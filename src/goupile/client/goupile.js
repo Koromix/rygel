@@ -487,12 +487,6 @@ let goupile = new function() {
                 <div class="gp_dropdown right">
                     <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${user.getUserName()}</button>
                     <div>
-                        <button type="button" @click=${e => user.showLockDialog(e, route_url)}>Verrouiller</button>
-                        <hr/>
-                        ${env.use_offline ? html`
-                            <button type="button" @click=${showSyncDialog}>Synchroniser</button>
-                            <hr/>
-                        ` : ''}
                         <button @click=${user.showLoginDialog}>Changer d'utilisateur</button>
                         <button @click=${user.logout}>Déconnexion</button>
                     </div>
