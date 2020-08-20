@@ -71,7 +71,6 @@ http_SessionManager::Session *
     }
 
     // Fill extra security values
-    strcpy(session->client_addr, request.client_addr);
     strncpy(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1);
 
     // Set session cookies
@@ -149,9 +148,12 @@ http_SessionManager::Session *
         return nullptr;
     }
 
+    // Until 2020-08-20 there was an IP check below, but it caused problems with mobile
+    // connectivity and with dual-stack browsers. For example, on occasion, I would get
+    // disconnected during localhost tests because login used IPv4 and a subsequent request
+    // used IPv6, or vice versa.
     Session *session = sessions.Find(session_key);
     if (!session ||
-            !TestStr(session->client_addr, request.client_addr) ||
 #ifdef NDEBUG
             strncmp(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1) ||
 #endif

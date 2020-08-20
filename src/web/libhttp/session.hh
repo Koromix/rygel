@@ -16,7 +16,6 @@ class http_SessionManager {
 
     struct Session {
         char session_key[129];
-        char client_addr[RG_SIZE(http_RequestInfo::client_addr)];
         char user_agent[134];
 
         int64_t login_time;
