@@ -20,7 +20,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH curl_easy_getinfo 3 "11 Feb 2009" "libcurl 7.19.4" "libcurl Manual"
+.TH curl_easy_getinfo 3 "July 13, 2020" "libcurl 7.72.0" "libcurl Manual"
+
 .SH NAME
 curl_easy_getinfo - extract information from a curl handle
 .SH SYNOPSIS
@@ -41,6 +42,9 @@ You should not free the memory returned by this function unless it is
 explicitly mentioned below.
 .SH AVAILABLE INFORMATION
 The following information can be extracted:
+.IP CURLINFO_EFFECTIVE_METHOD
+Last used HTTP method.
+See \fICURLINFO_EFFECTIVE_METHOD(3)\fP
 .IP CURLINFO_EFFECTIVE_URL
 Last used URL.
 See \fICURLINFO_EFFECTIVE_URL(3)\fP

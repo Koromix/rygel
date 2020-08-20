@@ -147,6 +147,7 @@ dnl initialize all the info variables
     curl_ssh_msg="no      (--with-{libssh,libssh2})"
    curl_zlib_msg="no      (--with-zlib)"
  curl_brotli_msg="no      (--with-brotli)"
+   curl_zstd_msg="no      (--with-zstd)"
     curl_gss_msg="no      (--with-gssapi)"
 curl_tls_srp_msg="no      (--enable-tls-srp)"
     curl_res_msg="default (--enable-ares / --enable-threaded-resolver)"
@@ -1116,6 +1117,93 @@ if test X"$OPT_BROTLI" != Xno; then
 fi
 
 dnl **********************************************************************
+dnl Check for libzstd
+dnl **********************************************************************
+
+dnl Default to compiler & linker defaults for libzstd
+OPT_ZSTD=off
+AC_ARG_WITH(zstd,dnl
+AC_HELP_STRING([--with-zstd=PATH],[Where to look for libzstd, PATH points to the libzstd installation; when possible, set the PKG_CONFIG_PATH environment variable instead of using this option])
+AC_HELP_STRING([--without-zstd], [disable libzstd]),
+  OPT_ZSTD=$withval)
+
+if test X"$OPT_ZSTD" != Xno; then
+  dnl backup the pre-zstd variables
+  CLEANLDFLAGS="$LDFLAGS"
+  CLEANCPPFLAGS="$CPPFLAGS"
+  CLEANLIBS="$LIBS"
+
+  case "$OPT_ZSTD" in
+  yes)
+    dnl --with-zstd (without path) used
+    CURL_CHECK_PKGCONFIG(libzstd)
+
+    if test "$PKGCONFIG" != "no" ; then
+      LIB_ZSTD=`$PKGCONFIG --libs-only-l libzstd`
+      LD_ZSTD=`$PKGCONFIG --libs-only-L libzstd`
+      CPP_ZSTD=`$PKGCONFIG --cflags-only-I libzstd`
+      version=`$PKGCONFIG --modversion libzstd`
+      DIR_ZSTD=`echo $LD_ZSTD | $SED -e 's/-L//'`
+    fi
+
+    ;;
+  off)
+    dnl no --with-zstd option given, just check default places
+    ;;
+  *)
+    dnl use the given --with-zstd spot
+    PREFIX_ZSTD=$OPT_ZSTD
+    ;;
+  esac
+
+  dnl if given with a prefix, we set -L and -I based on that
+  if test -n "$PREFIX_ZSTD"; then
+    LIB_ZSTD="-lzstd"
+    LD_ZSTD=-L${PREFIX_ZSTD}/lib$libsuff
+    CPP_ZSTD=-I${PREFIX_ZSTD}/include
+    DIR_ZSTD=${PREFIX_ZSTD}/lib$libsuff
+  fi
+
+  LDFLAGS="$LDFLAGS $LD_ZSTD"
+  CPPFLAGS="$CPPFLAGS $CPP_ZSTD"
+  LIBS="$LIB_ZSTD $LIBS"
+
+  AC_CHECK_LIB(zstd, ZSTD_createDStream)
+
+  AC_CHECK_HEADERS(zstd.h,
+    curl_zstd_msg="enabled (libzstd)"
+    HAVE_ZSTD=1
+    AC_DEFINE(HAVE_ZSTD, 1, [if libzstd is in use])
+    AC_SUBST(HAVE_ZSTD, [1])
+  )
+
+  if test X"$OPT_ZSTD" != Xoff &&
+     test "$HAVE_ZSTD" != "1"; then
+    AC_MSG_ERROR([libzstd was not found where specified!])
+  fi
+
+  if test "$HAVE_ZSTD" = "1"; then
+    if test -n "$DIR_ZSTD"; then
+       dnl when the zstd shared lib were found in a path that the run-time
+       dnl linker doesn't search through, we need to add it to
+       dnl CURL_LIBRARY_PATH to prevent further configure tests to fail due to
+       dnl this
+
+       if test "x$cross_compiling" != "xyes"; then
+         CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$DIR_ZSTD"
+         export CURL_LIBRARY_PATH
+         AC_MSG_NOTICE([Added $DIR_ZSTD to CURL_LIBRARY_PATH])
+       fi
+    fi
+  else
+    dnl no zstd, revert back to clean variables
+    LDFLAGS=$CLEANLDFLAGS
+    CPPFLAGS=$CLEANCPPFLAGS
+    LIBS=$CLEANLIBS
+  fi
+fi
+
+dnl **********************************************************************
 dnl Check for LDAP
 dnl **********************************************************************
 
@@ -1523,29 +1611,29 @@ dnl -------------------------------------------------
 dnl check winssl option before other SSL libraries
 dnl -------------------------------------------------
 
-OPT_WINSSL=no
+OPT_SCHANNEL=no
 AC_ARG_WITH(winssl,dnl
 AC_HELP_STRING([--with-winssl],[enable Windows native SSL/TLS])
 AC_HELP_STRING([--without-winssl], [disable Windows native SSL/TLS]),
-  OPT_WINSSL=$withval)
+  OPT_SCHANNEL=$withval)
 
 AC_ARG_WITH(schannel,dnl
 AC_HELP_STRING([--with-schannel],[enable Windows native SSL/TLS])
 AC_HELP_STRING([--without-schannel], [disable Windows native SSL/TLS]),
-  OPT_WINSSL=$withval)
+  OPT_SCHANNEL=$withval)
 
 AC_MSG_CHECKING([whether to enable Windows native SSL/TLS (Windows native builds only)])
-if test -z "$ssl_backends" -o "x$OPT_WINSSL" != xno; then
+if test -z "$ssl_backends" -o "x$OPT_SCHANNEL" != xno; then
   ssl_msg=
-  if test "x$OPT_WINSSL" != "xno"  &&
+  if test "x$OPT_SCHANNEL" != "xno"  &&
      test "x$curl_cv_native_windows" = "xyes"; then
     AC_MSG_RESULT(yes)
     AC_DEFINE(USE_SCHANNEL, 1, [to enable Windows native SSL/TLS support])
     AC_SUBST(USE_SCHANNEL, [1])
     ssl_msg="Windows-native"
     test schannel != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
-    WINSSL_ENABLED=1
-    # --with-winssl implies --enable-sspi
+    SCHANNEL_ENABLED=1
+    # --with-schannel implies --enable-sspi
     AC_DEFINE(USE_WINDOWS_SSPI, 1, [to enable SSPI support])
     AC_SUBST(USE_WINDOWS_SSPI, [1])
     curl_sspi_msg="enabled"
@@ -2293,6 +2381,7 @@ if test -z "$ssl_backends" -o "x$OPT_WOLFSSL" != xno; then
       OPT_WOLFSSL=""
     fi
 
+    dnl try pkg-config magic
     CURL_CHECK_PKGCONFIG(wolfssl, [$wolfpkg])
     AC_MSG_NOTICE([Check dir $wolfpkg])
 
@@ -2311,9 +2400,12 @@ if test -z "$ssl_backends" -o "x$OPT_WOLFSSL" != xno; then
       wolfssllibpath=`echo $addld | $SED -e 's/^-L//'`
     else
       addlib=-lwolfssl
-      addld=-L$OPT_WOLFSSL/lib$libsuff
-      addcflags=-I$OPT_WOLFSSL/include
-      wolfssllibpath=$OPT_WOLFSSL/lib$libsuff
+      dnl use system defaults if user does not supply a path
+      if test -n "$OPT_WOLFSSL"; then
+        addld=-L$OPT_WOLFSSL/lib$libsuff
+        addcflags=-I$OPT_WOLFSSL/include
+        wolfssllibpath=$OPT_WOLFSSL/lib$libsuff
+      fi
     fi
 
     if test "x$USE_WOLFSSL" != "xyes"; then
@@ -2365,7 +2457,7 @@ if test -z "$ssl_backends" -o "x$OPT_WOLFSSL" != xno; then
       dnl wolfssl/ctaocrypt/types.h needs SIZEOF_LONG_LONG defined!
       AX_COMPILE_CHECK_SIZEOF(long long)
 
-      LIBS="-lwolfssl -lm $LIBS"
+      LIBS="$addlib -lm $LIBS"
 
       dnl Recent WolfSSL versions build without SSLv3 by default
       dnl WolfSSL needs configure --enable-opensslextra to have *get_peer*
@@ -2377,12 +2469,19 @@ if test -z "$ssl_backends" -o "x$OPT_WOLFSSL" != xno; then
 
       dnl if this symbol is present, we want the include path to include the
       dnl OpenSSL API root as well
-      AC_CHECK_FUNC(wolfSSL_DES_set_odd_parity,
+      AC_CHECK_FUNC(wolfSSL_DES_ecb_encrypt,
         [
-            AC_DEFINE(HAVE_WOLFSSL_DES_SET_ODD_PARITY, 1,
-                      [if you have wolfSSL_DES_set_odd_parity])
-            CPPFLAGS="$addcflags/wolfssl $CPPFLAGS"
-            AC_MSG_NOTICE([Add $addcflags/wolfssl to CPPFLAGS])
+            AC_DEFINE(HAVE_WOLFSSL_DES_ECB_ENCRYPT, 1,
+                      [if you have wolfSSL_DES_ecb_encrypt])
+            if test -n "$addcflags"; then
+              CPPFLAGS="$addcflags/wolfssl $CPPFLAGS"
+              AC_MSG_NOTICE([Add $addcflags/wolfssl to CPPFLAGS])
+            else
+              dnl user didn't give a path, so guess/hope they installed wolfssl
+              dnl headers to system default location
+              CPPFLAGS="-I$includedir/wolfssl $CPPFLAGS"
+              AC_MSG_NOTICE([Add $includedir/wolfssl to CPPFLAGS])
+            fi
             WOLFSSL_NTLM=1
         ]
         )
@@ -2720,7 +2819,7 @@ if test -z "$ssl_backends" -o "x$OPT_NSS" != xno; then
   test -z "$ssl_msg" || ssl_backends="${ssl_backends:+$ssl_backends, }$ssl_msg"
 fi
 
-case "x$OPENSSL_ENABLED$GNUTLS_ENABLED$NSS_ENABLED$MBEDTLS_ENABLED$WOLFSSL_ENABLED$WINSSL_ENABLED$SECURETRANSPORT_ENABLED$MESALINK_ENABLED$BEARSSL_ENABLED$AMISSL_ENABLED" in
+case "x$OPENSSL_ENABLED$GNUTLS_ENABLED$NSS_ENABLED$MBEDTLS_ENABLED$WOLFSSL_ENABLED$SCHANNEL_ENABLED$SECURETRANSPORT_ENABLED$MESALINK_ENABLED$BEARSSL_ENABLED$AMISSL_ENABLED" in
 x)
   AC_MSG_WARN([SSL disabled, you will not be able to use HTTPS, FTPS, NTLM and more.])
   AC_MSG_WARN([Use --with-ssl, --with-gnutls, --with-wolfssl, --with-mbedtls, --with-nss, --with-schannel, --with-secure-transport, --with-mesalink, --with-amissl or --with-bearssl to address this.])
@@ -3183,7 +3282,7 @@ AC_HELP_STRING([--disable-versioned-symbols], [Disable versioned symbols in shar
           versioned_symbols_flavour="NSS_"
         elif test "x$WOLFSSL_ENABLED" = "x1"; then
           versioned_symbols_flavour="WOLFSSL_"
-        elif test "x$WINSSL_ENABLED" = "x1"; then
+        elif test "x$SCHANNEL_ENABLED" = "x1"; then
           versioned_symbols_flavour="SCHANNEL_"
         elif test "x$SECURETRANSPORT_ENABLED" = "x1"; then
           versioned_symbols_flavour="SECURE_TRANSPORT_"
@@ -4467,16 +4566,16 @@ AC_HELP_STRING([--disable-sspi],[Disable SSPI]),
        fi
        ;;
   *)
-       if test "x$WINSSL_ENABLED" = "x1"; then
-         # --with-winssl implies --enable-sspi
+       if test "x$SCHANNEL_ENABLED" = "x1"; then
+         # --with-schannel implies --enable-sspi
          AC_MSG_RESULT(yes)
        else
          AC_MSG_RESULT(no)
        fi
        ;;
   esac ],
-       if test "x$WINSSL_ENABLED" = "x1"; then
-         # --with-winssl implies --enable-sspi
+       if test "x$SCHANNEL_ENABLED" = "x1"; then
+         # --with-schannel implies --enable-sspi
          AC_MSG_RESULT(yes)
        else
          AC_MSG_RESULT(no)
@@ -4825,6 +4924,9 @@ fi
 if test "x$HAVE_BROTLI" = "x1"; then
   SUPPORT_FEATURES="$SUPPORT_FEATURES brotli"
 fi
+if test "x$HAVE_ZSTD" = "x1"; then
+  SUPPORT_FEATURES="$SUPPORT_FEATURES zstd"
+fi
 if test "x$USE_ARES" = "x1" -o "x$USE_THREADS_POSIX" = "x1" \
                             -o "x$USE_THREADS_WIN32" = "x1"; then
   SUPPORT_FEATURES="$SUPPORT_FEATURES AsynchDNS"
@@ -4897,6 +4999,10 @@ if test "x$ESNI_ENABLED" = "x1"; then
   SUPPORT_FEATURES="$SUPPORT_FEATURES ESNI"
 fi
 
+dnl replace spaces with newlines
+dnl sort the lines
+dnl replace the newlines back to spaces
+SUPPORT_FEATURES=`echo $SUPPORT_FEATURES | tr ' ' '\012' | sort | tr '\012' ' '`
 AC_SUBST(SUPPORT_FEATURES)
 
 dnl For supported protocols in pkg-config file
@@ -5063,6 +5169,7 @@ AC_MSG_NOTICE([Configured to build curl/libcurl:
   SSH:              ${curl_ssh_msg}
   zlib:             ${curl_zlib_msg}
   brotli:           ${curl_brotli_msg}
+  zstd:             ${curl_zstd_msg}
   GSS-API:          ${curl_gss_msg}
   TLS-SRP:          ${curl_tls_srp_msg}
   resolver:         ${curl_res_msg}

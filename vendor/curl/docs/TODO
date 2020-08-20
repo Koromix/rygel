@@ -36,7 +36,6 @@
  1.17 Add support for IRIs
  1.18 try next proxy if one doesn't work
  1.20 SRV and URI DNS records
- 1.21 Add return code to CURLMOPT_PUSHFUNCTION to fail the connection
  1.22 CURLINFO_PAUSE_STATE
  1.23 Offer API to flush the connection pool
  1.24 TCP Fast Open for windows
@@ -124,6 +123,7 @@
  15.1 Extend support for client certificate authentication
  15.2 Extend support for the --ciphers option
  15.3 Add option to disable client certificate auto-send
+ 15.4 Add option to allow abrupt server closure
 
  16. SASL
  16.1 Other authentication mechanisms
@@ -159,6 +159,8 @@
  18.20 host name sections in config files
  18.21 retry on the redirected-to URL
  18.22 Add flag to specify download directory
+ 18.23 Set the modification date on an uploaded file
+ 18.24 Use multiple parallel transfers for a single download
 
  19. Build
  19.1 roffit
@@ -357,13 +359,6 @@
 
  Offer support for resolving SRV and URI DNS records for libcurl to know which
  server to connect to for various protocols (including HTTP!).
-
-1.21 Add return code to CURLMOPT_PUSHFUNCTION to fail the connection
-
- Allow the callback to return a value that would stop the entire operation,
- like it can be done from most other callbacks.
-
- See https://curl.haxx.se/mail/lib-2020-06/0099.html
 
 1.22 CURLINFO_PAUSE_STATE
 
@@ -850,6 +845,15 @@ that doesn't exist on the server, just like --ftp-create-dirs.
 
  https://github.com/curl/curl/issues/2262
 
+15.4 Add option to allow abrupt server closure
+
+ libcurl w/schannel will error without a known termination point from the
+ server (such as length of transfer, or SSL "close notify" alert) to prevent
+ against a truncation attack. Really old servers may neglect to send any
+ termination point. An option could be added to ignore such abrupt closures.
+
+ https://github.com/curl/curl/issues/4427
+
 16. SASL
 
 16.1 Other authentication mechanisms
@@ -1113,6 +1117,34 @@ that doesn't exist on the server, just like --ftp-create-dirs.
  A directory name to basically prepend to the file name -O and -o use. Saves
  user from having to manually "cd" to the directory. Especially useful for
  command lines with multiple -O and different download directories.
+
+18.23 Set the modification date on an uploaded file
+
+ For SFTP and posssibly FTP, curl could offer an option to set the
+ modification time for the uploaded file.
+
+ See https://github.com/curl/curl/issues/5768
+
+18.24 Use multiple parallel transfers for a single download
+
+ To enhance transfer speed, downloading a single URL can be split up into
+ multiple separate range downloads that get combined into a single final
+ result.
+
+ An ideal implementation would not use a specified number of parallel
+ transfers, but curl could:
+ - First start getting the full file as transfer A
+ - If after N seconds have passed and the transfer is expected to continue for
+   M seconds or more, add a new transfer (B) that asks for the second half of
+   A's content (and stop A at the middle).
+ - If splitting up the work improves the transfer rate, it could then be done
+   again. Then again, etc up to a limit.
+
+ This way, if transfer B fails (because Range: isn't supported) it will let
+ transfer A remain the single one. N and M could be set to some sensible
+ defaults.
+
+ See https://github.com/curl/curl/issues/5774
 
 19. Build
 

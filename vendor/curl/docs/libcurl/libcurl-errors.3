@@ -20,7 +20,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH libcurl-errors 3 "1 Jan 2010" "libcurl 7.20.0" "libcurl errors"
+.TH libcurl-errors 3 "July 29, 2020" "libcurl 7.72.0" "libcurl errors"
+
 .SH NAME
 libcurl-errors \- error codes in libcurl
 .SH DESCRIPTION
@@ -271,7 +272,7 @@ interface. Also consider \fIcurl_multi_strerror(3)\fP.
 .IP "CURLM_CALL_MULTI_PERFORM (-1)"
 This is not really an error. It means you should call
 \fIcurl_multi_perform(3)\fP again without doing select() or similar in
-between. Before version 7.20.0 this could be returned by
+between. Before version 7.20.0 (released on February 9 2010) this could be returned by
 \fIcurl_multi_perform(3)\fP, but in later versions this return code is never
 used.
 .IP "CURLM_CALL_MULTI_SOCKET (-1)"

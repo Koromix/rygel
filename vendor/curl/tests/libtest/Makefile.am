@@ -91,8 +91,11 @@ libhostname_la_CPPFLAGS_EXTRA =
 libhostname_la_LDFLAGS_EXTRA = -module -avoid-version -rpath /nowhere
 libhostname_la_CFLAGS_EXTRA =
 
+libstubgss_la_LDFLAGS_EXTRA =
+
 if CURL_LT_SHLIB_USE_NO_UNDEFINED
 libhostname_la_LDFLAGS_EXTRA += -no-undefined
+libstubgss_la_LDFLAGS_EXTRA += -no-undefined
 endif
 
 if CURL_LT_SHLIB_USE_MIMPURE_TEXT
@@ -118,7 +121,7 @@ if BUILD_STUB_GSS
 noinst_LTLIBRARIES += libstubgss.la
 
 libstubgss_la_CPPFLAGS = $(AM_CPPFLAGS)
-libstubgss_la_LDFLAGS = $(AM_LDFLAGS) -avoid-version -rpath /nowhere
+libstubgss_la_LDFLAGS = $(AM_LDFLAGS) $(libstubgss_la_LDFLAGS_EXTRA) -avoid-version -rpath /nowhere
 libstubgss_la_CFLAGS = $(AM_CFLAGS) -g
 
 libstubgss_la_SOURCES = stub_gssapi.c stub_gssapi.h
@@ -137,7 +140,7 @@ CS_1 =
 CS_ = $(CS_0)
 
 checksrc:
-	$(CHECKSRC)@PERL@ $(top_srcdir)/lib/checksrc.pl $(srcdir)/*.[ch]
+	$(CHECKSRC)@PERL@ $(top_srcdir)/lib/checksrc.pl -D$(srcdir) $(srcdir)/*.[ch]
 
 if CURLDEBUG
 # for debug builds, we scan the sources on all regular make invokes
