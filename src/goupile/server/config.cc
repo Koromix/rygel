@@ -62,8 +62,6 @@ bool ConfigBuilder::LoadIni(StreamReader *st)
                 do {
                     if (prop.key == "UseOffline") {
                         valid &= IniParser::ParseBoolValue(prop.value, &config.use_offline);
-                    } else if (prop.key == "OfflineRecords") {
-                        valid &= IniParser::ParseBoolValue(prop.value, &config.offline_records);
                     } else if (prop.key == "MaxFileSize") {
                         valid &= ParseDec(prop.value, &config.max_file_size);
                     } else if (prop.key == "AllowGuests") {

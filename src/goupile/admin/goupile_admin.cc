@@ -22,7 +22,6 @@ DatabaseFile = database.db
 
 [Sync]
 # UseOffline = Off
-# OfflineRecords = Off
 # AllowGuests = Off
 
 [HTTP]
