@@ -260,8 +260,48 @@ function VirtualRecords(db) {
         return db.loadAll('rec_columns', table + '@', table + '`');
     };
 
-    this.sync = function() {
-        throw new Error('Not implemented yet!');
+    this.sync = async function() {
+        let fragments = await db.loadAll('rec_fragments');
+        // fragments = fragments.filter(frag => frag.username != null);
+
+        // Upload fragments
+        let uploads = util.mapRLE(fragments, frag => frag.id, (id, offset, length) => {
+            let record_fragments = fragments.slice(offset, length);
+
+            if (record_fragments.some(frag => frag.username == null)) {
+                let frag0 = record_fragments[0];
+
+                record_fragments = record_fragments.map(frag => ({
+                    mtime: frag.mtime,
+                    page: frag.page,
+                    values: frag.values
+                }));
+
+                let url = `${env.base_url}records/${frag0.table}/${frag0.id}`;
+                return net.fetch(url, {
+                    method: 'PUT',
+                    body: JSON.stringify(record_fragments)
+                });
+            } else {
+                return null;
+            }
+        });
+        for (let p of uploads) {
+            if (p != null) {
+                let response = await p;
+
+                if (!response.ok) {
+                    let err = (await response.text()).trim();
+                    throw new Error(err);
+                }
+            }
+        }
+
+        // Download fragments
+        /*for (let i = 0; i < app.forms.length; i += 10) {
+            let p = app.forms.slice(i, i + 10).map(downloadRecords);
+            await Promise.all(p);
+        }*/
     };
 
     function makeEntryKey(table, id) {
