@@ -130,7 +130,7 @@ function VirtualFS(db) {
             file = null;
         }
 
-        if (cache_file) {
+        if (file != null) {
             cache_file = Object.assign({}, file);
             cache.set(path, cache_file);
         }
