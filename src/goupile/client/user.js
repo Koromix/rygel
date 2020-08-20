@@ -203,8 +203,8 @@ function UserManager(db) {
         }
     };
 
-    this.fetchProfile = async function(force_online = false) {
-        if (net.isOnline() || force_online) {
+    this.fetchProfile = async function() {
+        if (net.isOnline()) {
             // Try online first
             let response = await net.fetch(`${env.base_url}api/profile.json`);
             if (response.ok) {

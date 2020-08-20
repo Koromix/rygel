@@ -567,7 +567,12 @@ let net = new function() {
         });
     };
 
-    this.setOnline = function(online2) { online = online2; };
+    this.setOnline = function(online2) {
+        if (online2 !== online) {
+            online = online2;
+            self.changeHandler();
+        }
+    };
     this.isOnline = function() { return online; };
 };
 

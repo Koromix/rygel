@@ -32,6 +32,14 @@ static BlockAllocator assets_alloc;
 
 static char etag[33];
 
+static void HandleEvents(const http_RequestInfo &request, http_IO *io)
+{
+    // Do this to renew session and clear invalid session cookies
+    GetCheckedSession(request, io);
+
+    io->AttachText(200, "{}", "application/json");
+}
+
 static AssetInfo PatchGoupileVariables(const AssetInfo &asset, Allocator *alloc)
 {
     AssetInfo asset2 = asset;
@@ -170,7 +178,9 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         {
             void (*func)(const http_RequestInfo &request, http_IO *io) = nullptr;
 
-            if (TestStr(request.url, "/api/profile.json")) {
+            if (TestStr(request.url, "/api/events.json")) {
+                func = HandleEvents;
+            } else if (TestStr(request.url, "/api/profile.json")) {
                 func = HandleProfile;
             } else if (TestStr(request.url, "/api/files.json")) {
                 func = HandleFileList;

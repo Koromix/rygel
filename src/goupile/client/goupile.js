@@ -55,11 +55,15 @@ let goupile = new function() {
             }
 
             nav = new ApplicationNavigator();
-
-            await user.fetchProfile();
             await self.initMain();
 
-            setTimeout(checkServer, 10000);
+            net.changeHandler = online => {
+                updateStatus();
+
+                if (env.use_offline)
+                    self.go();
+            };
+            setTimeout(checkEvents, 30000);
         } finally {
             document.querySelector('#gp_all').classList.remove('busy');
         }
@@ -335,8 +339,6 @@ let goupile = new function() {
                     }
                 } catch (err) {
                     log.error(err);
-                } finally {
-                    updateStatus();
                 }
 
                 // Give popup (if any) a chance to refresh too
@@ -361,25 +363,21 @@ let goupile = new function() {
         }
     };
 
-    async function checkServer() {
+    async function checkEvents() {
+        let prev_online = net.isOnline();
+
         try {
-            await user.fetchProfile(true);
+            await net.fetch(`${env.base_url}api/events.json`);
             net.setOnline(true);
         } catch (err) {
             net.setOnline(false);
         } finally {
-            let delay = (!net.isOnline() || env.use_offline) ? 30000 : 300000;
-
             if (ping_timer != null)
                 clearTimeout(ping_timer);
-            ping_timer = setTimeout(async () => {
-                let prev_online = net.isOnline();
+            ping_timer = setTimeout(checkEvents, 30000);
 
-                await checkServer();
-
-                if (net.isOnline() !== prev_online)
-                    self.go();
-            }, delay);
+            if (user.testCookies())
+                self.go();
         }
     }
 
@@ -420,6 +418,7 @@ let goupile = new function() {
                 <div id="gp_error" style="display: none;"></div>
             </main>
         `, document.querySelector('#gp_all'));
+        updateStatus();
 
         for (let panel of document.querySelectorAll('.gp_panel:empty')) {
             panel.classList.remove('broken');
