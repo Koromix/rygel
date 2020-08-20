@@ -50,6 +50,9 @@
     cursor: pointer;
 }
 .af_deploy {
+    position: absolute;
+    top: 0px;
+    width: 100%;
     display: block;
     text-align: center;
     font-size: 0.9em;
