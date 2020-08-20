@@ -2474,6 +2474,7 @@ union Date {
 // Time
 // ------------------------------------------------------------------------
 
+int64_t GetUnixTime();
 int64_t GetMonotonicTime();
 
 #if defined(_MSC_VER)

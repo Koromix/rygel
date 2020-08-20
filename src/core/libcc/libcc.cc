@@ -523,6 +523,32 @@ Date &Date::operator--()
 // Time
 // ------------------------------------------------------------------------
 
+static int64_t FileTimeToUnixTime(FILETIME ft)
+{
+    int64_t time = ((int64_t)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
+    return time / 10000000 - 11644473600ll;
+}
+
+int64_t GetUnixTime()
+{
+#if defined(_WIN32)
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+
+    return FileTimeToUnixTime(ft);
+#elif defined(__EMSCRIPTEN__)
+    return (int64_t)emscripten_get_now();
+#else
+    struct timespec ts;
+    if (clock_gettime(CLOCK_REALTIME, &ts) < 0) {
+        LogError("clock_gettime() failed: %1", strerror(errno));
+        return 0;
+    }
+
+    return (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
+#endif
+}
+
 int64_t GetMonotonicTime()
 {
 #if defined(_WIN32)
@@ -1530,12 +1556,6 @@ static FileType FileAttributesToType(uint32_t attr)
     } else {
         return FileType::File;
     }
-}
-
-static int64_t FileTimeToUnixTime(FILETIME ft)
-{
-    int64_t time = ((int64_t)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
-    return time / 10000000 - 11644473600ll;
 }
 
 bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
