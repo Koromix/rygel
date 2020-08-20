@@ -35,8 +35,8 @@ function VirtualRecords(db) {
 
             username: null,
             mtime: new Date,
-            complete: false,
 
+            complete: false,
             values: {}
         };
         for (let variable of variables)
@@ -130,7 +130,29 @@ function VirtualRecords(db) {
 
     this.delete = async function(table, id) {
         let ikey = makeEntryKey(table, id);
-        await db.deleteAll('rec_fragments', ikey + '@', ikey + '`');
+
+        await db.transaction('rw', ['rec_entries', 'rec_fragments'], async () => {
+            let entry = await db.load('rec_entries', ikey);
+
+            if (entry != null) {
+                entry.version++;
+
+                let frag = {
+                    _ikey: makeFragmentKey(table, id, entry.version),
+
+                    table: table,
+                    id: id,
+                    version: entry.version,
+                    page: null, // Delete fragment
+
+                    username: null,
+                    mtime: new Date
+                };
+
+                db.save('rec_entries', entry);
+                db.save('rec_fragments', frag);
+            }
+        });
     };
 
     this.load = async function(table, id, version = undefined) {
@@ -199,6 +221,10 @@ function VirtualRecords(db) {
 
         let pages_set = new Set(entry.pages);
 
+        // Deleted record
+        if (fragments[fragments.length - 1].page == null)
+            return null;
+
         for (let i = fragments.length - 1; i >= 0 && pages_set.size; i--) {
             let frag = fragments[i];
 
@@ -208,7 +234,7 @@ function VirtualRecords(db) {
                     record.mtime = frag.mtime;
                 }
 
-                if (pages_set.delete(frag.page)) {
+                if (frag.page != null && pages_set.delete(frag.page)) {
                     record.complete[frag.page] = frag.complete;
                     record.values = Object.assign(frag.values, record.values);
                 }
