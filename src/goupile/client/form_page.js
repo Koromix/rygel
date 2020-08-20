@@ -354,7 +354,7 @@ function PageBuilder(state, model, readonly = false) {
         if (!isModifiable(key))
             return;
 
-        goupile.popup(e, 'Modifier', (page, close) => {
+        dialog.popup(e, 'Modifier', (page, close) => {
             let number = page.number('number', 'Valeur :', {min: min, max: max, value: value});
 
             page.submitHandler = () => {

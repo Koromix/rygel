@@ -270,7 +270,7 @@ let dev_files = new function() {
     }
 
     function showCreateDialog(e, path, blob) {
-        goupile.popup(e, 'Créer', (page, close) => {
+        dialog.popup(e, 'Créer', (page, close) => {
             let blob = page.file('file', 'Fichier :', {mandatory: true});
 
             let default_path = blob.value ? `/files/${blob.value.name}` : null;
@@ -311,7 +311,7 @@ let dev_files = new function() {
     }
 
     function showSyncDialog(e) {
-        goupile.popup(e, 'Synchroniser', (page, close) => {
+        dialog.popup(e, 'Synchroniser', (page, close) => {
             page.output('Voulez-vous vraiment synchroniser les fichiers ?');
 
             page.submitHandler = async () => {
@@ -333,7 +333,7 @@ let dev_files = new function() {
                 self.runFiles();
             }
         } else {
-            goupile.popup(e, 'Oublier', (page, close) => {
+            dialog.popup(e, 'Oublier', (page, close) => {
                 page.output(`Voulez-vous vraiment oublier les modifications locales pour '${file.path}' ?`);
 
                 page.submitHandler = async () => {
@@ -347,7 +347,7 @@ let dev_files = new function() {
     }
 
     function showDeleteDialog(e, path) {
-        goupile.popup(e, 'Supprimer', (page, close) => {
+        dialog.popup(e, 'Supprimer', (page, close) => {
             page.output(`Voulez-vous vraiment supprimer '${path}' ?`);
 
             page.submitHandler = async () => {

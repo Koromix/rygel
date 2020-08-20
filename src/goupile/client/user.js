@@ -44,7 +44,7 @@ function UserManager(db) {
     };
 
     this.showLoginDialog = function(e) {
-        goupile.popup(e, 'Connexion', makeLoginForm);
+        dialog.popup(e, 'Connexion', makeLoginForm);
     };
 
     function makeLoginForm(page, close = null) {
@@ -279,7 +279,7 @@ function UserManager(db) {
     };
 
     this.showLockDialog = function(e, url) {
-        goupile.popup(e, 'Verrouiller', (page, close) => {
+        dialog.popup(e, 'Verrouiller', (page, close) => {
             page.output('Entrez le code de verrouillage');
             let pin = page.pin('*code');
 
@@ -299,7 +299,7 @@ function UserManager(db) {
     };
 
     this.showUnlockDialog = function(e) {
-        goupile.popup(e, null, (page, close) => {
+        dialog.popup(e, null, (page, close) => {
             page.output('Entrez le code de déverrouillage');
             let pin = page.pin('code');
 

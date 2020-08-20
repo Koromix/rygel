@@ -175,7 +175,7 @@ function updateTables(echelles, tables) {
 }
 
 function showDeleteDialog(e, form, id) {
-    goupile.popup(e, 'Supprimer', popup => {
+    dialog.popup(e, 'Supprimer', popup => {
         popup.output('Voulez-vous vraiment supprimer cet enregistrement ?');
 
         popup.submitHandler = async () => {

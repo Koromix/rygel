@@ -352,7 +352,7 @@ function ScheduleView(resources_map, meetings_map) {
     }
 
     function showCreateMeetingDialog(e, slot_ref) {
-        goupile.popup(e, 'Créer', (page, close) => {
+        dialog.popup(e, 'Créer', (page, close) => {
             let name = page.text('name', 'Nom :', {mandatory: true});
 
             page.submitHandler = () => {
@@ -363,7 +363,7 @@ function ScheduleView(resources_map, meetings_map) {
     }
 
     function showDeleteMeetingDialog(e, slot_ref) {
-        goupile.popup(e, 'Supprimer', (page, close) => {
+        dialog.popup(e, 'Supprimer', (page, close) => {
             page.output('Voulez-vous vraiment supprimer ce rendez-vous ?');
 
             page.submitHandler = () => {
@@ -444,7 +444,7 @@ function ScheduleView(resources_map, meetings_map) {
     }
 
     function showCreateResourceDialog(e, day) {
-        goupile.popup(e, 'Créer', (page, close) => {
+        dialog.popup(e, 'Créer', (page, close) => {
             let time = page.text('time', 'Horaire :', {mandatory: true});
 
             // Check value
@@ -460,7 +460,7 @@ function ScheduleView(resources_map, meetings_map) {
     }
 
     function showDeleteResourceDialog(e, day, res_idx) {
-        goupile.popup(e, 'Supprimer', (page, close) => {
+        dialog.popup(e, 'Supprimer', (page, close) => {
             page.output('Voulez-vous vraiment supprimer ces créneaux ?');
 
             page.submitHandler = () => {
@@ -471,7 +471,7 @@ function ScheduleView(resources_map, meetings_map) {
     }
 
     function showCloseDayDialog(e, day) {
-        goupile.popup(e, 'Fermer', (page, close) => {
+        dialog.popup(e, 'Fermer', (page, close) => {
             page.output('Voulez-vous vraiment fermer cette journée ?',
                         {help: 'Ceci supprime tous les créneaux'});
 

@@ -249,7 +249,7 @@ let form_exec = new function() {
     }
 
     function showTrailDialog(e, id) {
-        goupile.popup(e, null, (page, close) => {
+        dialog.popup(e, null, (page, close) => {
             // Goupile restarts popup functions after major state changes to give
             // them a chance to update. This allows us to change the highlighted version!
             let record = ctx_records.get(id);
@@ -322,7 +322,7 @@ let form_exec = new function() {
 
     function handleNewClick(e, confirm) {
         if (confirm) {
-            goupile.popup(e, 'Fermer l\'enregistrement', (page, close) => {
+            dialog.popup(e, 'Fermer l\'enregistrement', (page, close) => {
                 page.output('Cette action entraînera la perte des modifications en cours, êtes-vous sûr(e) ?');
 
                 page.submitHandler = () => {
@@ -336,7 +336,7 @@ let form_exec = new function() {
     }
 
     function showValidateDialog(e, submit_func) {
-        goupile.popup(e, 'Valider', (page, close) => {
+        dialog.popup(e, 'Valider', (page, close) => {
             page.output('Confirmez-vous la validation de cette page ?');
 
             page.submitHandler = () => {
@@ -774,7 +774,7 @@ let form_exec = new function() {
     }
 
     function showDeleteDialog(e, record) {
-        goupile.popup(e, 'Supprimer', (page, close) => {
+        dialog.popup(e, 'Supprimer', (page, close) => {
             page.output('Voulez-vous vraiment supprimer cet enregistrement ?');
 
             page.submitHandler = async () => {
