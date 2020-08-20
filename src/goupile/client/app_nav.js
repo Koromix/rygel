@@ -27,4 +27,16 @@ Navigation functions should only be called in reaction to user events, such as b
     this.isTablet = function() { return goupile.isTablet(); };
     this.isStandalone = function() { return goupile.isStandalone(); };
     this.isLocked = function() { return goupile.isLocked(); };
+
+    this.link = function(where, options = {}) {
+        let url = `${env.base_url}app/${where}/`;
+
+        if (options.id != null) {
+            url += id;
+            if (options.version != null)
+                url += `@${version}`;
+        }
+
+        return util.pasteURL(url, nav.route);
+    };
 }
