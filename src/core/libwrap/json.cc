@@ -134,7 +134,26 @@ bool json_Parser::Handler::Key(const char *key, Size len, bool)
 json_Parser::json_Parser(StreamReader *st, Allocator *allocator)
     : st(st), handler({allocator})
 {
+    RG_ASSERT(allocator);
     reader.IterativeParseInit();
+}
+
+bool json_Parser::ParseKey(Span<const char> *out_key)
+{
+    if (ConsumeToken(json_TokenType::Key)) {
+        *out_key = handler.u.key;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool json_Parser::ParseKey(const char **out_key)
+{
+    Span<const char> key;
+    ParseKey(&key);
+    *out_key = key.ptr;
+    return true;
 }
 
 bool json_Parser::ParseObject()
@@ -214,14 +233,12 @@ bool json_Parser::ParseString(Span<const char> *out_str)
     }
 }
 
-bool json_Parser::ParseKey(Span<const char> *out_key)
+bool json_Parser::ParseString(const char **out_str)
 {
-    if (ConsumeToken(json_TokenType::Key)) {
-        *out_key = handler.u.key;
-        return true;
-    } else {
-        return false;
-    }
+    Span<const char> str;
+    ParseString(&str);
+    *out_str = str.ptr;
+    return true;
 }
 
 void json_Parser::PushLogFilter()

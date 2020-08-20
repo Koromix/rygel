@@ -20,29 +20,42 @@ var goupile = new function() {
 var server = new function() {
     let self = this;
 
-    this.validateRecord = function(code, values) {
-        let model = new PageModel;
+    // C++ functions
+    this.readCode = null;
 
-        // We don't care about PageState (single execution)
-        let page_builder = new PageBuilder(new PageState, model);
-        page_builder.getValue = (key, default_value) => getValue(values, key, default_value);
+    this.validateFragments = function(fragments) {
+        let values = {};
 
-        // Execute user script
-        // XXX: We should fail when data types don't match (string given to number widget)
-        let func = Function('shared', 'route', 'go', 'form', 'page', 'scratch', code);
-        func({}, {}, () => {}, page_builder, page_builder, {});
+        let fragments2 = fragments.map(frag => {
+            if (frag.page != null) {
+                values = Object.assign(values, frag.values);
 
-        let values2 = filterValues(values, model.variables);
-        let variables = model.variables.map(variable => variable.key);
+                // We don't care about PageState (single execution)
+                let model = new PageModel;
+                let builder = new PageBuilder(new PageState, model);
+                builder.getValue = (key, default_value) => getValue(values, key, default_value);
 
-        // Make it easy for the C++ caller to store in database
-        let ret = {
-            json: JSON.stringify(values2),
-            variables: variables,
-            errors: model.errors.length
-        };
+                // Execute user script
+                // XXX: We should fail when data types don't match (string given to number widget)
+                let code = self.readCode(frag.page);
+                let func = Function('shared', 'route', 'go', 'form', 'page', 'scratch', code);
+                func({}, {}, () => {}, builder, builder, {});
 
-        return ret;
+                let frag2 = {
+                    page: frag.page,
+                    mtime: frag.mtime,
+
+                    columns: expandColumns(model.variables),
+                    values: filterValues(values, model.variables)
+                };
+
+                return frag2;
+            } else {
+                return {mtime: frag.mtime};
+            }
+        });
+
+        return fragments2;
     };
 
     function getValue(values, key, default_value) {
@@ -52,6 +65,27 @@ var server = new function() {
         }
 
         return values[key];
+    }
+
+    function expandColumns(variables) {
+        let columns = variables.flatMap((variable, idx) => {
+            if (variable.multi) {
+                let ret = variable.props.map(prop => ({
+                    key: variable.key.toString(),
+                    prop: JSON.stringify(prop.value)
+                }));
+
+                return ret;
+            } else {
+                let ret = {
+                    key: variable.key.toString()
+                };
+
+                return ret;
+            }
+        });
+
+        return columns;
     }
 
     function filterValues(values, variables) {
@@ -70,6 +104,7 @@ var server = new function() {
                 throw new Error(`Unexpected variable '${key}'`);
         }
 
-        return values2;
+        // Make it easy for the C++ caller to store in database
+        return JSON.stringify(values2);
     }
 };

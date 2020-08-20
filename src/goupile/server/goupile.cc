@@ -176,8 +176,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 func = HandleFileList;
             } else if (!strncmp(request.url, "/records/", 9)) {
                 func = HandleRecordGet;
-            } else if (TestStr(request.url, "/api/variables.json")) {
-                func = HandleRecordVariables;
+            } else if (TestStr(request.url, "/api/columns.json")) {
+                func = HandleRecordColumns;
             } else if (TestStr(request.url, "/api/schedule/resources.json")) {
                 func = HandleScheduleResources;
             } else if (TestStr(request.url, "/api/schedule/meetings.json")) {
@@ -213,8 +213,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     } else if (TestStr(request.method, "DELETE")) {
         if (!strncmp(request.url, "/files/", 7)) {
             HandleFileDelete(request, io);
-        } else if (!strncmp(request.url, "/records/", 9)) {
-            HandleRecordDelete(request, io);
         } else {
             io->AttachError(404);
         }

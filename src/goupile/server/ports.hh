@@ -26,26 +26,33 @@ struct ScriptHandle {
     }
 };
 
-struct ScriptRecord {
-    RG_DELETE_COPY(ScriptRecord)
+struct ScriptFragment {
+    RG_DELETE_COPY(ScriptFragment)
+
+    struct Column {
+        const char *key;
+        const char *prop;
+    };
 
     JSContext *ctx = nullptr;
-
-    Span<const char> json = {};
-    HeapArray<const char *> variables;
+    const char *mtime = nullptr;
+    const char *page = nullptr;
+    Span<const char> values = {};
     int errors;
+    HeapArray<Column> columns;
 
-    ScriptRecord() = default;
+    ScriptFragment() = default;
 
-    ~ScriptRecord()
+    ~ScriptFragment()
     {
         if (ctx) {
-            JS_FreeCString(ctx, json.ptr);
-
-            for (const char *variable: variables) {
-                JS_FreeCString(ctx, variable);
+            JS_FreeCString(ctx, mtime);
+            JS_FreeCString(ctx, page);
+            JS_FreeCString(ctx, values.ptr);
+            for (const Column &col: columns) {
+                JS_FreeCString(ctx, col.key);
+                JS_FreeCString(ctx, col.prop);
             }
-
             ctx = nullptr;
         }
     }
@@ -63,8 +70,8 @@ public:
     ScriptPort() = default;
     ~ScriptPort();
 
-    bool ParseValues(StreamReader *st, ScriptHandle *out_handle);
-    bool RunRecord(Span<const char> script, const ScriptHandle &values, ScriptRecord *out_record);
+    bool ParseFragments(StreamReader *st, ScriptHandle *out_handle);
+    bool RunRecord(const ScriptHandle &handle, HeapArray<ScriptFragment> *out_fragments);
 
     friend void InitPorts();
 };

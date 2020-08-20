@@ -106,7 +106,7 @@ static void PruneStaleTokens()
     }
 
     int64_t limit = GetUnixTime() - TokenLimit;
-    goupile_db.Run("DELETE FROM users_tokens WHERE login_time < ?", limit);
+    goupile_db.Run("DELETE FROM usr_tokens WHERE login_time < ?", limit);
 }
 
 void HandleLogin(const http_RequestInfo &request, http_IO *io)
@@ -134,7 +134,7 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
 
         sq_Statement stmt;
         if (!goupile_db.Prepare(R"(SELECT u.username, u.develop, u.new, u.edit, u.password_hash
-                                   FROM users u
+                                   FROM usr_users u
                                    WHERE u.username = ?)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
@@ -152,7 +152,7 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
                 }
 
                 int64_t login_time = GetUnixTime();
-                if (!goupile_db.Run("INSERT INTO users_tokens (token, username, login_time) VALUES (?, ?, ?)",
+                if (!goupile_db.Run("INSERT INTO usr_tokens (token, username, login_time) VALUES (?, ?, ?)",
                                     token, username, login_time))
                     return;
 
@@ -202,8 +202,8 @@ void HandleReconnect(const http_RequestInfo &request, http_IO *io)
 
         sq_Statement stmt;
         if (!goupile_db.Prepare(R"(SELECT u.username, u.develop, u.new, u.edit
-                                   FROM users_tokens t
-                                   INNER JOIN users u ON (u.username = t.username)
+                                   FROM usr_tokens t
+                                   INNER JOIN usr_users u ON (u.username = t.username)
                                    WHERE t.token = ? AND t.login_time >= ?)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, token, -1, SQLITE_STATIC);

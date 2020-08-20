@@ -160,6 +160,7 @@ public:
     bool IsEOF() const { return eof; }
 
     bool ParseKey(Span<const char> *out_key);
+    bool ParseKey(const char **out_key);
 
     bool ParseObject();
     bool InObject();
@@ -171,13 +172,14 @@ public:
     bool ParseInteger(int64_t *out_value);
     bool ParseDouble(double *out_value);
     bool ParseString(Span<const char> *out_str);
+    bool ParseString(const char **out_str);
 
     void PushLogFilter();
 
-private:
     json_TokenType PeekToken();
     bool ConsumeToken(json_TokenType token);
 
+private:
     bool IncreaseDepth();
 };
 

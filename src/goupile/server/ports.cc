@@ -4,6 +4,8 @@
 
 #include "../../core/libcc/libcc.hh"
 #include "../../core/libwrap/json.hh"
+#include "config.hh"
+#include "goupile.hh"
 #include "ports.hh"
 
 namespace RG {
@@ -15,129 +17,7 @@ static std::condition_variable js_cv;
 static ScriptPort js_ports[16];
 static LocalArray<ScriptPort *, 16> js_idle_ports;
 
-class JsonToQuickJS {
-    RG_DELETE_COPY(JsonToQuickJS)
-
-    enum class State {
-        Start,
-        Object,
-        Value,
-        Array,
-        Done
-    };
-
-    JSContext *ctx;
-    JSValue obj;
-
-    State state = State::Start;
-
-    JSAtom obj_prop;
-    JSValue array;
-    uint32_t array_len;
-
-public:
-    JsonToQuickJS(JSContext *ctx, JSValue obj) : ctx(ctx), obj(obj) {}
-
-    ~JsonToQuickJS()
-    {
-        if (state == State::Value) {
-            JS_FreeAtom(ctx, obj_prop);
-        }
-    }
-
-    bool StartObject()
-    {
-        if (state == State::Start) {
-            state = State::Object;
-            return true;
-        } else {
-            LogError("Unexpected object");
-            return false;
-        }
-    }
-    bool EndObject(Size)
-    {
-        if (state == State::Object) {
-            state = State::Done;
-            return true;
-        } else {
-            LogError("Unexpected end of object");
-            return false;
-        }
-    }
-
-    bool StartArray()
-    {
-        if (state == State::Value) {
-            array = JS_NewArray(ctx);
-            HandleValue(array);
-            array_len = 0;
-
-            state = State::Array;
-            return true;
-        } else {
-            LogError("Unexpected array");
-            return false;
-        }
-    }
-    bool EndArray(Size)
-    {
-        if (state == State::Array) {
-            state = State::Object;
-            return true;
-        } else {
-            LogError("Unexpected end of array");
-            return false;
-        }
-    }
-
-    bool Key(const char *key, Size, bool)
-    {
-        if (state == State::Object) {
-            obj_prop = JS_NewAtom(ctx, key);
-            state = State::Value;
-
-            return true;
-        } else {
-            LogError("Unexpected key");
-            return false;
-        }
-    }
-
-    bool Null() { return HandleValue(JS_NULL); }
-    bool Bool(bool b) { return HandleValue(b ? JS_TRUE : JS_FALSE); }
-    bool Int(int i) { return HandleValue(JS_NewInt32(ctx, i)); }
-    bool Uint(unsigned int u) { return HandleValue(JS_NewInt64(ctx, u)); }
-    bool Int64(int64_t i) { return HandleValue(JS_NewBigInt64(ctx, i)); }
-    bool Uint64(uint64_t u) { return HandleValue(JS_NewBigUint64(ctx, u)); }
-    bool Double(double d) { return HandleValue(JS_NewFloat64(ctx, d)); }
-    bool String(const char *str, Size len, bool)
-        { return HandleValue(JS_NewStringLen(ctx, str, (size_t)len)); }
-
-    bool RawNumber(const char *, Size, bool) { RG_UNREACHABLE(); }
-
-private:
-    bool HandleValue(JSValue value)
-    {
-        if (state == State::Value) {
-            JS_SetProperty(ctx, obj, obj_prop, value);
-            JS_FreeAtom(ctx, obj_prop);
-
-            state = State::Object;
-            return true;
-        } else if (state == State::Array) {
-            JS_SetPropertyUint32(ctx, array, array_len++, value);
-            return true;
-        } else {
-            LogError("Unexpected value");
-            JS_FreeValue(ctx, value);
-
-            return false;
-        }
-    }
-};
-
-// This function does not try to deal with null/undefined values
+// This functions does not try to deal with null/undefined values
 static int ConsumeValueInt(JSContext *ctx, JSValue value)
 {
     RG_DEFER { JS_FreeValue(ctx, value); };
@@ -169,43 +49,205 @@ ScriptPort::~ScriptPort()
     }
 }
 
-bool ScriptPort::ParseValues(StreamReader *st, ScriptHandle *out_handle)
+// XXX: Ugly memory behaviour, aud se actual JS exceptions
+static JSValue ReadCode(JSContext *ctx, JSValueConst, int argc, JSValueConst *argv)
 {
+    BlockAllocator temp_alloc;
+
+    const char *page = JS_ToCString(ctx, argv[0]);
+    if (!page)
+        return JS_EXCEPTION;
+    RG_DEFER { JS_FreeCString(ctx, page); };
+
+    if (PathIsAbsolute(page) || PathContainsDotDot(page)) {
+        LogError("Unsafe page name '%1'", page);
+        return JS_NULL;
+    }
+
+    const char *filename = Fmt(&temp_alloc, "%1%/pages%/%2.js",
+                               goupile_config.files_directory, page).ptr;
+
+    // Load page code
+    HeapArray<char> code;
+    if (ReadFile(filename, goupile_config.max_file_size, &code) < 0) {
+        LogError("Cannot load page '%1'", page);
+        return JS_NULL;
+    }
+
+    return JS_NewStringLen(ctx, code.ptr, (size_t)code.len);
+}
+
+bool ScriptPort::ParseFragments(StreamReader *st, ScriptHandle *out_handle)
+{
+    BlockAllocator temp_alloc;
+
     // Reinitialize (just in case)
     out_handle->~ScriptHandle();
 
-    JSValue values = JS_NewObject(ctx);
-    RG_DEFER_N(out_guard) { JS_FreeValue(ctx, values); };
+    json_Parser parser(st, &temp_alloc);
 
-    JsonToQuickJS converter(ctx, values);
-    if (!json_Parse(st, &converter))
+    JSValue fragments = JS_NewArray(ctx);
+    uint32_t fragments_len = 0;
+    RG_DEFER_N(out_guard) { JS_FreeValue(ctx, fragments); };
+
+    parser.ParseArray();
+    while (parser.InArray()) {
+        const char *mtime = nullptr;
+        const char *page = nullptr;
+        bool deletion = false;
+
+        JSValue frag = JS_NewObject(ctx);
+        JSValue values = JS_NewObject(ctx);
+        JS_SetPropertyStr(ctx, frag, "values", values);
+        JS_SetPropertyUint32(ctx, fragments, fragments_len++, frag);
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            const char *key = nullptr;
+            parser.ParseKey(&key);
+
+            if (TestStr(key, "mtime")) {
+                parser.ParseString(&mtime);
+            } else if (TestStr(key, "page")) {
+                if (parser.PeekToken() == json_TokenType::Null) {
+                    parser.ParseNull();
+                    deletion = true;
+                } else {
+                    parser.ParseString(&page);
+                    deletion = false;
+                }
+            } else if (TestStr(key, "values")) {
+                parser.ParseObject();
+                while (parser.InObject()) {
+                    const char *obj_key = nullptr;
+                    parser.ParseKey(&obj_key);
+
+                    JSAtom obj_prop = JS_NewAtom(ctx, obj_key);
+                    RG_DEFER { JS_FreeAtom(ctx, obj_prop); };
+
+                    switch (parser.PeekToken()) {
+                        case json_TokenType::Null: {
+                            parser.ParseNull();
+                            JS_SetProperty(ctx, values, obj_prop, JS_NULL);
+                        } break;
+                        case json_TokenType::Bool: {
+                            bool b = false;
+                            parser.ParseBool(&b);
+
+                            JS_SetProperty(ctx, values, obj_prop, b ? JS_TRUE : JS_FALSE);
+                        } break;
+                        case json_TokenType::Integer: {
+                            int64_t i = 0;
+                            parser.ParseInteger(&i);
+
+                            if (i >= INT_MIN || i <= INT_MAX) {
+                                JS_SetProperty(ctx, values, obj_prop, JS_NewInt32(ctx, (int32_t)i));
+                            } else {
+                                JS_SetProperty(ctx, values, obj_prop, JS_NewBigInt64(ctx, i));
+                            }
+                        } break;
+                        case json_TokenType::Double: {
+                            double d = 0.0;
+                            parser.ParseDouble(&d);
+
+                            JS_SetProperty(ctx, values, obj_prop, JS_NewFloat64(ctx, d));
+                        } break;
+                        case json_TokenType::String: {
+                            Span<const char> str;
+                            parser.ParseString(&str);
+
+                            JS_SetProperty(ctx, values, obj_prop, JS_NewStringLen(ctx, str.ptr, (size_t)str.len));
+                        } break;
+
+                        case json_TokenType::StartArray: {
+                            JSValue array = JS_NewArray(ctx);
+                            uint32_t len = 0;
+
+                            JS_SetProperty(ctx, values, obj_prop, array);
+
+                            parser.ParseArray();
+                            while (parser.InArray()) {
+                                switch (parser.PeekToken()) {
+                                    case json_TokenType::Null: {
+                                        parser.ParseNull();
+                                        JS_SetPropertyUint32(ctx, array, len++, JS_NULL);
+                                    } break;
+                                    case json_TokenType::Bool: {
+                                        bool b = false;
+                                        parser.ParseBool(&b);
+
+                                        JS_SetPropertyUint32(ctx, array, len++, b ? JS_TRUE : JS_FALSE);
+                                    } break;
+                                    case json_TokenType::Integer: {
+                                        int64_t i = 0;
+                                        parser.ParseInteger(&i);
+
+                                        if (i >= INT_MIN || i <= INT_MAX) {
+                                            JS_SetPropertyUint32(ctx, array, len++, JS_NewInt32(ctx, (int32_t)i));
+                                        } else {
+                                            JS_SetPropertyUint32(ctx, array, len++, JS_NewBigInt64(ctx, i));
+                                        }
+                                    } break;
+                                    case json_TokenType::Double: {
+                                        double d = 0.0;
+                                        parser.ParseDouble(&d);
+
+                                        JS_SetPropertyUint32(ctx, array, len++, JS_NewFloat64(ctx, d));
+                                    } break;
+                                    case json_TokenType::String: {
+                                        Span<const char> str;
+                                        parser.ParseString(&str);
+
+                                        JS_SetPropertyUint32(ctx, array, len++, JS_NewStringLen(ctx, str.ptr, (size_t)str.len));
+                                    } break;
+
+                                    default: {
+                                        LogError("Unexpected token type '%1'", json_TokenTypeNames[(int)parser.PeekToken()]);
+                                        return false;
+                                    } break;
+                                }
+                            }
+                        } break;
+
+                        default: {
+                            LogError("Unexpected token type '%1'", json_TokenTypeNames[(int)parser.PeekToken()]);
+                            return false;
+                        } break;
+                    }
+                }
+            } else {
+                LogError("Unknown key '%1' in fragment object", key);
+                return false;
+            }
+        }
+
+        if (((!page || !page[0]) && !deletion) || !mtime || !mtime[0]) {
+            LogError("Missing page or mtime attribute");
+            return false;
+        }
+
+        JS_SetPropertyStr(ctx, frag, "page", !deletion ? JS_NewString(ctx, page) : JS_NULL);
+        JS_SetPropertyStr(ctx, frag, "mtime", JS_NewString(ctx, mtime));
+    }
+    if (!parser.IsValid())
         return false;
 
     out_handle->ctx = ctx;
-    out_handle->value = values;
+    out_handle->value = fragments;
 
     out_guard.Disable();
     return true;
 }
 
 // XXX: Detect errors (such as allocation failures) in calls to QuickJS
-bool ScriptPort::RunRecord(Span<const char> script, const ScriptHandle &values, ScriptRecord *out_record)
+bool ScriptPort::RunRecord(const ScriptHandle &handle, HeapArray<ScriptFragment> *out_fragments)
 {
-    // Reinitialize (just in case)
-    out_record->~ScriptRecord();
+    JSValue arg = JS_DupValue(ctx, handle.value);
+    RG_DEFER { JS_FreeValue(ctx, arg); };
 
-    JSValue args[2] = {
-        JS_NewStringLen(ctx, script.ptr, script.len),
-        JS_DupValue(ctx, values.value)
-    };
-    RG_DEFER {
-        JS_FreeValue(ctx, args[0]);
-        JS_FreeValue(ctx, args[1]);
-    };
-
-    JSValue ret = JS_Call(ctx, validate_func, JS_UNDEFINED, RG_LEN(args), args);
-    RG_DEFER { JS_FreeValue(ctx, ret); };
-    if (JS_IsException(ret)) {
+    JSValue fragments = JS_Call(ctx, validate_func, JS_UNDEFINED, 1, &arg);
+    RG_DEFER { JS_FreeValue(ctx, fragments); };
+    if (JS_IsException(fragments)) {
         const char *msg = ConsumeValueStr(ctx, JS_GetException(ctx)).ptr;
         RG_DEFER { JS_FreeCString(ctx, msg); };
 
@@ -213,20 +255,35 @@ bool ScriptPort::RunRecord(Span<const char> script, const ScriptHandle &values, 
         return false;
     }
 
-    // Record values (as JSON string) and errors
-    out_record->json = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, ret, "json"));
-    out_record->errors = ConsumeValueInt(ctx, JS_GetPropertyStr(ctx, ret, "errors"));
+    int fragments_len = ConsumeValueInt(ctx, JS_GetPropertyStr(ctx, fragments, "length"));
 
-    // Variables
-    {
-        JSValue variables = JS_GetPropertyStr(ctx, ret, "variables");
-        RG_DEFER { JS_FreeValue(ctx, variables); };
+    for (int i = 0; i< fragments_len; i++) {
+        JSValue frag = JS_GetPropertyUint32(ctx, fragments, i);
+        RG_DEFER { JS_FreeValue(ctx, frag); };
 
-        int length = ConsumeValueInt(ctx, JS_GetPropertyStr(ctx, variables, "length"));
+        ScriptFragment *frag2 = out_fragments->AppendDefault();
+        frag2->ctx = ctx;
 
-        for (int i = 0; i < length; i++) {
-            const char *key = ConsumeValueStr(ctx, JS_GetPropertyUint32(ctx, variables, i)).ptr;
-            out_record->variables.Append(key);
+        frag2->mtime = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, frag, "mtime")).ptr;
+        frag2->page = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, frag, "page")).ptr;
+        frag2->values = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, frag, "values"));
+        frag2->errors = ConsumeValueInt(ctx, JS_GetPropertyStr(ctx, frag, "errors"));
+
+        JSValue columns = JS_GetPropertyStr(ctx, frag, "columns");
+        RG_DEFER { JS_FreeValue(ctx, columns); };
+
+        if (!JS_IsNull(columns) && !JS_IsUndefined(columns)) {
+            int columns_len = ConsumeValueInt(ctx, JS_GetPropertyStr(ctx, columns, "length"));
+
+            for (int j = 0; j < columns_len; j++) {
+                JSValue col = JS_GetPropertyUint32(ctx, columns, j);
+                RG_DEFER { JS_FreeValue(ctx, col); };
+
+                ScriptFragment::Column *col2 = frag2->columns.AppendDefault();
+
+                col2->key = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, col, "key")).ptr;
+                col2->prop = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, col, "prop")).ptr;
+            }
         }
     }
 
@@ -263,7 +320,8 @@ void InitPorts()
             JS_FreeValue(port->ctx, global);
         };
 
-        port->validate_func = JS_GetPropertyStr(port->ctx, server, "validateRecord");
+        JS_SetPropertyStr(port->ctx, server, "readCode", JS_NewCFunction(port->ctx, ReadCode, "readCode", 1));
+        port->validate_func = JS_GetPropertyStr(port->ctx, server, "validateFragments");
 
         js_idle_ports.Append(port);
     }

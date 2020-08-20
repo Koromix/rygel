@@ -32,7 +32,7 @@ DatabaseFile = database.db
 )";
 
 static const char *const SchemaSQL = R"(
-CREATE TABLE users (
+CREATE TABLE usr_users (
     username TEXT NOT NULL,
     password_hash TEXT NOT NULL,
 
@@ -40,55 +40,49 @@ CREATE TABLE users (
     new INTEGER CHECK(new IN (0, 1)) NOT NULL,
     edit INTEGER CHECK(edit IN (0, 1)) NOT NULL
 );
-CREATE UNIQUE INDEX users_u ON users (username);
+CREATE UNIQUE INDEX usr_users_u ON usr_users (username);
 
-CREATE TABLE users_tokens (
+CREATE TABLE usr_tokens (
     token TEXT NOT NULL,
 
     username TEXT NOT NULL,
     login_time INTEGER NOT NULL
 );
-CREATE UNIQUE INDEX users_tokens_t ON users_tokens (token);
+CREATE UNIQUE INDEX usr_tokens_t ON usr_tokens (token);
 
-CREATE TABLE files (
-    tag TEXT NOT NULL,
-    path TEXT NOT NULL,
-    size INTEGER NOT NULL,
-    sha256 TEXT NOT NULL,
-    data BLOB NOT NULL
-);
-CREATE UNIQUE INDEX files_tp ON files (tag, path);
-
-CREATE TABLE records (
+CREATE TABLE rec_entries (
+    table_name TEXT NOT NULL,
     id TEXT NOT NULL,
-    form TEXT NOT NULL,
-    sequence INTEGER NOT NULL,
-    data TEXT NOT NULL
+    sequence INTEGER NOT NULL
 );
-CREATE UNIQUE INDEX records_i ON records (id);
-CREATE INDEX records_f ON records (form);
+CREATE UNIQUE INDEX rec_entries_ti ON rec_entries (table_name, id);
 
-CREATE TABLE records_complete (
-    form TEXT NOT NULL,
+CREATE TABLE rec_fragments (
+    table_name TEXT NOT NULL,
+    id TEXT NOT NULL,
+    page TEXT,
+    username TEXT NOT NULL,
+    mtime TEXT NOT NULL,
+    complete INTEGER CHECK(complete IN (0, 1)) NOT NULL,
+    json TEXT
+);
+CREATE INDEX rec_fragments_tip ON rec_fragments(table_name, id, page);
+
+CREATE TABLE rec_columns (
+    table_name TEXT NOT NULL,
     page TEXT NOT NULL,
-    complete INTEGER CHECK(complete IN (0, 1)) NOT NULL
-);
-CREATE UNIQUE INDEX records_complete_fp ON records_complete(form, page);
-
-CREATE TABLE records_variables (
-    form TEXT NOT NULL,
     key TEXT NOT NULL,
-    page TEXT NOT NULL,
+    prop TEXT,
     before TEXT,
     after TEXT
 );
-CREATE UNIQUE INDEX records_variables_fk ON records_variables (form, key);
+CREATE UNIQUE INDEX rec_columns_tpkp ON rec_columns (table_name, page, key, prop);
 
-CREATE TABLE records_sequences (
-    form TEXT NOT NULL,
+CREATE TABLE rec_sequences (
+    table_name TEXT NOT NULL,
     sequence INTEGER NOT NULL
 );
-CREATE UNIQUE INDEX records_sequences_f ON records_sequences (form);
+CREATE UNIQUE INDEX rec_sequences_t ON rec_sequences (table_name);
 
 CREATE TABLE sched_resources (
     schedule TEXT NOT NULL,
@@ -265,7 +259,7 @@ Options:
             return 1;
         }
 
-        if (!database.Run("INSERT INTO users (username, password_hash, develop, new, edit) VALUES (?, ?, 1, 1, 1)",
+        if (!database.Run("INSERT INTO usr_users (username, password_hash, develop, new, edit) VALUES (?, ?, 1, 1, 1)",
                           default_username, hash))
             return 1;
     }
