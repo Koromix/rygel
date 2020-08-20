@@ -7,6 +7,7 @@ let app = null;
 let nav = null;
 let vfs = null;
 let vrec = null;
+let user = null;
 
 let goupile = new function() {
     let self = this;
@@ -42,6 +43,7 @@ let goupile = new function() {
             let db = await openDatabase();
             vfs = new VirtualFS(db);
             vrec = new VirtualRecords(db);
+            user = new UserManager(db);
 
             if (navigator.serviceWorker) {
                 navigator.serviceWorker.register(`${env.base_url}sw.pk.js`);
@@ -53,7 +55,11 @@ let goupile = new function() {
             }
 
             nav = new ApplicationNavigator();
+
+            await user.fetchProfile();
             await self.initMain();
+
+            setTimeout(checkServer, 10000);
         } finally {
             document.querySelector('#gp_all').classList.remove('busy');
         }
@@ -96,7 +102,7 @@ let goupile = new function() {
 
     async function openDatabase() {
         let db_name = `goupile+${env.app_key}`;
-        let db = await idb.open(db_name, 3, (db, old_version) => {
+        let db = await idb.open(db_name, 4, (db, old_version) => {
             switch (old_version) {
                 // See sw.js for why we need to use version 2 at a minimum.
                 // TLDR: IndexedDB sucks.
@@ -115,6 +121,11 @@ let goupile = new function() {
                     db.deleteStore('rec_variables');
                     db.createStore('rec_columns', {keyPath: 'key'});
                 } // fallthrough
+
+                case 3: {
+                    db.createStore('usr_offline', {keyPath: 'username'});
+                    db.createStore('usr_profiles', {keyPath: 'username'});
+                } // fallthrough
             }
         });
 
@@ -132,11 +143,8 @@ let goupile = new function() {
 
     // Can be launched multiple times (e.g. when main.js is edited)
     this.initMain = async function(code = undefined) {
-        if (ping_timer != null) {
-            clearTimeout(ping_timer);
-            ping_timer = null;
-        }
-        await checkServer();
+        if (user.testCookies())
+            await user.fetchProfile();
 
         if (self.isConnected() || env.allow_guests) {
             try {
@@ -269,7 +277,7 @@ let goupile = new function() {
                 }
 
                 // Restart application after session changes
-                if (await user.testCookies()) {
+                if (user.testCookies()) {
                     self.initMain();
                     return;
                 }
@@ -355,16 +363,15 @@ let goupile = new function() {
 
     async function checkServer() {
         try {
-            await user.fetchProfile();
+            await user.fetchProfile(true);
             net.setOnline(true);
         } catch (err) {
             net.setOnline(false);
         } finally {
-            if (ping_timer != null)
-                clearTimeout(ping_timer);
-
             let delay = (!net.isOnline() || env.use_offline) ? 30000 : 300000;
 
+            if (ping_timer != null)
+                clearTimeout(ping_timer);
             ping_timer = setTimeout(async () => {
                 let prev_online = net.isOnline();
 

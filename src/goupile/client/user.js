@@ -2,11 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let user = new function() {
+function UserManager(db) {
     let self = this;
 
     let profile = {};
-    let session_rnd = null;
+    let session_rnd;
 
     this.runLogin = function() {
         let state = new PageState;
@@ -62,6 +62,15 @@ let user = new function() {
         let entry = new log.Entry;
 
         entry.progress('Connexion en cours');
+
+        if (net.isOnline()) {
+            return await loginOnline(username, password, entry);
+        } else if (env.use_offline) {
+            return await loginOffline(username, password, entry);
+        }
+    };
+
+    async function loginOnline(username, password, entry) {
         try {
             let response = await net.fetch(`${env.base_url}api/login.json`, {
                 method: 'POST',
@@ -72,6 +81,16 @@ let user = new function() {
             });
 
             if (response.ok) {
+                let json = await response.json();
+
+                if (env.use_offline) {
+                    await saveOfflineToken(username, password, json.token);
+                    sessionStorage.setItem('offline_username', username);
+                }
+
+                profile = json.profile;
+                session_rnd = util.getCookie('session_rnd');
+
                 // Emergency unlocking
                 deleteLock();
 
@@ -89,56 +108,168 @@ let user = new function() {
             entry.error(err);
             return false;
         }
-    };
+    }
+
+    async function saveOfflineToken(username, password, token) {
+        let salt;
+        {
+            let digits = '0123456789ABCDEF';
+
+            salt = window.crypto.getRandomValues(new Uint8Array(32));
+            salt = Array.from(salt).map(value => digits[Math.floor(value / 16)] + digits[value % 16]);
+            salt = salt.join('');
+        }
+
+        let offline = {
+            username: username,
+            password_salt: salt,
+            password_sha256: Sha256(salt + password),
+            token: token
+        };
+
+        await db.save('usr_offline', offline);
+    }
+
+    async function loginOffline(username, password, entry) {
+        try {
+            let [offline, new_profile] = await Promise.all([
+                db.load('usr_offline', username),
+                db.load('usr_profiles', username)
+            ]);
+
+            if (offline == null || new_profile == null) {
+                entry.error('Ce compte n\'est pas disponible dans le cache hors ligne');
+                return false;
+            }
+
+            let password_sha256 = Sha256(offline.password_salt + password);
+            if (password_sha256 !== offline.password_sha256) {
+                entry.error('Ce compte n\'est pas disponible dans le cache hors ligne');
+                return false;
+            }
+
+            profile = new_profile;
+            sessionStorage.setItem('offline_username', username);
+
+            entry.success('Connexion réussie (hors ligne)');
+            await goupile.initMain();
+
+            return true;
+        } catch (err) {
+            entry.error(err);
+            return false;
+        }
+    }
 
     this.logout = async function() {
         let entry = new log.Entry;
 
         entry.progress('Déconnexion en cours');
         try {
-            let response = await net.fetch(`${env.base_url}api/logout.json`, {method: 'POST'});
+            if (env.use_offline) {
+                let username = sessionStorage.getItem('offline_username');
 
-            if (response.ok) {
-                entry.success('Déconnexion réussie');
-                await goupile.initMain();
+                if (username != null) {
+                    await Promise.all([
+                        db.delete('usr_offline', username),
+                        db.delete('usr_profiles', username)
+                    ]);
+                }
 
-                return true;
-            } else {
-                let msg = await response.text();
-                entry.error(msg);
-
-                return false;
+                sessionStorage.removeItem('offline_username');
             }
+
+            if (net.isOnline()) {
+                let response = await net.fetch(`${env.base_url}api/logout.json`, {method: 'POST'});
+
+                if (!response.ok) {
+                    let msg = await response.text();
+                    entry.error(msg);
+
+                    return false;
+                }
+            } else {
+                // XXX: Detect this on the server!
+                util.deleteCookie('session_rnd', env.base_url);
+            }
+
+            entry.success('Déconnexion réussie');
+            await goupile.initMain();
+
+            return true;
         } catch (err) {
             entry.error(err);
             return false;
         }
     };
 
-    this.fetchProfile = async function() {
-        let new_rnd = util.getCookie('session_rnd') || 0;
-        let changed = (new_rnd != session_rnd);
+    this.fetchProfile = async function(force_online = false) {
+        if (net.isOnline() || force_online) {
+            // Try online first
+            let response = await net.fetch(`${env.base_url}api/profile.json`);
+            if (response.ok) {
+                let new_profile = await response.json();
 
-        profile = {};
-        session_rnd = 0;
+                if (new_profile.username != null) {
+                    profile = new_profile;
+                    session_rnd = util.getCookie('session_rnd');
 
-        let response = await net.fetch(util.pasteURL(`${env.base_url}api/profile.json`, {_dc: new_rnd || null}));
+                    if (env.use_offline)
+                        await db.save('usr_profiles', profile);
 
-        if (response.ok) {
-            profile = await response.json();
-            session_rnd = new_rnd;
+                    return;
+                }
+            }
+
+            // It failed, but in offline mode we can try to reconnect using offline token (if any)
+            if (env.use_offline) {
+                let username = sessionStorage.getItem('offline_username');
+
+                if (username != null) {
+                    let offline = await db.load('usr_offline', username);
+
+                    if (offline != null) {
+                        let response = await net.fetch(`${env.base_url}api/reconnect.json`, {
+                            method: 'POST',
+                            body: new URLSearchParams({token: offline.token})
+                        });
+
+                        if (response.ok) {
+                            profile = await response.json();
+                            session_rnd = util.getCookie('session_rnd');
+
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // Well, too bad. Erase all traces.
+            profile = {};
+            session_rnd = undefined;
+            util.deleteCookie('session_rnd', env.base_url);
+            sessionStorage.removeItem('offline_username');
         } else {
-            // The request has failed and could have deleted the session_rnd cookie
-            session_rnd = util.getCookie('session_rnd');
+            let username = sessionStorage.getItem('offline_username');
+
+            if (username != null && profile.username !== username) {
+                profile = await db.load('usr_profiles', username);
+                if (profile == null)
+                    profile = {};
+            }
         }
     };
 
     this.testCookies = function() {
-        let new_rnd = util.getCookie('session_rnd') || 0;
-        return new_rnd !== session_rnd;
-    }
+        if (net.isOnline()) {
+            let new_rnd = util.getCookie('session_rnd');
+            return new_rnd !== session_rnd;
+        } else {
+            return false;
+        }
+    };
 
-    this.isConnected = function() { return !!session_rnd; };
+    this.isConnected = function() { return !!profile.username; };
     this.getUserName = function() { return profile.username; };
     this.hasPermission = function(perm) { return profile.permissions && !!profile.permissions[perm]; };
 

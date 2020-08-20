@@ -22,7 +22,59 @@ RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http
     return session;
 }
 
-static void CreateSessionFromRow(const http_RequestInfo &request, http_IO *io, sq_Statement &stmt)
+static Size ConvertToJsName(const char *name, Span<char> out_buf)
+{
+    // This is used for static strings (e.g. permission names), and the Span<char>
+    // output buffer will abort debug builds on out-of-bounds access.
+
+    if (name[0]) {
+        out_buf[0] = LowerAscii(name[0]);
+
+        Size j = 1;
+        for (Size i = 1; name[i]; i++) {
+            if (name[i] >= 'A' && name[i] <= 'Z') {
+                out_buf[j++] = '_';
+                out_buf[j++] = LowerAscii(name[i]);
+            } else {
+                out_buf[j++] = name[i];
+            }
+        }
+        out_buf[j] = 0;
+
+        return j;
+    } else {
+        out_buf[0] = 0;
+        return 0;
+    }
+}
+
+static void WriteProfileJson(const Session *session, json_Writer *out_json)
+{
+    out_json->StartObject();
+    if (session) {
+        out_json->Key("username"); out_json->String(session->username);
+        out_json->Key("permissions"); out_json->StartObject();
+        for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
+            char js_name[64];
+            ConvertToJsName(UserPermissionNames[i], js_name);
+
+            out_json->Key(js_name); out_json->Bool(session->permissions & (1 << i));
+        }
+        out_json->EndObject();
+    }
+    out_json->EndObject();
+}
+
+void HandleProfile(const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+
+    http_JsonPageBuilder json(request.compression_type);
+    WriteProfileJson(session.GetRaw(), &json);
+    json.Finish(io);
+}
+
+static RetainPtr<Session> CreateSessionFromRow(const http_RequestInfo &request, http_IO *io, sq_Statement &stmt)
 {
     const char *username = (const char *)sqlite3_column_text(stmt, 0);
 
@@ -36,6 +88,8 @@ static void CreateSessionFromRow(const http_RequestInfo &request, http_IO *io, s
 
     RetainPtr<Session> ptr(session, [](Session *session) { Allocator::Release(nullptr, session, -1); });
     sessions.Open(request, io, ptr);
+
+    return ptr;
 }
 
 static void PruneStaleTokens()
@@ -101,9 +155,15 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
                 if (!goupile_db.Run("INSERT INTO users_tokens (token, username, login_time) VALUES (?, ?, ?)",
                                     token, username, login_time))
                     return;
-                CreateSessionFromRow(request, io, stmt);
 
-                io->AttachText(200, token);
+                RetainPtr<Session> session = CreateSessionFromRow(request, io, stmt);
+
+                http_JsonPageBuilder json(request.compression_type);
+                json.StartObject();
+                json.Key("token"); json.String(token);
+                json.Key("profile"); WriteProfileJson(session.GetRaw(), &json);
+                json.EndObject();
+                json.Finish(io);
             }
         } else if (stmt.IsValid()) {
             // Enforce constant delay if authentification fails
@@ -150,8 +210,11 @@ void HandleReconnect(const http_RequestInfo &request, http_IO *io)
         sqlite3_bind_int64(stmt, 2, limit);
 
         if (stmt.Next()) {
-            CreateSessionFromRow(request, io, stmt);
-            io->AttachText(200, token);
+            RetainPtr<Session> session = CreateSessionFromRow(request, io, stmt);
+
+            http_JsonPageBuilder json(request.compression_type);
+            WriteProfileJson(session.GetRaw(), &json);
+            json.Finish(io);
         } else if (stmt.IsValid()) {
             // Enforce constant delay if authentification fails
             int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
