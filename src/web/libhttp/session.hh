@@ -16,6 +16,7 @@ class http_SessionManager {
 
     struct Session {
         char session_key[129];
+        char session_rnd[33];
         char user_agent[134];
 
         int64_t login_time;

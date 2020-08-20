@@ -63,11 +63,12 @@ http_SessionManager::Session *
     }
 
     // Create public randomized key (for use in session-specific URLs)
-    char session_rnd[33];
     {
+        RG_STATIC_ASSERT(RG_SIZE(session->session_rnd) == 33);
+
         uint64_t buf[2];
         randombytes_buf(&buf, RG_SIZE(buf));
-        Fmt(session_rnd, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
+        Fmt(session->session_rnd, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
     }
 
     // Fill extra security values
@@ -75,7 +76,7 @@ http_SessionManager::Session *
 
     // Set session cookies
     io->AddCookieHeader(request.base_url, "session_key", session->session_key, true);
-    io->AddCookieHeader(request.base_url, "session_rnd", session_rnd, false);
+    io->AddCookieHeader(request.base_url, "session_rnd", session->session_rnd, false);
 
     return session;
 }
@@ -140,10 +141,11 @@ http_SessionManager::Session *
     int64_t now = GetMonotonicTime();
 
     const char *session_key = request.GetCookieValue("session_key");
+    const char *session_rnd = request.GetCookieValue("session_rnd");
     const char *user_agent = request.GetHeaderValue("User-Agent");
-    if (!session_key || !user_agent) {
+    if (!session_key || !session_rnd || !user_agent) {
         if (out_mismatch) {
-            *out_mismatch = session_key;
+            *out_mismatch = session_key || session_rnd;
         }
         return nullptr;
     }
@@ -154,8 +156,9 @@ http_SessionManager::Session *
     // used IPv6, or vice versa.
     Session *session = sessions.Find(session_key);
     if (!session ||
+            !TestStr(session->session_rnd, session_rnd) ||
 #ifdef NDEBUG
-            strncmp(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1) ||
+            strncmp(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1) != 0 ||
 #endif
             now - session->login_time >= MaxSessionDelay ||
             now - session->register_time >= MaxKeyDelay) {
