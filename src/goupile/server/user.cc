@@ -170,7 +170,7 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
             int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
             WaitForDelay(safety_delay);
 
-            LogError("Invalid token");
+            LogError("Invalid username or password");
             io->AttachError(403);
         } else {
             LogError("SQLite Error: %1", sqlite3_errmsg(goupile_db));
@@ -220,7 +220,7 @@ void HandleReconnect(const http_RequestInfo &request, http_IO *io)
             int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
             WaitForDelay(safety_delay);
 
-            LogError("Incorrect username or password");
+            LogError("Incorrect token");
             io->AttachError(403);
         } else {
             LogError("SQLite Error: %1", sqlite3_errmsg(goupile_db));
