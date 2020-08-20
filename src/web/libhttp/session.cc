@@ -10,8 +10,8 @@ namespace RG {
 
 static const int64_t PruneDelay = 60 * 60000;
 static const int64_t MaxSessionDelay = 1440 * 60000;
-static const int64_t MaxKeyDelay = 120 * 60000;
-static const int64_t RegenerateDelay = 15 * 60000;
+static const int64_t MaxKeyDelay = 30 * 60000;
+static const int64_t RegenerateDelay = 10 * 60000;
 
 void http_SessionManager::Open2(const http_RequestInfo &request, http_IO *io, RetainPtr<RetainObject> udata)
 {
