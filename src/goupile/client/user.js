@@ -99,7 +99,7 @@ function UserManager(db) {
 
                 return true;
             } else {
-                let msg = await response.text();
+                let msg = (await response.text()).trim();
                 entry.error(msg);
 
                 return false;
@@ -183,7 +183,7 @@ function UserManager(db) {
                 let response = await net.fetch(`${env.base_url}api/logout.json`, {method: 'POST'});
 
                 if (!response.ok) {
-                    let msg = await response.text();
+                    let msg = (await response.text()).trim();
                     entry.error(msg);
 
                     return false;
