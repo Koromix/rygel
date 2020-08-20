@@ -157,7 +157,7 @@ let goupile = new function() {
                     code = await readCode('/files/main.js');
 
                 let func = Function('util', 'app', 'shared', 'go', 'route', code);
-                func(util, app_builder, new_app.shared, nav.go, new_app.route);
+                func(util, app_builder, new_app.shared, nav.go, nav.route);
 
                 app = new_app;
             } catch (err) {
