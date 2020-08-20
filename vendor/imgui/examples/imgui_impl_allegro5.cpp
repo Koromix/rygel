@@ -15,6 +15,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2020-08-10: Inputs: Fixed horizontal mouse wheel direction.
 //  2019-12-05: Inputs: Added support for ImGuiMouseCursor_NotAllowed mouse cursor.
 //  2019-07-21: Inputs: Added mapping for ImGuiKey_KeyPadEnter.
 //  2019-05-11: Inputs: Don't filter character value from ALLEGRO_EVENT_KEY_CHAR before calling AddInputCharacter().
@@ -174,7 +175,7 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
 bool ImGui_ImplAllegro5_CreateDeviceObjects()
 {
     // Build texture atlas
-    ImGuiIO &io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO();
     unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
@@ -182,7 +183,7 @@ bool ImGui_ImplAllegro5_CreateDeviceObjects()
     // Create texture
     int flags = al_get_new_bitmap_flags();
     int fmt = al_get_new_bitmap_format();
-    al_set_new_bitmap_flags(ALLEGRO_MEMORY_BITMAP|ALLEGRO_MIN_LINEAR|ALLEGRO_MAG_LINEAR);
+    al_set_new_bitmap_flags(ALLEGRO_MEMORY_BITMAP | ALLEGRO_MIN_LINEAR | ALLEGRO_MAG_LINEAR);
     al_set_new_bitmap_format(ALLEGRO_PIXEL_FORMAT_ABGR_8888_LE);
     ALLEGRO_BITMAP* img = al_create_bitmap(width, height);
     al_set_new_bitmap_flags(flags);
@@ -190,13 +191,13 @@ bool ImGui_ImplAllegro5_CreateDeviceObjects()
     if (!img)
         return false;
 
-    ALLEGRO_LOCKED_REGION *locked_img = al_lock_bitmap(img, al_get_bitmap_format(img), ALLEGRO_LOCK_WRITEONLY);
+    ALLEGRO_LOCKED_REGION* locked_img = al_lock_bitmap(img, al_get_bitmap_format(img), ALLEGRO_LOCK_WRITEONLY);
     if (!locked_img)
     {
         al_destroy_bitmap(img);
         return false;
     }
-    memcpy(locked_img->data, pixels, sizeof(int)*width*height);
+    memcpy(locked_img->data, pixels, sizeof(int) * width * height);
     al_unlock_bitmap(img);
 
     // Convert software texture to hardware texture.
@@ -211,7 +212,7 @@ bool ImGui_ImplAllegro5_CreateDeviceObjects()
 
     // Create an invisible mouse cursor
     // Because al_hide_mouse_cursor() seems to mess up with the actual inputs..
-    ALLEGRO_BITMAP* mouse_cursor = al_create_bitmap(8,8);
+    ALLEGRO_BITMAP* mouse_cursor = al_create_bitmap(8, 8);
     g_MouseCursorInvisible = al_create_mouse_cursor(mouse_cursor, 0, 0);
     al_destroy_bitmap(mouse_cursor);
 
@@ -322,7 +323,7 @@ void ImGui_ImplAllegro5_Shutdown()
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
 // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-bool ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT *ev)
+bool ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT* ev)
 {
     ImGuiIO& io = ImGui::GetIO();
 
@@ -332,7 +333,7 @@ bool ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT *ev)
         if (ev->mouse.display == g_Display)
         {
             io.MouseWheel += ev->mouse.dz;
-            io.MouseWheelH += ev->mouse.dw;
+            io.MouseWheelH -= ev->mouse.dw;
             io.MousePos = ImVec2(ev->mouse.x, ev->mouse.y);
         }
         return true;
@@ -403,7 +404,7 @@ void ImGui_ImplAllegro5_NewFrame()
     if (!g_Texture)
         ImGui_ImplAllegro5_CreateDeviceObjects();
 
-    ImGuiIO &io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO();
 
     // Setup display size (every frame to accommodate for window resizing)
     int w, h;
@@ -413,7 +414,7 @@ void ImGui_ImplAllegro5_NewFrame()
 
     // Setup time step
     double current_time = al_get_time();
-    io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f/60.0f);
+    io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f / 60.0f);
     g_Time = current_time;
 
     // Setup inputs
