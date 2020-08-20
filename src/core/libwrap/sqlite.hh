@@ -32,6 +32,8 @@ public:
     sq_Binding(unsigned short i) : type(Type::Integer) { u.i = i; }
     sq_Binding(int i) : type(Type::Integer) { u.i = i; }
     sq_Binding(unsigned int i) : type(Type::Integer) { u.i = i; }
+    sq_Binding(long i) : type(Type::Integer) { u.i = i; }
+    sq_Binding(long long i) : type(Type::Integer) { u.i = i; }
     sq_Binding(double d) : type(Type::Double) { u.d = d; };
     sq_Binding(const char *str) : type(Type::String) { u.str = str; };
     sq_Binding(Span<const char> str) : type(Type::String) { u.str = str; };

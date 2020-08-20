@@ -43,6 +43,14 @@ CREATE TABLE users (
 );
 CREATE UNIQUE INDEX users_u ON users (username);
 
+CREATE TABLE users_tokens (
+    token TEXT NOT NULL,
+
+    username TEXT NOT NULL,
+    login_time INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX users_tokens_t ON users_tokens (token);
+
 CREATE TABLE files (
     tag TEXT NOT NULL,
     path TEXT NOT NULL,

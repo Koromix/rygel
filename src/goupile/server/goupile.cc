@@ -250,6 +250,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     } else if (TestStr(request.method, "POST")) {
         if (TestStr(request.url, "/api/login.json")) {
             HandleLogin(request, io);
+        } else if (TestStr(request.url, "/api/reconnect.json")) {
+            HandleReconnect(request, io);
         } else if (TestStr(request.url, "/api/logout.json")) {
             HandleLogout(request, io);
         } else {
