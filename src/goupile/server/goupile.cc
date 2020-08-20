@@ -58,7 +58,7 @@ static Size ConvertToJsName(const char *name, Span<char> out_buf)
     }
 }
 
-static void HandleSettings(const http_RequestInfo &request, http_IO *io)
+static void HandleProfile(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
 
@@ -225,8 +225,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         {
             void (*func)(const http_RequestInfo &request, http_IO *io) = nullptr;
 
-            if (TestStr(request.url, "/api/settings.json")) {
-                func = HandleSettings;
+            if (TestStr(request.url, "/api/profile.json")) {
+                func = HandleProfile;
             } else if (TestStr(request.url, "/api/files.json")) {
                 func = HandleFileList;
             } else if (!strncmp(request.url, "/records/", 9)) {

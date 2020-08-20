@@ -19,6 +19,7 @@ let goupile = new function() {
 
     let running = 0;
     let restart = false;
+    let ping_timer;
 
     let left_panel = null;
     let show_overview = true;
@@ -53,12 +54,6 @@ let goupile = new function() {
 
             nav = new ApplicationNavigator();
             await self.initMain();
-
-            // If a run fails and we can run in offline mode, restart it transparently
-            net.changeHandler = online => {
-                if (env.use_offline)
-                    self.go();
-            };
         } finally {
             document.querySelector('#gp_all').classList.remove('busy');
         }
@@ -137,7 +132,11 @@ let goupile = new function() {
 
     // Can be launched multiple times (e.g. when main.js is edited)
     this.initMain = async function(code = undefined) {
-        await user.fetchSettings();
+        if (ping_timer != null) {
+            clearTimeout(ping_timer);
+            ping_timer = null;
+        }
+        await checkServer();
 
         if (self.isConnected() || env.allow_guests) {
             try {
@@ -270,7 +269,7 @@ let goupile = new function() {
                 }
 
                 // Restart application after session changes
-                if (await user.fetchSettings()) {
+                if (await user.testCookies()) {
                     self.initMain();
                     return;
                 }
@@ -353,6 +352,29 @@ let goupile = new function() {
             }
         }
     };
+
+    async function checkServer() {
+        try {
+            await user.fetchProfile();
+            net.setOnline(true);
+        } catch (err) {
+            net.setOnline(false);
+        } finally {
+            if (ping_timer != null)
+                clearTimeout(ping_timer);
+
+            let delay = (!net.isOnline() || env.use_offline) ? 30000 : 300000;
+
+            ping_timer = setTimeout(async () => {
+                let prev_online = net.isOnline();
+
+                await checkServer();
+
+                if (net.isOnline() !== prev_online)
+                    self.go();
+            }, delay);
+        }
+    }
 
     function renderAll() {
         let in_iframe;
@@ -470,20 +492,8 @@ let goupile = new function() {
                 </div>
             ` : ''}
 
-            ${env.use_offline ? html`<button type="button" id="gp_status" class="icon" @click=${toggleStatus} />` : ''}
-            ${!env.use_offline ? html`<div id="gp_status"/>` : ''}
+            <div id="gp_status"/>
         `;
-    }
-
-    async function toggleStatus() {
-        if (net.isOnline()) {
-            net.setPlugged(false);
-        } else {
-            net.setPlugged(true);
-            await user.fetchSettings(true);
-        }
-
-        await self.go();
     }
 
     function toggleLeftPanel(mode) {
@@ -661,10 +671,7 @@ let goupile = new function() {
         let el = document.querySelector('#gp_status');
 
         if (el) {
-            if (!net.isPlugged()) {
-                el.style.backgroundPositionY = 'calc(-142px + 1.2em)';
-                el.title = 'Mode hors-ligne forcé';
-            } else if (net.isOnline()) {
+            if (net.isOnline()) {
                 el.style.backgroundPositionY = 'calc(-54px + 1.2em)';
                 el.title = 'Serveur disponible';
             } else {

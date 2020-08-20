@@ -109,7 +109,7 @@ function VirtualFS(db) {
             } else {
                 file = null;
             }
-        } else if (net.isOnline() || !env.use_offline) {
+        } else if (!env.use_offline) {
             let response = await net.fetch(`${env.base_url}${path.substr(1)}`);
 
             if (response.ok) {
@@ -138,10 +138,8 @@ function VirtualFS(db) {
         return file;
     };
 
-    this.listAll = async function(remote = true) {
-        remote &= net.isOnline() || !env.use_offline;
-
-        let files = await self.status(remote);
+    this.listLocal = async function() {
+        let files = await self.status(false);
 
         files = files.filter(file => file.sha256 || file.remote_sha256);
         files = files.map(file => ({

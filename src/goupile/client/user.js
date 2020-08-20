@@ -5,7 +5,7 @@
 let user = new function() {
     let self = this;
 
-    let settings = {};
+    let profile = {};
     let session_rnd = null;
 
     this.runLogin = function() {
@@ -115,45 +115,32 @@ let user = new function() {
         }
     };
 
-    this.fetchSettings = async function(force = false) {
-        let new_rnd = util.getCookie('session_rnd');
+    this.fetchProfile = async function() {
+        let new_rnd = util.getCookie('session_rnd') || 0;
+        let changed = (new_rnd != session_rnd);
 
-        if (!force) {
-            if (new_rnd == session_rnd) {
-                return false;
-            } else if (new_rnd == null) {
-                settings = {};
-                session_rnd = null;
+        profile = {};
+        session_rnd = 0;
 
-                return true;
-            }
-        }
+        let response = await net.fetch(util.pasteURL(`${env.base_url}api/profile.json`, {_dc: new_rnd || null}));
 
-        if (net.isPlugged() || force) {
-            settings = {};
-            session_rnd = null;
-
-            try {
-                let response = await net.fetch(util.pasteURL(`${env.base_url}api/settings.json`, {_dc: new_rnd}));
-
-                if (response.ok) {
-                    settings = await response.json();
-                    session_rnd = new_rnd;
-                } else {
-                    // The request has failed and could have deleted the session_rnd cookie
-                    session_rnd = util.getCookie('session_rnd');
-                }
-            } catch (err) {
-                // Too bad :)
-            }
-
-            return true;
+        if (response.ok) {
+            profile = await response.json();
+            session_rnd = new_rnd;
+        } else {
+            // The request has failed and could have deleted the session_rnd cookie
+            session_rnd = util.getCookie('session_rnd');
         }
     };
 
+    this.testCookies = function() {
+        let new_rnd = util.getCookie('session_rnd') || 0;
+        return new_rnd !== session_rnd;
+    }
+
     this.isConnected = function() { return !!session_rnd; };
-    this.getUserName = function() { return settings.username; };
-    this.hasPermission = function(perm) { return settings.permissions && !!settings.permissions[perm]; };
+    this.getUserName = function() { return profile.username; };
+    this.hasPermission = function(perm) { return profile.permissions && !!profile.permissions[perm]; };
 
     this.getLockURL = function() {
         let url = localStorage.getItem('lock_url');

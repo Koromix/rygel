@@ -404,7 +404,7 @@ let dev_files = new function() {
             entry.error(err);
         }
 
-        let files2 = await vfs.listAll(false);
+        let files2 = await vfs.listLocal();
         let files2_map = files2.map(file => file.path);
 
         for (let [path, buffer] of editor_buffers) {

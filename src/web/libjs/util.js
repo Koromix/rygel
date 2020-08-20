@@ -537,22 +537,16 @@ let log = new function() {
 let net = new function() {
     let self = this;
 
-    let plugged = true;
     let online = true;
 
     this.changeHandler = online => {};
 
     this.fetch = async function(request, init) {
-        if (!plugged)
-            throw new Error('Cannot perform request in offline mode');
-
         try {
             let response = await fetch(request, init);
-
-            setOnline(true);
             return response;
         } catch (err) {
-            setOnline(false);
+            self.setOnline(false);
             throw new Error('Request failure: network error');
         }
     };
@@ -565,7 +559,7 @@ let net = new function() {
 
             script.onload = e => resolve(script);
             script.onerror = e => {
-                setOnline(false);
+                self.setOnline(false);
                 reject(new Error(`Failed to load '${url}' script`));
             }
 
@@ -573,17 +567,8 @@ let net = new function() {
         });
     };
 
-    function setOnline(online2) {
-        if (online2 !== online) {
-            online = online2;
-            self.changeHandler(online);
-        }
-    }
-
-    this.isPlugged = function() { return plugged; };
-    this.isOnline = function() { return plugged && online; };
-
-    this.setPlugged = function(plug) { plugged = plug; };
+    this.setOnline = function(online2) { online = online2; };
+    this.isOnline = function() { return online; };
 };
 
 // ------------------------------------------------------------------------
