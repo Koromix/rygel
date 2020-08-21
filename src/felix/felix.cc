@@ -11,16 +11,6 @@ int RunPack(Span<const char *> arguments);
 
 int Main(int argc, char **argv)
 {
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: felix <command> [<args>]
-
-Commands:
-    build                        Build C and C++ projects (default)
-    pack                         Pack assets to C source file and other formats
-
-You may be more interested by the build command help, type: felix build --help)");
-    };
-
     // Handle help and version arguments
     if (argc >= 2) {
         if (TestStr(argv[1], "--help") || TestStr(argv[1], "help")) {
@@ -28,8 +18,8 @@ You may be more interested by the build command help, type: felix build --help)"
                 argv[1] = argv[2];
                 argv[2] = const_cast<char *>("--help");
             } else {
-                print_usage(stdout);
-                return 0;
+                const char *args[] = {"--help"};
+                return RunBuild(args);
             }
         } else if (TestStr(argv[1], "--version")) {
             PrintLn("felix %1", FelixVersion);

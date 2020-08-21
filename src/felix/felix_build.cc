@@ -115,47 +115,51 @@ int RunBuild(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: felix build [options] [target...]
-       felix build [options] --run target [arguments...]
+R"(Usage: %!..+felix build [options] [target...]
+       felix build [options] --run target [arguments...]%!0
 
 Options:
-    -C, --config <filename>      Set configuration filename
-                                 (default: FelixBuild.ini)
-    -O, --output <directory>     Set output directory
-                                 (default: bin/<toolchain>)
+    %!..+-C, --config <filename>%!0      Set configuration filename
+                                 %!D..(default: FelixBuild.ini)%!0
+    %!..+-O, --output <directory>%!0     Set output directory
+                                 %!D..(default: bin/<toolchain>)%!0
 
-    -c, --compiler <compiler>    Set compiler, see below
-                                 (default: %1)
-    -m, --mode <mode>            Set build mode, see below
-                                 (default: %2)
-    -e, --environment            Use compiler flags found in environment (CFLAGS, LDFLAGS, etc.)
-        --no_pch                 Disable header precompilation (PCH)
+    %!..+-c, --compiler <compiler>%!0    Set compiler, see below
+                                 %!D..(default: %1)%!0
+    %!..+-m, --mode <mode>%!0            Set build mode, see below
+                                 %!D..(default: %2)%!0
+    %!..+-e, --environment%!0            Use compiler flags found in environment (CFLAGS, LDFLAGS, etc.)
+        %!..+--no_pch%!0                 Disable header precompilation (PCH)
 
-    -j, --jobs <count>           Set maximum number of parallel jobs
-                                 (default: %3)
-        --rebuild                Force rebuild all files
+    %!..+-j, --jobs <count>%!0           Set maximum number of parallel jobs
+                                 %!D..(default: %3)%!0
+        %!..+--rebuild%!0                Force rebuild all files
 
-    -q, --quiet                  Hide felix progress statements
-    -v, --verbose                Show detailed build commands
+    %!..+-q, --quiet%!0                  Hide felix progress statements
+    %!..+-v, --verbose%!0                Show detailed build commands
 
-        --run <target>           Run target after successful build
-                                 (all remaining arguments are passed as-is)
-        --run_here <target>      Same thing, but run from current directory
+        %!..+--run <target>%!0           Run target after successful build
+                                 %!D..(all remaining arguments are passed as-is)%!0
+        %!..+--run_here <target>%!0      Same thing, but run from current directory
 
 Supported compilers:)", build.compiler ? build.compiler->name : "?",
                         CompileModeNames[(int)build.compile_mode], jobs);
 
         for (const Compiler *compiler: Compilers) {
-            PrintLn(fp, "    %1 %2%3",
+            PrintLn(fp, "    %!..+%1%!0 %2%!D..%3%!0",
                     FmtArg(compiler->name).Pad(28), compiler->binary,
                     compiler->Test() ? "" : " [not available in PATH]");
         }
 
         PrintLn(fp, R"(
-Supported compilation modes:)");
-        for (const char *mode_name: CompileModeNames) {
-            PrintLn(fp, "    %1", mode_name);
-        }
+Supported compilation modes: %!..+%1%!0)", FmtSpan(CompileModeNames));
+
+        PrintLn(fp, R"(
+Felix can also run the following special commands:
+    %!..+build%!0                        Build C and C++ projects %!D..(default)%!0
+    %!..+pack%!0                         Pack assets to C source file and other formats
+
+For help about those commands, type: %!..+felix [command] --help%!0)");
     };
 
     // Parse arguments

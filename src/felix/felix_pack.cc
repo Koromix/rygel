@@ -23,36 +23,26 @@ int RunPack(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: felix pack <filename> ...
+R"(Usage: %!..+felix pack <filename> ...%!0
 
 Options:
-    -t, --type <type>            Set output file type
-                                 (default: C)
-    -O, --output_file <file>     Redirect output to file or directory
+    %!..+-t, --type <type>%!0            Set output file type
+                                 %!D..(default: %1)%!0
+    %!..+-O, --output_file <file>%!0     Redirect output to file or directory
 
-    -s, --strip <count>          Strip first count directory components, or 'All'
-                                 (default: All)
-    -c, --compress <type>        Compress data, see below for available types
-                                 (default: %2)
+    %!..+-s, --strip <count>%!0          Strip first count directory components, or 'All'
+                                 %!D..(default: All)%!0
+    %!..+-c, --compress <type>%!0        Compress data, see below for available types
+                                 %!D..(default: %2)%!0
 
-    -M, --merge_file <file>      Load merge rules from file
-    -m, --merge_option <options> Merge options (see below)
+    %!..+-M, --merge_file <file>%!0      Load merge rules from file
+    %!..+-m, --merge_option <options>%!0 Merge options (see below)
 
-Available output types:)", PackModeNames[(int)mode],
-                           CompressionTypeNames[(int)compression_type]);
-        for (const char *gen: PackModeNames) {
-            PrintLn(fp, "    %1", gen);
-        }
-        PrintLn(fp, R"(
-Available compression types:)");
-        for (const char *type: CompressionTypeNames) {
-            PrintLn(fp, "    %1", type);
-        }
-        PrintLn(fp, R"(
-Available merge options:)");
-        for (const char *option: MergeFlagNames) {
-            PrintLn(fp, "    %1", option);
-        }
+Available output types: %!..+%3%!0
+Available compression types: %!..+%4%!0
+Available merge options: %!..+%5%!0)", PackModeNames[(int)mode], CompressionTypeNames[(int)compression_type],
+                               FmtSpan(PackModeNames), FmtSpan(CompressionTypeNames),
+                               FmtSpan(MergeFlagNames));
     };
 
     // Parse arguments
