@@ -73,7 +73,7 @@ Commands:
     };
 
     if (argc < 2) {
-        print_usage(stderr);
+        LogError("No command provided");
         return 1;
     }
 
