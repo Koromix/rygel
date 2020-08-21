@@ -23,7 +23,7 @@ public:
         LogEntry entry = {};
 
         entry.level = level;
-        entry.ctx = DuplicateString(ctx, &str_alloc).ptr;
+        entry.ctx = ctx ? DuplicateString(ctx, &str_alloc).ptr : nullptr;
         entry.msg = DuplicateString(msg, &str_alloc).ptr;
 
         entries.Append(entry);
