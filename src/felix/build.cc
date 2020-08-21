@@ -522,7 +522,7 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
     // Replace long command lines with response files if the command supports it
     HashMap<const void *, const char *> rsp_map;
     for (const BuildNode &node: nodes) {
-        if (node.cmd_line.len > 4096 && node.rsp_offset > 0) {
+        if (node.cmd_line.len > MAX_COMMAND_LEN && node.rsp_offset > 0) {
             RG_ASSERT(node.rsp_offset < node.cmd_line.len);
 
             // In theory, there can be conflicts between RSP files. But it is unlikely
