@@ -27,7 +27,7 @@ static void MakePackCommand(Span<const char *const> pack_filenames, CompileMode 
 
     Fmt(&buf, "\"%1\" pack -O \"%2\"", GetApplicationExecutable(), dest_filename);
 
-    Fmt(&buf, use_arrays ? " -t Carray" : " -t Cstring");
+    Fmt(&buf, use_arrays ? " -t Carray" : " -t C");
     switch (compile_mode) {
         case CompileMode::Debug:
         case CompileMode::DebugFast: { Fmt(&buf, " -m SourceMap"); } break;

@@ -465,7 +465,7 @@ bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path)
 bool PackAssets(Span<const PackAssetInfo> assets, const char *output_path, PackMode mode)
 {
     switch (mode) {
-        case PackMode::Cstring: return PackToC(assets, false, output_path);
+        case PackMode::C: return PackToC(assets, false, output_path);
         case PackMode::Carray: return PackToC(assets, true, output_path);
         case PackMode::Files: return PackToFiles(assets, output_path);
     }

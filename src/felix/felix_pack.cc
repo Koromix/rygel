@@ -13,7 +13,7 @@ int RunPack(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    PackMode mode = PackMode::Cstring;
+    PackMode mode = PackMode::C;
     const char *output_path = nullptr;
     int strip_count = INT_MAX;
     CompressionType compression_type = CompressionType::None;

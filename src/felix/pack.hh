@@ -10,12 +10,12 @@
 namespace RG {
 
 enum class PackMode {
-    Cstring,
+    C,
     Carray,
     Files
 };
 static const char *const PackModeNames[] = {
-    "Cstring",
+    "C",
     "Carray",
     "Files"
 };
