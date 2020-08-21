@@ -2678,6 +2678,8 @@ class StreamWriter {
             U() {}
             ~U() {}
         } u;
+
+        bool vt100;
     } dest;
 
     struct {
@@ -2716,6 +2718,7 @@ public:
 
     const char *GetFileName() const { return filename; }
     CompressionType GetCompressionType() const { return compression.type; }
+    bool IsVt100() const { return dest.vt100; }
     bool IsValid() const { return filename && !error; }
 
     bool Write(Span<const uint8_t> buf);
@@ -2973,7 +2976,6 @@ typedef void LogFilterFunc(LogLevel level, const char *ctx, const char *msg,
                            FunctionRef<LogFunc> func);
 
 bool GetDebugFlag(const char *name);
-bool EnableAnsiOutput();
 
 void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args);
 
@@ -3541,6 +3543,7 @@ enum class OpenFileMode {
 };
 
 FILE *OpenFile(const char *filename, OpenFileMode mode);
+bool FileIsVt100(FILE *fp);
 
 bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
                         FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code);

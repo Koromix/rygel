@@ -1039,7 +1039,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 }
 
 template <typename AppendFunc>
-static inline Size ProcessAnsiSpecifier(const char *spec, AppendFunc append)
+static inline Size ProcessAnsiSpecifier(const char *spec, bool vt100, AppendFunc append)
 {
     Size idx = 0;
 
@@ -1124,7 +1124,7 @@ end:
         return idx;
     }
 
-    if (EnableAnsiOutput()) {
+    if (vt100) {
         strcat(buf, "m");
         append(buf);
     }
@@ -1133,7 +1133,7 @@ end:
 }
 
 template <typename AppendFunc>
-static inline void DoFormat(const char *fmt, Span<const FmtArg> args, AppendFunc append)
+static inline void DoFormat(const char *fmt, Span<const FmtArg> args, bool vt100, AppendFunc append)
 {
 #ifndef NDEBUG
     bool invalid_marker = false;
@@ -1182,7 +1182,7 @@ static inline void DoFormat(const char *fmt, Span<const FmtArg> args, AppendFunc
             append(*RG_PATH_SEPARATORS);
             fmt_ptr = marker_ptr + 2;
         } else if (marker_ptr[1] == '!') {
-            fmt_ptr = marker_ptr + 2 + ProcessAnsiSpecifier(marker_ptr + 1, append);
+            fmt_ptr = marker_ptr + 2 + ProcessAnsiSpecifier(marker_ptr + 1, vt100, append);
         } else if (marker_ptr[1]) {
             append(marker_ptr[0]);
             fmt_ptr = marker_ptr + 1;
@@ -1208,6 +1208,17 @@ static inline void DoFormat(const char *fmt, Span<const FmtArg> args, AppendFunc
 #endif
 }
 
+static inline bool FormatBufferWithVt100()
+{
+    // In most cases, when fmt contains color tags, this is because the caller is
+    // trying to make a string to show to the user. In this case, we want to generate
+    // VT-100 escape sequences if the standard output is a terminal, because the
+    // string will probably end up there.
+
+    static bool use_vt100 = FileIsVt100(stdout) && FileIsVt100(stderr);
+    return use_vt100;
+}
+
 Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Span<char> out_buf)
 {
     RG_ASSERT(out_buf.len >= 0);
@@ -1218,7 +1229,7 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Span<char> out_buf)
 
     Size available_len = out_buf.len;
 
-    DoFormat(fmt, args, [&](Span<const char> frag) {
+    DoFormat(fmt, args, FormatBufferWithVt100(), [&](Span<const char> frag) {
         Size copy_len = std::min(frag.len, available_len);
 
         memcpy(out_buf.end() - available_len, frag.ptr, (size_t)copy_len);
@@ -1236,7 +1247,7 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, HeapArray<char> *out
     Size start_len = out_buf->len;
 
     out_buf->Grow(RG_FMT_STRING_BASE_CAPACITY);
-    DoFormat(fmt, args, [&](Span<const char> frag) {
+    DoFormat(fmt, args, FormatBufferWithVt100(), [&](Span<const char> frag) {
         out_buf->Grow(frag.len + 1);
         memcpy(out_buf->end(), frag.ptr, (size_t)frag.len);
         out_buf->len += frag.len;
@@ -1256,7 +1267,7 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Allocator *alloc)
 void PrintFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *st)
 {
     LocalArray<char, RG_FMT_STRING_PRINT_BUFFER_SIZE> buf;
-    DoFormat(fmt, args, [&](Span<const char> frag) {
+    DoFormat(fmt, args, st->IsVt100(), [&](Span<const char> frag) {
         if (frag.len > RG_LEN(buf.data) - buf.len) {
             st->Write(buf);
             buf.len = 0;
@@ -1284,7 +1295,7 @@ static void WriteStdComplete(Span<const char> buf, FILE *fp)
 void PrintFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
 {
     LocalArray<char, RG_FMT_STRING_PRINT_BUFFER_SIZE> buf;
-    DoFormat(fmt, args, [&](Span<const char> frag) {
+    DoFormat(fmt, args, FileIsVt100(fp), [&](Span<const char> frag) {
         if (frag.len > RG_LEN(buf.data) - buf.len) {
             WriteStdComplete(buf, fp);
             buf.len = 0;
@@ -1346,56 +1357,6 @@ bool GetDebugFlag(const char *name)
         return true;
     }
 #endif
-}
-
-bool EnableAnsiOutput()
-{
-    static bool init, output_is_terminal;
-
-    if (!init) {
-#ifdef _WIN32
-        static HANDLE stderr_handle = (HANDLE)_get_osfhandle(_fileno(stderr));
-        static DWORD orig_console_mode;
-
-        if (GetConsoleMode(stderr_handle, &orig_console_mode)) {
-            output_is_terminal = orig_console_mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-
-            if (!output_is_terminal) {
-                // Enable VT100 escape sequences, introduced in Windows 10
-                DWORD new_mode = orig_console_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-                output_is_terminal = SetConsoleMode(stderr_handle, new_mode);
-
-                if (output_is_terminal) {
-                    atexit([]() {
-                        SetConsoleMode(stderr_handle, orig_console_mode);
-                    });
-                } else {
-                    // Try ConEmu ANSI support for Windows < 10
-                    const char *conemuansi_str = getenv("ConEmuANSI");
-                    output_is_terminal = conemuansi_str && TestStr(conemuansi_str, "ON");
-                }
-            }
-        }
-
-        if (output_is_terminal) {
-            atexit([]() {
-                ::WriteFile(stderr_handle, "\x1B[0m", (DWORD)strlen("\x1B[0m"), nullptr, nullptr);
-            });
-        }
-#else
-        output_is_terminal = isatty(fileno(stderr));
-        if (output_is_terminal) {
-            atexit([]() {
-                size_t ret = write(fileno(stderr), "\x1B[0m", strlen("\x1B[0m"));
-                (void)ret;
-            });
-        }
-#endif
-
-        init = true;
-    }
-
-    return output_is_terminal;
 }
 
 static void RunLogFilter(Size idx, LogLevel level, const char *ctx, const char *msg)
@@ -2338,6 +2299,55 @@ FILE *OpenFile(const char *filename, OpenFileMode mode)
     return fp;
 }
 
+bool FileIsVt100(FILE *fp)
+{
+    static RG_THREAD_LOCAL FILE *cache_fp;
+    static RG_THREAD_LOCAL bool cache_vt100;
+
+    // Fast path, for repeated calls (such as Print in a loop)
+    if (fp == cache_fp)
+        return cache_vt100;
+
+    if (fp == stdout || fp == stderr) {
+        HANDLE h = (HANDLE)_get_osfhandle(_fileno(fp));
+
+        DWORD console_mode;
+        if (GetConsoleMode(h, &console_mode)) {
+            static bool enable_emulation = [&]() {
+                bool emulation = console_mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+
+                if (!emulation) {
+                    // Enable VT100 escape sequences, introduced in Windows 10
+                    DWORD new_mode = console_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+                    emulation = SetConsoleMode(h, new_mode);
+
+                    if (emulation) {
+                        static HANDLE exit_handle = h;
+                        static DWORD exit_mode = console_mode;
+
+                        atexit([]() { SetConsoleMode(exit_handle, exit_mode); });
+                    } else {
+                        // Try ConEmu ANSI support for Windows < 10
+                        const char *conemuansi_str = getenv("ConEmuANSI");
+                        emulation = conemuansi_str && TestStr(conemuansi_str, "ON");
+                    }
+                }
+
+                return emulation;
+            }();
+
+            cache_vt100 = enable_emulation;
+        } else {
+            cache_vt100 = false;
+        }
+    } else {
+        cache_vt100 = false;
+    }
+
+    cache_fp = fp;
+    return cache_vt100;
+}
+
 bool MakeDirectory(const char *directory, bool error_if_exists)
 {
     wchar_t directory_w[4096];
@@ -2449,6 +2459,21 @@ FILE *OpenFile(const char *filename, OpenFileMode mode)
     }
 
     return fp;
+}
+
+bool FileIsVt100(FILE *fp)
+{
+    static RG_THREAD_LOCAL FILE *cache_fp;
+    static RG_THREAD_LOCAL bool cache_vt100;
+
+    // Fast path, for repeated calls (such as Print in a loop)
+    if (fp == cache_fp)
+        return cache_vt100;
+
+    cache_fp = fp;
+    cache_vt100 = isatty(fileno(fp));
+
+    return cache_vt100;
 }
 
 bool MakeDirectory(const char *directory, bool error_if_exists)
@@ -3957,6 +3982,7 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
 
     dest.type = DestinationType::Memory;
     dest.u.memory = mem;
+    dest.vt100 = false;
 
     if (!InitCompressor(compression_type))
         return false;
@@ -3981,6 +4007,7 @@ bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compress
     dest.type = DestinationType::File;
     dest.u.file.fp = fp;
     dest.u.file.owned = false;
+    dest.vt100 = FileIsVt100(fp);
 
     if (!InitCompressor(compression_type))
         return false;
@@ -4006,6 +4033,7 @@ bool StreamWriter::Open(const char *filename, CompressionType compression_type)
     if (!dest.u.file.fp)
         return false;
     dest.u.file.owned = true;
+    dest.vt100 = FileIsVt100(dest.u.file.fp);
 
     if (!InitCompressor(compression_type))
         return false;
@@ -4028,6 +4056,7 @@ bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, co
 
     dest.type = DestinationType::Function;
     new (&dest.u.func) std::function<bool(Span<const uint8_t>)>(func);
+    dest.vt100 = false;
 
     if (!InitCompressor(compression_type))
         return false;
@@ -4810,7 +4839,7 @@ bool ConsolePrompter::Read()
     RG_DEFER { sigaction(SIGWINCH, &old_sa, nullptr); };
 #endif
 
-    if (!EnableAnsiOutput() || !EnableRawMode()) {
+    if (!FileIsVt100(stdout) || !EnableRawMode()) {
         int c;
         while ((c = fgetc(stdin)) != EOF) {
             if (c == '\n') {
