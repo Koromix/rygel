@@ -317,36 +317,36 @@ int RunMcoClassify(Span<const char *> arguments)
     HeapArray<const char *> filenames;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: drdc mco_classify [options] stay_file ...
+        PrintLn(fp, R"(Usage: %!..+drdc mco_classify [options] stay_file ...%!0
 )");
         PrintLn(fp, CommonOptions);
         PrintLn(fp, R"(
 Classify options:
-    -o, --option <options>       Classifier options (see below)
-    -d, --dispense <mode>        Run dispensation algorithm (see below)
-        --coeff                  Apply GHS coefficients
+    %!..+-o, --option <options>%!0       Classifier options (see below)
+    %!..+-d, --dispense <mode>%!0        Run dispensation algorithm (see below)
+        %!..+--coeff%!0                  Apply GHS coefficients
 
-    -f, --filter <expr>          Run Wren filter
-    -F, --filter_file <file>     Run Wren filter in file
+    %!..+-f, --filter <expr>%!0          Run Wren filter
+    %!..+-F, --filter_file <file>%!0     Run Wren filter in file
 
-    -v, --verbose                Show more classification details (cumulative)
+    %!..+-v, --verbose%!0                Show more classification details (cumulative)
 
-        --test [options]         Enable testing against GenRSA values (see below)
-        --torture [N]            Benchmark classifier with N runs
+        %!..+--test [options]%!0         Enable testing against GenRSA values (see below)
+        %!..+--torture [N]%!0            Benchmark classifier with N runs
 
 Classifier options:)");
         for (const OptionDesc &desc: mco_ClassifyFlagOptions) {
-            PrintLn(fp, "    %1  %2", FmtArg(desc.name).Pad(27), desc.help);
+            PrintLn(fp, "    %!..+%1%!0  %2", FmtArg(desc.name).Pad(27), desc.help);
         }
         PrintLn(fp, R"(
 Dispensation modes:)");
         for (const OptionDesc &desc: mco_DispenseModeOptions) {
-            PrintLn(fp, "    %1  Algorithm %2", FmtArg(desc.name).Pad(27), desc.help);
+            PrintLn(fp, "    %!..+%1%!0  Algorithm %2", FmtArg(desc.name).Pad(27), desc.help);
         }
         PrintLn(fp, R"(
 Test options:)");
         for (const OptionDesc &desc: TestFlagOptions) {
-            PrintLn(fp, "    %1  %2", FmtArg(desc.name).Pad(27), desc.help);
+            PrintLn(fp, "    %!..+%1%!0  %2", FmtArg(desc.name).Pad(27), desc.help);
         }
     };
 
@@ -574,12 +574,12 @@ int RunMcoDump(Span<const char *> arguments)
     HeapArray<const char *> filenames;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: drdc mco_dump [options] [filename] ...
+        PrintLn(fp, R"(Usage: %!..+drdc mco_dump [options] [filename] ...%!0
 )");
         PrintLn(fp, CommonOptions);
         PrintLn(fp, R"(
 Dump options:
-    -d, --dump                   Dump content of (readable) tables)");
+    %!..+-d, --dump%!0                   Dump content of (readable) tables)");
     };
 
     // Parse arguments
@@ -619,13 +619,13 @@ int RunMcoList(Span<const char *> arguments)
     HeapArray<const char *> spec_strings;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: drdc mco_list [options] list_name ...
+        PrintLn(fp, R"(Usage: %!..+drdc mco_list [options] list_name ...%!0
 )");
         PrintLn(fp, CommonOptions);
         PrintLn(fp, R"(
 List options:
-    -d, --date <date>            Use tables valid on specified date
-                                 (default: most recent tables))");
+    %!..+-d, --date <date>%!0            Use tables valid on specified date
+                                 %!D..(default: most recent tables)%!0)");
     };
 
     // Parse arguments
@@ -707,13 +707,13 @@ int RunMcoMap(Span<const char *> arguments)
     Date index_date = {};
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: drdc mco_map [options]
+        PrintLn(fp, R"(Usage: %!..+drdc mco_map [options]%!0
 )");
         PrintLn(fp, CommonOptions);
         PrintLn(fp, R"(
 Map options:
-    -d, --date <date>            Use tables valid on specified date
-                                 (default: most recent tables))");
+    %!..+-d, --date <date>%!0            Use tables valid on specified date
+                                 %!D..(default: most recent tables)%!0)");
     };
 
     // Parse arguments
@@ -775,12 +775,12 @@ int RunMcoPack(Span<const char *> arguments)
     HeapArray<const char *> filenames;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: drdc mco_pack [options] stay_file ... -O output_file
+        PrintLn(fp, R"(Usage: %!..+drdc mco_pack [options] stay_file ... -O output_file%!0
 )");
         PrintLn(fp, CommonOptions);
         PrintLn(fp, R"(
 Pack options:
-    -O, --output_file <file>     Set output file)");
+    %!..+-O, --output_file <file>%!0     Set output file)");
     };
 
     // Parse arguments
@@ -834,7 +834,7 @@ int RunMcoShow(Span<const char *> arguments)
     HeapArray<const char *> names;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: drdc mco_show [options] name ...
+        PrintLn(fp, R"(Usage: %!..+drdc mco_show [options] name ...%!0
 )");
         PrintLn(fp, CommonOptions);
     };

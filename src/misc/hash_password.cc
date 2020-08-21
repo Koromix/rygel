@@ -17,11 +17,11 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp,
-R"(Usage: gen_password_hash
-       gen_password_hash -p <password>
+R"(Usage: %!..+gen_password_hash
+       gen_password_hash -p <password>%!0
 
 Options:
-    -p, --password <password>    Use password given as option)");
+    %!..+-p, --password <password>%!0    Use password given as option)");
     };
 
     // Parse arguments

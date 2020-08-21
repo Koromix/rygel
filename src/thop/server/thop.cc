@@ -450,23 +450,23 @@ int Main(int argc, char **argv)
     BlockAllocator temp_alloc;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: thop [options] [stay_file ..]
+        PrintLn(fp, R"(Usage: %!..+thop [options] [stay_file ..]%!0
 
 Options:
-    -C, --config_file <file>     Set configuration file
-                                 (default: <executable_dir>%/profile%/thop.ini)
+    %!..+-C, --config_file <file>%!0     Set configuration file
+                                 %!D..(default: <executable_dir>%/profile%/thop.ini)%!0
 
-        --profile_dir <dir>      Set profile directory
-        --table_dir <dir>        Add table directory
+        %!..+--profile_dir <dir>%!0      Set profile directory
+        %!..+--table_dir <dir>%!0        Add table directory
 
-        --mco_auth_file <file>   Set MCO authorization file
-                                 (default: <profile_dir>%/mco_authorizations.ini
-                                           <profile_dir>%/mco_authorizations.txt)
+        %!..+--mco_auth_file <file>%!0   Set MCO authorization file
+                                 %!D..(default: <profile_dir>%/mco_authorizations.ini
+                                           <profile_dir>%/mco_authorizations.txt)%!0
 
-        --port <port>            Change web server port
-                                 (default: %1)
-        --base_url <url>         Change base URL
-                                 (default: %2))",
+        %!..+--port <port>%!0            Change web server port
+                                 %!D..(default: %1)%!0
+        %!..+--base_url <url>%!0         Change base URL
+                                 %!D..(default: %2)%!0)",
                 thop_config.http.port, thop_config.http.base_url);
     };
 

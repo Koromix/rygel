@@ -17,18 +17,18 @@ int RunMcoShow(Span<const char *> arguments);
 
 const char *const CommonOptions =
 R"(Common options:
-    -C, --config_file <file>     Set configuration file
-                                 (default: <executable_dir>%/profile%/drdc.ini)
+    %!..+-C, --config_file <file>%!0     Set configuration file
+                                 %!D..(default: <executable_dir>%/profile%/drdc.ini)%!0
 
-        --profile_dir <dir>      Set profile directory
-        --table_dir <dir>        Add table directory
+        %!..+--profile_dir <dir>%!0      Set profile directory
+        %!..+--table_dir <dir>%!0        Add table directory
 
-        --mco_auth_file <file>   Set MCO authorization file
-                                 (default: <profile_dir>%/mco_authorizations.ini
-                                           <profile_dir>%/mco_authorizations.txt)
+        %!..+--mco_auth_file <file>%!0   Set MCO authorization file
+                                 %!D..(default: <profile_dir>%/mco_authorizations.ini
+                                           <profile_dir>%/mco_authorizations.txt)%!0
 
-    -s, --sector <sector>        Use Public or Private sector GHS and prices
-                                 (default: Public))";
+    %!..+-s, --sector <sector>%!0        Use Public or Private sector GHS and prices
+                                 %!D..(default: Public)%!0)";
 
 Config drdc_config;
 
@@ -58,17 +58,17 @@ bool HandleCommonOption(OptionParser &opt)
 int Main(int argc, char **argv)
 {
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: drdc <command> [<args>]
+        PrintLn(fp, R"(Usage: %!..+drdc <command> [<args>]%!0
 )");
         PrintLn(fp, CommonOptions);
         PrintLn(fp, R"(
 Commands:
-    mco_classify                 Classify MCO stays
-    mco_dump                     Dump available MCO tables and lists
-    mco_list                     Export MCO diagnosis and procedure lists
-    mco_map                      Compute GHM accessibility constraints
-    mco_pack                     Pack MCO stays for quicker loads
-    mco_show                     Print information about individual MCO elements
+    %!..+mco_classify%!0                 Classify MCO stays
+    %!..+mco_dump%!0                     Dump available MCO tables and lists
+    %!..+mco_list%!0                     Export MCO diagnosis and procedure lists
+    %!..+mco_map%!0                      Compute GHM accessibility constraints
+    %!..+mco_pack%!0                     Pack MCO stays for quicker loads
+    %!..+mco_show%!0                     Print information about individual MCO elements
                                  (diagnoses, procedures, GHM roots, etc.))");
     };
 

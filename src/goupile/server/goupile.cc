@@ -236,15 +236,15 @@ int Main(int argc, char **argv)
     BlockAllocator temp_alloc;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: goupile [options]
+        PrintLn(fp, R"(Usage: %!..+goupile [options]%!0
 
 Options:
-    -C, --config_file <file>     Set configuration file
+    %!..+-C, --config_file <file>%!0     Set configuration file
 
-        --port <port>            Change web server port
-                                 (default: %1)
-        --base_url <url>         Change base URL
-                                 (default: %2))",
+        %!..+--port <port>%!0            Change web server port
+                                 %!D..(default: %1)%!0
+        %!..+--base_url <url>%!0         Change base URL
+                                 %!D..(default: %2)%!0)",
                 goupile_config.http.port, goupile_config.http.base_url);
     };
 

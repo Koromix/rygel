@@ -42,15 +42,15 @@ int Main(int argc, char **argv)
     bool execute = true;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: blik [options] <file>
+        PrintLn(fp, R"(Usage: %!..+blik [options] <file>
        blik [options] -c <code>
-       blik [options] -i
+       blik [options] -i%!0
 
 Options:
-    -c, --command                Run code directly from argument
-    -i, --interactive            Run code interactively (REPL)
+    %!..+-c, --command%!0                Run code directly from argument
+    %!..+-i, --interactive%!0            Run code interactively (REPL)
 
-        --no_execute             Parse code but don't run it)");
+        %!..+--no_execute%!0             Parse code but don't run it)");
     };
 
     // Handle version
