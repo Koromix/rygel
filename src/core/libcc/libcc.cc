@@ -2096,7 +2096,7 @@ const char *GetApplicationExecutable()
         RG_ASSERT(path_buf);
         RG_ASSERT(strlen(path_buf) < RG_SIZE(executable_path));
 
-        strcpy(executable_path, path_buf);
+        strncpy(executable_path, path_buf, RG_SIZE(executable_path) - 1);
         free(path_buf);
     }
 
@@ -2109,7 +2109,7 @@ const char *GetApplicationExecutable()
         RG_ASSERT(path_buf);
         RG_ASSERT(strlen(path_buf) < RG_SIZE(executable_path));
 
-        strcpy(executable_path, path_buf);
+        strncpy(executable_path, path_buf, RG_SIZE(executable_path) - 1);
         free(path_buf);
     }
 
