@@ -159,7 +159,7 @@ Felix can also run the following special commands:
     %!..+build%!0                        Build C and C++ projects %!D..(default)%!0
     %!..+pack%!0                         Pack assets to C source file and other formats
 
-For help about those commands, type: %!..+felix [command] --help%!0)");
+For help about those commands, type: %!..+felix <command> --help%!0)");
     };
 
     // Parse arguments
