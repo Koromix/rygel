@@ -13,9 +13,6 @@ namespace RG {
 
 static http_SessionManager sessions;
 
-static const int64_t PruneDelay = 86400000;
-static const int64_t TokenLimit = 14 * 86400000;
-
 RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = sessions.Find<const Session>(request, io);
@@ -65,15 +62,6 @@ static void WriteProfileJson(const Session *session, json_Writer *out_json)
     out_json->EndObject();
 }
 
-void HandleProfile(const http_RequestInfo &request, http_IO *io)
-{
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
-
-    http_JsonPageBuilder json(request.compression_type);
-    WriteProfileJson(session.GetRaw(), &json);
-    json.Finish(io);
-}
-
 static RetainPtr<Session> CreateSessionFromRow(const http_RequestInfo &request, http_IO *io, sq_Statement &stmt)
 {
     const char *username = (const char *)sqlite3_column_text(stmt, 0);
@@ -92,27 +80,8 @@ static RetainPtr<Session> CreateSessionFromRow(const http_RequestInfo &request, 
     return ptr;
 }
 
-static void PruneStaleTokens()
-{
-    int64_t now = GetMonotonicTime();
-
-    static std::mutex last_pruning_mutex;
-    static int64_t last_pruning = 0;
-    {
-        std::lock_guard<std::mutex> lock(last_pruning_mutex);
-        if (now - last_pruning < PruneDelay)
-            return;
-        last_pruning = now;
-    }
-
-    int64_t limit = GetUnixTime() - TokenLimit;
-    goupile_db.Run("DELETE FROM usr_tokens WHERE login_time < ?", limit);
-}
-
 void HandleLogin(const http_RequestInfo &request, http_IO *io)
 {
-    PruneStaleTokens();
-
     io->RunAsync([=]() {
         // Read POST values
         HashMap<const char *, const char *> values;
@@ -143,29 +112,17 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 4);
 
             if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
-                char token[65];
-                {
-                    uint64_t buf[4];
-                    randombytes_buf(&buf, RG_SIZE(buf));
-                    Fmt(token, "%1%2%3%4", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16),
-                                           FmtHex(buf[2]).Pad0(-16), FmtHex(buf[3]).Pad0(-16));
-                }
-
-                int64_t login_time = GetUnixTime();
-                if (!goupile_db.Run("INSERT INTO usr_tokens (token, username, login_time) VALUES (?, ?, ?)",
-                                    token, username, login_time))
-                    return;
-
                 RetainPtr<Session> session = CreateSessionFromRow(request, io, stmt);
 
                 http_JsonPageBuilder json(request.compression_type);
-                json.StartObject();
-                json.Key("token"); json.String(token);
-                json.Key("profile"); WriteProfileJson(session.GetRaw(), &json);
-                json.EndObject();
+                WriteProfileJson(session.GetRaw(), &json);
                 json.Finish(io);
+
+                return;
             }
-        } else if (stmt.IsValid()) {
+        }
+
+        if (stmt.IsValid()) {
             // Enforce constant delay if authentification fails
             int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
             WaitForDelay(safety_delay);
@@ -178,60 +135,19 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
     });
 }
 
-void HandleReconnect(const http_RequestInfo &request, http_IO *io)
-{
-    PruneStaleTokens();
-
-    io->RunAsync([=]() {
-        // Read POST values
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
-        }
-
-        const char *token = values.FindValue("token", nullptr);
-        if (!token) {
-            LogError("Missing parameters");
-            io->AttachError(422);
-            return;
-        }
-
-        int64_t now = GetMonotonicTime();
-        int64_t limit = GetUnixTime() - TokenLimit;
-
-        sq_Statement stmt;
-        if (!goupile_db.Prepare(R"(SELECT u.username, u.develop, u.new, u.edit
-                                   FROM usr_tokens t
-                                   INNER JOIN usr_users u ON (u.username = t.username)
-                                   WHERE t.token = ? AND t.login_time >= ?)", &stmt))
-            return;
-        sqlite3_bind_text(stmt, 1, token, -1, SQLITE_STATIC);
-        sqlite3_bind_int64(stmt, 2, limit);
-
-        if (stmt.Next()) {
-            RetainPtr<Session> session = CreateSessionFromRow(request, io, stmt);
-
-            http_JsonPageBuilder json(request.compression_type);
-            WriteProfileJson(session.GetRaw(), &json);
-            json.Finish(io);
-        } else if (stmt.IsValid()) {
-            // Enforce constant delay if authentification fails
-            int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
-            WaitForDelay(safety_delay);
-
-            LogError("Incorrect token");
-            io->AttachError(403);
-        } else {
-            LogError("SQLite Error: %1", sqlite3_errmsg(goupile_db));
-        }
-    });
-}
-
 void HandleLogout(const http_RequestInfo &request, http_IO *io)
 {
     sessions.Close(request, io);
     io->AttachText(200, "");
+}
+
+void HandleProfile(const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+
+    http_JsonPageBuilder json(request.compression_type);
+    WriteProfileJson(session.GetRaw(), &json);
+    json.Finish(io);
 }
 
 }

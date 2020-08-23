@@ -5,7 +5,7 @@
 function UserManager(db) {
     let self = this;
 
-    let profile = {};
+    let session_profile = {};
     let session_rnd;
 
     this.runLogin = function() {
@@ -63,100 +63,108 @@ function UserManager(db) {
 
         entry.progress('Connexion en cours');
 
-        if (net.isOnline()) {
-            return await loginOnline(username, password, entry);
-        } else if (env.use_offline) {
-            return await loginOffline(username, password, entry);
-        }
-    };
-
-    async function loginOnline(username, password, entry) {
+        let success;
         try {
-            let response = await net.fetch(`${env.base_url}api/login.json`, {
-                method: 'POST',
-                body: new URLSearchParams({
-                    username: username.toLowerCase(),
-                    password: password
-                })
-            });
-
-            if (response.ok) {
-                let json = await response.json();
-
-                if (env.use_offline) {
-                    await saveOfflineToken(username, password, json.token);
-                    sessionStorage.setItem('offline_username', username);
-                }
-
-                profile = json.profile;
-                session_rnd = util.getCookie('session_rnd');
-
-                // Emergency unlocking
-                deleteLock();
-
-                entry.success('Connexion réussie');
-                await goupile.initMain();
-
-                return true;
+            if (net.isOnline()) {
+                success = await loginOnline(username, password);
             } else {
-                let msg = (await response.text()).trim();
-                entry.error(msg);
-
-                return false;
+                success = await loginOffline(username, password);
             }
         } catch (err) {
-            entry.error(err);
+            if (env.use_offline) {
+                success = await loginOffline(username, password);
+            } else {
+                success = false;
+            }
+        }
+
+        if (success) {
+            // Emergency unlocking
+            deleteLock();
+
+            entry.success('Connexion réussie');
+            await goupile.initMain();
+        } else {
+            entry.error('Échec de la connexion');
+        }
+
+        return success;
+    };
+
+    async function loginOnline(username, password) {
+        let response = await net.fetch(`${env.base_url}api/login.json`, {
+            method: 'POST',
+            body: new URLSearchParams({
+                username: username.toLowerCase(),
+                password: password
+            })
+        });
+
+        if (response.ok) {
+            let profile = await response.json();
+            if (env.use_offline)
+                await saveOfflineProfile(profile, password);
+
+            session_profile = profile;
+            session_rnd = util.getCookie('session_rnd');
+
+            return true;
+        } else {
+            if (env.use_offline)
+                await db.delete('usr_passports', username);
+
             return false;
         }
     }
 
-    async function saveOfflineToken(username, password, token) {
-        let salt;
-        {
-            let digits = '0123456789ABCDEF';
+    async function saveOfflineProfile(profile, password) {
+        let pwd_utf8 = new TextEncoder().encode(password);
+        let pwd_hash = await crypto.subtle.digest('SHA-256', pwd_utf8);
 
-            salt = window.crypto.getRandomValues(new Uint8Array(32));
-            salt = Array.from(salt).map(value => digits[Math.floor(value / 16)] + digits[value % 16]);
-            salt = salt.join('');
-        }
-
-        let offline = {
-            username: username,
-            password_salt: salt,
-            password_sha256: Sha256(salt + password),
-            token: token
+        let iv = crypto.getRandomValues(new Uint8Array(12));
+        let algorithm = {
+            name: 'AES-GCM',
+            iv: iv
         };
+        let key = await crypto.subtle.importKey('raw', pwd_hash, algorithm.name, false, ['encrypt']);
 
-        await db.save('usr_offline', offline);
+        let profile_utf8 = new TextEncoder().encode(JSON.stringify(profile));
+        let profile_enc = await crypto.subtle.encrypt(algorithm, key, profile_utf8);
+
+        let passport = {
+            username: profile.username,
+            iv: iv,
+            profile: profile_enc
+        };
+        await db.save('usr_passports', passport);
     }
 
     async function loginOffline(username, password, entry) {
+        // Instantaneous login feels weird
+        await util.waitFor(800);
+
+        let passport = await db.load('usr_passports', username);
+        if (passport == null)
+            return false;
+
         try {
-            let [offline, new_profile] = await Promise.all([
-                db.load('usr_offline', username),
-                db.load('usr_profiles', username)
-            ]);
+            let pwd_utf8 = new TextEncoder().encode(password);
+            let pwd_hash = await crypto.subtle.digest('SHA-256', pwd_utf8);
 
-            if (offline == null || new_profile == null) {
-                entry.error('Ce compte n\'est pas disponible dans le cache hors ligne');
-                return false;
-            }
+            let algorithm = {
+                name: 'AES-GCM',
+                iv: passport.iv
+            };
+            let key = await crypto.subtle.importKey('raw', pwd_hash, algorithm.name, false, ['decrypt']);
 
-            let password_sha256 = Sha256(offline.password_salt + password);
-            if (password_sha256 !== offline.password_sha256) {
-                entry.error('Ce compte n\'est pas disponible dans le cache hors ligne');
-                return false;
-            }
+            let profile_utf8 = await crypto.subtle.decrypt(algorithm, key, passport.profile);
 
-            profile = new_profile;
-            sessionStorage.setItem('offline_username', username);
-
-            entry.success('Connexion réussie (hors ligne)');
-            await goupile.initMain();
+            session_profile = JSON.parse(new TextDecoder().decode(profile_utf8));
+            session_rnd = undefined;
 
             return true;
         } catch (err) {
-            entry.error(err);
+            await util.waitFor(1200);
             return false;
         }
     }
@@ -165,113 +173,73 @@ function UserManager(db) {
         let entry = new log.Entry;
 
         entry.progress('Déconnexion en cours');
+
+        let success;
         try {
-            if (env.use_offline) {
-                let username = sessionStorage.getItem('offline_username');
-
-                if (username != null) {
-                    await Promise.all([
-                        db.delete('usr_offline', username),
-                        db.delete('usr_profiles', username)
-                    ]);
-                }
-
-                sessionStorage.removeItem('offline_username');
-            }
-
             if (net.isOnline()) {
-                let response = await net.fetch(`${env.base_url}api/logout.json`, {method: 'POST'});
-
-                if (!response.ok) {
-                    let msg = (await response.text()).trim();
-                    entry.error(msg);
-
-                    return false;
-                }
+                success = await logoutOnline();
             } else {
-                // XXX: Detect this on the server!
-                util.deleteCookie('session_rnd', env.base_url);
+                success = await logoutOffline();
             }
+        } catch (err) {
+            if (env.use_offline) {
+                success = await logoutOffline();
+            } else {
+                success = false;
+            }
+        }
+
+        if (success) {
+            session_profile = {};
+            session_rnd = undefined;
 
             entry.success('Déconnexion réussie');
             await goupile.initMain();
+        } else {
+            entry.error('Échec de déconnexion');
+        }
+    };
 
+    async function logoutOnline() {
+        let response = await net.fetch(`${env.base_url}api/logout.json`, {method: 'POST'});
+        return response.ok;
+    }
+
+    function logoutOffline() {
+        // We can't delete session_key (HttpOnly), nor can we delete the session on
+        // the server. But if we delete session_rnd, the mismatch will cause the
+        // server to close the session as soon as possible.
+        util.deleteCookie('session_rnd', env.base_url);
+        return true;
+    }
+
+    this.isSynced = function() {
+        if (net.isOnline()) {
+            let new_rnd = util.getCookie('session_rnd');
+            return new_rnd === session_rnd;
+        } else {
             return true;
-        } catch (err) {
-            entry.error(err);
-            return false;
         }
     };
 
     this.fetchProfile = async function() {
         if (net.isOnline()) {
-            // Try online first
             let response = await net.fetch(`${env.base_url}api/profile.json`);
-            if (response.ok) {
-                let new_profile = await response.json();
+            let profile = await response.json();
 
-                if (new_profile.username != null) {
-                    profile = new_profile;
-                    session_rnd = util.getCookie('session_rnd');
-
-                    if (env.use_offline)
-                        await db.save('usr_profiles', profile);
-
-                    return;
-                }
-            }
-
-            // It failed, but in offline mode we can try to reconnect using offline token (if any)
-            if (env.use_offline) {
-                let username = sessionStorage.getItem('offline_username');
-
-                if (username != null) {
-                    let offline = await db.load('usr_offline', username);
-
-                    if (offline != null) {
-                        let response = await net.fetch(`${env.base_url}api/reconnect.json`, {
-                            method: 'POST',
-                            body: new URLSearchParams({token: offline.token})
-                        });
-
-                        if (response.ok) {
-                            profile = await response.json();
-                            session_rnd = util.getCookie('session_rnd');
-
-                            return;
-                        }
-                    }
-                }
-            }
-
-            // Well, too bad. Erase all traces.
-            profile = {};
-            session_rnd = undefined;
-            util.deleteCookie('session_rnd', env.base_url);
-            sessionStorage.removeItem('offline_username');
-        } else {
-            let username = sessionStorage.getItem('offline_username');
-
-            if (username != null && profile.username !== username) {
-                profile = await db.load('usr_profiles', username);
-                if (profile == null)
-                    profile = {};
+            if (!env.use_offline || profile.username != null) {
+                session_profile = profile;
+                session_rnd = util.getCookie('session_rnd');
             }
         }
     };
 
-    this.testCookies = function() {
-        if (net.isOnline()) {
-            let new_rnd = util.getCookie('session_rnd');
-            return new_rnd !== session_rnd;
-        } else {
-            return false;
-        }
-    };
-
-    this.isConnected = function() { return !!profile.username; };
-    this.getUserName = function() { return profile.username; };
-    this.hasPermission = function(perm) { return profile.permissions && !!profile.permissions[perm]; };
+    this.isConnected = function() { return !!session_profile.username; };
+    this.getUserName = function() { return session_profile.username; };
+    this.hasPermission = function(perm) {
+        return session_profile.permissions &&
+               !!session_profile.permissions[perm];
+   };
 
     this.getLockURL = function() {
         let url = localStorage.getItem('lock_url');

@@ -392,6 +392,12 @@ let util = new function() {
         let rnd = Math.floor(Math.random() * (max - min)) + min;
         return rnd;
     };
+
+    this.waitFor = function(ms) {
+        return new Promise((resolve, reject) => {
+            setTimeout(resolve, ms);
+        });
+    };
 };
 
 // ------------------------------------------------------------------------

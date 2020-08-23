@@ -42,14 +42,6 @@ CREATE TABLE usr_users (
 );
 CREATE UNIQUE INDEX usr_users_u ON usr_users (username);
 
-CREATE TABLE usr_tokens (
-    token TEXT NOT NULL,
-
-    username TEXT NOT NULL,
-    login_time INTEGER NOT NULL
-);
-CREATE UNIQUE INDEX usr_tokens_t ON usr_tokens (token);
-
 CREATE TABLE rec_entries (
     table_name TEXT NOT NULL,
     id TEXT NOT NULL,
