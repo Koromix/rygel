@@ -62,22 +62,6 @@ static void WriteProfileJson(const Session *session, json_Writer *out_json)
     out_json->EndObject();
 }
 
-static RetainPtr<Session> CreateSessionFromRow(const http_RequestInfo &request, http_IO *io, sq_Statement &stmt)
-{
-    const char *username = (const char *)sqlite3_column_text(stmt, 0);
-
-    Session *session = (Session *)Allocator::Allocate(nullptr, RG_SIZE(Session) + strlen(username) + 1,
-                                                      (int)Allocator::Flag::Zero);
-
-    session->permissions = (uint32_t)sqlite3_column_int64(stmt, 1);
-    strcpy(session->username, username);
-
-    RetainPtr<Session> ptr(session, [](Session *session) { Allocator::Release(nullptr, session, -1); });
-    sessions.Open(request, io, ptr);
-
-    return ptr;
-}
-
 void HandleLogin(const http_RequestInfo &request, http_IO *io)
 {
     io->RunAsync([=]() {
@@ -100,20 +84,27 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
         int64_t now = GetMonotonicTime();
 
         sq_Statement stmt;
-        if (!goupile_db.Prepare(R"(SELECT u.username, u.permissions, u.password_hash
+        if (!goupile_db.Prepare(R"(SELECT u.username, u.password_hash, u.permissions
                                    FROM usr_users u
                                    WHERE u.username = ?)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
         if (stmt.Next()) {
-            const char *password_hash = (const char *)sqlite3_column_text(stmt, 2);
+            const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
 
             if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
-                RetainPtr<Session> session = CreateSessionFromRow(request, io, stmt);
+                Session *session = (Session *)Allocator::Allocate(nullptr, RG_SIZE(Session) + strlen(username) + 1,
+                                                                  (int)Allocator::Flag::Zero);
+
+                session->permissions = (uint32_t)sqlite3_column_int64(stmt, 2);
+                strcpy(session->username, username);
+
+                RetainPtr<Session> ptr(session, [](Session *session) { Allocator::Release(nullptr, session, -1); });
+                sessions.Open(request, io, ptr);
 
                 http_JsonPageBuilder json(request.compression_type);
-                WriteProfileJson(session.GetRaw(), &json);
+                WriteProfileJson(session, &json);
                 json.Finish(io);
 
                 return;
