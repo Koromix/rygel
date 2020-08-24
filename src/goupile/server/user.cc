@@ -69,9 +69,7 @@ static RetainPtr<Session> CreateSessionFromRow(const http_RequestInfo &request, 
     Session *session = (Session *)Allocator::Allocate(nullptr, RG_SIZE(Session) + strlen(username) + 1,
                                                       (int)Allocator::Flag::Zero);
 
-    session->permissions |= !!sqlite3_column_int(stmt, 1) * (int)UserPermission::Develop;
-    session->permissions |= !!sqlite3_column_int(stmt, 2) * (int)UserPermission::New;
-    session->permissions |= !!sqlite3_column_int(stmt, 3) * (int)UserPermission::Edit;
+    session->permissions = (uint32_t)sqlite3_column_int64(stmt, 1);
     strcpy(session->username, username);
 
     RetainPtr<Session> ptr(session, [](Session *session) { Allocator::Release(nullptr, session, -1); });
@@ -102,14 +100,14 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
         int64_t now = GetMonotonicTime();
 
         sq_Statement stmt;
-        if (!goupile_db.Prepare(R"(SELECT u.username, u.develop, u.new, u.edit, u.password_hash
+        if (!goupile_db.Prepare(R"(SELECT u.username, u.permissions, u.password_hash
                                    FROM usr_users u
                                    WHERE u.username = ?)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
         if (stmt.Next()) {
-            const char *password_hash = (const char *)sqlite3_column_text(stmt, 4);
+            const char *password_hash = (const char *)sqlite3_column_text(stmt, 2);
 
             if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
                 RetainPtr<Session> session = CreateSessionFromRow(request, io, stmt);
