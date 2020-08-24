@@ -269,7 +269,9 @@ Options:
 
     // Load config file
     if (!config_filename) {
-        config_filename = Fmt(&temp_alloc, "%1%/default/goupile.ini", GetApplicationDirectory()).ptr;
+        // Using GetWorkingDirectory() is not strictly necessary, but this will make sure
+        // filenames are normalized as absolute paths when config file is loaded.
+        config_filename = Fmt(&temp_alloc, "%1%/goupile.ini", GetWorkingDirectory()).ptr;
 
         if (!TestFile(config_filename, FileType::File)) {
             LogError("Configuration file must be specified");
