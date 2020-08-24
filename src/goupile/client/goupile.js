@@ -60,7 +60,7 @@ let goupile = new function() {
             };
             setTimeout(checkEvents, 30000);
         } finally {
-            document.querySelector('#gp_all').classList.remove('busy');
+            document.querySelector('#gp_root').classList.remove('busy');
         }
     };
 
@@ -416,7 +416,7 @@ let goupile = new function() {
 
                 <div id="gp_error" style="display: none;"></div>
             </main>
-        `, document.querySelector('#gp_all'));
+        `, document.querySelector('#gp_root'));
         updateStatus();
 
         for (let panel of document.querySelectorAll('.gp_panel:empty')) {

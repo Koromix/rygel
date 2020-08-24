@@ -33,7 +33,7 @@ function UserManager(db) {
                     ${model.render()}
                 </form>
                 <div style="flex: 1;"></div>
-            `, document.querySelector('#gp_all'));
+            `, document.querySelector('#gp_root'));
 
             if (focus) {
                 let el = document.querySelector('#usr_login input');
