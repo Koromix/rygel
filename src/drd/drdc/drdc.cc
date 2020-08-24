@@ -58,7 +58,7 @@ bool HandleCommonOption(OptionParser &opt)
 int Main(int argc, char **argv)
 {
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+drdc <command> [<args>]%!0
+        PrintLn(fp, R"(Usage: %!..+drdc <command> [args]%!0
 )");
         PrintLn(fp, CommonOptions);
         PrintLn(fp, R"(
