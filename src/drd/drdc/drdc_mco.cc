@@ -364,13 +364,15 @@ Test options:)");
                 while (flags_str[0]) {
                     Span<const char> part = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
 
-                    mco_ClassifyFlag flag;
-                    if (!OptionToEnum(mco_ClassifyFlagOptions, part, &flag)) {
-                        LogError("Unknown classifier flag '%1'", part);
-                        return 1;
-                    }
+                    if (part.len) {
+                        mco_ClassifyFlag flag;
+                        if (!OptionToEnum(mco_ClassifyFlagOptions, part, &flag)) {
+                            LogError("Unknown classifier flag '%1'", part);
+                            return 1;
+                        }
 
-                    classifier_flags |= 1u << (int)flag;
+                        classifier_flags |= 1u << (int)flag;
+                    }
                 }
             } else if (opt.Test("-d", "--dispense", OptionType::Value)) {
                 if (!OptionToEnum(mco_DispenseModeOptions, opt.current_value, &dispense_mode)) {
@@ -392,13 +394,15 @@ Test options:)");
                     while (flags_str[0]) {
                         Span<const char> part = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
 
-                        TestFlag flag;
-                        if (!OptionToEnum(TestFlagOptions, part, &flag)) {
-                            LogError("Unknown test flag '%1'", part);
-                            return 1;
-                        }
+                        if (part.len) {
+                            TestFlag flag;
+                            if (!OptionToEnum(TestFlagOptions, part, &flag)) {
+                                LogError("Unknown test flag '%1'", part);
+                                return 1;
+                            }
 
-                        test_flags |= 1u << (int)flag;
+                            test_flags |= 1u << (int)flag;
+                        }
                     }
                 } else {
                     test_flags = UINT_MAX;

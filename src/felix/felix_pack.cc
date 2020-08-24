@@ -79,13 +79,15 @@ Available merge options: %!..+%5%!0)", PackModeNames[(int)mode], CompressionType
                 while (flags_str[0]) {
                     Span<const char> part = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
 
-                    MergeFlag flag;
-                    if (!OptionToEnum(MergeFlagNames, part, &flag)) {
-                        LogError("Unknown merge flag '%1'", part);
-                        return 1;
-                    }
+                    if (part.len) {
+                        MergeFlag flag;
+                        if (!OptionToEnum(MergeFlagNames, part, &flag)) {
+                            LogError("Unknown merge flag '%1'", part);
+                            return 1;
+                        }
 
-                    merge_flags |= 1u << (int)flag;
+                        merge_flags |= 1u << (int)flag;
+                    }
                 }
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
