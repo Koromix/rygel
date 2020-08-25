@@ -1034,11 +1034,15 @@ instead of:
         let clicked = state.click_events.has(label);
         state.click_events.delete(label);
 
-        let type = model.actions.length ? 'button' : 'submit';
-        let render = intf => html`
-            <button type=${type} class="af_button" ?disabled=${options.disabled}
-                    @click=${func}>${label}</button>
-        `;
+        let render;
+        if (typeof label === 'string' && label.match(/^\-+$/)) {
+            render = intf => html`<hr/>`;
+        } else {
+            let type = model.actions.length ? 'button' : 'submit';
+
+            render = intf => html`<button type=${type} class="af_button" ?disabled=${options.disabled}
+                                          @click=${func}>${label}</button>`;
+        }
 
         let intf = makeWidget('action', label, render, options);
         intf.clicked = clicked;

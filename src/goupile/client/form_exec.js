@@ -199,6 +199,7 @@ let form_exec = new function() {
             builder.action('Enregistrer', {disabled: !enable_save}, e => builder.submit());
             if (route_page.options.use_validation)
                 builder.action('Valider', {disabled: !enable_validate}, e => showValidateDialog(e, record, route_page.key));
+            builder.action('-');
             builder.action('Fermer', {disabled: !state.changed && record.mtime == null}, e => handleNewClick(e, state.changed));
         }
 

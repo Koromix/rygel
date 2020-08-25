@@ -14,6 +14,11 @@
     width: 100%;
 }
 .af_actions > button + button { margin-top: 6px; }
+.af_actions > hr {
+    border: none;
+    border-top: 1px solid #efefef;
+    border-top-width: 0.5px;
+}
 
 /* -------------------- Containers -------------------- */
 
