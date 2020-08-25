@@ -81,11 +81,13 @@
 .fm_path > a.partial::before {
     padding-right: 4px;
     font-size: 0.9em;
+    font-weight: bold;
     content: '✓\FE0E';
 }
 .fm_path > a.complete::before {
     padding-right: 4px;
     font-size: 0.9em;
+    font-weight: bold;
     content: '✓\FE0E✓\FE0E';
 }
 .fm_path > a:hover { border-color: #e66d1d; }
@@ -194,11 +196,15 @@
 .st_table td.partial::before {
     padding-right: 4px;
     font-size: 0.9em;
+    font-weight: bold;
+    color: #e66d1d;
     content: '✓\FE0E';
 }
 .st_table td.complete::before {
     padding-right: 4px;
     font-size: 0.9em;
+    font-weight: bold;
+    color: #289c52;
     content: '✓\FE0E✓\FE0E';
 }
 
