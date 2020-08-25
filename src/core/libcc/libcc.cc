@@ -4866,7 +4866,10 @@ bool ConsolePrompter::Read()
         // EOF
         return false;
     }
-    RG_DEFER { DisableRawMode(); };
+    RG_DEFER {
+        Print("%!0");
+        DisableRawMode();
+    };
 
     // Don't overwrite current line
     fflush(stdout);
@@ -5207,7 +5210,7 @@ void ConsolePrompter::Prompt()
         Size i = 0;
         int x2 = prompt_columns;
 
-        Print("\r%!D.+%1%!0", prompt);
+        Print("\r%!0%1%!..+", prompt);
 
         for (;;) {
             if (i == str_offset) {
