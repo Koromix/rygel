@@ -142,10 +142,8 @@ let form_exec = new function() {
         builder.setValue = (key, value) => setValue(record, key, value);
         builder.getValue = (key, default_value) => getValue(record, key, default_value);
         builder.submitHandler = async () => {
-            await saveRecord(record, model);
-            state.changed = false;
-
-            await goupile.go();
+            if (await saveRecord(record, model.key, model.variables))
+                await goupile.go();
         };
         builder.changeHandler = () => runPageMulti(...arguments);
 
@@ -183,10 +181,8 @@ let form_exec = new function() {
         builder.setValue = (key, value) => setValue(record, key, value);
         builder.getValue = (key, default_value) => getValue(record, key, default_value);
         builder.submitHandler = async () => {
-            if (await saveRecord(record, model)) {
-                state.changed = false;
+            if (await saveRecord(record, model.key, model.variables))
                 await goupile.go();
-            }
         };
         builder.changeHandler = () => runPage(...arguments);
 
@@ -202,7 +198,7 @@ let form_exec = new function() {
 
             builder.action('Enregistrer', {disabled: !enable_save}, e => builder.submit());
             if (route_page.options.use_validation)
-                builder.action('Valider', {disabled: !enable_save}, e => showValidateDialog(e, builder.submit));
+                builder.action('Valider', {disabled: !enable_validate}, e => showValidateDialog(e, record, route_page.key));
             builder.action('Fermer', {disabled: !state.changed && record.mtime == null}, e => handleNewClick(e, state.changed));
         }
 
@@ -302,20 +298,57 @@ let form_exec = new function() {
         return record.values[key];
     }
 
-    async function saveRecord(record, model) {
+    function showValidateDialog(e, record, page) {
+        dialog.popup(e, 'Valider', (popup, close) => {
+            popup.output('Confirmez-vous la validation de cette page ?');
+
+            popup.submitHandler = async () => {
+                close();
+
+                if (await validateRecord(record, page))
+                    await goupile.go();
+            };
+        });
+    }
+
+    async function saveRecord(record, page, variables) {
         let entry = new log.Entry();
 
         entry.progress('Enregistrement en cours');
         try {
-            let record2 = await vrec.save(record, model.key, model.variables);
+            let record2 = await vrec.save(record, page, variables);
             entry.success('Données enregistrées');
 
+            let state = ctx_states[record2.id];
+            if (state != null)
+                state.changed = false;
             if (ctx_records.has(record2.id))
                 ctx_records.set(record2.id, record2);
 
             return true;
         } catch (err) {
             entry.error(`Échec de l\'enregistrement : ${err.message}`);
+            return false;
+        }
+    }
+
+    async function validateRecord(record, page) {
+        let entry = new log.Entry();
+
+        entry.progress('Validation en cours');
+        try {
+            let record2 = await vrec.validate(record, page);
+            entry.success('Données validées');
+
+            let state = ctx_states[record2.id];
+            if (state != null)
+                state.changed = false;
+            if (ctx_records.has(record2.id))
+                ctx_records.set(record2.id, record2);
+
+            return true;
+        } catch (err) {
+            entry.error(`Échec de la validation : ${err.message}`);
             return false;
         }
     }
@@ -333,17 +366,6 @@ let form_exec = new function() {
         } else {
             goupile.go(makeURL(route_page.form.key, route_page.key, null));
         }
-    }
-
-    function showValidateDialog(e, submit_func) {
-        dialog.popup(e, 'Valider', (page, close) => {
-            page.output('Confirmez-vous la validation de cette page ?');
-
-            page.submitHandler = () => {
-                close();
-                submit_func(true);
-            };
-        });
     }
 
     this.runStatus = async function() {

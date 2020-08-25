@@ -24,7 +24,10 @@ function VirtualRecords(db) {
         return record;
     };
 
-    this.save = async function(record, page, variables) {
+    this.save = function(record, page, variables) { return saveFragment(record, page, variables, false); };
+    this.validate = function(record, page) { return saveFragment(record, page, [], true); };
+
+    async function saveFragment(record, page, variables, complete) {
         let frag = {
             _ikey: null,
 
@@ -36,7 +39,7 @@ function VirtualRecords(db) {
             username: null,
             mtime: new Date,
 
-            complete: false,
+            complete: complete,
             values: {}
         };
         for (let variable of variables)
@@ -122,11 +125,11 @@ function VirtualRecords(db) {
         record2.version = frag.version;
         record2.mtime = frag.mtime;
         record2.complete = Object.assign({}, record.complete);
-        record2.complete[page] = false;
+        record2.complete[page] = complete;
         record2.values = Object.assign({}, record.values);
 
         return record2;
-    };
+    }
 
     this.delete = async function(table, id) {
         let ikey = makeEntryKey(table, id);
