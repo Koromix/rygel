@@ -722,7 +722,7 @@ User commands:
             return 0;
         }
     } else if (TestStr(cmd, "--version")) {
-        PrintLn("goupile_admin %1", FelixVersion);
+        PrintLn("%!R..goupile_admin%!0 %1", FelixVersion);
         return 0;
     }
 

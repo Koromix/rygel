@@ -90,7 +90,7 @@ Commands:
             return 0;
         }
     } else if (TestStr(cmd, "--version")) {
-        PrintLn("drdc %1", FelixVersion);
+        PrintLn("%!R..drdc%!0 %1", FelixVersion);
         return 0;
     }
 

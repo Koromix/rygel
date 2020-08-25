@@ -248,7 +248,7 @@ Options:
 
     // Handle version
     if (argc >= 2 && TestStr(argv[1], "--version")) {
-        PrintLn("goupile %1", FelixVersion);
+        PrintLn("%!R..goupile%!0 %1", FelixVersion);
         return 0;
     }
 

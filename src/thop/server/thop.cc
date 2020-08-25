@@ -477,7 +477,7 @@ Options:
 
     // Handle version
     if (argc >= 2 && TestStr(argv[1], "--version")) {
-        PrintLn("thop %1", FelixVersion);
+        PrintLn("%!R..thop%!0 %1", FelixVersion);
         return 0;
     }
 
