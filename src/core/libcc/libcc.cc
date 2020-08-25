@@ -1423,6 +1423,8 @@ void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg)
         case LogLevel::Info: { PrintLn(stderr, "%!D..%1%2%!0%3", ctx ? ctx : "", ctx ? ": " : "", msg); } break;
         case LogLevel::Error: { PrintLn(stderr, "%!R..%1%2%!0%3", ctx ? ctx : "", ctx ? ": " : "", msg); } break;
     }
+
+    fflush(stderr);
 }
 
 void PushLogFilter(const std::function<LogFilterFunc> &func)
@@ -5011,6 +5013,7 @@ bool ConsolePrompter::Read()
                     Prompt();
                 } else {
                     fputs("\r\n", stdout);
+                    fflush(stdout);
                     return false;
                 }
             } break;
@@ -5050,6 +5053,7 @@ bool ConsolePrompter::Read()
                     fprintf(stdout, "\x1B[%dB", rows - y);
                 }
                 fputs("\r\n", stdout);
+                fflush(stdout);
                 y = rows + 1;
 
                 return true;
@@ -5073,6 +5077,7 @@ bool ConsolePrompter::Read()
 
                 if (!mask && str_offset == str.len && uc < 128 && x + frag.len < columns) {
                     fwrite(frag.data, 1, (size_t)frag.len, stdout);
+                    fflush(stdout);
                     x += (int)frag.len;
                 } else {
                     Prompt();
@@ -5248,6 +5253,8 @@ void ConsolePrompter::Prompt()
     }
     fprintf(stdout, "\r\x1B[%dC", x);
     fprintf(stdout, "\x1B[?25h");
+
+    fflush(stdout);
 }
 
 Vec2<int> ConsolePrompter::GetConsoleSize()
