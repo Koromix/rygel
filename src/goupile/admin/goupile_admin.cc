@@ -129,7 +129,7 @@ Options:
                                  %!D..(default: project key)%!0
 
     %!..+-u, --user <name>%!0            Name of default user
-    %!..+-p, --password <pwd>%!0         Password of default user
+        %!..+--password <pwd>%!0         Password of default user
 
         %!..+--empty%!0                  Don't create default files)");
     };
@@ -148,7 +148,7 @@ Options:
                 app_name = opt.current_value;
             } else if (opt.Test("-u", "--user", OptionType::Value)) {
                 default_username = opt.current_value;
-            } else if (opt.Test("-p", "--password", OptionType::Value)) {
+            } else if (opt.Test("--password", OptionType::Value)) {
                 default_password = opt.current_value;
             } else if (opt.Test("--empty")) {
                 empty = true;
@@ -353,8 +353,8 @@ static int RunAddUser(Span<const char *> arguments)
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-p, --password <pwd>%!0         Password of user
-    %!..+-m, --permissions <perms>%!0    User permissions
+        %!..+--password <pwd>%!0         Password of user
+    %!..+-p, --permissions <perms>%!0    User permissions
 
 User permissions: %!..+%1%!0)", FmtSpan(UserPermissionNames));
     };
@@ -369,9 +369,9 @@ User permissions: %!..+%1%!0)", FmtSpan(UserPermissionNames));
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
                 config_filename = opt.current_value;
-            } else if (opt.Test("-p", "--password", OptionType::Value)) {
+            } else if (opt.Test("--password", OptionType::Value)) {
                 password = opt.current_value;
-            } else if (opt.Test("-m", "--permissions", OptionType::Value)) {
+            } else if (opt.Test("-p", "--permissions", OptionType::Value)) {
                 if (!ParsePermissionList(opt.current_value, &permissions))
                     return 1;
             } else {
@@ -447,8 +447,8 @@ static int RunEditUser(Span<const char *> arguments)
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-p, --password <pwd>%!0         Password of user
-    %!..+-m, --permissions <perms>%!0    User permissions
+        %!..+--password <pwd>%!0         Password of user
+    %!..+-p, --permissions <perms>%!0    User permissions
 
 User permissions: %!..+%1%!0)", FmtSpan(UserPermissionNames));
     };
@@ -463,9 +463,9 @@ User permissions: %!..+%1%!0)", FmtSpan(UserPermissionNames));
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
                 config_filename = opt.current_value;
-            } else if (opt.Test("-p", "--password", OptionType::Value)) {
+            } else if (opt.Test("--password", OptionType::Value)) {
                 password = opt.current_value;
-            } else if (opt.Test("-m", "--permissions", OptionType::Value)) {
+            } else if (opt.Test("-p", "--permissions", OptionType::Value)) {
                 if (!ParsePermissionList(opt.current_value, &permissions))
                     return 1;
             } else {
