@@ -9,6 +9,12 @@
 
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
+#ifndef _WIN32
+    #include <sys/types.h>
+    #include <pwd.h>
+    #include <unistd.h>
+#endif
+
 namespace RG {
 
 extern "C" const Span<const AssetInfo> pack_assets;
@@ -107,6 +113,46 @@ static bool HashPassword(Span<const char> password, char out_hash[crypto_pwhash_
     return true;
 }
 
+#ifndef _WIN32
+static bool FindPosixUser(const char *username, uid_t *out_uid, gid_t *out_gid)
+{
+    struct passwd pwd_buf;
+    HeapArray<char> buf;
+    struct passwd *pwd;
+
+again:
+    buf.Grow(1024);
+    buf.len += 1024;
+
+    int ret = getpwnam_r(username, &pwd_buf, buf.ptr, buf.len, &pwd);
+    if (ret != 0) {
+        if (ret == ERANGE)
+            goto again;
+
+        LogError("getpwnam('%1') failed: %2", username, strerror(errno));
+        return false;
+    }
+    if (!pwd) {
+        LogError("Could not find system user '%1'", username);
+        return false;
+    }
+
+    *out_uid = pwd->pw_uid;
+    *out_gid = pwd->pw_gid;
+    return true;
+}
+
+static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
+{
+    if (chown(filename, uid, gid) < 0) {
+        LogError("Failed to change '%1' owner: %2", filename, strerror(errno));
+        return false;
+    }
+
+    return true;
+}
+#endif
+
 static int RunInit(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -117,6 +163,11 @@ static int RunInit(Span<const char *> arguments)
     bool empty = false;
     Span<const char> default_username = nullptr;
     Span<const char> default_password = nullptr;
+#ifndef _WIN32
+    bool change_owner = false;
+    uid_t owner_uid = 0;
+    gid_t owner_gid = 0;
+#endif
     const char *profile_directory = nullptr;
 
     const auto print_usage = [](FILE *fp) {
@@ -132,6 +183,11 @@ Options:
         %!..+--password <pwd>%!0         Password of default user
 
         %!..+--empty%!0                  Don't create default files)");
+
+#ifndef _WIN32
+        PrintLn(fp, R"(
+    %!..+-o, --owner <owner>%!0          Change directory and file owner)");
+#endif
     };
 
     // Parse arguments
@@ -152,6 +208,13 @@ Options:
                 default_password = opt.current_value;
             } else if (opt.Test("--empty")) {
                 empty = true;
+#ifndef _WIN32
+            } else if (opt.Test("-o", "--owner", OptionType::Value)) {
+                change_owner = true;
+
+                if (!FindPosixUser(opt.current_value, &owner_uid, &owner_gid))
+                    return 1;
+#endif
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -201,6 +264,10 @@ Options:
 
         directories.Append(profile_directory);
     }
+#ifndef _WIN32
+    if (change_owner && !ChangeFileOwner(profile_directory, owner_uid, owner_gid))
+        return false;
+#endif
 
     // Gather missing information
     if (!default_username.len) {
@@ -222,6 +289,12 @@ Options:
                 return false;
 
             directories.Append(directory);
+
+#ifndef _WIN32
+            if (change_owner && !ChangeFileOwner(directory, owner_uid, owner_gid))
+                return false;
+#endif
+
             return true;
         };
 
@@ -240,6 +313,11 @@ Options:
             if (!WriteFile(asset.data, filename))
                 return 1;
             files.Append(filename);
+
+#ifndef _WIN32
+            if (change_owner && !ChangeFileOwner(filename, owner_uid, owner_gid))
+                return false;
+#endif
         }
     }
 
@@ -253,6 +331,11 @@ Options:
             return 1;
         if (!database.Run(SchemaSQL))
             return 1;
+
+#ifndef _WIN32
+        if (change_owner && !ChangeFileOwner(filename, owner_uid, owner_gid))
+            return false;
+#endif
     }
 
     // Create default user (admin)
@@ -277,6 +360,8 @@ Options:
         Print(&st, DefaultConfig, app_key, app_name);
         if (!st.Close())
             return 1;
+
+         // This one keeps the default owner uid/gid even with --owner
     }
 
     // Make sure database is OK!
