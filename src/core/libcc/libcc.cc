@@ -1822,6 +1822,12 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
     return true;
 }
 
+bool IsDirectoryEmpty(const char *dirname)
+{
+    EnumStatus status = EnumerateDirectory(dirname, nullptr, -1, [](const char *, FileType) { return false; });
+    return status == EnumStatus::Done;
+}
+
 bool TestFile(const char *filename, FileType type)
 {
     FileInfo file_info;

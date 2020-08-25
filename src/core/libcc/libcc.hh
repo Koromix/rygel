@@ -3515,6 +3515,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
                               FunctionRef<bool(const char *, FileType)> func);
 bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Size max_files,
                     Allocator *str_alloc, HeapArray<const char *> *out_files);
+bool IsDirectoryEmpty(const char *dirname);
 
 bool TestFile(const char *filename, FileType type = FileType::Unknown);
 

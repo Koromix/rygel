@@ -161,11 +161,10 @@ Options:
         profile_directory = opt.ConsumeNonOption();
     }
 
+    profile_directory = NormalizePath(profile_directory ? profile_directory : ".",
+                                      GetWorkingDirectory(), &temp_alloc).ptr;
+
     // Errors and defaults
-    if (!profile_directory) {
-        LogError("Profile directory is missing");
-        return 1;
-    }
     if (!app_key.len) {
         app_key = TrimStrRight((Span<const char>)profile_directory, RG_PATH_SEPARATORS);
         app_key = SplitStrReverseAny(app_key, RG_PATH_SEPARATORS);
@@ -178,10 +177,6 @@ Options:
         return 1;
     }
 
-    // If we can make it, it's a good start!
-    if (!MakeDirectory(profile_directory))
-        return 1;
-
     // Drop created files and directories if anything fails
     HeapArray<const char *> directories;
     HeapArray<const char *> files;
@@ -192,8 +187,20 @@ Options:
         for (Size i = directories.len - 1; i >= 0; i--) {
             UnlinkDirectory(directories[i]);
         }
-        UnlinkDirectory(profile_directory);
     };
+
+    // Make or check project directory
+    if (TestFile(profile_directory)) {
+        if (!IsDirectoryEmpty(profile_directory)) {
+            LogError("Directory '%1' is not empty", profile_directory);
+            return 1;
+        }
+    } else {
+        if (!MakeDirectory(profile_directory, false))
+            return 1;
+
+        directories.Append(profile_directory);
+    }
 
     // Gather missing information
     if (!default_username.len) {
