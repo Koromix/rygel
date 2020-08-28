@@ -366,8 +366,8 @@ let goupile = new function() {
         let prev_online = net.isOnline();
 
         try {
-            await net.fetch(`${env.base_url}api/events.json`);
-            net.setOnline(true);
+            let response = await net.fetch(`${env.base_url}api/events.json`);
+            net.setOnline(response.ok);
         } catch (err) {
             net.setOnline(false);
         } finally {
