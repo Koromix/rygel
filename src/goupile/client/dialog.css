@@ -8,7 +8,7 @@
     box-sizing: border-box;
     padding: 6px;
     border: 1px solid #dfdfdf;
-    background: #efefef;
+    background: #f6f6f6;
     box-shadow: 2px 2px rgba(136, 136, 136, 0.12);
     z-index: 999999;
 }

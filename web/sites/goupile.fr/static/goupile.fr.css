@@ -11,7 +11,7 @@ body {
     padding: 0;
     font-family: 'Open Sans', sans-serif;
     font-size: 16px;
-    background: #f8f8f8;
+    background: white;
 }
 
 a {
@@ -49,7 +49,7 @@ th {
 }
 td {
     padding: 0.5em;
-    background: #f8f8f8;
+    background: white;
     border: 1px solid #ebebeb;
     vertical-align: top;
 }
@@ -73,7 +73,7 @@ td {
     text-decoration: none;
     letter-spacing: 1px;
     text-align: center;
-    color: #f8f8f8;
+    color: white;
 }
 #header a + a { margin-left: 1em; }
 #header a:hover { text-decoration: underline; }
@@ -91,7 +91,7 @@ td {
     top: 4.5em;
     width: 200px;
     padding: 0 1em 0 0;
-    background: #f8f8f8;
+    background: white;
     font-size: 0.9em;
 }
 #menu ul { padding-left: 1em; }

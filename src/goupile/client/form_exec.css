@@ -24,8 +24,8 @@
 .fm_form > .af_main {
     position: relative;
     padding: 12px 12px 12px 12px;
-    background: #efefef;
-    border: 12px solid #f8f8f8;
+    background: #f6f6f6;
+    border: 12px solid white;
 }
 
 @media (max-width: 580px) {
@@ -65,8 +65,8 @@
     display: inline-block;
     height: 1.2em;
     padding: 4px 14px 6px 14px;
-    background: #f8f8f8;
-    border: 2px solid #f8f8f8;
+    background: white;
+    border: 2px solid white;
     color: black;
     text-decoration: none;
     font-size: 1.1em;
