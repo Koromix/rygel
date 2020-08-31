@@ -122,18 +122,36 @@ function UserManager(db) {
         let pwd_hash = await crypto.subtle.digest('SHA-256', pwd_utf8);
 
         let iv = crypto.getRandomValues(new Uint8Array(12));
-        let algorithm = {
-            name: 'AES-GCM',
-            iv: iv
-        };
-        let key = await crypto.subtle.importKey('raw', pwd_hash, algorithm.name, false, ['encrypt']);
+        let salt = crypto.getRandomValues(new Uint8Array(16));
 
-        let profile_utf8 = new TextEncoder().encode(JSON.stringify(profile));
-        let profile_enc = await crypto.subtle.encrypt(algorithm, key, profile_utf8);
+        let key;
+        {
+            let algorithm = {
+                name: 'PBKDF2',
+                hash: 'SHA-256',
+                salt: salt,
+                iterations: 1000
+            };
+
+            key = await crypto.subtle.importKey('raw', pwd_hash, 'PBKDF2', false, ['deriveKey']);
+            key = await crypto.subtle.deriveKey(algorithm, key, {name: 'AES-GCM', length: 256}, false, ['encrypt']);
+        }
+
+        let profile_enc;
+        {
+            let algorithm = {
+                name: 'AES-GCM',
+                iv: iv
+            };
+
+            let profile_utf8 = new TextEncoder().encode(JSON.stringify(profile));
+            profile_enc = await crypto.subtle.encrypt(algorithm, key, profile_utf8);
+        }
 
         let passport = {
             username: profile.username,
             iv: iv,
+            salt: salt,
             profile: profile_enc
         };
         await db.save('usr_passports', passport);
@@ -151,13 +169,28 @@ function UserManager(db) {
             let pwd_utf8 = new TextEncoder().encode(password);
             let pwd_hash = await crypto.subtle.digest('SHA-256', pwd_utf8);
 
-            let algorithm = {
-                name: 'AES-GCM',
-                iv: passport.iv
-            };
-            let key = await crypto.subtle.importKey('raw', pwd_hash, algorithm.name, false, ['decrypt']);
+            let key;
+            {
+                let algorithm = {
+                    name: 'PBKDF2',
+                    hash: 'SHA-256',
+                    salt: passport.salt,
+                    iterations: 1000
+                };
 
-            let profile_utf8 = await crypto.subtle.decrypt(algorithm, key, passport.profile);
+                key = await crypto.subtle.importKey('raw', pwd_hash, 'PBKDF2', false, ['deriveKey']);
+                key = await crypto.subtle.deriveKey(algorithm, key, {name: 'AES-GCM', length: 256}, false, ['decrypt']);
+            }
+
+            let profile_utf8;
+            {
+                let algorithm = {
+                    name: 'AES-GCM',
+                    iv: passport.iv
+                };
+
+                profile_utf8 = await crypto.subtle.decrypt(algorithm, key, passport.profile);
+            }
 
             session_profile = JSON.parse(new TextDecoder().decode(profile_utf8));
             session_rnd = undefined;
