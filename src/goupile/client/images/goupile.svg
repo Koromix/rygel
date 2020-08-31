@@ -40,11 +40,11 @@
      inkscape:window-height="921"
      id="namedview9"
      showgrid="false"
-     inkscape:zoom="0.16296602"
-     inkscape:cx="-701.03684"
-     inkscape:cy="-1.1036159"
-     inkscape:window-x="177"
-     inkscape:window-y="55"
+     inkscape:zoom="0.65186408"
+     inkscape:cx="268.17859"
+     inkscape:cy="802.47993"
+     inkscape:window-x="2029"
+     inkscape:window-y="179"
      inkscape:window-maximized="0"
      inkscape:current-layer="surface1" />
   <g
@@ -55,9 +55,9 @@
        id="path2" />
     <path
        style="fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none"
-       d="m 506.11328,814.51953 c 16.39844,0 192.34109,-232.29295 192.34109,-382.48045 -166.38933,-29.04826 -220.67216,-28.11656 -381.61015,0.76704 0,150.1875 172.87453,381.71341 189.26906,381.71341 z"
+       d="m 506.11328,834.51953 c 16.39844,0 192.34109,-216.29295 192.34109,-366.48045 -40.90678,-7.14151 -79.63979,-16.88308 -105.64321,-30.01851 -28.65552,-14.47513 -83.63376,-71.31949 -87.86679,-71.31949 -4.83385,0 -61.57951,56.74407 -90.62022,72.54632 -24.35817,13.25429 -60.16095,22.86107 -97.47993,29.55872 0,150.1875 172.87453,365.71341 189.26906,365.71341 z"
        id="path4"
        inkscape:connector-curvature="0"
-       sodipodi:nodetypes="sccs" />
+       sodipodi:nodetypes="scssscs" />
   </g>
 </svg>
