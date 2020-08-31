@@ -197,6 +197,8 @@ static bool RunMigrations(sq_Database &database, int version)
 {
     bool success = database.Transaction([&]() {
         for (Size i = version; i < RG_LEN(MigrationRequests); i++) {
+            LogInfo("Running migration %1 of %2", i + 1, RG_LEN(MigrationRequests));
+
             const std::function<bool(sq_Database &database)> &func = MigrationRequests[i];
             if (!func(database))
                 return false;
@@ -210,7 +212,7 @@ static bool RunMigrations(sq_Database &database, int version)
     if (!success)
         return false;
 
-    LogInfo("Schema version: %1", RG_LEN(MigrationRequests));
+    LogInfo("Migration complete, version: %1", RG_LEN(MigrationRequests));
     return true;
 }
 
@@ -505,9 +507,9 @@ Options:
         version = sqlite3_column_int(stmt, 0);
     }
 
-    LogInfo("Previous version: %1", version);
+    LogInfo("Profile version: %1", version);
     if (version == RG_LEN(MigrationRequests)) {
-        LogInfo("Database is up to date");
+        LogInfo("Profile is up to date");
         return 0;
     }
     if (!RunMigrations(database, version))
