@@ -39,68 +39,70 @@ DatabaseFile = database.db
 # BaseUrl = /
 )";
 
-static const char *const SchemaSQL = R"(
-CREATE TABLE usr_users (
-    username TEXT NOT NULL,
-    password_hash TEXT NOT NULL,
+static std::function<bool(sq_Database &database)> MigrationRequests[] = {
+    [](sq_Database &database) { return database.Run(R"(
+        CREATE TABLE rec_entries (
+            table_name TEXT NOT NULL,
+            id TEXT NOT NULL,
+            sequence INTEGER NOT NULL
+        );
+        CREATE UNIQUE INDEX rec_entries_ti ON rec_entries (table_name, id);
 
-    permissions INTEGER NOT NULL
-);
-CREATE UNIQUE INDEX usr_users_u ON usr_users (username);
+        CREATE TABLE rec_fragments (
+            table_name TEXT NOT NULL,
+            id TEXT NOT NULL,
+            page TEXT,
+            username TEXT NOT NULL,
+            mtime TEXT NOT NULL,
+            complete INTEGER CHECK(complete IN (0, 1)) NOT NULL,
+            json TEXT
+        );
+        CREATE INDEX rec_fragments_tip ON rec_fragments(table_name, id, page);
 
-CREATE TABLE rec_entries (
-    table_name TEXT NOT NULL,
-    id TEXT NOT NULL,
-    sequence INTEGER NOT NULL
-);
-CREATE UNIQUE INDEX rec_entries_ti ON rec_entries (table_name, id);
+        CREATE TABLE rec_columns (
+            table_name TEXT NOT NULL,
+            page TEXT NOT NULL,
+            key TEXT NOT NULL,
+            prop TEXT,
+            before TEXT,
+            after TEXT
+        );
+        CREATE UNIQUE INDEX rec_columns_tpkp ON rec_columns (table_name, page, key, prop);
 
-CREATE TABLE rec_fragments (
-    table_name TEXT NOT NULL,
-    id TEXT NOT NULL,
-    page TEXT,
-    username TEXT NOT NULL,
-    mtime TEXT NOT NULL,
-    complete INTEGER CHECK(complete IN (0, 1)) NOT NULL,
-    json TEXT
-);
-CREATE INDEX rec_fragments_tip ON rec_fragments(table_name, id, page);
+        CREATE TABLE rec_sequences (
+            table_name TEXT NOT NULL,
+            sequence INTEGER NOT NULL
+        );
+        CREATE UNIQUE INDEX rec_sequences_t ON rec_sequences (table_name);
 
-CREATE TABLE rec_columns (
-    table_name TEXT NOT NULL,
-    page TEXT NOT NULL,
-    key TEXT NOT NULL,
-    prop TEXT,
-    before TEXT,
-    after TEXT
-);
-CREATE UNIQUE INDEX rec_columns_tpkp ON rec_columns (table_name, page, key, prop);
+        CREATE TABLE sched_resources (
+            schedule TEXT NOT NULL,
+            date TEXT NOT NULL,
+            time INTEGER NOT NULL,
 
-CREATE TABLE rec_sequences (
-    table_name TEXT NOT NULL,
-    sequence INTEGER NOT NULL
-);
-CREATE UNIQUE INDEX rec_sequences_t ON rec_sequences (table_name);
+            slots INTEGER NOT NULL,
+            overbook INTEGER NOT NULL
+        );
+        CREATE UNIQUE INDEX sched_resources_sdt ON sched_resources (schedule, date, time);
 
-CREATE TABLE sched_resources (
-    schedule TEXT NOT NULL,
-    date TEXT NOT NULL,
-    time INTEGER NOT NULL,
+        CREATE TABLE sched_meetings (
+            schedule TEXT NOT NULL,
+            date TEXT NOT NULL,
+            time INTEGER NOT NULL,
 
-    slots INTEGER NOT NULL,
-    overbook INTEGER NOT NULL
-);
-CREATE UNIQUE INDEX sched_resources_sdt ON sched_resources (schedule, date, time);
+            identity TEXT NOT NULL
+        );
+        CREATE INDEX sched_meetings_sd ON sched_meetings (schedule, date, time);
 
-CREATE TABLE sched_meetings (
-    schedule TEXT NOT NULL,
-    date TEXT NOT NULL,
-    time INTEGER NOT NULL,
+        CREATE TABLE usr_users (
+            username TEXT NOT NULL,
+            password_hash TEXT NOT NULL,
 
-    identity TEXT NOT NULL
-);
-CREATE INDEX sched_meetings_sd ON sched_meetings (schedule, date, time);
-)";
+            permissions INTEGER NOT NULL
+        );
+        CREATE UNIQUE INDEX usr_users_u ON usr_users (username);
+    )"); }
+};
 
 static bool HashPassword(Span<const char> password, char out_hash[crypto_pwhash_STRBYTES])
 {
@@ -152,6 +154,27 @@ static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
     return true;
 }
 #endif
+
+static bool RunMigrations(sq_Database &database, int version)
+{
+    bool success = database.Transaction([&]() {
+        for (Size i = version; i < RG_LEN(MigrationRequests); i++) {
+            const std::function<bool(sq_Database &database)> &func = MigrationRequests[i];
+            if (!func(database))
+                return false;
+        }
+
+        char buf[128];
+        Fmt(buf, "PRAGMA user_version = %1;", RG_LEN(MigrationRequests));
+
+        return database.Run(buf);
+    });
+    if (!success)
+        return false;
+
+    LogInfo("Schema version: %1", RG_LEN(MigrationRequests));
+    return true;
+}
 
 static int RunInit(Span<const char *> arguments)
 {
@@ -330,7 +353,7 @@ Options:
 
         if (!database.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
             return 1;
-        if (!database.Run(SchemaSQL))
+        if (!RunMigrations(database, 0))
             return 1;
 
 #ifndef _WIN32
@@ -370,31 +393,7 @@ Options:
         return 1;
 
     out_guard.Disable();
-
-    LogInfo("Done!");
     return 0;
-}
-
-static bool ParsePermissionList(Span<const char> remain, uint32_t *out_permissions)
-{
-    uint32_t permissions = 0;
-
-    while (remain.len) {
-        Span<const char> part = TrimStr(SplitStr(remain, ',', &remain), " ");
-
-        if (part.len) {
-            UserPermission perm;
-            if (!OptionToEnum(UserPermissionNames, part, &perm)) {
-                LogError("Unknown permission '%1'", part);
-                return false;
-            }
-
-            permissions |= 1 << (int)perm;
-        }
-    }
-
-    *out_permissions = permissions;
-    return true;
 }
 
 static bool OpenProfileDatabase(const char *config_filename, sq_Database *out_database)
@@ -420,6 +419,84 @@ static bool OpenProfileDatabase(const char *config_filename, sq_Database *out_da
     if (!out_database->Open(config.database_filename, SQLITE_OPEN_READWRITE))
         return false;
 
+    return true;
+}
+
+static int RunMigrate(Span<const char *> arguments)
+{
+    // Options
+    const char *config_filename = nullptr;
+
+    const auto print_usage = [](FILE *fp) {
+        PrintLn(fp, R"(Usage: %!..+goupile_admin migrate [options]%!0
+
+Options:
+    %!..+-C, --config_file <file>%!0     Set configuration file)");
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
+                config_filename = opt.current_value;
+            } else {
+                LogError("Cannot handle option '%1'", opt.current_option);
+                return 1;
+            }
+        }
+    }
+
+    // Open database
+    sq_Database database;
+    if (!OpenProfileDatabase(config_filename, &database))
+        return 1;
+
+    // Get schema version
+    int version;
+    {
+        sq_Statement stmt;
+        if (!database.Prepare("PRAGMA user_version;", &stmt))
+            return 1;
+        RG_ASSERT(stmt.Next());
+
+        version = sqlite3_column_int(stmt, 0);
+    }
+
+    LogInfo("Previous version: %1", version);
+    if (version == RG_LEN(MigrationRequests)) {
+        LogInfo("Database is up to date");
+        return 0;
+    }
+    if (!RunMigrations(database, version))
+        return 1;
+
+    return 0;
+}
+
+static bool ParsePermissionList(Span<const char> remain, uint32_t *out_permissions)
+{
+    uint32_t permissions = 0;
+
+    while (remain.len) {
+        Span<const char> part = TrimStr(SplitStr(remain, ',', &remain), " ");
+
+        if (part.len) {
+            UserPermission perm;
+            if (!OptionToEnum(UserPermissionNames, part, &perm)) {
+                LogError("Unknown permission '%1'", part);
+                return false;
+            }
+
+            permissions |= 1 << (int)perm;
+        }
+    }
+
+    *out_permissions = permissions;
     return true;
 }
 
@@ -699,6 +776,7 @@ int Main(int argc, char **argv)
 
 General commands:
     %!..+init%!0                         Create new profile
+    %!..+migrate%!0                      Migrate existing profile
 
 User commands:
     %!..+add_user%!0                     Add new user
@@ -735,6 +813,8 @@ User commands:
 
     if (TestStr(cmd, "init")) {
         return RunInit(arguments);
+    } else if (TestStr(cmd, "migrate")) {
+        return RunMigrate(arguments);
     } else if (TestStr(cmd, "add_user")) {
         return RunAddUser(arguments);
     } else if (TestStr(cmd, "edit_user")) {
