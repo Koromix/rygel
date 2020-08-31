@@ -101,6 +101,27 @@ static std::function<bool(sq_Database &database)> MigrationRequests[] = {
             permissions INTEGER NOT NULL
         );
         CREATE UNIQUE INDEX usr_users_u ON usr_users (username);
+    )"); },
+
+    [](sq_Database &database) { return database.Run(R"(
+        ALTER TABLE rec_fragments RENAME TO rec_fragments_BAK;
+        DROP INDEX rec_fragments_tip;
+
+        CREATE TABLE rec_fragments (
+            table_name TEXT NOT NULL,
+            id TEXT NOT NULL,
+            page TEXT,
+            username TEXT NOT NULL,
+            mtime TEXT NOT NULL,
+            complete INTEGER CHECK(complete IN (0, 1)) NOT NULL,
+            json TEXT,
+            anchor INTEGER PRIMARY KEY AUTOINCREMENT
+        );
+        CREATE INDEX rec_fragments_tip ON rec_fragments(table_name, id, page);
+
+        INSERT INTO rec_fragments (table_name, id, page, username, mtime, complete, json)
+            SELECT table_name, id, page, username, mtime, complete, json FROM rec_fragments_BAK;
+        DROP TABLE rec_fragments_BAK;
     )"); }
 };
 

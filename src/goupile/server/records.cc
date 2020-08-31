@@ -36,6 +36,7 @@ static void ExportRecord(sq_Statement *stmt, Span<const char> table_name, json_W
             }
             json->Key("complete"); json->Bool(sqlite3_column_int(*stmt, 5));
             json->Key("values"); json->Raw((const char *)sqlite3_column_text(*stmt, 6));
+            json->Key("anchor"); json->Int64(sqlite3_column_int64(*stmt, 7));
 
             json->EndObject();
         } while (stmt->Next() && TestStr((const char *)sqlite3_column_text(*stmt, 0), id));
@@ -81,7 +82,7 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
 
     if (id.len) {
         sq_Statement stmt;
-        if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, f.mtime, f.username, f.page, f.complete, f.json
+        if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, f.mtime, f.username, f.page, f.complete, f.json, f.anchor
                                    FROM rec_entries r
                                    LEFT JOIN rec_fragments f ON (f.table_name = r.table_name)
                                    WHERE r.table_name = ? AND r.id = ?)", &stmt))
@@ -105,7 +106,7 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
         json.Finish(io);
     } else {
         sq_Statement stmt;
-        if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, f.mtime, f.username, f.page, f.complete, f.json
+        if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, f.mtime, f.username, f.page, f.complete, f.json, f.anchor
                                    FROM rec_entries r
                                    LEFT JOIN rec_fragments f ON (f.table_name = r.table_name)
                                    WHERE r.table_name = ?
