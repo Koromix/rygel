@@ -112,7 +112,7 @@ static int RunInit(Span<const char *> arguments)
     const char *profile_directory = nullptr;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+goupile_admin init [options] profile_directory%!0
+        PrintLn(fp, R"(Usage: %!..+goupile_admin init [options] [profile_directory]%!0
 
 Options:
     %!..+-k, --key <key>%!0              Change application key
