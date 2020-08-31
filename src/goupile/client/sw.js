@@ -10,32 +10,14 @@ let env = {
     cache_key: '{CACHE_KEY}'
 };
 
-let cache_urls = [
-    env.base_url,
-    `${env.base_url}static/goupile.pk.css`,
-    `${env.base_url}static/goupile.pk.js`,
-    `${env.base_url}static/ace.js`,
-    `${env.base_url}static/theme-merbivore_soft.js`,
-    `${env.base_url}static/mode-css.js`,
-    `${env.base_url}static/mode-html.js`,
-    `${env.base_url}static/mode-javascript.js`,
-    `${env.base_url}static/ext-searchbox.js`,
-    `${env.base_url}static/xlsx.core.min.js`,
-    `${env.base_url}static/OpenSans_v17_Latin_Regular.woff2`,
-    `${env.base_url}static/OpenSans_v17_Latin_Bold.woff2`,
-    `${env.base_url}static/OpenSans_v17_Latin_Italic.woff2`,
-    `${env.base_url}static/OpenSans_v17_Latin_BoldItalic.woff2`,
-    `${env.base_url}static/icons.png`,
-
-    `${env.base_url}manifest.json`,
-    `${env.base_url}favicon.png`
-];
-
 self.addEventListener('install', e => {
     e.waitUntil(async function() {
         if (env.use_offline) {
+            let files = await net.fetch(`${env.base_url}api/files/static.json`).then(response => response.json());
+            files.push(env.base_url);
+
             let cache = await caches.open(env.cache_key);
-            await cache.addAll(cache_urls);
+            await cache.addAll(files);
         }
 
         await self.skipWaiting();

@@ -28,7 +28,8 @@ const RG::AssetInfo *pack_asset_ports_pk_js;
 #else
 extern "C" const Span<const AssetInfo> pack_assets;
 #endif
-static HashTable<const char *, AssetInfo> assets_map;
+static HeapArray<AssetInfo> assets;
+static HashTable<const char *, const AssetInfo *> assets_map;
 static BlockAllocator assets_alloc;
 
 static char etag[33];
@@ -41,11 +42,24 @@ static void HandleEvents(const http_RequestInfo &request, http_IO *io)
     io->AttachText(200, "{}", "application/json");
 }
 
-static AssetInfo PatchGoupileVariables(const AssetInfo &asset, Allocator *alloc)
+static void HandleFileStatic(const http_RequestInfo &request, http_IO *io)
 {
-    AssetInfo asset2 = asset;
-    asset2.data = PatchAssetVariables(asset, alloc,
-                                      [](const char *key, StreamWriter *writer) {
+    http_JsonPageBuilder json(request.compression_type);
+
+    json.StartArray();
+    for (const AssetInfo &asset: assets) {
+        char buf[512];
+        json.String(Fmt(buf, "%1%2", goupile_config.http.base_url, asset.name + 1).ptr);
+    }
+    json.EndArray();
+
+    json.Finish(io);
+}
+
+static Span<const uint8_t> PatchGoupileVariables(const AssetInfo &asset, Allocator *alloc)
+{
+    Span<const uint8_t> data = PatchAssetVariables(asset, alloc,
+                                                   [](const char *key, StreamWriter *writer) {
         if (TestStr(key, "VERSION")) {
             writer->Write(FelixVersion);
             return true;
@@ -81,19 +95,18 @@ static AssetInfo PatchGoupileVariables(const AssetInfo &asset, Allocator *alloc)
         }
     });
 
-    return asset2;
+    return data;
 }
 
 static void InitAssets()
 {
-#ifdef NDEBUG
-    Span<const AssetInfo> assets = pack_assets;
-#else
-    Span<const AssetInfo> assets = asset_set.assets;
+#ifndef NDEBUG
+    Span<const AssetInfo> pack_assets = asset_set.assets;
 #endif
 
-    LogInfo(assets_map.count ? "Reload assets" : "Init assets");
+    LogInfo(assets.len ? "Reload assets" : "Init assets");
 
+    assets.Clear();
     assets_map.Clear();
     assets_alloc.ReleaseAll();
 
@@ -105,19 +118,34 @@ static void InitAssets()
     }
 
     // Packed static assets
-    for (const AssetInfo &asset: assets) {
-        if (TestStr(asset.name, "goupile.html") ||
-                TestStr(asset.name, "sw.pk.js") ||
-                TestStr(asset.name, "manifest.json")) {
-            AssetInfo asset2 = PatchGoupileVariables(asset, &assets_alloc);
-            assets_map.Set(asset2);
+    for (AssetInfo asset: pack_assets) {
+        if (TestStr(asset.name, "goupile.html")) {
+            asset.name = "/static/goupile.html";
+            asset.data = PatchGoupileVariables(asset, &assets_alloc);
+        } else if (TestStr(asset.name, "manifest.json")) {
+            if (!goupile_config.use_offline)
+                continue;
+
+            asset.name = "/manifest.json";
+            asset.data = PatchGoupileVariables(asset, &assets_alloc);
+        } else if (TestStr(asset.name, "sw.pk.js")) {
+            asset.name = "/sw.pk.js";
+            asset.data = PatchGoupileVariables(asset, &assets_alloc);
+        } else if (TestStr(asset.name, "favicon.png")) {
+            asset.name = "/favicon.png";
         } else if (TestStr(asset.name, "ports.pk.js")) {
 #ifndef NDEBUG
             pack_asset_ports_pk_js = &asset;
 #endif
+            continue;
         } else {
-            assets_map.Set(asset);
+            asset.name = Fmt(&assets_alloc, "/static/%1", asset.name).ptr;
         }
+
+        assets.Append(asset);
+    }
+    for (const AssetInfo &asset: assets) {
+        assets_map.Set(&asset);
     }
 }
 
@@ -139,20 +167,14 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
         // Now try static assets
         {
-            const AssetInfo *asset = nullptr;
+            const AssetInfo *asset;
 
-            if (TestStr(request.url, "/") ||
-                    !strncmp(request.url, "/app/", 5) || !strncmp(request.url, "/main/", 6)) {
-                asset = assets_map.Find("goupile.html");
-            } else if (TestStr(request.url, "/manifest.json") && goupile_config.use_offline) {
-                asset = assets_map.Find("manifest.json");
-            } else if (TestStr(request.url, "/favicon.png")) {
-                asset = assets_map.Find("favicon.png");
-            } else if (TestStr(request.url, "/sw.pk.js")) {
-                asset = assets_map.Find("sw.pk.js");
-            } else if (!strncmp(request.url, "/static/", 8)) {
-                const char *asset_name = request.url + 8;
-                asset = assets_map.Find(asset_name);
+            if (TestStr(request.url, "/") || !strncmp(request.url, "/app/", 5) ||
+                                             !strncmp(request.url, "/main/", 6)) {
+                asset = assets_map.FindValue("/static/goupile.html", nullptr);
+                RG_ASSERT(asset);
+            } else {
+                asset = assets_map.FindValue(request.url, nullptr);
             }
 
             if (asset) {
@@ -183,8 +205,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 func = HandleEvents;
             } else if (TestStr(request.url, "/api/profile.json")) {
                 func = HandleProfile;
-            } else if (TestStr(request.url, "/api/files.json")) {
+            } else if (TestStr(request.url, "/api/files/list.json")) {
                 func = HandleFileList;
+            } else if (TestStr(request.url, "/api/files/static.json")) {
+                func = HandleFileStatic;
             } else if (!strncmp(request.url, "/records/", 9)) {
                 func = HandleRecordGet;
             } else if (TestStr(request.url, "/api/columns.json")) {
