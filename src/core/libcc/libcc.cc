@@ -16,7 +16,12 @@
 #include "../../../vendor/grisu-exact/grisu_exact.h"
 
 #ifdef _WIN32
-    #define WIN32_LEAN_AND_MEAN
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
     #include <windows.h>
     #include <fcntl.h>
     #include <io.h>
