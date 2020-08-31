@@ -4,6 +4,7 @@
 
 #include "../../core/libcc/libcc.hh"
 #include "config.hh"
+#include "data.hh"
 #include "files.hh"
 #include "goupile.hh"
 #include "ports.hh"
@@ -327,6 +328,26 @@ Options:
     // Init database
     if (!goupile_db.Open(goupile_config.database_filename, SQLITE_OPEN_READWRITE))
         return 1;
+
+    // Check database version
+    {
+        sq_Statement stmt;
+        if (!goupile_db.Prepare("PRAGMA user_version;", &stmt))
+            return 1;
+
+        bool success = stmt.Next();
+        RG_ASSERT(success);
+
+        int version = sqlite3_column_int(stmt, 0);
+
+        if (version > MigrationFunctions.len) {
+            LogError("Profile is too recent for goupile version %1", FelixVersion);
+            return 1;
+        } else if (version < MigrationFunctions.len) {
+            LogError("Outdated profile version, use %!..+goupile_admin migrate%!0");
+            return 1;
+        }
+    }
 
     // Init assets and files
 #ifndef NDEBUG

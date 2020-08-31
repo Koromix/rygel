@@ -388,14 +388,15 @@ Options:
     }
 
     LogInfo("Profile version: %1", version);
-    if (version == MigrationFunctions.len) {
+    if (version > MigrationFunctions.len) {
+        LogError("Profile is too recent, expected version <= %1", MigrationFunctions.len);
+        return 1;
+    } else if (version == MigrationFunctions.len) {
         LogInfo("Profile is up to date");
         return 0;
     }
-    if (!RunMigrations(database, version))
-        return 1;
 
-    return 0;
+    return !RunMigrations(database, version);
 }
 
 static bool ParsePermissionList(Span<const char> remain, uint32_t *out_permissions)
