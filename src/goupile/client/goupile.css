@@ -12,6 +12,7 @@ body {
     background: white;
     font-family: 'Open Sans', sans-serif;
     font-size: 13px;
+    line-height: 1.5;
 }
 main { height: 100%; }
 #gp_root {
