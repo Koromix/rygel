@@ -122,6 +122,23 @@ static std::function<bool(sq_Database &database)> MigrationRequests[] = {
         INSERT INTO rec_fragments (table_name, id, page, username, mtime, complete, json)
             SELECT table_name, id, page, username, mtime, complete, json FROM rec_fragments_BAK;
         DROP TABLE rec_fragments_BAK;
+    )"); },
+
+    [](sq_Database &database) { return database.Run(R"(
+        DROP INDEX rec_entries_ti;
+        DROP INDEX rec_fragments_tip;
+        DROP INDEX rec_columns_tpkp;
+        DROP INDEX rec_sequences_t;
+
+        ALTER TABLE rec_entries RENAME COLUMN table_name TO store;
+        ALTER TABLE rec_fragments RENAME COLUMN table_name TO store;
+        ALTER TABLE rec_columns RENAME COLUMN table_name TO store;
+        ALTER TABLE rec_sequences RENAME COLUMN table_name TO store;
+
+        CREATE UNIQUE INDEX rec_entries_si ON rec_entries (store, id);
+        CREATE INDEX rec_fragments_sip ON rec_fragments(store, id, page);
+        CREATE UNIQUE INDEX rec_columns_spkp ON rec_columns (store, page, key, prop);
+        CREATE UNIQUE INDEX rec_sequences_s ON rec_sequences (store);
     )"); }
 };
 
