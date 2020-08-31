@@ -380,7 +380,9 @@ Options:
         sq_Statement stmt;
         if (!database.Prepare("PRAGMA user_version;", &stmt))
             return 1;
-        RG_ASSERT(stmt.Next());
+
+        bool success = stmt.Next();
+        RG_ASSERT(success);
 
         version = sqlite3_column_int(stmt, 0);
     }
