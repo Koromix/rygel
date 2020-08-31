@@ -212,7 +212,7 @@ Options:
 
     // Gather missing information
     if (!default_username.len) {
-        default_username = Prompt("User: ", &temp_alloc);
+        default_username = Prompt("Default user: ", &temp_alloc);
         if (!default_username.len)
             return 1;
     }
