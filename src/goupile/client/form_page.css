@@ -201,7 +201,10 @@
 .af_button::-moz-focus-inner { border: 0; }
 .af_button:not(:disabled):focus { outline: 2px dotted #999; }
 .af_button:not(:disabled):hover { border-color: #e66d1d; }
-.af_button:disabled { background: #bbb; }
+.af_button:disabled {
+    background: #bbb;
+    cursor: not-allowed;
+}
 .af_button.active {
     background: #e66d1d;
     border-color: #e66d1d;
