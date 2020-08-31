@@ -28,7 +28,7 @@ DatabaseFile = database.db
 # BaseUrl = /
 )";
 
-static std::function<bool(sq_Database &database)> RawMigrations[] = {
+static bool (* const RawMigrations[])(sq_Database &database) = {
     [](sq_Database &database) { return database.Run(R"(
         CREATE TABLE rec_entries (
             table_name TEXT NOT NULL,
@@ -130,6 +130,6 @@ static std::function<bool(sq_Database &database)> RawMigrations[] = {
         CREATE UNIQUE INDEX rec_sequences_s ON rec_sequences (store);
     )"); }
 };
-const Span<const std::function<bool(sq_Database &database)>> MigrationFunctions = RawMigrations;
+const Span<bool (* const)(sq_Database &database)> MigrationFunctions = RawMigrations;
 
 }

@@ -11,6 +11,6 @@ namespace RG {
 class sq_Database;
 
 extern const char *const DefaultConfig;
-extern const Span<const std::function<bool(sq_Database &database)>> MigrationFunctions;
+extern const Span<bool (* const)(sq_Database &database)> MigrationFunctions;
 
 }
