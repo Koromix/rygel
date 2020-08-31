@@ -266,7 +266,7 @@ Options:
     }
 #ifndef _WIN32
     if (change_owner && !ChangeFileOwner(profile_directory, owner_uid, owner_gid))
-        return false;
+        return 1;
 #endif
 
     // Gather missing information
@@ -316,7 +316,7 @@ Options:
 
 #ifndef _WIN32
             if (change_owner && !ChangeFileOwner(filename, owner_uid, owner_gid))
-                return false;
+                return 1;
 #endif
         }
     }
@@ -334,7 +334,7 @@ Options:
 
 #ifndef _WIN32
         if (change_owner && !ChangeFileOwner(filename, owner_uid, owner_gid))
-            return false;
+            return 1;
 #endif
     }
 
