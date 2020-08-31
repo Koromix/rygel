@@ -280,6 +280,7 @@ Options:
         if (!default_password.len)
             return 1;
     }
+    LogInfo();
 
     // Create base directories
     {
@@ -501,6 +502,7 @@ User permissions: %!..+%1%!0)", FmtSpan(UserPermissionNames));
         if (str.len && !ParsePermissionList(str, &permissions))
             return 1;
     }
+    LogInfo();
 
     // Hash password
     char hash[crypto_pwhash_STRBYTES];
@@ -512,7 +514,7 @@ User permissions: %!..+%1%!0)", FmtSpan(UserPermissionNames));
                       username, hash, permissions))
         return 1;
 
-    LogInfo("Done!");
+    LogInfo("Added user");
     return 0;
 }
 
@@ -633,7 +635,7 @@ User permissions: %!..+%1%!0)", FmtSpan(UserPermissionNames));
     if (!success)
         return 1;
 
-    LogInfo("Done!");
+    LogInfo("Changed user");
     return 0;
 }
 
@@ -686,7 +688,7 @@ Options:
         return 1;
     }
 
-    LogInfo("Done!");
+    LogInfo("Removed user");
     return 0;
 }
 
