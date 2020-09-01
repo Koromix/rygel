@@ -150,10 +150,12 @@ bool json_Parser::ParseKey(Span<const char> *out_key)
 
 bool json_Parser::ParseKey(const char **out_key)
 {
-    Span<const char> key;
-    ParseKey(&key);
-    *out_key = key.ptr;
-    return true;
+    if (ConsumeToken(json_TokenType::Key)) {
+        *out_key = handler.u.key.ptr;
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool json_Parser::ParseObject()
@@ -235,10 +237,12 @@ bool json_Parser::ParseString(Span<const char> *out_str)
 
 bool json_Parser::ParseString(const char **out_str)
 {
-    Span<const char> str;
-    ParseString(&str);
-    *out_str = str.ptr;
-    return true;
+    if (ConsumeToken(json_TokenType::String)) {
+        *out_str = handler.u.str.ptr;
+        return true;
+    } else {
+        return false;
+    }
 }
 
 void json_Parser::PushLogFilter()
