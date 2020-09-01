@@ -132,7 +132,7 @@
     border-collapse: collapse;
     border: 0;
 }
-.tr_table tr { background: #f4f4f4; }
+.tr_table tr { background: white; }
 .tr_table tr.selected {
     background: #666;
     color: white;
@@ -171,7 +171,7 @@
 .st_table td:first-child { border-left: 0; }
 .st_table td:last-child { border-right: 0; }
 
-.st_table tbody tr:nth-child(2n + 1) { background: #efefef; }
+.st_table tbody tr:nth-child(2n + 1) { background: white; }
 .st_table tbody tr:nth-child(2n) { background: #f4f4f4; }
 .st_table tbody tr.selected td, .st_table tbody tr.selected th {
     background: #666;
@@ -240,7 +240,7 @@
 .rec_table td:first-child { border-left: 0; }
 .rec_table td:last-child { border-right: 0; }
 
-.rec_table tbody tr:nth-child(2n + 1) { background: #efefef; }
+.rec_table tbody tr:nth-child(2n + 1) { background: white; }
 .rec_table tbody tr:nth-child(2n) { background: #f4f4f4; }
 .rec_table tbody tr.selected td, .rec_table tbody tr.selected th {
     background: #666;
