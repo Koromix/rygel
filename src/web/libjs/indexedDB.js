@@ -11,10 +11,20 @@ let idb = new function () {
 
             req.onupgradeneeded = e => {
                 let db = e.target.result;
-                let intf = new DatabaseInterface(e.target.result, e.target.transaction);
+                let t = e.target.transaction;
+                let intf = new DatabaseInterface(e.target.result, t);
 
-                intf.createStore = function(store, params = {}) { db.createObjectStore(store, params); };
+                intf.createStore = function(store, params = {}) { return db.createObjectStore(store, params); };
                 intf.deleteStore = function(store) { db.deleteObjectStore(store); };
+
+                intf.createIndex = function(store, index, path, params = {}) {
+                    let obj = t.objectStore(store);
+                    obj.createIndex(index, path, params);
+                };
+                intf.deleteIndex = function(store, index) {
+                    let obj = t.objectStore(store);
+                    obj.deleteIndex(index);
+                };
 
                 version_func(intf, e.oldVersion || null);
             };
@@ -97,9 +107,11 @@ let idb = new function () {
             });
         };
 
-        this.load = function(store, key) {
+        this.load = function(where, key) {
+            let [store, index] = where.split('/');
+
             return executeQuery('readonly', store, (t, resolve, reject) => {
-                let obj = t.objectStore(store);
+                let obj = openStoreOrIndex(t, store, index);
                 let req = obj.get(key);
 
                 req.onsuccess = e => resolve(e.target.result);
@@ -107,19 +119,19 @@ let idb = new function () {
             });
         };
 
-        this.loadAll = function(store, start = undefined, end = undefined) {
-            let query = makeKeyRange(start, end);
+        this.loadAll = function(where, range = undefined) {
+            let [store, index] = where.split('/');
 
             return executeQuery('readonly', store, (t, resolve, reject) => {
-                let obj = t.objectStore(store);
+                let obj = openStoreOrIndex(t, store, index);
 
                 if (obj.getAll) {
-                    let req = obj.getAll(query);
+                    let req = obj.getAll(range);
 
                     req.onsuccess = e => resolve(e.target.result);
                     req.onerror = e => logAndReject(reject, e.target.error);
                 } else {
-                    let cur = obj.openCursor(query);
+                    let cur = obj.openCursor(range);
                     let values = [];
 
                     cur.onsuccess = e => {
@@ -136,19 +148,19 @@ let idb = new function () {
             });
         };
 
-        this.list = function(store, start = undefined, end = undefined) {
-            let query = makeKeyRange(start, end);
+        this.list = function(where, range = undefined) {
+            let [store, index] = where.split('/');
 
             return executeQuery('readonly', store, (t, resolve, reject) => {
-                let obj = t.objectStore(store);
+                let obj = openStoreOrIndex(t, store, index);
 
                 if (obj.getAllKeys) {
-                    let req = obj.getAllKeys(query);
+                    let req = obj.getAllKeys(range);
 
                     req.onsuccess = e => resolve(e.target.result);
                     req.onerror = e => logAndReject(reject, e.target.error);
                 } else {
-                    let cur = obj.openKeyCursor(query);
+                    let cur = obj.openKeyCursor(range);
                     let keys = [];
 
                     cur.onsuccess = e => {
@@ -175,13 +187,11 @@ let idb = new function () {
             });
         };
 
-        this.deleteAll = function(store, start = undefined, end = undefined) {
-            let query = makeKeyRange(start, end);
-
-            if (query) {
+        this.deleteAll = function(store, range = undefined) {
+            if (range != null) {
                 return executeQuery('readwrite', store, (t, resolve, reject) => {
                     let obj = t.objectStore(store);
-                    obj.delete(query);
+                    obj.delete(range);
 
                     t.addEventListener('complete', e => resolve());
                     t.addEventListener('abort', e => logAndReject(reject, 'Database transaction failure'));
@@ -201,15 +211,13 @@ let idb = new function () {
             });
         };
 
-        function makeKeyRange(start, end) {
-            if (start != null && end != null) {
-                return IDBKeyRange.bound(start, end, false, true);
-            } else if (start != null) {
-                return IDBKeyRange.lowerBound(start);
-            } else if (end != null) {
-                return IDBKeyRange.upperBound(end, true);
+        function openStoreOrIndex(t, store, index = null) {
+            let obj = t.objectStore(store);
+
+            if (index != null) {
+                return obj.index(index);
             } else {
-                return null;
+                return obj;
             }
         }
 

@@ -163,7 +163,7 @@ function VirtualRecords(db) {
 
         let [entry, fragments] = await Promise.all([
             db.load('rec_entries', ikey),
-            db.loadAll('rec_fragments', ikey + '@', ikey + '`')
+            db.loadAll('rec_fragments', IDBKeyRange.bound(ikey + '@', ikey + '`', false, true))
         ]);
 
         if (entry && fragments.length) {
@@ -176,8 +176,8 @@ function VirtualRecords(db) {
 
     this.loadAll = async function(table) {
         let [records, fragments] = await Promise.all([
-            db.loadAll('rec_entries', table + ':', table + '`'),
-            db.loadAll('rec_fragments', table + ':', table + '`')
+            db.loadAll('rec_entries', IDBKeyRange.bound(table + ':', table + '`', false, true)),
+            db.loadAll('rec_fragments', IDBKeyRange.bound(table + ':', table + '`', false, true))
         ]);
 
         let i = 0, j = 0, k = 0;
@@ -260,7 +260,7 @@ function VirtualRecords(db) {
     }
 
     this.listColumns = async function(table) {
-        return db.loadAll('rec_columns', table + '@', table + '`');
+        return db.loadAll('rec_columns', IDBKeyRange.bound(table + '@', table + '`', false, true));
     };
 
     this.sync = async function() {
