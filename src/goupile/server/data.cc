@@ -27,7 +27,7 @@ DatabaseFile = database.db
 # Threads = 4
 # BaseUrl = /
 )";
-const int DatabaseVersion = 3;
+const int DatabaseVersion = 4;
 
 bool MigrateDatabase(sq_Database &database, int version)
 {
@@ -150,8 +150,27 @@ bool MigrateDatabase(sq_Database &database, int version)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 3: {
+                LogInfo("Running migration 4 of %1", DatabaseVersion);
+
+                bool success = database.Run(R"(
+                    CREATE TABLE adm_migrations (
+                        version INTEGER NOT NULL,
+                        build TEXT NOT NULL,
+                        time INTEGER NOT NULL
+                    );
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
         }
+
+        int64_t time = GetUnixTime();
+        if (!database.Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
+                          DatabaseVersion, FelixVersion, time))
+            return false;
 
         char buf[128];
         Fmt(buf, "PRAGMA user_version = %1;", DatabaseVersion);
@@ -163,7 +182,7 @@ bool MigrateDatabase(sq_Database &database, int version)
     });
 
     // If you change DatabaseVersion, don't forget to update the migration switch!
-    RG_STATIC_ASSERT(DatabaseVersion == 3);
+    RG_STATIC_ASSERT(DatabaseVersion == 4);
 
     return success;
 }
