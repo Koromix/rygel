@@ -38,6 +38,7 @@ function VirtualRecords(db) {
 
             username: null,
             mtime: new Date,
+            anchor: -1, // null/undefined keys are not indexed in IndexedDB
 
             complete: complete,
             values: {}
@@ -149,7 +150,8 @@ function VirtualRecords(db) {
                     page: null, // Delete fragment
 
                     username: null,
-                    mtime: new Date
+                    mtime: new Date,
+                    anchor: -1
                 };
 
                 db.save('rec_entries', entry);
@@ -217,8 +219,8 @@ function VirtualRecords(db) {
             })),
             version: null,
             mtime: null,
-            complete: {},
 
+            complete: {},
             values: {}
         };
 
@@ -265,13 +267,13 @@ function VirtualRecords(db) {
 
     this.sync = async function() {
         let fragments = await db.loadAll('rec_fragments');
-        // fragments = fragments.filter(frag => frag.username != null);
+        // fragments = fragments.filter(frag => frag.anchor < 0);
 
         // Upload fragments
         let uploads = util.mapRLE(fragments, frag => frag.id, (id, offset, length) => {
             let record_fragments = fragments.slice(offset, length);
 
-            if (record_fragments.some(frag => frag.username == null)) {
+            if (record_fragments.some(frag => frag.anchor < 0)) {
                 let frag0 = record_fragments[0];
 
                 record_fragments = record_fragments.map(frag => ({
