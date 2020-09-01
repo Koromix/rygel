@@ -364,10 +364,10 @@ Options:
 
         int version = sqlite3_column_int(stmt, 0);
 
-        if (version > MigrationFunctions.len) {
+        if (version > DatabaseVersion) {
             LogError("Profile is too recent for goupile version %1", FelixVersion);
             return 1;
-        } else if (version < MigrationFunctions.len) {
+        } else if (version < DatabaseVersion) {
             LogError("Outdated profile version, use %!..+goupile_admin migrate%!0");
             return 1;
         }

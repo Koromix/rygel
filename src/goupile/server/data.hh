@@ -11,6 +11,8 @@ namespace RG {
 class sq_Database;
 
 extern const char *const DefaultConfig;
-extern const Span<bool (* const)(sq_Database &database)> MigrationFunctions;
+extern const int DatabaseVersion;
+
+bool MigrateDatabase(sq_Database &database, int version);
 
 }

@@ -27,109 +27,145 @@ DatabaseFile = database.db
 # Threads = 4
 # BaseUrl = /
 )";
+const int DatabaseVersion = 3;
 
-static bool (* const RawMigrations[])(sq_Database &database) = {
-    [](sq_Database &database) { return database.Run(R"(
-        CREATE TABLE rec_entries (
-            table_name TEXT NOT NULL,
-            id TEXT NOT NULL,
-            sequence INTEGER NOT NULL
-        );
-        CREATE UNIQUE INDEX rec_entries_ti ON rec_entries (table_name, id);
+bool MigrateDatabase(sq_Database &database, int version)
+{
+    bool success = database.Transaction([&]() {
+        switch (version) {
+            case 0: {
+                LogInfo("Running migration 1 of %1", DatabaseVersion);
 
-        CREATE TABLE rec_fragments (
-            table_name TEXT NOT NULL,
-            id TEXT NOT NULL,
-            page TEXT,
-            username TEXT NOT NULL,
-            mtime TEXT NOT NULL,
-            complete INTEGER CHECK(complete IN (0, 1)) NOT NULL,
-            json TEXT
-        );
-        CREATE INDEX rec_fragments_tip ON rec_fragments(table_name, id, page);
+                bool success = database.Run(R"(
+                    CREATE TABLE rec_entries (
+                        table_name TEXT NOT NULL,
+                        id TEXT NOT NULL,
+                        sequence INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX rec_entries_ti ON rec_entries (table_name, id);
 
-        CREATE TABLE rec_columns (
-            table_name TEXT NOT NULL,
-            page TEXT NOT NULL,
-            key TEXT NOT NULL,
-            prop TEXT,
-            before TEXT,
-            after TEXT
-        );
-        CREATE UNIQUE INDEX rec_columns_tpkp ON rec_columns (table_name, page, key, prop);
+                    CREATE TABLE rec_fragments (
+                        table_name TEXT NOT NULL,
+                        id TEXT NOT NULL,
+                        page TEXT,
+                        username TEXT NOT NULL,
+                        mtime TEXT NOT NULL,
+                        complete INTEGER CHECK(complete IN (0, 1)) NOT NULL,
+                        json TEXT
+                    );
+                    CREATE INDEX rec_fragments_tip ON rec_fragments(table_name, id, page);
 
-        CREATE TABLE rec_sequences (
-            table_name TEXT NOT NULL,
-            sequence INTEGER NOT NULL
-        );
-        CREATE UNIQUE INDEX rec_sequences_t ON rec_sequences (table_name);
+                    CREATE TABLE rec_columns (
+                        table_name TEXT NOT NULL,
+                        page TEXT NOT NULL,
+                        key TEXT NOT NULL,
+                        prop TEXT,
+                        before TEXT,
+                        after TEXT
+                    );
+                    CREATE UNIQUE INDEX rec_columns_tpkp ON rec_columns (table_name, page, key, prop);
 
-        CREATE TABLE sched_resources (
-            schedule TEXT NOT NULL,
-            date TEXT NOT NULL,
-            time INTEGER NOT NULL,
+                    CREATE TABLE rec_sequences (
+                        table_name TEXT NOT NULL,
+                        sequence INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX rec_sequences_t ON rec_sequences (table_name);
 
-            slots INTEGER NOT NULL,
-            overbook INTEGER NOT NULL
-        );
-        CREATE UNIQUE INDEX sched_resources_sdt ON sched_resources (schedule, date, time);
+                    CREATE TABLE sched_resources (
+                        schedule TEXT NOT NULL,
+                        date TEXT NOT NULL,
+                        time INTEGER NOT NULL,
 
-        CREATE TABLE sched_meetings (
-            schedule TEXT NOT NULL,
-            date TEXT NOT NULL,
-            time INTEGER NOT NULL,
+                        slots INTEGER NOT NULL,
+                        overbook INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX sched_resources_sdt ON sched_resources (schedule, date, time);
 
-            identity TEXT NOT NULL
-        );
-        CREATE INDEX sched_meetings_sd ON sched_meetings (schedule, date, time);
+                    CREATE TABLE sched_meetings (
+                        schedule TEXT NOT NULL,
+                        date TEXT NOT NULL,
+                        time INTEGER NOT NULL,
 
-        CREATE TABLE usr_users (
-            username TEXT NOT NULL,
-            password_hash TEXT NOT NULL,
+                        identity TEXT NOT NULL
+                    );
+                    CREATE INDEX sched_meetings_sd ON sched_meetings (schedule, date, time);
 
-            permissions INTEGER NOT NULL
-        );
-        CREATE UNIQUE INDEX usr_users_u ON usr_users (username);
-    )"); },
+                    CREATE TABLE usr_users (
+                        username TEXT NOT NULL,
+                        password_hash TEXT NOT NULL,
 
-    [](sq_Database &database) { return database.Run(R"(
-        ALTER TABLE rec_fragments RENAME TO rec_fragments_BAK;
-        DROP INDEX rec_fragments_tip;
+                        permissions INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX usr_users_u ON usr_users (username);
+                )");
+                if (!success)
+                    return false;
+            } [[fallthrough]];
 
-        CREATE TABLE rec_fragments (
-            table_name TEXT NOT NULL,
-            id TEXT NOT NULL,
-            page TEXT,
-            username TEXT NOT NULL,
-            mtime TEXT NOT NULL,
-            complete INTEGER CHECK(complete IN (0, 1)) NOT NULL,
-            json TEXT,
-            anchor INTEGER PRIMARY KEY AUTOINCREMENT
-        );
-        CREATE INDEX rec_fragments_tip ON rec_fragments(table_name, id, page);
+            case 1: {
+                LogInfo("Running migration 2 of %1", DatabaseVersion);
 
-        INSERT INTO rec_fragments (table_name, id, page, username, mtime, complete, json)
-            SELECT table_name, id, page, username, mtime, complete, json FROM rec_fragments_BAK;
-        DROP TABLE rec_fragments_BAK;
-    )"); },
+                bool success = database.Run(R"(
+                    ALTER TABLE rec_fragments RENAME TO rec_fragments_BAK;
+                    DROP INDEX rec_fragments_tip;
 
-    [](sq_Database &database) { return database.Run(R"(
-        DROP INDEX rec_entries_ti;
-        DROP INDEX rec_fragments_tip;
-        DROP INDEX rec_columns_tpkp;
-        DROP INDEX rec_sequences_t;
+                    CREATE TABLE rec_fragments (
+                        table_name TEXT NOT NULL,
+                        id TEXT NOT NULL,
+                        page TEXT,
+                        username TEXT NOT NULL,
+                        mtime TEXT NOT NULL,
+                        complete INTEGER CHECK(complete IN (0, 1)) NOT NULL,
+                        json TEXT,
+                        anchor INTEGER PRIMARY KEY AUTOINCREMENT
+                    );
+                    CREATE INDEX rec_fragments_tip ON rec_fragments(table_name, id, page);
 
-        ALTER TABLE rec_entries RENAME COLUMN table_name TO store;
-        ALTER TABLE rec_fragments RENAME COLUMN table_name TO store;
-        ALTER TABLE rec_columns RENAME COLUMN table_name TO store;
-        ALTER TABLE rec_sequences RENAME COLUMN table_name TO store;
+                    INSERT INTO rec_fragments (table_name, id, page, username, mtime, complete, json)
+                        SELECT table_name, id, page, username, mtime, complete, json FROM rec_fragments_BAK;
+                    DROP TABLE rec_fragments_BAK;
+                )");
+                if (!success)
+                    return false;
+            } [[fallthrough]];
 
-        CREATE UNIQUE INDEX rec_entries_si ON rec_entries (store, id);
-        CREATE INDEX rec_fragments_sip ON rec_fragments(store, id, page);
-        CREATE UNIQUE INDEX rec_columns_spkp ON rec_columns (store, page, key, prop);
-        CREATE UNIQUE INDEX rec_sequences_s ON rec_sequences (store);
-    )"); }
-};
-const Span<bool (* const)(sq_Database &database)> MigrationFunctions = RawMigrations;
+            case 2: {
+                LogInfo("Running migration 3 of %1", DatabaseVersion);
+
+                bool success = database.Run(R"(
+                    DROP INDEX rec_entries_ti;
+                    DROP INDEX rec_fragments_tip;
+                    DROP INDEX rec_columns_tpkp;
+                    DROP INDEX rec_sequences_t;
+
+                    ALTER TABLE rec_entries RENAME COLUMN table_name TO store;
+                    ALTER TABLE rec_fragments RENAME COLUMN table_name TO store;
+                    ALTER TABLE rec_columns RENAME COLUMN table_name TO store;
+                    ALTER TABLE rec_sequences RENAME COLUMN table_name TO store;
+
+                    CREATE UNIQUE INDEX rec_entries_si ON rec_entries (store, id);
+                    CREATE INDEX rec_fragments_sip ON rec_fragments(store, id, page);
+                    CREATE UNIQUE INDEX rec_columns_spkp ON rec_columns (store, page, key, prop);
+                    CREATE UNIQUE INDEX rec_sequences_s ON rec_sequences (store);
+                )");
+                if (!success)
+                    return false;
+            } // [[fallthrough]];
+        }
+
+        char buf[128];
+        Fmt(buf, "PRAGMA user_version = %1;", DatabaseVersion);
+        if (!database.Run(buf))
+            return false;
+
+        LogInfo("Migration complete, version: %1", DatabaseVersion);
+        return true;
+    });
+
+    // If you change DatabaseVersion, don't forget to update the migration switch!
+    RG_STATIC_ASSERT(DatabaseVersion == 3);
+
+    return success;
+}
 
 }

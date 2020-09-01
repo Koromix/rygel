@@ -71,29 +71,6 @@ static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
 }
 #endif
 
-static bool RunMigrations(sq_Database &database, int version)
-{
-    bool success = database.Transaction([&]() {
-        for (Size i = version; i < MigrationFunctions.len; i++) {
-            LogInfo("Running migration %1 of %2", i + 1, MigrationFunctions.len);
-
-            const std::function<bool(sq_Database &database)> &func = MigrationFunctions[i];
-            if (!func(database))
-                return false;
-        }
-
-        char buf[128];
-        Fmt(buf, "PRAGMA user_version = %1;", MigrationFunctions.len);
-
-        return database.Run(buf);
-    });
-    if (!success)
-        return false;
-
-    LogInfo("Migration complete, version: %1", MigrationFunctions.len);
-    return true;
-}
-
 static int RunInit(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -271,7 +248,7 @@ Options:
 
         if (!database.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
             return 1;
-        if (!RunMigrations(database, 0))
+        if (!MigrateDatabase(database, 0))
             return 1;
 
 #ifndef _WIN32
@@ -388,15 +365,15 @@ Options:
     }
 
     LogInfo("Profile version: %1", version);
-    if (version > MigrationFunctions.len) {
-        LogError("Profile is too recent, expected version <= %1", MigrationFunctions.len);
+    if (version > DatabaseVersion) {
+        LogError("Profile is too recent, expected version <= %1", DatabaseVersion);
         return 1;
-    } else if (version == MigrationFunctions.len) {
+    } else if (version == DatabaseVersion) {
         LogInfo("Profile is up to date");
         return 0;
     }
 
-    return !RunMigrations(database, version);
+    return !MigrateDatabase(database, version);
 }
 
 static bool ParsePermissionList(Span<const char> remain, uint32_t *out_permissions)
