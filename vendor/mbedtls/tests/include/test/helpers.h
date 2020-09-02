@@ -6,7 +6,7 @@
  */
 
 /*
- *  Copyright (C) 2020, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -20,8 +20,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef TEST_HELPERS_H
@@ -54,7 +52,29 @@
 int mbedtls_test_platform_setup( void );
 void mbedtls_test_platform_teardown( void );
 
-int mbedtls_test_unhexify( unsigned char *obuf, const char *ibuf );
+/**
+ * \brief          This function translates an ASCII string encoding an
+ *                 hexadecimal number into the encoded hexadecimal number. The
+ *                 hexadecimal number is represented as an array of
+ *                 unsigned char.
+ *
+ * \note           The output buffer can be the same as the input buffer. For
+ *                 any other overlapping of the input and output buffers, the
+ *                 behavior is undefined.
+ *
+ * \param obuf     Output buffer.
+ * \param obufmax  Size in number of bytes of \p obuf.
+ * \param ibuf     Input buffer.
+ * \param len      The number of unsigned char written in \p obuf. This must
+ *                 not be \c NULL.
+ *
+ * \return         \c 0 on success.
+ * \return         \c -1 if the output buffer is too small or the input string
+ *                 is not a valid ASCII encoding of an hexadecimal number.
+ */
+int mbedtls_test_unhexify( unsigned char *obuf, size_t obufmax,
+                           const char *ibuf, size_t *len );
+
 void mbedtls_test_hexify( unsigned char *obuf,
                           const unsigned char *ibuf,
                           int len );

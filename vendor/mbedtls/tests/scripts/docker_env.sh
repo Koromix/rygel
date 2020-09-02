@@ -22,7 +22,7 @@
 # Running this script directly will check for Docker availability and set up
 # the Docker image.
 
-# Copyright (C) 2006-2019, Arm Limited (or its affiliates), All Rights Reserved.
+# Copyright The Mbed TLS Contributors
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -36,8 +36,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# This file is part of Mbed TLS (https://tls.mbed.org)
 
 
 # default values, can be overridden by the environment
@@ -60,12 +58,19 @@ else
     DOCKER="sudo docker"
 fi
 
+# Figure out the number of processors available
+if [ "$(uname)" == "Darwin" ]; then
+    NUM_PROC="$(sysctl -n hw.logicalcpu)"
+else
+    NUM_PROC="$(nproc)"
+fi
+
 # Build the Docker image
 echo "Getting docker image up to date (this may take a few minutes)..."
 ${DOCKER} image build \
     -t ${DOCKER_IMAGE_TAG} \
     --cache-from=${DOCKER_IMAGE_TAG} \
-    --build-arg MAKEFLAGS_PARALLEL="-j $(nproc)" \
+    --build-arg MAKEFLAGS_PARALLEL="-j ${NUM_PROC}" \
     --network host \
     ${http_proxy+--build-arg http_proxy=${http_proxy}} \
     ${https_proxy+--build-arg https_proxy=${https_proxy}} \

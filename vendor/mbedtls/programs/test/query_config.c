@@ -1,7 +1,7 @@
 /*
  *  Query Mbed TLS compile time configurations from config.h
  *
- *  Copyright (C) 2018, Arm Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,8 +15,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
 #if !defined(MBEDTLS_CONFIG_FILE)
@@ -1537,6 +1535,22 @@ int query_config( const char *config )
         return( 0 );
     }
 #endif /* MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH */
+
+#if defined(MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN)
+    if( strcmp( "MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN );
+        return( 0 );
+    }
+#endif /* MBEDTLS_TEST_CONSTANT_FLOW_MEMSAN */
+
+#if defined(MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND)
+    if( strcmp( "MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND );
+        return( 0 );
+    }
+#endif /* MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND */
 
 #if defined(MBEDTLS_TEST_HOOKS)
     if( strcmp( "MBEDTLS_TEST_HOOKS", config ) == 0 )

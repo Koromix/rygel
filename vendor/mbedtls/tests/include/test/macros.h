@@ -5,7 +5,7 @@
  */
 
 /*
- *  Copyright (C) 2020, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,8 +19,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef TEST_MACROS_H
@@ -75,7 +73,7 @@
 /* A compile-time constant with the value 0. If `const_expr` is not a
  * compile-time constant with a nonzero value, cause a compile-time error. */
 #define STATIC_ASSERT_EXPR( const_expr )                                \
-    ( 0 && sizeof( struct { int STATIC_ASSERT : 1 - 2 * ! ( const_expr ); } ) )
+    ( 0 && sizeof( struct { unsigned int STATIC_ASSERT : 1 - 2 * ! ( const_expr ); } ) )
 /* Return the scalar value `value` (possibly promoted). This is a compile-time
  * constant if `value` is. `condition` must be a compile-time constant.
  * If `condition` is false, arrange to cause a compile-time error. */

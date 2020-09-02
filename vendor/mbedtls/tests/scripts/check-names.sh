@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (c) 2015-2019, ARM Limited, All Rights Reserved
+# Copyright The Mbed TLS Contributors
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,8 +14,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# This file is part of Mbed TLS (https://tls.mbed.org)
 
 set -eu
 
@@ -98,6 +96,7 @@ done
 printf "Likely typos: "
 sort -u actual-macros enum-consts > _caps
 HEADERS=$( ls include/mbedtls/*.h include/psa/*.h | egrep -v 'compat-1\.3\.h' )
+HEADERS="$HEADERS library/*.h"
 HEADERS="$HEADERS 3rdparty/everest/include/everest/everest.h 3rdparty/everest/include/everest/x25519.h"
 LIBRARY="$( ls library/*.c )"
 LIBRARY="$LIBRARY 3rdparty/everest/library/everest.c 3rdparty/everest/library/x25519.c"

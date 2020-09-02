@@ -2,7 +2,7 @@
 
 # depends-pkalgs.pl
 #
-# Copyright (c) 2017, ARM Limited, All Rights Reserved
+# Copyright The Mbed TLS Contributors
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,8 +16,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# This file is part of Mbed TLS (https://tls.mbed.org)
 #
 # Purpose
 #
@@ -50,7 +48,8 @@ my $config_h = 'include/mbedtls/config.h';
 # Some algorithms can't be disabled on their own as others depend on them, so
 # we list those reverse-dependencies here to keep check_config.h happy.
 my %algs = (
-    'MBEDTLS_ECDSA_C'   => ['MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED'],
+    'MBEDTLS_ECDSA_C'   => ['MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED',
+                            'MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED'],
     'MBEDTLS_ECP_C'     => ['MBEDTLS_ECDSA_C',
                             'MBEDTLS_ECDH_C',
                             'MBEDTLS_ECJPAKE_C',
@@ -68,6 +67,7 @@ my %algs = (
     'MBEDTLS_RSA_C'     => ['MBEDTLS_X509_RSASSA_PSS_SUPPORT',
                             'MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED',
                             'MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED',
+                            'MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED',
                             'MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED',
                             'MBEDTLS_KEY_EXCHANGE_RSA_ENABLED'],
 );

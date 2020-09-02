@@ -14,7 +14,7 @@
  * This header file does not declare any function.
  */
 /*
- *  Copyright (C) 2018, ARM Limited, All Rights Reserved
+ *  Copyright The Mbed TLS Contributors
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -28,8 +28,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 
 #ifndef PSA_CRYPTO_TYPES_H
@@ -74,7 +72,7 @@ typedef uint16_t psa_key_type_t;
  * Values defined by this standard will never be in the range 0x80-0xff.
  * Vendors who define additional families must use an encoding in this range.
  */
-typedef uint8_t psa_ecc_curve_t;
+typedef uint8_t psa_ecc_family_t;
 
 /** The type of PSA Diffie-Hellman group family identifiers.
  *
@@ -85,7 +83,7 @@ typedef uint8_t psa_ecc_curve_t;
  * Values defined by this standard will never be in the range 0x80-0xff.
  * Vendors who define additional families must use an encoding in this range.
  */
-typedef uint8_t psa_dh_group_t;
+typedef uint8_t psa_dh_family_t;
 
 /** \brief Encoding of a cryptographic algorithm.
  *
