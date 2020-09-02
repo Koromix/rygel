@@ -92,7 +92,7 @@ function UserManager(db) {
     };
 
     async function loginOnline(username, password) {
-        let response = await net.fetch(`${env.base_url}api/login.json`, {
+        let response = await net.fetch(`${env.base_url}api/user/login`, {
             method: 'POST',
             body: new URLSearchParams({
                 username: username.toLowerCase(),
@@ -234,7 +234,7 @@ function UserManager(db) {
     };
 
     async function logoutOnline() {
-        let response = await net.fetch(`${env.base_url}api/logout.json`, {method: 'POST'});
+        let response = await net.fetch(`${env.base_url}api/user/logout`, {method: 'POST'});
         return response.ok;
     }
 
@@ -257,7 +257,7 @@ function UserManager(db) {
 
     this.fetchProfile = async function() {
         if (net.isOnline()) {
-            let response = await net.fetch(`${env.base_url}api/profile.json`);
+            let response = await net.fetch(`${env.base_url}api/user/profile`);
             let profile = await response.json();
 
             if (!env.use_offline || profile.username != null) {

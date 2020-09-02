@@ -370,7 +370,7 @@ let goupile = new function() {
         let prev_online = net.isOnline();
 
         try {
-            let response = await net.fetch(`${env.base_url}api/events.json`);
+            let response = await net.fetch(`${env.base_url}api/events`);
             net.setOnline(response.ok);
         } catch (err) {
             net.setOnline(false);

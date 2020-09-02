@@ -62,7 +62,7 @@ static void WriteProfileJson(const Session *session, json_Writer *out_json)
     out_json->EndObject();
 }
 
-void HandleLogin(const http_RequestInfo &request, http_IO *io)
+void HandleUserLogin(const http_RequestInfo &request, http_IO *io)
 {
     io->RunAsync([=]() {
         // Read POST values
@@ -124,13 +124,13 @@ void HandleLogin(const http_RequestInfo &request, http_IO *io)
     });
 }
 
-void HandleLogout(const http_RequestInfo &request, http_IO *io)
+void HandleUserLogout(const http_RequestInfo &request, http_IO *io)
 {
     sessions.Close(request, io);
     io->AttachText(200, "");
 }
 
-void HandleProfile(const http_RequestInfo &request, http_IO *io)
+void HandleUserProfile(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
 

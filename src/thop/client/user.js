@@ -84,7 +84,7 @@ let user = new function() {
     }
 
     this.login = async function(username, password) {
-        let response = await net.fetch(`${env.base_url}api/login.json`, {
+        let response = await net.fetch(`${env.base_url}api/user/login`, {
             method: 'POST',
             body: new URLSearchParams({
                 username: username.toLowerCase(),
@@ -103,7 +103,7 @@ let user = new function() {
     };
 
     this.logout = async function() {
-        let response = await net.fetch(`${env.base_url}api/logout.json`, {method: 'POST'});
+        let response = await net.fetch(`${env.base_url}api/user/logout`, {method: 'POST'});
 
         if (response.ok) {
             log.info('Vous êtes déconnecté(e)');

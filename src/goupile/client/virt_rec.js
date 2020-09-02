@@ -282,7 +282,7 @@ function VirtualRecords(db) {
                     values: frag.values
                 }));
 
-                let url = `${env.base_url}records/${frag0.table}/${frag0.id}`;
+                let url = `${env.base_url}api/records/${frag0.table}/${frag0.id}`;
                 return net.fetch(url, {
                     method: 'PUT',
                     body: JSON.stringify(record_fragments)

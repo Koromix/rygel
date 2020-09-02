@@ -351,21 +351,21 @@ static void InitRoutes()
     }
 
     // Common API
-    add_function_route("GET", "/api/settings.json", ProduceSettings);
-    add_function_route("POST", "/api/login.json", HandleLogin);
-    add_function_route("POST", "/api/logout.json", HandleLogout);
-    add_function_route("GET", "/api/structures.json", ProduceStructures);
+    add_function_route("GET", "/api/user/settings", ProduceSettings);
+    add_function_route("POST", "/api/user/login", HandleLogin);
+    add_function_route("POST", "/api/user/logout", HandleLogout);
+    add_function_route("GET", "/api/structures", ProduceStructures);
 
     // MCO information API
-    add_function_route("GET", "/api/mco_diagnoses.json", ProduceMcoDiagnoses);
-    add_function_route("GET", "/api/mco_procedures.json", ProduceMcoProcedures);
-    add_function_route("GET", "/api/mco_ghmghs.json", ProduceMcoGhmGhs);
-    add_function_route("GET", "/api/mco_tree.json", ProduceMcoTree);
-    add_function_route("GET", "/api/mco_highlight.json", ProduceMcoHighlight);
+    add_function_route("GET", "/api/mco/diagnoses", ProduceMcoDiagnoses);
+    add_function_route("GET", "/api/mco/procedures", ProduceMcoProcedures);
+    add_function_route("GET", "/api/mco/ghmghs", ProduceMcoGhmGhs);
+    add_function_route("GET", "/api/mco/tree", ProduceMcoTree);
+    add_function_route("GET", "/api/mco/highlight", ProduceMcoHighlight);
 
     // MCO casemix API
-    add_function_route("GET", "/api/mco_aggregate.json", ProduceMcoAggregate);
-    add_function_route("GET", "/api/mco_results.json", ProduceMcoResults);
+    add_function_route("GET", "/api/mco/aggregate", ProduceMcoAggregate);
+    add_function_route("GET", "/api/mco/results", ProduceMcoResults);
 
     // We can use a global ETag because everything is in the binary
     {

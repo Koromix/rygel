@@ -155,7 +155,7 @@ function VirtualFS(db) {
         let [local_files, sync_files, remote_files] = await Promise.all([
             db.loadAll('fs_entries'),
             db.loadAll('fs_sync'),
-            remote ? net.fetch(`${env.base_url}api/files/list.json`).then(response => response.json()) : db.loadAll('fs_sync')
+            remote ? net.fetch(`${env.base_url}api/files/list`).then(response => response.json()) : db.loadAll('fs_sync')
         ]);
 
         let local_map = util.arrayToObject(local_files, file => file.path);

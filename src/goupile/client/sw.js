@@ -13,7 +13,7 @@ let env = {
 self.addEventListener('install', e => {
     e.waitUntil(async function() {
         if (env.use_offline) {
-            let files = await net.fetch(`${env.base_url}api/files/static.json`).then(response => response.json());
+            let files = await net.fetch(`${env.base_url}api/files/static`).then(response => response.json());
             files.push(env.base_url);
 
             let cache = await caches.open(env.cache_key);

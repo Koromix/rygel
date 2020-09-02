@@ -151,7 +151,7 @@ let mco_info = new function() {
         let [mco, ghmghs] = await Promise.all([
             data.fetchDictionary('mco'),
 
-            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_ghmghs.json`, {
+            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco/ghmghs`, {
                 sector: route.sector || 'public',
                 date: version.begin_date
             }))
@@ -180,7 +180,7 @@ let mco_info = new function() {
         let [mco, ghmghs] = await Promise.all([
             data.fetchDictionary('mco'),
 
-            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_ghmghs.json`, {
+            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco/ghmghs`, {
                 sector: route.sector,
                 date: version.begin_date
             }))
@@ -243,7 +243,7 @@ let mco_info = new function() {
         let [cim10, diagnoses] = await Promise.all([
             data.fetchDictionary('cim10'),
 
-            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_diagnoses.json`, {
+            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco/diagnoses`, {
                 date: version.begin_date,
                 spec: route.diagnoses.list
             }))
@@ -286,7 +286,7 @@ let mco_info = new function() {
         let [ccam, procedures] = await Promise.all([
             data.fetchDictionary('ccam'),
 
-            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_procedures.json`, {
+            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco/procedures`, {
                 date: version.begin_date,
                 spec: route.procedures.list
             }))
@@ -545,11 +545,11 @@ let mco_info = new function() {
         let [mco, ghmghs, ghmghs_diff] = await Promise.all([
             data.fetchDictionary('mco'),
 
-            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_ghmghs.json`, {
+            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco/ghmghs`, {
                 sector: route.sector,
                 date: version.begin_date
             })),
-            version_diff ? data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_ghmghs.json`, {
+            version_diff ? data.fetchJSON(util.pasteURL(`${env.base_url}api/mco/ghmghs`, {
                 sector: route.sector,
                 date: version_diff.begin_date
             })) : null
@@ -978,10 +978,10 @@ let mco_info = new function() {
         let [mco, tree_nodes, highlight_map] = await Promise.all([
             data.fetchDictionary('mco'),
 
-            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_tree.json`, {
+            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco/tree`, {
                 date: version.begin_date
             })),
-            route.tree.filter ? data.fetchJSON(util.pasteURL(`${env.base_url}api/mco_highlight.json`, {
+            route.tree.filter ? data.fetchJSON(util.pasteURL(`${env.base_url}api/mco/highlight`, {
                 date: version.begin_date,
                 diag: route.tree.diag ? route.tree.diag.replace('.', '').trim() : null,
                 proc: route.tree.proc ? route.tree.proc.trim() : null

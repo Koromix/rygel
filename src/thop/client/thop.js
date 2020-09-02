@@ -197,7 +197,7 @@ let thop = new function() {
         // Fetch new settings
         {
             // We'll parse it manually to revive dates. It's relatively small anyway.
-            let url = util.pasteURL(`${env.base_url}api/settings.json`, {rnd: user.getSessionRnd()});
+            let url = util.pasteURL(`${env.base_url}api/user/settings`, {rnd: user.getSessionRnd()});
             let json = await net.fetch(url).then(response => response.text());
 
             settings = JSON.parse(json, (key, value) => {

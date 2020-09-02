@@ -29,8 +29,8 @@ struct Session: public RetainObject {
 
 RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http_IO *io);
 
-void HandleLogin(const http_RequestInfo &request, http_IO *io);
-void HandleLogout(const http_RequestInfo &request, http_IO *io);
-void HandleProfile(const http_RequestInfo &request, http_IO *io);
+void HandleUserLogin(const http_RequestInfo &request, http_IO *io);
+void HandleUserLogout(const http_RequestInfo &request, http_IO *io);
+void HandleUserProfile(const http_RequestInfo &request, http_IO *io);
 
 }

@@ -201,21 +201,21 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         {
             void (*func)(const http_RequestInfo &request, http_IO *io) = nullptr;
 
-            if (TestStr(request.url, "/api/events.json")) {
+            if (TestStr(request.url, "/api/events")) {
                 func = HandleEvents;
-            } else if (TestStr(request.url, "/api/profile.json")) {
-                func = HandleProfile;
-            } else if (TestStr(request.url, "/api/files/list.json")) {
+            } else if (TestStr(request.url, "/api/user/profile")) {
+                func = HandleUserProfile;
+            } else if (TestStr(request.url, "/api/files/list")) {
                 func = HandleFileList;
-            } else if (TestStr(request.url, "/api/files/static.json")) {
+            } else if (TestStr(request.url, "/api/files/static")) {
                 func = HandleFileStatic;
-            } else if (!strncmp(request.url, "/records/", 9)) {
+            } else if (!strncmp(request.url, "/api/records/", 13)) {
                 func = HandleRecordGet;
-            } else if (TestStr(request.url, "/api/columns.json")) {
+            } else if (TestStr(request.url, "/api/records/columns")) {
                 func = HandleRecordColumns;
-            } else if (TestStr(request.url, "/api/schedule/resources.json")) {
+            } else if (TestStr(request.url, "/api/schedule/resources")) {
                 func = HandleScheduleResources;
-            } else if (TestStr(request.url, "/api/schedule/meetings.json")) {
+            } else if (TestStr(request.url, "/api/schedule/meetings")) {
                 func = HandleScheduleMeetings;
             }
 
@@ -228,17 +228,17 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         // Found nothing
         io->AttachError(404);
     } else if (TestStr(request.method, "POST")) {
-        if (TestStr(request.url, "/api/login.json")) {
-            HandleLogin(request, io);
-        } else if (TestStr(request.url, "/api/logout.json")) {
-            HandleLogout(request, io);
+        if (TestStr(request.url, "/api/user/login")) {
+            HandleUserLogin(request, io);
+        } else if (TestStr(request.url, "/api/user/logout")) {
+            HandleUserLogout(request, io);
         } else {
             io->AttachError(404);
         }
     } else if (TestStr(request.method, "PUT")) {
         if (!strncmp(request.url, "/files/", 7)) {
             HandleFilePut(request, io);
-        } else if (!strncmp(request.url, "/records/", 9)) {
+        } else if (!strncmp(request.url, "/api/records/", 13)) {
             HandleRecordPut(request, io);
         } else {
             io->AttachError(404);
