@@ -27,6 +27,8 @@ DatabaseFile = database.db
 # Threads = 4
 # BaseUrl = /
 )";
+
+// If you change DatabaseVersion, don't forget to update the migration switch!
 const int DatabaseVersion = 5;
 
 bool MigrateDatabase(sq_Database &database, int version)
@@ -172,6 +174,8 @@ bool MigrateDatabase(sq_Database &database, int version)
                 if (!database.Run("UPDATE usr_users SET permissions = 31 WHERE permissions == 7;"))
                     return false;
             } // [[fallthrough]];
+
+            RG_STATIC_ASSERT(DatabaseVersion == 5);
         }
 
         int64_t time = GetUnixTime();
@@ -187,9 +191,6 @@ bool MigrateDatabase(sq_Database &database, int version)
         LogInfo("Migration complete, version: %1", DatabaseVersion);
         return true;
     });
-
-    // If you change DatabaseVersion, don't forget to update the migration switch!
-    RG_STATIC_ASSERT(DatabaseVersion == 5);
 
     return success;
 }
