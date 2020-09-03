@@ -233,4 +233,9 @@ main {
     main { padding: 1em; }
 
     .legend { bottom: -6%; }
+
+    .screenshot {
+        float: none !important;
+        margin: 1em auto !important;
+    }
 }
