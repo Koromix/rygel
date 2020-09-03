@@ -33,11 +33,13 @@ const int DatabaseVersion = 5;
 
 bool MigrateDatabase(sq_Database &database, int version)
 {
+    RG_ASSERT(version < DatabaseVersion);
+
+    LogInfo("Running migrations %1 to %2", version + 1, DatabaseVersion);
+
     bool success = database.Transaction([&]() {
         switch (version) {
             case 0: {
-                LogInfo("Running migration 1 of %1", DatabaseVersion);
-
                 bool success = database.Run(R"(
                     CREATE TABLE rec_entries (
                         table_name TEXT NOT NULL,
@@ -105,8 +107,6 @@ bool MigrateDatabase(sq_Database &database, int version)
             } [[fallthrough]];
 
             case 1: {
-                LogInfo("Running migration 2 of %1", DatabaseVersion);
-
                 bool success = database.Run(R"(
                     ALTER TABLE rec_fragments RENAME TO rec_fragments_BAK;
                     DROP INDEX rec_fragments_tip;
@@ -132,8 +132,6 @@ bool MigrateDatabase(sq_Database &database, int version)
             } [[fallthrough]];
 
             case 2: {
-                LogInfo("Running migration 3 of %1", DatabaseVersion);
-
                 bool success = database.Run(R"(
                     DROP INDEX rec_entries_ti;
                     DROP INDEX rec_fragments_tip;
@@ -155,8 +153,6 @@ bool MigrateDatabase(sq_Database &database, int version)
             } [[fallthrough]];
 
             case 3: {
-                LogInfo("Running migration 4 of %1", DatabaseVersion);
-
                 bool success = database.Run(R"(
                     CREATE TABLE adm_migrations (
                         version INTEGER NOT NULL,
@@ -169,8 +165,6 @@ bool MigrateDatabase(sq_Database &database, int version)
             } [[fallthrough]];
 
             case 4: {
-                LogInfo("Running migration 5 of %1", DatabaseVersion);
-
                 if (!database.Run("UPDATE usr_users SET permissions = 31 WHERE permissions == 7;"))
                     return false;
             } // [[fallthrough]];
