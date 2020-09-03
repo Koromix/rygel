@@ -27,7 +27,7 @@ DatabaseFile = database.db
 # Threads = 4
 # BaseUrl = /
 )";
-const int DatabaseVersion = 4;
+const int DatabaseVersion = 5;
 
 bool MigrateDatabase(sq_Database &database, int version)
 {
@@ -164,6 +164,16 @@ bool MigrateDatabase(sq_Database &database, int version)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 4: {
+                LogInfo("Running migration 5 of %1", DatabaseVersion);
+
+                bool success = database.Run(R"(
+                    UPDATE usr_users SET permissions = 31 WHERE permissions == 7;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
         }
 
@@ -182,7 +192,7 @@ bool MigrateDatabase(sq_Database &database, int version)
     });
 
     // If you change DatabaseVersion, don't forget to update the migration switch!
-    RG_STATIC_ASSERT(DatabaseVersion == 4);
+    RG_STATIC_ASSERT(DatabaseVersion == 5);
 
     return success;
 }

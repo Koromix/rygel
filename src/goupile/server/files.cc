@@ -263,7 +263,7 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
 
-    if (!session || !session->HasPermission(UserPermission::Develop)) {
+    if (!session || !session->HasPermission(UserPermission::Deploy)) {
         LogError("User is not allowed to deploy changes");
         io->AttachError(403);
         return;
@@ -382,7 +382,7 @@ void HandleFileDelete(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
 
-    if (!session || !session->HasPermission(UserPermission::Develop)) {
+    if (!session || !session->HasPermission(UserPermission::Deploy)) {
         LogError("User is not allowed to deploy changes");
         io->AttachError(403);
         return;
