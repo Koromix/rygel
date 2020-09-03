@@ -118,7 +118,9 @@ static void InitAssets()
     }
 
     // Packed static assets
-    for (AssetInfo asset: pack_assets) {
+    for (Size i = 0; i < pack_assets.len; i++) {
+        AssetInfo asset = pack_assets[i];
+
         if (TestStr(asset.name, "goupile.html")) {
             asset.name = "/static/goupile.html";
             asset.data = PatchGoupileVariables(asset, &assets_alloc);
@@ -135,7 +137,7 @@ static void InitAssets()
             asset.name = "/favicon.png";
         } else if (TestStr(asset.name, "ports.pk.js")) {
 #ifndef NDEBUG
-            pack_asset_ports_pk_js = &asset;
+            pack_asset_ports_pk_js = &pack_assets[i];
 #endif
             continue;
         } else {
