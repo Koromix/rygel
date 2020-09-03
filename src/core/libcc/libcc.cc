@@ -4490,71 +4490,133 @@ bool IniParser::ParseBoolValue(Span<const char> value, bool *out_value)
 // Assets
 // ------------------------------------------------------------------------
 
-AssetLoadStatus AssetSet::LoadFromLibrary(const char *filename, const char *var_name)
+#if defined(FELIX) && !defined(NDEBUG)
+
+static char assets_filename[4096];
+static int64_t assets_last_check = -1;
+static HeapArray<AssetInfo> assets;
+static HashTable<const char *, const AssetInfo *> assets_map;
+static BlockAllocator assets_alloc;
+static bool assets_ready;
+
+bool ReloadAssets()
 {
     const Span<const AssetInfo> *lib_assets = nullptr;
+
+    // Make asset library filename
+    if (!assets_filename[0]) {
+        Span<const char> prefix = GetApplicationExecutable();
+#ifdef _WIN32
+        SplitStrReverse(prefix, '.', &prefix);
+#endif
+
+        Fmt(assets_filename, "%1_assets%2", prefix, RG_SHARED_LIBRARY_EXTENSION);
+    }
 
     // Check library time
     {
         FileInfo file_info;
-        if (!StatFile(filename, &file_info))
-            return AssetLoadStatus::Error;
+        if (!StatFile(assets_filename, &file_info))
+            return false;
 
-        if (last_time == file_info.modification_time)
-            return AssetLoadStatus::Unchanged;
-        last_time = file_info.modification_time;
+        if (assets_last_check == file_info.modification_time)
+            return false;
+        assets_last_check = file_info.modification_time;
     }
 
 #ifdef _WIN32
     wchar_t filename_w[4096];
-    if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
-        return AssetLoadStatus::Error;
+    if (ConvertUtf8ToWin32Wide(assets_filename, filename_w) < 0)
+        return false;
 
     HMODULE h = LoadLibraryW(filename_w);
     if (!h) {
-        LogError("Cannot load library '%1'", filename);
-        return AssetLoadStatus::Error;
+        LogError("Cannot load library '%1'", assets_filename);
+        return false;
     }
     RG_DEFER { FreeLibrary(h); };
 
-    lib_assets = (const Span<const AssetInfo> *)GetProcAddress(h, var_name);
+    lib_assets = (const Span<const AssetInfo> *)GetProcAddress(h, "PackedAssets");
 #else
-    void *h = dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
+    void *h = dlopen(assets_filename, RTLD_LAZY | RTLD_LOCAL);
     if (!h) {
-        LogError("Cannot load library '%1': %2", filename, dlerror());
-        return AssetLoadStatus::Error;
+        LogError("Cannot load library '%1': %2", assets_filename, dlerror());
+        return false;
     }
     RG_DEFER { dlclose(h); };
 
-    lib_assets = (const Span<const AssetInfo> *)dlsym(h, var_name);
+    lib_assets = (const Span<const AssetInfo> *)dlsym(h, "PackedAssets");
 #endif
     if (!lib_assets) {
-        LogError("Cannot find symbol '%1' in library '%2'", var_name, filename);
-        return AssetLoadStatus::Error;
+        LogError("Cannot find symbol '%1' in library '%2'", "PackedAssets", assets_filename);
+        return false;
     }
 
+    // We are not allowed to fail from now on
     assets.Clear();
-    alloc.ReleaseAll();
+    assets_map.Clear();
+    assets_alloc.ReleaseAll();
+
     for (const AssetInfo &asset: *lib_assets) {
         AssetInfo asset_copy;
 
-        asset_copy.name = DuplicateString(asset.name, &alloc).ptr;
-        uint8_t *data_ptr = (uint8_t *)Allocator::Allocate(&alloc, asset.data.len);
+        asset_copy.name = DuplicateString(asset.name, &assets_alloc).ptr;
+        uint8_t *data_ptr = (uint8_t *)Allocator::Allocate(&assets_alloc, asset.data.len);
         memcpy(data_ptr, asset.data.ptr, (size_t)asset.data.len);
         asset_copy.data = {data_ptr, asset.data.len};
         asset_copy.compression_type = asset.compression_type;
-        asset_copy.source_map = DuplicateString(asset.source_map, &alloc).ptr;
+        asset_copy.source_map = DuplicateString(asset.source_map, &assets_alloc).ptr;
 
         assets.Append(asset_copy);
     }
+    for (const AssetInfo &asset: assets) {
+        assets_map.Set(&asset);
+    }
 
-    return AssetLoadStatus::Loaded;
+    assets_ready = true;
+    return true;
 }
+
+Span<const AssetInfo> GetPackedAssets()
+{
+    if (!assets_ready) {
+        ReloadAssets();
+        RG_ASSERT(assets_ready);
+    }
+
+    return assets;
+}
+
+const AssetInfo *FindPackedAsset(const char *name)
+{
+    if (!assets_ready) {
+        ReloadAssets();
+        RG_ASSERT(assets_ready);
+    }
+
+    return assets_map.FindValue(name, nullptr);
+}
+
+#else
+
+HashTable<const char *, const AssetInfo *> PackedAssets_map;
+static bool assets_ready;
+
+void InitPackedMap(Span<const AssetInfo> assets)
+{
+    if (RG_LIKELY(!assets_ready)) {
+        for (const AssetInfo &asset: assets) {
+            PackedAssets_map.Set(&asset);
+        }
+    }
+}
+
+#endif
 
 // This won't win any beauty or speed contest (especially when writing
 // a compressed stream) but whatever.
-Span<const uint8_t> PatchAssetVariables(const AssetInfo &asset, Allocator *alloc,
-                                        FunctionRef<bool(const char *, StreamWriter *)> func)
+Span<const uint8_t> PatchAsset(const AssetInfo &asset, Allocator *alloc,
+                               FunctionRef<bool(const char *, StreamWriter *)> func)
 {
     HeapArray<uint8_t> buf(alloc);
 

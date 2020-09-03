@@ -47,8 +47,7 @@ typedef struct AssetInfo {
 } AssetInfo;)";
 
 struct BlobInfo {
-    const char *str_name;
-    const char *var_name;
+    const char *name;
 
     CompressionType compression_type;
     Size len;
@@ -250,17 +249,6 @@ static Size PackSourceMap(const PackAssetInfo &asset, FunctionRef<void(Span<cons
     return buf.len;
 }
 
-static const char *CreateVariableName(const char *name, Allocator *alloc)
-{
-    char *var_name = DuplicateString(name, alloc).ptr;
-
-    for (Size i = 0; var_name[i]; i++) {
-        var_name[i] = IsAsciiAlphaOrDigit(var_name[i]) ? var_name[i] : '_';
-    }
-
-    return var_name;
-}
-
 static void PrintAsC(Span<const uint8_t> bytes, bool as_array, StreamWriter *out_st)
 {
     if (as_array) {
@@ -319,12 +307,11 @@ static const uint8_t raw_data[] = {)");
         HeapArray<BlobInfo> blobs;
         for (const PackAssetInfo &asset: assets) {
             BlobInfo blob = {};
-            blob.str_name = asset.name;
-            blob.var_name = CreateVariableName(asset.name, &temp_alloc);
+            blob.name = asset.name;
 
             blob.compression_type = asset.compression_type;
 
-            PrintLn(&st, "    // %1", blob.str_name);
+            PrintLn(&st, "    // %1", blob.name);
             Print(&st, "    ");
             blob.len = PackAsset(asset, [&](Span<const uint8_t> buf) { PrintAsC(buf, use_arrays, &st); });
             if (blob.len < 0)
@@ -338,12 +325,11 @@ static const uint8_t raw_data[] = {)");
                 blob.source_map = asset.source_map_name;
 
                 BlobInfo blob_map = {};
-                blob_map.str_name = blob.source_map;
-                blob_map.var_name = CreateVariableName(blob.source_map, &temp_alloc);
+                blob_map.name = blob.source_map;
 
                 blob_map.compression_type = asset.compression_type;
 
-                PrintLn(&st, "    // %1", blob_map.str_name);
+                PrintLn(&st, "    // %1", blob_map.name);
                 Print(&st, "    ");
                 blob_map.len = PackSourceMap(asset, [&](Span<const uint8_t> buf) { PrintAsC(buf, use_arrays, &st); });
                 if (blob_map.len < 0)
@@ -369,32 +355,23 @@ static AssetInfo assets[%1] = {)", blobs.len);
 
             if (blob.source_map) {
                 PrintLn(&st, "    {\"%1\", %2, {raw_data + %3, %4}, \"%5\"},",
-                        blob.str_name, (int)blob.compression_type, raw_offset, blob.len,
+                        blob.name, (int)blob.compression_type, raw_offset, blob.len,
                         blob.source_map);
             } else {
                 PrintLn(&st, "    {\"%1\", %2, {raw_data + %3, %4}, 0},",
-                        blob.str_name, (int)blob.compression_type, raw_offset, blob.len);
+                        blob.name, (int)blob.compression_type, raw_offset, blob.len);
             }
             raw_offset += blob.len + 1;
         }
 
         PrintLn(&st, R"(};
 
-EXPORT_SYMBOL extern const Span pack_assets;
-const Span pack_assets = {assets, %1};
-)", blobs.len);
-
-        for (Size i = 0; i < blobs.len; i++) {
-            const BlobInfo &blob = blobs[i];
-
-            PrintLn(&st,
-R"(EXPORT_SYMBOL extern const AssetInfo *const pack_asset_%1;
-const AssetInfo *const pack_asset_%1 = &assets[%2];)", blob.var_name, i);
-        }
+EXPORT_SYMBOL extern const Span PackedAssets;
+const Span PackedAssets = {assets, %1};)", blobs.len);
     } else {
         PrintLn(&st, R"(
-EXPORT_SYMBOL extern const Span pack_assets;
-const Span pack_assets = {0, 0};)");
+EXPORT_SYMBOL extern const Span PackedAssets;
+const Span PackedAssets = {0, 0};)");
     }
 
     return st.Close();

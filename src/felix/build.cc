@@ -179,13 +179,8 @@ bool Builder::AddTarget(const TargetInfo &target)
             }
         }
 
-        bool module = false;
-        switch (target.pack_link_mode) {
-            case PackLinkMode::Static: { module = false; } break;
-            case PackLinkMode::Module: { module = true; } break;
-            case PackLinkMode::ModuleIfDebug: { module = (build.compile_mode == CompileMode::Debug ||
-                                                          build.compile_mode == CompileMode::DebugFast); } break;
-        }
+        bool module = (build.compile_mode == CompileMode::Debug ||
+                       build.compile_mode == CompileMode::DebugFast);
 
         // Build object file
         {

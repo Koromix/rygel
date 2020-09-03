@@ -24,8 +24,6 @@ struct Instance {
     std::mutex lock;
 };
 
-extern "C" const AssetInfo *const pack_asset_Roboto_Medium_ttf;
-
 static ImFontAtlas font_atlas;
 
 RcppExport SEXP heimdallR_Init()
@@ -262,13 +260,14 @@ RcppExport SEXP heimdallR_SetConcepts(SEXP inst_xp, SEXP name_xp, SEXP concepts_
 static void InitFontAtlas()
 {
     if (font_atlas.Fonts.empty()) {
-        const AssetInfo &font = *pack_asset_Roboto_Medium_ttf;
-        RG_ASSERT(font.data.len <= INT_MAX);
+        const AssetInfo *font = FindPackedAsset("Roboto-Medium.ttf");
+        RG_ASSERT(font);
+        RG_ASSERT(font->data.len <= INT_MAX);
 
         ImFontConfig font_config;
         font_config.FontDataOwnedByAtlas = false;
 
-        font_atlas.AddFontFromMemoryTTF((void *)font.data.ptr, (int)font.data.len,
+        font_atlas.AddFontFromMemoryTTF((void *)font->data.ptr, (int)font->data.len,
                                         16, &font_config);
     }
 }

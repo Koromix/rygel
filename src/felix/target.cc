@@ -33,7 +33,6 @@ struct TargetConfig {
 
     FileSet pack_file_set;
     const char *pack_options;
-    PackLinkMode pack_link_mode;
 
     RG_HASHTABLE_HANDLER(TargetConfig, name);
 };
@@ -159,7 +158,6 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                 valid = false;
             }
             target_config.type = TargetType::Executable;
-            target_config.pack_link_mode = PackLinkMode::Static;
 
             // Type property must be specified first
             if (prop.key == "Type") {
@@ -271,17 +269,6 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         }
                     } else if (prop.key == "AssetOptions") {
                         target_config.pack_options = DuplicateString(prop.value, &set.str_alloc).ptr;
-                    } else if (prop.key == "AssetLink") {
-                        if (prop.value == "Static") {
-                            target_config.pack_link_mode = PackLinkMode::Static;
-                        } else if (prop.value == "Module") {
-                            target_config.pack_link_mode = PackLinkMode::Module;
-                        } else if (prop.value == "ModuleIfDebug") {
-                            target_config.pack_link_mode = PackLinkMode::ModuleIfDebug;
-                        } else {
-                            LogError("Unknown asset link mode '%1'", prop.value);
-                            valid = false;
-                        }
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -347,7 +334,6 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     std::swap(target->export_definitions, target_config->export_definitions);
     std::swap(target->include_directories, target_config->include_directories);
     std::swap(target->libraries, target_config->libraries);
-    target->pack_link_mode = target_config->pack_link_mode;
     target->pack_options = target_config->pack_options;
 
     // Resolve imported targets

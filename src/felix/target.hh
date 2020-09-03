@@ -29,12 +29,6 @@ struct SourceFileInfo {
     RG_HASHTABLE_HANDLER(SourceFileInfo, filename);
 };
 
-enum class PackLinkMode {
-    Static,
-    Module,
-    ModuleIfDebug
-};
-
 struct TargetInfo {
     const char *name;
     TargetType type;
@@ -53,7 +47,6 @@ struct TargetInfo {
 
     HeapArray<const char *> pack_filenames;
     const char *pack_options;
-    PackLinkMode pack_link_mode;
 
     RG_HASHTABLE_HANDLER(TargetInfo, name);
 };

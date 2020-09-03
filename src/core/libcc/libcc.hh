@@ -3671,23 +3671,44 @@ struct AssetInfo {
     RG_HASHTABLE_HANDLER(AssetInfo, name);
 };
 
-enum class AssetLoadStatus {
-    Unchanged,
-    Loaded,
-    Error
-};
+#ifdef NDEBUG
 
-struct AssetSet {
-    HeapArray<AssetInfo> assets;
-    LinkedAllocator alloc;
+// Reserved for internal use
+void InitPackedMap(Span<const AssetInfo> assets);
 
-    int64_t last_time = -1;
+extern "C" const Span<const AssetInfo> PackedAssets;
+extern HashTable<const char *, const AssetInfo *> PackedAssets_map;
 
-    AssetLoadStatus LoadFromLibrary(const char *filename, const char *var_name = "pack_assets");
-};
+// By definining functions here (with static inline), we don't need PackedAssets
+// to exist unless these functions are called. It also allows the compiler to remove
+// calls to ReloadAssets in non-debug builds (LTO or not).
 
-Span<const uint8_t> PatchAssetVariables(const AssetInfo &asset, Allocator *alloc,
-                                        FunctionRef<bool(const char *, StreamWriter *)> func);
+static inline bool ReloadAssets()
+{
+    return false;
+}
+
+static inline Span<const AssetInfo> GetPackedAssets()
+{
+    return PackedAssets;
+}
+
+static inline const AssetInfo *FindPackedAsset(const char *name)
+{
+    InitPackedMap(PackedAssets);
+    return PackedAssets_map.FindValue(name, nullptr);
+}
+
+#else
+
+bool ReloadAssets();
+Span<const AssetInfo> GetPackedAssets();
+const AssetInfo *FindPackedAsset(const char *name);
+
+#endif
+
+Span<const uint8_t> PatchAsset(const AssetInfo &asset, Allocator *alloc,
+                               FunctionRef<bool(const char *, StreamWriter *)> func);
 
 // ------------------------------------------------------------------------
 // Options

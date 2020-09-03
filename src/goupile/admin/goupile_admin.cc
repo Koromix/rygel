@@ -18,8 +18,6 @@
 
 namespace RG {
 
-extern "C" const Span<const AssetInfo> pack_assets;
-
 static bool HashPassword(Span<const char> password, char out_hash[crypto_pwhash_STRBYTES])
 {
     if (crypto_pwhash_str(out_hash, password.ptr, password.len,
@@ -225,7 +223,9 @@ Options:
 
     // Create default pages
     if (!empty) {
-        for (const AssetInfo &asset: pack_assets) {
+        Span<const AssetInfo> assets = GetPackedAssets();
+
+        for (const AssetInfo &asset: assets) {
             RG_ASSERT(asset.compression_type == CompressionType::None);
 
             const char *filename = Fmt(&temp_alloc, "%1%/files/%2", profile_directory, asset.name).ptr;

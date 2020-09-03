@@ -20,14 +20,6 @@ namespace RG {
 Config goupile_config;
 sq_Database goupile_db;
 
-#ifndef NDEBUG
-static const char *assets_filename;
-static AssetSet asset_set;
-extern "C" const RG::AssetInfo *pack_asset_ports_pk_js;
-const RG::AssetInfo *pack_asset_ports_pk_js;
-#else
-extern "C" const Span<const AssetInfo> pack_assets;
-#endif
 static HeapArray<AssetInfo> assets;
 static HashTable<const char *, const AssetInfo *> assets_map;
 static BlockAllocator assets_alloc;
@@ -58,8 +50,7 @@ static void HandleFileStatic(const http_RequestInfo &request, http_IO *io)
 
 static Span<const uint8_t> PatchGoupileVariables(const AssetInfo &asset, Allocator *alloc)
 {
-    Span<const uint8_t> data = PatchAssetVariables(asset, alloc,
-                                                   [](const char *key, StreamWriter *writer) {
+    Span<const uint8_t> data = PatchAsset(asset, alloc, [](const char *key, StreamWriter *writer) {
         if (TestStr(key, "VERSION")) {
             writer->Write(FelixVersion);
             return true;
@@ -100,10 +91,6 @@ static Span<const uint8_t> PatchGoupileVariables(const AssetInfo &asset, Allocat
 
 static void InitAssets()
 {
-#ifndef NDEBUG
-    Span<const AssetInfo> pack_assets = asset_set.assets;
-#endif
-
     LogInfo(assets.len ? "Reload assets" : "Init assets");
 
     assets.Clear();
@@ -117,9 +104,11 @@ static void InitAssets()
         Fmt(etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
     }
 
+    Span<const AssetInfo> packed_assets = GetPackedAssets();
+
     // Packed static assets
-    for (Size i = 0; i < pack_assets.len; i++) {
-        AssetInfo asset = pack_assets[i];
+    for (Size i = 0; i < packed_assets.len; i++) {
+        AssetInfo asset = packed_assets[i];
 
         if (TestStr(asset.name, "goupile.html")) {
             asset.name = "/static/goupile.html";
@@ -136,9 +125,6 @@ static void InitAssets()
         } else if (TestStr(asset.name, "favicon.png")) {
             asset.name = "/favicon.png";
         } else if (TestStr(asset.name, "ports.pk.js")) {
-#ifndef NDEBUG
-            pack_asset_ports_pk_js = &pack_assets[i];
-#endif
             continue;
         } else {
             asset.name = Fmt(&assets_alloc, "/static/%1", asset.name).ptr;
@@ -153,11 +139,9 @@ static void InitAssets()
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
-#ifndef NDEBUG
-    if (asset_set.LoadFromLibrary(assets_filename) == AssetLoadStatus::Loaded) {
+    if (ReloadAssets()) {
         InitAssets();
     }
-#endif
 
     // Send these headers whenever possible
     io->AddHeader("Referrer-Policy", "no-referrer");
@@ -376,12 +360,6 @@ Options:
     }
 
     // Init assets and files
-#ifndef NDEBUG
-    assets_filename = Fmt(&temp_alloc, "%1%/goupile_assets%2",
-                          GetApplicationDirectory(), RG_SHARED_LIBRARY_EXTENSION).ptr;
-    if (asset_set.LoadFromLibrary(assets_filename) == AssetLoadStatus::Error)
-        return 1;
-#endif
     InitAssets();
     if (goupile_config.files_directory && !InitFiles())
         return 1;

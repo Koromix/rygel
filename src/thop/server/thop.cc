@@ -55,15 +55,7 @@ UserSet thop_user_set;
 
 char thop_etag[33];
 
-static Span<const AssetInfo> assets;
-#ifndef NDEBUG
-static const char *assets_filename;
-static AssetSet asset_set;
-#else
-extern "C" const Span<const AssetInfo> pack_assets;
-#endif
 static DictionarySet dictionary_set;
-
 static HashTable<Span<const char>, Route> routes;
 static BlockAllocator routes_alloc;
 
@@ -306,9 +298,11 @@ static void InitRoutes()
         routes.Set(route);
     };
 
+    Span<const AssetInfo> assets = GetPackedAssets();
+    RG_ASSERT(assets.len > 0);
+
     // Static assets and dictionaries
     AssetInfo html = {};
-    RG_ASSERT(assets.len > 0);
     for (const AssetInfo &asset: assets) {
         if (TestStr(asset.name, "thop.html")) {
             html = asset;
@@ -326,8 +320,7 @@ static void InitRoutes()
     RG_ASSERT(html.name);
 
     // Patch HTML
-    html.data = PatchAssetVariables(html, &routes_alloc,
-                                    [](const char *key, StreamWriter *writer) {
+    html.data = PatchAsset(html, &routes_alloc, [](const char *key, StreamWriter *writer) {
         if (TestStr(key, "VERSION")) {
             writer->Write(FelixVersion);
             return true;
@@ -377,14 +370,9 @@ static void InitRoutes()
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
-#ifndef NDEBUG
-    if (asset_set.LoadFromLibrary(assets_filename) == AssetLoadStatus::Loaded) {
-        LogInfo("Reloaded assets from library");
-        assets = asset_set.assets;
-
+    if (ReloadAssets()) {
         InitRoutes();
     }
-#endif
 
     // Find user information
     const User *user = CheckSessionUser(request, io);
@@ -574,15 +562,6 @@ Options:
     }
 
     // Init routes
-#ifndef NDEBUG
-    assets_filename = Fmt(&temp_alloc, "%1%/thop_assets%2",
-                          GetApplicationDirectory(), RG_SHARED_LIBRARY_EXTENSION).ptr;
-    if (asset_set.LoadFromLibrary(assets_filename) == AssetLoadStatus::Error)
-        return 1;
-    assets = asset_set.assets;
-#else
-    assets = pack_assets;
-#endif
     InitRoutes();
 
     // Run!

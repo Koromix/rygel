@@ -10,8 +10,6 @@
 
 namespace RG {
 
-extern "C" const RG::AssetInfo *const pack_asset_ports_pk_js;
-
 static std::mutex js_mutex;
 static std::condition_variable js_cv;
 static ScriptPort js_ports[16];
@@ -302,10 +300,13 @@ bool ScriptPort::RunRecord(Span<const char> json, const ScriptHandle &handle,
 
 void InitPorts()
 {
+    const AssetInfo *asset = FindPackedAsset("ports.pk.js");
+    RG_ASSERT(asset);
+
     // QuickJS requires NUL termination, so we need to make a copy anyway
     HeapArray<char> code;
     {
-        StreamReader st(pack_asset_ports_pk_js->data, nullptr, pack_asset_ports_pk_js->compression_type);
+        StreamReader st(asset->data, nullptr, asset->compression_type);
 
         Size read_len = st.ReadAll(Megabytes(1), &code);
         RG_ASSERT(read_len >= 0);
