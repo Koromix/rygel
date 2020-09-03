@@ -175,6 +175,7 @@
 }
 
 .af_enum, .af_radio, .af_multi { display: inline-block; }
+.af_enum { line-height: calc(1.8em + 8px); }
 .af_radio, .af_multi { padding-top: 3px; }
 
 .af_pin {
@@ -192,7 +193,7 @@
 .af_pin > button.clear { color: red; }
 
 .af_button {
-    margin-right: 0.2em;
+    margin: 0 4px 0 0;
     padding: 0.25em 10px;
     background: white;
     border: 1px solid #ccc;
