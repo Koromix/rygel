@@ -182,11 +182,13 @@ bool MigrateDatabase(sq_Database &database, int version)
         if (!database.Run(buf))
             return false;
 
-        LogInfo("Migration complete, version: %1", DatabaseVersion);
         return true;
     });
+    if (!success)
+        return false;
 
-    return success;
+    LogInfo("Migration complete, version: %1", DatabaseVersion);
+    return true;
 }
 
 }
