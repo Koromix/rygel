@@ -568,6 +568,10 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
                 }
             }
 
+            // Dry run
+            if (build.fake)
+                return true;
+
             // Run command
             HeapArray<char> output_buf;
             int exit_code;

@@ -142,6 +142,7 @@ Options:
 
     %!..+-q, --quiet%!0                  Hide felix progress statements
     %!..+-v, --verbose%!0                Show detailed build commands
+    %!..+-n, --dry_run%!0                Fake command execution
 
         %!..+--run <target>%!0           Run target after successful build
                                  %!D..(all remaining arguments are passed as-is)%!0
@@ -216,6 +217,8 @@ For help about those commands, type: %!..+felix <command> --help%!0)");
                 quiet = true;
             } else if (opt.Test("-v", "--verbose")) {
                 verbose = true;
+            } else if (opt.Test("-n", "--dry_run")) {
+                build.fake = true;
             } else if (opt.Test("--run", OptionType::Value)) {
                 run_target_name = opt.current_value;
                 break;

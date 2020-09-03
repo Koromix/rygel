@@ -21,6 +21,7 @@ struct BuildSettings {
     const char *version_str = "(unknown version)";
     bool rebuild = false;
     bool env = false;
+    bool fake = false;
 };
 
 struct BuildNode {
