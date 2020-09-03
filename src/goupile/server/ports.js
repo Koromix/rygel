@@ -23,8 +23,8 @@ var server = new function() {
     // C++ functions
     this.readCode = null;
 
-    this.validateFragments = function(fragments) {
-        let values = {};
+    this.validateFragments = function(json, fragments) {
+        let values = JSON.parse(json);
 
         let fragments2 = fragments.map(frag => {
             if (frag.page != null) {
@@ -45,8 +45,9 @@ var server = new function() {
                     page: frag.page,
                     mtime: frag.mtime,
 
+                    // Make it easy for the C++ caller to store in database with stringified JSON
                     columns: expandColumns(model.variables),
-                    values: filterValues(values, model.variables)
+                    json: JSON.stringify(filterValues(values, model.variables))
                 };
 
                 return frag2;
@@ -55,7 +56,11 @@ var server = new function() {
             }
         });
 
-        return fragments2;
+        let ret = {
+            fragments: fragments2,
+            json: JSON.stringify(values)
+        };
+        return ret;
     };
 
     function getValue(values, key, default_value) {
@@ -104,7 +109,6 @@ var server = new function() {
                 throw new Error(`Unexpected variable '${key}'`);
         }
 
-        // Make it easy for the C++ caller to store in database
-        return JSON.stringify(values2);
+        return values2;
     }
 };

@@ -37,7 +37,7 @@ struct ScriptFragment {
     JSContext *ctx = nullptr;
     const char *mtime = nullptr;
     const char *page = nullptr;
-    Span<const char> values = {};
+    Span<const char> json = {};
     int errors;
     HeapArray<Column> columns;
 
@@ -48,7 +48,7 @@ struct ScriptFragment {
         if (ctx) {
             JS_FreeCString(ctx, mtime);
             JS_FreeCString(ctx, page);
-            JS_FreeCString(ctx, values.ptr);
+            JS_FreeCString(ctx, json.ptr);
             for (const Column &col: columns) {
                 JS_FreeCString(ctx, col.key);
                 JS_FreeCString(ctx, col.prop);
@@ -71,7 +71,8 @@ public:
     ~ScriptPort();
 
     bool ParseFragments(StreamReader *st, ScriptHandle *out_handle);
-    bool RunRecord(const ScriptHandle &handle, HeapArray<ScriptFragment> *out_fragments);
+    bool RunRecord(Span<const char> json, const ScriptHandle &handle,
+                   HeapArray<ScriptFragment> *out_fragments, Span<const char> *out_json);
 
     friend void InitPorts();
 };

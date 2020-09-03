@@ -29,7 +29,7 @@ DatabaseFile = database.db
 )";
 
 // If you change DatabaseVersion, don't forget to update the migration switch!
-const int DatabaseVersion = 5;
+const int DatabaseVersion = 6;
 
 bool MigrateDatabase(sq_Database &database, int version)
 {
@@ -121,11 +121,12 @@ bool MigrateDatabase(sq_Database &database, int version)
                         json TEXT,
                         anchor INTEGER PRIMARY KEY AUTOINCREMENT
                     );
-                    CREATE INDEX rec_fragments_tip ON rec_fragments(table_name, id, page);
 
                     INSERT INTO rec_fragments (table_name, id, page, username, mtime, complete, json)
                         SELECT table_name, id, page, username, mtime, complete, json FROM rec_fragments_BAK;
                     DROP TABLE rec_fragments_BAK;
+
+                    CREATE INDEX rec_fragments_tip ON rec_fragments(table_name, id, page);
                 )");
                 if (!success)
                     return false;
@@ -167,9 +168,21 @@ bool MigrateDatabase(sq_Database &database, int version)
             case 4: {
                 if (!database.Run("UPDATE usr_users SET permissions = 31 WHERE permissions == 7;"))
                     return false;
+            } [[fallthrough]];
+
+            case 5: {
+                // Incomplete migration that breaks down (because NOT NULL constraint)
+                // if there is any fragment, which is not ever the case yet.
+                bool success = database.Run(R"(
+                    ALTER TABLE rec_entries ADD COLUMN json TEXT NOT NULL;
+                    ALTER TABLE rec_entries ADD COLUMN version INTEGER NOT NULL;
+                    ALTER TABLE rec_fragments ADD COLUMN version INEGER NOT NULL;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DatabaseVersion == 5);
+            RG_STATIC_ASSERT(DatabaseVersion == 6);
         }
 
         int64_t time = GetUnixTime();

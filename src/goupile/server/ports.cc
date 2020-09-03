@@ -240,14 +240,21 @@ bool ScriptPort::ParseFragments(StreamReader *st, ScriptHandle *out_handle)
 }
 
 // XXX: Detect errors (such as allocation failures) in calls to QuickJS
-bool ScriptPort::RunRecord(const ScriptHandle &handle, HeapArray<ScriptFragment> *out_fragments)
+bool ScriptPort::RunRecord(Span<const char> json, const ScriptHandle &handle,
+                           HeapArray<ScriptFragment> *out_fragments, Span<const char> *out_json)
 {
-    JSValue arg = JS_DupValue(ctx, handle.value);
-    RG_DEFER { JS_FreeValue(ctx, arg); };
+    JSValue args[] = {
+        JS_NewStringLen(ctx, json.ptr, (size_t)json.len),
+        JS_DupValue(ctx, handle.value)
+    };
+    RG_DEFER {
+        JS_FreeValue(ctx, args[0]);
+        JS_FreeValue(ctx, args[1]);
+    };
 
-    JSValue fragments = JS_Call(ctx, validate_func, JS_UNDEFINED, 1, &arg);
-    RG_DEFER { JS_FreeValue(ctx, fragments); };
-    if (JS_IsException(fragments)) {
+    JSValue ret = JS_Call(ctx, validate_func, JS_UNDEFINED, RG_LEN(args), args);
+    RG_DEFER { JS_FreeValue(ctx, ret); };
+    if (JS_IsException(ret)) {
         const char *msg = ConsumeValueStr(ctx, JS_GetException(ctx)).ptr;
         RG_DEFER { JS_FreeCString(ctx, msg); };
 
@@ -255,7 +262,10 @@ bool ScriptPort::RunRecord(const ScriptHandle &handle, HeapArray<ScriptFragment>
         return false;
     }
 
+    JSValue fragments = JS_GetPropertyStr(ctx, ret, "fragments");
     int fragments_len = ConsumeValueInt(ctx, JS_GetPropertyStr(ctx, fragments, "length"));
+    RG_DEFER { JS_FreeValue(ctx, fragments); };
+    *out_json = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, ret, "json"));
 
     for (int i = 0; i< fragments_len; i++) {
         JSValue frag = JS_GetPropertyUint32(ctx, fragments, i);
@@ -266,7 +276,7 @@ bool ScriptPort::RunRecord(const ScriptHandle &handle, HeapArray<ScriptFragment>
 
         frag2->mtime = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, frag, "mtime")).ptr;
         frag2->page = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, frag, "page")).ptr;
-        frag2->values = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, frag, "values"));
+        frag2->json = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, frag, "json"));
         frag2->errors = ConsumeValueInt(ctx, JS_GetPropertyStr(ctx, frag, "errors"));
 
         JSValue columns = JS_GetPropertyStr(ctx, frag, "columns");

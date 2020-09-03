@@ -64,6 +64,7 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
         Span<const char> remain = request.url + 1;
 
         SplitStr(remain, '/', &remain);
+        SplitStr(remain, '/', &remain);
         table = SplitStr(remain, '/', &remain);
         id = SplitStr(remain, '/', &remain);
 
@@ -142,11 +143,13 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
+    // XXX: We need version data, in order to check for version mismatch
     Span<const char> table;
     Span<const char> id;
     {
         Span<const char> remain = request.url + 1;
 
+        SplitStr(remain, '/', &remain);
         SplitStr(remain, '/', &remain);
         table = SplitStr(remain, '/', &remain);
         id = SplitStr(remain, '/', &remain);
@@ -180,8 +183,33 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
                 return;
         }
 
+        // Get existing record data
+        sq_Statement stmt;
+        int version;
+        Span<const char> json;
+        {
+            if (!goupile_db.Prepare(R"(SELECT version, json
+                                       FROM rec_entries
+                                       WHERE store = ? AND id = ?)", &stmt))
+                return;
+            sqlite3_bind_text(stmt, 1, table.ptr, (int)table.len, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 2, id.ptr, (int)id.len, SQLITE_STATIC);
+
+            if (stmt.Next()) {
+                version = sqlite3_column_int(stmt, 0);
+                json.ptr = (const char *)sqlite3_column_text(stmt, 1);
+                json.len = (Size)sqlite3_column_bytes(stmt, 1);
+            } else if (stmt.IsValid()) {
+                version = 0;
+                json = "{}";
+            } else {
+                return;
+            }
+        }
+
+        // Run JS validation
         HeapArray<ScriptFragment> fragments;
-        if (!port->RunRecord(handle, &fragments))
+        if (!port->RunRecord(json, handle, &fragments, &json))
             return;
 
         bool success = goupile_db.Transaction([&]() {
@@ -211,19 +239,20 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
                 return false;
 
             // Save record entry
-            if (!goupile_db.Run(R"(INSERT INTO rec_entries (store, id, sequence)
-                                   VALUES (?, ?, ?)
-                                   ON CONFLICT DO NOTHING)",
-                                table, id, sequence))
-                return false;
-            if (!goupile_db.Run(R"(DELETE FROM rec_fragments WHERE id = ?)", id))
+            if (!goupile_db.Run(R"(INSERT INTO rec_entries (store, id, sequence, version, json)
+                                   VALUES (?, ?, ?, ?, ?)
+                                   ON CONFLICT(store, id) DO UPDATE SET version = excluded.version,
+                                                                        json = excluded.json)",
+                                table, id, sequence, version + fragments.len - 1, json))
                 return false;
 
             // Save record fragments (and variables)
-            for (const ScriptFragment &frag: fragments) {
-                if (!goupile_db.Run(R"(INSERT INTO rec_fragments (store, id, username, mtime, page, complete, json)
-                                       VALUES (?, ?, ?, ?, ?, 0, ?))",
-                                    table, id, session->username, frag.mtime, frag.page, frag.values))
+            for (Size i = 0; i < fragments.len; i++) {
+                const ScriptFragment &frag = fragments[i];
+
+                if (!goupile_db.Run(R"(INSERT INTO rec_fragments (store, id, version, page, username, mtime, complete, json)
+                                       VALUES (?, ?, ?, ?, ?, ?, 0, ?))",
+                                    table, id, version + i, frag.page, session->username, frag.mtime, frag.json))
                     return false;
 
                 sq_Statement stmt;
@@ -235,10 +264,10 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
                     return false;
                 sqlite3_bind_text(stmt, 1, table.ptr, (int)table.len, SQLITE_STATIC);
 
-                for (Size i = 0; i < frag.columns.len; i++) {
-                    const ScriptFragment::Column &col = frag.columns[i];
-                    const char *before = i ? frag.columns[i - 1].key : nullptr;
-                    const char *after = (i + 1 < frag.columns.len) ? frag.columns[i + 1].key : nullptr;
+                for (Size j = 0; j < frag.columns.len; j++) {
+                    const ScriptFragment::Column &col = frag.columns[j];
+                    const char *before = j ? frag.columns[j - 1].key : nullptr;
+                    const char *after = (j + 1 < frag.columns.len) ? frag.columns[j + 1].key : nullptr;
 
                     stmt.Reset();
                     sqlite3_bind_text(stmt, 2, frag.page, -1, SQLITE_STATIC);
