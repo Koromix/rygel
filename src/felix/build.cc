@@ -564,7 +564,8 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
                 Size progress_pct = 100 * progress++ / total;
                 LogInfo("%!C..%1%%%!0 %2", FmtArg(progress_pct).Pad(-3), node.text);
                 if (verbose) {
-                    PrintLn(stderr, cmd_line);
+                    PrintLn(cmd_line);
+                    fflush(stdout);
                 }
             }
 
