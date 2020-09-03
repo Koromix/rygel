@@ -349,7 +349,7 @@ bool Builder::Build(int jobs, bool verbose)
 
     // Update cache even if some tasks fail
     RG_DEFER {
-        if (total) {
+        if (total && !build.fake) {
             for (const WorkerState &worker: workers) {
                 for (const CacheEntry &entry: worker.entries) {
                     cache_map.Set(entry)->deps_offset = cache_dependencies.len;
@@ -568,14 +568,16 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
                 }
             }
 
-            // Dry run
-            if (build.fake)
-                return true;
-
             // Run command
             HeapArray<char> output_buf;
             int exit_code;
-            bool started = ExecuteCommandLine(cmd_line, {}, Megabytes(4), &output_buf, &exit_code);
+            bool started;
+            if (!build.fake) {
+                started = ExecuteCommandLine(cmd_line, {}, Megabytes(4), &output_buf, &exit_code);
+            } else {
+                started = true;
+                exit_code = 0;
+            }
 
             // Skip first output lines (if needed)
             Span<char> output = output_buf;
