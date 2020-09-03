@@ -89,6 +89,7 @@
     display: block;
     margin-bottom: 6px;
     padding-top: 4px;
+    font-weight: bold;
     color: #303030;
 }
 .af_widget.mandatory > label::after {
@@ -136,6 +137,7 @@
         min-width: 250px;
         margin-bottom: 0;
         padding-right: 4px;
+        font-weight: normal;
     }
     .af_widget.compact .af_error {
         flex: 1;
