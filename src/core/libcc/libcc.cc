@@ -642,6 +642,8 @@ static Span<char> FormatUnsignedToBinary(uint64_t value, char out_buf[64])
 
 static Size FakeFloatPrecision(Span<char> buf, int K, int min_prec, int max_prec, int *out_K)
 {
+    RG_ASSERT(min_prec >= 0);
+
     if (-K < min_prec) {
         int delta = min_prec + K;
         memset(buf.end(), '0', delta);
@@ -649,24 +651,32 @@ static Size FakeFloatPrecision(Span<char> buf, int K, int min_prec, int max_prec
         *out_K -= delta;
         return buf.len + delta;
     } else if (-K > max_prec) {
-        int truncate = (int)buf.len + K + max_prec;
+        if (-K <= buf.len) {
+            int offset = (int)buf.len + K;
+            int truncate = offset + max_prec;
 
-        if (buf[truncate] >= '5') {
-            int i = truncate;
-            while (i > (int)buf.len + K) {
-                if (buf[i - 1] == '9') {
-                    buf[--i] = '0';
-                } else {
-                    buf[i - 1]++;
-                    break;
+            if (buf[truncate] >= '5') {
+                int i = truncate;
+                while (i > offset) {
+                    if (buf[i - 1] == '9') {
+                        buf[--i] = '0';
+                    } else {
+                        buf[i - 1]++;
+                        break;
+                    }
                 }
+
+                truncate = std::max(i, offset + min_prec);
             }
 
-            truncate = std::max(i, (int)buf.len + K + min_prec);
+            *out_K -= (int)(truncate - buf.len);
+            return truncate;
+        } else {
+            buf[0] = '0' + (-K == buf.len + 1 && buf[0] >= '5');
+            memset(buf.ptr + 1, '0', min_prec - 1);
+            *out_K = -min_prec;
+            return min_prec;
         }
-
-        *out_K -= (int)(truncate - buf.len);
-        return truncate;
     } else {
         return buf.len;
     }
