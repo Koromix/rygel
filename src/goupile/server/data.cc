@@ -169,10 +169,7 @@ bool MigrateDatabase(sq_Database &database, int version)
             case 4: {
                 LogInfo("Running migration 5 of %1", DatabaseVersion);
 
-                bool success = database.Run(R"(
-                    UPDATE usr_users SET permissions = 31 WHERE permissions == 7;
-                )");
-                if (!success)
+                if (!database.Run("UPDATE usr_users SET permissions = 31 WHERE permissions == 7;"))
                     return false;
             } // [[fallthrough]];
         }
