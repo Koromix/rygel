@@ -202,11 +202,6 @@
 }
 .af_button + .af_button { border-left: none; }
 .af_button::-moz-focus-inner { border: 0; }
-.af_button:not(.active):hover {
-    background: #e66d1d;
-    border-color: #e66d1d;
-    color: white;
-}
 .af_button::before, .af_button::after {
     display: inline-block;
     width: 8px;
@@ -214,8 +209,8 @@
     content: '';
 }
 .af_button.active {
-    background: #e66d1d;
-    border-color: #e66d1d;
+    background: #303030;
+    border-color: #303030;
     color: white;
 }
 .af_button.active::before {
@@ -223,6 +218,11 @@
     content: '✓\FE0E';
 }
 .af_button.active::after { display: none; }
+.af_button:hover {
+    background: #e66d1d;
+    border-color: #e66d1d;
+    color: white;
+}
 
 .af_action {
     margin: 0;
