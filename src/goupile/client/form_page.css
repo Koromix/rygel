@@ -177,7 +177,6 @@
 }
 
 .af_enum, .af_radio, .af_multi { display: inline-block; }
-.af_enum { line-height: calc(1.8em + 8px); }
 .af_radio, .af_multi { padding-top: 3px; }
 
 .af_pin {
@@ -195,30 +194,47 @@
 .af_pin > button.clear { color: red; }
 
 .af_button {
-    margin: 0 4px 0 0;
+    margin: 0;
     padding: 0.25em 10px;
     background: white;
     border: 1px solid #ccc;
     border-width: 0.5px;
 }
+.af_button + .af_button { border-left: none; }
 .af_button::-moz-focus-inner { border: 0; }
-.af_button:not(:disabled):focus { outline: 2px dotted #999; }
-.af_button:not(:disabled):hover { border-color: #e66d1d; }
 .af_button:disabled {
     background: #bbb;
     cursor: not-allowed;
+}
+.af_button:not(:disabled):not(.active):hover {
+    background: #e66d1d;
+    border-color: #e66d1d;
+    color: white;
+}
+.af_button::before, .af_button::after {
+    display: inline-block;
+    width: 8px;
+    font-size: 0.9em;
+    content: '';
 }
 .af_button.active {
     background: #e66d1d;
     border-color: #e66d1d;
     color: white;
 }
+.af_button.active::before {
+    width: 16px;
+    content: '✓\FE0E';
+}
+.af_button.active::after { display: none; }
 
 .af_calc { font-weight: bold; }
 
 .af_button:focus, .af_input:focus, .af_select:focus {
+    position: relative;
     outline: 2px dotted #999;
     outline-offset: 1px;
+    z-index: 1;
 }
 .af_enum.readonly, .af_radio.readonly, .af_multi.readonly, .af_slider.readonly {
     pointer-events: none;
