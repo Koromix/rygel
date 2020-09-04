@@ -209,8 +209,8 @@
     content: '';
 }
 .af_button.active {
-    background: #303030;
-    border-color: #303030;
+    background: #555;
+    border-color: #555;
     color: white;
 }
 .af_button.active::before {
@@ -229,7 +229,6 @@
     padding: 0.35em 10px;
     background: #303030;
     border: 1px solid #303030;
-    border-width: 0.5px;
     color: white;
     cursor: pointer;
 }
@@ -240,8 +239,8 @@
     cursor: not-allowed;
 }
 .af_action:not(:disabled):hover {
-    background: #e66d1d;
-    border-color: #e66d1d;
+    background: #777;
+    border-color: #777;
 }
 
 .af_calc { font-weight: bold; }
@@ -403,7 +402,7 @@
     width: 100%;
     height: 8px;
     background: white;
-    background-image: linear-gradient(90deg, #303030 var(--webkit_progress),
+    background-image: linear-gradient(90deg, #555 var(--webkit_progress),
                                              white var(--webkit_progress));
     border: 1px solid #dfdfdf;
     border-width: 0.5px;
@@ -419,8 +418,8 @@
 }
 .af_slider:not(.missing) > input::-moz-range-progress {
     height: 6px;
-    background-color: #303030;
-    border: 1px solid #303030;
+    background-color: #555;
+    border: 1px solid #555;
     border-width: 0.5px;
     border-radius: 4px;
 }
@@ -429,7 +428,7 @@
     width: 1.6em;
     height: 1.6em;
     margin-top: -0.6em;
-    background: #303030;
+    background: #555;
     border: none;
     border-radius: 50%;
 }
@@ -438,7 +437,7 @@
     width: 1.6em;
     height: 1.6em;
     margin-top: -0.6em;
-    background: #303030;
+    background: #555;
     border: none;
     border-radius: 50%;
 }
