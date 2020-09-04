@@ -403,7 +403,7 @@
     width: 100%;
     height: 8px;
     background: white;
-    background-image: linear-gradient(90deg, #e66d1d var(--webkit_progress),
+    background-image: linear-gradient(90deg, #303030 var(--webkit_progress),
                                              white var(--webkit_progress));
     border: 1px solid #dfdfdf;
     border-width: 0.5px;
@@ -419,8 +419,8 @@
 }
 .af_slider:not(.missing) > input::-moz-range-progress {
     height: 6px;
-    background-color: #e66d1d;
-    border: 1px solid #e66d1d;
+    background-color: #303030;
+    border: 1px solid #303030;
     border-width: 0.5px;
     border-radius: 4px;
 }
@@ -429,7 +429,7 @@
     width: 1.6em;
     height: 1.6em;
     margin-top: -0.6em;
-    background: #e66d1d;
+    background: #303030;
     border: none;
     border-radius: 50%;
 }
@@ -438,7 +438,7 @@
     width: 1.6em;
     height: 1.6em;
     margin-top: -0.6em;
-    background: #e66d1d;
+    background: #303030;
     border: none;
     border-radius: 50%;
 }
