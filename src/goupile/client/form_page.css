@@ -7,7 +7,7 @@
 .af_actions {
     width: 60%;
     max-width: 340px;
-    margin: 24px auto 0 auto;
+    margin: 32px auto 0 auto;
 }
 .af_actions > button {
     display: block;
@@ -49,14 +49,12 @@
 }
 .af_section > legend {
     padding: 1px 0.7em;
-    background: #e66d1d;
+    background: #e08880;
     font-size: 1.1em;
     color: white;
     cursor: pointer;
 }
 .af_deploy {
-    position: absolute;
-    top: 0px;
     width: 100%;
     display: block;
     text-align: center;
@@ -194,19 +192,27 @@
 .af_pin > button.clear { color: red; }
 
 .af_button {
+    position: relative;
     margin: 0;
     padding: 0.25em 10px;
     background: white;
     border: 1px solid #ccc;
     border-width: 0.5px;
 }
-.af_button + .af_button { border-left: none; }
+.af_button + .af_button {
+    position: relative;
+    left: -1px;
+}
 .af_button::-moz-focus-inner { border: 0; }
 .af_button::before, .af_button::after {
     display: inline-block;
     width: 8px;
     font-size: 0.9em;
     content: '';
+}
+.af_button:not(.active):hover {
+    border-color: #e08880;
+    z-index: 1;
 }
 .af_button.active {
     background: #555;
@@ -218,11 +224,6 @@
     content: '✓\FE0E';
 }
 .af_button.active::after { display: none; }
-.af_button:hover {
-    background: #e66d1d;
-    border-color: #e66d1d;
-    color: white;
-}
 
 .af_action {
     margin: 0;
@@ -232,6 +233,7 @@
     color: white;
     cursor: pointer;
 }
+.af_action::-moz-focus-inner { border: 0; }
 .af_action:disabled {
     background: #bbb;
     border-color: #bbb;
@@ -246,10 +248,9 @@
 .af_calc { font-weight: bold; }
 
 .af_button:focus, .af_input:focus, .af_select:focus {
-    position: relative;
     outline: 2px dotted #999;
     outline-offset: 1px;
-    z-index: 1;
+    z-index: 2;
 }
 .af_enum.readonly, .af_radio.readonly, .af_multi.readonly, .af_slider.readonly {
     pointer-events: none;
@@ -297,8 +298,8 @@
 }
 .af_radio > input:checked + label::before { background: none; }
 .af_radio > input:checked + label::after { content: ''; }
-.af_radio > input:hover + label::before { border-color: #e66d1d; }
-.af_radio > input:hover + label::after { background-color: #e66d1d; }
+.af_radio > input:hover + label::before { border-color: #e08880; }
+.af_radio > input:hover + label::after { background-color: #e08880; }
 .af_radio > input:focus + label {
     outline: 2px dotted #999;
     outline-offset: 1px;
@@ -340,7 +341,7 @@
 }
 .af_multi > input:checked + label::after { content: ''; }
 .af_multi > input:hover + label::before,
-    .af_multi > input:hover + label::after { border-color: #e66d1d; }
+    .af_multi > input:hover + label::after { border-color: #e08880; }
 .af_multi > input:focus + label {
     outline: 2px dotted #999;
     outline-offset: 1px;

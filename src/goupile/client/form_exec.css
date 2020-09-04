@@ -13,7 +13,7 @@
     margin: auto;
 }
 
-.fm_form a { color: #e66d1d; }
+.fm_form a { color: #ca5d3d; }
 
 .fm_entry + .fm_entry {
     margin-top: 9px;
@@ -74,8 +74,8 @@
 }
 .fm_path > a + a { margin-left: 4px; }
 .fm_path > a.active {
-    background: #e66d1d;
-    border: 2px solid #e66d1d;
+    background: #e08880;
+    border: 2px solid #e08880;
     color: white;
 }
 .fm_path > a.partial::before {
@@ -90,7 +90,7 @@
     font-weight: bold;
     content: '✓\FE0E✓\FE0E';
 }
-.fm_path > a:hover { border-color: #e66d1d; }
+.fm_path > a:hover { border-color: #e08880; }
 .fm_path > a:focus {
     outline: 2px dotted #999;
     outline-offset: 1px;
@@ -120,7 +120,7 @@
         z-index: 999;
     }
     .gp_panel.overview .fm_form > .af_actions.float > * + * { margin: 4px 0; }
-    .gp_panel.overview .fm_form > .af_actions.float > hr { margin: 8px 0; }
+    .gp_panel.overview .fm_form > .af_actions.float > hr { margin: 8px; }
     #gp_menu + main .gp_panel.overview .fm_form > .af_actions.float { top: calc(2.5em + 32px); }
     .gp_panel.overview .fm_form > .af_actions.float > button { width: 9em; }
 }
@@ -197,7 +197,7 @@
     padding-right: 4px;
     font-size: 0.9em;
     font-weight: bold;
-    color: #e66d1d;
+    color: #ca5d3d;
     content: '✓\FE0E';
 }
 .st_table td.complete::before {
