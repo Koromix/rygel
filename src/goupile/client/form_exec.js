@@ -153,7 +153,7 @@ let form_exec = new function() {
              model.values, model.variables, {}, state.scratch);
 
         render(html`
-            <button type="button" class="af_button" style="float: right;"
+            <button type="button" class="af_action" style="float: right;"
                     ?disabled=${builder.hasErrors() || !state.changed}
                     @click=${builder.submit}>Enregistrer</button>
 

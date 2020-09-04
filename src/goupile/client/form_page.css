@@ -202,11 +202,7 @@
 }
 .af_button + .af_button { border-left: none; }
 .af_button::-moz-focus-inner { border: 0; }
-.af_button:disabled {
-    background: #bbb;
-    cursor: not-allowed;
-}
-.af_button:not(:disabled):not(.active):hover {
+.af_button:not(.active):hover {
     background: #e66d1d;
     border-color: #e66d1d;
     color: white;
@@ -227,6 +223,26 @@
     content: '✓\FE0E';
 }
 .af_button.active::after { display: none; }
+
+.af_action {
+    margin: 0;
+    padding: 0.35em 10px;
+    background: #303030;
+    border: 1px solid #303030;
+    border-width: 0.5px;
+    color: white;
+    cursor: pointer;
+}
+.af_action:disabled {
+    background: #bbb;
+    border-color: #bbb;
+    color: #eee;
+    cursor: not-allowed;
+}
+.af_action:not(:disabled):hover {
+    background: #e66d1d;
+    border-color: #e66d1d;
+}
 
 .af_calc { font-weight: bold; }
 
