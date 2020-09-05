@@ -2,24 +2,6 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* -------------------- Layout -------------------- */
-
-.af_actions {
-    width: 60%;
-    max-width: 340px;
-    margin: 32px auto 0 auto;
-}
-.af_actions > button {
-    display: block;
-    width: 100%;
-}
-.af_actions > button + button { margin-top: 6px; }
-.af_actions > hr {
-    border: none;
-    border-top: 1px solid #efefef;
-    border-top-width: 0.5px;
-}
-
 /* -------------------- Containers -------------------- */
 
 .af_wrap + .af_container,
@@ -198,6 +180,7 @@
     background: white;
     border: 1px solid #ccc;
     border-width: 0.5px;
+    color: black;
 }
 .af_button + .af_button {
     position: relative;
@@ -211,6 +194,7 @@
     content: '';
 }
 .af_button:not(.active):hover {
+    background: white;
     border-color: #e08880;
     z-index: 1;
 }
@@ -225,26 +209,6 @@
 }
 .af_button.active::after { display: none; }
 
-.af_action {
-    margin: 0;
-    padding: 0.35em 10px;
-    background: #303030;
-    border: 1px solid #303030;
-    color: white;
-    cursor: pointer;
-}
-.af_action::-moz-focus-inner { border: 0; }
-.af_action:disabled {
-    background: #bbb;
-    border-color: #bbb;
-    color: #eee;
-    cursor: not-allowed;
-}
-.af_action:not(:disabled):hover {
-    background: #777;
-    border-color: #777;
-}
-
 .af_calc { font-weight: bold; }
 
 .af_button:focus, .af_input:focus, .af_select:focus {
@@ -255,6 +219,24 @@
 .af_enum.readonly, .af_radio.readonly, .af_multi.readonly, .af_slider.readonly {
     pointer-events: none;
     cursor: inherit;
+}
+
+/* -------------------- Actions -------------------- */
+
+.af_actions {
+    width: 60%;
+    max-width: 340px;
+    margin: 32px auto 0 auto;
+}
+.af_actions > button {
+    display: block;
+    width: 100%;
+}
+.af_actions > button + button { margin-top: 6px; }
+.af_actions > hr {
+    border: none;
+    border-top: 1px solid #efefef;
+    border-top-width: 0.5px;
 }
 
 /* -------------------- Nice radio and checkboxes -------------------- */

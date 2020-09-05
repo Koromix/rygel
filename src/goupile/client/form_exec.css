@@ -12,14 +12,13 @@
     max-width: 824px;
     margin: auto;
 }
-
-.fm_form a { color: #ca5d3d; }
-
-.fm_entry + .fm_entry {
+.fm_form + .fm_form {
     margin-top: 9px;
     padding-top: 9px;
     border-top: 1px solid #dfdfdf;
 }
+
+.fm_form a { color: #ca5d3d; }
 
 .fm_form > .af_main {
     position: relative;

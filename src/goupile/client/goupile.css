@@ -30,10 +30,26 @@ a {
 }
 
 button {
+    padding: 0.35em 10px;
+    background: #303030;
+    border: 1px solid #303030;
+    color: white;
     font-family: inherit;
     font-size: 1em;
+    cursor: pointer;
 }
 button:not(:disabled) { cursor: pointer; }
+button:disabled {
+    background: #bbb;
+    border-color: #bbb;
+    color: #eee;
+    cursor: not-allowed;
+}
+button::-moz-focus-inner { border: 0; }
+button:not(:disabled):hover {
+    background: #777;
+    border-color: #777;
+}
 
 /* -------------------- Overlays -------------------- */
 

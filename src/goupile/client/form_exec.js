@@ -102,20 +102,25 @@ let form_exec = new function() {
         if (multi_mode) {
             if (ctx_records.size && multi_columns.size) {
                 render(html`
-                    <div class="af_main">${util.map(ctx_records.values(), record => {
+                    ${util.map(ctx_records.values(), record => {
                         // Each entry needs to update itself without doing a full render
                         let el = document.createElement('div');
-                        el.className = 'fm_entry';
+                        el.className = 'fm_form';
 
                         runPageMulti(func, record, multi_columns, el);
 
                         return el;
-                    })}</div>
+                    })}
                 `, panel_el);
-            } else if (!ctx_records.size) {
-                render(html`<div class="af_main">Aucun enregistrement sélectionné</div>`, panel_el);
             } else {
-                render(html`<div class="af_main">Aucune colonne sélectionnée</div>`, panel_el);
+                render(html`
+                    <div class="fm_form">
+                        <div class="af_main">
+                            ${ctx_records.size ? 'Aucune colonne sélectionnée'
+                                               : 'Aucun enregistrement sélectionné'}
+                        </div>
+                    </div>
+                `, panel_el);
             }
         } else {
             if (!ctx_records.size) {
@@ -135,7 +140,7 @@ let form_exec = new function() {
             ctx_states[record.id] = state;
         }
 
-        let model = PageModel(route_page.key);
+        let model = new PageModel(route_page.key);
         let builder = new PageBuilder(state, model);
 
         builder.decodeKey = decodeKey;
@@ -153,14 +158,16 @@ let form_exec = new function() {
              model.values, model.variables, {}, state.scratch);
 
         render(html`
-            <button type="button" class="af_action" style="float: right;"
-                    ?disabled=${builder.hasErrors() || !state.changed}
-                    @click=${builder.submit}>Enregistrer</button>
+            <div class="af_main">
+                <button type="button" style="float: right;"
+                        ?disabled=${builder.hasErrors() || !state.changed}
+                        @click=${builder.submit}>Enregistrer</button>
 
-            ${model.widgets.map(intf => {
-                let visible = intf.key && columns.has(intf.key.toString());
-                return visible ? intf.render() : '';
-            })}
+                ${model.widgets.map(intf => {
+                    let visible = intf.key && columns.has(intf.key.toString());
+                    return visible ? intf.render() : '';
+                })}
+            </div>
         `, el);
 
         window.history.replaceState(null, null, makeCurrentURL());

@@ -1027,7 +1027,7 @@ instead of:
         } else {
             let type = model.actions.length ? 'button' : 'submit';
 
-            render = intf => html`<button type=${type} class="af_action" ?disabled=${options.disabled}
+            render = intf => html`<button type=${type} ?disabled=${options.disabled}
                                           @click=${func}>${label}</button>`;
         }
 
