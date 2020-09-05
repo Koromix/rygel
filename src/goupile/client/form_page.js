@@ -256,7 +256,7 @@ function PageBuilder(state, model, readonly = false) {
         fillVariableInfo(intf, key, value, missing);
         addWidget(intf);
 
-        validateNumber(intf);
+        validateMinMax(intf);
 
         return intf;
     };
@@ -322,7 +322,7 @@ function PageBuilder(state, model, readonly = false) {
         fillVariableInfo(intf, key, value, missing);
         addWidget(intf);
 
-        validateNumber(intf);
+        validateMinMax(intf);
 
         return intf;
     }
@@ -362,23 +362,6 @@ function PageBuilder(state, model, readonly = false) {
                 close();
             };
         });
-    }
-
-    function validateNumber(intf) {
-        let value = intf.value;
-        let options = intf.options;
-
-        if (value != null &&
-                (options.min !== undefined && value < options.min) ||
-                (options.max !== undefined && value > options.max)) {
-            if (options.min !== undefined && options.max !== undefined) {
-                intf.error(`Doit être entre ${options.min} et ${options.max}`);
-            } else if (options.min !== undefined) {
-                intf.error(`Doit être ≥ ${options.min}`);
-            } else {
-                intf.error(`Doit être ≤ ${options.max}`);
-            }
-        }
     }
 
     this.enum = function(key, label, props = [], options = {}) {
@@ -705,6 +688,8 @@ function PageBuilder(state, model, readonly = false) {
         fillVariableInfo(intf, key, value, value == null);
         addWidget(intf);
 
+        validateMinMax(intf, dates.parse);
+
         return intf;
     };
 
@@ -734,6 +719,8 @@ function PageBuilder(state, model, readonly = false) {
         let intf = makeWidget('date', label, render, options);
         fillVariableInfo(intf, key, value, value == null);
         addWidget(intf);
+
+        validateMinMax(intf, times.parse);
 
         return intf;
     };
@@ -1206,6 +1193,27 @@ instead of:
         model.values[key] = value;
 
         return intf;
+    }
+
+    function validateMinMax(intf, transform = value => value) {
+        let value = intf.value;
+        let options = intf.options;
+
+        if (value != null) {
+            let min = transform(options.min);
+            let max = transform(options.max);
+
+            if ((min != null && value < min) ||
+                    (max != null && value > max)) {
+                if (min != null && max != null) {
+                    intf.error(`Doit être entre ${min.toLocaleString()} et ${max.toLocaleString()}`);
+                } else if (min != null) {
+                    intf.error(`Doit être ≥ ${min.toLocaleString()}`);
+                } else {
+                    intf.error(`Doit être ≤ ${max.toLocaleString()}`);
+                }
+            }
+        }
     }
 
     function makePrefixOrSuffix(cls, text, value) {

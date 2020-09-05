@@ -1132,6 +1132,8 @@ let dates = new function() {
     this.parse = function(str, validate = true) {
         if (str == null)
             return null;
+        if (str instanceof LocalDate)
+            return str;
 
         let date;
         try {
@@ -1250,6 +1252,8 @@ let times = new function() {
     this.parse = function(str, validate = true) {
         if (str == null)
             return null;
+        if (str instanceof LocalTime)
+            return str;
 
         let time;
         try {
