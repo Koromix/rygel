@@ -32,7 +32,7 @@ Navigation functions should only be called in reaction to user events, such as b
         let url = `${env.base_url}app/${where}/`;
 
         if (options.id != null) {
-            url += id;
+            url += options.id;
             if (options.version != null)
                 url += `@${version}`;
         }
