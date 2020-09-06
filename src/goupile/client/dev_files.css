@@ -29,7 +29,7 @@
     font-style: normal;
 }
 
-.sync_table tbody tr:nth-child(2n + 1) { background: #efefef; }
+.sync_table tbody tr:nth-child(2n + 1) { background: white; }
 .sync_table tbody tr:nth-child(2n) { background: #f4f4f4; }
 .sync_table tbody tr.conflict { background: #f9e3e3; }
 
