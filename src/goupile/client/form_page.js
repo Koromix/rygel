@@ -197,12 +197,12 @@ function PageBuilder(state, model, readonly = false) {
             ${!options.readonly ? html`
                 <div class="af_pin">
                     ${[7, 8, 9, 4, 5, 6, 1, 2, 3].map(i =>
-                        html`<button type="button" class="af_button" ?disabled=${options.disabled}
+                        html`<button type="button" ?disabled=${options.disabled}
                                      @click=${e => handlePinButton(e, key, value)}>${i}</button>`)}
-                    <button type="button" class="af_button" ?disabled=${options.disabled} style="visibility: hidden;">?</button>
-                    <button type="button" class="af_button" ?disabled=${options.disabled}
+                    <button type="button" ?disabled=${options.disabled} style="visibility: hidden;">?</button>
+                    <button type="button" ?disabled=${options.disabled}
                             @click=${e => handlePinButton(e, key, value)}>0</button>
-                    <button type="button" class="af_button clear" ?disabled=${options.disabled}
+                    <button type="button" class="clear" ?disabled=${options.disabled}
                             @click=${e => handlePinClear(e, key)}>C</button>
                 </div>
             `: ''}

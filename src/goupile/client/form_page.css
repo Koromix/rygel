@@ -171,7 +171,7 @@
     height: 2.7em;
     margin: 1px;
 }
-.af_pin > button.clear { color: red; }
+.af_pin > button.clear { color: #ca5d3d; }
 
 .af_button {
     position: relative;
