@@ -377,7 +377,7 @@ function PageBuilder(state, model, readonly = false) {
             <div class=${options.readonly ? 'af_enum readonly' : 'af_enum'} id=${id}>
                 ${props.map((p, i) =>
                     html`<button type="button" data-value=${util.valueToStr(p.value)}
-                                 .className=${value === p.value ? 'af_button active' : 'af_button'}
+                                 .className=${value === p.value ? 'active' : ''}
                                  ?disabled=${options.disabled}
                                  @click=${e => handleEnumChange(e, key, options.untoggle)}
                                  @keydown=${handleEnumOrMultiKey} tabindex=${i ? -1 : 0}>${p.label}</button>`)}
@@ -511,7 +511,7 @@ function PageBuilder(state, model, readonly = false) {
             <div class=${options.readonly ? 'af_enum readonly' : 'af_enum'} id=${id}>
                 ${props.map((p, i) =>
                     html`<button type="button" data-value=${util.valueToStr(p.value)}
-                                 .className=${value.includes(p.value) ? 'af_button active' : 'af_button'}
+                                 .className=${value.includes(p.value) ? 'active' : ''}
                                  ?disabled=${options.disabled}
                                  @click=${e => handleMultiChange(e, key)}
                                  @keydown=${handleEnumOrMultiKey} tabindex=${i ? -1 : 0}>${p.label}</button>`)}
@@ -925,16 +925,10 @@ function PageBuilder(state, model, readonly = false) {
 
         let render = intf => html`
             <div class="af_container af_tabs">
-                ${tabs.map((tab, idx) => {
-                    let cls = 'af_button';
-                    if (idx === tab_idx)
-                        cls += ' active';
-                    //if (tab.disable)
-                      //  cls += ' disabled';
-
-                    return html`<button type="button" class=${cls} ?disabled=${tab.disable}
-                                        @click=${e => handleTabClick(e, key, idx)}>${tab.label}</button>`;
-                })}
+                ${tabs.map((tab, idx) =>
+                    html`<button type="button" class=${idx === tab_idx ? 'active' : ''}
+                                 ?disabled=${tab.disable}
+                                 @click=${e => handleTabClick(e, key, idx)}>${tab.label}</button>`)}
 
                 <div class="af_section">
                     ${widgets.map(intf => intf.render())}

@@ -13,12 +13,12 @@
     margin-top: -10px;
     padding-top: 16px;
 }
-.af_tabs > .af_button {
+.af_tabs > button {
     position: relative;
     z-index: 999;
 }
-.af_tabs > .af_button:first-of-type { margin-left: 10px; }
-.af_tabs > .af_button:last-of-type { margin-right: 10px; }
+.af_tabs > button:first-of-type { margin-left: 10px; }
+.af_tabs > button:last-of-type { margin-right: 10px; }
 
 .af_section {
     position: relative;
@@ -156,9 +156,6 @@
     white-space: nowrap;
 }
 
-.af_enum, .af_radio, .af_multi { display: inline-block; }
-.af_radio, .af_multi { padding-top: 3px; }
-
 .af_pin {
     width: 9em;
     margin: 8px auto;
@@ -173,45 +170,44 @@
 }
 .af_pin > button.clear { color: #ca5d3d; }
 
-.af_button {
+.af_enum {
+    display: inline-block;
+    padding-left: 1px;
+    line-height: calc(1.8em + 8px)
+}
+.af_enum > button {
     position: relative;
-    margin: 0;
+    margin: 0 0 0 -1px;
     padding: 0.25em 10px;
     background: white;
     border: 1px solid #ccc;
     border-width: 0.5px;
     color: black;
 }
-.af_button + .af_button {
-    position: relative;
-    left: -1px;
-}
-.af_button::-moz-focus-inner { border: 0; }
-.af_button::before, .af_button::after {
+.af_enum > button::-moz-focus-inner { border: 0; }
+.af_enum > button::before, .af_enum > button::after {
     display: inline-block;
     width: 8px;
     font-size: 0.9em;
     content: '';
 }
-.af_button:not(.active):hover {
+.af_enum > button:not(.active):hover {
     background: white;
     border-color: #e08880;
     z-index: 1;
 }
-.af_button.active {
+.af_enum > button.active {
     background: #555;
     border-color: #555;
     color: white;
 }
-.af_button.active::before {
+.af_enum > button.active::before {
     width: 16px;
     content: '✓\FE0E';
 }
-.af_button.active::after { display: none; }
+.af_enum > button.active::after { display: none; }
 
-.af_calc { font-weight: bold; }
-
-.af_button:focus, .af_input:focus, .af_select:focus {
+.af_enum > button:focus, .af_input:focus, .af_select:focus {
     outline: 2px dotted #999;
     outline-offset: 1px;
     z-index: 2;
@@ -220,6 +216,8 @@
     pointer-events: none;
     cursor: inherit;
 }
+
+.af_calc { font-weight: bold; }
 
 /* -------------------- Actions -------------------- */
 
@@ -241,6 +239,10 @@
 
 /* -------------------- Nice radio and checkboxes -------------------- */
 
+.af_radio {
+    display: inline-block;
+    padding-top: 3px;
+}
 .af_radio > input {
     position: absolute;
     opacity: 0;
@@ -287,6 +289,10 @@
     outline-offset: 1px;
 }
 
+.af_multi {
+    display: inline-block;
+    padding-top: 3px;
+}
 .af_multi > input {
     position: absolute;
     opacity: 0;
