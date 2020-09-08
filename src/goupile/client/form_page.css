@@ -95,9 +95,9 @@
     font-style: italic;
 }
 .af_help {
-    font-size: 0.85em;
+    font-size: 0.9em;
     font-style: italic;
-    margin: 2px 0 0 20px;
+    margin-top: 0.4em;
 }
 .af_help::before { content: '☞\FE0E  '; }
 .af_prefix, .af_suffix {
