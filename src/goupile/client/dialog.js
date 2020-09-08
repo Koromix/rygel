@@ -5,18 +5,88 @@
 let dialog = new function() {
     let self = this;
 
+    let mod_veil;
+    let mod_el;
+    let mod_state;
+    let mod_builder;
+
     let popup_el;
     let popup_state;
     let popup_builder;
 
-    this.refresh = function() {
-        if (popup_builder != null)
-            popup_builder.changeHandler();
+    this.modal = function(action, func) {
+        if (!mod_veil) {
+            mod_veil = document.createElement('div');
+            mod_veil.setAttribute('id', 'dlg_veil');
+            document.body.appendChild(mod_veil);
+
+            mod_el = document.createElement('div');
+            mod_veil.appendChild(mod_el);
+
+            mod_veil.addEventListener('click', e => {
+                if (e.target === mod_veil)
+                    closeModal();
+            });
+            mod_el.addEventListener('keydown', e => {
+                if (e.keyCode == 27)
+                    closeModal();
+            });
+        }
+
+        closeModal();
+        openModal(action, func);
     };
 
+    function openModal(action, func) {
+        let model = new PageModel('@popup');
+
+        mod_builder = new PageBuilder(mod_state, model);
+        mod_builder.changeHandler = () => openModal(...arguments);
+        mod_builder.pushOptions({
+            missing_mode: 'disable',
+            wide: true
+        });
+
+        func(mod_builder, closeModal);
+        if (action != null)
+            mod_builder.action(action, {disabled: !mod_builder.isValid()}, mod_builder.submit);
+        mod_builder.action('Annuler', {}, closeModal);
+
+        render(html`
+            <form @submit=${e => e.preventDefault()}>
+                ${model.render()}
+            </form>
+        `, mod_el);
+
+        let give_focus = !mod_veil.classList.contains('active');
+        mod_veil.classList.add('active');
+
+        if (give_focus) {
+            // Give focus to first input
+            let first_widget = mod_el.querySelector(`.af_widget input, .af_widget select,
+                                                       .af_widget button, .af_widget textarea`);
+            if (first_widget)
+                first_widget.focus();
+        }
+    }
+
+    function closeModal() {
+        mod_state = new PageState;
+        mod_builder = null;
+
+        if (mod_veil) {
+            mod_veil.classList.remove('active');
+            render('', mod_el);
+        }
+    }
+
     this.popup = function(e, action, func) {
-        closePopup();
-        openPopup(e, action, func);
+        if (!goupile.isTablet()) {
+            closePopup();
+            openPopup(e, action, func);
+        } else {
+            self.modal(action, func);
+        }
     };
 
     function openPopup(e, action, func) {
@@ -134,4 +204,9 @@ let dialog = new function() {
             render('', popup_el);
         }
     }
+
+    this.refresh = function() {
+        if (popup_builder != null)
+            popup_builder.changeHandler();
+    };
 };
