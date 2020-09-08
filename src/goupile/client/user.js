@@ -260,10 +260,9 @@ function UserManager(db) {
             let response = await net.fetch(`${env.base_url}api/user/profile`);
             let profile = await response.json();
 
-            if (!env.use_offline || profile.username != null) {
+            if (!env.use_offline || profile.username != null)
                 session_profile = profile;
-                session_rnd = util.getCookie('session_rnd');
-            }
+            session_rnd = util.getCookie('session_rnd');
         }
     };
 
