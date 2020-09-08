@@ -8,55 +8,44 @@ function UserManager(db) {
     let session_profile = {};
     let session_rnd;
 
-    this.runLogin = function() {
-        let state = new PageState;
+    this.runLoginScreen = function() {
+        return dialog.runScreen((d, resolve, reject) => {
+            d.output(html`
+                <img id="usr_logo" src=${`${env.base_url}favicon.png`} alt="" />
+                <br/>
+            `);
 
-        let update = () => {
-            let model = new PageModel('@login');
+            let username = d.text('*username', 'Nom d\'utilisateur');
+            let password = d.password('*password', 'Mot de passe');
 
-            let builder = new PageBuilder(state, model);
-            builder.changeHandler = update;
-            builder.pushOptions({
-                missing_mode: 'disable',
-                wide: true
+            d.action('Se connecter', {disabled: !d.isValid()}, async () => {
+                let success = await self.login(username.value, password.value);
+                if (success)
+                    resolve(username.value);
             });
+        });
+    };
 
-            makeLoginForm(builder);
-            builder.action('Connexion', {disabled: !builder.isValid()}, builder.submit);
-
-            let focus = !document.querySelector('#usr_login');
-
-            render(html`
-                <div style="flex: 1;"></div>
-                <form id="usr_login" @submit=${e => e.preventDefault()}>
+    this.runLoginDialog = function(e = null, front) {
+        return dialog.run(e, (d, resolve, reject) => {
+            if (e == null) {
+                d.output(html`
                     <img id="usr_logo" src=${`${env.base_url}favicon.png`} alt="" />
-                    ${model.render()}
-                </form>
-                <div style="flex: 1;"></div>
-            `, document.querySelector('#gp_root'));
-
-            if (focus) {
-                let el = document.querySelector('#usr_login input');
-                setTimeout(() => el.focus(), 0);
+                    <br/>
+                `);
             }
-        };
-        update();
+
+            let username = d.text('*username', 'Nom d\'utilisateur');
+            let password = d.password('*password', 'Mot de passe');
+
+            d.action('Se connecter', {disabled: !d.isValid()}, async () => {
+                let success = await self.login(username.value, password.value);
+                if (success)
+                    resolve(username.value);
+            });
+            d.action('Annuler', {}, () => reject('Action annulée'));
+        });
     };
-
-    this.showLoginDialog = function(e) {
-        dialog.popup(e, 'Connexion', makeLoginForm);
-    };
-
-    function makeLoginForm(page, close = null) {
-        let username = page.text('*username', 'Nom d\'utilisateur');
-        let password = page.password('*password', 'Mot de passe');
-
-        page.submitHandler = async () => {
-            let success = await self.login(username.value, password.value);
-            if (success && close != null)
-                close();
-        };
-    }
 
     this.login = async function(username, password) {
         let entry = new log.Entry;
@@ -83,7 +72,7 @@ function UserManager(db) {
             deleteLock();
 
             entry.success('Connexion réussie');
-            await goupile.initMain();
+            goupile.initMain();
         } else {
             entry.error('Échec de la connexion');
         }
@@ -227,7 +216,7 @@ function UserManager(db) {
             session_rnd = undefined;
 
             entry.success('Déconnexion réussie');
-            await goupile.initMain();
+            goupile.initMain();
         } else {
             entry.error('Échec de déconnexion');
         }
@@ -267,47 +256,49 @@ function UserManager(db) {
     };
 
     this.isConnected = function() { return !!session_profile.username; };
+    this.isConnectedOnline = function() { return session_rnd != null; }
     this.getUserName = function() { return session_profile.username; };
     this.hasPermission = function(perm) {
         return session_profile.permissions &&
                !!session_profile.permissions[perm];
-   };
+    };
 
     this.getLockURL = function() {
         let url = localStorage.getItem('lock_url');
         return url;
     };
 
-    this.showLockDialog = function(e, url) {
-        dialog.popup(e, 'Verrouiller', (page, close) => {
-            page.output('Entrez le code de verrouillage');
-            let pin = page.pin('*code');
+    this.runLockDialog = function(e, url) {
+        return dialog.run(e, (d, resolve, reject) => {
+            d.output('Entrez le code de verrouillage');
+            let pin = d.pin('*code');
 
             if (pin.value && pin.value.length < 4)
                 pin.error('Le code doit comporter au moins 4 chiffres', true);
 
-            page.submitHandler = () => {
-                close();
-
+            d.action('Verrouiller', {disabled: !d.isValid()}, () => {
                 localStorage.setItem('lock_url', url);
                 localStorage.setItem('lock_pin', pin.value);
 
                 log.success('Application verrouillée !');
                 goupile.go();
-            };
+
+                resolve();
+            });
+            d.action('Annuler', {}, () => reject('Action annulée'));
         });
     };
 
-    this.showUnlockDialog = function(e) {
-        dialog.popup(e, null, (page, close) => {
-            page.output('Entrez le code de déverrouillage');
-            let pin = page.pin('code');
+    this.runUnlockDialog = function(e) {
+        return dialog.run(e, (d, resolve, reject) => {
+            d.output('Entrez le code de déverrouillage');
+            let pin = d.pin('code');
 
             if (pin.value && pin.value.length >= 4) {
                 let code = localStorage.getItem('lock_pin');
 
                 if (pin.value === code) {
-                    setTimeout(close, 0);
+                    setTimeout(resolve, 0);
 
                     deleteLock();
 
@@ -317,6 +308,8 @@ function UserManager(db) {
                     pin.error('Code erroné');
                 }
             }
+
+            d.action('Annuler', {}, () => reject('Action annulée'));
         });
     };
 

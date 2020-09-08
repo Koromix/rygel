@@ -244,8 +244,8 @@ function ScheduleView(resources_map, meetings_map) {
                                 <td class="sc_slot_identity">${slot_ref.identity || ''}</td>
                                 <td class="sc_slot_edit">
                                     ${slot_ref.identity ?
-                                        html`<a @click=${e => showDeleteMeetingDialog(e, slot_ref)}>x</a>` :
-                                        html`<a @click=${e => showCreateMeetingDialog(e, slot_ref)}>+</a>`
+                                        html`<a @click=${e => runDeleteMeetingDialog(e, slot_ref)}>x</a>` :
+                                        html`<a @click=${e => runCreateMeetingDialog(e, slot_ref)}>+</a>`
                                     }
                                 </td>
                             </tr>`;
@@ -351,26 +351,21 @@ function ScheduleView(resources_map, meetings_map) {
         renderAll();
     }
 
-    function showCreateMeetingDialog(e, slot_ref) {
-        dialog.popup(e, 'Créer', (page, close) => {
-            let name = page.text('name', 'Nom :', {mandatory: true});
+    function runCreateMeetingDialog(e, slot_ref) {
+        return dialog.run(e, (d, resolve, reject) => {
+            let name = d.text('name', 'Nom :', {mandatory: true});
 
-            page.submitHandler = () => {
+            d.action('Créer', {disabled: !d.isValid()}, () => {
                 createMeeting(slot_ref, name.value);
-                close();
-            };
+                resolve(name.value);
+            });
+            d.action('Annuler', {}, () => reject('Action annulée'));
         });
     }
 
-    function showDeleteMeetingDialog(e, slot_ref) {
-        dialog.popup(e, 'Supprimer', (page, close) => {
-            page.output('Voulez-vous vraiment supprimer ce rendez-vous ?');
-
-            page.submitHandler = () => {
-                deleteMeeting(slot_ref);
-                close();
-            };
-        });
+    function runDeleteMeetingDialog(e, slot_ref) {
+        let msg = 'Voulez-vous vraiment supprimer ce rendez-vous ?';
+        return dialog.confirm(e, msg, 'Supprimer', () => deleteMeeting(slot_ref));
     }
 
     function renderSettings() {
@@ -426,15 +421,15 @@ function ScheduleView(resources_map, meetings_map) {
                                 <td class="sc_slot_time">${formatTime(res.time)}</td>
                                 <td class="sc_slot_option">${res.slots} <a @click=${changeSlots(1)}>▲</a><a @click=${changeSlots(-1)}>▼</a></td>
                                 <td class="sc_slot_option">${res.overbook} <a @click=${changeOverbook(1)}>▲</a><a @click=${changeOverbook(-1)}>▼</a></td>
-                                <td class="sc_slot_edit"><a @click=${e => showDeleteResourceDialog(e, day, res_idx)}>x</a></td>
+                                <td class="sc_slot_edit"><a @click=${e => runDeleteResourceDialog(e, day, res_idx)}>x</a></td>
                             </tr>`;
                         })}
                     </table>` : ''}
 
                     <div class="sc_actions">
-                        <a @click=${e => showCreateResourceDialog(e, day)}>Nouveau</a> |
+                        <a @click=${e => runCreateResourceDialog(e, day)}>Nouveau</a> |
                         <a @click=${e => startCopy(day)}>Copier</a> |
-                        <a @click=${e => showCloseDayDialog(e, day)}>Fermer</a>
+                        <a @click=${e => runCloseDayDialog(e, day)}>Fermer</a>
                     </div>
                 </div>`;
             } else {
@@ -443,43 +438,31 @@ function ScheduleView(resources_map, meetings_map) {
         }), days_el);
     }
 
-    function showCreateResourceDialog(e, day) {
-        dialog.popup(e, 'Créer', (page, close) => {
-            let time = page.text('time', 'Horaire :', {mandatory: true});
+    function runCreateResourceDialog(e, day) {
+        return dialog.run(e, (d, resolve, reject) => {
+            let time = d.text('time', 'Horaire :', {mandatory: true});
 
             // Check value
             let time2 = parseTime(time.value);
             if (time.value && time2 == null)
                 time.error('Non valide (ex : 15h30, 7:30)');
 
-            page.submitHandler = () => {
+            d.action('Créer', {disabled: !d.isValid()}, () => {
                 createResource(day, time2);
-                close();
-            };
+                resolve(time2);
+            });
+            d.action('Annuler', {}, () => reject('Action annulée'));
         });
     }
 
-    function showDeleteResourceDialog(e, day, res_idx) {
-        dialog.popup(e, 'Supprimer', (page, close) => {
-            page.output('Voulez-vous vraiment supprimer ces créneaux ?');
-
-            page.submitHandler = () => {
-                deleteResource(day, res_idx);
-                lose();
-            };
-        });
+    function runDeleteResourceDialog(e, day, res_idx) {
+        let msg = 'Voulez-vous vraiment supprimer ces créneaux ?';
+        return dialog.confirm(e, msg, 'Supprimer', () => deleteResource(day, res_idx));
     }
 
-    function showCloseDayDialog(e, day) {
-        dialog.popup(e, 'Fermer', (page, close) => {
-            page.output('Voulez-vous vraiment fermer cette journée ?',
-                        {help: 'Ceci supprime tous les créneaux'});
-
-            page.submitHandler = () => {
-                closeDay(day);
-                close();
-            };
-        });
+    function runCloseDayDialog(e, day) {
+        let msg = 'Voulez-vous supprimer tous les créneaux de cette journée';
+        return dialog.confirm(e, msg, 'Fermer', () => closeDay(day));
     }
 
     function createResource(day, time) {

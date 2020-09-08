@@ -5,139 +5,131 @@
 let dialog = new function() {
     let self = this;
 
-    let mod_veil;
-    let mod_el;
-    let mod_state;
-    let mod_builder;
+    let init = false;
 
-    let popup_el;
-    let popup_state;
-    let popup_builder;
+    let dialogs = {
+        prev: null,
+        next: null
+    };
+    dialogs.prev = dialogs;
+    dialogs.next = dialogs;
 
-    this.modal = function(action, func) {
-        if (!mod_veil) {
-            mod_veil = document.createElement('div');
-            mod_veil.setAttribute('id', 'dlg_veil');
-            document.body.appendChild(mod_veil);
+    this.runScreen = function(func) {
+        render('', document.querySelector('#gp_root'));
 
-            mod_el = document.createElement('div');
-            mod_veil.appendChild(mod_el);
-
-            mod_veil.addEventListener('click', e => {
-                if (e.target === mod_veil)
-                    closeModal();
-            });
-            mod_el.addEventListener('keydown', e => {
-                if (e.keyCode == 27)
-                    closeModal();
-            });
+        // Close all dialogs and popups
+        let it = dialogs.next;
+        while (it !== dialogs) {
+            it.reject();
+            it = it.next;
         }
 
-        closeModal();
-        openModal(action, func);
+        return runDialog(null, 'modal', false, func);
     };
 
-    function openModal(action, func) {
-        let model = new PageModel('@popup');
-
-        mod_builder = new PageBuilder(mod_state, model);
-        mod_builder.changeHandler = () => openModal(...arguments);
-        mod_builder.pushOptions({
-            missing_mode: 'disable',
-            wide: true
-        });
-
-        func(mod_builder, closeModal);
-        if (action != null)
-            mod_builder.action(action, {disabled: !mod_builder.isValid()}, mod_builder.submit);
-        mod_builder.action('Annuler', {}, closeModal);
-
-        render(html`
-            <form @submit=${e => e.preventDefault()}>
-                ${model.render()}
-            </form>
-        `, mod_el);
-
-        let give_focus = !mod_veil.classList.contains('active');
-        mod_veil.classList.add('active');
-
-        if (give_focus) {
-            // Give focus to first input
-            let first_widget = mod_el.querySelector(`.af_widget input, .af_widget select,
-                                                       .af_widget button, .af_widget textarea`);
-            if (first_widget)
-                first_widget.focus();
+    this.run = function(e, func) {
+        if (e != null) {
+            e.stopPropagation();
+            if (goupile.isTablet())
+                e = null;
         }
-    }
 
-    function closeModal() {
-        mod_state = new PageState;
-        mod_builder = null;
-
-        if (mod_veil) {
-            mod_veil.classList.remove('active');
-            render('', mod_el);
-        }
-    }
-
-    this.popup = function(e, action, func) {
-        if (!goupile.isTablet()) {
-            closePopup();
-            openPopup(e, action, func);
-        } else {
-            self.modal(action, func);
-        }
+        return runDialog(e, e ? 'popup' : 'modal', true, func);
     };
 
-    function openPopup(e, action, func) {
-        if (!popup_el) {
-            popup_el = document.createElement('div');
-            popup_el.setAttribute('id', 'dlg_popup');
-            document.body.appendChild(popup_el);
+    function runDialog(e, type, closeable, func) {
+        if (!init) {
+            document.addEventListener('click', handleDocumentClick);
+            init = true;
+        }
 
-            popup_el.addEventListener('keydown', e => {
-                if (e.keyCode == 27)
-                    closePopup();
-            });
+        return new Promise((resolve, reject) => {
+            let dialog = {
+                prev: dialogs.prev,
+                next: dialogs,
 
-            document.addEventListener('click', e => {
-                let el = e.target;
-                while (el) {
-                    if (el === popup_el)
-                        return;
-                    el = el.parentNode;
+                closeable: closeable,
+                el: document.createElement('div'),
+                state: new PageState,
+                refresh: () => buildDialog(dialog, e, func),
+
+                resolve: value => {
+                    resolve(value);
+                    closeDialog(dialog);
+                },
+                reject: err => {
+                    reject(err);
+                    closeDialog(dialog);
                 }
-                closePopup();
-            });
-        }
+            };
 
+            // Complete linked list insertion
+            dialogs.prev.next = dialog;
+            dialogs.prev = dialog;
+
+            // Modal or popup?
+            let popup = (e != null && !goupile.isTablet());
+            dialog.el.setAttribute('id', `dlg_${type}`);
+            if (closeable) {
+                dialog.el.addEventListener('keydown', e => {
+                    if (e.keyCode == 27)
+                        dialog.reject(new Error('Action annulée'));
+                });
+            }
+
+            // Show it!
+            document.body.appendChild(dialog.el);
+            dialog.refresh();
+        });
+    };
+
+    function handleDocumentClick(e) {
+        let it = dialogs.next;
+
+        while (it !== dialogs) {
+            let target = e.target.parentNode;
+
+            if (it.closeable) {
+                for (;;) {
+                    if (target === it.el) {
+                        break;
+                    } else if (target == null) {
+                        it.reject(new Error('Action annulée'));
+                        break;
+                    }
+                    target = target.parentNode;
+                }
+            }
+
+            it = it.next;
+        }
+    }
+
+    function buildDialog(dialog, e, func) {
         let model = new PageModel('@popup');
 
-        popup_builder = new PageBuilder(popup_state, model);
-        popup_builder.changeHandler = () => openPopup(...arguments);
-        popup_builder.pushOptions({
+        let builder = new PageBuilder(dialog.state, model);
+        builder.changeHandler = () => buildDialog(...arguments);
+        builder.pushOptions({
             missing_mode: 'disable',
             wide: true
         });
 
-        func(popup_builder, closePopup);
-        if (action != null)
-            popup_builder.action(action, {disabled: !popup_builder.isValid()}, popup_builder.submit);
-        popup_builder.action('Annuler', {}, closePopup);
+        func(builder, dialog.resolve, dialog.reject);
 
         render(html`
             <form @submit=${e => e.preventDefault()}>
                 ${model.render()}
             </form>
-        `, popup_el);
+        `, dialog.el);
 
         // We need to know popup width and height
-        let give_focus = !popup_el.classList.contains('active');
-        popup_el.style.visibility = 'hidden';
-        popup_el.classList.add('active');
+        let give_focus = !dialog.el.classList.contains('active');
+        dialog.el.style.visibility = 'hidden';
+        dialog.el.classList.add('active');
 
-        // Try different positions
-        {
+        // Try different popup positions
+        if (e != null) {
             let origin;
             if (e.clientX && e.clientY) {
                 origin = {
@@ -156,57 +148,67 @@ let dialog = new function() {
                 x: origin.x,
                 y: origin.y
             };
-            if (pos.x > window.innerWidth - popup_el.offsetWidth - 10) {
-                pos.x = origin.x - popup_el.offsetWidth;
+            if (pos.x > window.innerWidth - dialog.el.offsetWidth - 10) {
+                pos.x = origin.x - dialog.el.offsetWidth;
                 if (pos.x < 10) {
-                    pos.x = Math.min(origin.x, window.innerWidth - popup_el.offsetWidth - 10);
+                    pos.x = Math.min(origin.x, window.innerWidth - dialog.el.offsetWidth - 10);
                     pos.x = Math.max(pos.x, 10);
                 }
             }
-            if (pos.y > window.innerHeight - popup_el.offsetHeight - 10) {
-                pos.y = origin.y - popup_el.offsetHeight;
+            if (pos.y > window.innerHeight - dialog.el.offsetHeight - 10) {
+                pos.y = origin.y - dialog.el.offsetHeight;
                 if (pos.y < 10) {
-                    pos.y = Math.min(origin.y, window.innerHeight - popup_el.offsetHeight - 10);
+                    pos.y = Math.min(origin.y, window.innerHeight - dialog.el.offsetHeight - 10);
                     pos.y = Math.max(pos.y, 10);
                 }
             }
 
-            popup_el.style.left = pos.x + 'px';
-            popup_el.style.top = pos.y + 'px';
+            dialog.el.style.left = pos.x + 'px';
+            dialog.el.style.top = pos.y + 'px';
         }
-
-        if (e.stopPropagation)
-            e.stopPropagation();
 
         // Reveal!
-        popup_el.style.visibility = 'visible';
-
+        dialog.el.style.visibility = 'visible';
         if (give_focus) {
-            // Avoid shrinking popups
-            popup_el.style.minWidth = popup_el.offsetWidth + 'px';
+            dialog.el.style.minWidth = dialog.el.offsetWidth + 'px';
 
-            // Give focus to first input
-            let first_widget = popup_el.querySelector(`.af_widget input, .af_widget select,
-                                                       .af_widget button, .af_widget textarea`);
-            if (first_widget)
-                first_widget.focus();
+            let widget0 = dialog.el.querySelector(`.af_widget input, .af_widget select,
+                                                   .af_widget button, .af_widget textarea`);
+            if (widget0 != null)
+                widget0.focus();
         }
     }
 
-    function closePopup() {
-        popup_state = new PageState;
-        popup_builder = null;
+    function closeDialog(dialog) {
+        dialog.next.prev = dialog.prev;
+        dialog.prev.next = dialog.next;
 
-        if (popup_el) {
-            popup_el.classList.remove('active');
-            popup_el.style.minWidth = '';
-
-            render('', popup_el);
-        }
+        document.body.removeChild(dialog.el);
     }
 
-    this.refresh = function() {
-        if (popup_builder != null)
-            popup_builder.changeHandler();
+    this.confirm = function(e, msg, action, func) {
+        return self.run(e, (d, resolve, reject) => {
+            d.output(msg);
+
+            d.action(action, {disabled: !d.isValid()}, async () => {
+                try {
+                    await func();
+                    resolve();
+                } catch (err) {
+                    log.error(err);
+                    reject(err);
+                }
+            });
+            d.action('Annuler', {}, () => reject('Action annulée'));
+        });
+    };
+
+    this.refreshAll = function() {
+        let it = dialogs.next;
+
+        while (it !== dialogs) {
+            it.refresh();
+            it = it.next;
+        }
     };
 };

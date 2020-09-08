@@ -23,7 +23,7 @@ p + p { margin-top: 1em; }
     left: calc(50% - 180px);
     top: 20px;
     width: 360px;
-    z-index: 99999;
+    z-index: 9999999;
     user-select: none;
     -moz-user-select: none;
     -webkit-user-select: none;

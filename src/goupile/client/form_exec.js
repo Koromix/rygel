@@ -205,7 +205,7 @@ let form_exec = new function() {
 
             builder.action('Enregistrer', {disabled: !enable_save}, e => builder.submit());
             if (route_page.options.use_validation)
-                builder.action('Valider', {disabled: !enable_validate}, e => showValidateDialog(e, record, route_page.key));
+                builder.action('Valider', {disabled: !enable_validate}, e => runValidateDialog(e, record, route_page.key));
             builder.action('-');
             builder.action('Fermer', {disabled: !state.changed && record.mtime == null}, e => handleNewClick(e, state.changed));
         }
@@ -222,7 +222,7 @@ let form_exec = new function() {
                             ${record.mtime == null ? html`Nouvel enregistrement` : ''}
                             ${record.mtime != null && record.sequence == null ? html`Enregistrement local` : ''}
                             ${record.mtime != null && record.sequence != null ? html`Enregistrement n°${record.sequence}` : ''}
-                            ${record.mtime != null ? html`(<a @click=${e => showTrailDialog(e, record.id)}>trail</a>)` : ''}
+                            ${record.mtime != null ? html`(<a @click=${e => runTrailDialog(e, record.id)}>trail</a>)` : ''}
                         </span>
                     </div>
                 ` : ''}
@@ -252,15 +252,15 @@ let form_exec = new function() {
         window.history.replaceState(null, null, makeCurrentURL());
     }
 
-    function showTrailDialog(e, id) {
-        dialog.popup(e, null, (page, close) => {
+    function runTrailDialog(e, id) {
+        return dialog.run(e, (d, resolve, reject) => {
             // Goupile restarts popup functions after major state changes to give
             // them a chance to update. This allows us to change the highlighted version!
             let record = ctx_records.get(id);
             if (!record)
-                close();
+                reject();
 
-            page.output(html`
+            d.output(html`
                 <table class="tr_table">
                     ${util.mapRange(0, record.versions.length, idx => {
                         let version = record.versions[record.versions.length - idx - 1];
@@ -276,6 +276,8 @@ let form_exec = new function() {
                     })}
                 </table>
             `);
+
+            d.action('Fermer', {}, resolve);
         });
     }
 
@@ -306,16 +308,11 @@ let form_exec = new function() {
         return record.values[key];
     }
 
-    function showValidateDialog(e, record, page) {
-        dialog.popup(e, 'Valider', (popup, close) => {
-            popup.output('Confirmez-vous la validation de cette page ?');
-
-            popup.submitHandler = async () => {
-                close();
-
-                if (await validateRecord(record, page))
-                    await goupile.go();
-            };
+    function runValidateDialog(e, record, page) {
+        let msg = 'Confirmez-vous la validation de cette page ?';
+        return dialog.confirm(e, msg, 'Valider', async () => {
+            if (await validateRecord(record, page))
+                goupile.go();
         });
     }
 
@@ -363,14 +360,10 @@ let form_exec = new function() {
 
     function handleNewClick(e, confirm) {
         if (confirm) {
-            dialog.popup(e, 'Fermer l\'enregistrement', (page, close) => {
-                page.output('Cette action entraînera la perte des modifications en cours, êtes-vous sûr(e) ?');
-
-                page.submitHandler = () => {
-                    close();
-                    goupile.go(makeURL(route_page.form.key, route_page.key, null));
-                };
-            })
+            let msg = 'Cette action entraînera la perte des modifications en cours, êtes-vous sûr(e) ?';
+            return dialog.confirm(e, msg, 'Fermer l\'enregistrement', () => {
+                goupile.go(makeURL(route_page.form.key, route_page.key, null));
+            });
         } else {
             goupile.go(makeURL(route_page.form.key, route_page.key, null));
         }
@@ -430,7 +423,7 @@ let form_exec = new function() {
                                 <tr class=${ctx_records.has(record.id) ? 'selected' : ''}>
                                     <th>
                                         <a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>
-                                        <a @click=${e => showDeleteDialog(e, record)}>✕</a>
+                                        <a @click=${e => runDeleteDialog(e, record)}>✕</a>
                                     </th>
                                     <td class="id">${record.sequence || 'local'}</td>
 
@@ -549,7 +542,7 @@ let form_exec = new function() {
                     ${records.map(record => html`
                         <tr class=${ctx_records.has(record.id) ? 'selected' : ''}>
                             ${!multi_mode ? html`<th><a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>
-                                                      <a @click=${e => showDeleteDialog(e, record)}>✕</a></th>` : ''}
+                                                      <a @click=${e => runDeleteDialog(e, record)}>✕</a></th>` : ''}
                             ${multi_mode ? html`<th><input type="checkbox" .checked=${ctx_records.has(record.id)}
                                                             @click=${e => handleEditClick(record)} /></th>` : ''}
                             <td class="id">${record.sequence || 'local'}</td>
@@ -803,18 +796,13 @@ let form_exec = new function() {
         }
     }
 
-    function showDeleteDialog(e, record) {
-        dialog.popup(e, 'Supprimer', (page, close) => {
-            page.output('Voulez-vous vraiment supprimer cet enregistrement ?');
+    function runDeleteDialog(e, record) {
+        let msg = 'Voulez-vous vraiment supprimer cet enregistrement ?';
+        return dialog.confirm(e, msg, 'Supprimer', async () => {
+            await vrec.delete(record.table, record.id);
+            ctx_records.delete(record.id, record);
 
-            page.submitHandler = async () => {
-                close();
-
-                await vrec.delete(record.table, record.id);
-                ctx_records.delete(record.id, record);
-
-                goupile.go();
-            };
+            goupile.go();
         });
     }
 

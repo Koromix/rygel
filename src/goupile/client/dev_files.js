@@ -181,10 +181,10 @@ let dev_files = new function() {
 
         render(html`
             <div class="gp_toolbar">
-                <button @click=${showCreateDialog}>Ajouter</button>
+                <button @click=${runCreateDialog}>Ajouter</button>
                 ${remote ? html`
                     <div style="flex: 1;"></div>
-                    <button ?disabled=${!actions} @click=${showSyncDialog}>Déployer</button>
+                    <button ?disabled=${!actions} @click=${runDeployDialog}>Déployer</button>
                 ` : ''}
             </div>
 
@@ -210,8 +210,8 @@ let dev_files = new function() {
                         return html`
                             <tr class=${file.action === 'conflict' ? 'conflict' : ''}>
                                 <td>
-                                    <a @click=${e => showDeleteDialog(e, file.path)}>x</a>
-                                    ${show_reset ? html`<a @click=${e => showResetDialog(e, file)}>&nbsp;👻\uFE0E</a>` : ''}
+                                    <a @click=${e => runDeleteDialog(e, file.path)}>x</a>
+                                    ${show_reset ? html`<a @click=${e => runResetDialog(e, file)}>&nbsp;👻\uFE0E</a>` : ''}
                                 </td>
                                 <td class=${makeLocalPathClass(file, action)}>${file.path}</td>
                                 <td class="sync_size">${file.sha256 ? util.formatDiskSize(file.size) : ''}</td>
@@ -269,12 +269,12 @@ let dev_files = new function() {
         return cls;
     }
 
-    function showCreateDialog(e, path, blob) {
-        dialog.popup(e, 'Créer', (page, close) => {
-            let blob = page.file('file', 'Fichier :', {mandatory: true});
+    function runCreateDialog(e, path, blob) {
+        return dialog.run(e, (d, resolve, reject) => {
+            let blob = d.file('file', 'Fichier :', {mandatory: true});
 
             let default_path = blob.value ? `/files/${blob.value.name}` : null;
-            let path = page.text('path', 'Chemin :', {placeholder: default_path});
+            let path = d.text('path', 'Chemin :', {placeholder: default_path});
             if (!path.value)
                 path.value = default_path;
 
@@ -290,9 +290,7 @@ let dev_files = new function() {
                 }
             }
 
-            page.submitHandler = async () => {
-                close();
-
+            d.action('Créer', {disabled: !d.isValid()}, async () => {
                 let entry = new log.Entry;
 
                 entry.progress('Enregistrement du fichier');
@@ -300,30 +298,28 @@ let dev_files = new function() {
                     let file = await vfs.save(path.value, blob.value || '');
                     markBufferInvalid(file.path, file.sha256);
 
-                    await goupile.initMain();
+                    goupile.initMain();
 
                     entry.success('Fichier enregistré !');
+                    resolve();
                 } catch (err) {
                     entry.error(`Échec de l'enregistrement : ${err.message}`);
+                    reject(err);
                 }
-            };
+            });
+            d.action('Annuler', {}, () => reject('Action annulée'));
         });
     }
 
-    function showSyncDialog(e) {
-        dialog.popup(e, 'Synchroniser', (page, close) => {
-            page.output('Voulez-vous vraiment synchroniser les fichiers ?');
-
-            page.submitHandler = async () => {
-                close();
-
-                await syncFiles();
-                await goupile.initMain();
-            };
+    function runDeployDialog(e) {
+        let msg = 'Voulez-vous vraiment synchroniser les fichiers ?';
+        return dialog.confirm(e, msg, 'Déployer', async d => {
+            await syncFiles();
+            goupile.initMain();
         });
     }
 
-    async function showResetDialog(e, file) {
+    async function runResetDialog(e, file) {
         if (file.sha256 === file.remote_sha256) {
             await resetFile(file.path);
 
@@ -333,29 +329,19 @@ let dev_files = new function() {
                 self.runFiles();
             }
         } else {
-            dialog.popup(e, 'Oublier', (page, close) => {
-                page.output(`Voulez-vous vraiment oublier les modifications locales pour '${file.path}' ?`);
-
-                page.submitHandler = async () => {
-                    close();
-
-                    await resetFile(file.path);
-                    goupile.initMain();
-                };
+            let msg = `Voulez-vous vraiment oublier les modifications locales pour '${file.path}' ?`;
+            return dialog.confirm(e, msg, 'Oublier', async () => {
+                await resetFile(file.path);
+                goupile.initMain();
             });
         }
     }
 
-    function showDeleteDialog(e, path) {
-        dialog.popup(e, 'Supprimer', (page, close) => {
-            page.output(`Voulez-vous vraiment supprimer '${path}' ?`);
-
-            page.submitHandler = async () => {
-                close();
-
-                await deleteFile(path);
-                goupile.initMain();
-            };
+    function runDeleteDialog(e, path) {
+        let msg = `Voulez-vous vraiment supprimer '${path}' ?`;
+        return dialog.confirm(e, msg, 'Supprimer', async () => {
+            await deleteFile(path);
+            goupile.initMain();
         });
     }
 

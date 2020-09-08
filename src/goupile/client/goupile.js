@@ -346,9 +346,9 @@ let goupile = new function() {
                 }
 
                 // Give dialog windows and popups (if any) a chance to refresh too
-                dialog.refresh();
+                dialog.refreshAll();
             } else {
-                user.runLogin();
+                user.runLoginScreen();
             }
         } finally {
             running--;
@@ -399,9 +399,9 @@ let goupile = new function() {
                 &nbsp;&nbsp;Application verrouillée
                 <div style="flex: 1;"></div>
                 <button type="button" class="icon" style="background-position-y: calc(-450px + 1.2em)"
-                        @click=${user.showLoginDialog}>Connexion</button>
+                        @click=${user.runLoginDialog}>Connexion</button>
                 <button type="button" class="icon" style="background-position-y: calc(-186px + 1.2em)"
-                        @click=${user.showUnlockDialog}>Déverrouiller</button>
+                        @click=${user.runUnlockDialog}>Déverrouiller</button>
             </nav>`: ''}
 
             <main>
@@ -484,12 +484,12 @@ let goupile = new function() {
 
             ${!self.isConnected() ?
                 html`<button class="icon" style="background-position-y: calc(-450px + 1.2em)"
-                             @click=${user.showLoginDialog}>Connexion</button>` : ''}
+                             @click=${user.runLoginDialog}>Connexion</button>` : ''}
             ${self.isConnected() ? html`
                 <div class="gp_dropdown right">
                     <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${user.getUserName()}</button>
                     <div>
-                        <button @click=${user.showLoginDialog}>Changer d'utilisateur</button>
+                        <button @click=${user.runLoginDialog}>Changer d'utilisateur</button>
                         <button @click=${user.logout}>Déconnexion</button>
                     </div>
                 </div>
@@ -530,15 +530,9 @@ let goupile = new function() {
         self.go();
     };
 
-    function showSyncDialog(e) {
-        dialog.popup(e, 'Synchroniser', (page, close) => {
-            page.output('Désirez-vous synchroniser les données ?');
-
-            page.submitHandler = () => {
-                close();
-                syncRecords();
-            };
-        });
+    function runSyncDialog(e) {
+        let msg = 'Désirez-vous synchroniser les données ?';
+        return dialog.confirm(e, msg, 'Synchroniser', syncRecords);
     }
 
     async function syncRecords() {

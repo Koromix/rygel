@@ -354,13 +354,14 @@ function PageBuilder(state, model, readonly = false) {
         if (!isModifiable(key))
             return;
 
-        dialog.popup(e, 'Modifier', (page, close) => {
-            let number = page.number('number', 'Valeur :', {min: min, max: max, value: value});
+        return dialog.run(e, (d, resolve, reject) => {
+            let number = d.number('number', 'Valeur :', {min: min, max: max, value: value});
 
-            page.submitHandler = () => {
+            d.action('Modifier', {disabled: !d.isValid()}, () => {
                 updateValue(key, number.value);
-                close();
-            };
+                resolve(number.value);
+            });
+            d.action('Annuler', {}, () => reject('Action annulée'));
         });
     }
 
@@ -1046,8 +1047,11 @@ instead of:
     };
 
     this.submit = async function() {
-        if (self.triggerErrors())
-            await self.submitHandler();
+        if (self.triggerErrors()) {
+            return await self.submitHandler();
+        } else {
+            return false;
+        }
     };
 
     this.restart = function() {

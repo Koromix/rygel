@@ -2,7 +2,7 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#dlg_veil {
+#dlg_modal {
     display: none;
     position: fixed;
     left: 0;
@@ -11,15 +11,17 @@
     height: 100vh;
     justify-content: center;
     align-items: center;
-    background: rgba(248, 248, 248, 0.96);
-    z-index: 999999;
+    background: rgba(252, 252, 252, 0.96);
+    z-index: 99999;
 }
-#dlg_veil.active { display: flex; }
-#dlg_veil > div {
+#dlg_modal.active { display: flex; }
+#dlg_modal > form {
+    display: block;
     position: absolute;
+    width: 300px;
     max-width: 90%;
     padding: 10px;
-    background: #fbfbfb;
+    background: #f6f6f6;
     border: 1px solid #e6e6e6;
 }
 
