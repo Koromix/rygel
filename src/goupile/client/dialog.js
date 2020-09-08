@@ -7,6 +7,7 @@ let dialog = new function() {
 
     let init = false;
 
+    let count = 0;
     let dialogs = {
         prev: null,
         next: null
@@ -48,7 +49,7 @@ let dialog = new function() {
                 prev: dialogs.prev,
                 next: dialogs,
 
-                closeable: closeable,
+                type: type,
                 el: document.createElement('div'),
                 state: new PageState,
                 refresh: () => buildDialog(dialog, e, func),
@@ -66,9 +67,9 @@ let dialog = new function() {
             // Complete linked list insertion
             dialogs.prev.next = dialog;
             dialogs.prev = dialog;
+            count++;
 
             // Modal or popup?
-            let popup = (e != null && !goupile.isTablet());
             dialog.el.setAttribute('id', `dlg_${type}`);
             if (closeable) {
                 dialog.el.addEventListener('keydown', e => {
@@ -76,6 +77,7 @@ let dialog = new function() {
                         dialog.reject(new Error('Action annulée'));
                 });
             }
+            dialog.el.style.zIndex = 999999 + count;
 
             // Show it!
             document.body.appendChild(dialog.el);
@@ -89,7 +91,7 @@ let dialog = new function() {
         while (it !== dialogs) {
             let target = e.target.parentNode;
 
-            if (it.closeable) {
+            if (it.type === 'popup') {
                 for (;;) {
                     if (target === it.el) {
                         break;
@@ -182,6 +184,7 @@ let dialog = new function() {
     function closeDialog(dialog) {
         dialog.next.prev = dialog.prev;
         dialog.prev.next = dialog.next;
+        count--;
 
         document.body.removeChild(dialog.el);
     }
