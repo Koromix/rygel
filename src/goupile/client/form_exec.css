@@ -18,7 +18,7 @@
     border-top: 1px solid #dfdfdf;
 }
 
-.fm_form a { color: #ca5d3d; }
+.fm_form a { color: #e66d1d; }
 
 .fm_form > .af_main {
     position: relative;
@@ -73,8 +73,8 @@
 }
 .fm_path > a + a { margin-left: 4px; }
 .fm_path > a.active {
-    background: #e08880;
-    border: 2px solid #e08880;
+    background: #e66d1d;
+    border: 2px solid #e66d1d;
     color: white;
 }
 .fm_path > a.partial::before {
@@ -89,7 +89,7 @@
     font-weight: bold;
     content: '✓\FE0E✓\FE0E';
 }
-.fm_path > a:hover { border-color: #e08880; }
+.fm_path > a:hover { border-color: #e66d1d; }
 .fm_path > a:focus {
     outline: 2px dotted #999;
     outline-offset: 1px;
@@ -196,7 +196,7 @@
     padding-right: 4px;
     font-size: 0.9em;
     font-weight: bold;
-    color: #ca5d3d;
+    color: #e66d1d;
     content: '✓\FE0E';
 }
 .st_table td.complete::before {
