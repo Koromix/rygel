@@ -38,7 +38,7 @@ function UserManager(db) {
             let username = d.text('*username', 'Nom d\'utilisateur');
             let password = d.password('*password', 'Mot de passe');
 
-            d.action('Se connecter', {disabled: !d.isValid()}, async () => {
+            d.action('Connexion', {disabled: !d.isValid()}, async () => {
                 let success = await self.login(username.value, password.value);
                 if (success)
                     resolve(username.value);
