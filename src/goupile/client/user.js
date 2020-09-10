@@ -43,7 +43,7 @@ function UserManager(db) {
                 if (success)
                     resolve(username.value);
             });
-            d.action('Annuler', {}, () => reject('Action annulée'));
+            d.action('Annuler', {}, () => reject(new Error('Action annulée')));
         });
     };
 
@@ -285,7 +285,7 @@ function UserManager(db) {
 
                 resolve();
             });
-            d.action('Annuler', {}, () => reject('Action annulée'));
+            d.action('Annuler', {}, () => reject(new Error('Action annulée')));
         });
     };
 
@@ -309,7 +309,7 @@ function UserManager(db) {
                 }
             }
 
-            d.action('Annuler', {}, () => reject('Action annulée'));
+            d.action('Annuler', {}, () => reject(new Error('Action annulée')));
         });
     };
 

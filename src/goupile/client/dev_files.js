@@ -307,7 +307,7 @@ let dev_files = new function() {
                     reject(err);
                 }
             });
-            d.action('Annuler', {}, () => reject('Action annulée'));
+            d.action('Annuler', {}, () => reject(new Error('Action annulée')));
         });
     }
 

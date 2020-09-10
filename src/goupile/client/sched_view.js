@@ -359,7 +359,7 @@ function ScheduleView(resources_map, meetings_map) {
                 createMeeting(slot_ref, name.value);
                 resolve(name.value);
             });
-            d.action('Annuler', {}, () => reject('Action annulée'));
+            d.action('Annuler', {}, () => reject(new Error('Action annulée')));
         });
     }
 
@@ -451,7 +451,7 @@ function ScheduleView(resources_map, meetings_map) {
                 createResource(day, time2);
                 resolve(time2);
             });
-            d.action('Annuler', {}, () => reject('Action annulée'));
+            d.action('Annuler', {}, () => reject(new Error('Action annulée')));
         });
     }
 
