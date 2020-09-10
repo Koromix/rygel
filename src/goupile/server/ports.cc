@@ -91,6 +91,7 @@ bool ScriptPort::ParseFragments(StreamReader *st, ScriptHandle *out_handle)
     parser.ParseArray();
     while (parser.InArray()) {
         const char *mtime = nullptr;
+        int64_t version = -1;
         const char *page = nullptr;
         bool deletion = false;
 
@@ -106,6 +107,8 @@ bool ScriptPort::ParseFragments(StreamReader *st, ScriptHandle *out_handle)
 
             if (TestStr(key, "mtime")) {
                 parser.ParseString(&mtime);
+            } else if (TestStr(key, "version")) {
+                parser.ParseInt(&version);
             } else if (TestStr(key, "page")) {
                 if (parser.PeekToken() == json_TokenType::Null) {
                     parser.ParseNull();
@@ -136,7 +139,7 @@ bool ScriptPort::ParseFragments(StreamReader *st, ScriptHandle *out_handle)
                         } break;
                         case json_TokenType::Integer: {
                             int64_t i = 0;
-                            parser.ParseInteger(&i);
+                            parser.ParseInt(&i);
 
                             if (i >= INT_MIN || i <= INT_MAX) {
                                 JS_SetProperty(ctx, values, obj_prop, JS_NewInt32(ctx, (int32_t)i));
@@ -178,7 +181,7 @@ bool ScriptPort::ParseFragments(StreamReader *st, ScriptHandle *out_handle)
                                     } break;
                                     case json_TokenType::Integer: {
                                         int64_t i = 0;
-                                        parser.ParseInteger(&i);
+                                        parser.ParseInt(&i);
 
                                         if (i >= INT_MIN || i <= INT_MAX) {
                                             JS_SetPropertyUint32(ctx, array, len++, JS_NewInt32(ctx, (int32_t)i));
@@ -219,13 +222,14 @@ bool ScriptPort::ParseFragments(StreamReader *st, ScriptHandle *out_handle)
             }
         }
 
-        if (((!page || !page[0]) && !deletion) || !mtime || !mtime[0]) {
-            LogError("Missing page or mtime attribute");
+        if (((!page || !page[0]) && !deletion) || !mtime || !mtime[0] || version < 0) {
+            LogError("Missing mtime, version or page attribute");
             return false;
         }
 
-        JS_SetPropertyStr(ctx, frag, "page", !deletion ? JS_NewString(ctx, page) : JS_NULL);
         JS_SetPropertyStr(ctx, frag, "mtime", JS_NewString(ctx, mtime));
+        JS_SetPropertyStr(ctx, frag, "version", JS_NewInt64(ctx, version));
+        JS_SetPropertyStr(ctx, frag, "page", !deletion ? JS_NewString(ctx, page) : JS_NULL);
     }
     if (!parser.IsValid())
         return false;
@@ -273,6 +277,7 @@ bool ScriptPort::RunRecord(Span<const char> json, const ScriptHandle &handle,
         frag2->ctx = ctx;
 
         frag2->mtime = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, frag, "mtime")).ptr;
+        frag2->version = ConsumeValueInt(ctx, JS_GetPropertyStr(ctx, frag, "version"));
         frag2->page = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, frag, "page")).ptr;
         frag2->json = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, frag, "json"));
         frag2->errors = ConsumeValueInt(ctx, JS_GetPropertyStr(ctx, frag, "errors"));

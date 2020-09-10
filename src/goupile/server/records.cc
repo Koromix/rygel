@@ -14,7 +14,9 @@ namespace RG {
 
 static void ExportRecord(sq_Statement *stmt, Span<const char> table, json_Writer *json)
 {
-    const char *id = (const char *)sqlite3_column_text(*stmt, 0);
+    char id[512];
+    strncpy(id, (const char *)sqlite3_column_text(*stmt, 0), RG_SIZE(id));
+    id[RG_SIZE(id) - 1] = 0;
 
     json->StartObject();
 
@@ -23,26 +25,22 @@ static void ExportRecord(sq_Statement *stmt, Span<const char> table, json_Writer
     json->Key("sequence"); json->Int(sqlite3_column_int(*stmt, 1));
 
     json->Key("fragments"); json->StartArray();
-    if (sqlite3_column_type(*stmt, 2) != SQLITE_NULL) {
-        do {
-            json->StartObject();
+    do {
+        json->StartObject();
 
-            json->Key("mtime"); json->String((const char *)sqlite3_column_text(*stmt, 2));
-            json->Key("username"); json->String((const char *)sqlite3_column_text(*stmt, 3));
-            if (sqlite3_column_type(*stmt, 4) != SQLITE_NULL) {
-                json->Key("page"); json->String((const char *)sqlite3_column_text(*stmt, 4));
-            } else {
-                json->Key("page"); json->Null();
-            }
-            json->Key("complete"); json->Bool(sqlite3_column_int(*stmt, 5));
-            json->Key("values"); json->Raw((const char *)sqlite3_column_text(*stmt, 6));
-            json->Key("anchor"); json->Int64(sqlite3_column_int64(*stmt, 7));
+        json->Key("mtime"); json->String((const char *)sqlite3_column_text(*stmt, 2));
+        json->Key("username"); json->String((const char *)sqlite3_column_text(*stmt, 3));
+        if (sqlite3_column_type(*stmt, 4) != SQLITE_NULL) {
+            json->Key("page"); json->String((const char *)sqlite3_column_text(*stmt, 4));
+        } else {
+            json->Key("page"); json->Null();
+        }
+        json->Key("complete"); json->Bool(sqlite3_column_int(*stmt, 5));
+        json->Key("values"); json->Raw((const char *)sqlite3_column_text(*stmt, 6));
+        json->Key("anchor"); json->Int64(sqlite3_column_int64(*stmt, 7));
 
-            json->EndObject();
-        } while (stmt->Next() && TestStr((const char *)sqlite3_column_text(*stmt, 0), id));
-    } else {
-        stmt->Next();
-    }
+        json->EndObject();
+    } while (stmt->Next() && TestStr((const char *)sqlite3_column_text(*stmt, 0), id));
     json->EndArray();
 
     json->EndObject();
@@ -85,7 +83,7 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
         sq_Statement stmt;
         if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, f.mtime, f.username, f.page, f.complete, f.json, f.anchor
                                    FROM rec_entries r
-                                   LEFT JOIN rec_fragments f ON (f.store = r.store)
+                                   INNER JOIN rec_fragments f ON (f.id = r.id)
                                    WHERE r.store = ? AND r.id = ?)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, table.ptr, (int)table.len, SQLITE_STATIC);
@@ -109,9 +107,8 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
         sq_Statement stmt;
         if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, f.mtime, f.username, f.page, f.complete, f.json, f.anchor
                                    FROM rec_entries r
-                                   LEFT JOIN rec_fragments f ON (f.store = r.store)
-                                   WHERE r.store = ?
-                                   ORDER BY r.id)", &stmt))
+                                   INNER JOIN rec_fragments f ON (f.id = r.id)
+                                   WHERE r.store = ?)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, table.ptr, (int)table.len, SQLITE_STATIC);
 
@@ -200,7 +197,7 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
                 json.ptr = (const char *)sqlite3_column_text(stmt, 1);
                 json.len = (Size)sqlite3_column_bytes(stmt, 1);
             } else if (stmt.IsValid()) {
-                version = 0;
+                version = -1;
                 json = "{}";
             } else {
                 return;
@@ -243,24 +240,39 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
                                    VALUES (?, ?, ?, ?, ?)
                                    ON CONFLICT(store, id) DO UPDATE SET version = excluded.version,
                                                                         json = excluded.json)",
-                                table, id, sequence, version + fragments.len - 1, json))
+                                table, id, sequence, fragments[fragments.len - 1].version, json))
                 return false;
+
+            // Sanity checks
+            if (!fragments.len) {
+                LogError("Request does not contain any record fragment");
+                io->AttachError(422);
+                return false;
+            }
+            if (fragments[fragments.len - 1].version <= version) {
+                LogError("Cannot overwrite old fragments");
+                io->AttachError(403);
+                return false;
+            }
 
             // Save record fragments (and variables)
             for (Size i = 0; i < fragments.len; i++) {
                 const ScriptFragment &frag = fragments[i];
 
+                // XXX: Silently skipping already stored fragments for now
+                if (frag.version <= version)
+                    continue;
+
                 if (!goupile_db.Run(R"(INSERT INTO rec_fragments (store, id, version, page, username, mtime, complete, json)
                                        VALUES (?, ?, ?, ?, ?, ?, 0, ?))",
-                                    table, id, version + i, frag.page, session->username, frag.mtime, frag.json))
+                                    table, id, frag.version, frag.page, session->username, frag.mtime, frag.json))
                     return false;
 
                 sq_Statement stmt;
-                if (!goupile_db.Prepare(R"(INSERT INTO rec_columns (store, page, key, prop, before, after)
+                if (!goupile_db.Prepare(R"(INSERT INTO rec_columns (store, page, variable, prop, before, after)
                                            VALUES (?, ?, ?, ?, ?, ?)
-                                           ON CONFLICT(store, page, key, prop) DO UPDATE SET prop = excluded.prop,
-                                                                                             before = excluded.before,
-                                                                                             after = excluded.after)", &stmt))
+                                           ON CONFLICT(store, page, variable, IFNULL(prop, 0)) DO UPDATE SET before = excluded.before,
+                                                                                                             after = excluded.after)", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, table.ptr, (int)table.len, SQLITE_STATIC);
 
@@ -312,7 +324,7 @@ void HandleRecordColumns(const http_RequestInfo &request, http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!goupile_db.Prepare(R"(SELECT page, key, prop, before, after
+    if (!goupile_db.Prepare(R"(SELECT page, variable, prop, before, after
                                FROM rec_columns
                                WHERE store = ?)", &stmt))
         return;
@@ -325,7 +337,7 @@ void HandleRecordColumns(const http_RequestInfo &request, http_IO *io)
     while (stmt.Next()) {
         json.StartObject();
         json.Key("page"); json.String((const char *)sqlite3_column_text(stmt, 0));
-        json.Key("key"); json.String((const char *)sqlite3_column_text(stmt, 1));
+        json.Key("variable"); json.String((const char *)sqlite3_column_text(stmt, 1));
         if (sqlite3_column_type(stmt, 2) != SQLITE_NULL) {
             json.Key("prop"); json.Raw((const char *)sqlite3_column_text(stmt, 2));
         }

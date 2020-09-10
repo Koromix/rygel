@@ -736,7 +736,7 @@ let form_exec = new function() {
 
             // Remaining page cols
             for (let key in cols_map) {
-                let col = cols_map[use_key];
+                let col = cols_map[key];
 
                 let col2 = makeColumnInfo(page, col);
                 columns.push(col2);

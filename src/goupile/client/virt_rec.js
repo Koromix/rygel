@@ -271,13 +271,14 @@ function VirtualRecords(db) {
 
         // Upload fragments
         let uploads = util.mapRLE(fragments, frag => frag.id, (id, offset, length) => {
-            let record_fragments = fragments.slice(offset, length);
+            let record_fragments = fragments.slice(offset, offset + length);
 
             if (record_fragments.some(frag => frag.anchor < 0)) {
                 let frag0 = record_fragments[0];
 
                 record_fragments = record_fragments.map(frag => ({
                     mtime: frag.mtime,
+                    version: frag.version,
                     page: frag.page,
                     values: frag.values
                 }));
@@ -302,11 +303,68 @@ function VirtualRecords(db) {
             }
         }
 
-        // Download fragments
-        /*for (let i = 0; i < app.forms.length; i += 10) {
-            let p = app.forms.slice(i, i + 10).map(downloadRecords);
-            await Promise.all(p);
-        }*/
+        // Get new fragments
+        for (let form of app.forms) {
+            let url = `${env.base_url}api/records/${form.key}`;
+            let records = await net.fetch(url).then(response => response.json());
+
+            let entries = records.map(record => ({
+                _ikey: makeEntryKey(record.table, record.id),
+                id: record.id,
+                pages: record.fragments.filter(frag => frag.page != null).map(frag => frag.page),
+                table: record.table,
+                version: record.fragments.length - 1,
+                sequence: record.sequence
+            }));
+            let fragments = records.flatMap(record => record.fragments.map((frag, version) => ({
+                _ikey: makeFragmentKey(record.table, record.id, version),
+                anchor: frag.anchor,
+                complete: frag.complete,
+                id: record.id,
+                mtime: frag.mtime,
+                page: frag.page,
+                table: record.table,
+                username: frag.username,
+                values: frag.values,
+                version: version
+            })));
+
+            await db.saveAll('rec_entries', entries);
+            await db.saveAll('rec_fragments', fragments);
+        }
+
+        // Update columns
+        for (let form of app.forms) {
+            let url = util.pasteURL(`${env.base_url}api/records/columns`, {table: form.key});
+            let columns = await net.fetch(url).then(response => response.json());
+
+            columns = columns.map(col => {
+                let col2 = {
+                    key: null,
+
+                    // XXX: Fix missing variable type
+                    table: form.key,
+                    page: col.page,
+                    variable: col.variable,
+                    prop: null,
+
+                    before: col.before,
+                    after: col.after
+                }
+
+                if (col.hasOwnProperty('prop')) {
+                    col2.key = makeColumnKeyMulti(form.key, col.page, col.variable, col.prop);
+                    col2.prop = col.prop;
+                } else {
+                    col2.key = makeColumnKey(form.key, col.page, col.variable);
+                    delete col2.prop;
+                }
+
+                return col2;
+            });
+
+            await db.saveAll('rec_columns', columns);
+        }
     };
 
     function makeEntryKey(table, id) {
@@ -317,10 +375,10 @@ function VirtualRecords(db) {
         return `${table}:${id}@${version.toString().padStart(9, '0')}`;
     }
 
-    function makeColumnKey(table, page, key) {
-        return `${table}@${page}.${key}`;
+    function makeColumnKey(table, page, variable) {
+        return `${table}@${page}.${variable}`;
     }
-    function makeColumnKeyMulti(table, page, key, prop) {
-        return `${table}@${page}.${key}@${prop}`;
+    function makeColumnKeyMulti(table, page, variable, prop) {
+        return `${table}@${page}.${variable}@${prop}`;
     }
 }

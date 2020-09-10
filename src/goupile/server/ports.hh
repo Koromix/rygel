@@ -36,6 +36,7 @@ struct ScriptFragment {
 
     JSContext *ctx = nullptr;
     const char *mtime = nullptr;
+    int version;
     const char *page = nullptr;
     Span<const char> json = {};
     int errors;

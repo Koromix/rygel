@@ -29,7 +29,7 @@ DatabaseFile = database.db
 )";
 
 // If you change DatabaseVersion, don't forget to update the migration switch!
-const int DatabaseVersion = 6;
+const int DatabaseVersion = 7;
 
 bool MigrateDatabase(sq_Database &database, int version)
 {
@@ -180,9 +180,20 @@ bool MigrateDatabase(sq_Database &database, int version)
                 )");
                 if (!success)
                     return false;
-            } // [[fallthrough]];
+            } [[fallthrough]];
 
-            RG_STATIC_ASSERT(DatabaseVersion == 6);
+            case 6: {
+                bool success = database.Run(R"(
+                    DROP INDEX rec_columns_spkp;
+                    ALTER TABLE rec_columns RENAME COLUMN key TO variable;
+                    CREATE UNIQUE INDEX rec_fragments_siv ON rec_fragments(store, id, version);
+                    CREATE UNIQUE INDEX rec_columns_spvp ON rec_columns (store, page, variable, IFNULL(prop, 0));
+                )");
+                if (!success)
+                    return false;
+            } // [[fallthrough]]
+
+            RG_STATIC_ASSERT(DatabaseVersion == 7);
         }
 
         int64_t time = GetUnixTime();

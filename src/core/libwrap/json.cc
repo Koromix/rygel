@@ -205,7 +205,7 @@ bool json_Parser::ParseBool(bool *out_b)
     }
 }
 
-bool json_Parser::ParseInteger(int64_t *out_i)
+bool json_Parser::ParseInt(int64_t *out_i)
 {
     if (ConsumeToken(json_TokenType::Integer)) {
         *out_i = handler.u.i;

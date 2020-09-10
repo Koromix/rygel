@@ -195,10 +195,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 func = HandleFileList;
             } else if (TestStr(request.url, "/api/files/static")) {
                 func = HandleFileStatic;
-            } else if (!strncmp(request.url, "/api/records/", 13)) {
-                func = HandleRecordGet;
             } else if (TestStr(request.url, "/api/records/columns")) {
                 func = HandleRecordColumns;
+            } else if (!strncmp(request.url, "/api/records/", 13)) {
+                func = HandleRecordGet;
             } else if (TestStr(request.url, "/api/schedule/resources")) {
                 func = HandleScheduleResources;
             } else if (TestStr(request.url, "/api/schedule/meetings")) {

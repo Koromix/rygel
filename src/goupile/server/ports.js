@@ -42,8 +42,9 @@ var server = new function() {
                 func({}, {}, () => {}, builder, builder, {});
 
                 let frag2 = {
-                    page: frag.page,
                     mtime: frag.mtime,
+                    version: frag.version,
+                    page: frag.page,
 
                     // Make it easy for the C++ caller to store in database with stringified JSON
                     columns: expandColumns(model.variables),
