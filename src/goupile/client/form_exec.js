@@ -389,6 +389,7 @@ let form_exec = new function() {
                 <p>&nbsp;&nbsp;${records.length} ${records.length > 1 ? 'enregistrements' : 'enregistrement'}
                    (${complete_set.size} ${complete_set.size > 1 ? 'complets' : 'complet'})</p>
                 <div style="flex: 1;"></div>
+                ${env.sync_mode === 'mirror' ? html`<button type="button" @click=${self.runSyncDialog}>Synchroniser</button>` : ''}
                 <div class="gp_dropdown right">
                     <button type="button">Options</button>
                     <div>
@@ -488,12 +489,13 @@ let form_exec = new function() {
                 <p>&nbsp;&nbsp;${records.length} ${records.length > 1 ? 'enregistrements' : 'enregistrement'}</p>
                 <div style="flex: 1;"></div>
                 <div class="gp_dropdown right">
-                    <button type="button">Export</button>
+                    <button type="button">Exporter</button>
                     <div>
                         <button type="button" @click=${e => exportSheets(route_page.form, 'xlsx')}>Excel</button>
                         <button type="button" @click=${e => exportSheets(route_page.form, 'csv')}>CSV</button>
                     </div>
                 </div>
+                ${env.sync_mode === 'mirror' ? html`<button type="button" @click=${self.runSyncDialog}>Synchroniser</button>` : ''}
                 <div class="gp_dropdown right">
                     <button type="button">Options</button>
                     <div>
@@ -804,6 +806,25 @@ let form_exec = new function() {
 
             goupile.go();
         });
+    }
+
+    this.runSyncDialog = function(e) {
+        let msg = 'Désirez-vous synchroniser les données ?';
+        return dialog.confirm(e, msg, 'Synchroniser', self.syncRecords);
+    };
+
+    this.syncRecords = async function() {
+        let entry = new log.Entry;
+
+        entry.progress('Synchronisation des données en cours');
+        try {
+            await goupile.runConnected(vrec.sync);
+            entry.success('Données synchronisées !');
+        } catch (err) {
+            entry.error(`La synchronisation a échoué : ${err.message}`);
+        }
+
+        goupile.go();
     }
 
     function makeCurrentURL() {

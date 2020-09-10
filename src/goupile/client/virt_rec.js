@@ -16,6 +16,7 @@ function VirtualRecords(db) {
             versions: [],
             version: null,
             mtime: null,
+            sequence: null,
             complete: {},
 
             values: {}
@@ -219,6 +220,7 @@ function VirtualRecords(db) {
             })),
             version: null,
             mtime: null,
+            sequence: entry.sequence,
 
             complete: {},
             values: {}

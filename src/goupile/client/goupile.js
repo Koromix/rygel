@@ -19,7 +19,9 @@ let goupile = new function() {
 
     let running = 0;
     let restart = false;
+
     let ping_timer;
+    let last_sync = 0;
 
     let left_panel = null;
     let show_overview = true;
@@ -58,7 +60,8 @@ let goupile = new function() {
                 if (env.use_offline)
                     self.go();
             };
-            setTimeout(checkEvents, 30000);
+
+            ping_timer = setTimeout(checkEvents, 0);
         } finally {
             document.querySelector('#gp_root').classList.remove('busy');
         }
@@ -367,11 +370,21 @@ let goupile = new function() {
     };
 
     async function checkEvents() {
-        let prev_online = net.isOnline();
-
         try {
             let response = await net.fetch(`${env.base_url}api/events`);
-            net.setOnline(response.ok);
+
+            if (response.ok) {
+                net.setOnline(true);
+
+                // XXX: Ugly, and syncing does way too much work for nothing
+                let now = Date.now();
+                if (env.sync_mode === 'mirror' && user.isConnected() && now - last_sync >= 180000) {
+                    await form_exec.syncRecords();
+                    last_sync = now;
+                }
+            } else {
+                net.setOnline(false);
+            }
         } catch (err) {
             net.setOnline(false);
         } finally {
@@ -558,26 +571,6 @@ let goupile = new function() {
 
         self.go();
     };
-
-    function runSyncDialog(e) {
-        let msg = 'Désirez-vous synchroniser les données ?';
-        return dialog.confirm(e, msg, 'Synchroniser', syncRecords);
-    }
-
-    async function syncRecords() {
-        let entry = new log.Entry;
-
-        entry.progress('Synchronisation des données en cours');
-        try {
-            await vrec.sync();
-
-            entry.success('Données synchronisées !');
-        } catch (err) {
-            entry.error(`La synchronisation a échoué : ${err.message}`);
-        }
-
-        self.go();
-    }
 
     this.validateCode = async function(path, code) {
         if (path === '/files/main.js') {

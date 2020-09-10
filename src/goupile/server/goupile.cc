@@ -7,6 +7,7 @@
 #include "data.hh"
 #include "files.hh"
 #include "goupile.hh"
+#include "misc.hh"
 #include "ports.hh"
 #include "records.hh"
 #include "schedule.hh"
@@ -68,6 +69,12 @@ static Span<const uint8_t> PatchGoupileVariables(const AssetInfo &asset, Allocat
             return true;
         } else if (TestStr(key, "ALLOW_GUESTS")) {
             writer->Write(goupile_config.allow_guests ? "true" : "false");
+            return true;
+        } else if (TestStr(key, "SYNC_MODE")) {
+            char buf[64];
+            ConvertToJsName(SyncModeNames[(int)goupile_config.sync_mode], buf);
+
+            writer->Write(buf);
             return true;
         } else if (TestStr(key, "CACHE_KEY")) {
 #ifdef NDEBUG

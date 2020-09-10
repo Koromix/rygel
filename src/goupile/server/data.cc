@@ -20,6 +20,7 @@ DatabaseFile = database.db
 [Sync]
 # UseOffline = Off
 # AllowGuests = Off
+# SyncMode = Offline
 
 [HTTP]
 # IPStack = Dual

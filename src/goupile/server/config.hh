@@ -9,6 +9,15 @@
 
 namespace RG {
 
+enum SyncMode {
+    Offline,
+    Mirror
+};
+static const char *const SyncModeNames[] = {
+    "Offline",
+    "Mirror"
+};
+
 struct Config {
     const char *app_key = nullptr;
     const char *app_name = nullptr;
@@ -19,6 +28,7 @@ struct Config {
     bool use_offline = false;
     Size max_file_size = Megabytes(4);
     bool allow_guests = false;
+    SyncMode sync_mode = SyncMode::Offline;
 
     http_Config http {.port = 8889};
     int max_age = 3600;

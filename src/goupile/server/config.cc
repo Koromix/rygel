@@ -66,6 +66,8 @@ bool ConfigBuilder::LoadIni(StreamReader *st)
                         valid &= ParseDec(prop.value, &config.max_file_size);
                     } else if (prop.key == "AllowGuests") {
                         valid &= IniParser::ParseBoolValue(prop.value, &config.allow_guests);
+                    } else if (prop.key == "SyncMode") {
+                        valid &= OptionToEnum(SyncModeNames, prop.value, &config.sync_mode);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
