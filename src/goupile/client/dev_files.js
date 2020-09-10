@@ -375,7 +375,7 @@ let dev_files = new function() {
 
     async function syncFiles() {
         let entry = new log.Entry;
-        entry.progress('Synchronisation en cours');
+        entry.progress('Déploiement en cours');
 
         try {
             let actions = files.map(file => {
@@ -385,7 +385,7 @@ let dev_files = new function() {
             });
             await vfs.sync(actions);
 
-            entry.success('Synchronisation terminée !');
+            entry.success('Déploiement terminé !');
         } catch (err) {
             entry.error(err);
         }
