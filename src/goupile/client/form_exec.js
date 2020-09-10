@@ -217,6 +217,9 @@ let form_exec = new function() {
                            {disabled: !state.changed && record.mtime == null}, e => handleNewClick(e, state.changed));
         }
 
+        let lock = user.getLock();
+        let pages = lock ? lock.urls.map(url => app.urls_map[url].page) : route_page.form.pages;
+
         // Check page dependencies?
         let allowed = route_page.options.dependencies.every(dep => record.complete[dep] != null);
 
@@ -237,12 +240,12 @@ let form_exec = new function() {
                     </div>
                 ` : ''}
 
-                <div class="fm_path">${route_page.form.pages.map(page2 => {
+                <div class="fm_path">${pages.map(page2 => {
                     let complete = record.complete[page2.key];
 
                     let cls = '';
                     let tooltip = '';
-                    let url = makeURL(route_page.form.key, page2.key, record);
+                    let url = makeURL(page2.form.key, page2.key, record);
 
                     for (dep of page2.options.dependencies) {
                         if (record.complete[dep] == null) {

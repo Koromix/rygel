@@ -267,12 +267,30 @@ function UserManager(db) {
     };
     this.isDemo = function() { return !!session_profile.demo; };
 
-    this.getLockURL = function() {
-        let url = localStorage.getItem('lock_url');
-        return url;
+    // XXX: Move locking system to ApplicationNavigator eventually, and expose a "secure"
+    // transient offline storage from this class.
+    this.isLocked = function() {
+        let pin = localStorage.getItem('lock_pin');
+        return pin != null;
+    };
+    this.getLock = function() {
+        let urls = localStorage.getItem('lock_urls');
+        let route = localStorage.getItem('lock_route');
+
+        if (urls != null) {
+            urls = JSON.parse(urls);
+            route = JSON.parse(route);
+
+            return {
+                urls: urls,
+                route: route
+            };
+        } else {
+            return null;
+        }
     };
 
-    this.runLockDialog = function(e, url) {
+    this.runLockDialog = function(e, urls, route) {
         return dialog.run(e, (d, resolve, reject) => {
             d.output('Entrez le code de verrouillage');
             let pin = d.pin('*code');
@@ -281,8 +299,9 @@ function UserManager(db) {
                 pin.error('Le code doit comporter au moins 4 chiffres', true);
 
             d.action('Verrouiller', {disabled: !d.isValid()}, () => {
-                localStorage.setItem('lock_url', url);
                 localStorage.setItem('lock_pin', pin.value);
+                localStorage.setItem('lock_urls', JSON.stringify(urls));
+                localStorage.setItem('lock_route', JSON.stringify(route));
 
                 log.success('Application verrouillée');
                 goupile.go();
@@ -318,7 +337,8 @@ function UserManager(db) {
     };
 
     function deleteLock() {
-        localStorage.removeItem('lock_url');
+        localStorage.removeItem('lock_urls');
+        localStorage.removeItem('lock_route');
         localStorage.removeItem('lock_pin');
     }
 };

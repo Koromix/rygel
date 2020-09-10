@@ -240,7 +240,7 @@ let goupile = new function() {
     this.isConnected = function() { return user.isConnected(); };
     this.isTablet = function() { return tablet_mq.matches; };
     this.isStandalone = function() { return standalone_mq.matches; };
-    this.isLocked = function() { return !!user.getLockURL(); };
+    this.isLocked = function() { return !!user.isLocked(); };
     this.isRunning = function() { return !!running; }
 
     this.go = async function(url = undefined, push_history = true) {
@@ -251,12 +251,24 @@ let goupile = new function() {
 
         try {
             running++;
-            url = user.getLockURL() || url;
 
             if (self.isConnected()) {
-                if (url) {
-                    url = new URL(url, window.location.href);
+                url = url ? new URL(url, window.location.href) : null;
 
+                // Apply navigation lock (if any)
+                if (user.isLocked()) {
+                    let lock = user.getLock();
+
+                    if (url == null || !lock.urls.some(url2 => url.pathname.startsWith(url2))) {
+                        url = new URL(window.location.href);
+                        if (url == null || !lock.urls.some(url2 => url.pathname.startsWith(url2)))
+                            url = new URL(lock.urls[0], window.location.href);
+                    }
+
+                    Object.assign(nav.route, lock.route);
+                }
+
+                if (url) {
                     // Update route application global
                     for (let [key, value] of url.searchParams) {
                         let num = Number(value);
@@ -310,7 +322,7 @@ let goupile = new function() {
                 }
 
                 // Ensure valid menu and panel configuration
-                if (!user.getLockURL()) {
+                if (!user.isLocked()) {
                     let show_develop = user.hasPermission('develop');
                     let show_data = user.hasPermission('edit') && route_asset &&
                                     route_asset.page && route_asset.page.options.show_data;
@@ -430,9 +442,9 @@ let goupile = new function() {
         }
 
         render(html`
-            ${!in_iframe && !user.getLockURL() ?
+            ${!in_iframe && !user.isLocked() ?
                 html`<nav id="gp_menu" class="gp_toolbar">${renderFullMenu()}</nav>`: ''}
-            ${!in_iframe && user.getLockURL() ? html`<nav id="gp_menu" class="gp_toolbar locked">
+            ${!in_iframe && user.isLocked() ? html`<nav id="gp_menu" class="gp_toolbar locked">
                 &nbsp;&nbsp;Application verrouillée
                 <div style="flex: 1;"></div>
                 <button type="button" class="icon" style="background-position-y: calc(-450px + 1.2em)"
