@@ -383,7 +383,7 @@ let dev_files = new function() {
                 file.action = user_actions[file.path] || file.action;
                 return file;
             });
-            await vfs.sync(actions);
+            await goupile.runConnected(() => vfs.sync(actions));
 
             entry.success('Déploiement terminé !');
         } catch (err) {

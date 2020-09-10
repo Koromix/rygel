@@ -513,6 +513,35 @@ let goupile = new function() {
         self.go();
     }
 
+    this.runConnected = async function(func) {
+        if (!net.isOnline()) {
+            log.error('Cette action nécessite une connexion au serveur');
+            return;
+        }
+
+        // If user is really connected (with a server session key)
+        if (user.isConnectedOnline()) {
+            try {
+                await func();
+                return;
+            } catch (err) {
+                if (user.isSynced())
+                    return;
+            }
+
+            await self.initMain();
+
+            if (user.isConnectedOnline()) {
+                await func();
+                return;
+            }
+        }
+
+        // Ask user to connect
+        await user.runLoginDialog();
+        await func();
+    };
+
     this.toggleOverview = function(enable = undefined) {
         if (enable == null)
             enable = !show_overview || goupile.isTablet();
