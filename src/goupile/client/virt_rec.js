@@ -5,8 +5,10 @@
 function VirtualRecords(db, zone) {
     let self = this;
 
-    this.create = function(table) {
-        let id = util.makeULID();
+    this.create = function(table, id = undefined) {
+        if (id == null)
+            id = util.makeULID();
+
         let record = {
             _ikey: makeEntryKey(table, id),
 

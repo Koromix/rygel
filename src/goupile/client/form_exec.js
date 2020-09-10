@@ -18,8 +18,6 @@ let form_exec = new function() {
         let what = url.pathname.substr(page.url.length) || null;
         let new_page = (route_page == null || page.key !== route_page.key);
 
-        if (what && !what.match(/^(new|multi|[A-Z0-9]{26}(@[0-9]+)?)$/))
-            throw new Error(`Adresse incorrecte '${url.pathname}'`);
         route_page = page;
 
         // Clear inappropriate records (wrong form)
