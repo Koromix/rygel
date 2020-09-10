@@ -124,18 +124,34 @@ main {
 }
 .slideshow > img {
     position: absolute;
-    left: 0;
-    top: 0;
+    left: 1px;
+    top: 35px;
     width: 100%;
     cursor: pointer;
     transition: opacity 0.2s ease-in-out;
     opacity: 0;
     pointer-events: none;
 }
+.slideshow::after {
+    position: absolute;
+    top: 12px;
+    right: 19px;
+    width: 102px;
+    height: 10px;
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMwAAAAUCAYAAADBT9KwAAAAtElEQVRoge3bwQqAIBREUf//I9+XCLVqGaTJmxm4B9wGiRdBawy0mnNeJ4f6fdxV1VVVv+fp1HOwiGB6EUy4UwudYNbsLnhCESMYDYIJRTBaXwMgFBMEo0UwYQjGw1sQhGKGYDxsB8MxZy+C8fIE8nlnIZheBONlORj0IhgvBGOOYLwQjDmC8cApWQiC8UAwIQhGi4vLMASjRTBhCEaDjy9DEYwGwYTiorgXP5CFI5hep4O5AfjM9qYEkebNAAAAAElFTkSuQmCC');
+    background-size: 102px 10px;
+    background-repeat: no-repeat;
+    pointer-events: none;
+    content: ' ';
+}
 .slideshow > img:first-of-type {
     position: relative;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+    left: 0;
+    top: 0;
     opacity: 1;
+    border: 1px solid #012330;
+    border-top-width: 35px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
     pointer-events: auto;
 }
 .slideshow > img.active {
