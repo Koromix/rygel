@@ -39,6 +39,7 @@ function initMenu() {
 
             let a = document.createElement('a');
             a.setAttribute('href', '#' + h.id);
+            a.style.fontWeight = (h.tagName == 'H1') ? 'bold' : 'normal';
             a.textContent = h.textContent;
 
             li.appendChild(a);
