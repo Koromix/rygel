@@ -32,7 +32,7 @@ This will create a felix binary at the root of the source tree. You can then sta
 it to build all projects defined in *FelixBuild.ini*.
 
 The following compilers are supported: GCC, Clang and MSVC (on Windows). If you
-want to build Fast or Release builds you also need to install Node.js in order to
+want to build Fast or LTO builds you also need to install Node.js in order to
 transpile the JS code used in some projects.
 
 Use `felix build --help` for more information.
