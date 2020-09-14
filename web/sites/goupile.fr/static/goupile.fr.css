@@ -100,15 +100,25 @@ td {
     background: white;
     font-size: 0.9em;
 }
-#menu ul { padding-left: 1em; }
+#menu ul {
+    padding-left: 0;
+    text-indent: 1em;
+}
 #menu li {
     list-style-type: none;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-#menu a { text-decoration: none; }
+#menu a {
+    display: block;
+    text-decoration: none;
+    padding-left: 0;
+}
 #menu a:hover { text-decoration: underline; }
+#menu a.active { background: #f6f6f6; }
+#menu li li a { padding-left: 1em; }
+#menu li li li a { padding-left: 2em; }
 
 main {
     flex: 1;
