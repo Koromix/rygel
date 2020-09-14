@@ -592,8 +592,12 @@ let goupile = new function() {
                 await runAssetSafe(route_asset);
             return true;
         } else {
-            let asset = app.paths_map[path];
-            return asset ? await runAssetSafe(asset, code) : true;
+            if (route_asset && route_asset.path === path) {
+                return await runAssetSafe(route_asset, code);
+            } else {
+                let asset = app.paths_map[path];
+                return asset ? await runAssetSafe(asset, code) : true;
+            }
         }
     };
 
