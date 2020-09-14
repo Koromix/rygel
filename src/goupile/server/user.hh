@@ -14,14 +14,14 @@ enum class UserPermission {
     New = 1 << 1,
     Edit = 1 << 2,
     Deploy = 1 << 3,
-    Lock = 1 << 4
+    Validate = 1 << 4
 };
 static const char *const UserPermissionNames[] = {
     "Develop",
     "New",
     "Edit",
     "Deploy",
-    "Lock"
+    "Validate"
 };
 
 struct Session: public RetainObject {
