@@ -269,12 +269,14 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
                     return false;
 
                 sq_Statement stmt;
-                if (!goupile_db.Prepare(R"(INSERT INTO rec_columns (store, page, variable, prop, before, after)
-                                           VALUES (?, ?, ?, ?, ?, ?)
+                if (!goupile_db.Prepare(R"(INSERT INTO rec_columns (store, page, variable, prop, before, after, anchor)
+                                           VALUES (?, ?, ?, ?, ?, ?, ?)
                                            ON CONFLICT(store, page, variable, IFNULL(prop, 0)) DO UPDATE SET before = excluded.before,
-                                                                                                             after = excluded.after)", &stmt))
+                                                                                                             after = excluded.after,
+                                                                                                             anchor = excluded.anchor)", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, table.ptr, (int)table.len, SQLITE_STATIC);
+                sqlite3_bind_int(stmt, 7, sqlite3_last_insert_rowid(goupile_db));
 
                 for (Size j = 0; j < frag.columns.len; j++) {
                     const ScriptFragment::Column &col = frag.columns[j];
