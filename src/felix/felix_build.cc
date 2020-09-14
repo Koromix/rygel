@@ -362,7 +362,7 @@ For help about those commands, type: %!..+felix <command> --help%!0)");
     LogInfo("Root directory: '%1'", GetWorkingDirectory());
     LogInfo("  Compiler: %1 (%2)", build.compiler->name, CompileModeNames[(int)build.compile_mode]);
     LogInfo("  Output directory: '%1'", build.output_directory);
-    if (!MakeDirectoryRec(build.output_directory))
+    if (!build.fake && !MakeDirectoryRec(build.output_directory))
         return 1;
 
     // Build version string from git commit (date, hash)

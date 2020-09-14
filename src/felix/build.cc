@@ -44,9 +44,9 @@ static const char *BuildObjectPath(const char *src_filename, const char *output_
     return buf.TrimAndLeak(1).ptr;
 }
 
-static bool UpdateVersionSource(const char *version_str, const char *dest_filename)
+static bool UpdateVersionSource(const char *version_str, bool fake, const char *dest_filename)
 {
-    if (!EnsureDirectoryExists(dest_filename))
+    if (!fake && !EnsureDirectoryExists(dest_filename))
         return false;
 
     char code[512];
@@ -65,7 +65,7 @@ static bool UpdateVersionSource(const char *version_str, const char *dest_filena
         new_version = true;
     }
 
-    if (new_version) {
+    if (!fake && new_version) {
         return WriteFile(code, dest_filename);
     } else {
         return true;
@@ -102,7 +102,7 @@ bool Builder::AddTarget(const TargetInfo &target)
         const char *src_filename = Fmt(&str_alloc, "%1%/cache%/version.c", build.output_directory).ptr;
         version_obj_filename = Fmt(&str_alloc, "%1%2", src_filename, OBJECT_EXTENSION).ptr;
 
-        if (UpdateVersionSource(build.version_str, src_filename) || build.rebuild) {
+        if (UpdateVersionSource(build.version_str, build.fake, src_filename) || build.rebuild) {
             BuildNode node = {};
 
             node.text = "Build version file";
@@ -171,7 +171,7 @@ bool Builder::AddTarget(const TargetInfo &target)
                                             target.pack_options, src_filename, &str_alloc, &node);
 
             if (NeedsRebuild(src_filename, node, target.pack_filenames)) {
-                if (!EnsureDirectoryExists(src_filename))
+                if (!build.fake && !EnsureDirectoryExists(src_filename))
                     return false;
 
                 prep_nodes.Append(node);
@@ -286,7 +286,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
                                                build.env, &str_alloc, &node);
 
                 if (NeedsRebuild(node.dest_filename, node, pch->filename)) {
-                    if (!CreatePrecompileHeader(pch->filename, node.dest_filename))
+                    if (!build.fake && !CreatePrecompileHeader(pch->filename, node.dest_filename))
                         return (const char *)nullptr;
 
                     prep_nodes.Append(node);
@@ -316,7 +316,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
 
         if (pch_filename ? NeedsRebuild(node.dest_filename, node, {src.filename, pch_filename})
                          : NeedsRebuild(node.dest_filename, node, src.filename)) {
-            if (!EnsureDirectoryExists(node.dest_filename))
+            if (!build.fake && !EnsureDirectoryExists(node.dest_filename))
                 return nullptr;
 
             obj_nodes.Append(node);
@@ -516,32 +516,33 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
 
     // Replace long command lines with response files if the command supports it
     HashMap<const void *, const char *> rsp_map;
-    for (const BuildNode &node: nodes) {
-        if (node.cmd_line.len > MAX_COMMAND_LEN && node.rsp_offset > 0) {
-            RG_ASSERT(node.rsp_offset < node.cmd_line.len);
+    if (!build.fake) {
+        for (const BuildNode &node: nodes) {
+            if (node.cmd_line.len > MAX_COMMAND_LEN && node.rsp_offset > 0) {
+                RG_ASSERT(node.rsp_offset < node.cmd_line.len);
 
-            // In theory, there can be conflicts between RSP files. But it is unlikely
-            // that response files will be generated for anything other than link commands,
-            // so the risk is very low.
-            const char *target_basename = SplitStrReverseAny(node.dest_filename, RG_PATH_SEPARATORS).ptr;
-            const char *rsp_filename = Fmt(&temp_alloc, "%1%/cache%/%2.rsp", build.output_directory, target_basename).ptr;
+                // In theory, there can be conflicts between RSP files. But it is unlikely
+                // that response files will be generated for anything other than link commands,
+                // so the risk is very low.
+                const char *target_basename = SplitStrReverseAny(node.dest_filename, RG_PATH_SEPARATORS).ptr;
+                const char *rsp_filename = Fmt(&temp_alloc, "%1%/cache%/%2.rsp", build.output_directory, target_basename).ptr;
 
-            Span<const char> rsp = node.cmd_line.Take(node.rsp_offset + 1,
-                                                      node.cmd_line.len - node.rsp_offset - 1);
+                Span<const char> rsp = node.cmd_line.Take(node.rsp_offset + 1,
+                                                          node.cmd_line.len - node.rsp_offset - 1);
 
-            // Apparently backslash characters needs to be escaped in response files,
-            // but it's easier to use '/' instead.
-            StreamWriter st(rsp_filename);
-            for (char c: rsp) {
-                st.Write(c == '\\' ? '/' : c);
+                // Apparently backslash characters needs to be escaped in response files,
+                // but it's easier to use '/' instead.
+                StreamWriter st(rsp_filename);
+                for (char c: rsp) {
+                    st.Write(c == '\\' ? '/' : c);
+                }
+                if (!st.Close())
+                    return false;
+
+                const char *new_cmd = Fmt(&temp_alloc, "%1 \"@%2\"",
+                                          node.cmd_line.Take(0, node.rsp_offset), rsp_filename).ptr;
+                rsp_map.Set(&node, new_cmd);
             }
-            if (!st.Close())
-                return false;
-
-            const char *new_cmd = Fmt(&temp_alloc, "%1 \"@%2\"",
-                                      node.cmd_line.Take(0, node.rsp_offset), rsp_filename).ptr;
-
-            rsp_map.Set(&node, new_cmd);
         }
     }
 
