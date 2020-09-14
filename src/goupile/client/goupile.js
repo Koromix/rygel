@@ -539,7 +539,7 @@ let goupile = new function() {
                 return;
             } catch (err) {
                 if (user.isSynced())
-                    return;
+                    throw err;
             }
 
             await self.initMain();
