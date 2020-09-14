@@ -59,9 +59,8 @@ void HandleUserLogin(const http_RequestInfo &request, http_IO *io)
         int64_t now = GetMonotonicTime();
 
         sq_Statement stmt;
-        if (!goupile_db.Prepare(R"(SELECT u.username, u.password_hash, u.permissions
-                                   FROM usr_users u
-                                   WHERE u.username = ?)", &stmt))
+        if (!goupile_db.Prepare(R"(SELECT username, password_hash, permissions FROM usr_users
+                                   WHERE username = ?)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 

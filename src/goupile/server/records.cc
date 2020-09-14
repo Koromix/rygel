@@ -81,8 +81,8 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
 
     if (id.len) {
         sq_Statement stmt;
-        if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, f.mtime, f.username, f.page, f.complete, f.json, f.anchor
-                                   FROM rec_entries r
+        if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, f.mtime, f.username, f.page, f.complete,
+                                          f.json, f.anchor FROM rec_entries r
                                    INNER JOIN rec_fragments f ON (f.id = r.id)
                                    WHERE r.store = ? AND r.id = ?)", &stmt))
             return;
@@ -105,8 +105,8 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
         json.Finish(io);
     } else {
         sq_Statement stmt;
-        if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, f.mtime, f.username, f.page, f.complete, f.json, f.anchor
-                                   FROM rec_entries r
+        if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, f.mtime, f.username, f.page, f.complete,
+                                          f.json, f.anchor FROM rec_entries r
                                    INNER JOIN rec_fragments f ON (f.id = r.id)
                                    WHERE r.store = ?)", &stmt))
             return;
@@ -185,8 +185,7 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
         int version;
         Span<const char> json;
         {
-            if (!goupile_db.Prepare(R"(SELECT version, json
-                                       FROM rec_entries
+            if (!goupile_db.Prepare(R"(SELECT version, json FROM rec_entries
                                        WHERE store = ? AND id = ?)", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, table.ptr, (int)table.len, SQLITE_STATIC);
@@ -213,8 +212,7 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
             int sequence;
             {
                 sq_Statement stmt;
-                if (!goupile_db.Prepare(R"(SELECT sequence
-                                           FROM rec_sequences
+                if (!goupile_db.Prepare(R"(SELECT sequence FROM rec_sequences
                                            WHERE store = ?)", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, table.ptr, (int)table.len, SQLITE_STATIC);
@@ -231,15 +229,17 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
             // Update sequence number
             if (!goupile_db.Run(R"(INSERT INTO rec_sequences (store, sequence)
                                    VALUES (?, ?)
-                                   ON CONFLICT(store) DO UPDATE SET sequence = excluded.sequence)",
+                                   ON CONFLICT(store)
+                                        DO UPDATE SET sequence = excluded.sequence)",
                                 table, sequence + 1))
                 return false;
 
             // Save record entry
             if (!goupile_db.Run(R"(INSERT INTO rec_entries (store, id, sequence, version, json)
                                    VALUES (?, ?, ?, ?, ?)
-                                   ON CONFLICT(store, id) DO UPDATE SET version = excluded.version,
-                                                                        json = excluded.json)",
+                                   ON CONFLICT(store, id)
+                                        DO UPDATE SET version = excluded.version,
+                                                      json = excluded.json)",
                                 table, id, sequence, fragments[fragments.len - 1].version, json))
                 return false;
 
@@ -271,9 +271,10 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
                 sq_Statement stmt;
                 if (!goupile_db.Prepare(R"(INSERT INTO rec_columns (store, page, variable, prop, before, after, anchor)
                                            VALUES (?, ?, ?, ?, ?, ?, ?)
-                                           ON CONFLICT(store, page, variable, IFNULL(prop, 0)) DO UPDATE SET before = excluded.before,
-                                                                                                             after = excluded.after,
-                                                                                                             anchor = excluded.anchor)", &stmt))
+                                           ON CONFLICT(store, page, variable, IFNULL(prop, 0))
+                                                DO UPDATE SET before = excluded.before,
+                                                              after = excluded.after,
+                                                              anchor = excluded.anchor)", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, table.ptr, (int)table.len, SQLITE_STATIC);
                 sqlite3_bind_int(stmt, 7, sqlite3_last_insert_rowid(goupile_db));
@@ -326,8 +327,7 @@ void HandleRecordColumns(const http_RequestInfo &request, http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!goupile_db.Prepare(R"(SELECT page, variable, prop, before, after
-                               FROM rec_columns
+    if (!goupile_db.Prepare(R"(SELECT page, variable, prop, before, after FROM rec_columns
                                WHERE store = ?)", &stmt))
         return;
     sqlite3_bind_text(stmt, 1, table, -1, SQLITE_STATIC);
