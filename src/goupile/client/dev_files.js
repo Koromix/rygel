@@ -312,9 +312,9 @@ let dev_files = new function() {
     }
 
     function runDeployDialog(e) {
-        let msg = 'Voulez-vous vraiment synchroniser les fichiers ?';
+        let msg = 'Voulez-vous vraiment déployer les fichiers ?';
         return dialog.confirm(e, msg, 'Déployer', async d => {
-            await syncFiles();
+            await deployFiles();
             goupile.initMain();
         });
     }
@@ -373,7 +373,7 @@ let dev_files = new function() {
             buffer.invalid = true;
     }
 
-    async function syncFiles() {
+    async function deployFiles() {
         let entry = new log.Entry;
         entry.progress('Déploiement en cours');
 
