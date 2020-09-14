@@ -47,6 +47,7 @@ p + p { margin-top: 1em; }
 
 .ut_log_close {
     float: right;
+    padding: 2px 6px;
     background: none;
     border: 0;
     color: white;
