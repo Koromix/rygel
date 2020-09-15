@@ -84,7 +84,8 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
         if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, f.mtime, f.username, f.page, f.complete,
                                           f.json, f.anchor FROM rec_entries r
                                    INNER JOIN rec_fragments f ON (f.id = r.id)
-                                   WHERE r.store = ? AND r.id = ?)", &stmt))
+                                   WHERE r.store = ? AND r.id = ?
+                                   ORDER BY f.anchor)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, table.ptr, (int)table.len, SQLITE_STATIC);
         sqlite3_bind_text(stmt, 2, id.ptr, (int)id.len, SQLITE_STATIC);
@@ -108,7 +109,8 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
         if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, f.mtime, f.username, f.page, f.complete,
                                           f.json, f.anchor FROM rec_entries r
                                    INNER JOIN rec_fragments f ON (f.id = r.id)
-                                   WHERE r.store = ?)", &stmt))
+                                   WHERE r.store = ?
+                                   ORDER BY r.id, f.anchor)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, table.ptr, (int)table.len, SQLITE_STATIC);
 
