@@ -49,6 +49,7 @@
     color: black;
     font-weight: normal;
     font-style: italic;
+    vertical-align: top;
 }
 
 .tsel_view:not(.active) { display: none; }
