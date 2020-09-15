@@ -300,7 +300,13 @@ function VirtualRecords(db) {
 
                 if (!response.ok) {
                     let err = (await response.text()).trim();
-                    throw new Error(err);
+
+                    if (response.status === 409) {
+                        // XXX: Avoid this kind of silent data loss...
+                        console.log(err.message);
+                    } else {
+                        throw new Error(err);
+                    }
                 }
             }
         }

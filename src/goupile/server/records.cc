@@ -251,7 +251,7 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
             }
             if (fragments[fragments.len - 1].version <= version) {
                 LogError("Cannot overwrite old fragments");
-                io->AttachError(403);
+                io->AttachError(409);
                 return false;
             }
 
