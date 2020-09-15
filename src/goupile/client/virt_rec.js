@@ -207,6 +207,9 @@ function VirtualRecords(db) {
     };
 
     function expandFragments(entry, fragments, version = undefined) {
+        if (version == null)
+            version = entry.version;
+
         let record = {
             _ikey: entry._ikey,
 
@@ -235,7 +238,7 @@ function VirtualRecords(db) {
         for (let i = fragments.length - 1; i >= 0 && pages_set.size; i--) {
             let frag = fragments[i];
 
-            if (version == null || frag.version <= version) {
+            if (frag.version <= version) {
                 if (record.version == null) {
                     record.version = frag.version;
                     record.mtime = frag.mtime;
