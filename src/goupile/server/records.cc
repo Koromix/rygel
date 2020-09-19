@@ -279,7 +279,7 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
                                                               anchor = excluded.anchor)", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, table.ptr, (int)table.len, SQLITE_STATIC);
-                sqlite3_bind_int(stmt, 7, sqlite3_last_insert_rowid(goupile_db));
+                sqlite3_bind_int64(stmt, 7, sqlite3_last_insert_rowid(goupile_db));
 
                 for (Size j = 0; j < frag.columns.len; j++) {
                     const ScriptFragment::Column &col = frag.columns[j];
