@@ -24,28 +24,21 @@ struct BuildSettings {
     bool fake = false;
 };
 
-struct BuildNode {
-    enum class DependencyMode {
-        None,
-        MakeLike,
-        ShowIncludes
-    };
-
-    const char *text;
-    const char *dest_filename;
-
-    // Set by compiler methods
-    Span<const char> cmd_line; // Must be C safe (NULL termination)
-    Size cache_len;
-    Size rsp_offset;
-    bool skip_success;
-    int skip_lines;
-    DependencyMode deps_mode;
-    const char *deps_filename; // Used by MakeLike mode
-};
-
 class Builder {
     RG_DELETE_COPY(Builder)
+
+    struct Node {
+        const char *text;
+        const char *dest_filename;
+        HeapArray<Size> triggers;
+
+        // Set by compiler methods
+        Command cmd;
+
+        // Managed by Build method
+        std::atomic_int semaphore;
+        bool success;
+    };
 
     struct CacheEntry {
         const char *filename;
@@ -67,23 +60,24 @@ class Builder {
     BuildSettings build;
     const char *cache_filename;
 
+    // AddTarget, AddSource
     bool version_init = false;
     const char *version_obj_filename = nullptr;
+    HeapArray<Node> nodes;
+    HashMap<const char *, Size> nodes_map;
+    HashMap<const char *, const char *> build_map;
+    HashMap<const char *, int64_t> mtime_map;
 
-    // Reuse for performance
-    HeapArray<const char *> obj_filenames;
-
-    HeapArray<BuildNode> prep_nodes;
-    HeapArray<BuildNode> obj_nodes;
-    HeapArray<BuildNode> link_nodes;
+    // Build
+    std::mutex out_mutex;
+    HeapArray<const char *> clear_filenames;
+    HashMap<const void *, const char *> rsp_map;
+    int progress;
+    bool interrupted;
+    HeapArray<WorkerState> workers;
 
     HashTable<const char *, CacheEntry> cache_map;
     HeapArray<const char *> cache_dependencies;
-
-    HashMap<const char *, int64_t> mtime_map;
-    HashMap<const char *, const char *> build_map;
-
-    HeapArray<WorkerState> workers;
 
     BlockAllocator str_alloc;
 
@@ -101,12 +95,14 @@ private:
     void SaveCache();
     void LoadCache();
 
-    bool NeedsRebuild(const char *dest_filename, const BuildNode &node,
+    bool AppendNode(const char *text, const char *dest_filename, const Command &cmd,
+                    Span<const char *const> src_filenames);
+    bool NeedsRebuild(const char *dest_filename, const Command &cmd,
                       Span<const char *const> src_filenames);
     bool IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames);
     int64_t GetFileModificationTime(const char *filename);
 
-    bool RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, Size progress, Size total);
+    bool RunNode(Async *async, Node *node, bool verbose);
 };
 
 }

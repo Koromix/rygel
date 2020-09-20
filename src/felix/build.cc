@@ -95,35 +95,31 @@ Builder::Builder(const BuildSettings &build)
 // Beware, failures can leave the Builder in a undefined state
 bool Builder::AddTarget(const TargetInfo &target)
 {
-    obj_filenames.RemoveFrom(0);
+    HeapArray<const char *> obj_filenames;
 
-    // Build information
-    if (!version_init) {
-        const char *src_filename = Fmt(&str_alloc, "%1%/cache%/version.c", build.output_directory).ptr;
-        version_obj_filename = Fmt(&str_alloc, "%1%2", src_filename, OBJECT_EXTENSION).ptr;
+    // Version string
+    if (target.type == TargetType::Executable) {
+        if (!version_init) {
+            const char *src_filename = Fmt(&str_alloc, "%1%/cache%/version.c", build.output_directory).ptr;
+            version_obj_filename = Fmt(&str_alloc, "%1%2", src_filename, OBJECT_EXTENSION).ptr;
 
-        if (UpdateVersionSource(build.version_str, build.fake, src_filename) || build.rebuild) {
-            BuildNode node = {};
+            if (UpdateVersionSource(build.version_str, build.fake, src_filename) || build.rebuild) {
+                Command cmd = {};
+                build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
+                                                  false, nullptr, {}, {}, build.env,
+                                                  version_obj_filename, &str_alloc, &cmd);
 
-            node.text = "Build version file";
-            node.dest_filename = version_obj_filename;
-
-            build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
-                                              false, nullptr, {}, {}, build.env,
-                                              version_obj_filename, &str_alloc, &node);
-
-            if (NeedsRebuild(version_obj_filename, node, src_filename)) {
-                obj_nodes.Append(node);
-                mtime_map.Set(version_obj_filename, -1);
+                AppendNode("Build version file", version_obj_filename, cmd, src_filename);
+            } else {
+                LogError("Failed to build git version string");
+                version_obj_filename = nullptr;
             }
-        } else {
-            LogError("Failed to build git version string");
-            version_obj_filename = nullptr;
+
+            version_init = true;
         }
 
-        version_init = true;
+        obj_filenames.Append(version_obj_filename);
     }
-    obj_filenames.Append(version_obj_filename);
 
     // Object commands
     for (const SourceFileInfo *src: target.sources) {
@@ -134,7 +130,7 @@ bool Builder::AddTarget(const TargetInfo &target)
         obj_filenames.Append(obj_filename);
     }
 
-    // Some compilers (such as MSVC) also build PCH object files that needs to be linked
+    // Some compilers (such as MSVC) also build PCH object files that need to be linked
     if (build.pch) {
         if (target.c_pch_src) {
             const char *pch_filename = build_map.FindValue(target.c_pch_src->filename, nullptr);
@@ -162,21 +158,12 @@ bool Builder::AddTarget(const TargetInfo &target)
 
         // Make C file
         {
-            BuildNode node = {};
-
-            node.text = Fmt(&str_alloc, "Pack %1 assets", target.name).ptr;
-            node.dest_filename = src_filename;
-
+            Command cmd = {};
             build.compiler->MakePackCommand(target.pack_filenames, build.compile_mode,
-                                            target.pack_options, src_filename, &str_alloc, &node);
+                                            target.pack_options, src_filename, &str_alloc, &cmd);
 
-            if (NeedsRebuild(src_filename, node, target.pack_filenames)) {
-                if (!build.fake && !EnsureDirectoryExists(src_filename))
-                    return false;
-
-                prep_nodes.Append(node);
-                mtime_map.Set(src_filename, -1);
-            }
+            const char *text = Fmt(&str_alloc, "Pack %1 assets", target.name).ptr;
+            AppendNode(text, src_filename, cmd, target.pack_filenames);
         }
 
         bool module = (build.compile_mode == CompileMode::Debug ||
@@ -184,25 +171,19 @@ bool Builder::AddTarget(const TargetInfo &target)
 
         // Build object file
         {
-            BuildNode node = {};
-
-            node.text = Fmt(&str_alloc, "Build %1 assets", target.name).ptr;
-            node.dest_filename = obj_filename;
-
+            Command cmd = {};
             if (module) {
                 build.compiler->MakeObjectCommand(src_filename, SourceType::C, CompileMode::Debug,
                                                   false, nullptr, {"EXPORT"}, {}, build.env,
-                                                  obj_filename, &str_alloc, &node);
+                                                  obj_filename, &str_alloc, &cmd);
             } else {
                 build.compiler->MakeObjectCommand(src_filename, SourceType::C, CompileMode::Debug,
                                                   false, nullptr, {}, {}, build.env,
-                                                  obj_filename,  &str_alloc, &node);
+                                                  obj_filename,  &str_alloc, &cmd);
             }
 
-            if (NeedsRebuild(obj_filename, node, src_filename)) {
-                obj_nodes.Append(node);
-                mtime_map.Set(obj_filename, -1);
-            }
+            const char *text = Fmt(&str_alloc, "Build %1 assets", target.name).ptr;
+            AppendNode(text, obj_filename, cmd, src_filename);
         }
 
         // Build module if needed
@@ -210,20 +191,14 @@ bool Builder::AddTarget(const TargetInfo &target)
             const char *module_filename = Fmt(&str_alloc, "%1%/%2_assets%3", build.output_directory,
                                               target.name, RG_SHARED_LIBRARY_EXTENSION).ptr;
 
-            if (!IsFileUpToDate(module_filename, obj_filename)) {
-                BuildNode node = {};
+            Command cmd = {};
+            build.compiler->MakeLinkCommand(obj_filename, CompileMode::Debug, {},
+                                            LinkType::SharedLibrary, build.env,
+                                            module_filename, &str_alloc, &cmd);
 
-                // XXX: Check if this conflicts with a target destination file?
-                node.text = Fmt(&str_alloc, "Link %1",
-                                SplitStrReverseAny(module_filename, RG_PATH_SEPARATORS)).ptr;
-                node.dest_filename = module_filename;
-
-                build.compiler->MakeLinkCommand(obj_filename, CompileMode::Debug, {},
-                                                LinkType::SharedLibrary, build.env,
-                                                module_filename, &str_alloc, &node);
-
-                link_nodes.Append(node);
-            }
+            const char *text = Fmt(&str_alloc, "Link %1",
+                                   SplitStrReverseAny(module_filename, RG_PATH_SEPARATORS)).ptr;
+            AppendNode(text, module_filename, cmd, obj_filename);
         } else {
             obj_filenames.Append(obj_filename);
         }
@@ -231,20 +206,16 @@ bool Builder::AddTarget(const TargetInfo &target)
 
     // Link commands
     if (target.type == TargetType::Executable) {
-        BuildNode node = {};
-
         const char *target_filename = Fmt(&str_alloc, "%1%/%2%3", build.output_directory,
                                           target.name, EXECUTABLE_EXTENSION).ptr;
 
-        node.text = Fmt(&str_alloc, "Link %1", SplitStrReverseAny(target_filename, RG_PATH_SEPARATORS)).ptr;
-        node.dest_filename = target_filename;
-
+        Command cmd = {};
         build.compiler->MakeLinkCommand(obj_filenames, build.compile_mode, target.libraries,
-                                        LinkType::Executable, build.env, target_filename, &str_alloc, &node);
+                                        LinkType::Executable, build.env, target_filename,
+                                        &str_alloc, &cmd);
 
-        if (NeedsRebuild(target_filename, node, obj_filenames)) {
-            link_nodes.Append(node);
-        }
+        const char *text = Fmt(&str_alloc, "Link %1", SplitStrReverseAny(target_filename, RG_PATH_SEPARATORS)).ptr;
+        AppendNode(text, target_filename, cmd, obj_filenames);
 
         target_filenames.Set(target.name, target_filename);
     }
@@ -274,27 +245,19 @@ const char *Builder::AddSource(const SourceFileInfo &src)
             pch_filename = build_map.FindValue(pch->filename, nullptr);
 
             if (!pch_filename) {
-                BuildNode node = {};
-
-                node.text = Fmt(&str_alloc, "Precompile %1", pch->filename).ptr;
-                node.dest_filename = BuildObjectPath(pch->filename, build.output_directory,
-                                                     pch_ext, &str_alloc);
-
+                pch_filename = BuildObjectPath(pch->filename, build.output_directory, pch_ext, &str_alloc);
                 bool warnings = (pch->target->type != TargetType::ExternalLibrary);
-                build.compiler->MakePchCommand(node.dest_filename, pch->type, build.compile_mode, warnings,
+
+                Command cmd = {};
+                build.compiler->MakePchCommand(pch_filename, pch->type, build.compile_mode, warnings,
                                                pch->target->definitions, pch->target->include_directories,
-                                               build.env, &str_alloc, &node);
+                                               build.env, &str_alloc, &cmd);
 
-                if (NeedsRebuild(node.dest_filename, node, pch->filename)) {
-                    if (!build.fake && !CreatePrecompileHeader(pch->filename, node.dest_filename))
+                const char *text = Fmt(&str_alloc, "Precompile %1", pch->filename).ptr;
+                if (AppendNode(text, pch_filename, cmd, pch->filename)) {
+                    if (!build.fake && !CreatePrecompileHeader(pch->filename, pch_filename))
                         return (const char *)nullptr;
-
-                    prep_nodes.Append(node);
-                    mtime_map.Set(node.dest_filename, -1);
                 }
-
-                pch_filename = node.dest_filename;
-                build_map.Set(pch->filename, pch_filename);
             }
         }
     }
@@ -303,28 +266,20 @@ const char *Builder::AddSource(const SourceFileInfo &src)
 
     // Build object
     if (!obj_filename) {
-        BuildNode node = {};
-
-        node.text = Fmt(&str_alloc, "Build %1", src.filename).ptr;
-        node.dest_filename = BuildObjectPath(src.filename, build.output_directory,
-                                             OBJECT_EXTENSION, &str_alloc);
-
+        obj_filename = BuildObjectPath(src.filename, build.output_directory, OBJECT_EXTENSION, &str_alloc);
         bool warnings = (src.target->type != TargetType::ExternalLibrary);
+
+        Command cmd = {};
         build.compiler->MakeObjectCommand(src.filename, src.type, build.compile_mode, warnings,
                                           pch_filename, src.target->definitions, src.target->include_directories,
-                                          build.env, node.dest_filename, &str_alloc, &node);
+                                          build.env, obj_filename, &str_alloc, &cmd);
 
-        if (pch_filename ? NeedsRebuild(node.dest_filename, node, {src.filename, pch_filename})
-                         : NeedsRebuild(node.dest_filename, node, src.filename)) {
-            if (!build.fake && !EnsureDirectoryExists(node.dest_filename))
+        const char *text = Fmt(&str_alloc, "Build %1", src.filename).ptr;
+        if (pch_filename ? AppendNode(text, obj_filename, cmd, {src.filename, pch_filename})
+                         : AppendNode(text, obj_filename, cmd, src.filename)) {
+            if (!build.fake && !EnsureDirectoryExists(obj_filename))
                 return nullptr;
-
-            obj_nodes.Append(node);
-            mtime_map.Set(node.dest_filename, -1);
         }
-
-        obj_filename = node.dest_filename;
-        build_map.Set(src.filename, obj_filename);
     }
 
     return obj_filename;
@@ -336,15 +291,17 @@ bool Builder::Build(int jobs, bool verbose)
 {
     RG_ASSERT(jobs >= 0);
 
-    Size total = prep_nodes.len + obj_nodes.len + link_nodes.len;
-
-    Async async(jobs - 1);
+    // Reset build context
+    clear_filenames.Clear();
+    rsp_map.Clear();
+    progress = 0;
+    interrupted = false;
     workers.Clear();
     workers.AppendDefault(jobs);
 
-    // Update cache even if some tasks fail
     RG_DEFER {
-        if (total && !build.fake) {
+        // Update cache even if some tasks fail
+        if (nodes.len && !build.fake) {
             for (const WorkerState &worker: workers) {
                 for (const CacheEntry &entry: worker.entries) {
                     cache_map.Set(entry)->deps_offset = cache_dependencies.len;
@@ -358,139 +315,11 @@ bool Builder::Build(int jobs, bool verbose)
 
             SaveCache();
         }
-    };
 
-    LogInfo("Building...");
-    int64_t now = GetMonotonicTime();
-
-    if (!RunNodes(&async, prep_nodes, verbose, 0, total))
-        return false;
-    if (!RunNodes(&async, obj_nodes, verbose, prep_nodes.len, total))
-        return false;
-    if (!RunNodes(&async, link_nodes, verbose, prep_nodes.len + obj_nodes.len, total))
-        return false;
-
-    LogInfo("%!C..100%%%!0 Done (%1s)", FmtDouble((double)(GetMonotonicTime() - now) / 1000.0, 1));
-    return true;
-}
-
-static Span<const char> ParseMakeFragment(Span<const char> remain, HeapArray<char> *out_frag)
-{
-    // Skip white spaces
-    remain = TrimStrLeft(remain);
-
-    if (remain.len) {
-        out_frag->Append(remain[0]);
-
-        Size i = 1;
-        for (; i < remain.len && !strchr("\r\n", remain[i]); i++) {
-            char c = remain[i];
-
-            // The 'i > 1' check is for absolute Windows paths
-            if (c == ':' && i > 1)
-                break;
-
-            if (strchr(" $#", c)) {
-                if (remain[i - 1] == '\\') {
-                    (*out_frag)[out_frag->len - 1] = c;
-                } else {
-                    break;
-                }
-            } else {
-                out_frag->Append(c);
-            }
-        }
-
-        remain = remain.Take(i, remain.len - i);
-    }
-
-    return remain;
-}
-
-static bool ParseMakeRule(const char *filename, Allocator *alloc,
-                          HeapArray<const char *> *out_filenames)
-{
-    HeapArray<char> rule_buf;
-    if (ReadFile(filename, Megabytes(2), &rule_buf) < 0)
-        return false;
-
-    // Parser state
-    Span<const char> remain = rule_buf;
-    HeapArray<char> frag;
-
-    // Skip outputs
-    while (remain.len) {
-        frag.RemoveFrom(0);
-        remain = ParseMakeFragment(remain, &frag);
-
-        if ((Span<const char>)frag == ":")
-            break;
-    }
-
-    // Get dependency filenames
-    while (remain.len) {
-        frag.RemoveFrom(0);
-        remain = ParseMakeFragment(remain, &frag);
-
-        if (frag.len && (Span<const char>)frag != "\\") {
-            const char *dep_filename = NormalizePath(frag, alloc).ptr;
-            out_filenames->Append(dep_filename);
-        }
-    }
-
-    return true;
-}
-
-static Size ExtractShowIncludes(Span<char> buf, Allocator *alloc,
-                                HeapArray<const char *> *out_filenames)
-{
-    // We need to strip include notes from the output
-    Span<char> new_buf = MakeSpan(buf.ptr, 0);
-
-    while (buf.len) {
-        Span<const char> line = SplitStr(buf, '\n', &buf);
-
-        // MS had the brilliant idea to localize inclusion notes.. In english it starts
-        // with 'Note: including file:  ' but it can basically be anything. We match
-        // lines that start with a non-space character, and which contain a colon
-        // followed by two spaces we take the line. Not pretty, hopefully it is alright.
-        Span<const char> dep = {};
-        if (line.len && !IsAsciiWhite(line[0])) {
-            for (Size i = 0; i < line.len - 3; i++) {
-                if (line[i] == ':' && line[i + 1] == ' ' && line[i + 2] == ' ') {
-                    dep = TrimStr(line.Take(i + 3, line.len - i - 3));
-                    break;
-                }
-            }
-        }
-
-        if (dep.len) {
-            if (out_filenames) {
-                const char *dep_filename = DuplicateString(dep, alloc).ptr;
-                out_filenames->Append(dep_filename);
-            }
-        } else {
-            Size copy_len = line.len + (buf.ptr > line.end());
-
-            memmove(new_buf.end(), line.ptr, copy_len);
-            new_buf.len += copy_len;
-        }
-    }
-
-    return new_buf.len;
-}
-
-bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, Size progress, Size total)
-{
-    BlockAllocator temp_alloc;
-
-    std::mutex out_mutex;
-    HeapArray<const char *> clear_filenames;
-
-    RG_DEFER {
-#ifdef _WIN32
+        // Clean up failed and temporary files
         // Windows has a tendency to hold file locks a bit longer than needed...
         // Try to delete files several times silently unless it's the last try.
+#ifdef _WIN32
         if (clear_filenames.len) {
             PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
             RG_DEFER { PopLogFilter(); };
@@ -508,27 +337,27 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
             }
         }
 #endif
-
         for (const char *filename: clear_filenames) {
             UnlinkFile(filename);
         }
     };
 
     // Replace long command lines with response files if the command supports it
-    HashMap<const void *, const char *> rsp_map;
     if (!build.fake) {
-        for (const BuildNode &node: nodes) {
-            if (node.cmd_line.len > MAX_COMMAND_LEN && node.rsp_offset > 0) {
-                RG_ASSERT(node.rsp_offset < node.cmd_line.len);
+        for (const Node &node: nodes) {
+            const Command &cmd = node.cmd;
+
+            if (cmd.cmd_line.len > MAX_COMMAND_LEN && cmd.rsp_offset > 0) {
+                RG_ASSERT(cmd.rsp_offset < cmd.cmd_line.len);
 
                 // In theory, there can be conflicts between RSP files. But it is unlikely
                 // that response files will be generated for anything other than link commands,
                 // so the risk is very low.
                 const char *target_basename = SplitStrReverseAny(node.dest_filename, RG_PATH_SEPARATORS).ptr;
-                const char *rsp_filename = Fmt(&temp_alloc, "%1%/cache%/%2.rsp", build.output_directory, target_basename).ptr;
+                const char *rsp_filename = Fmt(&str_alloc, "%1%/cache%/%2.rsp", build.output_directory, target_basename).ptr;
 
-                Span<const char> rsp = node.cmd_line.Take(node.rsp_offset + 1,
-                                                          node.cmd_line.len - node.rsp_offset - 1);
+                Span<const char> rsp = cmd.cmd_line.Take(cmd.rsp_offset + 1,
+                                                         cmd.cmd_line.len - cmd.rsp_offset - 1);
 
                 // Apparently backslash characters needs to be escaped in response files,
                 // but it's easier to use '/' instead.
@@ -539,112 +368,29 @@ bool Builder::RunNodes(Async *async, Span<const BuildNode> nodes, bool verbose, 
                 if (!st.Close())
                     return false;
 
-                const char *new_cmd = Fmt(&temp_alloc, "%1 \"@%2\"",
-                                          node.cmd_line.Take(0, node.rsp_offset), rsp_filename).ptr;
+                const char *new_cmd = Fmt(&str_alloc, "%1 \"@%2\"",
+                                          cmd.cmd_line.Take(0, cmd.rsp_offset), rsp_filename).ptr;
                 rsp_map.Set(&node, new_cmd);
             }
         }
     }
 
-    bool interrupted = false;
-    for (const BuildNode &node: nodes) {
-        async->Run([&]() {
-            WorkerState *worker = &workers[Async::GetWorkerIdx()];
-            const char *cmd_line = rsp_map.FindValue(&node, node.cmd_line.ptr);
+    LogInfo("Building...");
+    int64_t now = GetMonotonicTime();
 
-            // The lock is needed to guarantee ordering of progress counter. Atomics
-            // do not help much because the LogInfo() calls need to be protected too.
-            {
-                std::lock_guard<std::mutex> out_lock(out_mutex);
+    Async async(jobs - 1);
 
-                Size progress_pct = 100 * progress++ / total;
-                LogInfo("%!C..%1%%%!0 %2", FmtArg(progress_pct).Pad(-3), node.text);
-                if (verbose) {
-                    PrintLn(cmd_line);
-                    fflush(stdout);
-                }
-            }
+    // Run nodes
+    for (Size i = 0; i < nodes.len; i++) {
+        Node *node = &nodes[i];
 
-            // Run command
-            HeapArray<char> output_buf;
-            int exit_code;
-            bool started;
-            if (!build.fake) {
-                started = ExecuteCommandLine(cmd_line, {}, Megabytes(4), &output_buf, &exit_code);
-            } else {
-                started = true;
-                exit_code = 0;
-            }
-
-            // Skip first output lines (if needed)
-            Span<char> output = output_buf;
-            for (Size i = 0; i < node.skip_lines; i++) {
-                SplitStr(output, '\n', &output);
-            }
-
-            // Deal with results
-            if (started && !exit_code) {
-                // Update cache entries
-                {
-                    CacheEntry entry;
-
-                    entry.filename = node.dest_filename;
-                    entry.cmd_line = node.cmd_line.Take(0, node.cache_len);
-
-                    entry.deps_offset = worker->dependencies.len;
-                    switch (node.deps_mode) {
-                        case BuildNode::DependencyMode::None: {} break;
-                        case BuildNode::DependencyMode::MakeLike: {
-                            if (TestFile(node.deps_filename)) {
-                                started &= ParseMakeRule(node.deps_filename, &worker->str_alloc,
-                                                         &worker->dependencies);
-                                UnlinkFile(node.deps_filename);
-                            }
-                        } break;
-                        case BuildNode::DependencyMode::ShowIncludes: {
-                            output.len = ExtractShowIncludes(output, &worker->str_alloc,
-                                                             &worker->dependencies);
-                        } break;
-                    }
-                    entry.deps_len = worker->dependencies.len - entry.deps_offset;
-
-                    worker->entries.Append(entry);
-                }
-
-                if (output.len && !node.skip_success) {
-                    std::lock_guard<std::mutex> out_lock(out_mutex);
-                    stdout_st.Write(output);
-                }
-
-                return true;
-            } else {
-                std::lock_guard<std::mutex> out_lock(out_mutex);
-
-                // Even through we don't care about dependencies, we still want to
-                // remove include notes from the output buffer.
-                if (node.deps_mode == BuildNode::DependencyMode::ShowIncludes) {
-                    output.len = ExtractShowIncludes(output, &str_alloc, nullptr);
-                }
-
-                cache_map.Remove(node.dest_filename);
-                clear_filenames.Append(node.dest_filename);
-
-                if (!started) {
-                    // Error already issued by ExecuteCommandLine()
-                    stderr_st.Write(output);
-                } else if (exit_code == 130) {
-                    interrupted = true; // SIGINT
-                } else {
-                    LogError("%1 (exit code %2)", node.text, exit_code);
-                    stderr_st.Write(output);
-                }
-
-                return false;
-            }
-        });
+        if (!node->success && !node->semaphore) {
+            async.Run([=, &async]() { return RunNode(&async, node, verbose); });
+        }
     }
 
-    if (async->Sync()) {
+    if (async.Sync()) {
+        LogInfo("%!C..100%%%!0 Done (%1s)", FmtDouble((double)(GetMonotonicTime() - now) / 1000.0, 1));
         return true;
     } else if (interrupted) {
         LogError("Build was interrupted");
@@ -745,14 +491,49 @@ void Builder::LoadCache()
     clear_guard.Disable();
 }
 
-bool Builder::NeedsRebuild(const char *dest_filename, const BuildNode &node,
+bool Builder::AppendNode(const char *text, const char *dest_filename, const Command &cmd,
+                         Span<const char *const> src_filenames)
+{
+    RG_ASSERT(src_filenames.len >= 1);
+
+    build_map.Set(src_filenames[0], dest_filename);
+
+    if (NeedsRebuild(dest_filename, cmd, src_filenames)) {
+        Size node_idx = nodes.len;
+        Node *node = nodes.AppendDefault();
+
+        node->text = text;
+        node->dest_filename = dest_filename;
+        node->cmd = cmd;
+
+        for (const char *src_filename: src_filenames) {
+            Size src_idx = nodes_map.FindValue(src_filename, -1);
+
+            if (src_idx >= 0) {
+                Node *src_node = &nodes[src_idx];
+
+                src_node->triggers.Append(node_idx);
+                node->semaphore++;
+            }
+        }
+
+        nodes_map.Set(dest_filename, node_idx);
+        mtime_map.Set(dest_filename, -1);
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool Builder::NeedsRebuild(const char *dest_filename, const Command &cmd,
                            Span<const char *const> src_filenames)
 {
     const CacheEntry *entry = cache_map.Find(dest_filename);
 
     if (!entry)
         return true;
-    if (!TestStr(node.cmd_line.Take(0, node.cache_len), entry->cmd_line))
+    if (!TestStr(cmd.cmd_line.Take(0, cmd.cache_len), entry->cmd_line))
         return true;
 
     if (!IsFileUpToDate(dest_filename, src_filenames))
@@ -799,6 +580,218 @@ int64_t Builder::GetFileModificationTime(const char *filename)
         mtime_map.Set(filename2, file_info.modification_time);
 
         return file_info.modification_time;
+    }
+}
+
+static Span<const char> ParseMakeFragment(Span<const char> remain, HeapArray<char> *out_frag)
+{
+    // Skip white spaces
+    remain = TrimStrLeft(remain);
+
+    if (remain.len) {
+        out_frag->Append(remain[0]);
+
+        Size i = 1;
+        for (; i < remain.len && !strchr("\r\n", remain[i]); i++) {
+            char c = remain[i];
+
+            // The 'i > 1' check is for absolute Windows paths
+            if (c == ':' && i > 1)
+                break;
+
+            if (strchr(" $#", c)) {
+                if (remain[i - 1] == '\\') {
+                    (*out_frag)[out_frag->len - 1] = c;
+                } else {
+                    break;
+                }
+            } else {
+                out_frag->Append(c);
+            }
+        }
+
+        remain = remain.Take(i, remain.len - i);
+    }
+
+    return remain;
+}
+
+static bool ParseMakeRule(const char *filename, Allocator *alloc, HeapArray<const char *> *out_filenames)
+{
+    HeapArray<char> rule_buf;
+    if (ReadFile(filename, Megabytes(2), &rule_buf) < 0)
+        return false;
+
+    // Parser state
+    Span<const char> remain = rule_buf;
+    HeapArray<char> frag;
+
+    // Skip outputs
+    while (remain.len) {
+        frag.RemoveFrom(0);
+        remain = ParseMakeFragment(remain, &frag);
+
+        if ((Span<const char>)frag == ":")
+            break;
+    }
+
+    // Get dependency filenames
+    while (remain.len) {
+        frag.RemoveFrom(0);
+        remain = ParseMakeFragment(remain, &frag);
+
+        if (frag.len && (Span<const char>)frag != "\\") {
+            const char *dep_filename = NormalizePath(frag, alloc).ptr;
+            out_filenames->Append(dep_filename);
+        }
+    }
+
+    return true;
+}
+
+static Size ExtractShowIncludes(Span<char> buf, Allocator *alloc, HeapArray<const char *> *out_filenames)
+{
+    // We need to strip include notes from the output
+    Span<char> new_buf = MakeSpan(buf.ptr, 0);
+
+    while (buf.len) {
+        Span<const char> line = SplitStr(buf, '\n', &buf);
+
+        // MS had the brilliant idea to localize inclusion notes.. In english it starts
+        // with 'Note: including file:  ' but it can basically be anything. We match
+        // lines that start with a non-space character, and which contain a colon
+        // followed by two spaces we take the line. Not pretty, hopefully it is alright.
+        Span<const char> dep = {};
+        if (line.len && !IsAsciiWhite(line[0])) {
+            for (Size i = 0; i < line.len - 3; i++) {
+                if (line[i] == ':' && line[i + 1] == ' ' && line[i + 2] == ' ') {
+                    dep = TrimStr(line.Take(i + 3, line.len - i - 3));
+                    break;
+                }
+            }
+        }
+
+        if (dep.len) {
+            if (out_filenames) {
+                const char *dep_filename = DuplicateString(dep, alloc).ptr;
+                out_filenames->Append(dep_filename);
+            }
+        } else {
+            Size copy_len = line.len + (buf.ptr > line.end());
+
+            memmove(new_buf.end(), line.ptr, copy_len);
+            new_buf.len += copy_len;
+        }
+    }
+
+    return new_buf.len;
+}
+
+bool Builder::RunNode(Async *async, Node *node, bool verbose)
+{
+    const Command &cmd = node->cmd;
+
+    WorkerState *worker = &workers[Async::GetWorkerIdx()];
+    const char *cmd_line = rsp_map.FindValue(&node, cmd.cmd_line.ptr);
+
+    // The lock is needed to guarantee ordering of progress counter. Atomics
+    // do not help much because the LogInfo() calls need to be protected too.
+    {
+        std::lock_guard<std::mutex> out_lock(out_mutex);
+
+        Size progress_pct = 100 * progress++ / nodes.len;
+        LogInfo("%!C..%1%%%!0 %2", FmtArg(progress_pct).Pad(-3), node->text);
+        if (verbose) {
+            PrintLn(cmd_line);
+            fflush(stdout);
+        }
+    }
+
+    // Run command
+    HeapArray<char> output_buf;
+    int exit_code;
+    bool started;
+    if (!build.fake) {
+        started = ExecuteCommandLine(cmd_line, {}, Megabytes(4), &output_buf, &exit_code);
+    } else {
+        started = true;
+        exit_code = 0;
+    }
+
+    // Skip first output lines (if needed)
+    Span<char> output = output_buf;
+    for (Size i = 0; i < cmd.skip_lines; i++) {
+        SplitStr(output, '\n', &output);
+    }
+
+    // Deal with results
+    if (started && !exit_code) {
+        // Update cache entries
+        {
+            CacheEntry entry;
+
+            entry.filename = node->dest_filename;
+            entry.cmd_line = cmd.cmd_line.Take(0, cmd.cache_len);
+
+            entry.deps_offset = worker->dependencies.len;
+            switch (cmd.deps_mode) {
+                case Command::DependencyMode::None: {} break;
+                case Command::DependencyMode::MakeLike: {
+                    if (TestFile(cmd.deps_filename)) {
+                        started &= ParseMakeRule(cmd.deps_filename, &worker->str_alloc,
+                                                 &worker->dependencies);
+                        UnlinkFile(cmd.deps_filename);
+                    }
+                } break;
+                case Command::DependencyMode::ShowIncludes: {
+                    output.len = ExtractShowIncludes(output, &worker->str_alloc,
+                                                     &worker->dependencies);
+                } break;
+            }
+            entry.deps_len = worker->dependencies.len - entry.deps_offset;
+
+            worker->entries.Append(entry);
+        }
+
+        if (output.len && !cmd.skip_success) {
+            std::lock_guard<std::mutex> out_lock(out_mutex);
+            stdout_st.Write(output);
+        }
+
+        for (Size trigger_idx: node->triggers) {
+            Node *trigger_node = &nodes[trigger_idx];
+
+            if (!--trigger_node->semaphore) {
+                RG_ASSERT(!trigger_node->success);
+                async->Run([=]() { return RunNode(async, trigger_node, verbose); });
+            }
+        }
+
+        node->success = true;
+        return true;
+    } else {
+        std::lock_guard<std::mutex> out_lock(out_mutex);
+
+        // Even through we don't care about dependencies, we still want to
+        // remove include notes from the output buffer.
+        if (cmd.deps_mode == Command::DependencyMode::ShowIncludes) {
+            output.len = ExtractShowIncludes(output, &str_alloc, nullptr);
+        }
+
+        cache_map.Remove(node->dest_filename);
+        clear_filenames.Append(node->dest_filename);
+
+        if (!started) {
+            // Error already issued by ExecuteCommandLine()
+            stderr_st.Write(output);
+        } else if (exit_code == 130) {
+            interrupted = true; // SIGINT
+        } else {
+            LogError("%1 (exit code %2)", node->text, exit_code);
+            stderr_st.Write(output);
+        }
+
+        return false;
     }
 }
 

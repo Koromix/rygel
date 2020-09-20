@@ -8,8 +8,6 @@
 
 namespace RG {
 
-struct BuildNode;
-
 enum class CompileMode {
     Debug,
     DebugFast,
@@ -33,6 +31,22 @@ enum class LinkType {
     SharedLibrary
 };
 
+struct Command {
+    enum class DependencyMode {
+        None,
+        MakeLike,
+        ShowIncludes
+    };
+
+    Span<const char> cmd_line; // Must be C safe (NULL termination)
+    Size cache_len;
+    Size rsp_offset;
+    bool skip_success;
+    int skip_lines;
+    DependencyMode deps_mode;
+    const char *deps_filename; // Used by MakeLike mode
+};
+
 class Compiler {
     RG_DELETE_COPY(Compiler)
 
@@ -50,23 +64,23 @@ public:
 
     virtual void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
                                  const char *pack_options, const char *dest_filename,
-                                 Allocator *alloc, BuildNode *out_node) const = 0;
+                                 Allocator *alloc, Command *out_cmd) const = 0;
 
     virtual void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                                 bool warnings, Span<const char *const> definitions,
                                 Span<const char *const> include_directories, bool env_flags,
-                                Allocator *alloc, BuildNode *out_node) const = 0;
+                                Allocator *alloc, Command *out_cmd) const = 0;
     virtual const char *GetPchObject(const char *pch_filename, Allocator *alloc) const = 0;
 
     virtual void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                                    bool warnings, const char *pch_filename, Span<const char *const> definitions,
                                    Span<const char *const> include_directories, bool env_flags,
-                                   const char *dest_filename, Allocator *alloc, BuildNode *out_node) const = 0;
+                                   const char *dest_filename, Allocator *alloc, Command *out_cmd) const = 0;
 
     virtual void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
                                  Span<const char *const> libraries, LinkType link_type,
                                  bool env_flags, const char *dest_filename,
-                                 Allocator *alloc, BuildNode *out_node) const = 0;
+                                 Allocator *alloc, Command *out_cmd) const = 0;
 };
 
 extern const Span<const Compiler *const> Compilers;

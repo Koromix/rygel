@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../core/libcc/libcc.hh"
-#include "build.hh"
 #include "compiler.hh"
 
 namespace RG {
@@ -21,7 +20,7 @@ static void AddEnvironmentFlags(Span<const char *const> names, HeapArray<char> *
 
 static void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
                             bool use_arrays, const char *pack_options, const char *dest_filename,
-                            Allocator *alloc, BuildNode *out_node)
+                            Allocator *alloc, Command *out_cmd)
 {
     HeapArray<char> buf(alloc);
 
@@ -42,8 +41,8 @@ static void MakePackCommand(Span<const char *const> pack_filenames, CompileMode 
         Fmt(&buf, " \"%1\"", pack_filename);
     }
 
-    out_node->cache_len = buf.len;
-    out_node->cmd_line = buf.TrimAndLeak(1);
+    out_cmd->cache_len = buf.len;
+    out_cmd->cmd_line = buf.TrimAndLeak(1);
 }
 
 bool Compiler::Test() const
@@ -62,19 +61,19 @@ public:
 
     void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
                          const char *pack_options, const char *dest_filename,
-                         Allocator *alloc, BuildNode *out_node) const override
+                         Allocator *alloc, Command *out_cmd) const override
     {
         RG::MakePackCommand(pack_filenames, compile_mode, false, pack_options,
-                            dest_filename, alloc, out_node);
+                            dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                         bool warnings, Span<const char *const> definitions,
                         Span<const char *const> include_directories, bool env_flags,
-                        Allocator *alloc, BuildNode *out_node) const override
+                        Allocator *alloc, Command *out_cmd) const override
     {
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr, definitions,
-                          include_directories, env_flags, nullptr, alloc, out_node);
+                          include_directories, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
@@ -82,7 +81,7 @@ public:
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, bool env_flags,
-                           const char *dest_filename, Allocator *alloc, BuildNode *out_node) const override
+                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         HeapArray<char> buf(alloc);
 
@@ -100,7 +99,7 @@ public:
             }
         }
         Fmt(&buf, " -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
-        out_node->rsp_offset = buf.len;
+        out_cmd->rsp_offset = buf.len;
 
         // Build options
         switch (compile_mode) {
@@ -151,21 +150,21 @@ public:
             }
         }
 
-        out_node->cache_len = buf.len;
+        out_cmd->cache_len = buf.len;
         if (FileIsVt100(stdout)) {
             Fmt(&buf, " -fcolor-diagnostics -fansi-escape-codes");
         }
-        out_node->cmd_line = buf.TrimAndLeak(1);
+        out_cmd->cmd_line = buf.TrimAndLeak(1);
 
         // Dependencies
-        out_node->deps_mode = BuildNode::DependencyMode::MakeLike;
-        out_node->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
+        out_cmd->deps_mode = Command::DependencyMode::MakeLike;
+        out_cmd->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
     }
 
     void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
                          Span<const char *const> libraries, LinkType link_type,
                          bool env_flags, const char *dest_filename,
-                         Allocator *alloc, BuildNode *out_node) const override
+                         Allocator *alloc, Command *out_cmd) const override
     {
         HeapArray<char> buf(alloc);
 
@@ -175,7 +174,7 @@ public:
             case LinkType::SharedLibrary: { Fmt(&buf, "clang++ -shared"); } break;
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
-        out_node->rsp_offset = buf.len;
+        out_cmd->rsp_offset = buf.len;
 
         // Build mode
         switch (compile_mode) {
@@ -211,11 +210,11 @@ public:
             AddEnvironmentFlags("LDFLAGS", &buf);
         }
 
-        out_node->cache_len = buf.len;
+        out_cmd->cache_len = buf.len;
         if (FileIsVt100(stdout)) {
             Fmt(&buf, " -fcolor-diagnostics -fansi-escape-codes");
         }
-        out_node->cmd_line = buf.TrimAndLeak(1);
+        out_cmd->cmd_line = buf.TrimAndLeak(1);
     }
 };
 
@@ -225,19 +224,19 @@ public:
 
     void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
                          const char *pack_options, const char *dest_filename,
-                         Allocator *alloc, BuildNode *out_node) const override
+                         Allocator *alloc, Command *out_cmd) const override
     {
         RG::MakePackCommand(pack_filenames, compile_mode, false, pack_options,
-                            dest_filename, alloc, out_node);
+                            dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                         bool warnings, Span<const char *const> definitions,
                         Span<const char *const> include_directories, bool env_flags,
-                        Allocator *alloc, BuildNode *out_node) const override
+                        Allocator *alloc, Command *out_cmd) const override
     {
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr,
-                          definitions, include_directories, env_flags, nullptr, alloc, out_node);
+                          definitions, include_directories, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
@@ -245,7 +244,7 @@ public:
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, bool env_flags,
-                           const char *dest_filename, Allocator *alloc, BuildNode *out_node) const override
+                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         HeapArray<char> buf(alloc);
 
@@ -263,7 +262,7 @@ public:
             }
         }
         Fmt(&buf, " -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
-        out_node->rsp_offset = buf.len;
+        out_cmd->rsp_offset = buf.len;
 
         // Build options
         switch (compile_mode) {
@@ -315,21 +314,21 @@ public:
             }
         }
 
-        out_node->cache_len = buf.len;
+        out_cmd->cache_len = buf.len;
         if (FileIsVt100(stdout)) {
             Fmt(&buf, " -fdiagnostics-color=always");
         }
-        out_node->cmd_line = buf.TrimAndLeak(1);
+        out_cmd->cmd_line = buf.TrimAndLeak(1);
 
         // Dependencies
-        out_node->deps_mode = BuildNode::DependencyMode::MakeLike;
-        out_node->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
+        out_cmd->deps_mode = Command::DependencyMode::MakeLike;
+        out_cmd->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
     }
 
     void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
                          Span<const char *const> libraries, LinkType link_type,
                          bool env_flags, const char *dest_filename,
-                         Allocator *alloc, BuildNode *out_node) const override
+                         Allocator *alloc, Command *out_cmd) const override
     {
         HeapArray<char> buf(alloc);
 
@@ -339,7 +338,7 @@ public:
             case LinkType::SharedLibrary: { Fmt(&buf, "g++ -shared"); } break;
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
-        out_node->rsp_offset = buf.len;
+        out_cmd->rsp_offset = buf.len;
 
         // Build mode
         switch (compile_mode) {
@@ -378,11 +377,11 @@ public:
             AddEnvironmentFlags("LDFLAGS", &buf);
         }
 
-        out_node->cache_len = buf.len;
+        out_cmd->cache_len = buf.len;
         if (FileIsVt100(stdout)) {
             Fmt(&buf, " -fdiagnostics-color=always");
         }
-        out_node->cmd_line = buf.TrimAndLeak(1);
+        out_cmd->cmd_line = buf.TrimAndLeak(1);
     }
 };
 
@@ -393,20 +392,20 @@ public:
 
     void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
                          const char *pack_options, const char *dest_filename,
-                         Allocator *alloc, BuildNode *out_node) const override
+                         Allocator *alloc, Command *out_cmd) const override
     {
         // Strings literals are limited in length in MSVC, even with concatenation (64kiB)
         RG::MakePackCommand(pack_filenames, compile_mode, true, pack_options,
-                            dest_filename, alloc, out_node);
+                            dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                         bool warnings, Span<const char *const> definitions,
                         Span<const char *const> include_directories, bool env_flags,
-                        Allocator *alloc, BuildNode *out_node) const override
+                        Allocator *alloc, Command *out_cmd) const override
     {
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr, definitions,
-                          include_directories, env_flags, nullptr, alloc, out_node);
+                          include_directories, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchObject(const char *pch_filename, Allocator *alloc) const override
@@ -418,7 +417,7 @@ public:
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, bool env_flags,
-                           const char *dest_filename, Allocator *alloc, BuildNode *out_node) const override
+                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         HeapArray<char> buf(alloc);
 
@@ -433,7 +432,7 @@ public:
             Fmt(&buf, " /Yc \"/Fp%1.pch\" \"/Fo%1.obj\"", src_filename);
         }
         Fmt(&buf, " /showIncludes");
-        out_node->rsp_offset = buf.len;
+        out_cmd->rsp_offset = buf.len;
 
         // Build options
         Fmt(&buf, " /MT /EHsc %1", warnings ? "/W3 /wd4200" : "/w");
@@ -468,18 +467,18 @@ public:
             }
         }
 
-        out_node->cache_len = buf.len;
-        out_node->cmd_line = buf.TrimAndLeak(1);
-        out_node->skip_lines = 1;
+        out_cmd->cache_len = buf.len;
+        out_cmd->cmd_line = buf.TrimAndLeak(1);
+        out_cmd->skip_lines = 1;
 
         // Dependencies
-        out_node->deps_mode = BuildNode::DependencyMode::ShowIncludes;
+        out_cmd->deps_mode = Command::DependencyMode::ShowIncludes;
     }
 
     void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
                          Span<const char *const> libraries, LinkType link_type,
                          bool env_flags, const char *dest_filename,
-                         Allocator *alloc, BuildNode *out_node) const override
+                         Allocator *alloc, Command *out_cmd) const override
     {
         HeapArray<char> buf(alloc);
 
@@ -489,7 +488,7 @@ public:
             case LinkType::SharedLibrary: { Fmt(&buf, "link /nologo /DLL"); } break;
         }
         Fmt(&buf, " \"/OUT:%1\"", dest_filename);
-        out_node->rsp_offset = buf.len;
+        out_cmd->rsp_offset = buf.len;
 
         // Build mode
         switch (compile_mode) {
@@ -511,9 +510,9 @@ public:
             AddEnvironmentFlags("LDFLAGS", &buf);
         }
 
-        out_node->cache_len = buf.len;
-        out_node->cmd_line = buf.TrimAndLeak(1);
-        out_node->skip_success = true;
+        out_cmd->cache_len = buf.len;
+        out_cmd->cmd_line = buf.TrimAndLeak(1);
+        out_cmd->skip_success = true;
     }
 };
 #endif
