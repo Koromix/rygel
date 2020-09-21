@@ -62,6 +62,9 @@ public:
 
     bool Test() const;
 
+    virtual const char *GetObjectExtension() const = 0;
+    virtual const char *GetExecutableExtension() const = 0;
+
     virtual void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
                                  const char *pack_options, const char *dest_filename,
                                  Allocator *alloc, Command *out_cmd) const = 0;

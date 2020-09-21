@@ -59,6 +59,14 @@ class ClangCompiler final: public Compiler {
 public:
     ClangCompiler(const char *name) : Compiler(name, "clang") {}
 
+#ifdef _WIN32
+    const char *GetObjectExtension() const override { return ".obj"; }
+    const char *GetExecutableExtension() const override { return ".exe"; }
+#else
+    const char *GetObjectExtension() const override { return ".o"; }
+    const char *GetExecutableExtension() const override { return ""; }
+#endif
+
     void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
@@ -221,6 +229,14 @@ public:
 class GnuCompiler final: public Compiler {
 public:
     GnuCompiler(const char *name) : Compiler(name, "gcc") {}
+
+#ifdef _WIN32
+    const char *GetObjectExtension() const override { return ".o"; }
+    const char *GetExecutableExtension() const override { return ".exe"; }
+#else
+    const char *GetObjectExtension() const override { return ".o"; }
+    const char *GetExecutableExtension() const override { return ""; }
+#endif
 
     void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
                          const char *pack_options, const char *dest_filename,
@@ -390,6 +406,9 @@ class MsCompiler final: public Compiler {
 public:
     MsCompiler(const char *name) : Compiler(name, "cl") {}
 
+    const char *GetObjectExtension() const override { return ".obj"; }
+    const char *GetExecutableExtension() const override { return ".exe"; }
+
     void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
@@ -517,23 +536,174 @@ public:
 };
 #endif
 
+class EmsdkCompiler final: public Compiler {
+public:
+    EmsdkCompiler(const char *name) : Compiler(name, "emcc") {}
+
+    const char *GetObjectExtension() const override { return ".o"; }
+    const char *GetExecutableExtension() const override { return ".js"; }
+
+    void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
+                         const char *pack_options, const char *dest_filename,
+                         Allocator *alloc, Command *out_cmd) const override
+    {
+        RG::MakePackCommand(pack_filenames, compile_mode, false, pack_options,
+                            dest_filename, alloc, out_cmd);
+    }
+
+    void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
+                        bool warnings, Span<const char *const> definitions,
+                        Span<const char *const> include_directories, bool env_flags,
+                        Allocator *alloc, Command *out_cmd) const override
+    {
+        MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr,
+                          definitions, include_directories, env_flags, nullptr, alloc, out_cmd);
+    }
+
+    const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
+
+    void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
+                           bool warnings, const char *pch_filename, Span<const char *const> definitions,
+                           Span<const char *const> include_directories, bool env_flags,
+                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
+    {
+        HeapArray<char> buf(alloc);
+
+        // Compiler
+        switch (src_type) {
+#ifdef _WIN32
+            case SourceType::C: { Fmt(&buf, "emcc.bat -std=gnu11"); } break;
+            case SourceType::CXX: { Fmt(&buf, "em++.bat -std=gnu++2a"); } break;
+#else
+            case SourceType::C: { Fmt(&buf, "emcc -std=gnu11"); } break;
+            case SourceType::CXX: { Fmt(&buf, "em++ -std=gnu++2a"); } break;
+#endif
+        }
+        if (dest_filename) {
+            Fmt(&buf, " -o \"%1\"", dest_filename);
+        } else {
+            switch (src_type) {
+                case SourceType::C: { Fmt(&buf, " -x c-header"); } break;
+                case SourceType::CXX: { Fmt(&buf, " -x c++-header"); } break;
+            }
+        }
+        Fmt(&buf, " -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
+        out_cmd->rsp_offset = buf.len;
+
+        // Build options
+        switch (compile_mode) {
+            case CompileMode::Debug: { Fmt(&buf, " -O0 -g -ftrapv"); } break;
+            case CompileMode::DebugFast: { Fmt(&buf, " -Og -g -ftrapv"); } break;
+            case CompileMode::Fast: { Fmt(&buf, " -O2 -DNDEBUG"); } break;
+            case CompileMode::LTO: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
+        }
+        Fmt(&buf, warnings ? " -Wall" : " -w");
+
+        // Platform flags
+        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64");
+
+        // Sources and definitions
+        Fmt(&buf, " -DFELIX -c \"%1\"", src_filename);
+        if (pch_filename) {
+            Fmt(&buf, " -include \"%1\"", pch_filename);
+        }
+        for (const char *definition: definitions) {
+            Fmt(&buf, " -D%1", definition);
+        }
+        for (const char *include_directory: include_directories) {
+            Fmt(&buf, " \"-I%1\"", include_directory);
+        }
+
+        if (env_flags) {
+            switch (src_type) {
+                case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
+                case SourceType::CXX: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+            }
+        }
+
+        out_cmd->cache_len = buf.len;
+        if (FileIsVt100(stdout)) {
+            Fmt(&buf, " -fdiagnostics-color=always");
+        }
+        out_cmd->cmd_line = buf.TrimAndLeak(1);
+
+        // Dependencies
+        out_cmd->deps_mode = Command::DependencyMode::MakeLike;
+        out_cmd->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
+    }
+
+    void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
+                         Span<const char *const> libraries, LinkType link_type,
+                         bool env_flags, const char *dest_filename,
+                         Allocator *alloc, Command *out_cmd) const override
+    {
+        HeapArray<char> buf(alloc);
+
+        // Linker
+        switch (link_type) {
+#ifdef _WIN32
+            case LinkType::Executable: { Fmt(&buf, "emcc.bat"); } break;
+            case LinkType::SharedLibrary: { Fmt(&buf, "emcc.bat -shared"); } break;
+#else
+            case LinkType::Executable: { Fmt(&buf, "emcc"); } break;
+            case LinkType::SharedLibrary: { Fmt(&buf, "emcc -shared"); } break;
+#endif
+        }
+        Fmt(&buf, " -o \"%1\"", dest_filename);
+        out_cmd->rsp_offset = buf.len;
+
+        // Build mode
+        switch (compile_mode) {
+            case CompileMode::Debug:
+            case CompileMode::DebugFast: { Fmt(&buf, " -g"); } break;
+            case CompileMode::Fast: { Fmt(&buf, " -s"); } break;
+            case CompileMode::LTO: { Fmt(&buf, " -flto -s"); } break;
+        }
+
+        // Objects and libraries
+        for (const char *obj_filename: obj_filenames) {
+            Fmt(&buf, " \"%1\"", obj_filename);
+        }
+        for (const char *lib: libraries) {
+            Fmt(&buf, " -l%1", lib);
+        }
+
+        // Platform flags and libraries
+        Fmt(&buf, " -lnodefs.js");
+
+        if (env_flags) {
+            AddEnvironmentFlags("LDFLAGS", &buf);
+        }
+
+        out_cmd->cache_len = buf.len;
+        if (FileIsVt100(stdout)) {
+            Fmt(&buf, " -fdiagnostics-color=always");
+        }
+        out_cmd->cmd_line = buf.TrimAndLeak(1);
+    }
+};
+
 static ClangCompiler ClangCompiler("Clang");
 static GnuCompiler GnuCompiler("GCC");
 #ifdef _WIN32
 static MsCompiler MsCompiler("MSVC");
 #endif
+static EmsdkCompiler EmsdkCompiler("EmSDK");
 
 static const Compiler *const CompilerTable[] = {
 #if defined(_WIN32)
     &MsCompiler,
     &ClangCompiler,
-    &GnuCompiler
+    &GnuCompiler,
+    &EmsdkCompiler
 #elif defined(__APPLE__)
     &ClangCompiler,
-    &GnuCompiler
+    &GnuCompiler,
+    &EmsdkCompiler
 #else
     &GnuCompiler,
-    &ClangCompiler
+    &ClangCompiler,
+    &EmsdkCompiler
 #endif
 };
 const Span<const Compiler *const> Compilers = CompilerTable;

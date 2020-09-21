@@ -8,12 +8,8 @@
 namespace RG {
 
 #ifdef _WIN32
-    #define OBJECT_EXTENSION ".obj"
-    #define EXECUTABLE_EXTENSION ".exe"
     #define MAX_COMMAND_LEN 4096
 #else
-    #define OBJECT_EXTENSION ".o"
-    #define EXECUTABLE_EXTENSION ""
     #define MAX_COMMAND_LEN 32768
 #endif
 
@@ -101,7 +97,8 @@ bool Builder::AddTarget(const TargetInfo &target)
     if (target.type == TargetType::Executable) {
         if (!version_init) {
             const char *src_filename = Fmt(&str_alloc, "%1%/cache%/version.c", build.output_directory).ptr;
-            version_obj_filename = Fmt(&str_alloc, "%1%2", src_filename, OBJECT_EXTENSION).ptr;
+            version_obj_filename = Fmt(&str_alloc, "%1%2", src_filename,
+                                       build.compiler->GetObjectExtension()).ptr;
 
             if (UpdateVersionSource(build.version_str, build.fake, src_filename) || build.rebuild) {
                 Command cmd = {};
@@ -154,7 +151,8 @@ bool Builder::AddTarget(const TargetInfo &target)
     if (target.pack_filenames.len) {
         const char *src_filename = Fmt(&str_alloc, "%1%/cache%/%2_assets.c",
                                        build.output_directory, target.name).ptr;
-        const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, OBJECT_EXTENSION).ptr;
+        const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename,
+                                       build.compiler->GetObjectExtension()).ptr;
 
         // Make C file
         {
@@ -207,7 +205,7 @@ bool Builder::AddTarget(const TargetInfo &target)
     // Link commands
     if (target.type == TargetType::Executable) {
         const char *target_filename = Fmt(&str_alloc, "%1%/%2%3", build.output_directory,
-                                          target.name, EXECUTABLE_EXTENSION).ptr;
+                                          target.name, build.compiler->GetExecutableExtension()).ptr;
 
         Command cmd = {};
         build.compiler->MakeLinkCommand(obj_filenames, build.compile_mode, target.libraries,
@@ -266,7 +264,8 @@ const char *Builder::AddSource(const SourceFileInfo &src)
 
     // Build object
     if (!obj_filename) {
-        obj_filename = BuildObjectPath(src.filename, build.output_directory, OBJECT_EXTENSION, &str_alloc);
+        obj_filename = BuildObjectPath(src.filename, build.output_directory,
+                                       build.compiler->GetObjectExtension(), &str_alloc);
         bool warnings = (src.target->type != TargetType::ExternalLibrary);
 
         Command cmd = {};

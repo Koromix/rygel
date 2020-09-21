@@ -5042,7 +5042,7 @@ bool ConsolePrompter::Read()
                     Span<const char> line = SplitStr(remain, '\n', &remain);
 
                     Size line_offset = std::min(line.len, (Size)x - prompt_columns);
-                    str_offset = std::min(line.ptr - str.ptr + line_offset, str.len);
+                    str_offset = std::min((Size)(line.ptr - str.ptr + line_offset), str.len);
 
                     Prompt();
                 } else if (entry_idx < entries.len - 1) {
@@ -5058,7 +5058,7 @@ bool ConsolePrompter::Read()
                     Span<const char> line = SplitStrReverse(remain, '\n', &remain);
 
                     Size line_offset = std::min(line.len, (Size)x - prompt_columns);
-                    str_offset = std::min(line.ptr - str.ptr + line_offset, str.len);
+                    str_offset = std::min((Size)(line.ptr - str.ptr + line_offset), str.len);
 
                     Prompt();
                 } else if (entry_idx > 0) {
