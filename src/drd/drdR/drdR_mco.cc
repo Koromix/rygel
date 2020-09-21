@@ -114,6 +114,7 @@ struct StaysProxy {
     rcc_NumericVector<int> confirm;
     rcc_NumericVector<int> ucd;
     rcc_NumericVector<int> raac;
+    rcc_NumericVector<int> conversion;
     rcc_NumericVector<int> context;
     rcc_NumericVector<int> hospital_use;
     rcc_NumericVector<int> rescript;
@@ -216,6 +217,13 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         }
         if (stays.raac.Len() && stays.raac[i] && stays.raac[i] != NA_INTEGER) {
             stay.flags |= (int)mco_Stay::Flag::RAAC;
+        }
+        if (stays.conversion.Len() && stays.conversion[i] != NA_INTEGER) {
+            if (stays.conversion[i]) {
+                stay.flags |= (int)mco_Stay::Flag::Conversion;
+            } else {
+                stay.flags |= (int)mco_Stay::Flag::NoConversion;
+            }
         }
         if (stays.context.Len() && stays.context[i] && stays.context[i] != NA_INTEGER) {
             stay.flags |= (int)mco_Stay::Flag::Context;
@@ -574,6 +582,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     }
     LOAD_OPTIONAL_COLUMN(stays, ucd);
     LOAD_OPTIONAL_COLUMN(stays, raac);
+    LOAD_OPTIONAL_COLUMN(stays, conversion);
     LOAD_OPTIONAL_COLUMN(stays, context);
     LOAD_OPTIONAL_COLUMN(stays, hospital_use);
     LOAD_OPTIONAL_COLUMN(stays, rescript);
@@ -1285,6 +1294,7 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
         rcc_Vector<int> stays_confirm = stays_builder.Add<int>("confirm");
         rcc_Vector<int> stays_ucd = stays_builder.Add<int>("ucd");
         rcc_Vector<int> stays_raac = stays_builder.Add<int>("raac");
+        rcc_Vector<int> stays_conversion = stays_builder.Add<int>("conversion");
         rcc_Vector<int> stays_context = stays_builder.Add<int>("context");
         rcc_Vector<int> stays_hospital_use = stays_builder.Add<int>("hospital_use");
         rcc_Vector<int> stays_rescript = stays_builder.Add<int>("rescript");
@@ -1344,6 +1354,14 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
             stays_confirm[i] = !!(stay.flags & (int)mco_Stay::Flag::Confirmed);
             stays_ucd[i] = !!(stay.flags & (int)mco_Stay::Flag::UCD);
             stays_raac[i] = !!(stay.flags & (int)mco_Stay::Flag::RAAC);
+            if (stay.flags & (int)mco_Stay::Flag::Conversion) {
+                stays_conversion[i] = 1;
+            } else if (stay.flags & (int)mco_Stay::Flag::NoConversion) {
+                stays_conversion[i] = 0;
+            } else {
+                stays_conversion[i] = NA_INTEGER;
+            }
+            stays_context[i] = !!(stay.flags & (int)mco_Stay::Flag::Context);
             stays_context[i] = !!(stay.flags & (int)mco_Stay::Flag::Context);
             stays_hospital_use[i] = !!(stay.flags & (int)mco_Stay::Flag::HospitalUse);
             stays_rescript[i] = !!(stay.flags & (int)mco_Stay::Flag::Rescript);
