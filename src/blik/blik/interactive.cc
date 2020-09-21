@@ -130,6 +130,12 @@ int RunInteractive(bool execute)
         return Value();
     });
 
+    // Make sure the prelude runs successfully
+    {
+        bool success = compiler.Compile("", "<inline>") && vm.Run();
+        RG_ASSERT(success);
+    }
+
     ConsolePrompter prompter;
 
     while (run && prompter.Read()) {
