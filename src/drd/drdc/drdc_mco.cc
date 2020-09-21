@@ -143,9 +143,9 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
             if (result.stays.len != test->cluster_len) {
                 failed_clusters++;
                 if (verbose) {
-                    PrintLn("    %1 [%2] has inadequate cluster %3 != %4",
+                    PrintLn("    %1 [%2 *%3] has inadequate cluster %4 != %5",
                             test->bill_id, result.stays[result.stays.len - 1].exit.date,
-                            result.stays.len, test->cluster_len);
+                            result.stays.len, result.stays.len, test->cluster_len);
                 }
             }
         }
@@ -155,9 +155,9 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
             if (test->ghm != result.ghm) {
                 failed_ghm++;
                 if (verbose) {
-                    PrintLn("    %1 [%2] has inadequate GHM %3 != %4",
+                    PrintLn("    %1 [%2 *%3] has inadequate GHM %4 != %5",
                             test->bill_id, result.stays[result.stays.len - 1].exit.date,
-                            result.ghm, test->ghm);
+                            result.stays.len, result.ghm, test->ghm);
                 }
             }
         }
@@ -167,9 +167,9 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
             if (test->error != result.main_error) {
                 failed_main_errors++;
                 if (verbose) {
-                    PrintLn("    %1 [%2] has inadequate main error %3 != %4",
+                    PrintLn("    %1 [%2 *%3] has inadequate main error %4 != %5",
                             test->bill_id, result.stays[result.stays.len - 1].exit.date,
-                            result.main_error, test->error);
+                            result.stays.len, result.main_error, test->error);
                 }
             }
         }
@@ -179,9 +179,9 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
             if (test->ghs != result.ghs) {
                 failed_ghs++;
                 if (verbose) {
-                    PrintLn("    %1 [%2] has inadequate GHS %3 != %4",
+                    PrintLn("    %1 [%2 *%3] has inadequate GHS %4 != %5",
                             test->bill_id, result.stays[result.stays.len - 1].exit.date,
-                            result.ghs, test->ghs);
+                            result.stays.len, result.ghs, test->ghs);
                 }
             }
         }
@@ -193,10 +193,10 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
                 if (verbose) {
                     for (Size i = 0; i < RG_LEN(mco_SupplementTypeNames); i++) {
                         if (test->supplement_days.values[i] != result.supplement_days.values[i]) {
-                            PrintLn("    %1 [%2] has inadequate %3 %4 != %5",
+                            PrintLn("    %1 [%2 *%3] has inadequate %4 %5 != %6",
                                     test->bill_id, result.stays[result.stays.len - 1].exit.date,
-                                    mco_SupplementTypeNames[i], result.supplement_days.values[i],
-                                    test->supplement_days.values[i]);
+                                    result.stays.len, mco_SupplementTypeNames[i],
+                                    result.supplement_days.values[i], test->supplement_days.values[i]);
                         }
                     }
                 }
@@ -257,9 +257,9 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
             if (test->exb_exh != pricing.exb_exh) {
                 failed_exb_exh++;
                 if (verbose) {
-                    PrintLn("    %1 [%2] has inadequate EXB/EXH %3 != %4",
+                    PrintLn("    %1 [%2 *%3] has inadequate EXB/EXH %3 != %4",
                             test->bill_id, result.stays[result.stays.len - 1].exit.date,
-                            pricing.exb_exh, test->exb_exh);
+                            result.stays.len, pricing.exb_exh, test->exb_exh);
                 }
             }
         }
