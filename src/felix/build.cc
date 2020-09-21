@@ -384,7 +384,7 @@ bool Builder::Build(int jobs, bool verbose)
         Node *node = &nodes[i];
 
         if (!node->success && !node->semaphore) {
-            async.Run([=, &async]() { return RunNode(&async, node, verbose); });
+            async.Run([=, &async, this]() { return RunNode(&async, node, verbose); });
         }
     }
 
@@ -505,13 +505,14 @@ bool Builder::AppendNode(const char *text, const char *dest_filename, const Comm
         node->dest_filename = dest_filename;
         node->cmd = cmd;
 
+        // Add triggers to source file nodes
         for (const char *src_filename: src_filenames) {
             Size src_idx = nodes_map.FindValue(src_filename, -1);
 
             if (src_idx >= 0) {
-                Node *src_node = &nodes[src_idx];
+                Node *src = &nodes[src_idx];
 
-                src_node->triggers.Append(node_idx);
+                src->triggers.Append(node_idx);
                 node->semaphore++;
             }
         }
@@ -757,12 +758,13 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
             stdout_st.Write(output);
         }
 
+        // Trigger dependent nodes
         for (Size trigger_idx: node->triggers) {
-            Node *trigger_node = &nodes[trigger_idx];
+            Node *trigger = &nodes[trigger_idx];
 
-            if (!--trigger_node->semaphore) {
-                RG_ASSERT(!trigger_node->success);
-                async->Run([=]() { return RunNode(async, trigger_node, verbose); });
+            if (!--trigger->semaphore) {
+                RG_ASSERT(!trigger->success);
+                async->Run([=, this]() { return RunNode(async, trigger, verbose); });
             }
         }
 
