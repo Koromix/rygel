@@ -62,14 +62,6 @@ button:not(:disabled):hover {
     animation-fill-mode: forwards;
     animation-delay: 0.3s;
 }
-.busy::before {
-    float: left;
-    display: inline-block;
-    box-sizing: border-box;
-    width: 80px;
-    height: 80px;
-    margin: -2px 0 0 -2px;
-}
 .busy::after {
     content: ' ';
     display: block;
