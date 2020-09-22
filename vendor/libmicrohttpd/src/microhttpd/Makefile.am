@@ -233,7 +233,7 @@ test_upgrade_LDADD = \
   $(PTHREAD_LIBS)
 
 test_upgrade_large_SOURCES = \
-  test_upgrade_large.c test_helpers.h mhd_sockets.h
+  test_upgrade_large.c test_helpers.h mhd_sockets.h mhd_sockets.c mhd_itc.h mhd_itc_types.h mhd_itc.c
 test_upgrade_large_CPPFLAGS = \
   $(AM_CPPFLAGS) $(MHD_TLS_LIB_CPPFLAGS)
 test_upgrade_large_CFLAGS = \
@@ -259,7 +259,7 @@ test_upgrade_tls_LDADD = \
   $(PTHREAD_LIBS)
 
 test_upgrade_large_tls_SOURCES = \
-  test_upgrade_large.c test_helpers.h mhd_sockets.h
+  test_upgrade_large.c test_helpers.h mhd_sockets.h mhd_sockets.c mhd_itc.h mhd_itc_types.h mhd_itc.c
 test_upgrade_large_tls_CPPFLAGS = \
   $(AM_CPPFLAGS) $(MHD_TLS_LIB_CPPFLAGS)
 test_upgrade_large_tls_CFLAGS = \

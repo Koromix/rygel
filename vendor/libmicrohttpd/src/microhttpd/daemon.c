@@ -77,18 +77,6 @@
  */
 #define MHD_POOL_SIZE_DEFAULT (32 * 1024)
 
-/**
- * Print extra messages with reasons for closing
- * sockets? (only adds non-error messages).
- */
-#define DEBUG_CLOSE MHD_NO
-
-/**
- * Print extra messages when establishing
- * connections? (only adds non-error messages).
- */
-#define DEBUG_CONNECT MHD_NO
-
 
 /* Forward declarations. */
 
@@ -462,7 +450,7 @@ MHD_ip_limit_add (struct MHD_Daemon *daemon,
   /* Test if there is room for another connection; if so,
    * increment count */
   result = (key->count < daemon->per_ip_connection_limit) ? MHD_YES : MHD_NO;
-  if (MHD_YES == result)
+  if (MHD_NO != result)
     ++key->count;
 
   MHD_ip_count_unlock (daemon);
@@ -1081,7 +1069,7 @@ internal_get_fdset2 (struct MHD_Daemon *daemon,
     }
   }
 #endif
-#if DEBUG_CONNECT
+#if _MHD_DEBUG_CONNECT
 #ifdef HAVE_MESSAGES
   if (NULL != max_fd)
     MHD_DLOG (daemon,
@@ -1326,7 +1314,7 @@ cleanup_upgraded_connection (struct MHD_Connection *connection)
 #if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
 /**
  * Performs bi-directional forwarding on upgraded HTTPS connections
- * based on the readyness state stored in the @a urh handle.
+ * based on the readiness state stored in the @a urh handle.
  * @remark To be called only from thread that processes
  * connection's recv(), send() and response.
  *
@@ -2178,7 +2166,7 @@ thread_main_handle_connection (void *data)
     }
 #endif /* UPGRADE_SUPPORT */
   }
-#if DEBUG_CLOSE
+#if _MHD_DEBUG_CLOSE
 #ifdef HAVE_MESSAGES
   MHD_DLOG (con->daemon,
             _ ("Processing thread terminating. Closing connection.\n"));
@@ -2449,7 +2437,7 @@ internal_add_connection (struct MHD_Daemon *daemon,
 
 
 #ifdef HAVE_MESSAGES
-#if DEBUG_CONNECT
+#if _MHD_DEBUG_CONNECT
   MHD_DLOG (daemon,
             _ ("Accepted connection on socket %d.\n"),
             client_socket);
@@ -2479,7 +2467,7 @@ internal_add_connection (struct MHD_Daemon *daemon,
                                addr,
                                addrlen)) )
   {
-#if DEBUG_CLOSE
+#if _MHD_DEBUG_CLOSE
 #ifdef HAVE_MESSAGES
     MHD_DLOG (daemon,
               _ ("Connection rejected by application. Closing connection.\n"));
@@ -3310,7 +3298,7 @@ MHD_accept_connection (struct MHD_Daemon *daemon)
   }
 #endif /* !USE_ACCEPT4 || !SOCK_CLOEXEC */
 #ifdef HAVE_MESSAGES
-#if DEBUG_CONNECT
+#if _MHD_DEBUG_CONNECT
   MHD_DLOG (daemon,
             _ ("Accepted connection on socket %d\n"),
             s);
@@ -3716,7 +3704,7 @@ MHD_select (struct MHD_Daemon *daemon,
   maxsock = MHD_INVALID_SOCKET;
   err_state = MHD_NO;
   if ( (0 != (daemon->options & MHD_TEST_ALLOW_SUSPEND_RESUME)) &&
-       (MHD_YES == resume_suspended_connections (daemon)) &&
+       (MHD_NO != resume_suspended_connections (daemon)) &&
        (0 == (daemon->options & MHD_USE_THREAD_PER_CONNECTION)) )
     may_block = MHD_NO;
 
@@ -3804,7 +3792,7 @@ MHD_select (struct MHD_Daemon *daemon,
             &rs);
   }
   tv = NULL;
-  if (MHD_YES == err_state)
+  if (MHD_NO != err_state)
     may_block = MHD_NO;
   if (MHD_NO == may_block)
   {
@@ -3813,7 +3801,7 @@ MHD_select (struct MHD_Daemon *daemon,
     tv = &timeout;
   }
   else if ( (0 == (daemon->options & MHD_USE_THREAD_PER_CONNECTION)) &&
-            (MHD_YES == MHD_get_timeout (daemon, &ltimeout)) )
+            (MHD_NO != MHD_get_timeout (daemon, &ltimeout)) )
   {
     /* ltimeout is in ms */
     timeout.tv_usec = (ltimeout % 1000) * 1000;
@@ -3842,7 +3830,7 @@ MHD_select (struct MHD_Daemon *daemon,
 #endif
     return MHD_NO;
   }
-  if (MHD_YES == internal_run_from_select (daemon,
+  if (MHD_NO != internal_run_from_select (daemon,
                                            &rs,
                                            &ws,
                                            &es))
@@ -3873,7 +3861,7 @@ MHD_poll_all (struct MHD_Daemon *daemon,
 #endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
 
   if ( (0 != (daemon->options & MHD_TEST_ALLOW_SUSPEND_RESUME)) &&
-       (MHD_YES == resume_suspended_connections (daemon)) )
+       (MHD_NO != resume_suspended_connections (daemon)) )
     may_block = MHD_NO;
 
   /* count number of connections and thus determine poll set size */
@@ -3931,7 +3919,7 @@ MHD_poll_all (struct MHD_Daemon *daemon,
     if (may_block == MHD_NO)
       timeout = 0;
     else if ( (0 != (daemon->options & MHD_USE_THREAD_PER_CONNECTION)) ||
-              (MHD_YES != MHD_get_timeout (daemon,
+              (MHD_NO == MHD_get_timeout (daemon,
                                            &ltimeout)) )
       timeout = -1;
     else
@@ -4453,12 +4441,12 @@ MHD_epoll (struct MHD_Daemon *daemon,
   }
 
   if ( (0 != (daemon->options & MHD_TEST_ALLOW_SUSPEND_RESUME)) &&
-       (MHD_YES == resume_suspended_connections (daemon)) )
+       (MHD_NO != resume_suspended_connections (daemon)) )
     may_block = MHD_NO;
 
-  if (MHD_YES == may_block)
+  if (MHD_NO != may_block)
   {
-    if (MHD_YES == MHD_get_timeout (daemon,
+    if (MHD_NO != MHD_get_timeout (daemon,
                                     &timeout_ll))
     {
       if (timeout_ll >= (MHD_UNSIGNED_LONG_LONG) INT_MAX)
@@ -4534,7 +4522,7 @@ MHD_epoll (struct MHD_Daemon *daemon,
            * Do not accept more then 10 connections at once. The rest will
            * be accepted on next turn (level trigger is used for listen
            * socket). */
-          while ( (MHD_YES == MHD_accept_connection (daemon)) &&
+          while ( (MHD_NO != MHD_accept_connection (daemon)) &&
                   (series_length < 10) &&
                   (daemon->connections < daemon->connection_limit) &&
                   (! daemon->at_limit) )
@@ -5417,7 +5405,7 @@ parse_options_va (struct MHD_Daemon *daemon,
         case MHD_OPTION_CONNECTION_MEMORY_LIMIT:
         case MHD_OPTION_CONNECTION_MEMORY_INCREMENT:
         case MHD_OPTION_THREAD_STACK_SIZE:
-          if (MHD_YES != parse_options (daemon,
+          if (MHD_NO == parse_options (daemon,
                                         servaddr,
                                         opt,
                                         (size_t) oa[i].value,
@@ -5434,7 +5422,7 @@ parse_options_va (struct MHD_Daemon *daemon,
         case MHD_OPTION_LISTENING_ADDRESS_REUSE:
         case MHD_OPTION_LISTEN_BACKLOG_SIZE:
         case MHD_OPTION_SERVER_INSANITY:
-          if (MHD_YES != parse_options (daemon,
+          if (MHD_NO == parse_options (daemon,
                                         servaddr,
                                         opt,
                                         (unsigned int) oa[i].value,
@@ -5444,7 +5432,7 @@ parse_options_va (struct MHD_Daemon *daemon,
           /* all options taking 'enum' */
 #ifdef HTTPS_SUPPORT
         case MHD_OPTION_HTTPS_CRED_TYPE:
-          if (MHD_YES != parse_options (daemon,
+          if (MHD_NO == parse_options (daemon,
                                         servaddr,
                                         opt,
                                         (gnutls_credentials_type_t) oa[i].value,
@@ -5454,7 +5442,7 @@ parse_options_va (struct MHD_Daemon *daemon,
 #endif /* HTTPS_SUPPORT */
         /* all options taking 'MHD_socket' */
         case MHD_OPTION_LISTEN_SOCKET:
-          if (MHD_YES != parse_options (daemon,
+          if (MHD_NO == parse_options (daemon,
                                         servaddr,
                                         opt,
                                         (MHD_socket) oa[i].value,
@@ -5463,7 +5451,7 @@ parse_options_va (struct MHD_Daemon *daemon,
           break;
         /* all options taking 'int' */
         case MHD_OPTION_STRICT_FOR_CLIENT:
-          if (MHD_YES != parse_options (daemon,
+          if (MHD_NO == parse_options (daemon,
                                         servaddr,
                                         opt,
                                         (int) oa[i].value,
@@ -5481,7 +5469,7 @@ parse_options_va (struct MHD_Daemon *daemon,
         case MHD_OPTION_ARRAY:
         case MHD_OPTION_HTTPS_CERT_CALLBACK:
         case MHD_OPTION_HTTPS_CERT_CALLBACK2:
-          if (MHD_YES != parse_options (daemon,
+          if (MHD_NO == parse_options (daemon,
                                         servaddr,
                                         opt,
                                         oa[i].ptr_value,
@@ -5495,7 +5483,7 @@ parse_options_va (struct MHD_Daemon *daemon,
         case MHD_OPTION_EXTERNAL_LOGGER:
         case MHD_OPTION_UNESCAPE_CALLBACK:
         case MHD_OPTION_GNUTLS_PSK_CRED_HANDLER:
-          if (MHD_YES != parse_options (daemon,
+          if (MHD_NO == parse_options (daemon,
                                         servaddr,
                                         opt,
                                         (void *) oa[i].value,
@@ -5505,7 +5493,7 @@ parse_options_va (struct MHD_Daemon *daemon,
           break;
         /* options taking size_t-number followed by pointer */
         case MHD_OPTION_DIGEST_AUTH_RANDOM:
-          if (MHD_YES != parse_options (daemon,
+          if (MHD_NO == parse_options (daemon,
                                         servaddr,
                                         opt,
                                         (size_t) oa[i].value,
@@ -5877,7 +5865,7 @@ MHD_start_daemon_va (unsigned int flags,
 #endif /* HTTPS_SUPPORT */
 
 
-  if (MHD_YES != parse_options_va (daemon,
+  if (MHD_NO == parse_options_va (daemon,
                                    &servaddr,
                                    ap))
   {
@@ -6388,7 +6376,7 @@ MHD_start_daemon_va (unsigned int flags,
 #endif
       goto free_and_fail;
     }
-    if (MHD_YES != setup_epoll_to_listen (daemon))
+    if (MHD_NO == setup_epoll_to_listen (daemon))
       goto free_and_fail;
   }
 #endif /* EPOLL_SUPPORT */
@@ -6531,7 +6519,7 @@ MHD_start_daemon_va (unsigned int flags,
           ++d->connection_limit;
 #ifdef EPOLL_SUPPORT
         if ( (0 != (*pflags & MHD_USE_EPOLL)) &&
-             (MHD_YES != setup_epoll_to_listen (d)) )
+             (MHD_NO == setup_epoll_to_listen (d)) )
           goto thread_failed;
 #endif
         /* Must init cleanup connection mutex for each worker */

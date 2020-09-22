@@ -1587,7 +1587,7 @@ AC_ARG_WITH([[gnutls]],
         CPPFLAGS="-I$with_gnutls/include $CPPFLAGS"
         have_gnutls_pkgcfg=no
           AC_CHECK_HEADERS([gnutls/gnutls.h],
-            [AC_CHECK_LIB([gnutls], [gnutls_priority_set],
+            [AC_CHECK_LIB([gnutls], [gnutls_record_uncork],
               [
                 GNUTLS_CPPFLAGS="-I$with_gnutls/include"
                 GNUTLS_LDFLAGS="-L$with_gnutls/lib"
@@ -1699,7 +1699,7 @@ choke me now
        # check for GnuTLS at default paths
        have_gnutls_pkgcfg='no'
        AC_CHECK_HEADERS([gnutls/gnutls.h],
-        [AC_CHECK_LIB([gnutls], [gnutls_priority_set],
+        [AC_CHECK_LIB([gnutls], [gnutls_record_uncork],
           [
             GNUTLS_LIBS="-lgnutls"
             have_gnutls=yes
@@ -1726,8 +1726,8 @@ AS_IF([test "x$with_gnutls" != "xno" && test "x$have_gnutls" != "xyes"],
        # A bit of hack: unset cache variable to force recheck
        AS_UNSET([ac_cv_header_gnutls_gnutls_h])
        AC_CHECK_HEADERS([gnutls/gnutls.h],
-        [AS_UNSET([ac_cv_lib_gnutls_gnutls_priority_set]) # A bit of hack: unset cache variable to force recheck
-         AC_CHECK_LIB([gnutls], [gnutls_priority_set],
+        [AS_UNSET([ac_cv_lib_gnutls_gnutls_record_uncork]) # A bit of hack: unset cache variable to force recheck
+         AC_CHECK_LIB([gnutls], [gnutls_record_uncork],
           [
             GNUTLS_CPPFLAGS="$LIBGCRYPT_CFLAGS"
             GNUTLS_CFLAGS="$LIBGCRYPT_CFLAGS"

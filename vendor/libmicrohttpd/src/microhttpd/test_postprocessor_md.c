@@ -27,6 +27,10 @@
 #include <stdlib.h>
 #include <microhttpd.h>
 
+#define DEBUG 0
+
+#define ARRAY_LENGTH(array)     (sizeof(array) / sizeof(array[0]))
+
 /**
  * Handler for fatal errors.
  */
@@ -69,10 +73,12 @@ post_data_iterator (void *cls,
                     uint64_t off,
                     size_t size)
 {
+#if DEBUG
   fprintf (stderr,
            "%s\t%s\n",
            key,
            data);
+#endif
   if (0 == strcmp (key, "xxxx"))
   {
     if ( (4 != size) ||
@@ -103,30 +109,241 @@ post_data_iterator (void *cls,
 }
 
 
+static enum MHD_Result
+post_data_iterator2 (void *cls,
+                     enum MHD_ValueKind kind,
+                     const char *key,
+                     const char *filename,
+                     const char *content_type,
+                     const char *transfer_encoding,
+                     const char *data,
+                     uint64_t off,
+                     size_t size)
+{
+  static char seen[16];
+
+#if DEBUG
+  printf ("%s\t%s@ %llu\n",
+          key,
+          data,
+          (unsigned long long) off);
+#endif
+  if (0 == strcmp (key, "text"))
+  {
+    if (off + size > sizeof (seen))
+      exit (6);
+    memcpy (&seen[off],
+            data,
+            size);
+    if ( (10 == off + size) &&
+         (0 == memcmp (seen, "text, text", 10)) )
+      found |= 1;
+  }
+  return MHD_YES;
+}
+
+
+static enum MHD_Result
+post_data_iterator3 (void *cls,
+                     enum MHD_ValueKind kind,
+                     const char *key,
+                     const char *filename,
+                     const char *content_type,
+                     const char *transfer_encoding,
+                     const char *data,
+                     uint64_t off,
+                     size_t size)
+{
+#if DEBUG
+  fprintf (stderr,
+           "%s\t%s\n",
+           key,
+           data);
+#endif
+  if (0 == strcmp (key, "y"))
+  {
+    if ( (1 != size) ||
+         (0 != memcmp (data, "y", 1)) )
+      exit (1);
+    found |= 1;
+  }
+  return MHD_YES;
+}
+
+
+static enum MHD_Result
+post_data_iterator4 (void *cls,
+                     enum MHD_ValueKind kind,
+                     const char *key,
+                     const char *filename,
+                     const char *content_type,
+                     const char *transfer_encoding,
+                     const char *data,
+                     uint64_t off,
+                     size_t size)
+{
+#if DEBUG
+  fprintf (stderr,
+           "%s\t%s\n",
+           key,
+           data);
+#endif
+  if (NULL != memchr (data, 'M', size))
+  {
+    found |= 1;
+  }
+  return MHD_YES;
+}
+
+
+static enum MHD_Result
+post_data_iterator5 (void *cls,
+                     enum MHD_ValueKind kind,
+                     const char *key,
+                     const char *filename,
+                     const char *content_type,
+                     const char *transfer_encoding,
+                     const char *data,
+                     uint64_t off,
+                     size_t size)
+{
+  found++;
+  return MHD_YES;
+}
+
+
 int
 main (int argc, char *argv[])
 {
   struct MHD_PostProcessor *postprocessor;
 
-  postprocessor = malloc (sizeof (struct MHD_PostProcessor)
-                          + 0x1000 + 1);
-  if (NULL == postprocessor)
-    return 77;
-  memset (postprocessor,
-          0,
-          sizeof (struct MHD_PostProcessor) + 0x1000 + 1);
-  postprocessor->ikvi = &post_data_iterator;
-  postprocessor->encoding = MHD_HTTP_POST_ENCODING_FORM_URLENCODED;
-  postprocessor->buffer_size = 0x1000;
-  postprocessor->state = PP_Init;
-  postprocessor->skip_rn = RN_Inactive;
-  MHD_post_process (postprocessor, "xxxx=xxxx", 9);
-  MHD_post_process (postprocessor, "&yyyy=yyyy&zzzz=&aaaa=", 22);
-  MHD_post_process (postprocessor, "", 0);
-  if (MHD_YES !=
-      MHD_destroy_post_processor (postprocessor))
-    exit (3);
-  if (found != 15)
-    exit (2);
+  {
+    postprocessor = malloc (sizeof (struct MHD_PostProcessor)
+                            + 0x1000 + 1);
+    if (NULL == postprocessor)
+      return 77;
+    memset (postprocessor,
+            0,
+            sizeof (struct MHD_PostProcessor) + 0x1000 + 1);
+    postprocessor->ikvi = &post_data_iterator;
+    postprocessor->encoding = MHD_HTTP_POST_ENCODING_FORM_URLENCODED;
+    postprocessor->buffer_size = 0x1000;
+    postprocessor->state = PP_Init;
+    postprocessor->skip_rn = RN_Inactive;
+    MHD_post_process (postprocessor, "xxxx=xxxx", 9);
+    MHD_post_process (postprocessor, "&yyyy=yyyy&zzzz=&aaaa=", 22);
+    MHD_post_process (postprocessor, "", 0);
+    if (MHD_YES !=
+        MHD_destroy_post_processor (postprocessor))
+      exit (3);
+    if (found != 15)
+      exit (2);
+  }
+  {
+    found = 0;
+    postprocessor = malloc (sizeof (struct MHD_PostProcessor)
+                            + 0x1000 + 1);
+    if (NULL == postprocessor)
+      return 77;
+    memset (postprocessor,
+            0,
+            sizeof (struct MHD_PostProcessor) + 0x1000 + 1);
+    postprocessor->ikvi = post_data_iterator2;
+    postprocessor->encoding = MHD_HTTP_POST_ENCODING_FORM_URLENCODED;
+    postprocessor->buffer_size = 0x1000;
+    postprocessor->state = PP_Init;
+    postprocessor->skip_rn = RN_Inactive;
+    MHD_post_process (postprocessor, "text=text%2", 11);
+    MHD_post_process (postprocessor, "C+text", 6);
+    MHD_post_process (postprocessor, "", 0);
+    MHD_destroy_post_processor (postprocessor);
+    if (found != 1)
+      exit (4);
+  }
+  {
+    found = 0;
+    postprocessor = malloc (sizeof (struct MHD_PostProcessor)
+                            + 0x1000 + 1);
+    if (NULL == postprocessor)
+      return 77;
+    memset (postprocessor,
+            0,
+            sizeof (struct MHD_PostProcessor) + 0x1000 + 1);
+    postprocessor->ikvi = post_data_iterator3;
+    postprocessor->encoding = MHD_HTTP_POST_ENCODING_FORM_URLENCODED;
+    postprocessor->buffer_size = 0x1000;
+    postprocessor->state = PP_Init;
+    postprocessor->skip_rn = RN_Inactive;
+    {
+      const char *chunk =
+        "x=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxx%2C%2Cxxxxxxxxxxx%2C%2Cxxxxxx%2Cxxxx%2C%2Cxxxxx%2Cxxxxxxxxx%2C%2Cxxx%2Cxxxxxxxxxxx_xxxxxxxxxxxxxxx%2Cxxxxx%2Cxxxxxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxx_xxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2Cxxxxx%2C%2Cx%2Cxxxxxxxxxxxxxxxxxxxx%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxx%2Cxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxxxxxxx%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2Cxx%2C%2Cx%2Cxx%2C%2Cxxxx%2Cxxx%2C%2Cx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxxxxxxxxx%2Cxxxxxxx%2Cxxxxxxxxxxxxxxxxxxx%2C%2Cxxxxxxx%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cx%2Cx%2Cxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxx%2Cxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxx%2Cxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxx%2Cxxxxxxxxx%2Cxxxxxx%2Cxxxxxxxxx%2Cxxxxxxx%2Cxxxxx%2Cxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2Cxxxxxxxxxxxx%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxx%2Cx%2Cxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxx%2Cx%2C%2Cx%2Cxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxx%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxx%2Cxxxx%2Cxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2Cxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxx%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxx%2Cxxxxxxxxxxx%2C%2C%2Cxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxx%2Cxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxx%2Cxxxxxxxxxxxx%2Cxxxxxxx%2Cxxxxxxxxxxxx%2Cxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxx%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxx%2Cxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxx%2Cxxxxxxxxx%2Cxxxxxxx%2Cxxxxxxxxxx%2Cxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxx%2Cxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxxxx%2Cxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxx%2Cx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cx%2Cxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cx%2Cxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxx%2Cxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxx%2Cxxxxxx%2Cxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxxxxx%2Cxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxx%2C%2C%2Cxxxxxxxxxx%2Cxxxxxxx%2Cxxxxxxxxx%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxx%2C%2C%2Cxxxxxxxxx%2Cxxxxxxxx%2C"
+        "&y=y&z=z";
+
+      MHD_post_process (postprocessor, chunk, strlen (chunk) );
+    }
+    MHD_post_process (postprocessor, "", 0);
+    MHD_destroy_post_processor (postprocessor);
+    if (found != 1)
+      exit (5);
+  }
+
+  {
+    postprocessor = malloc (sizeof(struct MHD_PostProcessor) + 131076 + 1);
+    if (NULL == postprocessor)
+      return 77;
+    memset (postprocessor,
+            0,
+            sizeof (struct MHD_PostProcessor) + 0x1000 + 1);
+    postprocessor->ikvi = post_data_iterator4;
+    postprocessor->encoding = MHD_HTTP_POST_ENCODING_FORM_URLENCODED;
+    postprocessor->buffer_size = 131076;
+    postprocessor->state = PP_Init;
+    postprocessor->skip_rn = RN_Inactive;
+    const char *chunks[] = {
+      "t=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2Cxxxxx%2C%2Cx%2Cxxxxxxxxxxxxxxxxxxxx%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxx%2Cxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxxxxxxx%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2Cxx%2C%2Cx%2Cxx%2C%2Cxxxx%2Cxxx%2C%2Cx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxxxxxxxxx%2Cxxxxxxx%2Cxxxxxxxxxxxxxxxxxxx%2C%2Cxxxxxxx%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cx%2Cx%2Cxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxx%2Cxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxx%2Cxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2Cxxxxxxxxxxxx%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxx%2Cx%2Cxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxx%2Cxxxxxxxxx",
+      // one chunk: second line is dropped
+      "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxx%2Cx%2C%2Cx%2Cxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxx%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxx%2Cxxxx%2Cxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2Cx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxx%2Cxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxx%2Cxxxxxxxxxxxx%2Cxxxxxxx%2Cxxxxxxxxxxxx%2Cxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxx%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxx%2Cxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxx%2Cxxxxxxxxx%2Cxxxxxxx%2Cxxxxxxxxxx%2Cxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxx%2Cxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxxxx%2Cxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxx%2Cx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cx%2Cxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cx%2Cxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxx%2Cxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxx%2Cxxxxxx%2Cxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxx%2C%2Cxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2C%2C%2C%2C%2C%2C%2Cxxxxxxxxxxxxxx%2C%2C%2C%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx%2CxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxZZZZZZZZZZZZZ%2C%2C%2C%2C"
+      "%E2%80%A2MMMMMMMM%2C%2C%2C%2CMMMMMMMMMMMMMMMMMMMM%2CMMMMMMMMMMMMMMMMMMMMMMM%2CMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM%2C%2C%2C%2CMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM%2CMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM%2CMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"
+      "zz",
+      "",
+    };
+    for (unsigned i = 0; i < ARRAY_LENGTH (chunks); ++i)
+    {
+      const char *chunk = chunks[i];
+      MHD_post_process (postprocessor, chunk, strlen (chunk) );
+    }
+    MHD_destroy_post_processor (postprocessor);
+    if (found != 1)
+      return 6;
+  }
+  {
+    postprocessor = malloc (sizeof(struct MHD_PostProcessor) + 131076 + 1);
+    found = 0;
+    if (NULL == postprocessor)
+      return 77;
+    memset (postprocessor,
+            0,
+            sizeof (struct MHD_PostProcessor) + 0x1000 + 1);
+    postprocessor->ikvi = post_data_iterator5;
+    postprocessor->encoding = MHD_HTTP_POST_ENCODING_FORM_URLENCODED;
+    postprocessor->buffer_size = 131076;
+    postprocessor->state = PP_Init;
+    postprocessor->skip_rn = RN_Inactive;
+    const char *chunks[] = {
+      "XXXXXXXXXXXX=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&XXXXXX=&XXXXXXXXXXXXXX=XXXX+&XXXXXXXXXXXXXXX=XXXXXXXXX&XXXXXXXXXXXXX=XXXX%XX%XXXXXX&XXXXXXXXXXX=XXXXXXXXX&XXXXXXXXXXXXX=XXXXXXXXXX&XXXXXXXXXXXXXXX=XX&XXXXXXXXXXXXXXX=XXXXXXXXX&XXXXXXXXXXXXX=XXXXXX&XXXXXXXXXXX=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      "&XXXXXXXX=XXXX",
+      "",
+    };
+    for (unsigned i = 0; i < ARRAY_LENGTH (chunks); ++i)
+    {
+      const char *chunk = chunks[i];
+      MHD_post_process (postprocessor, chunk, strlen (chunk) );
+    }
+    MHD_destroy_post_processor (postprocessor);
+    if (found != 12)
+      return 7;
+  }
+
+
   return EXIT_SUCCESS;
 }

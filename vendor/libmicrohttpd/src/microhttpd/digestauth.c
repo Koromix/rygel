@@ -814,7 +814,7 @@ check_argument_match (struct MHD_Connection *connection,
                               &test_header,
                               &num_headers);
   free (argb);
-  if (MHD_YES != ret)
+  if (MHD_NO == ret)
   {
     return MHD_NO;
   }
@@ -1025,7 +1025,7 @@ digest_auth_check_all (struct MHD_Connection *connection,
    * Checking if that combination of nonce and nc is sound
    * and not a replay attack attempt. Also adds the nonce
    * to the nonce-nc map if it does not exist there.
-   */if (MHD_YES !=
+   */if (MHD_NO ==
       check_nonce_nc (connection,
                       nonce,
                       nci))
@@ -1114,7 +1114,7 @@ digest_auth_check_all (struct MHD_Connection *connection,
         args = "";
       else
         args++;
-      if (MHD_YES !=
+      if (MHD_NO ==
           check_argument_match (connection,
                                 args) )
       {
@@ -1363,7 +1363,7 @@ MHD_queue_auth_fail_response2 (struct MHD_Connection *connection,
                      realm,
                      &da,
                      nonce);
-    if (MHD_YES !=
+    if (MHD_NO ==
         check_nonce_nc (connection,
                         nonce,
                         0))
@@ -1417,7 +1417,7 @@ MHD_queue_auth_fail_response2 (struct MHD_Connection *connection,
       else
         ret = MHD_NO;
 #if 0
-      if ( (MHD_YES == ret) && (AND in state : 100 continue aborting ...))
+      if ( (MHD_NO != ret) && (AND in state : 100 continue aborting ...))
         ret = MHD_add_response_header (response,
                                        MHD_HTTP_HEADER_CONNECTION,
                                        "close");
@@ -1428,7 +1428,7 @@ MHD_queue_auth_fail_response2 (struct MHD_Connection *connection,
       ret = MHD_NO;
   }
 
-  if (MHD_YES == ret)
+  if (MHD_NO != ret)
   {
     ret = MHD_queue_response (connection,
                               MHD_HTTP_UNAUTHORIZED,

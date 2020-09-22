@@ -262,7 +262,7 @@ MHD_get_response_headers (struct MHD_Response *response,
   {
     numHeaders++;
     if ((NULL != iterator) &&
-        (MHD_YES != iterator (iterator_cls,
+        (MHD_NO == iterator (iterator_cls,
                               pos->kind,
                               pos->header,
                               pos->value)))
@@ -527,6 +527,37 @@ file_reader (void *cls,
 
 
 /**
+ * Given a pipe descriptor, read data from the pipe
+ * to generate the response.
+ *
+ * @param cls pointer to the response
+ * @param pos offset in the pipe to access (ignored)
+ * @param buf where to write the data
+ * @param max number of bytes to write at most
+ * @return number of bytes written
+ */
+static ssize_t
+pipe_reader (void *cls,
+             uint64_t pos,
+             char *buf,
+             size_t max)
+{
+  struct MHD_Response *response = cls;
+  ssize_t n;
+
+  (void) pos;
+  n = read (response->fd,
+            buf,
+            max);
+  if (0 == n)
+    return MHD_CONTENT_READER_END_OF_STREAM;
+  if (n < 0)
+    return MHD_CONTENT_READER_END_WITH_ERROR;
+  return n;
+}
+
+
+/**
  * Destroy file reader context.  Closes the file
  * descriptor.
  *
@@ -614,7 +645,37 @@ MHD_create_response_from_fd_at_offset64 (uint64_t size,
   if (NULL == response)
     return NULL;
   response->fd = fd;
+  response->is_pipe = false;
   response->fd_off = offset;
+  response->crc_cls = response;
+  return response;
+}
+
+
+/**
+ * Create a response object.  The response object can be extended with
+ * header information and then be used ONLY ONCE.
+ *
+ * @param fd file descriptor referring to a read-end of a pipe with the
+ *        data; will be closed when response is destroyed;
+ *        fd should be in 'blocking' mode
+ * @return NULL on error (i.e. invalid arguments, out of memory)
+ * @ingroup response
+ */
+_MHD_EXTERN struct MHD_Response *
+MHD_create_response_from_pipe (int fd)
+{
+  struct MHD_Response *response;
+
+  response = MHD_create_response_from_callback (MHD_SIZE_UNKNOWN,
+                                                MHD_FILE_READ_BLOCK_SIZE,
+                                                &pipe_reader,
+                                                NULL,
+                                                &free_callback);
+  if (NULL == response)
+    return NULL;
+  response->fd = fd;
+  response->is_pipe = true;
   response->crc_cls = response;
   return response;
 }

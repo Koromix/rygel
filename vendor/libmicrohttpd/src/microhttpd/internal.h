@@ -76,6 +76,18 @@
 
 
 /**
+ * @def _MHD_MACRO_NO
+ * "Negative answer"/"false" for use in macros, meaningful for precompiler
+ */
+#define _MHD_MACRO_NO   0
+
+/**
+ * @def _MHD_MACRO_YES
+ * "Positive answer"/"true" for use in macros, meaningful for precompiler
+ */
+#define _MHD_MACRO_YES  1
+
+/**
  * Close FD and abort execution if error is detected.
  * @param fd the FD to close
  */
@@ -84,11 +96,33 @@
       MHD_PANIC (_ ("Failed to close FD.\n"));            \
 } while (0)
 
-/**
- * Should we perform additional sanity checks at runtime (on our internal
- * invariants)?  This may lead to aborts, but can be useful for debugging.
+/*
+#define EXTRA_CHECKS _MHD_MACRO_NO
+ * Not used. Behaviour is controlled by _DEBUG/NDEBUG macros.
  */
-#define EXTRA_CHECKS MHD_NO
+
+#ifndef _MHD_DEBUG_CONNECT
+/**
+ * Print extra messages when establishing
+ * connections? (only adds non-error messages).
+ */
+#define _MHD_DEBUG_CONNECT _MHD_MACRO_NO
+#endif /* ! _MHD_DEBUG_CONNECT */
+
+#ifndef _MHD_DEBUG_SEND_DATA
+/**
+ * Should all data send be printed to stderr?
+ */
+#define _MHD_DEBUG_SEND_DATA _MHD_MACRO_NO
+#endif /* ! _MHD_DEBUG_SEND_DATA */
+
+#ifndef _MHD_DEBUG_CLOSE
+/**
+ * Add extra debug messages with reasons for closing connections
+ * (non-error reasons).
+ */
+#define _MHD_DEBUG_CLOSE _MHD_MACRO_NO
+#endif /* ! _MHD_DEBUG_CLOSE */
 
 #define MHD_MAX(a,b) (((a)<(b)) ? (b) : (a))
 #define MHD_MIN(a,b) (((a)<(b)) ? (a) : (b))
@@ -399,6 +433,11 @@ struct MHD_Response
    * Flags set for the MHD response.
    */
   enum MHD_ResponseFlags flags;
+
+  /**
+   * If the @e fd is a pipe (no sendfile()).
+   */
+  bool is_pipe;
 
 };
 
@@ -1055,7 +1094,7 @@ struct UpgradeEpollHandle
    *
    * Similarly, for writing to TLS, this epoll() will be on the
    * connection's `socket_fd`, and this will merely be the FD which
-   * the applicatio would write to.  Hence this struct must always be
+   * the application would write to.  Hence this struct must always be
    * interpreted based on which field in `struct
    * MHD_UpgradeResponseHandle` it is (`app` or `mhd`).
    */

@@ -28,7 +28,7 @@
 #if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
 /**
  * Performs bi-directional forwarding on upgraded HTTPS connections
- * based on the readyness state stored in the @a urh handle.
+ * based on the readiness state stored in the @a urh handle.
  * @remark To be called only from thread that process
  * connection's recv(), send() and response.
  *

@@ -471,7 +471,7 @@ enum MHD_StatusCode
   MHD_SC_UPGRADE_FORWARD_INCOMPLETE = 30010,
 
   /**
-   * We failed to allocate memory for generatig the response from our
+   * We failed to allocate memory for generating the response from our
    * memory pool.  Likely the request header was too large to leave
    * enough room.
    */
