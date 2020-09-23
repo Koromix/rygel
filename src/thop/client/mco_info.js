@@ -414,8 +414,7 @@ let mco_info = new function() {
                     case 'e':
                     case 'ê':
                     case 'é':
-                    case 'è':
-                    case 'e': { re += '[eèéê]'; } break;
+                    case 'è': { re += '[eèéê]'; } break;
                     case 'a':
                     case 'à':
                     case 'â': { re += '[aàâ]'; } break;
@@ -442,10 +441,8 @@ let mco_info = new function() {
                     case '+':
                     case '*':
                     case '?':
-                    case '-':
                     case '<':
                     case '>':
-                    case '-':
                     case '&':
                     case '|':
                     case '\\':
