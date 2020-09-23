@@ -20,7 +20,7 @@
 }
 .af_section > legend {
     padding: 1px 0.7em;
-    background: #e66d1d;
+    background: #ff6600;
     font-size: 1.1em;
     color: white;
     cursor: pointer;
@@ -71,12 +71,12 @@
 .af_tabs > button + button { margin-left: 4px; }
 .af_tabs > button:not(.active):hover {
     background: white;
-    border-color: #e66d1d;
+    border-color: #ff6600;
     z-index: 1;
 }
 .af_tabs > button.active, .af_tabs > button.active:hover {
-    background: #e66d1d;
-    border-color: #e66d1d;
+    background: #ff6600;
+    border-color: #ff6600;
     color: white;
 }
 
@@ -188,7 +188,7 @@
 }
 .af_pin > button.clear {
     font-weight: bold;
-    color: #e66d1d;
+    color: #ff6600;
 }
 
 .af_enum {
@@ -213,7 +213,7 @@
 }
 .af_enum > button:not(.active):hover {
     background: white;
-    border-color: #e66d1d;
+    border-color: #ff6600;
     z-index: 1;
 }
 .af_enum > button.active {
@@ -302,8 +302,8 @@
 }
 .af_radio > input:checked + label::before { background: none; }
 .af_radio > input:checked + label::after { content: ''; }
-.af_radio > input:hover + label::before { border-color: #e66d1d; }
-.af_radio > input:hover + label::after { background-color: #e66d1d; }
+.af_radio > input:hover + label::before { border-color: #ff6600; }
+.af_radio > input:hover + label::after { background-color: #ff6600; }
 .af_radio > input:focus + label {
     outline: 2px dotted #999;
     outline-offset: 1px;
@@ -349,7 +349,7 @@
 }
 .af_multi > input:checked + label::after { content: ''; }
 .af_multi > input:hover + label::before,
-    .af_multi > input:hover + label::after { border-color: #e66d1d; }
+    .af_multi > input:hover + label::after { border-color: #ff6600; }
 .af_multi > input:focus + label {
     outline: 2px dotted #999;
     outline-offset: 1px;
