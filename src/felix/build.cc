@@ -93,60 +93,6 @@ bool Builder::AddTarget(const TargetInfo &target)
 {
     HeapArray<const char *> obj_filenames;
 
-    // Version string
-    if (target.type == TargetType::Executable) {
-        if (!version_init) {
-            const char *src_filename = Fmt(&str_alloc, "%1%/cache%/version.c", build.output_directory).ptr;
-            version_obj_filename = Fmt(&str_alloc, "%1%2", src_filename,
-                                       build.compiler->GetObjectExtension()).ptr;
-
-            if (UpdateVersionSource(build.version_str, build.fake, src_filename) || build.rebuild) {
-                Command cmd = {};
-                build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
-                                                  false, nullptr, {}, {}, build.env,
-                                                  version_obj_filename, &str_alloc, &cmd);
-
-                AppendNode("Build version file", version_obj_filename, cmd, src_filename);
-            } else {
-                LogError("Failed to build git version string");
-                version_obj_filename = nullptr;
-            }
-
-            version_init = true;
-        }
-
-        obj_filenames.Append(version_obj_filename);
-    }
-
-    // Object commands
-    for (const SourceFileInfo *src: target.sources) {
-        const char *obj_filename = AddSource(*src);
-        if (!obj_filename)
-            return false;
-
-        obj_filenames.Append(obj_filename);
-    }
-
-    // Some compilers (such as MSVC) also build PCH object files that need to be linked
-    if (build.pch) {
-        if (target.c_pch_src) {
-            const char *pch_filename = build_map.FindValue(target.c_pch_src->filename, nullptr);
-            const char *obj_filename = build.compiler->GetPchObject(pch_filename, &str_alloc);
-
-            if (obj_filename) {
-                obj_filenames.Append(obj_filename);
-            }
-        }
-        if (target.cxx_pch_src) {
-            const char *pch_filename = build_map.FindValue(target.cxx_pch_src->filename, nullptr);
-            const char *obj_filename = build.compiler->GetPchObject(pch_filename, &str_alloc);
-
-            if (obj_filename) {
-                obj_filenames.Append(obj_filename);
-            }
-        }
-    }
-
     // Assets
     if (target.pack_filenames.len) {
         const char *src_filename = Fmt(&str_alloc, "%1%/cache%/%2_assets.c",
@@ -199,6 +145,60 @@ bool Builder::AddTarget(const TargetInfo &target)
             AppendNode(text, module_filename, cmd, obj_filename);
         } else {
             obj_filenames.Append(obj_filename);
+        }
+    }
+
+    // Version string
+    if (target.type == TargetType::Executable) {
+        if (!version_init) {
+            const char *src_filename = Fmt(&str_alloc, "%1%/cache%/version.c", build.output_directory).ptr;
+            version_obj_filename = Fmt(&str_alloc, "%1%2", src_filename,
+                                       build.compiler->GetObjectExtension()).ptr;
+
+            if (UpdateVersionSource(build.version_str, build.fake, src_filename) || build.rebuild) {
+                Command cmd = {};
+                build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
+                                                  false, nullptr, {}, {}, build.env,
+                                                  version_obj_filename, &str_alloc, &cmd);
+
+                AppendNode("Build version file", version_obj_filename, cmd, src_filename);
+            } else {
+                LogError("Failed to build git version string");
+                version_obj_filename = nullptr;
+            }
+
+            version_init = true;
+        }
+
+        obj_filenames.Append(version_obj_filename);
+    }
+
+    // Object commands
+    for (const SourceFileInfo *src: target.sources) {
+        const char *obj_filename = AddSource(*src);
+        if (!obj_filename)
+            return false;
+
+        obj_filenames.Append(obj_filename);
+    }
+
+    // Some compilers (such as MSVC) also build PCH object files that need to be linked
+    if (build.pch) {
+        if (target.c_pch_src) {
+            const char *pch_filename = build_map.FindValue(target.c_pch_src->filename, nullptr);
+            const char *obj_filename = build.compiler->GetPchObject(pch_filename, &str_alloc);
+
+            if (obj_filename) {
+                obj_filenames.Append(obj_filename);
+            }
+        }
+        if (target.cxx_pch_src) {
+            const char *pch_filename = build_map.FindValue(target.cxx_pch_src->filename, nullptr);
+            const char *obj_filename = build.compiler->GetPchObject(pch_filename, &str_alloc);
+
+            if (obj_filename) {
+                obj_filenames.Append(obj_filename);
+            }
         }
     }
 
