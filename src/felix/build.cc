@@ -522,6 +522,7 @@ bool Builder::AppendNode(const char *text, const char *dest_filename, const Comm
 
         return true;
     } else {
+        skipped_nodes++;
         return false;
     }
 }
@@ -699,7 +700,7 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
     {
         std::lock_guard<std::mutex> out_lock(out_mutex);
 
-        Size progress_pct = 100 * progress++ / nodes.len;
+        Size progress_pct = 100 * (skipped_nodes + progress++) / (skipped_nodes + nodes.len);
         LogInfo("%!C..%1%%%!0 %2", FmtArg(progress_pct).Pad(-3), node->text);
         if (verbose) {
             PrintLn(cmd_line);

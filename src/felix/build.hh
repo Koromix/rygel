@@ -64,6 +64,7 @@ class Builder {
     bool version_init = false;
     const char *version_obj_filename = nullptr;
     HeapArray<Node> nodes;
+    Size skipped_nodes = 0;
     HashMap<const char *, Size> nodes_map;
     HashMap<const char *, const char *> build_map;
     HashMap<const char *, int64_t> mtime_map;
