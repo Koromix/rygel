@@ -27,16 +27,8 @@
         </script>
 
         <script src="{BASE_URL}static/goupile.pk.js"></script>
-        <script nomodule>
-            if (typeof goupile === 'undefined') {
-                var script = document.createElement('script');
-                script.src = '{BASE_URL}static/goupile_compat.pk.js';
-                script.type = 'text/javascript';
-                document.head.appendChild(script);
-            }
-        </script>
         <script>
-            document.addEventListener('readystatechange', e => {
+            document.addEventListener('readystatechange', function(e) {
                 if (document.readyState === 'complete')
                     goupile.startApp();
             });
