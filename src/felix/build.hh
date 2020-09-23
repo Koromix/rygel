@@ -64,7 +64,7 @@ class Builder {
     bool version_init = false;
     const char *version_obj_filename = nullptr;
     HeapArray<Node> nodes;
-    Size skipped_nodes = 0;
+    Size total = 0;
     HashMap<const char *, Size> nodes_map;
     HashMap<const char *, const char *> build_map;
     HashMap<const char *, int64_t> mtime_map;
@@ -73,7 +73,7 @@ class Builder {
     std::mutex out_mutex;
     HeapArray<const char *> clear_filenames;
     HashMap<const void *, const char *> rsp_map;
-    int progress;
+    Size progress;
     bool interrupted;
     HeapArray<WorkerState> workers;
 

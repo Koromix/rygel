@@ -293,7 +293,7 @@ bool Builder::Build(int jobs, bool verbose)
     // Reset build context
     clear_filenames.Clear();
     rsp_map.Clear();
-    progress = 0;
+    progress = total - nodes.len;
     interrupted = false;
     workers.Clear();
     workers.AppendDefault(jobs);
@@ -389,7 +389,7 @@ bool Builder::Build(int jobs, bool verbose)
     }
 
     if (async.Sync()) {
-        LogInfo("%!C..100%%%!0 Done (%1s)", FmtDouble((double)(GetMonotonicTime() - now) / 1000.0, 1));
+        LogInfo("Done (%1s)", FmtDouble((double)(GetMonotonicTime() - now) / 1000.0, 1));
         return true;
     } else if (interrupted) {
         LogError("Build was interrupted");
@@ -496,6 +496,7 @@ bool Builder::AppendNode(const char *text, const char *dest_filename, const Comm
     RG_ASSERT(src_filenames.len >= 1);
 
     build_map.Set(src_filenames[0], dest_filename);
+    total++;
 
     if (NeedsRebuild(dest_filename, cmd, src_filenames)) {
         Size node_idx = nodes.len;
@@ -522,7 +523,6 @@ bool Builder::AppendNode(const char *text, const char *dest_filename, const Comm
 
         return true;
     } else {
-        skipped_nodes++;
         return false;
     }
 }
@@ -700,8 +700,10 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
     {
         std::lock_guard<std::mutex> out_lock(out_mutex);
 
-        Size progress_pct = 100 * (skipped_nodes + progress++) / (skipped_nodes + nodes.len);
-        LogInfo("%!C..%1%%%!0 %2", FmtArg(progress_pct).Pad(-3), node->text);
+        int pad = (int)log10(total) + 3;
+        progress++;
+
+        LogInfo("%!C..%1/%2%!0 %3", FmtArg(progress).Pad(-pad), total, node->text);
         if (verbose) {
             PrintLn(cmd_line);
             fflush(stdout);
