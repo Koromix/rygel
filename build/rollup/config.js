@@ -45,6 +45,7 @@ module.exports = {
     plugins: [
         babel({
             babelrc: false,
+            babelHelpers: 'bundled',
             exclude: 'node_modules/**',
             presets: [
                 ['@babel/env', {

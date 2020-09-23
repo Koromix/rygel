@@ -28,12 +28,6 @@
                 document.head.appendChild(script);
             }
         </script>
-        <script>
-            document.addEventListener('readystatechange', e => {
-                if (document.readyState === 'complete')
-                    thop.startApp();
-            });
-        </script>
 
         <link rel="stylesheet" href="{BASE_URL}static/thop.pk.css"/>
     </head>
