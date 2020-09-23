@@ -4925,10 +4925,12 @@ bool ConsolePrompter::Read()
 #endif
 
     if (!FileIsVt100(stdout) || !EnableRawMode()) {
+        fputs(prompt, stdout);
+        fflush(stdout);
+
         int c;
         while ((c = fgetc(stdin)) != EOF) {
             if (c == '\n') {
-                str.Append('\n');
                 return true;
             } else if (c >= 32 || c == '\t') {
                 str.Append(c);
