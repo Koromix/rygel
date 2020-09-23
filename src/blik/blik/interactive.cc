@@ -119,16 +119,13 @@ int RunInteractive(bool execute)
     bool run = true;
 
     // Functions specific to interactive mode
-    compiler.AddFunction("exit()", [&](VirtualMachine *vm, Span<const Value> args) {
+    const auto exit = [&](VirtualMachine *vm, Span<const Value> args) {
         run = false;
         vm->SetInterrupt();
         return Value();
-    });
-    compiler.AddFunction("quit()", [&](VirtualMachine *vm, Span<const Value> args) {
-        run = false;
-        vm->SetInterrupt();
-        return Value();
-    });
+    };
+    compiler.AddFunction("exit()", exit);
+    compiler.AddFunction("quit()", exit);
 
     // Make sure the prelude runs successfully
     {
