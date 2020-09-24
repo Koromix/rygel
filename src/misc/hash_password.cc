@@ -24,6 +24,12 @@ Options:
     %!..+-p, --password <password>%!0    Use password given as option)", FelixTarget);
     };
 
+    // Handle version
+    if (argc >= 2 && TestStr(argv[1], "--version")) {
+        PrintLn("%!R..%1%!0 %2", FelixTarget, FelixVersion);
+        return 0;
+    }
+
     // Parse arguments
     {
         OptionParser opt(argc, argv);
