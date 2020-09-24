@@ -689,7 +689,7 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
     const Command &cmd = node->cmd;
 
     WorkerState *worker = &workers[Async::GetWorkerIdx()];
-    const char *cmd_line = rsp_map.FindValue(&node, cmd.cmd_line.ptr);
+    const char *cmd_line = rsp_map.FindValue(node, cmd.cmd_line.ptr);
 
     // The lock is needed to guarantee ordering of progress counter. Atomics
     // do not help much because the LogInfo() calls need to be protected too.
