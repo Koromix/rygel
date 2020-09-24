@@ -358,18 +358,24 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         }
     }
 
+    // Build version string from git commit (date, hash)
+    {
+        const char *version_str = BuildGitVersionString(&temp_alloc);
+
+        if (version_str) {
+            build.version_str = version_str;
+        } else {
+            LogError("Failed to use git to build version string");
+        }
+    }
+
     // We're ready to output stuff
     LogInfo("Root directory: %!..+%1%!0", GetWorkingDirectory());
     LogInfo("  Compiler: %!..+%1 (%2)%!0", build.compiler->name, CompileModeNames[(int)build.compile_mode]);
     LogInfo("  Output directory: %!..+%1%!0", build.output_directory);
+    LogInfo("  Version: %!..+%1%!0", build.version_str);
     if (!build.fake && !MakeDirectoryRec(build.output_directory))
         return 1;
-
-    // Build version string from git commit (date, hash)
-    build.version_str = BuildGitVersionString(&temp_alloc);
-    if (!build.version_str) {
-        LogError("Git version string will be null");
-    }
 
     // The detection of SIGINT (or the Win32 equivalent) by WaitForInterruption()
     // remains after timing out, which will allow RunBuildNodes() to clean up files
