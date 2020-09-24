@@ -40,17 +40,19 @@ static const char *BuildObjectPath(const char *src_filename, const char *output_
     return buf.TrimAndLeak(1).ptr;
 }
 
-static bool UpdateVersionSource(const char *version_str, bool fake, const char *dest_filename)
+static bool UpdateVersionSource(const char *target_name, const char *version_str,
+                                bool fake, const char *dest_filename)
 {
     if (!fake && !EnsureDirectoryExists(dest_filename))
         return false;
 
-    char code[512];
-    Fmt(code, "const char *FelixVersion = \"%1\";\n", version_str);
+    char code[1024];
+    Fmt(code, "const char *FelixTarget = \"%1\";\n"
+              "const char *FelixVersion = \"%2\";\n", target_name, version_str);
 
     bool new_version;
     if (TestFile(dest_filename, FileType::File)) {
-        char old_code[512] = {};
+        char old_code[1024] = {};
         {
             StreamReader reader(dest_filename);
             reader.Read(RG_SIZE(old_code) - 1, old_code);
@@ -150,27 +152,21 @@ bool Builder::AddTarget(const TargetInfo &target)
 
     // Version string
     if (target.type == TargetType::Executable) {
-        if (!version_init) {
-            const char *src_filename = Fmt(&str_alloc, "%1%/cache%/version.c", build.output_directory).ptr;
-            version_obj_filename = Fmt(&str_alloc, "%1%2", src_filename,
-                                       build.compiler->GetObjectExtension()).ptr;
+        const char *src_filename = Fmt(&str_alloc, "%1%/cache%/%2.c", build.output_directory, target.name).ptr;
+        const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
 
-            if (UpdateVersionSource(build.version_str, build.fake, src_filename) || build.rebuild) {
-                Command cmd = {};
-                build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
-                                                  false, nullptr, {}, {}, build.env,
-                                                  version_obj_filename, &str_alloc, &cmd);
+        if (!UpdateVersionSource(target.name, build.version_str, build.fake, src_filename))
+            return false;
 
-                AppendNode("Build version file", version_obj_filename, cmd, src_filename);
-            } else {
-                LogError("Failed to build git version string");
-                version_obj_filename = nullptr;
-            }
+        Command cmd = {};
+        build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
+                                          false, nullptr, {}, {}, build.env,
+                                          obj_filename, &str_alloc, &cmd);
 
-            version_init = true;
-        }
+        const char *text = Fmt(&str_alloc, "Build %1 version file", target.name).ptr;
+        AppendNode(text, obj_filename, cmd, src_filename);
 
-        obj_filenames.Append(version_obj_filename);
+        obj_filenames.Append(obj_filename);
     }
 
     // Object commands

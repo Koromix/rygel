@@ -64,6 +64,7 @@ namespace RG {
 // ------------------------------------------------------------------------
 
 #ifndef FELIX
+const char *FelixTarget = "????";
 const char *FelixVersion = "(unknown version)";
 #endif
 

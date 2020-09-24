@@ -67,6 +67,7 @@ namespace RG {
 // Utility
 // ------------------------------------------------------------------------
 
+extern "C" const char *FelixTarget;
 extern "C" const char *FelixVersion;
 
 enum class Endianness {

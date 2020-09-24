@@ -61,8 +61,6 @@ class Builder {
     const char *cache_filename;
 
     // AddTarget, AddSource
-    bool version_init = false;
-    const char *version_obj_filename = nullptr;
     HeapArray<Node> nodes;
     Size total = 0;
     HashMap<const char *, Size> nodes_map;
