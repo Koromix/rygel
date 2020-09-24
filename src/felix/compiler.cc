@@ -282,8 +282,8 @@ public:
 
         // Build options
         switch (compile_mode) {
-            case CompileMode::Debug: { Fmt(&buf, " -O0 -g -ftrapv"); } break;
-            case CompileMode::DebugFast: { Fmt(&buf, " -Og -g -ftrapv"); } break;
+            case CompileMode::Debug: { Fmt(&buf, " -O0 -g -fsanitize=signed-integer-overflow -fsanitize-undefined-trap-on-error"); } break;
+            case CompileMode::DebugFast: { Fmt(&buf, " -Og -g -fsanitize=signed-integer-overflow -fsanitize-undefined-trap-on-error"); } break;
             case CompileMode::Fast: { Fmt(&buf, " -O2 -DNDEBUG"); } break;
             case CompileMode::LTO: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
         }
