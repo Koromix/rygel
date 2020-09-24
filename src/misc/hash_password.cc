@@ -17,11 +17,11 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+hash_password
-       hash_password -p <password>%!0
+R"(Usage: %!..+%1
+       %1 -p <password>%!0
 
 Options:
-    %!..+-p, --password <password>%!0    Use password given as option)");
+    %!..+-p, --password <password>%!0    Use password given as option)", FelixTarget);
     };
 
     // Parse arguments

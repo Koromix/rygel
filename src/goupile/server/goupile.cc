@@ -252,21 +252,21 @@ int Main(int argc, char **argv)
     BlockAllocator temp_alloc;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+goupile [options]%!0
+        PrintLn(fp, R"(Usage: %!..+%1 [options]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
         %!..+--port <port>%!0            Change web server port
-                                 %!D..(default: %1)%!0
+                                 %!D..(default: %2)%!0
         %!..+--base_url <url>%!0         Change base URL
-                                 %!D..(default: %2)%!0)",
-                goupile_config.http.port, goupile_config.http.base_url);
+                                 %!D..(default: %3)%!0)",
+                FelixTarget, goupile_config.http.port, goupile_config.http.base_url);
     };
 
     // Handle version
     if (argc >= 2 && TestStr(argv[1], "--version")) {
-        PrintLn("%!R..goupile%!0 %1", FelixVersion);
+        PrintLn("%!R..%1%!0 %2", FelixTarget, FelixVersion);
         return 0;
     }
 

@@ -317,8 +317,8 @@ int RunMcoClassify(Span<const char *> arguments)
     HeapArray<const char *> filenames;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+drdc mco_classify [options] stay_file ...%!0
-)");
+        PrintLn(fp, R"(Usage: %!..+%1 mco_classify [options] stay_file ...%!0
+)", FelixTarget);
         PrintLn(fp, CommonOptions);
         PrintLn(fp, R"(
 Classify options:
@@ -578,8 +578,8 @@ int RunMcoDump(Span<const char *> arguments)
     HeapArray<const char *> filenames;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+drdc mco_dump [options] [filename] ...%!0
-)");
+        PrintLn(fp, R"(Usage: %!..+%1 mco_dump [options] [filename] ...%!0
+)", FelixTarget);
         PrintLn(fp, CommonOptions);
         PrintLn(fp, R"(
 Dump options:
@@ -623,8 +623,8 @@ int RunMcoList(Span<const char *> arguments)
     HeapArray<const char *> spec_strings;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+drdc mco_list [options] list_name ...%!0
-)");
+        PrintLn(fp, R"(Usage: %!..+%1 mco_list [options] list_name ...%!0
+)", FelixTarget);
         PrintLn(fp, CommonOptions);
         PrintLn(fp, R"(
 List options:
@@ -711,8 +711,8 @@ int RunMcoMap(Span<const char *> arguments)
     Date index_date = {};
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+drdc mco_map [options]%!0
-)");
+        PrintLn(fp, R"(Usage: %!..+%1 mco_map [options]%!0
+)", FelixTarget);
         PrintLn(fp, CommonOptions);
         PrintLn(fp, R"(
 Map options:
@@ -779,8 +779,8 @@ int RunMcoPack(Span<const char *> arguments)
     HeapArray<const char *> filenames;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+drdc mco_pack [options] stay_file ... -O output_file%!0
-)");
+        PrintLn(fp, R"(Usage: %!..+%1 mco_pack [options] stay_file ... -O output_file%!0
+)", FelixTarget);
         PrintLn(fp, CommonOptions);
         PrintLn(fp, R"(
 Pack options:
@@ -838,8 +838,8 @@ int RunMcoShow(Span<const char *> arguments)
     HeapArray<const char *> names;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+drdc mco_show [options] name ...%!0
-)");
+        PrintLn(fp, R"(Usage: %!..+%1 mco_show [options] name ...%!0
+)", FelixTarget);
         PrintLn(fp, CommonOptions);
     };
 

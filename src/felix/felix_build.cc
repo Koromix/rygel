@@ -120,8 +120,8 @@ int RunBuild(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+felix build [options] [target...]
-       felix build [options] --run target [arguments...]%!0
+R"(Usage: %!..+%1 build [options] [target...]
+       %1 build [options] --run target [arguments...]%!0
 
 Options:
     %!..+-C, --config <filename>%!0      Set configuration filename
@@ -130,14 +130,14 @@ Options:
                                  %!D..(default: bin/<toolchain>)%!0
 
     %!..+-c, --compiler <compiler>%!0    Set compiler, see below
-                                 %!D..(default: %1)%!0
-    %!..+-m, --mode <mode>%!0            Set build mode, see below
                                  %!D..(default: %2)%!0
+    %!..+-m, --mode <mode>%!0            Set build mode, see below
+                                 %!D..(default: %3)%!0
     %!..+-e, --environment%!0            Use compiler flags found in environment (CFLAGS, LDFLAGS, etc.)
         %!..+--no_pch%!0                 Disable header precompilation (PCH)
 
     %!..+-j, --jobs <count>%!0           Set maximum number of parallel jobs
-                                 %!D..(default: %3)%!0
+                                 %!D..(default: %4)%!0
         %!..+--rebuild%!0                Force rebuild all files
 
     %!..+-q, --quiet%!0                  Hide felix progress statements
@@ -148,7 +148,7 @@ Options:
                                  %!D..(all remaining arguments are passed as-is)%!0
         %!..+--run_here <target>%!0      Same thing, but run from current directory
 
-Supported compilers:)", build.compiler ? build.compiler->name : "?",
+Supported compilers:)", FelixTarget, build.compiler ? build.compiler->name : "?",
                         CompileModeNames[(int)build.compile_mode], jobs);
 
         for (const Compiler *compiler: Compilers) {
@@ -165,7 +165,7 @@ Felix can also run the following special commands:
     %!..+build%!0                        Build C and C++ projects %!D..(default)%!0
     %!..+pack%!0                         Pack assets to C source file and other formats
 
-For help about those commands, type: %!..+felix <command> --help%!0)");
+For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget);
     };
 
     // Parse arguments

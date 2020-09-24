@@ -42,20 +42,20 @@ int Main(int argc, char **argv)
     bool execute = true;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+blik [options] <file>
-       blik [options] -c <code>
-       blik [options] -i%!0
+        PrintLn(fp, R"(Usage: %!..+%1 [options] <file>
+       %1 [options] -c <code>
+       %1 [options] -i%!0
 
 Options:
     %!..+-c, --command%!0                Run code directly from argument
     %!..+-i, --interactive%!0            Run code interactively (REPL)
 
-        %!..+--no_execute%!0             Parse code but don't run it)");
+        %!..+--no_execute%!0             Parse code but don't run it)", FelixTarget);
     };
 
     // Handle version
     if (argc >= 2 && TestStr(argv[1], "--version")) {
-        PrintLn("%!R..blik%!0 %1", FelixVersion);
+        PrintLn("%!R..%1%!0 %2", FelixTarget, FelixVersion);
         return 0;
     }
 

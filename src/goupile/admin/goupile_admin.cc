@@ -87,7 +87,7 @@ static int RunInit(Span<const char *> arguments)
     const char *profile_directory = nullptr;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+goupile_admin init [options] [profile_directory]%!0
+        PrintLn(fp, R"(Usage: %!..+%1 init [options] [profile_directory]%!0
 
 Options:
     %!..+-k, --key <key>%!0              Change application key
@@ -98,7 +98,7 @@ Options:
     %!..+-u, --user <name>%!0            Name of default user
         %!..+--password <pwd>%!0         Password of default user
 
-        %!..+--empty%!0                  Don't create default files)");
+        %!..+--empty%!0                  Don't create default files)", FelixTarget);
 
 #ifndef _WIN32
         PrintLn(fp, R"(
@@ -323,10 +323,10 @@ static int RunMigrate(Span<const char *> arguments)
     const char *config_filename = nullptr;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+goupile_admin migrate [options]%!0
+        PrintLn(fp, R"(Usage: %!..+%1 migrate [options]%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file)");
+    %!..+-C, --config_file <file>%!0     Set configuration file)", FelixTarget);
     };
 
     // Parse arguments
@@ -409,7 +409,7 @@ static int RunAddUser(Span<const char *> arguments)
     uint32_t permissions = UINT32_MAX;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+goupile_admin add_user [options] <username>%!0
+        PrintLn(fp, R"(Usage: %!..+%1 add_user [options] <username>%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -417,7 +417,7 @@ Options:
         %!..+--password <pwd>%!0         Password of user
     %!..+-p, --permissions <perms>%!0    User permissions
 
-User permissions: %!..+%1%!0)", FmtSpan(UserPermissionNames));
+User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
     };
 
     // Parse arguments
@@ -504,7 +504,7 @@ static int RunEditUser(Span<const char *> arguments)
     uint32_t permissions = UINT32_MAX;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+goupile_admin edit_user [options] <username>%!0
+        PrintLn(fp, R"(Usage: %!..+%1 edit_user [options] <username>%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -512,7 +512,7 @@ Options:
         %!..+--password <pwd>%!0         Password of user
     %!..+-p, --permissions <perms>%!0    User permissions
 
-User permissions: %!..+%1%!0)", FmtSpan(UserPermissionNames));
+User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
     };
 
     // Parse arguments
@@ -621,10 +621,10 @@ static int RunRemoveUser(Span<const char *> arguments)
     const char *username = nullptr;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+goupile_admin remove_user [options] <username>%!0
+        PrintLn(fp, R"(Usage: %!..+%1 remove_user [options] <username>%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file)");
+    %!..+-C, --config_file <file>%!0     Set configuration file)", FelixTarget);
     };
 
     // Parse arguments
@@ -670,7 +670,7 @@ Options:
 int Main(int argc, char **argv)
 {
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+goupile_admin <command> [args]%!0
+        PrintLn(fp, R"(Usage: %!..+%1 <command> [args]%!0
 
 General commands:
     %!..+init%!0                         Create new profile
@@ -679,7 +679,7 @@ General commands:
 User commands:
     %!..+add_user%!0                     Add new user
     %!..+edit_user%!0                    Edit existing user
-    %!..+remove_user%!0                  Remove existing user)");
+    %!..+remove_user%!0                  Remove existing user)", FelixTarget);
     };
 
     if (argc < 2) {
@@ -700,7 +700,7 @@ User commands:
             return 0;
         }
     } else if (TestStr(cmd, "--version")) {
-        PrintLn("%!R..goupile_admin%!0 %1", FelixVersion);
+        PrintLn("%!R..%1%!0 %2", FelixTarget, FelixVersion);
         return 0;
     }
 

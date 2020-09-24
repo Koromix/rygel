@@ -23,26 +23,27 @@ int RunPack(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+felix pack <filename> ...%!0
+R"(Usage: %!..+%1 pack <filename> ...%!0
 
 Options:
     %!..+-t, --type <type>%!0            Set output file type
-                                 %!D..(default: %1)%!0
+                                 %!D..(default: %2)%!0
     %!..+-O, --output_file <file>%!0     Redirect output to file or directory
 
     %!..+-s, --strip <count>%!0          Strip first count directory components, or 'All'
                                  %!D..(default: All)%!0
     %!..+-c, --compress <type>%!0        Compress data, see below for available types
-                                 %!D..(default: %2)%!0
+                                 %!D..(default: %3)%!0
 
     %!..+-M, --merge_file <file>%!0      Load merge rules from file
     %!..+-m, --merge_option <options>%!0 Merge options (see below)
 
-Available output types: %!..+%3%!0
-Available compression types: %!..+%4%!0
-Available merge options: %!..+%5%!0)", PackModeNames[(int)mode], CompressionTypeNames[(int)compression_type],
-                               FmtSpan(PackModeNames), FmtSpan(CompressionTypeNames),
-                               FmtSpan(MergeFlagNames));
+Available output types: %!..+%4%!0
+Available compression types: %!..+%5%!0
+Available merge options: %!..+%6%!0)", FelixTarget, PackModeNames[(int)mode],
+                                       CompressionTypeNames[(int)compression_type],
+                                       FmtSpan(PackModeNames), FmtSpan(CompressionTypeNames),
+                                       FmtSpan(MergeFlagNames));
     };
 
     // Parse arguments

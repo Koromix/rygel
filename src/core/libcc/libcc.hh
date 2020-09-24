@@ -3529,8 +3529,8 @@ bool FindExecutableInPath(const char *name, Allocator *alloc = nullptr,
 bool SetWorkingDirectory(const char *directory);
 const char *GetWorkingDirectory();
 
-const char *GetApplicationExecutable(); // Can be NULL
-const char *GetApplicationDirectory(); // Can be NULL
+const char *GetApplicationExecutable(); // Can be NULL (EmSDK)
+const char *GetApplicationDirectory(); // Can be NULL (EmSDK)
 
 bool MakeDirectory(const char *directory, bool error_if_exists = true);
 bool MakeDirectoryRec(Span<const char> directory);

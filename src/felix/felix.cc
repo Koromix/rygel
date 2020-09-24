@@ -22,7 +22,7 @@ int Main(int argc, char **argv)
                 return RunBuild(args);
             }
         } else if (TestStr(argv[1], "--version")) {
-            PrintLn("%!R..felix%!0 %1", FelixVersion);
+            PrintLn("%!R..%1%!0 %2", FelixTarget, FelixVersion);
             return 0;
         }
     }

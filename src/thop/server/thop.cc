@@ -438,7 +438,7 @@ int Main(int argc, char **argv)
     BlockAllocator temp_alloc;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+thop [options] [stay_file ..]%!0
+        PrintLn(fp, R"(Usage: %!..+%1 [options] [stay_file ..]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -452,10 +452,10 @@ Options:
                                            <profile_dir>%/mco_authorizations.txt)%!0
 
         %!..+--port <port>%!0            Change web server port
-                                 %!D..(default: %1)%!0
+                                 %!D..(default: %2)%!0
         %!..+--base_url <url>%!0         Change base URL
-                                 %!D..(default: %2)%!0)",
-                thop_config.http.port, thop_config.http.base_url);
+                                 %!D..(default: %3)%!0)",
+                FelixTarget, thop_config.http.port, thop_config.http.base_url);
     };
 
     if (sodium_init() < 0) {
@@ -465,7 +465,7 @@ Options:
 
     // Handle version
     if (argc >= 2 && TestStr(argv[1], "--version")) {
-        PrintLn("%!R..thop%!0 %1", FelixVersion);
+        PrintLn("%!R..%1%!0 %2", FelixTarget, FelixVersion);
         return 0;
     }
 

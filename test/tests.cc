@@ -20,12 +20,11 @@ int RunTest(int argc, char **argv)
     bool bench = false;
 
     const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp, R"(Usage: tests [options]
+        PrintLn(fp, R"(Usage: %1 [options]
 
 Options:
         --test                   Run tests
-        --bench                  Run benchmarks)",
-                test, bench);
+        --bench                  Run benchmarks)", FelixTarget);
     };
 
     // Parse arguments
