@@ -30,7 +30,7 @@ DatabaseFile = database.db
 )";
 
 // If you change DatabaseVersion, don't forget to update the migration switch!
-const int DatabaseVersion = 8;
+const int DatabaseVersion = 9;
 
 bool MigrateDatabase(sq_Database &database, int version)
 {
@@ -216,9 +216,14 @@ bool MigrateDatabase(sq_Database &database, int version)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 8: {
+                if (!database.Run("UPDATE usr_users SET permissions = 63 WHERE permissions == 31;"))
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DatabaseVersion == 8);
+            RG_STATIC_ASSERT(DatabaseVersion == 9);
         }
 
         int64_t time = GetUnixTime();
