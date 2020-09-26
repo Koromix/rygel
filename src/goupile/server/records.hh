@@ -11,9 +11,8 @@ namespace RG {
 
 void InitRecords();
 
-void HandleRecordGet(const http_RequestInfo &request, http_IO *io);
-void HandleRecordPut(const http_RequestInfo &request, http_IO *io);
-
+void HandleRecordLoad(const http_RequestInfo &request, http_IO *io);
 void HandleRecordColumns(const http_RequestInfo &request, http_IO *io);
+void HandleRecordSave(const http_RequestInfo &request, http_IO *io);
 
 }

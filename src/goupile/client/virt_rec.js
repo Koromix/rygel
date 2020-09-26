@@ -288,9 +288,9 @@ function VirtualRecords(db) {
                     values: frag.values
                 }));
 
-                let url = `${env.base_url}api/records/${frag0.table}/${frag0.id}`;
+                let url = util.pasteURL(`${env.base_url}api/records/save`, {table: frag0.table, id: frag0.id});
                 return net.fetch(url, {
-                    method: 'PUT',
+                    method: 'POST',
                     body: JSON.stringify(record_fragments)
                 });
             } else {
@@ -316,7 +316,7 @@ function VirtualRecords(db) {
 
         // Get new fragments
         for (let form of app.forms) {
-            let url = `${env.base_url}api/records/${form.key}`;
+            let url = util.pasteURL(`${env.base_url}api/records/load`, {table: form.key});
             let records = await net.fetch(url).then(response => response.json());
 
             let entries = records.map(record => ({

@@ -46,7 +46,7 @@ static void ExportRecord(sq_Statement *stmt, Span<const char> table, json_Writer
     json->EndObject();
 }
 
-void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
+void HandleRecordLoad(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
 
@@ -56,30 +56,15 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
-    Span<const char> table;
-    Span<const char> id;
-    {
-        Span<const char> remain = request.url + 1;
-
-        SplitStr(remain, '/', &remain);
-        SplitStr(remain, '/', &remain);
-        table = SplitStr(remain, '/', &remain);
-        id = SplitStr(remain, '/', &remain);
-
-        if (!table.len || remain.len) {
-            LogError("URL must contain table and optional ID (and nothing more)");
-            io->AttachError(422);
-            return;
-        }
-
-        if (table == ".." || id == "..") {
-            LogError("URL must not contain '..' components");
-            io->AttachError(422);
-            return;
-        }
+    const char *table = request.GetQueryValue("table");
+    const char *id = request.GetQueryValue("id");
+    if (!table) {
+        LogError("Missing 'table' parameter");
+        io->AttachError(422);
+        return;
     }
 
-    if (id.len) {
+    if (id) {
         sq_Statement stmt;
         if (!goupile_db.Prepare(R"(SELECT r.id, r.sequence, f.mtime, f.username, f.page, f.complete,
                                           f.json, f.anchor FROM rec_entries r
@@ -87,8 +72,8 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
                                    WHERE r.store = ? AND r.id = ?
                                    ORDER BY f.anchor)", &stmt))
             return;
-        sqlite3_bind_text(stmt, 1, table.ptr, (int)table.len, SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 2, id.ptr, (int)id.len, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 1, table, -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, id, -1, SQLITE_STATIC);
 
         if (!stmt.Next()) {
             if (stmt.IsValid()) {
@@ -112,7 +97,7 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
                                    WHERE r.store = ?
                                    ORDER BY r.id, f.anchor)", &stmt))
             return;
-        sqlite3_bind_text(stmt, 1, table.ptr, (int)table.len, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 1, table, -1, SQLITE_STATIC);
 
         // Export data
         http_JsonPageBuilder json(request.compression_type);
@@ -131,7 +116,60 @@ void HandleRecordGet(const http_RequestInfo &request, http_IO *io)
     }
 }
 
-void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
+void HandleRecordColumns(const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+
+    if (!session) {
+        LogError("User is not allowed to view data");
+        io->AttachError(403);
+        return;
+    }
+
+    const char *table = request.GetQueryValue("table");
+    if (!table) {
+        LogError("Missing 'table' parameter");
+        io->AttachError(422);
+        return;
+    }
+
+    sq_Statement stmt;
+    if (!goupile_db.Prepare(R"(SELECT page, variable, prop, before, after FROM rec_columns
+                               WHERE store = ?)", &stmt))
+        return;
+    sqlite3_bind_text(stmt, 1, table, -1, SQLITE_STATIC);
+
+    // Export data
+    http_JsonPageBuilder json(request.compression_type);
+
+    json.StartArray();
+    while (stmt.Next()) {
+        json.StartObject();
+        json.Key("page"); json.String((const char *)sqlite3_column_text(stmt, 0));
+        json.Key("variable"); json.String((const char *)sqlite3_column_text(stmt, 1));
+        if (sqlite3_column_type(stmt, 2) != SQLITE_NULL) {
+            json.Key("prop"); json.Raw((const char *)sqlite3_column_text(stmt, 2));
+        }
+        if (sqlite3_column_type(stmt, 3) != SQLITE_NULL) {
+            json.Key("before"); json.String((const char *)sqlite3_column_text(stmt, 3));
+        } else {
+            json.Key("before"); json.Null();
+        }
+        if (sqlite3_column_type(stmt, 4) != SQLITE_NULL) {
+            json.Key("after"); json.String((const char *)sqlite3_column_text(stmt, 4));
+        } else {
+            json.Key("after"); json.Null();
+        }
+        json.EndObject();
+    }
+    if (!stmt.IsValid())
+        return;
+    json.EndArray();
+
+    json.Finish(io);
+}
+
+void HandleRecordSave(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
 
@@ -143,27 +181,12 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
     }
 
     // XXX: We need version data, in order to check for version mismatch
-    Span<const char> table;
-    Span<const char> id;
-    {
-        Span<const char> remain = request.url + 1;
-
-        SplitStr(remain, '/', &remain);
-        SplitStr(remain, '/', &remain);
-        table = SplitStr(remain, '/', &remain);
-        id = SplitStr(remain, '/', &remain);
-
-        if (!table.len || !id.len || remain.len) {
-            LogError("URL must contain table and ID (and nothing more)");
-            io->AttachError(422);
-            return;
-        }
-
-        if (table == ".." || id == "..") {
-            LogError("URL must not contain '..' components");
-            io->AttachError(422);
-            return;
-        }
+    const char *table = request.GetQueryValue("table");
+    const char *id = request.GetQueryValue("id");
+    if (!table || !id) {
+        LogError("Mising 'table' and/or 'id' parameter");
+        io->AttachError(422);
+        return;
     }
 
     io->RunAsync([=]() {
@@ -190,8 +213,8 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
             if (!goupile_db.Prepare(R"(SELECT version, json FROM rec_entries
                                        WHERE store = ? AND id = ?)", &stmt))
                 return;
-            sqlite3_bind_text(stmt, 1, table.ptr, (int)table.len, SQLITE_STATIC);
-            sqlite3_bind_text(stmt, 2, id.ptr, (int)id.len, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 1, table, -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 2, id, -1, SQLITE_STATIC);
 
             if (stmt.Next()) {
                 version = sqlite3_column_int(stmt, 0);
@@ -217,7 +240,7 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
                 if (!goupile_db.Prepare(R"(SELECT sequence FROM rec_sequences
                                            WHERE store = ?)", &stmt))
                     return false;
-                sqlite3_bind_text(stmt, 1, table.ptr, (int)table.len, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 1, table, -1, SQLITE_STATIC);
 
                 if (stmt.Next()) {
                     sequence = sqlite3_column_int(stmt, 0);
@@ -278,7 +301,7 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
                                                               after = excluded.after,
                                                               anchor = excluded.anchor)", &stmt))
                     return false;
-                sqlite3_bind_text(stmt, 1, table.ptr, (int)table.len, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 1, table, -1, SQLITE_STATIC);
                 sqlite3_bind_int64(stmt, 7, sqlite3_last_insert_rowid(goupile_db));
 
                 for (Size j = 0; j < frag.columns.len; j++) {
@@ -309,59 +332,6 @@ void HandleRecordPut(const http_RequestInfo &request, http_IO *io)
 
         io->AttachText(200, "Done!");
     });
-}
-
-void HandleRecordColumns(const http_RequestInfo &request, http_IO *io)
-{
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
-
-    if (!session) {
-        LogError("User is not allowed to view data");
-        io->AttachError(403);
-        return;
-    }
-
-    const char *table = request.GetQueryValue("table");
-    if (!table) {
-        LogError("Missing 'table' parameter'");
-        io->AttachError(422);
-        return;
-    }
-
-    sq_Statement stmt;
-    if (!goupile_db.Prepare(R"(SELECT page, variable, prop, before, after FROM rec_columns
-                               WHERE store = ?)", &stmt))
-        return;
-    sqlite3_bind_text(stmt, 1, table, -1, SQLITE_STATIC);
-
-    // Export data
-    http_JsonPageBuilder json(request.compression_type);
-
-    json.StartArray();
-    while (stmt.Next()) {
-        json.StartObject();
-        json.Key("page"); json.String((const char *)sqlite3_column_text(stmt, 0));
-        json.Key("variable"); json.String((const char *)sqlite3_column_text(stmt, 1));
-        if (sqlite3_column_type(stmt, 2) != SQLITE_NULL) {
-            json.Key("prop"); json.Raw((const char *)sqlite3_column_text(stmt, 2));
-        }
-        if (sqlite3_column_type(stmt, 3) != SQLITE_NULL) {
-            json.Key("before"); json.String((const char *)sqlite3_column_text(stmt, 3));
-        } else {
-            json.Key("before"); json.Null();
-        }
-        if (sqlite3_column_type(stmt, 4) != SQLITE_NULL) {
-            json.Key("after"); json.String((const char *)sqlite3_column_text(stmt, 4));
-        } else {
-            json.Key("after"); json.Null();
-        }
-        json.EndObject();
-    }
-    if (!stmt.IsValid())
-        return;
-    json.EndArray();
-
-    json.Finish(io);
 }
 
 }
