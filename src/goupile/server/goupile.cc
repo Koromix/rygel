@@ -201,6 +201,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
          HandleFileList(request, io);
     } else if (TestStr(request.url, "/api/files/static") && request.method == http_RequestMethod::Get) {
         HandleFileStatic(request, io);
+    } else if (StartsWith(request.url, "/files/") && request.method == http_RequestMethod::Put) {
+        HandleFilePut(request, io);
+    } else if (StartsWith(request.url, "/files/") && request.method == http_RequestMethod::Delete) {
+        HandleFileDelete(request, io);
     } else if (StartsWith(request.url, "/api/records/") && request.method == http_RequestMethod::Get) {
         HandleRecordGet(request, io);
     } else if (StartsWith(request.url, "/api/records/") && request.method == http_RequestMethod::Put) {
@@ -211,10 +215,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         HandleScheduleResources(request, io);
     } else if (TestStr(request.url, "/api/schedule/meetings") && request.method == http_RequestMethod::Get) {
         HandleScheduleMeetings(request, io);
-    } else if (StartsWith(request.url, "/files/") && request.method == http_RequestMethod::Put) {
-        HandleFilePut(request, io);
-    } else if (StartsWith(request.url, "/files/") && request.method == http_RequestMethod::Delete) {
-        HandleFileDelete(request, io);
     } else {
         io->AttachError(404);
     }
