@@ -30,7 +30,7 @@ struct Route {
         Function
     };
 
-    const char *method;
+    http_RequestMethod method;
     Span<const char> url;
     Matching matching;
 
@@ -271,7 +271,7 @@ static void InitRoutes()
     routes.Clear();
     routes_alloc.ReleaseAll();
 
-    const auto add_asset_route = [&](const char *method, const char *url,
+    const auto add_asset_route = [&](http_RequestMethod method, const char *url,
                                      Route::Matching matching, const AssetInfo &asset) {
         Route route = {};
 
@@ -284,7 +284,7 @@ static void InitRoutes()
 
         routes.Set(route);
     };
-    const auto add_function_route = [&](const char *method, const char *url,
+    const auto add_function_route = [&](http_RequestMethod method, const char *url,
                                         void (*func)(const http_RequestInfo &request, const User *user,
                                                      http_IO *io)) {
         Route route = {};
@@ -307,15 +307,15 @@ static void InitRoutes()
         if (TestStr(asset.name, "thop.html")) {
             html = asset;
         } else if (TestStr(asset.name, "favicon.png")) {
-            add_asset_route("GET", "/favicon.png", Route::Matching::Exact, asset);
+            add_asset_route(http_RequestMethod::Get, "/favicon.png", Route::Matching::Exact, asset);
         } else {
             const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
-            add_asset_route("GET", url, Route::Matching::Exact, asset);
+            add_asset_route(http_RequestMethod::Get, url, Route::Matching::Exact, asset);
         }
     }
     for (const AssetInfo &desc: dictionary_set.dictionaries) {
         const char *url = Fmt(&routes_alloc, "/dictionaries/%1", desc.name).ptr;
-        add_asset_route("GET", url, Route::Matching::Exact, desc);
+        add_asset_route(http_RequestMethod::Get, url, Route::Matching::Exact, desc);
     }
     RG_ASSERT(html.name);
 
@@ -336,29 +336,29 @@ static void InitRoutes()
     });
 
     // Root
-    add_asset_route("GET", "/", Route::Matching::Exact, html);
-    add_asset_route("GET", "/mco_info", Route::Matching::Walk, html);
+    add_asset_route(http_RequestMethod::Get, "/", Route::Matching::Exact, html);
+    add_asset_route(http_RequestMethod::Get, "/mco_info", Route::Matching::Walk, html);
     if (thop_has_casemix) {
-        add_asset_route("GET", "/mco_casemix", Route::Matching::Walk, html);
-        add_asset_route("GET", "/user", Route::Matching::Walk, html);
+        add_asset_route(http_RequestMethod::Get, "/mco_casemix", Route::Matching::Walk, html);
+        add_asset_route(http_RequestMethod::Get, "/user", Route::Matching::Walk, html);
     }
 
     // Common API
-    add_function_route("GET", "/api/user/settings", ProduceSettings);
-    add_function_route("POST", "/api/user/login", HandleLogin);
-    add_function_route("POST", "/api/user/logout", HandleLogout);
-    add_function_route("GET", "/api/structures", ProduceStructures);
+    add_function_route(http_RequestMethod::Get, "/api/user/settings", ProduceSettings);
+    add_function_route(http_RequestMethod::Post, "/api/user/login", HandleLogin);
+    add_function_route(http_RequestMethod::Post, "/api/user/logout", HandleLogout);
+    add_function_route(http_RequestMethod::Get, "/api/structures", ProduceStructures);
 
     // MCO information API
-    add_function_route("GET", "/api/mco/diagnoses", ProduceMcoDiagnoses);
-    add_function_route("GET", "/api/mco/procedures", ProduceMcoProcedures);
-    add_function_route("GET", "/api/mco/ghmghs", ProduceMcoGhmGhs);
-    add_function_route("GET", "/api/mco/tree", ProduceMcoTree);
-    add_function_route("GET", "/api/mco/highlight", ProduceMcoHighlight);
+    add_function_route(http_RequestMethod::Get, "/api/mco/diagnoses", ProduceMcoDiagnoses);
+    add_function_route(http_RequestMethod::Get, "/api/mco/procedures", ProduceMcoProcedures);
+    add_function_route(http_RequestMethod::Get, "/api/mco/ghmghs", ProduceMcoGhmGhs);
+    add_function_route(http_RequestMethod::Get, "/api/mco/tree", ProduceMcoTree);
+    add_function_route(http_RequestMethod::Get, "/api/mco/highlight", ProduceMcoHighlight);
 
     // MCO casemix API
-    add_function_route("GET", "/api/mco/aggregate", ProduceMcoAggregate);
-    add_function_route("GET", "/api/mco/results", ProduceMcoResults);
+    add_function_route(http_RequestMethod::Get, "/api/mco/aggregate", ProduceMcoAggregate);
+    add_function_route(http_RequestMethod::Get, "/api/mco/results", ProduceMcoResults);
 
     // We can use a global ETag because everything is in the binary
     {
@@ -396,13 +396,13 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         Span<const char> url = request.url;
 
         route = routes.Find(url);
-        if (!route || !TestStr(route->method, request.method)) {
+        if (!route || route->method != request.method) {
             while (url.len > 1) {
                 SplitStrReverse(url, '/', &url);
 
                 const Route *walk_route = routes.Find(url);
                 if (walk_route && walk_route->matching == Route::Matching::Walk &&
-                        TestStr(walk_route->method, request.method)) {
+                                  walk_route->method == request.method) {
                     route = walk_route;
                     break;
                 }

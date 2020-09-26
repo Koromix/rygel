@@ -179,8 +179,11 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
         io->daemon = daemon;
         io->request.base_url = daemon->base_url;
         io->request.conn = conn;
-        io->request.method = method;
 
+        if (!OptionToEnum(http_RequestMethodNames, method, &io->request.method)) {
+            io->AttachError(405);
+            return MHD_queue_response(conn, (unsigned int)io->code, io->response);
+        }
         if (!GetClientAddress(conn, io->request.client_addr)) {
             io->AttachError(422);
             return MHD_queue_response(conn, (unsigned int)io->code, io->response);
@@ -521,7 +524,7 @@ bool http_IO::ReadPostValues(Allocator *alloc,
                              HashMap<const char *, const char *> *out_values)
 {
     RG_ASSERT(state != State::Sync);
-    RG_ASSERT(TestStr(request.method, "POST"));
+    RG_ASSERT(request.method == http_RequestMethod::Post);
 
     struct PostProcessorContext {
         HashMap<const char *, const char *> *values;

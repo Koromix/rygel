@@ -54,13 +54,32 @@ private:
                                  MHD_RequestTerminationCode toe);
 };
 
+enum class http_RequestMethod {
+    Get,
+    Head,
+    Post,
+    Put,
+    Patch,
+    Delete,
+    Options
+};
+static const char *const http_RequestMethodNames[] = {
+    "GET",
+    "HEAD",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS"
+};
+
 struct http_RequestInfo {
     MHD_Connection *conn;
 
     // Useful in some cases (such as for cookie scopes)
     const char *base_url;
 
-    const char *method;
+    http_RequestMethod method;
     const char *url;
     CompressionType compression_type;
 
