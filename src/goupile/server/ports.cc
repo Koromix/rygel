@@ -47,7 +47,7 @@ ScriptPort::~ScriptPort()
     }
 }
 
-// XXX: Ugly memory behaviour, aud se actual JS exceptions
+// XXX: Ugly memory behaviour, and use actual JS exceptions
 static JSValue ReadCode(JSContext *ctx, JSValueConst, int argc, JSValueConst *argv)
 {
     BlockAllocator temp_alloc;
@@ -75,131 +75,155 @@ static JSValue ReadCode(JSContext *ctx, JSValueConst, int argc, JSValueConst *ar
     return JS_NewStringLen(ctx, code.ptr, (size_t)code.len);
 }
 
-bool ScriptPort::ParseFragments(StreamReader *st, ScriptHandle *out_handle)
+bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_handles)
 {
-    BlockAllocator temp_alloc;
+    RG_DEFER_NC(out_guard, len = out_handles->len) { out_handles->RemoveFrom(len); };
 
-    // Reinitialize (just in case)
-    out_handle->~ScriptHandle();
+    BlockAllocator temp_alloc;
 
     json_Parser parser(st, &temp_alloc);
 
-    JSValue fragments = JS_NewArray(ctx);
-    uint32_t fragments_len = 0;
-    RG_DEFER_N(out_guard) { JS_FreeValue(ctx, fragments); };
-
     parser.ParseArray();
     while (parser.InArray()) {
-        const char *mtime = nullptr;
-        int64_t version = -1;
-        const char *page = nullptr;
-        bool deletion = false;
+        ScriptRecord *handle = out_handles->AppendDefault();
 
-        JSValue frag = JS_NewObject(ctx);
-        JSValue values = JS_NewObject(ctx);
-        JS_SetPropertyStr(ctx, frag, "values", values);
-        JS_SetPropertyUint32(ctx, fragments, fragments_len++, frag);
+        handle->ctx = ctx;
+        handle->fragments = JS_NewArray(ctx);
+
+        const char *table = nullptr;
+        const char *id = nullptr;
+        uint32_t fragments_len = 0;
 
         parser.ParseObject();
         while (parser.InObject()) {
             const char *key = nullptr;
             parser.ParseKey(&key);
 
-            if (TestStr(key, "mtime")) {
-                parser.ParseString(&mtime);
-            } else if (TestStr(key, "version")) {
-                parser.ParseInt(&version);
-            } else if (TestStr(key, "page")) {
-                if (parser.PeekToken() == json_TokenType::Null) {
-                    parser.ParseNull();
-                    deletion = true;
-                } else {
-                    parser.ParseString(&page);
-                    deletion = false;
-                }
-            } else if (TestStr(key, "values")) {
-                parser.ParseObject();
-                while (parser.InObject()) {
-                    const char *obj_key = nullptr;
-                    parser.ParseKey(&obj_key);
+            if (TestStr(key, "table")) {
+                parser.ParseString(&table);
+            } else if (TestStr(key, "id")) {
+                parser.ParseString(&id);
+            } else if (TestStr(key, "fragments")) {
+                parser.ParseArray();
+                while (parser.InArray()) {
+                    const char *mtime = nullptr;
+                    int64_t version = -1;
+                    const char *page = nullptr;
+                    bool deletion = false;
 
-                    JSAtom obj_prop = JS_NewAtom(ctx, obj_key);
-                    RG_DEFER { JS_FreeAtom(ctx, obj_prop); };
+                    JSValue frag = JS_NewObject(ctx);
+                    JSValue values = JS_NewObject(ctx);
+                    JS_SetPropertyStr(ctx, frag, "values", values);
+                    JS_SetPropertyUint32(ctx, handle->fragments, fragments_len++, frag);
 
-                    switch (parser.PeekToken()) {
-                        case json_TokenType::Null: {
-                            parser.ParseNull();
-                            JS_SetProperty(ctx, values, obj_prop, JS_NULL);
-                        } break;
-                        case json_TokenType::Bool: {
-                            bool b = false;
-                            parser.ParseBool(&b);
+                    parser.ParseObject();
+                    while (parser.InObject()) {
+                        const char *key = nullptr;
+                        parser.ParseKey(&key);
 
-                            JS_SetProperty(ctx, values, obj_prop, b ? JS_TRUE : JS_FALSE);
-                        } break;
-                        case json_TokenType::Integer: {
-                            int64_t i = 0;
-                            parser.ParseInt(&i);
-
-                            if (i >= INT_MIN || i <= INT_MAX) {
-                                JS_SetProperty(ctx, values, obj_prop, JS_NewInt32(ctx, (int32_t)i));
+                        if (TestStr(key, "mtime")) {
+                            parser.ParseString(&mtime);
+                        } else if (TestStr(key, "version")) {
+                            parser.ParseInt(&version);
+                        } else if (TestStr(key, "page")) {
+                            if (parser.PeekToken() == json_TokenType::Null) {
+                                parser.ParseNull();
+                                deletion = true;
                             } else {
-                                JS_SetProperty(ctx, values, obj_prop, JS_NewBigInt64(ctx, i));
+                                parser.ParseString(&page);
+                                deletion = false;
                             }
-                        } break;
-                        case json_TokenType::Double: {
-                            double d = 0.0;
-                            parser.ParseDouble(&d);
+                        } else if (TestStr(key, "values")) {
+                            parser.ParseObject();
+                            while (parser.InObject()) {
+                                const char *obj_key = nullptr;
+                                parser.ParseKey(&obj_key);
 
-                            JS_SetProperty(ctx, values, obj_prop, JS_NewFloat64(ctx, d));
-                        } break;
-                        case json_TokenType::String: {
-                            Span<const char> str;
-                            parser.ParseString(&str);
+                                JSAtom obj_prop = JS_NewAtom(ctx, obj_key);
+                                RG_DEFER { JS_FreeAtom(ctx, obj_prop); };
 
-                            JS_SetProperty(ctx, values, obj_prop, JS_NewStringLen(ctx, str.ptr, (size_t)str.len));
-                        } break;
-
-                        case json_TokenType::StartArray: {
-                            JSValue array = JS_NewArray(ctx);
-                            uint32_t len = 0;
-
-                            JS_SetProperty(ctx, values, obj_prop, array);
-
-                            parser.ParseArray();
-                            while (parser.InArray()) {
                                 switch (parser.PeekToken()) {
                                     case json_TokenType::Null: {
                                         parser.ParseNull();
-                                        JS_SetPropertyUint32(ctx, array, len++, JS_NULL);
+                                        JS_SetProperty(ctx, values, obj_prop, JS_NULL);
                                     } break;
                                     case json_TokenType::Bool: {
                                         bool b = false;
                                         parser.ParseBool(&b);
 
-                                        JS_SetPropertyUint32(ctx, array, len++, b ? JS_TRUE : JS_FALSE);
+                                        JS_SetProperty(ctx, values, obj_prop, b ? JS_TRUE : JS_FALSE);
                                     } break;
                                     case json_TokenType::Integer: {
                                         int64_t i = 0;
                                         parser.ParseInt(&i);
 
                                         if (i >= INT_MIN || i <= INT_MAX) {
-                                            JS_SetPropertyUint32(ctx, array, len++, JS_NewInt32(ctx, (int32_t)i));
+                                            JS_SetProperty(ctx, values, obj_prop, JS_NewInt32(ctx, (int32_t)i));
                                         } else {
-                                            JS_SetPropertyUint32(ctx, array, len++, JS_NewBigInt64(ctx, i));
+                                            JS_SetProperty(ctx, values, obj_prop, JS_NewBigInt64(ctx, i));
                                         }
                                     } break;
                                     case json_TokenType::Double: {
                                         double d = 0.0;
                                         parser.ParseDouble(&d);
 
-                                        JS_SetPropertyUint32(ctx, array, len++, JS_NewFloat64(ctx, d));
+                                        JS_SetProperty(ctx, values, obj_prop, JS_NewFloat64(ctx, d));
                                     } break;
                                     case json_TokenType::String: {
                                         Span<const char> str;
                                         parser.ParseString(&str);
 
-                                        JS_SetPropertyUint32(ctx, array, len++, JS_NewStringLen(ctx, str.ptr, (size_t)str.len));
+                                        JS_SetProperty(ctx, values, obj_prop, JS_NewStringLen(ctx, str.ptr, (size_t)str.len));
+                                    } break;
+
+                                    case json_TokenType::StartArray: {
+                                        JSValue array = JS_NewArray(ctx);
+                                        uint32_t len = 0;
+
+                                        JS_SetProperty(ctx, values, obj_prop, array);
+
+                                        parser.ParseArray();
+                                        while (parser.InArray()) {
+                                            switch (parser.PeekToken()) {
+                                                case json_TokenType::Null: {
+                                                    parser.ParseNull();
+                                                    JS_SetPropertyUint32(ctx, array, len++, JS_NULL);
+                                                } break;
+                                                case json_TokenType::Bool: {
+                                                    bool b = false;
+                                                    parser.ParseBool(&b);
+
+                                                    JS_SetPropertyUint32(ctx, array, len++, b ? JS_TRUE : JS_FALSE);
+                                                } break;
+                                                case json_TokenType::Integer: {
+                                                    int64_t i = 0;
+                                                    parser.ParseInt(&i);
+
+                                                    if (i >= INT_MIN || i <= INT_MAX) {
+                                                        JS_SetPropertyUint32(ctx, array, len++, JS_NewInt32(ctx, (int32_t)i));
+                                                    } else {
+                                                        JS_SetPropertyUint32(ctx, array, len++, JS_NewBigInt64(ctx, i));
+                                                    }
+                                                } break;
+                                                case json_TokenType::Double: {
+                                                    double d = 0.0;
+                                                    parser.ParseDouble(&d);
+
+                                                    JS_SetPropertyUint32(ctx, array, len++, JS_NewFloat64(ctx, d));
+                                                } break;
+                                                case json_TokenType::String: {
+                                                    Span<const char> str;
+                                                    parser.ParseString(&str);
+
+                                                    JS_SetPropertyUint32(ctx, array, len++, JS_NewStringLen(ctx, str.ptr, (size_t)str.len));
+                                                } break;
+
+                                                default: {
+                                                    LogError("Unexpected token type '%1'", json_TokenTypeNames[(int)parser.PeekToken()]);
+                                                    return false;
+                                                } break;
+                                            }
+                                        }
                                     } break;
 
                                     default: {
@@ -208,46 +232,46 @@ bool ScriptPort::ParseFragments(StreamReader *st, ScriptHandle *out_handle)
                                     } break;
                                 }
                             }
-                        } break;
-
-                        default: {
-                            LogError("Unexpected token type '%1'", json_TokenTypeNames[(int)parser.PeekToken()]);
+                        } else {
+                            LogError("Unknown key '%1' in fragment object", key);
                             return false;
-                        } break;
+                        }
                     }
+
+                    if (((!page || !page[0]) && !deletion) || !mtime || !mtime[0] || version < 0) {
+                        LogError("Missing mtime, version or page attribute");
+                        return false;
+                    }
+
+                    JS_SetPropertyStr(ctx, frag, "mtime", JS_NewString(ctx, mtime));
+                    JS_SetPropertyStr(ctx, frag, "version", JS_NewInt64(ctx, version));
+                    JS_SetPropertyStr(ctx, frag, "page", !deletion ? JS_NewString(ctx, page) : JS_NULL);
                 }
-            } else {
-                LogError("Unknown key '%1' in fragment object", key);
-                return false;
             }
         }
 
-        if (((!page || !page[0]) && !deletion) || !mtime || !mtime[0] || version < 0) {
-            LogError("Missing mtime, version or page attribute");
+        if (!table || !table[0] || !id || !id[0]) {
+            LogError("Missing table or id attribute");
             return false;
         }
 
-        JS_SetPropertyStr(ctx, frag, "mtime", JS_NewString(ctx, mtime));
-        JS_SetPropertyStr(ctx, frag, "version", JS_NewInt64(ctx, version));
-        JS_SetPropertyStr(ctx, frag, "page", !deletion ? JS_NewString(ctx, page) : JS_NULL);
+        handle->table = ConsumeValueStr(ctx, JS_NewString(ctx, table)).ptr;
+        handle->id = ConsumeValueStr(ctx, JS_NewString(ctx, id)).ptr;
     }
     if (!parser.IsValid())
         return false;
-
-    out_handle->ctx = ctx;
-    out_handle->value = fragments;
 
     out_guard.Disable();
     return true;
 }
 
 // XXX: Detect errors (such as allocation failures) in calls to QuickJS
-bool ScriptPort::RunRecord(Span<const char> json, const ScriptHandle &handle,
+bool ScriptPort::RunRecord(Span<const char> json, const ScriptRecord &handle,
                            HeapArray<ScriptFragment> *out_fragments, Span<const char> *out_json)
 {
     JSValue args[] = {
         JS_NewStringLen(ctx, json.ptr, (size_t)json.len),
-        JS_DupValue(ctx, handle.value)
+        JS_DupValue(ctx, handle.fragments)
     };
     RG_DEFER {
         JS_FreeValue(ctx, args[0]);

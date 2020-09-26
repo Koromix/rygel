@@ -102,13 +102,10 @@ function VirtualRecords(db) {
                     table: record.table,
                     id: record.id,
 
-                    pages: [],
                     version: record.version || -1
                 };
             }
 
-            entry.pages = entry.pages.filter(key => key !== page);
-            entry.pages.push(page);
             frag.version = ++entry.version;
             frag._ikey = makeFragmentKey(record.table, record.id, frag.version);
 
@@ -229,13 +226,13 @@ function VirtualRecords(db) {
             values: {}
         };
 
-        let pages_set = new Set(entry.pages);
+        let pages_set = new Set;
 
         // Deleted record
         if (fragments[fragments.length - 1].page == null)
             return null;
 
-        for (let i = fragments.length - 1; i >= 0 && pages_set.size; i--) {
+        for (let i = fragments.length - 1; i >= 0; i--) {
             let frag = fragments[i];
 
             if (frag.version <= version) {
@@ -244,9 +241,11 @@ function VirtualRecords(db) {
                     record.mtime = frag.mtime;
                 }
 
-                if (frag.page != null && pages_set.delete(frag.page)) {
+                if (frag.page != null && !pages_set.has(frag.page)) {
                     record.complete[frag.page] = frag.complete;
                     record.values = Object.assign(frag.values, record.values);
+
+                    pages_set.add(frag.page);
                 }
             }
         }
@@ -258,11 +257,6 @@ function VirtualRecords(db) {
                 record.values[key] = undefined;
         }
 
-        if (record.version === record.versions.length - 1 && pages_set.size) {
-            let list = Array.from(pages_set);
-            console.error(`Damaged record ${record.id} (missing pages: ${list.join(', ')})`);
-        }
-
         return record;
     }
 
@@ -271,73 +265,69 @@ function VirtualRecords(db) {
     };
 
     this.sync = async function() {
-        let fragments = await db.loadAll('rec_fragments');
-        // fragments = fragments.filter(frag => frag.anchor < 0);
+        // Upload new fragments
+        {
+            let new_fragments = await db.loadAll('rec_fragments/anchor', IDBKeyRange.only(-1));
+            new_fragments.sort((frag1, frag2) => util.compareValues(frag1._ikey, frag2._ikey));
 
-        // Upload fragments
-        let uploads = util.mapRLE(fragments, frag => frag.id, (id, offset, length) => {
-            let record_fragments = fragments.slice(offset, offset + length);
+            let records = util.mapRLE(new_fragments, frag => frag.id, (id, offset, length) => {
+                let fragments = new_fragments.slice(offset, offset + length);
+                let frag0 = fragments[0];
 
-            if (record_fragments.some(frag => frag.anchor < 0)) {
-                let frag0 = record_fragments[0];
+                let record = {
+                    table: frag0.table,
+                    id: frag0.id,
 
-                record_fragments = record_fragments.map(frag => ({
-                    mtime: frag.mtime,
-                    version: frag.version,
-                    page: frag.page,
-                    values: frag.values
-                }));
+                    fragments: fragments.map(frag => ({
+                        mtime: frag.mtime,
+                        version: frag.version,
+                        page: frag.page,
+                        values: frag.values
+                    }))
+                };
 
-                let url = util.pasteURL(`${env.base_url}api/records/save`, {table: frag0.table, id: frag0.id});
-                return net.fetch(url, {
-                    method: 'POST',
-                    body: JSON.stringify(record_fragments)
-                });
-            } else {
-                return null;
-            }
-        });
-        for (let p of uploads) {
-            if (p != null) {
-                let response = await p;
+                return record;
+            });
+            records = Array.from(records);
 
-                if (!response.ok) {
-                    let err = (await response.text()).trim();
-
-                    if (response.status === 409) {
-                        // XXX: Avoid this kind of silent data loss...
-                        console.log(err.message);
-                    } else {
-                        throw new Error(err);
-                    }
-                }
-            }
+            await net.fetch(`${env.base_url}api/records/sync`, {
+                method: 'POST',
+                body: JSON.stringify(records)
+            });
         }
 
         // Get new fragments
-        for (let form of app.forms) {
-            let url = util.pasteURL(`${env.base_url}api/records/load`, {table: form.key});
+        {
+            let [_, anchor] = await db.getMinMax('rec_fragments/anchor');
+            anchor = (anchor != null) ? (anchor + 1) : 0;
+
+            let url = util.pasteURL(`${env.base_url}api/records/load`, {anchor: anchor});
             let records = await net.fetch(url).then(response => response.json());
 
             let entries = records.map(record => ({
                 _ikey: makeEntryKey(record.table, record.id),
+
                 id: record.id,
-                pages: record.fragments.filter(frag => frag.page != null).map(frag => frag.page),
                 table: record.table,
-                version: record.fragments.length - 1,
-                sequence: record.sequence
+                sequence: record.sequence,
+
+                version: record.fragments[record.fragments.length - 1].version,
             }));
-            let fragments = records.flatMap(record => record.fragments.map((frag, version) => ({
-                _ikey: makeFragmentKey(record.table, record.id, version),
-                anchor: frag.anchor,
-                complete: frag.complete,
-                id: record.id,
-                mtime: frag.mtime,
-                page: frag.page,
+
+            let fragments = records.flatMap(record => record.fragments.map(frag => ({
+                _ikey: makeFragmentKey(record.table, record.id, frag.version),
+
                 table: record.table,
+                id: record.id,
+                version: frag.version,
+                page: frag.page,
+
                 username: frag.username,
-                values: frag.values,
-                version: version
+                mtime: frag.mtime,
+                anchor: frag.anchor,
+
+                complete: frag.complete,
+                values: frag.values
             })));
 
             await db.saveAll('rec_entries', entries);
@@ -345,8 +335,8 @@ function VirtualRecords(db) {
         }
 
         // Update columns
-        for (let form of app.forms) {
-            let url = util.pasteURL(`${env.base_url}api/records/columns`, {table: form.key});
+        {
+            let url = util.pasteURL(`${env.base_url}api/records/columns`);
             let columns = await net.fetch(url).then(response => response.json());
 
             columns = columns.map(col => {
@@ -354,7 +344,7 @@ function VirtualRecords(db) {
                     key: null,
 
                     // XXX: Fix missing variable type
-                    table: form.key,
+                    table: col.table,
                     page: col.page,
                     variable: col.variable,
                     prop: null,
@@ -364,10 +354,10 @@ function VirtualRecords(db) {
                 }
 
                 if (col.hasOwnProperty('prop')) {
-                    col2.key = makeColumnKeyMulti(form.key, col.page, col.variable, col.prop);
+                    col2.key = makeColumnKeyMulti(col.table, col.page, col.variable, col.prop);
                     col2.prop = col.prop;
                 } else {
-                    col2.key = makeColumnKey(form.key, col.page, col.variable);
+                    col2.key = makeColumnKey(col.table, col.page, col.variable);
                     delete col2.prop;
                 }
 

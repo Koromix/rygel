@@ -9,18 +9,22 @@
 
 namespace RG {
 
-struct ScriptHandle {
-    RG_DELETE_COPY(ScriptHandle)
+struct ScriptRecord {
+    RG_DELETE_COPY(ScriptRecord)
 
     JSContext *ctx = nullptr;
-    JSValue value = JS_UNDEFINED;
+    const char *table = nullptr;
+    const char *id = nullptr;
+    JSValue fragments = JS_UNDEFINED;
 
-    ScriptHandle() = default;
+    ScriptRecord() = default;
 
-    ~ScriptHandle()
+    ~ScriptRecord()
     {
         if (ctx) {
-            JS_FreeValue(ctx, value);
+            JS_FreeCString(ctx, table);
+            JS_FreeCString(ctx, id);
+            JS_FreeValue(ctx, fragments);
             ctx = nullptr;
         }
     }
@@ -71,8 +75,8 @@ public:
     ScriptPort() = default;
     ~ScriptPort();
 
-    bool ParseFragments(StreamReader *st, ScriptHandle *out_handle);
-    bool RunRecord(Span<const char> json, const ScriptHandle &handle,
+    bool ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_handles);
+    bool RunRecord(Span<const char> json, const ScriptRecord &handle,
                    HeapArray<ScriptFragment> *out_fragments, Span<const char> *out_json);
 
     friend void InitPorts();

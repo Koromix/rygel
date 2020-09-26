@@ -209,8 +209,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         HandleRecordLoad(request, io);
     } else if (TestStr(request.url, "/api/records/columns") && request.method == http_RequestMethod::Get) {
         HandleRecordColumns(request, io);
-    } else if (StartsWith(request.url, "/api/records/save") && request.method == http_RequestMethod::Post) {
-        HandleRecordSave(request, io);
+    } else if (StartsWith(request.url, "/api/records/sync") && request.method == http_RequestMethod::Post) {
+        HandleRecordSync(request, io);
     } else if (TestStr(request.url, "/api/schedule/resources") && request.method == http_RequestMethod::Get) {
         HandleScheduleResources(request, io);
     } else if (TestStr(request.url, "/api/schedule/meetings") && request.method == http_RequestMethod::Get) {
