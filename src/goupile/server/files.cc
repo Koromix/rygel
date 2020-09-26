@@ -277,7 +277,7 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
     const char *sha256 = request.GetQueryValue("sha256");
 
     // Security checks
-    if (strncmp(request.url, "/files/", 7)) {
+    if (!StartsWith(request.url, "/files/")) {
         LogError("Cannot write to file outside '/files/'");
         io->AttachError(403);
         return;

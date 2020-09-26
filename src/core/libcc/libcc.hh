@@ -3144,6 +3144,31 @@ static inline int CmpStr(Span<const char> str1, const char *str2)
 static inline int CmpStr(const char *str1, const char *str2)
     { return strcmp(str1, str2); }
 
+static inline bool StartsWith(Span<const char> str, const char *prefix)
+{
+    Size i = 0;
+    while (i < str.len && prefix[i]) {
+        if (str[i] != prefix[i])
+            return false;
+
+        i++;
+    }
+
+    return !prefix[i];
+}
+static inline bool StartsWith(const char *str, const char *prefix)
+{
+    Size i = 0;
+    while (str[i] && prefix[i]) {
+        if (str[i] != prefix[i])
+            return false;
+
+        i++;
+    }
+
+    return !prefix[i];
+}
+
 static inline Span<char> SplitStr(Span<char> str, char split_char, Span<char> *out_remainder = nullptr)
 {
     Size part_len = 0;

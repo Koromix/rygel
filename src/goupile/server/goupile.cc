@@ -160,8 +160,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         if (HandleFileGet(request, io))
             return;
 
-        if (TestStr(request.url, "/") || !strncmp(request.url, "/app/", 5) ||
-                                         !strncmp(request.url, "/main/", 6)) {
+        if (TestStr(request.url, "/") || StartsWith(request.url, "/app/") ||
+                                         StartsWith(request.url, "/main/")) {
             asset = assets_map.FindValue("/static/goupile.html", nullptr);
             RG_ASSERT(asset);
         } else {
@@ -201,9 +201,9 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
          HandleFileList(request, io);
     } else if (TestStr(request.url, "/api/files/static") && request.method == http_RequestMethod::Get) {
         HandleFileStatic(request, io);
-    } else if (!strncmp(request.url, "/api/records/", 13) && request.method == http_RequestMethod::Get) {
+    } else if (StartsWith(request.url, "/api/records/") && request.method == http_RequestMethod::Get) {
         HandleRecordGet(request, io);
-    } else if (!strncmp(request.url, "/api/records/", 13) && request.method == http_RequestMethod::Put) {
+    } else if (StartsWith(request.url, "/api/records/") && request.method == http_RequestMethod::Put) {
         HandleRecordPut(request, io);
     } else if (TestStr(request.url, "/api/records/columns") && request.method == http_RequestMethod::Get) {
         HandleRecordColumns(request, io);
@@ -211,9 +211,9 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         HandleScheduleResources(request, io);
     } else if (TestStr(request.url, "/api/schedule/meetings") && request.method == http_RequestMethod::Get) {
         HandleScheduleMeetings(request, io);
-    } else if (!strncmp(request.url, "/files/", 7) && request.method == http_RequestMethod::Put) {
+    } else if (StartsWith(request.url, "/files/") && request.method == http_RequestMethod::Put) {
         HandleFilePut(request, io);
-    } else if (!strncmp(request.url, "/files/", 7) && request.method == http_RequestMethod::Delete) {
+    } else if (StartsWith(request.url, "/files/") && request.method == http_RequestMethod::Delete) {
         HandleFileDelete(request, io);
     } else {
         io->AttachError(404);
