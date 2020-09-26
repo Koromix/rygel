@@ -5174,7 +5174,7 @@ bool ConsolePrompter::Read()
 
 void ConsolePrompter::Commit()
 {
-    str.len = TrimStrRight((Span<const char>)str, "\r\n").len;
+    str.len = TrimStrRight(str.Take(), "\r\n").len;
 
     if (str.len) {
         std::swap(str, entries[entries.len - 1]);

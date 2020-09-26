@@ -1088,10 +1088,9 @@ public:
         RemoveFrom(len - count);
     }
 
-    Span<T> Take(Size offset, Size len) const
-        { return Span<T>((T *)data, N).Take(offset, len); }
-    Span<T> TakeAvailable() const
-        { return Span<T>((T *)data + len, N - len); }
+    Span<T> Take() const { return Span<T>(data, len); }
+    Span<T> Take(Size offset, Size len) const { return Span<T>((T *)data, N).Take(offset, len); }
+    Span<T> TakeAvailable() const { return Span<T>((T *)data + len, N - len); }
 };
 
 template <typename T>
@@ -1292,8 +1291,8 @@ public:
         RemoveFrom(len - count);
     }
 
-    Span<T> Take(Size offset, Size len) const
-        { return Span<T>(ptr, this->len).Take(offset, len); }
+    Span<T> Take() const { return Span<T>(ptr, len); }
+    Span<T> Take(Size offset, Size len) const { return Span<T>(ptr, this->len).Take(offset, len); }
 
     Span<T> Leak()
     {
@@ -3145,8 +3144,7 @@ static inline int CmpStr(Span<const char> str1, const char *str2)
 static inline int CmpStr(const char *str1, const char *str2)
     { return strcmp(str1, str2); }
 
-template <typename T>
-Span<T> SplitStr(Span<T> str, char split_char, Span<T> *out_remainder = nullptr)
+static inline Span<char> SplitStr(Span<char> str, char split_char, Span<char> *out_remainder = nullptr)
 {
     Size part_len = 0;
     while (part_len < str.len) {
@@ -3164,8 +3162,7 @@ Span<T> SplitStr(Span<T> str, char split_char, Span<T> *out_remainder = nullptr)
     }
     return str;
 }
-template <typename T>
-Span<T> SplitStr(T *str, char split_char, T **out_remainder = nullptr)
+static inline Span<char> SplitStr(char *str, char split_char, char **out_remainder = nullptr)
 {
     Size part_len = 0;
     while (str[part_len]) {
@@ -3183,28 +3180,33 @@ Span<T> SplitStr(T *str, char split_char, T **out_remainder = nullptr)
     }
     return MakeSpan(str, part_len);
 }
+static inline Span<const char> SplitStr(Span<const char> str, char split_char, Span<const char> *out_remainder = nullptr)
+    { return SplitStr(MakeSpan((char *)str.ptr, str.len), split_char, (Span<char> *)out_remainder); }
+static inline Span<const char> SplitStr(const char *str, char split_char, const char **out_remainder = nullptr)
+    { return SplitStr((char *)str, split_char, (char **)out_remainder); }
 
-template <typename T>
-Span<T> SplitStrLine(Span<T> str, Span<T> *out_remainder = nullptr)
+static inline Span<char> SplitStrLine(Span<char> str, Span<char> *out_remainder = nullptr)
 {
-    Span<T> part = SplitStr(str, '\n', out_remainder);
+    Span<char> part = SplitStr(str, '\n', out_remainder);
     if (part.len < str.len && part.len && part[part.len - 1] == '\r') {
         part.len--;
     }
     return part;
 }
-template <typename T>
-Span<T> SplitStrLine(T *str, T **out_remainder = nullptr)
+static inline Span<char> SplitStrLine(char *str, char **out_remainder = nullptr)
 {
-    Span<T> part = SplitStr(str, '\n', out_remainder);
+    Span<char> part = SplitStr(str, '\n', out_remainder);
     if (str[part.len] && part.len && part[part.len - 1] == '\r') {
         part.len--;
     }
     return part;
 }
+static inline Span<const char> SplitStrLine(Span<const char> str, Span<const char> *out_remainder = nullptr)
+    { return SplitStrLine(MakeSpan((char *)str.ptr, str.len), (Span<char> *)out_remainder); }
+static inline Span<const char> SplitStrLine(const char *str, const char **out_remainder = nullptr)
+    { return SplitStrLine((char *)str, (char **)out_remainder); }
 
-template <typename T>
-Span<T> SplitStrAny(Span<T> str, const char *split_chars, Span<T> *out_remainder = nullptr)
+static inline Span<char> SplitStrAny(Span<char> str, const char *split_chars, Span<char> *out_remainder = nullptr)
 {
     Bitset<256> split_mask;
     for (Size i = 0; split_chars[i]; i++) {
@@ -3227,8 +3229,7 @@ Span<T> SplitStrAny(Span<T> str, const char *split_chars, Span<T> *out_remainder
     }
     return str;
 }
-template <typename T>
-Span<T> SplitStrAny(T *str, const char *split_chars, T **out_remainder = nullptr)
+static inline Span<char> SplitStrAny(char *str, const char *split_chars, char **out_remainder = nullptr)
 {
     Bitset<256> split_mask;
     for (Size i = 0; split_chars[i]; i++) {
@@ -3251,9 +3252,13 @@ Span<T> SplitStrAny(T *str, const char *split_chars, T **out_remainder = nullptr
     }
     return MakeSpan(str, part_len);
 }
+static inline Span<const char> SplitStrAny(Span<const char> str, const char *split_chars, Span<const char> *out_remainder = nullptr)
+    { return SplitStrAny(MakeSpan((char *)str.ptr, str.len), split_chars, (Span<char> *)out_remainder); }
+static inline Span<const char> SplitStrAny(const char *str, const char *split_chars, const char **out_remainder = nullptr)
+    { return SplitStrAny((char *)str, split_chars, (char **)out_remainder); }
 
-template <typename T>
-Span<T> SplitStrReverse(Span<T> str, char split_char, Span<T> *out_remainder = nullptr)
+static inline Span<const char> SplitStrReverse(Span<const char> str, char split_char,
+                                               Span<const char> *out_remainder = nullptr)
 {
     Size remainder_len = str.len - 1;
     while (remainder_len >= 0) {
@@ -3271,12 +3276,12 @@ Span<T> SplitStrReverse(Span<T> str, char split_char, Span<T> *out_remainder = n
     }
     return str;
 }
-template <typename T>
-Span<T> SplitStrReverse(T *str, char split_char, Span<T> *out_remainder = nullptr)
-    { return SplitStrReverse(Span<T>(str), split_char, out_remainder); }
+static inline Span<const char> SplitStrReverse(const char *str, char split_char,
+                                               Span<const char> *out_remainder = nullptr)
+    { return SplitStrReverse(MakeSpan(str, strlen(str)), split_char, out_remainder); }
 
-template <typename T>
-Span<T> SplitStrReverseAny(Span<T> str, const char *split_chars, Span<T> *out_remainder = nullptr)
+static inline Span<const char> SplitStrReverseAny(Span<const char> str, const char *split_chars,
+                                                  Span<const char> *out_remainder = nullptr)
 {
     Bitset<256> split_mask;
     for (Size i = 0; split_chars[i]; i++) {
@@ -3299,12 +3304,11 @@ Span<T> SplitStrReverseAny(Span<T> str, const char *split_chars, Span<T> *out_re
     }
     return str;
 }
-template <typename T>
-Span<T> SplitStrReverseAny(T *str, const char *split_chars, Span<T> *out_remainder = nullptr)
-    { return SplitStrReverseAny(Span<T>(str), split_chars, out_remainder); }
+static inline Span<const char> SplitStrReverseAny(const char *str, const char *split_chars,
+                                                  Span<const char> *out_remainder = nullptr)
+    { return SplitStrReverseAny(MakeSpan(str, strlen(str)), split_chars, out_remainder); }
 
-template <typename T>
-Span<T> TrimStrLeft(Span<T> str, const char *trim_chars = " \t\r\n")
+static inline Span<char> TrimStrLeft(Span<char> str, const char *trim_chars = " \t\r\n")
 {
     while (str.len && strchr(trim_chars, str[0])) {
         str.ptr++;
@@ -3313,8 +3317,7 @@ Span<T> TrimStrLeft(Span<T> str, const char *trim_chars = " \t\r\n")
 
     return str;
 }
-template <typename T>
-Span<T> TrimStrRight(Span<T> str, const char *trim_chars = " \t\r\n")
+static inline Span<char> TrimStrRight(Span<char> str, const char *trim_chars = " \t\r\n")
 {
     while (str.len && strchr(trim_chars, str[str.len - 1])) {
         str.len--;
@@ -3322,11 +3325,19 @@ Span<T> TrimStrRight(Span<T> str, const char *trim_chars = " \t\r\n")
 
     return str;
 }
-template <typename T>
-Span<T> TrimStr(Span<T> str, const char *trim_chars = " \t\r\n")
+static inline Span<char> TrimStr(Span<char> str, const char *trim_chars = " \t\r\n")
 {
-    return TrimStrLeft(TrimStrRight(str, trim_chars), trim_chars);
+    str = TrimStrRight(str, trim_chars);
+    str = TrimStrLeft(str, trim_chars);
+
+    return str;
 }
+static inline Span<const char> TrimStrLeft(Span<const char> str, const char *trim_chars = " \t\r\n")
+    { return TrimStrLeft(MakeSpan((char *)str.ptr, str.len), trim_chars); }
+static inline Span<const char> TrimStrRight(Span<const char> str, const char *trim_chars = " \t\r\n")
+    { return TrimStrRight(MakeSpan((char *)str.ptr, str.len), trim_chars); }
+static inline Span<const char> TrimStr(Span<const char> str, const char *trim_chars = " \t\r\n")
+    { return TrimStr(MakeSpan((char *)str.ptr, str.len), trim_chars); }
 
 template <typename T>
 bool ParseDec(Span<const char> str, T *out_value, int flags = RG_DEFAULT_PARSE_FLAGS,

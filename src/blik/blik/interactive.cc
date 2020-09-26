@@ -151,7 +151,7 @@ int RunInteractive(bool execute)
             trace.Dump();
         };
 
-        Span<const char> code = TrimStrRight((Span<const char>)prompter.str);
+        Span<const char> code = TrimStrRight(prompter.str.Take());
         if (!code.len)
             continue;
 
@@ -177,7 +177,7 @@ int RunInteractive(bool execute)
             CompileReport report;
             if (!compiler.Compile(file, &report)) {
                 if (report.unexpected_eof) {
-                    prompter.str.len = TrimStrRight((Span<const char>)prompter.str, "\t ").len;
+                    prompter.str.len = TrimStrRight(prompter.str.Take(), "\t ").len;
                     if (!prompter.str.len || prompter.str[prompter.str.len - 1] != '\n') {
                         prompter.str.Append('\n');
                     }

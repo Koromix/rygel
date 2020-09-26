@@ -1284,7 +1284,7 @@ mco_FilterRunner::~mco_FilterRunner()
 bool mco_FilterRunner::Init(const char *filter)
 {
     // Newlines are significant in Wren
-    Span<const char> filter2 = TrimStr((Span<const char>)filter);
+    Span<const char> filter2 = TrimStr(filter);
 
     // NOTE: We hack around the fact that Wren expressions cannot contain multiple
     // statements by turn filter into a function body when there are newlines. It's

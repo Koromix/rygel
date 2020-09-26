@@ -440,7 +440,7 @@ void Builder::LoadCache()
     HeapArray<char> cache(&str_alloc);
     if (ReadFile(cache_filename, Megabytes(64), CompressionType::Gzip, &cache) < 0)
         return;
-    cache.len = TrimStrRight((Span<char>)cache, "\n").len;
+    cache.len = TrimStrRight(cache.Take(), "\n").len;
     cache.SetCapacity(cache.len + 1);
 
     // Parse cache file
@@ -628,7 +628,7 @@ static bool ParseMakeRule(const char *filename, Allocator *alloc, HeapArray<cons
         frag.RemoveFrom(0);
         remain = ParseMakeFragment(remain, &frag);
 
-        if ((Span<const char>)frag == ":")
+        if (TestStr(frag, ":"))
             break;
     }
 
@@ -637,7 +637,7 @@ static bool ParseMakeRule(const char *filename, Allocator *alloc, HeapArray<cons
         frag.RemoveFrom(0);
         remain = ParseMakeFragment(remain, &frag);
 
-        if (frag.len && (Span<const char>)frag != "\\") {
+        if (frag.len && !TestStr(frag, "\\")) {
             const char *dep_filename = NormalizePath(frag, alloc).ptr;
             out_filenames->Append(dep_filename);
         }

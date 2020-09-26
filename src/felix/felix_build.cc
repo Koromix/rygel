@@ -94,7 +94,7 @@ static const char *BuildGitVersionString(Allocator *alloc)
         return nullptr;
     }
 
-    output.len = TrimStrRight((Span<const char>)output).len;
+    output.len = TrimStrRight(output.Take()).len;
     output.Append(0);
 
     return output.TrimAndLeak().ptr;

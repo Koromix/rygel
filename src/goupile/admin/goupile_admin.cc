@@ -145,7 +145,7 @@ Options:
 
     // Errors and defaults
     if (!app_key.len) {
-        app_key = TrimStrRight((Span<const char>)profile_directory, RG_PATH_SEPARATORS);
+        app_key = TrimStrRight(profile_directory, RG_PATH_SEPARATORS);
         app_key = SplitStrReverseAny(app_key, RG_PATH_SEPARATORS);
     }
     if (!app_name.len) {
