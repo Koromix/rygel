@@ -592,13 +592,15 @@ static Span<const char> ParseMakeFragment(Span<const char> remain, HeapArray<cha
         for (; i < remain.len && !strchr("\r\n", remain[i]); i++) {
             char c = remain[i];
 
-            // The 'i > 1' check is for absolute Windows paths
-            if (c == ':' && i > 1)
-                break;
-
-            if (strchr(" $#", c)) {
+            if (strchr(" $#:", c)) {
                 if (remain[i - 1] == '\\') {
                     (*out_frag)[out_frag->len - 1] = c;
+#ifdef _WIN32
+                } else if (c == ':' && i == 1) {
+                    // Absolute Windows paths start with [A-Z]:
+                    // Some MinGW builds escape the colon, some don't. Tolerate both cases.
+                    out_frag->Append(c);
+#endif
                 } else {
                     break;
                 }
