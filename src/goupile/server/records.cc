@@ -128,16 +128,27 @@ void HandleRecordColumns(const http_RequestInfo &request, http_IO *io)
     }
 
     const char *table = request.GetQueryValue("table");
+    int64_t anchor = -1;
+    {
+        const char *anchor_str = request.GetQueryValue("anchor");
+        if (anchor_str && !ParseDec(anchor_str, &anchor)) {
+            io->AttachError(422);
+            return;
+        }
+    }
 
     sq_Statement stmt;
     if (table) {
         if (!goupile_db.Prepare(R"(SELECT store, page, variable, prop, before, after FROM rec_columns
-                                   WHERE store = ?)", &stmt))
+                                   WHERE store = ? AND anchor >= ?)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, table, -1, SQLITE_STATIC);
+        sqlite3_bind_int64(stmt, 2, anchor);
     } else {
-        if (!goupile_db.Prepare("SELECT store, page, variable, prop, before, after FROM rec_columns", &stmt))
+        if (!goupile_db.Prepare(R"(SELECT store, page, variable, prop, before, after FROM rec_columns
+                                   WHERE anchor >= ?)", &stmt))
             return;
+        sqlite3_bind_int64(stmt, 1, anchor);
     }
 
     // Export data
