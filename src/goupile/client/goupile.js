@@ -445,6 +445,7 @@ let goupile = new function() {
     function renderFullMenu() {
         let show_develop = user.hasPermission('develop');
         let show_data = user.hasPermission('edit') && route_asset && route_asset.form;
+        let show_export = user.hasPermission('export');
 
         return html`
             ${show_develop ? html`
@@ -466,8 +467,8 @@ let goupile = new function() {
                     <div>
                         <button class=${left_panel === 'status' ? 'active' : ''}
                                 @click=${e => toggleLeftPanel('status')}>Suivi</button>
-                        <button class=${left_panel === 'data' ? 'active' : ''}
-                                @click=${e => toggleLeftPanel('data')}>Données</button>
+                        ${show_export ? html`<button class=${left_panel === 'data' ? 'active' : ''}
+                                                     @click=${e => toggleLeftPanel('data')}>Données</button>` : ''}
                     </div>
                 </div>
             ` :  ''}
