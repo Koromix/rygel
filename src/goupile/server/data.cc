@@ -211,8 +211,9 @@ bool MigrateDatabase(sq_Database &database, int version)
 
                     INSERT INTO rec_columns (store, page, variable, prop, before, after, anchor)
                         SELECT store, page, variable, prop, before, after, 0 FROM rec_columns_BAK;
-
                     CREATE UNIQUE INDEX rec_columns_spvp ON rec_columns (store, page, variable, IFNULL(prop, 0));
+
+                    DROP TABLE rec_columns_BAK;
                 )");
                 if (!success)
                     return false;
