@@ -200,6 +200,8 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
             }
         }
 
+        bool conflict = false;
+
         for (const ScriptRecord &handle: handles) {
             // Get existing record data
             sq_Statement stmt;
@@ -226,8 +228,10 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
 
             // Run JS validation
             HeapArray<ScriptFragment> fragments;
-            if (!port->RunRecord(json, handle, &fragments, &json))
-                return;
+            if (!port->RunRecord(json, handle, &fragments, &json)) {
+                conflict = true;
+                continue;
+            }
 
             bool success = goupile_db.Transaction([&]() {
                 // Get sequence number
@@ -270,25 +274,16 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
                         return false;
                 }
 
-                // Sanity checks
-                if (!fragments.len) {
-                    LogError("Request does not contain any record fragment");
-                    io->AttachError(422);
-                    return false;
-                }
-                /* XXX: if (fragments[fragments.len - 1].version <= version) {
-                    LogError("Cannot overwrite old fragments");
-                    io->AttachError(409);
-                    return false;
-                } */
-
                 // Save record fragments (and variables)
                 for (Size i = 0; i < fragments.len; i++) {
                     const ScriptFragment &frag = fragments[i];
 
                     // XXX: Silently skipping already stored fragments for now
-                    if (frag.version <= version)
+                    if (frag.version <= version) {
+                        LogError("Ignored conflicting fragment %1 for %2", frag.version, handle.id);
+                        conflict = true;
                         continue;
+                    }
 
                     if (!goupile_db.Run(R"(INSERT INTO rec_fragments (store, id, version, page, username, mtime, complete, json)
                                            VALUES (?, ?, ?, ?, ?, ?, 0, ?))",
@@ -334,7 +329,11 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
                 return;
         }
 
-        io->AttachText(200, "Done!");
+        if (conflict) {
+            io->AttachText(409, "Done (with errors)!");
+        } else {
+            io->AttachText(200, "Done!");
+        }
     });
 }
 

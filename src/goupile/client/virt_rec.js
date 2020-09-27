@@ -290,10 +290,19 @@ function VirtualRecords(db) {
             });
             records = Array.from(records);
 
-            await net.fetch(`${env.base_url}api/records/sync`, {
+            let response = await net.fetch(`${env.base_url}api/records/sync`, {
                 method: 'POST',
                 body: JSON.stringify(records)
             });
+
+            if (!response.ok) {
+                if (response.status === 409) {
+                    console.log('Some records are in conflict');
+                } else {
+                    let err = (await response.text()).trim();
+                    throw new Error(err);
+                }
+            }
         }
 
         // Get new fragments
