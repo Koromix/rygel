@@ -230,6 +230,7 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
                 return;
 
             bool success = goupile_db.Transaction([&]() {
+                // Get sequence number
                 int sequence;
                 {
                     sq_Statement stmt;
@@ -247,22 +248,27 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
                     }
                 }
 
-                // Update sequence number
-                if (!goupile_db.Run(R"(INSERT INTO rec_sequences (store, sequence)
-                                       VALUES (?, ?)
-                                       ON CONFLICT(store)
-                                            DO UPDATE SET sequence = excluded.sequence)",
-                                    handle.table, sequence + 1))
-                    return false;
-
-                // Save record entry
+                // Insert new entry
                 if (!goupile_db.Run(R"(INSERT INTO rec_entries (store, id, sequence, version, json)
                                        VALUES (?, ?, ?, ?, ?)
-                                       ON CONFLICT(store, id)
-                                            DO UPDATE SET version = excluded.version,
-                                                          json = excluded.json)",
+                                       ON CONFLICT DO NOTHING)",
                                     handle.table, handle.id, sequence, fragments[fragments.len - 1].version, json))
                     return false;
+
+                // Update sequence number of existing entry depending on result
+                if (sqlite3_changes(goupile_db)) {
+                    if (!goupile_db.Run(R"(INSERT INTO rec_sequences (store, sequence)
+                                           VALUES (?, ?)
+                                           ON CONFLICT(store)
+                                                DO UPDATE SET sequence = excluded.sequence)",
+                                        handle.table, sequence + 1))
+                        return false;
+                } else {
+                    if (!goupile_db.Run(R"(UPDATE rec_entries SET version = ?, json = ?
+                                           WHERE store = ? AND id = ?)",
+                                        fragments[fragments.len - 1].version, json, handle.table, handle.id))
+                        return false;
+                }
 
                 // Sanity checks
                 if (!fragments.len) {
