@@ -23,7 +23,7 @@ var server = new function() {
     // C++ functions
     this.readCode = null;
 
-    this.validateFragments = function(json, fragments) {
+    this.validateFragments = function(table, json, fragments) {
         let values = JSON.parse(json);
 
         let fragments2 = fragments.map(frag => {
@@ -47,7 +47,7 @@ var server = new function() {
                     page: frag.page,
 
                     // Make it easy for the C++ caller to store in database with stringified JSON
-                    columns: expandColumns(model.variables),
+                    columns: expandColumns(table, frag.page, model.variables),
                     json: JSON.stringify(filterValues(values, model.variables))
                 };
 
@@ -73,18 +73,24 @@ var server = new function() {
         return values[key];
     }
 
-    function expandColumns(variables) {
+    function expandColumns(table, page, variables) {
         let columns = variables.flatMap((variable, idx) => {
+            let key = variable.key.toString();
+
             if (variable.multi) {
                 let ret = variable.props.map(prop => ({
-                    key: variable.key.toString(),
+                    key: makeColumnKeyMulti(table, page, key, prop.value),
+                    variable: key,
+                    type: variable.type,
                     prop: JSON.stringify(prop.value)
                 }));
 
                 return ret;
             } else {
                 let ret = {
-                    key: variable.key.toString()
+                    key: makeColumnKey(table, page, key),
+                    variable: key,
+                    type: variable.type
                 };
 
                 return ret;
@@ -92,6 +98,14 @@ var server = new function() {
         });
 
         return columns;
+    }
+
+    // Duplicated in client/virt_rec.js, keep in sync
+    function makeColumnKey(table, page, variable) {
+        return `${table}@${page}.${variable}`;
+    }
+    function makeColumnKeyMulti(table, page, variable, prop) {
+        return `${table}@${page}.${variable}@${prop}`;
     }
 
     function filterValues(values, variables) {

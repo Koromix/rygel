@@ -358,10 +358,10 @@ function VirtualRecords(db) {
                     let col2 = {
                         key: null,
 
-                        // XXX: Fix missing variable type
                         table: col.table,
                         page: col.page,
                         variable: col.variable,
+                        type: col.type,
                         prop: null,
 
                         before: col.before,
@@ -370,7 +370,7 @@ function VirtualRecords(db) {
 
                     if (col.hasOwnProperty('prop')) {
                         col2.key = makeColumnKeyMulti(col.table, col.page, col.variable, col.prop);
-                        col2.prop = col.prop;
+                        col2.prop = JSON.parse(col.prop);
                     } else {
                         col2.key = makeColumnKey(col.table, col.page, col.variable);
                         delete col2.prop;
@@ -392,6 +392,7 @@ function VirtualRecords(db) {
         return `${table}:${id}@${version.toString().padStart(9, '0')}`;
     }
 
+    // XXX: Duplicated in server/ports.js, keep in sync
     function makeColumnKey(table, page, variable) {
         return `${table}@${page}.${variable}`;
     }

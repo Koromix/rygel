@@ -139,13 +139,13 @@ void HandleRecordColumns(const http_RequestInfo &request, http_IO *io)
 
     sq_Statement stmt;
     if (table) {
-        if (!goupile_db.Prepare(R"(SELECT store, page, variable, prop, before, after FROM rec_columns
+        if (!goupile_db.Prepare(R"(SELECT store, page, variable, type, prop, before, after FROM rec_columns
                                    WHERE store = ? AND anchor >= ?)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, table, -1, SQLITE_STATIC);
         sqlite3_bind_int64(stmt, 2, anchor);
     } else {
-        if (!goupile_db.Prepare(R"(SELECT store, page, variable, prop, before, after FROM rec_columns
+        if (!goupile_db.Prepare(R"(SELECT store, page, variable, type, prop, before, after FROM rec_columns
                                    WHERE anchor >= ?)", &stmt))
             return;
         sqlite3_bind_int64(stmt, 1, anchor);
@@ -160,16 +160,17 @@ void HandleRecordColumns(const http_RequestInfo &request, http_IO *io)
         json.Key("table"); json.String((const char *)sqlite3_column_text(stmt, 0));
         json.Key("page"); json.String((const char *)sqlite3_column_text(stmt, 1));
         json.Key("variable"); json.String((const char *)sqlite3_column_text(stmt, 2));
-        if (sqlite3_column_type(stmt, 3) != SQLITE_NULL) {
-            json.Key("prop"); json.Raw((const char *)sqlite3_column_text(stmt, 3));
-        }
+        json.Key("type"); json.String((const char *)sqlite3_column_text(stmt, 3));
         if (sqlite3_column_type(stmt, 4) != SQLITE_NULL) {
-            json.Key("before"); json.String((const char *)sqlite3_column_text(stmt, 4));
+            json.Key("prop"); json.Raw((const char *)sqlite3_column_text(stmt, 4));
+        }
+        if (sqlite3_column_type(stmt, 5) != SQLITE_NULL) {
+            json.Key("before"); json.String((const char *)sqlite3_column_text(stmt, 5));
         } else {
             json.Key("before"); json.Null();
         }
-        if (sqlite3_column_type(stmt, 5) != SQLITE_NULL) {
-            json.Key("after"); json.String((const char *)sqlite3_column_text(stmt, 5));
+        if (sqlite3_column_type(stmt, 6) != SQLITE_NULL) {
+            json.Key("after"); json.String((const char *)sqlite3_column_text(stmt, 6));
         } else {
             json.Key("after"); json.Null();
         }
@@ -296,22 +297,24 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
                         continue;
                     }
 
+                    int64_t anchor;
                     if (!goupile_db.Run(R"(INSERT INTO rec_fragments (store, id, version, page, username, mtime, complete, json)
                                            VALUES (?, ?, ?, ?, ?, ?, 0, ?))",
                                         handle.table, handle.id, frag.version, frag.page,
                                         session->username, frag.mtime, frag.json))
                         return false;
+                    anchor = sqlite3_last_insert_rowid(goupile_db);
 
                     sq_Statement stmt;
-                    if (!goupile_db.Prepare(R"(INSERT INTO rec_columns (store, page, variable, prop, before, after, anchor)
-                                               VALUES (?, ?, ?, ?, ?, ?, ?)
-                                               ON CONFLICT(store, page, variable, IFNULL(prop, 0))
+                    if (!goupile_db.Prepare(R"(INSERT INTO rec_columns (key, store, page, variable, type, prop, before, after, anchor)
+                                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                               ON CONFLICT(key)
                                                     DO UPDATE SET before = excluded.before,
                                                                   after = excluded.after,
                                                                   anchor = excluded.anchor)", &stmt))
                         return false;
-                    sqlite3_bind_text(stmt, 1, handle.table, -1, SQLITE_STATIC);
-                    sqlite3_bind_int64(stmt, 7, sqlite3_last_insert_rowid(goupile_db));
+                    sqlite3_bind_text(stmt, 2, handle.table, -1, SQLITE_STATIC);
+                    sqlite3_bind_int64(stmt, 9, anchor);
 
                     for (Size j = 0; j < frag.columns.len; j++) {
                         const ScriptFragment::Column &col = frag.columns[j];
@@ -319,15 +322,17 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
                         const char *after = (j + 1 < frag.columns.len) ? frag.columns[j + 1].key : nullptr;
 
                         stmt.Reset();
-                        sqlite3_bind_text(stmt, 2, frag.page, -1, SQLITE_STATIC);
-                        sqlite3_bind_text(stmt, 3, col.key, -1, SQLITE_STATIC);
+                        sqlite3_bind_text(stmt, 1, col.key, -1, SQLITE_STATIC);
+                        sqlite3_bind_text(stmt, 3, frag.page, -1, SQLITE_STATIC);
+                        sqlite3_bind_text(stmt, 4, col.variable, -1, SQLITE_STATIC);
+                        sqlite3_bind_text(stmt, 5, col.type, -1, SQLITE_STATIC);
                         if (col.prop) {
-                            sqlite3_bind_text(stmt, 4, col.prop, -1, SQLITE_STATIC);
+                            sqlite3_bind_text(stmt, 6, col.prop, -1, SQLITE_STATIC);
                         } else {
-                            sqlite3_bind_null(stmt, 4);
+                            sqlite3_bind_null(stmt, 6);
                         }
-                        sqlite3_bind_text(stmt, 5, before, -1, SQLITE_STATIC);
-                        sqlite3_bind_text(stmt, 6, after, -1, SQLITE_STATIC);
+                        sqlite3_bind_text(stmt, 7, before, -1, SQLITE_STATIC);
+                        sqlite3_bind_text(stmt, 8, after, -1, SQLITE_STATIC);
 
                         if (!stmt.Run())
                             return false;

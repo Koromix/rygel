@@ -30,7 +30,7 @@ DatabaseFile = database.db
 )";
 
 // If you change DatabaseVersion, don't forget to update the migration switch!
-const int DatabaseVersion = 9;
+const int DatabaseVersion = 10;
 
 bool MigrateDatabase(sq_Database &database, int version)
 {
@@ -222,9 +222,34 @@ bool MigrateDatabase(sq_Database &database, int version)
             case 8: {
                 if (!database.Run("UPDATE usr_users SET permissions = 63 WHERE permissions == 31;"))
                     return false;
+            } [[fallthrough]];
+
+            case 9: {
+                bool success = database.Run(R"(
+                    DROP TABLE rec_columns;
+
+                    CREATE TABLE rec_columns (
+                        key TEXT NOT NULL,
+
+                        store TEXT NOT NULL,
+                        page TEXT NOT NULL,
+                        variable TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        prop TEXT,
+                        before TEXT,
+                        after TEXT,
+
+                        anchor INTEGER NOT NULL
+                    );
+
+                    CREATE UNIQUE INDEX rec_columns_k ON rec_columns (key);
+                    CREATE INDEX rec_columns_sp ON rec_columns (store, page);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DatabaseVersion == 9);
+            RG_STATIC_ASSERT(DatabaseVersion == 10);
         }
 
         int64_t time = GetUnixTime();

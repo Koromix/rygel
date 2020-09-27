@@ -35,6 +35,8 @@ struct ScriptFragment {
 
     struct Column {
         const char *key;
+        const char *variable;
+        const char *type;
         const char *prop;
     };
 
@@ -54,10 +56,14 @@ struct ScriptFragment {
             JS_FreeCString(ctx, mtime);
             JS_FreeCString(ctx, page);
             JS_FreeCString(ctx, json.ptr);
+
             for (const Column &col: columns) {
                 JS_FreeCString(ctx, col.key);
+                JS_FreeCString(ctx, col.variable);
+                JS_FreeCString(ctx, col.type);
                 JS_FreeCString(ctx, col.prop);
             }
+
             ctx = nullptr;
         }
     }

@@ -270,12 +270,14 @@ bool ScriptPort::RunRecord(Span<const char> json, const ScriptRecord &handle,
                            HeapArray<ScriptFragment> *out_fragments, Span<const char> *out_json)
 {
     JSValue args[] = {
+        JS_NewString(ctx, handle.table),
         JS_NewStringLen(ctx, json.ptr, (size_t)json.len),
         JS_DupValue(ctx, handle.fragments)
     };
     RG_DEFER {
         JS_FreeValue(ctx, args[0]);
         JS_FreeValue(ctx, args[1]);
+        JS_FreeValue(ctx, args[2]);
     };
 
     JSValue ret = JS_Call(ctx, validate_func, JS_UNDEFINED, RG_LEN(args), args);
@@ -319,6 +321,8 @@ bool ScriptPort::RunRecord(Span<const char> json, const ScriptRecord &handle,
                 ScriptFragment::Column *col2 = frag2->columns.AppendDefault();
 
                 col2->key = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, col, "key")).ptr;
+                col2->variable = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, col, "variable")).ptr;
+                col2->type = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, col, "type")).ptr;
                 col2->prop = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, col, "prop")).ptr;
             }
         }
