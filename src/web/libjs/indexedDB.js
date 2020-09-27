@@ -177,6 +177,32 @@ let idb = new function () {
             });
         };
 
+        this.getMinMax = function(where) {
+            let [store, index] = where.split('/');
+
+            return executeQuery('readonly', store, (t, resolve, reject) => {
+                let obj = openStoreOrIndex(t, store, index);
+                let cur1 = obj.openKeyCursor(null, 'next');
+                let cur2 = obj.openKeyCursor(null, 'prev');
+
+                let min, max;
+                cur1.onsuccess = e => {
+                    let cursor = e.target.result;
+                    if (cursor)
+                        min = cursor.key;
+                };
+                cur2.onsuccess = e => {
+                    let cursor = e.target.result;
+                    if (cursor)
+                        max = cursor.key;
+                };
+                cur1.onerror = e => reject(new Error(e.target.error));
+                cur2.onerror = e => reject(new Error(e.target.error));
+
+                t.addEventListener('complete', e => resolve([min, max]));
+            });
+        };
+
         this.delete = function(store, key) {
             return executeQuery('readwrite', store, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
