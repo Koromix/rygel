@@ -332,7 +332,7 @@ function VirtualRecords(db) {
                 page: frag.page,
 
                 username: frag.username,
-                mtime: frag.mtime,
+                mtime: new Date(frag.mtime),
                 anchor: frag.anchor,
 
                 complete: frag.complete,
