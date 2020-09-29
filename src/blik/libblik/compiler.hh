@@ -9,31 +9,31 @@
 
 namespace RG {
 
-class Parser;
-struct TokenizedFile;
+class bk_Parser;
+struct bk_TokenizedFile;
 
-struct CompileReport {
+struct bk_CompileReport {
     bool unexpected_eof;
     int depth;
 };
 
-class Compiler {
-    RG_DELETE_COPY(Compiler)
+class bk_Compiler {
+    RG_DELETE_COPY(bk_Compiler)
 
-    Parser *parser;
+    bk_Parser *parser;
 
 public:
-    Compiler(Program *out_program);
-    ~Compiler();
+    bk_Compiler(bk_Program *out_program);
+    ~bk_Compiler();
 
-    bool Compile(const TokenizedFile &file, CompileReport *out_report = nullptr);
-    bool Compile(Span<const char> code, const char *filename, CompileReport *out_report = nullptr);
+    bool Compile(const bk_TokenizedFile &file, bk_CompileReport *out_report = nullptr);
+    bool Compile(Span<const char> code, const char *filename, bk_CompileReport *out_report = nullptr);
 
-    void AddFunction(const char *signature, std::function<NativeFunction> native);
-    void AddGlobal(const char *name, const TypeInfo *type, Value value, bool mut = false);
-    void AddGlobal(const char *name, PrimitiveType primitive, Value value, bool mut = false);
+    void AddFunction(const char *signature, std::function<bk_NativeFunction> native);
+    void AddGlobal(const char *name, const bk_TypeInfo *type, bk_Value value, bool mut = false);
+    void AddGlobal(const char *name, bk_PrimitiveType primitive, bk_Value value, bool mut = false);
 
-    const TypeInfo *GetBasicType(PrimitiveType primitive);
+    const bk_TypeInfo *GetBasicType(bk_PrimitiveType primitive);
 };
 
 }

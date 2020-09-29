@@ -8,11 +8,11 @@
 
 namespace RG {
 
-class Compiler;
+class bk_Compiler;
 
-void ImportAll(Compiler *out_compiler);
+void bk_ImportAll(bk_Compiler *out_compiler);
 
-void ImportPrint(Compiler *out_compiler);
-void ImportMath(Compiler *out_compiler);
+void bk_ImportPrint(bk_Compiler *out_compiler);
+void bk_ImportMath(bk_Compiler *out_compiler);
 
 }

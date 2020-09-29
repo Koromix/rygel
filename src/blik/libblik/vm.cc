@@ -8,21 +8,21 @@
 
 namespace RG {
 
-VirtualMachine::VirtualMachine(const Program *const program)
+bk_VirtualMachine::bk_VirtualMachine(const bk_Program *const program)
     : program(program)
 {
     frames.AppendDefault();
 }
 
-bool VirtualMachine::Run()
+bool bk_VirtualMachine::Run()
 {
-    const Instruction *inst;
+    const bk_Instruction *inst;
 
     ir = program->ir;
     run = true;
     error = false;
 
-    CallFrame *frame = &frames[frames.len - 1];
+    bk_CallFrame *frame = &frames[frames.len - 1];
     Size pc = frame->pc;
     Size bp = frame->bp;
 
@@ -56,7 +56,7 @@ bool VirtualMachine::Run()
         for (;;) \
             switch(inst->code)
     #define CASE(Code) \
-        case Opcode::Code
+        case bk_Opcode::Code
 #endif
 
     LOOP {
@@ -457,14 +457,14 @@ bool VirtualMachine::Run()
         }
 
         CASE(EqualType): {
-            const TypeInfo *type1 = stack[stack.len - 2].type;
-            const TypeInfo *type2 = stack[stack.len - 1].type;
+            const bk_TypeInfo *type1 = stack[stack.len - 2].type;
+            const bk_TypeInfo *type2 = stack[stack.len - 1].type;
             stack[--stack.len - 1].b = (type1 == type2);
             DISPATCH(++pc);
         }
         CASE(NotEqualType): {
-            const TypeInfo *type1 = stack[stack.len - 2].type;
-            const TypeInfo *type2 = stack[stack.len - 1].type;
+            const bk_TypeInfo *type1 = stack[stack.len - 2].type;
+            const bk_TypeInfo *type2 = stack[stack.len - 1].type;
             stack[--stack.len - 1].b = (type1 != type2);
             DISPATCH(++pc);
         }
@@ -490,8 +490,8 @@ bool VirtualMachine::Run()
         }
 
         CASE(Call): {
-            const FunctionInfo *func = inst->u.func;
-            RG_ASSERT(func->mode == FunctionInfo::Mode::Blik);
+            const bk_FunctionInfo *func = inst->u.func;
+            RG_ASSERT(func->mode == bk_FunctionInfo::Mode::Blik);
 
             // Save current PC
             frame->pc = pc;
@@ -505,8 +505,8 @@ bool VirtualMachine::Run()
             DISPATCH(pc = frame->pc);
         }
         CASE(CallNative): {
-            const FunctionInfo *func = inst->u.func;
-            RG_ASSERT(func->mode == FunctionInfo::Mode::Native);
+            const bk_FunctionInfo *func = inst->u.func;
+            RG_ASSERT(func->mode == bk_FunctionInfo::Mode::Native);
 
             // Save current PC
             frame->pc = pc;
@@ -516,14 +516,14 @@ bool VirtualMachine::Run()
             frame->pc = func->addr;
 
             if (func->variadic) {
-                Span<const Value> args;
+                Span<const bk_Value> args;
                 args.len = func->params.len + (stack[stack.len - 1].i * 2);
                 args.ptr = stack.end() - args.len - 1;
 
                 stack.len -= args.len;
                 stack[stack.len - 1] = func->native(this, args);
             } else {
-                Span<const Value> args;
+                Span<const bk_Value> args;
                 args.len = func->params.len;
                 args.ptr = stack.end() - args.len;
 
@@ -582,72 +582,72 @@ bool VirtualMachine::Run()
 #undef DISPATCH
 }
 
-void VirtualMachine::DumpInstruction(Size pc) const
+void bk_VirtualMachine::DumpInstruction(Size pc) const
 {
 #if 0
-    const Instruction &inst = ir[pc];
+    const bk_Instruction &inst = ir[pc];
 
     switch (inst.code) {
-        case Opcode::PushBool: { LogDebug("[0x%1] PushBool %2", FmtHex(pc).Pad0(-5), inst.u.b); } break;
-        case Opcode::PushInt: { LogDebug("[0x%1] PushInt %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::PushFloat: { LogDebug("[0x%1] PushFloat %2", FmtHex(pc).Pad0(-5), inst.u.d); } break;
-        case Opcode::PushString: { LogDebug("[0x%1] PushString %2", FmtHex(pc).Pad0(-5), inst.u.str); } break;
-        case Opcode::PushType: { LogDebug("[0x%1] PushType %2", FmtHex(pc).Pad0(-5), inst.u.type->signature); } break;
-        case Opcode::Pop: { LogDebug("[0x%1] Pop %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::PushBool: { LogDebug("[0x%1] PushBool %2", FmtHex(pc).Pad0(-5), inst.u.b); } break;
+        case bk_Opcode::PushInt: { LogDebug("[0x%1] PushInt %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::PushFloat: { LogDebug("[0x%1] PushFloat %2", FmtHex(pc).Pad0(-5), inst.u.d); } break;
+        case bk_Opcode::PushString: { LogDebug("[0x%1] PushString %2", FmtHex(pc).Pad0(-5), inst.u.str); } break;
+        case bk_Opcode::PushType: { LogDebug("[0x%1] PushType %2", FmtHex(pc).Pad0(-5), inst.u.type->signature); } break;
+        case bk_Opcode::Pop: { LogDebug("[0x%1] Pop %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
-        case Opcode::LoadBool: { LogDebug("[0x%1] LoadBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadInt: { LogDebug("[0x%1] LoadInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadFloat: { LogDebug("[0x%1] LoadFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadString: { LogDebug("[0x%1] LoadString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadType: { LogDebug("[0x%1] LoadType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreBool: { LogDebug("[0x%1] StoreBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreInt: { LogDebug("[0x%1] StoreInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreFloat: { LogDebug("[0x%1] StoreFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreString: { LogDebug("[0x%1] StoreString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreType: { LogDebug("[0x%1] StoreType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::CopyBool: { LogDebug("[0x%1] CopyBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::CopyInt: { LogDebug("[0x%1] CopyInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::CopyFloat: { LogDebug("[0x%1] CopyFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::CopyString: { LogDebug("[0x%1] CopyString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::CopyType: { LogDebug("[0x%1] CopyType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::LoadBool: { LogDebug("[0x%1] LoadBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::LoadInt: { LogDebug("[0x%1] LoadInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::LoadFloat: { LogDebug("[0x%1] LoadFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::LoadString: { LogDebug("[0x%1] LoadString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::LoadType: { LogDebug("[0x%1] LoadType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::StoreBool: { LogDebug("[0x%1] StoreBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::StoreInt: { LogDebug("[0x%1] StoreInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::StoreFloat: { LogDebug("[0x%1] StoreFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::StoreString: { LogDebug("[0x%1] StoreString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::StoreType: { LogDebug("[0x%1] StoreType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::CopyBool: { LogDebug("[0x%1] CopyBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::CopyInt: { LogDebug("[0x%1] CopyInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::CopyFloat: { LogDebug("[0x%1] CopyFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::CopyString: { LogDebug("[0x%1] CopyString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::CopyType: { LogDebug("[0x%1] CopyType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
-        case Opcode::LoadLocalBool: { LogDebug("[0x%1] LoadLocalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadLocalInt: { LogDebug("[0x%1] LoadLocalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadLocalFloat: { LogDebug("[0x%1] LoadLocalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadLocalString: { LogDebug("[0x%1] LoadLocalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::LoadLocalType: { LogDebug("[0x%1] LoadLocalType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreLocalBool: { LogDebug("[0x%1] StoreLocalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreLocalInt: { LogDebug("[0x%1] StoreLocalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreLocalFloat: { LogDebug("[0x%1] StoreLocalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreLocalString: { LogDebug("[0x%1] StoreLocalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::StoreLocalType: { LogDebug("[0x%1] StoreLocalType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::CopyLocalBool: { LogDebug("[0x%1] CopyLocalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::CopyLocalInt: { LogDebug("[0x%1] CopyLocalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::CopyLocalFloat: { LogDebug("[0x%1] CopyLocalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::CopyLocalString: { LogDebug("[0x%1] CopyLocalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case Opcode::CopyLocalType: { LogDebug("[0x%1] CopyLocalType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::LoadLocalBool: { LogDebug("[0x%1] LoadLocalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::LoadLocalInt: { LogDebug("[0x%1] LoadLocalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::LoadLocalFloat: { LogDebug("[0x%1] LoadLocalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::LoadLocalString: { LogDebug("[0x%1] LoadLocalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::LoadLocalType: { LogDebug("[0x%1] LoadLocalType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::StoreLocalBool: { LogDebug("[0x%1] StoreLocalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::StoreLocalInt: { LogDebug("[0x%1] StoreLocalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::StoreLocalFloat: { LogDebug("[0x%1] StoreLocalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::StoreLocalString: { LogDebug("[0x%1] StoreLocalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::StoreLocalType: { LogDebug("[0x%1] StoreLocalType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::CopyLocalBool: { LogDebug("[0x%1] CopyLocalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::CopyLocalInt: { LogDebug("[0x%1] CopyLocalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::CopyLocalFloat: { LogDebug("[0x%1] CopyLocalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::CopyLocalString: { LogDebug("[0x%1] CopyLocalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::CopyLocalType: { LogDebug("[0x%1] CopyLocalType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
-        case Opcode::Jump: { LogDebug("[0x%1] Jump 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
-        case Opcode::BranchIfTrue: { LogDebug("[0x%1] BranchIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
-        case Opcode::BranchIfFalse: { LogDebug("[0x%1] BranchIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
-        case Opcode::SkipIfTrue: { LogDebug("[0x%1] SkipIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
-        case Opcode::SkipIfFalse: { LogDebug("[0x%1] SkipIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
+        case bk_Opcode::Jump: { LogDebug("[0x%1] Jump 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
+        case bk_Opcode::BranchIfTrue: { LogDebug("[0x%1] BranchIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
+        case bk_Opcode::BranchIfFalse: { LogDebug("[0x%1] BranchIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
+        case bk_Opcode::SkipIfTrue: { LogDebug("[0x%1] SkipIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
+        case bk_Opcode::SkipIfFalse: { LogDebug("[0x%1] SkipIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
 
-        case Opcode::Call:
-        case Opcode::CallNative: {
-            const FunctionInfo *func = inst.u.func;
-            LogDebug("[0x%1] %2 %3 (%4%5)", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst.code],
+        case bk_Opcode::Call:
+        case bk_Opcode::CallNative: {
+            const bk_FunctionInfo *func = inst.u.func;
+            LogDebug("[0x%1] %2 %3 (%4%5)", FmtHex(pc).Pad0(-5), bk_OpcodeNames[(int)inst.code],
                                             func->name, func->params.len, func->variadic ? "+" : "");
         } break;
 
-        default: { LogDebug("[0x%1] %2", FmtHex(pc).Pad0(-5), OpcodeNames[(int)inst.code]); } break;
+        default: { LogDebug("[0x%1] %2", FmtHex(pc).Pad0(-5), bk_OpcodeNames[(int)inst.code]); } break;
     }
 #endif
 }
 
-bool Run(const Program &program)
+bool bk_Run(const bk_Program &program)
 {
-    VirtualMachine vm(&program);
+    bk_VirtualMachine vm(&program);
     return vm.Run();
 }
 

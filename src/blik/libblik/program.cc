@@ -7,15 +7,15 @@
 
 namespace RG {
 
-const char *Program::LocateInstruction(Size pc, int32_t *out_line) const
+const char *bk_Program::LocateInstruction(Size pc, int32_t *out_line) const
 {
-    const SourceInfo *src = std::upper_bound(sources.begin(), sources.end(), pc,
-                                             [](Size pc, const SourceInfo &src) { return pc < src.lines[0].addr; }) - 1;
+    const bk_SourceInfo *src = std::upper_bound(sources.begin(), sources.end(), pc,
+                                                [](Size pc, const bk_SourceInfo &src) { return pc < src.lines[0].addr; }) - 1;
     if (src < sources.ptr)
         return nullptr;
 
-    const SourceInfo::Line *line = std::upper_bound(src->lines.begin(), src->lines.end(), pc,
-                                                    [](Size pc, const SourceInfo::Line &line) { return pc < line.addr; }) - 1;
+    const bk_SourceInfo::Line *line = std::upper_bound(src->lines.begin(), src->lines.end(), pc,
+                                                       [](Size pc, const bk_SourceInfo::Line &line) { return pc < line.addr; }) - 1;
     RG_ASSERT(line);
 
     if (out_line) {

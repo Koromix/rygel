@@ -47,14 +47,14 @@ def write_xid_header(version, id_start, id_continue, f):
 
 namespace RG {{
 
-static const int32_t UnicodeIdStartTable[] = {{""")
+static const int32_t bk_UnicodeIdStartTable[] = {{""")
     for i, v in enumerate(id_start):
         if i % 5 == 0: f.write('\n   ')
         f.write(f' 0x{v[0]:05X}, 0x{v[1]:05X}{"," if i + 1 < len(id_start) else ""}')
     f.write("""
 };
 
-static const int32_t UnicodeIdContinueTable[] = {""")
+static const int32_t bk_UnicodeIdContinueTable[] = {""")
     for i, v in enumerate(id_continue):
         if i % 5 == 0: f.write('\n   ')
         f.write(f' 0x{v[0]:05X}, 0x{v[1]:05X}{"," if i + 1 < len(id_continue) else ""}')

@@ -45,18 +45,18 @@ public:
     }
 };
 
-static bool TokenizeWithFakePrint(Span<const char> code, const char *filename, TokenizedFile *out_file)
+static bool TokenizeWithFakePrint(Span<const char> code, const char *filename, bk_TokenizedFile *out_file)
 {
-    static TokenizedFile intro;
-    static TokenizedFile outro;
+    static bk_TokenizedFile intro;
+    static bk_TokenizedFile outro;
 
     // Tokenize must only be called once for each TokenizedFile, so we need to cheat a little
     if (!intro.tokens.len) {
-        bool success = Tokenize(R"(
+        bool success = bk_Tokenize(R"(
 begin
     let __result =
 )", "<intro>", &intro);
-        success &= Tokenize(R"(
+        success &= bk_Tokenize(R"(
     if typeOf(__result) != Null do printLn(__result)
 end
 )", "<outro>", &outro);
@@ -65,7 +65,7 @@ end
     }
 
     out_file->tokens.Append(intro.tokens);
-    if (!Tokenize(code, filename, out_file))
+    if (!bk_Tokenize(code, filename, out_file))
         return false;
     out_file->tokens.Append(outro.tokens);
 
@@ -74,15 +74,15 @@ end
 
 int RunCommand(Span<const char> code, bool execute)
 {
-    Program program;
+    bk_Program program;
 
-    Compiler compiler(&program);
-    ImportAll(&compiler);
+    bk_Compiler compiler(&program);
+    bk_ImportAll(&compiler);
 
     // Try to parse with fake print first...
     bool valid_with_fake_print;
     {
-        TokenizedFile file;
+        bk_TokenizedFile file;
         if (!TokenizeWithFakePrint(code, "<inline>", &file))
             return 1;
 
@@ -95,34 +95,34 @@ int RunCommand(Span<const char> code, bool execute)
 
     // If the fake print has failed, reparse the code without the fake print
     if (!valid_with_fake_print) {
-        TokenizedFile file;
-        bool success = Tokenize(code, "<inline>", &file);
+        bk_TokenizedFile file;
+        bool success = bk_Tokenize(code, "<inline>", &file);
         RG_ASSERT(success);
 
         if (!compiler.Compile(file))
             return 1;
     }
 
-    return execute ? !Run(program) : 0;
+    return execute ? !bk_Run(program) : 0;
 }
 
 int RunInteractive(bool execute)
 {
     LogInfo("%!R..blik%!0 %1", FelixVersion);
 
-    Program program;
+    bk_Program program;
 
-    Compiler compiler(&program);
-    ImportAll(&compiler);
+    bk_Compiler compiler(&program);
+    bk_ImportAll(&compiler);
 
-    VirtualMachine vm(&program);
+    bk_VirtualMachine vm(&program);
     bool run = true;
 
     // Functions specific to interactive mode
-    const auto exit = [&](VirtualMachine *vm, Span<const Value> args) {
+    const auto exit = [&](bk_VirtualMachine *vm, Span<const bk_Value> args) {
         run = false;
         vm->SetInterrupt();
-        return Value();
+        return bk_Value();
     };
     compiler.AddFunction("exit()", exit);
     compiler.AddFunction("quit()", exit);
@@ -160,7 +160,7 @@ int RunInteractive(bool execute)
 
         bool valid_with_fake_print;
         {
-            TokenizedFile file;
+            bk_TokenizedFile file;
             if (!TokenizeWithFakePrint(code, "<inline>", &file))
                 continue;
 
@@ -170,11 +170,11 @@ int RunInteractive(bool execute)
         if (!valid_with_fake_print) {
             trace.Clear();
 
-            TokenizedFile file;
-            bool success = Tokenize(code, "<interactive>", &file);
+            bk_TokenizedFile file;
+            bool success = bk_Tokenize(code, "<interactive>", &file);
             RG_ASSERT(success);
 
-            CompileReport report;
+            bk_CompileReport report;
             if (!compiler.Compile(file, &report)) {
                 if (report.unexpected_eof) {
                     prompter.str.len = TrimStrRight(prompter.str.Take(), "\t ").len;

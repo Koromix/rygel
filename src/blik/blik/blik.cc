@@ -12,20 +12,20 @@ int RunInteractive(bool execute);
 
 static int RunFile(const char *filename, bool execute)
 {
-    Program program;
+    bk_Program program;
     {
         HeapArray<char> code;
         if (ReadFile(filename, Megabytes(256), &code) < 0)
             return 1;
 
-        Compiler compiler(&program);
-        ImportAll(&compiler);
+        bk_Compiler compiler(&program);
+        bk_ImportAll(&compiler);
 
         if (!compiler.Compile(code, filename))
             return 1;
     }
 
-    return execute ? !Run(program) : 0;
+    return execute ? !bk_Run(program) : 0;
 }
 
 int Main(int argc, char **argv)

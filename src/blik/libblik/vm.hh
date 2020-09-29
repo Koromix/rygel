@@ -10,21 +10,21 @@
 
 namespace RG {
 
-class VirtualMachine {
-    RG_DELETE_COPY(VirtualMachine)
+class bk_VirtualMachine {
+    RG_DELETE_COPY(bk_VirtualMachine)
 
-    Span<const Instruction> ir;
+    Span<const bk_Instruction> ir;
 
     bool run;
     bool error;
 
 public:
-    const Program *const program;
+    const bk_Program *const program;
 
-    HeapArray<CallFrame> frames;
-    HeapArray<Value> stack;
+    HeapArray<bk_CallFrame> frames;
+    HeapArray<bk_Value> stack;
 
-    VirtualMachine(const Program *const program);
+    bk_VirtualMachine(const bk_Program *const program);
 
     bool Run();
 
@@ -32,7 +32,7 @@ public:
     template <typename... Args>
     void FatalError(const char *fmt, Args... args)
     {
-        ReportRuntimeError(*program, frames, fmt, args...);
+        bk_ReportRuntimeError(*program, frames, fmt, args...);
 
         run = false;
         error = true;
@@ -42,6 +42,6 @@ private:
     void DumpInstruction(Size pc) const;
 };
 
-bool Run(const Program &program);
+bool bk_Run(const bk_Program &program);
 
 }

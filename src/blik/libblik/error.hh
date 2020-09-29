@@ -9,14 +9,14 @@
 
 namespace RG {
 
-enum class DiagnosticType {
+enum class bk_DiagnosticType {
     Error,
     ErrorHint
 };
 
 template <typename... Args>
-void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *filename,
-                      int line, Size offset, const char *fmt, Args... args)
+void bk_ReportDiagnostic(bk_DiagnosticType type, Span<const char> code, const char *filename,
+                         int line, Size offset, const char *fmt, Args... args)
 {
     // Find entire code line and compute column from offset
     int column = 0;
@@ -70,7 +70,7 @@ void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *fi
     }
 
     switch (type) {
-        case DiagnosticType::Error: {
+        case bk_DiagnosticType::Error: {
             char ctx_buf[512];
             Fmt(ctx_buf, "%1(%2:%3)", filename, line, column + 1);
 
@@ -83,7 +83,7 @@ void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *fi
             Log(LogLevel::Error, ctx_buf, "%1", msg_buf.data);
         } break;
 
-        case DiagnosticType::ErrorHint: {
+        case bk_DiagnosticType::ErrorHint: {
             char ctx_buf[512];
             Fmt(ctx_buf, "    %1(%2:%3)", filename, line, column + 1);
 
@@ -100,10 +100,10 @@ void ReportDiagnostic(DiagnosticType type, Span<const char> code, const char *fi
 
 
 template <typename... Args>
-void ReportDiagnostic(DiagnosticType type, const char *fmt, Args... args)
+void bk_ReportDiagnostic(bk_DiagnosticType type, const char *fmt, Args... args)
 {
     switch (type) {
-        case DiagnosticType::Error: {
+        case bk_DiagnosticType::Error: {
             LocalArray<char, 2048> msg_buf;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!..+").len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), fmt, args...).len;
@@ -112,7 +112,7 @@ void ReportDiagnostic(DiagnosticType type, const char *fmt, Args... args)
             Log(LogLevel::Error, "Error", "%1", msg_buf.data);
         } break;
 
-        case DiagnosticType::ErrorHint: {
+        case bk_DiagnosticType::ErrorHint: {
             LocalArray<char, 2048> msg_buf;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!..+").len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), fmt, args...).len;
@@ -124,7 +124,8 @@ void ReportDiagnostic(DiagnosticType type, const char *fmt, Args... args)
 }
 
 template <typename... Args>
-void ReportRuntimeError(const Program &program, Span<const CallFrame> frames, const char *fmt, Args... args)
+void bk_ReportRuntimeError(const bk_Program &program, Span<const bk_CallFrame> frames,
+                           const char *fmt, Args... args)
 {
     LogInfo("Something wrong has happened, execution has stopped");
     LogInfo();
@@ -133,7 +134,7 @@ void ReportRuntimeError(const Program &program, Span<const CallFrame> frames, co
         LogInfo("Dumping stack trace:");
 
         for (Size i = frames.len - 1; i >= 0; i--) {
-            const CallFrame &frame = frames[i];
+            const bk_CallFrame &frame = frames[i];
 
             const char *name = frame.func ? frame.func->signature : "<outside function>";
             bool tre = frame.func && frame.func->tre;

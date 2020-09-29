@@ -8,17 +8,17 @@
 
 namespace RG {
 
-enum class TokenKind {
+enum class bk_TokenKind {
     #define TOKEN(Kind, Str) Kind,
     #include "tokens.inc"
 };
-static const char *const TokenKindNames[] = {
+static const char *const bk_TokenKindNames[] = {
     #define TOKEN(Kind, Str) (Str),
     #include "tokens.inc"
 };
 
-struct Token {
-    TokenKind kind;
+struct bk_Token {
+    bk_TokenKind kind;
 
     int line;
     Size offset;
@@ -31,11 +31,11 @@ struct Token {
     } u;
 };
 
-struct TokenizedFile {
+struct bk_TokenizedFile {
     const char *filename = nullptr;
     Span<const char> code;
 
-    HeapArray<Token> tokens;
+    HeapArray<bk_Token> tokens;
 
     // Used to parse function declarations in first pass
     HeapArray<Size> funcs;
@@ -44,6 +44,6 @@ struct TokenizedFile {
 };
 
 // TokenizedFile keeps a reference to code, you must keep it around!
-bool Tokenize(Span<const char> code, const char *filename, TokenizedFile *out_file);
+bool bk_Tokenize(Span<const char> code, const char *filename, bk_TokenizedFile *out_file);
 
 }

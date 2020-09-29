@@ -9,28 +9,28 @@
 
 namespace RG {
 
-static const HashMap<Span<const char>, Token> KeywordsMap {
-    {"func", {TokenKind::Func}},
-    {"return", {TokenKind::Return}},
-    {"let", {TokenKind::Let}},
-    {"mut", {TokenKind::Mut}},
-    {"begin", {TokenKind::Begin}},
-    {"end", {TokenKind::End}},
-    {"if", {TokenKind::If}},
-    {"else", {TokenKind::Else}},
-    {"while", {TokenKind::While}},
-    {"for", {TokenKind::For}},
-    {"in", {TokenKind::In}},
-    {"break", {TokenKind::Break}},
-    {"continue", {TokenKind::Continue}},
-    {"do", {TokenKind::Do}},
-    {"null", {TokenKind::Null}},
-    {"true", {TokenKind::Bool, 0, 0, {.b = true}}},
-    {"false", {TokenKind::Bool, 0, 0, {.b = false}}}
+static const HashMap<Span<const char>, bk_Token> KeywordsMap {
+    {"func", {bk_TokenKind::Func}},
+    {"return", {bk_TokenKind::Return}},
+    {"let", {bk_TokenKind::Let}},
+    {"mut", {bk_TokenKind::Mut}},
+    {"begin", {bk_TokenKind::Begin}},
+    {"end", {bk_TokenKind::End}},
+    {"if", {bk_TokenKind::If}},
+    {"else", {bk_TokenKind::Else}},
+    {"while", {bk_TokenKind::While}},
+    {"for", {bk_TokenKind::For}},
+    {"in", {bk_TokenKind::In}},
+    {"break", {bk_TokenKind::Break}},
+    {"continue", {bk_TokenKind::Continue}},
+    {"do", {bk_TokenKind::Do}},
+    {"null", {bk_TokenKind::Null}},
+    {"true", {bk_TokenKind::Bool, 0, 0, {.b = true}}},
+    {"false", {bk_TokenKind::Bool, 0, 0, {.b = false}}}
 };
 
-class Lexer {
-    RG_DELETE_COPY(Lexer)
+class bk_Lexer {
+    RG_DELETE_COPY(bk_Lexer)
 
     const char *filename;
     Span<const char> code;
@@ -41,19 +41,19 @@ class Lexer {
 
     HashSet<Span<const char>> strings;
 
-    TokenizedFile *file;
-    HeapArray<Token> &tokens;
+    bk_TokenizedFile *file;
+    HeapArray<bk_Token> &tokens;
 
 public:
-    Lexer(TokenizedFile *file);
+    bk_Lexer(bk_TokenizedFile *file);
 
     bool Tokenize(Span<const char> code, const char *filename);
 
 private:
-    inline bool Token1(TokenKind tok);
-    inline bool Token2(char c, TokenKind tok);
-    inline bool Token3(char c1, char c2, TokenKind tok);
-    inline bool Token4(char c1, char c2, char c3, TokenKind tok);
+    inline bool Token1(bk_TokenKind tok);
+    inline bool Token2(char c, bk_TokenKind tok);
+    inline bool Token3(char c1, char c2, bk_TokenKind tok);
+    inline bool Token4(char c1, char c2, char c3, bk_TokenKind tok);
 
     unsigned int ConvertHexaDigit(Size pos);
 
@@ -63,8 +63,8 @@ private:
     void MarkError(Size offset, const char *fmt, Args... args)
     {
         if (valid) {
-            ReportDiagnostic(DiagnosticType::Error, code, filename,
-                             line, offset, fmt, args...);
+            bk_ReportDiagnostic(bk_DiagnosticType::Error, code, filename,
+                                line, offset, fmt, args...);
             valid = false;
         }
     }
@@ -86,7 +86,7 @@ private:
     }
 };
 
-Lexer::Lexer(TokenizedFile *file)
+bk_Lexer::bk_Lexer(bk_TokenizedFile *file)
     : file(file), tokens(file->tokens)
 {
     RG_ASSERT(file);
@@ -105,7 +105,7 @@ static bool TestUnicodeTable(Span<const int32_t> table, int32_t uc)
     return idx & 0x1;
 }
 
-bool Lexer::Tokenize(Span<const char> code, const char *filename)
+bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
 {
     RG_DEFER_NC(err_guard, tokens_len = tokens.len,
                            funcs_len = file->funcs.len) {
@@ -140,7 +140,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
             case '\r': {} break;
 
             case '\n': {
-                Token1(TokenKind::EndOfLine);
+                Token1(bk_TokenKind::EndOfLine);
                 line++;
             } break;
 
@@ -179,7 +179,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                             return false;
                         }
 
-                        tokens.Append({TokenKind::Integer, line, offset, {.i = (int64_t)value}});
+                        tokens.Append({bk_TokenKind::Integer, line, offset, {.i = (int64_t)value}});
                         continue;
                     } else if (code[next] == 'o') {
                         // We limit to IN64_MAX, but we build with -ftrapv in debug builds.
@@ -208,7 +208,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                             return false;
                         }
 
-                        tokens.Append({TokenKind::Integer, line, offset, {.i = (int64_t)value}});
+                        tokens.Append({bk_TokenKind::Integer, line, offset, {.i = (int64_t)value}});
                         continue;
                     } else if (code[next] == 'x') {
                         // We limit to IN64_MAX, but we build with -ftrapv in debug builds.
@@ -240,7 +240,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                             return false;
                         }
 
-                        tokens.Append({TokenKind::Integer, line, offset, {.i = (int64_t)value}});
+                        tokens.Append({bk_TokenKind::Integer, line, offset, {.i = (int64_t)value}});
                         continue;
                     } else {
                         MarkUnexpected(next, "Invalid literal base");
@@ -290,7 +290,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         return false;
                     }
 
-                    tokens.Append({TokenKind::Integer, line, offset, {.i = (int64_t)value}});
+                    tokens.Append({bk_TokenKind::Integer, line, offset, {.i = (int64_t)value}});
                 }
             } break;
 
@@ -404,7 +404,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     ret.first->ptr = str_buf.TrimAndLeak().ptr;
                 }
 
-                tokens.Append({TokenKind::String, line, offset, {.str = ret.first->ptr}});
+                tokens.Append({bk_TokenKind::String, line, offset, {.str = ret.first->ptr}});
             } break;
 
             case '.': {
@@ -413,30 +413,30 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     // Support '.dddd' float literals
                     TokenizeFloat();
                 } else {
-                    Token1(TokenKind::Dot);
+                    Token1(bk_TokenKind::Dot);
                 }
             } break;
-            case ':': { Token2('=', TokenKind::Reassign) || Token1(TokenKind::Colon); } break;
-            case '(': { Token1(TokenKind::LeftParenthesis); } break;
-            case ')': { Token1(TokenKind::RightParenthesis); } break;
-            case '+': { Token2('=', TokenKind::PlusAssign) || Token1(TokenKind::Plus); } break;
-            case '-': { Token2('=', TokenKind::MinusAssign) || Token1(TokenKind::Minus); } break;
-            case '*': { Token2('=', TokenKind::MultiplyAssign) || Token1(TokenKind::Multiply); } break;
-            case '/': { Token2('=', TokenKind::DivideAssign) || Token1(TokenKind::Divide); } break;
-            case '%': { Token2('=', TokenKind::ModuloAssign) || Token1(TokenKind::Modulo); } break;
-            case '~': { Token2('=', TokenKind::XorAssign) || Token1(TokenKind::XorOrComplement); } break;
-            case '&': { Token2('=', TokenKind::AndAssign) || Token2('&', TokenKind::AndAnd) || Token1(TokenKind::And); } break;
-            case '|': { Token2('=', TokenKind::OrAssign) || Token2('|', TokenKind::OrOr) || Token1(TokenKind::Or); } break;
-            case '!': { Token2('=', TokenKind::NotEqual) || Token1(TokenKind::Not); } break;
-            case '=': { Token2('=', TokenKind::Equal) || Token1(TokenKind::Assign); } break;
-            case '>': { Token4('>', '>', '=', TokenKind::RightRotateAssign) || Token3('>', '>', TokenKind::RightRotate) ||
-                        Token3('>', '=', TokenKind::RightShiftAssign) || Token2('>', TokenKind::RightShift) ||
-                        Token2('=', TokenKind::GreaterOrEqual) || Token1(TokenKind::Greater); } break;
-            case '<': { Token4('<', '<', '=', TokenKind::LeftRotateAssign) || Token3('<', '<', TokenKind::LeftRotate) ||
-                        Token3('<', '=', TokenKind::LeftShiftAssign) || Token2('<', TokenKind::LeftShift) ||
-                        Token2('=', TokenKind::LessOrEqual) || Token1(TokenKind::Less); } break;
-            case ',': { Token1(TokenKind::Comma); } break;
-            case ';': { Token1(TokenKind::Semicolon); } break;
+            case ':': { Token2('=', bk_TokenKind::Reassign) || Token1(bk_TokenKind::Colon); } break;
+            case '(': { Token1(bk_TokenKind::LeftParenthesis); } break;
+            case ')': { Token1(bk_TokenKind::RightParenthesis); } break;
+            case '+': { Token2('=', bk_TokenKind::PlusAssign) || Token1(bk_TokenKind::Plus); } break;
+            case '-': { Token2('=', bk_TokenKind::MinusAssign) || Token1(bk_TokenKind::Minus); } break;
+            case '*': { Token2('=', bk_TokenKind::MultiplyAssign) || Token1(bk_TokenKind::Multiply); } break;
+            case '/': { Token2('=', bk_TokenKind::DivideAssign) || Token1(bk_TokenKind::Divide); } break;
+            case '%': { Token2('=', bk_TokenKind::ModuloAssign) || Token1(bk_TokenKind::Modulo); } break;
+            case '~': { Token2('=', bk_TokenKind::XorAssign) || Token1(bk_TokenKind::XorOrComplement); } break;
+            case '&': { Token2('=', bk_TokenKind::AndAssign) || Token2('&', bk_TokenKind::AndAnd) || Token1(bk_TokenKind::And); } break;
+            case '|': { Token2('=', bk_TokenKind::OrAssign) || Token2('|', bk_TokenKind::OrOr) || Token1(bk_TokenKind::Or); } break;
+            case '!': { Token2('=', bk_TokenKind::NotEqual) || Token1(bk_TokenKind::Not); } break;
+            case '=': { Token2('=', bk_TokenKind::Equal) || Token1(bk_TokenKind::Assign); } break;
+            case '>': { Token4('>', '>', '=', bk_TokenKind::RightRotateAssign) || Token3('>', '>', bk_TokenKind::RightRotate) ||
+                        Token3('>', '=', bk_TokenKind::RightShiftAssign) || Token2('>', bk_TokenKind::RightShift) ||
+                        Token2('=', bk_TokenKind::GreaterOrEqual) || Token1(bk_TokenKind::Greater); } break;
+            case '<': { Token4('<', '<', '=', bk_TokenKind::LeftRotateAssign) || Token3('<', '<', bk_TokenKind::LeftRotate) ||
+                        Token3('<', '=', bk_TokenKind::LeftShiftAssign) || Token2('<', bk_TokenKind::LeftShift) ||
+                        Token2('=', bk_TokenKind::LessOrEqual) || Token1(bk_TokenKind::Less); } break;
+            case ',': { Token1(bk_TokenKind::Comma); } break;
+            case ';': { Token1(bk_TokenKind::Semicolon); } break;
 
             default: {
                 if (RG_LIKELY(IsAsciiAlpha(code[offset]) || code[offset] == '_')) {
@@ -445,7 +445,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     int32_t uc = 0;
                     Size bytes = DecodeUtf8(code.ptr, offset, &uc);
 
-                    if (RG_UNLIKELY(!TestUnicodeTable(UnicodeIdStartTable, uc))) {
+                    if (RG_UNLIKELY(!TestUnicodeTable(bk_UnicodeIdStartTable, uc))) {
                         MarkUnexpected(offset, "Identifiers cannot start with");
                         return false;
                     }
@@ -463,7 +463,7 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                         int32_t uc = 0;
                         Size bytes = DecodeUtf8(code.ptr, next, &uc);
 
-                        if (!TestUnicodeTable(UnicodeIdContinueTable, uc)) {
+                        if (!TestUnicodeTable(bk_UnicodeIdContinueTable, uc)) {
                             MarkUnexpected(next, "Identifiers cannot contain");
                             return false;
                         }
@@ -475,12 +475,12 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                 }
 
                 Span<const char> ident = code.Take(offset, next - offset);
-                const Token *keyword = KeywordsMap.Find(ident);
+                const bk_Token *keyword = KeywordsMap.Find(ident);
 
                 if (keyword) {
                     // In order to have order-independent top-level functions, we need to parse
                     // their declarations first! Tell the parser where to look to help it.
-                    if (keyword->kind == TokenKind::Func) {
+                    if (keyword->kind == bk_TokenKind::Func) {
                         file->funcs.Append(tokens.len);
                     }
 
@@ -491,14 +491,14 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
                     if (ret.second) {
                         ret.first->ptr = DuplicateString(ident, &file->str_alloc).ptr;
                     }
-                    tokens.Append({TokenKind::Identifier, line, offset, {.str = ret.first->ptr}});
+                    tokens.Append({bk_TokenKind::Identifier, line, offset, {.str = ret.first->ptr}});
                 }
             } break;
         }
     }
 
     // Newlines are used to end statements. Make sure the last statement has one.
-    Token1(TokenKind::EndOfLine);
+    Token1(bk_TokenKind::EndOfLine);
 
     if (valid) {
         file->filename = DuplicateString(filename, &file->str_alloc).ptr;
@@ -512,13 +512,13 @@ bool Lexer::Tokenize(Span<const char> code, const char *filename)
     return valid;
 }
 
-inline bool Lexer::Token1(TokenKind kind)
+inline bool bk_Lexer::Token1(bk_TokenKind kind)
 {
     tokens.Append({kind, line, offset});
     return true;
 }
 
-inline bool Lexer::Token2(char c, TokenKind kind)
+inline bool bk_Lexer::Token2(char c, bk_TokenKind kind)
 {
     if (next < code.len && code[next] == c) {
         tokens.Append({kind, line, offset});
@@ -530,7 +530,7 @@ inline bool Lexer::Token2(char c, TokenKind kind)
     }
 }
 
-inline bool Lexer::Token3(char c1, char c2, TokenKind kind)
+inline bool bk_Lexer::Token3(char c1, char c2, bk_TokenKind kind)
 {
     if (next < code.len - 1 && code[next] == c1 && code[next + 1] == c2) {
         tokens.Append({kind, line, offset});
@@ -542,7 +542,7 @@ inline bool Lexer::Token3(char c1, char c2, TokenKind kind)
     }
 }
 
-inline bool Lexer::Token4(char c1, char c2, char c3, TokenKind kind)
+inline bool bk_Lexer::Token4(char c1, char c2, char c3, bk_TokenKind kind)
 {
     if (next < code.len - 2 && code[next] == c1 && code[next + 1] == c2 && code[next + 2] == c3) {
         tokens.Append({kind, line, offset});
@@ -554,7 +554,7 @@ inline bool Lexer::Token4(char c1, char c2, char c3, TokenKind kind)
     }
 }
 
-unsigned int Lexer::ConvertHexaDigit(Size pos)
+unsigned int bk_Lexer::ConvertHexaDigit(Size pos)
 {
     if (IsAsciiDigit(code[pos])) {
         return (unsigned int)(code[pos] - '0');
@@ -566,7 +566,7 @@ unsigned int Lexer::ConvertHexaDigit(Size pos)
 }
 
 // Expects offset to point to the start of the literal, and next to point just behind the dot
-void Lexer::TokenizeFloat()
+void bk_Lexer::TokenizeFloat()
 {
     LocalArray<char, 256> buf;
     for (Size i = offset; i < next; i++) {
@@ -613,12 +613,12 @@ void Lexer::TokenizeFloat()
         return;
     }
 
-    tokens.Append({TokenKind::Float, line, offset, {.d = d}});
+    tokens.Append({bk_TokenKind::Float, line, offset, {.d = d}});
 }
 
-bool Tokenize(Span<const char> code, const char *filename, TokenizedFile *out_file)
+bool bk_Tokenize(Span<const char> code, const char *filename, bk_TokenizedFile *out_file)
 {
-    Lexer lexer(out_file);
+    bk_Lexer lexer(out_file);
     return lexer.Tokenize(code, filename);
 }
 
