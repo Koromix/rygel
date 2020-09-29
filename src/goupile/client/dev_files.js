@@ -28,9 +28,9 @@ let dev_files = new function() {
         }
 
         editor_tabs = [
-            {name: 'Application', path: '/files/main.js'},
-            {name: 'Modèle', path: '/files/main.html'},
-            {name: 'Style', path: '/files/main.css'}
+            {category: 'Application', name: 'Structure', path: '/files/main.js'},
+            {category: 'Application', name: 'Modèle', path: '/files/main.html'},
+            {category: 'Application', name: 'Style', path: '/files/main.css'}
         ];
 
         if (path) {
@@ -55,11 +55,34 @@ let dev_files = new function() {
     }
 
     async function renderEditorPanel() {
+        let current_idx = editor_tabs.findIndex(tab => tab.path === editor_path);
+        let current_name = (current_idx >= 0) ? editor_tabs[current_idx].name : editor_path;
+
         render(html`
             <div class="gp_toolbar dev">
-                ${editor_tabs.map((tab, idx) =>
-                    html`<button class=${tab.path === editor_path ? 'active' : ''}
-                                 @click=${e => toggleEditorFile(tab.path)}>${tab.name}</button>`)}
+                ${util.mapRLE(editor_tabs, tab => tab.category, (category, offset, length) => {
+                    let tabs = editor_tabs.slice(offset, offset + length);
+
+                    if (category != null) {
+                        let active = current_idx >= offset && current_idx < (offset + length);
+                        let name = active ? editor_tabs[current_idx].name : 'Application';
+
+                        return html`
+                            <div class="gp_dropdown">
+                                <button type="button" class=${active ? 'active' : ''}>${name}</button>
+                                <div>
+                                    ${tabs.map(tab =>
+                                        html`<button class=${tab.path === editor_path ? 'active' : ''}
+                                                     @click=${e => toggleEditorFile(tab.path)}>${tab.name}</button>`)}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        return tabs.map(tab =>
+                            html`<button class=${tab.path === editor_path ? 'active' : ''}
+                                         @click=${e => toggleEditorFile(tab.path)}>${tab.name}</button>`);
+                    }
+                })}
             </div>
             ${editor_el}
         `, document.querySelector('#dev_editor'));
@@ -181,11 +204,8 @@ let dev_files = new function() {
 
         render(html`
             <div class="gp_toolbar">
-                <button @click=${runCreateDialog}>Ajouter</button>
-                ${remote ? html`
-                    <div style="flex: 1;"></div>
-                    <button ?disabled=${!actions} @click=${runDeployDialog}>Déployer</button>
-                ` : ''}
+                <div style="flex: 1;"></div>
+                ${remote ? html`<button @click=${runDeployDialog}>Déployer</button>` : ''}
             </div>
 
             <table class="sync_table">
@@ -201,46 +221,53 @@ let dev_files = new function() {
                     ` : ''}
                 </tr></thead>
 
-                <tbody>${files.map(file => {
-                    if (file.sha256 || file.remote_sha256) {
-                        let action = user_actions[file.path] || file.action;
-                        let show_reset = file.deleted || (file.sha256 && (!env.use_offline ||
-                                                                          file.sha256 !== file.remote_sha256));
+                <tbody>
+                    ${files.map(file => {
+                        if (file.sha256 || file.remote_sha256) {
+                            let action = user_actions[file.path] || file.action;
+                            let show_reset = file.deleted || (file.sha256 && (!env.use_offline ||
+                                                                              file.sha256 !== file.remote_sha256));
 
-                        return html`
-                            <tr class=${file.action === 'conflict' ? 'conflict' : ''}>
-                                <td>
-                                    <a @click=${e => runDeleteDialog(e, file.path)}>x</a>
-                                    ${show_reset ? html`<a @click=${e => runResetDialog(e, file)}>&nbsp;👻\uFE0E</a>` : ''}
-                                </td>
-                                <td class=${makeLocalPathClass(file, action)}>${file.path}</td>
-                                <td class="sync_size">${file.sha256 ? util.formatDiskSize(file.size) : ''}</td>
-
-                                ${remote ? html`
-                                    <td class="sync_actions">
-                                        <a class=${action === 'pull' ? 'selected' : (file.sha256 === file.remote_sha256 ? 'disabled' : '')}
-                                           @click=${e => toggleAction(file, 'pull')}>&lt;</a>
-                                        <a class=${action === 'noop' ? 'selected' : ''}
-                                           @click=${e => toggleAction(file, 'noop')}>=</a>
-                                        <a class=${action === 'push' ? 'selected' : (file.sha256 === file.remote_sha256 || (!file.sha256 && !file.deleted) ? 'disabled' : '')}
-                                           @click=${e => toggleAction(file, 'push')}>&gt;</a>
+                            return html`
+                                <tr class=${file.action === 'conflict' ? 'conflict' : ''}>
+                                    <td>
+                                        <a @click=${e => runDeleteDialog(e, file.path)}>x</a>
+                                        ${show_reset ? html`<a @click=${e => runResetDialog(e, file)}>&nbsp;👻\uFE0E</a>` : ''}
                                     </td>
+                                    <td class=${makeLocalPathClass(file, action)}>${file.path}</td>
+                                    <td class="sync_size">${file.sha256 ? util.formatDiskSize(file.size) : ''}</td>
 
-                                    <td class=${makeRemotePathClass(file, action)}>${file.path}</td>
-                                    <td class="sync_size">
-                                        ${file.action === 'conflict' ? html`<span class="sync_conflict" title="Modifications en conflit">⚠\uFE0E</span>&nbsp;` : ''}
-                                        ${file.remote_sha256 ? util.formatDiskSize(file.remote_size) : ''}
-                                    </td>
-                                ` : ''}
-                            </tr>
-                        `;
-                    } else {
-                        // Getting here means that nobody has the file because it was deleted
-                        // on both sides independently. We need to act on it anyway in order
-                        // to clean up any remaining local state about this file.
-                        return '';
-                    }
-                })}</tbody>
+                                    ${remote ? html`
+                                        <td class="sync_actions">
+                                            <a class=${action === 'pull' ? 'selected' : (file.sha256 === file.remote_sha256 ? 'disabled' : '')}
+                                               @click=${e => toggleAction(file, 'pull')}>&lt;</a>
+                                            <a class=${action === 'noop' ? 'selected' : ''}
+                                               @click=${e => toggleAction(file, 'noop')}>=</a>
+                                            <a class=${action === 'push' ? 'selected' : (file.sha256 === file.remote_sha256 || (!file.sha256 && !file.deleted) ? 'disabled' : '')}
+                                               @click=${e => toggleAction(file, 'push')}>&gt;</a>
+                                        </td>
+
+                                        <td class=${makeRemotePathClass(file, action)}>${file.path}</td>
+                                        <td class="sync_size">
+                                            ${file.action === 'conflict' ? html`<span class="sync_conflict" title="Modifications en conflit">⚠\uFE0E</span>&nbsp;` : ''}
+                                            ${file.remote_sha256 ? util.formatDiskSize(file.remote_size) : ''}
+                                        </td>
+                                    ` : ''}
+                                </tr>
+                            `;
+                        } else {
+                            // Getting here means that nobody has the file because it was deleted
+                            // on both sides independently. We need to act on it anyway in order
+                            // to clean up any remaining local state about this file.
+                            return '';
+                        }
+                    })}
+
+                    <tr class="action">
+                        <th></th>
+                        <th colspan="5"><a @click=${runCreateDialog}>Ajouter un fichier</a></th>
+                    </tr>
+                </tbody>
             </table>
         `, document.querySelector('#dev_files'));
     }

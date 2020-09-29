@@ -32,6 +32,12 @@
 .sync_table tbody tr:nth-child(2n + 1) { background: white; }
 .sync_table tbody tr:nth-child(2n) { background: #f4f4f4; }
 .sync_table tbody tr.conflict { background: #f9e3e3; }
+.sync_table tbody tr.action { background: none; }
+.sync_table tbody tr.action th {
+    border: none;
+    font-weight: normal;
+    text-align: left;
+}
 
 .sync_actions { text-align: center; }
 .sync_actions > a { padding: 0 6px 1px 6px; }
