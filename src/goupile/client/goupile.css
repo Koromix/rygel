@@ -119,6 +119,7 @@ button:not(:disabled):hover {
     -moz-user-select: none;
     -webkit-user-select: none;
     -ms-user-select: none;
+    z-index: 9999;
 }
 
 .gp_toolbar button {
@@ -133,9 +134,9 @@ button:not(:disabled):hover {
 }
 .gp_toolbar button::-moz-focus-inner { border: 0; }
 .gp_toolbar button:focus { outline: 0; }
-.gp_toolbar button:not(.active):not(:disabled):hover { background-color: #376cb5; }
-.gp_toolbar button.active { background-color: #3b7ad1; }
-.gp_toolbar button:disabled { filter: brightness(75%); }
+.gp_toolbar button:not(.active):hover { background-color: #376db9; }
+.gp_toolbar button.active { background-color: #4387e5; }
+.gp_toolbar button:disabled { filter: brightness(75%) !important; }
 
 .gp_dropdown {
     position: relative;
@@ -147,33 +148,32 @@ button:not(:disabled):hover {
     display: none;
     position: absolute;
     min-width: 160px;
-    background-color: inherit;
-    border-left: 0.5px solid #376cb5;
+    background-color: #376db9;
     z-index: 9999;
 }
-.gp_dropdown.right > div {
-    right: 0;
-    border-left: 0;
-    border-right: 0.5px solid #376cb5;
-}
+.gp_dropdown.right > div { right: 0; }
 .gp_dropdown:hover > div {
     display: flex;
     flex-direction: column;
 }
-.gp_dropdown:hover > button { background-color: #376cb5; }
+.gp_dropdown:hover > button:not(.active) { background-color: #376db9; }
 .gp_dropdown > div button {
     height: 2.5em;
     text-align: left;
 }
+.gp_dropdown > div button:not(.active):hover { background-color: #3b7ad1; }
 .gp_dropdown hr {
     width: 94%;
     border: none;
-    border-top: 0.5px solid #376cb5;
+    border-top: 0.5px solid #376db9;
+    height: 3px;
 }
 
 .gp_toolbar.dev { background: #383936; }
 .gp_toolbar.dev button.active { background: #272822; }
-.gp_toolbar.dev button:not(.active):not(:disabled):hover { background: #31322e; }
+.gp_toolbar.dev button:not(.active):hover { background: #2a2a27; }
+.gp_toolbar.dev .gp_dropdown > div { background-color: #31322e; }
+.gp_toolbar.dev .gp_dropdown:hover > button:not(.active) { background-color: #31322e; }
 
 /* -------------------- Main header -------------------- */
 
