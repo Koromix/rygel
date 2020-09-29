@@ -451,12 +451,12 @@ let goupile = new function() {
             ${show_develop ? html`
                 <div class="gp_dropdown">
                     <button class=${left_panel === 'editor' || left_panel === 'files' ? 'icon active' : 'icon'}
-                            style="background-position-y: calc(-228px + 1.2em)">Code</button>
+                            style="background-position-y: calc(-228px + 1.2em)">Configuration</button>
                     <div>
                         <button class=${left_panel === 'editor' ? 'active' : ''}
-                                @click=${e => toggleLeftPanel('editor')}>Éditeur</button>
+                                @click=${e => toggleLeftPanel('editor')}>Code</button>
                         <button class=${left_panel === 'files' ? 'active' : ''}
-                                @click=${e => toggleLeftPanel('files')}>Déploiement</button>
+                                @click=${e => toggleLeftPanel('files')}>Fichiers</button>
                     </div>
                 </div>
             ` : ''}
