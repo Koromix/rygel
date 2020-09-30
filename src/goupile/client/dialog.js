@@ -55,12 +55,16 @@ let dialog = new function() {
                 refresh: () => buildDialog(dialog, e, func),
 
                 resolve: value => {
-                    resolve(value);
-                    closeDialog(dialog);
+                    if (dialog.el != null) {
+                        resolve(value);
+                        closeDialog(dialog);
+                    }
                 },
                 reject: err => {
-                    reject(err);
-                    closeDialog(dialog);
+                    if (dialog.el != null) {
+                        reject(err);
+                        closeDialog(dialog);
+                    }
                 }
             };
 
@@ -187,6 +191,7 @@ let dialog = new function() {
         count--;
 
         document.body.removeChild(dialog.el);
+        dialog.el = null;
     }
 
     this.confirm = function(e, msg, action, func) {
