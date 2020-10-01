@@ -449,12 +449,16 @@ let goupile = new function() {
 
         return html`
             ${show_develop ? html`
-                <button class=${left_panel === 'files' ? 'icon active' : 'icon'}
-                        style="font-weight: bold; background-position-y: calc(-538px + 1.2em)"
-                        @click=${e => toggleLeftPanel('files')}>${env.app_name}</button>
-                <button class=${left_panel === 'editor' ? 'icon active' : 'icon'}
-                        style="background-position-y: calc(-228px + 1.2em)"
-                        @click=${e => toggleLeftPanel('editor')}>Code</button>
+                <div class="gp_dropdown">
+                    <button class=${left_panel === 'editor' || left_panel === 'files' ? 'icon active' : 'icon'}
+                            style="font-weight: bold; background-position-y: calc(-538px + 1.2em)">${env.app_name}</button>
+                    <div>
+                        <button class=${left_panel === 'editor' ? 'active' : ''}
+                                @click=${e => toggleLeftPanel('editor')}>Code</button>
+                        <button class=${left_panel === 'files' ? 'active' : ''}
+                                @click=${e => toggleLeftPanel('files')}>Déploiement</button>
+                    </div>
+                </div>
             ` : ''}
             ${show_data ? html`
                 <div class="gp_dropdown">
