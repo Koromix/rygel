@@ -239,6 +239,8 @@ function PageBuilder(state, model, readonly = false) {
 
         let value = parseFloat(readValue(key, options.value));
         let missing = (value == null || Number.isNaN(value));
+        if (missing)
+            value = undefined;
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -782,12 +784,11 @@ function PageBuilder(state, model, readonly = false) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
-        updateValue(key, value, false);
-
         let text = value;
         if (!options.raw && typeof value !== 'string') {
             if (value == null || Number.isNaN(value)) {
-                text = '';
+                value = undefined;
+                text = 'Non calculable';
             } else if (isFinite(value)) {
                 // This is a garbage way to round numbers
                 let multiplicator = Math.pow(10, 2);
@@ -795,6 +796,8 @@ function PageBuilder(state, model, readonly = false) {
                 text = Math.round(n) / multiplicator;
             }
         }
+
+        updateValue(key, value, false);
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
