@@ -460,23 +460,29 @@ let goupile = new function() {
                     </div>
                 </div>
             ` : ''}
-            ${show_data ? html`
+            ${!show_develop ?
+                html`<button class="icon" style="font-weight: bold; background-position-y: calc(-538px + 1.2em)"
+                             @click=${e => self.go('/')}>${env.app_name}</button>` : ''}
+            ${show_data && show_export ? html`
                 <div class="gp_dropdown">
                     <button class=${left_panel === 'status' || left_panel === 'data' ? 'icon active' : 'icon'}
                             style="background-position-y: calc(-274px + 1.2em)">Recueil</button>
                     <div>
                         <button class=${left_panel === 'status' ? 'active' : ''}
                                 @click=${e => toggleLeftPanel('status')}>Suivi</button>
-                        ${show_export ? html`<button class=${left_panel === 'data' ? 'active' : ''}
-                                                     @click=${e => toggleLeftPanel('data')}>Données</button>` : ''}
+                        <button class=${left_panel === 'data' ? 'active' : ''}
+                                @click=${e => toggleLeftPanel('data')}>Données</button>
                     </div>
                 </div>
             ` :  ''}
-            ${route_asset ? html`
-                <button class=${show_overview ? 'icon active': 'icon'}
-                        @click=${e => self.toggleOverview()}
-                        style="background-position-y: calc(-318px + 1.2em)">${route_asset.overview}</button>
-            ` : ''}
+            ${show_data && !show_export ?
+                html`<button class=${left_panel === 'status' ? 'icon active' : 'icon'}
+                             style="background-position-y: calc(-274px + 1.2em)"
+                             @click=${e => toggleLeftPanel('status')}>Suivi</button>` : ''}
+            ${route_asset ?
+                html`<button class=${show_overview ? 'icon active': 'icon'}
+                             @click=${e => self.toggleOverview()}
+                             style="background-position-y: calc(-318px + 1.2em)">${route_asset.overview}</button>` : ''}
 
             ${show_develop ? html`
                 <select id="gp_assets" @change=${e => self.go(e.target.value)}>
@@ -494,7 +500,7 @@ let goupile = new function() {
                     })}
                 </select>
             ` : ''}
-            ${!show_develop ? html`<div style="flex: 1;"></div>` : ''}
+            ${!show_develop ? html`<div style="flex: 1; text-align: center;">${env.app_name}</div>` : ''}
 
             ${!self.isConnected() ?
                 html`<button class="icon" style="background-position-y: calc(-450px + 1.2em)"
