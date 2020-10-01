@@ -223,7 +223,7 @@ button:not(:disabled):hover {
     padding-left: 36px;
     background-image: url('icons.png');
     background-repeat: no-repeat;
-    background-size: 22px 506px;
+    background-size: 22px 550px;
     background-position-x: 6px;
 }
 @media screen and (max-width: 580px) {
@@ -244,7 +244,7 @@ button:not(:disabled):hover {
     max-width: 3em;
     background-image: url('icons.png');
     background-repeat: no-repeat;
-    background-size: 22px 506px;
+    background-size: 22px 550px;
     background-position-x: center;
 }
 
