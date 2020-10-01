@@ -536,8 +536,8 @@ let goupile = new function() {
         // If user is really connected (with a server session key)
         if (user.isConnectedOnline()) {
             try {
-                await func();
-                return;
+                let ret = await func();
+                return ret;
             } catch (err) {
                 if (user.isSynced())
                     throw err;
@@ -546,14 +546,16 @@ let goupile = new function() {
             await self.initMain();
 
             if (user.isConnectedOnline()) {
-                await func();
-                return;
+                let ret = await func();
+                return ret;
             }
         }
 
         // Ask user to connect
         await user.runLoginDialog();
-        await func();
+
+        let ret = await func();
+        return ret;
     };
 
     this.toggleOverview = function(enable = undefined) {

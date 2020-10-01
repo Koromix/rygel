@@ -818,8 +818,13 @@ let form_exec = new function() {
 
         entry.progress('Synchronisation des données en cours');
         try {
-            await goupile.runConnected(vrec.sync);
-            entry.success('Données synchronisées !');
+            let changes = await goupile.runConnected(vrec.sync);
+
+            if (changes) {
+                entry.success('Données synchronisées !');
+            } else {
+                entry.close();
+            }
         } catch (err) {
             entry.error(`La synchronisation a échoué : ${err.message}`);
         }

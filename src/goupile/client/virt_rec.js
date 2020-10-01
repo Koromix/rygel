@@ -265,6 +265,8 @@ function VirtualRecords(db) {
     };
 
     this.sync = async function() {
+        let changes = false;
+
         // Upload new fragments
         {
             let new_fragments = await db.loadAll('rec_fragments/anchor', IDBKeyRange.only(-1));
@@ -305,6 +307,8 @@ function VirtualRecords(db) {
                         throw new Error(err);
                     }
                 }
+
+                changes = true;
             }
         }
 
@@ -345,6 +349,8 @@ function VirtualRecords(db) {
 
                 await db.saveAll('rec_entries', entries);
                 await db.saveAll('rec_fragments', fragments);
+
+                changes = true;
             }
         }
 
@@ -382,6 +388,8 @@ function VirtualRecords(db) {
                 await db.saveAll('rec_columns', columns);
             }
         }
+
+        return changes;
     };
 
     function makeEntryKey(table, id) {
