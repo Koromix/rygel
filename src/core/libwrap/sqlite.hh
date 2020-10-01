@@ -15,6 +15,7 @@ namespace RG {
 class sq_Binding {
 public:
     enum class Type {
+        Null,
         Integer,
         Double,
         String
@@ -27,7 +28,8 @@ public:
         Span<const char> str;
     } u;
 
-    sq_Binding(unsigned char i)  : type(Type::Integer) { u.i = i; }
+    sq_Binding() : type(Type::Null) {}
+    sq_Binding(unsigned char i) : type(Type::Integer) { u.i = i; }
     sq_Binding(short i) : type(Type::Integer) { u.i = i; }
     sq_Binding(unsigned short i) : type(Type::Integer) { u.i = i; }
     sq_Binding(int i) : type(Type::Integer) { u.i = i; }

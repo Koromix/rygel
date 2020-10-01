@@ -53,7 +53,12 @@ var server = new function() {
 
                 return frag2;
             } else {
-                return {mtime: frag.mtime};
+                let frag2 = {
+                    mtime: frag.mtime,
+                    version: frag.version
+                };
+
+                return frag2;
             }
         });
 

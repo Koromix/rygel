@@ -140,6 +140,7 @@ bool sq_Database::RunWithBindings(const char *sql, Span<const sq_Binding> bindin
         const sq_Binding &binding = bindings[i];
 
         switch (binding.type) {
+            case sq_Binding::Type::Null: { sqlite3_bind_null(stmt, i + 1); } break;
             case sq_Binding::Type::Integer: { sqlite3_bind_int64(stmt, i + 1, binding.u.i); } break;
             case sq_Binding::Type::Double: { sqlite3_bind_double(stmt, i + 1, binding.u.d); } break;
             case sq_Binding::Type::String: { sqlite3_bind_text(stmt, i + 1, binding.u.str.ptr,

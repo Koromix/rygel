@@ -33,11 +33,13 @@ static void ExportRecord(sq_Statement *stmt, json_Writer *json)
         json->Key("version"); json->Int64(sqlite3_column_int64(*stmt, 5));
         if (sqlite3_column_type(*stmt, 6) != SQLITE_NULL) {
             json->Key("page"); json->String((const char *)sqlite3_column_text(*stmt, 6));
+            json->Key("complete"); json->Bool(sqlite3_column_int(*stmt, 7));
+            json->Key("values"); json->Raw((const char *)sqlite3_column_text(*stmt, 8));
         } else {
             json->Key("page"); json->Null();
+            json->Key("complete"); json->Bool(false);
+            json->Key("values"); json->Raw("{}");
         }
-        json->Key("complete"); json->Bool(sqlite3_column_int(*stmt, 7));
-        json->Key("values"); json->Raw((const char *)sqlite3_column_text(*stmt, 8));
         json->Key("anchor"); json->Int64(sqlite3_column_int64(*stmt, 9));
 
         json->EndObject();
@@ -300,8 +302,9 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
                     int64_t anchor;
                     if (!goupile_db.Run(R"(INSERT INTO rec_fragments (store, id, version, page, username, mtime, complete, json)
                                            VALUES (?, ?, ?, ?, ?, ?, 0, ?))",
-                                        handle.table, handle.id, frag.version, frag.page,
-                                        session->username, frag.mtime, frag.json))
+                                        handle.table, handle.id, frag.version,
+                                        frag.page ? sq_Binding(frag.page) : sq_Binding(), session->username,
+                                        frag.mtime, frag.json))
                         return false;
                     anchor = sqlite3_last_insert_rowid(goupile_db);
 
