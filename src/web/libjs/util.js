@@ -15,6 +15,54 @@ if (typeof lithtml !== 'undefined') {
 // Compatibility
 // ------------------------------------------------------------------------
 
+if (typeof String.prototype.padStart !== 'function') {
+    String.prototype.padStart = function(target_len, pad_str) {
+        if (this.length >= target_len) {
+            return this;
+        } else {
+            let pad_len = target_len - this.length;
+            pad_str += pad_str.repeat(pad_len / pad_str.length);
+
+            let str = pad_str.slice(0, pad_len) + this;
+            return str;
+        }
+    };
+}
+
+if (typeof Array.prototype.flatMap !== 'function') {
+    Array.prototype.flatMap = function(func, this_arg = undefined) {
+        let obj = Object(this);
+        let arr = [];
+
+        flattenIntoArray(arr, obj, 0, 1, func, this_arg);
+
+        return arr;
+    };
+
+    function flattenIntoArray(target, src, start, depth, mapper = null, this_arg = undefined) {
+        let j = start;
+
+        for (let i = 0; i < src.length; i++, j++) {
+            if (i in src) {
+                let elmt = src[i];
+                if (mapper != null)
+                    elmt = mapper.call(this_arg, elmt, i, target);
+
+                let spreadable = Object.getOwnPropertySymbols(elmt).includes(Symbol.isConcatSpreadable) ||
+                                 Array.isArray(elmt);
+
+                if (spreadable && depth > 0) {
+                    j = flattenIntoArray(target, elmt, j, depth - 1) - 1;
+                } else {
+                    target[j] = elmt;
+                }
+            }
+        }
+
+        return j;
+    }
+}
+
 if (typeof Blob !== 'undefined' && !Blob.prototype.text) {
     Blob.prototype.text = function() {
         return new Promise((resolve, reject) => {
