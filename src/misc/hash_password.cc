@@ -54,8 +54,12 @@ Options:
 
     if (!password.ptr) {
         password = Prompt("Password: ", "*", &temp_alloc);
-        if (!password.len)
+        if (!password.len) {
+            if (password.ptr) {
+                LogError("Password must not be empty");
+            }
             return 1;
+        }
     }
 
     char hash[crypto_pwhash_STRBYTES];

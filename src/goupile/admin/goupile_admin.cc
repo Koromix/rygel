@@ -77,8 +77,8 @@ static int RunInit(Span<const char *> arguments)
     Span<const char> app_key = {};
     Span<const char> app_name = {};
     bool empty = false;
-    Span<const char> default_username = nullptr;
-    Span<const char> default_password = nullptr;
+    const char *username = nullptr;
+    const char *password = nullptr;
 #ifndef _WIN32
     bool change_owner = false;
     uid_t owner_uid = 0;
@@ -119,9 +119,9 @@ Options:
             } else if (opt.Test("--name", OptionType::Value)) {
                 app_name = opt.current_value;
             } else if (opt.Test("-u", "--user", OptionType::Value)) {
-                default_username = opt.current_value;
+                username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
-                default_password = opt.current_value;
+                password = opt.current_value;
             } else if (opt.Test("--empty")) {
                 empty = true;
 #ifndef _WIN32
@@ -151,7 +151,7 @@ Options:
     if (!app_name.len) {
         app_name = app_key;
     }
-    if (default_password.len && !default_username.len) {
+    if (password && !username) {
         LogError("Option --password cannot be used without --user");
         return 1;
     }
@@ -186,15 +186,23 @@ Options:
 #endif
 
     // Gather missing information
-    if (!default_username.len) {
-        default_username = Prompt("Default user: ", &temp_alloc);
-        if (!default_username.len)
+    if (!username) {
+        username = Prompt("Default user: ", &temp_alloc);
+        if (!username)
             return 1;
     }
-    if (!default_password.len) {
-        default_password = Prompt("Password: ", "*", &temp_alloc);
-        if (!default_password.len)
+    if (!username[0]) {
+        LogError("Username cannot be empty");
+        return 1;
+    }
+    if (!password) {
+        password = Prompt("Password: ", "*", &temp_alloc);
+        if (!password)
             return 1;
+    }
+    if (!password[0]) {
+        LogError("Password cannot be empty");
+        return 1;
     }
     LogInfo();
 
@@ -260,13 +268,13 @@ Options:
     // Create default user (admin)
     {
         char hash[crypto_pwhash_STRBYTES];
-        if (!HashPassword(default_password, hash))
+        if (!HashPassword(password, hash))
             return 1;
 
         uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
 
         if (!database.Run("INSERT INTO usr_users (username, password_hash, permissions) VALUES (?, ?, ?)",
-                          default_username, hash, permissions))
+                          username, hash, permissions))
             return 1;
     }
 
@@ -405,7 +413,7 @@ static int RunAddUser(Span<const char *> arguments)
     // Options
     const char *config_filename = nullptr;
     const char *username = nullptr;
-    Span<const char> password = nullptr;
+    const char *password = nullptr;
     uint32_t permissions = UINT32_MAX;
 
     const auto print_usage = [](FILE *fp) {
@@ -467,15 +475,22 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
     }
 
     // Gather missing information
-    if (!password.len) {
+    if (!password) {
         password = Prompt("Password: ", "*", &temp_alloc);
-        if (!password.len)
+        if (!password)
             return 1;
+    }
+    if (!password[0]) {
+        LogError("Password cannot be empty");
+        return 1;
     }
     if (permissions == UINT32_MAX) {
         Span<const char> str = Prompt("Permissions: ", &temp_alloc);
-        if (str.len && !ParsePermissionList(str, &permissions))
+        if (str.len && !ParsePermissionList(str, &permissions)) {
             return 1;
+        } else if (!str.ptr) {
+            return 1;
+        }
     }
     LogInfo();
 
@@ -500,7 +515,7 @@ static int RunEditUser(Span<const char *> arguments)
     // Options
     const char *config_filename = nullptr;
     const char *username = nullptr;
-    Span<const char> password = nullptr;
+    const char *password = nullptr;
     uint32_t permissions = UINT32_MAX;
 
     const auto print_usage = [](FILE *fp) {
@@ -565,9 +580,12 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
     }
 
     // Gather missing information
-    if (!password.ptr) {
+    if (!password) {
         password = Prompt("Password: ", "*", &temp_alloc);
+        if (!password)
+            return 1;
     }
+    password = password[0] ? password : nullptr;
     if (permissions == UINT32_MAX) {
         ConsolePrompter prompter;
 
@@ -587,7 +605,7 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
 
     // Update user
     bool success = database.Transaction([&]() {
-        if (password.len) {
+        if (password) {
             char hash[crypto_pwhash_STRBYTES];
             if (!HashPassword(password, hash))
                 return false;
