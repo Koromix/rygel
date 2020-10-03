@@ -57,11 +57,18 @@ let idb = new function () {
             if (transaction)
                 throw new Error('Nested transactions are not supported');
 
-            transaction = db.transaction(stores, mode);
+            let p = new Promise((resolve, reject) => {
+                transaction = db.transaction(stores, mode);
+
+                transaction.addEventListener('complete', e => resolve());
+                transaction.addEventListener('abort', e => reject(new Error('Database transaction failure')));
+            });
+
             try {
                 await func();
+                await p;
             } catch (err) {
-                if (!aborted)
+                if (!aborted && transaction.error == null)
                     transaction.abort();
 
                 throw err;
@@ -79,32 +86,26 @@ let idb = new function () {
         this.save = function(store, value) {
             return executeQuery('readwrite', store, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
-                obj.put(value);
+                let req = obj.put(value);
 
-                t.addEventListener('complete', e => resolve());
-                t.addEventListener('abort', e => logAndReject(reject, 'Database transaction failure'));
+                req.onsuccess = e => resolve();
+                req.onerror = e => logAndReject(reject, 'Failed to save record');
             });
         };
 
         this.saveWithKey = function(store, key, value) {
             return executeQuery('readwrite', store, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
-                obj.put(value, key);
+                let req = obj.put(value, key);
 
-                t.addEventListener('complete', e => resolve());
-                t.addEventListener('abort', e => logAndReject(reject, 'Database transaction failure'));
+                req.onsuccess = e => resolve();
+                req.onerror = e => logAndReject(reject, 'Failed to save record');
             });
         };
 
-        this.saveAll = function(store, values) {
-            return executeQuery('readwrite', store, (t, resolve, reject) => {
-                let obj = t.objectStore(store);
-                for (let value of values)
-                    obj.put(value);
-
-                t.addEventListener('complete', e => resolve());
-                t.addEventListener('abort', e => logAndReject(reject, 'Database transaction failure'));
-            });
+        this.saveAll = async function(store, values) {
+            for (let value of values)
+                await self.save(store, value);
         };
 
         this.load = function(where, key) {
