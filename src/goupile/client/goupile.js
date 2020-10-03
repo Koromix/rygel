@@ -462,7 +462,7 @@ let goupile = new function() {
             ` : ''}
             ${!show_develop ?
                 html`<button class="icon" style="font-weight: bold; background-position-y: calc(-538px + 1.2em)"
-                             @click=${e => self.go('/')}>${env.app_name}</button>` : ''}
+                             @click=${e => self.go(env.base_url)}>${env.app_name}</button>` : ''}
             ${show_data && show_export ? html`
                 <div class="gp_dropdown">
                     <button class=${left_panel === 'status' || left_panel === 'data' ? 'icon active' : 'icon'}
