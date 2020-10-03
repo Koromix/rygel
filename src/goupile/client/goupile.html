@@ -37,6 +37,14 @@
             try {
                 eval('async function test() {}');
 
+                // See here: https://github.com/dfahlander/Dexie.js/issues/317
+                let m = navigator.userAgent.match('Firefox/([0-9]+)');
+                if (m != null) {
+                    let version = parseInt(m[1], 10);
+                    if (version < 60)
+                        throw new Error('Cannot work with broken async in IndexedDB');
+                }
+
                 document.querySelector('#gp_root').classList.add('busy');
                 document.addEventListener('readystatechange', function(e) {
                     if (document.readyState === 'complete')
@@ -47,7 +55,7 @@
                 el.innerHTML =
                     '<div class="gp_wip">' +
                     '    <b>Ce navigateur n\'est pas supporté, ou il s\'agit d\'une version trop ancienne</b><br/>' +
-                    '    Vous pouvez utiliser Chrome (version ≥ 55), Firefox (version ≥ 52), Edge (version ≥ 15), Safari (≥ 10.1)' +
+                    '    Vous pouvez utiliser Chrome (version ≥ 55), Firefox (version ≥ 60), Edge (version ≥ 17), Safari (≥ 11)' +
                     '</div>';
             }
         </script>
