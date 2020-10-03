@@ -298,10 +298,10 @@ button:not(:disabled):hover {
 
 .gp_wip {
     padding: 5px;
-    font-size: 2em;
+    font-size: 1.4em;
     text-align: center;
 }
 .gp_wip::before {
     content: '⚠\FE0E';
-    padding-right: 10px;
+    padding-right: 6px;
 }

@@ -25,22 +25,32 @@
                 sync_mode: '{SYNC_MODE}'
             };
         </script>
-
         <script src="{BASE_URL}static/goupile.pk.js"></script>
-        <script>
-            document.addEventListener('readystatechange', function(e) {
-                if (document.readyState === 'complete')
-                    goupile.startApp();
-            });
-        </script>
 
         <link rel="stylesheet" href="{BASE_URL}static/goupile.pk.css"/>
         {LINK_MANIFEST}
     </head>
 
     <body>
-        <noscript><div class="gp_wip">Cette application nécessite un support Javascript</div></noscript>
         <div id="gp_root"></div>
-        <script>document.querySelector('#gp_root').classList.add('busy');</script>
+        <script>
+            try {
+                eval('async function test() {}');
+
+                document.querySelector('#gp_root').classList.add('busy');
+                document.addEventListener('readystatechange', function(e) {
+                    if (document.readyState === 'complete')
+                        goupile.startApp();
+                });
+            } catch (err) {
+                let el = document.querySelector('#gp_root');
+                el.innerHTML =
+                    '<div class="gp_wip">' +
+                    '    <b>Ce navigateur n\'est pas supporté, ou il s\'agit d\'une version trop ancienne</b><br/>' +
+                    '    Vous pouvez utiliser Chrome (version ≥ 55), Firefox (version ≥ 52), Edge (version ≥ 15), Safari (≥ 10.1)' +
+                    '</div>';
+            }
+        </script>
+        <noscript><div class="gp_wip">Cette application nécessite un support Javascript</div></noscript>
     </body>
 </html>
