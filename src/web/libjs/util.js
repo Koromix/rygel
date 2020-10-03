@@ -597,6 +597,11 @@ let net = new function() {
 
     this.fetch = async function(request, init) {
         try {
+            if (init == null)
+                init = {};
+            if (init.credentials == null)
+                init.credentials = 'same-origin';
+
             let response = await fetch(request, init);
             return response;
         } catch (err) {
