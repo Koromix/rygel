@@ -81,12 +81,13 @@ function UserManager(db) {
     };
 
     async function loginOnline(username, password) {
+        let query = new URLSearchParams;
+        query.set('username', username.toLowerCase());
+        query.set('password', password);
+
         let response = await net.fetch(`${env.base_url}api/user/login`, {
             method: 'POST',
-            body: new URLSearchParams({
-                username: username.toLowerCase(),
-                password: password
-            })
+            body: query
         });
 
         if (response.ok) {

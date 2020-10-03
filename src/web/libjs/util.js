@@ -117,15 +117,15 @@ let util = new function() {
     };
 
     this.pasteURL = function(url, params = {}, hash = null) {
+        let query = new URLSearchParams;
+
         for (let key in params) {
-            if (params[key] != null) {
-                params[key] = params[key].toString();
-            } else {
-                delete params[key];
-            }
+            let value = params[key];
+            if (value != null)
+                query.set(key, value.toString());
         }
 
-        let query_str = new URLSearchParams(params).toString();
+        let query_str = query.toString();
         return `${url}${query_str ? '?' : ''}${query_str || ''}${hash ? '#' : ''}${hash || ''}`;
     };
 
