@@ -322,7 +322,6 @@ let form_exec = new function() {
         entry.progress('Enregistrement en cours');
         try {
             let record2 = await vrec.save(record, page, variables);
-            entry.success('Données enregistrées');
 
             let state = ctx_states[record2.id];
             if (state != null)
@@ -330,8 +329,12 @@ let form_exec = new function() {
             if (ctx_records.has(record2.id))
                 ctx_records.set(record2.id, record2);
 
-            if (env.sync_mode === 'mirror' && user.isConnected())
+            if (env.sync_mode === 'mirror' && user.isConnected()) {
+                entry.close();
                 self.syncRecords();
+            } else {
+                entry.success('Données enregistrées');
+            }
 
             return true;
         } catch (err) {
