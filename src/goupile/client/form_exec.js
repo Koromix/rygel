@@ -330,6 +330,9 @@ let form_exec = new function() {
             if (ctx_records.has(record2.id))
                 ctx_records.set(record2.id, record2);
 
+            if (env.sync_mode === 'mirror' && user.isConnected())
+                self.syncRecords();
+
             return true;
         } catch (err) {
             entry.error(`Échec de l\'enregistrement : ${err.message}`);
