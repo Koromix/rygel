@@ -64,7 +64,14 @@ function ApplicationBuilder(app) {
 
         let form_builder = new FormBuilder(form, expandOptions);
         if (typeof func === 'function') {
-            func(form_builder);
+            let prev_options = options_stack;
+
+            try {
+                options_stack = [options_stack[options_stack.length - 1]];
+                func(form_builder);
+            } finally {
+                options_stack = prev_options;
+            }
 
             if (!form.pages.length)
                 throw new Error(`Impossible de créer le formulaire '${key}' sans page`);
