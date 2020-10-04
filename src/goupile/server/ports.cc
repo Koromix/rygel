@@ -7,6 +7,7 @@
 #include "config.hh"
 #include "goupile.hh"
 #include "ports.hh"
+#include "user.hh"
 
 namespace RG {
 
@@ -39,12 +40,29 @@ static Span<const char> ConsumeValueStr(JSContext *ctx, JSValue value)
 ScriptPort::~ScriptPort()
 {
     if (ctx) {
+        JS_FreeValue(ctx, profile_func);
         JS_FreeValue(ctx, validate_func);
         JS_FreeContext(ctx);
     }
     if (rt) {
         JS_FreeRuntime(rt);
     }
+}
+
+void ScriptPort::ChangeProfile(const Session &session)
+{
+    JSValue args[] = {
+        JS_NewString(ctx, session.username),
+        session.zone ? JS_NewString(ctx, session.zone) : JS_NULL
+    };
+    RG_DEFER {
+        JS_FreeValue(ctx, args[0]);
+        JS_FreeValue(ctx, args[1]);
+    };
+
+    JSValue ret = JS_Call(ctx, profile_func, JS_UNDEFINED, RG_LEN(args), args);
+    RG_ASSERT(!JS_IsException(ret));
+    RG_DEFER { JS_FreeValue(ctx, ret); };
 }
 
 // XXX: Ugly memory behaviour, and use actual JS exceptions
@@ -92,6 +110,7 @@ bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_h
 
         const char *table = nullptr;
         const char *id = nullptr;
+        const char *zone = nullptr;
         uint32_t fragments_len = 0;
 
         parser.ParseObject();
@@ -103,6 +122,8 @@ bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_h
                 parser.ParseString(&table);
             } else if (TestStr(key, "id")) {
                 parser.ParseString(&id);
+            } else if (TestStr(key, "zone")) {
+                parser.ParseString(&zone);
             } else if (TestStr(key, "fragments")) {
                 parser.ParseArray();
                 while (parser.InArray()) {
@@ -254,9 +275,14 @@ bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_h
             LogError("Missing table or id attribute");
             return false;
         }
+        if (zone && !zone[0]) {
+            LogError("Zone attribute cannot be empty");
+            return false;
+        }
 
         handle->table = ConsumeValueStr(ctx, JS_NewString(ctx, table)).ptr;
         handle->id = ConsumeValueStr(ctx, JS_NewString(ctx, id)).ptr;
+        handle->zone = zone ? ConsumeValueStr(ctx, JS_NewString(ctx, zone)).ptr : nullptr;
     }
     if (!parser.IsValid())
         return false;
@@ -269,18 +295,21 @@ bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_h
 bool ScriptPort::RunRecord(Span<const char> json, const ScriptRecord &handle,
                            HeapArray<ScriptFragment> *out_fragments, Span<const char> *out_json)
 {
-    JSValue args[] = {
-        JS_NewString(ctx, handle.table),
-        JS_NewStringLen(ctx, json.ptr, (size_t)json.len),
-        JS_DupValue(ctx, handle.fragments)
-    };
-    RG_DEFER {
-        JS_FreeValue(ctx, args[0]);
-        JS_FreeValue(ctx, args[1]);
-        JS_FreeValue(ctx, args[2]);
-    };
+    JSValue ret;
+    {
+        JSValue args[] = {
+            JS_NewString(ctx, handle.table),
+            JS_NewStringLen(ctx, json.ptr, (size_t)json.len),
+            JS_DupValue(ctx, handle.fragments)
+        };
+        RG_DEFER {
+            JS_FreeValue(ctx, args[0]);
+            JS_FreeValue(ctx, args[1]);
+            JS_FreeValue(ctx, args[2]);
+        };
 
-    JSValue ret = JS_Call(ctx, validate_func, JS_UNDEFINED, RG_LEN(args), args);
+        ret = JS_Call(ctx, validate_func, JS_UNDEFINED, RG_LEN(args), args);
+    }
     RG_DEFER { JS_FreeValue(ctx, ret); };
     if (JS_IsException(ret)) {
         const char *msg = ConsumeValueStr(ctx, JS_GetException(ctx)).ptr;
@@ -365,6 +394,7 @@ void InitPorts()
         };
 
         JS_SetPropertyStr(port->ctx, server, "readCode", JS_NewCFunction(port->ctx, ReadCode, "readCode", 1));
+        port->profile_func = JS_GetPropertyStr(port->ctx, server, "changeProfile");
         port->validate_func = JS_GetPropertyStr(port->ctx, server, "validateFragments");
 
         js_idle_ports.Append(port);

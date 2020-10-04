@@ -414,6 +414,7 @@ static int RunAddUser(Span<const char *> arguments)
     const char *config_filename = nullptr;
     const char *username = nullptr;
     const char *password = nullptr;
+    const char *zone = nullptr;
     uint32_t permissions = UINT32_MAX;
 
     const auto print_usage = [](FILE *fp) {
@@ -423,6 +424,7 @@ Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
         %!..+--password <pwd>%!0         Password of user
+        %!..+--zone <zone>%!0            Zone of user
     %!..+-p, --permissions <perms>%!0    User permissions
 
 User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
@@ -440,6 +442,8 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
                 config_filename = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 password = opt.current_value;
+            } else if (opt.Test("--zone", OptionType::Value)) {
+                zone = opt.current_value;
             } else if (opt.Test("-p", "--permissions", OptionType::Value)) {
                 if (!ParsePermissionList(opt.current_value, &permissions))
                     return 1;
@@ -484,6 +488,12 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
         LogError("Password cannot be empty");
         return 1;
     }
+    if (!zone) {
+        zone = Prompt("Zone: ", &temp_alloc);
+        if (!zone)
+            return 1;
+    }
+    zone = zone[0] ? zone : nullptr;
     if (permissions == UINT32_MAX) {
         Span<const char> str = Prompt("Permissions: ", &temp_alloc);
         if (str.len && !ParsePermissionList(str, &permissions)) {
@@ -500,8 +510,9 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
         return 1;
 
     // Create user
-    if (!database.Run("INSERT INTO usr_users (username, password_hash, permissions) VALUES (?, ?, ?)",
-                      username, hash, permissions))
+    if (!database.Run(R"(INSERT INTO usr_users (username, password_hash, zone, permissions)
+                         VALUES (?, ?, ?, ?))",
+                      username, hash, zone ? sq_Binding(zone) : sq_Binding(), permissions))
         return 1;
 
     LogInfo("Added user");
@@ -516,6 +527,7 @@ static int RunEditUser(Span<const char *> arguments)
     const char *config_filename = nullptr;
     const char *username = nullptr;
     const char *password = nullptr;
+    const char *zone = nullptr;
     uint32_t permissions = UINT32_MAX;
 
     const auto print_usage = [](FILE *fp) {
@@ -525,6 +537,7 @@ Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
         %!..+--password <pwd>%!0         Password of user
+        %!..+--zone <zone>%!0            Zone of user
     %!..+-p, --permissions <perms>%!0    User permissions
 
 User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
@@ -542,6 +555,8 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
                 config_filename = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 password = opt.current_value;
+            } else if (opt.Test("--zone", OptionType::Value)) {
+                zone = opt.current_value;
             } else if (opt.Test("-p", "--permissions", OptionType::Value)) {
                 if (!ParsePermissionList(opt.current_value, &permissions))
                     return 1;
@@ -564,10 +579,11 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
         return 1;
 
     // Find user first
+    const char *prev_zone;
     uint32_t prev_permissions;
     {
         sq_Statement stmt;
-        if (!database.Prepare("SELECT permissions FROM usr_users WHERE username = ?", &stmt))
+        if (!database.Prepare("SELECT zone, permissions FROM usr_users WHERE username = ?", &stmt))
             return false;
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
@@ -576,7 +592,13 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
             return 1;
         }
 
-        prev_permissions = (uint32_t)sqlite3_column_int64(stmt, 0);
+        if (sqlite3_column_type(stmt, 0) != SQLITE_NULL) {
+            const char *zone = (const char *)sqlite3_column_text(stmt, 0);
+            prev_zone = DuplicateString(zone, &temp_alloc).ptr;
+        } else {
+            prev_zone = nullptr;
+        }
+        prev_permissions = (uint32_t)sqlite3_column_int64(stmt, 1);
     }
 
     // Gather missing information
@@ -586,6 +608,20 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
             return 1;
     }
     password = password[0] ? password : nullptr;
+    if (zone && !zone[0]) {
+        zone = prev_zone;
+    } else if (!zone) {
+        ConsolePrompter prompter;
+
+        prompter.prompt = "Zone: ";
+        prompter.str.allocator = &temp_alloc;
+        prompter.str.Append(prev_zone);
+
+        if (!prompter.Read())
+            return 1;
+
+        zone = prompter.str.len ? prompter.str.ptr : nullptr;
+    }
     if (permissions == UINT32_MAX) {
         ConsolePrompter prompter;
 
@@ -615,8 +651,8 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
                 return false;
         }
 
-        if (!database.Run("UPDATE usr_users SET permissions = ? WHERE username = ?",
-                          permissions, username))
+        if (!database.Run("UPDATE usr_users SET zone = ?, permissions = ? WHERE username = ?",
+                          zone ? sq_Binding(zone) : sq_Binding(), permissions, username))
             return false;
         if (!sqlite3_changes(database)) {
             LogError("UPDATE request failed: no match");

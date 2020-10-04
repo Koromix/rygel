@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function VirtualRecords(db) {
+function VirtualRecords(db, zone) {
     let self = this;
 
     this.create = function(table) {
@@ -12,6 +12,7 @@ function VirtualRecords(db) {
 
             table: table,
             id: id,
+            zone: zone,
 
             versions: [],
             version: null,
@@ -34,6 +35,7 @@ function VirtualRecords(db) {
 
             table: record.table,
             id: record.id,
+            zone: zone,
             version: 0,
             page: page,
 
@@ -91,6 +93,10 @@ function VirtualRecords(db) {
             let entry = await db.load('rec_entries', ikey);
 
             if (entry) {
+                if (!testZone(entry)) {
+                    console.log(entry, record);
+                    throw new Error(`Zone mismatch for record ${record.id}`);
+                }
                 if (entry.version !== record.version) {
                     console.log(entry, record);
                     throw new Error(`Cannot save old version of record ${record.id}`);
@@ -101,6 +107,7 @@ function VirtualRecords(db) {
 
                     table: record.table,
                     id: record.id,
+                    zone: zone,
 
                     version: record.version || -1
                 };
@@ -136,6 +143,9 @@ function VirtualRecords(db) {
         await db.transaction('rw', ['rec_entries', 'rec_fragments'], async () => {
             let entry = await db.load('rec_entries', ikey);
 
+            if (!testZone(entry))
+                throw new Error(`Zone mismatch for record ${id}`);
+
             if (entry != null) {
                 entry.version++;
 
@@ -144,6 +154,7 @@ function VirtualRecords(db) {
 
                     table: table,
                     id: id,
+                    zone: zone,
                     version: entry.version,
                     page: null, // Delete fragment
 
@@ -167,6 +178,9 @@ function VirtualRecords(db) {
         ]);
 
         if (entry && fragments.length) {
+            if (!testZone(entry))
+                throw new Error(`Zone mismatch for record ${id}`);
+
             let record = expandFragments(entry, fragments, version);
             return record;
         } else {
@@ -182,20 +196,21 @@ function VirtualRecords(db) {
 
         let i = 0, j = 0, k = 0;
         while (j < records.length && k < fragments.length) {
-            records[i] = records[j++];
+            let entry = records[j++];
 
-            // Find matching data row
-            while (k < fragments.length && fragments[k]._ikey < records[i]._ikey)
-                k++;
+            if (testZone(entry)) {
+                while (k < fragments.length && fragments[k]._ikey < entry._ikey)
+                    k++;
 
-            let fragments_acc = [];
-            while (k < fragments.length && fragments[k].table === table &&
-                                           fragments[k].id === records[i].id)
-                fragments_acc.push(fragments[k++]);
+                let fragments_acc = [];
+                while (k < fragments.length && fragments[k].table === table &&
+                                               fragments[k].id === entry.id)
+                    fragments_acc.push(fragments[k++]);
 
-            if (fragments_acc.length) {
-                records[i] = expandFragments(records[i], fragments_acc);
-                i += !!records[i];
+                if (fragments_acc.length) {
+                    records[i] = expandFragments(entry, fragments_acc);
+                    i += !!records[i];
+                }
             }
         }
         records.length = i;
@@ -212,6 +227,7 @@ function VirtualRecords(db) {
 
             table: entry.table,
             id: entry.id,
+            zone: entry.zone,
 
             versions: fragments.map(frag => ({
                 version: frag.version,
@@ -260,6 +276,10 @@ function VirtualRecords(db) {
         return record;
     }
 
+    function testZone(entry) {
+        return zone == null || entry.zone == null || entry.zone === zone;
+    }
+
     this.listColumns = async function(table) {
         return db.loadAll('rec_columns', IDBKeyRange.bound(table + '@', table + '`', false, true));
     };
@@ -270,30 +290,33 @@ function VirtualRecords(db) {
         // Upload new fragments
         {
             let new_fragments = await db.loadAll('rec_fragments/anchor', IDBKeyRange.only(-1));
+            new_fragments.sort((frag1, frag2) => util.compareValues(frag1._ikey, frag2._ikey));
 
-            if (new_fragments.length) {
-                new_fragments.sort((frag1, frag2) => util.compareValues(frag1._ikey, frag2._ikey));
+            let records = util.mapRLE(new_fragments, frag => frag.id, (id, offset, length) => {
+                let fragments = new_fragments.slice(offset, offset + length);
+                let frag0 = fragments[0];
 
-                let records = util.mapRLE(new_fragments, frag => frag.id, (id, offset, length) => {
-                    let fragments = new_fragments.slice(offset, offset + length);
-                    let frag0 = fragments[0];
+                let record = {
+                    table: frag0.table,
+                    id: frag0.id,
+                    zone: frag0.zone,
 
-                    let record = {
-                        table: frag0.table,
-                        id: frag0.id,
+                    fragments: fragments.map(frag => ({
+                        mtime: frag.mtime,
+                        version: frag.version,
+                        page: frag.page,
+                        values: frag.values
+                    }))
+                };
 
-                        fragments: fragments.map(frag => ({
-                            mtime: frag.mtime,
-                            version: frag.version,
-                            page: frag.page,
-                            values: frag.values
-                        }))
-                    };
+                return record;
+            });
+            records = Array.from(records);
 
-                    return record;
-                });
-                records = Array.from(records);
+            if (zone != null)
+                records = records.filter(record => record.zone == null || record.zone === zone);
 
+            if (records.length) {
                 let response = await net.fetch(`${env.base_url}api/records/sync`, {
                     method: 'POST',
                     body: JSON.stringify(records)
@@ -326,6 +349,7 @@ function VirtualRecords(db) {
 
                     id: record.id,
                     table: record.table,
+                    zone: record.zone,
                     sequence: record.sequence,
 
                     version: record.fragments[record.fragments.length - 1].version,
@@ -336,6 +360,7 @@ function VirtualRecords(db) {
 
                     table: record.table,
                     id: record.id,
+                    zone: record.zone,
                     version: frag.version,
                     page: frag.page,
 

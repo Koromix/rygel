@@ -259,6 +259,7 @@ function UserManager(db) {
     this.isConnected = function() { return !!session_profile.username; };
     this.isConnectedOnline = function() { return session_rnd != null; }
     this.getUserName = function() { return session_profile.username; };
+    this.getZone = function() { return session_profile.zone; };
     this.hasPermission = function(perm) {
         return session_profile.permissions &&
                !!session_profile.permissions[perm];

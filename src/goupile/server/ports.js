@@ -7,14 +7,27 @@ var render = () => {};
 var html = () => {};
 var svg = () => {};
 
+let profile = {
+    username: null,
+    zone: null
+};
+
 // Stub exposed goupile methods
 var goupile = new function() {
     let self = this;
 
-    this.isConnected = function() { return false; };
+    this.isConnected = function() { return true; };
     this.isTablet = function() { return false; };
     this.isStandalone = function() { return false; };
     this.isLocked = function() { return false; };
+};
+var user = new function() {
+    let self = this;
+
+    this.isConnected = function() { return true; };
+    this.isConnectedOnline = function() { return true; }
+    this.getUserName = function() { return profile.username; };
+    this.getZone = function() { return profile.zone; };
 };
 
 var server = new function() {
@@ -22,6 +35,11 @@ var server = new function() {
 
     // C++ functions
     this.readCode = null;
+
+    this.changeProfile = function(username, zone) {
+        profile.username = username;
+        profile.zone = zone;
+    };
 
     this.validateFragments = function(table, json, fragments) {
         let values = JSON.parse(json);

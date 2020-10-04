@@ -25,6 +25,11 @@ static void WriteProfileJson(const Session *session, json_Writer *out_json)
     out_json->StartObject();
     if (session) {
         out_json->Key("username"); out_json->String(session->username);
+        if (session->zone) {
+            out_json->Key("zone"); out_json->String(session->zone);
+        } else {
+            out_json->Key("zone"); out_json->Null();
+        }
         out_json->Key("permissions"); out_json->StartObject();
         for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
             char js_name[64];
@@ -59,20 +64,26 @@ void HandleUserLogin(const http_RequestInfo &request, http_IO *io)
         int64_t now = GetMonotonicTime();
 
         sq_Statement stmt;
-        if (!goupile_db.Prepare(R"(SELECT username, password_hash, permissions FROM usr_users
+        if (!goupile_db.Prepare(R"(SELECT username, password_hash, permissions, zone FROM usr_users
                                    WHERE username = ?)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
         if (stmt.Next()) {
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
+            const char *zone = (const char *)sqlite3_column_text(stmt, 3);
 
             if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
-                Session *session = (Session *)Allocator::Allocate(nullptr, RG_SIZE(Session) + strlen(username) + 1,
-                                                                  (int)Allocator::Flag::Zero);
+                Size len = RG_SIZE(Session) + strlen(username) + (zone ? strlen(zone) : 0) + 2;
+                Session *session = (Session *)Allocator::Allocate(nullptr, len, (int)Allocator::Flag::Zero);
 
+                session->username = (char *)session + RG_SIZE(Session);
+                strcpy((char *)session->username, username);
+                if (zone) {
+                    session->zone = session->username + strlen(username) + 1;
+                    strcpy((char *)session->zone, zone);
+                }
                 session->permissions = (uint32_t)sqlite3_column_int64(stmt, 2);
-                strcpy(session->username, username);
 
                 RetainPtr<Session> ptr(session, [](Session *session) { Allocator::Release(nullptr, session, -1); });
                 sessions.Open(request, io, ptr);

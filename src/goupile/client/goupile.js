@@ -12,6 +12,8 @@ let user = null;
 let goupile = new function() {
     let self = this;
 
+    let db;
+
     let tablet_mq = window.matchMedia('(pointer: coarse)');
     let standalone_mq = window.matchMedia('(display-mode: standalone)');
 
@@ -37,9 +39,8 @@ let goupile = new function() {
 
             initNavigation();
 
-            let db = await openDatabase();
+            db = await openDatabase();
             vfs = new VirtualFS(db);
-            vrec = new VirtualRecords(db);
             user = new UserManager(db);
 
             if (navigator.serviceWorker) {
@@ -157,6 +158,8 @@ let goupile = new function() {
     this.initMain = async function(code = undefined) {
         if (!user.isSynced())
             await user.fetchProfile();
+
+        vrec = new VirtualRecords(db, user.getZone());
 
         if (self.isConnected() || env.allow_guests) {
             try {

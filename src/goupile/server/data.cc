@@ -30,7 +30,7 @@ DatabaseFile = database.db
 )";
 
 // If you change DatabaseVersion, don't forget to update the migration switch!
-const int DatabaseVersion = 10;
+const int DatabaseVersion = 11;
 
 bool MigrateDatabase(sq_Database &database, int version)
 {
@@ -247,9 +247,20 @@ bool MigrateDatabase(sq_Database &database, int version)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 10: {
+                bool success = database.Run(R"(
+                    ALTER TABLE rec_entries ADD COLUMN zone TEXT;
+                    ALTER TABLE usr_users ADD COLUMN zone TEXT;
+
+                    CREATE INDEX rec_entries_z ON rec_entries (zone);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DatabaseVersion == 10);
+            RG_STATIC_ASSERT(DatabaseVersion == 11);
         }
 
         int64_t time = GetUnixTime();

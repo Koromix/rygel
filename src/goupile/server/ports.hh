@@ -9,12 +9,15 @@
 
 namespace RG {
 
+struct Session;
+
 struct ScriptRecord {
     RG_DELETE_COPY(ScriptRecord)
 
     JSContext *ctx = nullptr;
     const char *table = nullptr;
     const char *id = nullptr;
+    const char *zone = nullptr;
     JSValue fragments = JS_UNDEFINED;
 
     ScriptRecord() = default;
@@ -24,6 +27,7 @@ struct ScriptRecord {
         if (ctx) {
             JS_FreeCString(ctx, table);
             JS_FreeCString(ctx, id);
+            JS_FreeCString(ctx, zone);
             JS_FreeValue(ctx, fragments);
             ctx = nullptr;
         }
@@ -72,6 +76,7 @@ struct ScriptFragment {
 class ScriptPort {
     RG_DELETE_COPY(ScriptPort)
 
+    JSValue profile_func = JS_UNDEFINED;
     JSValue validate_func = JS_UNDEFINED;
 
 public:
@@ -80,6 +85,8 @@ public:
 
     ScriptPort() = default;
     ~ScriptPort();
+
+    void ChangeProfile(const Session &session);
 
     bool ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_handles);
     bool RunRecord(Span<const char> json, const ScriptRecord &handle,

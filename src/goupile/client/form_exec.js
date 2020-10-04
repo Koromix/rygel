@@ -403,6 +403,7 @@ let form_exec = new function() {
                 <colgroup>
                     <col style="width: 3em;"/>
                     <col style="width: 60px;"/>
+                    ${!user.getZone() ? html`<col style="width: 90px;"/>` : ''}
                     ${pages.map(col => html`<col/>`)}
                 </colgroup>
 
@@ -410,6 +411,7 @@ let form_exec = new function() {
                     <tr>
                         <th class="actions"></th>
                         <th class="id">ID</th>
+                        ${!user.getZone() ? html`<th class="id">Zone</th>` : ''}
                         ${pages.map(page => html`<th>${page.label}</th>`)}
                     </tr>
                 </thead>
@@ -417,7 +419,7 @@ let form_exec = new function() {
                 <tbody>
                     ${!records.length ?
                         html`<tr><td style="text-align: left;"
-                                     colspan=${2 + Math.max(1, pages.length)}>Aucune donnée à afficher</td></tr>` : ''}
+                                     colspan=${2 + !user.getZone() + Math.max(1, pages.length)}>Aucune donnée à afficher</td></tr>` : ''}
                     ${records.map(record => {
                         if (show_complete || !complete_set.has(record.id)) {
                             return html`
@@ -427,6 +429,7 @@ let form_exec = new function() {
                                         <a @click=${e => runDeleteDialog(e, record)}>✕</a>
                                     </th>
                                     <td class="id">${record.sequence || 'local'}</td>
+                                    ${!user.getZone() ? html`<td class="id">${record.zone || ''}</td>` : ''}
 
                                     ${pages.map(page => {
                                         let complete = record.complete[page.key];
@@ -509,6 +512,7 @@ let form_exec = new function() {
                 <colgroup>
                     <col style="width: 3em;"/>
                     <col style="width: 60px;"/>
+                    ${!user.getZone() ? html`<col style="width: 90px;"/>` : ''}
                     ${!columns.length ? html`<col/>` : ''}
                     ${columns.map(col => html`<col style="width: 8em;"/>`)}
                 </colgroup>
@@ -516,7 +520,7 @@ let form_exec = new function() {
                 <thead>
                     ${columns.length ? html`
                         <tr>
-                            <th colspan="2"></th>
+                            <th colspan=${2 + !user.getZone()}></th>
                             ${util.mapRLE(columns, col => col.category, (page, offset, len) =>
                                 html`<th class="rec_page" colspan=${len}>${page}</th>`)}
                         </tr>
@@ -529,6 +533,7 @@ let form_exec = new function() {
                                             @change=${e => toggleAllRecords(records, e.target.checked)} />` : ''}
                         </th>
                         <th class="id">ID</th>
+                        ${!user.getZone() ? html`<th class="id">Zone</th>` : ''}
 
                         ${!columns.length ? html`<th>&nbsp;</th>` : ''}
                         ${!multi_mode ? columns.map(col => html`<th title=${col.title}>${col.title}</th>`) : ''}
@@ -540,7 +545,7 @@ let form_exec = new function() {
 
                 <tbody>
                     ${empty_msg ?
-                        html`<tr><td colspan=${2 + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
+                        html`<tr><td colspan=${2 + !user.getZone() + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
                     ${records.map(record => html`
                         <tr class=${ctx_records.has(record.id) ? 'selected' : ''}>
                             ${!multi_mode ? html`<th><a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>
@@ -548,6 +553,7 @@ let form_exec = new function() {
                             ${multi_mode ? html`<th><input type="checkbox" .checked=${ctx_records.has(record.id)}
                                                             @click=${e => handleEditClick(record)} /></th>` : ''}
                             <td class="id">${record.sequence || 'local'}</td>
+                            ${!user.getZone() ? html`<td class="id">${record.zone || ''}</td>` : ''}
 
                             ${columns.map(col => {
                                 let value = record.values[col.variable];

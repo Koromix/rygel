@@ -27,8 +27,9 @@ static const char *const UserPermissionNames[] = {
 };
 
 struct Session: public RetainObject {
+    const char *username;
+    const char *zone;
     uint32_t permissions;
-    char username[];
 
     bool HasPermission(UserPermission perm) const { return permissions & (int)perm; }
 };
