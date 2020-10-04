@@ -5553,14 +5553,15 @@ void ConsolePrompter::EnsureNulTermination()
 const char *Prompt(const char *prompt, const char *mask, Allocator *alloc)
 {
     ConsolePrompter prompter;
+
     prompter.prompt = prompt;
     prompter.mask = mask;
+    prompter.str.allocator = alloc;
 
     if (!prompter.Read())
         return nullptr;
 
-    const char *str = DuplicateString(prompter.str, alloc).ptr;
-    return str;
+    return prompter.str.ptr;
 }
 
 }
