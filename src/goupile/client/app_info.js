@@ -25,6 +25,8 @@ function ApplicationBuilder(app) {
 
     let options_stack = [{
         show_id: true,
+        show_data: true,
+        make_seq: record => record.sequence || 'local',
         default_actions: true,
         float_actions: true,
         use_validation: false

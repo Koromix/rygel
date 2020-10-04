@@ -431,7 +431,7 @@ let form_exec = new function() {
                                         <a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>
                                         <a @click=${e => runDeleteDialog(e, record)}>✕</a>
                                     </th>
-                                    <td class="id">${record.sequence || 'local'}</td>
+                                    <td class="id">${route_page.options.make_seq(record)}</td>
                                     ${!user.getZone() ? html`<td class="id">${record.zone || ''}</td>` : ''}
 
                                     ${pages.map(page => {
@@ -555,7 +555,7 @@ let form_exec = new function() {
                                                       <a @click=${e => runDeleteDialog(e, record)}>✕</a></th>` : ''}
                             ${multi_mode ? html`<th><input type="checkbox" .checked=${ctx_records.has(record.id)}
                                                             @click=${e => handleEditClick(record)} /></th>` : ''}
-                            <td class="id">${record.sequence || 'local'}</td>
+                            <td class="id">${route_page.options.make_seq(record)}</td>
                             ${!user.getZone() ? html`<td class="id">${record.zone || ''}</td>` : ''}
 
                             ${columns.map(col => {

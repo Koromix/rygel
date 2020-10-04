@@ -302,7 +302,8 @@ let goupile = new function() {
                 // Ensure valid menu and panel configuration
                 if (!user.getLockURL()) {
                     let show_develop = user.hasPermission('develop');
-                    let show_data = user.hasPermission('edit') && route_asset && route_asset.form;
+                    let show_data = user.hasPermission('edit') && route_asset &&
+                                    route_asset.page && route_asset.page.options.show_data;
 
                     let correct_mode = (left_panel == null ||
                                         (left_panel === 'files' && show_develop) ||
@@ -450,7 +451,8 @@ let goupile = new function() {
 
     function renderFullMenu() {
         let show_develop = user.hasPermission('develop');
-        let show_data = user.hasPermission('edit') && route_asset && route_asset.form;
+        let show_data = user.hasPermission('edit') && route_asset &&
+                        route_asset.page && route_asset.page.options.show_data;
         let show_export = user.hasPermission('export');
 
         return html`
