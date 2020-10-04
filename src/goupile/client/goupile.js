@@ -201,6 +201,9 @@ let goupile = new function() {
             app = null;
         }
 
+        if (env.sync_mode === 'mirror' && user.isConnected())
+            await form_exec.syncRecords();
+
         await self.go(window.location.href, false);
     };
 
