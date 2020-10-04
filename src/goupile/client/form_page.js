@@ -946,7 +946,7 @@ function PageBuilder(state, model, readonly = false) {
         return intf;
     };
 
-    this.tab = function(label, options = {}) {
+    this.tab = function(label, func, options = {}) {
         options = expandOptions(options);
 
         if (!tabs_ref)
@@ -974,7 +974,9 @@ function PageBuilder(state, model, readonly = false) {
         };
         tabs_ref.push(tab);
 
-        return active;
+        let widgets = captureWidgets('tab', func);
+        if (active)
+            widgets_ref.push(...widgets);
     };
 
     function handleTabClick(e, key, label) {
