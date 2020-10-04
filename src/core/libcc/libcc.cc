@@ -5561,7 +5561,8 @@ const char *Prompt(const char *prompt, const char *mask, Allocator *alloc)
     if (!prompter.Read())
         return nullptr;
 
-    return prompter.str.ptr;
+    const char *str = prompter.str.Leak().ptr;
+    return str;
 }
 
 }
