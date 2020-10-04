@@ -927,18 +927,23 @@ function PageBuilder(state, model, readonly = false) {
             tabs_ref = prev_tabs;
         }
 
-        let render = intf => html`
-            <div class="af_container af_tabs">
-                ${tabs.map((tab, idx) =>
-                    html`<button type="button" class=${idx === tab_idx ? 'active' : ''}
-                                 ?disabled=${tab.disable}
-                                 @click=${e => handleTabClick(e, key, idx)}>${tab.label}</button>`)}
+        let render;
+        if (tabs.length) {
+            render = intf => html`
+                <div class="af_container af_tabs">
+                    ${tabs.map((tab, idx) =>
+                        html`<button type="button" class=${idx === tab_idx ? 'active' : ''}
+                                     ?disabled=${tab.disable}
+                                     @click=${e => handleTabClick(e, key, idx)}>${tab.label}</button>`)}
 
-                <div class="af_section">
-                    ${widgets.map(intf => intf.render())}
+                    <div class="af_section">
+                        ${widgets.map(intf => intf.render())}
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        } else {
+            render = intf => '';
+        }
 
         let intf = makeWidget('tabs', null, render, options);
         addWidget(intf);
