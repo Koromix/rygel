@@ -120,7 +120,7 @@ bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_h
 
         parser.ParseObject();
         while (parser.InObject()) {
-            const char *key = nullptr;
+            const char *key = "";
             parser.ParseKey(&key);
 
             if (TestStr(key, "table")) {
@@ -128,7 +128,18 @@ bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_h
             } else if (TestStr(key, "id")) {
                 parser.ParseString(&id);
             } else if (TestStr(key, "zone")) {
-                parser.ParseString(&zone);
+                switch (parser.PeekToken()) {
+                    case json_TokenType::Null: {
+                        parser.ParseNull();
+                        zone = nullptr;
+                    } break;
+                    case json_TokenType::String: { parser.ParseString(&zone); } break;
+
+                    default: {
+                        LogError("Unexpected token type '%1'", json_TokenTypeNames[(int)parser.PeekToken()]);
+                        return false;
+                    } break;
+                }
             } else if (TestStr(key, "fragments")) {
                 parser.ParseArray();
                 while (parser.InArray()) {
@@ -145,7 +156,7 @@ bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_h
 
                     parser.ParseObject();
                     while (parser.InObject()) {
-                        const char *key = nullptr;
+                        const char *key = "";
                         parser.ParseKey(&key);
 
                         if (TestStr(key, "mtime")) {
@@ -266,6 +277,8 @@ bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_h
                             return false;
                         }
                     }
+                    if (!parser.IsValid())
+                        return false;
 
                     if (((!page || !page[0]) && !deletion) || !mtime || !mtime[0] || version < 0) {
                         LogError("Missing mtime, version or page attribute");
@@ -279,6 +292,8 @@ bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_h
                 }
             }
         }
+        if (!parser.IsValid())
+            return false;
 
         if (!table || !table[0] || !id || !id[0]) {
             LogError("Missing table or id attribute");
