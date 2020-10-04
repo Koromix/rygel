@@ -155,7 +155,7 @@ let form_exec = new function() {
         // Build it!
         builder.pushOptions({compact: true});
         func(util, app.shared, nav.go, builder, builder,
-             model.values, model.variables, {}, state.scratch);
+             state.values, model.variables, {}, state.scratch);
 
         render(html`
             <div class="af_main">
@@ -195,7 +195,7 @@ let form_exec = new function() {
 
         // Build it!
         func(util, app.shared, nav.go, builder, builder,
-             model.values, model.variables, nav.route, state.scratch);
+             state.values, model.variables, nav.route, state.scratch);
         builder.errorList();
 
         if (route_page.options.default_actions && model.variables.length) {
