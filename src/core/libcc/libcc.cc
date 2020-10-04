@@ -4938,6 +4938,7 @@ bool ConsolePrompter::Read()
         int c;
         while ((c = fgetc(stdin)) != EOF) {
             if (c == '\n') {
+                EnsureNulTermination();
                 return true;
             } else if (c >= 32 || c == '\t') {
                 str.Append(c);
@@ -5145,6 +5146,7 @@ bool ConsolePrompter::Read()
                 fflush(stdout);
                 y = rows + 1;
 
+                EnsureNulTermination();
                 return true;
             } break;
 
@@ -5175,6 +5177,7 @@ bool ConsolePrompter::Read()
         }
     }
 
+    EnsureNulTermination();
     return true;
 }
 
@@ -5539,6 +5542,12 @@ int ConsolePrompter::ComputeWidth(Span<const char> str)
     }
 
     return width;
+}
+
+void ConsolePrompter::EnsureNulTermination()
+{
+    str.Grow(1);
+    str.ptr[str.len] = 0;
 }
 
 const char *Prompt(const char *prompt, const char *mask, Allocator *alloc)

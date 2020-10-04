@@ -3875,6 +3875,8 @@ private:
     int32_t ReadChar();
 
     int ComputeWidth(Span<const char> str);
+
+    void EnsureNulTermination();
 };
 
 const char *Prompt(const char *prompt, const char *mask, Allocator *alloc);
