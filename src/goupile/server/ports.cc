@@ -16,7 +16,12 @@ static std::condition_variable js_cv;
 static ScriptPort js_ports[16];
 static LocalArray<ScriptPort *, 16> js_idle_ports;
 
-// This functions does not try to deal with null/undefined values
+// These functions do not try to deal with null/undefined values
+static bool ConsumeValueBool(JSContext *ctx, JSValue value)
+{
+    RG_DEFER { JS_FreeValue(ctx, value); };
+    return JS_VALUE_GET_BOOL(value);
+}
 static int ConsumeValueInt(JSContext *ctx, JSValue value)
 {
     RG_DEFER { JS_FreeValue(ctx, value); };
@@ -131,6 +136,7 @@ bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_h
                     int64_t version = -1;
                     const char *page = nullptr;
                     bool deletion = false;
+                    bool complete = false;
 
                     JSValue frag = JS_NewObject(ctx);
                     JSValue values = JS_NewObject(ctx);
@@ -154,6 +160,8 @@ bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_h
                                 parser.ParseString(&page);
                                 deletion = false;
                             }
+                        } else if (TestStr(key, "complete")) {
+                            parser.ParseBool(&complete);
                         } else if (TestStr(key, "values")) {
                             parser.ParseObject();
                             while (parser.InObject()) {
@@ -267,6 +275,7 @@ bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_h
                     JS_SetPropertyStr(ctx, frag, "mtime", JS_NewString(ctx, mtime));
                     JS_SetPropertyStr(ctx, frag, "version", JS_NewInt64(ctx, version));
                     JS_SetPropertyStr(ctx, frag, "page", !deletion ? JS_NewString(ctx, page) : JS_NULL);
+                    JS_SetPropertyStr(ctx, frag, "complete", complete ? JS_TRUE : JS_FALSE);
                 }
             }
         }
@@ -334,6 +343,7 @@ bool ScriptPort::RunRecord(Span<const char> json, const ScriptRecord &handle,
         frag2->mtime = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, frag, "mtime")).ptr;
         frag2->version = ConsumeValueInt(ctx, JS_GetPropertyStr(ctx, frag, "version"));
         frag2->page = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, frag, "page")).ptr;
+        frag2->complete = ConsumeValueBool(ctx, JS_GetPropertyStr(ctx, frag, "complete"));
         frag2->json = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, frag, "json"));
         frag2->errors = ConsumeValueInt(ctx, JS_GetPropertyStr(ctx, frag, "errors"));
 

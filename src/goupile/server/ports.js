@@ -65,6 +65,7 @@ var server = new function() {
                     mtime: frag.mtime,
                     version: frag.version,
                     page: frag.page,
+                    complete: frag.complete,
 
                     // Make it easy for the C++ caller to store in database with stringified JSON
                     columns: expandColumns(table, frag.page, model.variables),

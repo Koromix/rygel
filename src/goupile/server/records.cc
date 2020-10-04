@@ -269,7 +269,7 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
                 continue;
             }
 
-            bool success = goupile_db.Transaction([&]() {
+            goupile_db.Transaction([&]() {
                 // Get sequence number
                 int sequence;
                 {
@@ -321,14 +321,19 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
                         conflict = true;
                         continue;
                     }
+                    if (frag.complete && !session->HasPermission(UserPermission::Validate)) {
+                        LogError("User is not allowed to validate records");
+                        conflict = true;
+                        return false;
+                    }
 
                     int64_t anchor;
                     if (!goupile_db.Run(R"(INSERT INTO rec_fragments (store, id, version, page,
                                                                       username, mtime, complete, json)
-                                           VALUES (?, ?, ?, ?, ?, ?, 0, ?))",
+                                           VALUES (?, ?, ?, ?, ?, ?, ?, ?))",
                                         handle.table, handle.id, frag.version,
                                         frag.page ? sq_Binding(frag.page) : sq_Binding(), session->username,
-                                        frag.mtime, frag.json))
+                                        frag.mtime, 0 + frag.complete, frag.json))
                         return false;
                     anchor = sqlite3_last_insert_rowid(goupile_db);
 
@@ -369,8 +374,6 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
 
                 return true;
             });
-            if (!success)
-                return;
         }
 
         if (conflict) {

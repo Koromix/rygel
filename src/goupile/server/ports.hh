@@ -48,6 +48,7 @@ struct ScriptFragment {
     const char *mtime = nullptr;
     int version;
     const char *page = nullptr;
+    bool complete;
     Span<const char> json = {};
     int errors;
     HeapArray<Column> columns;

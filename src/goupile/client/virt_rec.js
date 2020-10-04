@@ -305,6 +305,7 @@ function VirtualRecords(db, zone) {
                         mtime: frag.mtime,
                         version: frag.version,
                         page: frag.page,
+                        complete: frag.complete,
                         values: frag.values
                     }))
                 };
