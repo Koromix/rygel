@@ -25,6 +25,7 @@ var server = new function() {
 
     this.validateFragments = function(table, json, fragments) {
         let values = JSON.parse(json);
+        let values2 = JSON.parse(json);
 
         let fragments2 = fragments.map(frag => {
             if (frag.page != null) {
@@ -41,6 +42,7 @@ var server = new function() {
                 let func = Function('shared', 'route', 'go', 'form', 'page', 'scratch', code);
                 func({}, {}, () => {}, builder, builder, {});
 
+                let frag2_values = gatherValues(model.variables);
                 let frag2 = {
                     mtime: frag.mtime,
                     version: frag.version,
@@ -48,9 +50,10 @@ var server = new function() {
 
                     // Make it easy for the C++ caller to store in database with stringified JSON
                     columns: expandColumns(table, frag.page, model.variables),
-                    json: JSON.stringify(filterValues(values, model.variables))
+                    json: JSON.stringify(frag2_values)
                 };
 
+                values2 = Object.assign(values2, frag2_values);
                 return frag2;
             } else {
                 let frag2 = {
@@ -64,7 +67,7 @@ var server = new function() {
 
         let ret = {
             fragments: fragments2,
-            json: JSON.stringify(values)
+            json: JSON.stringify(values2)
         };
         return ret;
     };
@@ -113,22 +116,9 @@ var server = new function() {
         return `${table}@${page}.${variable}@${prop}`;
     }
 
-    function filterValues(values, variables) {
-        let values2 = {};
-
-        let set = new Set;
-        for (let variable of variables) {
-            let key = variable.key.toString();
-
-            set.add(key);
-            values2[key] = values[key];
-        }
-
-        for (let key in values) {
-            if (!set.has(key))
-                throw new Error(`Unexpected variable '${key}'`);
-        }
-
-        return values2;
+    function gatherValues(variables) {
+        let values = util.arrayToObject(variables, variable => variable.key.toString(),
+                                        variable => variable.value);
+        return values;
     }
 };
