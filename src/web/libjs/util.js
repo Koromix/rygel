@@ -1170,6 +1170,7 @@ let dates = new function() {
             let str = `${year_str}-${month_str}-${day_str}`;
             return str;
         };
+        LocalDate.prototype.toJSON = LocalDate.prototype.toString;
 
         LocalDate.prototype.toLocaleString = function() {
             let js_date = new Date(this.year, this.month - 1, this.day);
@@ -1285,6 +1286,7 @@ let times = new function() {
             let str = `${hour_str}:${minute_str}:${second_str}`;
             return str;
         };
+        LocalTime.prototype.toJSON = LocalTime.prototype.toString;
         LocalTime.prototype.toLocaleString = LocalTime.prototype.toString;
     }
 
