@@ -26,7 +26,8 @@ static int RunTarget(const TargetInfo &target, const char *target_filename,
 {
     RG_ASSERT(target.type == TargetType::Executable);
 
-    LogInfo("Run target '%1'\n%!D..--------------------------------------------------%!0", target.name);
+    LogInfo("Run target '%1'", target.name);
+    LogInfo("%!D..--------------------------------------------------%!0");
 
 #ifdef _WIN32
     HeapArray<char> cmd;
