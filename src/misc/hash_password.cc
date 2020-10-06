@@ -13,7 +13,7 @@ int Main(int argc, char **argv)
     BlockAllocator temp_alloc;
 
     // Options
-    Span <const char> password = {};
+    const char *password = nullptr;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp,
@@ -52,18 +52,30 @@ Options:
         return 1;
     }
 
-    if (!password.ptr) {
+    if (!password) {
         password = Prompt("Password: ", "*", &temp_alloc);
-        if (!password.len) {
-            if (password.ptr) {
-                LogError("Password must not be empty");
-            }
+        if (!password)
+            return 1;
+        if (!password[0]) {
+            LogError("Password must not be empty");
             return 1;
         }
+
+        const char *confirm = Prompt("Confirm: ", "*", &temp_alloc);
+        if (!confirm)
+            return 1;
+
+        if (!TestStr(password, confirm)) {
+            LogError("Password mismatch");
+            return 1;
+        }
+    } else if (!password[0]) {
+        LogError("Password must not be empty");
+        return 1;
     }
 
     char hash[crypto_pwhash_STRBYTES];
-    if (crypto_pwhash_str(hash, password.ptr, password.len,
+    if (crypto_pwhash_str(hash, password, strlen(password),
                           crypto_pwhash_OPSLIMIT_INTERACTIVE, crypto_pwhash_MEMLIMIT_INTERACTIVE) != 0) {
         LogError("Failed to hash password");
         return 1;
