@@ -4931,9 +4931,9 @@ bool ConsolePrompter::Read()
     RG_DEFER { sigaction(SIGWINCH, &old_sa, nullptr); };
 #endif
 
-    if (!FileIsVt100(stdout) || !EnableRawMode()) {
-        fputs(prompt, stdout);
-        fflush(stdout);
+    if (!FileIsVt100(stderr) || !EnableRawMode()) {
+        fputs(prompt, stderr);
+        fflush(stderr);
 
         int c;
         while ((c = fgetc(stdin)) != EOF) {
@@ -4954,14 +4954,14 @@ bool ConsolePrompter::Read()
         return false;
     }
     RG_DEFER {
-        Print("%!0");
+        Print(stderr, "%!0");
         DisableRawMode();
     };
 
     // Don't overwrite current line
-    fflush(stdout);
+    fflush(stderr);
     if (GetCursorPosition().x > 0) {
-        fputs("\r\n", stdout);
+        fputs("\r\n", stderr);
     }
 
     str_offset = str.len;
@@ -5102,8 +5102,8 @@ bool ConsolePrompter::Read()
 
                     Prompt();
                 } else {
-                    fputs("\r\n", stdout);
-                    fflush(stdout);
+                    fputs("\r\n", stderr);
+                    fflush(stderr);
                     return false;
                 }
             } break;
@@ -5133,17 +5133,17 @@ bool ConsolePrompter::Read()
                 Prompt();
             } break;
             case 0xC: { // Ctrl-L
-                fputs("\x1B[2J\x1B[999A", stdout);
+                fputs("\x1B[2J\x1B[999A", stderr);
                 Prompt();
             } break;
 
             case '\r':
             case '\n': {
                 if (rows > y) {
-                    fprintf(stdout, "\x1B[%dB", rows - y);
+                    fprintf(stderr, "\x1B[%dB", rows - y);
                 }
-                fputs("\r\n", stdout);
-                fflush(stdout);
+                fputs("\r\n", stderr);
+                fflush(stderr);
                 y = rows + 1;
 
                 EnsureNulTermination();
@@ -5167,8 +5167,8 @@ bool ConsolePrompter::Read()
                 str_offset += frag.len;
 
                 if (!mask && str_offset == str.len && uc < 128 && x + frag.len < columns) {
-                    fwrite(frag.data, 1, (size_t)frag.len, stdout);
-                    fflush(stdout);
+                    fwrite(frag.data, 1, (size_t)frag.len, stderr);
+                    fflush(stderr);
                     x += (int)frag.len;
                 } else {
                     Prompt();
@@ -5289,9 +5289,9 @@ void ConsolePrompter::Prompt()
     prompt_columns = ComputeWidth(prompt);
 
     // Hide cursor during refresh
-    fprintf(stdout, "\x1B[?25l");
+    fprintf(stderr, "\x1B[?25l");
     if (y) {
-        fprintf(stdout, "\x1B[%dA", y);
+        fprintf(stderr, "\x1B[%dA", y);
     }
 
     // Output prompt(s) and string lines
@@ -5299,7 +5299,7 @@ void ConsolePrompter::Prompt()
         Size i = 0;
         int x2 = prompt_columns;
 
-        Print("\r%!0%1%!..+", prompt);
+        Print(stderr, "\r%!0%1%!..+", prompt);
 
         for (;;) {
             if (i == str_offset) {
@@ -5314,45 +5314,45 @@ void ConsolePrompter::Prompt()
 
             if (x2 + width >= columns || str[i] == '\n') {
                 FmtArg prefix = FmtArg(str[i] == '\n' ? '.' : ' ').Repeat(prompt_columns - 1);
-                Print(stdout, "\x1B[0K\r\n%!D.+%1%!0 ", prefix);
+                Print(stderr, "\x1B[0K\r\n%!D.+%1%!0 ", prefix);
 
                 x2 = prompt_columns;
                 rows++;
             }
             if (width > 0) {
                 if (mask) {
-                    fputs(mask, stdout);
+                    fputs(mask, stderr);
                 } else {
-                    fwrite(str.ptr + i, 1, (size_t)bytes, stdout);
+                    fwrite(str.ptr + i, 1, (size_t)bytes, stderr);
                 }
             }
 
             x2 += width;
             i += bytes;
         }
-        fputs("\x1B[0K", stdout);
+        fputs("\x1B[0K", stderr);
     }
 
     // Clear remaining rows
     for (int i = rows; i < rows_with_extra; i++) {
-        fprintf(stdout, "\r\n\x1B[0K");
+        fprintf(stderr, "\r\n\x1B[0K");
     }
     rows_with_extra = std::max(rows_with_extra, rows);
 
     // Fix up cursor and show it
     if (rows_with_extra > y) {
-        fprintf(stdout, "\x1B[%dA", rows_with_extra - y);
+        fprintf(stderr, "\x1B[%dA", rows_with_extra - y);
     }
-    fprintf(stdout, "\r\x1B[%dC", x);
-    fprintf(stdout, "\x1B[?25h");
+    fprintf(stderr, "\r\x1B[%dC", x);
+    fprintf(stderr, "\x1B[?25h");
 
-    fflush(stdout);
+    fflush(stderr);
 }
 
 Vec2<int> ConsolePrompter::GetConsoleSize()
 {
 #ifdef _WIN32
-    HANDLE h = (HANDLE)_get_osfhandle(_fileno(stdout));
+    HANDLE h = (HANDLE)_get_osfhandle(_fileno(stderr));
 
     CONSOLE_SCREEN_BUFFER_INFO screen;
     if (GetConsoleScreenBufferInfo(h, &screen))
@@ -5370,7 +5370,7 @@ Vec2<int> ConsolePrompter::GetConsoleSize()
 Vec2<int> ConsolePrompter::GetCursorPosition()
 {
 #ifdef _WIN32
-    HANDLE h = (HANDLE)_get_osfhandle(_fileno(stdout));
+    HANDLE h = (HANDLE)_get_osfhandle(_fileno(stderr));
 
     CONSOLE_SCREEN_BUFFER_INFO screen;
     if (!GetConsoleScreenBufferInfo(h, &screen))
@@ -5378,8 +5378,8 @@ Vec2<int> ConsolePrompter::GetCursorPosition()
 
     return {screen.dwCursorPosition.X, screen.dwCursorPosition.Y};
 #else
-    fputs("\x1B[6n", stdout);
-    fflush(stdout);
+    fputs("\x1B[6n", stderr);
+    fflush(stderr);
 
     LocalArray<char, 64> buf;
     while (buf.Available() > 1 && read(STDIN_FILENO, buf.end(), 1) == 1 && buf.data[buf.len] != 'R') {
