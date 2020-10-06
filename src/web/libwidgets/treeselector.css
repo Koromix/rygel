@@ -9,7 +9,7 @@
     margin: 2px;
     vertical-align: middle;
     background: white;
-    border: 1px solid #a4a4a4;
+    border: 1px solid #ccc;
     text-align: left;
     user-select: none;
     -moz-user-select: none;
@@ -65,6 +65,7 @@
     vertical-align: middle;
     background: #eee;
     border: 0;
+    border-radius: 0;
     font-weight: normal;
     text-decoration: none;
     color: black;
@@ -112,7 +113,7 @@
         width: 100%;
         z-index: 100;
         background: white;
-        border: 1px solid #a4a4a4;
+        border: 1px solid #ccc;
         border-top: 0;
     }
     .tsel_list {
@@ -132,7 +133,7 @@
         height: calc(100vh - 100px);
         z-index: 100;
         background: white;
-        border: 1px solid #a4a4a4;
+        border: 1px solid #ccc;
     }
 
     .tsel_list {
