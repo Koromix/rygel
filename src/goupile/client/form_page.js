@@ -979,7 +979,7 @@ function PageBuilder(state, model, readonly = false) {
         };
         tabs_ref.push(tab);
 
-        let widgets = captureWidgets('tab', func);
+        let widgets = captureWidgets('tab', () => func(active));
         if (active)
             widgets_ref.push(...widgets);
     };
