@@ -1259,7 +1259,7 @@ let times = new function() {
 
         LocalTime.prototype.isZero = function() { return !this.hour && !this.minute && !this.second; };
         LocalTime.prototype.isValid = function() {
-            if (this.hour == null || this.hour < 1 || this.hour > 23)
+            if (this.hour == null || this.hour < 0 || this.hour > 23)
                 return false;
             if (this.minute == null || this.minute < 0 || this.minute > 59)
                 return false;

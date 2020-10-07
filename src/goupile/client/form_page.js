@@ -671,7 +671,7 @@ function PageBuilder(state, model, readonly = false) {
 
         let value = readValue(key, options.value);
         if (typeof value === 'string') {
-            value = dates.parse(value);
+            value = dates.parseSafe(value);
         } else if (value == null || value.constructor.name !== 'LocalDate') {
             value = null;
         }
@@ -702,7 +702,7 @@ function PageBuilder(state, model, readonly = false) {
 
         let value = readValue(key, options.value);
         if (typeof value === 'string') {
-            value = times.parse(value);
+            value = times.parseSafe(value);
         } else if (value == null || value.constructor.name !== 'LocalTime') {
             value = null;
         }
