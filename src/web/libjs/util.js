@@ -1190,11 +1190,24 @@ let dates = new function() {
             return str;
 
         let date;
-        try {
-            let [year, month, day] = str.split('-').map(x => parseInt(x, 10));
-            date = dates.create(year, month, day);
-        } catch (err) {
-            throw new Error(`Date '${str}' is malformed`);
+        {
+            let parts = str.split(/[\-\/]/);
+            if (parts.length !== 3) {
+                throw new Error(`Date '${str}' is malformed`);
+            } else if (parts[0].length < 4 && parts[2].length < 4) {
+                throw new Error(`Date '${str}' is ambiguous`);
+            }
+
+            if (parts[2].length >= 4)
+                parts.reverse();
+            parts = parts.map(part => {
+                let value = parseInt(part, 10);
+                if (Number.isNaN(value))
+                    throw new Error(`Date '${str}' is malformed`);
+                return value;
+            });
+
+            date = dates.create(...parts);
         }
 
         if (validate && !date.isValid())
@@ -1311,11 +1324,13 @@ let times = new function() {
             return str;
 
         let time;
-        try {
-            let [hour, minute, second] = str.split(':').map(x => parseInt(x, 10));
+        {
+            let m = str.match(/^([0-9]{2})[h:]([0-9]{2})(?:m?|[m:](?:([0-9]{2})s?)?)$/);
+            if (m == null)
+                throw new Error(`Time '${str}' is malformed`);
+
+            let [, hour, minute, second] = m.map(part => parseInt(part, 10));
             time = times.create(hour, minute, second || 0);
-        } catch (err) {
-            throw new Error(`Time '${str}' is malformed`);
         }
 
         if (validate && !time.isValid())
