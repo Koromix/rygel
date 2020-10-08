@@ -43,8 +43,6 @@ static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 static ImGui_ImplVulkanH_Window g_MainWindowData;
 static int                      g_MinImageCount = 2;
 static bool                     g_SwapChainRebuild = false;
-static int                      g_SwapChainResizeWidth = 0;
-static int                      g_SwapChainResizeHeight = 0;
 
 static void check_vk_result(VkResult err)
 {
@@ -74,10 +72,9 @@ static void SetupVulkan(const char** extensions, uint32_t extensions_count)
         create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         create_info.enabledExtensionCount = extensions_count;
         create_info.ppEnabledExtensionNames = extensions;
-
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
-        // Enabling multiple validation layers grouped as LunarG standard validation
-        const char* layers[] = { "VK_LAYER_LUNARG_standard_validation" };
+        // Enabling validation layers
+        const char* layers[] = { "VK_LAYER_KHRONOS_validation" };
         create_info.enabledLayerCount = 1;
         create_info.ppEnabledLayerNames = layers;
 
@@ -255,6 +252,11 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
     VkSemaphore image_acquired_semaphore  = wd->FrameSemaphores[wd->SemaphoreIndex].ImageAcquiredSemaphore;
     VkSemaphore render_complete_semaphore = wd->FrameSemaphores[wd->SemaphoreIndex].RenderCompleteSemaphore;
     err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &wd->FrameIndex);
+    if (err == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        g_SwapChainRebuild = true;
+        return;
+    }
     check_vk_result(err);
 
     ImGui_ImplVulkanH_Frame* fd = &wd->Frames[wd->FrameIndex];
@@ -312,6 +314,8 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
 
 static void FramePresent(ImGui_ImplVulkanH_Window* wd)
 {
+    if (g_SwapChainRebuild)
+        return;
     VkSemaphore render_complete_semaphore = wd->FrameSemaphores[wd->SemaphoreIndex].RenderCompleteSemaphore;
     VkPresentInfoKHR info = {};
     info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -321,6 +325,11 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
     info.pSwapchains = &wd->Swapchain;
     info.pImageIndices = &wd->FrameIndex;
     VkResult err = vkQueuePresentKHR(g_Queue, &info);
+    if (err == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        g_SwapChainRebuild = true;
+        return;
+    }
     check_vk_result(err);
     wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->ImageCount; // Now we can use the next set of semaphores
 }
@@ -328,13 +337,6 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
 static void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
-}
-
-static void glfw_resize_callback(GLFWwindow*, int w, int h)
-{
-    g_SwapChainRebuild = true;
-    g_SwapChainResizeWidth = w;
-    g_SwapChainResizeHeight = h;
 }
 
 int main(int, char**)
@@ -365,7 +367,6 @@ int main(int, char**)
     // Create Framebuffers
     int w, h;
     glfwGetFramebufferSize(window, &w, &h);
-    glfwSetFramebufferSizeCallback(window, glfw_resize_callback);
     ImGui_ImplVulkanH_Window* wd = &g_MainWindowData;
     SetupVulkanWindow(wd, surface, w, h);
 
@@ -457,12 +458,17 @@ int main(int, char**)
         glfwPollEvents();
 
         // Resize swap chain?
-        if (g_SwapChainRebuild && g_SwapChainResizeWidth > 0 && g_SwapChainResizeHeight > 0)
+        if (g_SwapChainRebuild)
         {
-            g_SwapChainRebuild = false;
-            ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
-            ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, g_SwapChainResizeWidth, g_SwapChainResizeHeight, g_MinImageCount);
-            g_MainWindowData.FrameIndex = 0;
+            int width, height;
+            glfwGetFramebufferSize(window, &width, &height);
+            if (width > 0 && height > 0)
+            {
+                ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
+                ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, width, height, g_MinImageCount);
+                g_MainWindowData.FrameIndex = 0;
+                g_SwapChainRebuild = false;
+            }
         }
 
         // Start the Dear ImGui frame

@@ -23,7 +23,7 @@ or view this file with any Markdown viewer.
 | [I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-clipping-or-disappearing-when-i-move-windows-around) |
 | [I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries..](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-displaying-outside-their-expected-windows-boundaries) |
 | **Q&A: Usage** |
-| **[How can I have widgets with an empty label?<br>How can I have multiple widgets with the same label?<br>Why are multiple widgets reacting when I interact with one?](#q-how-can-i-have-widgets-with-an-empty-label)** |
+| **[Why is my widget not reacting when I click on it?<br>How can I have multiple widgets with the same label?<br>Why are multiple widgets reacting when I interact with one?](#q-why-is-my-widget-not-reacting-when-i-click-on-it)** |
 | [How can I display an image? What is ImTextureID, how does it work?](#q-how-can-i-display-an-image-what-is-imtextureid-how-does-it-work)|
 | [How can I use my own math types instead of ImVec2/ImVec4?](#q-how-can-i-use-my-own-math-types-instead-of-imvec2imvec4) |
 | [How can I interact with standard C++ types (such as std::string and std::vector)?](#q-how-can-i-interact-with-standard-c-types-such-as-stdstring-and-stdvector) |
@@ -173,9 +173,9 @@ Refer to rendering back-ends in the [examples/](https://github.com/ocornut/imgui
 
 # Q&A: Usage
 
+### Q: Why is my widget not reacting when I click on it?
 ### Q: How can I have widgets with an empty label?
 ### Q: How can I have multiple widgets with the same label?
-### Q: Why are multiple widgets reacting when I interact with one?
 
 A primer on labels and the ID Stack...
 
@@ -600,7 +600,7 @@ You may take a look at:
 
 - [Quotes](https://github.com/ocornut/imgui/wiki/Quotes)
 - [Software using Dear ImGui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui)
-- [Gallery](https://github.com/ocornut/imgui/issues/3075)
+- [Gallery](https://github.com/ocornut/imgui/issues/3488)
 
 ##### [Return to Index](#index)
 
@@ -646,7 +646,7 @@ There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/ci
 - Individuals: you can support continued maintenance and development via PayPal donations. See [README](https://github.com/ocornut/imgui/blob/master/docs/README.md).
 - If you are experienced with Dear ImGui and C++, look at the [GitHub Issues](https://github.com/ocornut/imgui/issues), look at the [Wiki](https://github.com/ocornut/imgui/wiki), read [docs/TODO.txt](https://github.com/ocornut/imgui/blob/master/docs/TODO.txt) and see how you want to help and can help!
 - Disclose your usage of Dear ImGui via a dev blog post, a tweet, a screenshot, a mention somewhere etc.
-You may post screenshot or links in the [gallery threads](https://github.com/ocornut/imgui/issues/3075). Visuals are ideal as they inspire other programmers. Disclosing your use of dear imgui help the library grow credibility, and help other teams and programmers with taking decisions.
+You may post screenshot or links in the [gallery threads](https://github.com/ocornut/imgui/issues/3488). Visuals are ideal as they inspire other programmers. Disclosing your use of dear imgui help the library grow credibility, and help other teams and programmers with taking decisions.
 - If you have issues or if you need to hack into the library, even if you don't expect any support it is useful that you share your issues or sometimes incomplete PR.
 
 ##### [Return to Index](#index)
