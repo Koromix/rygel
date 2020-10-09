@@ -46,6 +46,14 @@ function PageModel(key) {
 function PageBuilder(state, model, readonly = false) {
     let self = this;
 
+    // XXX: Temporary workaround for lack of date and time inputs in Safari
+    let has_input_date = (() => {
+        let el = document.createElement('input');
+        el.setAttribute('type', 'date');
+        el.value = '1900-01-01';
+        return el.valueAsDate != null;
+    })();
+
     let variables_map = {};
     let options_stack = [{
         deploy: true,
@@ -680,10 +688,12 @@ function PageBuilder(state, model, readonly = false) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
-            <input id=${id} type="date" class="af_input" style=${makeInputStyle(options)}
-                   .value=${value ? value.toString() : ''}
+            <input id=${id} type=${has_input_date ? 'date' : 'text'}
+                   class="af_input" style=${makeInputStyle(options)}
+                   .value=${value ? (has_input_date ? value.toString() : value.toLocaleString()) : ''}
+                   placeholder=${!has_input_date ? 'DD/MM/YYYY' : ''}
                    ?disabled=${options.disabled} ?readonly=${options.readonly}
-                   @input=${e => handleDateTimeInput(e, key)}/>
+                   @input=${e => handleDateInput(e, key)}/>
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
 
@@ -695,6 +705,25 @@ function PageBuilder(state, model, readonly = false) {
 
         return intf;
     };
+
+    function handleDateInput(e, key) {
+        if (!isModifiable(key))
+            return;
+
+        if (has_input_date) {
+            // Store as string, for serialization purposes
+            updateValue(key, e.target.value || undefined);
+        } else {
+            try {
+                let date = dates.parse(e.target.value || null);
+
+                e.target.setCustomValidity('');
+                updateValue(key, date ? date.toString() : null);
+            } catch (err) {
+                e.target.setCustomValidity('Date malformée ou ambiguë');
+            }
+        }
+    }
 
     this.time = function(key, label, options = {}) {
         options = expandOptions(options);
@@ -711,11 +740,13 @@ function PageBuilder(state, model, readonly = false) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
-            <input id=${id} type="time" step class="af_input" style=${makeInputStyle(options)}
+            <input id=${id} type=${has_input_date ? 'time' : 'text'} step
+                   class="af_input" style=${makeInputStyle(options)}
                    .value=${value ? value.toString().substr(0, options.seconds ? 8 : 5) : ''}
+                   placeholder=${!has_input_date ? 'HH:MM:SS'.substr(0, options.seconds ? 8 : 5) : ''}
                    step=${options.seconds ? 1 : 60}
                    ?disabled=${options.disabled} ?readonly=${options.readonly}
-                   @input=${e => handleDateTimeInput(e, key)}/>
+                   @input=${e => handleTimeInput(e, key)} />
             ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
 
@@ -728,12 +759,23 @@ function PageBuilder(state, model, readonly = false) {
         return intf;
     };
 
-    function handleDateTimeInput(e, key) {
+    function handleTimeInput(e, key) {
         if (!isModifiable(key))
             return;
 
-        // Store as string, for serialization purposes
-        updateValue(key, e.target.value || undefined);
+        if (has_input_date) {
+            // Store as string, for serialization purposes
+            updateValue(key, e.target.value || undefined);
+        } else {
+            try {
+                let time = times.parse(e.target.value || null);
+
+                e.target.setCustomValidity('');
+                updateValue(key, time ? time.toString() : null);
+            } catch (err) {
+                e.target.setCustomValidity('Horaire malformé');
+            }
+        }
     }
 
     this.file = function(key, label, options = {}) {
