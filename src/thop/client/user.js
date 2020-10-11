@@ -94,7 +94,7 @@ let user = new function() {
         });
 
         if (response.ok) {
-            log.success('Vous êtes connecté(e) !');
+            log.success('Vous êtes connecté(e)');
             self.readSessionCookies(false);
         } else {
             log.error('Connexion refusée : utilisateur ou mot de passe incorrect');

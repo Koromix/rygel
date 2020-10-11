@@ -282,7 +282,7 @@ function UserManager(db) {
                 localStorage.setItem('lock_url', url);
                 localStorage.setItem('lock_pin', pin.value);
 
-                log.success('Application verrouillée !');
+                log.success('Application verrouillée');
                 goupile.go();
 
                 resolve();
@@ -304,7 +304,7 @@ function UserManager(db) {
 
                     deleteLock();
 
-                    log.success('Application déverrouillée !');
+                    log.success('Application déverrouillée');
                     goupile.go();
                 } else if (pin.value.length >= code.length) {
                     pin.error('Code erroné');

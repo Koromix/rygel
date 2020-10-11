@@ -855,7 +855,7 @@ let form_exec = new function() {
             let changes = await goupile.runConnected(vrec.sync);
 
             if (changes) {
-                entry.success('Données synchronisées !');
+                entry.success('Données synchronisées');
             } else {
                 entry.close();
             }

@@ -327,7 +327,7 @@ let dev_files = new function() {
 
                     goupile.initMain();
 
-                    entry.success('Fichier enregistré !');
+                    entry.success('Fichier enregistré');
                     resolve();
                 } catch (err) {
                     entry.error(`Échec de l'enregistrement : ${err.message}`);
@@ -412,7 +412,7 @@ let dev_files = new function() {
             });
             await goupile.runConnected(() => vfs.sync(actions));
 
-            entry.success('Déploiement terminé !');
+            entry.success('Déploiement terminé');
         } catch (err) {
             entry.error(err);
         }
