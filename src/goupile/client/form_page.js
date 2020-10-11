@@ -48,10 +48,14 @@ function PageBuilder(state, model, readonly = false) {
 
     // XXX: Temporary workaround for lack of date and time inputs in Safari
     let has_input_date = (() => {
-        let el = document.createElement('input');
-        el.setAttribute('type', 'date');
-        el.value = '1900-01-01';
-        return el.valueAsDate != null;
+        if (typeof document !== 'undefined') {
+            let el = document.createElement('input');
+            el.setAttribute('type', 'date');
+            el.value = '1900-01-01';
+            return el.valueAsDate != null;
+        } else {
+            return false;
+        }
     })();
 
     let variables_map = {};
