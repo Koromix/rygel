@@ -864,7 +864,8 @@ let form_exec = new function() {
         }
 
         goupile.go();
-    }
+    };
+    this.syncRecords = util.serialize(this.syncRecords);
 
     function makeCurrentURL() {
         let url = `${env.base_url}app/${route_page.form.key}/${route_page.key}/`;

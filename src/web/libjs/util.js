@@ -446,6 +446,33 @@ let util = new function() {
             setTimeout(resolve, ms);
         });
     };
+
+    this.serialize = function(func) {
+        let resolves = [];
+        let rejects = [];
+
+        return (...args) => new Promise((resolve, reject) => {
+            resolves.push(resolve);
+            rejects.push(reject);
+
+            if (resolves.length === 1) {
+                let p = func(...args);
+
+                p.then(value => {
+                    for (let resolve of resolves)
+                        resolve(value);
+                });
+                p.catch(err => {
+                    for (let reject of rejects)
+                        reject(err);
+                });
+                p.finally(() => {
+                    resolves.length = 0;
+                    rejects.length = 0;
+                });
+            }
+        });
+    };
 };
 
 // ------------------------------------------------------------------------
