@@ -408,8 +408,8 @@ let form_exec = new function() {
             <table class="st_table">
                 <colgroup>
                     <col style="width: 3em;"/>
-                    <col style="width: 60px;"/>
-                    ${!user.getZone() ? html`<col style="width: 90px;"/>` : ''}
+                    <col style=${computeSeqColumnWidth(records[0])} />
+                    ${!user.getZone() ? html`<col style="width: 8em;"/>` : ''}
                     ${pages.map(col => html`<col/>`)}
                 </colgroup>
 
@@ -514,11 +514,11 @@ let form_exec = new function() {
                 </div>
             </div>
 
-            <table class="rec_table" style=${`min-width: ${30 + 60 * columns.length}px`}>
+            <table class="rec_table">
                 <colgroup>
                     <col style="width: 3em;"/>
-                    <col style="width: 60px;"/>
-                    ${!user.getZone() ? html`<col style="width: 90px;"/>` : ''}
+                    <col style=${computeSeqColumnWidth(records[0])} />
+                    ${!user.getZone() ? html`<col style="width: 8em;"/>` : ''}
                     ${!columns.length ? html`<col/>` : ''}
                     ${columns.map(col => html`<col style="width: 8em;"/>`)}
                 </colgroup>
@@ -591,6 +591,33 @@ let form_exec = new function() {
                 </tbody>
             </table>
         `, document.querySelector('#dev_data'));
+    }
+
+    function computeSeqColumnWidth(record) {
+        if (record != null) {
+            try {
+                let seq = '' + route_page.options.make_seq(record);
+
+                let ctx = computeSeqColumnWidth.ctx;
+                if (ctx == null) {
+                    let canvas = document.createElement('canvas');
+                    let style = window.getComputedStyle(document.body);
+
+                    ctx = canvas.getContext('2d');
+                    ctx.font = style.getPropertyValue('font-size') + ' ' +
+                               style.getPropertyValue('font-family');
+
+                    computeSeqColumnWidth.ctx = ctx;
+                }
+
+                let metrics = ctx.measureText(seq);
+                return `width: ${Math.ceil(metrics.width * 1.1) + 20}px;`;
+            } catch (err) {
+                // Not critical, let's return the default width
+            }
+        }
+
+        return 'width: 60px;';
     }
 
     function toggleSelectionMode() {

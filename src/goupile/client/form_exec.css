@@ -166,6 +166,9 @@
     padding: 3px;
     border: 1px solid #dfdfdf;
     text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .st_table td:first-child { border-left: 0; }
 .st_table td:last-child { border-right: 0; }
