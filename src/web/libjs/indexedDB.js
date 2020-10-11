@@ -51,8 +51,8 @@ let idb = new function () {
                 case 'r': { mode = 'readonly'; } break;
                 case 'rw': { mode = 'readwrite'; } break;
             }
-            if (!Array.isArray(stores))
-                stores = [stores];
+            if (Array.isArray(stores) && stores.length === 1)
+                stores = stores[0];
 
             if (transaction)
                 throw new Error('Nested transactions are not supported');
