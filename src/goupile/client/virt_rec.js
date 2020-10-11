@@ -336,8 +336,43 @@ function VirtualRecords(db, zone) {
             }
         }
 
-        let [, anchor] = await db.getMinMax('rec_fragments/anchor');
+        let anchor = await db.load('rec_sync', (zone != null) ? zone : 0);
         anchor = (anchor != null) ? (anchor + 1) : 0;
+
+        // Update columns
+        {
+            let url = util.pasteURL(`${env.base_url}api/records/columns`, {anchor: anchor});
+            let columns = await net.fetch(url).then(response => response.json());
+
+            if (columns.length) {
+                columns = columns.map(col => {
+                    let col2 = {
+                        key: null,
+
+                        table: col.table,
+                        page: col.page,
+                        variable: col.variable,
+                        type: col.type,
+                        prop: null,
+
+                        before: col.before,
+                        after: col.after
+                    }
+
+                    if (col.hasOwnProperty('prop')) {
+                        col2.key = makeColumnKeyMulti(col.table, col.page, col.variable, col.prop);
+                        col2.prop = JSON.parse(col.prop);
+                    } else {
+                        col2.key = makeColumnKey(col.table, col.page, col.variable);
+                        delete col2.prop;
+                    }
+
+                    return col2;
+                });
+
+                await db.saveAll('rec_columns', columns);
+            }
+        }
 
         // Get new fragments
         {
@@ -376,42 +411,10 @@ function VirtualRecords(db, zone) {
                 await db.saveAll('rec_entries', entries);
                 await db.saveAll('rec_fragments', fragments);
 
+                let new_anchor = Math.max(...fragments.map(frag => frag.anchor));
+                await db.saveWithKey('rec_sync', (zone != null) ? zone : 0, new_anchor);
+
                 changes = true;
-            }
-        }
-
-        // Update columns
-        {
-            let url = util.pasteURL(`${env.base_url}api/records/columns`, {anchor: anchor});
-            let columns = await net.fetch(url).then(response => response.json());
-
-            if (columns.length) {
-                columns = columns.map(col => {
-                    let col2 = {
-                        key: null,
-
-                        table: col.table,
-                        page: col.page,
-                        variable: col.variable,
-                        type: col.type,
-                        prop: null,
-
-                        before: col.before,
-                        after: col.after
-                    }
-
-                    if (col.hasOwnProperty('prop')) {
-                        col2.key = makeColumnKeyMulti(col.table, col.page, col.variable, col.prop);
-                        col2.prop = JSON.parse(col.prop);
-                    } else {
-                        col2.key = makeColumnKey(col.table, col.page, col.variable);
-                        delete col2.prop;
-                    }
-
-                    return col2;
-                });
-
-                await db.saveAll('rec_columns', columns);
             }
         }
 
