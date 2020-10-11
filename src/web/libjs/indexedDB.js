@@ -60,13 +60,20 @@ let idb = new function () {
             let p = new Promise((resolve, reject) => {
                 transaction = db.transaction(stores, mode);
 
-                transaction.addEventListener('complete', e => resolve());
-                transaction.addEventListener('abort', e => reject(new Error('Database transaction failure')));
+                transaction.oncomplete = e => resolve();
+                transaction.onabort = e => reject(new Error('Database transaction aborted'));
+                transaction.onerror = e => {
+                    e.preventDefault();
+                    reject(new Error(transaction.error));
+                };
             });
 
             try {
                 await func();
-                await p;
+
+                // Don't await here; We need to execute the finally clause before we let
+                // the user execute any other transaction!
+                return p;
             } catch (err) {
                 if (!aborted && transaction.error == null)
                     transaction.abort();
