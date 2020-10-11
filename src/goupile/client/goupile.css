@@ -126,6 +126,7 @@ button:not(:disabled):hover {
     display: inline-block;
     height: 100%;
     box-sizing: border-box;
+    margin: 0;
     padding: 0 10px;
     background-color: inherit;
     border: 0;
@@ -142,6 +143,7 @@ button:not(:disabled):hover {
     position: relative;
     display: inline-block;
     height: 100%;
+    margin: 0;
     background-color: inherit;
 }
 .gp_dropdown > div {
