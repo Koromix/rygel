@@ -407,7 +407,7 @@ let form_exec = new function() {
 
             <table class="st_table">
                 <colgroup>
-                    <col style="width: 3em;"/>
+                    <col style="width: 4.5em;"/>
                     <col style=${computeSeqColumnWidth(records[0])} />
                     ${!user.getZone() ? html`<col style="width: 8em;"/>` : ''}
                     ${pages.map(col => html`<col/>`)}
@@ -431,7 +431,7 @@ let form_exec = new function() {
                             return html`
                                 <tr class=${ctx_records.has(record.id) ? 'selected' : ''}>
                                     <th>
-                                        <a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>
+                                        <a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>&nbsp;
                                         <a @click=${e => runDeleteDialog(e, record)}>✕</a>
                                     </th>
                                     <td class="id">${route_page.options.make_seq(record)}</td>
@@ -516,7 +516,7 @@ let form_exec = new function() {
 
             <table class="rec_table">
                 <colgroup>
-                    <col style="width: 3em;"/>
+                    <col style="width: 4.5em;"/>
                     <col style=${computeSeqColumnWidth(records[0])} />
                     ${!user.getZone() ? html`<col style="width: 8em;"/>` : ''}
                     ${!columns.length ? html`<col/>` : ''}
@@ -554,8 +554,10 @@ let form_exec = new function() {
                         html`<tr><td colspan=${2 + !user.getZone() + Math.max(1, columns.length)}>${empty_msg}</td></tr>` : ''}
                     ${records.map(record => html`
                         <tr class=${ctx_records.has(record.id) ? 'selected' : ''}>
-                            ${!multi_mode ? html`<th><a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>
-                                                      <a @click=${e => runDeleteDialog(e, record)}>✕</a></th>` : ''}
+                            ${!multi_mode ? html`<th>
+                                <a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>&nbsp;
+                                <a @click=${e => runDeleteDialog(e, record)}>✕</a>
+                            </th>` : ''}
                             ${multi_mode ? html`<th><input type="checkbox" .checked=${ctx_records.has(record.id)}
                                                             @click=${e => handleEditClick(record)} /></th>` : ''}
                             <td class="id">${route_page.options.make_seq(record)}</td>
