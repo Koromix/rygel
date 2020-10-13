@@ -285,8 +285,6 @@ function VirtualRecords(db, zone) {
     };
 
     this.sync = async function() {
-        let changes = false;
-
         // Upload new fragments
         {
             let new_fragments = await db.loadAll('rec_fragments/anchor', IDBKeyRange.only(-1));
@@ -331,8 +329,6 @@ function VirtualRecords(db, zone) {
                         throw new Error(err);
                     }
                 }
-
-                changes = true;
             }
         }
 
@@ -375,6 +371,7 @@ function VirtualRecords(db, zone) {
         }
 
         // Get new fragments
+        let changes;
         {
             let url = util.pasteURL(`${env.base_url}api/records/load`, {anchor: anchor});
             let records = await net.fetch(url).then(response => response.json());
@@ -413,9 +410,9 @@ function VirtualRecords(db, zone) {
 
                 let new_anchor = Math.max(...fragments.map(frag => frag.anchor));
                 await db.saveWithKey('rec_sync', (zone != null) ? zone : 0, new_anchor);
-
-                changes = true;
             }
+
+            changes = records.map(record => record.id);
         }
 
         return changes;

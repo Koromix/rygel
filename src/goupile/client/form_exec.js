@@ -843,7 +843,7 @@ let form_exec = new function() {
         let msg = 'Voulez-vous vraiment supprimer cet enregistrement ?';
         return dialog.confirm(e, msg, 'Supprimer', async () => {
             await vrec.delete(record.table, record.id);
-            ctx_records.delete(record.id, record);
+            ctx_records.delete(record.id);
 
             goupile.go();
         });
@@ -856,7 +856,20 @@ let form_exec = new function() {
         try {
             let changes = await goupile.runConnected(vrec.sync);
 
-            if (changes) {
+            if (changes.length) {
+                // XXX: Make sure the user does not lost any change in progress by
+                // finishing the immutable values WIP commit (user changes are stored
+                // as some kind of diff on top).
+                for (let id of changes) {
+                    let prev_record = ctx_records.get(id);
+
+                    if (prev_record != null && prev_record.version === prev_record.versions.length - 1) {
+                        let new_record = await vrec.load(route_page.form.key, id);
+                        if (new_record != null)
+                            ctx_records.set(id, new_record);
+                    }
+                }
+
                 entry.success('Données synchronisées');
             } else {
                 entry.close();
