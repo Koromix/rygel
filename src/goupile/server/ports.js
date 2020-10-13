@@ -29,6 +29,14 @@ var user = new function() {
     this.getUserName = function() { return profile.username; };
     this.getZone = function() { return profile.zone; };
 };
+var nav = new function() {
+    let self = this;
+
+    this.isConnected = function() { return goupile.isConnected(); };
+    this.isTablet = function() { return goupile.isTablet(); };
+    this.isStandalone = function() { return goupile.isStandalone(); };
+    this.isLocked = function() { return goupile.isLocked(); };
+};
 
 var server = new function() {
     let self = this;
