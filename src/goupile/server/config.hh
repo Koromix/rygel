@@ -31,7 +31,7 @@ struct Config {
     SyncMode sync_mode = SyncMode::Offline;
 
     http_Config http {.port = 8889};
-    int max_age = 3600;
+    int max_age = 900;
 
     BlockAllocator str_alloc;
 };
