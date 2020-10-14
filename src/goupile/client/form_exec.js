@@ -207,7 +207,8 @@ let form_exec = new function() {
             if (route_page.options.use_validation && user.hasPermission('validate'))
                 builder.action('Valider', {disabled: !enable_validate}, e => runValidateDialog(e, record, route_page.key));
             builder.action('-');
-            builder.action('Fermer', {disabled: !state.changed && record.mtime == null}, e => handleNewClick(e, state.changed));
+            builder.action(record.mtime != null ? 'Nouveau' : 'Réinitialiser',
+                           {disabled: !state.changed && record.mtime == null}, e => handleNewClick(e, state.changed));
         }
 
         render(html`
