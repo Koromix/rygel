@@ -437,7 +437,7 @@ let form_exec = new function() {
 
             <table class="st_table">
                 <colgroup>
-                    <col style="width: 4.5em;"/>
+                    <col style="width: 2em;"/>
                     <col style=${computeSeqColumnWidth(records[0])} />
                     ${!user.getZone() ? html`<col style="width: 8em;"/>` : ''}
                     ${pages.map(col => html`<col/>`)}
@@ -460,22 +460,20 @@ let form_exec = new function() {
                         if (show_complete || !complete_set.has(record.id)) {
                             return html`
                                 <tr class=${ctx_records.has(record.id) ? 'selected' : ''}>
-                                    <th>
-                                        <a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>&nbsp;
-                                        <a @click=${e => runDeleteDialog(e, record)}>✕</a>
-                                    </th>
+                                    <th><a @click=${e => runDeleteDialog(e, record)}>✕</a></th>
                                     <td class="id">${route_page.options.make_seq(record)}</td>
                                     ${!user.getZone() ? html`<td class="id">${record.zone || ''}</td>` : ''}
 
                                     ${pages.map(page => {
                                         let complete = record.complete[page.key];
+                                        let url = makeURL(route_page.form.key, page.key, record);
 
                                         if (complete == null) {
-                                            return html`<td class="none"><a href=${makeURL(route_page.form.key, page.key, record)}>Non rempli</a></td>`;
+                                            return html`<td class="none"><a href=${url}>Non rempli&nbsp;&nbsp;🔍\uFE0E</a></td>`;
                                         } else if (complete) {
-                                            return html`<td class="complete"><a href=${makeURL(route_page.form.key, page.key, record)}>Validé</a></td>`;
+                                            return html`<td class="complete"><a href=${url}>Validé&nbsp;&nbsp;🔍\uFE0E</a></td>`;
                                         } else {
-                                            return html`<td class="partial"><a href=${makeURL(route_page.form.key, page.key, record)}>Enregistré</a></td>`;
+                                            return html`<td class="partial"><a href=${url}>Enregistré&nbsp;&nbsp;🔍\uFE0E</a></td>`;
                                         }
                                     })}
                                 </tr>

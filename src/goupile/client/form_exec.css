@@ -202,14 +202,14 @@
     color: #cbcbcb;
 }
 .st_table td.partial::before {
-    padding-right: 4px;
+    padding-right: 8px;
     font-size: 0.9em;
     font-weight: bold;
     color: #ff6600;
     content: '✓\FE0E';
 }
 .st_table td.complete::before {
-    padding-right: 4px;
+    padding-right: 8px;
     font-size: 0.9em;
     font-weight: bold;
     color: #289c52;
