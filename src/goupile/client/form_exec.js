@@ -387,6 +387,13 @@ let form_exec = new function() {
             if (ctx_records.has(record2.id))
                 ctx_records.set(record2.id, record2);
 
+            if (env.sync_mode === 'mirror' && user.isConnected()) {
+                entry.close();
+                self.syncRecords();
+            } else {
+                entry.success('Données validées');
+            }
+
             return true;
         } catch (err) {
             entry.error(`Échec de la validation : ${err.message}`);
@@ -873,7 +880,11 @@ let form_exec = new function() {
             await vrec.delete(record.table, record.id);
             ctx_records.delete(record.id);
 
-            goupile.go();
+            if (env.sync_mode === 'mirror' && user.isConnected()) {
+                self.syncRecords();
+            } else {
+                goupile.go();
+            }
         });
     }
 

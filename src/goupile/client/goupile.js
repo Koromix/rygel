@@ -23,7 +23,8 @@ let goupile = new function() {
     let restart = false;
 
     let ping_timer;
-    let last_sync = 0;
+    let sync_time = 0;
+    let sync_rnd;
 
     let left_panel = null;
     let show_overview = true;
@@ -205,10 +206,8 @@ let goupile = new function() {
             app = null;
         }
 
-        if (env.sync_mode === 'mirror' && user.isConnected())
-            await form_exec.syncRecords();
-
         await self.go(window.location.href, false);
+        await triggerSync();
     };
 
     function changeCSS(css) {
@@ -386,13 +385,7 @@ let goupile = new function() {
 
             if (response.ok) {
                 net.setOnline(true);
-
-                // XXX: Ugly, and syncing does way too much work for nothing
-                let now = Date.now();
-                if (env.sync_mode === 'mirror' && user.isConnected() && now - last_sync >= 180000) {
-                    await form_exec.syncRecords();
-                    last_sync = now;
-                }
+                triggerSync();
             } else {
                 net.setOnline(false);
             }
@@ -405,6 +398,19 @@ let goupile = new function() {
 
             if (!user.isSynced())
                 self.go();
+        }
+    }
+
+    async function triggerSync() {
+        if (env.sync_mode === 'mirror' && user.isConnected()) {
+            let now = Date.now();
+
+            if (user.getSessionRnd() !== sync_rnd || now - sync_time >= 180000) {
+                await form_exec.syncRecords();
+
+                sync_rnd = user.getSessionRnd();
+                sync_time = now;
+            }
         }
     }
 
