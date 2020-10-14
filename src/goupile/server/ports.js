@@ -65,8 +65,8 @@ var server = new function() {
                 // Execute user script
                 // XXX: We should fail when data types don't match (string given to number widget)
                 let code = self.readCode(frag.page);
-                let func = Function('shared', 'route', 'go', 'form', 'page', 'scratch', code);
-                func({}, {}, () => {}, builder, builder, {});
+                let func = Function('shared', 'route', 'go', 'form', 'page', 'scratch', 'values', code);
+                func({}, {}, () => {}, builder, builder, {}, values);
 
                 let frag2_values = gatherValues(model.variables);
                 let frag2 = {
