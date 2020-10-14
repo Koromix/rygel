@@ -30,7 +30,7 @@ DatabaseFile = database.db
 )";
 
 // If you change DatabaseVersion, don't forget to update the migration switch!
-const int DatabaseVersion = 11;
+const int DatabaseVersion = 12;
 
 bool MigrateDatabase(sq_Database &database, int version)
 {
@@ -258,9 +258,22 @@ bool MigrateDatabase(sq_Database &database, int version)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 11: {
+                bool success = database.Run(R"(
+                    CREATE TABLE adm_events (
+                        time INTEGER NOT NULL,
+                        address TEXT,
+                        type TEXT NOT NULL,
+                        details TEXT NOT NULL
+                    );
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DatabaseVersion == 11);
+            RG_STATIC_ASSERT(DatabaseVersion == 12);
         }
 
         int64_t time = GetUnixTime();

@@ -74,6 +74,12 @@ void HandleUserLogin(const http_RequestInfo &request, http_IO *io)
             const char *zone = (const char *)sqlite3_column_text(stmt, 3);
 
             if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
+                int64_t time = GetUnixTime();
+                if (!goupile_db.Run(R"(INSERT INTO adm_events (time, address, type, details)
+                                      VALUES (?, ?, 'login', ?);)",
+                                    time, request.client_addr, username))
+                    return;
+
                 Size len = RG_SIZE(Session) + strlen(username) + (zone ? strlen(zone) : 0) + 2;
                 Session *session = (Session *)Allocator::Allocate(nullptr, len, (int)Allocator::Flag::Zero);
 
