@@ -400,8 +400,12 @@ let util = new function() {
                 if (target && (target.tagName === 'A' || target.tagName === 'a') &&
                         !target.getAttribute('download')) {
                     let href = target.getAttribute('href');
-                    if (href && !href.match(/^[a-z]+:/) && href[0] != '#') {
-                        func(e, href);
+                    if (href) {
+                        if (!href.match(/^[a-z]+:/) && href[0] != '#') {
+                            func(e, href);
+                            e.preventDefault();
+                        }
+                    } else {
                         e.preventDefault();
                     }
                 }
