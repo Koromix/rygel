@@ -843,6 +843,7 @@ function PageBuilder(state, model, readonly = false) {
             }
         }
 
+        readValue(key);
         updateValue(key, value, false);
 
         let id = makeID(key);
