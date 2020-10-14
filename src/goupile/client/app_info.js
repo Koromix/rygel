@@ -29,7 +29,8 @@ function ApplicationBuilder(app) {
         make_seq: record => record.sequence || 'local',
         default_actions: true,
         float_actions: true,
-        use_validation: false
+        use_validation: false,
+        dependencies: []
     }];
 
     let used_keys = new Set;
@@ -196,6 +197,7 @@ function FormBuilder(form, expand_func = options => options) {
             throw new Error(`Page '${key}' is already used in this form`);
 
         options = expand_func(options);
+        options.dependencies = options.dependencies.filter(dep => dep !== key);
 
         let page = {
             key: key,

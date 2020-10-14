@@ -77,6 +77,12 @@
     border: 2px solid #ff6600;
     color: white;
 }
+.fm_path > a.blocked {
+    background: #bbb;
+    border-color: #bbb;
+    color: #eee;
+    cursor: not-allowed;
+}
 .fm_path > a.partial::before {
     padding-right: 4px;
     font-size: 0.9em;
@@ -89,7 +95,7 @@
     font-weight: bold;
     content: '✓\FE0E✓\FE0E';
 }
-.fm_path > a:hover { border-color: #ff6600; }
+.fm_path > a:not(.blocked):hover { border-color: #ff6600; }
 .fm_path > a:focus {
     outline: 2px dotted #999;
     outline-offset: 1px;

@@ -211,6 +211,9 @@ let form_exec = new function() {
                            {disabled: !state.changed && record.mtime == null}, e => handleNewClick(e, state.changed));
         }
 
+        // Check page dependencies?
+        let allowed = route_page.options.dependencies.every(dep => record.complete[dep] != null);
+
         render(html`
             <div class="fm_form">
                 ${route_page.options.show_id ? html`
@@ -232,8 +235,26 @@ let form_exec = new function() {
                     let complete = record.complete[page2.key];
 
                     let cls = '';
-                    if (page2.key === model.key)
+                    let tooltip = '';
+                    let url = makeURL(route_page.form.key, page2.key, record);
+
+                    for (dep of page2.options.dependencies) {
+                        if (record.complete[dep] == null) {
+                            if (url != null)
+                                cls += ' blocked';
+                            tooltip += `La page ${dep} doit d'abord être renseignée\n`;
+                            url = null;
+                        }
+                    }
+
+                    if (page2.key === route_page.key) {
                         cls += ' active';
+                    } else if (state.changed) {
+                        cls += ' blocked';
+                        tooltip += 'Vous devez enregistrer la page en cours pour continuer\n';
+                        url = null;
+                    }
+
                     if (complete == null) {
                         // Leave as is
                     } else if (complete) {
@@ -242,11 +263,19 @@ let form_exec = new function() {
                         cls += ' partial';
                     }
 
-                    return html`<a class=${cls} href=${makeURL(route_page.form.key, page2.key, record)}>${page2.label}</a>`;
+                    return html`<a class=${cls} title=${tooltip.trim()} href=${url || ''}>${page2.label}</a>`;
                 })}</div>
 
-                <div class="af_main">${model.renderWidgets()}</div>
-                <div class=${route_page.options.float_actions ? 'af_actions float' : 'af_actions'}>${model.renderActions()}</div>
+                ${allowed ? html`
+                    <div class="af_main">${model.renderWidgets()}</div>
+                    <div class=${route_page.options.float_actions ? 'af_actions float' : 'af_actions'}>${model.renderActions()}</div>
+                ` : ''}
+                ${!allowed ? html`
+                    <div class="af_main">
+                        Vous ne pouvez pas remplir cette page pour le moment, les pages suivantes ne sont pas remplies :
+                        <i>${route_page.options.dependencies.join(', ')}</i>
+                    </div>
+                ` : ''}
             </div>
         `, el);
 
