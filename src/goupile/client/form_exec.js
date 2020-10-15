@@ -16,6 +16,7 @@ let form_exec = new function() {
 
     this.route = async function(page, url) {
         let what = url.pathname.substr(page.url.length) || null;
+        let new_page = (route_page == null || page.key !== route_page.key);
 
         if (what && !what.match(/^(new|multi|[A-Z0-9]{26}(@[0-9]+)?)$/))
             throw new Error(`Adresse incorrecte '${url.pathname}'`);
@@ -41,6 +42,7 @@ let form_exec = new function() {
             ctx_records.clear();
             ctx_records.set(record.id, record);
 
+            goupile.toggleOverview(true);
             multi_mode = false;
         } else if (what == null) {
             let record = vrec.create(route_page.form.key);
@@ -81,6 +83,10 @@ let form_exec = new function() {
                 }
 
                 delete ctx_states[id];
+
+                goupile.toggleOverview(true);
+            } else if (new_page) {
+                goupile.toggleOverview(true);
             }
 
             ctx_records.set(record.id, record);
@@ -590,7 +596,7 @@ let form_exec = new function() {
                     ${records.map(record => html`
                         <tr class=${ctx_records.has(record.id) ? 'selected' : ''}>
                             ${!multi_mode ? html`<th>
-                                <a @click=${e => handleEditClick(record)}>🔍\uFE0E</a>&nbsp;
+                                <a href=${makeURL(route_page.form.key, route_page.key, record)}>🔍\uFE0E</a>&nbsp;
                                 <a @click=${e => runDeleteDialog(e, record)}>✕</a>
                             </th>` : ''}
                             ${multi_mode ? html`<th><input type="checkbox" .checked=${ctx_records.has(record.id)}

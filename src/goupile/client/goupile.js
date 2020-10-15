@@ -586,17 +586,19 @@ let goupile = new function() {
         if (enable == null)
             enable = !show_overview || goupile.isTablet();
 
-        if (enable) {
-            if (goupile.isTablet())
-                left_panel = null;
-            show_overview = true;
-        } else {
-            left_panel = left_panel || 'editor';
-            show_overview = false;
-        }
-        overview_wanted = false;
+        if (enable !== show_overview) {
+            if (enable) {
+                if (goupile.isTablet())
+                    left_panel = null;
+                show_overview = true;
+            } else {
+                left_panel = left_panel || 'editor';
+                show_overview = false;
+            }
+            overview_wanted = false;
 
-        self.go();
+            self.go();
+        }
     };
 
     this.validateCode = async function(path, code) {
