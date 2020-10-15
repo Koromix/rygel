@@ -207,7 +207,9 @@ let goupile = new function() {
         }
 
         await self.go(window.location.href, false);
-        await triggerSync();
+
+        if (net.isOnline())
+            await triggerSync();
     };
 
     function changeCSS(css) {
@@ -552,10 +554,8 @@ let goupile = new function() {
     }
 
     this.runConnected = async function(func) {
-        if (!net.isOnline()) {
-            log.error('Cette action nécessite une connexion au serveur');
-            return;
-        }
+        if (!net.isOnline())
+            throw new Error('Cette action nécessite une connexion au serveur');
 
         // If user is really connected (with a server session key)
         if (user.isConnectedOnline()) {
