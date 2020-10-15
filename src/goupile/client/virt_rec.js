@@ -371,7 +371,7 @@ function VirtualRecords(db, zone) {
         }
 
         // Get new fragments
-        let changes;
+        let changes = [];
         {
             let url = util.pasteURL(`${env.base_url}api/records/load`, {anchor: anchor});
             let records = await net.fetch(url).then(response => response.json());
