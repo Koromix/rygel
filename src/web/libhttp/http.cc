@@ -422,12 +422,13 @@ void http_IO::AddCachingHeaders(int max_age, const char *etag)
 
 #ifndef NDEBUG
     max_age = 0;
+    etag = nullptr;
 #endif
 
     if (max_age || etag) {
         char buf[128];
 
-        AddHeader("Cache-Control", Fmt(buf, "max-age=%1", max_age).ptr);
+        AddHeader("Cache-Control", max_age ? Fmt(buf, "max-age=%1", max_age).ptr : "no-cache");
         if (etag) {
             AddHeader("ETag", etag);
         }

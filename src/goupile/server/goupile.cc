@@ -77,11 +77,7 @@ static Span<const uint8_t> PatchGoupileVariables(const AssetInfo &asset, Allocat
             writer->Write(buf);
             return true;
         } else if (TestStr(key, "CACHE_KEY")) {
-#ifdef NDEBUG
-            writer->Write(FelixVersion);
-#else
             writer->Write(etag);
-#endif
             return true;
         } else if (TestStr(key, "LINK_MANIFEST")) {
             if (goupile_config.use_offline) {

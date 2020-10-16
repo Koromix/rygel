@@ -110,7 +110,8 @@ function VirtualFS(db) {
                 file = null;
             }
         } else if (!env.use_offline) {
-            let response = await net.fetch(`${env.base_url}${path.substr(1)}`);
+            let url = util.pasteURL(`${env.base_url}${path.substr(1)}`, {_dc: env.cache_key});
+            let response = await net.fetch(url);
 
             if (response.ok) {
                 let blob = await response.blob();
