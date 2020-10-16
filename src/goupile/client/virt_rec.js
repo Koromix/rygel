@@ -349,7 +349,7 @@ function VirtualRecords(db, zone) {
                         page: col.page,
                         variable: col.variable,
                         type: col.type,
-                        prop: null,
+                        prop: col.prop,
 
                         before: col.before,
                         after: col.after
@@ -357,7 +357,6 @@ function VirtualRecords(db, zone) {
 
                     if (col.hasOwnProperty('prop')) {
                         col2.key = makeColumnKeyMulti(col.table, col.page, col.variable, col.prop);
-                        col2.prop = JSON.parse(col.prop);
                     } else {
                         col2.key = makeColumnKey(col.table, col.page, col.variable);
                         delete col2.prop;
