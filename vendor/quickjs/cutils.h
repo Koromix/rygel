@@ -27,30 +27,32 @@
 
 #include <stdlib.h>
 #include <inttypes.h>
+
 #ifdef _MSC_VER
-#include <intrin.h>
+  #include <windows.h>
+  #include <intrin.h>
+#else 
+  #include <sys/time.h>
 #endif
 
 /* set if CPU is big endian */
 #undef WORDS_BIGENDIAN
 
-#if defined(__GNUC__) || defined(__clang__)
-#define likely(x)       __builtin_expect(!!(x), 1)
-#define unlikely(x)     __builtin_expect(!!(x), 0)
-#define force_inline inline __attribute__((always_inline))
-#define no_inline __attribute__((noinline))
-#define __maybe_unused __attribute__((unused))
+#ifndef __has_attribute
+  #define likely(x)    (x)
+  #define unlikely(x)  (x)
+  #define force_inline __forceinline
+  #define no_inline __declspec(noinline)
+  #define __maybe_unused
+  #define __attribute__(x)
+  #define __attribute(x)
+  typedef size_t ssize_t;
 #else
-#define likely(x)    (x)
-#define unlikely(x)  (x)
-#define force_inline inline
-#define no_inline
-#define __maybe_unused
-#endif
-
-#ifdef _MSC_VER
-#define __attribute(x)
-#define __attribute__(x)
+  #define likely(x)       __builtin_expect(!!(x), 1)
+  #define unlikely(x)     __builtin_expect(!!(x), 0)
+  #define force_inline inline __attribute__((always_inline))
+  #define no_inline __attribute__((noinline))
+  #define __maybe_unused __attribute__((unused))
 #endif
 
 #define xglue(x, y) x ## y
@@ -131,12 +133,9 @@ static inline int64_t min_int64(int64_t a, int64_t b)
 static inline int clz32(unsigned int a)
 {
 #ifdef _MSC_VER
-    unsigned long leading_zero;
-    if (_BitScanReverse(&leading_zero, a)) {
-        return (int)(31 - leading_zero);
-    } else {
-        return 32;
-    }
+    unsigned long idx;
+    _BitScanReverse(&idx, a);
+    return 31 ^ idx;
 #else
     return __builtin_clz(a);
 #endif
@@ -145,24 +144,24 @@ static inline int clz32(unsigned int a)
 /* WARNING: undefined if a = 0 */
 static inline int clz64(uint64_t a)
 {
-#if defined(_MSC_VER) && defined(_WIN64)
-    unsigned long leading_zero;
-    if (_BitScanReverse64(&leading_zero, a)) {
-        return (int)(63 - leading_zero);
-    } else {
-        return 64;
-    }
-#elif defined(_MSC_VER)
-    unsigned long leading_zero;
-    if (_BitScanReverse(&leading_zero, a >> 32)) {
-        return (int)(31 - leading_zero);
-    } else if (_BitScanReverse(&leading_zero, (uint32_t)a)) {
-        return (int)(63 - leading_zero);
-    } else {
-        return 64;
-    }
+#ifdef _MSC_VER
+  unsigned long where;
+  // BitScanReverse scans from MSB to LSB for first set bit.
+  // Returns 0 if no set bit is found.
+#if INTPTR_MAX >= INT64_MAX // 64-bit
+  if (_BitScanReverse64(&where, a))
+    return (int)(63 - where);
 #else
-    return __builtin_ctzll(a);
+  // Scan the high 32 bits.
+  if (_BitScanReverse(&where, (uint32_t)(a >> 32)))
+    return (int)(63 - (where + 32)); // Create a bit offset from the MSB.
+  // Scan the low 32 bits.
+  if (_BitScanReverse(&where, (uint32_t)(a)))
+    return (int)(63 - where);
+#endif
+  return 64; // Undefined Behavior.
+#else
+  return __builtin_clzll(a);
 #endif
 }
 
@@ -170,12 +169,9 @@ static inline int clz64(uint64_t a)
 static inline int ctz32(unsigned int a)
 {
 #ifdef _MSC_VER
-    unsigned long trailing_zero;
-    if (_BitScanForward(&trailing_zero, a)) {
-        return (int)trailing_zero;
-    } else {
-        return 32;
-    }
+    unsigned long idx;
+    _BitScanForward(&idx, a);
+    return 31 ^ idx;
 #else
     return __builtin_ctz(a);
 #endif
@@ -184,38 +180,55 @@ static inline int ctz32(unsigned int a)
 /* WARNING: undefined if a = 0 */
 static inline int ctz64(uint64_t a)
 {
-#if defined(_MSC_VER) && defined(_WIN64)
-    unsigned long trailing_zero;
-    if (_BitScanForward64(&trailing_zero, a)) {
-        return (int)trailing_zero;
-    } else {
-        return 64;
-    }
-#elif defined(_MSC_VER)
-    unsigned long trailing_zero;
-    if (_BitScanForward(&trailing_zero, (uint32_t)a)) {
-        return trailing_zero;
-    } else if (_BitScanForward(&trailing_zero, a >> 32)) {
-        return 32 + trailing_zero;
-    } else {
-        return 64;
-    }
+#ifdef _MSC_VER
+  unsigned long where;
+  // Search from LSB to MSB for first set bit.
+  // Returns zero if no set bit is found.
+#if INTPTR_MAX >= INT64_MAX // 64-bit
+  if (_BitScanForward64(&where, a))
+    return (int)(where);
 #else
-    return __builtin_ctzll(a);
+  // Win32 doesn't have _BitScanForward64 so emulate it with two 32 bit calls.
+  // Scan the Low Word.
+  if (_BitScanForward(&where, (uint32_t)(a)))
+    return (int)(where);
+  // Scan the High Word.
+  if (_BitScanForward(&where, (uint32_t)(a >> 32)))
+    return (int)(where + 32); // Create a bit offset from the LSB.
+#endif
+  return 64;
+#else
+  return __builtin_ctzll(a);
 #endif
 }
 
+#ifdef _MSC_VER
 #pragma pack(push, 1)
 struct packed_u64 {
     uint64_t v;
 };
+
 struct packed_u32 {
     uint32_t v;
 };
+
 struct packed_u16 {
     uint16_t v;
 };
 #pragma pack(pop)
+#else
+struct __attribute__((packed)) packed_u64 {
+    uint64_t v;
+};
+
+struct __attribute__((packed)) packed_u32 {
+    uint32_t v;
+};
+
+struct __attribute__((packed)) packed_u16 {
+    uint16_t v;
+};
+#endif
 
 static inline uint64_t get_u64(const uint8_t *tab)
 {
@@ -337,6 +350,10 @@ int __attribute__((format(printf, 2, 3))) dbuf_printf(DynBuf *s,
 void dbuf_free(DynBuf *s);
 static inline BOOL dbuf_error(DynBuf *s) {
     return s->error;
+}
+static inline void dbuf_set_error(DynBuf *s)
+{
+    s->error = TRUE;
 }
 
 #define UTF8_CHAR_LEN_MAX 6

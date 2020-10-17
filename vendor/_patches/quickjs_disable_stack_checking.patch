@@ -1,33 +1,19 @@
 diff --git a/vendor/quickjs/quickjs.c b/vendor/quickjs/quickjs.c
-index e3bcd2d2..8b581b8c 100644
+index 1ac3052b8..7d265f607 100644
 --- a/vendor/quickjs/quickjs.c
 +++ b/vendor/quickjs/quickjs.c
-@@ -1978,7 +1978,6 @@ void JS_FreeRuntime(JSRuntime *rt)
-     }
- }
+@@ -72,10 +72,10 @@
+ #define CONFIG_ATOMICS
+ #endif
  
--#if defined(EMSCRIPTEN)
- /* currently no stack limitation */
- static inline uint8_t *js_get_stack_pointer(void)
- {
-@@ -1989,20 +1988,6 @@ static inline BOOL js_check_stack_overflow(JSContext *ctx, size_t alloca_size)
- {
-     return FALSE;
- }
--#else
--/* Note: OS and CPU dependent */
--static inline uint8_t *js_get_stack_pointer(void)
--{
--    return __builtin_frame_address(0);
--}
--
--static inline BOOL js_check_stack_overflow(JSContext *ctx, size_t alloca_size)
--{
--    size_t size;
--    size = ctx->stack_top - js_get_stack_pointer();
--    return unlikely((size + alloca_size) > ctx->stack_size);
--}
+-#if !defined(EMSCRIPTEN) && !defined(_MSC_VER)
+-/* enable stack limitation */
+-#define CONFIG_STACK_CHECK
 -#endif
++// #if !defined(EMSCRIPTEN) && !defined(_MSC_VER)
++// /* enable stack limitation */
++// #define CONFIG_STACK_CHECK
++// #endif
  
- JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque)
- {
+ 
+ /* dump object free */

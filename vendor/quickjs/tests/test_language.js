@@ -311,10 +311,21 @@ function test_template()
     var a, b;
     b = 123;
     a = `abc${b}d`;
-    assert(a === "abc123d");
+    assert(a, "abc123d");
 
     a = String.raw `abc${b}d`;
-    assert(a === "abc123d");
+    assert(a, "abc123d");
+
+    a = "aaa";
+    b = "bbb";
+    assert(`aaa${a, b}ccc`, "aaabbbccc");
+}
+
+function test_template_skip()
+{
+    var a = "Bar";
+    var { b = `${a + `a${a}` }baz` } = {};
+    assert(b, "BaraBarbaz");
 }
 
 function test_object_literal()
@@ -348,6 +359,23 @@ function test_labels()
     while (0) x: { break x; };
 }
 
+function test_destructuring()
+{
+    function * g () { return 0; };
+    var [x] = g();
+    assert(x, void 0);
+}
+
+function test_spread()
+{
+    var x;
+    x = [1, 2, ...[3, 4]];
+    assert(x.toString(), "1,2,3,4");
+
+    x = [ ...[ , ] ];
+    assert(Object.getOwnPropertyNames(x).toString(), "0,length");
+}
+
 test_op1();
 test_cvt();
 test_eq();
@@ -358,6 +386,9 @@ test_prototype();
 test_arguments();
 test_class();
 test_template();
+test_template_skip();
 test_object_literal();
 test_regexp_skip();
 test_labels();
+test_destructuring();
+test_spread();
