@@ -153,6 +153,11 @@ let goupile = new function() {
     function initNavigation() {
         window.addEventListener('popstate', e => self.go(window.location.href, false));
 
+        window.onbeforeunload = e => {
+            if (form_exec.hasChanges())
+                return 'Si vous confirmez vouloir quitter la page, les modifications en cours seront perdues !';
+        };
+
         util.interceptLocalAnchors((e, href) => {
             self.go(href);
             e.preventDefault();

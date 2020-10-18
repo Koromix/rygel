@@ -970,4 +970,15 @@ let form_exec = new function() {
 
         return util.pasteURL(url, nav.route);
     }
+
+    this.hasChanges = function() {
+        for (let key in ctx_states) {
+            let state = ctx_states[key];
+
+            if (state.changed)
+                return true;
+        }
+
+        return false;
+    };
 };
