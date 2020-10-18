@@ -171,7 +171,7 @@ let goupile = new function() {
 
         vrec = new VirtualRecords(db, user.getZone());
 
-        if (self.isConnected() || env.allow_guests) {
+        if (self.isConnected()) {
             try {
                 running++;
 
@@ -253,7 +253,7 @@ let goupile = new function() {
             running++;
             url = user.getLockURL() || url;
 
-            if (self.isConnected() || env.allow_guests) {
+            if (self.isConnected()) {
                 if (url) {
                     url = new URL(url, window.location.href);
 
@@ -527,18 +527,13 @@ let goupile = new function() {
             ` : ''}
             ${!show_develop ? html`<div style="flex: 1; text-align: center;">${env.app_name}</div>` : ''}
 
-            ${!self.isConnected() ?
-                html`<button class="icon" style="background-position-y: calc(-450px + 1.2em)"
-                             @click=${user.runLoginDialog}>Connexion</button>` : ''}
-            ${self.isConnected() ? html`
-                <div class="gp_dropdown right">
-                    <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${user.getUserName()}</button>
-                    <div>
-                        <button @click=${user.runLoginDialog}>Changer d'utilisateur</button>
-                        <button @click=${user.logout}>Déconnexion</button>
-                    </div>
+            <div class="gp_dropdown right">
+                <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${user.getUserName()}</button>
+                <div>
+                    <button @click=${user.runLoginDialog}>Changer d'utilisateur</button>
+                    ${!user.isDemo() ? html`<button @click=${user.logout}>Déconnexion</button>` : ''}
                 </div>
-            ` : ''}
+            </div>
 
             <div id="gp_status"/>
         `;

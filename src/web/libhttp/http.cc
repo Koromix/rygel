@@ -367,7 +367,7 @@ void http_Daemon::RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
 
 http_IO::http_IO()
 {
-    response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+    ResetResponse();
 }
 
 http_IO::~http_IO()
@@ -438,6 +438,14 @@ void http_IO::AddCachingHeaders(int max_age, const char *etag)
     } else {
         AddHeader("Cache-Control", "no-store");
     }
+}
+
+void http_IO::ResetResponse()
+{
+    code = -1;
+
+    MHD_destroy_response(response);
+    response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
 }
 
 void http_IO::AttachResponse(int new_code, MHD_Response *new_response)

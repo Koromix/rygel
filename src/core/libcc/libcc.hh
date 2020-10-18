@@ -772,6 +772,12 @@ public:
         return *this;
     }
 
+    operator RetainPtr<const T>() const
+    {
+        RetainPtr<const T> ptr((const T *)p);
+        return ptr;
+    }
+
     bool IsValid() const { return p; }
     operator bool() const { return p; }
 

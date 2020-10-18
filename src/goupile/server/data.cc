@@ -19,8 +19,8 @@ DatabaseFile = database.db
 
 [Sync]
 # UseOffline = Off
-# AllowGuests = Off
 # SyncMode = Offline
+# DemoUser =
 
 [HTTP]
 # IPStack = Dual

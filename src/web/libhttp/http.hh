@@ -107,7 +107,7 @@ class http_IO {
     http_RequestInfo request;
 
     int code = -1;
-    MHD_Response *response;
+    MHD_Response *response = nullptr;
 
     std::mutex mutex;
     State state = State::Sync;
@@ -149,6 +149,8 @@ public:
                       CompressionType compression_type = CompressionType::None);
     void AttachError(int code, const char *details = nullptr);
     void AttachNothing(int code);
+
+    void ResetResponse();
 
     // Blocking, do in async context
     bool OpenForRead(StreamReader *out_st);

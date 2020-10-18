@@ -67,9 +67,6 @@ static Span<const uint8_t> PatchGoupileVariables(const AssetInfo &asset, Allocat
         } else if (TestStr(key, "USE_OFFLINE")) {
             writer->Write(goupile_config.use_offline ? "true" : "false");
             return true;
-        } else if (TestStr(key, "ALLOW_GUESTS")) {
-            writer->Write(goupile_config.allow_guests ? "true" : "false");
-            return true;
         } else if (TestStr(key, "SYNC_MODE")) {
             char buf[64];
             ConvertToJsName(SyncModeNames[(int)goupile_config.sync_mode], buf);

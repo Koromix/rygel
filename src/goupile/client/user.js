@@ -265,6 +265,7 @@ function UserManager(db) {
         return session_profile.permissions &&
                !!session_profile.permissions[perm];
     };
+    this.isDemo = function() { return !!session_profile.demo; };
 
     this.getLockURL = function() {
         let url = localStorage.getItem('lock_url');
