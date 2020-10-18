@@ -246,13 +246,17 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
             if (!reader.IsValid())
                 return;
 
-            StreamWriter writer;
-            if (!io->OpenForWrite(200, &writer))
-                return;
-            if (!SpliceStream(&reader, goupile_config.max_file_size, &writer))
-                return;
+            if (request.headers_only) {
+                io->AttachNothing(200);
+            } else {
+                StreamWriter writer;
+                if (!io->OpenForWrite(200, &writer))
+                    return;
+                if (!SpliceStream(&reader, goupile_config.max_file_size, &writer))
+                    return;
 
-            writer.Close();
+                writer.Close();
+            }
         }
     });
 

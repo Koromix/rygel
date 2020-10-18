@@ -180,7 +180,10 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
         io->request.base_url = daemon->base_url;
         io->request.conn = conn;
 
-        if (!OptionToEnum(http_RequestMethodNames, method, &io->request.method)) {
+        if (TestStr(method, "HEAD")) {
+            io->request.method = http_RequestMethod::Get;
+            io->request.headers_only = true;
+        } else if (!OptionToEnum(http_RequestMethodNames, method, &io->request.method)) {
             io->AttachError(405);
             return MHD_queue_response(conn, (unsigned int)io->code, io->response);
         }
@@ -460,26 +463,31 @@ void http_IO::AttachText(int code, Span<const char> str, const char *mime_type)
 bool http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_type,
                            CompressionType compression_type)
 {
-    MHD_Response *response;
     if (compression_type != request.compression_type) {
-        HeapArray<uint8_t> buf;
-        {
-            StreamReader reader(data, nullptr, compression_type);
-            StreamWriter writer(&buf, nullptr, request.compression_type);
-            if (!SpliceStream(&reader, Megabytes(8), &writer))
-                return false;
-            if (!writer.Close())
-                return false;
-        }
+        if (request.headers_only) {
+            AttachNothing(code);
+        } else {
+            HeapArray<uint8_t> buf;
+            {
+                StreamReader reader(data, nullptr, compression_type);
+                StreamWriter writer(&buf, nullptr, request.compression_type);
+                if (!SpliceStream(&reader, Megabytes(8), &writer))
+                    return false;
+                if (!writer.Close())
+                    return false;
+            }
 
-        response = MHD_create_response_from_buffer_with_free_callback((size_t)buf.len, (void *)buf.ptr,
-                                                                      ReleaseDataCallback);
-        buf.Leak();
+            MHD_Response *response =
+                MHD_create_response_from_buffer_with_free_callback((size_t)buf.len, (void *)buf.ptr, ReleaseDataCallback);
+            AttachResponse(code, response);
+
+            buf.Leak();
+        }
     } else {
-        response = MHD_create_response_from_buffer((size_t)data.len, (void *)data.ptr,
-                                                   MHD_RESPMEM_PERSISTENT);
+        MHD_Response *response =
+            MHD_create_response_from_buffer((size_t)data.len, (void *)data.ptr, MHD_RESPMEM_PERSISTENT);
+        AttachResponse(code, response);
     }
-    AttachResponse(code, response);
 
     AddEncodingHeader(request.compression_type);
     if (mime_type) {
@@ -503,6 +511,18 @@ void http_IO::AttachError(int code, const char *details)
                                                            ReleaseDataCallback);
     AttachResponse(code, response);
     AddHeader("Content-Type", "text/plain");
+}
+
+void http_IO::AttachNothing(int code)
+{
+    // We don't want libmicrohttpd to send Content-Length, so we use a callback response
+    const auto null_callback = [](void *, uint64_t, char *, size_t) {
+        return (ssize_t)MHD_CONTENT_READER_END_OF_STREAM;
+    };
+
+    MHD_Response *response =
+        MHD_create_response_from_callback(MHD_SIZE_UNKNOWN, Kilobytes(16), null_callback, nullptr, nullptr);
+    AttachResponse(code, response);
 }
 
 bool http_IO::OpenForRead(StreamReader *out_st)
