@@ -88,9 +88,9 @@ function VirtualRecords(db, zone) {
             col.after = i < (columns.length - 1) ? columns[i + 1].key : null;
         }
 
-        await db.transaction('rw', ['rec_entries', 'rec_fragments', 'rec_columns'], async () => {
+        await db.transaction('rw', ['rec_entries', 'rec_fragments', 'rec_columns'], async t => {
             let ikey = makeEntryKey(record.table, record.id);
-            let entry = await db.load('rec_entries', ikey);
+            let entry = await t.load('rec_entries', ikey);
 
             if (entry) {
                 if (!testZone(entry)) {
@@ -116,9 +116,9 @@ function VirtualRecords(db, zone) {
             frag.version = ++entry.version;
             frag._ikey = makeFragmentKey(record.table, record.id, frag.version);
 
-            db.save('rec_entries', entry);
-            db.save('rec_fragments', frag);
-            db.saveAll('rec_columns', columns);
+            t.save('rec_entries', entry);
+            t.save('rec_fragments', frag);
+            t.saveAll('rec_columns', columns);
         });
 
         let record2 = Object.assign({}, record);
@@ -140,8 +140,8 @@ function VirtualRecords(db, zone) {
     this.delete = async function(table, id) {
         let ikey = makeEntryKey(table, id);
 
-        await db.transaction('rw', ['rec_entries', 'rec_fragments'], async () => {
-            let entry = await db.load('rec_entries', ikey);
+        await db.transaction('rw', ['rec_entries', 'rec_fragments'], async t => {
+            let entry = await t.load('rec_entries', ikey);
 
             if (!testZone(entry))
                 throw new Error(`Zone mismatch for record ${id}`);
@@ -163,8 +163,8 @@ function VirtualRecords(db, zone) {
                     anchor: -1
                 };
 
-                db.save('rec_entries', entry);
-                db.save('rec_fragments', frag);
+                t.save('rec_entries', entry);
+                t.save('rec_fragments', frag);
             }
         });
     };

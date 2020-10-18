@@ -18,9 +18,9 @@ function VirtualFS(db) {
             sha256: await computeSha256(data)
         };
 
-        await db.transaction('rw', ['fs_entries', 'fs_data'], () => {
-            db.save('fs_entries', file);
-            db.saveWithKey('fs_data', path, data);
+        await db.transaction('rw', ['fs_entries', 'fs_data'], t => {
+            t.save('fs_entries', file);
+            t.saveWithKey('fs_data', path, data);
         });
 
         cache.delete(path);
@@ -64,18 +64,18 @@ function VirtualFS(db) {
                 delete file.data;
                 await db.save('fs_sync', file);
             } else if (response.status === 404) {
-                await db.transaction('rw', ['fs_entries', 'fs_data'], () => {
-                    db.delete('fs_entries', path);
-                    db.delete('fs_data', path);
+                await db.transaction('rw', ['fs_entries', 'fs_data'], t => {
+                    t.delete('fs_entries', path);
+                    t.delete('fs_data', path);
                 });
             } else {
                 let err = (await response.text()).trim();
                 throw new Error(err);
             }
         } else {
-            await db.transaction('rw', ['fs_entries', 'fs_data'], () => {
-                db.delete('fs_entries', path);
-                db.delete('fs_data', path);
+            await db.transaction('rw', ['fs_entries', 'fs_data'], t => {
+                t.delete('fs_entries', path);
+                t.delete('fs_data', path);
             });
         }
 
@@ -83,9 +83,9 @@ function VirtualFS(db) {
     };
 
     this.delete = async function(path) {
-        await db.transaction('rw', ['fs_entries', 'fs_data'], () => {
-            db.save('fs_entries', {path: path});
-            db.delete('fs_data', path);
+        await db.transaction('rw', ['fs_entries', 'fs_data'], t => {
+            t.save('fs_entries', {path: path});
+            t.delete('fs_data', path);
         });
 
         cache.delete(path);
@@ -277,10 +277,10 @@ function VirtualFS(db) {
                     if (env.use_offline) {
                         await db.save('fs_sync', file2);
                     } else {
-                        await db.transaction('rw', ['fs_entries', 'fs_data', 'fs_sync'], () => {
-                            db.delete('fs_entries', file.path);
-                            db.delete('fs_data', file.path);
-                            db.save('fs_sync', file2);
+                        await db.transaction('rw', ['fs_entries', 'fs_data', 'fs_sync'], t => {
+                            t.delete('fs_entries', file.path);
+                            t.delete('fs_data', file.path);
+                            t.save('fs_sync', file2);
                         });
                     }
                 } else {
@@ -290,9 +290,9 @@ function VirtualFS(db) {
                         throw new Error(err);
                     }
 
-                    await db.transaction('rw', ['fs_entries', 'fs_sync'], () => {
-                        db.delete('fs_entries', file.path);
-                        db.delete('fs_sync', file.path);
+                    await db.transaction('rw', ['fs_entries', 'fs_sync'], t => {
+                        t.delete('fs_entries', file.path);
+                        t.delete('fs_sync', file.path);
                     });
                 }
             } break;
@@ -305,10 +305,10 @@ function VirtualFS(db) {
                     delete file2.data;
                     await db.save('fs_sync', file2);
                 } else {
-                    await db.transaction('rw', ['fs_entries', 'fs_data', 'fs_sync'], () => {
-                        db.delete('fs_entries', file.path);
-                        db.delete('fs_data', file.path);
-                        db.delete('fs_sync', file.path);
+                    await db.transaction('rw', ['fs_entries', 'fs_data', 'fs_sync'], t => {
+                        t.delete('fs_entries', file.path);
+                        t.delete('fs_data', file.path);
+                        t.delete('fs_sync', file.path);
                     });
                 }
 

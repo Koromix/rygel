@@ -57,37 +57,37 @@ let idb = new function () {
             if (transaction)
                 throw new Error('Nested transactions are not supported');
 
-            let p = new Promise((resolve, reject) => {
-                transaction = db.transaction(stores, mode);
+            let t = db.transaction(stores, mode);
+            let intf = new DatabaseInterface(db, t);
 
-                transaction.oncomplete = e => resolve();
-                transaction.onabort = e => reject(new Error('Database transaction aborted'));
-                transaction.onerror = e => {
+            let p = new Promise((resolve, reject) => {
+                t.oncomplete = e => resolve();
+                t.onabort = e => reject(new Error('Database transaction aborted'));
+                t.onerror = e => {
                     e.preventDefault();
-                    reject(new Error(transaction.error));
+                    reject(new Error(t.error));
                 };
             });
 
             try {
-                await func();
-
-                // Don't await here; We need to execute the finally clause before we let
-                // the user execute any other transaction!
-                return p;
+                await func(intf);
+                await p;
             } catch (err) {
-                if (!aborted && transaction.error == null)
-                    transaction.abort();
+                if (t.error)
+                    intf.abort();
 
                 throw err;
-            } finally {
-                transaction = null;
-                aborted = false;
             }
         };
 
         this.abort = function() {
-            transaction.abort();
-            aborted = true;
+            if (transaction == null)
+                throw new Error('Cannot abort from outside transaction');
+
+            if (!aborted) {
+                transaction.abort();
+                aborted = true;
+            }
         };
 
         this.save = function(store, value) {
