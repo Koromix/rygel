@@ -605,28 +605,18 @@ let form_exec = new function() {
                             ${!user.getZone() ? html`<td class="id">${record.zone || ''}</td>` : ''}
 
                             ${columns.map(col => {
-                                let value = record.values[col.variable];
+                                let [text, cls] = computeColumnValue(record, col);
 
-                                if (record.complete[col.page] == null) {
-                                    return html`<td class="missing" title="Page non remplie"></td>`;
-                                } else if (value == null) {
-                                    if (!record.values.hasOwnProperty(col.variable)) {
-                                        return html`<td class="missing" title="Non applicable">NA</td>`;
-                                    } else {
-                                        return html`<td class="missing" title="Donnée manquante">MD</td>`;
+                                if (cls === 'missing') {
+                                    let title;
+                                    switch (text) {
+                                        case 'NA': { title = 'Non applicable'; } break;
+                                        case 'MD': { title = 'Donnée manquante'; } break;
                                     }
-                                } else if (Array.isArray(value)) {
-                                    if (col.hasOwnProperty('prop')) {
-                                        let text = value.includes(col.prop) ? 1 : 0;
-                                        return html`<td title=${text}>${text}</td>`;
-                                    } else {
-                                        let text = value.join('|');
-                                        return html`<td title=${text}>${text}</td>`;
-                                    }
-                                } else if (typeof value === 'number') {
-                                    return html`<td class="number" title=${value}>${value}</td>`;
+
+                                    return html`<td class=${cls} title=${title}>${text}</td>`;
                                 } else {
-                                    return html`<td title=${value}>${value}</td>`;
+                                    return html`<td class=${cls}>${text}</td>`;
                                 }
                             })}
                         </tr>
@@ -715,9 +705,12 @@ let form_exec = new function() {
         }
 
         // Worksheet
-        let ws = XLSX.utils.aoa_to_sheet([columns.map(col => col.variable)]);
+        let ws = XLSX.utils.aoa_to_sheet([columns.map(col => col.title)]);
         for (let record of records) {
-            let values = columns.map(col => record.values[col.variable]);
+            let values = columns.map(col => {
+                let [value, ] = computeColumnValue(record, col);
+                return value;
+            });
             XLSX.utils.sheet_add_aoa(ws, [values], {origin: -1});
         }
 
@@ -730,6 +723,32 @@ let form_exec = new function() {
         switch (format) {
             case 'xlsx': { XLSX.writeFile(wb, filename); } break;
             case 'csv': { XLSX.writeFile(wb, filename, {FS: ';'}); } break;
+        }
+    }
+
+    function computeColumnValue(record, col) {
+        let value = record.values[col.variable];
+
+        if (record.complete[col.page] == null) {
+            return ['', 'missing'];
+        } else if (value == null) {
+            if (!record.values.hasOwnProperty(col.variable)) {
+                return ['NA', 'missing'];
+            } else {
+                return ['MD', 'missing'];
+            }
+        } else if (Array.isArray(value)) {
+            if (col.hasOwnProperty('prop')) {
+                let text = value.includes(col.prop) ? 1 : 0;
+                return [text, 'text'];
+            } else {
+                let text = value.join('|');
+                return [text, 'text'];
+            }
+        } else if (typeof value === 'number') {
+            return [value, 'number'];
+        } else {
+            return [value, 'text'];
         }
     }
 
