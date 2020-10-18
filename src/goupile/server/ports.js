@@ -145,7 +145,7 @@ var server = new function() {
 
     function gatherValues(variables) {
         let values = util.arrayToObject(variables, variable => variable.key.toString(),
-                                        variable => variable.value);
+                                        variable => !variable.missing ? variable.value : null);
         return values;
     }
 };
