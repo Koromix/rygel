@@ -56,7 +56,6 @@ private:
 
 enum class http_RequestMethod {
     Get,
-    Head,
     Post,
     Put,
     Patch,
@@ -65,7 +64,6 @@ enum class http_RequestMethod {
 };
 static const char *const http_RequestMethodNames[] = {
     "GET",
-    "HEAD",
     "POST",
     "PUT",
     "PATCH",
@@ -79,7 +77,9 @@ struct http_RequestInfo {
     // Useful in some cases (such as for cookie scopes)
     const char *base_url;
 
+    // When verb is HEAD, method is set to Get and headers_only is set to true
     http_RequestMethod method;
+    bool headers_only;
     const char *url;
     CompressionType compression_type;
 
@@ -104,7 +104,7 @@ class http_IO {
     };
 
     http_Daemon *daemon;
-    http_RequestInfo request;
+    http_RequestInfo request = {};
 
     int code = -1;
     MHD_Response *response = nullptr;
@@ -148,6 +148,7 @@ public:
     bool AttachBinary(int code, Span<const uint8_t> data, const char *mime_type,
                       CompressionType compression_type = CompressionType::None);
     void AttachError(int code, const char *details = nullptr);
+    void AttachNothing(int code);
 
     void ResetResponse();
 

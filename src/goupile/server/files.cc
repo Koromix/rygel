@@ -242,17 +242,22 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
             MHD_Response *response = MHD_create_response_from_fd(sb.st_size, fd);
             io->AttachResponse(200, response);
         } else {
-            StreamReader reader(file->filename);
-            if (!reader.IsValid())
-                return;
+            if (request.headers_only) {
+                io->AttachNothing(200);
+                io->AddEncodingHeader(request.compression_type);
+            } else {
+                StreamReader reader(file->filename);
+                if (!reader.IsValid())
+                    return;
 
-            StreamWriter writer;
-            if (!io->OpenForWrite(200, &writer))
-                return;
-            if (!SpliceStream(&reader, goupile_config.max_file_size, &writer))
-                return;
+                StreamWriter writer;
+                if (!io->OpenForWrite(200, &writer))
+                    return;
 
-            writer.Close();
+                if (!SpliceStream(&reader, goupile_config.max_file_size, &writer))
+                    return;
+                writer.Close();
+            }
         }
     });
 
