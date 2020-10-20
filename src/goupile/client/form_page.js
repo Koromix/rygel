@@ -877,7 +877,7 @@ function PageBuilder(state, model, readonly = false) {
     };
 
     this.scope = function(func) {
-        let widgets = captureWidgets('section', func);
+        let widgets = captureWidgets([], 'section', func);
         widgets_ref.push(...widgets);
     };
 
@@ -890,8 +890,7 @@ function PageBuilder(state, model, readonly = false) {
             state.sections_state[label] = deploy;
         }
 
-        let widgets = captureWidgets('section', func);
-
+        let widgets = [];
         let render = intf => html`
             <fieldset class="af_container af_section">
                 ${label != null ? html`<legend @click=${e => handleSectionClick(e, label)}>${label}</legend>` : ''}
@@ -904,6 +903,8 @@ function PageBuilder(state, model, readonly = false) {
 
         let intf = makeWidget('section', label, render);
         addWidget(intf);
+
+        captureWidgets(widgets, 'section', func);
 
         return intf;
     };
@@ -954,14 +955,32 @@ function PageBuilder(state, model, readonly = false) {
 
         let tabs = [];
         let tab_idx;
-        let widgets;
+        let widgets = [];
+
+        let render = intf => tabs.length ? html`
+            <div class="af_container af_tabs">
+                ${tabs.map((tab, idx) =>
+                    html`<button type="button" class=${idx === tab_idx ? 'active' : ''}
+                                 ?disabled=${tab.disable}
+                                 @click=${e => handleTabClick(e, key, idx)}>${tab.label}</button>`)}
+
+                <div class="af_section">
+                    ${widgets.map(intf => intf.render())}
+                </div>
+            </div>
+        ` : '';
+
+        let intf = makeWidget('tabs', null, render, options);
+        addWidget(intf);
+
+        // Capture tabs and widgets
         {
             let prev_tabs = tabs_ref;
             let prev_select = selected_tab;
 
             tabs_ref = tabs;
             selected_tab = (state.tabs_state.hasOwnProperty(key) ? state.tabs_state[key] : options.tab) || 0;
-            widgets = captureWidgets('tabs', func);
+            captureWidgets(widgets, 'tabs', func);
 
             // form.tab() can change selected_tab
             if (typeof selected_tab === 'string') {
@@ -976,27 +995,6 @@ function PageBuilder(state, model, readonly = false) {
             selected_tab = prev_select;
             tabs_ref = prev_tabs;
         }
-
-        let render;
-        if (tabs.length) {
-            render = intf => html`
-                <div class="af_container af_tabs">
-                    ${tabs.map((tab, idx) =>
-                        html`<button type="button" class=${idx === tab_idx ? 'active' : ''}
-                                     ?disabled=${tab.disable}
-                                     @click=${e => handleTabClick(e, key, idx)}>${tab.label}</button>`)}
-
-                    <div class="af_section">
-                        ${widgets.map(intf => intf.render())}
-                    </div>
-                </div>
-            `;
-        } else {
-            render = intf => '';
-        }
-
-        let intf = makeWidget('tabs', null, render, options);
-        addWidget(intf);
 
         return intf;
     };
@@ -1029,9 +1027,10 @@ function PageBuilder(state, model, readonly = false) {
         };
         tabs_ref.push(tab);
 
-        let widgets = captureWidgets('tab', () => func(active));
+        let widgets = captureWidgets([], 'tab', () => func(active));
         if (active)
             widgets_ref.push(...widgets);
+        model.widgets.push(...widgets);
     };
 
     function handleTabClick(e, key, label) {
@@ -1042,8 +1041,7 @@ function PageBuilder(state, model, readonly = false) {
     this.columns = function(func, options) {
         options = expandOptions(options);
 
-        let widgets = captureWidgets('columns', func, {compact: false});
-
+        let widgets = [];
         let render = intf => html`
             <div class="af_container af_columns">
                 ${widgets.map(intf => html`
@@ -1056,6 +1054,8 @@ function PageBuilder(state, model, readonly = false) {
 
         let intf = makeWidget('columns', undefined, render);
         addWidget(intf);
+
+        captureWidgets(widgets, 'columns', func, {compact: false});
 
         return intf;
     };
@@ -1078,9 +1078,7 @@ function PageBuilder(state, model, readonly = false) {
         }
     };
 
-    function captureWidgets(type, func, options = {}) {
-        let widgets = [];
-
+    function captureWidgets(widgets, type, func, options = {}) {
         if (!func) {
             throw new Error(`This call does not contain a function.
 
