@@ -65,6 +65,9 @@ function PageBuilder(state, model, readonly = false) {
     }];
     let widgets_ref = model.widgets0;
 
+    let inline_next = false;
+    let inline_widgets;
+
     let tabs_keys = new Set;
     let tabs_ref;
     let selected_tab;
@@ -1036,7 +1039,46 @@ function PageBuilder(state, model, readonly = false) {
         self.restart();
     }
 
-    function captureWidgets(type, func) {
+    this.columns = function(func, options) {
+        options = expandOptions(options);
+
+        let widgets = captureWidgets('columns', func, {compact: false});
+
+        let render = intf => html`
+            <div class="af_container af_columns">
+                ${widgets.map(intf => html`
+                    <div style=${options.wide ? 'flex: 1;' : ''}>
+                        ${intf.render()}
+                    </div>
+                `)}
+            </div>
+        `;
+
+        let intf = makeWidget('columns', undefined, render);
+        addWidget(intf);
+
+        return intf;
+    };
+
+    this.sameLine = function() {
+        if (inline_widgets == null) {
+            let prev_widget = widgets_ref.pop();
+
+            let widgets;
+            self.columns(() => {
+                if (prev_widget != null)
+                    widgets_ref.push(prev_widget);
+                widgets = widgets_ref;
+            });
+
+            inline_widgets = widgets;
+            inline_next = true;
+        } else {
+            inline_next = true;
+        }
+    };
+
+    function captureWidgets(type, func, options = {}) {
         let widgets = [];
 
         if (!func) {
@@ -1053,7 +1095,7 @@ instead of:
 
         try {
             widgets_ref = widgets;
-            options_stack = [options_stack[options_stack.length - 1]];
+            options_stack = [expandOptions(options)];
 
             func();
         } finally {
@@ -1201,7 +1243,14 @@ instead of:
     }
 
     function addWidget(intf) {
-        widgets_ref.push(intf);
+        if (inline_next) {
+            inline_widgets.push(intf);
+            inline_next = false;
+        } else {
+            inline_widgets = null;
+            widgets_ref.push(intf);
+        }
+
         model.widgets.push(intf);
     }
 
