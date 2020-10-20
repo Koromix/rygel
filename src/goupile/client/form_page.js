@@ -876,10 +876,20 @@ function PageBuilder(state, model, readonly = false) {
         }
     };
 
-    this.scope = function(func) {
-        let widgets = captureWidgets([], 'section', func);
-        widgets_ref.push(...widgets);
+    this.block = function(func, options = {}) {
+        options = expandOptions(options);
+
+        let widgets = [];
+        let render = intf => widgets.map(intf => intf.render());
+
+        let intf = makeWidget('block', '', render);
+        addWidget(intf);
+
+        captureWidgets(widgets, 'block', func);
+
+        return intf;
     };
+    this.scope = this.block;
 
     this.section = function(label, func, options = {}) {
         options = expandOptions(options);
