@@ -80,8 +80,10 @@
     color: white;
 }
 
-.af_columns { display: flex; }
-.af_columns > div + div { padding-left: 12px; }
+@media (min-width: 581px) {
+    .af_columns { display: flex; }
+    .af_columns > div + div { padding-left: 12px; }
+}
 
 /* -------------------- Widgets -------------------- */
 
