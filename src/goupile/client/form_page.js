@@ -1092,13 +1092,20 @@ instead of:
 
         let prev_widgets = widgets_ref;
         let prev_options = options_stack;
+        let prev_inline = inline_widgets;
 
         try {
             widgets_ref = widgets;
             options_stack = [expandOptions(options)];
 
+            inline_next = false;
+            inline_widgets = null;
+
             func();
         } finally {
+            inline_next = false;
+            inline_widgets = prev_inline;
+
             options_stack = prev_options;
             widgets_ref = prev_widgets;
         }
