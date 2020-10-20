@@ -1060,7 +1060,7 @@ function PageBuilder(state, model, readonly = false) {
         return intf;
     };
 
-    this.sameLine = function() {
+    this.sameLine = function(wide = false) {
         if (inline_widgets == null) {
             let prev_widget = widgets_ref.pop();
 
@@ -1069,7 +1069,7 @@ function PageBuilder(state, model, readonly = false) {
                 if (prev_widget != null)
                     widgets_ref.push(prev_widget);
                 widgets = widgets_ref;
-            });
+            }, {wide: wide});
 
             inline_widgets = widgets;
             inline_next = true;
