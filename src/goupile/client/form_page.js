@@ -893,7 +893,7 @@ function PageBuilder(state, model, readonly = false) {
         let widgets = [];
         let render = intf => html`
             <fieldset class="af_container af_section">
-                ${label != null ? html`<legend @click=${e => handleSectionClick(e, label)}>${label}</legend>` : ''}
+                ${label ? html`<legend @click=${e => handleSectionClick(e, label)}>${label}</legend>` : ''}
                 ${deploy ?
                     widgets.map(intf => intf.render()) :
                     html`<a class="af_deploy"
