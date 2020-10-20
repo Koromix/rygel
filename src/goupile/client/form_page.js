@@ -1240,6 +1240,7 @@ instead of:
                 intf.render = () => '';
                 return func(intf);
             },
+            toHTML: () => intf.render(),
             options: options,
             errors: []
         };
