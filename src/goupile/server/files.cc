@@ -147,8 +147,8 @@ static bool ComputeFileSha256(const char *filename, char out_sha256[65])
 
 bool InitFiles()
 {
-    Size url_offset = strlen(goupile_config.files_directory) + 1;
-    if (!ListRecurse(goupile_config.files_directory, url_offset))
+    Size url_offset = strlen(instance->config.files_directory) + 1;
+    if (!ListRecurse(instance->config.files_directory, url_offset))
         return false;
 
     Async async;
@@ -254,7 +254,7 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
                 if (!io->OpenForWrite(200, &writer))
                     return;
 
-                if (!SpliceStream(&reader, goupile_config.max_file_size, &writer))
+                if (!SpliceStream(&reader, instance->config.max_file_size, &writer))
                     return;
                 writer.Close();
             }
@@ -273,7 +273,7 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
         io->AttachError(403);
         return;
     }
-    if (!goupile_config.files_directory) {
+    if (!instance->config.files_directory) {
         LogError("File upload is disabled");
         io->AttachError(403);
         return;
@@ -294,7 +294,7 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
     }
 
     // Construct filenames
-    const char *filename = Fmt(&io->allocator, "%1%/%2", goupile_config.files_directory, request.url + 7).ptr;
+    const char *filename = Fmt(&io->allocator, "%1%/%2", instance->config.files_directory, request.url + 7).ptr;
     const char *tmp_filename = Fmt(&io->allocator, "%1~", filename).ptr;
 
     io->RunAsync([=]() {
@@ -321,9 +321,9 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
                 if (buf.len < 0)
                     return;
 
-                if (RG_UNLIKELY(buf.len > goupile_config.max_file_size - total_len)) {
+                if (RG_UNLIKELY(buf.len > instance->config.max_file_size - total_len)) {
                     LogError("File '%1' is too large (limit = %2)",
-                             reader.GetFileName(), FmtDiskSize(goupile_config.max_file_size));
+                             reader.GetFileName(), FmtDiskSize(instance->config.max_file_size));
                     io->AttachError(413);
                     return;
                 }
@@ -372,7 +372,7 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
                 return;
             tmp_guard.Disable();
 
-            Size url_offset = strlen(goupile_config.files_directory) + 1;
+            Size url_offset = strlen(instance->config.files_directory) + 1;
             file = AddFileEntry(filename, url_offset, total_len);
             FormatSha256(hash, file->sha256);
 
@@ -392,7 +392,7 @@ void HandleFileDelete(const http_RequestInfo &request, http_IO *io)
         io->AttachError(403);
         return;
     }
-    if (!goupile_config.files_directory) {
+    if (!instance->config.files_directory) {
         LogError("File upload is disabled");
         io->AttachError(403);
         return;

@@ -65,19 +65,19 @@ static RetainPtr<Session> CreateUserSession(const http_RequestInfo &request, htt
 static RetainPtr<Session> CreateDemoSession(const http_RequestInfo &request, http_IO *io)
 {
     sq_Statement stmt;
-    if (!goupile_db.Prepare(R"(SELECT permissions, zone FROM usr_users
-                               WHERE username = ?)", &stmt))
+    if (!instance->db.Prepare(R"(SELECT permissions, zone FROM usr_users
+                                 WHERE username = ?)", &stmt))
         return {};
-    sqlite3_bind_text(stmt, 1, goupile_config.demo_user, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 1, instance->config.demo_user, -1, SQLITE_STATIC);
     if (!stmt.Next()) {
-        LogError("Demo user '%1' does not exist", goupile_config.demo_user);
+        LogError("Demo user '%1' does not exist", instance->config.demo_user);
         return {};
     }
 
     // Make sure previous there is no session related Set-Cookie header left
     io->ResetResponse();
 
-    RetainPtr<Session>session = CreateUserSession(request, io, goupile_config.demo_user, &stmt);
+    RetainPtr<Session>session = CreateUserSession(request, io, instance->config.demo_user, &stmt);
     session->demo = true;
 
     return session;
@@ -87,7 +87,7 @@ RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http
 {
     RetainPtr<Session> session = sessions.Find<Session>(request, io);
 
-    if (goupile_config.demo_user && !session) {
+    if (instance->config.demo_user && !session) {
         session = CreateDemoSession(request, io);
     }
 
@@ -116,8 +116,8 @@ void HandleUserLogin(const http_RequestInfo &request, http_IO *io)
         int64_t now = GetMonotonicTime();
 
         sq_Statement stmt;
-        if (!goupile_db.Prepare(R"(SELECT permissions, zone, password_hash FROM usr_users
-                                   WHERE username = ?)", &stmt))
+        if (!instance->db.Prepare(R"(SELECT permissions, zone, password_hash FROM usr_users
+                                     WHERE username = ?)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
@@ -128,8 +128,8 @@ void HandleUserLogin(const http_RequestInfo &request, http_IO *io)
                 int64_t time = GetUnixTime();
                 const char *zone = (const char *)sqlite3_column_text(stmt, 1);
 
-                if (!goupile_db.Run(R"(INSERT INTO adm_events (time, address, type, username, zone)
-                                      VALUES (?, ?, 'login', ?, ?);)",
+                if (!instance->db.Run(R"(INSERT INTO adm_events (time, address, type, username, zone)
+                                         VALUES (?, ?, 'login', ?, ?);)",
                                     time, request.client_addr, username,
                                     zone ? sq_Binding(zone) : sq_Binding()))
                     return;
@@ -152,7 +152,7 @@ void HandleUserLogin(const http_RequestInfo &request, http_IO *io)
             LogError("Invalid username or password");
             io->AttachError(403);
         } else {
-            LogError("SQLite Error: %1", sqlite3_errmsg(goupile_db));
+            LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
         }
     });
 }
@@ -161,7 +161,7 @@ void HandleUserLogout(const http_RequestInfo &request, http_IO *io)
 {
     sessions.Close(request, io);
 
-    if (goupile_config.demo_user) {
+    if (instance->config.demo_user) {
         CreateDemoSession(request, io);
     }
 

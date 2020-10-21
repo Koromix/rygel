@@ -5,13 +5,16 @@
 #pragma once
 
 #include "../../core/libcc/libcc.hh"
+#include "config.hh"
+#include "../../core/libwrap/sqlite.hh"
 
 namespace RG {
 
-struct Config;
-class sq_Database;
+struct InstanceData {
+    Config config;
+    sq_Database db;
+};
 
-extern Config goupile_config;
-extern sq_Database goupile_db;
+extern InstanceData *instance;
 
 }

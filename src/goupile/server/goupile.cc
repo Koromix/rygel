@@ -18,8 +18,8 @@
 
 namespace RG {
 
-Config goupile_config;
-sq_Database goupile_db;
+static InstanceData main_instance;
+InstanceData *instance = &main_instance;
 
 static HeapArray<AssetInfo> assets;
 static HashTable<const char *, const AssetInfo *> assets_map;
@@ -42,7 +42,7 @@ static void HandleFileStatic(const http_RequestInfo &request, http_IO *io)
     json.StartArray();
     for (const AssetInfo &asset: assets) {
         char buf[512];
-        json.String(Fmt(buf, "%1%2", goupile_config.http.base_url, asset.name + 1).ptr);
+        json.String(Fmt(buf, "%1%2", instance->config.http.base_url, asset.name + 1).ptr);
     }
     json.EndArray();
 
@@ -56,20 +56,20 @@ static Span<const uint8_t> PatchGoupileVariables(const AssetInfo &asset, Allocat
             writer->Write(FelixVersion);
             return true;
         } else if (TestStr(key, "APP_KEY")) {
-            writer->Write(goupile_config.app_key);
+            writer->Write(instance->config.app_key);
             return true;
         } else if (TestStr(key, "APP_NAME")) {
-            writer->Write(goupile_config.app_name);
+            writer->Write(instance->config.app_name);
             return true;
         } else if (TestStr(key, "BASE_URL")) {
-            writer->Write(goupile_config.http.base_url);
+            writer->Write(instance->config.http.base_url);
             return true;
         } else if (TestStr(key, "USE_OFFLINE")) {
-            writer->Write(goupile_config.use_offline ? "true" : "false");
+            writer->Write(instance->config.use_offline ? "true" : "false");
             return true;
         } else if (TestStr(key, "SYNC_MODE")) {
             char buf[64];
-            ConvertToJsName(SyncModeNames[(int)goupile_config.sync_mode], buf);
+            ConvertToJsName(SyncModeNames[(int)instance->config.sync_mode], buf);
 
             writer->Write(buf);
             return true;
@@ -77,8 +77,8 @@ static Span<const uint8_t> PatchGoupileVariables(const AssetInfo &asset, Allocat
             writer->Write(etag);
             return true;
         } else if (TestStr(key, "LINK_MANIFEST")) {
-            if (goupile_config.use_offline) {
-                Print(writer, "<link rel=\"manifest\" href=\"%1manifest.json\"/>", goupile_config.http.base_url);
+            if (instance->config.use_offline) {
+                Print(writer, "<link rel=\"manifest\" href=\"%1manifest.json\"/>", instance->config.http.base_url);
             }
             return true;
         } else {
@@ -114,7 +114,7 @@ static void InitAssets()
             asset.name = "/static/goupile.html";
             asset.data = PatchGoupileVariables(asset, &assets_alloc);
         } else if (TestStr(asset.name, "manifest.json")) {
-            if (!goupile_config.use_offline)
+            if (!instance->config.use_offline)
                 continue;
 
             asset.name = "/manifest.json";
@@ -171,7 +171,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 const char *mimetype = http_GetMimeType(GetPathExtension(asset->name));
                 io->AttachBinary(200, asset->data, mimetype, asset->compression_type);
 
-                io->AddCachingHeaders(goupile_config.max_age, etag);
+                io->AddCachingHeaders(instance->config.max_age, etag);
                 if (asset->source_map) {
                     io->AddHeader("SourceMap", asset->source_map);
                 }
@@ -227,7 +227,7 @@ Options:
                                  %!D..(default: %2)%!0
         %!..+--base_url <url>%!0         Change base URL
                                  %!D..(default: %3)%!0)",
-                FelixTarget, goupile_config.http.port, goupile_config.http.base_url);
+                FelixTarget, instance->config.http.port, instance->config.http.base_url);
     };
 
     // Handle version
@@ -262,7 +262,7 @@ Options:
             return 1;
         }
     }
-    if (!LoadConfig(config_filename, &goupile_config))
+    if (!LoadConfig(config_filename, &instance->config))
         return 1;
 
     // Parse arguments
@@ -273,10 +273,10 @@ Options:
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
             } else if (opt.Test("--port", OptionType::Value)) {
-                if (!ParseDec(opt.current_value, &goupile_config.http.port))
+                if (!ParseDec(opt.current_value, &instance->config.http.port))
                     return 1;
             } else if (opt.Test("--base_url", OptionType::Value)) {
-                goupile_config.http.base_url = opt.current_value;
+                instance->config.http.base_url = opt.current_value;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -288,18 +288,18 @@ Options:
     {
         bool valid = true;
 
-        if (!goupile_config.app_key || !goupile_config.app_key[0]) {
+        if (!instance->config.app_key || !instance->config.app_key[0]) {
             LogError("Project key must not be empty");
             valid = false;
         }
-        if (!goupile_config.files_directory) {
+        if (!instance->config.files_directory) {
             LogError("Application directory not specified");
             valid = false;
-        } else if (!TestFile(goupile_config.files_directory, FileType::Directory)) {
-            LogError("Application directory '%1' does not exist", goupile_config.files_directory);
+        } else if (!TestFile(instance->config.files_directory, FileType::Directory)) {
+            LogError("Application directory '%1' does not exist", instance->config.files_directory);
             valid = false;
         }
-        if (!goupile_config.database_filename) {
+        if (!instance->config.database_filename) {
             LogError("Database file not specified");
             valid = false;
         }
@@ -309,13 +309,13 @@ Options:
     }
 
     // Init database
-    if (!goupile_db.Open(goupile_config.database_filename, SQLITE_OPEN_READWRITE))
+    if (!instance->db.Open(instance->config.database_filename, SQLITE_OPEN_READWRITE))
         return 1;
 
     // Check database version
     {
         sq_Statement stmt;
-        if (!goupile_db.Prepare("PRAGMA user_version;", &stmt))
+        if (!instance->db.Prepare("PRAGMA user_version;", &stmt))
             return 1;
 
         bool success = stmt.Next();
@@ -334,7 +334,7 @@ Options:
 
     // Init assets and files
     InitAssets();
-    if (goupile_config.files_directory && !InitFiles())
+    if (instance->config.files_directory && !InitFiles())
         return 1;
 
     // Init QuickJS
@@ -342,10 +342,10 @@ Options:
 
     // Run!
     http_Daemon daemon;
-    if (!daemon.Start(goupile_config.http, HandleRequest))
+    if (!daemon.Start(instance->config.http, HandleRequest))
         return 1;
     LogInfo("Listening on port %1 (%2 stack)",
-            goupile_config.http.port, IPStackNames[(int)goupile_config.http.ip_stack]);
+            instance->config.http.port, IPStackNames[(int)instance->config.http.ip_stack]);
 
     WaitForInterruption();
 

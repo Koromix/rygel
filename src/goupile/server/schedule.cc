@@ -65,7 +65,7 @@ static bool PrepareMonthQuery(const http_RequestInfo &request, http_IO *io,
     {
         char buf[32];
 
-        if (!goupile_db.Prepare(sql, out_stmt))
+        if (!instance->db.Prepare(sql, out_stmt))
             return false;
         sqlite3_bind_text(*out_stmt, 1, schedule_name, -1, SQLITE_TRANSIENT);
         sqlite3_bind_text(*out_stmt, 2, Fmt(buf, "%1", dates[0]).ptr, -1, SQLITE_TRANSIENT);
@@ -78,11 +78,10 @@ static bool PrepareMonthQuery(const http_RequestInfo &request, http_IO *io,
 void HandleScheduleResources(const http_RequestInfo &request, http_IO *io)
 {
     sq_Statement stmt;
-    if (!PrepareMonthQuery(request, io,
-                           R"(SELECT date, time, slots, overbook
-                              FROM sched_resources
-                              WHERE schedule = ? AND date >= ? AND date < ?
-                              ORDER BY date, time)", &stmt))
+    if (!PrepareMonthQuery(request, io, R"(SELECT date, time, slots, overbook
+                                           FROM sched_resources
+                                           WHERE schedule = ? AND date >= ? AND date < ?
+                                           ORDER BY date, time)", &stmt))
         return;
 
     // Export data
@@ -120,11 +119,10 @@ void HandleScheduleResources(const http_RequestInfo &request, http_IO *io)
 void HandleScheduleMeetings(const http_RequestInfo &request, http_IO *io)
 {
     sq_Statement stmt;
-    if (!PrepareMonthQuery(request, io,
-                           R"(SELECT date, time, identity
-                              FROM sched_meetings
-                              WHERE schedule = ? AND date >= ? AND date < ?
-                              ORDER BY date, time)", &stmt))
+    if (!PrepareMonthQuery(request, io, R"(SELECT date, time, identity
+                                           FROM sched_meetings
+                                           WHERE schedule = ? AND date >= ? AND date < ?
+                                           ORDER BY date, time)", &stmt))
         return;
 
     // Export data

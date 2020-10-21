@@ -86,11 +86,11 @@ static JSValue ReadCode(JSContext *ctx, JSValueConst, int argc, JSValueConst *ar
     }
 
     const char *filename = Fmt(&temp_alloc, "%1%/pages%/%2.js",
-                               goupile_config.files_directory, page).ptr;
+                               instance->config.files_directory, page).ptr;
 
     // Load page code
     HeapArray<char> code;
-    if (ReadFile(filename, goupile_config.max_file_size, &code) < 0) {
+    if (ReadFile(filename, instance->config.max_file_size, &code) < 0) {
         LogError("Cannot load page '%1'", page);
         return JS_NULL;
     }
