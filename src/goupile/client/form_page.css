@@ -124,10 +124,11 @@
 }
 .af_help::before { content: '☞\FE0E  '; }
 .af_prefix, .af_suffix {
-    margin-left: 4px;
     padding-top: 5px;
     font-size: 0.85em;
 }
+.af_prefix { margin-right: 3px; }
+.af_suffix { margin-left: 3px; }
 
 @media screen and (min-width: 581px) {
     .af_widget.compact {
@@ -412,8 +413,8 @@
     -webkit-appearance: none;
     background: none;
 }
-.af_slider .af_prefix { padding-right: 5px; }
-.af_slider .af_suffix { padding-left: 2px; }
+.af_slider .af_prefix { margin-right: 8px; }
+.af_slider .af_suffix { margin-left: 8px; }
 .af_slider input::-webkit-slider-runnable-track {
     width: 100%;
     height: 8px;

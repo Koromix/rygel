@@ -858,7 +858,9 @@ function PageBuilder(state, model, readonly = false) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             <label for=${id}>${label || key}</label>
+            ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
             <span id="${id}" class="af_calc">${text}</span>
+            ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
         `);
 
         let intf = makeWidget('calc', label, render, options);
