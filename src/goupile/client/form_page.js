@@ -301,6 +301,8 @@ function PageBuilder(state, model, readonly = false) {
         options.decimals = options.decimals || 0;
         options.min = options.min || 0;
         options.max = (options.max != null) ? options.max : 10;
+        options.prefix = (options.prefix != null) ? options.prefix : options.min;
+        options.suffix = (options.suffix != null) ? options.suffix : options.max;
 
         let range = options.max - options.min;
         if (range <= 0)
@@ -322,16 +324,20 @@ function PageBuilder(state, model, readonly = false) {
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class=${'af_slider' + (missing ? ' missing' : '') + (options.readonly ? ' readonly' : '')}
                  style=${makeInputStyle(options)}>
-                <div style=${options.untoggle ? ' cursor: pointer;': ''}
-                     @click=${e => handleSliderClick(e, key, value, options.min, options.max)}>${value.toFixed(options.decimals)}</div>
-                <input id=${id} type="range" style=${`--webkit_progress: ${webkit_progress * 100}%`}
-                       min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
-                       .value=${thumb_value} data-value=${thumb_value}
-                       placeholder=${options.placeholder || ''}
-                       ?disabled=${options.disabled}
-                       @click=${e => { e.target.value = fix_value; handleSliderChange(e, key); }}
-                       @dblclick=${e => handleSliderClick(e, key, value, options.min, options.max)}
-                       @input=${e => handleSliderChange(e, key)}/>
+                <span style=${options.untoggle ? ' cursor: pointer;': ''}
+                      @click=${e => handleSliderClick(e, key, value, options.min, options.max)}>${value.toFixed(options.decimals)}</span>
+                <div>
+                    ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
+                    <input id=${id} type="range" style=${`--webkit_progress: ${webkit_progress * 100}%`}
+                           min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
+                           .value=${thumb_value} data-value=${thumb_value}
+                           placeholder=${options.placeholder || ''}
+                           ?disabled=${options.disabled}
+                           @click=${e => { e.target.value = fix_value; handleSliderChange(e, key); }}
+                           @dblclick=${e => handleSliderClick(e, key, value, options.min, options.max)}
+                           @input=${e => handleSliderChange(e, key)}/>
+                    ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
+                </div>
             </div>
         `);
 
@@ -1339,7 +1345,7 @@ instead of:
     function makePrefixOrSuffix(cls, text, value) {
         if (typeof text === 'function') {
             return html`<span class="${cls}">${text(value)}</span>`;
-        } else if (text) {
+        } else if (text != null && text !== '') {
             return html`<span class="${cls}">${text}</span>`;
         } else {
             return '';

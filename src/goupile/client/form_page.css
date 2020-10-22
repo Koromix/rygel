@@ -398,18 +398,23 @@
     width: 18em;
     height: 3.2em;
 }
-.af_slider > div {
+.af_slider > span {
+    display: block;
     margin-bottom: 4px;
     font-size: 0.9em;
     text-align: center;
 }
-.af_slider > input {
+.af_slider > div { display: flex; }
+.af_slider input {
+    flex: 1;
     width: 100%;
-    margin: 0.3em 0 2px 0;
+    margin: 0.43em 0 2px 2px;
     -webkit-appearance: none;
     background: none;
 }
-.af_slider > input::-webkit-slider-runnable-track {
+.af_slider .af_prefix { padding-right: 5px; }
+.af_slider .af_suffix { padding-left: 2px; }
+.af_slider input::-webkit-slider-runnable-track {
     width: 100%;
     height: 8px;
     background: white;
@@ -419,7 +424,7 @@
     border-width: 0.5px;
     border-radius: 4px;
 }
-.af_slider > input::-moz-range-track {
+.af_slider input::-moz-range-track {
     width: 100%;
     height: 6px;
     background: white;
@@ -427,14 +432,14 @@
     border-width: 0.5px;
     border-radius: 4px;
 }
-.af_slider:not(.missing) > input::-moz-range-progress {
+.af_slider:not(.missing) input::-moz-range-progress {
     height: 6px;
     background-color: #555;
     border: 1px solid #555;
     border-width: 0.5px;
     border-radius: 4px;
 }
-.af_slider > input::-webkit-slider-thumb {
+.af_slider input::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 1.6em;
     height: 1.6em;
@@ -443,7 +448,7 @@
     border: none;
     border-radius: 50%;
 }
-.af_slider > input::-moz-range-thumb {
+.af_slider input::-moz-range-thumb {
     -webkit-appearance: none;
     width: 1.6em;
     height: 1.6em;
@@ -452,11 +457,11 @@
     border: none;
     border-radius: 50%;
 }
-.af_slider > input:focus {
+.af_slider input:focus {
     outline: 2px dotted #999;
     outline-offset: 1px;
 }
 
-.af_slider.missing > div { visibility: hidden; }
-.af_slider.missing > input::-webkit-slider-thumb { background: #ccc; }
-.af_slider.missing > input::-moz-range-thumb { background: #ccc; }
+.af_slider.missing > span { visibility: hidden; }
+.af_slider.missing input::-webkit-slider-thumb { background: #ccc; }
+.af_slider.missing input::-moz-range-thumb { background: #ccc; }
