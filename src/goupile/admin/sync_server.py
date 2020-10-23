@@ -9,12 +9,14 @@ import subprocess
 
 PROFILES_DIRECTORY = '/srv/www/goupile/profiles'
 NGINX_FILE = '/srv/www/goupile/nginx_goupile.conf'
+GOUPILE_BINARY = '/srv/www/goupile/goupile'
 
 def list_fs_instances():
     instances = {}
 
-    for directory in os.listdir(PROFILES_DIRECTORY):
-        filename = os.path.join(PROFILES_DIRECTORY, directory, 'goupile.ini')
+    for name in os.listdir(PROFILES_DIRECTORY):
+        directory = os.path.join(PROFILES_DIRECTORY, name)
+        filename = os.path.join(directory, 'goupile.ini')
 
         if os.path.isfile(filename):
             config = configparser.ConfigParser()
@@ -22,10 +24,11 @@ def list_fs_instances():
             config.read(filename)
 
             info = {
+                'directory': directory,
                 'base_url': config.get('HTTP', 'BaseUrl'),
                 'port': config.getint('HTTP', 'Port')
             }
-            instances[directory] = info
+            instances[name] = info
 
     return instances
 
@@ -68,6 +71,13 @@ if __name__ == '__main__':
         if prev_instance is not None:
             raise ValueError(f'Port {info["port"]} is used by {prev_instance} and {instance}')
         ports[info['port']] = instance
+
+    # Make missing goupile symlinks
+    for instance, info in fs_instances.items():
+        symlink = os.path.join(info['directory'], 'goupile')
+        if not os.path.exists(symlink):
+            print(f'Link {symlink} to {GOUPILE_BINARY}', file = sys.stderr)
+            os.symlink(GOUPILE_BINARY, symlink)
 
     # Update NGINX locations
     print('Update NGINX configuration', file = sys.stderr)
