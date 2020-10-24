@@ -15,8 +15,11 @@ GOUPILE_BINARY = '/srv/www/goupile/goupile'
 @dataclass
 class InstanceConfig:
     directory = None
+
     base_url = None
     port = None
+
+    restart = False
 
 def list_instances():
     instances = {}
@@ -101,16 +104,23 @@ if __name__ == '__main__':
             if prev_instance is None:
                 used_ports[info.port] = instance
             else:
+                print(f'Conflict on port {info.port}, used by {prev_instance} and {instance}', file = sys.stderr)
                 info.port = None
     for instance, info in instances.items():
         if info.port is None:
+            print(f'Assigning Port {next_port} to {instance}', file = sys.stderr)
             info.port = next_port
             next_port = next_port + 1
+            info.restart = True
 
     # Adjust instance URLs
     for instance, info in instances.items():
         parts = instance.split('_', 2)
-        info.base_url = f'/{parts[1]}/'
+        base_url = f'/{parts[1]}/'
+        if base_url != info.base_url:
+            print(f'Assigning BaseUrl "{base_url}" to {instance}', file = sys.stderr)
+            info.base_url = base_url
+            info.restart = True
 
     # Update configuration files
     print('Update configuration files', file = sys.stderr)
@@ -126,11 +136,11 @@ if __name__ == '__main__':
         if info is None:
             run_service_command(instance, 'stop')
             run_service_command(instance, 'disable')
-    for instance in instances:
+    for instance, info in instances.items():
         status = services.get(instance)
         if status is None:
             run_service_command(instance, 'enable')
-        if not status:
+        if info.restart or not status:
             run_service_command(instance, 'restart')
 
     # Reload NGINX configuration
