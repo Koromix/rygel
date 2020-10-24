@@ -98,12 +98,11 @@ if __name__ == '__main__':
             os.symlink(GOUPILE_BINARY, symlink)
 
     # Adjust instance ports
-    next_port = 9000
     used_ports = {}
+    try_port = 9000
     for instance, info in instances.items():
         if info.port is not None:
             prev_instance = used_ports.get(info.port)
-            next_port = max(next_port, info.port)
             if prev_instance is None:
                 used_ports[info.port] = instance
             else:
@@ -111,9 +110,10 @@ if __name__ == '__main__':
                 info.port = None
     for instance, info in instances.items():
         if info.port is None:
-            print(f'Assigning Port {next_port} to {instance}', file = sys.stderr)
-            info.port = next_port
-            next_port = next_port + 1
+            while try_port in used_ports:
+                try_port += 1
+            print(f'Assigning Port {try_port} to {instance}', file = sys.stderr)
+            info.port = try_port
             info.restart = True
 
     # Adjust instance URLs
