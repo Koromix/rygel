@@ -6,10 +6,17 @@ import os
 import re
 import sys
 import subprocess
+from dataclasses import dataclass
 
 PROFILES_DIRECTORY = '/srv/www/goupile/profiles'
 NGINX_FILE = '/srv/www/goupile/nginx_goupile.conf'
 GOUPILE_BINARY = '/srv/www/goupile/goupile'
+
+@dataclass
+class InstanceConfig:
+    directory = None
+    base_url = None
+    port = None
 
 def list_instances():
     instances = {}
@@ -23,11 +30,11 @@ def list_instances():
             config.optionxform = str
             config.read(filename)
 
-            info = {
-                'directory': directory,
-                'base_url': config.get('HTTP', 'BaseUrl', fallback = None),
-                'port': config.getint('HTTP', 'Port', fallback = None)
-            }
+            info = InstanceConfig()
+            info.directory = directory
+            info.base_url = config.get('HTTP', 'BaseUrl', fallback = None)
+            info.port = config.getint('HTTP', 'Port', fallback = None)
+
             instances[name] = info
 
     return instances
@@ -56,21 +63,21 @@ def run_service_command(instance, cmd):
     subprocess.run(['systemctl', cmd, '--quiet', service])
 
 def update_instance_config(info):
-    filename = os.path.join(info['directory'], 'goupile.ini')
+    filename = os.path.join(info.directory, 'goupile.ini')
 
     config = configparser.ConfigParser()
     config.optionxform = str
     config.read(filename)
 
-    config.set('HTTP', 'BaseUrl', info['base_url'])
-    config.set('HTTP', 'Port', str(info['port']))
+    config.set('HTTP', 'BaseUrl', info.base_url)
+    config.set('HTTP', 'Port', str(info.port))
 
     with open(filename, 'w') as f:
         config.write(f)
 
 def write_nginx_entry(f, info):
-    print(f'location {info["base_url"]} {{', file = f)
-    print(f'    proxy_pass http://127.0.0.1:{info["port"]};', file = f)
+    print(f'location {info.base_url} {{', file = f)
+    print(f'    proxy_pass http://127.0.0.1:{info.port};', file = f)
     print(f'}}', file = f)
 
 if __name__ == '__main__':
@@ -79,7 +86,7 @@ if __name__ == '__main__':
 
     # Make missing goupile symlinks
     for instance, info in instances.items():
-        symlink = os.path.join(info['directory'], 'goupile')
+        symlink = os.path.join(info.directory, 'goupile')
         if not os.path.exists(symlink):
             print(f'Link {symlink} to {GOUPILE_BINARY}', file = sys.stderr)
             os.symlink(GOUPILE_BINARY, symlink)
@@ -88,22 +95,22 @@ if __name__ == '__main__':
     next_port = 9000
     used_ports = {}
     for instance, info in instances.items():
-        if info['port'] is not None:
-            prev_instance = used_ports.get(info['port'])
-            next_port = max(next_port, info['port'])
+        if info.port is not None:
+            prev_instance = used_ports.get(info.port)
+            next_port = max(next_port, info.port)
             if prev_instance is None:
-                used_ports[info['port']] = instance
+                used_ports[info.port] = instance
             else:
-                info['port'] = None
+                info.port = None
     for instance, info in instances.items():
-        if info['port'] is None:
-            info['port'] = next_port
+        if info.port is None:
+            info.port = next_port
             next_port = next_port + 1
 
     # Adjust instance URLs
     for instance, info in instances.items():
         parts = instance.split('_')
-        info['base_url'] = parts[1]
+        info.base_url = parts[1]
 
     # Update configuration files
     print('Update configuration files', file = sys.stderr)
