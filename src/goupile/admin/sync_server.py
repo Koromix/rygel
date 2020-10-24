@@ -11,7 +11,7 @@ PROFILES_DIRECTORY = '/srv/www/goupile/profiles'
 NGINX_FILE = '/srv/www/goupile/nginx_goupile.conf'
 GOUPILE_BINARY = '/srv/www/goupile/goupile'
 
-def list_fs_instances():
+def list_instances():
     instances = {}
 
     for name in os.listdir(PROFILES_DIRECTORY):
@@ -32,8 +32,8 @@ def list_fs_instances():
 
     return instances
 
-def list_systemd_instances():
-    instances = {}
+def list_services():
+    services = {}
 
     output = subprocess.check_output(['systemctl', 'list-units', '--type=service', '--all'])
     output = output.decode()
@@ -46,11 +46,11 @@ def list_systemd_instances():
 
             if match is not None:
                 name = match.group(1)
-                instances[name] = (parts[3] == 'active')
+                services[name] = (parts[3] == 'active')
 
-    return instances
+    return services
 
-def run_systemd_instance(instance, cmd):
+def run_service_command(instance, cmd):
     service = f'goupile@{instance}.service'
     print(f'{cmd.capitalize()} {service}', file = sys.stderr)
     subprocess.run(['systemctl', cmd, '--quiet', service])
@@ -74,11 +74,11 @@ def write_nginx_entry(f, info):
     print(f'}}', file = f)
 
 if __name__ == '__main__':
-    fs_instances = list_fs_instances()
-    systemd_instances = list_systemd_instances()
+    instances = list_instances()
+    services = list_services()
 
     # Make missing goupile symlinks
-    for instance, info in fs_instances.items():
+    for instance, info in instances.items():
         symlink = os.path.join(info['directory'], 'goupile')
         if not os.path.exists(symlink):
             print(f'Link {symlink} to {GOUPILE_BINARY}', file = sys.stderr)
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     # Adjust instance ports
     next_port = 9000
     used_ports = {}
-    for instance, info in fs_instances.items():
+    for instance, info in instances.items():
         if info['port'] is not None:
             prev_instance = used_ports.get(info['port'])
             next_port = max(next_port, info['port'])
@@ -95,36 +95,36 @@ if __name__ == '__main__':
                 used_ports[info['port']] = instance
             else:
                 info['port'] = None
-    for instance, info in fs_instances.items():
+    for instance, info in instances.items():
         if info['port'] is None:
             info['port'] = next_port
             next_port = next_port + 1
 
     # Adjust instance URLs
-    for instance, info in fs_instances.items():
+    for instance, info in instances.items():
         parts = instance.split('_')
         info['base_url'] = parts[1]
 
     # Update configuration files
     print('Update configuration files', file = sys.stderr)
-    for instance, info in fs_instances.items():
+    for instance, info in instances.items():
         update_instance_config(info)
     with open(NGINX_FILE, 'w') as f:
-        for instance, info in fs_instances.items():
+        for instance, info in instances.items():
             write_nginx_entry(f, info)
 
     # Sync systemd services
-    for instance in systemd_instances:
-        info = fs_instances.get(instance)
+    for instance in services:
+        info = instances.get(instance)
         if info is None:
-            run_systemd_instance(instance, 'stop')
-            run_systemd_instance(instance, 'disable')
-    for instance in fs_instances:
-        status = systemd_instances.get(instance)
+            run_service_command(instance, 'stop')
+            run_service_command(instance, 'disable')
+    for instance in instances:
+        status = services.get(instance)
         if status is None:
-            run_systemd_instance(instance, 'enable')
+            run_service_command(instance, 'enable')
         if not status:
-            run_systemd_instance(instance, 'restart')
+            run_service_command(instance, 'restart')
 
     # Reload NGINX configuration
     print('Reload NGINX server', file = sys.stderr)
