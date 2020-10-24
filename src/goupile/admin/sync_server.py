@@ -109,8 +109,8 @@ if __name__ == '__main__':
 
     # Adjust instance URLs
     for instance, info in instances.items():
-        parts = instance.split('_')
-        info.base_url = parts[1]
+        parts = instance.split('_', 2)
+        info.base_url = f'/{parts[1]}/'
 
     # Update configuration files
     print('Update configuration files', file = sys.stderr)
