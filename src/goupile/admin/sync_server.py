@@ -126,7 +126,7 @@ if __name__ == '__main__':
             info.restart = True
 
     # Update configuration files
-    print('Update configuration files', file = sys.stderr)
+    print('Write configuration files', file = sys.stderr)
     for instance, info in instances.items():
         update_instance_config(info)
     with open(NGINX_FILE, 'w') as f:
