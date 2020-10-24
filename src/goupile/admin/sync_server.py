@@ -2,6 +2,7 @@
 
 import configparser
 import io
+import itertools
 import os
 import re
 import sys
@@ -10,6 +11,7 @@ from dataclasses import dataclass
 
 PROFILES_DIRECTORY = '/srv/www/goupile/profiles'
 NGINX_FILE = '/srv/www/goupile/nginx_goupile.conf'
+NGINX_SSL = '/srv/www/goupile/nginx_ssl.conf'
 GOUPILE_BINARY = '/srv/www/goupile/goupile'
 DOMAIN_NAME = 'goupile.fr'
 
@@ -109,10 +111,22 @@ def update_instance_config(info):
     with open(filename, 'w') as f:
         config.write(f)
 
-def write_nginx_entry(f, info):
-    print(f'location {info.base_url} {{', file = f)
-    print(f'    proxy_pass http://127.0.0.1:{info.port};', file = f)
-    print(f'}}', file = f)
+def update_nginx_config(instances):
+    instances = list(instances.items())
+    instances.sort(key = lambda t: t[1].domain)
+
+    with open(NGINX_FILE, 'w') as f:
+        for domain, items in itertools.groupby(instances, key = lambda t: t[1].domain):
+            print(f'server {{', file = f)
+            print(f'    server_name {domain};', file = f)
+            print(f'    include {NGINX_SSL};', file = f)
+
+            for instance, info in items:
+                print(f'    location {info.base_url} {{', file = f)
+                print(f'        proxy_pass http://127.0.0.1:{info.port};', file = f)
+                print(f'    }}', file = f)
+
+            print(f'}}', file = f)
 
 if __name__ == '__main__':
     instances = list_instances()
@@ -129,9 +143,7 @@ if __name__ == '__main__':
     print('Write configuration files', file = sys.stderr)
     for instance, info in instances.items():
         update_instance_config(info)
-    with open(NGINX_FILE, 'w') as f:
-        for instance, info in instances.items():
-            write_nginx_entry(f, info)
+    update_nginx_config(instances)
 
     # Sync systemd services
     for instance in services:
