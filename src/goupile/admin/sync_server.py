@@ -25,8 +25,8 @@ def list_fs_instances():
 
             info = {
                 'directory': directory,
-                'base_url': config.get('HTTP', 'BaseUrl'),
-                'port': config.getint('HTTP', 'Port')
+                'base_url': config.get('HTTP', 'BaseUrl', fallback = None),
+                'port': config.getint('HTTP', 'Port', fallback = None)
             }
             instances[name] = info
 
@@ -55,6 +55,19 @@ def run_systemd_instance(instance, cmd):
     print(f'{cmd.capitalize()} {service}', file = sys.stderr)
     subprocess.run(['systemctl', cmd, '--quiet', service])
 
+def update_instance_config(info):
+    filename = os.path.join(info['directory'], 'goupile.ini')
+
+    config = configparser.ConfigParser()
+    config.optionxform = str
+    config.read(filename)
+
+    config.set('HTTP', 'BaseUrl', info['base_url'])
+    config.set('HTTP', 'Port', str(info['port']))
+
+    with open(filename, 'w') as f:
+        config.write(f)
+
 def write_nginx_entry(f, info):
     print(f'location {info["base_url"]} {{', file = f)
     print(f'    proxy_pass http://127.0.0.1:{info["port"]};', file = f)
@@ -64,14 +77,6 @@ if __name__ == '__main__':
     fs_instances = list_fs_instances()
     systemd_instances = list_systemd_instances()
 
-    # Sanity checks
-    ports = {}
-    for instance, info in fs_instances.items():
-        prev_instance = ports.get(info['port'])
-        if prev_instance is not None:
-            raise ValueError(f'Port {info["port"]} is used by {prev_instance} and {instance}')
-        ports[info['port']] = instance
-
     # Make missing goupile symlinks
     for instance, info in fs_instances.items():
         symlink = os.path.join(info['directory'], 'goupile')
@@ -79,8 +84,31 @@ if __name__ == '__main__':
             print(f'Link {symlink} to {GOUPILE_BINARY}', file = sys.stderr)
             os.symlink(GOUPILE_BINARY, symlink)
 
-    # Update NGINX locations
-    print('Update NGINX configuration', file = sys.stderr)
+    # Adjust instance ports
+    next_port = 9000
+    used_ports = {}
+    for instance, info in fs_instances.items():
+        if info['port'] is not None:
+            prev_instance = used_ports.get(info['port'])
+            next_port = max(next_port, info['port'])
+            if prev_instance is None:
+                used_ports[info['port']] = instance
+            else:
+                info['port'] = None
+    for instance, info in fs_instances.items():
+        if info['port'] is None:
+            info['port'] = next_port
+            next_port = next_port + 1
+
+    # Adjust instance URLs
+    for instance, info in fs_instances.items():
+        parts = instance.split('_')
+        info['base_url'] = parts[1]
+
+    # Update configuration files
+    print('Update configuration files', file = sys.stderr)
+    for instance, info in fs_instances.items():
+        update_instance_config(info)
     with open(NGINX_FILE, 'w') as f:
         for instance, info in fs_instances.items():
             write_nginx_entry(f, info)
@@ -96,7 +124,7 @@ if __name__ == '__main__':
         if status is None:
             run_systemd_instance(instance, 'enable')
         if not status:
-            run_systemd_instance(instance, 'start')
+            run_systemd_instance(instance, 'restart')
 
     # Reload NGINX configuration
     print('Reload NGINX server', file = sys.stderr)
