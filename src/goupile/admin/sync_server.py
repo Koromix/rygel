@@ -115,8 +115,8 @@ if __name__ == '__main__':
 
     # Adjust instance URLs
     for instance, info in instances.items():
-        parts = instance.split('_', 2)
-        base_url = f'/{parts[1]}/'
+        domain, base_url = instance.split('_', 1)
+        base_url = f'/{base_url}/'
         if base_url != info.base_url:
             print(f'Assigning BaseUrl "{base_url}" to {instance}', file = sys.stderr)
             info.base_url = base_url
