@@ -11,21 +11,26 @@ from dataclasses import dataclass
 PROFILES_DIRECTORY = '/srv/www/goupile/profiles'
 NGINX_FILE = '/srv/www/goupile/nginx_goupile.conf'
 GOUPILE_BINARY = '/srv/www/goupile/goupile'
+DOMAIN_NAME = 'goupile.fr'
 
 @dataclass
 class InstanceConfig:
     directory = None
 
+    domain = None
     base_url = None
     port = None
 
-    restart = False
+    mismatch = False
 
 def list_instances():
     instances = {}
 
-    for name in os.listdir(PROFILES_DIRECTORY):
-        directory = os.path.join(PROFILES_DIRECTORY, name)
+    used_ports = {}
+    try_port = 9000
+
+    for instance in os.listdir(PROFILES_DIRECTORY):
+        directory = os.path.join(PROFILES_DIRECTORY, instance)
         filename = os.path.join(directory, 'goupile.ini')
 
         if os.path.isfile(filename):
@@ -35,10 +40,33 @@ def list_instances():
 
             info = InstanceConfig()
             info.directory = directory
-            info.base_url = config.get('HTTP', 'BaseUrl', fallback = None)
+            info.domain, info.base_url = instance.split('_', 1)
             info.port = config.getint('HTTP', 'Port', fallback = None)
 
-            instances[name] = info
+            info.domain = f'{info.domain}.{DOMAIN_NAME}'
+            info.base_url = f'/{info.base_url}/'
+
+            # Fix BaseUrl setting if needed
+            if config.get('HTTP', 'BaseUrl', fallback = None) != info.base_url:
+                print(f'Assigning BaseUrl "{info.base_url}" to {instance}', file = sys.stderr)
+                info.mismatch = True
+
+            # Fix Port setting if needed
+            if info.port is not None:
+                prev_instance = used_ports.get(info.port)
+                if prev_instance is None:
+                    used_ports[info.port] = instance
+                else:
+                    print(f'Conflict on port {info.port}, used by {prev_instance} and {instance}', file = sys.stderr)
+                    info.port = None
+            if info.port is None:
+                while try_port in used_ports:
+                    try_port += 1
+                print(f'Assigning Port {try_port} to {instance}', file = sys.stderr)
+                info.port = try_port
+                info.mismatch = True
+
+            instances[instance] = info
 
     return instances
 
@@ -97,34 +125,6 @@ if __name__ == '__main__':
             print(f'Link {symlink} to {GOUPILE_BINARY}', file = sys.stderr)
             os.symlink(GOUPILE_BINARY, symlink)
 
-    # Adjust instance ports
-    used_ports = {}
-    try_port = 9000
-    for instance, info in instances.items():
-        if info.port is not None:
-            prev_instance = used_ports.get(info.port)
-            if prev_instance is None:
-                used_ports[info.port] = instance
-            else:
-                print(f'Conflict on port {info.port}, used by {prev_instance} and {instance}', file = sys.stderr)
-                info.port = None
-    for instance, info in instances.items():
-        if info.port is None:
-            while try_port in used_ports:
-                try_port += 1
-            print(f'Assigning Port {try_port} to {instance}', file = sys.stderr)
-            info.port = try_port
-            info.restart = True
-
-    # Adjust instance URLs
-    for instance, info in instances.items():
-        domain, base_url = instance.split('_', 1)
-        base_url = f'/{base_url}/'
-        if base_url != info.base_url:
-            print(f'Assigning BaseUrl "{base_url}" to {instance}', file = sys.stderr)
-            info.base_url = base_url
-            info.restart = True
-
     # Update configuration files
     print('Write configuration files', file = sys.stderr)
     for instance, info in instances.items():
@@ -143,7 +143,7 @@ if __name__ == '__main__':
         status = services.get(instance)
         if status is None:
             run_service_command(instance, 'enable')
-        if info.restart or not status:
+        if info.mismatch or not status:
             run_service_command(instance, 'restart')
 
     # Reload NGINX configuration
