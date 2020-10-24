@@ -72,6 +72,9 @@ def update_instance_config(info):
     config.optionxform = str
     config.read(filename)
 
+    if not config.has_section('HTTP'):
+        config.add_section('HTTP')
+
     config.set('HTTP', 'BaseUrl', info.base_url)
     config.set('HTTP', 'Port', str(info.port))
 
