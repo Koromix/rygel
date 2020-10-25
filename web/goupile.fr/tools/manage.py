@@ -155,6 +155,7 @@ def run_sync(config):
         if not os.path.exists(symlink):
             print(f'Link {symlink} to {binary}', file = sys.stderr)
             os.symlink(binary, symlink)
+            info.mismatch = True
 
     # Update configuration files
     print('Write configuration files', file = sys.stderr)
