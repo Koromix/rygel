@@ -40,6 +40,13 @@ def load_config(filename):
 
     return config
 
+def run_build(config):
+    print('Build goupile and goupile_admin', file = sys.stderr)
+
+    build_filename = os.path.join(config['Goupile.SourceDirectory'], 'FelixBuild.ini')
+    subprocess.run(['felix', '-mFast', '-q', '-C', build_filename,
+                    '-O', config['Goupile.BinaryDirectory'], 'goupile', 'goupile_admin'])
+
 def list_instances(root, domain):
     instances = {}
 
@@ -138,11 +145,6 @@ def update_nginx_config(filename, instances, include = None):
                 print(f'    }}', file = f)
 
             print(f'}}', file = f)
-
-def run_build(config):
-    build_filename = os.path.join(config['Goupile.SourceDirectory'], 'FelixBuild.ini')
-    subprocess.run(['felix', '-mFast', '-C', build_filename,
-                    '-O', config['Goupile.BinaryDirectory'], 'goupile', 'goupile_admin'])
 
 def run_sync(config):
     instances = list_instances(config['Goupile.ProfileDirectory'], config['Goupile.DomainName'])
