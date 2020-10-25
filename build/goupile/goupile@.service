@@ -1,0 +1,14 @@
+[Service]
+Type=simple
+
+User=goupile
+Group=goupile
+
+ExecStart=/srv/www/goupile/profiles/%i/goupile -C %i/goupile.ini --migrate
+WorkingDirectory=/srv/www/goupile/profiles
+
+Restart=on-failure
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target
