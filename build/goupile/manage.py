@@ -59,7 +59,7 @@ def list_instances(root, domain):
     used_ports = {}
     try_port = 9000
 
-    for instance in os.listdir(root):
+    for instance in sorted(os.listdir(root)):
         directory = os.path.join(root, instance)
         filename = os.path.join(directory, 'goupile.ini')
 
