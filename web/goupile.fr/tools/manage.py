@@ -1,5 +1,6 @@
 #!/bin/env python3
 
+import argparse
 import configparser
 import io
 import itertools
@@ -8,12 +9,6 @@ import re
 import sys
 import subprocess
 from dataclasses import dataclass
-
-PROFILES_DIRECTORY = '/srv/www/goupile/profiles'
-NGINX_FILE = '/srv/www/goupile/nginx_goupile.conf'
-NGINX_SSL = '/srv/www/goupile/nginx_ssl.conf'
-GOUPILE_BINARY = '/srv/www/goupile/goupile'
-DOMAIN_NAME = 'goupile.fr'
 
 @dataclass
 class InstanceConfig:
@@ -25,31 +20,49 @@ class InstanceConfig:
 
     mismatch = False
 
-def list_instances():
+def parse_ini(filename):
+    with open(filename, 'r') as f:
+        ini = configparser.ConfigParser()
+        ini.optionxform = str
+        ini.read_file(f)
+
+        return ini
+
+def load_config(filename):
+    config = {}
+
+    ini = parse_ini(filename)
+
+    for section in ini.sections():
+        for key, value in ini.items(section):
+            name = f'{section}.{key}'
+            config[name] = value
+
+    return config
+
+def list_instances(root, domain):
     instances = {}
 
     used_ports = {}
     try_port = 9000
 
-    for instance in os.listdir(PROFILES_DIRECTORY):
-        directory = os.path.join(PROFILES_DIRECTORY, instance)
+    for instance in os.listdir(root):
+        directory = os.path.join(root, instance)
         filename = os.path.join(directory, 'goupile.ini')
 
         if os.path.isfile(filename):
-            config = configparser.ConfigParser()
-            config.optionxform = str
-            config.read(filename)
+            ini = parse_ini(filename)
 
             info = InstanceConfig()
             info.directory = directory
             info.domain, info.base_url = instance.split('_', 1)
-            info.port = config.getint('HTTP', 'Port', fallback = None)
+            info.port = ini.getint('HTTP', 'Port', fallback = None)
 
-            info.domain = f'{info.domain}.{DOMAIN_NAME}'
+            info.domain = f'{info.domain}.{domain}'
             info.base_url = f'/{info.base_url}/'
 
             # Fix BaseUrl setting if needed
-            if config.get('HTTP', 'BaseUrl', fallback = None) != info.base_url:
+            if ini.get('HTTP', 'BaseUrl', fallback = None) != info.base_url:
                 print(f'Assigning BaseUrl "{info.base_url}" to {instance}', file = sys.stderr)
                 info.mismatch = True
 
@@ -97,29 +110,27 @@ def run_service_command(instance, cmd):
 
 def update_instance_config(info):
     filename = os.path.join(info.directory, 'goupile.ini')
+    ini = parse_ini(filename)
 
-    config = configparser.ConfigParser()
-    config.optionxform = str
-    config.read(filename)
+    if not ini.has_section('HTTP'):
+        ini.add_section('HTTP')
 
-    if not config.has_section('HTTP'):
-        config.add_section('HTTP')
-
-    config.set('HTTP', 'BaseUrl', info.base_url)
-    config.set('HTTP', 'Port', str(info.port))
+    ini.set('HTTP', 'BaseUrl', info.base_url)
+    ini.set('HTTP', 'Port', str(info.port))
 
     with open(filename, 'w') as f:
-        config.write(f)
+        ini.write(f)
 
-def update_nginx_config(instances):
+def update_nginx_config(filename, instances, include = None):
     instances = list(instances.items())
     instances.sort(key = lambda t: t[1].domain)
 
-    with open(NGINX_FILE, 'w') as f:
+    with open(filename, 'w') as f:
         for domain, items in itertools.groupby(instances, key = lambda t: t[1].domain):
             print(f'server {{', file = f)
             print(f'    server_name {domain};', file = f)
-            print(f'    include {NGINX_SSL};', file = f)
+            if include is not None:
+                print(f'    include {include};', file = f)
 
             for instance, info in items:
                 print(f'    location {info.base_url} {{', file = f)
@@ -128,22 +139,26 @@ def update_nginx_config(instances):
 
             print(f'}}', file = f)
 
-if __name__ == '__main__':
-    instances = list_instances()
+def run_deploy(config):
+    raise RuntimeError('Not implemented yet')
+
+def run_sync(config):
+    instances = list_instances(config['Goupile.ProfileDirectory'], config['Goupile.DomainName'])
     services = list_services()
 
     # Make missing goupile symlinks
+    binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
     for instance, info in instances.items():
         symlink = os.path.join(info.directory, 'goupile')
         if not os.path.exists(symlink):
-            print(f'Link {symlink} to {GOUPILE_BINARY}', file = sys.stderr)
-            os.symlink(GOUPILE_BINARY, symlink)
+            print(f'Link {symlink} to {binary}', file = sys.stderr)
+            os.symlink(binary, symlink)
 
     # Update configuration files
     print('Write configuration files', file = sys.stderr)
     for instance, info in instances.items():
         update_instance_config(info)
-    update_nginx_config(instances)
+    update_nginx_config(config['NGINX.ConfigFile'], instances, config.get('NGINX.ServerInclude'))
 
     # Sync systemd services
     for instance in services:
@@ -161,3 +176,24 @@ if __name__ == '__main__':
     # Reload NGINX configuration
     print('Reload NGINX server', file = sys.stderr)
     subprocess.run(['systemctl', 'reload', 'nginx.service'])
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description = 'Manage goupile.fr instances')
+    parser.add_argument('-C', '--config', dest = 'config', action = 'store',
+                        default = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.ini'),
+                        help = 'Change configuration file')
+    parser.add_argument('-d', '--deploy', dest = 'deploy', action = 'store_true',
+                        default = False, help = 'Deploy goupile binaries')
+    parser.add_argument('-s', '--sync', dest = 'sync', action = 'store_true',
+                        default = False, help = 'Sync instances, NGINX and systemd')
+    args = parser.parse_args()
+
+    if not args.deploy and not args.sync:
+        raise ValueError('Call with --sync and/or --deploy')
+
+    config = load_config(args.config)
+
+    if args.deploy:
+        run_deploy(config)
+    if args.sync:
+        run_sync(config)
