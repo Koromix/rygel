@@ -217,6 +217,8 @@ int Main(int argc, char **argv)
 {
     BlockAllocator temp_alloc;
 
+    bool migrate = false;
+
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 [options]%!0
 
@@ -226,7 +228,9 @@ Options:
         %!..+--port <port>%!0            Change web server port
                                  %!D..(default: %2)%!0
         %!..+--base_url <url>%!0         Change base URL
-                                 %!D..(default: %3)%!0)",
+                                 %!D..(default: %3)%!0
+
+        %!..+--migrate%!0                Migrate database if needed)",
                 FelixTarget, instance->config.http.port, instance->config.http.base_url);
     };
 
@@ -277,6 +281,8 @@ Options:
                     return 1;
             } else if (opt.Test("--base_url", OptionType::Value)) {
                 instance->config.http.base_url = opt.current_value;
+            } else if (opt.Test("--migrate")) {
+                migrate = true;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -327,8 +333,13 @@ Options:
             LogError("Profile is too recent for goupile version %1", FelixVersion);
             return 1;
         } else if (version < DatabaseVersion) {
-            LogError("Outdated profile version, use %!..+goupile_admin migrate%!0");
-            return 1;
+            if (migrate) {
+                if (!MigrateDatabase(instance->db, version))
+                    return 1;
+            } else {
+                LogError("Outdated profile version, use %!..+--migrate or goupile_admin migrate%!0");
+                return 1;
+            }
         }
     }
 
