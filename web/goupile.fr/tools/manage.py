@@ -139,8 +139,10 @@ def update_nginx_config(filename, instances, include = None):
 
             print(f'}}', file = f)
 
-def run_deploy(config):
-    raise RuntimeError('Not implemented yet')
+def run_build(config):
+    build_filename = os.path.join(config['Goupile.SourceDirectory'], 'FelixBuild.ini')
+    subprocess.run(['felix', '-mFast', '-C', build_filename,
+                    '-O', config['Goupile.BinaryDirectory'], 'goupile', 'goupile_admin'])
 
 def run_sync(config):
     instances = list_instances(config['Goupile.ProfileDirectory'], config['Goupile.DomainName'])
@@ -182,18 +184,18 @@ if __name__ == '__main__':
     parser.add_argument('-C', '--config', dest = 'config', action = 'store',
                         default = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.ini'),
                         help = 'Change configuration file')
-    parser.add_argument('-d', '--deploy', dest = 'deploy', action = 'store_true',
-                        default = False, help = 'Deploy goupile binaries')
+    parser.add_argument('-b', '--build', dest = 'build', action = 'store_true',
+                        default = False, help = 'Build and install goupile binaries')
     parser.add_argument('-s', '--sync', dest = 'sync', action = 'store_true',
                         default = False, help = 'Sync instances, NGINX and systemd')
     args = parser.parse_args()
 
-    if not args.deploy and not args.sync:
-        raise ValueError('Call with --sync and/or --deploy')
+    if not args.build and not args.sync:
+        raise ValueError('Call with --sync and/or --build')
 
     config = load_config(args.config)
 
-    if args.deploy:
-        run_deploy(config)
+    if args.build:
+        run_build(config)
     if args.sync:
         run_sync(config)
