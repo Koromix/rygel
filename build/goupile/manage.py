@@ -13,20 +13,26 @@ from dataclasses import dataclass
 @dataclass
 class InstanceConfig:
     directory = None
-
+    binary = None
     domain = None
     base_url = None
     port = None
-
     mismatch = False
+    inode = None
+
+@dataclass
+class ServiceStatus:
+    running = False
+    inode = None
 
 def parse_ini(filename):
+    ini = configparser.ConfigParser()
+    ini.optionxform = str
+
     with open(filename, 'r') as f:
-        ini = configparser.ConfigParser()
-        ini.optionxform = str
         ini.read_file(f)
 
-        return ini
+    return ini
 
 def load_config(filename):
     config = {}
@@ -61,12 +67,16 @@ def list_instances(root, domain):
             ini = parse_ini(filename)
 
             info = InstanceConfig()
+            info.binary = os.path.join(directory, 'goupile')
             info.directory = directory
             info.domain, info.base_url = instance.split('_', 1)
             info.port = ini.getint('HTTP', 'Port', fallback = None)
 
             info.domain = f'{info.domain}.{domain}'
             info.base_url = f'/{info.base_url}/'
+
+            sb = os.stat(info.binary)
+            info.inode = sb.st_ino
 
             # Fix BaseUrl setting if needed
             if ini.get('HTTP', 'BaseUrl', fallback = None) != info.base_url:
@@ -106,7 +116,20 @@ def list_services():
 
             if match is not None:
                 name = match.group(1)
-                services[name] = (parts[3] == 'active')
+
+                status = ServiceStatus()
+                status.running = (parts[3] == 'active')
+
+                if status.running:
+                    try:
+                        pid = int(subprocess.check_output(['systemctl', 'show', '-p', 'ExecMainPID', '--value', parts[1]]))
+
+                        sb = os.stat(f'/proc/{pid}/exe')
+                        status.inode = sb.st_ino
+                    except:
+                        status.running = False
+
+                services[name] = status
 
     return services
 
@@ -153,11 +176,9 @@ def run_sync(config):
     # Make missing goupile symlinks
     binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
     for instance, info in instances.items():
-        symlink = os.path.join(info.directory, 'goupile')
-        if not os.path.exists(symlink):
-            print(f'Link {symlink} to {binary}', file = sys.stderr)
-            os.symlink(binary, symlink)
-            info.mismatch = True
+        if info.inode is None:
+            print(f'Link {info.binary} to {binary}', file = sys.stderr)
+            os.symlink(binary, info.binary)
 
     # Update configuration files
     print('Write configuration files', file = sys.stderr)
@@ -175,7 +196,8 @@ def run_sync(config):
         status = services.get(instance)
         if status is None:
             run_service_command(instance, 'enable')
-        if info.mismatch or not status:
+            run_service_command(instance, 'start')
+        elif info.mismatch or not status.running or info.inode != status.inode:
             run_service_command(instance, 'restart')
 
     # Reload NGINX configuration
