@@ -75,8 +75,11 @@ def list_instances(root, domain):
             info.domain = f'{info.domain}.{domain}'
             info.base_url = f'/{info.base_url}/'
 
-            sb = os.stat(info.binary)
-            info.inode = sb.st_ino
+            try:
+                sb = os.stat(info.binary)
+                info.inode = sb.st_ino
+            except:
+                pass
 
             # Fix BaseUrl setting if needed
             if ini.get('HTTP', 'BaseUrl', fallback = None) != info.base_url:
