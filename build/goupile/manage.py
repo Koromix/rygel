@@ -99,6 +99,7 @@ def list_instances(root, domain):
                     try_port += 1
                 print(f'Assigning Port {try_port} to {instance}', file = sys.stderr)
                 info.port = try_port
+                used_ports[try_port] = instance
                 info.mismatch = True
 
             instances[instance] = info
