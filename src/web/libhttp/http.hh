@@ -154,9 +154,8 @@ public:
 
     // Blocking, do in async context
     bool OpenForRead(StreamReader *out_st);
-    bool ReadPostValues(Allocator *alloc,
-                        HashMap<const char *, const char *> *out_values);
-    bool OpenForWrite(int code, StreamWriter *out_st);
+    bool ReadPostValues(Allocator *alloc, HashMap<const char *, const char *> *out_values);
+    bool OpenForWrite(int code, CompressionType compression_type, StreamWriter *out_st);
 
     void AddFinalizer(const std::function<void()> &func);
 

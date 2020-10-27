@@ -255,7 +255,6 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
         MHD_move_response_headers(io->response, new_response);
 
         io->AttachResponse(io->write_code, new_response);
-        io->AddEncodingHeader(request->compression_type);
 
         return MHD_queue_response(conn, (unsigned int)io->code, io->response);
     } else if (io->state == http_IO::State::Idle) {
@@ -483,8 +482,9 @@ bool http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_
                 StreamReader reader(data, nullptr, compression_type);
 
                 StreamWriter writer;
-                if (!OpenForWrite(code, &writer))
+                if (!OpenForWrite(code, request.compression_type, &writer))
                     return;
+                AddEncodingHeader(request.compression_type);
 
                 if (!SpliceStream(&reader, Megabytes(8), &writer))
                     return;
@@ -537,20 +537,21 @@ bool http_IO::OpenForRead(StreamReader *out_st)
 {
     RG_ASSERT(state != State::Sync);
 
-    return out_st->Open([this](Span<uint8_t> out_buf) { return Read(out_buf); }, "<http>");
+    bool success = out_st->Open([this](Span<uint8_t> out_buf) { return Read(out_buf); }, "<http>");
+    return success;
 }
 
-bool http_IO::OpenForWrite(int code, StreamWriter *out_st)
+bool http_IO::OpenForWrite(int code, CompressionType compression_type, StreamWriter *out_st)
 {
     RG_ASSERT(state != State::Sync);
 
     write_code = code;
-    return out_st->Open([this](Span<const uint8_t> buf) { return Write(buf); }, "<http>",
-                        request.compression_type);
+    bool success = out_st->Open([this](Span<const uint8_t> buf) { return Write(buf); }, "<http>", compression_type);
+
+    return success;
 }
 
-bool http_IO::ReadPostValues(Allocator *alloc,
-                             HashMap<const char *, const char *> *out_values)
+bool http_IO::ReadPostValues(Allocator *alloc, HashMap<const char *, const char *> *out_values)
 {
     RG_ASSERT(state != State::Sync);
     RG_ASSERT(request.method == http_RequestMethod::Post);

@@ -251,8 +251,9 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
                     return;
 
                 StreamWriter writer;
-                if (!io->OpenForWrite(200, &writer))
+                if (!io->OpenForWrite(200, request.compression_type, &writer))
                     return;
+                io->AddEncodingHeader(request.compression_type);
 
                 if (!SpliceStream(&reader, instance->config.max_file_size, &writer))
                     return;
