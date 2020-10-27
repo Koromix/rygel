@@ -11,13 +11,15 @@ bool ConfigBuilder::LoadIni(StreamReader *st)
 {
     RG_DEFER_NC(out_guard, app_key = config.app_key,
                            app_name = config.app_name,
-                           files_directory = config.files_directory,
+                           live_directory = config.live_directory,
+                           temp_directory = config.temp_directory,
                            database_filename = config.database_filename,
                            http = config.http,
                            max_age = config.max_age) {
         config.app_key = app_key;
         config.app_name = app_name;
-        config.files_directory = files_directory;
+        config.live_directory = live_directory;
+        config.temp_directory = temp_directory;
         config.database_filename = database_filename;
         config.http = http;
         config.max_age = max_age;
@@ -47,9 +49,12 @@ bool ConfigBuilder::LoadIni(StreamReader *st)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "Data") {
                 do {
-                    if (prop.key == "FilesDirectory") {
-                        config.files_directory = NormalizePath(prop.value, root_directory,
-                                                               &config.str_alloc).ptr;
+                    if (prop.key == "LiveDirectory" || prop.key == "FilesDirectory") {
+                        config.live_directory = NormalizePath(prop.value, root_directory,
+                                                              &config.str_alloc).ptr;
+                    } else if (prop.key == "TempDirectory") {
+                        config.temp_directory = NormalizePath(prop.value, root_directory,
+                                                              &config.str_alloc).ptr;
                     } else if (prop.key == "DatabaseFile") {
                         config.database_filename = NormalizePath(prop.value, root_directory,
                                                                  &config.str_alloc).ptr;
@@ -150,6 +155,17 @@ bool ConfigBuilder::LoadFiles(Span<const char *const> filenames)
 void ConfigBuilder::Finish(Config *out_config)
 {
     config.app_name = config.app_name ? config.app_name : config.app_key;
+
+    if (config.database_filename) {
+        Span<const char> root_directory;
+        SplitStrReverseAny(config.database_filename, RG_PATH_SEPARATORS, &root_directory);
+
+        if (!config.temp_directory) {
+            config.temp_directory = Fmt(&config.str_alloc, "%1%/tmp", root_directory).ptr;
+        }
+
+    }
+
     std::swap(*out_config, config);
 }
 

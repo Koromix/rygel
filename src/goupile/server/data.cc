@@ -14,7 +14,6 @@ Key = %1
 Name = %2
 
 [Data]
-FilesDirectory = files
 DatabaseFile = database.db
 
 [Sync]
@@ -30,7 +29,7 @@ DatabaseFile = database.db
 )";
 
 // If you change DatabaseVersion, don't forget to update the migration switch!
-const int DatabaseVersion = 13;
+const int DatabaseVersion = 14;
 
 bool MigrateDatabase(sq_Database &database, int version)
 {
@@ -281,9 +280,24 @@ bool MigrateDatabase(sq_Database &database, int version)
                 )");
                 if (!success)
                     return sq_TransactionResult::Error;
+            } [[fallthrough]];
+
+            case 13: {
+                bool success = database.Run(R"(
+                    CREATE TABLE fs_files (
+                        path TEXT NOT NULL,
+                        blob BLOB,
+                        compression TEXT,
+                        sha256 TEXT
+                    );
+
+                    CREATE INDEX fs_files_p ON fs_files (path);
+                )");
+                if (!success)
+                    return sq_TransactionResult::Error;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DatabaseVersion == 13);
+            RG_STATIC_ASSERT(DatabaseVersion == 14);
         }
 
         int64_t time = GetUnixTime();

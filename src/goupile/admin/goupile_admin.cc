@@ -69,6 +69,12 @@ static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
 }
 #endif
 
+static void FormatSha256(Span<const uint8_t> hash, char out_sha256[65])
+{
+    RG_ASSERT(hash.len == 32);
+    Fmt(MakeSpan(out_sha256, 65), "%1", FmtSpan(hash, FmtType::Hexadecimal, "").Pad0(-2));
+}
+
 static int RunInit(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -187,7 +193,7 @@ Options:
 
     // Gather missing information
     if (!username) {
-        username = Prompt("Default user: ", &temp_alloc);
+        username = Prompt("User: ", &temp_alloc);
         if (!username)
             return 1;
     }
@@ -206,7 +212,7 @@ Options:
     }
     LogInfo();
 
-    // Create base directories
+    // Directories
     {
         const auto make_profile_directory = [&](const char *name) {
             const char *directory = Fmt(&temp_alloc, "%1%/%2", profile_directory, name).ptr;
@@ -223,29 +229,10 @@ Options:
             return true;
         };
 
-        if (!make_profile_directory("files"))
+        if (!make_profile_directory("tmp"))
             return 1;
-        if (!make_profile_directory("files/pages"))
+        if (!make_profile_directory("backup"))
             return 1;
-    }
-
-    // Create default pages
-    if (!empty) {
-        Span<const AssetInfo> assets = GetPackedAssets();
-
-        for (const AssetInfo &asset: assets) {
-            RG_ASSERT(asset.compression_type == CompressionType::None);
-
-            const char *filename = Fmt(&temp_alloc, "%1%/files/%2", profile_directory, asset.name).ptr;
-            if (!WriteFile(asset.data, filename))
-                return 1;
-            files.Append(filename);
-
-#ifndef _WIN32
-            if (change_owner && !ChangeFileOwner(filename, owner_uid, owner_gid))
-                return 1;
-#endif
-        }
     }
 
     // Create database
@@ -263,6 +250,55 @@ Options:
         if (change_owner && !ChangeFileOwner(filename, owner_uid, owner_gid))
             return 1;
 #endif
+    }
+
+    // Create default files
+    if (!empty) {
+        Span<const AssetInfo> assets = GetPackedAssets();
+
+        sq_Statement stmt;
+        if (!database.Prepare("INSERT INTO fs_files (path, blob, compression, sha256) VALUES (?, ?, ?, ?)", &stmt))
+            return 1;
+
+        for (const AssetInfo &asset: assets) {
+            const char *path = Fmt(&temp_alloc, "/files/%1", asset.name).ptr;
+
+            HeapArray<uint8_t> gzip;
+            char sha256[65];
+            {
+                StreamReader reader(asset.data, "<asset>", asset.compression_type);
+                StreamWriter writer(&gzip, "<gzip>", CompressionType::Gzip);
+
+                crypto_hash_sha256_state state;
+                crypto_hash_sha256_init(&state);
+
+                while (!reader.IsEOF()) {
+                    LocalArray<uint8_t, 16384> buf;
+                    buf.len = reader.Read(buf.data);
+                    if (buf.len < 0)
+                        return false;
+
+                    writer.Write(buf);
+                    crypto_hash_sha256_update(&state, buf.data, buf.len);
+                }
+
+                bool success = writer.Close();
+                RG_ASSERT(success);
+
+                uint8_t hash[crypto_hash_sha256_BYTES];
+                crypto_hash_sha256_final(&state, hash);
+                FormatSha256(hash, sha256);
+            }
+
+            stmt.Reset();
+            sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
+            sqlite3_bind_blob64(stmt, 2, gzip.ptr, gzip.len, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 3, "Gzip", -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 4, sha256, -1, SQLITE_STATIC);
+
+            if (!stmt.Run())
+                return 1;
+        }
     }
 
     // Create default user (admin)

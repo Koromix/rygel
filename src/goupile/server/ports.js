@@ -41,12 +41,16 @@ var nav = new function() {
 var server = new function() {
     let self = this;
 
+    let cache = new LruMap(4);
+
     // C++ functions
-    this.readCode = null;
+    this.readFile = null;
 
     this.changeProfile = function(username, zone) {
         profile.username = username;
         profile.zone = zone;
+
+        cache.clear();
     };
 
     this.validateFragments = function(table, json, fragments) {
@@ -64,7 +68,7 @@ var server = new function() {
 
                 // Execute user script
                 // XXX: We should fail when data types don't match (string given to number widget)
-                let code = self.readCode(frag.page);
+                let code = readPage(frag.page);
                 let func = Function('shared', 'route', 'go', 'form', 'page', 'scratch', 'values', code);
                 func({}, {}, () => {}, builder, builder, {}, values);
 
@@ -98,6 +102,18 @@ var server = new function() {
         };
         return ret;
     };
+
+    function readPage(page) {
+        let path = `/files/pages/${page}.js`;
+        let code = cache.get(path);
+
+        if (!code) {
+            code = self.readFile(path);
+            cache.set(path, code);
+        }
+
+        return code;
+    }
 
     function getValue(values, key, default_value) {
         if (!values.hasOwnProperty(key)) {

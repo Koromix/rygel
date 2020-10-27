@@ -8,8 +8,6 @@
 
 namespace RG {
 
-bool InitFiles();
-
 void HandleFileList(const http_RequestInfo &request, http_IO *io);
 bool HandleFileGet(const http_RequestInfo &request, http_IO *io);
 void HandleFilePut(const http_RequestInfo &request, http_IO *io);

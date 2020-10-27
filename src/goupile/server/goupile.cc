@@ -300,13 +300,6 @@ Options:
             LogError("Project key must not be empty");
             valid = false;
         }
-        if (!instance->config.files_directory) {
-            LogError("Application directory not specified");
-            valid = false;
-        } else if (!TestFile(instance->config.files_directory, FileType::Directory)) {
-            LogError("Application directory '%1' does not exist", instance->config.files_directory);
-            valid = false;
-        }
         if (!instance->config.database_filename) {
             LogError("Database file not specified");
             valid = false;
@@ -345,12 +338,12 @@ Options:
         }
     }
 
-    // Init assets and files
-    InitAssets();
-    if (instance->config.files_directory && !InitFiles())
+    // Create temporary directory
+    if (!MakeDirectory(instance->config.temp_directory, false))
         return 1;
 
-    // Init QuickJS
+    // Init subsystems
+    InitAssets();
     InitPorts();
 
     // Run!

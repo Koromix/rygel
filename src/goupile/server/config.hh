@@ -22,11 +22,12 @@ struct Config {
     const char *app_key = nullptr;
     const char *app_name = nullptr;
 
-    const char *files_directory = nullptr;
+    const char *live_directory = nullptr;
+    const char *temp_directory = nullptr;
     const char *database_filename = nullptr;
 
     bool use_offline = false;
-    Size max_file_size = Megabytes(4);
+    int max_file_size = (int)Megabytes(8);
     SyncMode sync_mode = SyncMode::Offline;
     const char *demo_user = nullptr;
 

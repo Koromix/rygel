@@ -70,32 +70,65 @@ void ScriptPort::ChangeProfile(const Session &session)
     RG_DEFER { JS_FreeValue(ctx, ret); };
 }
 
-// XXX: Ugly memory behaviour, and use actual JS exceptions
-static JSValue ReadCode(JSContext *ctx, JSValueConst, int argc, JSValueConst *argv)
+static JSValue ReadFile(JSContext *ctx, JSValueConst, int argc, JSValueConst *argv)
 {
-    BlockAllocator temp_alloc;
-
-    const char *page = JS_ToCString(ctx, argv[0]);
-    if (!page)
+    const char *filename = JS_ToCString(ctx, argv[0]);
+    if (!filename)
         return JS_EXCEPTION;
-    RG_DEFER { JS_FreeCString(ctx, page); };
+    RG_DEFER { JS_FreeCString(ctx, filename); };
 
-    if (PathIsAbsolute(page) || PathContainsDotDot(page)) {
-        LogError("Unsafe page name '%1'", page);
-        return JS_NULL;
+    if (!StartsWith(filename, "/files/")) {
+        JS_ThrowReferenceError(ctx, "Cannot read file outside '/files/'");
+        return JS_EXCEPTION;
+    }
+    if (PathContainsDotDot(filename)) {
+        JS_ThrowReferenceError(ctx, "Unsafe filename '%s'", filename);
+        return JS_EXCEPTION;
     }
 
-    const char *filename = Fmt(&temp_alloc, "%1%/pages%/%2.js",
-                               instance->config.files_directory, page).ptr;
+    sq_Statement stmt;
+    if (!instance->db.Prepare(R"(SELECT compression, blob FROM fs_files
+                                 WHERE path = ? AND sha256 IS NOT NULL;)", &stmt)) {
+        JS_ThrowInternalError(ctx, "SQLite Error: %s", sqlite3_errmsg(instance->db));
+        return JS_EXCEPTION;
+    }
+    sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
 
-    // Load page code
-    HeapArray<char> code;
-    if (ReadFile(filename, instance->config.max_file_size, &code) < 0) {
-        LogError("Cannot load page '%1'", page);
-        return JS_NULL;
+    if (!stmt.Next()) {
+        if (stmt.IsValid()) {
+            JS_ThrowReferenceError(ctx, "Cannot load file '%s'", filename);
+        } else {
+            JS_ThrowInternalError(ctx, "SQLite Error: %s", sqlite3_errmsg(instance->db));
+        }
+
+        return JS_EXCEPTION;
     }
 
-    return JS_NewStringLen(ctx, code.ptr, (size_t)code.len);
+    CompressionType compression_type;
+    {
+        const char *str = (const char *)sqlite3_column_text(stmt, 0);
+        if (!OptionToEnum(CompressionTypeNames, str, &compression_type)) {
+            JS_ThrowInternalError(ctx, "Invalid compression type '%s'", str);
+            return JS_EXCEPTION;
+        }
+    }
+
+    Span<const uint8_t> blob = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 1),
+                                        sqlite3_column_bytes(stmt, 1));
+
+    if (compression_type == CompressionType::None) {
+        return JS_NewStringLen(ctx, (const char *)blob.ptr, blob.len);
+    } else {
+        StreamReader reader(blob, filename, compression_type);
+
+        HeapArray<uint8_t> buf;
+        if (reader.ReadAll(instance->config.max_file_size, &buf) < 0) {
+            JS_ThrowInternalError(ctx, "Failed to decompress '%s'", filename);
+            return JS_EXCEPTION;
+        }
+
+        return JS_NewStringLen(ctx, (const char *)buf.ptr, buf.len);
+    }
 }
 
 bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_handles)
@@ -418,7 +451,8 @@ void InitPorts()
             JS_FreeValue(port->ctx, global);
         };
 
-        JS_SetPropertyStr(port->ctx, server, "readCode", JS_NewCFunction(port->ctx, ReadCode, "readCode", 1));
+        JS_SetPropertyStr(port->ctx, server, "readFile", JS_NewCFunction(port->ctx, ReadFile, "readFile", 1));
+
         port->profile_func = JS_GetPropertyStr(port->ctx, server, "changeProfile");
         port->validate_func = JS_GetPropertyStr(port->ctx, server, "validateFragments");
 
