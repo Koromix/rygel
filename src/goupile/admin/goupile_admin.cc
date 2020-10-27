@@ -640,28 +640,28 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
     }
 
     // Update user
-    bool success = database.Transaction([&]() {
+    sq_TransactionResult ret = database.Transaction([&]() {
         if (password) {
             char hash[crypto_pwhash_STRBYTES];
             if (!HashPassword(password, hash))
-                return false;
+                return sq_TransactionResult::Rollback;
 
             if (!database.Run("UPDATE usr_users SET password_hash = ? WHERE username = ?",
                               hash, username))
-                return false;
+                return sq_TransactionResult::Error;
         }
 
         if (!database.Run("UPDATE usr_users SET zone = ?, permissions = ? WHERE username = ?",
                           zone ? sq_Binding(zone) : sq_Binding(), permissions, username))
-            return false;
+            return sq_TransactionResult::Error;
         if (!sqlite3_changes(database)) {
             LogError("UPDATE request failed: no match");
-            return false;
+            return sq_TransactionResult::Rollback;
         }
 
-        return true;
+        return sq_TransactionResult::Commit;
     });
-    if (!success)
+    if (ret != sq_TransactionResult::Commit)
         return 1;
 
     LogInfo("Changed user");

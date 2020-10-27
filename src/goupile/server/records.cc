@@ -227,7 +227,7 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
             }
         }
 
-        bool conflict = false;
+        bool incomplete = false;
 
         for (const ScriptRecord &handle: handles) {
             // Get existing record data
@@ -246,7 +246,7 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
                         const char *zone = (const char *)sqlite3_column_text(stmt, 0);
                         if (!TestStr(session->zone, zone)) {
                             LogError("Zone mismatch for %1", handle.id);
-                            conflict = true;
+                            incomplete = true;
                             continue;
                         }
                     }
@@ -265,18 +265,18 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
             // Run JS validation
             HeapArray<ScriptFragment> fragments;
             if (!port->RunRecord(json, handle, &fragments, &json)) {
-                conflict = true;
+                incomplete = true;
                 continue;
             }
 
-            instance->db.Transaction([&]() {
+            sq_TransactionResult ret = instance->db.Transaction([&]() {
                 // Get sequence number
                 int sequence;
                 {
                     sq_Statement stmt;
                     if (!instance->db.Prepare(R"(SELECT sequence FROM rec_sequences
                                                  WHERE store = ?)", &stmt))
-                        return false;
+                        return sq_TransactionResult::Error;
                     sqlite3_bind_text(stmt, 1, handle.table, -1, SQLITE_STATIC);
 
                     if (stmt.Next()) {
@@ -284,31 +284,31 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
                     } else if (stmt.IsValid()) {
                         sequence = 1;
                     } else {
-                        return false;
+                        return sq_TransactionResult::Error;
                     }
                 }
 
                 // Insert new entry
                 if (!instance->db.Run(R"(INSERT INTO rec_entries (store, id, zone, sequence, version, json)
                                          VALUES (?, ?, ?, ?, ?, ?)
-                                                ON CONFLICT DO NOTHING)",
+                                         ON CONFLICT DO NOTHING)",
                                     handle.table, handle.id, handle.zone ? sq_Binding(handle.zone) : sq_Binding(),
                                     sequence, fragments[fragments.len - 1].version, json))
-                    return false;
+                    return sq_TransactionResult::Error;
 
                 // Update sequence number of existing entry depending on result
                 if (sqlite3_changes(instance->db)) {
                     if (!instance->db.Run(R"(INSERT INTO rec_sequences (store, sequence)
                                              VALUES (?, ?)
                                              ON CONFLICT(store)
-                                             DO UPDATE SET sequence = excluded.sequence)",
+                                                 DO UPDATE SET sequence = excluded.sequence)",
                                         handle.table, sequence + 1))
-                        return false;
+                        return sq_TransactionResult::Error;
                 } else {
                     if (!instance->db.Run(R"(UPDATE rec_entries SET version = ?, json = ?
                                              WHERE store = ? AND id = ?)",
                                         fragments[fragments.len - 1].version, json, handle.table, handle.id))
-                        return false;
+                        return sq_TransactionResult::Error;
                 }
 
                 // Save record fragments (and variables)
@@ -318,13 +318,13 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
                     // XXX: Silently skipping already stored fragments for now
                     if (frag.version <= version) {
                         LogError("Ignored conflicting fragment %1 for %2", frag.version, handle.id);
-                        conflict = true;
+                        incomplete = true;
                         continue;
                     }
                     if (frag.complete && !session->HasPermission(UserPermission::Validate)) {
                         LogError("User is not allowed to validate records");
-                        conflict = true;
-                        return false;
+                        incomplete = true;
+                        return sq_TransactionResult::Rollback;
                     }
 
                     int64_t anchor;
@@ -334,7 +334,7 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
                                         handle.table, handle.id, frag.version,
                                         frag.page ? sq_Binding(frag.page) : sq_Binding(), session->username,
                                         frag.mtime, 0 + frag.complete, frag.json))
-                        return false;
+                        return sq_TransactionResult::Error;
                     anchor = sqlite3_last_insert_rowid(instance->db);
 
                     sq_Statement stmt;
@@ -345,7 +345,7 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
                                                      DO UPDATE SET before = excluded.before,
                                                                    after = excluded.after,
                                                                    anchor = excluded.anchor)", &stmt))
-                        return false;
+                        return sq_TransactionResult::Error;
                     sqlite3_bind_text(stmt, 2, handle.table, -1, SQLITE_STATIC);
                     sqlite3_bind_int64(stmt, 9, anchor);
 
@@ -368,15 +368,18 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
                         sqlite3_bind_text(stmt, 8, after, -1, SQLITE_STATIC);
 
                         if (!stmt.Run())
-                            return false;
+                            return sq_TransactionResult::Error;
                     }
                 }
 
-                return true;
+                return sq_TransactionResult::Commit;
             });
+
+            if (ret == sq_TransactionResult::Error)
+                return;
         }
 
-        if (conflict) {
+        if (incomplete) {
             io->AttachText(409, "Done (with errors)!");
         } else {
             io->AttachText(200, "Done!");

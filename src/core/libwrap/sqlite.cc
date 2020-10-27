@@ -87,7 +87,7 @@ bool sq_Database::Close()
     return true;
 }
 
-bool sq_Database::Transaction(FunctionRef<bool()> func)
+sq_TransactionResult sq_Database::Transaction(FunctionRef<sq_TransactionResult()> func)
 {
     std::lock_guard<std::shared_mutex> lock(transact_mutex);
 
@@ -95,16 +95,17 @@ bool sq_Database::Transaction(FunctionRef<bool()> func)
     RG_DEFER { transact_thread = std::thread::id(); };
 
     if (!Run("BEGIN IMMEDIATE TRANSACTION"))
-        return false;
+        return sq_TransactionResult::Error;
     RG_DEFER_N(rollback_guard) { Run("ROLLBACK"); };
 
-    if (!func())
-        return false;
+    sq_TransactionResult ret = func();
+    if (ret != sq_TransactionResult::Commit)
+        return ret;
     if (!Run("COMMIT"))
-        return false;
+        return sq_TransactionResult::Error;
 
     rollback_guard.Disable();
-    return true;
+    return sq_TransactionResult::Commit;
 }
 
 bool sq_Database::Run(const char *sql)

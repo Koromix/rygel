@@ -38,7 +38,7 @@ bool MigrateDatabase(sq_Database &database, int version)
 
     LogInfo("Running migrations %1 to %2", version + 1, DatabaseVersion);
 
-    bool success = database.Transaction([&]() {
+    sq_TransactionResult ret = database.Transaction([&]() {
         switch (version) {
             case 0: {
                 bool success = database.Run(R"(
@@ -104,7 +104,7 @@ bool MigrateDatabase(sq_Database &database, int version)
                     CREATE UNIQUE INDEX usr_users_u ON usr_users (username);
                 )");
                 if (!success)
-                    return false;
+                    return sq_TransactionResult::Error;
             } [[fallthrough]];
 
             case 1: {
@@ -130,7 +130,7 @@ bool MigrateDatabase(sq_Database &database, int version)
                     CREATE INDEX rec_fragments_tip ON rec_fragments(table_name, id, page);
                 )");
                 if (!success)
-                    return false;
+                    return sq_TransactionResult::Error;
             } [[fallthrough]];
 
             case 2: {
@@ -151,7 +151,7 @@ bool MigrateDatabase(sq_Database &database, int version)
                     CREATE UNIQUE INDEX rec_sequences_s ON rec_sequences (store);
                 )");
                 if (!success)
-                    return false;
+                    return sq_TransactionResult::Error;
             } [[fallthrough]];
 
             case 3: {
@@ -163,12 +163,12 @@ bool MigrateDatabase(sq_Database &database, int version)
                     );
                 )");
                 if (!success)
-                    return false;
+                    return sq_TransactionResult::Error;
             } [[fallthrough]];
 
             case 4: {
                 if (!database.Run("UPDATE usr_users SET permissions = 31 WHERE permissions == 7;"))
-                    return false;
+                    return sq_TransactionResult::Error;
             } [[fallthrough]];
 
             case 5: {
@@ -180,7 +180,7 @@ bool MigrateDatabase(sq_Database &database, int version)
                     ALTER TABLE rec_fragments ADD COLUMN version INEGER NOT NULL;
                 )");
                 if (!success)
-                    return false;
+                    return sq_TransactionResult::Error;
             } [[fallthrough]];
 
             case 6: {
@@ -191,7 +191,7 @@ bool MigrateDatabase(sq_Database &database, int version)
                     CREATE UNIQUE INDEX rec_columns_spvp ON rec_columns (store, page, variable, IFNULL(prop, 0));
                 )");
                 if (!success)
-                    return false;
+                    return sq_TransactionResult::Error;
             } [[fallthrough]];
 
             case 7: {
@@ -216,12 +216,12 @@ bool MigrateDatabase(sq_Database &database, int version)
                     DROP TABLE rec_columns_BAK;
                 )");
                 if (!success)
-                    return false;
+                    return sq_TransactionResult::Error;
             } [[fallthrough]];
 
             case 8: {
                 if (!database.Run("UPDATE usr_users SET permissions = 63 WHERE permissions == 31;"))
-                    return false;
+                    return sq_TransactionResult::Error;
             } [[fallthrough]];
 
             case 9: {
@@ -246,7 +246,7 @@ bool MigrateDatabase(sq_Database &database, int version)
                     CREATE INDEX rec_columns_sp ON rec_columns (store, page);
                 )");
                 if (!success)
-                    return false;
+                    return sq_TransactionResult::Error;
             } [[fallthrough]];
 
             case 10: {
@@ -257,7 +257,7 @@ bool MigrateDatabase(sq_Database &database, int version)
                     CREATE INDEX rec_entries_z ON rec_entries (zone);
                 )");
                 if (!success)
-                    return false;
+                    return sq_TransactionResult::Error;
             } [[fallthrough]];
 
             case 11: {
@@ -270,8 +270,8 @@ bool MigrateDatabase(sq_Database &database, int version)
                     );
                 )");
                 if (!success)
-                    return false;
-            } // [[fallthrough]];
+                    return sq_TransactionResult::Error;
+            } [[fallthrough]];
 
             case 12: {
                 bool success = database.Run(R"(
@@ -280,7 +280,7 @@ bool MigrateDatabase(sq_Database &database, int version)
                     ALTER TABLE adm_events ADD COLUMN details TEXT;
                 )");
                 if (!success)
-                    return false;
+                    return sq_TransactionResult::Error;
             } // [[fallthrough]];
 
             RG_STATIC_ASSERT(DatabaseVersion == 13);
@@ -289,16 +289,16 @@ bool MigrateDatabase(sq_Database &database, int version)
         int64_t time = GetUnixTime();
         if (!database.Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
                           DatabaseVersion, FelixVersion, time))
-            return false;
+            return sq_TransactionResult::Error;
 
         char buf[128];
         Fmt(buf, "PRAGMA user_version = %1;", DatabaseVersion);
         if (!database.Run(buf))
-            return false;
+            return sq_TransactionResult::Error;
 
-        return true;
+        return sq_TransactionResult::Commit;
     });
-    if (!success)
+    if (ret != sq_TransactionResult::Commit)
         return false;
 
     LogInfo("Migration complete, version: %1", DatabaseVersion);

@@ -70,6 +70,12 @@ public:
     friend class sq_Database;
 };
 
+enum class sq_TransactionResult {
+    Commit,
+    Rollback,
+    Error
+};
+
 class sq_Database {
     RG_DELETE_COPY(sq_Database)
 
@@ -88,7 +94,7 @@ public:
     bool Open(const char *filename, unsigned int flags);
     bool Close();
 
-    bool Transaction(FunctionRef<bool()> func);
+    sq_TransactionResult Transaction(FunctionRef<sq_TransactionResult()> func);
 
     bool Run(const char *sql);
     template <typename... Args>
