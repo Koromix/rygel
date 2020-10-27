@@ -3580,13 +3580,15 @@ bool UnlinkDirectory(const char *directory, bool error_if_missing = false);
 bool UnlinkFile(const char *filename, bool error_if_missing = false);
 bool EnsureDirectoryExists(const char *filename);
 
-enum class OpenFileMode {
+enum class OpenFileFlag {
     Read = 1 << 0,
     Write = 1 << 1,
-    Append = 1 << 2
+    Append = 1 << 2,
+
+    Exclusive = 1 << 3
 };
 
-FILE *OpenFile(const char *filename, OpenFileMode mode);
+FILE *OpenFile(const char *filename, unsigned int flags);
 bool FileIsVt100(FILE *fp);
 
 bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,

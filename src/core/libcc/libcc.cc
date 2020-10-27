@@ -2301,23 +2301,50 @@ bool PathContainsDotDot(const char *path)
 
 #ifdef _WIN32
 
-FILE *OpenFile(const char *filename, OpenFileMode mode)
+FILE *OpenFile(const char *filename, unsigned int flags)
 {
     wchar_t filename_w[4096];
     if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
         return nullptr;
 
-    const wchar_t *mode_w = nullptr;
-    switch (mode) {
-        case OpenFileMode::Read: { mode_w = L"rbcN"; } break;
-        case OpenFileMode::Write: { mode_w = L"wbcN"; } break;
-        case OpenFileMode::Append: { mode_w = L"abcN"; } break;
+    int oflags = -1;
+    const char *mode = nullptr;
+    switch (flags & ((int)OpenFileFlag::Read |
+                     (int)OpenFileFlag::Write |
+                     (int)OpenFileFlag::Append)) {
+        case (int)OpenFileFlag::Read: {
+            oflags = _O_RDONLY | _O_BINARY;
+            mode = "rbcN";
+        } break;
+        case (int)OpenFileFlag::Write: {
+            oflags = _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY;
+            mode = "wbcN";
+        } break;
+        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: {
+            oflags = _O_RDWR | _O_CREAT | _O_TRUNC | _O_BINARY;
+            mode = "w+bcN";
+        } break;
+        case (int)OpenFileFlag::Append: {
+            oflags = _O_WRONLY | _O_CREAT | _O_APPEND | _O_BINARY;
+            mode = "abcN";
+        } break;
     }
-    RG_ASSERT(mode_w);
+    RG_ASSERT(oflags >= 0);
 
-    FILE *fp = _wfopen(filename_w, mode_w);
+    if (flags & (int)OpenFileFlag::Exclusive) {
+        oflags |= (int)_O_EXCL;
+    }
+
+    int fd = _wopen(filename_w, oflags, _S_IREAD | _S_IWRITE);
+    if (fd < 0) {
+        LogError("Cannot open '%1': %2", filename, strerror(errno));
+        return nullptr;
+    }
+
+    FILE *fp = _fdopen(fd, mode);
     if (!fp) {
         LogError("Cannot open '%1': %2", filename, strerror(errno));
+        _close(fd);
     }
 
     return fp;
@@ -2467,19 +2494,46 @@ bool UnlinkFile(const char *filename, bool error_if_missing)
 
 #else
 
-FILE *OpenFile(const char *filename, OpenFileMode mode)
+FILE *OpenFile(const char *filename, unsigned int flags)
 {
-    const char *mode_str = nullptr;
-    switch (mode) {
-        case OpenFileMode::Read: { mode_str = "rbe"; } break;
-        case OpenFileMode::Write: { mode_str = "wbe"; } break;
-        case OpenFileMode::Append: { mode_str = "abe"; } break;
+    int oflags = -1;
+    const char *mode = nullptr;
+    switch (flags & ((int)OpenFileFlag::Read |
+                     (int)OpenFileFlag::Write |
+                     (int)OpenFileFlag::Append)) {
+        case (int)OpenFileFlag::Read: {
+            oflags = O_RDONLY | O_CLOEXEC;
+            mode = "rbe";
+        } break;
+        case (int)OpenFileFlag::Write: {
+            oflags = O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC;
+            mode = "wbe";
+        } break;
+        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: {
+            oflags = O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC;
+            mode = "w+be";
+        } break;
+        case (int)OpenFileFlag::Append: {
+            oflags = O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC;
+            mode = "abe";
+        } break;
     }
-    RG_ASSERT(mode_str);
+    RG_ASSERT(oflags >= 0);
 
-    FILE *fp = fopen(filename, mode_str);
+    if (flags & (int)OpenFileFlag::Exclusive) {
+        oflags |= O_EXCL;
+    }
+
+    int fd = open(filename, oflags, 0644);
+    if (fd < 0) {
+        LogError("Cannot open '%1': %2", filename, strerror(errno));
+        return nullptr;
+    }
+
+    FILE *fp = fdopen(fd, mode);
     if (!fp) {
         LogError("Cannot open '%1': %2", filename, strerror(errno));
+        close(fd);
     }
 
     return fp;
@@ -3504,7 +3558,7 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
     this->filename = filename;
 
     source.type = SourceType::File;
-    source.u.file.fp = OpenFile(filename, OpenFileMode::Read);
+    source.u.file.fp = OpenFile(filename, (int)OpenFileFlag::Read);
     if (!source.u.file.fp)
         return false;
     source.u.file.owned = true;
@@ -4053,7 +4107,7 @@ bool StreamWriter::Open(const char *filename, CompressionType compression_type)
     this->filename = filename;
 
     dest.type = DestinationType::File;
-    dest.u.file.fp = OpenFile(filename, OpenFileMode::Write);
+    dest.u.file.fp = OpenFile(filename, (int)OpenFileFlag::Write);
     if (!dest.u.file.fp)
         return false;
     dest.u.file.owned = true;
