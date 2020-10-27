@@ -7,6 +7,16 @@
 
 namespace RG {
 
+sq_Statement &sq_Statement::operator=(sq_Statement &&other)
+{
+    Finalize();
+
+    stmt = other.stmt;
+    other.stmt = nullptr;
+
+    return *this;
+}
+
 void sq_Statement::Finalize()
 {
     sqlite3_finalize(stmt);
@@ -34,6 +44,12 @@ void sq_Statement::Reset()
 {
     int ret = sqlite3_reset(stmt);
     RG_ASSERT(ret == SQLITE_OK);
+}
+
+sqlite3_stmt *sq_Statement::Leak()
+{
+    RG_DEFER { stmt = nullptr; };
+    return stmt;
 }
 
 bool sq_Database::Open(const char *filename, unsigned int flags)

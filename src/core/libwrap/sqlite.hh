@@ -51,6 +51,9 @@ public:
     sq_Statement() {}
     ~sq_Statement() { Finalize(); }
 
+    sq_Statement(sq_Statement &&other) { *this = std::move(other); }
+    sq_Statement &operator=(sq_Statement &&other);
+
     void Finalize();
 
     bool IsValid() const { return stmt && (rc == SQLITE_DONE || rc == SQLITE_ROW); };
@@ -59,6 +62,8 @@ public:
     bool Run();
     bool Next();
     void Reset();
+
+    sqlite3_stmt *Leak();
 
     operator sqlite3_stmt *() { return stmt; }
 
