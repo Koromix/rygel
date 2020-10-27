@@ -55,6 +55,7 @@
     #define ftello64 ftello
 #endif
 #include <chrono>
+#include <random>
 #include <thread>
 
 namespace RG {
@@ -2621,6 +2622,57 @@ bool UnlinkFile(const char *filename, bool error_if_missing)
 }
 
 #endif
+
+const char *CreateTemporaryFile(const char *directory, const char *extension,
+                                Allocator *alloc, FILE **out_fp)
+{
+    RG_ASSERT(alloc);
+
+    HeapArray<char> filename(alloc);
+    filename.Append(directory);
+    filename.Append(*RG_PATH_SEPARATORS);
+
+    Size name_offset = filename.len;
+
+    PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
+    RG_DEFER_N(log_guard) { PopLogFilter(); };
+
+    for (Size i = 0; i < 1000; i++) {
+        // We want to show an error on last try
+        if (RG_UNLIKELY(i == 999)) {
+            PopLogFilter();
+            log_guard.Disable();
+        }
+
+        filename.RemoveFrom(name_offset);
+        for (Size j = 0; j < 24; j++) {
+            static const char *chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+            // We don't want to depend on libsodium here, so use C++ crap instead
+            static std::default_random_engine rnd_generator(GetUnixTime());
+            static std::uniform_int_distribution<int> rnd_distribution(0, strlen(chars) - 1);
+
+            filename.Append(chars[rnd_distribution(rnd_generator)]);
+        }
+        filename.Append(extension);
+        filename.Append(0);
+
+        FILE *fp = OpenFile(filename.ptr, (int)OpenFileFlag::Read | (int)OpenFileFlag::Write |
+                                          (int)OpenFileFlag::Exclusive);
+        if (fp) {
+            if (out_fp) {
+                *out_fp = fp;
+            } else {
+                fclose(fp);
+            }
+
+            const char *ret = filename.TrimAndLeak(1).ptr;
+            return ret;
+        }
+    }
+
+    return nullptr;
+}
 
 bool EnsureDirectoryExists(const char *filename)
 {
