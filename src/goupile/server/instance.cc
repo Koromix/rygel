@@ -4,7 +4,7 @@
 
 #include "../../core/libcc/libcc.hh"
 #include "instance.hh"
-#include "../../core/libwrap/sqlite.hh"
+#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
 
@@ -87,6 +87,8 @@ bool InstanceData::Open(const char *filename)
 bool InstanceData::Migrate()
 {
     RG_ASSERT(version < SchemaVersion);
+
+    BlockAllocator temp_alloc;
 
     LogInfo("Running migrations %1 to %2", version + 1, SchemaVersion);
 
@@ -348,6 +350,54 @@ bool InstanceData::Migrate()
                 )");
                 if (!success)
                     return sq_TransactionResult::Error;
+
+                if (config.live_directory) {
+                    HeapArray<const char *> filenames;
+                    if (!EnumerateFiles(config.live_directory, nullptr, -1, -1, &temp_alloc, &filenames))
+                        return sq_TransactionResult::Error;
+
+                    Size relative_offset = strlen(config.live_directory);
+
+                    for (const char *filename: filenames) {
+                        HeapArray<uint8_t> gzip;
+                        char sha256[65];
+                        {
+                            StreamReader reader(filename);
+                            StreamWriter writer(&gzip, "<gzip>", CompressionType::Gzip);
+
+                            crypto_hash_sha256_state state;
+                            crypto_hash_sha256_init(&state);
+
+                            while (!reader.IsEOF()) {
+                                LocalArray<uint8_t, 16384> buf;
+                                buf.len = reader.Read(buf.data);
+                                if (buf.len < 0)
+                                    return sq_TransactionResult::Error;
+
+                                writer.Write(buf);
+                                crypto_hash_sha256_update(&state, buf.data, buf.len);
+                            }
+
+                            bool success = writer.Close();
+                            RG_ASSERT(success);
+
+                            uint8_t hash[crypto_hash_sha256_BYTES];
+                            crypto_hash_sha256_final(&state, hash);
+                            FormatSha256(hash, sha256);
+                        }
+
+                        Span<char> path = Fmt(&temp_alloc, "/files%1", filename + relative_offset);
+#ifdef _WIN32
+                        for (char &c: path) {
+                            c = (c == '\\') ? '/' : c;
+                        }
+#endif
+
+                        if (!db.Run(R"(INSERT INTO fs_files (path, blob, compression, sha256)
+                                       VALUES (?, ?, ?, ?);)", path, gzip, "Gzip", sha256))
+                            return sq_TransactionResult::Error;
+                    }
+                }
             } // [[fallthrough]];
 
             RG_STATIC_ASSERT(SchemaVersion == 14);
