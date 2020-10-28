@@ -7,23 +7,9 @@
 
 namespace RG {
 
-bool ConfigBuilder::LoadIni(StreamReader *st)
+bool LoadConfig(StreamReader *st, Config *out_config)
 {
-    RG_DEFER_NC(out_guard, app_key = config.app_key,
-                           app_name = config.app_name,
-                           live_directory = config.live_directory,
-                           temp_directory = config.temp_directory,
-                           database_filename = config.database_filename,
-                           http = config.http,
-                           max_age = config.max_age) {
-        config.app_key = app_key;
-        config.app_name = app_name;
-        config.live_directory = live_directory;
-        config.temp_directory = temp_directory;
-        config.database_filename = database_filename;
-        config.http = http;
-        config.max_age = max_age;
-    };
+    Config config;
 
     Span<const char> root_directory;
     SplitStrReverseAny(st->GetFileName(), RG_PATH_SEPARATORS, &root_directory);
@@ -119,64 +105,20 @@ bool ConfigBuilder::LoadIni(StreamReader *st)
     if (!ini.IsValid() || !valid)
         return false;
 
-    out_guard.Disable();
-    return true;
-}
-
-bool ConfigBuilder::LoadFiles(Span<const char *const> filenames)
-{
-    bool success = true;
-
-    for (const char *filename: filenames) {
-        CompressionType compression_type;
-        Span<const char> extension = GetPathExtension(filename, &compression_type);
-
-        bool (ConfigBuilder::*load_func)(StreamReader *st);
-        if (extension == ".ini") {
-            load_func = &ConfigBuilder::LoadIni;
-        } else {
-            LogError("Cannot load config from file '%1' with unknown extension '%2'",
-                     filename, extension);
-            success = false;
-            continue;
-        }
-
-        StreamReader st(filename, compression_type);
-        if (!st.IsValid()) {
-            success = false;
-            continue;
-        }
-        success &= (this->*load_func)(&st);
-    }
-
-    return success;
-}
-
-void ConfigBuilder::Finish(Config *out_config)
-{
+    // Default values
     config.app_name = config.app_name ? config.app_name : config.app_key;
-
-    if (config.database_filename) {
-        Span<const char> root_directory;
-        SplitStrReverseAny(config.database_filename, RG_PATH_SEPARATORS, &root_directory);
-
-        if (!config.temp_directory) {
-            config.temp_directory = Fmt(&config.str_alloc, "%1%/tmp", root_directory).ptr;
-        }
-
+    if (config.database_filename && !config.temp_directory) {
+        config.temp_directory = Fmt(&config.str_alloc, "%1%/tmp", root_directory).ptr;
     }
 
     std::swap(*out_config, config);
+    return true;
 }
 
-bool LoadConfig(Span<const char *const> filenames, Config *out_config)
+bool LoadConfig(const char *filename, Config *out_config)
 {
-    ConfigBuilder config_builder;
-    if (!config_builder.LoadFiles(filenames))
-        return false;
-    config_builder.Finish(out_config);
-
-    return true;
+    StreamReader st(filename);
+    return LoadConfig(&st, out_config);
 }
 
 }

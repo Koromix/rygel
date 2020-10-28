@@ -8,15 +8,9 @@
 
 namespace RG {
 
-bool ConfigBuilder::LoadIni(StreamReader *st)
+bool LoadConfig(StreamReader *st, Config *out_config)
 {
-    RG_DEFER_NC(out_guard, table_directories_len = config.table_directories.len,
-                           profile_directory = config.profile_directory,
-                           mco_authorization_filename = config.mco_authorization_filename) {
-        config.table_directories.RemoveFrom(table_directories_len);
-        config.profile_directory = profile_directory;
-        config.mco_authorization_filename = mco_authorization_filename;
-    };
+    Config config;
 
     Span<const char> root_directory;
     SplitStrReverseAny(st->GetFileName(), RG_PATH_SEPARATORS, &root_directory);
@@ -73,52 +67,14 @@ bool ConfigBuilder::LoadIni(StreamReader *st)
     if (!ini.IsValid() || !valid)
         return false;
 
-    out_guard.Disable();
-    return true;
-}
-
-bool ConfigBuilder::LoadFiles(Span<const char *const> filenames)
-{
-    bool success = true;
-
-    for (const char *filename: filenames) {
-        CompressionType compression_type;
-        Span<const char> extension = GetPathExtension(filename, &compression_type);
-
-        bool (ConfigBuilder::*load_func)(StreamReader *st);
-        if (extension == ".ini") {
-            load_func = &ConfigBuilder::LoadIni;
-        } else {
-            LogError("Cannot load config from file '%1' with unknown extension '%2'",
-                     filename, extension);
-            success = false;
-            continue;
-        }
-
-        StreamReader st(filename, compression_type);
-        if (!st.IsValid()) {
-            success = false;
-            continue;
-        }
-        success &= (this->*load_func)(&st);
-    }
-
-    return success;
-}
-
-void ConfigBuilder::Finish(Config *out_config)
-{
     std::swap(*out_config, config);
+    return true;
 }
 
-bool LoadConfig(Span<const char *const> filenames, Config *out_config)
+bool LoadConfig(const char *filename, Config *out_config)
 {
-    ConfigBuilder config_builder;
-    if (!config_builder.LoadFiles(filenames))
-        return false;
-    config_builder.Finish(out_config);
-
-    return true;
+    StreamReader st(filename);
+    return LoadConfig(&st, out_config);
 }
 
 }

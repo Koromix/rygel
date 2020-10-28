@@ -37,20 +37,7 @@ struct Config {
     BlockAllocator str_alloc;
 };
 
-class ConfigBuilder {
-    RG_DELETE_COPY(ConfigBuilder)
-
-    Config config;
-
-public:
-    ConfigBuilder() = default;
-
-    bool LoadIni(StreamReader *st);
-    bool LoadFiles(Span<const char *const> filenames);
-
-    void Finish(Config *out_config);
-};
-
-bool LoadConfig(Span<const char *const> filenames, Config *out_config);
+bool LoadConfig(StreamReader *st, Config *out_config);
+bool LoadConfig(const char *filename, Config *out_config);
 
 }
