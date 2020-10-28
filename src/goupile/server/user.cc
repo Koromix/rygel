@@ -69,8 +69,11 @@ static RetainPtr<Session> CreateDemoSession(const http_RequestInfo &request, htt
                                  WHERE username = ?)", &stmt))
         return {};
     sqlite3_bind_text(stmt, 1, instance->config.demo_user, -1, SQLITE_STATIC);
+
     if (!stmt.Next()) {
-        LogError("Demo user '%1' does not exist", instance->config.demo_user);
+        if (stmt.IsValid()) {
+            LogError("Demo user '%1' does not exist", instance->config.demo_user);
+        }
         return {};
     }
 

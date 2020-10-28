@@ -473,7 +473,9 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
         if (stmt.Next()) {
-            LogError("User '%1' already exists", username);
+            if (stmt.IsValid()) {
+                LogError("User '%1' already exists", username);
+            }
             return 1;
         }
     }
@@ -588,7 +590,9 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
         if (!stmt.Next()) {
-            LogError("User '%1' does not exist", username);
+            if (stmt.IsValid()) {
+                LogError("User '%1' does not exist", username);
+            }
             return 1;
         }
 
