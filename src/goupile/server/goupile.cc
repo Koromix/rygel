@@ -3,17 +3,15 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../core/libcc/libcc.hh"
-#include "config.hh"
-#include "data.hh"
 #include "files.hh"
 #include "goupile.hh"
+#include "instance.hh"
 #include "misc.hh"
 #include "ports.hh"
 #include "records.hh"
 #include "schedule.hh"
 #include "user.hh"
 #include "../../web/libhttp/libhttp.hh"
-#include "../../core/libwrap/sqlite.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
@@ -257,7 +255,7 @@ Options:
         }
     }
 
-    // Load config file
+    // Load instance
     if (!config_filename) {
         // Using GetWorkingDirectory() is not strictly necessary, but this will make sure
         // filenames are normalized as absolute paths when config file is loaded.
@@ -268,7 +266,7 @@ Options:
             return 1;
         }
     }
-    if (!LoadConfig(config_filename, &instance->config))
+    if (!instance->Open(config_filename))
         return 1;
 
     // Parse arguments
@@ -292,49 +290,17 @@ Options:
         }
     }
 
-    // Check project configuration
-    {
-        bool valid = true;
-
-        if (!instance->config.app_key || !instance->config.app_key[0]) {
-            LogError("Project key must not be empty");
-            valid = false;
-        }
-        if (!instance->config.database_filename) {
-            LogError("Database file not specified");
-            valid = false;
-        }
-
-        if (!valid)
-            return 1;
-    }
-
-    // Init database
-    if (!instance->db.Open(instance->config.database_filename, SQLITE_OPEN_READWRITE))
+    // Check schema version
+    if (instance->version > SchemaVersion) {
+        LogError("Profile is too recent for goupile version %1", FelixVersion);
         return 1;
-
-    // Check database version
-    {
-        sq_Statement stmt;
-        if (!instance->db.Prepare("PRAGMA user_version;", &stmt))
-            return 1;
-
-        bool success = stmt.Next();
-        RG_ASSERT(success);
-
-        int version = sqlite3_column_int(stmt, 0);
-
-        if (version > DatabaseVersion) {
-            LogError("Profile is too recent for goupile version %1", FelixVersion);
-            return 1;
-        } else if (version < DatabaseVersion) {
-            if (migrate) {
-                if (!MigrateDatabase(instance->db, version))
-                    return 1;
-            } else {
-                LogError("Outdated profile version, use %!..+--migrate or goupile_admin migrate%!0");
+    } else if (instance->version < SchemaVersion) {
+        if (migrate) {
+            if (!instance->Migrate())
                 return 1;
-            }
+        } else {
+            LogError("Outdated profile version, use %!..+--migrate or goupile_admin migrate%!0");
+            return 1;
         }
     }
 

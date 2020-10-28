@@ -4,8 +4,7 @@
 
 #include "../../core/libcc/libcc.hh"
 #include "../../core/libwrap/sqlite.hh"
-#include "../server/config.hh"
-#include "../server/data.hh"
+#include "../server/instance.hh"
 #include "../server/user.hh"
 
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
@@ -235,29 +234,48 @@ Options:
             return 1;
     }
 
+    const char *config_filename = Fmt(&temp_alloc, "%1%/goupile.ini", profile_directory).ptr;
+    files.Append(config_filename);
+
+    // Write configuration file
+    {
+        StreamWriter st(config_filename);
+        Print(&st, DefaultConfig, app_key, app_name);
+        if (!st.Close())
+            return 1;
+
+        // This one keeps the default owner uid/gid even with --owner
+    }
+
     // Create database
-    sq_Database database;
     {
         const char *filename = Fmt(&temp_alloc, "%1%/database.db", profile_directory).ptr;
         files.Append(filename);
 
+        sq_Database database;
         if (!database.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
             return 1;
-        if (!MigrateDatabase(database, 0))
+        if (!database.Close())
             return 1;
-
-#ifndef _WIN32
-        if (change_owner && !ChangeFileOwner(filename, owner_uid, owner_gid))
-            return 1;
-#endif
     }
+
+    // Open and migrate database schema
+    InstanceData instance;
+    if (!instance.Open(config_filename))
+        return 1;
+    if (!instance.Migrate())
+        return 1;
+#ifndef _WIN32
+    if (change_owner && !ChangeFileOwner(instance.config.database_filename, owner_uid, owner_gid))
+        return 1;
+#endif
 
     // Create default files
     if (!empty) {
         Span<const AssetInfo> assets = GetPackedAssets();
 
         sq_Statement stmt;
-        if (!database.Prepare("INSERT INTO fs_files (path, blob, compression, sha256) VALUES (?, ?, ?, ?)", &stmt))
+        if (!instance.db.Prepare("INSERT INTO fs_files (path, blob, compression, sha256) VALUES (?, ?, ?, ?)", &stmt))
             return 1;
 
         for (const AssetInfo &asset: assets) {
@@ -309,56 +327,17 @@ Options:
 
         uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
 
-        if (!database.Run("INSERT INTO usr_users (username, password_hash, permissions) VALUES (?, ?, ?)",
-                          username, hash, permissions))
+        if (!instance.db.Run("INSERT INTO usr_users (username, password_hash, permissions) VALUES (?, ?, ?)",
+                             username, hash, permissions))
             return 1;
     }
 
-    // Write configuration file
-    {
-        const char *filename = Fmt(&temp_alloc, "%1%/goupile.ini", profile_directory).ptr;
-        files.Append(filename);
-
-        StreamWriter st(filename);
-        Print(&st, DefaultConfig, app_key, app_name);
-        if (!st.Close())
-            return 1;
-
-         // This one keeps the default owner uid/gid even with --owner
-    }
-
-    // Make sure database is OK!
-    if (!database.Close())
+    // Make sure instance.db is OK!
+    if (!instance.db.Close())
         return 1;
 
     out_guard.Disable();
     return 0;
-}
-
-static bool OpenProfileDatabase(const char *config_filename, sq_Database *out_database)
-{
-    if (!config_filename) {
-        config_filename = "goupile.ini";
-
-        if (!TestFile(config_filename, FileType::File)) {
-            LogError("Configuration file must be specified");
-            return false;
-        }
-    }
-
-    Config config;
-    if (!LoadConfig(config_filename, &config))
-        return false;
-
-    // Open database
-    if (!config.database_filename) {
-        LogError("Database file not specified");
-        return false;
-    }
-    if (!out_database->Open(config.database_filename, SQLITE_OPEN_READWRITE))
-        return false;
-
-    return true;
 }
 
 static int RunMigrate(Span<const char *> arguments)
@@ -390,34 +369,21 @@ Options:
         }
     }
 
-    // Open database
-    sq_Database database;
-    if (!OpenProfileDatabase(config_filename, &database))
+    // Open instance
+    InstanceData instance;
+    if (!instance.Open(config_filename))
         return 1;
 
-    // Get schema version
-    int version;
-    {
-        sq_Statement stmt;
-        if (!database.Prepare("PRAGMA user_version;", &stmt))
-            return 1;
-
-        bool success = stmt.Next();
-        RG_ASSERT(success);
-
-        version = sqlite3_column_int(stmt, 0);
-    }
-
-    LogInfo("Profile version: %1", version);
-    if (version > DatabaseVersion) {
-        LogError("Profile is too recent, expected version <= %1", DatabaseVersion);
+    LogInfo("Profile version: %1", instance.version);
+    if (instance.version > SchemaVersion) {
+        LogError("Profile is too recent, expected version <= %1", SchemaVersion);
         return 1;
-    } else if (version == DatabaseVersion) {
+    } else if (instance.version == SchemaVersion) {
         LogInfo("Profile is up to date");
         return 0;
     }
 
-    return !MigrateDatabase(database, version);
+    return !instance.Migrate();
 }
 
 static bool ParsePermissionList(Span<const char> remain, uint32_t *out_permissions)
@@ -497,14 +463,14 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
     }
 
     // Open database
-    sq_Database database;
-    if (!OpenProfileDatabase(config_filename, &database))
+    InstanceData instance;
+    if (!instance.Open(config_filename))
         return 1;
 
     // Find user first
     {
         sq_Statement stmt;
-        if (!database.Prepare("SELECT permissions FROM usr_users WHERE username = ?", &stmt))
+        if (!instance.db.Prepare("SELECT permissions FROM usr_users WHERE username = ?", &stmt))
             return false;
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
@@ -548,8 +514,8 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
         return 1;
 
     // Create user
-    if (!database.Run(R"(INSERT INTO usr_users (username, password_hash, zone, permissions)
-                         VALUES (?, ?, ?, ?))",
+    if (!instance.db.Run(R"(INSERT INTO usr_users (username, password_hash, zone, permissions)
+                            VALUES (?, ?, ?, ?))",
                       username, hash, zone ? sq_Binding(zone) : sq_Binding(), permissions))
         return 1;
 
@@ -611,9 +577,9 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
         }
     }
 
-    // Open database
-    sq_Database database;
-    if (!OpenProfileDatabase(config_filename, &database))
+    // Open instance
+    InstanceData instance;
+    if (!instance.Open(config_filename))
         return 1;
 
     // Find user first
@@ -621,7 +587,7 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
     uint32_t prev_permissions;
     {
         sq_Statement stmt;
-        if (!database.Prepare("SELECT zone, permissions FROM usr_users WHERE username = ?", &stmt))
+        if (!instance.db.Prepare("SELECT zone, permissions FROM usr_users WHERE username = ?", &stmt))
             return false;
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
@@ -680,21 +646,21 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
     }
 
     // Update user
-    sq_TransactionResult ret = database.Transaction([&]() {
+    sq_TransactionResult ret = instance.db.Transaction([&]() {
         if (password) {
             char hash[crypto_pwhash_STRBYTES];
             if (!HashPassword(password, hash))
                 return sq_TransactionResult::Rollback;
 
-            if (!database.Run("UPDATE usr_users SET password_hash = ? WHERE username = ?",
-                              hash, username))
+            if (!instance.db.Run("UPDATE usr_users SET password_hash = ? WHERE username = ?",
+                                 hash, username))
                 return sq_TransactionResult::Error;
         }
 
-        if (!database.Run("UPDATE usr_users SET zone = ?, permissions = ? WHERE username = ?",
-                          zone ? sq_Binding(zone) : sq_Binding(), permissions, username))
+        if (!instance.db.Run("UPDATE usr_users SET zone = ?, permissions = ? WHERE username = ?",
+                             zone ? sq_Binding(zone) : sq_Binding(), permissions, username))
             return sq_TransactionResult::Error;
-        if (!sqlite3_changes(database)) {
+        if (!sqlite3_changes(instance.db)) {
             LogError("UPDATE request failed: no match");
             return sq_TransactionResult::Rollback;
         }
@@ -744,15 +710,15 @@ Options:
         }
     }
 
-    // Open database
-    sq_Database database;
-    if (!OpenProfileDatabase(config_filename, &database))
+    // Open instance
+    InstanceData instance;
+    if (!instance.Open(config_filename))
         return 1;
 
     // Delete user
-    if (!database.Run("DELETE FROM usr_users WHERE username = ?", username))
+    if (!instance.db.Run("DELETE FROM usr_users WHERE username = ?", username))
         return 1;
-    if (!sqlite3_changes(database)) {
+    if (!sqlite3_changes(instance.db)) {
         LogError("User '%1' does not exist", username);
         return 1;
     }

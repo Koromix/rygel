@@ -4,6 +4,7 @@
 
 #include "../../core/libcc/libcc.hh"
 #include "goupile.hh"
+#include "instance.hh"
 #include "schedule.hh"
 #include "../../core/libwrap/sqlite.hh"
 

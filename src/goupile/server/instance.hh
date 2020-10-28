@@ -5,14 +5,23 @@
 #pragma once
 
 #include "../../core/libcc/libcc.hh"
+#include "config.hh"
+#include "../../core/libwrap/sqlite.hh"
 
 namespace RG {
 
-class sq_Database;
-
 extern const char *const DefaultConfig;
-extern const int DatabaseVersion;
+extern const int SchemaVersion;
 
-bool MigrateDatabase(sq_Database &database, int version);
+class InstanceData {
+public:
+    Config config;
+    sq_Database db;
+    int version = -1;
+
+    bool Open(const char *filename);
+    bool Migrate();
+    void Close();
+};
 
 }

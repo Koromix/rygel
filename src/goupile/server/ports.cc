@@ -4,8 +4,8 @@
 
 #include "../../core/libcc/libcc.hh"
 #include "../../core/libwrap/json.hh"
-#include "config.hh"
 #include "goupile.hh"
+#include "instance.hh"
 #include "ports.hh"
 #include "user.hh"
 

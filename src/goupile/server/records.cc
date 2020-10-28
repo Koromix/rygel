@@ -3,12 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../core/libcc/libcc.hh"
-#include "config.hh"
 #include "goupile.hh"
+#include "instance.hh"
 #include "ports.hh"
 #include "user.hh"
 #include "../../core/libwrap/json.hh"
-#include "../../core/libwrap/sqlite.hh"
 
 namespace RG {
 

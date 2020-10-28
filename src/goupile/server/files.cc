@@ -3,12 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../core/libcc/libcc.hh"
-#include "config.hh"
 #include "files.hh"
+#include "instance.hh"
 #include "goupile.hh"
 #include "user.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
-#include <stdio.h>
 
 namespace RG {
 

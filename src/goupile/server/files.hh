@@ -5,6 +5,7 @@
 #pragma once
 
 #include "../../core/libcc/libcc.hh"
+#include "../../web/libhttp/libhttp.hh"
 
 namespace RG {
 

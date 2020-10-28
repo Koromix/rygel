@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../core/libcc/libcc.hh"
-#include "data.hh"
+#include "instance.hh"
 #include "../../core/libwrap/sqlite.hh"
 
 namespace RG {
@@ -28,19 +28,72 @@ DatabaseFile = database.db
 # BaseUrl = /
 )";
 
-// If you change DatabaseVersion, don't forget to update the migration switch!
-const int DatabaseVersion = 14;
+// If you change SchemaVersion, don't forget to update the migration switch!
+const int SchemaVersion = 14;
 
-bool MigrateDatabase(sq_Database &database, int version)
+bool InstanceData::Open(const char *filename)
 {
-    RG_ASSERT(version < DatabaseVersion);
+    Close();
 
-    LogInfo("Running migrations %1 to %2", version + 1, DatabaseVersion);
+    if (!filename) {
+        filename = "goupile.ini";
 
-    sq_TransactionResult ret = database.Transaction([&]() {
+        if (!TestFile(filename, FileType::File)) {
+            LogError("Configuration file must be specified");
+            return false;
+        }
+    }
+
+    // Load configuration
+    if (!LoadConfig(filename, &config))
+        return false;
+
+    // Check configuration
+    {
+        bool valid = true;
+
+        if (!config.app_key || !config.app_key[0]) {
+            LogError("Project key must not be empty");
+            valid = false;
+        }
+        if (!config.database_filename) {
+            LogError("Database file not specified");
+            valid = false;
+        }
+
+        if (!valid)
+            return 1;
+    }
+
+    // Open database
+    if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))
+        return false;
+
+    // Schema version
+    {
+        sq_Statement stmt;
+        if (!db.Prepare("PRAGMA user_version;", &stmt))
+            return 1;
+
+        bool success = stmt.Next();
+        RG_ASSERT(success);
+
+        version = sqlite3_column_int(stmt, 0);
+    }
+
+    return true;
+}
+
+bool InstanceData::Migrate()
+{
+    RG_ASSERT(version < SchemaVersion);
+
+    LogInfo("Running migrations %1 to %2", version + 1, SchemaVersion);
+
+    sq_TransactionResult ret = db.Transaction([&]() {
         switch (version) {
             case 0: {
-                bool success = database.Run(R"(
+                bool success = db.Run(R"(
                     CREATE TABLE rec_entries (
                         table_name TEXT NOT NULL,
                         id TEXT NOT NULL,
@@ -107,7 +160,7 @@ bool MigrateDatabase(sq_Database &database, int version)
             } [[fallthrough]];
 
             case 1: {
-                bool success = database.Run(R"(
+                bool success = db.Run(R"(
                     ALTER TABLE rec_fragments RENAME TO rec_fragments_BAK;
                     DROP INDEX rec_fragments_tip;
 
@@ -133,7 +186,7 @@ bool MigrateDatabase(sq_Database &database, int version)
             } [[fallthrough]];
 
             case 2: {
-                bool success = database.Run(R"(
+                bool success = db.Run(R"(
                     DROP INDEX rec_entries_ti;
                     DROP INDEX rec_fragments_tip;
                     DROP INDEX rec_columns_tpkp;
@@ -154,7 +207,7 @@ bool MigrateDatabase(sq_Database &database, int version)
             } [[fallthrough]];
 
             case 3: {
-                bool success = database.Run(R"(
+                bool success = db.Run(R"(
                     CREATE TABLE adm_migrations (
                         version INTEGER NOT NULL,
                         build TEXT NOT NULL,
@@ -166,14 +219,14 @@ bool MigrateDatabase(sq_Database &database, int version)
             } [[fallthrough]];
 
             case 4: {
-                if (!database.Run("UPDATE usr_users SET permissions = 31 WHERE permissions == 7;"))
+                if (!db.Run("UPDATE usr_users SET permissions = 31 WHERE permissions == 7;"))
                     return sq_TransactionResult::Error;
             } [[fallthrough]];
 
             case 5: {
                 // Incomplete migration that breaks down (because NOT NULL constraint)
                 // if there is any fragment, which is not ever the case yet.
-                bool success = database.Run(R"(
+                bool success = db.Run(R"(
                     ALTER TABLE rec_entries ADD COLUMN json TEXT NOT NULL;
                     ALTER TABLE rec_entries ADD COLUMN version INTEGER NOT NULL;
                     ALTER TABLE rec_fragments ADD COLUMN version INEGER NOT NULL;
@@ -183,7 +236,7 @@ bool MigrateDatabase(sq_Database &database, int version)
             } [[fallthrough]];
 
             case 6: {
-                bool success = database.Run(R"(
+                bool success = db.Run(R"(
                     DROP INDEX rec_columns_spkp;
                     ALTER TABLE rec_columns RENAME COLUMN key TO variable;
                     CREATE UNIQUE INDEX rec_fragments_siv ON rec_fragments(store, id, version);
@@ -194,7 +247,7 @@ bool MigrateDatabase(sq_Database &database, int version)
             } [[fallthrough]];
 
             case 7: {
-                bool success = database.Run(R"(
+                bool success = db.Run(R"(
                     ALTER TABLE rec_columns RENAME TO rec_columns_BAK;
                     DROP INDEX rec_columns_spvp;
 
@@ -219,12 +272,12 @@ bool MigrateDatabase(sq_Database &database, int version)
             } [[fallthrough]];
 
             case 8: {
-                if (!database.Run("UPDATE usr_users SET permissions = 63 WHERE permissions == 31;"))
+                if (!db.Run("UPDATE usr_users SET permissions = 63 WHERE permissions == 31;"))
                     return sq_TransactionResult::Error;
             } [[fallthrough]];
 
             case 9: {
-                bool success = database.Run(R"(
+                bool success = db.Run(R"(
                     DROP TABLE rec_columns;
 
                     CREATE TABLE rec_columns (
@@ -249,7 +302,7 @@ bool MigrateDatabase(sq_Database &database, int version)
             } [[fallthrough]];
 
             case 10: {
-                bool success = database.Run(R"(
+                bool success = db.Run(R"(
                     ALTER TABLE rec_entries ADD COLUMN zone TEXT;
                     ALTER TABLE usr_users ADD COLUMN zone TEXT;
 
@@ -260,7 +313,7 @@ bool MigrateDatabase(sq_Database &database, int version)
             } [[fallthrough]];
 
             case 11: {
-                bool success = database.Run(R"(
+                bool success = db.Run(R"(
                     CREATE TABLE adm_events (
                         time INTEGER NOT NULL,
                         address TEXT,
@@ -273,7 +326,7 @@ bool MigrateDatabase(sq_Database &database, int version)
             } [[fallthrough]];
 
             case 12: {
-                bool success = database.Run(R"(
+                bool success = db.Run(R"(
                     ALTER TABLE adm_events RENAME COLUMN details TO username;
                     ALTER TABLE adm_events ADD COLUMN zone TEXT;
                     ALTER TABLE adm_events ADD COLUMN details TEXT;
@@ -283,7 +336,7 @@ bool MigrateDatabase(sq_Database &database, int version)
             } [[fallthrough]];
 
             case 13: {
-                bool success = database.Run(R"(
+                bool success = db.Run(R"(
                     CREATE TABLE fs_files (
                         path TEXT NOT NULL,
                         blob BLOB,
@@ -297,17 +350,17 @@ bool MigrateDatabase(sq_Database &database, int version)
                     return sq_TransactionResult::Error;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DatabaseVersion == 14);
+            RG_STATIC_ASSERT(SchemaVersion == 14);
         }
 
         int64_t time = GetUnixTime();
-        if (!database.Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
-                          DatabaseVersion, FelixVersion, time))
+        if (!db.Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
+                              SchemaVersion, FelixVersion, time))
             return sq_TransactionResult::Error;
 
         char buf[128];
-        Fmt(buf, "PRAGMA user_version = %1;", DatabaseVersion);
-        if (!database.Run(buf))
+        Fmt(buf, "PRAGMA user_version = %1;", SchemaVersion);
+        if (!db.Run(buf))
             return sq_TransactionResult::Error;
 
         return sq_TransactionResult::Commit;
@@ -315,8 +368,16 @@ bool MigrateDatabase(sq_Database &database, int version)
     if (ret != sq_TransactionResult::Commit)
         return false;
 
-    LogInfo("Migration complete, version: %1", DatabaseVersion);
+    version = SchemaVersion;
+    LogInfo("Migration complete, version: %1", version);
+
     return true;
+}
+
+void InstanceData::Close()
+{
+    config.str_alloc.ReleaseAll();
+    db.Close();
 }
 
 }
