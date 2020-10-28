@@ -555,6 +555,7 @@ bool http_IO::ReadPostValues(Allocator *alloc, HashMap<const char *, const char 
 {
     RG_ASSERT(state != State::Sync);
     RG_ASSERT(request.method == http_RequestMethod::Post);
+    RG_ASSERT(alloc);
 
     struct PostProcessorContext {
         HashMap<const char *, const char *> *values;

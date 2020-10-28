@@ -17,6 +17,7 @@ static const char *BuildObjectPath(const char *src_filename, const char *output_
                                    const char *suffix, Allocator *alloc)
 {
     RG_ASSERT(!PathIsAbsolute(src_filename));
+    RG_ASSERT(alloc);
 
     HeapArray<char> buf(alloc);
 
@@ -617,6 +618,8 @@ static Span<const char> ParseMakeFragment(Span<const char> remain, HeapArray<cha
 
 static bool ParseMakeRule(const char *filename, Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
+    RG_ASSERT(alloc);
+
     HeapArray<char> rule_buf;
     if (ReadFile(filename, Megabytes(2), &rule_buf) < 0)
         return false;
@@ -650,6 +653,8 @@ static bool ParseMakeRule(const char *filename, Allocator *alloc, HeapArray<cons
 
 static Size ExtractShowIncludes(Span<char> buf, Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
+    RG_ASSERT(alloc);
+
     // We need to strip include notes from the output
     Span<char> new_buf = MakeSpan(buf.ptr, 0);
 

@@ -51,6 +51,8 @@ static void HandleFileStatic(const http_RequestInfo &request, http_IO *io)
 
 static Span<const uint8_t> PatchGoupileVariables(const AssetInfo &asset, Allocator *alloc)
 {
+    RG_ASSERT(alloc);
+
     Span<const uint8_t> data = PatchAsset(asset, alloc, [](const char *key, StreamWriter *writer) {
         if (TestStr(key, "VERSION")) {
             writer->Write(FelixVersion);

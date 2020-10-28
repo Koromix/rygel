@@ -85,6 +85,8 @@ static int RunTarget(const TargetInfo &target, const char *target_filename,
 
 static const char *BuildGitVersionString(Allocator *alloc)
 {
+    RG_ASSERT(alloc);
+
     HeapArray<char> output(alloc);
     int exit_code;
     if (!ExecuteCommandLine("git log -n1 --pretty=format:%ad_%h --date=format:%Y%m%d",

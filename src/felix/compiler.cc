@@ -22,6 +22,8 @@ static void MakePackCommand(Span<const char *const> pack_filenames, CompileMode 
                             bool use_arrays, const char *pack_options, const char *dest_filename,
                             Allocator *alloc, Command *out_cmd)
 {
+    RG_ASSERT(alloc);
+
     HeapArray<char> buf(alloc);
 
     Fmt(&buf, "\"%1\" pack -O \"%2\"", GetApplicationExecutable(), dest_filename);
@@ -71,6 +73,7 @@ public:
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
+        RG_ASSERT(alloc);
         RG::MakePackCommand(pack_filenames, compile_mode, false, pack_options,
                             dest_filename, alloc, out_cmd);
     }
@@ -80,6 +83,7 @@ public:
                         Span<const char *const> include_directories, bool env_flags,
                         Allocator *alloc, Command *out_cmd) const override
     {
+        RG_ASSERT(alloc);
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr, definitions,
                           include_directories, env_flags, nullptr, alloc, out_cmd);
     }
@@ -91,6 +95,8 @@ public:
                            Span<const char *const> include_directories, bool env_flags,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
+        RG_ASSERT(alloc);
+
         HeapArray<char> buf(alloc);
 
         // Compiler
@@ -174,6 +180,8 @@ public:
                          bool env_flags, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
+        RG_ASSERT(alloc);
+
         HeapArray<char> buf(alloc);
 
         // Linker
@@ -242,6 +250,7 @@ public:
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
+        RG_ASSERT(alloc);
         RG::MakePackCommand(pack_filenames, compile_mode, false, pack_options,
                             dest_filename, alloc, out_cmd);
     }
@@ -251,6 +260,7 @@ public:
                         Span<const char *const> include_directories, bool env_flags,
                         Allocator *alloc, Command *out_cmd) const override
     {
+        RG_ASSERT(alloc);
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr,
                           definitions, include_directories, env_flags, nullptr, alloc, out_cmd);
     }
@@ -262,6 +272,8 @@ public:
                            Span<const char *const> include_directories, bool env_flags,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
+        RG_ASSERT(alloc);
+
         HeapArray<char> buf(alloc);
 
         // Compiler
@@ -346,6 +358,8 @@ public:
                          bool env_flags, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
+        RG_ASSERT(alloc);
+
         HeapArray<char> buf(alloc);
 
         // Linker
@@ -413,6 +427,8 @@ public:
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
+        RG_ASSERT(alloc);
+
         // Strings literals are limited in length in MSVC, even with concatenation (64kiB)
         RG::MakePackCommand(pack_filenames, compile_mode, true, pack_options,
                             dest_filename, alloc, out_cmd);
@@ -423,12 +439,15 @@ public:
                         Span<const char *const> include_directories, bool env_flags,
                         Allocator *alloc, Command *out_cmd) const override
     {
+        RG_ASSERT(alloc);
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr, definitions,
                           include_directories, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchObject(const char *pch_filename, Allocator *alloc) const override
     {
+        RG_ASSERT(alloc);
+
         const char *obj_filename = Fmt(alloc, "%1.obj", pch_filename).ptr;
         return obj_filename;
     }
@@ -438,6 +457,8 @@ public:
                            Span<const char *const> include_directories, bool env_flags,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
+        RG_ASSERT(alloc);
+
         HeapArray<char> buf(alloc);
 
         // Compiler
@@ -499,6 +520,8 @@ public:
                          bool env_flags, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
+        RG_ASSERT(alloc);
+
         HeapArray<char> buf(alloc);
 
         // Linker
@@ -547,6 +570,7 @@ public:
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
+        RG_ASSERT(alloc);
         RG::MakePackCommand(pack_filenames, compile_mode, false, pack_options,
                             dest_filename, alloc, out_cmd);
     }
@@ -556,6 +580,7 @@ public:
                         Span<const char *const> include_directories, bool env_flags,
                         Allocator *alloc, Command *out_cmd) const override
     {
+        RG_ASSERT(alloc);
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr,
                           definitions, include_directories, env_flags, nullptr, alloc, out_cmd);
     }
@@ -567,6 +592,8 @@ public:
                            Span<const char *const> include_directories, bool env_flags,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
+        RG_ASSERT(alloc);
+
         HeapArray<char> buf(alloc);
 
         // Compiler
@@ -637,6 +664,8 @@ public:
                          bool env_flags, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
+        RG_ASSERT(alloc);
+
         HeapArray<char> buf(alloc);
 
         // Linker

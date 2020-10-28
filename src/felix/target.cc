@@ -40,6 +40,8 @@ struct TargetConfig {
 static bool AppendNormalizedPath(Span<const char> path,
                                  Allocator *alloc, HeapArray<const char *> *out_paths)
 {
+    RG_ASSERT(alloc);
+
     if (PathIsAbsolute(path)) {
         LogError("Cannot use absolute path '%1'", path);
         return false;
@@ -54,6 +56,8 @@ static bool AppendNormalizedPath(Span<const char> path,
 static void AppendListValues(Span<const char> str,
                              Allocator *alloc, HeapArray<const char *> *out_libraries)
 {
+    RG_ASSERT(alloc);
+
     while (str.len) {
         Span<const char> lib = TrimStr(SplitStr(str, ' ', &str));
 
@@ -67,6 +71,8 @@ static void AppendListValues(Span<const char> str,
 static bool EnumerateSortedFiles(const char *directory, bool recursive,
                                  Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
+    RG_ASSERT(alloc);
+
     Size start_idx = out_filenames->len;
 
     if (!EnumerateFiles(directory, nullptr, recursive ? -1  : 0, 1024, alloc, out_filenames))
@@ -83,6 +89,8 @@ static bool EnumerateSortedFiles(const char *directory, bool recursive,
 static bool ResolveFileSet(const FileSet &file_set,
                            Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
+    RG_ASSERT(alloc);
+
     RG_DEFER_NC(out_guard, len = out_filenames->len) { out_filenames->RemoveFrom(len); };
 
     out_filenames->Append(file_set.filenames);

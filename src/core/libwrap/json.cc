@@ -131,10 +131,10 @@ bool json_Parser::Handler::Key(const char *key, Size len, bool)
     return true;
 }
 
-json_Parser::json_Parser(StreamReader *st, Allocator *allocator)
-    : st(st), handler({allocator})
+json_Parser::json_Parser(StreamReader *st, Allocator *alloc)
+    : st(st), handler({alloc})
 {
-    RG_ASSERT(allocator);
+    RG_ASSERT(alloc);
     reader.IterativeParseInit();
 }
 

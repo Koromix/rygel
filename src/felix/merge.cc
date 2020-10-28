@@ -146,6 +146,8 @@ static void FindMergeRules(Span<const MergeRule> rules, const char *filename,
 
 static void InitSourceMergeData(PackSourceInfo *src, MergeMode merge_mode, Allocator *alloc)
 {
+    RG_ASSERT(alloc);
+
     switch (merge_mode) {
         case MergeMode::Naive: {
             src->prefix = "";

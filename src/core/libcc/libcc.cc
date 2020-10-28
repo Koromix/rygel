@@ -1969,6 +1969,8 @@ bool MatchPathSpec(const char *path, const char *spec)
 
 bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_path)
 {
+    RG_ASSERT(alloc);
+
     // XXX: Non-Unicode friendly on Win32
     Span<const char> env = getenv("PATH");
 
@@ -2213,6 +2215,8 @@ CompressionType GetPathCompression(Span<const char> filename)
 
 Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory, Allocator *alloc)
 {
+    RG_ASSERT(alloc);
+
     if (!path.len && !root_directory.len)
         return Fmt(alloc, "");
 
@@ -4725,6 +4729,8 @@ void InitPackedMap(Span<const AssetInfo> assets)
 Span<const uint8_t> PatchAsset(const AssetInfo &asset, Allocator *alloc,
                                FunctionRef<bool(const char *, StreamWriter *)> func)
 {
+    RG_ASSERT(alloc);
+
     HeapArray<uint8_t> buf(alloc);
 
     StreamReader reader(asset.data, nullptr, asset.compression_type);
@@ -5658,6 +5664,8 @@ void ConsolePrompter::EnsureNulTermination()
 
 const char *Prompt(const char *prompt, const char *mask, Allocator *alloc)
 {
+    RG_ASSERT(alloc);
+
     ConsolePrompter prompter;
 
     prompter.prompt = prompt;
