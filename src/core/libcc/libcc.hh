@@ -3487,6 +3487,12 @@ static inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
     }
 }
 
+static inline void FormatSha256(Span<const uint8_t> hash, char out_sha256[65])
+{
+    RG_ASSERT(hash.len == 32);
+    Fmt(MakeSpan(out_sha256, 65), "%1", FmtSpan(hash, FmtType::Hexadecimal, "").Pad0(-2));
+}
+
 // ------------------------------------------------------------------------
 // System
 // ------------------------------------------------------------------------

@@ -6,7 +6,6 @@
 #include "../../core/libwrap/sqlite.hh"
 #include "../server/instance.hh"
 #include "../server/user.hh"
-
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
 #ifndef _WIN32
@@ -67,12 +66,6 @@ static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
     return true;
 }
 #endif
-
-static void FormatSha256(Span<const uint8_t> hash, char out_sha256[65])
-{
-    RG_ASSERT(hash.len == 32);
-    Fmt(MakeSpan(out_sha256, 65), "%1", FmtSpan(hash, FmtType::Hexadecimal, "").Pad0(-2));
-}
 
 static int RunInit(Span<const char *> arguments)
 {

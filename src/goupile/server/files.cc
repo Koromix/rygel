@@ -144,12 +144,6 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
     return true;
 }
 
-static void FormatSha256(Span<const uint8_t> hash, char out_sha256[65])
-{
-    RG_ASSERT(hash.len == 32);
-    Fmt(MakeSpan(out_sha256, 65), "%1", FmtSpan(hash, FmtType::Hexadecimal, "").Pad0(-2));
-}
-
 void HandleFilePut(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
