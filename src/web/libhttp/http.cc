@@ -130,11 +130,6 @@ static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
     return true;
 }
 
-static void ReleaseDataCallback(void *ptr)
-{
-    Allocator::Release(nullptr, ptr, -1);
-}
-
 static bool NegociateContentEncoding(MHD_Connection *conn, CompressionType *out_compression_type,
                                      http_IO *io)
 {
@@ -511,12 +506,10 @@ void http_IO::AttachError(int code, const char *details)
         details = last_err ? last_err : "";
     }
 
-    Span<char> page = Fmt((Allocator *)nullptr, "Error %1: %2\n%3", code,
+    Span<char> page = Fmt(&allocator, "Error %1: %2\n%3", code,
                           MHD_get_reason_phrase_for((unsigned int)code), details);
+    MHD_Response *response = MHD_create_response_from_buffer((size_t)page.len, page.ptr, MHD_RESPMEM_PERSISTENT);
 
-    MHD_Response *response =
-        MHD_create_response_from_buffer_with_free_callback((size_t)page.len, page.ptr,
-                                                           ReleaseDataCallback);
     AttachResponse(code, response);
     AddHeader("Content-Type", "text/plain");
 }
