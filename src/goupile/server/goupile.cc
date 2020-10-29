@@ -6,7 +6,6 @@
 #include "files.hh"
 #include "goupile.hh"
 #include "instance.hh"
-#include "misc.hh"
 #include "ports.hh"
 #include "records.hh"
 #include "schedule.hh"

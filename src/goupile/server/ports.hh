@@ -101,4 +101,6 @@ void InitPorts();
 ScriptPort *LockPort();
 void UnlockPort(ScriptPort *port);
 
+Size ConvertToJsName(const char *name, Span<char> out_buf);
+
 }
