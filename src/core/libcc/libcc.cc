@@ -2653,8 +2653,8 @@ const char *CreateTemporaryFile(const char *directory, const char *extension,
             static const char *chars = "abcdefghijklmnopqrstuvwxyz0123456789";
 
             // We don't want to depend on libsodium here, so use C++ crap instead
-            static std::default_random_engine rnd_generator(GetUnixTime());
-            static std::uniform_int_distribution<int> rnd_distribution(0, strlen(chars) - 1);
+            static std::default_random_engine rnd_generator((int)GetUnixTime());
+            static std::uniform_int_distribution<int> rnd_distribution(0, (int)strlen(chars) - 1);
 
             filename.Append(chars[rnd_distribution(rnd_generator)]);
         }
