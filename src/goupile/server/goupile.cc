@@ -6,7 +6,7 @@
 #include "files.hh"
 #include "goupile.hh"
 #include "instance.hh"
-#include "ports.hh"
+#include "js.hh"
 #include "records.hh"
 #include "schedule.hh"
 #include "user.hh"
@@ -123,7 +123,7 @@ static void InitAssets()
             asset.data = PatchGoupileVariables(asset, &assets_alloc);
         } else if (TestStr(asset.name, "favicon.png")) {
             asset.name = "/favicon.png";
-        } else if (TestStr(asset.name, "ports.pk.js")) {
+        } else if (TestStr(asset.name, "server.pk.js")) {
             continue;
         } else {
             asset.name = Fmt(&assets_alloc, "/static/%1", asset.name).ptr;

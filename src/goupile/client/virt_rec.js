@@ -425,7 +425,7 @@ function VirtualRecords(db, zone) {
         return `${table}:${id}@${version.toString().padStart(9, '0')}`;
     }
 
-    // XXX: Duplicated in server/ports.js, keep in sync
+    // XXX: Duplicated in server/js.js, keep in sync
     function makeColumnKey(table, page, variable) {
         return `${table}@${page}.${variable}`;
     }

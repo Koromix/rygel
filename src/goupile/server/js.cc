@@ -6,7 +6,7 @@
 #include "../../core/libwrap/json.hh"
 #include "goupile.hh"
 #include "instance.hh"
-#include "ports.hh"
+#include "js.hh"
 #include "user.hh"
 
 namespace RG {
@@ -420,7 +420,7 @@ bool ScriptPort::RunRecord(Span<const char> json, const ScriptRecord &handle,
 
 void InitPorts()
 {
-    const AssetInfo *asset = FindPackedAsset("ports.pk.js");
+    const AssetInfo *asset = FindPackedAsset("server.pk.js");
     RG_ASSERT(asset);
 
     // QuickJS requires NUL termination, so we need to make a copy anyway
@@ -441,7 +441,7 @@ void InitPorts()
         port->rt = JS_NewRuntime();
         port->ctx = JS_NewContext(port->rt);
 
-        JSValue ret = JS_Eval(port->ctx, code.ptr, code.len, "ports.pk.js", JS_EVAL_TYPE_GLOBAL);
+        JSValue ret = JS_Eval(port->ctx, code.ptr, code.len, "server.pk.js", JS_EVAL_TYPE_GLOBAL);
         RG_ASSERT(!JS_IsException(ret));
 
         JSValue global = JS_GetGlobalObject(port->ctx);
