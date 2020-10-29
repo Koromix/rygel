@@ -81,28 +81,30 @@ def list_instances(root, domain):
             except:
                 pass
 
-            # Fix BaseUrl setting if needed
-            if ini.get('HTTP', 'BaseUrl', fallback = None) != info.base_url:
-                print(f'Assigning BaseUrl "{info.base_url}" to {instance}', file = sys.stderr)
-                info.mismatch = True
-
-            # Fix Port setting if needed
             if info.port is not None:
-                prev_instance = used_ports.get(info.port)
-                if prev_instance is None:
-                    used_ports[info.port] = instance
-                else:
-                    print(f'Conflict on port {info.port}, used by {prev_instance} and {instance}', file = sys.stderr)
-                    info.port = None
-            if info.port is None:
-                while try_port in used_ports:
-                    try_port += 1
-                print(f'Assigning Port {try_port} to {instance}', file = sys.stderr)
-                info.port = try_port
-                used_ports[try_port] = instance
-                info.mismatch = True
+                used_ports[info.port] = instance
 
             instances[instance] = info
+
+    for instance, info in instances:
+        # Fix BaseUrl setting if needed
+        if ini.get('HTTP', 'BaseUrl', fallback = None) != info.base_url:
+            print(f'Assigning BaseUrl "{info.base_url}" to {instance}', file = sys.stderr)
+            info.mismatch = True
+
+        # Fix Port setting if needed
+        if info.port is not None:
+            prev_instance = used_ports.get(info.port)
+            if prev_instance is not None:
+                print(f'Conflict on port {info.port}, used by {prev_instance} and {instance}', file = sys.stderr)
+                info.port = None
+        if info.port is None:
+            while try_port in used_ports:
+                try_port += 1
+            print(f'Assigning Port {try_port} to {instance}', file = sys.stderr)
+            info.port = try_port
+            used_ports[try_port] = instance
+            info.mismatch = True
 
     return instances
 
