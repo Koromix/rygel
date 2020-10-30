@@ -25,6 +25,8 @@
     #include <windows.h>
     #include <fcntl.h>
     #include <io.h>
+    #include <sys/types.h>
+    #include <sys/stat.h>
     #include <direct.h>
     #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
         #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
