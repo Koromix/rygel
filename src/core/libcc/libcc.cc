@@ -13,7 +13,7 @@
     #define MINIZ_NO_MALLOC
     #include "../../../vendor/miniz/miniz.h"
 #endif
-#include "../../../vendor/grisu-exact/grisu_exact.h"
+#include "../../../vendor/dragonbox/include/dragonbox/dragonbox.h"
 
 #ifdef _WIN32
     #ifndef NOMINMAX
@@ -761,7 +761,7 @@ static Span<char> ExponentiateFloat(Span<char> buf, int K, int min_prec, int max
 template <typename T>
 Span<const char> FormatFloatingPoint(T value, int min_prec, int max_prec, char out_buf[32])
 {
-    auto v = jkj::grisu_exact(value);
+    auto v = jkj::dragonbox::to_decimal(value, jkj::dragonbox::policy::sign::ignore);
 
     Span<char> buf = FormatUnsignedToDecimal(v.significand, out_buf);
     int KK = (int)buf.len + v.exponent;

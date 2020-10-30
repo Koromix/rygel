@@ -75,7 +75,7 @@ bundle_drdR <- function(project_dir, version, build_dir) {
     copy_files(c('src/core/libwrap/Rcc.cc',
                  'src/core/libwrap/Rcc.hh'), 'src/core/libwrap')
     copy_files(list_files('vendor/miniz'), 'vendor/miniz')
-    copy_files('vendor/grisu-exact/grisu_exact.h', 'vendor/grisu-exact')
+    copy_files('vendor/dragonbox/include/dragonbox/dragonbox.h', 'vendor/dragonbox/include/dragonbox')
 
     return (build_dir)
 }
@@ -137,7 +137,7 @@ bundle_heimdallR <- function(project_dir, version, build_dir) {
                  'src/core/libwrap/opengl.hh',
                  'src/core/libwrap/opengl_func.inc'), 'src/core/libwrap')
     copy_files(list_files('vendor/miniz'), 'vendor/miniz')
-    copy_files('vendor/grisu-exact/grisu_exact.h', 'vendor/grisu-exact')
+    copy_files('vendor/dragonbox/include/dragonbox/dragonbox.h', 'vendor/dragonbox/include/dragonbox')
     copy_files(list_files('vendor/imgui'), 'vendor/imgui')
     copy_files(list_files('vendor/glfw'), 'vendor/glfw')
     copy_files(list_files('vendor/glfw/src'), 'vendor/glfw/src')
