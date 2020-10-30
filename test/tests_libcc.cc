@@ -397,9 +397,9 @@ void BenchFmt()
     static const int iterations = 1600000;
 
 #ifdef _WIN32
-    FILE *fp = OpenFile("NUL", OpenFileMode::Write);
+    FILE *fp = fopen("\\\\.\\NUL", "wb");
 #else
-    FILE *fp = OpenFile("/dev/null", OpenFileMode::Write);
+    FILE *fp = OpenFile("/dev/null", (int)OpenFileFlag::Write);
 #endif
     RG_ASSERT(fp);
     RG_DEFER { fclose(fp); };
