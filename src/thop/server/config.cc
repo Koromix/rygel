@@ -74,14 +74,9 @@ bool LoadConfig(StreamReader *st, Config *out_config)
             } else if (prop.section == "HTTP") {
                 do {
                     if (prop.key == "IPStack") {
-                        if (prop.value == "Dual") {
-                            config.http.ip_stack = IPStack::Dual;
-                        } else if (prop.value == "IPv4") {
-                            config.http.ip_stack = IPStack::IPv4;
-                        } else if (prop.value == "IPv6") {
-                            config.http.ip_stack = IPStack::IPv6;
-                        } else {
+                        if (!OptionToEnum(IPStackNames, prop.value, &config.http.ip_stack)) {
                             LogError("Unknown IP stack '%1'", prop.value);
+                            valid = false;
                         }
                     } else if (prop.key == "Port") {
                         valid &= ParseDec(prop.value, &config.http.port);
