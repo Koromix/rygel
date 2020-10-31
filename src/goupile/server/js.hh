@@ -87,19 +87,20 @@ public:
     ScriptPort() = default;
     ~ScriptPort();
 
+    void Unlock();
+
     void ChangeProfile(const Session &session);
 
     bool ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_handles);
     bool RunRecord(Span<const char> json, const ScriptRecord &handle,
                    HeapArray<ScriptFragment> *out_fragments, Span<const char> *out_json);
 
-    friend void InitPorts();
+    friend void InitJS();
 };
 
-void InitPorts();
+void InitJS();
 
-ScriptPort *LockPort();
-void UnlockPort(ScriptPort *port);
+ScriptPort *LockScriptPort();
 
 Size ConvertToJsName(const char *name, Span<char> out_buf);
 

@@ -54,6 +54,29 @@ ScriptPort::~ScriptPort()
     }
 }
 
+ScriptPort *LockScriptPort()
+{
+    std::unique_lock<std::mutex> lock(js_mutex);
+
+    while (!js_idle_ports.len) {
+        js_cv.wait(lock);
+    }
+
+    ScriptPort *port = js_idle_ports[js_idle_ports.len - 1];
+    js_idle_ports.RemoveLast(1);
+
+    return port;
+}
+
+void ScriptPort::Unlock()
+{
+    std::unique_lock<std::mutex> lock(js_mutex);
+
+    js_idle_ports.Append(this);
+
+    js_cv.notify_one();
+}
+
 void ScriptPort::ChangeProfile(const Session &session)
 {
     JSValue args[] = {
@@ -418,7 +441,7 @@ bool ScriptPort::RunRecord(Span<const char> json, const ScriptRecord &handle,
     return true;
 }
 
-void InitPorts()
+void InitJS()
 {
     const AssetInfo *asset = FindPackedAsset("server.pk.js");
     RG_ASSERT(asset);
@@ -458,29 +481,6 @@ void InitPorts()
 
         js_idle_ports.Append(port);
     }
-}
-
-ScriptPort *LockPort()
-{
-    std::unique_lock<std::mutex> lock(js_mutex);
-
-    while (!js_idle_ports.len) {
-        js_cv.wait(lock);
-    }
-
-    ScriptPort *port = js_idle_ports[js_idle_ports.len - 1];
-    js_idle_ports.RemoveLast(1);
-
-    return port;
-}
-
-void UnlockPort(ScriptPort *port)
-{
-    std::unique_lock<std::mutex> lock(js_mutex);
-
-    js_idle_ports.Append(port);
-
-    js_cv.notify_one();
 }
 
 // This is used for static strings (e.g. permission names), and the Span<char>

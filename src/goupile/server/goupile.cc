@@ -309,7 +309,7 @@ Options:
 
     // Init subsystems
     InitAssets();
-    InitPorts();
+    InitJS();
 
     // Run!
     http_Daemon daemon;

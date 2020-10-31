@@ -208,8 +208,8 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
 
     io->RunAsync([=]() {
         // Find appropriate port
-        ScriptPort *port = LockPort();
-        RG_DEFER { UnlockPort(port); };
+        ScriptPort *port = LockScriptPort();
+        RG_DEFER { port->Unlock(); };
 
         port->ChangeProfile(*session);
 
