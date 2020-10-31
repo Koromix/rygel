@@ -216,13 +216,14 @@ int Main(int argc, char **argv)
 {
     BlockAllocator temp_alloc;
 
+    const char *instance_directory = nullptr;
     bool migrate = false;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 [options]%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
+    %!..+-I, --instance_dir <dir>%!0     Set instance directory
 
         %!..+--port <port>%!0            Change web server port
                                  %!D..(default: %2)%!0
@@ -239,8 +240,7 @@ Options:
         return 0;
     }
 
-    // Find config filename
-    const char *config_filename = nullptr;
+    // Find instance directory
     {
         OptionParser opt(argc, argv, (int)OptionParser::Flag::SkipNonOptions);
 
@@ -248,24 +248,14 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
-                config_filename = opt.current_value;
+            } else if (opt.Test("-I", "--instance_dir", OptionType::OptionalValue)) {
+                instance_directory = opt.current_value;
             }
         }
     }
 
     // Load instance
-    if (!config_filename) {
-        // Using GetWorkingDirectory() is not strictly necessary, but this will make sure
-        // filenames are normalized as absolute paths when config file is loaded.
-        config_filename = Fmt(&temp_alloc, "%1%/goupile.ini", GetWorkingDirectory()).ptr;
-
-        if (!TestFile(config_filename, FileType::File)) {
-            LogError("Configuration file must be specified");
-            return 1;
-        }
-    }
-    if (!instance->Open(config_filename))
+    if (!instance->Open(instance_directory))
         return 1;
 
     // Parse arguments
@@ -273,7 +263,7 @@ Options:
         OptionParser opt(argc, argv);
 
         while (opt.Next()) {
-            if (opt.Test("-C", "--config_file", OptionType::Value)) {
+            if (opt.Test("-I", "--instance_dir", OptionType::Value)) {
                 // Already handled
             } else if (opt.Test("--port", OptionType::Value)) {
                 if (!ParseDec(opt.current_value, &instance->config.http.port))
@@ -289,22 +279,10 @@ Options:
         }
     }
 
-    // Check schema version
-    if (instance->version > SchemaVersion) {
-        LogError("Profile is too recent for goupile version %1", FelixVersion);
+    // Check instance
+    if (migrate && !instance->Migrate())
         return 1;
-    } else if (instance->version < SchemaVersion) {
-        if (migrate) {
-            if (!instance->Migrate())
-                return 1;
-        } else {
-            LogError("Outdated profile version, use %!..+--migrate or goupile_admin migrate%!0");
-            return 1;
-        }
-    }
-
-    // Create temporary directory
-    if (!MakeDirectory(instance->config.temp_directory, false))
+    if (!instance->Validate())
         return 1;
 
     // Init subsystems

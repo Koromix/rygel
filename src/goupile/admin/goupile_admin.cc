@@ -82,10 +82,10 @@ static int RunInit(Span<const char *> arguments)
     uid_t owner_uid = 0;
     gid_t owner_gid = 0;
 #endif
-    const char *profile_directory = nullptr;
+    const char *instance_directory = nullptr;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 init [options] [profile_directory]%!0
+        PrintLn(fp, R"(Usage: %!..+%1 init [options] [directory]%!0
 
 Options:
     %!..+-k, --key <key>%!0              Change application key
@@ -135,15 +135,15 @@ Options:
             }
         }
 
-        profile_directory = opt.ConsumeNonOption();
+        instance_directory = opt.ConsumeNonOption();
     }
 
-    profile_directory = NormalizePath(profile_directory ? profile_directory : ".",
-                                      GetWorkingDirectory(), &temp_alloc).ptr;
+    instance_directory = NormalizePath(instance_directory ? instance_directory : ".",
+                                       GetWorkingDirectory(), &temp_alloc).ptr;
 
     // Errors and defaults
     if (!app_key.len) {
-        app_key = TrimStrRight(profile_directory, RG_PATH_SEPARATORS);
+        app_key = TrimStrRight(instance_directory, RG_PATH_SEPARATORS);
         app_key = SplitStrReverseAny(app_key, RG_PATH_SEPARATORS);
     }
     if (!app_name.len) {
@@ -166,20 +166,20 @@ Options:
         }
     };
 
-    // Make or check project directory
-    if (TestFile(profile_directory)) {
-        if (!IsDirectoryEmpty(profile_directory)) {
-            LogError("Directory '%1' is not empty", profile_directory);
+    // Make or check instance directory
+    if (TestFile(instance_directory)) {
+        if (!IsDirectoryEmpty(instance_directory)) {
+            LogError("Directory '%1' is not empty", instance_directory);
             return 1;
         }
     } else {
-        if (!MakeDirectory(profile_directory, false))
+        if (!MakeDirectory(instance_directory, false))
             return 1;
 
-        directories.Append(profile_directory);
+        directories.Append(instance_directory);
     }
 #ifndef _WIN32
-    if (change_owner && !ChangeFileOwner(profile_directory, owner_uid, owner_gid))
+    if (change_owner && !ChangeFileOwner(instance_directory, owner_uid, owner_gid))
         return 1;
 #endif
 
@@ -206,8 +206,8 @@ Options:
 
     // Directories
     {
-        const auto make_profile_directory = [&](const char *name) {
-            const char *directory = Fmt(&temp_alloc, "%1%/%2", profile_directory, name).ptr;
+        const auto make_instance_directory = [&](const char *name) {
+            const char *directory = Fmt(&temp_alloc, "%1%/%2", instance_directory, name).ptr;
             if (!MakeDirectory(directory))
                 return false;
 
@@ -221,28 +221,13 @@ Options:
             return true;
         };
 
-        if (!make_profile_directory("tmp"))
+        if (!make_instance_directory("tmp"))
             return 1;
-        if (!make_profile_directory("backup"))
-            return 1;
-    }
-
-    const char *config_filename = Fmt(&temp_alloc, "%1%/goupile.ini", profile_directory).ptr;
-    files.Append(config_filename);
-
-    // Write configuration file
-    {
-        StreamWriter st(config_filename);
-        Print(&st, DefaultConfig, app_key, app_name);
-        if (!st.Close())
-            return 1;
-
-        // This one keeps the default owner uid/gid even with --owner
     }
 
     // Create database
     {
-        const char *filename = Fmt(&temp_alloc, "%1%/database.db", profile_directory).ptr;
+        const char *filename = Fmt(&temp_alloc, "%1%/database.db", instance_directory).ptr;
         files.Append(filename);
 
         sq_Database database;
@@ -252,16 +237,20 @@ Options:
             return 1;
     }
 
-    // Open and migrate database schema
+    // Open instance
     InstanceData instance;
-    if (!instance.Open(config_filename))
-        return 1;
-    if (!instance.Migrate())
+    if (!instance.Open(instance_directory))
         return 1;
 #ifndef _WIN32
-    if (change_owner && !ChangeFileOwner(instance.config.database_filename, owner_uid, owner_gid))
+    if (change_owner && !ChangeFileOwner(database_filename, owner_uid, owner_gid))
         return 1;
 #endif
+
+    // Create database schema
+    instance.config.app_key = DuplicateString(app_key, &temp_alloc).ptr;
+    instance.config.app_name = DuplicateString(app_name, &temp_alloc).ptr;
+    if (!instance.Migrate())
+        return 1;
 
     // Create default files
     if (!empty) {
@@ -336,13 +325,13 @@ Options:
 static int RunMigrate(Span<const char *> arguments)
 {
     // Options
-    const char *config_filename = nullptr;
+    const char *instance_directory = nullptr;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 migrate [options]%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file)", FelixTarget);
+    %!..+-I, --instance_dir <dir>%!0     Set instance directory)", FelixTarget);
     };
 
     // Parse arguments
@@ -353,8 +342,8 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
-                config_filename = opt.current_value;
+            } else if (opt.Test("-I", "--instance_dir", OptionType::OptionalValue)) {
+                instance_directory = opt.current_value;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -364,17 +353,8 @@ Options:
 
     // Open instance
     InstanceData instance;
-    if (!instance.Open(config_filename))
+    if (!instance.Open(instance_directory))
         return 1;
-
-    LogInfo("Profile version: %1", instance.version);
-    if (instance.version > SchemaVersion) {
-        LogError("Profile is too recent, expected version <= %1", SchemaVersion);
-        return 1;
-    } else if (instance.version == SchemaVersion) {
-        LogInfo("Profile is up to date");
-        return 0;
-    }
 
     return !instance.Migrate();
 }
@@ -406,7 +386,7 @@ static int RunAddUser(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *config_filename = nullptr;
+    const char *instance_directory = nullptr;
     const char *username = nullptr;
     const char *password = nullptr;
     const char *zone = nullptr;
@@ -416,7 +396,7 @@ static int RunAddUser(Span<const char *> arguments)
         PrintLn(fp, R"(Usage: %!..+%1 add_user [options] <username>%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
+    %!..+-I, --instance_dir <dir>%!0     Set instance directory
 
         %!..+--password <pwd>%!0         Password of user
         %!..+--zone <zone>%!0            Zone of user
@@ -433,8 +413,8 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
-                config_filename = opt.current_value;
+            } else if (opt.Test("-I", "--instance_dir", OptionType::OptionalValue)) {
+                instance_directory = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 password = opt.current_value;
             } else if (opt.Test("--zone", OptionType::Value)) {
@@ -457,7 +437,9 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
 
     // Open database
     InstanceData instance;
-    if (!instance.Open(config_filename))
+    if (!instance.Open(instance_directory))
+        return 1;
+    if (!instance.Validate())
         return 1;
 
     // Find user first
@@ -521,7 +503,7 @@ static int RunEditUser(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *config_filename = nullptr;
+    const char *instance_directory = nullptr;
     const char *username = nullptr;
     const char *password = nullptr;
     const char *zone = nullptr;
@@ -531,7 +513,7 @@ static int RunEditUser(Span<const char *> arguments)
         PrintLn(fp, R"(Usage: %!..+%1 edit_user [options] <username>%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
+    %!..+-I, --instance_dir <dir>%!0     Set instance directory
 
         %!..+--password <pwd>%!0         Password of user
         %!..+--zone <zone>%!0            Zone of user
@@ -548,8 +530,8 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
-                config_filename = opt.current_value;
+            } else if (opt.Test("-I", "--instance_dir", OptionType::OptionalValue)) {
+                instance_directory = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 password = opt.current_value;
             } else if (opt.Test("--zone", OptionType::Value)) {
@@ -572,7 +554,9 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
 
     // Open instance
     InstanceData instance;
-    if (!instance.Open(config_filename))
+    if (!instance.Open(instance_directory))
+        return 1;
+    if (!instance.Validate())
         return 1;
 
     // Find user first
@@ -670,14 +654,14 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
 static int RunRemoveUser(Span<const char *> arguments)
 {
     // Options
-    const char *config_filename = nullptr;
+    const char *instance_directory = nullptr;
     const char *username = nullptr;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 remove_user [options] <username>%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file)", FelixTarget);
+    %!..+-I, --instance_dir <dir>%!0     Set instance directory)", FelixTarget);
     };
 
     // Parse arguments
@@ -688,8 +672,8 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
-                config_filename = opt.current_value;
+            } else if (opt.Test("-I", "--instance_dir", OptionType::OptionalValue)) {
+                instance_directory = opt.current_value;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -705,7 +689,9 @@ Options:
 
     // Open instance
     InstanceData instance;
-    if (!instance.Open(config_filename))
+    if (!instance.Open(instance_directory))
+        return 1;
+    if (!instance.Validate())
         return 1;
 
     // Delete user
@@ -726,8 +712,8 @@ int Main(int argc, char **argv)
         PrintLn(fp, R"(Usage: %!..+%1 <command> [args]%!0
 
 General commands:
-    %!..+init%!0                         Create new profile
-    %!..+migrate%!0                      Migrate existing profile
+    %!..+init%!0                         Create new instance
+    %!..+migrate%!0                      Migrate existing instance
 
 User commands:
     %!..+add_user%!0                     Add new user

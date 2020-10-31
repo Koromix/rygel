@@ -8,179 +8,29 @@
 
 namespace RG {
 
-const char *const DefaultConfig =
-R"([Application]
-Key = %1
-Name = %2
-
-[Data]
-DatabaseFile = database.db
-
-[Sync]
-# UseOffline = Off
-# SyncMode = Offline
-# DemoUser =
-
-[HTTP]
-# IPStack = Dual
-# Port = 8889
-# Threads = 4
-# BaseUrl = /
-)";
-
 // If you change SchemaVersion, don't forget to update the migration switch!
-const int SchemaVersion = 14;
+const int SchemaVersion = 15;
 
-static bool LoadConfig(StreamReader *st, InstanceConfig *out_config)
+bool InstanceData::Open(const char *directory)
 {
-    InstanceConfig config;
-
-    Span<const char> root_directory;
-    SplitStrReverseAny(st->GetFileName(), RG_PATH_SEPARATORS, &root_directory);
-
-    IniParser ini(st);
-    ini.PushLogFilter();
-    RG_DEFER { PopLogFilter(); };
-
-    bool valid = true;
-    {
-        IniProperty prop;
-        while (ini.Next(&prop)) {
-            if (prop.section == "Application") {
-                do {
-                    if (prop.key == "Key") {
-                        config.app_key = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "Name") {
-                        config.app_name = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
-                } while (ini.NextInSection(&prop));
-            } else if (prop.section == "Data") {
-                do {
-                    if (prop.key == "LiveDirectory" || prop.key == "FilesDirectory") {
-                        config.live_directory = NormalizePath(prop.value, root_directory,
-                                                              &config.str_alloc).ptr;
-                    } else if (prop.key == "TempDirectory") {
-                        config.temp_directory = NormalizePath(prop.value, root_directory,
-                                                              &config.str_alloc).ptr;
-                    } else if (prop.key == "DatabaseFile") {
-                        config.database_filename = NormalizePath(prop.value, root_directory,
-                                                                 &config.str_alloc).ptr;
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
-                } while (ini.NextInSection(&prop));
-            } else if (prop.section == "Sync") {
-                do {
-                    if (prop.key == "UseOffline") {
-                        valid &= IniParser::ParseBoolValue(prop.value, &config.use_offline);
-                    } else if (prop.key == "MaxFileSize") {
-                        valid &= ParseDec(prop.value, &config.max_file_size);
-                    } else if (prop.key == "SyncMode") {
-                        valid &= OptionToEnum(SyncModeNames, prop.value, &config.sync_mode);
-                    } else if (prop.key == "DemoUser") {
-                        config.demo_user = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
-                } while (ini.NextInSection(&prop));
-            } else if (prop.section == "HTTP") {
-                do {
-                    if (prop.key == "IPStack") {
-                        if (prop.value == "Dual") {
-                            config.http.ip_stack = IPStack::Dual;
-                        } else if (prop.value == "IPv4") {
-                            config.http.ip_stack = IPStack::IPv4;
-                        } else if (prop.value == "IPv6") {
-                            config.http.ip_stack = IPStack::IPv6;
-                        } else {
-                            LogError("Unknown IP version '%1'", prop.value);
-                        }
-                    } else if (prop.key == "Port") {
-                        valid &= ParseDec(prop.value, &config.http.port);
-                    } else if (prop.key == "MaxConnections") {
-                        valid &= ParseDec(prop.value, &config.http.max_connections);
-                    } else if (prop.key == "IdleTimeout") {
-                        valid &= ParseDec(prop.value, &config.http.idle_timeout);
-                    } else if (prop.key == "Threads") {
-                        valid &= ParseDec(prop.value, &config.http.threads);
-                    } else if (prop.key == "AsyncThreads") {
-                        valid &= ParseDec(prop.value, &config.http.async_threads);
-                    } else if (prop.key == "BaseUrl") {
-                        config.http.base_url = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "MaxAge") {
-                        valid &= ParseDec(prop.value, &config.max_age);
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
-                } while (ini.NextInSection(&prop));
-            } else {
-                LogError("Unknown section '%1'", prop.section);
-                while (ini.NextInSection(&prop));
-                valid = false;
-            }
-        }
-    }
-    if (!ini.IsValid() || !valid)
-        return false;
-
-    // Default values
-    config.app_name = config.app_name ? config.app_name : config.app_key;
-    if (config.database_filename && !config.temp_directory) {
-        config.temp_directory = Fmt(&config.str_alloc, "%1%/tmp", root_directory).ptr;
-    }
-
-    std::swap(*out_config, config);
-    return true;
-}
-
-static bool LoadConfig(const char *filename, InstanceConfig *out_config)
-{
-    StreamReader st(filename);
-    return LoadConfig(&st, out_config);
-}
-
-bool InstanceData::Open(const char *filename)
-{
+    RG_DEFER_N(err_guard) { Close(); };
     Close();
 
-    if (!filename) {
-        filename = "goupile.ini";
-
-        if (!TestFile(filename, FileType::File)) {
-            LogError("Configuration file must be specified");
+    // Directories
+    if (!directory) {
+        if (TestFile("database.db", FileType::File)) {
+            directory = ".";
+        } else {
+            LogError("Instance directory must be specified");
             return false;
         }
     }
-
-    // Load configuration
-    if (!LoadConfig(filename, &config))
-        return false;
-
-    // Check configuration
-    {
-        bool valid = true;
-
-        if (!config.app_key || !config.app_key[0]) {
-            LogError("Project key must not be empty");
-            valid = false;
-        }
-        if (!config.database_filename) {
-            LogError("Database file not specified");
-            valid = false;
-        }
-
-        if (!valid)
-            return 1;
-    }
+    root_directory = DuplicateString(directory, &str_alloc).ptr;
+    temp_directory = Fmt(&str_alloc, "%1%/tmp", directory).ptr;
+    database_filename = Fmt(&str_alloc, "%1%/database.db", directory).ptr;
 
     // Open database
-    if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))
+    if (!db.Open(database_filename, SQLITE_OPEN_READWRITE))
         return false;
 
     // Schema version
@@ -192,22 +42,81 @@ bool InstanceData::Open(const char *filename)
         bool success = stmt.Next();
         RG_ASSERT(success);
 
-        version = sqlite3_column_int(stmt, 0);
+        schema_version = sqlite3_column_int(stmt, 0);
     }
 
+    // Load configuration
+    if (schema_version >= 15) {
+        if (!LoadDatabaseConfig())
+            return false;
+    } else if (schema_version) {
+        const char *ini_filename = Fmt(&str_alloc, "%1%/goupile.ini", directory).ptr;
+
+        StreamReader st(ini_filename);
+        if (!LoadIniConfig(&st))
+            return false;
+    }
+
+    // Ensure directories exist
+    if (!MakeDirectory(temp_directory, false))
+        return false;
+
+    err_guard.Disable();
     return true;
+}
+
+bool InstanceData::Validate()
+{
+    RG_ASSERT(schema_version >= 0);
+
+    bool valid = true;
+
+    // Schema version
+    if (schema_version > SchemaVersion) {
+        LogError("Database schema is too recent (%1, expected %2)", schema_version, SchemaVersion);
+        return false;
+    } else if (schema_version < SchemaVersion) {
+        LogError("Outdated database schema, use %!..+goupile_admin migrate%!0");
+        return false;
+    }
+
+    // Settings
+    if (!config.app_key || !config.app_key[0]) {
+        LogError("Project key must not be empty");
+        valid = false;
+    }
+    if (!config.app_name) {
+        config.app_name = config.app_key;
+    }
+    if (config.max_file_size <= 0) {
+        LogError("Maximum file size must be >= 0");
+        valid = false;
+    }
+    if (config.max_age < 0) {
+        LogError("HTTP MaxAge must be >= 0");
+        valid = false;
+    }
+
+    return valid;
 }
 
 bool InstanceData::Migrate()
 {
-    RG_ASSERT(version < SchemaVersion);
-
     BlockAllocator temp_alloc;
 
-    LogInfo("Running migrations %1 to %2", version + 1, SchemaVersion);
+    RG_ASSERT(schema_version >= 0);
+
+    if (schema_version > SchemaVersion) {
+        LogError("Database schema is too recent (%1, expected %2)", schema_version, SchemaVersion);
+        return false;
+    } else if (schema_version == SchemaVersion) {
+        return true;
+    }
+
+    LogInfo("Running migrations %1 to %2", schema_version + 1, SchemaVersion);
 
     sq_TransactionResult ret = db.Transaction([&]() {
-        switch (version) {
+        switch (schema_version) {
             case 0: {
                 bool success = db.Run(R"(
                     CREATE TABLE rec_entries (
@@ -465,12 +374,14 @@ bool InstanceData::Migrate()
                 if (!success)
                     return sq_TransactionResult::Error;
 
-                if (config.live_directory) {
+                if (schema_version) {
+                    const char *files_directory = Fmt(&temp_alloc, "%1%/files", root_directory).ptr;
+
                     HeapArray<const char *> filenames;
-                    if (!EnumerateFiles(config.live_directory, nullptr, -1, -1, &temp_alloc, &filenames))
+                    if (!EnumerateFiles(files_directory, nullptr, -1, -1, &temp_alloc, &filenames))
                         return sq_TransactionResult::Error;
 
-                    Size relative_offset = strlen(config.live_directory);
+                    Size relative_offset = strlen(files_directory);
 
                     for (const char *filename: filenames) {
                         HeapArray<uint8_t> gzip;
@@ -512,9 +423,43 @@ bool InstanceData::Migrate()
                             return sq_TransactionResult::Error;
                     }
                 }
+            } [[fallthrough]];
+
+            case 14: {
+                bool success = db.Run(R"(
+                    CREATE TABLE fs_settings (
+                        key TEXT NOT NULL,
+                        value TEXT
+                    );
+
+                    CREATE UNIQUE INDEX fs_settings_k ON fs_settings (key);
+                )");
+
+                const char *sql = "INSERT INTO fs_settings (key, value) VALUES (?, ?)";
+                success &= db.Run(sql, "Application.Name", config.app_name);
+                success &= db.Run(sql, "Application.ClientKey", config.app_key);
+                success &= db.Run(sql, "Application.UseOffline", 0 + config.use_offline);
+                success &= db.Run(sql, "Application.MaxFileSize", config.max_file_size);
+                success &= db.Run(sql, "Application.SyncMode", SyncModeNames[(int)config.sync_mode]);
+                success &= db.Run(sql, "Application.DemoUser", config.demo_user);
+                success &= db.Run(sql, "HTTP.IPStack", IPStackNames[(int)config.http.ip_stack]);
+                success &= db.Run(sql, "HTTP.Port", config.http.port);
+                success &= db.Run(sql, "HTTP.MaxConnections", config.http.max_connections);
+                success &= db.Run(sql, "HTTP.IdleTimeout", config.http.idle_timeout);
+                success &= db.Run(sql, "HTTP.Threads", config.http.threads);
+                success &= db.Run(sql, "HTTP.AsyncThreads", config.http.async_threads);
+                success &= db.Run(sql, "HTTP.BaseUrl", config.http.base_url);
+                success &= db.Run(sql, "HTTP.MaxAge", config.max_age);
+
+                if (schema_version) {
+                    LogInfo("You should remove goupile.ini manually!");
+                }
+
+                if (!success)
+                    return sq_TransactionResult::Error;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(SchemaVersion == 14);
+            RG_STATIC_ASSERT(SchemaVersion == 15);
         }
 
         int64_t time = GetUnixTime();
@@ -532,16 +477,174 @@ bool InstanceData::Migrate()
     if (ret != sq_TransactionResult::Commit)
         return false;
 
-    version = SchemaVersion;
-    LogInfo("Migration complete, version: %1", version);
+    schema_version = SchemaVersion;
+    LogInfo("Migration complete, version: %1", schema_version);
 
     return true;
 }
 
 void InstanceData::Close()
 {
-    config.str_alloc.ReleaseAll();
     db.Close();
+    schema_version = -1;
+    config = {};
+    str_alloc.ReleaseAll();
+}
+
+bool InstanceData::LoadDatabaseConfig()
+{
+    sq_Statement stmt;
+    if (!db.Prepare("SELECT key, value FROM fs_settings;", &stmt))
+        return false;
+
+    bool valid = true;
+
+    while (stmt.Next()) {
+        const char *key = (const char *)sqlite3_column_text(stmt, 0);
+        const char *value = (const char *)sqlite3_column_text(stmt, 1);
+
+        if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
+            if (TestStr(key, "Application.Name")) {
+                config.app_name = DuplicateString(value, &str_alloc).ptr;
+            } else if (TestStr(key, "Application.ClientKey")) {
+                config.app_key = DuplicateString(value, &str_alloc).ptr;
+            } else if (TestStr(key, "Application.UseOffline")) {
+                valid &= IniParser::ParseBoolValue(value, &config.use_offline);
+            } else if (TestStr(key, "Application.MaxFileSize")) {
+                valid &= ParseDec(value, &config.max_file_size);
+            } else if (TestStr(key, "Application.SyncMode")) {
+                if (!OptionToEnum(SyncModeNames, value, &config.sync_mode)) {
+                    LogError("Unknown sync mode '%1'", value);
+                    valid = false;
+                }
+            } else if (TestStr(key, "Application.DemoUser")) {
+                config.demo_user = DuplicateString(value, &str_alloc).ptr;
+            } else if (TestStr(key, "HTTP.IPStack")) {
+                if (!OptionToEnum(IPStackNames, value, &config.http.ip_stack)) {
+                    LogError("Unknown IP stack '%1'", value);
+                    valid = false;
+                }
+            } else if (TestStr(key, "HTTP.Port")) {
+                valid &= ParseDec(value, &config.http.port);
+            } else if (TestStr(key, "HTTP.MaxConnections")) {
+                valid &= ParseDec(value, &config.http.max_connections);
+            } else if (TestStr(key, "HTTP.IdleTimeout")) {
+                valid &= ParseDec(value, &config.http.idle_timeout);
+            } else if (TestStr(key, "HTTP.Threads")) {
+                valid &= ParseDec(value, &config.http.threads);
+            } else if (TestStr(key, "HTTP.AsyncThreads")) {
+                valid &= ParseDec(value, &config.http.async_threads);
+            } else if (TestStr(key, "HTTP.BaseUrl")) {
+                config.http.base_url = DuplicateString(value, &str_alloc).ptr;
+            } else if (TestStr(key, "HTTP.MaxAge")) {
+                valid &= ParseDec(value, &config.max_age);
+            } else {
+                LogError("Unknown setting '%1'", key);
+                valid = false;
+            }
+        }
+    }
+    if (!stmt.IsValid() || !valid)
+        return false;
+
+    return true;
+}
+
+bool InstanceData::LoadIniConfig(StreamReader *st)
+{
+    Span<const char> root_directory;
+    SplitStrReverseAny(st->GetFileName(), RG_PATH_SEPARATORS, &root_directory);
+
+    IniParser ini(st);
+    ini.PushLogFilter();
+    RG_DEFER { PopLogFilter(); };
+
+    bool valid = true;
+    {
+        IniProperty prop;
+        while (ini.Next(&prop)) {
+            if (prop.section == "Application") {
+                do {
+                    if (prop.key == "Key") {
+                        config.app_key = DuplicateString(prop.value, &str_alloc).ptr;
+                    } else if (prop.key == "Name") {
+                        config.app_name = DuplicateString(prop.value, &str_alloc).ptr;
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
+            } else if (prop.section == "Data") {
+                do {
+                    if (prop.key == "FilesDirectory") {
+                        // Ignored
+                    } else if (prop.key == "DatabaseFile") {
+                        // Ignored
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
+            } else if (prop.section == "Sync") {
+                do {
+                    if (prop.key == "UseOffline") {
+                        valid &= IniParser::ParseBoolValue(prop.value, &config.use_offline);
+                    } else if (prop.key == "MaxFileSize") {
+                        valid &= ParseDec(prop.value, &config.max_file_size);
+                    } else if (prop.key == "SyncMode") {
+                        if (!OptionToEnum(SyncModeNames, prop.value, &config.sync_mode)) {
+                            LogError("Unknown sync mode '%1'", prop.value);
+                            valid = false;
+                        }
+                    } else if (prop.key == "DemoUser") {
+                        config.demo_user = DuplicateString(prop.value, &str_alloc).ptr;
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
+            } else if (prop.section == "HTTP") {
+                do {
+                    if (prop.key == "IPStack") {
+                        if (prop.value == "Dual") {
+                            config.http.ip_stack = IPStack::Dual;
+                        } else if (prop.value == "IPv4") {
+                            config.http.ip_stack = IPStack::IPv4;
+                        } else if (prop.value == "IPv6") {
+                            config.http.ip_stack = IPStack::IPv6;
+                        } else {
+                            LogError("Unknown IP version '%1'", prop.value);
+                        }
+                    } else if (prop.key == "Port") {
+                        valid &= ParseDec(prop.value, &config.http.port);
+                    } else if (prop.key == "MaxConnections") {
+                        valid &= ParseDec(prop.value, &config.http.max_connections);
+                    } else if (prop.key == "IdleTimeout") {
+                        valid &= ParseDec(prop.value, &config.http.idle_timeout);
+                    } else if (prop.key == "Threads") {
+                        valid &= ParseDec(prop.value, &config.http.threads);
+                    } else if (prop.key == "AsyncThreads") {
+                        valid &= ParseDec(prop.value, &config.http.async_threads);
+                    } else if (prop.key == "BaseUrl") {
+                        config.http.base_url = DuplicateString(prop.value, &str_alloc).ptr;
+                    } else if (prop.key == "MaxAge") {
+                        valid &= ParseDec(prop.value, &config.max_age);
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
+            } else {
+                LogError("Unknown section '%1'", prop.section);
+                while (ini.NextInSection(&prop));
+                valid = false;
+            }
+        }
+    }
+    if (!ini.IsValid() || !valid)
+        return false;
+
+    return true;
 }
 
 }

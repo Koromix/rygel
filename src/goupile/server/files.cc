@@ -171,7 +171,7 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
     io->RunAsync([=]() {
         // Create temporary file
         FILE *fp = nullptr;
-        const char *tmp_filename = CreateTemporaryFile(instance->config.temp_directory, ".tmp", &io->allocator, &fp);
+        const char *tmp_filename = CreateTemporaryFile(instance->temp_directory, ".tmp", &io->allocator, &fp);
         if (!tmp_filename)
             return;
         RG_DEFER {

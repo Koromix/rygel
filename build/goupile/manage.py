@@ -6,6 +6,7 @@ import io
 import itertools
 import os
 import re
+import sqlite3
 import sys
 import subprocess
 from dataclasses import dataclass
@@ -25,19 +26,13 @@ class ServiceStatus:
     running = False
     inode = None
 
-def parse_ini(filename):
-    ini = configparser.ConfigParser()
-    ini.optionxform = str
-
-    with open(filename, 'r') as f:
-        ini.read_file(f)
-
-    return ini
-
 def load_config(filename):
     config = {}
 
-    ini = parse_ini(filename)
+    ini = configparser.ConfigParser()
+    ini.optionxform = str
+    with open(filename, 'r') as f:
+        ini.read_file(f)
 
     for section in ini.sections():
         for key, value in ini.items(section):
@@ -56,24 +51,32 @@ def run_build(config):
 def list_instances(root, domain):
     instances = {}
 
-    used_ports = {}
-    try_port = 9000
-
     for instance in sorted(os.listdir(root)):
         directory = os.path.join(root, instance)
-        filename = os.path.join(directory, 'goupile.ini')
+        filename = os.path.join(directory, 'database.db')
 
         if os.path.isfile(filename):
-            ini = parse_ini(filename)
-
             info = InstanceConfig()
+
+            path_domain, path_base_url = instance.split('_', 1)
+            path_domain = f'{path_domain}.{domain}'
+            path_base_url = f'/{path_base_url}/'
+
+            db = sqlite3.connect(filename)
+            for k, v in db.execute('SELECT key, value FROM fs_settings;'):
+                if k == 'HTTP.BaseUrl':
+                    info.base_url = v
+                elif k == 'HTTP.Port' and v is not None:
+                    info.port = int(v)
+            db.close()
+
             info.binary = os.path.join(directory, 'goupile')
             info.directory = directory
-            info.domain, info.base_url = instance.split('_', 1)
-            info.port = ini.getint('HTTP', 'Port', fallback = None)
-
-            info.domain = f'{info.domain}.{domain}'
-            info.base_url = f'/{info.base_url}/'
+            info.domain = path_domain
+            if info.base_url != path_base_url:
+                print(f'Assigning BaseUrl "{path_base_url}" to {instance}', file = sys.stderr)
+                info.base_url = path_base_url
+                info.mismatch = True
 
             try:
                 sb = os.stat(info.binary)
@@ -81,23 +84,21 @@ def list_instances(root, domain):
             except:
                 pass
 
-            if info.port is not None:
-                used_ports[info.port] = instance
-
             instances[instance] = info
 
-    for instance, info in instances:
-        # Fix BaseUrl setting if needed
-        if ini.get('HTTP', 'BaseUrl', fallback = None) != info.base_url:
-            print(f'Assigning BaseUrl "{info.base_url}" to {instance}', file = sys.stderr)
-            info.mismatch = True
+    used_ports = {}
+    try_port = 9000
 
-        # Fix Port setting if needed
+    # Fix port conflicts
+    for instance, info in instances.items():
         if info.port is not None:
             prev_instance = used_ports.get(info.port)
-            if prev_instance is not None:
+            if prev_instance is None:
+                used_ports[info.port] = instance
+            else:
                 print(f'Conflict on port {info.port}, used by {prev_instance} and {instance}', file = sys.stderr)
                 info.port = None
+    for instance, info in instances.items():
         if info.port is None:
             while try_port in used_ports:
                 try_port += 1
@@ -145,17 +146,15 @@ def run_service_command(instance, cmd):
     subprocess.run(['systemctl', cmd, '--quiet', service])
 
 def update_instance_config(info):
-    filename = os.path.join(info.directory, 'goupile.ini')
-    ini = parse_ini(filename)
+    filename = os.path.join(info.directory, 'database.db')
 
-    if not ini.has_section('HTTP'):
-        ini.add_section('HTTP')
-
-    ini.set('HTTP', 'BaseUrl', info.base_url)
-    ini.set('HTTP', 'Port', str(info.port))
-
-    with open(filename, 'w') as f:
-        ini.write(f)
+    db = sqlite3.connect(filename)
+    db.executemany('UPDATE fs_settings SET value = ? WHERE key = ?', [
+        (info.base_url, 'HTTP.BaseUrl'),
+        (info.port, 'HTTP.Port')
+    ])
+    db.commit()
+    db.close()
 
 def update_nginx_config(filename, instances, include = None):
     instances = list(instances.items())

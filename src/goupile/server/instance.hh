@@ -10,7 +10,6 @@
 
 namespace RG {
 
-extern const char *const DefaultConfig;
 extern const int SchemaVersion;
 
 enum SyncMode {
@@ -22,35 +21,39 @@ static const char *const SyncModeNames[] = {
     "Mirror"
 };
 
-struct InstanceConfig {
-    const char *app_key = nullptr;
-    const char *app_name = nullptr;
-
-    const char *live_directory = nullptr;
+class InstanceData {
+public:
+    const char *root_directory = nullptr;
     const char *temp_directory = nullptr;
     const char *database_filename = nullptr;
 
-    bool use_offline = false;
-    int max_file_size = (int)Megabytes(8);
-    SyncMode sync_mode = SyncMode::Offline;
-    const char *demo_user = nullptr;
+    sq_Database db;
+    int schema_version = -1;
 
-    http_Config http {.port = 8889};
-    int max_age = 900;
+    struct {
+        const char *app_name = nullptr;
+        const char *app_key = nullptr;
+
+        bool use_offline = false;
+        int max_file_size = (int)Megabytes(8);
+        SyncMode sync_mode = SyncMode::Offline;
+        const char *demo_user = nullptr;
+
+        http_Config http { .port = 8889 };
+        int max_age = 900;
+    } config;
 
     BlockAllocator str_alloc;
-};
 
-class InstanceData {
-public:
-    InstanceConfig config;
-
-    sq_Database db;
-    int version = -1;
-
-    bool Open(const char *filename);
+    bool Open(const char *directory);
+    bool Validate();
     bool Migrate();
+
     void Close();
+
+private:
+    bool LoadDatabaseConfig();
+    bool LoadIniConfig(StreamReader *st);
 };
 
 }
