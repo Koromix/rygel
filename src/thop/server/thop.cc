@@ -537,6 +537,10 @@ Options:
             LogError("No table directory is specified");
             valid = false;
         }
+        if (thop_config.max_age < 0) {
+            LogError("HTTP MaxAge must be >= 0");
+            valid = false;
+        }
 
         if (!valid)
             return 1;
