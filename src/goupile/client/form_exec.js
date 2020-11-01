@@ -14,17 +14,17 @@ let form_exec = new function() {
     let multi_mode = false;
     let multi_columns = new Set;
 
-    this.route = async function(page, url) {
-        let what = url.pathname.substr(page.url.length) || null;
+    this.route = async function(page, what) {
         let new_page = (route_page == null || page.key !== route_page.key);
 
+        what = what || null;
         route_page = page;
 
         // Clear inappropriate records (wrong form)
         if (ctx_records.size) {
             let record0 = ctx_records.first();
 
-            if (record0.table !== route_page.form.key)
+            if (record0.table !== route_page.store)
                 ctx_records.clear();
         }
 
@@ -35,7 +35,7 @@ let form_exec = new function() {
             let record = ctx_records.first();
 
             if (!record || record.mtime != null)
-                record = vrec.create(route_page.form.key);
+                record = vrec.create(route_page.store);
 
             ctx_records.clear();
             ctx_records.set(record.id, record);
@@ -43,7 +43,7 @@ let form_exec = new function() {
             goupile.toggleOverview(true);
             multi_mode = false;
         } else if (what == null) {
-            let record = vrec.create(route_page.form.key);
+            let record = vrec.create(route_page.store);
 
             ctx_records.clear();
             ctx_records.set(record.id, record);
@@ -58,7 +58,7 @@ let form_exec = new function() {
             ctx_records.clear();
 
             if (record) {
-                if (record.table !== route_page.form.key) {
+                if (record.table !== route_page.store) {
                     record = null;
                 } else if (version != null) {
                     if (version !== record.version)
@@ -69,7 +69,7 @@ let form_exec = new function() {
                 }
             }
             if (!record) {
-                record = await vrec.load(route_page.form.key, id, version);
+                record = await vrec.load(route_page.store, id, version);
 
                 if (record) {
                     if (version != null && record.version !== version)
@@ -77,7 +77,7 @@ let form_exec = new function() {
                                   `Version chargée : @${record.version}`);
                 } else {
                     log.error(`La fiche ${id} n'existe pas`);
-                    record = vrec.create(route_page.form.key);
+                    record = vrec.create(route_page.store);
                 }
 
                 delete ctx_states[id];
@@ -128,7 +128,7 @@ let form_exec = new function() {
             }
         } else {
             if (!ctx_records.size) {
-                let record = vrec.create(route_page.form.key);
+                let record = vrec.create(route_page.store);
                 ctx_records.set(record.id, record);
             }
 
@@ -216,7 +216,7 @@ let form_exec = new function() {
         }
 
         let lock = user.getLock();
-        let pages = lock ? lock.urls.map(url => app.urls_map[url].page) : route_page.form.pages;
+        let items = lock ? lock.menu : route_page.menu;
 
         // Check page dependencies?
         let allowed = route_page.options.dependencies.every(dep => record.complete[dep] != null);
@@ -238,14 +238,14 @@ let form_exec = new function() {
                     </div>
                 ` : ''}
 
-                <div class="fm_path">${pages.map(page2 => {
-                    let complete = record.complete[page2.key];
+                <div class="fm_path">${items.map(item => {
+                    let complete = record.complete[item.key];
 
                     let cls = '';
                     let tooltip = '';
-                    let url = makeURL(page2.form.key, page2.key, record);
+                    let url = makeURL(item.key, record);
 
-                    for (dep of page2.options.dependencies) {
+                    for (dep of item.dependencies) {
                         if (record.complete[dep] == null) {
                             if (url != null)
                                 cls += ' blocked';
@@ -254,7 +254,7 @@ let form_exec = new function() {
                         }
                     }
 
-                    if (page2.key === route_page.key) {
+                    if (item.key === route_page.key) {
                         cls += ' active';
                     } else if (state.changed) {
                         cls += ' blocked';
@@ -270,7 +270,7 @@ let form_exec = new function() {
                         cls += ' partial';
                     }
 
-                    return html`<a class=${cls} title=${tooltip.trim()} href=${url || ''}>${page2.label}</a>`;
+                    return html`<a class=${cls} title=${tooltip.trim()} href=${url || ''}>${item.title}</a>`;
                 })}</div>
 
                 ${allowed ? html`
@@ -301,7 +301,7 @@ let form_exec = new function() {
                 <table class="tr_table">
                     ${util.mapRange(0, record.versions.length, idx => {
                         let version = record.versions[record.versions.length - idx - 1];
-                        let url = makeURL(route_page.form.key, route_page.key, record, version.version);
+                        let url = makeURL(route_page.key, record, version.version);
 
                         return html`
                             <tr class=${record.version === version.version ? 'selected' : ''}>
@@ -412,25 +412,25 @@ let form_exec = new function() {
         if (confirm) {
             let msg = 'Cette action entraînera la perte des modifications en cours, êtes-vous sûr(e) ?';
             return dialog.confirm(e, msg, 'Fermer l\'enregistrement', () => {
-                goupile.go(makeURL(route_page.form.key, route_page.key, null));
+                goupile.go(makeURL(route_page.key, null));
             });
         } else {
-            goupile.go(makeURL(route_page.form.key, route_page.key, null));
+            goupile.go(makeURL(route_page.key, null));
         }
     }
 
     this.runStatus = async function() {
-        let records = await vrec.loadAll(route_page.form.key);
+        let records = await vrec.loadAll(route_page.store);
         renderStatus(records);
     };
 
     function renderStatus(records) {
-        let pages = route_page.form.pages;
+        let items = route_page.menu;
 
         let complete_set = new Set;
         for (let record of records) {
             // We can't compute this at save time because the set of pages may change anytime
-            if (pages.every(page => record.complete[page.key]))
+            if (items.every(item => record.complete[item.key]))
                 complete_set.add(record.id);
         }
 
@@ -454,7 +454,7 @@ let form_exec = new function() {
                     <col style="width: 2em;"/>
                     <col style=${computeSeqColumnWidth(records[0])} />
                     ${!user.getZone() ? html`<col style="width: 8em;"/>` : ''}
-                    ${pages.map(col => html`<col/>`)}
+                    ${items.map(item => html`<col/>`)}
                 </colgroup>
 
                 <thead>
@@ -462,14 +462,14 @@ let form_exec = new function() {
                         <th class="actions"></th>
                         <th class="id">ID</th>
                         ${!user.getZone() ? html`<th class="id">Zone</th>` : ''}
-                        ${pages.map(page => html`<th>${page.label}</th>`)}
+                        ${items.map(item => html`<th>${item.title}</th>`)}
                     </tr>
                 </thead>
 
                 <tbody>
                     ${!records.length ?
                         html`<tr><td style="text-align: left;"
-                                     colspan=${2 + !user.getZone() + Math.max(1, pages.length)}>Aucune donnée à afficher</td></tr>` : ''}
+                                     colspan=${2 + !user.getZone() + Math.max(1, items.length)}>Aucune donnée à afficher</td></tr>` : ''}
                     ${records.map(record => {
                         if (show_complete || !complete_set.has(record.id)) {
                             return html`
@@ -478,9 +478,9 @@ let form_exec = new function() {
                                     <td class="id">${route_page.options.make_seq(record)}</td>
                                     ${!user.getZone() ? html`<td class="id">${record.zone || ''}</td>` : ''}
 
-                                    ${pages.map(page => {
-                                        let complete = record.complete[page.key];
-                                        let url = makeURL(route_page.form.key, page.key, record);
+                                    ${items.map(item => {
+                                        let complete = record.complete[item.key];
+                                        let url = makeURL(item.key, record);
 
                                         if (complete == null) {
                                             return html`<td class="none"><a href=${url}>Non rempli&nbsp;&nbsp;🔍\uFE0E</a></td>`;
@@ -507,9 +507,9 @@ let form_exec = new function() {
     }
 
     this.runData = async function() {
-        let records = await vrec.loadAll(route_page.form.key);
-        let raw_columns = await vrec.listColumns(route_page.form.key);
-        let columns = self.orderColumns(route_page.form.pages, raw_columns);
+        let records = await vrec.loadAll(route_page.store);
+        let raw_columns = await vrec.listColumns(route_page.store);
+        let columns = self.orderColumns(route_page.menu, raw_columns);
 
         renderRecords(records, columns);
     };
@@ -542,8 +542,8 @@ let form_exec = new function() {
                 <div class="gp_dropdown right">
                     <button type="button">Exporter</button>
                     <div>
-                        <button type="button" @click=${e => exportSheets(route_page.form, 'xlsx')}>Excel</button>
-                        <button type="button" @click=${e => exportSheets(route_page.form, 'csv')}>CSV</button>
+                        <button type="button" @click=${e => exportSheets(route_page.store, route_page.menu, 'xlsx')}>Excel</button>
+                        <button type="button" @click=${e => exportSheets(route_page.store, route_page.menu, 'csv')}>CSV</button>
                     </div>
                 </div>
                 ${env.sync_mode === 'mirror' ? html`<button type="button" @click=${self.syncRecords}>Synchroniser</button>` : ''}
@@ -597,7 +597,7 @@ let form_exec = new function() {
                     ${records.map(record => html`
                         <tr class=${ctx_records.has(record.id) ? 'selected' : ''}>
                             ${!multi_mode ? html`<th>
-                                <a href=${makeURL(route_page.form.key, route_page.key, record)}>🔍\uFE0E</a>&nbsp;
+                                <a href=${makeURL(route_page.key, record)}>🔍\uFE0E</a>&nbsp;
                                 <a @click=${e => runDeleteDialog(e, record)}>✕</a>
                             </th>` : ''}
                             ${multi_mode ? html`<th><input type="checkbox" .checked=${ctx_records.has(record.id)}
@@ -692,13 +692,13 @@ let form_exec = new function() {
         goupile.go();
     }
 
-    async function exportSheets(form, format = 'xlsx') {
+    async function exportSheets(store, items, format = 'xlsx') {
         if (typeof XSLX === 'undefined')
             await net.loadScript(`${env.base_url}static/xlsx.core.min.js`);
 
-        let records = await vrec.loadAll(form.key);
-        let raw_columns = await vrec.listColumns(form.key);
-        let columns = self.orderColumns(form.pages, raw_columns);
+        let records = await vrec.loadAll(store);
+        let raw_columns = await vrec.listColumns(store);
+        let columns = self.orderColumns(items, raw_columns);
 
         if (!columns.length) {
             log.error('Impossible d\'exporter pour le moment (colonnes inconnues)');
@@ -754,7 +754,7 @@ let form_exec = new function() {
     }
 
     // XXX: This belongs in VirtualRecords, and it should be able to enumerate pages
-    this.orderColumns = function(pages, raw_columns) {
+    this.orderColumns = function(items, raw_columns) {
         raw_columns = raw_columns.slice();
         raw_columns.sort((col1, col2) => util.compareValues(col1.key, col2.key));
 
@@ -770,9 +770,9 @@ let form_exec = new function() {
         }
 
         let columns = [];
-        for (let page of pages) {
-            let frag_columns = frags_map[page.key] || [];
-            delete frags_map[page.key];
+        for (let item of items) {
+            let frag_columns = frags_map[item.key] || [];
+            delete frags_map[item.key];
 
             let cols_map = util.arrayToObject(frag_columns, col => col.key);
 
@@ -805,7 +805,7 @@ let form_exec = new function() {
                         let col = cols_map[key];
 
                         if (!set_ptr.has(col.after)) {
-                            let col2 = makeColumnInfo(page, col);
+                            let col2 = makeColumnInfo(item, col);
                             columns.push(col2);
                         }
                     }
@@ -830,7 +830,7 @@ let form_exec = new function() {
                         let use_key = set_ptr.values().next().value;
                         let col = cols_map[use_key];
 
-                        let col2 = makeColumnInfo(page, col);
+                        let col2 = makeColumnInfo(item, col);
                         columns.push(col2);
                     }
                 }
@@ -842,7 +842,7 @@ let form_exec = new function() {
             for (let key in cols_map) {
                 let col = cols_map[key];
 
-                let col2 = makeColumnInfo(page, col);
+                let col2 = makeColumnInfo(item, col);
                 columns.push(col2);
             }
         }
@@ -858,12 +858,12 @@ let form_exec = new function() {
         }
     }
 
-    function makeColumnInfo(page, col) {
+    function makeColumnInfo(item, col) {
         let col2 = {
             key: col.key,
 
-            page: page.key,
-            category: page.label,
+            page: item.key,
+            category: item.title,
             title: col.hasOwnProperty('prop') ? `${col.variable}.${col.prop}` : col.variable,
             variable: col.variable,
             type: col.type
@@ -888,7 +888,7 @@ let form_exec = new function() {
             ctx_records.delete(record.id);
 
             if (!multi_mode && !ctx_records.size) {
-                let record = vrec.create(route_page.form.key);
+                let record = vrec.create(route_page.store);
                 ctx_records.set(record.id, record);
             }
         }
@@ -929,7 +929,7 @@ let form_exec = new function() {
                     let prev_record = ctx_records.get(id);
 
                     if (prev_record != null && prev_record.version === prev_record.versions.length - 1) {
-                        let new_record = await vrec.load(route_page.form.key, id);
+                        let new_record = await vrec.load(route_page.store, id);
                         if (new_record != null)
                             ctx_records.set(id, new_record);
                     }
@@ -948,7 +948,7 @@ let form_exec = new function() {
     this.syncRecords = util.serialize(this.syncRecords);
 
     function makeCurrentURL() {
-        let url = `${env.base_url}app/${route_page.form.key}/${route_page.key}/`;
+        let url = `${env.base_url}app/${route_page.key}/`;
 
         if (multi_mode) {
             url += 'multi';
@@ -969,8 +969,8 @@ let form_exec = new function() {
         return util.pasteURL(url, nav.route);
     }
 
-    function makeURL(form_key, page_key, record = null, version = undefined) {
-        let url = `${env.base_url}app/${form_key}/${page_key}/`;
+    function makeURL(key, record = null, version = undefined) {
+        let url = `${env.base_url}app/${key}/`;
 
         if (record) {
             if (record.mtime != null) {

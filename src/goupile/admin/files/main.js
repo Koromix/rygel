@@ -1,4 +1,4 @@
-app.form("tutoriel", form => {
-    form.page("introduction", "Introduction")
-    form.page("erreurs_et_conditions", "Erreurs et conditions")
+app.form("tutoriel", () => {
+    app.page("introduction", "Introduction")
+    app.page("erreurs_et_conditions", "Erreurs et conditions")
 })

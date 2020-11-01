@@ -28,8 +28,8 @@ Navigation functions should only be called in reaction to user events, such as b
     this.isStandalone = function() { return goupile.isStandalone(); };
     this.isLocked = function() { return goupile.isLocked(); };
 
-    this.link = function(where, options = {}) {
-        let url = `${env.base_url}app/${where}/`;
+    this.makeURL = function(key, options = {}) {
+        let url = `${env.base_url}app/${key}/`;
 
         if (options.id != null) {
             url += options.id;
@@ -39,4 +39,5 @@ Navigation functions should only be called in reaction to user events, such as b
 
         return util.pasteURL(url, nav.route);
     };
+    this.makePath = function(key) { return `/files/pages/${key}.js`; };
 }

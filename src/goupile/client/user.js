@@ -274,15 +274,15 @@ function UserManager(db) {
         return pin != null;
     };
     this.getLock = function() {
-        let urls = localStorage.getItem('lock_urls');
+        let menu = localStorage.getItem('lock_menu');
         let route = localStorage.getItem('lock_route');
 
-        if (urls != null) {
-            urls = JSON.parse(urls);
+        if (menu != null) {
+            menu = JSON.parse(menu);
             route = JSON.parse(route);
 
             return {
-                urls: urls,
+                menu: menu,
                 route: route
             };
         } else {
@@ -290,7 +290,7 @@ function UserManager(db) {
         }
     };
 
-    this.runLockDialog = function(e, urls, route) {
+    this.runLockDialog = function(e, menu, route) {
         return dialog.run(e, (d, resolve, reject) => {
             d.output('Entrez le code de verrouillage');
             let pin = d.pin('*code');
@@ -300,7 +300,7 @@ function UserManager(db) {
 
             d.action('Verrouiller', {disabled: !d.isValid()}, () => {
                 localStorage.setItem('lock_pin', pin.value);
-                localStorage.setItem('lock_urls', JSON.stringify(urls));
+                localStorage.setItem('lock_menu', JSON.stringify(menu));
                 localStorage.setItem('lock_route', JSON.stringify(route));
 
                 log.success('Application verrouillée');
@@ -337,7 +337,7 @@ function UserManager(db) {
     };
 
     function deleteLock() {
-        localStorage.removeItem('lock_urls');
+        localStorage.removeItem('lock_menu');
         localStorage.removeItem('lock_route');
         localStorage.removeItem('lock_pin');
     }

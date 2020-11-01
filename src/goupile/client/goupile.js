@@ -17,10 +17,9 @@ let goupile = new function() {
     let tablet_mq = window.matchMedia('(pointer: coarse)');
     let standalone_mq = window.matchMedia('(display-mode: standalone)');
 
-    let route_asset;
+    let route_page;
 
     let running = 0;
-    let restart = false;
 
     let ping_timer;
     let sync_time = 0;
@@ -197,9 +196,6 @@ let goupile = new function() {
                 running--;
             }
 
-            // Select default page
-            app.urls_map[env.base_url] = app.home ? app.urls_map[app.home] : app.assets[0];
-
             // Load custom template and CSS (if any)
             let html = await readCode('/files/main.html') || '';
             let css = await readCode('/files/main.css') || '';
@@ -244,159 +240,160 @@ let goupile = new function() {
     this.isRunning = function() { return !!running; }
 
     this.go = async function(url = undefined, push_history = true) {
-        if (running) {
-            restart = true;
-            return;
-        }
-
         try {
             running++;
 
-            if (self.isConnected()) {
-                url = url ? new URL(url, window.location.href) : null;
+            if (!user.isConnected()) {
+                user.runLoginScreen();
+                return;
+            }
 
-                // Apply navigation lock (if any)
-                if (user.isLocked()) {
-                    let lock = user.getLock();
+            if (url != null || enforceLock()) {
+                url = new URL(url != null ? url : window.location.href, window.location.href);
 
-                    if (url == null || !lock.urls.some(url2 => url.pathname.startsWith(url2))) {
-                        url = new URL(window.location.href);
-                        if (url == null || !lock.urls.some(url2 => url.pathname.startsWith(url2)))
-                            url = new URL(lock.urls[0], window.location.href);
+                // Update history and route
+                for (let [key, value] of url.searchParams) {
+                    let num = Number(value);
+                    nav.route[key] = Number.isNaN(num) ? value : num;
+                }
+                if (push_history)
+                    window.history.pushState(null, null, url.pathname);
+
+                // Find relevant page
+                let context;
+                {
+                    let path = url.pathname;
+
+                    if (!path.endsWith('/'))
+                        path += '/';
+
+                    if (path === env.base_url) {
+                        context = '';
+                        route_page = app.pages[0];
+                    } else if (path.startsWith(`${env.base_url}app/`)) {
+                        path = path.substr(env.base_url.length + 4);
+
+                        let split_offset = path.indexOf('/');
+                        let page_key = path.substr(0, split_offset);
+
+                        context = path.substr(split_offset + 1);
+                        route_page = app.pages_map[page_key];
                     }
 
-                    Object.assign(nav.route, lock.route);
+                    if (context.endsWith('/'))
+                        context = context.substr(0, context.length - 1);
                 }
 
-                if (url) {
-                    // Update route application global
-                    for (let [key, value] of url.searchParams) {
-                        let num = Number(value);
-                        nav.route[key] = Number.isNaN(num) ? value : num;
+                if (enforceLock())
+                    context = '';
+
+                // Route URL through controller
+                if (route_page != null) {
+                    try {
+                        await form_exec.route(route_page, context);
+                    } catch (err) {
+                        log.error(err);
+                        route_page = null;
                     }
-
-                    // Find relevant asset
-                    {
-                        let path = url.pathname;
-                        if (!path.endsWith('/'))
-                            path += '/';
-
-                        route_asset = app.urls_map[path] || app.aliases_map[path];
-
-                        if (!route_asset) {
-                            do {
-                                path = path.substr(0, path.length - 1);
-                                path = path.substr(0, path.lastIndexOf('/') + 1);
-
-                                if (path === env.base_url)
-                                    break;
-
-                                route_asset = app.urls_map[path];
-                            } while (!route_asset && path.length);
-                        }
-                    }
-
-                    // Update history
-                    if (push_history)
-                        window.history.pushState(null, null, url.pathname);
-
-                    // Route URL through appropriate controller
-                    if (route_asset) {
-                        try {
-                            switch (route_asset.type) {
-                                case 'page': { await form_exec.route(route_asset.page, url); } break;
-                            }
-                        } catch (err) {
-                            log.error(err);
-                            route_asset = null;
-                        }
-                    } else {
-                        log.error(`URL non supportée '${url.pathname}'`);
-                    }
-                }
-
-                // Restart application after session changes
-                if (!user.isSynced()) {
-                    self.initMain();
-                    return;
-                }
-
-                // Ensure valid menu and panel configuration
-                if (!user.isLocked()) {
-                    let show_develop = user.hasPermission('develop');
-                    let show_data = user.hasPermission('edit') && route_asset &&
-                                    route_asset.page && route_asset.page.options.show_data;
-
-                    let correct_mode = (left_panel == null ||
-                                        (left_panel === 'files' && show_develop) ||
-                                        (left_panel === 'editor' && show_develop) ||
-                                        (left_panel === 'status' && show_data) ||
-                                        (left_panel === 'data' && show_data) ||
-                                        (left_panel === 'describe' && show_data));
-                    if (!correct_mode)
-                        left_panel = show_develop ? 'editor' : null;
-
-                    if (!route_asset || !route_asset.overview) {
-                        if (!overview_wanted)
-                            overview_wanted = show_overview && !self.isTablet();
-                        show_overview = false;
-                    } else if (!left_panel || overview_wanted) {
-                        show_overview = true;
-                    }
-
-                    if (show_overview && self.isTablet())
-                        left_panel = null;
                 } else {
-                    left_panel = null;
+                    log.error(`URL non supportée '${url.pathname}'`);
+                }
+            }
+
+            // Restart application after session changes
+            if (!user.isSynced()) {
+                self.initMain();
+                return;
+            }
+
+            // Ensure valid menu and panel configuration
+            if (!user.isLocked()) {
+                let show_develop = user.hasPermission('develop');
+                let show_data = user.hasPermission('edit') &&
+                                route_page != null && route_page.options.show_data;
+
+                let correct_mode = (left_panel == null ||
+                                    (left_panel === 'files' && show_develop) ||
+                                    (left_panel === 'editor' && show_develop) ||
+                                    (left_panel === 'status' && show_data) ||
+                                    (left_panel === 'data' && show_data) ||
+                                    (left_panel === 'describe' && show_data));
+                if (!correct_mode)
+                    left_panel = show_develop ? 'editor' : null;
+
+                if (route_page == null) {
+                    if (!overview_wanted)
+                        overview_wanted = show_overview && !self.isTablet();
+                    show_overview = false;
+                } else if (!left_panel || overview_wanted) {
                     show_overview = true;
                 }
 
-                // Render menu and page layout
-                renderAll();
+                if (show_overview && self.isTablet())
+                    left_panel = null;
+            } else {
+                left_panel = null;
+                show_overview = true;
+            }
 
-                try {
-                    // Run appropriate module
-                    if (route_asset) {
-                        document.title = `${route_asset.label} — ${env.app_name}`;
-                        await runAssetSafe(route_asset);
-                    } else {
-                        document.title = env.app_name;
-                    }
+            // Render menu and page layout
+            renderAll();
 
-                    // Run accessory panel
-                    switch (left_panel) {
-                        case 'files': { await dev_files.runFiles(); } break;
-                        case 'editor': {
-                            let path = route_asset && route_asset.path ? route_asset.path : null;
-                            await dev_files.runEditor(path);
-                        } break;
-                        case 'status': { await form_exec.runStatus(); } break;
-                        case 'data': { await form_exec.runData(); } break;
-                    }
-                } catch (err) {
-                    log.error(err);
+            try {
+                // Run appropriate module
+                if (route_page != null) {
+                    document.title = `${route_page.title} — ${env.app_name}`;
+                    await runPageSafe(route_page);
+                } else {
+                    document.title = env.app_name;
                 }
 
-                // Give dialog windows and popups (if any) a chance to refresh too
-                dialog.refreshAll();
-            } else {
-                user.runLoginScreen();
+                // Run accessory panel
+                switch (left_panel) {
+                    case 'files': { await dev_files.runFiles(); } break;
+                    case 'editor': {
+                        let path = nav.makePath(route_page.key);
+                        await dev_files.runEditor(path);
+                    } break;
+                    case 'status': { await form_exec.runStatus(); } break;
+                    case 'data': { await form_exec.runData(); } break;
+                }
+            } catch (err) {
+                log.error(err);
             }
+
+            // Give dialog windows and popups (if any) a chance to refresh too
+            dialog.refreshAll();
         } finally {
             running--;
 
-            if (restart) {
-                restart = false;
-                setTimeout(self.go, 0);
-            } else {
-                for (let panel of document.querySelectorAll('.gp_panel')) {
-                    panel.classList.remove('busy');
-                    if (!panel.children.length)
-                        panel.classList.add('broken');
-                }
+            for (let panel of document.querySelectorAll('.gp_panel')) {
+                panel.classList.remove('busy');
+                if (!panel.children.length)
+                    panel.classList.add('broken');
             }
         }
     };
+    this.go = util.serialize(this.go);
+
+    function enforceLock()
+    {
+        if (user.isLocked()) {
+            let lock = user.getLock();
+
+            Object.assign(nav.route, lock.route);
+            if (route_page != null && !lock.menu.some(item => item.key === route_page.key)) {
+                let page_key = lock.menu[0].key;
+                route_page = app.pages_map[page_key];
+
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
 
     async function checkEvents() {
         try {
@@ -480,8 +477,8 @@ let goupile = new function() {
 
     function renderFullMenu() {
         let show_develop = user.hasPermission('develop');
-        let show_data = user.hasPermission('edit') && route_asset &&
-                        route_asset.page && route_asset.page.options.show_data;
+        let show_data = user.hasPermission('edit') &&
+                        route_page != null && route_page.options.show_data;
         let show_export = user.hasPermission('export');
 
         return html`
@@ -516,25 +513,17 @@ let goupile = new function() {
                 html`<button class=${left_panel === 'status' ? 'icon active' : 'icon'}
                              style="background-position-y: calc(-274px + 1.2em)"
                              @click=${e => toggleLeftPanel('status')}>Suivi</button>` : ''}
-            ${route_asset ?
+            ${route_page != null ?
                 html`<button class=${show_overview ? 'icon active': 'icon'}
                              @click=${e => self.toggleOverview()}
-                             style="background-position-y: calc(-318px + 1.2em)">${route_asset.overview}</button>` : ''}
+                             style="background-position-y: calc(-318px + 1.2em)">Page</button>` : ''}
 
             ${show_develop ? html`
                 <select id="gp_assets" @change=${e => self.go(e.target.value)}>
-                    ${!route_asset ? html`<option>-- Sélectionnez une page --</option>` : ''}
-                    ${util.mapRLE(app.assets, asset => asset.category, (category, offset, len) => {
-                        if (category == null) {
-                            return '';
-                        } else {
-                            return html`<optgroup label=${category}>${util.mapRange(offset, offset + len, idx => {
-                                let asset = app.assets[idx];
-                                return html`<option value=${asset.url}
-                                                    .selected=${asset === route_asset}>${asset.label}</option>`;
-                            })}</optgroup>`;
-                        }
-                    })}
+                    ${route_page == null ? html`<option>-- Sélectionnez une page --</option>` : ''}
+                    ${app.pages.map(page =>
+                        html`<option value=${nav.makeURL(page.key)}
+                                     .selected=${page === route_page}>${page.title}</option>`)}
                 </select>
             ` : ''}
             ${!show_develop ? html`<div style="flex: 1; text-align: center;">${env.app_name}</div>` : ''}
@@ -629,26 +618,30 @@ let goupile = new function() {
             return true;
         } else if (path === '/files/main.html') {
             changeTemplate(code);
-            if (route_asset)
-                await runAssetSafe(route_asset);
+            if (route_page != null)
+                await runPageSafe(route_page);
             return true;
         } else {
-            if (route_asset && route_asset.path === path) {
-                return await runAssetSafe(route_asset, code);
+            let m = path.match(/^\/files\/pages\/(.+)\.js$/);
+
+            if (m != null) {
+                let page_key = m[1];
+                let page = app.pages_map[page_key];
+
+                return await runPageSafe(page, code);
             } else {
-                let asset = app.paths_map[path];
-                return asset ? await runAssetSafe(asset, code) : true;
+                return true;
             }
         }
     };
 
-    async function runAssetSafe(asset, code = undefined) {
+    async function runPageSafe(page, code = undefined) {
         let error_el = document.querySelector('#gp_error');
         let overview_el = document.querySelector('#gp_overview');
 
         let test_el;
         let broken_template = false;
-        if (asset === route_asset) {
+        if (page === route_page) {
             if (template_el) {
                 render(template_el.content, overview_el);
                 test_el = document.getElementById('@page');
@@ -664,21 +657,20 @@ let goupile = new function() {
             test_el = document.createElement('div');
         }
 
-        try {
-            if (asset.path && code == null)
-                code = await readCode(asset.path);
-        } catch (err) {
-            overview_el.classList.add('broken');
-            throw err;
+        if (code == null) {
+            try {
+                let path = nav.makePath(page.key);
+                code = await readCode(path);
+            } catch (err) {
+                overview_el.classList.add('broken');
+                throw err;
+            }
         }
 
         try {
             running++;
 
-            switch (asset.type) {
-                case 'page': { form_exec.runPage(code, test_el); } break;
-            }
-
+            form_exec.runPage(code, test_el);
             if (broken_template)
                 throw new Error(`Le modèle ne contient pas d'élément avec l'ID '@page'`);
 
