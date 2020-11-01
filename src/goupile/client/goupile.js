@@ -677,7 +677,6 @@ let goupile = new function() {
 
             switch (asset.type) {
                 case 'page': { form_exec.runPage(code, test_el); } break;
-                case 'schedule': { await sched_exec.runMeetings(asset.schedule, test_el); } break;
             }
 
             if (broken_template)

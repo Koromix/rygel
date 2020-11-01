@@ -6,8 +6,6 @@ function ApplicationInfo() {
     let self = this;
 
     this.forms = [];
-    this.schedules = [];
-
     this.assets = [];
 
     // Initialized by goupile.js and main script
@@ -137,27 +135,6 @@ function ApplicationBuilder(app) {
 
         return [form1, form2];
     }
-
-    this.schedule = function(key) {
-        checkKey(key);
-
-        let schedule = {
-            key: key,
-            url: `${env.base_url}app/${key}/`
-        };
-        app.schedules.push(schedule);
-
-        pushAsset({
-            type: 'schedule',
-            url: schedule.url,
-
-            category: 'Agendas',
-            label: schedule.key,
-            overview: 'Agenda',
-
-            schedule: schedule
-        });
-    };
 
     function expandOptions(options) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);

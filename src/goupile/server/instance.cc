@@ -9,7 +9,7 @@
 namespace RG {
 
 // If you change SchemaVersion, don't forget to update the migration switch!
-const int SchemaVersion = 15;
+const int SchemaVersion = 16;
 
 bool InstanceData::Open(const char *directory)
 {
@@ -457,9 +457,20 @@ bool InstanceData::Migrate()
 
                 if (!success)
                     return sq_TransactionResult::Error;
+            } [[fallthrough]];
+
+            case 15: {
+                bool success = db.Run(R"(
+                    DROP INDEX sched_resources_sdt;
+                    DROP INDEX sched_meetings_sd;
+                    DROP TABLE sched_meetings;
+                    DROP TABLE sched_resources;
+                )");
+                if (!success)
+                    return sq_TransactionResult::Error;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(SchemaVersion == 15);
+            RG_STATIC_ASSERT(SchemaVersion == 16);
         }
 
         int64_t time = GetUnixTime();
