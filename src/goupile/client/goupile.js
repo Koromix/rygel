@@ -352,7 +352,7 @@ let goupile = new function() {
                 switch (left_panel) {
                     case 'files': { await dev_files.runFiles(); } break;
                     case 'editor': {
-                        let path = nav.makePath(route_page.key);
+                        let path = route_page != null ? nav.makePath(route_page.key) : null;
                         await dev_files.runEditor(path);
                     } break;
                     case 'status': { await form_exec.runStatus(); } break;
