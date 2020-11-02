@@ -208,7 +208,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             } else if (opt.Test("--no_pch")) {
                 build.pch = false;
             } else if (opt.Test("-j", "--jobs", OptionType::Value)) {
-                if (!ParseDec(opt.current_value, &jobs))
+                if (!ParseInt(opt.current_value, &jobs))
                     return 1;
                 if (jobs < 1) {
                     LogError("Jobs count cannot be < 1");

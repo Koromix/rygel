@@ -408,7 +408,7 @@ Test options:)");
                     test_flags = UINT_MAX;
                 }
             } else if (opt.Test("--torture", OptionType::Value)) {
-                if (!ParseDec(opt.current_value, &torture))
+                if (!ParseInt(opt.current_value, &torture))
                     return 1;
             } else if (!HandleCommonOption(opt)) {
                 return 1;
@@ -641,7 +641,7 @@ List options:
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-d", "--date", OptionType::Value)) {
-                index_date = Date::FromString(opt.current_value);
+                index_date = Date::Parse(opt.current_value);
                 if (!index_date.value)
                     return 1;
             } else if (!HandleCommonOption(opt)) {
@@ -729,7 +729,7 @@ Map options:
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-d", "--date", OptionType::Value)) {
-                index_date = Date::FromString(opt.current_value);
+                index_date = Date::Parse(opt.current_value);
                 if (!index_date.value)
                     return 1;
             } else if (!HandleCommonOption(opt)) {
@@ -852,7 +852,7 @@ int RunMcoShow(Span<const char *> arguments)
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-d", "--date", OptionType::Value)) {
-                index_date = Date::FromString(opt.current_value);
+                index_date = Date::Parse(opt.current_value);
                 if (!index_date.value)
                     return 1;
             } else if (!HandleCommonOption(opt)) {
@@ -883,7 +883,7 @@ int RunMcoShow(Span<const char *> arguments)
         // Diagnosis?
         {
             drd_DiagnosisCode diag =
-                drd_DiagnosisCode::FromString(name, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                drd_DiagnosisCode::Parse(name, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (diag.IsValid()) {
                 Span<const mco_DiagnosisInfo> diagnoses = index->FindDiagnosis(diag);
                 if (diagnoses.len) {
@@ -896,7 +896,7 @@ int RunMcoShow(Span<const char *> arguments)
         // Procedure?
         {
             drd_ProcedureCode proc =
-                drd_ProcedureCode::FromString(name, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                drd_ProcedureCode::Parse(name, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (proc.IsValid()) {
                 Span<const mco_ProcedureInfo> procedures = index->FindProcedure(proc);
                 if (procedures.len) {
@@ -909,7 +909,7 @@ int RunMcoShow(Span<const char *> arguments)
         // GHM root?
         {
             mco_GhmRootCode ghm_root =
-                mco_GhmRootCode::FromString(name, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                mco_GhmRootCode::Parse(name, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (ghm_root.IsValid()) {
                 const mco_GhmRootInfo *ghm_root_info = index->FindGhmRoot(ghm_root);
                 if (ghm_root_info) {
@@ -926,7 +926,7 @@ int RunMcoShow(Span<const char *> arguments)
 
         // GHS?
         {
-            mco_GhsCode ghs = mco_GhsCode::FromString(name, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+            mco_GhsCode ghs = mco_GhsCode::Parse(name, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (ghs.IsValid()) {
                 const mco_GhsPriceInfo *pub_price_info = index->FindGhsPrice(ghs, drd_Sector::Public);
                 const mco_GhsPriceInfo *priv_price_info = index->FindGhsPrice(ghs, drd_Sector::Private);

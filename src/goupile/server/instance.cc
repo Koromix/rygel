@@ -520,9 +520,9 @@ bool InstanceData::LoadDatabaseConfig()
             } else if (TestStr(key, "Application.ClientKey")) {
                 config.app_key = DuplicateString(value, &str_alloc).ptr;
             } else if (TestStr(key, "Application.UseOffline")) {
-                valid &= IniParser::ParseBoolValue(value, &config.use_offline);
+                valid &= ParseBool(value, &config.use_offline);
             } else if (TestStr(key, "Application.MaxFileSize")) {
-                valid &= ParseDec(value, &config.max_file_size);
+                valid &= ParseInt(value, &config.max_file_size);
             } else if (TestStr(key, "Application.SyncMode")) {
                 if (!OptionToEnum(SyncModeNames, value, &config.sync_mode)) {
                     LogError("Unknown sync mode '%1'", value);
@@ -536,19 +536,19 @@ bool InstanceData::LoadDatabaseConfig()
                     valid = false;
                 }
             } else if (TestStr(key, "HTTP.Port")) {
-                valid &= ParseDec(value, &config.http.port);
+                valid &= ParseInt(value, &config.http.port);
             } else if (TestStr(key, "HTTP.MaxConnections")) {
-                valid &= ParseDec(value, &config.http.max_connections);
+                valid &= ParseInt(value, &config.http.max_connections);
             } else if (TestStr(key, "HTTP.IdleTimeout")) {
-                valid &= ParseDec(value, &config.http.idle_timeout);
+                valid &= ParseInt(value, &config.http.idle_timeout);
             } else if (TestStr(key, "HTTP.Threads")) {
-                valid &= ParseDec(value, &config.http.threads);
+                valid &= ParseInt(value, &config.http.threads);
             } else if (TestStr(key, "HTTP.AsyncThreads")) {
-                valid &= ParseDec(value, &config.http.async_threads);
+                valid &= ParseInt(value, &config.http.async_threads);
             } else if (TestStr(key, "HTTP.BaseUrl")) {
                 config.http.base_url = DuplicateString(value, &str_alloc).ptr;
             } else if (TestStr(key, "HTTP.MaxAge")) {
-                valid &= ParseDec(value, &config.max_age);
+                valid &= ParseInt(value, &config.max_age);
             } else {
                 LogError("Unknown setting '%1'", key);
                 valid = false;
@@ -599,9 +599,9 @@ bool InstanceData::LoadIniConfig(StreamReader *st)
             } else if (prop.section == "Sync") {
                 do {
                     if (prop.key == "UseOffline") {
-                        valid &= IniParser::ParseBoolValue(prop.value, &config.use_offline);
+                        valid &= ParseBool(prop.value, &config.use_offline);
                     } else if (prop.key == "MaxFileSize") {
-                        valid &= ParseDec(prop.value, &config.max_file_size);
+                        valid &= ParseInt(prop.value, &config.max_file_size);
                     } else if (prop.key == "SyncMode") {
                         if (!OptionToEnum(SyncModeNames, prop.value, &config.sync_mode)) {
                             LogError("Unknown sync mode '%1'", prop.value);
@@ -627,19 +627,19 @@ bool InstanceData::LoadIniConfig(StreamReader *st)
                             LogError("Unknown IP version '%1'", prop.value);
                         }
                     } else if (prop.key == "Port") {
-                        valid &= ParseDec(prop.value, &config.http.port);
+                        valid &= ParseInt(prop.value, &config.http.port);
                     } else if (prop.key == "MaxConnections") {
-                        valid &= ParseDec(prop.value, &config.http.max_connections);
+                        valid &= ParseInt(prop.value, &config.http.max_connections);
                     } else if (prop.key == "IdleTimeout") {
-                        valid &= ParseDec(prop.value, &config.http.idle_timeout);
+                        valid &= ParseInt(prop.value, &config.http.idle_timeout);
                     } else if (prop.key == "Threads") {
-                        valid &= ParseDec(prop.value, &config.http.threads);
+                        valid &= ParseInt(prop.value, &config.http.threads);
                     } else if (prop.key == "AsyncThreads") {
-                        valid &= ParseDec(prop.value, &config.http.async_threads);
+                        valid &= ParseInt(prop.value, &config.http.async_threads);
                     } else if (prop.key == "BaseUrl") {
                         config.http.base_url = DuplicateString(prop.value, &str_alloc).ptr;
                     } else if (prop.key == "MaxAge") {
-                        valid &= ParseDec(prop.value, &config.max_age);
+                        valid &= ParseInt(prop.value, &config.max_age);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;

@@ -223,7 +223,7 @@ static bool ParsePmsiInt(Span<const char> str, T *out_value)
         return false;
 
     T value;
-    if (RG_LIKELY(ParseDec<T>(str, &value, 0, &str))) {
+    if (RG_LIKELY(ParseInt<T>(str, &value, 0, &str))) {
         *out_value = value;
         return true;
     } else {
@@ -348,7 +348,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
     offset += 3;
     if (RG_LIKELY(line[offset] != ' ')) {
         stay.main_diagnosis =
-            drd_DiagnosisCode::FromString(line.Take(offset, 8), (int)ParseFlag::End);
+            drd_DiagnosisCode::Parse(line.Take(offset, 8), (int)ParseFlag::End);
         if (RG_UNLIKELY(!stay.main_diagnosis.IsValid())) {
             stay.errors |= (int)mco_Stay::Error::MalformedMainDiagnosis;
         }
@@ -356,7 +356,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
     offset += 8;
     if (line[offset] != ' ') {
         stay.linked_diagnosis =
-            drd_DiagnosisCode::FromString(line.Take(offset, 8), (int)ParseFlag::End);
+            drd_DiagnosisCode::Parse(line.Take(offset, 8), (int)ParseFlag::End);
         if (RG_UNLIKELY(!stay.linked_diagnosis.IsValid())) {
             stay.errors |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
         }
@@ -395,7 +395,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
 
         for (int i = 0; i < das_count; i++) {
             drd_DiagnosisCode diag =
-                drd_DiagnosisCode::FromString(read_fragment(8), (int)ParseFlag::End);
+                drd_DiagnosisCode::Parse(read_fragment(8), (int)ParseFlag::End);
             if (RG_LIKELY(diag.IsValid())) {
                 other_diagnoses.Append(diag);
             } else {
@@ -408,7 +408,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
             mco_ProcedureRealisation proc = {};
 
             ParsePmsiDate(read_fragment(8), &proc.date);
-            proc.proc = drd_ProcedureCode::FromString(read_fragment(7), (int)ParseFlag::End);
+            proc.proc = drd_ProcedureCode::Parse(read_fragment(7), (int)ParseFlag::End);
             if (version >= 17) {
                 if (line[offset] != ' ') {
                     if (RG_UNLIKELY(line[offset] != '-' ||
@@ -443,7 +443,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
 
         bool valid = true;
         test.bill_id = stay.bill_id;
-        test.ghm = mco_GhmCode::FromString(line.Take(2, 6));
+        test.ghm = mco_GhmCode::Parse(line.Take(2, 6));
         valid &= test.ghm.IsValid();
         valid &= ParsePmsiInt(line.Take(12, 3), &test.error);
 
@@ -504,7 +504,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
     rsa.admin_id = rsa.bill_id;
     test.bill_id = rsa.bill_id;
     offset += 19; // Skip more version info, first GHM
-    test.ghm = mco_GhmCode::FromString(read_fragment(6));
+    test.ghm = mco_GhmCode::Parse(read_fragment(6));
     ParsePmsiInt(read_fragment(3), &test.error);
     ParsePmsiInt(read_fragment(2), &test.cluster_len);
     ParsePmsiInt(read_fragment(3), &age) || set_error_flag(mco_Stay::Error::MalformedBirthdate);
@@ -642,7 +642,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         offset += 14; // Skip many fields
         if (RG_LIKELY(line[offset] != ' ')) {
             stay.main_diagnosis =
-                drd_DiagnosisCode::FromString(line.Take(offset, 6), (int)ParseFlag::End);
+                drd_DiagnosisCode::Parse(line.Take(offset, 6), (int)ParseFlag::End);
             if (RG_UNLIKELY(!stay.main_diagnosis.IsValid())) {
                 stay.errors |= (int)mco_Stay::Error::MalformedMainDiagnosis;
             }
@@ -650,7 +650,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         offset += 6;
         if (line[offset] != ' ') {
             stay.linked_diagnosis =
-                drd_DiagnosisCode::FromString(line.Take(offset, 6), (int)ParseFlag::End);
+                drd_DiagnosisCode::Parse(line.Take(offset, 6), (int)ParseFlag::End);
             if (RG_UNLIKELY(!stay.linked_diagnosis.IsValid())) {
                 stay.errors |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
             }
@@ -752,7 +752,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         HeapArray<drd_DiagnosisCode> other_diagnoses(&other_diagnoses_alloc);
         for (Size j = 0; j < stay.other_diagnoses.len; j++) {
             drd_DiagnosisCode diag =
-                drd_DiagnosisCode::FromString(read_fragment(6), (int)ParseFlag::End);
+                drd_DiagnosisCode::Parse(read_fragment(6), (int)ParseFlag::End);
             if (RG_LIKELY(diag.IsValid())) {
                 other_diagnoses.Append(diag);
             } else {
@@ -776,7 +776,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
                     proc.date = rsa.entry.date + proc_delay;
                 }
             }
-            proc.proc = drd_ProcedureCode::FromString(read_fragment(7), (int)ParseFlag::End);
+            proc.proc = drd_ProcedureCode::Parse(read_fragment(7), (int)ParseFlag::End);
             if (version >= 222) {
                 if (line[offset] != ' ') {
                     ParsePmsiInt(line.Take(offset, 2), &proc.extension) ||

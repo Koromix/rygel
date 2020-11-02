@@ -33,7 +33,7 @@ bool StructureSetBuilder::LoadIni(StreamReader *st)
             do {
                 StructureEntity ent = {};
 
-                ent.unit = drd_UnitCode::FromString(prop.key);
+                ent.unit = drd_UnitCode::Parse(prop.key);
                 valid &= ent.unit.IsValid();
 
                 ent.path = DuplicateString(prop.value, &set.str_alloc).ptr;

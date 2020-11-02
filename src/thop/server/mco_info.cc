@@ -17,7 +17,7 @@ static const mco_TableIndex *GetIndexFromRequest(const http_RequestInfo &request
     {
         const char *date_str = request.GetQueryValue("date");
         if (date_str) {
-            date = Date::FromString(date_str);
+            date = Date::Parse(date_str);
         } else {
             LogError("Missing 'date' parameter");
         }
@@ -521,7 +521,7 @@ void ProduceMcoHighlight(const http_RequestInfo &request, const User *user, http
             ctx.ignore_diagnoses = true;
         } else {
             drd_DiagnosisCode diag =
-                drd_DiagnosisCode::FromString(code, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                drd_DiagnosisCode::Parse(code, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (!diag.IsValid()) {
                 LogError("Invalid CIM-10 code '%1'", code);
                 io->AttachError(422);
@@ -545,7 +545,7 @@ void ProduceMcoHighlight(const http_RequestInfo &request, const User *user, http
             ctx.ignore_procedures = true;
         } else {
             drd_ProcedureCode proc =
-                drd_ProcedureCode::FromString(code, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                drd_ProcedureCode::Parse(code, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (!proc.IsValid()) {
                 LogError("Invalid CCAM code '%1'", code);
                 io->AttachError(422);

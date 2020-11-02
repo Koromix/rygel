@@ -79,19 +79,19 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                             valid = false;
                         }
                     } else if (prop.key == "Port") {
-                        valid &= ParseDec(prop.value, &config.http.port);
+                        valid &= ParseInt(prop.value, &config.http.port);
                     } else if (prop.key == "MaxConnections") {
-                        valid &= ParseDec(prop.value, &config.http.max_connections);
+                        valid &= ParseInt(prop.value, &config.http.max_connections);
                     } else if (prop.key == "IdleTimeout") {
-                        valid &= ParseDec(prop.value, &config.http.idle_timeout);
+                        valid &= ParseInt(prop.value, &config.http.idle_timeout);
                     } else if (prop.key == "Threads") {
-                        valid &= ParseDec(prop.value, &config.http.threads);
+                        valid &= ParseInt(prop.value, &config.http.threads);
                     } else if (prop.key == "AsyncThreads") {
-                        valid &= ParseDec(prop.value, &config.http.async_threads);
+                        valid &= ParseInt(prop.value, &config.http.async_threads);
                     } else if (prop.key == "BaseUrl") {
                         config.http.base_url = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "MaxAge") {
-                        valid &= ParseDec(prop.value, &config.max_age);
+                        valid &= ParseInt(prop.value, &config.max_age);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;

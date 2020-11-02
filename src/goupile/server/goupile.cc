@@ -261,7 +261,7 @@ Options:
             if (opt.Test("-I", "--instance_dir", OptionType::Value)) {
                 // Already handled
             } else if (opt.Test("--port", OptionType::Value)) {
-                if (!ParseDec(opt.current_value, &instance->config.http.port))
+                if (!ParseInt(opt.current_value, &instance->config.http.port))
                     return 1;
             } else if (opt.Test("--base_url", OptionType::Value)) {
                 instance->config.http.base_url = opt.current_value;

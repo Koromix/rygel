@@ -26,10 +26,10 @@ static bool GetQueryDateRange(const http_RequestInfo &request, const char *key,
     {
         Span<const char> remain = str;
 
-        start_date = Date::FromString(remain, 0, &remain);
+        start_date = Date::Parse(remain, 0, &remain);
         if (remain.len < 2 || remain[0] != '.' || remain[1] != '.')
             goto invalid;
-        end_date = Date::FromString(remain.Take(2, remain.len - 2), 0, &remain);
+        end_date = Date::Parse(remain.Take(2, remain.len - 2), 0, &remain);
         if (remain.len)
             goto invalid;
 
@@ -101,7 +101,7 @@ static bool GetQueryGhmRoot(const http_RequestInfo &request, const char *key,
         return false;
     }
 
-    mco_GhmRootCode ghm_root = mco_GhmRootCode::FromString(str);
+    mco_GhmRootCode ghm_root = mco_GhmRootCode::Parse(str);
     if (!ghm_root.IsValid()) {
         io->AttachError(422);
         return false;

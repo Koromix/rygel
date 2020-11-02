@@ -1225,28 +1225,28 @@ static bool ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &
             } else if (prop.section == "Supplements") {
                 do {
                     if (prop.key == "REA") {
-                        valid &= ParseDec(prop.value, &supplement_prices.st.rea);
+                        valid &= ParseInt(prop.value, &supplement_prices.st.rea);
                     } else if (prop.key == "STF") {
-                        valid &= ParseDec(prop.value, &supplement_prices.st.reasi);
+                        valid &= ParseInt(prop.value, &supplement_prices.st.reasi);
                         supplement_prices.st.si = supplement_prices.st.reasi;
                     } else if (prop.key == "SRC") {
-                        valid &= ParseDec(prop.value, &supplement_prices.st.src);
+                        valid &= ParseInt(prop.value, &supplement_prices.st.src);
                     } else if (prop.key == "NN1") {
-                        valid &= ParseDec(prop.value, &supplement_prices.st.nn1);
+                        valid &= ParseInt(prop.value, &supplement_prices.st.nn1);
                     } else if (prop.key == "NN2") {
-                        valid &= ParseDec(prop.value, &supplement_prices.st.nn2);
+                        valid &= ParseInt(prop.value, &supplement_prices.st.nn2);
                     } else if (prop.key == "NN3") {
-                        valid &= ParseDec(prop.value, &supplement_prices.st.nn3);
+                        valid &= ParseInt(prop.value, &supplement_prices.st.nn3);
                     } else if (prop.key == "REP") {
-                        valid &= ParseDec(prop.value, &supplement_prices.st.rep);
+                        valid &= ParseInt(prop.value, &supplement_prices.st.rep);
                     } else if (prop.key == "ANT") {
-                        valid &= ParseDec(prop.value, &supplement_prices.st.ant);
+                        valid &= ParseInt(prop.value, &supplement_prices.st.ant);
                     } else if (prop.key == "RAP") {
-                        valid &= ParseDec(prop.value, &supplement_prices.st.rap);
+                        valid &= ParseInt(prop.value, &supplement_prices.st.rap);
                     } else if (prop.key == "SDC") {
-                        valid &= ParseDec(prop.value, &supplement_prices.st.sdc);
+                        valid &= ParseInt(prop.value, &supplement_prices.st.sdc);
                     } else if (prop.key == "DIP") {
-                        valid &= ParseDec(prop.value, &supplement_prices.st.dip);
+                        valid &= ParseInt(prop.value, &supplement_prices.st.dip);
                     } else if (prop.key == "TDE" || prop.key == "TSE") {
                         // Unsupported (for now)
                     } else {
@@ -1257,16 +1257,16 @@ static bool ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &
             } else {
                 mco_GhsPriceInfo price_info = {};
 
-                price_info.ghs = mco_GhsCode::FromString(prop.section);
+                price_info.ghs = mco_GhsCode::Parse(prop.section);
                 valid &= price_info.ghs.IsValid();
 
                 do {
                     if (prop.key == "PriceCents") {
-                        valid &= ParseDec(prop.value, &price_info.ghs_cents);
+                        valid &= ParseInt(prop.value, &price_info.ghs_cents);
                     } else if (prop.key == "ExbTreshold") {
-                        valid &= ParseDec(prop.value, &price_info.exb_treshold);
+                        valid &= ParseInt(prop.value, &price_info.exb_treshold);
                     } else if (prop.key == "ExbCents") {
-                        valid &= ParseDec(prop.value, &price_info.exb_cents);
+                        valid &= ParseInt(prop.value, &price_info.exb_cents);
                     } else if (prop.key == "ExbType") {
                         if (prop.value == "Daily") {
                             price_info.flags &= (uint16_t)~(int)mco_GhsPriceInfo::Flag::ExbOnce;
@@ -1277,9 +1277,9 @@ static bool ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &
                             valid = false;
                         }
                     } else if (prop.key == "ExhTreshold") {
-                        valid &= ParseDec(prop.value, &price_info.exh_treshold);
+                        valid &= ParseInt(prop.value, &price_info.exh_treshold);
                     } else if (prop.key == "ExhCents") {
-                        valid &= ParseDec(prop.value, &price_info.exh_cents);
+                        valid &= ParseInt(prop.value, &price_info.exh_cents);
                     } else {
                         LogError("Unknown GHS price attribute '%1'", prop.key);
                         valid = false;
@@ -1383,13 +1383,13 @@ bool mco_TableSetBuilder::LoadPrices(StreamReader *st)
         bool valid = true;
         while (ini.Next(&prop) && !prop.section.len) {
             if (prop.key == "Date") {
-                table_info.limit_dates[0] = Date::FromString(prop.value);
+                table_info.limit_dates[0] = Date::Parse(prop.value);
                 valid &= !!table_info.limit_dates[0].value;
             } else if (prop.key == "End") {
-                table_info.limit_dates[1] = Date::FromString(prop.value);
+                table_info.limit_dates[1] = Date::Parse(prop.value);
                 valid &= !!table_info.limit_dates[1].value;
             } else if (prop.key == "Build") {
-                Date build_date = Date::FromString(prop.value);
+                Date build_date = Date::Parse(prop.value);
                 valid &= build_date.IsValid();
                 table_info.build_date = build_date;
             } else if (prop.key == "Sector") {

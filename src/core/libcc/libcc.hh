@@ -2412,8 +2412,8 @@ union Date {
         return (int8_t)(DaysPerMonth[month - 1] + (month == 2 && IsLeapYear(year)));
     }
 
-    static Date FromString(Span<const char> date_str, int flags = RG_DEFAULT_PARSE_FLAGS,
-                           Span<const char> *out_remaining = nullptr);
+    static Date Parse(Span<const char> date_str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+                      Span<const char> *out_remaining = nullptr);
     static Date FromJulianDays(int days);
     static Date FromCalendarDate(int days) { return Date::FromJulianDays(days + 2440588); }
 
@@ -3371,7 +3371,7 @@ static inline Span<const char> TrimStr(Span<const char> str, const char *trim_ch
     { return TrimStr(MakeSpan((char *)str.ptr, str.len), trim_chars); }
 
 template <typename T>
-bool ParseDec(Span<const char> str, T *out_value, int flags = RG_DEFAULT_PARSE_FLAGS,
+bool ParseInt(Span<const char> str, T *out_value, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
               Span<const char> *out_remaining = nullptr)
 {
     uint64_t value = 0;
@@ -3422,6 +3422,9 @@ overflow:
     }
     return false;
 }
+
+bool ParseBool(Span<const char> str, bool *out_value, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+               Span<const char> *out_remaining = nullptr);
 
 static inline Size EncodeUtf8(int32_t c, char out_buf[4])
 {
@@ -3703,8 +3706,6 @@ public:
     bool NextInSection(IniProperty *out_prop);
 
     void PushLogFilter() { reader.PushLogFilter(); }
-
-    static bool ParseBoolValue(Span<const char> value, bool *out_value);
 
 private:
     LineType FindNextLine(IniProperty *out_prop);

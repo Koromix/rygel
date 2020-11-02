@@ -98,7 +98,7 @@ const Date rcc_Vector<Date>::operator[](Size idx) const
         case Type::Character: {
             SEXP str = u.chr[idx];
             if (str != NA_STRING) {
-                date = Date::FromString(CHAR(str), (int)ParseFlag::End);
+                date = Date::Parse(CHAR(str), (int)ParseFlag::End);
             }
         } break;
 

@@ -358,7 +358,8 @@ void IndirectBlockAllocator::ReleaseAll()
 // ------------------------------------------------------------------------
 
 // XXX: Rewrite the ugly parsing part
-Date Date::FromString(Span<const char> date_str, int flags, Span<const char> *out_remaining)
+Date Date::Parse(Span<const char> date_str, unsigned int flags,
+                      Span<const char> *out_remaining)
 {
     Date date;
 
@@ -587,6 +588,40 @@ Span<char> DuplicateString(Span<const char> str, Allocator *alloc)
     memcpy(new_str, str.ptr, (size_t)str.len);
     new_str[str.len] = 0;
     return MakeSpan(new_str, str.len);
+}
+
+bool ParseBool(Span<const char> str, bool *out_value, unsigned int flags,
+               Span<const char> *out_remaining)
+{
+#define TRY_MATCH(Match, Value) \
+        do { \
+            if (str == (Match)) { \
+                *out_value = (Value); \
+                if (out_remaining) { \
+                    *out_remaining = str.Take(str.len, 0); \
+                } \
+                return true; \
+            } else if (!(flags & (int)ParseFlag::End)) { \
+                *out_value = (Value); \
+                if (out_remaining) { \
+                    Size match_len = strlen(Match); \
+                    *out_remaining = str.Take(match_len, str.len - match_len); \
+                } \
+                return true; \
+            } \
+        } while (false)
+
+    TRY_MATCH("1", true);
+    TRY_MATCH("On", true);
+    TRY_MATCH("Y", true);
+    TRY_MATCH("0", false);
+    TRY_MATCH("Off", false);
+    TRY_MATCH("N", false);
+
+    if (flags & (int)ParseFlag::Log) {
+        LogError("Invalid boolean value '%1'", str);
+    }
+    return false;
 }
 
 // ------------------------------------------------------------------------
@@ -4583,20 +4618,6 @@ bool IniParser::NextInSection(IniProperty *out_prop)
 {
     LineType type = FindNextLine(out_prop);
     return type == LineType::KeyValue;
-}
-
-bool IniParser::ParseBoolValue(Span<const char> value, bool *out_value)
-{
-    if (value == "1" || value == "On" || value == "Y") {
-        *out_value = true;
-        return true;
-    } else if (value == "0" || value == "Off" || value == "N") {
-        *out_value = false;
-        return true;
-    } else {
-        LogError("Invalid boolean value '%1'", value);
-        return false;
-    }
 }
 
 // ------------------------------------------------------------------------

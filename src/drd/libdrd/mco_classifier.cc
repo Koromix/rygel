@@ -1140,7 +1140,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set,
         out_prepared_set->mono_preps.Append(out_prepared_set->prep);
 
         SetError(out_errors, 59);
-        return mco_GhmCode::FromString("90Z00Z");
+        return mco_GhmCode::Parse("90Z00Z");
     }
 
     bool valid = true;
@@ -1152,7 +1152,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set,
     if (RG_LIKELY(valid)) {
         if (RG_UNLIKELY(!out_prepared_set->index)) {
             SetError(out_errors, 502, 2);
-            return mco_GhmCode::FromString("90Z03Z");
+            return mco_GhmCode::Parse("90Z03Z");
         }
 
         // Aggregate diagnoses and procedures
@@ -1185,7 +1185,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set,
     valid &= CheckAggregateErrors(out_prepared_set->prep, out_prepared_set->mono_preps, out_errors);
 
     if (RG_UNLIKELY(!valid))
-        return mco_GhmCode::FromString("90Z00Z");
+        return mco_GhmCode::Parse("90Z00Z");
 
     return {};
 }
@@ -1537,8 +1537,8 @@ static bool CheckGhmErrors(const mco_PreparedStay &prep, Span<const mco_Prepared
     if (RG_UNLIKELY(stay.exit.date >= Date(2016, 3, 1) && ghm.Root() == mco_GhmRootCode(14, 'Z', 8))) {
         bool type_present = std::any_of(prep.procedures.begin(), prep.procedures.end(),
                                         [](const mco_ProcedureInfo *proc_info) {
-            static drd_ProcedureCode proc1 = drd_ProcedureCode::FromString("JNJD002");
-            static drd_ProcedureCode proc2 = drd_ProcedureCode::FromString("JNJP001");
+            static drd_ProcedureCode proc1 = drd_ProcedureCode::Parse("JNJD002");
+            static drd_ProcedureCode proc2 = drd_ProcedureCode::Parse("JNJP001");
 
             return proc_info->proc == proc1 || proc_info->proc == proc2;
         });
@@ -1575,7 +1575,7 @@ static mco_GhmCode RunGhmTree(const mco_TableIndex &index, const mco_PreparedSta
                 LogError("Result for GHM tree test %1 out of range (%2 - %3)",
                          ghm_node.function, 0, ghm_node.u.test.children_count);
                 SetError(out_errors, 4, 2);
-                return mco_GhmCode::FromString("90Z03Z");
+                return mco_GhmCode::Parse("90Z03Z");
             }
 
             node_idx = ghm_node.u.test.children_idx + test_ret;
@@ -1733,7 +1733,7 @@ mco_GhmCode mco_PickGhm(const mco_TableIndex &index,
 
 #define RETURN_ERROR_GHM(GhmStr) \
         do { \
-            mco_GhmCode ghm = mco_GhmCode::FromString(GhmStr); \
+            mco_GhmCode ghm = mco_GhmCode::Parse(GhmStr); \
             if (out_ghm_for_ghs) { \
                 *out_ghm_for_ghs = ghm; \
             } \

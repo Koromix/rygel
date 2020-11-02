@@ -215,7 +215,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                     }
 
                     if (prop.key == "EnableByDefault") {
-                        valid &= IniParser::ParseBoolValue(prop.value, &target_config.enable_by_default);
+                        valid &= ParseBool(prop.value, &target_config.enable_by_default);
                     } else if (prop.key == "SourceDirectory") {
                         valid &= AppendNormalizedPath(prop.value,
                                                       &set.str_alloc, &target_config.src_file_set.directories);

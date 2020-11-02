@@ -23,8 +23,8 @@ union drd_DiagnosisCode {
 
     drd_DiagnosisCode() = default;
 
-    static drd_DiagnosisCode FromString(Span<const char> str, int flags = RG_DEFAULT_PARSE_FLAGS,
-                                        Span<const char> *out_remaining = nullptr)
+    static drd_DiagnosisCode Parse(Span<const char> str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+                                   Span<const char> *out_remaining = nullptr)
     {
         drd_DiagnosisCode code = {};
         Size end = 0;
@@ -95,8 +95,8 @@ union drd_ProcedureCode {
 
     drd_ProcedureCode() = default;
 
-    static drd_ProcedureCode FromString(Span<const char> str, int flags = RG_DEFAULT_PARSE_FLAGS,
-                                        Span<const char> *out_remaining = nullptr)
+    static drd_ProcedureCode Parse(Span<const char> str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+                                   Span<const char> *out_remaining = nullptr)
     {
         drd_ProcedureCode code = {};
         {
@@ -146,12 +146,12 @@ struct drd_UnitCode {
     drd_UnitCode() = default;
     explicit drd_UnitCode(int16_t code) : number(code) {}
 
-    static drd_UnitCode FromString(Span<const char> str, int flags = RG_DEFAULT_PARSE_FLAGS,
-                                   Span<const char> *out_remaining = nullptr)
+    static drd_UnitCode Parse(Span<const char> str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+                              Span<const char> *out_remaining = nullptr)
     {
         drd_UnitCode code = {};
 
-        if (!ParseDec(str, &code.number, flags & ~(int)ParseFlag::Log, out_remaining) ||
+        if (!ParseInt(str, &code.number, flags & ~(int)ParseFlag::Log, out_remaining) ||
                 ((flags & (int)ParseFlag::Validate) && !code.IsValid())) {
             if (flags & (int)ParseFlag::Log) {
                 LogError("Malformed Unit code '%1'", str);

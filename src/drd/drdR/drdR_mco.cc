@@ -255,7 +255,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                     continue;
 
                 drd_DiagnosisCode diag =
-                    drd_DiagnosisCode::FromString(diagnoses.diag[j], (int)ParseFlag::End);
+                    drd_DiagnosisCode::Parse(diagnoses.diag[j], (int)ParseFlag::End);
                 const char *type_str = diagnoses.type[j].ptr;
 
                 if (RG_LIKELY(type_str[0] && !type_str[1])) {
@@ -296,14 +296,14 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         } else {
             if (RG_LIKELY(stays.main_diagnosis[i] != CHAR(NA_STRING))) {
                 stay.main_diagnosis =
-                    drd_DiagnosisCode::FromString(stays.main_diagnosis[i], (int)ParseFlag::End);
+                    drd_DiagnosisCode::Parse(stays.main_diagnosis[i], (int)ParseFlag::End);
                 if (RG_UNLIKELY(!stay.main_diagnosis.IsValid())) {
                     stay.errors |= (int)mco_Stay::Error::MalformedMainDiagnosis;
                 }
             }
             if (stays.linked_diagnosis[i] != CHAR(NA_STRING)) {
                 stay.linked_diagnosis =
-                    drd_DiagnosisCode::FromString(stays.linked_diagnosis[i], (int)ParseFlag::End);
+                    drd_DiagnosisCode::Parse(stays.linked_diagnosis[i], (int)ParseFlag::End);
                 if (RG_UNLIKELY(!stay.linked_diagnosis.IsValid())) {
                     stay.errors |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
                 }
@@ -317,7 +317,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                     continue;
 
                 drd_DiagnosisCode diag =
-                    drd_DiagnosisCode::FromString(diagnoses.diag[j], (int)ParseFlag::End);
+                    drd_DiagnosisCode::Parse(diagnoses.diag[j], (int)ParseFlag::End);
                 if (RG_UNLIKELY(!diag.IsValid())) {
                     stay.errors |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
                 }
@@ -337,7 +337,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
 
             mco_ProcedureRealisation proc = {};
 
-            proc.proc = drd_ProcedureCode::FromString(procedures.proc[k], (int)ParseFlag::End);
+            proc.proc = drd_ProcedureCode::Parse(procedures.proc[k], (int)ParseFlag::End);
             if (procedures.extension.Len() && procedures.extension[k] != NA_INTEGER) {
                 int extension = procedures.extension[k];
                 if (RG_LIKELY(extension >= 0 && extension < 100)) {
@@ -1432,7 +1432,7 @@ RcppExport SEXP drdR_mco_CleanDiagnoses(SEXP diagnoses_xp)
     for (Size i = 0; i < diagnoses.Len(); i++) {
         Span<const char> str = diagnoses[i];
         if (!diagnoses.IsNA(str)) {
-            drd_DiagnosisCode diag = drd_DiagnosisCode::FromString(diagnoses[i]);
+            drd_DiagnosisCode diag = drd_DiagnosisCode::Parse(diagnoses[i]);
             if (RG_LIKELY(diag.IsValid())) {
                 diagnoses2.Set(i, diag.str);
             } else {
@@ -1454,7 +1454,7 @@ RcppExport SEXP drdR_mco_CleanProcedures(SEXP procedures_xp)
     for (Size i = 0; i < procedures.Len(); i++) {
         Span<const char> str = procedures[i];
         if (!procedures.IsNA(str)) {
-            drd_ProcedureCode proc = drd_ProcedureCode::FromString(procedures[i]);
+            drd_ProcedureCode proc = drd_ProcedureCode::Parse(procedures[i]);
             if (RG_LIKELY(proc.IsValid())) {
                 procedures2.Set(i, proc.str);
             } else {

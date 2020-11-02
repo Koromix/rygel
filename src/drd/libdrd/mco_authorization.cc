@@ -73,17 +73,17 @@ bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader *st)
                     auth.unit.number = INT16_MAX;
                     authorizations = &set.facility_authorizations;
                 } else {
-                    auth.unit = drd_UnitCode::FromString(line.Take(0, 4));
+                    auth.unit = drd_UnitCode::Parse(line.Take(0, 4));
                     valid &= auth.unit.IsValid();
                     authorizations = &set.authorizations;
                 }
-                valid &= ParseDec(line.Take(13, 3), &auth.type,
+                valid &= ParseInt(line.Take(13, 3), &auth.type,
                                   RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
-                ParseDec(line.Take(16, 2), &auth.dates[0].st.day,
+                ParseInt(line.Take(16, 2), &auth.dates[0].st.day,
                          RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
-                ParseDec(line.Take(18, 2), &auth.dates[0].st.month,
+                ParseInt(line.Take(18, 2), &auth.dates[0].st.month,
                          RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
-                ParseDec(line.Take(20, 4), &auth.dates[0].st.year,
+                ParseInt(line.Take(20, 4), &auth.dates[0].st.year,
                          RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
                 auth.dates[1] = mco_MaxDate1980;
                 switch (line[27]) {
@@ -134,14 +134,14 @@ bool mco_AuthorizationSetBuilder::LoadIni(StreamReader *st)
                 auth.unit.number = INT16_MAX;
                 authorizations = &set.facility_authorizations;
             } else {
-                auth.unit = drd_UnitCode::FromString(prop.section);
+                auth.unit = drd_UnitCode::Parse(prop.section);
                 valid &= auth.unit.IsValid();
                 authorizations = &set.authorizations;
             }
 
             do {
                 if (prop.key == "Authorization") {
-                    valid &= ParseDec(prop.value, &auth.type, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
+                    valid &= ParseInt(prop.value, &auth.type, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
                 } else if (prop.key == "Mode") {
                     if (prop.value == "Complete") {
                         auth.mode = mco_Authorization::Mode::Complete;
@@ -154,10 +154,10 @@ bool mco_AuthorizationSetBuilder::LoadIni(StreamReader *st)
                         valid = false;
                     }
                 } else if (prop.key == "Date") {
-                    auth.dates[0] = Date::FromString(prop.value);
+                    auth.dates[0] = Date::Parse(prop.value);
                     valid &= !!auth.dates[0].value;
                 } else if (prop.key == "End") {
-                    auth.dates[1] = Date::FromString(prop.value);
+                    auth.dates[1] = Date::Parse(prop.value);
                     valid &= !!auth.dates[1].value;
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);

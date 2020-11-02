@@ -64,7 +64,7 @@ Available merge options: %!..+%6%!0)", FelixTarget, PackModeNames[(int)mode],
             } else if (opt.Test("-s", "--strip", OptionType::Value)) {
                 if (TestStr(opt.current_value, "All")) {
                     strip_count = INT_MAX;
-                } else if (!ParseDec(opt.current_value, &strip_count)) {
+                } else if (!ParseInt(opt.current_value, &strip_count)) {
                     return 1;
                 }
             } else if (opt.Test("-c", "--compress", OptionType::Value)) {

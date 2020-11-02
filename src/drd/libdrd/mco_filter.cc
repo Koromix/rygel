@@ -577,7 +577,7 @@ static WrenForeignMethodFn BindDiagnosisArrayMethod(const char *signature)
         ProxyArray<drd_DiagnosisCode> &arr = *(ProxyArray<drd_DiagnosisCode> *)wrenGetSlotForeign(vm, 0);
         const char *str = GetSlotStringSafe(vm, 1);
 
-        drd_DiagnosisCode new_diag = drd_DiagnosisCode::FromString(str, (int)ParseFlag::End);
+        drd_DiagnosisCode new_diag = drd_DiagnosisCode::Parse(str, (int)ParseFlag::End);
         if (!new_diag.IsValid()) {
             TriggerError(vm, "Invalid diagnosis code");
             return;
@@ -598,7 +598,7 @@ static WrenForeignMethodFn BindDiagnosisArrayMethod(const char *signature)
         ProxyArray<drd_DiagnosisCode> &arr = *(ProxyArray<drd_DiagnosisCode> *)wrenGetSlotForeign(vm, 0);
         const char *str = GetSlotStringSafe(vm, 1);
 
-        drd_DiagnosisCode remove_diag = drd_DiagnosisCode::FromString(str, (int)ParseFlag::End);
+        drd_DiagnosisCode remove_diag = drd_DiagnosisCode::Parse(str, (int)ParseFlag::End);
         if (!remove_diag.IsValid()) {
             TriggerError(vm, "Invalid diagnosis code");
             return;
@@ -649,7 +649,7 @@ static WrenForeignMethodFn BindProcedureArrayMethod(const char *signature)
 
         mco_ProcedureRealisation new_proc = {};
 
-        new_proc.proc = drd_ProcedureCode::FromString(str, (int)ParseFlag::End);
+        new_proc.proc = drd_ProcedureCode::Parse(str, (int)ParseFlag::End);
         if (!new_proc.proc.IsValid()) {
             TriggerError(vm, "Invalid procedure code");
             return;
@@ -680,7 +680,7 @@ static WrenForeignMethodFn BindProcedureArrayMethod(const char *signature)
             *(ProxyArray<mco_ProcedureRealisation> *)wrenGetSlotForeign(vm, 0);
         const char *str = GetSlotStringSafe(vm, 1);
 
-        drd_ProcedureCode remove_proc = drd_ProcedureCode::FromString(str, (int)ParseFlag::End);
+        drd_ProcedureCode remove_proc = drd_ProcedureCode::Parse(str, (int)ParseFlag::End);
         if (!remove_proc.IsValid()) {
             TriggerError(vm, "Invalid procedure code");
             return;
@@ -892,7 +892,7 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
         ProxyArray<mco_Stay> *array = obj->array;
 
         const char *new_value = GetSlotStringSafe(vm, 1);
-        drd_DiagnosisCode new_diag = drd_DiagnosisCode::FromString(new_value, (int)ParseFlag::End);
+        drd_DiagnosisCode new_diag = drd_DiagnosisCode::Parse(new_value, (int)ParseFlag::End);
         if (RG_UNLIKELY(!new_diag.IsValid())) {
             TriggerError(vm, "Invalid diagnosis code");
             return;
@@ -908,7 +908,7 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
         ProxyArray<mco_Stay> *array = obj->array;
 
         const char *new_value = GetSlotStringSafe(vm, 1);
-        drd_DiagnosisCode new_diag = drd_DiagnosisCode::FromString(new_value, (int)ParseFlag::End);
+        drd_DiagnosisCode new_diag = drd_DiagnosisCode::Parse(new_value, (int)ParseFlag::End);
         if (RG_UNLIKELY(!new_diag.IsValid())) {
             TriggerError(vm, "Invalid diagnosis code");
             return;

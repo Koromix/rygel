@@ -68,7 +68,7 @@ void HandleRecordLoad(const http_RequestInfo &request, http_IO *io)
     int64_t anchor = -1;
     {
         const char *anchor_str = request.GetQueryValue("anchor");
-        if (anchor_str && !ParseDec(anchor_str, &anchor)) {
+        if (anchor_str && !ParseInt(anchor_str, &anchor)) {
             io->AttachError(422);
             return;
         }
@@ -143,7 +143,7 @@ void HandleRecordColumns(const http_RequestInfo &request, http_IO *io)
     int64_t anchor = -1;
     {
         const char *anchor_str = request.GetQueryValue("anchor");
-        if (anchor_str && !ParseDec(anchor_str, &anchor)) {
+        if (anchor_str && !ParseInt(anchor_str, &anchor)) {
             io->AttachError(422);
             return;
         }

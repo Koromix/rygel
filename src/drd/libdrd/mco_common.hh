@@ -33,8 +33,8 @@ union mco_GhmRootCode {
         : parts {cmd, type, seq, 0} {}
 #endif
 
-    static mco_GhmRootCode FromString(Span<const char> str, int flags = RG_DEFAULT_PARSE_FLAGS,
-                                      Span<const char> *out_remaining = nullptr)
+    static mco_GhmRootCode Parse(Span<const char> str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+                                 Span<const char> *out_remaining = nullptr)
     {
         mco_GhmRootCode code = {};
         {
@@ -127,8 +127,8 @@ union mco_GhmCode {
         : parts {cmd, type, seq, mode} {}
 #endif
 
-    static mco_GhmCode FromString(Span<const char> str, int flags = RG_DEFAULT_PARSE_FLAGS,
-                                  Span<const char> *out_remaining = nullptr)
+    static mco_GhmCode Parse(Span<const char> str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+                             Span<const char> *out_remaining = nullptr)
     {
         mco_GhmCode code = {};
         {
@@ -227,12 +227,12 @@ struct mco_GhsCode {
     mco_GhsCode() = default;
     explicit mco_GhsCode(int16_t number) : number(number) {}
 
-    static mco_GhsCode FromString(Span<const char> str, int flags = RG_DEFAULT_PARSE_FLAGS,
-                                  Span<const char> *out_remaining = nullptr)
+    static mco_GhsCode Parse(Span<const char> str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+                             Span<const char> *out_remaining = nullptr)
     {
         mco_GhsCode code = {};
 
-        if (!ParseDec(str, &code.number, flags & ~(int)ParseFlag::Log, out_remaining) ||
+        if (!ParseInt(str, &code.number, flags & ~(int)ParseFlag::Log, out_remaining) ||
                 ((flags & (int)ParseFlag::Validate) && !code.IsValid())) {
             if (flags & (int)ParseFlag::Log) {
                 LogError("Malformed GHS code '%1'", str);
