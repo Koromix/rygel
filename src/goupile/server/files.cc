@@ -83,7 +83,7 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
     }
 
     sqlite3_blob *blob;
-    int size;
+    Size size;
     if (sqlite3_blob_open(instance->db, "main", "fs_files", "blob", rowid, 0, &blob) != SQLITE_OK) {
         LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
         return true;
@@ -96,7 +96,7 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
         sqlite3_finalize(stmt);
     });
 
-    io->RunAsync([=]() mutable {
+    io->RunAsync([=]() {
         io->AddCachingHeaders(0, sha256);
 
         if (request.compression_type == compression_type && size <= 65536) {
@@ -106,7 +106,7 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
             io->AddEncodingHeader(compression_type);
 
             LocalArray<char, 65536> buf;
-            if (sqlite3_blob_read(blob, buf.data, size, 0) != SQLITE_OK) {
+            if (sqlite3_blob_read(blob, buf.data, (int)size, 0) != SQLITE_OK) {
                 LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
                 return;
             }
@@ -121,12 +121,12 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
                 return;
             io->AddEncodingHeader(request.compression_type);
 
-            int offset = 0;
+            Size offset = 0;
 
             StreamReader reader([&](Span<uint8_t> buf) {
-                Size copy_len = std::min((Size)size - offset, buf.len);
+                Size copy_len = std::min(size - offset, buf.len);
 
-                if (sqlite3_blob_read(blob, buf.ptr, copy_len, offset) != SQLITE_OK) {
+                if (sqlite3_blob_read(blob, buf.ptr, (int)copy_len, (int)offset) != SQLITE_OK) {
                     LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
                     return (Size)-1;
                 }
