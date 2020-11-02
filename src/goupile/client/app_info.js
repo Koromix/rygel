@@ -68,7 +68,9 @@ function ApplicationBuilder(app) {
 
     this.page = function(key, title, options = {}) {
         checkKey(key);
+
         options = expandOptions(options);
+        options.dependencies = options.dependencies.filter(dep => dep !== key);
 
         let page = {
             key: key,
