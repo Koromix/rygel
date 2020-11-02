@@ -21,7 +21,7 @@ struct Config {
     HeapArray<const char *> mco_stay_directories;
     HeapArray<const char *> mco_stay_filenames;
 
-    http_Config http {.port = 8888};
+    http_Config http;
     int max_age = 3600;
 
     BlockAllocator str_alloc;

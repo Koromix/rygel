@@ -39,7 +39,9 @@ public:
         SyncMode sync_mode = SyncMode::Offline;
         const char *demo_user = nullptr;
 
-        http_Config http { .port = 8889 };
+        // XXX: Restore http_Config designated initializers when MSVC ICE is fixed
+        // https://developercommunity.visualstudio.com/content/problem/1238876/fatal-error-c1001-ice-with-ehsc.html
+        http_Config http;
         int max_age = 900;
     } config;
 
