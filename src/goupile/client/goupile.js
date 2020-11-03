@@ -252,10 +252,8 @@ let goupile = new function() {
                 url = new URL(url != null ? url : window.location.href, window.location.href);
 
                 // Update history and route
-                for (let [key, value] of url.searchParams) {
-                    let num = Number(value);
-                    nav.route[key] = Number.isNaN(num) ? value : num;
-                }
+                for (let [key, value] of url.searchParams)
+                    nav.route[key] = value;
                 if (push_history)
                     window.history.pushState(null, null, url.pathname);
 
