@@ -61,7 +61,9 @@ function PageBuilder(state, model, readonly = false) {
     let variables_map = {};
     let options_stack = [{
         deploy: true,
-        untoggle: true
+        untoggle: true,
+        store: true,
+        export: true
     }];
     let widgets_ref = model.widgets0;
 
@@ -856,9 +858,6 @@ function PageBuilder(state, model, readonly = false) {
             }
         }
 
-        readValue(key);
-        updateValue(key, value, false);
-
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             <label for=${id}>${label || key}</label>
@@ -870,6 +869,9 @@ function PageBuilder(state, model, readonly = false) {
         let intf = makeWidget('calc', label, render, options);
         fillVariableInfo(intf, key, value, value == null || Number.isNaN(value));
         addWidget(intf);
+
+        readValue(key);
+        updateValue(key, value, false);
 
         return intf;
     };
@@ -1188,9 +1190,20 @@ instead of:
     };
 
     function decodeKey(key, options) {
-        if (typeof key === 'string' && key[0] === '*') {
-            key = key.substr(1);
-            options.mandatory = true;
+        if (typeof key === 'string') {
+            for (;;) {
+                if (key[0] === '*') {
+                    options.mandatory = true;
+                } else if (key[0] === '!') {
+                    options.store = false;
+                } else if (key[0] === '@') {
+                    options.export = false;
+                } else {
+                    break;
+                }
+
+                key = key.substr(1);
+            }
         }
 
         return self.decodeKey(key);
@@ -1320,7 +1333,8 @@ instead of:
                 valid = false;
         }
 
-        model.variables.push(intf);
+        if (intf.options.store)
+            model.variables.push(intf);
         variables_map[key] = intf;
 
         model.values[key] = value;
@@ -1373,13 +1387,16 @@ instead of:
 
     function updateValue(key, value, refresh = true) {
         if (value !== state.values[key]) {
+           let intf = variables_map[key];
+
             state.values[key] = value;
-            state.changed = true;
+            state.changed |= intf.options.store;
 
             state.take_delayed.delete(key.toString());
             state.changed_variables.add(key.toString());
 
-            self.setValue(key, value);
+            if (intf.options.store)
+                self.setValue(key, value);
             if (refresh)
                 self.restart();
         }

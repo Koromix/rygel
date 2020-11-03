@@ -52,7 +52,9 @@ function VirtualRecords(db, zone) {
             frag.values[variable.key] = !variable.missing ? record.values[variable.key] : null;
 
         let columns = variables.flatMap((variable, idx) => {
-            if (variable.multi) {
+            if (!variable.options.export) {
+                return [];
+            } else if (variable.multi) {
                 let ret = variable.props.map(prop => ({
                     key: makeColumnKeyMulti(record.table, page, variable.key, prop.value),
 

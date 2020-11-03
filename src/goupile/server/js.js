@@ -128,7 +128,9 @@ var server = new function() {
         let columns = variables.flatMap((variable, idx) => {
             let key = variable.key.toString();
 
-            if (variable.multi) {
+            if (!variable.options.export) {
+                return [];
+            } else if (variable.multi) {
                 let ret = variable.props.map(prop => ({
                     key: makeColumnKeyMulti(table, page, key, prop.value),
                     variable: key,
