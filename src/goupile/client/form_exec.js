@@ -100,7 +100,7 @@ let form_exec = new function() {
     };
 
     this.runPage = function(code, panel_el) {
-        let func = Function('util', 'shared', 'go', 'form', 'page',
+        let func = Function('util', 'shared', 'go', 'form', 'page', 'state',
                             'values', 'variables', 'route', 'scratch', code);
 
         if (multi_mode) {
@@ -158,8 +158,8 @@ let form_exec = new function() {
 
         // Build it!
         builder.pushOptions({compact: true});
-        func(util, app.shared, nav.go, builder, builder,
-             state.values, model.variables, {}, state.scratch);
+        func(util, app.shared, nav.go, builder, builder, state,
+             record.values, model.variables, {}, state.scratch);
 
         render(html`
             <div class="af_main">
@@ -198,8 +198,8 @@ let form_exec = new function() {
         builder.changeHandler = () => runPage(...arguments);
 
         // Build it!
-        func(util, app.shared, nav.go, builder, builder,
-             state.values, model.variables, nav.route, state.scratch);
+        func(util, app.shared, nav.go, builder, builder, state,
+             record.values, model.variables, nav.route, state.scratch);
         builder.errorList();
 
         if (route_page.options.default_actions && model.variables.length) {
