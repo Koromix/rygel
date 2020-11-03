@@ -894,7 +894,7 @@ function PageBuilder(state, model, readonly = false) {
         let widgets = [];
         let render = intf => widgets.map(intf => intf.render());
 
-        let intf = makeWidget('block', '', render);
+        let intf = makeWidget('block', '', render, options);
         addWidget(intf);
 
         captureWidgets(widgets, 'block', func);
@@ -923,7 +923,7 @@ function PageBuilder(state, model, readonly = false) {
             </fieldset>
         `;
 
-        let intf = makeWidget('section', label, render);
+        let intf = makeWidget('section', label, render, options);
         addWidget(intf);
 
         captureWidgets(widgets, 'section', func);
@@ -960,7 +960,7 @@ function PageBuilder(state, model, readonly = false) {
             }
         };
 
-        let intf = makeWidget('errorList', null, render);
+        let intf = makeWidget('errorList', null, render, options);
         addWidget(intf);
 
         return intf;
@@ -1074,7 +1074,7 @@ function PageBuilder(state, model, readonly = false) {
             </div>
         `;
 
-        let intf = makeWidget('columns', undefined, render);
+        let intf = makeWidget('columns', undefined, render, options);
         addWidget(intf);
 
         captureWidgets(widgets, 'columns', func, {compact: false});
@@ -1208,28 +1208,24 @@ instead of:
     }
 
     function renderWrappedWidget(intf, frag) {
-        if (!intf.options.hidden) {
-            let cls = 'af_widget';
-            if (intf.errors.length)
-                cls += ' error';
-            if (intf.options.mandatory)
-                cls += ' mandatory';
-            if (intf.options.compact)
-                cls += ' compact';
+        let cls = 'af_widget';
+        if (intf.errors.length)
+            cls += ' error';
+        if (intf.options.mandatory)
+            cls += ' mandatory';
+        if (intf.options.compact)
+            cls += ' compact';
 
-            return html`
-                <div class=${intf.options.disabled ? 'af_wrap disabled' : 'af_wrap'}>
-                    <div class=${cls}>
-                        ${frag}
-                        ${intf.errors.length ?
-                            html`<div class="af_error">${intf.errors.map(err => html`${err}<br/>`)}</div>` : ''}
-                    </div>
-                    ${intf.options.help ? html`<p class="af_help">${intf.options.help}</p>` : ''}
+        return html`
+            <div class=${intf.options.disabled ? 'af_wrap disabled' : 'af_wrap'}>
+                <div class=${cls}>
+                    ${frag}
+                    ${intf.errors.length ?
+                        html`<div class="af_error">${intf.errors.map(err => html`${err}<br/>`)}</div>` : ''}
                 </div>
-            `;
-        } else {
-            return '';
-        }
+                ${intf.options.help ? html`<p class="af_help">${intf.options.help}</p>` : ''}
+            </div>
+        `;
     }
 
     function makeInputStyle(options) {
@@ -1260,7 +1256,12 @@ instead of:
             label: label,
             render: () => {
                 intf.render = () => '';
-                return func(intf);
+
+                if (!intf.options.hidden) {
+                    return func(intf);
+                } else {
+                    return '';
+                }
             },
             toHTML: () => intf.render(),
             options: options,
