@@ -233,6 +233,10 @@ Options:
         sq_Database database;
         if (!database.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
             return 1;
+#ifndef _WIN32
+        if (change_owner && !ChangeFileOwner(filename, owner_uid, owner_gid))
+            return 1;
+#endif
         if (!database.Close())
             return 1;
     }
@@ -241,10 +245,6 @@ Options:
     InstanceData instance;
     if (!instance.Open(instance_directory))
         return 1;
-#ifndef _WIN32
-    if (change_owner && !ChangeFileOwner(database_filename, owner_uid, owner_gid))
-        return 1;
-#endif
 
     // Create database schema
     instance.config.app_key = DuplicateString(app_key, &temp_alloc).ptr;
