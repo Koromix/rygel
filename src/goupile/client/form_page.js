@@ -982,15 +982,15 @@ function PageBuilder(state, model, readonly = false) {
         let widgets = [];
 
         let render = intf => tabs.length ? html`
-            <div class="af_container af_tabs">
-                ${tabs.map((tab, idx) =>
-                    html`<button type="button" class=${idx === tab_idx ? 'active' : ''}
-                                 ?disabled=${tab.disable}
-                                 @click=${e => handleTabClick(e, key, idx)}>${tab.label}</button>`)}
-
-                <div class="af_section">
-                    ${widgets.map(intf => intf.render())}
+            <div class="af_container af_section tabs">
+                <div class="af_tabs">
+                    ${tabs.map((tab, idx) =>
+                        html`<button type="button" class=${idx === tab_idx ? 'active' : ''}
+                                     ?disabled=${tab.disable}
+                                     @click=${e => handleTabClick(e, key, idx)}>${tab.label}</button>`)}
                 </div>
+
+                ${widgets.map(intf => intf.render())}
             </div>
         ` : '';
 

@@ -5,15 +5,16 @@
 page.output(html`
     <p>Une <b>fonction</b> est composée d'un <i>nom</i> et de plusieurs <i>paramètres</i> et permet de proposer un outil de saisie (champ texte, menu déroulant ...).
     <p>Exemple : la fonction page.text("num_patient", "Numéro de patient") propose un champ de saisie texte intitulé <i>Numéro de patient</i> et le stocke dans la variable <i>num_patient</i>.
-    <p>Vous pouvez copier les fonctions présentées dans la section <b>Exemples</b> dans <b>Nouvelle section</b> pour créer votre propre formulaire.
 `)
 
+
 page.section("Nouvelle section", () => {
-    // Copier coller les fonctions dans les lignes vides ci-dessous
-
-
+    page.output(html`
+        <p>Vous pouvez par exemple copier les fonctions présentées dans la section <b>Exemples</b> dans cette section pour créer votre propre formulaire.
+    `)
 })
 
+page.sameLine(true)
 page.section("Exemples", () => {
     page.number("*age", "Quel est votre âge ?", {min: 0, max: 120})
 

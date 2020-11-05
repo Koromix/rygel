@@ -7,23 +7,31 @@
 .af_wrap + .af_container,
     .af_container + .af_container,
     .af_container + .af_wrap,
-    .af_wrap + .af_wrap { margin-top: 0.8em; }
+    .af_wrap + .af_wrap { margin-top: 1.2em; }
 
 .af_section {
     position: relative;
     min-height: 24px;
-    margin: 0;
-    padding: 10px;
+    padding: calc(2.1em + 14px) 14px 14px 14px;
     background: rgba(136, 136, 136, 0.06);
     border: 0;
-    box-shadow: 2px 2px rgba(136, 136, 136, 0.12);
 }
 .af_section > legend {
-    padding: 1px 0.7em;
-    background: #ff6600;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: calc(100% - 1em);
+    padding: 0.3em 0.5em;
+    background: rgba(136, 136, 136, 0.09);
     font-size: 1.1em;
-    color: white;
+    font-weight: bold;
+    color: #222;
     cursor: pointer;
+}
+.af_section > legend::before {
+    padding-right: 0.5em;
+    color: #ff6600;
+    content: '#';
 }
 .af_deploy {
     width: 100%;
@@ -35,40 +43,43 @@
 
 .af_section.error {
     background: #f9e3e3;
-    border: 1px dashed red;
+    border: 1px solid #fc2727;
     padding: 5px 10px;
 }
 .af_section.error > legend {
     background: #db0a0a;
+    color: white;
     margin-left: -5px;
 }
+.af_section.error > legend::before { display: none; }
 
 @media (max-width: 580px) {
     .af_section {
-        margin-left: -12px;
-        margin-right: -12px;
-        box-shadow: 0 2px rgba(136, 136, 136, 0.12);
+        margin-left: -16px;
+        margin-right: -16px;
     }
 }
 
-/* -------------------- Tabs and columns -------------------- */
-
-.af_tabs > .af_section {
-    margin-top: -10px;
-    padding-top: 16px;
+.af_section.tabs {
+    margin-top: 1.6em;
+    padding-top: 24px;
 }
-.af_tabs > button:first-of-type { margin-left: 10px; }
-.af_tabs > button:last-of-type { margin-right: 10px; }
-
+.af_tabs {
+    position: absolute;
+    left: 0;
+    top: -1em;
+    width: 100%;
+    text-align: center;
+}
 .af_tabs > button {
     position: relative;
     background: white;
-    border: 1px solid #ccc;
+    border: 1px solid white;
     border-width: 0.5px;
     color: black;
     z-index: 999;
 }
-.af_tabs > button + button { margin-left: 4px; }
+.af_tabs > button + button { margin-left: 8px; }
 .af_tabs > button:not(.active):hover {
     background: white;
     border-color: #ff6600;
@@ -80,7 +91,7 @@
     color: white;
 }
 
-@media (min-width: 581px) {
+@media (min-width: 701px) {
     .af_columns { display: flex; }
     .af_columns > div + div { padding-left: 12px; }
 }
@@ -93,7 +104,7 @@
     margin-bottom: 6px;
     padding-top: 4px;
     font-weight: bold;
-    color: #303030;
+    color: #222;
 }
 .af_widget.mandatory > label::after {
     content: ' *';
@@ -137,8 +148,8 @@
         align-items: start;
     }
     .af_widget.compact > label {
-        width: 250px;
-        min-width: 250px;
+        width: 270px;
+        min-width: 270px;
         margin-bottom: 0;
         padding-right: 4px;
         font-weight: normal;

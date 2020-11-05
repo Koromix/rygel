@@ -11,7 +11,7 @@ body {
     padding: 0;
     background: white;
     font-family: 'Open Sans', sans-serif;
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.5;
 }
 main { height: 100%; }
@@ -31,8 +31,8 @@ a {
 
 button {
     padding: 0.35em 10px;
-    background: #303030;
-    border: 1px solid #303030;
+    background: #222;
+    border: 1px solid #222;
     color: white;
     font-family: inherit;
     font-size: 1em;
@@ -106,8 +106,8 @@ button:not(:disabled):hover {
     position: sticky;
     box-sizing: border-box;
     width: 100%;
-    height: 2.5em;
-    min-height: 2.5em;
+    height: 2.4em;
+    min-height: 2.4em;
     left: 0;
     top: 0;
     margin: 0;
@@ -160,7 +160,7 @@ button:not(:disabled):hover {
 }
 .gp_dropdown:hover > button:not(.active) { background-color: #376db9; }
 .gp_dropdown > div button {
-    height: 2.5em;
+    height: 2.4em;
     text-align: left;
 }
 .gp_dropdown > div button:not(.active):hover { background-color: #3b7ad1; }
@@ -217,9 +217,6 @@ button:not(:disabled):hover {
         color: white;
     }
 }
-@media screen and (max-width: 580px) {
-    #gp_assets { font-size: 1.1em; }
-}
 
 .gp_toolbar button.icon {
     padding-left: 36px;
@@ -256,9 +253,9 @@ button:not(:disabled):hover {
 .gp_panel.left {
     position: fixed;
     left: 0;
-    top: 2.5em;
+    top: 2.4em;
     width: 50vw;
-    height: calc(100% - 2.5em);
+    height: calc(100% - 2.4em);
     display: flex;
     flex-direction: column;
     overflow: auto;
@@ -267,9 +264,9 @@ button:not(:disabled):hover {
 .gp_panel.fixed {
     position: fixed;
     left: 0;
-    top: 2.5em;
+    top: 2.4em;
     width: 100%;
-    height: calc(100% - 2.5em);
+    height: calc(100% - 2.4em);
     display: flex;
     flex-direction: column;
     overflow: auto;
@@ -279,11 +276,11 @@ button:not(:disabled):hover {
 .gp_panel:empty { background: rgba(136, 136, 136, 0.08); }
 
 #gp_menu + main {
-    height: calc(100% - 2.5em);
-    margin-top: 2.5em;
+    height: calc(100% - 2.4em);
+    margin-top: 2.4em;
 }
 #gp_menu + main * { scroll-margin: 80px; }
-#gp_menu + main > .gp_panel { min-height: calc(100% - 2.5em); }
+#gp_menu + main > .gp_panel { min-height: calc(100% - 2.4em); }
 
 #gp_error {
     position: fixed;

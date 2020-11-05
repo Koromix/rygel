@@ -9,7 +9,7 @@
     margin-left: 1px;
 }
 .gp_panel.overview > .fm_form {
-    max-width: 824px;
+    max-width: 960px;
     margin: auto;
 }
 .fm_form + .fm_form {
@@ -22,14 +22,14 @@
 
 .fm_form > .af_main {
     position: relative;
-    padding: 12px 12px 12px 12px;
-    background: #f6f6f6;
+    padding: 16px;
+    background: #f8f8f8;
     border: 12px solid white;
 }
 
 @media (max-width: 580px) {
     .fm_form > .af_main {
-        padding-bottom: 2px;
+        padding-bottom: 0;
         border-left: 0;
         border-right: 0;
     }
@@ -65,16 +65,17 @@
     height: 1.2em;
     padding: 4px 14px 6px 14px;
     background: white;
-    border: 2px solid white;
+    border: 1px solid white;
+    border-width: 0.5px;
     color: black;
     text-decoration: none;
     font-size: 1.1em;
     pointer-events: auto;
 }
-.fm_path > a + a { margin-left: 4px; }
+.fm_path > a + a { margin-left: 8px; }
 .fm_path > a.active {
     background: #ff6600;
-    border: 2px solid #ff6600;
+    border-color: #ff6600;
     color: white;
 }
 .fm_path > a.blocked {
@@ -110,15 +111,15 @@
     margin-bottom: 12px;
 }
 
-@media screen and (max-width: 580px) {
+@media (max-width: 580px) {
     .fm_id { display: none; }
 }
 
-@media (min-width: 1061px) {
+@media (min-width: 1261px) {
     .gp_panel.overview .fm_form > .af_actions.float {
         position: fixed;
         display: inline-block;
-        left: calc(50% + 406px);
+        left: calc(50% + 480px);
         top: 32px;
         width: auto;
         margin-top: 0;
@@ -126,7 +127,7 @@
     }
     .gp_panel.overview .fm_form > .af_actions.float > * + * { margin: 4px 0; }
     .gp_panel.overview .fm_form > .af_actions.float > hr { margin: 8px; }
-    #gp_menu + main .gp_panel.overview .fm_form > .af_actions.float { top: calc(2.5em + 32px); }
+    #gp_menu + main .gp_panel.overview .fm_form > .af_actions.float { top: calc(2.4em + 32px); }
     .gp_panel.overview .fm_form > .af_actions.float > button { width: 9em; }
 }
 
