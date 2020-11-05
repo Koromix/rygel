@@ -9,7 +9,7 @@
 namespace RG {
 
 // If you change SchemaVersion, don't forget to update the migration switch!
-const int SchemaVersion = 16;
+const int SchemaVersion = 17;
 
 bool InstanceData::Open(const char *directory)
 {
@@ -468,9 +468,77 @@ bool InstanceData::Migrate()
                 )");
                 if (!success)
                     return sq_TransactionResult::Error;
+            } [[fallthrough]];
+
+            case 16: {
+                bool success = db.Run(R"(
+                    ALTER TABLE fs_files ADD COLUMN size INTEGER;
+                )");
+                if (!success)
+                    return sq_TransactionResult::Error;
+
+                sq_Statement stmt;
+                if (!db.Prepare(R"(SELECT rowid, path, compression FROM fs_files
+                                   WHERE sha256 IS NOT NULL;)", &stmt))
+                    return sq_TransactionResult::Error;
+
+                while (stmt.Next()) {
+                    int64_t rowid = sqlite3_column_int64(stmt, 0);
+                    const char *path = (const char *)sqlite3_column_text(stmt, 1);
+
+                    CompressionType compression_type;
+                    {
+                        const char *name = (const char *)sqlite3_column_text(stmt, 2);
+                        if (!name || !OptionToEnum(CompressionTypeNames, name, &compression_type)) {
+                            LogError("XXXX");
+                            return sq_TransactionResult::Rollback;
+                        }
+                    }
+
+                    sqlite3_blob *blob;
+                    if (sqlite3_blob_open(db, "main", "fs_files", "blob", rowid, 0, &blob) != SQLITE_OK) {
+                        LogError("SQLite Error: %1", sqlite3_errmsg(db));
+                        return sq_TransactionResult::Error;
+                    }
+                    RG_DEFER { sqlite3_blob_close(blob); };
+
+                    Size real_len = 0;
+                    if (compression_type == CompressionType::None) {
+                        real_len = sqlite3_blob_bytes(blob);
+                    } else {
+                        Size offset = 0;
+                        Size blob_len = sqlite3_blob_bytes(blob);
+
+                        StreamReader reader([&](Span<uint8_t> buf) {
+                            Size copy_len = std::min(blob_len - offset, buf.len);
+
+                            if (sqlite3_blob_read(blob, buf.ptr, (int)copy_len, (int)offset) != SQLITE_OK) {
+                                LogError("SQLite Error: %1", sqlite3_errmsg(db));
+                                return (Size)-1;
+                            }
+
+                            offset += copy_len;
+                            return copy_len;
+                        }, path, compression_type);
+
+                        while (!reader.IsEOF()) {
+                            LocalArray<uint8_t, 16384> buf;
+                            buf.len = reader.Read(buf.data);
+                            if (buf.len < 0)
+                                return sq_TransactionResult::Error;
+
+                            real_len += buf.len;
+                        }
+                    }
+
+                    if (!db.Run("UPDATE fs_files SET size = ? WHERE path = ?;", real_len, path))
+                        return sq_TransactionResult::Error;
+                }
+                if (!stmt.IsValid())
+                    return sq_TransactionResult::Error;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(SchemaVersion == 16);
+            RG_STATIC_ASSERT(SchemaVersion == 17);
         }
 
         int64_t time = GetUnixTime();

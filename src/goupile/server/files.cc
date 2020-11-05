@@ -14,7 +14,7 @@ namespace RG {
 void HandleFileList(const http_RequestInfo &request, http_IO *io)
 {
     sq_Statement stmt;
-    if (!instance->db.Prepare(R"(SELECT path, blob, sha256 FROM fs_files
+    if (!instance->db.Prepare(R"(SELECT path, size, sha256 FROM fs_files
                                  WHERE sha256 IS NOT NULL
                                  ORDER BY path;)", &stmt))
         return;
@@ -25,7 +25,7 @@ void HandleFileList(const http_RequestInfo &request, http_IO *io)
     while (stmt.Next()) {
         json.StartObject();
         json.Key("path"); json.String((const char *)sqlite3_column_text(stmt, 0));
-        json.Key("size"); json.Int(sqlite3_column_bytes(stmt, 0));
+        json.Key("size"); json.Int64(sqlite3_column_int64(stmt, 1));
         json.Key("sha256"); json.String((const char *)sqlite3_column_text(stmt, 2));
         json.EndObject();
     }
@@ -83,12 +83,12 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
     }
 
     sqlite3_blob *blob;
-    Size size;
+    Size blob_len;
     if (sqlite3_blob_open(instance->db, "main", "fs_files", "blob", rowid, 0, &blob) != SQLITE_OK) {
         LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
         return true;
     }
-    size = sqlite3_blob_bytes(blob);
+    blob_len = sqlite3_blob_bytes(blob);
 
     // SQLite data needs to remain valid until the end of connection
     io->AddFinalizer([blob, stmt = stmt.Leak()]() {
@@ -99,18 +99,18 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
     io->RunAsync([=]() {
         io->AddCachingHeaders(0, sha256);
 
-        if (request.compression_type == compression_type && size <= 65536) {
+        if (request.compression_type == compression_type && blob_len <= 65536) {
             StreamWriter writer;
             if (!io->OpenForWrite(200, CompressionType::None, &writer))
                 return;
             io->AddEncodingHeader(compression_type);
 
             LocalArray<char, 65536> buf;
-            if (sqlite3_blob_read(blob, buf.data, (int)size, 0) != SQLITE_OK) {
+            if (sqlite3_blob_read(blob, buf.data, (int)blob_len, 0) != SQLITE_OK) {
                 LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
                 return;
             }
-            buf.len = size;
+            buf.len = blob_len;
 
             // Not much we can do at this stage in case of error. Client will get truncated data.
             writer.Write(buf);
@@ -122,9 +122,8 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
             io->AddEncodingHeader(request.compression_type);
 
             Size offset = 0;
-
             StreamReader reader([&](Span<uint8_t> buf) {
-                Size copy_len = std::min(size - offset, buf.len);
+                Size copy_len = std::min(blob_len - offset, buf.len);
 
                 if (sqlite3_blob_read(blob, buf.ptr, (int)copy_len, (int)offset) != SQLITE_OK) {
                     LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
