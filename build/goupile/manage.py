@@ -18,7 +18,6 @@ from dataclasses import dataclass
 @dataclass
 class InstanceConfig:
     directory = None
-    binary = None
     domain = None
     base_url = None
     port = None
@@ -74,19 +73,12 @@ def list_instances(root, domain):
                     info.port = int(v)
             db.close()
 
-            info.binary = os.path.join(directory, 'goupile')
             info.directory = directory
             info.domain = path_domain
             if info.base_url != path_base_url:
                 print(f'Assigning BaseUrl "{path_base_url}" to {instance}', file = sys.stderr)
                 info.base_url = path_base_url
                 info.mismatch = True
-
-            try:
-                sb = os.stat(info.binary)
-                info.inode = sb.st_ino
-            except:
-                pass
 
             instances[instance] = info
 
@@ -182,6 +174,15 @@ def run_sync(config):
     instances = list_instances(config['Goupile.InstanceDirectory'], config['Goupile.DomainName'])
     services = list_services()
 
+    # Detect binary mismatches
+    binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
+    binary_inode = os.stat(binary).st_ino
+    for instance, info in instances.items():
+        status = services.get(instance)
+        if status is not None and status.inode != binary_inode:
+            print(f'Instance {instance} is running old version')
+            info.mismatch = True
+
     # Update configuration files
     print('Write configuration files', file = sys.stderr)
     for instance, info in instances.items():
@@ -199,7 +200,7 @@ def run_sync(config):
         if status is None:
             run_service_command(instance, 'enable')
             run_service_command(instance, 'start')
-        elif info.mismatch or not status.running or info.inode != status.inode:
+        elif info.mismatch or not status.running:
             run_service_command(instance, 'restart')
 
     # Reload NGINX configuration
