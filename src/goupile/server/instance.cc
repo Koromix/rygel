@@ -490,7 +490,7 @@ bool InstanceData::Migrate()
                     {
                         const char *name = (const char *)sqlite3_column_text(stmt, 2);
                         if (!name || !OptionToEnum(CompressionTypeNames, name, &compression_type)) {
-                            LogError("XXXX");
+                            LogError("Unknown compression type '%1'", name);
                             return sq_TransactionResult::Rollback;
                         }
                     }

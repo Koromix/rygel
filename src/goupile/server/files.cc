@@ -78,8 +78,10 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
     CompressionType compression_type;
     {
         const char *name = (const char *)sqlite3_column_text(stmt, 1);
-        bool success = OptionToEnum(CompressionTypeNames, name, &compression_type);
-        RG_ASSERT(success);
+        if (!name || !OptionToEnum(CompressionTypeNames, name, &compression_type)) {
+            LogError("Unknown compression type '%1'", name);
+            return true;
+        }
     }
 
     sqlite3_blob *blob;
