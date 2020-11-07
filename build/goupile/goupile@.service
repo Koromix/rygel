@@ -4,7 +4,7 @@ Type=simple
 User=goupile
 Group=goupile
 
-ExecStart=/srv/www/goupile/bin/goupile -C %i/goupile.ini --migrate
+ExecStart=/srv/www/goupile/bin/goupile -I %i --migrate
 WorkingDirectory=/srv/www/goupile/instances
 
 Restart=on-failure

@@ -245,19 +245,6 @@ Options:
                 return 0;
             } else if (opt.Test("-I", "--instance_dir", OptionType::OptionalValue)) {
                 instance_directory = opt.current_value;
-            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
-                // XXX: Remove deprecated support for --config_file
-                LogError("Option --config_file is deprecated and will soon be removed");
-
-                Span<const char> directory;
-                const char *basename = SplitStrReverseAny(opt.current_value, RG_PATH_SEPARATORS, &directory).ptr;
-
-                if (!TestStr(basename, "goupile.ini")) {
-                    LogError("You must use 'goupile.ini' as fake cofiguration filename");
-                    return 1;
-                }
-
-                instance_directory = DuplicateString(directory, &temp_alloc).ptr;
             }
         }
     }
@@ -272,8 +259,6 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("-I", "--instance_dir", OptionType::Value)) {
-                // Already handled
-            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
             } else if (opt.Test("--port", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &instance->config.http.port))
