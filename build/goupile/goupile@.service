@@ -4,8 +4,8 @@ Type=simple
 User=goupile
 Group=goupile
 
-ExecStart=/srv/www/goupile/profiles/%i/goupile -C %i/goupile.ini --migrate
-WorkingDirectory=/srv/www/goupile/profiles
+ExecStart=/srv/www/goupile/bin/goupile -C %i/goupile.ini --migrate
+WorkingDirectory=/srv/www/goupile/instances
 
 Restart=on-failure
 TimeoutStopSec=20

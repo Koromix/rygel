@@ -179,15 +179,8 @@ def update_nginx_config(filename, instances, include = None):
             print(f'}}', file = f)
 
 def run_sync(config):
-    instances = list_instances(config['Goupile.ProfileDirectory'], config['Goupile.DomainName'])
+    instances = list_instances(config['Goupile.InstanceDirectory'], config['Goupile.DomainName'])
     services = list_services()
-
-    # Make missing goupile symlinks
-    binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
-    for instance, info in instances.items():
-        if info.inode is None:
-            print(f'Link {info.binary} to {binary}', file = sys.stderr)
-            os.symlink(binary, info.binary)
 
     # Update configuration files
     print('Write configuration files', file = sys.stderr)
