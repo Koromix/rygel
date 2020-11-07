@@ -276,6 +276,13 @@ let goupile = new function() {
 
                         context = path.substr(split_offset + 1);
                         route_page = app.pages_map[page_key];
+
+                        if (route_page == null) {
+                            log.error(`URL non supportée '${url.pathname}'`);
+
+                            context = '';
+                            route_page = app.pages[0];
+                        }
                     }
 
                     if (context.endsWith('/'))
@@ -293,8 +300,6 @@ let goupile = new function() {
                         log.error(err);
                         route_page = null;
                     }
-                } else {
-                    log.error(`URL non supportée '${url.pathname}'`);
                 }
             }
 
