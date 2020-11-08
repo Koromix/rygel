@@ -10,7 +10,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
         <link rel="icon" href="favicon.png"/>
-        <title>Goupile — Free and open-source EDC application</title>
+        <title>Goupile — Conception d'eCRF gratuite et open-source</title>
 
         <link rel="stylesheet" href="static/goupile.fr.css"/>
         <link rel="stylesheet" href="static/opensans/OpenSans.css"/>
@@ -39,66 +39,71 @@
     <body>
         <nav id="header">
             <div>
-                <a href="/demo/">Test Online</a>
-                <a href="/contribute">Contribute</a>
+                <a href="/demo/">Tester en ligne</a>
+                <a href="/contribute">Contribuer</a>
             </div>
             <a href="/"><img id="logo" src="favicon.png"/></a>
             <div>
-                <a href="/manual">User Manual</a>
+                <a href="/manual">Documentation</a>
                 <a href="mailto:hello@goupile.fr">Contact</a>
+                <a href="/en/manual" class="flag en"></a>
             </div>
         </nav>
 
         <main>
-            <h1 id="setup">Setup your project</h1>
-            <h2 id="setup_main">Project structure</h2>
-            <p>The <b>form editor</b> allows defining the architecture and project configuration
-            administration. Here, you define the number of pages of the form, their order, and
-            their styles.</p>
-            <h2 id="setup_users">User management</h2>
+            <h1 id="setup">Configuration globale</h1>
+            <h2 id="setup_main">Structure de l'application</h2>
+            <p>Le <b>panneau d'édition d'application</b> permet de définir l'architecture des tables,
+            les relations entre les tables, et l'organisation des pages ainsi que leur style global.</p>
+            <h2 id="setup_users">Profils et utilisateurs</h2>
             <p>XXX</p>
 
-            <h1 id="dev">Develop pages</h1>
-            <h2 id="dev_page">Page edition</h2>
-            <p>The <b>page editor</b> helps you develop the form. It is equivalent to a code editor with
-            the difference that here you don't need advanced computer knowledge to develop your form: you
-            can use predefined functions. These functions will generate a visual control in the form: a
-            text field, a numeric field, a date field, a slider, etc.</p>
+            <h1 id="dev">Paramétrage des pages</h1>
+            <h2 id="dev_page">Éditeur de page</h2>
+            <p>L'<b>éditeur de page</b> vous permet de construire le contenu du formulaire. Il s'agit d'un
+            éditeur de code, mais vous n'avez pas besoin de connaissances de programmation pour réaliser
+            des formulaires simples : Goupile fournit des fonctions prédéfinies qui permet de créer les
+            widgets (champ texte, numérique, liste déroulante, etc.) très simplement et de gérer les
+            variables recueillies de manière automatique.</p>
             <div class="screenshot right">
                 <img src="static/screenshots/editor.png"/>
-                <p>Code your page in the <b>editor</b> (left), and see the result in the
-                <b>overview</b> (right)</p>
+                <p>Programmez la page dans <b>l'éditeur</b> (gauche), et le <b>résultat</b> (droite)
+                s'affiche immédiatement</p>
             </div>
-            <p>Each change you make in the editor is run and the <b>form overview</b> gives
-            you the result instantly. This is the same page that the final user will see and at this step,
-            you can already enter data.</p>
-            <p>A page is made of several <b>widgets</b> which allow the user to input data. Many types
-            of widgets are available: text field, number field, etc. To add a widget, you need to call
-            a function. For a complete list and instructions, go to the <a href="#dev_widgets">widget table</a>.</p>
-            <p>Each widget takes a few <b>options</b>. For input widgets, you need to specify the
-            variable identifier and the label that is displayed to the user. Many other optional
-            settings are available, such as: <i>mandatory</i>, <i>wide</i>, <i>compact</i>, etc.</p>
-            <p>The code is Javascript, a widely used programming language on the web platform.
-            As a result, you have access to all Javascript features. We will use this later to
-            implement conditional fields and loops, among other things.</p>
+            <p>Les changements réalisés dans l'éditeur sont immédiatement exécutés et le <b>panneau
+            d'aperçu</b> à droite vous affiche le formulaire qui en résulte. Il s'agit de la même page
+            qui sera présentée à l'utilisateur final. A ce stade, vous pouvez déjà ajouter des données.</p>
+            <p>Une page est constituée de plusieurs <b>widgets</b>. De nombreux widgets prédéfinis sont
+            disponibles : champ texte, champ numérique, liste déroulante, etc. Pour ajouter un widget,
+            il vous suffit d'apeler une fonction. Pour la liste des widgets et les instructions détaillées,
+            rendez-vous à la <a href="#dev_widgets">table des widgets</a>.</p>
+            <p>Chaque widget accepte différentes <b>options</b>. Pour les widgets d'entrées (champs) vous devez
+            spécifique un nom de variable et un libellé affiché à l'utilisateur. De nombreuses autres
+            options sont disponibles : <i>champ obligatoire</i>, <i>affichage compact ou élargi</i>, etc.</p>
+            <p>La programmation des pages se fait en Javascript, il s'agit d'un langage de programmation
+            largement répandu sur le web. En conséquence, vous pouvez utiliser la majorité des fonctionnalités
+            Javascript disponibles dans les navigateurs. Nous utiliserons cela pour implémenter des champs
+            conditionnels et des boucles, parmi d'autres choses.</p>
 
-            <h2 id="dev_widgets">Standard widgets</h2>
+            <h2 id="dev_widgets">Widgets standards</h2>
             <div class="screenshot right">
                 <img src="static/screenshots/instant.png"/>
-                <p>Example of input widgets generated by predefined functions</p>
+                <p>Exemples de widgets prédéfinis, avec le code à gauche et le résultat à droite</p>
             </div>
-            <p>Widgets are created by calling predefined functions with the following syntax:</p>
-            <p class="code"><span style="color: #24579d;">function</span> ( <span style="color: #c09500;">"variable_name"</span>, <span style="color: #842d3d;">"Label shown to user"</span> )</p></p>
-            <p>Variable names must start with a letter or _, followed by zero or more alphanumeric
-            or _ characters. They must not contain spaces, accentuated or any other special characters.</p>
-            <p>Most widgets accept optional arguments with the following syntax:</p>
-            <p class="code"><span style="color: #24579d;">function</span> ( <span style="color: #c09500;">"variable_name"</span>, <span style="color: #842d3d;">"Label shown to user"</span>, {
-    <span style="color: #054e2d;">option1</span> : <span style="color: #431180;">value</span>,
-    <span style="color: #054e2d;">option2</span> : <span style="color: #431180;">value</span>
+            <p>Les widgets sont créés en appelant des fonctions prédéfinies avec la syntaxe suivante :</p>
+            <p class="code"><span style="color: #24579d;">function</span> ( <span style="color: #c09500;">"nom_variable"</span>, <span style="color: #842d3d;">"Libellé présenté à l'utilisateur"</span> )</p></p>
+            <p>Les noms de variables doivent commencer par une lettre ou _, suivie de zéro ou plusieurs caractères
+            alphanumériques ou _. Ils ne doivent pas contenir d'espaces, de caractères accentués ou tout autre
+            caractère spécial.</p>
+            <p>La plupart des widgets acceptent des paramètres optionnels de cette manière :</p>
+            <p class="code"><span style="color: #24579d;">function</span> ( <span style="color: #c09500;">"nom_variable"</span>, <span style="color: #842d3d;">"Libellé présenté à l'utilisateur"</span>, {
+    <span style="color: #054e2d;">option1</span> : <span style="color: #431180;">valeur</span>,
+    <span style="color: #054e2d;">option2</span> : <span style="color: #431180;">valeur</span>
 } )</p></p>
-            <p>Be careful with code syntax. When parentheses or quotes are mismatched, an error
-            occurs and the page cannot be displayed unless the error is fixed. Go to the
-            <a href="#dev_errors">section about programming errors</a> for more information.</p>
+            <p>Attention à la syntaxe du code. Lorsque les parenthèses ou les guillemets ne
+            correspondent pas, une erreur se produit et la page affichée ne peut pas être mise à jour
+            tant que l'erreur persiste. La <a href="#dev_errors">section sur les erreurs</a> contient
+            plus d'informations à ce sujet.</p>
             <h3>Input widgets</h3>
             <table>
                 <tr>
@@ -107,62 +112,62 @@
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 58px; object-position: 0px 0px;"/></td>
-                    <td class="code">page.text("variable", "Label")</td>
+                    <td class="code">page.text("variable", "Libellé")</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 58px; object-position: 0 -53px;"/></td>
-                    <td class="code">page.number("variable", "Label")</td>
+                    <td class="code">page.number("variable", "Libellé")</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 58px; object-position: 0 -106px;"/></td>
-                    <td class="code">page.slider("variable", "Label")</td>
+                    <td class="code">page.slider("variable", "Libellé")</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 58px; object-position: 0 -175px;"/></td>
-                    <td class="code">page.date("variable_name", "Label")</td>
+                    <td class="code">page.date("nom_variable", "Libellé")</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 63px; object-position: 0 -228px;"/></td>
-                    <td class="code">page.binary("variable_name", "Label")</td>
+                    <td class="code">page.binary("nom_variable", "Libellé")</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 63px; object-position: 0 -285px;"/></td>
-                    <td class="code">page.enum("variable_name", "Label", [
+                    <td class="code">page.enum("nom_variable", "Libellé", [
     ["modality1", "modality1 Label"],
     ["modality2", "modality2 Label"]
 ])</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 58px; object-position: 0 -340px;"/></td>
-                    <td class="code">page.enumDrop("variable_name", "Label", [
+                    <td class="code">page.enumDrop("nom_variable", "Libellé", [
     ["modality1", "modality1 Label"],
     ["modality2", "modality2 Label"]
 ])</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 74px; object-position: 0 -392px;"/></td>
-                    <td class="code">page.enumRadio("variable_name", "Label", [
+                    <td class="code">page.enumRadio("nom_variable", "Libellé", [
     ["modality1", "modality1 Label"],
     ["modality2", "modality2 Label"]
 ])</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 63px; object-position: 0 -461px;"/></td>
-                    <td class="code">page.multi("variable_name", "Label", [
+                    <td class="code">page.multi("nom_variable", "Libellé", [
     ["modality1", "modality1 Label"],
     ["modality2", "modality2 Label"]
 ])</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 74px; object-position: 0 -517px;"/></td>
-                    <td class="code">page.multiCheck("variable_name", "Label", [
+                    <td class="code">page.multiCheck("nom_variable", "Libellé", [
     ["modality1", "modality1 Label"],
     ["modality2", "modality2 Label"]
 ])</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 51px; object-position: 0 -586px;"/></td>
-                    <td class="code">page.calc("variable_name", 18)</td>
+                    <td class="code">page.calc("nom_variable", 18)</td>
                 </tr>
             </table>
 
@@ -174,7 +179,7 @@
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 152px; object-position: 0 -632px;"/></td>
-                    <td class="code">page.section("Section name", () => {
+                    <td class="code">page.section("Nom de la section", () => {
     page.text("variable1", "Label 1")
     page.number("variable2", "Label 2")
 })</td>
@@ -189,39 +194,39 @@
                 </tr>
             </table>
 
-            <h2 id="dev_errors">Programming errors</h2>
+            <h2 id="dev_errors">Erreurs de programmation</h2>
             <div class="screenshot">
                 <img src="static/screenshots/error.png"/>
-                <p>Can you spot the error? There is an extra closing parenthesis on the right.</p>
+                <p>Voyez-vous l'erreur ? Il y a une parenthèse fermante en trop à droite.</p>
             </div>
-            <p>Programming languages (such as Javascript) are very sensitive to syntax errors.
-            If you make a mistake, the code cannot run and the editor will show you an error
-            message.</p>
+            <p>Les langages de programmation (comme Javascript utilisé ici) sont très sensibles aux
+            erreurs de syntaxe. Si vous faites une erreur, le code ne peut pas être exécuté et un
+            message d'erreur sera affiché.</p>
 
-            <p>If this happens, <b>don't worry</b>! Most errors are easy to fix, as shown
-            in the table below.</p>
+            <p>Si cela se produit, <b>ne paniquez pas</b> ! La plupart des erreurs sont faciles à
+            corriger, la table ci-dessous peut vous aider.</p>
             <p>XXX</p>
 
-            <h1 id="deploy">Deploy your project</h1>
+            <h1 id="deploy">Déploiement du formulaire</h1>
             <p>XXX</p>
 
-            <h1 id="run">Routine use</h1>
-            <p>After the form has been finalized, the form may be used conjointly with the data
-            overview module and the dashboard to check records and progress
-            of data entry.</p>
+            <h1 id="run">Utilisation en routine</h1>
+            <p>Une fois le formulaire prêt, les panneaux de suivi et d'export vous permettent
+            de suivre l'avancée de la saisie et d'exporter les données.</p>
 
-            <h2 id="run_status">Dashboard</h2>
-            <p>The dashboard displays the list of records with their status (completed, in progress,
-            empty). From the dashboard, you can access to a specific record in order to complete it or
-            check its values.</p>
+            <h2 id="run_status">Suivi des données</h2>
+            <p>Le tableau de suivi affiche la liste des enregistrements avec leur statut (complété,
+            enregistré, non saisi). Depuis ce tableau de suivi, vous pouvez accéder directement à
+            un enregistrement spécifique pour le compléter ou vérifier les données saisies.</p>
 
-            <h2 id="run_data">Data view and export</h2>
+            <h2 id="run_data">Export des données</h2>
             <div class="screenshot right">
                 <img src="static/screenshots/data.png"/>
-                <p>Test the form. Immediately check the result with the data overview.</p>
+                <p>Testez votre formulaire et vérifiez instantanément les données produites dans le
+                panneau d'export.</p>
             </div>
-            <p> The data overview module displays the data. It also provides an export function of the
-            whole dataset. Currently, supported formats are csv and xlsx.</p>
+            <p>Le panneau de données affiche vos données et vous permet de les exporter, au format CSV
+            ou XLSX.</p>
         </main>
     </body>
 </html>

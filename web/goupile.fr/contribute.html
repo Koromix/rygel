@@ -10,7 +10,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
         <link rel="icon" href="favicon.png"/>
-        <title>Goupile — Free and open-source EDC application</title>
+        <title>Goupile — Conception d'eCRF gratuite et open-source</title>
 
         <link rel="stylesheet" href="static/goupile.fr.css"/>
         <link rel="stylesheet" href="static/opensans/OpenSans.css"/>
@@ -21,35 +21,37 @@
     <body>
         <nav id="header">
             <div>
-                <a href="/demo/">Test Online</a>
-                <a href="/contribute">Contribute</a>
+                <a href="/demo/">Tester en ligne</a>
+                <a href="/contribute">Contribuer</a>
             </div>
             <a href="/"><img id="logo" src="favicon.png"/></a>
             <div>
-                <a href="/manual">User Manual</a>
+                <a href="/manual">Documentation</a>
                 <a href="mailto:hello@goupile.fr">Contact</a>
+                <a href="/en/contribute" class="flag en"></a>
             </div>
         </nav>
 
         <main>
-            <h1 id="tickets">Test version</h1>
-            <h2 id="demo">Online demo</h2>
-            <p>Even though public builds are not yet available, you can test the
-            <a href="/demo/">demo online</a>.</p>
-            <h2 id="bugs">Feature / bug reports</h2>
-            <p>Use our <a href="https://github.com/Koromix/rygel/issues">online tracker</a> to
-            request new features or to report bugs.</a></p>
+            <h1 id="tickets">Tester l'outil</h1>
+            <h2 id="demo">Démo en ligne</h2>
+            <p>Même si une version publique compilée n'est pas encore disponible, vous pouvez tester
+            la <a href="/demo/">démo en ligne</a>.</p>
+            <h2 id="bugs">Fonctionnalités et rapports de bugs</h2>
+            <p>Utilisez notre outil de <a href="https://github.com/Koromix/rygel/issues">suivi de tickets</a>
+            en ligne pour demander de nouvelles fonctionnalités ou rapporter des bugs.</p>
 
-            <h1 id="code">Source code</h1>
-            <h2 id="license">License</h2>
-            <p>Goupile is a <b>free and open-source</b> tool, licensed under the
-            <a href="https://www.mozilla.org/en-US/MPL/2.0/">MPL 2.0 license</a>. You can freely
-            download and use the goupile source code. Everyone is granted the right to copy, modify
-            and redistribute it.</p>
-            <h2 id="repository">Repository</h2>
-            <p>Navigate and clone the code on <a href="https://github.com/Koromix/rygel">our git repository</a>.</p>
-            <p>Please note, however, that this is a <b>monorepo</b> containing multiple projects.
-            Look into <i>src/goupile</i> for the code specific to Goupile.</p>
+            <h1 id="code">Code source</h1>
+            <h2 id="license">Licence</h2>
+            <p>Goupile est une application <b>gratuite et open-source</b>, sous
+            <a href="https://www.mozilla.org/en-US/MPL/2.0/">licence MPL 2.0</a>. Vous pouvez librement
+            télécharger et utiliser le code source de Goupile. Tout le monde a l'autorisation d'exécuter,
+            de copier, de modifier, et de redistribuer des versions modifiées de ce code.</p>
+            <h2 id="repository">Dépôt</h2>
+            <p>Le code source est disponible dans notre <a href="https://github.com/Koromix/rygel">dépôt git</a>.</p>
+            <p>Attention, il s'agit d'un <b>dépôt unique</b> (<i>monorepo</i>) qui contient plusieurs projets.
+            Le code spécifique de Goupile est disponible dans <i>src/goupile</i>, mais il fait référence à plusieurs
+            autres librairies (internes ou externes) dans ce dépôt.</p>
         </main>
     </body>
 </html>
