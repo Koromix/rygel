@@ -2006,7 +2006,7 @@ bool MatchPathSpec(const char *path, const char *spec)
 
 bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_path)
 {
-    RG_ASSERT(alloc);
+    RG_ASSERT(alloc || !out_path);
 
     // XXX: Non-Unicode friendly on Win32
     Span<const char> env = getenv("PATH");
