@@ -181,6 +181,7 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
         };
 
         // Read and compress request body
+        Size total_len = 0;
         char sha256[65];
         {
             StreamWriter writer(fp, "<temp>", CompressionType::Gzip);
@@ -191,7 +192,6 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
             crypto_hash_sha256_state state;
             crypto_hash_sha256_init(&state);
 
-            Size total_len = 0;
 
             while (!reader.IsEOF()) {
                 LocalArray<uint8_t, 16384> buf;
@@ -261,13 +261,14 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
                 return sq_TransactionResult::Error;
 
             sq_Statement stmt;
-            if (!instance->db.Prepare(R"(INSERT INTO fs_files (path, blob, compression, sha256)
-                                         VALUES (?, ?, ?, ?);)", &stmt))
+            if (!instance->db.Prepare(R"(INSERT INTO fs_files (path, blob, compression, sha256, size)
+                                         VALUES (?, ?, ?, ?, ?);)", &stmt))
                 return sq_TransactionResult::Error;
             sqlite3_bind_text(stmt, 1, request.url, -1, SQLITE_STATIC);
             sqlite3_bind_zeroblob(stmt, 2, (int)file_len);
             sqlite3_bind_text(stmt, 3, "Gzip", -1, SQLITE_STATIC);
             sqlite3_bind_text(stmt, 4, sha256, -1, SQLITE_STATIC);
+            sqlite3_bind_int64(stmt, 5, total_len);
             if (!stmt.Run())
                 return sq_TransactionResult::Error;
 
