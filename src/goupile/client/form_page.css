@@ -12,15 +12,14 @@
 .af_section {
     position: relative;
     min-height: 24px;
-    padding: calc(2.1em + 14px) 14px 14px 14px;
+    padding: 14px;
     background: rgba(136, 136, 136, 0.06);
     border: 0;
 }
-.af_section > legend {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: calc(100% - 1em);
+.af_legend {
+    box-sizing: border-box;
+    width: calc(100% + 28px);
+    margin: -14px 0 10px -14px;
     padding: 0.3em 0.5em;
     background: rgba(136, 136, 136, 0.09);
     font-size: 1.1em;
@@ -28,7 +27,7 @@
     color: #222;
     cursor: pointer;
 }
-.af_section > legend::before {
+.af_legend::before {
     padding-right: 0.5em;
     color: #ff6600;
     content: '#';
@@ -44,14 +43,12 @@
 .af_section.error {
     background: #f9e3e3;
     border: 1px solid #fc2727;
-    padding: 5px 10px;
 }
-.af_section.error > legend {
+.af_section.error > .af_legend {
     background: #db0a0a;
     color: white;
-    margin-left: -5px;
 }
-.af_section.error > legend::before { display: none; }
+.af_section.error > .af_legend::before { display: none; }
 
 @media (max-width: 580px) {
     .af_section {

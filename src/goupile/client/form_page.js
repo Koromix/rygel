@@ -917,7 +917,7 @@ function PageBuilder(state, model, readonly = false) {
         let widgets = [];
         let render = intf => html`
             <fieldset class="af_container af_section">
-                ${label ? html`<legend @click=${e => handleSectionClick(e, label)}>${label}</legend>` : ''}
+                ${label ? html`<div class="af_legend" @click=${e => handleSectionClick(e, label)}>${label}</div>` : ''}
                 ${deploy ?
                     widgets.map(intf => intf.render()) :
                     html`<a class="af_deploy"
@@ -945,7 +945,7 @@ function PageBuilder(state, model, readonly = false) {
             if (self.hasErrors() || options.force) {
                 return html`
                     <fieldset class="af_container af_section error">
-                        <legend>${options.label || 'Liste des erreurs'}</legend>
+                        <div class="af_legend">${options.label || 'Liste des erreurs'}</div>
                         ${!self.hasErrors() ? 'Aucune erreur' : ''}
                         ${model.widgets.map(intf => {
                             if (intf.errors.length) {
