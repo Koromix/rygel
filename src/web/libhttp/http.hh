@@ -18,6 +18,7 @@ struct http_Config {
     int threads = std::max(GetCoreCount(), 4);
     int async_threads = std::max(GetCoreCount() * 2, 8);
 
+    bool Validate() const;
 };
 
 struct http_RequestInfo;

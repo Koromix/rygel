@@ -7,6 +7,23 @@
 
 namespace RG {
 
+bool Config::Validate() const
+{
+    bool valid = true;
+
+    valid &= http.Validate();
+    if (base_url[0] != '/' || base_url[strlen(base_url) - 1] != '/') {
+        LogError("Base URL '%1' does not start and end with '/'", base_url);
+        valid = false;
+    }
+    if (max_age < 0) {
+        LogError("HTTP MaxAge must be >= 0");
+        valid = false;
+    }
+
+    return valid;
+}
+
 bool LoadConfig(StreamReader *st, Config *out_config)
 {
     Config config;
@@ -104,6 +121,17 @@ bool LoadConfig(StreamReader *st, Config *out_config)
         }
     }
     if (!ini.IsValid() || !valid)
+        return false;
+
+    // Default values
+    if (!config.table_directories.len) {
+        const char *directory = NormalizePath("tables", root_directory, &config.str_alloc).ptr;
+        config.table_directories.Append(directory);
+    }
+    if (!config.profile_directory) {
+        config.profile_directory = NormalizePath("profile", root_directory, &config.str_alloc).ptr;
+    }
+    if (!config.Validate())
         return false;
 
     std::swap(*out_config, config);

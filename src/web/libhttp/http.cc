@@ -14,6 +14,34 @@
 
 namespace RG {
 
+bool http_Config::Validate() const
+{
+    bool valid = true;
+
+    if (port < 1 || port > UINT16_MAX) {
+        LogError("HTTP port %1 is invalid (range: 1 - %2)", port, UINT16_MAX);
+        valid = false;
+    }
+    if (max_connections < 0) {
+        LogError("HTTP max connections cannot be negative (%1)", max_connections);
+        valid = false;
+    }
+    if (idle_timeout < 0) {
+        LogError("HTTP idle timeout cannot be negative (%1)", idle_timeout);
+        valid = false;
+    }
+    if (threads <= 0 || threads > 128) {
+        LogError("HTTP threads %1 is invalid (range: 1 - 128)", threads);
+        valid = false;
+    }
+    if (async_threads <= 0) {
+        LogError("HTTP async threads %1 is invalid (minimum: 1)", async_threads);
+        valid = false;
+    }
+
+    return valid;
+}
+
 bool http_Daemon::Start(const http_Config &config,
                         std::function<void(const http_RequestInfo &request, http_IO *io)> func)
 {
@@ -21,33 +49,8 @@ bool http_Daemon::Start(const http_Config &config,
     RG_ASSERT(func);
 
     // Validate configuration
-    {
-        bool valid = true;
-
-        if (config.port < 1 || config.port > UINT16_MAX) {
-            LogError("HTTP port %1 is invalid (range: 1 - %2)", config.port, UINT16_MAX);
-            valid = false;
-        }
-        if (config.max_connections < 0) {
-            LogError("HTTP max connections cannot be negative (%1)", config.max_connections);
-            valid = false;
-        }
-        if (config.idle_timeout < 0) {
-            LogError("HTTP idle timeout cannot be negative (%1)", config.idle_timeout);
-            valid = false;
-        }
-        if (config.threads <= 0 || config.threads > 128) {
-            LogError("HTTP threads %1 is invalid (range: 1 - 128)", config.threads);
-            valid = false;
-        }
-        if (config.async_threads <= 0) {
-            LogError("HTTP async threads %1 is invalid (minimum: 1)", config.async_threads);
-            valid = false;
-        }
-
-        if (!valid)
-            return false;
-    }
+    if (!config.Validate())
+        return false;
 
     // MHD options
     int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_ALLOW_SUSPEND_RESUME | MHD_USE_ERROR_LOG;

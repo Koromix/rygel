@@ -440,12 +440,15 @@ int Main(int argc, char **argv)
 {
     BlockAllocator temp_alloc;
 
-    const auto print_usage = [](FILE *fp) {
+    // Options
+    const char *config_filename = "thop.ini";
+
+    const auto print_usage = [&](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 [options] [stay_file ..]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
-                                 %!D..(default: <executable_dir>%/profile%/thop.ini)%!0
+                                 %!D..(default: %2)%!0
 
         %!..+--profile_dir <dir>%!0      Set profile directory
         %!..+--table_dir <dir>%!0        Add table directory
@@ -455,10 +458,10 @@ Options:
                                            <profile_dir>%/mco_authorizations.txt)%!0
 
         %!..+--port <port>%!0            Change web server port
-                                 %!D..(default: %2)%!0
+                                 %!D..(default: %3)%!0
         %!..+--base_url <url>%!0         Change base URL
-                                 %!D..(default: %3)%!0)",
-                FelixTarget, thop_config.http.port, thop_config.base_url);
+                                 %!D..(default: %4)%!0)",
+                FelixTarget, config_filename, thop_config.http.port, thop_config.base_url);
     };
 
     if (sodium_init() < 0) {
@@ -473,7 +476,6 @@ Options:
     }
 
     // Find config filename
-    const char *config_filename = nullptr;
     {
         OptionParser opt(argc, argv, (int)OptionParser::Flag::SkipNonOptions);
 
@@ -485,20 +487,10 @@ Options:
                 config_filename = opt.current_value;
             }
         }
-
-        if (!config_filename) {
-            const char *app_directory = GetApplicationDirectory();
-            if (app_directory) {
-                const char *test_filename = Fmt(&thop_config.str_alloc, "%1%/profile/thop.ini", app_directory).ptr;
-                if (TestFile(test_filename, FileType::File)) {
-                    config_filename = test_filename;
-                }
-            }
-        }
     }
 
     // Load config file
-    if (config_filename && !LoadConfig(config_filename, &thop_config))
+    if (!LoadConfig(config_filename, &thop_config))
         return 1;
 
     // Parse arguments
@@ -526,26 +518,9 @@ Options:
         }
 
         opt.ConsumeNonOptions(&thop_config.mco_stay_filenames);
-    }
 
-    // Configuration errors
-    {
-        bool valid = true;
-
-        if (!thop_config.profile_directory) {
-            LogError("Profile directory is missing");
-            valid = false;
-        }
-        if (!thop_config.table_directories.len) {
-            LogError("No table directory is specified");
-            valid = false;
-        }
-        if (thop_config.max_age < 0) {
-            LogError("HTTP MaxAge must be >= 0");
-            valid = false;
-        }
-
-        if (!valid)
+        // We may have changed some stuff (such as base_url), so revalidate
+        if (!thop_config.Validate())
             return 1;
     }
 
@@ -563,10 +538,8 @@ Options:
         return 1;
     if (!InitMcoTables(thop_config.table_directories))
         return 1;
-    if (thop_has_casemix) {
-        if (!InitMcoStays(thop_config.mco_stay_directories, thop_config.mco_stay_filenames))
-            return 1;
-    }
+    if (thop_has_casemix && !InitMcoStays(thop_config.mco_stay_directories, thop_config.mco_stay_filenames))
+        return 1;
 
     // Init routes
     InitRoutes();

@@ -18,7 +18,7 @@ int RunMcoShow(Span<const char *> arguments);
 const char *const CommonOptions =
 R"(Common options:
     %!..+-C, --config_file <file>%!0     Set configuration file
-                                 %!D..(default: <executable_dir>%/profile%/drdc.ini)%!0
+                                 %!D..(default: drdc.ini)%!0
 
         %!..+--profile_dir <dir>%!0      Set profile directory
         %!..+--table_dir <dir>%!0        Add table directory
@@ -57,6 +57,11 @@ bool HandleCommonOption(OptionParser &opt)
 
 int Main(int argc, char **argv)
 {
+    BlockAllocator temp_alloc;
+
+    // Global options
+    const char *config_filename = "drdc.ini";
+
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 <command> [args]%!0
 )", FelixTarget);
@@ -94,7 +99,7 @@ Commands:
         return 0;
     }
 
-    const char *config_filename = nullptr;
+    // Find config filename
     {
         OptionParser opt(arguments, (int)OptionParser::Flag::SkipNonOptions);
 
@@ -107,26 +112,15 @@ Commands:
                 config_filename = opt.current_value;
             }
         }
-
-        if (!config_filename) {
-            const char *app_directory = GetApplicationDirectory();
-            if (app_directory) {
-                const char *test_filename = Fmt(&drdc_config.str_alloc, "%1%/profile/drdc.ini", app_directory).ptr;
-                if (TestFile(test_filename, FileType::File)) {
-                    config_filename = test_filename;
-                }
-            }
-        }
     }
+
+    if (!LoadConfig(config_filename, &drdc_config))
+        return 1;
 
 #define HANDLE_COMMAND(Cmd, Func) \
         do { \
-            if (TestStr(cmd, RG_STRINGIFY(Cmd))) { \
-                if (config_filename && !LoadConfig(config_filename, &drdc_config)) \
-                    return 1; \
-                 \
+            if (TestStr(cmd, RG_STRINGIFY(Cmd))) \
                 return Func(arguments); \
-            } \
         } while (false)
 
     HANDLE_COMMAND(mco_classify, RunMcoClassify);

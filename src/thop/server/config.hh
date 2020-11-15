@@ -26,6 +26,8 @@ struct Config {
     int max_age = 3600;
 
     BlockAllocator str_alloc;
+
+    bool Validate() const;
 };
 
 bool LoadConfig(StreamReader *st, Config *out_config);
