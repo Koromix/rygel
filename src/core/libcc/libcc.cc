@@ -4118,7 +4118,7 @@ void LineReader::PushLogFilter()
 {
     RG::PushLogFilter([this](LogLevel level, const char *, const char *msg, FunctionRef<LogFunc> func) {
         char ctx_buf[1024];
-        Fmt(ctx_buf, "%1(%2): ", st->GetFileName(), line_number);
+        Fmt(ctx_buf, "%1(%2)", st->GetFileName(), line_number);
 
         func(level, ctx_buf, msg);
     });
