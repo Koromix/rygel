@@ -171,6 +171,12 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
         io->request.conn = conn;
         io->request.url = url;
 
+        // Is that even possible? Dunno, but make sure it never happens!
+        if (RG_UNLIKELY(url[0] != '/')) {
+            io->AttachError(400);
+            return MHD_queue_response(conn, (unsigned int)io->code, io->response);
+        }
+
         if (TestStr(method, "HEAD")) {
             io->request.method = http_RequestMethod::Get;
             io->request.headers_only = true;
