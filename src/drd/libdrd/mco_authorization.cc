@@ -251,17 +251,15 @@ bool mco_LoadAuthorizationSet(const char *profile_directory,
     BlockAllocator temp_alloc;
 
     const char *filename = nullptr;
-    {
-        if (authorization_filename) {
-            filename = authorization_filename;
-        } else {
-            for (const char *default_name: default_names) {
-                const char *test_filename = Fmt(&temp_alloc, "%1%/%2",
-                                                profile_directory, default_name).ptr;
-                if (TestFile(test_filename, FileType::File)) {
-                    filename = test_filename;
-                    break;
-                }
+    if (authorization_filename) {
+        filename = authorization_filename;
+    } else {
+        for (const char *default_name: default_names) {
+            const char *test_filename = Fmt(&temp_alloc, "%1%/%2",
+                                            profile_directory, default_name).ptr;
+            if (TestFile(test_filename, FileType::File)) {
+                filename = test_filename;
+                break;
             }
         }
     }
