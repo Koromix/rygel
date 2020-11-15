@@ -42,6 +42,7 @@ public:
         // XXX: Restore http_Config designated initializers when MSVC ICE is fixed
         // https://developercommunity.visualstudio.com/content/problem/1238876/fatal-error-c1001-ice-with-ehsc.html
         http_Config http;
+        const char *base_url = "/";
         int max_age = 900;
     } config;
 

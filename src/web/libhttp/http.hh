@@ -18,7 +18,6 @@ struct http_Config {
     int threads = std::max(GetCoreCount(), 4);
     int async_threads = std::max(GetCoreCount() * 2, 8);
 
-    const char *base_url = "/";
 };
 
 struct http_RequestInfo;
@@ -30,7 +29,6 @@ class http_Daemon {
     MHD_Daemon *daemon = nullptr;
     std::atomic_bool running {false};
 
-    const char *base_url;
     std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;
 
     Async *async = nullptr;
@@ -73,9 +71,6 @@ static const char *const http_RequestMethodNames[] = {
 
 struct http_RequestInfo {
     MHD_Connection *conn;
-
-    // Useful in some cases (such as for cookie scopes)
-    const char *base_url;
 
     // When verb is HEAD, method is set to Get and headers_only is set to true
     http_RequestMethod method;

@@ -88,7 +88,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     } else if (prop.key == "AsyncThreads") {
                         valid &= ParseInt(prop.value, &config.http.async_threads);
                     } else if (prop.key == "BaseUrl") {
-                        config.http.base_url = DuplicateString(prop.value, &config.str_alloc).ptr;
+                        config.base_url = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "MaxAge") {
                         valid &= ParseInt(prop.value, &config.max_age);
                     } else {

@@ -448,7 +448,7 @@ bool InstanceData::Migrate()
                 success &= db.Run(sql, "HTTP.IdleTimeout", config.http.idle_timeout);
                 success &= db.Run(sql, "HTTP.Threads", config.http.threads);
                 success &= db.Run(sql, "HTTP.AsyncThreads", config.http.async_threads);
-                success &= db.Run(sql, "HTTP.BaseUrl", config.http.base_url);
+                success &= db.Run(sql, "HTTP.BaseUrl", config.base_url);
                 success &= db.Run(sql, "HTTP.MaxAge", config.max_age);
 
                 if (schema_version) {
@@ -614,7 +614,7 @@ bool InstanceData::LoadDatabaseConfig()
             } else if (TestStr(key, "HTTP.AsyncThreads")) {
                 valid &= ParseInt(value, &config.http.async_threads);
             } else if (TestStr(key, "HTTP.BaseUrl")) {
-                config.http.base_url = DuplicateString(value, &str_alloc).ptr;
+                config.base_url = DuplicateString(value, &str_alloc).ptr;
             } else if (TestStr(key, "HTTP.MaxAge")) {
                 valid &= ParseInt(value, &config.max_age);
             } else {
@@ -705,7 +705,7 @@ bool InstanceData::LoadIniConfig(StreamReader *st)
                     } else if (prop.key == "AsyncThreads") {
                         valid &= ParseInt(prop.value, &config.http.async_threads);
                     } else if (prop.key == "BaseUrl") {
-                        config.http.base_url = DuplicateString(prop.value, &str_alloc).ptr;
+                        config.base_url = DuplicateString(prop.value, &str_alloc).ptr;
                     } else if (prop.key == "MaxAge") {
                         valid &= ParseInt(prop.value, &config.max_age);
                     } else {

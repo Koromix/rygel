@@ -75,16 +75,10 @@ http_SessionManager::Session *
     strncpy(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1);
 
     // Set session cookies
-    io->AddCookieHeader(request.base_url, "session_key", session->session_key, true);
-    io->AddCookieHeader(request.base_url, "session_rnd", session->session_rnd, false);
+    io->AddCookieHeader(cookie_path, "session_key", session->session_key, true);
+    io->AddCookieHeader(cookie_path, "session_rnd", session->session_rnd, false);
 
     return session;
-}
-
-static void DeleteSessionCookies(const http_RequestInfo &request, http_IO *io)
-{
-    io->AddCookieHeader(request.base_url, "session_key", nullptr, true);
-    io->AddCookieHeader(request.base_url, "session_rnd", nullptr, false);
 }
 
 void http_SessionManager::Close(const http_RequestInfo &request, http_IO *io)
@@ -172,6 +166,12 @@ http_SessionManager::Session *
         *out_mismatch = false;
     }
     return session;
+}
+
+void http_SessionManager::DeleteSessionCookies(const http_RequestInfo &request, http_IO *io)
+{
+    io->AddCookieHeader(cookie_path, "session_key", nullptr, true);
+    io->AddCookieHeader(cookie_path, "session_rnd", nullptr, false);
 }
 
 void http_SessionManager::PruneStaleSessions()

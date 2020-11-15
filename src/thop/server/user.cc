@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../core/libcc/libcc.hh"
+#include "config.hh"
 #include "structure.hh"
 #include "thop.hh"
 #include "user.hh"
@@ -11,6 +12,34 @@
 namespace RG {
 
 static http_SessionManager sessions;
+
+class UserSetBuilder {
+    RG_DELETE_COPY(UserSetBuilder)
+
+    struct UnitRuleSet {
+        bool allow_default;
+        Span<const char *> allow;
+        Span<const char *> deny;
+    };
+
+    UserSet set;
+    HashMap<const char *, Size> map;
+
+    HeapArray<UnitRuleSet> rule_sets;
+    BlockAllocator allow_alloc;
+    BlockAllocator deny_alloc;
+
+public:
+    UserSetBuilder() = default;
+
+    bool LoadIni(StreamReader *st);
+    bool LoadFiles(Span<const char *const> filenames);
+
+    void Finish(const StructureSet &structure_set, UserSet *out_set);
+
+private:
+    bool CheckUnitPermission(const UnitRuleSet &rule_set, const StructureEntity &ent);
+};
 
 static Span<const char> SplitListValue(Span<const char> str,
                                        Span<const char> *out_remain, bool *out_enable)
@@ -236,13 +265,28 @@ bool UserSetBuilder::CheckUnitPermission(const UnitRuleSet &rule_set, const Stru
     }
 }
 
-bool LoadUserSet(Span<const char *const> filenames, const StructureSet &structure_set,
-                 UserSet *out_set)
+bool InitUsers(const char *profile_directory)
 {
-    UserSetBuilder user_set_builder;
-    if (!user_set_builder.LoadFiles(filenames))
-        return false;
-    user_set_builder.Finish(structure_set, out_set);
+    BlockAllocator temp_alloc;
+
+    LogInfo("Load users");
+
+    // Load INI file
+    {
+        const char *filename = Fmt(&temp_alloc, "%1%/users.ini", profile_directory).ptr;
+
+        UserSetBuilder builder;
+        if (!builder.LoadFiles(filename))
+            return false;
+        builder.Finish(thop_structure_set, &thop_user_set);
+    }
+
+    // Everyone can use the default dispense mode
+    for (User &user: thop_user_set.users) {
+        user.mco_dispense_modes |= 1 << (int)thop_config.mco_dispense_mode;
+    }
+
+    sessions.SetCookiePath(thop_config.base_url);
 
     return true;
 }

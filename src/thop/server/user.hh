@@ -5,13 +5,13 @@
 #pragma once
 
 #include "../../core/libcc/libcc.hh"
-#include "structure.hh"
 #include "../../drd/libdrd/libdrd.hh"
 #include "../../web/libhttp/libhttp.hh"
 
 namespace RG {
 
 struct StructureEntity;
+struct StructureSet;
 
 enum class UserPermission {
     McoCasemix = 1 << 0,
@@ -52,36 +52,7 @@ struct UserSet {
     const User *FindUser(const char *name) const { return map.FindValue(name, nullptr); }
 };
 
-class UserSetBuilder {
-    RG_DELETE_COPY(UserSetBuilder)
-
-    struct UnitRuleSet {
-        bool allow_default;
-        Span<const char *> allow;
-        Span<const char *> deny;
-    };
-
-    UserSet set;
-    HashMap<const char *, Size> map;
-
-    HeapArray<UnitRuleSet> rule_sets;
-    BlockAllocator allow_alloc;
-    BlockAllocator deny_alloc;
-
-public:
-    UserSetBuilder() = default;
-
-    bool LoadIni(StreamReader *st);
-    bool LoadFiles(Span<const char *const> filenames);
-
-    void Finish(const StructureSet &structure_set, UserSet *out_set);
-
-private:
-    bool CheckUnitPermission(const UnitRuleSet &rule_set, const StructureEntity &ent);
-};
-
-bool LoadUserSet(Span<const char *const> filenames, const StructureSet &structure_set,
-                 UserSet *out_set);
+bool InitUsers(const char *profile_directory);
 
 const User *CheckSessionUser(const http_RequestInfo &request, http_IO *io);
 

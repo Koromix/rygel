@@ -246,24 +246,6 @@ static bool InitDictionarySet(Span<const char *const> table_directories)
     return true;
 }
 
-static bool InitUsers(const char *profile_directory)
-{
-    BlockAllocator temp_alloc;
-
-    LogInfo("Load users");
-
-    if (const char *filename = Fmt(&temp_alloc, "%1%/users.ini", profile_directory).ptr;
-            !LoadUserSet(filename, thop_structure_set, &thop_user_set))
-        return false;
-
-    // Everyone can use the default dispense mode
-    for (User &user: thop_user_set.users) {
-        user.mco_dispense_modes |= 1 << (int)thop_config.mco_dispense_mode;
-    }
-
-    return true;
-}
-
 static void InitRoutes()
 {
     LogInfo("Init routes");
@@ -325,7 +307,7 @@ static void InitRoutes()
             writer->Write(FelixVersion);
             return true;
         } else if (TestStr(key, "BASE_URL")) {
-            writer->Write(thop_config.http.base_url);
+            writer->Write(thop_config.base_url);
             return true;
         } else if (TestStr(key, "HAS_USERS")) {
             writer->Write(thop_has_casemix ? "true" : "false");
@@ -393,7 +375,28 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     // Find appropriate route
     const Route *route;
     {
-        Span<const char> url = request.url;
+        Span<const char> url;
+        {
+            Size offset = 0;
+
+            // Trim URL prefix (base_url setting)
+            while (thop_config.base_url[offset]) {
+                if (request.url[offset] != thop_config.base_url[offset]) {
+                    if (!request.url[offset] && thop_config.base_url[offset] == '/' && !thop_config.base_url[offset + 1]) {
+                        io->AddHeader("Location", thop_config.base_url);
+                        io->AttachNothing(301);
+                        return;
+                    } else {
+                        io->AttachError(404);
+                        return;
+                    }
+                }
+
+                offset++;
+            }
+
+            url = request.url + offset - 1;
+        }
 
         route = routes.Find(url);
         if (!route || route->method != request.method) {
@@ -455,7 +458,7 @@ Options:
                                  %!D..(default: %2)%!0
         %!..+--base_url <url>%!0         Change base URL
                                  %!D..(default: %3)%!0)",
-                FelixTarget, thop_config.http.port, thop_config.http.base_url);
+                FelixTarget, thop_config.http.port, thop_config.base_url);
     };
 
     if (sodium_init() < 0) {
@@ -515,7 +518,7 @@ Options:
                 if (!ParseInt(opt.current_value, &thop_config.http.port))
                     return 1;
             } else if (opt.Test("--base_url", OptionType::Value)) {
-                thop_config.http.base_url = opt.current_value;
+                thop_config.base_url = opt.current_value;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;

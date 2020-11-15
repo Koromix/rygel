@@ -22,6 +22,7 @@ struct Config {
     HeapArray<const char *> mco_stay_filenames;
 
     http_Config http;
+    const char *base_url = "/";
     int max_age = 3600;
 
     BlockAllocator str_alloc;

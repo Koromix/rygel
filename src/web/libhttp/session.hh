@@ -27,11 +27,15 @@ class http_SessionManager {
         RG_HASHTABLE_HANDLER_T(Session, const char *, session_key);
     };
 
+    const char *cookie_path = "/";
+
     std::shared_mutex mutex;
     HashTable<const char *, Session> sessions;
 
 public:
     http_SessionManager() = default;
+
+    void SetCookiePath(const char *new_path) { cookie_path = new_path; }
 
     template<typename T>
     void Open(const http_RequestInfo &request, http_IO *io, RetainPtr<T> udata)
@@ -54,6 +58,8 @@ private:
 
     RetainObject *Find2(const http_RequestInfo &request, http_IO *io);
     Session *FindSession(const http_RequestInfo &request, bool *out_mismatch = nullptr);
+
+    void DeleteSessionCookies(const http_RequestInfo &request, http_IO *io);
 
     void PruneStaleSessions();
 };

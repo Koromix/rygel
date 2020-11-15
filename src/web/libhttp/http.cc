@@ -18,8 +18,6 @@ bool http_Daemon::Start(const http_Config &config,
                         std::function<void(const http_RequestInfo &request, http_IO *io)> func)
 {
     RG_ASSERT(!daemon);
-
-    RG_ASSERT(config.base_url);
     RG_ASSERT(func);
 
     // Validate configuration
@@ -44,10 +42,6 @@ bool http_Daemon::Start(const http_Config &config,
         }
         if (config.async_threads <= 0) {
             LogError("HTTP async threads %1 is invalid (minimum: 1)", config.async_threads);
-            valid = false;
-        }
-        if (config.base_url[0] != '/' || config.base_url[strlen(config.base_url) - 1] != '/') {
-            LogError("Base URL '%1' does not start and end with '/'", config.base_url);
             valid = false;
         }
 
@@ -76,7 +70,6 @@ bool http_Daemon::Start(const http_Config &config,
 #endif
 
     handle_func = func;
-    base_url = config.base_url;
     async = new Async(config.async_threads - 1);
 
     running = true;
@@ -172,8 +165,8 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
         *con_cls = io;
 
         io->daemon = daemon;
-        io->request.base_url = daemon->base_url;
         io->request.conn = conn;
+        io->request.url = url;
 
         if (TestStr(method, "HEAD")) {
             io->request.method = http_RequestMethod::Get;
@@ -186,20 +179,6 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
             io->AttachError(422);
             return MHD_queue_response(conn, (unsigned int)io->code, io->response);
         }
-
-        // Trim URL prefix (base_url setting)
-        for (Size i = 0; daemon->base_url[i]; i++, url++) {
-            if (url[0] != daemon->base_url[i]) {
-                if (!url[0] && daemon->base_url[i] == '/' && !daemon->base_url[i + 1]) {
-                    io->AddHeader("Location", daemon->base_url);
-                    return MHD_queue_response(conn, 303, io->response);
-                } else {
-                    io->AttachError(404);
-                    return MHD_queue_response(conn, (unsigned int)io->code, io->response);
-                }
-            }
-        }
-        io->request.url = --url;
 
         if (!NegociateContentEncoding(conn, &io->request.compression_type, io))
             return MHD_queue_response(conn, (unsigned int)io->code, io->response);

@@ -38,7 +38,7 @@ static void HandleFileStatic(const http_RequestInfo &request, http_IO *io)
     json.StartArray();
     for (const AssetInfo &asset: assets) {
         char buf[512];
-        json.String(Fmt(buf, "%1%2", instance->config.http.base_url, asset.name + 1).ptr);
+        json.String(Fmt(buf, "%1%2", instance->config.base_url, asset.name + 1).ptr);
     }
     json.EndArray();
 
@@ -60,7 +60,7 @@ static Span<const uint8_t> PatchGoupileVariables(const AssetInfo &asset, Allocat
             writer->Write(instance->config.app_name);
             return true;
         } else if (TestStr(key, "BASE_URL")) {
-            writer->Write(instance->config.http.base_url);
+            writer->Write(instance->config.base_url);
             return true;
         } else if (TestStr(key, "USE_OFFLINE")) {
             writer->Write(instance->config.use_offline ? "true" : "false");
@@ -76,7 +76,7 @@ static Span<const uint8_t> PatchGoupileVariables(const AssetInfo &asset, Allocat
             return true;
         } else if (TestStr(key, "LINK_MANIFEST")) {
             if (instance->config.use_offline) {
-                Print(writer, "<link rel=\"manifest\" href=\"%1manifest.json\"/>", instance->config.http.base_url);
+                Print(writer, "<link rel=\"manifest\" href=\"%1manifest.json\"/>", instance->config.base_url);
             }
             return true;
         } else {
@@ -226,7 +226,7 @@ Options:
                                  %!D..(default: %3)%!0
 
         %!..+--migrate%!0                Migrate database if needed)",
-                FelixTarget, instance->config.http.port, instance->config.http.base_url);
+                FelixTarget, instance->config.http.port, instance->config.base_url);
     };
 
     // Handle version
@@ -264,7 +264,7 @@ Options:
                 if (!ParseInt(opt.current_value, &instance->config.http.port))
                     return 1;
             } else if (opt.Test("--base_url", OptionType::Value)) {
-                instance->config.http.base_url = opt.current_value;
+                instance->config.base_url = opt.current_value;
             } else if (opt.Test("--migrate")) {
                 migrate = true;
             } else {
