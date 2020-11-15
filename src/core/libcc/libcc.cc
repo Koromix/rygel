@@ -2717,9 +2717,7 @@ const char *CreateTemporaryFile(const char *directory, const char *extension,
 
 bool EnsureDirectoryExists(const char *filename)
 {
-    Span<const char> directory;
-    SplitStrReverseAny(filename, RG_PATH_SEPARATORS, &directory);
-
+    Span<const char> directory = GetPathDirectory(filename);
     return MakeDirectoryRec(directory);
 }
 

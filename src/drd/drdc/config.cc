@@ -12,8 +12,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 {
     Config config;
 
-    Span<const char> root_directory;
-    SplitStrReverseAny(st->GetFileName(), RG_PATH_SEPARATORS, &root_directory);
+    Span<const char> root_directory = GetPathDirectory(st->GetFileName());
 
     IniParser ini(st);
     ini.PushLogFilter();
