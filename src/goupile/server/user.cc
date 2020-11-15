@@ -69,7 +69,7 @@ static void WriteProfileJson(const Session *session, const Token *token, json_Wr
         out_json->Key("permissions"); out_json->StartObject();
         for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
             char js_name[64];
-            ConvertToJsName(UserPermissionNames[i], js_name);
+            ConvertToJsonName(UserPermissionNames[i], js_name);
 
             out_json->Key(js_name); out_json->Bool(token->permissions & (1 << i));
         }

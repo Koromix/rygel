@@ -59,32 +59,6 @@ static DictionarySet dictionary_set;
 static HashTable<Span<const char>, Route> routes;
 static BlockAllocator routes_alloc;
 
-static Size ConvertToJsName(const char *name, Span<char> out_buf)
-{
-    // This is used for static strings (e.g. permission names), and the Span<char>
-    // output buffer will abort debug builds on out-of-bounds access.
-
-    if (name[0]) {
-        out_buf[0] = LowerAscii(name[0]);
-
-        Size j = 1;
-        for (Size i = 1; name[i]; i++) {
-            if (name[i] >= 'A' && name[i] <= 'Z') {
-                out_buf[j++] = '_';
-                out_buf[j++] = LowerAscii(name[i]);
-            } else {
-                out_buf[j++] = name[i];
-            }
-        }
-        out_buf[j] = 0;
-
-        return j;
-    } else {
-        out_buf[0] = 0;
-        return 0;
-    }
-}
-
 static void ProduceSettings(const http_RequestInfo &request, const User *user, http_IO *io)
 {
     http_JsonPageBuilder json(request.compression_type);
@@ -101,7 +75,7 @@ static void ProduceSettings(const http_RequestInfo &request, const User *user, h
         unsigned int permissions = user ? user->permissions : 0;
         for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
             char js_name[64];
-            ConvertToJsName(UserPermissionNames[i], js_name);
+            ConvertToJsonName(UserPermissionNames[i], js_name);
 
             json.Key(js_name); json.Bool(permissions & (1 << i));
         }

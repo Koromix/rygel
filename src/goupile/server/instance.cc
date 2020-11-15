@@ -193,10 +193,10 @@ Span<const uint8_t> InstanceData::PatchVariables(const AssetInfo &asset)
             writer->Write(config.use_offline ? "true" : "false");
             return true;
         } else if (TestStr(key, "SYNC_MODE")) {
-            char buf[64];
-            ConvertToJsName(SyncModeNames[(int)config.sync_mode], buf);
+            char js_name[64];
+            ConvertToJsonName(SyncModeNames[(int)config.sync_mode], js_name);
 
-            writer->Write(buf);
+            writer->Write(js_name);
             return true;
         } else if (TestStr(key, "CACHE_KEY")) {
             writer->Write(etag);
