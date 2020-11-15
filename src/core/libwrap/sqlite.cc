@@ -164,6 +164,7 @@ bool sq_Database::RunWithBindings(const char *sql, Span<const sq_Binding> bindin
                                                                (int)binding.u.str.len, SQLITE_STATIC); } break;
             case sq_Binding::Type::Blob: { sqlite3_bind_blob64(stmt, i + 1, binding.u.blob.ptr,
                                                                binding.u.blob.len, SQLITE_STATIC); } break;
+            case sq_Binding::Type::Zero: { sqlite3_bind_zeroblob64(stmt, i + 1, binding.u.zero_len); } break;
         }
     }
 

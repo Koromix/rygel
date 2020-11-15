@@ -19,7 +19,8 @@ public:
         Integer,
         Double,
         String,
-        Blob
+        Blob,
+        Zero
     };
 
     Type type;
@@ -28,6 +29,7 @@ public:
         double d;
         Span<const char> str;
         Span<const uint8_t> blob;
+        Size zero_len;
     } u;
 
     sq_Binding() : type(Type::Null) {}
@@ -42,6 +44,14 @@ public:
     sq_Binding(const char *str) : type(Type::String) { u.str = str; };
     sq_Binding(Span<const char> str) : type(Type::String) { u.str = str; };
     sq_Binding(Span<const uint8_t> blob) : type(Type::Blob) { u.blob = blob; };
+
+    static sq_Binding Zeroblob(Size len)
+    {
+        sq_Binding binding;
+        binding.type = Type::Zero;
+        binding.u.zero_len = len;
+        return binding;
+    }
 };
 
 class sq_Statement {
