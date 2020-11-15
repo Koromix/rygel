@@ -4,6 +4,7 @@
 
 #include "../../core/libcc/libcc.hh"
 #include "../../core/libwrap/sqlite.hh"
+#include "../server/domain.hh"
 #include "../server/instance.hh"
 #include "../server/user.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
@@ -15,6 +16,19 @@
 #endif
 
 namespace RG {
+
+static const char *DefaultConfig = R"(
+[Resources]
+# DatabaseFile = goupile.db
+# InstanceDirectory = instances
+# TempDirectory = tmp
+
+[HTTP]
+# IPStack = Dual
+# Port = 8889
+# Threads =
+# AsyncThreads =
+)";
 
 static bool HashPassword(Span<const char> password, char out_hash[crypto_pwhash_STRBYTES])
 {
@@ -72,9 +86,6 @@ static int RunInit(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    Span<const char> app_key = {};
-    Span<const char> app_name = {};
-    bool empty = false;
     const char *username = nullptr;
     const char *password = nullptr;
 #ifndef _WIN32
@@ -82,21 +93,13 @@ static int RunInit(Span<const char *> arguments)
     uid_t owner_uid = 0;
     gid_t owner_gid = 0;
 #endif
-    const char *instance_directory = nullptr;
+    const char *root_directory = nullptr;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 init [options] [directory]%!0
-
 Options:
-    %!..+-k, --key <key>%!0              Change application key
-                                 %!D..(default: directory name)%!0
-        %!..+--name <name>%!0            Change application name
-                                 %!D..(default: project key)%!0
-
     %!..+-u, --user <name>%!0            Name of default user
-        %!..+--password <pwd>%!0         Password of default user
-
-        %!..+--empty%!0                  Don't create default files)", FelixTarget);
+        %!..+--password <pwd>%!0         Password of default user)", FelixTarget);
 
 #ifndef _WIN32
         PrintLn(fp, R"(
@@ -112,16 +115,10 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-k", "--key", OptionType::Value)) {
-                app_key = opt.current_value;
-            } else if (opt.Test("--name", OptionType::Value)) {
-                app_name = opt.current_value;
             } else if (opt.Test("-u", "--user", OptionType::Value)) {
                 username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 password = opt.current_value;
-            } else if (opt.Test("--empty")) {
-                empty = true;
 #ifndef _WIN32
             } else if (opt.Test("-o", "--owner", OptionType::Value)) {
                 change_owner = true;
@@ -135,20 +132,11 @@ Options:
             }
         }
 
-        instance_directory = opt.ConsumeNonOption();
+        root_directory = opt.ConsumeNonOption();
+        root_directory = NormalizePath(root_directory ? root_directory : ".", GetWorkingDirectory(), &temp_alloc).ptr;
     }
-
-    instance_directory = NormalizePath(instance_directory ? instance_directory : ".",
-                                       GetWorkingDirectory(), &temp_alloc).ptr;
 
     // Errors and defaults
-    if (!app_key.len) {
-        app_key = TrimStrRight(instance_directory, RG_PATH_SEPARATORS);
-        app_key = SplitStrReverseAny(app_key, RG_PATH_SEPARATORS);
-    }
-    if (!app_name.len) {
-        app_name = app_key;
-    }
     if (password && !username) {
         LogError("Option --password cannot be used without --user");
         return 1;
@@ -157,7 +145,7 @@ Options:
     // Drop created files and directories if anything fails
     HeapArray<const char *> directories;
     HeapArray<const char *> files;
-    RG_DEFER_N(out_guard) {
+    RG_DEFER_N(root_guard) {
         for (const char *filename: files) {
             UnlinkFile(filename);
         }
@@ -167,25 +155,24 @@ Options:
     };
 
     // Make or check instance directory
-    if (TestFile(instance_directory)) {
-        if (!IsDirectoryEmpty(instance_directory)) {
-            LogError("Directory '%1' is not empty", instance_directory);
+    if (TestFile(root_directory)) {
+        if (!IsDirectoryEmpty(root_directory)) {
+            LogError("Directory '%1' is not empty", root_directory);
             return 1;
         }
     } else {
-        if (!MakeDirectory(instance_directory, false))
+        if (!MakeDirectory(root_directory, false))
             return 1;
-
-        directories.Append(instance_directory);
+        directories.Append(root_directory);
     }
 #ifndef _WIN32
-    if (change_owner && !ChangeFileOwner(instance_directory, owner_uid, owner_gid))
+    if (change_owner && !ChangeFileOwner(root_directory, owner_uid, owner_gid))
         return 1;
 #endif
 
     // Gather missing information
     if (!username) {
-        username = Prompt("User: ", &temp_alloc);
+        username = Prompt("Admin user: ", &temp_alloc);
         if (!username)
             return 1;
     }
@@ -204,14 +191,29 @@ Options:
     }
     LogInfo();
 
-    // Directories
+    // Create config
+    Config config;
     {
-        const auto make_instance_directory = [&](const char *name) {
-            const char *directory = Fmt(&temp_alloc, "%1%/%2", instance_directory, name).ptr;
-            if (!MakeDirectory(directory))
-                return false;
+        const char *filename = Fmt(&temp_alloc, "%1%/goupile.ini", root_directory).ptr;
+        files.Append(filename);
 
-            directories.Append(directory);
+        if (!WriteFile(DefaultConfig, filename))
+            return 1;
+#ifndef _WIN32
+        if (change_owner && !ChangeFileOwner(filename, owner_uid, owner_gid))
+            return 1;
+#endif
+
+        if (!LoadConfig(filename, &config))
+            return 1;
+    }
+
+    // Create directories
+    {
+        const auto make_directory = [&](const char *path) {
+            if (!MakeDirectory(path))
+                return false;
+            directories.Append(path);
 
 #ifndef _WIN32
             if (change_owner && !ChangeFileOwner(directory, owner_uid, owner_gid))
@@ -221,43 +223,228 @@ Options:
             return true;
         };
 
-        if (!make_instance_directory("tmp"))
+        if (!make_directory(config.instances_directory))
+            return 1;
+        if (!make_directory(config.temp_directory))
             return 1;
     }
 
     // Create database
-    {
-        const char *filename = Fmt(&temp_alloc, "%1%/database.db", instance_directory).ptr;
-        files.Append(filename);
-
-        sq_Database database;
-        if (!database.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
-            return 1;
+    sq_Database db;
+    if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+        return 1;
+    files.Append(config.database_filename);
+    if (!MigrateDomain(&db))
+        return 1;
 #ifndef _WIN32
-        if (change_owner && !ChangeFileOwner(filename, owner_uid, owner_gid))
-            return 1;
+    if (change_owner && !ChangeFileOwner(filename, owner_uid, owner_gid))
+        return 1;
 #endif
-        if (!database.Close())
+
+    // Create default admin user
+    {
+        char hash[crypto_pwhash_STRBYTES];
+        if (!HashPassword(password, hash))
+            return 1;
+
+        if (!db.Run("INSERT INTO dom_users (username, password_hash, admin) VALUES (?, ?, 1)", username, hash))
             return 1;
     }
 
-    // Open instance
-    InstanceData instance;
-    if (!instance.Open(instance_directory))
+    if (!db.Close())
         return 1;
 
-    // Create database schema
-    instance.config.app_key = DuplicateString(app_key, &temp_alloc).ptr;
-    instance.config.app_name = DuplicateString(app_name, &temp_alloc).ptr;
-    if (!instance.Migrate())
+    root_guard.Disable();
+    return 0;
+}
+
+static int RunMigrate(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    const char *config_filename = "goupile.ini";
+
+    const auto print_usage = [&](FILE *fp) {
+        PrintLn(fp, R"(Usage: %!..+%1 migrate <instance_file> ...%!0
+
+Options:
+    %!..+-C, --config_file <file>%!0     Set configuration file
+                                 %!D..(default: %2)%!0)", FelixTarget, config_filename);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                config_filename = opt.current_value;
+            } else {
+                LogError("Cannot handle option '%1'", opt.current_option);
+                return 1;
+            }
+        }
+    }
+
+    Config config;
+    if (!LoadConfig(config_filename, &config))
         return 1;
+
+    bool success = true;
+
+    // Migrate main database
+    success &= MigrateDomain(config.database_filename);
+
+    // Migrate instances
+    {
+        EnumStatus status = EnumerateDirectory(config.instances_directory, "*.db", -1,
+                                               [&](const char *filename, FileType) {
+            filename = Fmt(&temp_alloc, "%1%/%2", config.instances_directory, filename).ptr;
+            success &= MigrateInstance(filename);
+
+            return true;
+        });
+        if (status != EnumStatus::Done)
+            return 1;
+    }
+
+    return !success;
+}
+
+static int RunAddInstance(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    const char *config_filename = "goupile.ini";
+    Span<const char> base_url = {};
+    Span<const char> app_key = {};
+    Span<const char> app_name = {};
+    bool empty = false;
+#ifndef _WIN32
+    bool change_owner = false;
+    uid_t owner_uid = 0;
+    gid_t owner_gid = 0;
+#endif
+    const char *instance_key = nullptr;
+
+    const auto print_usage = [&](FILE *fp) {
+        PrintLn(fp, R"(Usage: %!..+%1 add_instance [options] <instance>%!0
+
+Options:
+    %!..+-C, --config_file <file>%!0     Set configuration file
+                                 %!D..(default: %2)%!0
+
+        %!..+--base_url <url>%!0         Change base URL
+                                 %!D..(default: directory name)%!0
+        %!..+--app_key <key>%!0          Change application key
+                                 %!D..(default: directory name)%!0
+        %!..+--app_name <name>%!0        Change application name
+                                 %!D..(default: project key)%!0
+
+        %!..+--empty%!0                  Don't create default files)", FelixTarget, config_filename);
+
+#ifndef _WIN32
+        PrintLn(fp, R"(
+    %!..+-o, --owner <owner>%!0          Change directory and file owner)");
+#endif
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                config_filename = opt.current_value;
+            } else if (opt.Test("--base_url", OptionType::Value)) {
+                base_url = opt.current_value;
+            } else if (opt.Test("--app_key", OptionType::Value)) {
+                app_key = opt.current_value;
+            } else if (opt.Test("--app_name", OptionType::Value)) {
+                app_name = opt.current_value;
+            } else if (opt.Test("--empty")) {
+                empty = true;
+#ifndef _WIN32
+            } else if (opt.Test("-o", "--owner", OptionType::Value)) {
+                change_owner = true;
+
+                if (!FindPosixUser(opt.current_value, &owner_uid, &owner_gid))
+                    return 1;
+#endif
+            } else {
+                LogError("Cannot handle option '%1'", opt.current_option);
+                return 1;
+            }
+        }
+
+        instance_key = opt.ConsumeNonOption();
+        if (!instance_key) {
+            LogError("Instance key must be provided");
+            return 1;
+        }
+    }
+
+    // Default values
+    if (!base_url.len) {
+        base_url = Fmt(&temp_alloc, "/%1/", instance_key);
+    }
+    if (!app_key.len) {
+        app_key = instance_key;
+    }
+    if (!app_name.len) {
+        app_name = instance_key;
+    }
+
+    Config config;
+    if (!LoadConfig(config_filename, &config))
+        return 1;
+
+    // Check for existing instance database
+    const char *database_filename = Fmt(&temp_alloc, "%1%/%2.db", config.instances_directory, instance_key).ptr;
+    if (TestFile(database_filename)) {
+        LogError("Instance '%1' already exists", instance_key);
+        return 1;
+    }
+
+    // Create instance database
+    sq_Database db;
+    if (!db.Open(database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+        return 1;
+    RG_DEFER_N(db_guard) { UnlinkFile(database_filename); };
+    if (!MigrateInstance(&db))
+        return 1;
+#ifndef _WIN32
+    if (change_owner && !ChangeFileOwner(database_filename, owner_uid, owner_gid))
+        return 1;
+#endif
+
+    // Set default settings
+    {
+        const char *sql = "UPDATE fs_settings SET value = ? WHERE key = ?";
+        bool success = true;
+
+        success &= db.Run(sql, base_url, "BaseUrl");
+        success &= db.Run(sql, app_key, "AppKey");
+        success &= db.Run(sql, app_name, "AppName");
+
+        if (!success)
+            return false;
+    }
 
     // Create default files
     if (!empty) {
         Span<const AssetInfo> assets = GetPackedAssets();
 
         sq_Statement stmt;
-        if (!instance.db.Prepare("INSERT INTO fs_files (path, blob, compression, sha256) VALUES (?, ?, ?, ?)", &stmt))
+        if (!db.Prepare("INSERT INTO fs_files (path, blob, compression, sha256) VALUES (?, ?, ?, ?)", &stmt))
             return 1;
 
         for (const AssetInfo &asset: assets) {
@@ -301,37 +488,32 @@ Options:
         }
     }
 
-    // Create default user (admin)
-    {
-        char hash[crypto_pwhash_STRBYTES];
-        if (!HashPassword(password, hash))
-            return 1;
-
-        uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
-
-        if (!instance.db.Run("INSERT INTO usr_users (username, password_hash, permissions) VALUES (?, ?, ?)",
-                             username, hash, permissions))
-            return 1;
-    }
-
-    // Make sure instance.db is OK!
-    if (!instance.db.Close())
+    if (!db.Close())
         return 1;
+    db_guard.Disable();
 
-    out_guard.Disable();
+    LogInfo("Instance added");
     return 0;
 }
 
-static int RunMigrate(Span<const char *> arguments)
+static int RunDeleteInstance(Span<const char *> arguments)
 {
-    // Options
-    const char *instance_directory = nullptr;
+    BlockAllocator temp_alloc;
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 migrate [options]%!0
+    // Options
+    const char *config_filename = "goupile.ini";
+    bool purge = false;
+    const char *instance_key = nullptr;
+
+    const auto print_usage = [&](FILE *fp) {
+        PrintLn(fp, R"(Usage: %!..+%1 delete_instance [options] <instance>%!0
 
 Options:
-    %!..+-I, --instance_dir <dir>%!0     Set instance directory)", FelixTarget);
+    %!..+-C, --config_file <file>%!0     Set configuration file
+                                 %!D..(default: %2)%!0
+
+        %!..+--purge%!0                  Completely delete instance database)",
+                FelixTarget, config_filename);
     };
 
     // Parse arguments
@@ -342,43 +524,44 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-I", "--instance_dir", OptionType::OptionalValue)) {
-                instance_directory = opt.current_value;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                config_filename = opt.current_value;
+            } else if (opt.Test("--purge")) {
+                purge = true;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
             }
         }
-    }
 
-    // Open instance
-    InstanceData instance;
-    if (!instance.Open(instance_directory))
-        return 1;
-
-    return !instance.Migrate();
-}
-
-static bool ParsePermissionList(Span<const char> remain, uint32_t *out_permissions)
-{
-    uint32_t permissions = 0;
-
-    while (remain.len) {
-        Span<const char> part = TrimStr(SplitStr(remain, ',', &remain), " ");
-
-        if (part.len) {
-            UserPermission perm;
-            if (!OptionToEnum(UserPermissionNames, part, &perm)) {
-                LogError("Unknown permission '%1'", part);
-                return false;
-            }
-
-            permissions |= 1 << (int)perm;
+        instance_key = opt.ConsumeNonOption();
+        if (!instance_key) {
+            LogError("Instance key must be provided");
+            return 1;
         }
     }
 
-    *out_permissions = permissions;
-    return true;
+    Config config;
+    if (!LoadConfig(config_filename, &config))
+        return 1;
+
+    const char *database_filename = Fmt(&temp_alloc, "%1%/%2.db", config.instances_directory, instance_key).ptr;
+    if (!TestFile(database_filename)) {
+        LogError("Instance '%1' does not exist", instance_key);
+        return 1;
+    }
+
+    if (purge) {
+        if (!UnlinkFile(database_filename))
+            return 1;
+    } else {
+        const char *backup_filename = Fmt(&temp_alloc, "%1.bak", database_filename).ptr;
+        if (!RenameFile(database_filename, backup_filename))
+            return 1;
+    }
+
+    LogInfo("Instance deleted");
+    return 0;
 }
 
 static int RunAddUser(Span<const char *> arguments)
@@ -386,23 +569,19 @@ static int RunAddUser(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *instance_directory = nullptr;
+    const char *config_filename = nullptr;
     const char *username = nullptr;
     const char *password = nullptr;
-    const char *zone = nullptr;
-    uint32_t permissions = UINT32_MAX;
+    bool admin = false;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 add_user [options] <username>%!0
 
 Options:
-    %!..+-I, --instance_dir <dir>%!0     Set instance directory
+    %!..+-C, --config_file <file>%!0     Set configuration file
 
         %!..+--password <pwd>%!0         Password of user
-        %!..+--zone <zone>%!0            Zone of user
-    %!..+-p, --permissions <perms>%!0    User permissions
-
-User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
+        %!..+--admin%!0                  Set user as administrator)", FelixTarget);
     };
 
     // Parse arguments
@@ -413,15 +592,12 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-I", "--instance_dir", OptionType::OptionalValue)) {
-                instance_directory = opt.current_value;
+            } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
+                config_filename = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 password = opt.current_value;
-            } else if (opt.Test("--zone", OptionType::Value)) {
-                zone = opt.current_value;
-            } else if (opt.Test("-p", "--permissions", OptionType::Value)) {
-                if (!ParsePermissionList(opt.current_value, &permissions))
-                    return 1;
+            } else if (opt.Test("--admin")) {
+                admin = true;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -436,16 +612,19 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
     }
 
     // Open database
-    InstanceData instance;
-    if (!instance.Open(instance_directory))
-        return 1;
-    if (!instance.Validate())
-        return 1;
+    sq_Database db;
+    {
+        Config config;
+        if (!LoadConfig(config_filename, &config))
+            return 1;
+        if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))
+            return 1;
+    }
 
     // Find user first
     {
         sq_Statement stmt;
-        if (!instance.db.Prepare("SELECT permissions FROM usr_users WHERE username = ?", &stmt))
+        if (!db.Prepare("SELECT admin FROM dom_users WHERE username = ?", &stmt))
             return false;
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
@@ -467,20 +646,6 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
         LogError("Password cannot be empty");
         return 1;
     }
-    if (!zone) {
-        zone = Prompt("Zone: ", &temp_alloc);
-        if (!zone)
-            return 1;
-    }
-    zone = zone[0] ? zone : nullptr;
-    if (permissions == UINT32_MAX) {
-        Span<const char> str = Prompt("Permissions: ", &temp_alloc);
-        if (str.len && !ParsePermissionList(str, &permissions)) {
-            return 1;
-        } else if (!str.ptr) {
-            return 1;
-        }
-    }
     LogInfo();
 
     // Hash password
@@ -489,37 +654,25 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
         return 1;
 
     // Create user
-    if (!instance.db.Run(R"(INSERT INTO usr_users (username, password_hash, zone, permissions)
-                            VALUES (?, ?, ?, ?))",
-                      username, hash, zone ? sq_Binding(zone) : sq_Binding(), permissions))
+    if (!db.Run("INSERT INTO dom_users (username, password_hash, admin) VALUES (?, ?, ?);",
+                username, hash, 0 + admin))
         return 1;
 
     LogInfo("Added user");
     return 0;
 }
 
-static int RunEditUser(Span<const char *> arguments)
+static int RunDeleteUser(Span<const char *> arguments)
 {
-    BlockAllocator temp_alloc;
-
     // Options
-    const char *instance_directory = nullptr;
+    const char *config_filename = nullptr;
     const char *username = nullptr;
-    const char *password = nullptr;
-    const char *zone = nullptr;
-    uint32_t permissions = UINT32_MAX;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 edit_user [options] <username>%!0
+        PrintLn(fp, R"(Usage: %!..+%1 delete_user [options] <username>%!0
 
 Options:
-    %!..+-I, --instance_dir <dir>%!0     Set instance directory
-
-        %!..+--password <pwd>%!0         Password of user
-        %!..+--zone <zone>%!0            Zone of user
-    %!..+-p, --permissions <perms>%!0    User permissions
-
-User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
+    %!..+-C, --config_file <file>%!0     Set configuration file)", FelixTarget);
     };
 
     // Parse arguments
@@ -530,15 +683,8 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-I", "--instance_dir", OptionType::OptionalValue)) {
-                instance_directory = opt.current_value;
-            } else if (opt.Test("--password", OptionType::Value)) {
-                password = opt.current_value;
-            } else if (opt.Test("--zone", OptionType::Value)) {
-                zone = opt.current_value;
-            } else if (opt.Test("-p", "--permissions", OptionType::Value)) {
-                if (!ParsePermissionList(opt.current_value, &permissions))
-                    return 1;
+            } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
+                config_filename = opt.current_value;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -552,157 +698,25 @@ User permissions: %!..+%2%!0)", FelixTarget, FmtSpan(UserPermissionNames));
         }
     }
 
-    // Open instance
-    InstanceData instance;
-    if (!instance.Open(instance_directory))
-        return 1;
-    if (!instance.Validate())
-        return 1;
-
-    // Find user first
-    const char *prev_zone;
-    uint32_t prev_permissions;
+    // Open database
+    sq_Database db;
     {
-        sq_Statement stmt;
-        if (!instance.db.Prepare("SELECT zone, permissions FROM usr_users WHERE username = ?", &stmt))
-            return false;
-        sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
-
-        if (!stmt.Next()) {
-            if (stmt.IsValid()) {
-                LogError("User '%1' does not exist", username);
-            }
+        Config config;
+        if (!LoadConfig(config_filename, &config))
             return 1;
-        }
-
-        if (sqlite3_column_type(stmt, 0) != SQLITE_NULL) {
-            const char *zone = (const char *)sqlite3_column_text(stmt, 0);
-            prev_zone = DuplicateString(zone, &temp_alloc).ptr;
-        } else {
-            prev_zone = nullptr;
-        }
-        prev_permissions = (uint32_t)sqlite3_column_int64(stmt, 1);
-    }
-
-    // Gather missing information
-    if (!password) {
-        password = Prompt("Password: ", "*", &temp_alloc);
-        if (!password)
+        if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))
             return 1;
     }
-    password = password[0] ? password : nullptr;
-    if (zone && !zone[0]) {
-        zone = prev_zone;
-    } else if (!zone) {
-        ConsolePrompter prompter;
-
-        prompter.prompt = "Zone: ";
-        prompter.str.allocator = &temp_alloc;
-        prompter.str.Append(prev_zone);
-
-        if (!prompter.Read())
-            return 1;
-
-        zone = prompter.str.len ? prompter.str.ptr : nullptr;
-    }
-    if (permissions == UINT32_MAX) {
-        ConsolePrompter prompter;
-
-        prompter.prompt = "Permissions: ";
-        for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
-            if (prev_permissions & (1u << i)) {
-                Fmt(&prompter.str, "%1, ", UserPermissionNames[i]);
-            }
-        }
-        prompter.str.len = std::max((Size)0, prompter.str.len - 2);
-
-        if (!prompter.Read())
-            return 1;
-        if (!ParsePermissionList(prompter.str, &permissions))
-            return 1;
-    }
-
-    // Update user
-    sq_TransactionResult ret = instance.db.Transaction([&]() {
-        if (password) {
-            char hash[crypto_pwhash_STRBYTES];
-            if (!HashPassword(password, hash))
-                return sq_TransactionResult::Rollback;
-
-            if (!instance.db.Run("UPDATE usr_users SET password_hash = ? WHERE username = ?",
-                                 hash, username))
-                return sq_TransactionResult::Error;
-        }
-
-        if (!instance.db.Run("UPDATE usr_users SET zone = ?, permissions = ? WHERE username = ?",
-                             zone ? sq_Binding(zone) : sq_Binding(), permissions, username))
-            return sq_TransactionResult::Error;
-        if (!sqlite3_changes(instance.db)) {
-            LogError("UPDATE request failed: no match");
-            return sq_TransactionResult::Rollback;
-        }
-
-        return sq_TransactionResult::Commit;
-    });
-    if (ret != sq_TransactionResult::Commit)
-        return 1;
-
-    LogInfo("Changed user");
-    return 0;
-}
-
-static int RunRemoveUser(Span<const char *> arguments)
-{
-    // Options
-    const char *instance_directory = nullptr;
-    const char *username = nullptr;
-
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 remove_user [options] <username>%!0
-
-Options:
-    %!..+-I, --instance_dir <dir>%!0     Set instance directory)", FelixTarget);
-    };
-
-    // Parse arguments
-    {
-        OptionParser opt(arguments);
-
-        while (opt.Next()) {
-            if (opt.Test("--help")) {
-                print_usage(stdout);
-                return 0;
-            } else if (opt.Test("-I", "--instance_dir", OptionType::OptionalValue)) {
-                instance_directory = opt.current_value;
-            } else {
-                LogError("Cannot handle option '%1'", opt.current_option);
-                return 1;
-            }
-        }
-
-        username = opt.ConsumeNonOption();
-        if (!username) {
-            LogError("No username provided");
-            return 1;
-        }
-    }
-
-    // Open instance
-    InstanceData instance;
-    if (!instance.Open(instance_directory))
-        return 1;
-    if (!instance.Validate())
-        return 1;
 
     // Delete user
-    if (!instance.db.Run("DELETE FROM usr_users WHERE username = ?", username))
+    if (!db.Run("DELETE FROM dom_users WHERE username = ?", username))
         return 1;
-    if (!sqlite3_changes(instance.db)) {
+    if (!sqlite3_changes(db)) {
         LogError("User '%1' does not exist", username);
         return 1;
     }
 
-    LogInfo("Removed user");
+    LogInfo("User deleted");
     return 0;
 }
 
@@ -711,14 +725,17 @@ int Main(int argc, char **argv)
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 <command> [args]%!0
 
-General commands:
-    %!..+init%!0                         Create new instance
-    %!..+migrate%!0                      Migrate existing instance
+Domain commands:
+    %!..+init%!0                         Create new domain
+    %!..+migrate%!0                      Migrate existing domain
+
+Instance commands:
+    %!..+add_instance%!0                 Add new instance
+    %!..+delete_instance%!0              Delete existing instance
 
 User commands:
     %!..+add_user%!0                     Add new user
-    %!..+edit_user%!0                    Edit existing user
-    %!..+remove_user%!0                  Remove existing user)", FelixTarget);
+    %!..+delete_user%!0                  Remove existing user)", FelixTarget);
     };
 
     if (argc < 2) {
@@ -752,12 +769,14 @@ User commands:
         return RunInit(arguments);
     } else if (TestStr(cmd, "migrate")) {
         return RunMigrate(arguments);
+    } else if (TestStr(cmd, "add_instance")) {
+        return RunAddInstance(arguments);
+    } else if (TestStr(cmd, "delete_instance")) {
+        return RunDeleteInstance(arguments);
     } else if (TestStr(cmd, "add_user")) {
         return RunAddUser(arguments);
-    } else if (TestStr(cmd, "edit_user")) {
-        return RunEditUser(arguments);
-    } else if (TestStr(cmd, "remove_user")) {
-        return RunRemoveUser(arguments);
+    } else if (TestStr(cmd, "delete_user")) {
+        return RunDeleteUser(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;

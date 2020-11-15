@@ -9,9 +9,11 @@
 
 namespace RG {
 
-void HandleFileList(const http_RequestInfo &request, http_IO *io);
-bool HandleFileGet(const http_RequestInfo &request, http_IO *io);
-void HandleFilePut(const http_RequestInfo &request, http_IO *io);
-void HandleFileDelete(const http_RequestInfo &request, http_IO *io);
+class InstanceData;
+
+void HandleFileList(InstanceData *instance, const http_RequestInfo &request, http_IO *io);
+bool HandleFileGet(InstanceData *instance, const http_RequestInfo &request, http_IO *io);
+void HandleFilePut(InstanceData *instance, const http_RequestInfo &request, http_IO *io);
+void HandleFileDelete(InstanceData *instance, const http_RequestInfo &request, http_IO *io);
 
 }

@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../core/libcc/libcc.hh"
+#include "domain.hh"
 #include "files.hh"
 #include "goupile.hh"
 #include "instance.hh"
@@ -14,16 +15,13 @@
 
 namespace RG {
 
-static InstanceData main_instance;
-InstanceData *instance = &main_instance;
+Config goupile_config;
+sq_Database goupile_db;
 
-static HeapArray<AssetInfo> assets;
-static HashTable<const char *, const AssetInfo *> assets_map;
-static BlockAllocator assets_alloc;
+static HeapArray<InstanceData> instances;
+static HashMap<Span<const char>, InstanceData *> instances_map;
 
-static char etag[33];
-
-static void HandleEvents(const http_RequestInfo &request, http_IO *io)
+static void HandleEvents(InstanceData *, const http_RequestInfo &request, http_IO *io)
 {
     // Do this to renew session and clear invalid session cookies
     GetCheckedSession(request, io);
@@ -31,12 +29,12 @@ static void HandleEvents(const http_RequestInfo &request, http_IO *io)
     io->AttachText(200, "{}", "application/json");
 }
 
-static void HandleFileStatic(const http_RequestInfo &request, http_IO *io)
+static void HandleFileStatic(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
 {
     http_JsonPageBuilder json(request.compression_type);
 
     json.StartArray();
-    for (const AssetInfo &asset: assets) {
+    for (const AssetInfo &asset: instance->assets) {
         char buf[512];
         json.String(Fmt(buf, "%1%2", instance->config.base_url, asset.name + 1).ptr);
     }
@@ -45,131 +43,70 @@ static void HandleFileStatic(const http_RequestInfo &request, http_IO *io)
     json.Finish(io);
 }
 
-static Span<const uint8_t> PatchGoupileVariables(const AssetInfo &asset, Allocator *alloc)
-{
-    RG_ASSERT(alloc);
-
-    Span<const uint8_t> data = PatchAsset(asset, alloc, [](const char *key, StreamWriter *writer) {
-        if (TestStr(key, "VERSION")) {
-            writer->Write(FelixVersion);
-            return true;
-        } else if (TestStr(key, "APP_KEY")) {
-            writer->Write(instance->config.app_key);
-            return true;
-        } else if (TestStr(key, "APP_NAME")) {
-            writer->Write(instance->config.app_name);
-            return true;
-        } else if (TestStr(key, "BASE_URL")) {
-            writer->Write(instance->config.base_url);
-            return true;
-        } else if (TestStr(key, "USE_OFFLINE")) {
-            writer->Write(instance->config.use_offline ? "true" : "false");
-            return true;
-        } else if (TestStr(key, "SYNC_MODE")) {
-            char buf[64];
-            ConvertToJsName(SyncModeNames[(int)instance->config.sync_mode], buf);
-
-            writer->Write(buf);
-            return true;
-        } else if (TestStr(key, "CACHE_KEY")) {
-            writer->Write(etag);
-            return true;
-        } else if (TestStr(key, "LINK_MANIFEST")) {
-            if (instance->config.use_offline) {
-                Print(writer, "<link rel=\"manifest\" href=\"%1manifest.json\"/>", instance->config.base_url);
-            }
-            return true;
-        } else {
-            return false;
-        }
-    });
-
-    return data;
-}
-
-static void InitAssets()
-{
-    LogInfo(assets.len ? "Reload assets" : "Init assets");
-
-    assets.Clear();
-    assets_map.Clear();
-    assets_alloc.ReleaseAll();
-
-    // We can use a global ETag because everything is in the binary
-    {
-        uint64_t buf[2];
-        randombytes_buf(&buf, RG_SIZE(buf));
-        Fmt(etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
-    }
-
-    Span<const AssetInfo> packed_assets = GetPackedAssets();
-
-    // Packed static assets
-    for (Size i = 0; i < packed_assets.len; i++) {
-        AssetInfo asset = packed_assets[i];
-
-        if (TestStr(asset.name, "goupile.html")) {
-            asset.name = "/static/goupile.html";
-            asset.data = PatchGoupileVariables(asset, &assets_alloc);
-        } else if (TestStr(asset.name, "manifest.json")) {
-            if (!instance->config.use_offline)
-                continue;
-
-            asset.name = "/manifest.json";
-            asset.data = PatchGoupileVariables(asset, &assets_alloc);
-        } else if (TestStr(asset.name, "sw.pk.js")) {
-            asset.name = "/sw.pk.js";
-            asset.data = PatchGoupileVariables(asset, &assets_alloc);
-        } else if (TestStr(asset.name, "favicon.png")) {
-            asset.name = "/favicon.png";
-        } else if (TestStr(asset.name, "server.pk.js")) {
-            continue;
-        } else {
-            asset.name = Fmt(&assets_alloc, "/static/%1", asset.name).ptr;
-        }
-
-        assets.Append(asset);
-    }
-    for (const AssetInfo &asset: assets) {
-        assets_map.Set(&asset);
-    }
-}
-
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
     if (ReloadAssets()) {
-        InitAssets();
+        for (InstanceData &instance: instances) {
+            instance.InitAssets();
+        }
     }
 
     // Send these headers whenever possible
     io->AddHeader("Referrer-Policy", "no-referrer");
 
+    // Decode URL to instance/path pair
+    InstanceData *instance;
+    const char *path;
+    {
+        Size offset = SplitStr(request.url + 1, '/').len + 1;
+
+        if (request.url[offset] != '/') {
+            if (offset == 1) {
+                io->AttachError(404);
+            } else {
+                const char *redirect = Fmt(&io->allocator, "%1/", request.url).ptr;
+                io->AddHeader("Location", redirect);
+                io->AttachNothing(301);
+            }
+            return;
+        }
+
+        Span<const char> base_url = MakeSpan(request.url, offset + 1);
+
+        instance = instances_map.FindValue(base_url, nullptr);
+        if (!instance) {
+            io->AttachError(404);
+            return;
+        }
+        path = request.url + offset;
+    }
+
     // Try application and static assets
     if (request.method == http_RequestMethod::Get) {
         const AssetInfo *asset;
 
-        if (HandleFileGet(request, io))
+        // Instance asset?
+        if (HandleFileGet(instance, request, io))
             return;
 
-        if (TestStr(request.url, "/") || StartsWith(request.url, "/app/") ||
-                                         StartsWith(request.url, "/main/")) {
-            asset = assets_map.FindValue("/static/goupile.html", nullptr);
+        if (TestStr(path, "/") || StartsWith(path, "/app/") || StartsWith(path, "/main/")) {
+            asset = instance->assets_map.FindValue("/static/goupile.html", nullptr);
             RG_ASSERT(asset);
         } else {
-            asset = assets_map.FindValue(request.url, nullptr);
+            asset = instance->assets_map.FindValue(path, nullptr);
         }
 
         if (asset) {
             const char *client_etag = request.GetHeaderValue("If-None-Match");
 
-            if (client_etag && TestStr(client_etag, etag)) {
+            if (client_etag && TestStr(client_etag, instance->etag)) {
                 MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
                 io->AttachResponse(304, response);
             } else {
                 const char *mimetype = http_GetMimeType(GetPathExtension(asset->name));
                 io->AttachBinary(200, asset->data, mimetype, asset->compression_type);
 
-                io->AddCachingHeaders(instance->config.max_age, etag);
+                io->AddCachingHeaders(goupile_config.max_age, instance->etag);
                 if (asset->source_map) {
                     io->AddHeader("SourceMap", asset->source_map);
                 }
@@ -180,28 +117,28 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     }
 
     // And last (but not least), API endpoints
-    if (TestStr(request.url, "/api/events") && request.method == http_RequestMethod::Get) {
-        HandleEvents(request, io);
-    } else if (TestStr(request.url, "/api/user/profile") && request.method == http_RequestMethod::Get) {
-        HandleUserProfile(request, io);
-    } else if (TestStr(request.url, "/api/user/login") && request.method == http_RequestMethod::Post) {
-        HandleUserLogin(request, io);
-    } else if (TestStr(request.url, "/api/user/logout") && request.method == http_RequestMethod::Post) {
-        HandleUserLogout(request, io);
-    } else if (TestStr(request.url, "/api/files/list") && request.method == http_RequestMethod::Get) {
-         HandleFileList(request, io);
-    } else if (TestStr(request.url, "/api/files/static") && request.method == http_RequestMethod::Get) {
-        HandleFileStatic(request, io);
-    } else if (StartsWith(request.url, "/files/") && request.method == http_RequestMethod::Put) {
-        HandleFilePut(request, io);
-    } else if (StartsWith(request.url, "/files/") && request.method == http_RequestMethod::Delete) {
-        HandleFileDelete(request, io);
-    } else if (StartsWith(request.url, "/api/records/load") && request.method == http_RequestMethod::Get) {
-        HandleRecordLoad(request, io);
-    } else if (TestStr(request.url, "/api/records/columns") && request.method == http_RequestMethod::Get) {
-        HandleRecordColumns(request, io);
-    } else if (StartsWith(request.url, "/api/records/sync") && request.method == http_RequestMethod::Post) {
-        HandleRecordSync(request, io);
+    if (TestStr(path, "/api/events") && request.method == http_RequestMethod::Get) {
+        HandleEvents(instance, request, io);
+    } else if (TestStr(path, "/api/user/profile") && request.method == http_RequestMethod::Get) {
+        HandleUserProfile(instance, request, io);
+    } else if (TestStr(path, "/api/user/login") && request.method == http_RequestMethod::Post) {
+        HandleUserLogin(instance, request, io);
+    } else if (TestStr(path, "/api/user/logout") && request.method == http_RequestMethod::Post) {
+        HandleUserLogout(instance, request, io);
+    } else if (TestStr(path, "/api/files/list") && request.method == http_RequestMethod::Get) {
+         HandleFileList(instance, request, io);
+    } else if (TestStr(path, "/api/files/static") && request.method == http_RequestMethod::Get) {
+        HandleFileStatic(instance, request, io);
+    } else if (StartsWith(path, "/files/") && request.method == http_RequestMethod::Put) {
+        HandleFilePut(instance, request, io);
+    } else if (StartsWith(path, "/files/") && request.method == http_RequestMethod::Delete) {
+        HandleFileDelete(instance, request, io);
+    } else if (TestStr(path, "/api/records/load") && request.method == http_RequestMethod::Get) {
+        HandleRecordLoad(instance, request, io);
+    } else if (TestStr(path, "/api/records/columns") && request.method == http_RequestMethod::Get) {
+        HandleRecordColumns(instance, request, io);
+    } else if (TestStr(path, "/api/records/sync") && request.method == http_RequestMethod::Post) {
+        HandleRecordSync(instance, request, io);
     } else {
         io->AttachError(404);
     }
@@ -211,22 +148,21 @@ int Main(int argc, char **argv)
 {
     BlockAllocator temp_alloc;
 
-    const char *instance_directory = nullptr;
+    const char *config_filename = "goupile.ini";
     bool migrate = false;
 
-    const auto print_usage = [](FILE *fp) {
+    const auto print_usage = [&](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 [options]%!0
 
 Options:
-    %!..+-I, --instance_dir <dir>%!0     Set instance directory
+    %!..+-C, --config_file <file>%!0     Set configuration file
+                                 %!D..(default: %2)%!0
 
         %!..+--port <port>%!0            Change web server port
-                                 %!D..(default: %2)%!0
-        %!..+--base_url <url>%!0         Change base URL
                                  %!D..(default: %3)%!0
 
         %!..+--migrate%!0                Migrate database if needed)",
-                FelixTarget, instance->config.http.port, instance->config.base_url);
+                FelixTarget, config_filename, goupile_config.http.port);
     };
 
     // Handle version
@@ -235,7 +171,7 @@ Options:
         return 0;
     }
 
-    // Find instance directory
+    // Find config filename
     {
         OptionParser opt(argc, argv, (int)OptionParser::Flag::SkipNonOptions);
 
@@ -243,14 +179,16 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-I", "--instance_dir", OptionType::OptionalValue)) {
-                instance_directory = opt.current_value;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                config_filename = opt.current_value;
             }
         }
     }
 
-    // Load instance
-    if (!instance->Open(instance_directory))
+    // Load main config and database
+    if (!LoadConfig(config_filename, &goupile_config))
+        return 1;
+    if (!goupile_db.Open(goupile_config.database_filename, SQLITE_OPEN_READWRITE))
         return 1;
 
     // Parse arguments
@@ -258,13 +196,11 @@ Options:
         OptionParser opt(argc, argv);
 
         while (opt.Next()) {
-            if (opt.Test("-I", "--instance_dir", OptionType::Value)) {
+            if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
             } else if (opt.Test("--port", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &instance->config.http.port))
+                if (!ParseInt(opt.current_value, &goupile_config.http.port))
                     return 1;
-            } else if (opt.Test("--base_url", OptionType::Value)) {
-                instance->config.base_url = opt.current_value;
             } else if (opt.Test("--migrate")) {
                 migrate = true;
             } else {
@@ -272,31 +208,55 @@ Options:
                 return 1;
             }
         }
+
+        // We may have changed some stuff (such as HTTP port), so revalidate
+        if (!goupile_config.Validate())
+            return 1;
     }
 
-    // Check instance
-    if (migrate && !instance->Migrate())
-        return 1;
-    if (!instance->Validate())
-        return 1;
+    // Load instances
+    {
+        EnumStatus status = EnumerateDirectory(goupile_config.instances_directory, "*.db", -1,
+                                               [&](const char *filename, FileType) {
+            InstanceData *instance = instances.AppendDefault();
+            filename = Fmt(&temp_alloc, "%1%/%2", goupile_config.instances_directory, filename).ptr;
 
-    // Init subsystems
-    InitAssets();
+            if (migrate && !MigrateInstance(filename))
+                return false;
+            if (!instance->Open(filename))
+                return false;
+
+            return true;
+        });
+        if (status != EnumStatus::Done)
+            return 1;
+
+        if (!instances.len) {
+            LogError("No instance found");
+            return 1;
+        }
+
+        for (InstanceData &instance: instances) {
+            instances_map.Set(instance.config.base_url, &instance);
+        }
+    }
+
+    // Init JS
     InitJS();
 
     // Run!
     http_Daemon daemon;
-    if (!daemon.Start(instance->config.http, HandleRequest))
+    if (!daemon.Start(goupile_config.http, HandleRequest))
         return 1;
     LogInfo("Listening on port %1 (%2 stack)",
-            instance->config.http.port, IPStackNames[(int)instance->config.http.ip_stack]);
+            goupile_config.http.port, IPStackNames[(int)goupile_config.http.ip_stack]);
 
     WaitForInterruption();
 
-    // Make sure the "Exit" message comes after the daemon has effectively stopped
     daemon.Stop();
-    LogInfo("Exit");
+    goupile_db.Close();
 
+    LogInfo("Exit");
     return 0;
 }
 

@@ -10,8 +10,6 @@
 
 namespace RG {
 
-extern const int SchemaVersion;
-
 enum SyncMode {
     Offline,
     Mirror
@@ -23,40 +21,39 @@ static const char *const SyncModeNames[] = {
 
 class InstanceData {
 public:
-    const char *root_directory = nullptr;
-    const char *temp_directory = nullptr;
-    const char *database_filename = nullptr;
-
+    const char *filename = nullptr;
     sq_Database db;
-    int schema_version = -1;
 
     struct {
-        const char *app_name = nullptr;
+        const char *base_url = nullptr;
         const char *app_key = nullptr;
+        const char *app_name = nullptr;
 
         bool use_offline = false;
         int max_file_size = (int)Megabytes(8);
         SyncMode sync_mode = SyncMode::Offline;
-        const char *demo_user = nullptr;
-
-        // XXX: Restore http_Config designated initializers when MSVC ICE is fixed
-        // https://developercommunity.visualstudio.com/content/problem/1238876/fatal-error-c1001-ice-with-ehsc.html
-        http_Config http;
-        const char *base_url = "/";
-        int max_age = 900;
     } config;
 
-    BlockAllocator str_alloc;
+    HeapArray<AssetInfo> assets;
+    HashTable<const char *, const AssetInfo *> assets_map;
+    char etag[33];
 
-    bool Open(const char *directory);
+    BlockAllocator str_alloc;
+    BlockAllocator assets_alloc;
+
+    bool Open(const char *filename);
     bool Validate();
-    bool Migrate();
+
+    // Can be restarted (for debug builds)
+    void InitAssets();
 
     void Close();
 
 private:
-    bool LoadDatabaseConfig();
-    bool LoadIniConfig(StreamReader *st);
+    Span<const uint8_t> PatchVariables(const AssetInfo &asset);
 };
+
+bool MigrateInstance(sq_Database *db);
+bool MigrateInstance(const char *filename);
 
 }

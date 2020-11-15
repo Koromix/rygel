@@ -53,9 +53,10 @@ static void ExportRecord(sq_Statement *stmt, json_Writer *json)
     json->EndObject();
 }
 
-void HandleRecordLoad(const http_RequestInfo &request, http_IO *io)
+void HandleRecordLoad(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
+    const Token *token = session->GetToken(instance);
 
     if (!session) {
         LogError("User is not allowed to view data");
@@ -83,7 +84,7 @@ void HandleRecordLoad(const http_RequestInfo &request, http_IO *io)
                                                       f.page, f.complete, f.json, f.anchor FROM rec_entries r
                                                INNER JOIN rec_fragments f ON (f.id = r.id)
                                                WHERE 1 = 1)").len;
-        if (session->zone) {
+        if (token->zone) {
             sql.len += Fmt(sql.TakeAvailable(), " AND (r.zone IS NULL OR r.zone == ?)").len;
         }
         if (table) {
@@ -99,8 +100,8 @@ void HandleRecordLoad(const http_RequestInfo &request, http_IO *io)
         if (!instance->db.Prepare(sql.data, &stmt))
             return;
 
-        if (session->zone) {
-            sqlite3_bind_text(stmt, bind_idx++, session->zone, -1, SQLITE_STATIC);
+        if (token->zone) {
+            sqlite3_bind_text(stmt, bind_idx++, token->zone, -1, SQLITE_STATIC);
         }
         if (table) {
             sqlite3_bind_text(stmt, bind_idx++, table, -1, SQLITE_STATIC);
@@ -129,7 +130,7 @@ void HandleRecordLoad(const http_RequestInfo &request, http_IO *io)
     json.Finish(io);
 }
 
-void HandleRecordColumns(const http_RequestInfo &request, http_IO *io)
+void HandleRecordColumns(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
 
@@ -195,12 +196,13 @@ void HandleRecordColumns(const http_RequestInfo &request, http_IO *io)
     json.Finish(io);
 }
 
-void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
+void HandleRecordSync(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
+    const Token *token = session->GetToken(instance);
 
     // XXX: Check new/edit permissions correctly
-    if (!session || !session->HasPermission(UserPermission::Edit)) {
+    if (!session || !token->HasPermission(UserPermission::Edit)) {
         LogError("User is not allowed to sync data");
         io->AttachError(403);
         return;
@@ -211,7 +213,7 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
         ScriptPort *port = LockScriptPort();
         RG_DEFER { port->Unlock(); };
 
-        port->ChangeProfile(*session);
+        port->Setup(instance, *session, *token);
 
         // Parse request body (JSON)
         HeapArray<ScriptRecord> handles;
@@ -241,9 +243,9 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
                 sqlite3_bind_text(stmt, 2, handle.id, -1, SQLITE_STATIC);
 
                 if (stmt.Next()) {
-                    if (session->zone && sqlite3_column_type(stmt, 0) != SQLITE_NULL) {
+                    if (token->zone && sqlite3_column_type(stmt, 0) != SQLITE_NULL) {
                         const char *zone = (const char *)sqlite3_column_text(stmt, 0);
-                        if (!TestStr(session->zone, zone)) {
+                        if (!TestStr(token->zone, zone)) {
                             LogError("Zone mismatch for %1", handle.id);
                             incomplete = true;
                             continue;
@@ -320,7 +322,7 @@ void HandleRecordSync(const http_RequestInfo &request, http_IO *io)
                         incomplete = true;
                         continue;
                     }
-                    if (frag.complete && !session->HasPermission(UserPermission::Validate)) {
+                    if (frag.complete && !token->HasPermission(UserPermission::Validate)) {
                         LogError("User is not allowed to validate records");
                         incomplete = true;
                         return sq_TransactionResult::Rollback;

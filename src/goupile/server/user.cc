@@ -3,9 +3,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../core/libcc/libcc.hh"
+#include "domain.hh"
 #include "goupile.hh"
 #include "instance.hh"
-#include "js.hh"
 #include "user.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
@@ -13,14 +13,56 @@ namespace RG {
 
 static http_SessionManager sessions;
 
-static void WriteProfileJson(const Session *session, json_Writer *out_json)
+const Token *Session::GetToken(InstanceData *instance) const
+{
+    Token *token;
+    {
+        std::shared_lock<std::shared_mutex> lock(tokens_lock);
+        token = tokens_map.Find(instance);
+    }
+
+    if (!token) {
+        if (!demo) {
+            std::lock_guard<std::shared_mutex> lock(tokens_lock);
+            token = tokens_map.SetDefault(instance);
+        } else {
+            do {
+                sq_Statement stmt;
+                if (!instance->db.Prepare("SELECT zone, permissions FROM dom_permissions WHERE username = ?", &stmt))
+                    break;
+                sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
+                if (!stmt.Next())
+                    break;
+
+                const char *zone = (const char *)sqlite3_column_text(stmt, 0);
+                uint32_t permissions = sqlite3_column_int(stmt, 1);
+
+                std::lock_guard<std::shared_mutex> lock(tokens_lock);
+
+                token = tokens_map.SetDefault(instance);
+                token->zone = zone ? DuplicateString(zone, &tokens_alloc).ptr : nullptr;
+                token->permissions = permissions;
+            } while (false);
+        }
+
+        // As last resort (after error or in demo session), give token without any permission
+        if (!token) {
+            std::lock_guard<std::shared_mutex> lock(tokens_lock);
+            token = tokens_map.SetDefault(instance);
+        }
+    }
+
+    return token;
+}
+
+static void WriteProfileJson(const Session *session, const Token *token, json_Writer *out_json)
 {
     out_json->StartObject();
 
     if (session) {
         out_json->Key("username"); out_json->String(session->username);
-        if (session->zone) {
-            out_json->Key("zone"); out_json->String(session->zone);
+        if (token->zone) {
+            out_json->Key("zone"); out_json->String(token->zone);
         } else {
             out_json->Key("zone"); out_json->Null();
         }
@@ -29,7 +71,7 @@ static void WriteProfileJson(const Session *session, json_Writer *out_json)
             char js_name[64];
             ConvertToJsName(UserPermissionNames[i], js_name);
 
-            out_json->Key(js_name); out_json->Bool(session->permissions & (1 << i));
+            out_json->Key(js_name); out_json->Bool(token->permissions & (1 << i));
         }
         out_json->EndObject();
         out_json->Key("demo"); out_json->Bool(session->demo);
@@ -39,21 +81,13 @@ static void WriteProfileJson(const Session *session, json_Writer *out_json)
 }
 
 static RetainPtr<Session> CreateUserSession(const http_RequestInfo &request, http_IO *io,
-                                            const char *username, sq_Statement *stmt)
+                                            const char *username)
 {
-    uint32_t permissions = (uint32_t)sqlite3_column_int64(*stmt, 0);
-    const char *zone = (const char *)sqlite3_column_text(*stmt, 1);
-
-    Size len = RG_SIZE(Session) + strlen(username) + (zone ? strlen(zone) : 0) + 2;
+    Size len = RG_SIZE(Session) + strlen(username) + 1;
     Session *session = (Session *)Allocator::Allocate(nullptr, len, (int)Allocator::Flag::Zero);
 
     session->username = (char *)session + RG_SIZE(Session);
     strcpy((char *)session->username, username);
-    if (zone) {
-        session->zone = session->username + strlen(username) + 1;
-        strcpy((char *)session->zone, zone);
-    }
-    session->permissions = (uint32_t)permissions;
 
     RetainPtr<Session> ptr(session, [](Session *session) { Allocator::Release(nullptr, session, -1); });
     sessions.Open(request, io, ptr);
@@ -63,23 +97,10 @@ static RetainPtr<Session> CreateUserSession(const http_RequestInfo &request, htt
 
 static RetainPtr<Session> CreateDemoSession(const http_RequestInfo &request, http_IO *io)
 {
-    sq_Statement stmt;
-    if (!instance->db.Prepare(R"(SELECT permissions, zone FROM usr_users
-                                 WHERE username = ?)", &stmt))
-        return {};
-    sqlite3_bind_text(stmt, 1, instance->config.demo_user, -1, SQLITE_STATIC);
-
-    if (!stmt.Next()) {
-        if (stmt.IsValid()) {
-            LogError("Demo user '%1' does not exist", instance->config.demo_user);
-        }
-        return {};
-    }
-
-    // Make sure previous there is no session related Set-Cookie header left
+    // Make sure there is no session related Set-Cookie header left
     io->ResetResponse();
 
-    RetainPtr<Session>session = CreateUserSession(request, io, instance->config.demo_user, &stmt);
+    RetainPtr<Session>session = CreateUserSession(request, io, goupile_config.demo_user);
     session->demo = true;
 
     return session;
@@ -89,14 +110,14 @@ RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http
 {
     RetainPtr<Session> session = sessions.Find<Session>(request, io);
 
-    if (instance->config.demo_user && !session) {
+    if (goupile_config.demo_user && !session) {
         session = CreateDemoSession(request, io);
     }
 
     return session;
 }
 
-void HandleUserLogin(const http_RequestInfo &request, http_IO *io)
+void HandleUserLogin(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
 {
     io->RunAsync([=]() {
         // Read POST values
@@ -118,28 +139,27 @@ void HandleUserLogin(const http_RequestInfo &request, http_IO *io)
         int64_t now = GetMonotonicTime();
 
         sq_Statement stmt;
-        if (!instance->db.Prepare(R"(SELECT permissions, zone, password_hash FROM usr_users
-                                     WHERE username = ?)", &stmt))
+        if (!goupile_db.Prepare(R"(SELECT password_hash FROM dom_users
+                                   WHERE username = ?)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
         if (stmt.Next()) {
-            const char *password_hash = (const char *)sqlite3_column_text(stmt, 2);
+            const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
 
             if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
                 int64_t time = GetUnixTime();
-                const char *zone = (const char *)sqlite3_column_text(stmt, 1);
 
-                if (!instance->db.Run(R"(INSERT INTO adm_events (time, address, type, username, zone)
-                                         VALUES (?, ?, 'login', ?, ?);)",
-                                    time, request.client_addr, username,
-                                    zone ? sq_Binding(zone) : sq_Binding()))
+                if (!goupile_db.Run(R"(INSERT INTO adm_events (time, address, type, username)
+                                       VALUES (?, ?, ?, ?);)",
+                                    time, request.client_addr, "login", username))
                     return;
 
-                RetainPtr<const Session> session = CreateUserSession(request, io, username, &stmt);
+                RetainPtr<const Session> session = CreateUserSession(request, io, username);
+                const Token *token = session->GetToken(instance);
 
                 http_JsonPageBuilder json(request.compression_type);
-                WriteProfileJson(session.GetRaw(), &json);
+                WriteProfileJson(session.GetRaw(), token, &json);
                 json.Finish(io);
 
                 return;
@@ -154,28 +174,29 @@ void HandleUserLogin(const http_RequestInfo &request, http_IO *io)
             LogError("Invalid username or password");
             io->AttachError(403);
         } else {
-            LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
+            LogError("SQLite Error: %1", sqlite3_errmsg(goupile_db));
         }
     });
 }
 
-void HandleUserLogout(const http_RequestInfo &request, http_IO *io)
+void HandleUserLogout(InstanceData *, const http_RequestInfo &request, http_IO *io)
 {
     sessions.Close(request, io);
 
-    if (instance->config.demo_user) {
+    if (goupile_config.demo_user) {
         CreateDemoSession(request, io);
     }
 
     io->AttachText(200, "");
 }
 
-void HandleUserProfile(const http_RequestInfo &request, http_IO *io)
+void HandleUserProfile(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
+    const Token *token = session ? session->GetToken(instance) : nullptr;
 
     http_JsonPageBuilder json(request.compression_type);
-    WriteProfileJson(session.GetRaw(), &json);
+    WriteProfileJson(session.GetRaw(), token, &json);
     json.Finish(io);
 }
 

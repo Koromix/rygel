@@ -9,6 +9,8 @@
 
 namespace RG {
 
+class InstanceData;
+
 enum class UserPermission {
     Develop = 1 << 0,
     New = 1 << 1,
@@ -26,20 +28,29 @@ static const char *const UserPermissionNames[] = {
     "Export"
 };
 
-struct Session: public RetainObject {
-    const char *username;
-
+struct Token {
     const char *zone;
     uint32_t permissions;
+
+    bool HasPermission(UserPermission perm) const { return permissions & (int)perm; };
+};
+
+class Session: public RetainObject {
+    mutable std::shared_mutex tokens_lock;
+    mutable HashMap<const void *, Token> tokens_map;
+    mutable BlockAllocator tokens_alloc;
+
+public:
+    const char *username;
     bool demo;
 
-    bool HasPermission(UserPermission perm) const { return permissions & (int)perm; }
+    const Token *GetToken(InstanceData *instance) const;
 };
 
 RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http_IO *io);
 
-void HandleUserLogin(const http_RequestInfo &request, http_IO *io);
-void HandleUserLogout(const http_RequestInfo &request, http_IO *io);
-void HandleUserProfile(const http_RequestInfo &request, http_IO *io);
+void HandleUserLogin(InstanceData *instance, const http_RequestInfo &request, http_IO *io);
+void HandleUserLogout(InstanceData *instance, const http_RequestInfo &request, http_IO *io);
+void HandleUserProfile(InstanceData *instance, const http_RequestInfo &request, http_IO *io);
 
 }

@@ -9,7 +9,8 @@
 
 namespace RG {
 
-struct Session;
+class Session;
+struct Token;
 
 struct ScriptRecord {
     RG_DELETE_COPY(ScriptRecord)
@@ -89,7 +90,7 @@ public:
 
     void Unlock();
 
-    void ChangeProfile(const Session &session);
+    void Setup(InstanceData *instance, const Session &session, const Token &token);
 
     bool ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_handles);
     bool RunRecord(Span<const char> json, const ScriptRecord &handle,
@@ -101,7 +102,5 @@ public:
 void InitJS();
 
 ScriptPort *LockScriptPort();
-
-Size ConvertToJsName(const char *name, Span<char> out_buf);
 
 }

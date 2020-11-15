@@ -77,11 +77,13 @@ void ScriptPort::Unlock()
     js_cv.notify_one();
 }
 
-void ScriptPort::ChangeProfile(const Session &session)
+void ScriptPort::Setup(InstanceData *instance, const Session &session, const Token &token)
 {
+    JS_SetContextOpaque(ctx, instance);
+
     JSValue args[] = {
         JS_NewString(ctx, session.username),
-        session.zone ? JS_NewString(ctx, session.zone) : JS_NULL
+        token.zone ? JS_NewString(ctx, token.zone) : JS_NULL
     };
     RG_DEFER {
         JS_FreeValue(ctx, args[0]);
@@ -95,6 +97,8 @@ void ScriptPort::ChangeProfile(const Session &session)
 
 static JSValue ReadFile(JSContext *ctx, JSValueConst, int argc, JSValueConst *argv)
 {
+    InstanceData *instance = (InstanceData *)JS_GetContextOpaque(ctx);
+
     const char *filename = JS_ToCString(ctx, argv[0]);
     if (!filename)
         return JS_EXCEPTION;
@@ -480,31 +484,6 @@ void InitJS()
         port->validate_func = JS_GetPropertyStr(port->ctx, server, "validateFragments");
 
         js_idle_ports.Append(port);
-    }
-}
-
-// This is used for static strings (e.g. permission names), and the Span<char>
-// output buffer will abort debug builds on out-of-bounds access.
-Size ConvertToJsName(const char *name, Span<char> out_buf)
-{
-    if (name[0]) {
-        out_buf[0] = LowerAscii(name[0]);
-
-        Size j = 1;
-        for (Size i = 1; name[i]; i++) {
-            if (name[i] >= 'A' && name[i] <= 'Z') {
-                out_buf[j++] = '_';
-                out_buf[j++] = LowerAscii(name[i]);
-            } else {
-                out_buf[j++] = name[i];
-            }
-        }
-        out_buf[j] = 0;
-
-        return j;
-    } else {
-        out_buf[0] = 0;
-        return 0;
     }
 }
 

@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../core/libcc/libcc.hh"
+#include "domain.hh"
 #include "files.hh"
 #include "instance.hh"
 #include "goupile.hh"
@@ -11,7 +12,7 @@
 
 namespace RG {
 
-void HandleFileList(const http_RequestInfo &request, http_IO *io)
+void HandleFileList(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
 {
     sq_Statement stmt;
     if (!instance->db.Prepare(R"(SELECT path, size, sha256 FROM fs_files
@@ -37,19 +38,18 @@ void HandleFileList(const http_RequestInfo &request, http_IO *io)
 }
 
 // Returns true when request has been handled (file exists or an error has occured)
-bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
+bool HandleFileGet(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
 {
-    const char *path;
-    if (TestStr(request.url, "/favicon.png")) {
-        path ="/files/favicon.png";
-    } else if (TestStr(request.url, "/manifest.json")) {
-        path = "/files/manifest.json";
-    } else {
-        path = request.url;
-    }
-
+    const char *path = request.url + strlen(instance->config.base_url) - 1;
     const char *client_etag = request.GetHeaderValue("If-None-Match");
     const char *client_sha256 = request.GetQueryValue("sha256");
+
+    // Handle special paths
+    if (TestStr(path, "/favicon.png")) {
+        path ="/files/favicon.png";
+    } else if (TestStr(path, "/manifest.json")) {
+        path = "/files/manifest.json";
+    }
 
     sq_Statement stmt;
     if (!instance->db.Prepare(R"(SELECT rowid, compression, sha256 FROM fs_files
@@ -145,25 +145,27 @@ bool HandleFileGet(const http_RequestInfo &request, http_IO *io)
     return true;
 }
 
-void HandleFilePut(const http_RequestInfo &request, http_IO *io)
+void HandleFilePut(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
+    const Token *token = session->GetToken(instance);
 
-    if (!session || !session->HasPermission(UserPermission::Deploy)) {
+    if (!session || !token->HasPermission(UserPermission::Deploy)) {
         LogError("User is not allowed to deploy changes");
         io->AttachError(403);
         return;
     }
 
+    const char *path = request.url + strlen(instance->config.base_url) - 1;
     const char *client_sha256 = request.GetQueryValue("sha256");
 
     // Security checks
-    if (!StartsWith(request.url, "/files/")) {
+    if (!StartsWith(path, "/files/")) {
         LogError("Cannot write to file outside '/files/'");
         io->AttachError(403);
         return;
     }
-    if (PathContainsDotDot(request.url)) {
+    if (PathContainsDotDot(path)) {
         LogError("Path must not contain any '..' component");
         io->AttachError(403);
         return;
@@ -172,7 +174,7 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
     io->RunAsync([=]() {
         // Create temporary file
         FILE *fp = nullptr;
-        const char *tmp_filename = CreateTemporaryFile(instance->temp_directory, ".tmp", &io->allocator, &fp);
+        const char *tmp_filename = CreateTemporaryFile(goupile_config.temp_directory, ".tmp", &io->allocator, &fp);
         if (!tmp_filename)
             return;
         RG_DEFER {
@@ -234,7 +236,7 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
                 if (!instance->db.Prepare(R"(SELECT sha256 FROM fs_files
                                              WHERE path = ? AND sha256 IS NOT NULL;)", &stmt))
                     return sq_TransactionResult::Error;
-                sqlite3_bind_text(stmt, 1, request.url, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
 
                 if (stmt.Next()) {
                     const char *sha256 = (const char *)sqlite3_column_text(stmt, 0);
@@ -257,19 +259,11 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
 
             // We need to get the ROWID value after INSERT, but sqlite3_last_insert_rowid() does
             // not work with UPSERT. So use DELETE + INSERT instead.
-            if (!instance->db.Run("DELETE FROM fs_files WHERE path = ?;", request.url))
+            if (!instance->db.Run("DELETE FROM fs_files WHERE path = ?;", path))
                 return sq_TransactionResult::Error;
-
-            sq_Statement stmt;
-            if (!instance->db.Prepare(R"(INSERT INTO fs_files (path, blob, compression, sha256, size)
-                                         VALUES (?, ?, ?, ?, ?);)", &stmt))
-                return sq_TransactionResult::Error;
-            sqlite3_bind_text(stmt, 1, request.url, -1, SQLITE_STATIC);
-            sqlite3_bind_zeroblob(stmt, 2, (int)file_len);
-            sqlite3_bind_text(stmt, 3, "Gzip", -1, SQLITE_STATIC);
-            sqlite3_bind_text(stmt, 4, sha256, -1, SQLITE_STATIC);
-            sqlite3_bind_int64(stmt, 5, total_len);
-            if (!stmt.Run())
+            if (!instance->db.Run(R"(INSERT INTO fs_files (path, blob, compression, sha256, size)
+                                     VALUES (?, ?, ?, ?, ?);)",
+                                     path, sq_Binding::Zeroblob(file_len), "Gzip", sha256, total_len))
                 return sq_TransactionResult::Error;
 
             int64_t rowid = sqlite3_last_insert_rowid(instance->db);
@@ -313,16 +307,18 @@ void HandleFilePut(const http_RequestInfo &request, http_IO *io)
     });
 }
 
-void HandleFileDelete(const http_RequestInfo &request, http_IO *io)
+void HandleFileDelete(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
+    const Token *token = session->GetToken(instance);
 
-    if (!session || !session->HasPermission(UserPermission::Deploy)) {
+    if (!session || !token->HasPermission(UserPermission::Deploy)) {
         LogError("User is not allowed to deploy changes");
         io->AttachError(403);
         return;
     }
 
+    const char *path = request.url + strlen(instance->config.base_url) - 1;
     const char *client_sha256 = request.GetQueryValue("sha256");
 
     sq_TransactionResult ret = instance->db.Transaction([&]() {
@@ -330,7 +326,7 @@ void HandleFileDelete(const http_RequestInfo &request, http_IO *io)
             sq_Statement stmt;
             if (!instance->db.Prepare("SELECT sha256 FROM fs_files WHERE path = ?", &stmt))
                 return sq_TransactionResult::Error;
-            sqlite3_bind_text(stmt, 1, request.url, -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
 
             if (stmt.Next()) {
                 const char *sha256 = (const char *)sqlite3_column_text(stmt, 0);
@@ -352,7 +348,7 @@ void HandleFileDelete(const http_RequestInfo &request, http_IO *io)
         }
 
         if (!instance->db.Run(R"(UPDATE fs_files SET blob = NULL, compression = NULL, sha256 = NULL
-                                 WHERE path = ? AND sha256 IS NOT NULL)", request.url))
+                                 WHERE path = ? AND sha256 IS NOT NULL)", path))
             return sq_TransactionResult::Error;
 
         if (sqlite3_changes(instance->db)) {
