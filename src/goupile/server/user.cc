@@ -23,9 +23,6 @@ const Token *Session::GetToken(InstanceData *instance) const
 
     if (!token) {
         if (!demo) {
-            std::lock_guard<std::shared_mutex> lock(tokens_lock);
-            token = tokens_map.SetDefault(instance);
-        } else {
             do {
                 sq_Statement stmt;
                 if (!instance->db.Prepare("SELECT zone, permissions FROM dom_permissions WHERE username = ?", &stmt))
