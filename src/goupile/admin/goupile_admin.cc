@@ -23,6 +23,9 @@ static const char *DefaultConfig = R"(
 # InstanceDirectory = instances
 # TempDirectory = tmp
 
+[Session]
+# DemoUser =
+
 [HTTP]
 # IPStack = Dual
 # Port = 8889
