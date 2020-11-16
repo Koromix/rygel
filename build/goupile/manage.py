@@ -156,7 +156,7 @@ def run_sync(config):
     binary_inode = os.stat(binary).st_ino
     for domain, info in domains.items():
         status = services.get(domain)
-        if status is not None and status.inode != binary_inode:
+        if status is not None and status.running and status.inode != binary_inode:
             print(f'Domain {domain} is running old version')
             info.mismatch = True
 
