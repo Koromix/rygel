@@ -10,19 +10,16 @@ import io
 import itertools
 import os
 import re
-import sqlite3
 import sys
 import subprocess
 from dataclasses import dataclass
 
 @dataclass
-class InstanceConfig:
+class DomainConfig:
     directory = None
     domain = None
-    base_url = None
     port = None
     mismatch = False
-    inode = None
 
 @dataclass
 class ServiceStatus:
@@ -51,59 +48,45 @@ def run_build(config):
     subprocess.run(['felix', '-mFast', '-q', '-C', build_filename,
                     '-O', config['Goupile.BinaryDirectory'], 'goupile', 'goupile_admin'])
 
-def list_instances(root, domain):
-    instances = {}
+def list_domains(root):
+    domains = {}
 
-    for instance in sorted(os.listdir(root)):
-        directory = os.path.join(root, instance)
-        filename = os.path.join(directory, 'database.db')
+    for domain in sorted(os.listdir(root)):
+        directory = os.path.join(root, domain)
+        filename = os.path.join(directory, 'goupile.ini')
 
         if os.path.isfile(filename):
-            info = InstanceConfig()
+            config = load_config(filename)
 
-            path_domain, path_base_url = instance.split('_', 1)
-            path_domain = f'{path_domain}.{domain}'
-            path_base_url = f'/{path_base_url}/'
-
-            db = sqlite3.connect(filename)
-            for k, v in db.execute('SELECT key, value FROM fs_settings;'):
-                if k == 'HTTP.BaseUrl':
-                    info.base_url = v
-                elif k == 'HTTP.Port' and v is not None:
-                    info.port = int(v)
-            db.close()
-
+            info = DomainConfig()
             info.directory = directory
-            info.domain = path_domain
-            if info.base_url != path_base_url:
-                print(f'Assigning BaseUrl "{path_base_url}" to {instance}', file = sys.stderr)
-                info.base_url = path_base_url
-                info.mismatch = True
+            info.domain = domain
+            info.port = config.get('HTTP.Port')
 
-            instances[instance] = info
+            domains[domain] = info
 
     used_ports = {}
     try_port = 9000
 
     # Fix port conflicts
-    for instance, info in instances.items():
+    for domain, info in domains.items():
         if info.port is not None:
-            prev_instance = used_ports.get(info.port)
-            if prev_instance is None:
-                used_ports[info.port] = instance
+            prev_domain = used_ports.get(info.port)
+            if prev_domain is None:
+                used_ports[info.port] = domain
             else:
-                print(f'Conflict on port {info.port}, used by {prev_instance} and {instance}', file = sys.stderr)
+                print(f'Conflict on port {info.port}, used by {prev_domain} and {domain}', file = sys.stderr)
                 info.port = None
-    for instance, info in instances.items():
+    for domain, info in domains.items():
         if info.port is None:
             while try_port in used_ports:
                 try_port += 1
-            print(f'Assigning Port {try_port} to {instance}', file = sys.stderr)
+            print(f'Assigning Port {try_port} to {domain}', file = sys.stderr)
             info.port = try_port
-            used_ports[try_port] = instance
+            used_ports[try_port] = domain
             info.mismatch = True
 
-    return instances
+    return domains
 
 def list_services():
     services = {}
@@ -136,86 +119,80 @@ def list_services():
 
     return services
 
-def run_service_command(instance, cmd):
-    service = f'goupile@{instance}.service'
+def run_service_command(domain, cmd):
+    service = f'goupile@{domain}.service'
     print(f'{cmd.capitalize()} {service}', file = sys.stderr)
     subprocess.run(['systemctl', cmd, '--quiet', service])
 
-def update_instance_config(info):
-    filename = os.path.join(info.directory, 'database.db')
+def update_domain_config(info):
+    filename = os.path.join(info.directory, 'goupile.ini')
+    ini = parse_ini(filename)
 
-    db = sqlite3.connect(filename)
-    db.executemany('UPDATE fs_settings SET value = ? WHERE key = ?', [
-        (info.base_url, 'HTTP.BaseUrl'),
-        (info.port, 'HTTP.Port')
-    ])
-    db.commit()
-    db.close()
-
-def update_nginx_config(filename, instances, include = None):
-    instances = list(instances.items())
-    instances.sort(key = lambda t: t[1].domain)
+    if not ini.has_section('HTTP'):
+        ini.add_section('HTTP')
+    ini.set('HTTP', 'Port', str(info.port))
 
     with open(filename, 'w') as f:
-        for domain, items in itertools.groupby(instances, key = lambda t: t[1].domain):
+        ini.write(f)
+
+def update_nginx_config(filename, domains, include = None):
+    with open(filename, 'w') as f:
+        for domain, info in domains.items():
             print(f'server {{', file = f)
             print(f'    server_name {domain};', file = f)
             if include is not None:
                 print(f'    include {include};', file = f)
-
-            for instance, info in items:
-                print(f'    location {info.base_url} {{', file = f)
-                print(f'        proxy_pass http://127.0.0.1:{info.port};', file = f)
-                print(f'    }}', file = f)
-
+            print(f'    location / {{')
+            print(f'        proxy_pass http://127.0.0.1:{info.port};', file = f)
+            print(f'    }}', file = f)
             print(f'}}', file = f)
 
 def run_sync(config):
-    instances = list_instances(config['Goupile.InstanceDirectory'], config['Goupile.DomainName'])
+    domains = list_domains(config['Goupile.DomainDirectory'])
     services = list_services()
 
     # Detect binary mismatches
     binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
     binary_inode = os.stat(binary).st_ino
-    for instance, info in instances.items():
-        status = services.get(instance)
+    for domain, info in domains.items():
+        status = services.get(domain)
         if status is not None and status.inode != binary_inode:
-            print(f'Instance {instance} is running old version')
+            print(f'Domain {domain} is running old version')
             info.mismatch = True
 
     # Update configuration files
     print('Write configuration files', file = sys.stderr)
-    for instance, info in instances.items():
-        update_instance_config(info)
-    update_nginx_config(config['NGINX.ConfigFile'], instances, config.get('NGINX.ServerInclude'))
+    for domain, info in domains.items():
+        update_domain_config(info)
+    update_nginx_config(config['NGINX.ConfigFile'], domains, config.get('NGINX.ServerInclude'))
 
     # Sync systemd services
-    for instance in services:
-        info = instances.get(instance)
+    for domain in services:
+        info = domains.get(domain)
         if info is None:
-            run_service_command(instance, 'stop')
-            run_service_command(instance, 'disable')
-    for instance, info in instances.items():
-        status = services.get(instance)
+            run_service_command(domain, 'stop')
+            run_service_command(domain, 'disable')
+    for domain, info in domains.items():
+        status = services.get(domain)
         if status is None:
-            run_service_command(instance, 'enable')
-            run_service_command(instance, 'start')
+            run_service_command(domain, 'enable')
+            run_service_command(domain, 'start')
         elif info.mismatch or not status.running:
-            run_service_command(instance, 'restart')
+            run_service_command(domain, 'restart')
 
     # Reload NGINX configuration
     print('Reload NGINX server', file = sys.stderr)
     subprocess.run(['systemctl', 'reload', 'nginx.service'])
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description = 'Manage goupile.fr instances')
+    parser = argparse.ArgumentParser(description = 'Manage goupile.fr domains')
     parser.add_argument('-C', '--config', dest = 'config', action = 'store',
                         default = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.ini'),
                         help = 'Change configuration file')
     parser.add_argument('-b', '--build', dest = 'build', action = 'store_true',
                         default = False, help = 'Build and install goupile binaries')
     parser.add_argument('-s', '--sync', dest = 'sync', action = 'store_true',
-                        default = False, help = 'Sync instances, NGINX and systemd')
+                        default = False, help = 'Sync domains, NGINX and systemd')
     args = parser.parse_args()
 
     if not args.build and not args.sync:
