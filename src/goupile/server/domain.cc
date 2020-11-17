@@ -107,8 +107,6 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
     if (!config.temp_directory) {
         config.temp_directory = NormalizePath("tmp", root_directory, &config.str_alloc).ptr;
     }
-    if (!config.Validate())
-        return false;
 
     std::swap(*out_config, config);
     return true;
@@ -120,21 +118,40 @@ bool LoadConfig(const char *filename, DomainConfig *out_config)
     return LoadConfig(&st, out_config);
 }
 
-bool CheckDomainVersion(sq_Database *db)
+bool DomainData::Open(const char *filename)
 {
-    int version;
-    if (!db->GetUserVersion(&version))
+    RG_DEFER_N(err_guard) { Close(); };
+    Close();
+
+    // Load config and database
+    if (!LoadConfig(filename, &config))
+        return false;
+    if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))
         return false;
 
-    if (version > DomainVersion) {
-        LogError("Domain schema is too recent (%1, expected %2)", version, DomainVersion);
-        return false;
-    } else if (version < DomainVersion) {
-        LogError("Domain schema is outdated");
-        return false;
+    // Check schema version
+    {
+        int version;
+        if (!db.GetUserVersion(&version))
+            return false;
+
+        if (version > DomainVersion) {
+            LogError("Domain schema is too recent (%1, expected %2)", version, DomainVersion);
+            return false;
+        } else if (version < DomainVersion) {
+            LogError("Domain schema is outdated");
+            return false;
+        }
     }
 
+    err_guard.Disable();
     return true;
+}
+
+void DomainData::Close()
+{
+    db.Close();
+    config = {};
 }
 
 bool MigrateDomain(sq_Database *db)

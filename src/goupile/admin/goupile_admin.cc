@@ -194,7 +194,7 @@ Options:
     }
     LogInfo();
 
-    // Create config
+    // Create domain
     DomainConfig config;
     {
         const char *filename = Fmt(&temp_alloc, "%1%/goupile.ini", root_directory).ptr;
@@ -410,12 +410,12 @@ Options:
         app_name = instance_key;
     }
 
-    DomainConfig config;
-    if (!LoadConfig(config_filename, &config))
+    DomainData domain;
+    if (!domain.Open(config_filename))
         return 1;
 
     // Check for existing instance database
-    const char *database_filename = Fmt(&temp_alloc, "%1%/%2.db", config.instances_directory, instance_key).ptr;
+    const char *database_filename = Fmt(&temp_alloc, "%1%/%2.db", domain.config.instances_directory, instance_key).ptr;
     if (TestFile(database_filename)) {
         LogError("Instance '%1' already exists", instance_key);
         return 1;
@@ -548,11 +548,11 @@ Options:
         }
     }
 
-    DomainConfig config;
-    if (!LoadConfig(config_filename, &config))
+    DomainData domain;
+    if (!domain.Open(config_filename))
         return 1;
 
-    const char *database_filename = Fmt(&temp_alloc, "%1%/%2.db", config.instances_directory, instance_key).ptr;
+    const char *database_filename = Fmt(&temp_alloc, "%1%/%2.db", domain.config.instances_directory, instance_key).ptr;
     if (!TestFile(database_filename)) {
         LogError("Instance '%1' does not exist", instance_key);
         return 1;
@@ -618,20 +618,14 @@ Options:
         }
     }
 
-    // Open database
-    sq_Database db;
-    {
-        DomainConfig config;
-        if (!LoadConfig(config_filename, &config))
-            return 1;
-        if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))
-            return 1;
-    }
+    DomainData domain;
+    if (!domain.Open(config_filename))
+        return 1;
 
     // Find user first
     {
         sq_Statement stmt;
-        if (!db.Prepare("SELECT admin FROM dom_users WHERE username = ?", &stmt))
+        if (!domain.db.Prepare("SELECT admin FROM dom_users WHERE username = ?", &stmt))
             return false;
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
@@ -661,8 +655,8 @@ Options:
         return 1;
 
     // Create user
-    if (!db.Run("INSERT INTO dom_users (username, password_hash, admin) VALUES (?, ?, ?);",
-                username, hash, 0 + admin))
+    if (!domain.db.Run("INSERT INTO dom_users (username, password_hash, admin) VALUES (?, ?, ?);",
+                       username, hash, 0 + admin))
         return 1;
 
     LogInfo("Added user");
@@ -705,20 +699,14 @@ Options:
         }
     }
 
-    // Open database
-    sq_Database db;
-    {
-        DomainConfig config;
-        if (!LoadConfig(config_filename, &config))
-            return 1;
-        if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))
-            return 1;
-    }
+    DomainData domain;
+    if (!domain.Open(config_filename))
+        return 1;
 
     // Delete user
-    if (!db.Run("DELETE FROM dom_users WHERE username = ?", username))
+    if (!domain.db.Run("DELETE FROM dom_users WHERE username = ?", username))
         return 1;
-    if (!sqlite3_changes(db)) {
+    if (!sqlite3_changes(domain.db)) {
         LogError("User '%1' does not exist", username);
         return 1;
     }

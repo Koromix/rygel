@@ -15,8 +15,7 @@
 
 namespace RG {
 
-DomainConfig goupile_config;
-sq_Database goupile_db;
+DomainData goupile_domain;
 
 static HeapArray<InstanceData> instances;
 static HashMap<Span<const char>, InstanceData *> instances_map;
@@ -106,7 +105,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 const char *mimetype = http_GetMimeType(GetPathExtension(asset->name));
                 io->AttachBinary(200, asset->data, mimetype, asset->compression_type);
 
-                io->AddCachingHeaders(goupile_config.max_age, instance->etag);
+                io->AddCachingHeaders(goupile_domain.config.max_age, instance->etag);
                 if (asset->source_map) {
                     io->AddHeader("SourceMap", asset->source_map);
                 }
@@ -162,7 +161,7 @@ Options:
                                  %!D..(default: %3)%!0
 
         %!..+--migrate%!0                Migrate database if needed)",
-                FelixTarget, config_filename, goupile_config.http.port);
+                FelixTarget, config_filename, goupile_domain.config.http.port);
     };
 
     // Handle version
@@ -185,12 +184,8 @@ Options:
         }
     }
 
-    // Load main config and database
-    if (!LoadConfig(config_filename, &goupile_config))
-        return 1;
-    if (!goupile_db.Open(goupile_config.database_filename, SQLITE_OPEN_READWRITE))
-        return 1;
-    if (!CheckDomainVersion(&goupile_db))
+    // Load domain information
+    if (!goupile_domain.Open(config_filename))
         return 1;
 
     // Parse arguments
@@ -201,7 +196,7 @@ Options:
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
             } else if (opt.Test("--port", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &goupile_config.http.port))
+                if (!ParseInt(opt.current_value, &goupile_domain.config.http.port))
                     return 1;
             } else if (opt.Test("--migrate")) {
                 migrate = true;
@@ -212,16 +207,16 @@ Options:
         }
 
         // We may have changed some stuff (such as HTTP port), so revalidate
-        if (!goupile_config.Validate())
+        if (!goupile_domain.config.Validate())
             return 1;
     }
 
     // Load instances
     {
-        EnumStatus status = EnumerateDirectory(goupile_config.instances_directory, "*.db", -1,
+        EnumStatus status = EnumerateDirectory(goupile_domain.config.instances_directory, "*.db", -1,
                                                [&](const char *filename, FileType) {
             InstanceData *instance = instances.AppendDefault();
-            filename = Fmt(&temp_alloc, "%1%/%2", goupile_config.instances_directory, filename).ptr;
+            filename = Fmt(&temp_alloc, "%1%/%2", goupile_domain.config.instances_directory, filename).ptr;
 
             if (migrate && !MigrateInstance(filename))
                 return false;
@@ -248,15 +243,18 @@ Options:
 
     // Run!
     http_Daemon daemon;
-    if (!daemon.Start(goupile_config.http, HandleRequest))
+    if (!daemon.Start(goupile_domain.config.http, HandleRequest))
         return 1;
     LogInfo("Listening on port %1 (%2 stack)",
-            goupile_config.http.port, IPStackNames[(int)goupile_config.http.ip_stack]);
+            goupile_domain.config.http.port, IPStackNames[(int)goupile_domain.config.http.ip_stack]);
 
     WaitForInterruption();
 
     daemon.Stop();
-    goupile_db.Close();
+    for (InstanceData &instance: instances) {
+        instance.Close();
+    }
+    goupile_domain.Close();
 
     LogInfo("Exit");
     return 0;

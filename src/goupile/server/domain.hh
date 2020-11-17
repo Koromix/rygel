@@ -22,15 +22,23 @@ struct DomainConfig {
     http_Config http;
     int max_age = 900;
 
-    BlockAllocator str_alloc;
-
     bool Validate() const;
+
+    BlockAllocator str_alloc;
 };
 
 bool LoadConfig(StreamReader *st, DomainConfig *out_config);
 bool LoadConfig(const char *filename, DomainConfig *out_config);
 
-bool CheckDomainVersion(sq_Database *db);
+class DomainData {
+public:
+    DomainConfig config = {};
+    sq_Database db;
+
+    bool Open(const char *filename);
+    void Close();
+};
+
 bool MigrateDomain(sq_Database *db);
 bool MigrateDomain(const char *filename);
 

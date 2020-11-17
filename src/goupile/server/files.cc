@@ -174,7 +174,8 @@ void HandleFilePut(InstanceData *instance, const http_RequestInfo &request, http
     io->RunAsync([=]() {
         // Create temporary file
         FILE *fp = nullptr;
-        const char *tmp_filename = CreateTemporaryFile(goupile_config.temp_directory, ".tmp", &io->allocator, &fp);
+        const char *tmp_filename = CreateTemporaryFile(goupile_domain.config.temp_directory, ".tmp",
+                                                       &io->allocator, &fp);
         if (!tmp_filename)
             return;
         RG_DEFER {
