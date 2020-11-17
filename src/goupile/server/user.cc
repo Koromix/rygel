@@ -31,13 +31,14 @@ const Token *Session::GetToken(InstanceData *instance) const
                 if (!stmt.Next())
                     break;
 
-                const char *zone = (const char *)sqlite3_column_text(stmt, 0);
                 uint32_t permissions = sqlite3_column_int(stmt, 1);
+                const char *zone = (const char *)sqlite3_column_text(stmt, 0);
+                zone = zone ? DuplicateString(zone, &tokens_alloc).ptr : nullptr;
 
                 std::lock_guard<std::shared_mutex> lock(tokens_lock);
 
                 token = tokens_map.SetDefault(instance);
-                token->zone = zone ? DuplicateString(zone, &tokens_alloc).ptr : nullptr;
+                token->zone = zone;
                 token->permissions = permissions;
             } while (false);
         }
