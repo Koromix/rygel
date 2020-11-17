@@ -30,10 +30,10 @@ bool InstanceData::Open(const char *filename)
             return false;
 
         if (version > InstanceVersion) {
-            LogError("Database schema is too recent (%1, expected %2)", version, InstanceVersion);
+            LogError("Schema of '%1' is too recent (%2, expected %3)", filename, version, InstanceVersion);
             return false;
         } else if (version < InstanceVersion) {
-            LogError("Outdated database schema, use %!..+goupile_admin migrate%!0");
+            LogError("Schema of '%1' is outdated", filename);
             return false;
         }
     }
@@ -213,17 +213,6 @@ bool MigrateInstance(sq_Database *db)
 {
     BlockAllocator temp_alloc;
 
-    int version;
-    if (!db->GetUserVersion(&version))
-        return false;
-
-    if (version > InstanceVersion) {
-        LogError("Database schema is too recent (%1, expected %2)", version, InstanceVersion);
-        return false;
-    } else if (version == InstanceVersion) {
-        return true;
-    }
-
     // Database filename
     const char *filename;
     {
@@ -235,6 +224,17 @@ bool MigrateInstance(sq_Database *db)
 
         filename = (const char *)sqlite3_column_text(stmt, 2);
         filename = filename && filename[0] ? DuplicateString(filename, &temp_alloc).ptr : nullptr;
+    }
+
+    int version;
+    if (!db->GetUserVersion(&version))
+        return false;
+
+    if (version > InstanceVersion) {
+        LogError("Schema of '%1' is too recent (%2, expected %3)", filename, version, InstanceVersion);
+        return false;
+    } else if (version == InstanceVersion) {
+        return true;
     }
 
     LogInfo("Migrate instance '%1': %2 to %3",

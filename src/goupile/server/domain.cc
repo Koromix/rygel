@@ -120,6 +120,23 @@ bool LoadConfig(const char *filename, Config *out_config)
     return LoadConfig(&st, out_config);
 }
 
+bool CheckDomainVersion(sq_Database *db)
+{
+    int version;
+    if (!db->GetUserVersion(&version))
+        return false;
+
+    if (version > DomainVersion) {
+        LogError("Domain schema is too recent (%1, expected %2)", version, DomainVersion);
+        return false;
+    } else if (version < DomainVersion) {
+        LogError("Domain schema is outdated");
+        return false;
+    }
+
+    return true;
+}
+
 bool MigrateDomain(sq_Database *db)
 {
     int version;
@@ -127,7 +144,7 @@ bool MigrateDomain(sq_Database *db)
         return false;
 
     if (version > DomainVersion) {
-        LogError("Database schema is too recent (%1, expected %2)", version, DomainVersion);
+        LogError("Domain schema is too recent (%1, expected %2)", version, DomainVersion);
         return false;
     } else if (version == DomainVersion) {
         return true;

@@ -30,6 +30,7 @@ struct Config {
 bool LoadConfig(StreamReader *st, Config *out_config);
 bool LoadConfig(const char *filename, Config *out_config);
 
+bool CheckDomainVersion(sq_Database *db);
 bool MigrateDomain(sq_Database *db);
 bool MigrateDomain(const char *filename);
 
