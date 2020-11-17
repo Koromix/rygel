@@ -443,7 +443,7 @@ Options:
         success &= db.Run(sql, app_name, "AppName");
 
         if (!success)
-            return false;
+            return 1;
     }
 
     // Create default files
@@ -470,7 +470,7 @@ Options:
                     LocalArray<uint8_t, 16384> buf;
                     buf.len = reader.Read(buf.data);
                     if (buf.len < 0)
-                        return false;
+                        return 1;
 
                     writer.Write(buf);
                     crypto_hash_sha256_update(&state, buf.data, buf.len);
@@ -626,7 +626,7 @@ Options:
     {
         sq_Statement stmt;
         if (!domain.db.Prepare("SELECT admin FROM dom_users WHERE username = ?", &stmt))
-            return false;
+            return 1;
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
         if (stmt.Next()) {
