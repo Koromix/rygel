@@ -297,13 +297,14 @@ Options:
     if (!LoadConfig(config_filename, &config))
         return 1;
 
-    bool success = true;
-
     // Migrate main database
-    success &= MigrateDomain(config.database_filename);
+    if (!MigrateDomain(config.database_filename))
+        return 1;
 
     // Migrate instances
     {
+        bool success = true;
+
         EnumStatus status = EnumerateDirectory(config.instances_directory, "*.db", -1,
                                                [&](const char *filename, FileType) {
             filename = Fmt(&temp_alloc, "%1%/%2", config.instances_directory, filename).ptr;
@@ -313,9 +314,12 @@ Options:
         });
         if (status != EnumStatus::Done)
             return 1;
+
+        if (!success)
+            return 1;
     }
 
-    return !success;
+    return 0;
 }
 
 static int RunAddInstance(Span<const char *> arguments)
