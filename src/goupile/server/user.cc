@@ -61,20 +61,24 @@ static void WriteProfileJson(const Session *session, const Token *token, json_Wr
 
     if (session) {
         out_json->Key("username"); out_json->String(session->username);
-        if (token->zone) {
-            out_json->Key("zone"); out_json->String(token->zone);
-        } else {
-            out_json->Key("zone"); out_json->Null();
-        }
-        out_json->Key("permissions"); out_json->StartObject();
-        for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
-            char js_name[64];
-            ConvertToJsonName(UserPermissionNames[i], js_name);
-
-            out_json->Key(js_name); out_json->Bool(token->permissions & (1 << i));
-        }
-        out_json->EndObject();
+        out_json->Key("admin"); out_json->Bool(session->admin);
         out_json->Key("demo"); out_json->Bool(session->demo);
+
+        if (token) {
+            if (token->zone) {
+                out_json->Key("zone"); out_json->String(token->zone);
+            } else {
+                out_json->Key("zone"); out_json->Null();
+            }
+            out_json->Key("permissions"); out_json->StartObject();
+            for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
+                char js_name[64];
+                ConvertToJsonName(UserPermissionNames[i], js_name);
+
+                out_json->Key(js_name); out_json->Bool(token->permissions & (1 << i));
+            }
+            out_json->EndObject();
+        }
     }
 
     out_json->EndObject();
@@ -139,13 +143,14 @@ void HandleUserLogin(InstanceData *instance, const http_RequestInfo &request, ht
         int64_t now = GetMonotonicTime();
 
         sq_Statement stmt;
-        if (!goupile_domain.db.Prepare(R"(SELECT password_hash FROM dom_users
+        if (!goupile_domain.db.Prepare(R"(SELECT password_hash, admin FROM dom_users
                                           WHERE username = ?)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
         if (stmt.Next()) {
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
+            bool admin = (sqlite3_column_int(stmt, 1) == 1);
 
             if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
                 int64_t time = GetUnixTime();
@@ -155,7 +160,9 @@ void HandleUserLogin(InstanceData *instance, const http_RequestInfo &request, ht
                                     time, request.client_addr, "login", username))
                     return;
 
-                RetainPtr<const Session> session = CreateUserSession(request, io, username);
+                RetainPtr<Session> session = CreateUserSession(request, io, username);
+                session->admin = admin;
+
                 const Token *token = session->GetToken(instance);
 
                 http_JsonPageBuilder json(request.compression_type);

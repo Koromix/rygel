@@ -42,6 +42,7 @@ class Session: public RetainObject {
 
 public:
     const char *username;
+    bool admin;
     bool demo;
 
     const Token *GetToken(const InstanceData *instance) const;
