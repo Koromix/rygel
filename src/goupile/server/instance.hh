@@ -21,6 +21,7 @@ static const char *const SyncModeNames[] = {
 
 class InstanceData {
 public:
+    const char *key = nullptr;
     const char *filename = nullptr;
     sq_Database db;
 

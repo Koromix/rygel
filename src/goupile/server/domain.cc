@@ -7,7 +7,7 @@
 
 namespace RG {
 
-static const int DomainVersion = 1;
+static const int DomainVersion = 2;
 
 bool Config::Validate() const
 {
@@ -179,9 +179,23 @@ bool MigrateDomain(sq_Database *db)
                 )");
                 if (!success)
                     return sq_TransactionResult::Error;
+            } [[fallthrough]];
+
+            case 1: {
+                bool success = db->Run(R"(
+                    CREATE TABLE dom_permissions (
+                        username TEXT NOT NULL REFERENCES dom_users (username),
+                        instance TEXT NOT NULL,
+                        permissions INTEGER NOT NULL,
+                        zone TEXT
+                    );
+                    CREATE UNIQUE INDEX dom_permissions_ui ON dom_permissions (username, instance);
+                )");
+                if (!success)
+                    return sq_TransactionResult::Error;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 1);
+            RG_STATIC_ASSERT(DomainVersion == 2);
         }
 
         int64_t time = GetUnixTime();

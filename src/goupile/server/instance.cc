@@ -11,17 +11,25 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-static const int InstanceVersion = 18;
+static const int InstanceVersion = 19;
 
 bool InstanceData::Open(const char *filename)
 {
     RG_DEFER_N(err_guard) { Close(); };
     Close();
 
+    // Instance key
+    {
+        Span<const char> key = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
+        key = SplitStrReverse(key, '.');
+
+        this->key = DuplicateString(key, &str_alloc).ptr;
+        this->filename = DuplicateString(filename, &str_alloc).ptr;
+    }
+
     // Open database
     if (!db.Open(filename, SQLITE_OPEN_READWRITE))
         return false;
-    this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     // Check schema version
     {
@@ -159,6 +167,7 @@ void InstanceData::InitAssets()
 
 void InstanceData::Close()
 {
+    key = nullptr;
     filename = nullptr;
     db.Close();
     config = {};
@@ -792,9 +801,22 @@ bool MigrateInstance(sq_Database *db)
 
                 if (!success)
                     return sq_TransactionResult::Error;
+            } [[fallthrough]];
+
+            case 18: {
+                bool success = db->Run(R"(
+                    DROP TABLE dom_permissions;
+                )");
+
+                if (version) {
+                    LogInfo("Existing instance permissions must be recreated on main database");
+                }
+
+                if (!success)
+                    return sq_TransactionResult::Error;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 18);
+            RG_STATIC_ASSERT(InstanceVersion == 19);
         }
 
         int64_t time = GetUnixTime();

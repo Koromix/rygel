@@ -13,7 +13,7 @@ namespace RG {
 
 static http_SessionManager sessions;
 
-const Token *Session::GetToken(InstanceData *instance) const
+const Token *Session::GetToken(const InstanceData *instance) const
 {
     Token *token;
     {
@@ -25,9 +25,11 @@ const Token *Session::GetToken(InstanceData *instance) const
         if (!demo) {
             do {
                 sq_Statement stmt;
-                if (!instance->db.Prepare("SELECT zone, permissions FROM dom_permissions WHERE username = ?", &stmt))
+                if (!goupile_db.Prepare(R"(SELECT zone, permissions FROM dom_permissions
+                                           WHERE instance = ? AND username = ?;)", &stmt))
                     break;
-                sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 1, instance->key, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 2, username, -1, SQLITE_STATIC);
                 if (!stmt.Next())
                     break;
 

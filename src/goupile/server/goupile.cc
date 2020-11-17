@@ -190,6 +190,8 @@ Options:
         return 1;
     if (!goupile_db.Open(goupile_config.database_filename, SQLITE_OPEN_READWRITE))
         return 1;
+    if (!CheckDomainVersion(&goupile_db))
+        return 1;
 
     // Parse arguments
     {

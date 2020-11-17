@@ -44,7 +44,7 @@ public:
     const char *username;
     bool demo;
 
-    const Token *GetToken(InstanceData *instance) const;
+    const Token *GetToken(const InstanceData *instance) const;
 };
 
 RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http_IO *io);
