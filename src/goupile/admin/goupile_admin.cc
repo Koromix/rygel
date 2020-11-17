@@ -195,7 +195,7 @@ Options:
     LogInfo();
 
     // Create config
-    Config config;
+    DomainConfig config;
     {
         const char *filename = Fmt(&temp_alloc, "%1%/goupile.ini", root_directory).ptr;
         files.Append(filename);
@@ -293,7 +293,7 @@ Options:
         }
     }
 
-    Config config;
+    DomainConfig config;
     if (!LoadConfig(config_filename, &config))
         return 1;
 
@@ -406,7 +406,7 @@ Options:
         app_name = instance_key;
     }
 
-    Config config;
+    DomainConfig config;
     if (!LoadConfig(config_filename, &config))
         return 1;
 
@@ -544,7 +544,7 @@ Options:
         }
     }
 
-    Config config;
+    DomainConfig config;
     if (!LoadConfig(config_filename, &config))
         return 1;
 
@@ -617,7 +617,7 @@ Options:
     // Open database
     sq_Database db;
     {
-        Config config;
+        DomainConfig config;
         if (!LoadConfig(config_filename, &config))
             return 1;
         if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))
@@ -704,7 +704,7 @@ Options:
     // Open database
     sq_Database db;
     {
-        Config config;
+        DomainConfig config;
         if (!LoadConfig(config_filename, &config))
             return 1;
         if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))

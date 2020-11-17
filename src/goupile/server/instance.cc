@@ -572,7 +572,7 @@ bool MigrateInstance(sq_Database *db)
 
                 // Default settings
                 {
-                    Config fake1;
+                    DomainConfig fake1;
                     decltype(InstanceData::config) fake2;
 
                     const char *sql = "INSERT INTO fs_settings (key, value) VALUES (?, ?)";

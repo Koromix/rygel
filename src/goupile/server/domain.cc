@@ -9,7 +9,7 @@ namespace RG {
 
 static const int DomainVersion = 2;
 
-bool Config::Validate() const
+bool DomainConfig::Validate() const
 {
     bool valid = true;
 
@@ -22,9 +22,9 @@ bool Config::Validate() const
     return valid;
 }
 
-bool LoadConfig(StreamReader *st, Config *out_config)
+bool LoadConfig(StreamReader *st, DomainConfig *out_config)
 {
-    Config config;
+    DomainConfig config;
 
     Span<const char> root_directory = GetPathDirectory(st->GetFileName());
 
@@ -114,7 +114,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
     return true;
 }
 
-bool LoadConfig(const char *filename, Config *out_config)
+bool LoadConfig(const char *filename, DomainConfig *out_config)
 {
     StreamReader st(filename);
     return LoadConfig(&st, out_config);

@@ -10,7 +10,7 @@
 
 namespace RG {
 
-struct Config {
+struct DomainConfig {
     const char *database_filename = nullptr;
     const char *instances_directory = nullptr;
     const char *temp_directory = nullptr;
@@ -27,8 +27,8 @@ struct Config {
     bool Validate() const;
 };
 
-bool LoadConfig(StreamReader *st, Config *out_config);
-bool LoadConfig(const char *filename, Config *out_config);
+bool LoadConfig(StreamReader *st, DomainConfig *out_config);
+bool LoadConfig(const char *filename, DomainConfig *out_config);
 
 bool CheckDomainVersion(sq_Database *db);
 bool MigrateDomain(sq_Database *db);

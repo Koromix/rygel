@@ -15,7 +15,7 @@
 
 namespace RG {
 
-Config goupile_config;
+DomainConfig goupile_config;
 sq_Database goupile_db;
 
 static HeapArray<InstanceData> instances;

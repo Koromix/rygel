@@ -8,10 +8,10 @@
 
 namespace RG {
 
-struct Config;
+struct DomainConfig;
 class sq_Database;
 
-extern Config goupile_config;
+extern DomainConfig goupile_config;
 extern sq_Database goupile_db;
 
 }
