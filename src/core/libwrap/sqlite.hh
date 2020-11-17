@@ -107,6 +107,9 @@ public:
     bool Open(const char *filename, unsigned int flags);
     bool Close();
 
+    bool GetUserVersion(int *out_version);
+    bool SetUserVersion(int version);
+
     sq_TransactionResult Transaction(FunctionRef<sq_TransactionResult()> func);
 
     bool Run(const char *sql);

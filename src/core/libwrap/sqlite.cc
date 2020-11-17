@@ -87,6 +87,25 @@ bool sq_Database::Close()
     return true;
 }
 
+bool sq_Database::GetUserVersion(int *out_version)
+{
+    sq_Statement stmt;
+    if (!Prepare("PRAGMA user_version;", &stmt))
+        return false;
+    if (!stmt.Next())
+        return false;
+
+    *out_version = sqlite3_column_int(stmt, 0);
+    return true;
+}
+
+bool sq_Database::SetUserVersion(int version)
+{
+    char buf[128];
+    Fmt(buf, "PRAGMA user_version = %1;", version);
+    return Run(buf);
+}
+
 sq_TransactionResult sq_Database::Transaction(FunctionRef<sq_TransactionResult()> func)
 {
     std::lock_guard<std::shared_mutex> lock(transact_mutex);

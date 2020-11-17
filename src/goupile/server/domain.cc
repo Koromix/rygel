@@ -123,16 +123,8 @@ bool LoadConfig(const char *filename, Config *out_config)
 bool MigrateDomain(sq_Database *db)
 {
     int version;
-    {
-        sq_Statement stmt;
-        if (!db->Prepare("PRAGMA user_version;", &stmt))
-            return 1;
-
-        bool success = stmt.Next();
-        RG_ASSERT(success);
-
-        version = sqlite3_column_int(stmt, 0);
-    }
+    if (!db->GetUserVersion(&version))
+        return false;
 
     if (version > DomainVersion) {
         LogError("Database schema is too recent (%1, expected %2)", version, DomainVersion);
@@ -179,10 +171,7 @@ bool MigrateDomain(sq_Database *db)
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
                      DomainVersion, FelixVersion, time))
             return sq_TransactionResult::Error;
-
-        char buf[128];
-        Fmt(buf, "PRAGMA user_version = %1;", DomainVersion);
-        if (!db->Run(buf))
+        if (!db->SetUserVersion(DomainVersion))
             return sq_TransactionResult::Error;
 
         return sq_TransactionResult::Commit;

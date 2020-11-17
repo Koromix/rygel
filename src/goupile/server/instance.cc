@@ -25,14 +25,9 @@ bool InstanceData::Open(const char *filename)
 
     // Check schema version
     {
-        sq_Statement stmt;
-        if (!db.Prepare("PRAGMA user_version;", &stmt))
-            return 1;
-
-        bool success = stmt.Next();
-        RG_ASSERT(success);
-
-        int version = sqlite3_column_int(stmt, 0);
+        int version;
+        if (!db.GetUserVersion(&version))
+            return false;
 
         if (version > InstanceVersion) {
             LogError("Database schema is too recent (%1, expected %2)", version, InstanceVersion);
@@ -219,16 +214,8 @@ bool MigrateInstance(sq_Database *db)
     BlockAllocator temp_alloc;
 
     int version;
-    {
-        sq_Statement stmt;
-        if (!db->Prepare("PRAGMA user_version;", &stmt))
-            return 1;
-
-        bool success = stmt.Next();
-        RG_ASSERT(success);
-
-        version = sqlite3_column_int(stmt, 0);
-    }
+    if (!db->GetUserVersion(&version))
+        return false;
 
     if (version > InstanceVersion) {
         LogError("Database schema is too recent (%1, expected %2)", version, InstanceVersion);
@@ -814,10 +801,7 @@ bool MigrateInstance(sq_Database *db)
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
                      InstanceVersion, FelixVersion, time))
             return sq_TransactionResult::Error;
-
-        char buf[128];
-        Fmt(buf, "PRAGMA user_version = %1;", InstanceVersion);
-        if (!db->Run(buf))
+        if (!db->SetUserVersion(InstanceVersion))
             return sq_TransactionResult::Error;
 
         return sq_TransactionResult::Commit;
