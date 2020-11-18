@@ -56,9 +56,9 @@ static void ExportRecord(sq_Statement *stmt, json_Writer *json)
 void HandleRecordLoad(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    const Token *token = session->GetToken(instance);
+    const Token *token = session ? session->GetToken(instance) : nullptr;
 
-    if (!session) {
+    if (!token) {
         LogError("User is not allowed to view data");
         io->AttachError(403);
         return;
@@ -200,10 +200,10 @@ void HandleRecordColumns(InstanceData *instance, const http_RequestInfo &request
 void HandleRecordSync(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    const Token *token = session->GetToken(instance);
+    const Token *token = session ? session->GetToken(instance) : nullptr;
 
     // XXX: Check new/edit permissions correctly
-    if (!session || !token->HasPermission(UserPermission::Edit)) {
+    if (!token || !token->HasPermission(UserPermission::Edit)) {
         LogError("User is not allowed to sync data");
         io->AttachError(403);
         return;
