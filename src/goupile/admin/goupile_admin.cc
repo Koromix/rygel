@@ -219,7 +219,7 @@ Options:
             directories.Append(path);
 
 #ifndef _WIN32
-            if (change_owner && !ChangeFileOwner(directory, owner_uid, owner_gid))
+            if (change_owner && !ChangeFileOwner(path, owner_uid, owner_gid))
                 return false;
 #endif
 
@@ -240,7 +240,7 @@ Options:
     if (!MigrateDomain(&db))
         return 1;
 #ifndef _WIN32
-    if (change_owner && !ChangeFileOwner(filename, owner_uid, owner_gid))
+    if (change_owner && !ChangeFileOwner(config.database_filename, owner_uid, owner_gid))
         return 1;
 #endif
 
