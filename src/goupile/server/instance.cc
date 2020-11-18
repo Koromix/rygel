@@ -21,7 +21,7 @@ bool InstanceData::Open(const char *filename)
     // Instance key
     {
         Span<const char> key = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
-        key = SplitStrReverse(key, '.');
+        key = SplitStr(key, '.');
 
         this->key = DuplicateString(key, &str_alloc).ptr;
         this->filename = DuplicateString(filename, &str_alloc).ptr;
