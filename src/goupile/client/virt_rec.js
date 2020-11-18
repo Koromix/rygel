@@ -289,11 +289,11 @@ function VirtualRecords(db, zone) {
     };
 
     this.sync = async function() {
+        let new_fragments = await db.loadAll('rec_fragments/anchor', IDBKeyRange.only(-1));
+        new_fragments.sort((frag1, frag2) => util.compareValues(frag1._ikey, frag2._ikey));
+
         // Upload new fragments
         {
-            let new_fragments = await db.loadAll('rec_fragments/anchor', IDBKeyRange.only(-1));
-            new_fragments.sort((frag1, frag2) => util.compareValues(frag1._ikey, frag2._ikey));
-
             let records = util.mapRLE(new_fragments, frag => frag.id, (id, offset, length) => {
                 let fragments = new_fragments.slice(offset, offset + length);
                 let frag0 = fragments[0];
@@ -408,6 +408,7 @@ function VirtualRecords(db, zone) {
                     values: frag.values
                 })));
 
+                await db.saveAll('rec_backup', new_fragments);
                 await db.saveAll('rec_entries', entries);
                 await db.saveAll('rec_fragments', fragments);
 
