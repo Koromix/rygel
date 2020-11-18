@@ -22,63 +22,59 @@ const Token *Session::GetToken(const InstanceData *instance) const
     }
 
     if (!token) {
-        if (!demo) {
-            do {
-                sq_Statement stmt;
-                if (!goupile_domain.db.Prepare(R"(SELECT zone, permissions FROM dom_permissions
-                                                  WHERE instance = ? AND username = ?;)", &stmt))
-                    break;
-                sqlite3_bind_text(stmt, 1, instance->key, -1, SQLITE_STATIC);
-                sqlite3_bind_text(stmt, 2, username, -1, SQLITE_STATIC);
-                if (!stmt.Next())
-                    break;
+        do {
+            sq_Statement stmt;
+            if (!goupile_domain.db.Prepare(R"(SELECT zone, permissions FROM dom_permissions
+                                              WHERE instance = ? AND username = ?;)", &stmt))
+                break;
+            sqlite3_bind_text(stmt, 1, instance->key, -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 2, username, -1, SQLITE_STATIC);
+            if (!stmt.Next())
+                break;
 
-                uint32_t permissions = sqlite3_column_int(stmt, 1);
-                const char *zone = (const char *)sqlite3_column_text(stmt, 0);
-                zone = zone ? DuplicateString(zone, &tokens_alloc).ptr : nullptr;
+            uint32_t permissions = sqlite3_column_int(stmt, 1);
+            const char *zone = (const char *)sqlite3_column_text(stmt, 0);
+            zone = zone ? DuplicateString(zone, &tokens_alloc).ptr : nullptr;
 
-                std::lock_guard<std::shared_mutex> lock(tokens_lock);
+            std::lock_guard<std::shared_mutex> lock(tokens_lock);
 
-                token = tokens_map.SetDefault(instance);
-                token->zone = zone;
-                token->permissions = permissions;
-            } while (false);
-        }
+            token = tokens_map.SetDefault(instance);
+            token->zone = zone;
+            token->permissions = permissions;
+        } while (false);
 
-        // As last resort (after error or in demo session), give token without any permission
+        // User is not assigned to this instance, cache this information
         if (!token) {
             std::lock_guard<std::shared_mutex> lock(tokens_lock);
             token = tokens_map.SetDefault(instance);
         }
     }
 
-    return token;
+    return token->permissions ? token : nullptr;
 }
 
 static void WriteProfileJson(const Session *session, const Token *token, json_Writer *out_json)
 {
     out_json->StartObject();
 
-    if (session) {
+    if (session && token) {
         out_json->Key("username"); out_json->String(session->username);
         out_json->Key("admin"); out_json->Bool(session->admin);
         out_json->Key("demo"); out_json->Bool(session->demo);
 
-        if (token) {
-            if (token->zone) {
-                out_json->Key("zone"); out_json->String(token->zone);
-            } else {
-                out_json->Key("zone"); out_json->Null();
-            }
-            out_json->Key("permissions"); out_json->StartObject();
-            for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
-                char js_name[64];
-                ConvertToJsonName(UserPermissionNames[i], js_name);
-
-                out_json->Key(js_name); out_json->Bool(token->permissions & (1 << i));
-            }
-            out_json->EndObject();
+        if (token->zone) {
+            out_json->Key("zone"); out_json->String(token->zone);
+        } else {
+            out_json->Key("zone"); out_json->Null();
         }
+        out_json->Key("permissions"); out_json->StartObject();
+        for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
+            char js_name[64];
+            ConvertToJsonName(UserPermissionNames[i], js_name);
+
+            out_json->Key(js_name); out_json->Bool(token->permissions & (1 << i));
+        }
+        out_json->EndObject();
     }
 
     out_json->EndObject();
@@ -143,10 +139,13 @@ void HandleUserLogin(InstanceData *instance, const http_RequestInfo &request, ht
         int64_t now = GetMonotonicTime();
 
         sq_Statement stmt;
-        if (!goupile_domain.db.Prepare(R"(SELECT password_hash, admin FROM dom_users
-                                          WHERE username = ?)", &stmt))
+        if (!goupile_domain.db.Prepare(R"(SELECT u.password_hash, u.admin FROM dom_users u
+                                          INNER JOIN dom_permissions p ON (p.username = u.username)
+                                          WHERE u.username = ? AND
+                                                p.instance = ? AND p.permissions > 0;)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, instance->key, -1, SQLITE_STATIC);
 
         if (stmt.Next()) {
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
