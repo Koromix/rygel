@@ -457,7 +457,7 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 config_filename = opt.current_value;
             }
         }

@@ -104,17 +104,17 @@ Commands:
         OptionParser opt(arguments, (int)OptionParser::Flag::SkipNonOptions);
 
         while (opt.Next()) {
-            if (opt.Test("--help", OptionType::OptionalValue)) {
+            if (opt.Test("--help")) {
                 // Don't try to load anything in this case
                 config_filename = nullptr;
                 break;
-            } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 config_filename = opt.current_value;
             }
         }
     }
 
-    if (!LoadConfig(config_filename, &drdc_config))
+    if (config_filename && !LoadConfig(config_filename, &drdc_config))
         return 1;
 
 #define HANDLE_COMMAND(Cmd, Func) \

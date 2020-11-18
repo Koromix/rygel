@@ -599,7 +599,7 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 config_filename = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 password = opt.current_value;
@@ -684,7 +684,7 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 config_filename = opt.current_value;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
