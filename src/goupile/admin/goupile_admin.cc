@@ -203,10 +203,6 @@ Options:
 
         if (!WriteFile(DefaultConfig, filename))
             return 1;
-#ifndef _WIN32
-        if (change_owner && !ChangeFileOwner(filename, owner_uid, owner_gid))
-            return 1;
-#endif
 
         if (!LoadConfig(filename, &config))
             return 1;
