@@ -11,6 +11,7 @@
 
 #ifndef _WIN32
     #include <sys/types.h>
+    #include <sys/stat.h>
     #include <pwd.h>
     #include <unistd.h>
 #endif
@@ -332,11 +333,6 @@ static int RunAddInstance(Span<const char *> arguments)
     Span<const char> app_key = {};
     Span<const char> app_name = {};
     bool empty = false;
-#ifndef _WIN32
-    bool change_owner = false;
-    uid_t owner_uid = 0;
-    gid_t owner_gid = 0;
-#endif
     const char *instance_key = nullptr;
 
     const auto print_usage = [&](FILE *fp) {
@@ -354,11 +350,6 @@ Options:
                                  %!D..(default: project key)%!0
 
         %!..+--empty%!0                  Don't create default files)", FelixTarget, config_filename);
-
-#ifndef _WIN32
-        PrintLn(fp, R"(
-    %!..+-o, --owner <owner>%!0          Change directory and file owner)");
-#endif
     };
 
     // Parse arguments
@@ -379,13 +370,6 @@ Options:
                 app_name = opt.current_value;
             } else if (opt.Test("--empty")) {
                 empty = true;
-#ifndef _WIN32
-            } else if (opt.Test("-o", "--owner", OptionType::Value)) {
-                change_owner = true;
-
-                if (!FindPosixUser(opt.current_value, &owner_uid, &owner_gid))
-                    return 1;
-#endif
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -421,6 +405,21 @@ Options:
         return 1;
     }
 
+#ifndef _WIN32
+    uid_t owner_uid = 0;
+    gid_t owner_gid = 0;
+    {
+        struct stat sb;
+        if (stat(domain.config.database_filename, &sb) < 0) {
+            LogError("Failed to stat '%1': %2", domain.config.database_filename, strerror(errno));
+            return 1;
+        }
+
+        owner_uid = sb.st_uid;
+        owner_gid = sb.st_gid;
+    }
+#endif
+
     // Create instance database
     sq_Database db;
     if (!db.Open(database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
@@ -429,7 +428,7 @@ Options:
     if (!MigrateInstance(&db))
         return 1;
 #ifndef _WIN32
-    if (change_owner && !ChangeFileOwner(database_filename, owner_uid, owner_gid))
+    if (!ChangeFileOwner(database_filename, owner_uid, owner_gid))
         return 1;
 #endif
 
