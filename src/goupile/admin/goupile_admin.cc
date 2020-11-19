@@ -9,7 +9,10 @@
 #include "../server/user.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
-#ifndef _WIN32
+#ifdef _WIN32
+    typedef unsigned int uid_t;
+    typedef unsigned int gid_t;
+#else
     #include <sys/types.h>
     #include <sys/stat.h>
     #include <pwd.h>
@@ -105,17 +108,19 @@ again:
     *out_gid = pwd->pw_gid;
     return true;
 }
+#endif
 
 static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
 {
+#ifndef _WIN32
     if (chown(filename, uid, gid) < 0) {
         LogError("Failed to change '%1' owner: %2", filename, strerror(errno));
         return false;
     }
+#endif
 
     return true;
 }
-#endif
 
 static int RunInit(Span<const char *> arguments)
 {
@@ -124,11 +129,9 @@ static int RunInit(Span<const char *> arguments)
     // Options
     const char *username = nullptr;
     const char *password = nullptr;
-#ifndef _WIN32
     bool change_owner = false;
     uid_t owner_uid = 0;
     gid_t owner_gid = 0;
-#endif
     const char *root_directory = nullptr;
 
     const auto print_usage = [](FILE *fp) {
@@ -201,10 +204,8 @@ Options:
             return 1;
         directories.Append(root_directory);
     }
-#ifndef _WIN32
     if (change_owner && !ChangeFileOwner(root_directory, owner_uid, owner_gid))
         return 1;
-#endif
 
     // Gather missing information
     if (!username) {
@@ -244,11 +245,8 @@ Options:
             if (!MakeDirectory(path))
                 return false;
             directories.Append(path);
-
-#ifndef _WIN32
             if (change_owner && !ChangeFileOwner(path, owner_uid, owner_gid))
                 return false;
-#endif
 
             return true;
         };
@@ -266,10 +264,8 @@ Options:
     files.Append(config.database_filename);
     if (!MigrateDomain(&db))
         return 1;
-#ifndef _WIN32
     if (change_owner && !ChangeFileOwner(config.database_filename, owner_uid, owner_gid))
         return 1;
-#endif
 
     // Create default admin user
     {
@@ -429,9 +425,9 @@ Options:
         return 1;
     }
 
-#ifndef _WIN32
     uid_t owner_uid = 0;
     gid_t owner_gid = 0;
+#ifndef _WIN32
     {
         struct stat sb;
         if (stat(domain.config.database_filename, &sb) < 0) {
@@ -451,10 +447,8 @@ Options:
     RG_DEFER_N(db_guard) { UnlinkFile(database_filename); };
     if (!MigrateInstance(&db))
         return 1;
-#ifndef _WIN32
     if (!ChangeFileOwner(database_filename, owner_uid, owner_gid))
         return 1;
-#endif
 
     // Set default settings
     {
