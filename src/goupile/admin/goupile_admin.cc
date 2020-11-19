@@ -34,6 +34,38 @@ static const char *DefaultConfig = R"(
 # AsyncThreads =
 )";
 
+static bool CheckKeyName(Span<const char> key, const char *type)
+{
+    const auto test_key_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '_'; };
+
+    if (!key.len) {
+        LogError("%1 key cannot be empty", type);
+        return false;
+    }
+    if (!std::all_of(key.begin(), key.end(), test_key_char)) {
+        LogError("%1 key must only contain lowercase alphanumeric or '_' characters", type);
+        return false;
+    }
+
+    return true;
+}
+
+static bool CheckUserName(Span<const char> username)
+{
+    const auto test_user_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_' || c == '.'; };
+
+    if (!username.len) {
+        LogError("Username cannot be empty");
+        return false;
+    }
+    if (!std::all_of(username.begin(), username.end(), test_user_char)) {
+        LogError("Username must only contain alphanumeric, '_' or '.' characters");
+        return false;
+    }
+
+    return true;
+}
+
 static bool HashPassword(Span<const char> password, char out_hash[crypto_pwhash_STRBYTES])
 {
     if (crypto_pwhash_str(out_hash, password.ptr, password.len,
@@ -180,10 +212,8 @@ Options:
         if (!username)
             return 1;
     }
-    if (!username[0]) {
-        LogError("Username cannot be empty");
+    if (!CheckUserName(username))
         return 1;
-    }
     if (!password) {
         password = Prompt("Password: ", "*", &temp_alloc);
         if (!password)
@@ -373,13 +403,11 @@ Options:
         }
 
         instance_key = opt.ConsumeNonOption();
-        if (!instance_key) {
-            LogError("Instance key must be provided");
-            return 1;
-        }
     }
 
     // Default values
+    if (!CheckKeyName(instance_key, "Instance"))
+        return 1;
     if (!base_url.len) {
         base_url = Fmt(&temp_alloc, "/%1/", instance_key);
     }
@@ -577,7 +605,7 @@ static int RunAddUser(Span<const char *> arguments)
     bool admin = false;
 
     const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 add_user [options] <username>%!0
+        PrintLn(fp, R"(Usage: %!..+%1 add_user [options] [username]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -607,14 +635,19 @@ Options:
         }
 
         username = opt.ConsumeNonOption();
-        if (!username) {
-            LogError("No username provided");
-            return 1;
-        }
     }
 
     DomainData domain;
     if (!domain.Open(config_filename))
+        return 1;
+
+    // Get username and check it
+    if (!username) {
+        username = Prompt("User: ", nullptr, &temp_alloc);
+        if (!username)
+            return 1;
+    }
+    if (!CheckUserName(username))
         return 1;
 
     // Find user first
@@ -632,7 +665,7 @@ Options:
         }
     }
 
-    // Gather missing information
+    // Get password if needed
     if (!password) {
         password = Prompt("Password: ", "*", &temp_alloc);
         if (!password)
