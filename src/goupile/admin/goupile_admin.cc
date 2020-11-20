@@ -549,7 +549,9 @@ Options:
     if (!domain.db.Run("INSERT INTO dom_instances (instance) VALUES (?);", instance_key))
         return 1;
 
+    LogInfo("Added instance");
     db_guard.Disable();
+
     return 0;
 }
 
@@ -615,6 +617,7 @@ Options:
             return 1;
     }
 
+    LogInfo("Deleted instance");
     return 0;
 }
 
