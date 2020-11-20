@@ -42,7 +42,7 @@ public:
     BlockAllocator str_alloc;
     BlockAllocator assets_alloc;
 
-    bool Open(const char *filename);
+    bool Open(const char *key, const char *filename);
     bool Validate();
 
     // Can be restarted (for debug builds)

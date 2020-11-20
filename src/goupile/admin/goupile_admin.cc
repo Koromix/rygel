@@ -262,7 +262,7 @@ Options:
     if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
         return 1;
     files.Append(config.database_filename);
-    if (!MigrateDomain(&db))
+    if (!MigrateDomain(&db, config.instances_directory))
         return 1;
     if (change_owner && !ChangeFileOwner(config.database_filename, owner_uid, owner_gid))
         return 1;
@@ -320,27 +320,36 @@ Options:
     if (!LoadConfig(config_filename, &config))
         return 1;
 
-    // Migrate main database
-    if (!MigrateDomain(config.database_filename))
+    // Migrate and open main database
+    sq_Database db;
+    if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))
+        return 1;
+    if (!MigrateDomain(&db, config.instances_directory))
         return 1;
 
     // Migrate instances
     {
+        sq_Statement stmt;
+        if (!db.Prepare("SELECT instance FROM dom_instances;", &stmt))
+            return 1;
+
         bool success = true;
 
-        EnumStatus status = EnumerateDirectory(config.instances_directory, "*.db", -1,
-                                               [&](const char *filename, FileType) {
-            filename = Fmt(&temp_alloc, "%1%/%2", config.instances_directory, filename).ptr;
-            success &= MigrateInstance(filename);
+        while (stmt.Next()) {
+            const char *key = (const char *)sqlite3_column_text(stmt, 0);
+            const char *filename = Fmt(&temp_alloc, "%1%/%2.db", config.instances_directory, key).ptr;
 
-            return true;
-        });
-        if (status != EnumStatus::Done)
+            success &= MigrateInstance(filename);
+        }
+        if (!stmt.IsValid())
             return 1;
 
         if (!success)
             return 1;
     }
+
+    if (!db.Close())
+        return 1;
 
     return 0;
 }
@@ -355,6 +364,7 @@ static int RunAddInstance(Span<const char *> arguments)
     Span<const char> app_key = {};
     Span<const char> app_name = {};
     bool empty = false;
+    bool force = false;
     const char *instance_key = nullptr;
 
     const auto print_usage = [&](FILE *fp) {
@@ -371,7 +381,8 @@ Options:
         %!..+--app_name <name>%!0        Change application name
                                  %!D..(default: project key)%!0
 
-        %!..+--empty%!0                  Don't create default files)", FelixTarget, config_filename);
+        %!..+--empty%!0                  Don't create default files
+        %!..+--force%!0                  Force creation if database already exists)", FelixTarget, config_filename);
     };
 
     // Parse arguments
@@ -392,6 +403,8 @@ Options:
                 app_name = opt.current_value;
             } else if (opt.Test("--empty")) {
                 empty = true;
+            } else if (opt.Test("--force")) {
+                force = true;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -418,10 +431,25 @@ Options:
     if (!domain.Open(config_filename))
         return 1;
 
-    // Check for existing instance database
+    // Check for existing instance
+    {
+        sq_Statement stmt;
+        if (!domain.db.Prepare("SELECT instance FROM dom_instances WHERE instance = ?;", &stmt))
+            return 1;
+        sqlite3_bind_text(stmt, 1, instance_key, -1, SQLITE_STATIC);
+
+        if (stmt.Next()) {
+            LogError("Instance '%1' already exists", instance_key);
+            return 1;
+        } else if (!stmt.IsValid()) {
+            return 1;
+        }
+    }
+
     const char *database_filename = Fmt(&temp_alloc, "%1%/%2.db", domain.config.instances_directory, instance_key).ptr;
-    if (TestFile(database_filename)) {
-        LogError("Instance '%1' already exists", instance_key);
+    bool reuse_database = TestFile(database_filename);
+    if (reuse_database && !force) {
+        LogError("Database '%1' already exists (old deleted instance?)", database_filename);
         return 1;
     }
 
@@ -444,7 +472,11 @@ Options:
     sq_Database db;
     if (!db.Open(database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
         return 1;
-    RG_DEFER_N(db_guard) { UnlinkFile(database_filename); };
+    RG_DEFER_N(db_guard) {
+        if (!reuse_database) {
+            UnlinkFile(database_filename);
+        }
+    };
     if (!MigrateInstance(&db))
         return 1;
     if (!ChangeFileOwner(database_filename, owner_uid, owner_gid))
@@ -514,9 +546,10 @@ Options:
 
     if (!db.Close())
         return 1;
-    db_guard.Disable();
+    if (!domain.db.Run("INSERT INTO dom_instances (instance) VALUES (?);", instance_key))
+        return 1;
 
-    LogInfo("Instance added");
+    db_guard.Disable();
     return 0;
 }
 
@@ -569,22 +602,21 @@ Options:
     if (!domain.Open(config_filename))
         return 1;
 
-    const char *database_filename = Fmt(&temp_alloc, "%1%/%2.db", domain.config.instances_directory, instance_key).ptr;
-    if (!TestFile(database_filename)) {
+    if (!domain.db.Run("DELETE FROM dom_instances WHERE instance = ?;", instance_key))
+        return 1;
+    if (!sqlite3_changes(domain.db)) {
         LogError("Instance '%1' does not exist", instance_key);
         return 1;
     }
 
     if (purge) {
+        const char *database_filename = Fmt(&temp_alloc, "%1%/%2.db",
+                                            domain.config.instances_directory, instance_key).ptr;
+
         if (!UnlinkFile(database_filename))
-            return 1;
-    } else {
-        const char *backup_filename = Fmt(&temp_alloc, "%1.bak", database_filename).ptr;
-        if (!RenameFile(database_filename, backup_filename))
             return 1;
     }
 
-    LogInfo("Instance deleted");
     return 0;
 }
 

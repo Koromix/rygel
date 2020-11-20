@@ -13,19 +13,13 @@ namespace RG {
 // If you change InstanceVersion, don't forget to update the migration switch!
 static const int InstanceVersion = 19;
 
-bool InstanceData::Open(const char *filename)
+bool InstanceData::Open(const char *key, const char *filename)
 {
     RG_DEFER_N(err_guard) { Close(); };
     Close();
 
-    // Instance key
-    {
-        Span<const char> key = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
-        key = SplitStr(key, '.');
-
-        this->key = DuplicateString(key, &str_alloc).ptr;
-        this->filename = DuplicateString(filename, &str_alloc).ptr;
-    }
+    this->key = DuplicateString(key, &str_alloc).ptr;
+    this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     // Open database
     if (!db.Open(filename, SQLITE_OPEN_READWRITE))

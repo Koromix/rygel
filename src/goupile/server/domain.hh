@@ -39,7 +39,7 @@ public:
     void Close();
 };
 
-bool MigrateDomain(sq_Database *db);
-bool MigrateDomain(const char *filename);
+bool MigrateDomain(sq_Database *db, const char *instances_directory);
+bool MigrateDomain(const DomainConfig &config);
 
 }

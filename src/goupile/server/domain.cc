@@ -7,7 +7,7 @@
 
 namespace RG {
 
-static const int DomainVersion = 2;
+static const int DomainVersion = 3;
 
 bool DomainConfig::Validate() const
 {
@@ -154,7 +154,7 @@ void DomainData::Close()
     config = {};
 }
 
-bool MigrateDomain(sq_Database *db)
+bool MigrateDomain(sq_Database *db, const char *instances_directory)
 {
     int version;
     if (!db->GetUserVersion(&version))
@@ -210,9 +210,60 @@ bool MigrateDomain(sq_Database *db)
                 )");
                 if (!success)
                     return sq_TransactionResult::Error;
+            } [[fallthrough]];
+
+            case 2: {
+                bool success = db->Run(R"(
+                    ALTER TABLE dom_permissions RENAME TO dom_permissions_BAK;
+                    DROP INDEX dom_permissions_ui;
+
+                    CREATE TABLE dom_instances (
+                        instance TEXT NOT NULL
+                    );
+                    CREATE UNIQUE INDEX dom_instances_i ON dom_instances (instance);
+                )");
+                if (!success)
+                    return sq_TransactionResult::Error;
+
+                // Insert existing instances
+                if (version) {
+                    sq_Statement stmt;
+                    if (!db->Prepare("INSERT INTO dom_instances (instance) VALUES (?);", &stmt))
+                        return sq_TransactionResult::Error;
+
+                    EnumStatus status = EnumerateDirectory(instances_directory, "*.db", -1,
+                                                           [&](const char *filename, FileType) {
+                        Span<const char> key = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
+                        key = SplitStr(key, '.');
+
+                        stmt.Reset();
+                        sqlite3_bind_text(stmt, 1, key.ptr, (int)key.len, SQLITE_STATIC);
+
+                        return stmt.Run();
+                    });
+                    if (status != EnumStatus::Done)
+                        return sq_TransactionResult::Error;
+                }
+
+                success = db->Run(R"(
+                    CREATE TABLE dom_permissions (
+                        username TEXT NOT NULL REFERENCES dom_users (username),
+                        instance TEXT NOT NULL REFERENCES dom_instances (instance),
+                        permissions INTEGER NOT NULL,
+                        zone TEXT
+                    );
+
+                    INSERT INTO dom_permissions (username, instance, permissions, zone)
+                        SELECT username, instance, permissions, zone FROM dom_permissions_BAK;
+                    DROP TABLE dom_permissions_BAK;
+
+                    CREATE UNIQUE INDEX dom_permissions_ui ON dom_permissions (username, instance);
+                )");
+                if (!success)
+                    return sq_TransactionResult::Error;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 2);
+            RG_STATIC_ASSERT(DomainVersion == 3);
         }
 
         int64_t time = GetUnixTime();
@@ -230,13 +281,13 @@ bool MigrateDomain(sq_Database *db)
     return true;
 }
 
-bool MigrateDomain(const char *filename)
+bool MigrateDomain(const DomainConfig &config)
 {
     sq_Database db;
 
-    if (!db.Open(filename, SQLITE_OPEN_READWRITE))
+    if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))
         return false;
-    if (!MigrateDomain(&db))
+    if (!MigrateDomain(&db, config.instances_directory))
         return false;
     if (!db.Close())
         return false;

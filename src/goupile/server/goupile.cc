@@ -213,25 +213,24 @@ Options:
 
     // Load instances
     {
-        EnumStatus status = EnumerateDirectory(goupile_domain.config.instances_directory, "*.db", -1,
-                                               [&](const char *filename, FileType) {
+        sq_Statement stmt;
+        if (!goupile_domain.db.Prepare("SELECT instance FROM dom_instances;", &stmt))
+            return 1;
+
+        while (stmt.Next()) {
             InstanceData *instance = instances.AppendDefault();
-            filename = Fmt(&temp_alloc, "%1%/%2", goupile_domain.config.instances_directory, filename).ptr;
+
+            const char *key = (const char *)sqlite3_column_text(stmt, 0);
+            const char *filename = Fmt(&temp_alloc, "%1%/%2.db",
+                                       goupile_domain.config.instances_directory, key).ptr;
 
             if (migrate && !MigrateInstance(filename))
-                return false;
-            if (!instance->Open(filename))
-                return false;
-
-            return true;
-        });
-        if (status != EnumStatus::Done)
-            return 1;
-
-        if (!instances.len) {
-            LogError("No instance found");
-            return 1;
+                return 1;
+            if (!instance->Open(key, filename))
+                return 1;
         }
+        if (!stmt.IsValid())
+            return 1;
 
         for (InstanceData &instance: instances) {
             instances_map.Set(instance.config.base_url, &instance);
