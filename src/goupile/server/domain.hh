@@ -24,6 +24,8 @@ struct DomainConfig {
 
     bool Validate() const;
 
+    const char *GetInstanceFileName(const char *key, Allocator *alloc) const;
+
     BlockAllocator str_alloc;
 };
 

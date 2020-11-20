@@ -216,8 +216,7 @@ Options:
             InstanceData *instance = instances.AppendDefault();
 
             const char *key = (const char *)sqlite3_column_text(stmt, 0);
-            const char *filename = Fmt(&temp_alloc, "%1%/%2.db",
-                                       goupile_domain.config.instances_directory, key).ptr;
+            const char *filename = goupile_domain.config.GetInstanceFileName(key, &temp_alloc);
 
             if (!instance->Open(key, filename))
                 return 1;

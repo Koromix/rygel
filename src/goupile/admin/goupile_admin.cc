@@ -337,7 +337,7 @@ Options:
 
         while (stmt.Next()) {
             const char *key = (const char *)sqlite3_column_text(stmt, 0);
-            const char *filename = Fmt(&temp_alloc, "%1%/%2.db", config.instances_directory, key).ptr;
+            const char *filename = config.GetInstanceFileName(key, &temp_alloc);
 
             success &= MigrateInstance(filename);
         }
@@ -446,7 +446,7 @@ Options:
         }
     }
 
-    const char *database_filename = Fmt(&temp_alloc, "%1%/%2.db", domain.config.instances_directory, instance_key).ptr;
+    const char *database_filename = domain.config.GetInstanceFileName(instance_key, &temp_alloc);
     bool reuse_database = TestFile(database_filename);
     if (reuse_database && !force) {
         LogError("Database '%1' already exists (old deleted instance?)", database_filename);
@@ -610,10 +610,8 @@ Options:
     }
 
     if (purge) {
-        const char *database_filename = Fmt(&temp_alloc, "%1%/%2.db",
-                                            domain.config.instances_directory, instance_key).ptr;
-
-        if (!UnlinkFile(database_filename))
+        const char *filename = domain.config.GetInstanceFileName(instance_key, &temp_alloc);
+        if (!UnlinkFile(filename))
             return 1;
     }
 

@@ -22,6 +22,14 @@ bool DomainConfig::Validate() const
     return valid;
 }
 
+const char *DomainConfig::GetInstanceFileName(const char *key, Allocator *alloc) const
+{
+    RG_ASSERT(instances_directory);
+
+    const char *filename = Fmt(alloc, "%1%/%2.db", instances_directory, key).ptr;
+    return filename;
+}
+
 bool LoadConfig(StreamReader *st, DomainConfig *out_config)
 {
     DomainConfig config;
