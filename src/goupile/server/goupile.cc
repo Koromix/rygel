@@ -148,7 +148,6 @@ int Main(int argc, char **argv)
     BlockAllocator temp_alloc;
 
     const char *config_filename = "goupile.ini";
-    bool migrate = false;
 
     const auto print_usage = [&](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 [options]%!0
@@ -158,9 +157,7 @@ Options:
                                  %!D..(default: %2)%!0
 
         %!..+--port <port>%!0            Change web server port
-                                 %!D..(default: %3)%!0
-
-        %!..+--migrate%!0                Migrate database if needed)",
+                                 %!D..(default: %3)%!0)",
                 FelixTarget, config_filename, goupile_domain.config.http.port);
     };
 
@@ -198,8 +195,6 @@ Options:
             } else if (opt.Test("--port", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &goupile_domain.config.http.port))
                     return 1;
-            } else if (opt.Test("--migrate")) {
-                migrate = true;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -224,8 +219,6 @@ Options:
             const char *filename = Fmt(&temp_alloc, "%1%/%2.db",
                                        goupile_domain.config.instances_directory, key).ptr;
 
-            if (migrate && !MigrateInstance(filename))
-                return 1;
             if (!instance->Open(key, filename))
                 return 1;
         }
