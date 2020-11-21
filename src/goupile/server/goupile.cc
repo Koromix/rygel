@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../core/libcc/libcc.hh"
+#include "admin.hh"
 #include "domain.hh"
 #include "files.hh"
 #include "goupile.hh"
@@ -53,8 +54,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     // Send these headers whenever possible
     io->AddHeader("Referrer-Policy", "no-referrer");
 
-    // Decode URL to instance/path pair
-    InstanceData *instance;
+    // Separate base URL and path
+    Span<const char> base_url;
     const char *path;
     {
         Size offset = SplitStr(request.url + 1, '/').len + 1;
@@ -70,76 +71,86 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        Span<const char> base_url = MakeSpan(request.url, offset + 1);
+        base_url = MakeSpan(request.url, offset + 1);
+        path = request.url + offset;
+    }
 
-        instance = instances_map.FindValue(base_url, nullptr);
+    if (base_url == "/admin/") {
+        if (TestStr(path, "/api/instances/list") && request.method == http_RequestMethod::Get) {
+            HandleListInstances(request, io);
+        } else if (TestStr(path, "/api/users/list") && request.method == http_RequestMethod::Get) {
+            HandleListUsers(request, io);
+        } else {
+            io->AttachError(404);
+        }
+    } else {
+        InstanceData *instance = instances_map.FindValue(base_url, nullptr);
         if (!instance) {
             io->AttachError(404);
             return;
         }
-        path = request.url + offset;
-    }
 
-    // Try application and static assets
-    if (request.method == http_RequestMethod::Get) {
-        const AssetInfo *asset;
+        // Try application and static assets
+        if (request.method == http_RequestMethod::Get) {
+            const AssetInfo *asset;
 
-        // Instance asset?
-        if (HandleFileGet(instance, request, io))
-            return;
+            // Instance asset?
+            if (HandleFileGet(instance, request, io))
+                return;
 
-        if (TestStr(path, "/") || StartsWith(path, "/app/") || StartsWith(path, "/main/")) {
-            asset = instance->assets_map.FindValue("/static/goupile.html", nullptr);
-            RG_ASSERT(asset);
-        } else {
-            asset = instance->assets_map.FindValue(path, nullptr);
-        }
-
-        if (asset) {
-            const char *client_etag = request.GetHeaderValue("If-None-Match");
-
-            if (client_etag && TestStr(client_etag, instance->etag)) {
-                MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-                io->AttachResponse(304, response);
+            if (TestStr(path, "/") || StartsWith(path, "/app/") || StartsWith(path, "/main/")) {
+                asset = instance->assets_map.FindValue("/static/goupile.html", nullptr);
+                RG_ASSERT(asset);
             } else {
-                const char *mimetype = http_GetMimeType(GetPathExtension(asset->name));
-                io->AttachBinary(200, asset->data, mimetype, asset->compression_type);
-
-                io->AddCachingHeaders(goupile_domain.config.max_age, instance->etag);
-                if (asset->source_map) {
-                    io->AddHeader("SourceMap", asset->source_map);
-                }
+                asset = instance->assets_map.FindValue(path, nullptr);
             }
 
-            return;
-        }
-    }
+            if (asset) {
+                const char *client_etag = request.GetHeaderValue("If-None-Match");
 
-    // And last (but not least), API endpoints
-    if (TestStr(path, "/api/events") && request.method == http_RequestMethod::Get) {
-        HandleEvents(instance, request, io);
-    } else if (TestStr(path, "/api/user/profile") && request.method == http_RequestMethod::Get) {
-        HandleUserProfile(instance, request, io);
-    } else if (TestStr(path, "/api/user/login") && request.method == http_RequestMethod::Post) {
-        HandleUserLogin(instance, request, io);
-    } else if (TestStr(path, "/api/user/logout") && request.method == http_RequestMethod::Post) {
-        HandleUserLogout(instance, request, io);
-    } else if (TestStr(path, "/api/files/list") && request.method == http_RequestMethod::Get) {
-         HandleFileList(instance, request, io);
-    } else if (TestStr(path, "/api/files/static") && request.method == http_RequestMethod::Get) {
-        HandleFileStatic(instance, request, io);
-    } else if (StartsWith(path, "/files/") && request.method == http_RequestMethod::Put) {
-        HandleFilePut(instance, request, io);
-    } else if (StartsWith(path, "/files/") && request.method == http_RequestMethod::Delete) {
-        HandleFileDelete(instance, request, io);
-    } else if (TestStr(path, "/api/records/load") && request.method == http_RequestMethod::Get) {
-        HandleRecordLoad(instance, request, io);
-    } else if (TestStr(path, "/api/records/columns") && request.method == http_RequestMethod::Get) {
-        HandleRecordColumns(instance, request, io);
-    } else if (TestStr(path, "/api/records/sync") && request.method == http_RequestMethod::Post) {
-        HandleRecordSync(instance, request, io);
-    } else {
-        io->AttachError(404);
+                if (client_etag && TestStr(client_etag, instance->etag)) {
+                    MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+                    io->AttachResponse(304, response);
+                } else {
+                    const char *mimetype = http_GetMimeType(GetPathExtension(asset->name));
+                    io->AttachBinary(200, asset->data, mimetype, asset->compression_type);
+
+                    io->AddCachingHeaders(goupile_domain.config.max_age, instance->etag);
+                    if (asset->source_map) {
+                        io->AddHeader("SourceMap", asset->source_map);
+                    }
+                }
+
+                return;
+            }
+        }
+
+        // And last (but not least), API endpoints
+        if (TestStr(path, "/api/events") && request.method == http_RequestMethod::Get) {
+            HandleEvents(instance, request, io);
+        } else if (TestStr(path, "/api/user/profile") && request.method == http_RequestMethod::Get) {
+            HandleUserProfile(instance, request, io);
+        } else if (TestStr(path, "/api/user/login") && request.method == http_RequestMethod::Post) {
+            HandleUserLogin(instance, request, io);
+        } else if (TestStr(path, "/api/user/logout") && request.method == http_RequestMethod::Post) {
+            HandleUserLogout(instance, request, io);
+        } else if (TestStr(path, "/api/files/list") && request.method == http_RequestMethod::Get) {
+             HandleFileList(instance, request, io);
+        } else if (TestStr(path, "/api/files/static") && request.method == http_RequestMethod::Get) {
+            HandleFileStatic(instance, request, io);
+        } else if (StartsWith(path, "/files/") && request.method == http_RequestMethod::Put) {
+            HandleFilePut(instance, request, io);
+        } else if (StartsWith(path, "/files/") && request.method == http_RequestMethod::Delete) {
+            HandleFileDelete(instance, request, io);
+        } else if (TestStr(path, "/api/records/load") && request.method == http_RequestMethod::Get) {
+            HandleRecordLoad(instance, request, io);
+        } else if (TestStr(path, "/api/records/columns") && request.method == http_RequestMethod::Get) {
+            HandleRecordColumns(instance, request, io);
+        } else if (TestStr(path, "/api/records/sync") && request.method == http_RequestMethod::Post) {
+            HandleRecordSync(instance, request, io);
+        } else {
+            io->AttachError(404);
+        }
     }
 }
 
