@@ -4956,20 +4956,14 @@ const char *OptionParser::ConsumeValue()
 
 const char *OptionParser::ConsumeNonOption()
 {
-    const char *non_option;
+    if (pos == args.len)
+        return nullptr;
+    // Beyond limit there are only non-options, the limit is moved when we move non-options
+    // to the end or upon encouteering a double dash '--'.
+    if (pos < limit && IsOption(args[pos]))
+        return nullptr;
 
-    do {
-        if (pos == args.len)
-            return nullptr;
-        // Beyond limit there are only non-options, the limit is moved when we move non-options
-        // to the end or upon encouteering a double dash '--'.
-        if (pos < limit && IsOption(args[pos]))
-            return nullptr;
-
-        non_option = args[pos++];
-    } while (!non_option[0]);
-
-    return non_option;
+    return args[pos++];
 }
 
 void OptionParser::ConsumeNonOptions(HeapArray<const char *> *non_options)
