@@ -25,8 +25,8 @@ main { height: 100%; }
 }
 
 a {
-    color: #24579d;
-    text-decoration: none;
+    color: #ff6600;
+    text-decoration: underline;
 }
 
 button {
