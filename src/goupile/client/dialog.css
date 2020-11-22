@@ -19,9 +19,8 @@
     position: absolute;
     width: 300px;
     max-width: 90%;
-    padding: 10px;
+    padding: 16px;
     background: #f8f8f8;
-    border: 1px solid #e6e6e6;
 }
 
 #dlg_popup {
