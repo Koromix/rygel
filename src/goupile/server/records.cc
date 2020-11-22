@@ -13,17 +13,15 @@ namespace RG {
 
 static void ExportRecord(sq_Statement *stmt, json_Writer *json)
 {
-    char id[512];
-    strncpy(id, (const char *)sqlite3_column_text(*stmt, 1), RG_SIZE(id));
-    id[RG_SIZE(id) - 1] = 0;
+    int64_t rowid = sqlite3_column_int64(*stmt, 0);
 
     json->StartObject();
 
-    json->Key("table"); json->String((const char *)sqlite3_column_text(*stmt, 0));
-    json->Key("id"); json->String(id);
-    json->Key("sequence"); json->Int(sqlite3_column_int(*stmt, 2));
-    if (sqlite3_column_type(*stmt, 3) != SQLITE_NULL) {
-        json->Key("zone"); json->String((const char *)sqlite3_column_text(*stmt, 3));
+    json->Key("table"); json->String((const char *)sqlite3_column_text(*stmt, 1));
+    json->Key("id"); json->String((const char *)sqlite3_column_text(*stmt, 2));
+    json->Key("sequence"); json->Int(sqlite3_column_int(*stmt, 3));
+    if (sqlite3_column_type(*stmt, 4) != SQLITE_NULL) {
+        json->Key("zone"); json->String((const char *)sqlite3_column_text(*stmt, 4));
     } else {
         json->Key("zone"); json->Null();
     }
@@ -32,22 +30,22 @@ static void ExportRecord(sq_Statement *stmt, json_Writer *json)
     do {
         json->StartObject();
 
-        json->Key("mtime"); json->String((const char *)sqlite3_column_text(*stmt, 4));
-        json->Key("username"); json->String((const char *)sqlite3_column_text(*stmt, 5));
-        json->Key("version"); json->Int64(sqlite3_column_int64(*stmt, 6));
-        if (sqlite3_column_type(*stmt, 7) != SQLITE_NULL) {
-            json->Key("page"); json->String((const char *)sqlite3_column_text(*stmt, 7));
-            json->Key("complete"); json->Bool(sqlite3_column_int(*stmt, 8));
-            json->Key("values"); json->Raw((const char *)sqlite3_column_text(*stmt, 9));
+        json->Key("mtime"); json->String((const char *)sqlite3_column_text(*stmt, 5));
+        json->Key("username"); json->String((const char *)sqlite3_column_text(*stmt, 6));
+        json->Key("version"); json->Int64(sqlite3_column_int64(*stmt, 7));
+        if (sqlite3_column_type(*stmt, 8) != SQLITE_NULL) {
+            json->Key("page"); json->String((const char *)sqlite3_column_text(*stmt, 8));
+            json->Key("complete"); json->Bool(sqlite3_column_int(*stmt, 9));
+            json->Key("values"); json->Raw((const char *)sqlite3_column_text(*stmt, 10));
         } else {
             json->Key("page"); json->Null();
             json->Key("complete"); json->Bool(false);
             json->Key("values"); json->Raw("{}");
         }
-        json->Key("anchor"); json->Int64(sqlite3_column_int64(*stmt, 10));
+        json->Key("anchor"); json->Int64(sqlite3_column_int64(*stmt, 11));
 
         json->EndObject();
-    } while (stmt->Next() && TestStr((const char *)sqlite3_column_text(*stmt, 1), id));
+    } while (stmt->Next() && sqlite3_column_int64(*stmt, 0) == rowid);
     json->EndArray();
 
     json->EndObject();
@@ -80,8 +78,8 @@ void HandleRecordLoad(InstanceData *instance, const http_RequestInfo &request, h
         LocalArray<char, 1024> sql;
         int bind_idx = 1;
 
-        sql.len += Fmt(sql.TakeAvailable(), R"(SELECT r.store, r.id, r.sequence, r.zone, f.mtime, f.username, f.version,
-                                                      f.page, f.complete, f.json, f.anchor FROM rec_entries r
+        sql.len += Fmt(sql.TakeAvailable(), R"(SELECT r.rowid, r.store, r.id, r.sequence, r.zone, f.mtime, f.username,
+                                                      f.version, f.page, f.complete, f.json, f.anchor FROM rec_entries r
                                                INNER JOIN rec_fragments f ON (f.id = r.id)
                                                WHERE 1 = 1)").len;
         if (token->zone) {
