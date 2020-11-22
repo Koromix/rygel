@@ -26,15 +26,8 @@ function UserManager(db) {
         });
     };
 
-    this.runLoginDialog = function(e = null, front) {
+    this.runLoginDialog = function(e, front) {
         return dialog.run(e, (d, resolve, reject) => {
-            if (e == null) {
-                d.output(html`
-                    <img id="usr_logo" src=${`${env.base_url}favicon.png`} alt="" />
-                    <br/>
-                `);
-            }
-
             let username = d.text('*username', 'Nom d\'utilisateur');
             let password = d.password('*password', 'Mot de passe');
 
