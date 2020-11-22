@@ -11,7 +11,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-static const int InstanceVersion = 19;
+const int InstanceVersion = 19;
 
 bool InstanceData::Open(const char *key, const char *filename)
 {

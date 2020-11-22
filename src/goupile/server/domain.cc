@@ -7,7 +7,7 @@
 
 namespace RG {
 
-static const int DomainVersion = 3;
+const int DomainVersion = 3;
 
 bool DomainConfig::Validate() const
 {

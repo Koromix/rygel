@@ -174,7 +174,8 @@ Options:
 
     // Handle version
     if (argc >= 2 && TestStr(argv[1], "--version")) {
-        PrintLn("%!R..%1%!0 %2", FelixTarget, FelixVersion);
+        PrintLn("%!R..%1%!0 %2 (domain: %!..+%3%!0, instance: %!..+%4%!0)",
+                FelixTarget, FelixVersion, DomainVersion, InstanceVersion);
         return 0;
     }
 

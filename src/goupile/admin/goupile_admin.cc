@@ -806,7 +806,8 @@ User commands:
             return 0;
         }
     } else if (TestStr(cmd, "--version")) {
-        PrintLn("%!R..%1%!0 %2", FelixTarget, FelixVersion);
+        PrintLn("%!R..%1%!0 %2 (domain: %!..+%3%!0, instance: %!..+%4%!0)",
+                FelixTarget, FelixVersion, DomainVersion, InstanceVersion);
         return 0;
     }
 

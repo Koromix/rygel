@@ -10,6 +10,8 @@
 
 namespace RG {
 
+extern const int InstanceVersion;
+
 enum SyncMode {
     Offline,
     Mirror

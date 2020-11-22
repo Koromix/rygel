@@ -10,6 +10,8 @@
 
 namespace RG {
 
+extern const int DomainVersion;
+
 struct DomainConfig {
     const char *database_filename = nullptr;
     const char *instances_directory = nullptr;
