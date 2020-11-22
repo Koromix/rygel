@@ -78,6 +78,7 @@
 .af_tabs > button:not(.active):hover {
     background: white;
     border-color: #ff6600;
+    color: black;
     z-index: 1;
 }
 .af_tabs > button.active, .af_tabs > button.active:hover {
@@ -225,6 +226,7 @@
 .af_enum > button:not(.active):hover {
     background: white;
     border-color: #ff6600;
+    color: black;
     z-index: 1;
 }
 .af_enum > button.active {
@@ -237,6 +239,10 @@
     content: '✓\FE0E';
 }
 .af_enum > button.active::after { display: none; }
+.af_enum > button.active:hover {
+    background: #777;
+    border-color: #777;
+}
 
 .af_enum > button:focus, .af_input:focus, .af_select:focus {
     outline: 2px dotted #999;
