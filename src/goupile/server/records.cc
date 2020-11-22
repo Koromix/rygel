@@ -94,7 +94,7 @@ void HandleRecordLoad(InstanceData *instance, const http_RequestInfo &request, h
         if (anchor) {
             sql.len += Fmt(sql.TakeAvailable(), " AND f.anchor >= ?").len;
         }
-        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY f.anchor;").len;
+        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY r.rowid, f.anchor;").len;
 
         if (!instance->db.Prepare(sql.data, &stmt))
             return;
