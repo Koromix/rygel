@@ -20,16 +20,14 @@
     box-sizing: border-box;
     width: calc(100% + 28px);
     margin: -14px 0 10px -14px;
-    padding: 0.3em 0.5em;
-    background: rgba(136, 136, 136, 0.09);
+    padding: 0.2em 0.5em;
+    background: #ff6600;
     font-size: 1.1em;
-    font-weight: bold;
-    color: #222;
+    color: white;
     cursor: pointer;
 }
 .af_legend::before {
     padding-right: 0.5em;
-    color: #ff6600;
     content: '#';
 }
 .af_deploy {
