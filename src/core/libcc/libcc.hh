@@ -3625,12 +3625,12 @@ bool WaitForInterruption(int64_t delay = -1);
 
 int GetCoreCount();
 
-enum class IPStack {
+enum class SocketType {
     Dual,
     IPv4,
     IPv6
 };
-static const char *const IPStackNames[] = {
+static const char *const SocketTypeNames[] = {
     "Dual",
     "IPv4",
     "IPv6"

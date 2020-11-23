@@ -31,7 +31,7 @@ static const char *DefaultConfig = R"(
 # DemoUser =
 
 [HTTP]
-# IPStack = Dual
+# SocketType = Dual
 # Port = 8889
 # Threads =
 # AsyncThreads =

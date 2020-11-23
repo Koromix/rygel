@@ -68,13 +68,13 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "HTTP") {
                 do {
-                    if (prop.key == "IPStack") {
+                    if (prop.key == "SocketType" || prop.key == "IPStack") {
                         if (prop.value == "Dual") {
-                            config.http.ip_stack = IPStack::Dual;
+                            config.http.sock_type = SocketType::Dual;
                         } else if (prop.value == "IPv4") {
-                            config.http.ip_stack = IPStack::IPv4;
+                            config.http.sock_type = SocketType::IPv4;
                         } else if (prop.value == "IPv6") {
-                            config.http.ip_stack = IPStack::IPv6;
+                            config.http.sock_type = SocketType::IPv6;
                         } else {
                             LogError("Unknown IP version '%1'", prop.value);
                         }

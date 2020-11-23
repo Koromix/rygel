@@ -523,7 +523,7 @@ Options:
     if (!daemon.Start(thop_config.http, HandleRequest))
         return 1;
     LogInfo("Listening on port %1 (%2 stack)",
-            thop_config.http.port, IPStackNames[(int)thop_config.http.ip_stack]);
+            thop_config.http.port, SocketTypeNames[(int)thop_config.http.sock_type]);
 
     WaitForInterruption();
 

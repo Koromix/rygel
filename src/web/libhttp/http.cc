@@ -55,10 +55,10 @@ bool http_Daemon::Start(const http_Config &config,
     // MHD options
     int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_ALLOW_SUSPEND_RESUME | MHD_USE_ERROR_LOG;
     LocalArray<MHD_OptionItem, 16> mhd_options;
-    switch (config.ip_stack) {
-        case IPStack::Dual: { flags |= MHD_USE_DUAL_STACK; } break;
-        case IPStack::IPv4: {} break;
-        case IPStack::IPv6: { flags |= MHD_USE_IPv6; } break;
+    switch (config.sock_type) {
+        case SocketType::Dual: { flags |= MHD_USE_DUAL_STACK; } break;
+        case SocketType::IPv4: {} break;
+        case SocketType::IPv6: { flags |= MHD_USE_IPv6; } break;
     }
     if (config.threads > 1) {
         mhd_options.Append({MHD_OPTION_THREAD_POOL_SIZE, config.threads});

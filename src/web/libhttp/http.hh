@@ -10,7 +10,7 @@
 namespace RG {
 
 struct http_Config {
-    IPStack ip_stack = IPStack::Dual;
+    SocketType sock_type = SocketType::Dual;
     int port = 8888;
 
     int max_connections = 512;

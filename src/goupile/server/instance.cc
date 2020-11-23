@@ -576,7 +576,7 @@ bool MigrateInstance(sq_Database *db)
                     success &= db->Run(sql, "Application.MaxFileSize", fake2.max_file_size);
                     success &= db->Run(sql, "Application.SyncMode", SyncModeNames[(int)fake2.sync_mode]);
                     success &= db->Run(sql, "Application.DemoUser", fake1.demo_user);
-                    success &= db->Run(sql, "HTTP.IPStack", IPStackNames[(int)fake1.http.ip_stack]);
+                    success &= db->Run(sql, "HTTP.SocketType", SocketTypeNames[(int)fake1.http.sock_type]);
                     success &= db->Run(sql, "HTTP.Port", fake1.http.port);
                     success &= db->Run(sql, "HTTP.MaxConnections", fake1.http.max_connections);
                     success &= db->Run(sql, "HTTP.IdleTimeout", fake1.http.idle_timeout);
@@ -644,8 +644,8 @@ bool MigrateInstance(sq_Database *db)
                             } while (ini.NextInSection(&prop));
                         } else if (prop.section == "HTTP") {
                             do {
-                                if (prop.key == "IPStack") {
-                                    success &= db->Run(sql, "HTTP.IPStack", prop.value);
+                                if (prop.key == "SocketType") {
+                                    success &= db->Run(sql, "HTTP.SocketType", prop.value);
                                 } else if (prop.key == "Port") {
                                     int value;
                                     success &= ParseInt(prop.value, &value);

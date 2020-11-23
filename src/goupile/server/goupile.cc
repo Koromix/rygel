@@ -249,7 +249,7 @@ Options:
     if (!daemon.Start(goupile_domain.config.http, HandleRequest))
         return 1;
     LogInfo("Listening on port %1 (%2 stack)",
-            goupile_domain.config.http.port, IPStackNames[(int)goupile_domain.config.http.ip_stack]);
+            goupile_domain.config.http.port, SocketTypeNames[(int)goupile_domain.config.http.sock_type]);
 
     WaitForInterruption();
 

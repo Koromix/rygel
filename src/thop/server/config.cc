@@ -89,8 +89,8 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "HTTP") {
                 do {
-                    if (prop.key == "IPStack") {
-                        if (!OptionToEnum(IPStackNames, prop.value, &config.http.ip_stack)) {
+                    if (prop.key == "SocketType" || prop.key == "IPStack") {
+                        if (!OptionToEnum(SocketTypeNames, prop.value, &config.http.sock_type)) {
                             LogError("Unknown IP stack '%1'", prop.value);
                             valid = false;
                         }
