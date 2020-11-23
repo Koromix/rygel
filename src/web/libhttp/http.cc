@@ -109,6 +109,7 @@ bool http_Daemon::Start(const http_Config &config,
     }
     mhd_options.Append({MHD_OPTION_CONNECTION_TIMEOUT, config.idle_timeout});
     mhd_options.Append({MHD_OPTION_END, 0, nullptr});
+    use_xrealip = config.use_xrealip;
 #ifndef NDEBUG
     flags |= MHD_USE_DEBUG;
 #endif
@@ -147,9 +148,20 @@ void http_Daemon::Stop()
     daemon = nullptr;
 }
 
-static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
+static bool GetClientAddress(MHD_Connection *conn, bool use_xrealip, Span<char> out_address)
 {
     RG_ASSERT(out_address.len);
+
+    if (use_xrealip) {
+        const char *xrealip = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "X-Real-IP");
+
+        if (xrealip) {
+            strncpy(out_address.ptr, xrealip, out_address.len - 1);
+            out_address[out_address.len - 1] = 0;
+
+            return true;
+        }
+    }
 
     int family;
     void *addr;
@@ -240,7 +252,7 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
             io->AttachError(405);
             return MHD_queue_response(conn, (unsigned int)io->code, io->response);
         }
-        if (!GetClientAddress(conn, io->request.client_addr)) {
+        if (!GetClientAddress(conn, daemon->use_xrealip, io->request.client_addr)) {
             io->AttachError(422);
             return MHD_queue_response(conn, (unsigned int)io->code, io->response);
         }

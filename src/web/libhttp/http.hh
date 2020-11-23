@@ -20,6 +20,7 @@ struct http_Config {
     int idle_timeout = 60;
     int threads = std::max(GetCoreCount(), 4);
     int async_threads = std::max(GetCoreCount() * 2, 8);
+    bool use_xrealip = false;
 
     bool Validate() const;
 };
@@ -34,6 +35,7 @@ class http_Daemon {
 #ifndef _WIN32
     int unix_fd = -1;
 #endif
+    bool use_xrealip = false;
     std::atomic_bool running {false};
 
     std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;

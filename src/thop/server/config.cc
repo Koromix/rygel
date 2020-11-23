@@ -112,6 +112,8 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                         config.base_url = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "MaxAge") {
                         valid &= ParseInt(prop.value, &config.max_age);
+                    } else if (prop.key == "TrustXRealIP") {
+                        valid &= ParseBool(prop.value, &config.http.use_xrealip);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;

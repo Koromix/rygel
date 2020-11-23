@@ -94,6 +94,8 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         valid &= ParseInt(prop.value, &config.http.async_threads);
                     } else if (prop.key == "MaxAge") {
                         valid &= ParseInt(prop.value, &config.max_age);
+                    } else if (prop.key == "TrustXRealIP") {
+                        valid &= ParseBool(prop.value, &config.http.use_xrealip);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
