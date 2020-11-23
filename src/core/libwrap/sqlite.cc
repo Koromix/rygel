@@ -57,6 +57,7 @@ bool sq_Database::Open(const char *filename, unsigned int flags)
     static const char *const sql = R"(
         PRAGMA foreign_keys = ON;
         PRAGMA journal_mode = WAL;
+        PRAGMA synchronous = NORMAL;
         PRAGMA busy_timeout = 5000;
     )";
 
