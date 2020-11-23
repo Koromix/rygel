@@ -94,6 +94,10 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                             LogError("Unknown IP stack '%1'", prop.value);
                             valid = false;
                         }
+#ifndef _WIN32
+                    } else if (prop.key == "UnixPath") {
+                        config.http.unix_path = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+#endif
                     } else if (prop.key == "Port") {
                         valid &= ParseInt(prop.value, &config.http.port);
                     } else if (prop.key == "MaxConnections") {

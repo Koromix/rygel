@@ -248,6 +248,11 @@ Options:
     http_Daemon daemon;
     if (!daemon.Start(goupile_domain.config.http, HandleRequest))
         return 1;
+#ifndef _WIN32
+    if (goupile_domain.config.http.sock_type == SocketType::Unix) {
+        LogInfo("Listening on socket '%1' (Unix stack)", goupile_domain.config.http.unix_path);
+    } else
+#endif
     LogInfo("Listening on port %1 (%2 stack)",
             goupile_domain.config.http.port, SocketTypeNames[(int)goupile_domain.config.http.sock_type]);
 

@@ -9,6 +9,8 @@
 #ifdef _WIN32
     #include <ws2tcpip.h>
 #else
+    #include <sys/socket.h>
+    #include <sys/un.h>
     #include <arpa/inet.h>
 #endif
 
@@ -18,6 +20,20 @@ bool http_Config::Validate() const
 {
     bool valid = true;
 
+#ifndef _WIN32
+    if (sock_type == SocketType::Unix) {
+        struct sockaddr_un addr;
+
+        if (!unix_path) {
+            LogError("Unix socket path must be set");
+            valid = false;
+        }
+        if (strlen(unix_path) >= sizeof(addr.sun_path)) {
+            LogError("Socket path '%1' is too long (max length = %2)", unix_path, sizeof(addr.sun_path) - 1);
+            valid = false;
+        }
+    } else
+#endif
     if (port < 1 || port > UINT16_MAX) {
         LogError("HTTP port %1 is invalid (range: 1 - %2)", port, UINT16_MAX);
         valid = false;
@@ -59,6 +75,31 @@ bool http_Daemon::Start(const http_Config &config,
         case SocketType::Dual: { flags |= MHD_USE_DUAL_STACK; } break;
         case SocketType::IPv4: {} break;
         case SocketType::IPv6: { flags |= MHD_USE_IPv6; } break;
+#ifndef _WIN32
+        case SocketType::Unix: {
+            unix_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+            if (unix_fd < 0) {
+                LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
+                return false;
+            }
+
+            struct sockaddr_un addr = {};
+            addr.sun_family = AF_UNIX;
+            strncpy(addr.sun_path, config.unix_path, sizeof(addr.sun_path) - 1);
+
+            unlink(config.unix_path);
+            if (bind(unix_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+                LogError("Failed to bind socket to '%1': %2", config.unix_path, strerror(errno));
+                return false;
+            }
+            if (listen(unix_fd, 256) < 0) {
+                LogError("Failed to listen on socket '%1': %2", config.unix_path, strerror(errno));
+                return false;
+            }
+
+            mhd_options.Append({MHD_OPTION_LISTEN_SOCKET, unix_fd});
+        } break;
+#endif
     }
     if (config.threads > 1) {
         mhd_options.Append({MHD_OPTION_THREAD_POOL_SIZE, config.threads});
@@ -95,6 +136,12 @@ void http_Daemon::Stop()
     if (daemon) {
         MHD_stop_daemon(daemon);
     }
+#ifndef _WIN32
+    if (unix_fd >= 0) {
+        close(unix_fd);
+        unix_fd = -1;
+    }
+#endif
 
     async = nullptr;
     daemon = nullptr;
@@ -114,6 +161,15 @@ static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
         switch (saddr->sa_family) {
             case AF_INET: { addr = &((sockaddr_in *)saddr)->sin_addr; } break;
             case AF_INET6: { addr = &((sockaddr_in6 *)saddr)->sin6_addr; } break;
+#ifndef _WIN32
+            case AF_UNIX: {
+                strncpy(out_address.ptr, "unix", out_address.len - 1);
+                out_address[out_address.len - 1] = 0;
+
+                return true;
+            } break;
+#endif
+
             default: { RG_UNREACHABLE(); } break;
         }
     }

@@ -12,6 +12,9 @@ namespace RG {
 struct http_Config {
     SocketType sock_type = SocketType::Dual;
     int port = 8888;
+#ifndef _WIN32
+    const char *unix_path = nullptr;
+#endif
 
     int max_connections = 512;
     int idle_timeout = 60;
@@ -28,6 +31,9 @@ class http_Daemon {
     RG_DELETE_COPY(http_Daemon)
 
     MHD_Daemon *daemon = nullptr;
+#ifndef _WIN32
+    int unix_fd = -1;
+#endif
     std::atomic_bool running {false};
 
     std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;

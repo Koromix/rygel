@@ -522,6 +522,11 @@ Options:
     http_Daemon daemon;
     if (!daemon.Start(thop_config.http, HandleRequest))
         return 1;
+#ifndef _WIN32
+    if (thop_config.http.sock_type == SocketType::Unix) {
+        LogInfo("Listening on socket '%1' (Unix stack)", thop_config.http.unix_path);
+    } else
+#endif
     LogInfo("Listening on port %1 (%2 stack)",
             thop_config.http.port, SocketTypeNames[(int)thop_config.http.sock_type]);
 

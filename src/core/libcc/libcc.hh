@@ -3628,12 +3628,18 @@ int GetCoreCount();
 enum class SocketType {
     Dual,
     IPv4,
-    IPv6
+    IPv6,
+#ifndef _WIN32
+    Unix
+#endif
 };
 static const char *const SocketTypeNames[] = {
     "Dual",
     "IPv4",
-    "IPv6"
+    "IPv6",
+#ifndef _WIN32
+    "Unix"
+#endif
 };
 
 #ifndef _WIN32
