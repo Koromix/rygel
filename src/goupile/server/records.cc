@@ -80,7 +80,7 @@ void HandleRecordLoad(InstanceData *instance, const http_RequestInfo &request, h
 
         sql.len += Fmt(sql.TakeAvailable(), R"(SELECT r.rowid, r.store, r.id, r.sequence, r.zone, f.mtime, f.username,
                                                       f.version, f.page, f.complete, f.json, f.anchor FROM rec_entries r
-                                               INNER JOIN rec_fragments f ON (f.id = r.id)
+                                               INNER JOIN rec_fragments f ON (f.store = r.store AND f.id = r.id)
                                                WHERE 1 = 1)").len;
         if (token->zone) {
             sql.len += Fmt(sql.TakeAvailable(), " AND (r.zone IS NULL OR r.zone == ?)").len;
