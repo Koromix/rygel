@@ -9,6 +9,7 @@
 #ifdef _WIN32
     #include <ws2tcpip.h>
 #else
+    #include <sys/stat.h>
     #include <sys/socket.h>
     #include <sys/un.h>
     #include <arpa/inet.h>
@@ -96,6 +97,7 @@ bool http_Daemon::Start(const http_Config &config,
                 LogError("Failed to listen on socket '%1': %2", config.unix_path, strerror(errno));
                 return false;
             }
+            chmod(config.unix_path, 0666);
 
             mhd_options.Append({MHD_OPTION_LISTEN_SOCKET, unix_fd});
         } break;
