@@ -18,7 +18,7 @@ from dataclasses import dataclass
 class DomainConfig:
     directory = None
     domain = None
-    port = None
+    socket = None
     mismatch = False
 
 @dataclass
@@ -26,13 +26,18 @@ class ServiceStatus:
     running = False
     inode = None
 
-def load_config(filename):
-    config = {}
-
+def parse_ini(filename):
     ini = configparser.ConfigParser()
     ini.optionxform = str
+
     with open(filename, 'r') as f:
         ini.read_file(f)
+
+    return ini
+
+def load_config(filename):
+    ini = parse_ini(filename)
+    config = {}
 
     for section in ini.sections():
         for key, value in ini.items(section):
@@ -48,11 +53,11 @@ def run_build(config):
     subprocess.run(['felix', '-mFast', '-q', '-C', build_filename,
                     '-O', config['Goupile.BinaryDirectory'], 'goupile', 'goupile_admin'])
 
-def list_domains(root):
+def list_domains(root_dir, socket_dir):
     domains = {}
 
-    for domain in sorted(os.listdir(root)):
-        directory = os.path.join(root, domain)
+    for domain in sorted(os.listdir(root_dir)):
+        directory = os.path.join(root_dir, domain)
         filename = os.path.join(directory, 'goupile.ini')
 
         if os.path.isfile(filename):
@@ -61,30 +66,13 @@ def list_domains(root):
             info = DomainConfig()
             info.directory = directory
             info.domain = domain
-            info.port = config.get('HTTP.Port')
+            info.socket = os.path.join(socket_dir, domain) + '.sock'
+
+            prev_socket = config.get('HTTP.UnixPath')
+            if prev_socket != info.socket:
+                info.mismatch = True
 
             domains[domain] = info
-
-    used_ports = {}
-    try_port = 9000
-
-    # Fix port conflicts
-    for domain, info in domains.items():
-        if info.port is not None:
-            prev_domain = used_ports.get(info.port)
-            if prev_domain is None:
-                used_ports[info.port] = domain
-            else:
-                print(f'Conflict on port {info.port}, used by {prev_domain} and {domain}', file = sys.stderr)
-                info.port = None
-    for domain, info in domains.items():
-        if info.port is None:
-            while try_port in used_ports:
-                try_port += 1
-            print(f'Assigning Port {try_port} to {domain}', file = sys.stderr)
-            info.port = try_port
-            used_ports[try_port] = domain
-            info.mismatch = True
 
     return domains
 
@@ -130,7 +118,9 @@ def update_domain_config(info):
 
     if not ini.has_section('HTTP'):
         ini.add_section('HTTP')
-    ini.set('HTTP', 'Port', str(info.port))
+    ini.set('HTTP', 'SocketType', 'Unix')
+    ini.set('HTTP', 'UnixPath', info.socket)
+    ini.remove_option('HTTP', 'Port')
 
     with open(filename, 'w') as f:
         ini.write(f)
@@ -142,13 +132,13 @@ def update_nginx_config(filename, domains, include = None):
             print(f'    server_name {domain};', file = f)
             if include is not None:
                 print(f'    include {include};', file = f)
-            print(f'    location / {{')
-            print(f'        proxy_pass http://127.0.0.1:{info.port};', file = f)
+            print(f'    location / {{', file = f)
+            print(f'        proxy_pass http://unix:{info.socket}:;', file = f)
             print(f'    }}', file = f)
             print(f'}}', file = f)
 
 def run_sync(config):
-    domains = list_domains(config['Goupile.DomainDirectory'])
+    domains = list_domains(config['Goupile.DomainDirectory'], config['Goupile.SocketDirectory'])
     services = list_services()
 
     # Detect binary mismatches
