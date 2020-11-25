@@ -452,6 +452,11 @@ Options:
         LogError("Database '%1' already exists (old deleted instance?)", database_filename);
         return 1;
     }
+    RG_DEFER_N(db_guard) {
+        if (!reuse_database) {
+            UnlinkFile(database_filename);
+        }
+    };
 
     uid_t owner_uid = 0;
     gid_t owner_gid = 0;
@@ -472,11 +477,6 @@ Options:
     sq_Database db;
     if (!db.Open(database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
         return 1;
-    RG_DEFER_N(db_guard) {
-        if (!reuse_database) {
-            UnlinkFile(database_filename);
-        }
-    };
     if (!MigrateInstance(&db))
         return 1;
     if (!ChangeFileOwner(database_filename, owner_uid, owner_gid))
@@ -498,9 +498,11 @@ Options:
     // Create default files
     if (!empty) {
         Span<const AssetInfo> assets = GetPackedAssets();
+        int64_t mtime = GetUnixTime();
 
         sq_Statement stmt;
-        if (!db.Prepare("INSERT INTO fs_files (path, blob, compression, sha256) VALUES (?, ?, ?, ?)", &stmt))
+        if (!db.Prepare(R"(INSERT INTO fs_files (active, path, mtime, blob, compression, sha256, size)
+                           VALUES (1, ?, ?, ?, ?, ?, ?);)", &stmt))
             return 1;
 
         for (const AssetInfo &asset: assets) {
@@ -535,9 +537,11 @@ Options:
 
             stmt.Reset();
             sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
-            sqlite3_bind_blob64(stmt, 2, gzip.ptr, gzip.len, SQLITE_STATIC);
-            sqlite3_bind_text(stmt, 3, "Gzip", -1, SQLITE_STATIC);
-            sqlite3_bind_text(stmt, 4, sha256, -1, SQLITE_STATIC);
+            sqlite3_bind_int64(stmt, 2, mtime);
+            sqlite3_bind_blob64(stmt, 3, gzip.ptr, gzip.len, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 4, "Gzip", -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 5, sha256, -1, SQLITE_STATIC);
+            sqlite3_bind_int64(stmt, 6, asset.data.len);
 
             if (!stmt.Run())
                 return 1;

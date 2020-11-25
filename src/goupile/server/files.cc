@@ -16,7 +16,7 @@ void HandleFileList(InstanceData *instance, const http_RequestInfo &request, htt
 {
     sq_Statement stmt;
     if (!instance->db.Prepare(R"(SELECT path, size, sha256 FROM fs_files
-                                 WHERE sha256 IS NOT NULL
+                                 WHERE active = 1
                                  ORDER BY path;)", &stmt))
         return;
 
@@ -53,7 +53,7 @@ bool HandleFileGet(InstanceData *instance, const http_RequestInfo &request, http
 
     sq_Statement stmt;
     if (!instance->db.Prepare(R"(SELECT rowid, compression, sha256 FROM fs_files
-                                 WHERE path = ? AND sha256 IS NOT NULL)", &stmt))
+                                 WHERE active = 1 AND path = ?;)", &stmt))
         return true;
     sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
 
@@ -235,7 +235,7 @@ void HandleFilePut(InstanceData *instance, const http_RequestInfo &request, http
             if (client_sha256) {
                 sq_Statement stmt;
                 if (!instance->db.Prepare(R"(SELECT sha256 FROM fs_files
-                                             WHERE path = ? AND sha256 IS NOT NULL;)", &stmt))
+                                             WHERE active = 1 AND path = ?;)", &stmt))
                     return sq_TransactionResult::Error;
                 sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
 
@@ -258,13 +258,14 @@ void HandleFilePut(InstanceData *instance, const http_RequestInfo &request, http
                 }
             }
 
-            // We need to get the ROWID value after INSERT, but sqlite3_last_insert_rowid() does
-            // not work with UPSERT. So use DELETE + INSERT instead.
-            if (!instance->db.Run("DELETE FROM fs_files WHERE path = ?;", path))
+            int64_t mtime = GetUnixTime();
+
+            if (!instance->db.Run(R"(UPDATE fs_files SET active = 0
+                                     WHERE active = 1 AND path = ?;)", path))
                 return sq_TransactionResult::Error;
-            if (!instance->db.Run(R"(INSERT INTO fs_files (path, blob, compression, sha256, size)
-                                     VALUES (?, ?, ?, ?, ?);)",
-                                     path, sq_Binding::Zeroblob(file_len), "Gzip", sha256, total_len))
+            if (!instance->db.Run(R"(INSERT INTO fs_files (active, path, mtime, blob, compression, sha256, size)
+                                     VALUES (?, ?, ?, ?, ?, ?, ?);)",
+                                     1, path, mtime, sq_Binding::Zeroblob(file_len), "Gzip", sha256, total_len))
                 return sq_TransactionResult::Error;
 
             int64_t rowid = sqlite3_last_insert_rowid(instance->db);
@@ -325,13 +326,15 @@ void HandleFileDelete(InstanceData *instance, const http_RequestInfo &request, h
     sq_TransactionResult ret = instance->db.Transaction([&]() {
         if (client_sha256) {
             sq_Statement stmt;
-            if (!instance->db.Prepare("SELECT sha256 FROM fs_files WHERE path = ?", &stmt))
+            if (!instance->db.Prepare(R"(SELECT active, sha256 FROM fs_files
+                                         WHERE path = ?
+                                         ORDER BY active DESC;)", &stmt))
                 return sq_TransactionResult::Error;
             sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
 
             if (stmt.Next()) {
-                const char *sha256 = (const char *)sqlite3_column_text(stmt, 0);
-                sha256 = sha256 ? sha256 : "";
+                bool active = sqlite3_column_int(stmt, 0);
+                const char *sha256 = active ? (const char *)sqlite3_column_text(stmt, 1) : "";
 
                 if (!TestStr(client_sha256, sha256)) {
                     LogError("Deletion refused because of sha256 mismatch");
@@ -348,8 +351,8 @@ void HandleFileDelete(InstanceData *instance, const http_RequestInfo &request, h
             }
         }
 
-        if (!instance->db.Run(R"(UPDATE fs_files SET blob = NULL, compression = NULL, sha256 = NULL
-                                 WHERE path = ? AND sha256 IS NOT NULL)", path))
+        if (!instance->db.Run(R"(UPDATE fs_files SET active = 0
+                                 WHERE active = 1 AND path = ?;)", path))
             return sq_TransactionResult::Error;
 
         if (sqlite3_changes(instance->db)) {

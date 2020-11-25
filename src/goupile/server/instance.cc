@@ -11,7 +11,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 19;
+const int InstanceVersion = 20;
 
 bool InstanceData::Open(const char *key, const char *filename)
 {
@@ -706,11 +706,79 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return sq_TransactionResult::Error;
+            } [[fallthrough]];
+
+            case 17: {
+                bool success = db->Run(R"(
+                    UPDATE fs_settings SET key = 'Application.BaseUrl' WHERE key = 'HTTP.BaseUrl';
+                    UPDATE fs_settings SET key = 'Application.AppKey' WHERE key = 'Application.ClientKey';
+                    UPDATE fs_settings SET key = 'Application.AppName' WHERE key = 'Application.Name';
+                    DELETE FROM fs_settings WHERE key NOT LIKE 'Application.%' OR key = 'Application.DemoUser';
+                    UPDATE fs_settings SET key = REPLACE(key, 'Application.', '');
+
+                    CREATE TABLE dom_permissions (
+                        username TEXT NOT NULL,
+                        permissions INTEGER NOT NULL,
+                        zone TEXT
+                    );
+                    INSERT INTO dom_permissions (username, permissions, zone)
+                        SELECT username, permissions, zone FROM usr_users;
+                    CREATE UNIQUE INDEX dom_permissions_u ON dom_permissions (username);
+
+                    DROP TABLE adm_events;
+                    DROP TABLE usr_users;
+                )");
+
+                if (version) {
+                    LogInfo("Existing instance users must be recreated on main database");
+                }
+
+                if (!success)
+                    return sq_TransactionResult::Error;
+            } [[fallthrough]];
+
+            case 18: {
+                bool success = db->Run(R"(
+                    DROP TABLE dom_permissions;
+                )");
+
+                if (version) {
+                    LogInfo("Existing instance permissions must be recreated on main database");
+                }
+
+                if (!success)
+                    return sq_TransactionResult::Error;
+            } // [[fallthrough]];
+
+            case 19: {
+                bool success = db->Run(R"(
+                    ALTER TABLE fs_files RENAME TO fs_files_BAK;
+                    DROP INDEX fs_files_p;
+
+                    CREATE TABLE fs_files (
+                        path TEXT NOT NULL,
+                        active INTEGER CHECK(active IN (0, 1)) NOT NULL,
+                        mtime INTEGER NOT NULL,
+                        blob BLOB NOT NULL,
+                        compression TEXT NOT NULL,
+                        sha256 TEXT NOT NULL,
+                        size INTEGER NOT NULL
+                    );
+                    INSERT INTO fs_files (path, active, mtime, blob, compression, sha256, size)
+                        SELECT path, 1, 0, blob, compression, sha256, 0 FROM fs_files_BAK
+                        WHERE sha256 IS NOT NULL;
+                    CREATE INDEX fs_files_pa ON fs_files (path, active);
+
+                    DROP TABLE fs_files_BAK;
+                )");
+                if (!success)
+                    return sq_TransactionResult::Error;
 
                 sq_Statement stmt;
-                if (!db->Prepare(R"(SELECT rowid, path, compression FROM fs_files
-                                   WHERE sha256 IS NOT NULL;)", &stmt))
+                if (!db->Prepare("SELECT rowid, path, compression FROM fs_files;", &stmt))
                     return sq_TransactionResult::Error;
+
+                int64_t mtime = GetUnixTime();
 
                 while (stmt.Next()) {
                     int64_t rowid = sqlite3_column_int64(stmt, 0);
@@ -761,56 +829,15 @@ bool MigrateInstance(sq_Database *db)
                         }
                     }
 
-                    if (!db->Run("UPDATE fs_files SET size = ? WHERE path = ?;", real_len, path))
+                    if (!db->Run(R"(UPDATE fs_files SET mtime = ?, size = ?
+                                    WHERE active = 1 AND path = ?;)", mtime, real_len, path))
                         return sq_TransactionResult::Error;
                 }
                 if (!stmt.IsValid())
                     return sq_TransactionResult::Error;
-            } [[fallthrough]];
-
-            case 17: {
-                bool success = db->Run(R"(
-                    UPDATE fs_settings SET key = 'Application.BaseUrl' WHERE key = 'HTTP.BaseUrl';
-                    UPDATE fs_settings SET key = 'Application.AppKey' WHERE key = 'Application.ClientKey';
-                    UPDATE fs_settings SET key = 'Application.AppName' WHERE key = 'Application.Name';
-                    DELETE FROM fs_settings WHERE key NOT LIKE 'Application.%' OR key = 'Application.DemoUser';
-                    UPDATE fs_settings SET key = REPLACE(key, 'Application.', '');
-
-                    CREATE TABLE dom_permissions (
-                        username TEXT NOT NULL,
-                        permissions INTEGER NOT NULL,
-                        zone TEXT
-                    );
-                    INSERT INTO dom_permissions (username, permissions, zone)
-                        SELECT username, permissions, zone FROM usr_users;
-                    CREATE UNIQUE INDEX dom_permissions_u ON dom_permissions (username);
-
-                    DROP TABLE adm_events;
-                    DROP TABLE usr_users;
-                )");
-
-                if (version) {
-                    LogInfo("Existing instance users must be recreated on main database");
-                }
-
-                if (!success)
-                    return sq_TransactionResult::Error;
-            } [[fallthrough]];
-
-            case 18: {
-                bool success = db->Run(R"(
-                    DROP TABLE dom_permissions;
-                )");
-
-                if (version) {
-                    LogInfo("Existing instance permissions must be recreated on main database");
-                }
-
-                if (!success)
-                    return sq_TransactionResult::Error;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 19);
+            RG_STATIC_ASSERT(InstanceVersion == 20);
         }
 
         int64_t time = GetUnixTime();
