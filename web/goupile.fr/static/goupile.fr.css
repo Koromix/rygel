@@ -104,7 +104,7 @@ td {
 
 #menu {
     position: fixed;
-    left: calc(50% + 435px);
+    left: calc(50% + 485px);
     top: 4.5em;
     width: 220px;
     padding: 0 1em 0 0;
@@ -136,7 +136,7 @@ main {
     width: 100%;
     background: #f6f6f6;
     box-sizing: border-box;
-    max-width: 870px;
+    max-width: 970px;
     padding: 2em 1.5em 1.5em 1.5em;
 }
 
@@ -261,7 +261,7 @@ main {
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
 }
 
-@media screen and (max-width: 580px) {
+@media screen and (max-width: 680px) {
     #header { height: auto; }
     #header > div:first-child > a { text-align: right; }
     #header > div:last-child > a { text-align: left; }
