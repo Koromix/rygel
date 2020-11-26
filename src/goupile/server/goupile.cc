@@ -16,10 +16,80 @@
 
 namespace RG {
 
+struct InstanceGuard {
+    std::atomic_int refcount {1};
+    InstanceGuard *next_free = nullptr;
+
+    InstanceData instance;
+
+    InstanceData *Ref();
+    void Unref();
+};
+
 DomainData goupile_domain;
 
-static HeapArray<InstanceData> instances;
-static HashMap<Span<const char>, InstanceData *> instances_map;
+static std::shared_mutex instances_mutex;
+static BucketArray<InstanceGuard> instances;
+static InstanceGuard *instances_free = nullptr;
+static HashMap<Span<const char>, InstanceGuard *> instances_map;
+
+InstanceData *InstanceGuard::Ref()
+{
+    refcount++;
+    return &instance;
+}
+
+void InstanceGuard::Unref()
+{
+    if (!--refcount) {
+        std::lock_guard<std::shared_mutex> lock(instances_mutex);
+
+        instance.Close();
+        next_free = instances_free;
+        instances_free = this;
+    }
+}
+
+// Call with instances_mutex locked (exclusive)
+static bool LoadInstance(const char *key, const char *filename)
+{
+    if (!instances_free) {
+        instances_free = instances.AppendDefault();
+    }
+
+    InstanceGuard *guard = instances_free;
+    if (!guard->instance.Open(key, filename))
+        return false;
+    instances_free = guard->next_free;
+    guard->next_free = nullptr;
+
+    InstanceData *instance = guard->Ref();
+    instances_map.Set(instance->config.base_url, guard);
+
+    return true;
+}
+
+static bool InitInstances()
+{
+    BlockAllocator temp_alloc;
+
+    sq_Statement stmt;
+    if (!goupile_domain.db.Prepare("SELECT instance FROM dom_instances;", &stmt))
+        return false;
+
+    std::lock_guard<std::shared_mutex> lock(instances_mutex);
+
+    bool success = true;
+    while (stmt.Next()) {
+        const char *key = (const char *)sqlite3_column_text(stmt, 0);
+        const char *filename = goupile_domain.config.GetInstanceFileName(key, &temp_alloc);
+
+        success &= LoadInstance(key, filename);
+    }
+    success &= stmt.IsValid();
+
+    return success;
+}
 
 static void HandleEvents(InstanceData *, const http_RequestInfo &request, http_IO *io)
 {
@@ -46,8 +116,13 @@ static void HandleFileStatic(InstanceData *instance, const http_RequestInfo &req
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
     if (ReloadAssets()) {
-        for (InstanceData &instance: instances) {
-            instance.InitAssets();
+        std::lock_guard<std::shared_mutex> lock(instances_mutex);
+
+        for (InstanceGuard &guard: instances) {
+            InstanceData *instance = guard.Ref();
+            RG_DEFER { guard.Unref(); };
+
+            instance->InitAssets();
         }
     }
 
@@ -84,11 +159,18 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             io->AttachError(404);
         }
     } else {
-        InstanceData *instance = instances_map.FindValue(base_url, nullptr);
-        if (!instance) {
+        InstanceGuard *guard;
+        {
+            std::shared_lock<std::shared_mutex> lock(instances_mutex);
+            guard = instances_map.FindValue(base_url, nullptr);
+        }
+        if (!guard) {
             io->AttachError(404);
             return;
         }
+
+        InstanceData *instance = guard->Ref();
+        io->AddFinalizer([=]() { guard->Unref(); });
 
         // Try application and static assets
         if (request.method == http_RequestMethod::Get) {
@@ -156,8 +238,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
 int Main(int argc, char **argv)
 {
-    BlockAllocator temp_alloc;
-
     const char *config_filename = "goupile.ini";
 
     const auto print_usage = [&](FILE *fp) {
@@ -218,30 +298,8 @@ Options:
             return 1;
     }
 
-    // Load instances
-    {
-        sq_Statement stmt;
-        if (!goupile_domain.db.Prepare("SELECT instance FROM dom_instances;", &stmt))
-            return 1;
-
-        while (stmt.Next()) {
-            InstanceData *instance = instances.AppendDefault();
-
-            const char *key = (const char *)sqlite3_column_text(stmt, 0);
-            const char *filename = goupile_domain.config.GetInstanceFileName(key, &temp_alloc);
-
-            if (!instance->Open(key, filename))
-                return 1;
-        }
-        if (!stmt.IsValid())
-            return 1;
-
-        for (InstanceData &instance: instances) {
-            instances_map.Set(instance.config.base_url, &instance);
-        }
-    }
-
-    // Init JS
+    if (!InitInstances())
+        return 1;
     InitJS();
 
     // Run!
@@ -259,12 +317,8 @@ Options:
     WaitForInterruption();
 
     daemon.Stop();
-    for (InstanceData &instance: instances) {
-        instance.Close();
-    }
-    goupile_domain.Close();
-
     LogInfo("Exit");
+
     return 0;
 }
 
