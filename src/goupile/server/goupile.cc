@@ -64,7 +64,7 @@ static bool LoadInstance(const char *key, const char *filename)
     guard->next_free = nullptr;
 
     InstanceData *instance = guard->Ref();
-    instances_map.Set(instance->config.base_url, guard);
+    instances_map.Set(instance->base_url, guard);
 
     return true;
 }
@@ -106,7 +106,7 @@ static void HandleFileStatic(InstanceData *instance, const http_RequestInfo &req
     json.StartArray();
     for (const AssetInfo &asset: instance->assets) {
         char buf[512];
-        json.String(Fmt(buf, "%1%2", instance->config.base_url, asset.name + 1).ptr);
+        json.String(Fmt(buf, "%1%2", instance->base_url, asset.name + 1).ptr);
     }
     json.EndArray();
 

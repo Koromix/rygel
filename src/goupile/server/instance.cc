@@ -11,7 +11,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 20;
+const int InstanceVersion = 21;
 
 bool InstanceData::Open(const char *key, const char *filename)
 {
@@ -53,9 +53,7 @@ bool InstanceData::Open(const char *key, const char *filename)
             const char *value = (const char *)sqlite3_column_text(stmt, 1);
 
             if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
-                if (TestStr(key, "BaseUrl")) {
-                    config.base_url = DuplicateString(value, &str_alloc).ptr;
-                } else if (TestStr(key, "AppName")) {
+                if (TestStr(key, "AppName")) {
                     config.app_name = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(key, "AppKey")) {
                     config.app_key = DuplicateString(value, &str_alloc).ptr;
@@ -82,6 +80,7 @@ bool InstanceData::Open(const char *key, const char *filename)
     if (!Validate())
         return false;
 
+    base_url = Fmt(&str_alloc, "/%1/", key);
     InitAssets();
 
     err_guard.Disable();
@@ -93,11 +92,6 @@ bool InstanceData::Validate()
     bool valid = true;
 
     // Settings
-    if (!config.base_url || config.base_url[0] != '/' ||
-                            config.base_url[strlen(config.base_url) - 1] != '/') {
-        LogError("Base URL '%1' does not start and end with '/'", config.base_url);
-        valid = false;
-    }
     if (!config.app_key || !config.app_key[0]) {
         LogError("Project key must not be empty");
         valid = false;
@@ -165,6 +159,7 @@ void InstanceData::Close()
     filename = nullptr;
     db.Close();
     config = {};
+    base_url = {};
     assets.Clear();
     assets_map.Clear();
     str_alloc.ReleaseAll();
@@ -185,7 +180,7 @@ Span<const uint8_t> InstanceData::PatchVariables(const AssetInfo &asset)
             writer->Write(config.app_name);
             return true;
         } else if (TestStr(key, "BASE_URL")) {
-            writer->Write(config.base_url);
+            writer->Write(base_url);
             return true;
         } else if (TestStr(key, "USE_OFFLINE")) {
             writer->Write(config.use_offline ? "true" : "false");
@@ -201,7 +196,7 @@ Span<const uint8_t> InstanceData::PatchVariables(const AssetInfo &asset)
             return true;
         } else if (TestStr(key, "LINK_MANIFEST")) {
             if (config.use_offline) {
-                Print(writer, "<link rel=\"manifest\" href=\"%1manifest.json\"/>", config.base_url);
+                Print(writer, "<link rel=\"manifest\" href=\"%1manifest.json\"/>", base_url);
             }
             return true;
         } else {
@@ -582,7 +577,7 @@ bool MigrateInstance(sq_Database *db)
                     success &= db->Run(sql, "HTTP.IdleTimeout", fake1.http.idle_timeout);
                     success &= db->Run(sql, "HTTP.Threads", fake1.http.threads);
                     success &= db->Run(sql, "HTTP.AsyncThreads", fake1.http.async_threads);
-                    success &= db->Run(sql, "HTTP.BaseUrl", fake2.base_url);
+                    success &= db->Run(sql, "HTTP.BaseUrl", nullptr);
                     success &= db->Run(sql, "HTTP.MaxAge", fake1.max_age);
                 }
 
@@ -835,9 +830,17 @@ bool MigrateInstance(sq_Database *db)
                 }
                 if (!stmt.IsValid())
                     return sq_TransactionResult::Error;
+            } [[fallthrough]];
+
+            case 20: {
+                bool success = db->Run(R"(
+                    DELETE FROM fs_settings WHERE key = 'BaseUrl';
+                )");
+                if (!success)
+                    return sq_TransactionResult::Error;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 20);
+            RG_STATIC_ASSERT(InstanceVersion == 21);
         }
 
         int64_t time = GetUnixTime();

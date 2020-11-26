@@ -40,7 +40,7 @@ void HandleFileList(InstanceData *instance, const http_RequestInfo &request, htt
 // Returns true when request has been handled (file exists or an error has occured)
 bool HandleFileGet(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
 {
-    const char *path = request.url + strlen(instance->config.base_url) - 1;
+    const char *path = request.url + instance->base_url.len - 1;
     const char *client_etag = request.GetHeaderValue("If-None-Match");
     const char *client_sha256 = request.GetQueryValue("sha256");
 
@@ -156,7 +156,7 @@ void HandleFilePut(InstanceData *instance, const http_RequestInfo &request, http
         return;
     }
 
-    const char *path = request.url + strlen(instance->config.base_url) - 1;
+    const char *path = request.url + instance->base_url.len - 1;
     const char *client_sha256 = request.GetQueryValue("sha256");
 
     // Security checks
@@ -312,7 +312,7 @@ void HandleFileDelete(InstanceData *instance, const http_RequestInfo &request, h
         return;
     }
 
-    const char *path = request.url + strlen(instance->config.base_url) - 1;
+    const char *path = request.url + instance->base_url.len - 1;
     const char *client_sha256 = request.GetQueryValue("sha256");
 
     sq_TransactionResult ret = instance->db.Transaction([&]() {

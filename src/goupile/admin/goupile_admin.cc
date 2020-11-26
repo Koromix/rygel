@@ -360,7 +360,6 @@ static int RunAddInstance(Span<const char *> arguments)
 
     // Options
     const char *config_filename = "goupile.ini";
-    Span<const char> base_url = {};
     Span<const char> app_key = {};
     Span<const char> app_name = {};
     bool empty = false;
@@ -374,8 +373,6 @@ Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
                                  %!D..(default: %2)%!0
 
-        %!..+--base_url <url>%!0         Change base URL
-                                 %!D..(default: directory name)%!0
         %!..+--app_key <key>%!0          Change application key
                                  %!D..(default: directory name)%!0
         %!..+--app_name <name>%!0        Change application name
@@ -395,8 +392,6 @@ Options:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 config_filename = opt.current_value;
-            } else if (opt.Test("--base_url", OptionType::Value)) {
-                base_url = opt.current_value;
             } else if (opt.Test("--app_key", OptionType::Value)) {
                 app_key = opt.current_value;
             } else if (opt.Test("--app_name", OptionType::Value)) {
@@ -417,9 +412,6 @@ Options:
     // Default values
     if (!CheckKeyName(instance_key, "Instance"))
         return 1;
-    if (!base_url.len) {
-        base_url = Fmt(&temp_alloc, "/%1/", instance_key);
-    }
     if (!app_key.len) {
         app_key = instance_key;
     }
@@ -487,7 +479,6 @@ Options:
         const char *sql = "UPDATE fs_settings SET value = ? WHERE key = ?";
         bool success = true;
 
-        success &= db.Run(sql, base_url, "BaseUrl");
         success &= db.Run(sql, app_key, "AppKey");
         success &= db.Run(sql, app_name, "AppName");
 

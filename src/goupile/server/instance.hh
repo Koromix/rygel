@@ -28,7 +28,6 @@ public:
     sq_Database db;
 
     struct {
-        const char *base_url = nullptr;
         const char *app_key = nullptr;
         const char *app_name = nullptr;
 
@@ -37,6 +36,7 @@ public:
         SyncMode sync_mode = SyncMode::Offline;
     } config;
 
+    Span<const char> base_url = {};
     HeapArray<AssetInfo> assets;
     HashTable<const char *, const AssetInfo *> assets_map;
     char etag[33];
