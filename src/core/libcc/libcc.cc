@@ -3692,7 +3692,6 @@ bool StreamReader::Close()
     filename = nullptr;
     source.eof = false;
     raw_len = -1;
-    read = 0;
     raw_read = 0;
     error = false;
     eof = false;
@@ -3718,9 +3717,6 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
         } break;
     }
 
-    if (RG_LIKELY(read_len >= 0)) {
-        read += read_len;
-    }
     return read_len;
 }
 

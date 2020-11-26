@@ -2556,7 +2556,6 @@ class StreamReader {
     } compression;
 
     Size raw_len;
-    Size read;
     Size raw_read;
     bool eof;
     bool error = false;
