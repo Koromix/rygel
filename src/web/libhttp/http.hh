@@ -121,8 +121,10 @@ class http_IO {
     const char *last_err = nullptr;
 
     std::condition_variable read_cv;
+    Size read_max = -1;
     Span<uint8_t> read_buf = {};
     Size read_len = 0;
+    Size read_total = 0;
     bool read_eof = false;
 
     int write_code;
@@ -157,7 +159,7 @@ public:
     void ResetResponse();
 
     // Blocking, do in async context
-    bool OpenForRead(StreamReader *out_st);
+    bool OpenForRead(Size max_len, StreamReader *out_st);
     bool ReadPostValues(Allocator *alloc, HashMap<const char *, const char *> *out_values);
     bool OpenForWrite(int code, CompressionType compression_type, StreamWriter *out_st);
 

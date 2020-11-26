@@ -218,7 +218,7 @@ void HandleRecordSync(InstanceData *instance, const http_RequestInfo &request, h
         HeapArray<ScriptRecord> handles;
         {
             StreamReader st;
-            if (!io->OpenForRead(&st))
+            if (!io->OpenForRead(Megabytes(2), &st))
                 return;
 
             if (!port->ParseFragments(&st, &handles)) {

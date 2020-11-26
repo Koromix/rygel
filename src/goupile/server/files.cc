@@ -189,25 +189,17 @@ void HandleFilePut(InstanceData *instance, const http_RequestInfo &request, http
         {
             StreamWriter writer(fp, "<temp>", CompressionType::Gzip);
             StreamReader reader;
-            if (!io->OpenForRead(&reader))
+            if (!io->OpenForRead(instance->config.max_file_size, &reader))
                 return;
 
             crypto_hash_sha256_state state;
             crypto_hash_sha256_init(&state);
-
 
             while (!reader.IsEOF()) {
                 LocalArray<uint8_t, 16384> buf;
                 buf.len = reader.Read(buf.data);
                 if (buf.len < 0)
                     return;
-
-                if (RG_UNLIKELY(buf.len > instance->config.max_file_size - total_len)) {
-                    LogError("File '%1' is too large (limit = %2)",
-                             reader.GetFileName(), FmtDiskSize(instance->config.max_file_size));
-                    io->AttachError(413);
-                    return;
-                }
                 total_len += buf.len;
 
                 if (!writer.Write(buf))

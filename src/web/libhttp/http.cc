@@ -584,9 +584,11 @@ void http_IO::AttachNothing(int code)
     AttachResponse(code, response);
 }
 
-bool http_IO::OpenForRead(StreamReader *out_st)
+bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
 {
     RG_ASSERT(state != State::Sync);
+
+    read_max = max_len;
 
     bool success = out_st->Open([this](Span<uint8_t> out_buf) { return Read(out_buf); }, "<http>");
     return success;
@@ -637,28 +639,21 @@ bool http_IO::ReadPostValues(Allocator *alloc, HashMap<const char *, const char 
     }
     RG_DEFER { MHD_destroy_post_processor(pp); };
 
+    read_max = Kibibytes(32);
+
     // Parse available upload data
-    {
-        Size total_len = 0;
-        for (;;) {
-            LocalArray<uint8_t, 1024> buf;
-            buf.len = Read(buf.data);
-            if (buf.len < 0) {
-                return false;
-            } else if (!buf.len) {
-                break;
-            }
+    for (;;) {
+        LocalArray<uint8_t, 1024> buf;
+        buf.len = Read(buf.data);
+        if (buf.len < 0) {
+            return false;
+        } else if (!buf.len) {
+            break;
+        }
 
-            if (RG_UNLIKELY(buf.len > Kibibytes(32) - total_len)) {
-                LogError("POST body is too long (max: %1)", FmtMemSize(buf.len));
-                return false;
-            }
-            total_len += buf.len;
-
-            if (MHD_post_process(pp, (const char *)buf.data, (size_t)buf.len) != MHD_YES) {
-                LogError("Failed to parse POST data");
-                return false;
-            }
+        if (MHD_post_process(pp, (const char *)buf.data, (size_t)buf.len) != MHD_YES) {
+            LogError("Failed to parse POST data");
+            return false;
         }
     }
 
@@ -707,6 +702,13 @@ Size http_IO::Read(Span<uint8_t> out_buf)
         LogError("Connection aborted");
         return -1;
     }
+
+    if (RG_UNLIKELY(read_max >= 0 && read_len > read_max - read_total)) {
+        LogError("HTTP body is too big (max = %1)", FmtMemSize(read_len));
+        AttachError(413);
+        return -1;
+    }
+    read_total += read_len;
 
     return read_len;
 }
