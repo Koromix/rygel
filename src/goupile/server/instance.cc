@@ -748,7 +748,7 @@ bool MigrateInstance(sq_Database *db)
 
                 if (!success)
                     return sq_TransactionResult::Error;
-            } // [[fallthrough]];
+            } [[fallthrough]];
 
             case 19: {
                 bool success = db->Run(R"(
