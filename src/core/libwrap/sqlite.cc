@@ -59,7 +59,6 @@ bool sq_Database::Open(const char *filename, unsigned int flags)
         PRAGMA journal_mode = WAL;
         PRAGMA synchronous = NORMAL;
         PRAGMA busy_timeout = 5000;
-        PRAGMA locking_mode = EXCLUSIVE;
     )";
 
     RG_ASSERT(!db);
