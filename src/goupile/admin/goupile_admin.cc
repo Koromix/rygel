@@ -599,7 +599,15 @@ Options:
     if (!domain.Open(config_filename))
         return 1;
 
-    if (!domain.db.Run("DELETE FROM dom_instances WHERE instance = ?;", instance_key))
+    sq_TransactionResult ret = domain.db.Transaction([&]() {
+        if (!domain.db.Run("DELETE FROM dom_permissions WHERE instance = ?;", instance_key))
+            return sq_TransactionResult::Error;
+        if (!domain.db.Run("DELETE FROM dom_instances WHERE instance = ?;", instance_key))
+            return sq_TransactionResult::Error;
+
+        return sq_TransactionResult::Commit;
+    });
+    if (ret != sq_TransactionResult::Commit)
         return 1;
     if (!sqlite3_changes(domain.db)) {
         LogError("Instance '%1' does not exist", instance_key);
