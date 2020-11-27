@@ -440,9 +440,14 @@ Options:
 
     const char *database_filename = domain.config.GetInstanceFileName(instance_key, &temp_alloc);
     bool reuse_database = TestFile(database_filename);
-    if (reuse_database && !force) {
-        LogError("Database '%1' already exists (old deleted instance?)", database_filename);
-        return 1;
+    if (reuse_database) {
+        if (force) {
+            LogInfo("Reusing database '%1', with implied --empty", database_filename);
+            empty = true;
+        } else {
+            LogError("Database '%1' already exists (old deleted instance?)", database_filename);
+            return 1;
+        }
     }
     RG_DEFER_N(db_guard) {
         if (!reuse_database) {
