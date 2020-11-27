@@ -634,7 +634,7 @@ static int RunAddUser(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *config_filename = nullptr;
+    const char *config_filename = "goupile.ini";
     const char *username = nullptr;
     const char *password = nullptr;
     bool admin = false;
@@ -729,7 +729,7 @@ Options:
 static int RunDeleteUser(Span<const char *> arguments)
 {
     // Options
-    const char *config_filename = nullptr;
+    const char *config_filename = "goupile.ini";
     const char *username = nullptr;
 
     const auto print_usage = [](FILE *fp) {
