@@ -18,7 +18,7 @@ const Token *Session::GetToken(const InstanceData *instance) const
     Token *token;
     {
         std::shared_lock<std::shared_mutex> lock(tokens_lock);
-        token = tokens_map.Find(instance);
+        token = tokens_map.Find(instance->unique);
     }
 
     if (!token) {
@@ -38,7 +38,7 @@ const Token *Session::GetToken(const InstanceData *instance) const
 
             std::lock_guard<std::shared_mutex> lock(tokens_lock);
 
-            token = tokens_map.SetDefault(instance);
+            token = tokens_map.SetDefault(instance->unique);
             token->zone = zone;
             token->permissions = permissions;
         } while (false);
@@ -46,7 +46,7 @@ const Token *Session::GetToken(const InstanceData *instance) const
         // User is not assigned to this instance, cache this information
         if (!token) {
             std::lock_guard<std::shared_mutex> lock(tokens_lock);
-            token = tokens_map.SetDefault(instance);
+            token = tokens_map.SetDefault(instance->unique);
         }
     }
 

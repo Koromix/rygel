@@ -13,10 +13,14 @@ namespace RG {
 // If you change InstanceVersion, don't forget to update the migration switch!
 const int InstanceVersion = 21;
 
+static std::atomic_int64_t next_unique;
+
 bool InstanceData::Open(const char *key, const char *filename)
 {
     RG_DEFER_N(err_guard) { Close(); };
     Close();
+
+    unique = next_unique++;
 
     this->key = DuplicateString(key, &str_alloc).ptr;
     this->filename = DuplicateString(filename, &str_alloc).ptr;
@@ -157,6 +161,7 @@ void InstanceData::Close()
 {
     key = nullptr;
     filename = nullptr;
+    unique = -1;
     db.Close();
     config = {};
     base_url = {};

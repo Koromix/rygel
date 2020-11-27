@@ -17,8 +17,10 @@
 namespace RG {
 
 struct InstanceGuard {
-    std::atomic_int refcount {1};
+    std::atomic_int refcount {0};
+
     InstanceGuard *next_free = nullptr;
+    bool valid = true;
 
     InstanceData instance;
 
@@ -44,15 +46,18 @@ void InstanceGuard::Unref()
     if (!--refcount) {
         std::lock_guard<std::shared_mutex> lock(instances_mutex);
 
+        instances_map.Remove(instance.key);
         instance.Close();
+
         next_free = instances_free;
         instances_free = this;
     }
 }
 
-// Call with instances_mutex locked (exclusive)
 static bool LoadInstance(const char *key, const char *filename)
 {
+    std::lock_guard<std::shared_mutex> lock(instances_mutex);
+
     if (!instances_free) {
         instances_free = instances.AppendDefault();
     }
@@ -62,31 +67,61 @@ static bool LoadInstance(const char *key, const char *filename)
         return false;
     instances_free = guard->next_free;
     guard->next_free = nullptr;
+    guard->valid = true;
 
     InstanceData *instance = guard->Ref();
-    instances_map.Set(instance->base_url, guard);
+    instances_map.Set(instance->key, guard);
 
     return true;
 }
 
+// Can be called multiple times, from main thread only
 static bool InitInstances()
 {
     BlockAllocator temp_alloc;
 
-    sq_Statement stmt;
-    if (!goupile_domain.db.Prepare("SELECT instance FROM dom_instances;", &stmt))
-        return false;
-
-    std::lock_guard<std::shared_mutex> lock(instances_mutex);
-
     bool success = true;
-    while (stmt.Next()) {
-        const char *key = (const char *)sqlite3_column_text(stmt, 0);
-        const char *filename = goupile_domain.config.GetInstanceFileName(key, &temp_alloc);
+    HashSet<const char *> keys;
 
-        success &= LoadInstance(key, filename);
+    // Start new instances (if any)
+    {
+        sq_Statement stmt;
+        if (!goupile_domain.db.Prepare("SELECT instance FROM dom_instances;", &stmt))
+            return false;
+
+        while (stmt.Next()) {
+            const char *key = (const char *)sqlite3_column_text(stmt, 0);
+            key = DuplicateString(key, &temp_alloc).ptr;
+
+            InstanceGuard *guard = instances_map.FindValue(key, nullptr);
+            if (!guard) {
+                LogDebug("Load instance '%1'", key);
+
+                const char *filename = goupile_domain.config.GetInstanceFileName(key, &temp_alloc);
+                success &= LoadInstance(key, filename);
+            } else if (!guard->valid) {
+                LogDebug("Instance key '%1' is not reusable yet, try again");
+                success = false;
+            }
+
+            keys.Set(key);
+        }
+        success &= stmt.IsValid();
     }
-    success &= stmt.IsValid();
+
+    // Drop removed instances (if any)
+    for (InstanceGuard &guard: instances) {
+        if (guard.valid) {
+            InstanceData *instance = &guard.instance;
+
+            if (!keys.Find(instance->key)) {
+                LogDebug("Drop instance '%1'", instance->key);
+
+                guard.Unref();
+                guard.valid = false;
+            }
+        }
+    }
 
     return success;
 }
@@ -119,10 +154,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         std::lock_guard<std::shared_mutex> lock(instances_mutex);
 
         for (InstanceGuard &guard: instances) {
-            InstanceData *instance = guard.Ref();
-            RG_DEFER { guard.Unref(); };
-
-            instance->InitAssets();
+            if (guard.valid) {
+                InstanceData *instance = &guard.instance;
+                instance->InitAssets();
+            }
         }
     }
 
@@ -130,8 +165,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     io->AddHeader("Referrer-Policy", "no-referrer");
 
     // Separate base URL and path
-    Span<const char> base_url;
-    const char *path;
+    Span<const char> inst_key;
+    const char *inst_path;
     {
         Size offset = SplitStr(request.url + 1, '/').len + 1;
 
@@ -146,14 +181,14 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        base_url = MakeSpan(request.url, offset + 1);
-        path = request.url + offset;
+        inst_key = MakeSpan(request.url + 1, offset - 1);
+        inst_path = request.url + offset;
     }
 
-    if (base_url == "/admin/") {
-        if (TestStr(path, "/api/instances/list") && request.method == http_RequestMethod::Get) {
+    if (inst_key == "admin") {
+        if (TestStr(inst_path, "/api/instances/list") && request.method == http_RequestMethod::Get) {
             HandleListInstances(request, io);
-        } else if (TestStr(path, "/api/users/list") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(inst_path, "/api/users/list") && request.method == http_RequestMethod::Get) {
             HandleListUsers(request, io);
         } else {
             io->AttachError(404);
@@ -162,9 +197,9 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         InstanceGuard *guard;
         {
             std::shared_lock<std::shared_mutex> lock(instances_mutex);
-            guard = instances_map.FindValue(base_url, nullptr);
+            guard = instances_map.FindValue(inst_key, nullptr);
         }
-        if (!guard) {
+        if (!guard || !guard->valid) {
             io->AttachError(404);
             return;
         }
@@ -180,11 +215,11 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             if (HandleFileGet(instance, request, io))
                 return;
 
-            if (TestStr(path, "/") || StartsWith(path, "/app/") || StartsWith(path, "/main/")) {
+            if (TestStr(inst_path, "/") || StartsWith(inst_path, "/app/") || StartsWith(inst_path, "/main/")) {
                 asset = instance->assets_map.FindValue("/static/goupile.html", nullptr);
                 RG_ASSERT(asset);
             } else {
-                asset = instance->assets_map.FindValue(path, nullptr);
+                asset = instance->assets_map.FindValue(inst_path, nullptr);
             }
 
             if (asset) {
@@ -208,27 +243,27 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         }
 
         // And last (but not least), API endpoints
-        if (TestStr(path, "/api/events") && request.method == http_RequestMethod::Get) {
+        if (TestStr(inst_path, "/api/events") && request.method == http_RequestMethod::Get) {
             HandleEvents(instance, request, io);
-        } else if (TestStr(path, "/api/user/profile") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(inst_path, "/api/user/profile") && request.method == http_RequestMethod::Get) {
             HandleUserProfile(instance, request, io);
-        } else if (TestStr(path, "/api/user/login") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(inst_path, "/api/user/login") && request.method == http_RequestMethod::Post) {
             HandleUserLogin(instance, request, io);
-        } else if (TestStr(path, "/api/user/logout") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(inst_path, "/api/user/logout") && request.method == http_RequestMethod::Post) {
             HandleUserLogout(instance, request, io);
-        } else if (TestStr(path, "/api/files/list") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(inst_path, "/api/files/list") && request.method == http_RequestMethod::Get) {
              HandleFileList(instance, request, io);
-        } else if (TestStr(path, "/api/files/static") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(inst_path, "/api/files/static") && request.method == http_RequestMethod::Get) {
             HandleFileStatic(instance, request, io);
-        } else if (StartsWith(path, "/files/") && request.method == http_RequestMethod::Put) {
+        } else if (StartsWith(inst_path, "/files/") && request.method == http_RequestMethod::Put) {
             HandleFilePut(instance, request, io);
-        } else if (StartsWith(path, "/files/") && request.method == http_RequestMethod::Delete) {
+        } else if (StartsWith(inst_path, "/files/") && request.method == http_RequestMethod::Delete) {
             HandleFileDelete(instance, request, io);
-        } else if (TestStr(path, "/api/records/load") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(inst_path, "/api/records/load") && request.method == http_RequestMethod::Get) {
             HandleRecordLoad(instance, request, io);
-        } else if (TestStr(path, "/api/records/columns") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(inst_path, "/api/records/columns") && request.method == http_RequestMethod::Get) {
             HandleRecordColumns(instance, request, io);
-        } else if (TestStr(path, "/api/records/sync") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(inst_path, "/api/records/sync") && request.method == http_RequestMethod::Post) {
             HandleRecordSync(instance, request, io);
         } else {
             io->AttachError(404);
@@ -314,7 +349,9 @@ Options:
     LogInfo("Listening on port %1 (%2 stack)",
             goupile_domain.config.http.port, SocketTypeNames[(int)goupile_domain.config.http.sock_type]);
 
-    WaitForInterruption();
+    while (!WaitForInterruption(30000)) {
+        InitInstances();
+    }
 
     daemon.Stop();
     LogInfo("Exit");

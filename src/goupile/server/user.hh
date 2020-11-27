@@ -37,7 +37,7 @@ struct Token {
 
 class Session: public RetainObject {
     mutable std::shared_mutex tokens_lock;
-    mutable HashMap<const void *, Token> tokens_map;
+    mutable HashMap<int64_t, Token> tokens_map;
     mutable BlockAllocator tokens_alloc;
 
 public:
