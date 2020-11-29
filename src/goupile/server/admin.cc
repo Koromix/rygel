@@ -539,23 +539,21 @@ void HandleDeleteInstance(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        sq_TransactionResult ret = goupile_domain.db.Transaction([&]() {
+        goupile_domain.db.Transaction([&]() {
             if (!goupile_domain.db.Run("DELETE FROM dom_permissions WHERE instance = ?;", instance_key))
-                return sq_TransactionResult::Error;
+                return false;
             if (!goupile_domain.db.Run("DELETE FROM dom_instances WHERE instance = ?;", instance_key))
-                return sq_TransactionResult::Error;
+                return false;
 
-            return sq_TransactionResult::Commit;
+            if (!sqlite3_changes(goupile_domain.db)) {
+                LogError("Instance '%1' does not exist", instance_key);
+                io->AttachError(404);
+                return false;
+            }
+
+            io->AttachText(200, "Done!");
+            return true;
         });
-        if (ret != sq_TransactionResult::Commit)
-            return;
-        if (!sqlite3_changes(goupile_domain.db)) {
-            LogError("Instance '%1' does not exist", instance_key);
-            io->AttachError(404);
-            return;
-        }
-
-        io->AttachText(200, "Done!");
     });
 }
 
@@ -627,33 +625,36 @@ void HandleCreateUser(const http_RequestInfo &request, http_IO *io)
             }
         }
 
-        // Check for existing user
-        {
-            sq_Statement stmt;
-            if (!goupile_domain.db.Prepare("SELECT admin FROM dom_users WHERE username = ?", &stmt))
-                return;
-            sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
-
-            if (stmt.Next()) {
-                LogError("User '%1' already exists", username);
-                io->AttachError(409);
-                return;
-            } else if (!stmt.IsValid()) {
-                return;
-            }
-        }
-
         // Hash password
         char hash[crypto_pwhash_STRBYTES];
         if (!HashPassword(password, hash))
             return;
 
-        // Create user
-        if (!goupile_domain.db.Run("INSERT INTO dom_users (username, password_hash, admin) VALUES (?, ?, ?);",
-                                   username, hash, 0 + admin))
-            return;
+        goupile_domain.db.Transaction([&]() {
+            // Check for existing user
+            {
+                sq_Statement stmt;
+                if (!goupile_domain.db.Prepare("SELECT admin FROM dom_users WHERE username = ?", &stmt))
+                    return false;
+                sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
-        io->AttachText(200, "Done!");
+                if (stmt.Next()) {
+                    LogError("User '%1' already exists", username);
+                    io->AttachError(409);
+                    return false;
+                } else if (!stmt.IsValid()) {
+                    return false;
+                }
+            }
+
+            // Create user
+            if (!goupile_domain.db.Run("INSERT INTO dom_users (username, password_hash, admin) VALUES (?, ?, ?);",
+                                       username, hash, 0 + admin))
+                return false;
+
+            io->AttachText(200, "Done!");
+            return true;
+        });
     });
 }
 
@@ -682,15 +683,18 @@ void HandleDeleteUser(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        if (!goupile_domain.db.Run("DELETE FROM dom_users WHERE username = ?", username))
-            return;
-        if (!sqlite3_changes(goupile_domain.db)) {
-            LogError("User '%1' does not exist", username);
-            io->AttachError(404);
-            return;
-        }
+        goupile_domain.db.Transaction([&]() {
+            if (!goupile_domain.db.Run("DELETE FROM dom_users WHERE username = ?", username))
+                return false;
+            if (!sqlite3_changes(goupile_domain.db)) {
+                LogError("User '%1' does not exist", username);
+                io->AttachError(404);
+                return false;
+            }
 
-        io->AttachError(200, "Done!");
+            io->AttachError(200, "Done!");
+            return true;
+        });
     });
 }
 
@@ -760,13 +764,13 @@ void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
             }
         }
 
-        sq_TransactionResult ret = goupile_domain.db.Transaction([&]() {
+        goupile_domain.db.Transaction([&]() {
             // Does instance exist?
             {
                 sq_Statement stmt;
                 if (!goupile_domain.db.Prepare(R"(SELECT instance FROM dom_instances
                                                   WHERE instance = ?;)", &stmt))
-                    return sq_TransactionResult::Error;
+                    return false;
                 sqlite3_bind_text(stmt, 1, instance, -1, SQLITE_STATIC);
 
                 if (!stmt.Next()) {
@@ -774,7 +778,7 @@ void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
                         LogError("Instance '%1' does not exist", instance);
                         io->AttachError(404);
                     }
-                    return sq_TransactionResult::Error;
+                    return false;
                 }
             }
 
@@ -783,7 +787,7 @@ void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
                 sq_Statement stmt;
                 if (!goupile_domain.db.Prepare(R"(SELECT username FROM dom_users
                                                   WHERE username = ?;)", &stmt))
-                    return sq_TransactionResult::Error;
+                    return false;
                 sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
                 if (!stmt.Next()) {
@@ -791,7 +795,7 @@ void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
                         LogError("User '%1' does not exist", instance);
                         io->AttachError(404);
                     }
-                    return sq_TransactionResult::Error;
+                    return false;
                 }
             }
 
@@ -802,20 +806,17 @@ void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
                                               ON CONFLICT(instance, username)
                                                   DO UPDATE SET permissions = excluded.permissions;)",
                                            instance, username, permissions, zone))
-                    return sq_TransactionResult::Error;
+                    return false;
             } else {
                 if (!goupile_domain.db.Run(R"(DELETE FROM dom_permissions
                                               WHERE instance = ? AND username = ?;)",
                                            instance, username))
-                    return sq_TransactionResult::Error;
+                    return false;
             }
 
-            return sq_TransactionResult::Commit;
+            io->AttachText(200, "Done!");
+            return true;
         });
-        if (ret != sq_TransactionResult::Commit)
-            return;
-
-        io->AttachText(200, "Done!");
     });
 }
 

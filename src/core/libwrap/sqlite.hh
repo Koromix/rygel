@@ -83,12 +83,6 @@ public:
     friend class sq_Database;
 };
 
-enum class sq_TransactionResult {
-    Commit,
-    Rollback,
-    Error
-};
-
 class sq_Database {
     RG_DELETE_COPY(sq_Database)
 
@@ -110,7 +104,7 @@ public:
     bool GetUserVersion(int *out_version);
     bool SetUserVersion(int version);
 
-    sq_TransactionResult Transaction(FunctionRef<sq_TransactionResult()> func);
+    bool Transaction(FunctionRef<bool()> func);
 
     bool Run(const char *sql);
     template <typename... Args>

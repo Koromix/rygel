@@ -215,19 +215,19 @@ void HandleFilePut(InstanceData *instance, const http_RequestInfo &request, http
         }
 
         // Copy and commit to database
-        sq_TransactionResult ret = instance->db.Transaction([&]() {
+        instance->db.Transaction([&]() {
             // XXX: StreamX::Seek() (and Tell)
             Size file_len = ftell(fp);
             if (fseek(fp, 0, SEEK_SET) < 0) {
                 LogError("fseek('<temp>') failed: %1", strerror(errno));
-                return sq_TransactionResult::Error;
+                return false;
             }
 
             if (client_sha256) {
                 sq_Statement stmt;
                 if (!instance->db.Prepare(R"(SELECT sha256 FROM fs_files
                                              WHERE active = 1 AND path = ?;)", &stmt))
-                    return sq_TransactionResult::Error;
+                    return false;
                 sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
 
                 if (stmt.Next()) {
@@ -236,16 +236,16 @@ void HandleFilePut(InstanceData *instance, const http_RequestInfo &request, http
                     if (!TestStr(client_sha256, sha256)) {
                         LogError("Update refused because of sha256 mismatch");
                         io->AttachError(409);
-                        return sq_TransactionResult::Rollback;
+                        return false;
                     }
                 } else if (stmt.IsValid()) {
                     if (client_sha256[0]) {
                         LogError("Update refused because of sha256 mismatch");
                         io->AttachError(409);
-                        return sq_TransactionResult::Rollback;
+                        return false;
                     }
                 } else {
-                    return sq_TransactionResult::Error;
+                    return false;
                 }
             }
 
@@ -253,17 +253,17 @@ void HandleFilePut(InstanceData *instance, const http_RequestInfo &request, http
 
             if (!instance->db.Run(R"(UPDATE fs_files SET active = 0
                                      WHERE active = 1 AND path = ?;)", path))
-                return sq_TransactionResult::Error;
+                return false;
             if (!instance->db.Run(R"(INSERT INTO fs_files (active, path, mtime, blob, compression, sha256, size)
                                      VALUES (?, ?, ?, ?, ?, ?, ?);)",
                                      1, path, mtime, sq_Binding::Zeroblob(file_len), "Gzip", sha256, total_len))
-                return sq_TransactionResult::Error;
+                return false;
 
             int64_t rowid = sqlite3_last_insert_rowid(instance->db);
 
             sqlite3_blob *blob;
             if (sqlite3_blob_open(instance->db, "main", "fs_files", "blob", rowid, 1, &blob) != SQLITE_OK)
-                return sq_TransactionResult::Error;
+                return false;
             RG_DEFER { sqlite3_blob_close(blob); };
 
             StreamReader reader(fp, "<temp>");
@@ -273,30 +273,27 @@ void HandleFilePut(InstanceData *instance, const http_RequestInfo &request, http
                 LocalArray<uint8_t, 16384> buf;
                 buf.len = reader.Read(buf.data);
                 if (buf.len < 0)
-                    return sq_TransactionResult::Error;
+                    return false;
 
                 if (buf.len + read_len > file_len) {
                     LogError("Temporary file size has changed (bigger)");
-                    return sq_TransactionResult::Error;
+                    return false;
                 }
                 if (sqlite3_blob_write(blob, buf.data, (int)buf.len, (int)read_len) != SQLITE_OK) {
                     LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
-                    return sq_TransactionResult::Error;
+                    return false;
                 }
 
                 read_len += buf.len;
             }
             if (read_len < file_len) {
                 LogError("Temporary file size has changed (truncated)");
-                return sq_TransactionResult::Error;
+                return false;
             }
 
-            return sq_TransactionResult::Commit;
+            io->AttachText(200, "Done!");
+            return true;
         });
-        if (ret != sq_TransactionResult::Commit)
-            return;
-
-        io->AttachText(200, "Done!");
     });
 }
 
@@ -313,13 +310,13 @@ void HandleFileDelete(InstanceData *instance, const http_RequestInfo &request, h
     const char *path = request.url + instance->base_url.len - 1;
     const char *client_sha256 = request.GetQueryValue("sha256");
 
-    sq_TransactionResult ret = instance->db.Transaction([&]() {
+    instance->db.Transaction([&]() {
         if (client_sha256) {
             sq_Statement stmt;
             if (!instance->db.Prepare(R"(SELECT active, sha256 FROM fs_files
                                          WHERE path = ?
                                          ORDER BY active DESC;)", &stmt))
-                return sq_TransactionResult::Error;
+                return false;
             sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
 
             if (stmt.Next()) {
@@ -329,7 +326,7 @@ void HandleFileDelete(InstanceData *instance, const http_RequestInfo &request, h
                 if (!TestStr(client_sha256, sha256)) {
                     LogError("Deletion refused because of sha256 mismatch");
                     io->AttachError(409);
-                    return sq_TransactionResult::Rollback;
+                    return false;
                 }
             } else {
                 if (stmt.IsValid() && client_sha256[0]) {
@@ -337,27 +334,21 @@ void HandleFileDelete(InstanceData *instance, const http_RequestInfo &request, h
                     io->AttachError(409);
                 }
 
-                return sq_TransactionResult::Rollback;
+                return false;
             }
         }
 
         if (!instance->db.Run(R"(UPDATE fs_files SET active = 0
                                  WHERE active = 1 AND path = ?;)", path))
-            return sq_TransactionResult::Error;
+            return false;
 
         if (sqlite3_changes(instance->db)) {
             io->AttachText(200, "Done!");
         } else {
             io->AttachError(404);
         }
-        return sq_TransactionResult::Commit;
+        return true;
     });
-
-    switch (ret) {
-        case sq_TransactionResult::Commit: { io->AttachText(200, "Done!"); } break;
-        case sq_TransactionResult::Rollback: { io->AttachError(404); } break;
-        case sq_TransactionResult::Error: { /* Error 500 */ } break;
-    }
 }
 
 }

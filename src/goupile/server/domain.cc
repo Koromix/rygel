@@ -277,7 +277,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
 
     LogInfo("Migrating domain: %1 to %2", version + 1, DomainVersion);
 
-    sq_TransactionResult ret = db->Transaction([&]() {
+    bool success = db->Transaction([&]() {
         switch (version) {
             case 0: {
                 bool success = db->Run(R"(
@@ -303,7 +303,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     CREATE UNIQUE INDEX dom_users_u ON dom_users (username);
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 1: {
@@ -317,7 +317,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     CREATE UNIQUE INDEX dom_permissions_ui ON dom_permissions (username, instance);
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 2: {
@@ -331,13 +331,13 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     CREATE UNIQUE INDEX dom_instances_i ON dom_instances (instance);
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
 
                 // Insert existing instances
                 if (version) {
                     sq_Statement stmt;
                     if (!db->Prepare("INSERT INTO dom_instances (instance) VALUES (?);", &stmt))
-                        return sq_TransactionResult::Error;
+                        return false;
 
                     EnumStatus status = EnumerateDirectory(instances_directory, "*.db", -1,
                                                            [&](const char *filename, FileType) {
@@ -350,7 +350,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                         return stmt.Run();
                     });
                     if (status != EnumStatus::Done)
-                        return sq_TransactionResult::Error;
+                        return false;
                 }
 
                 success = db->Run(R"(
@@ -368,7 +368,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     CREATE UNIQUE INDEX dom_permissions_ui ON dom_permissions (username, instance);
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } // [[fallthrough]];
 
             RG_STATIC_ASSERT(DomainVersion == 3);
@@ -377,16 +377,14 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
         int64_t time = GetUnixTime();
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
                      DomainVersion, FelixVersion, time))
-            return sq_TransactionResult::Error;
+            return false;
         if (!db->SetUserVersion(DomainVersion))
-            return sq_TransactionResult::Error;
+            return false;
 
-        return sq_TransactionResult::Commit;
+        return true;
     });
-    if (ret != sq_TransactionResult::Commit)
-        return false;
 
-    return true;
+    return success;
 }
 
 bool MigrateDomain(const DomainConfig &config)

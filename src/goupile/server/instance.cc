@@ -246,7 +246,7 @@ bool MigrateInstance(sq_Database *db)
     LogInfo("Migrate instance '%1': %2 to %3",
             SplitStrReverseAny(filename, RG_PATH_SEPARATORS), version + 1, InstanceVersion);
 
-    sq_TransactionResult ret = db->Transaction([&]() {
+    bool success = db->Transaction([&]() {
         switch (version) {
             case 0: {
                 bool success = db->Run(R"(
@@ -312,7 +312,7 @@ bool MigrateInstance(sq_Database *db)
                     CREATE UNIQUE INDEX usr_users_u ON usr_users (username);
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 1: {
@@ -338,7 +338,7 @@ bool MigrateInstance(sq_Database *db)
                     CREATE INDEX rec_fragments_tip ON rec_fragments(table_name, id, page);
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 2: {
@@ -359,7 +359,7 @@ bool MigrateInstance(sq_Database *db)
                     CREATE UNIQUE INDEX rec_sequences_s ON rec_sequences (store);
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 3: {
@@ -371,12 +371,12 @@ bool MigrateInstance(sq_Database *db)
                     );
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 4: {
                 if (!db->Run("UPDATE usr_users SET permissions = 31 WHERE permissions == 7;"))
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 5: {
@@ -388,7 +388,7 @@ bool MigrateInstance(sq_Database *db)
                     ALTER TABLE rec_fragments ADD COLUMN version INEGER NOT NULL;
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 6: {
@@ -399,7 +399,7 @@ bool MigrateInstance(sq_Database *db)
                     CREATE UNIQUE INDEX rec_columns_spvp ON rec_columns (store, page, variable, IFNULL(prop, 0));
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 7: {
@@ -424,12 +424,12 @@ bool MigrateInstance(sq_Database *db)
                     DROP TABLE rec_columns_BAK;
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 8: {
                 if (!db->Run("UPDATE usr_users SET permissions = 63 WHERE permissions == 31;"))
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 9: {
@@ -454,7 +454,7 @@ bool MigrateInstance(sq_Database *db)
                     CREATE INDEX rec_columns_sp ON rec_columns (store, page);
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 10: {
@@ -465,7 +465,7 @@ bool MigrateInstance(sq_Database *db)
                     CREATE INDEX rec_entries_z ON rec_entries (zone);
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 11: {
@@ -478,7 +478,7 @@ bool MigrateInstance(sq_Database *db)
                     );
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 12: {
@@ -488,7 +488,7 @@ bool MigrateInstance(sq_Database *db)
                     ALTER TABLE adm_events ADD COLUMN details TEXT;
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 13: {
@@ -503,7 +503,7 @@ bool MigrateInstance(sq_Database *db)
                     CREATE INDEX fs_files_p ON fs_files (path);
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
 
                 if (version && filename) {
                     Span<const char> root_directory = GetPathDirectory(filename);
@@ -511,7 +511,7 @@ bool MigrateInstance(sq_Database *db)
 
                     HeapArray<const char *> filenames;
                     if (!EnumerateFiles(files_directory, nullptr, -1, -1, &temp_alloc, &filenames))
-                        return sq_TransactionResult::Error;
+                        return false;
 
                     Size relative_offset = strlen(files_directory);
 
@@ -529,7 +529,7 @@ bool MigrateInstance(sq_Database *db)
                                 LocalArray<uint8_t, 16384> buf;
                                 buf.len = reader.Read(buf.data);
                                 if (buf.len < 0)
-                                    return sq_TransactionResult::Error;
+                                    return false;
 
                                 writer.Write(buf);
                                 crypto_hash_sha256_update(&state, buf.data, buf.len);
@@ -552,7 +552,7 @@ bool MigrateInstance(sq_Database *db)
 
                         if (!db->Run(R"(INSERT INTO fs_files (path, blob, compression, sha256)
                                         VALUES (?, ?, ?, ?);)", path, gzip, "Gzip", sha256))
-                            return sq_TransactionResult::Error;
+                            return false;
                     }
                 }
             } [[fallthrough]];
@@ -689,7 +689,7 @@ bool MigrateInstance(sq_Database *db)
                 }
 
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 15: {
@@ -700,7 +700,7 @@ bool MigrateInstance(sq_Database *db)
                     DROP TABLE sched_resources;
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 16: {
@@ -708,7 +708,7 @@ bool MigrateInstance(sq_Database *db)
                     ALTER TABLE fs_files ADD COLUMN size INTEGER;
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 17: {
@@ -737,7 +737,7 @@ bool MigrateInstance(sq_Database *db)
                 }
 
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 18: {
@@ -750,7 +750,7 @@ bool MigrateInstance(sq_Database *db)
                 }
 
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 19: {
@@ -775,11 +775,11 @@ bool MigrateInstance(sq_Database *db)
                     DROP TABLE fs_files_BAK;
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
 
                 sq_Statement stmt;
                 if (!db->Prepare("SELECT rowid, path, compression FROM fs_files;", &stmt))
-                    return sq_TransactionResult::Error;
+                    return false;
 
                 int64_t mtime = GetUnixTime();
 
@@ -792,14 +792,14 @@ bool MigrateInstance(sq_Database *db)
                         const char *name = (const char *)sqlite3_column_text(stmt, 2);
                         if (!name || !OptionToEnum(CompressionTypeNames, name, &compression_type)) {
                             LogError("Unknown compression type '%1'", name);
-                            return sq_TransactionResult::Rollback;
+                            return false;
                         }
                     }
 
                     sqlite3_blob *blob;
                     if (sqlite3_blob_open(*db, "main", "fs_files", "blob", rowid, 0, &blob) != SQLITE_OK) {
                         LogError("SQLite Error: %1", sqlite3_errmsg(*db));
-                        return sq_TransactionResult::Error;
+                        return false;
                     }
                     RG_DEFER { sqlite3_blob_close(blob); };
 
@@ -826,7 +826,7 @@ bool MigrateInstance(sq_Database *db)
                             LocalArray<uint8_t, 16384> buf;
                             buf.len = reader.Read(buf.data);
                             if (buf.len < 0)
-                                return sq_TransactionResult::Error;
+                                return false;
 
                             real_len += buf.len;
                         }
@@ -834,10 +834,10 @@ bool MigrateInstance(sq_Database *db)
 
                     if (!db->Run(R"(UPDATE fs_files SET mtime = ?, size = ?
                                     WHERE active = 1 AND path = ?;)", mtime, real_len, path))
-                        return sq_TransactionResult::Error;
+                        return false;
                 }
                 if (!stmt.IsValid())
-                    return sq_TransactionResult::Error;
+                    return false;
             } [[fallthrough]];
 
             case 20: {
@@ -845,7 +845,7 @@ bool MigrateInstance(sq_Database *db)
                     DELETE FROM fs_settings WHERE key = 'BaseUrl';
                 )");
                 if (!success)
-                    return sq_TransactionResult::Error;
+                    return false;
             } // [[fallthrough]];
 
             RG_STATIC_ASSERT(InstanceVersion == 21);
@@ -854,16 +854,14 @@ bool MigrateInstance(sq_Database *db)
         int64_t time = GetUnixTime();
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
                      InstanceVersion, FelixVersion, time))
-            return sq_TransactionResult::Error;
+            return false;
         if (!db->SetUserVersion(InstanceVersion))
-            return sq_TransactionResult::Error;
+            return false;
 
-        return sq_TransactionResult::Commit;
+        return true;
     });
-    if (ret != sq_TransactionResult::Commit)
-        return false;
 
-    return true;
+    return success;
 }
 
 bool MigrateInstance(const char *filename)

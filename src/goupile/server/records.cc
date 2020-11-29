@@ -267,14 +267,22 @@ void HandleRecordSync(InstanceData *instance, const http_RequestInfo &request, h
                 continue;
             }
 
-            sq_TransactionResult ret = instance->db.Transaction([&]() {
+            for (const ScriptFragment &frag: fragments) {
+                if (frag.complete && !token->HasPermission(UserPermission::Validate)) {
+                    LogError("User is not allowed to validate records");
+                    incomplete = true;
+                    continue;
+                }
+            }
+
+            bool success = instance->db.Transaction([&]() {
                 // Get sequence number
                 int sequence;
                 {
                     sq_Statement stmt;
                     if (!instance->db.Prepare(R"(SELECT sequence FROM rec_sequences
                                                  WHERE store = ?)", &stmt))
-                        return sq_TransactionResult::Error;
+                        return false;
                     sqlite3_bind_text(stmt, 1, handle.table, -1, SQLITE_STATIC);
 
                     if (stmt.Next()) {
@@ -282,7 +290,7 @@ void HandleRecordSync(InstanceData *instance, const http_RequestInfo &request, h
                     } else if (stmt.IsValid()) {
                         sequence = 1;
                     } else {
-                        return sq_TransactionResult::Error;
+                        return false;
                     }
                 }
 
@@ -292,7 +300,7 @@ void HandleRecordSync(InstanceData *instance, const http_RequestInfo &request, h
                                          ON CONFLICT DO NOTHING)",
                                     handle.table, handle.id, handle.zone ? sq_Binding(handle.zone) : sq_Binding(),
                                     sequence, fragments[fragments.len - 1].version, json))
-                    return sq_TransactionResult::Error;
+                    return false;
 
                 // Update sequence number of existing entry depending on result
                 if (sqlite3_changes(instance->db)) {
@@ -301,12 +309,12 @@ void HandleRecordSync(InstanceData *instance, const http_RequestInfo &request, h
                                              ON CONFLICT(store)
                                                  DO UPDATE SET sequence = excluded.sequence)",
                                         handle.table, sequence + 1))
-                        return sq_TransactionResult::Error;
+                        return false;
                 } else {
                     if (!instance->db.Run(R"(UPDATE rec_entries SET version = ?, json = ?
                                              WHERE store = ? AND id = ?)",
                                         fragments[fragments.len - 1].version, json, handle.table, handle.id))
-                        return sq_TransactionResult::Error;
+                        return false;
                 }
 
                 // Save record fragments (and variables)
@@ -319,11 +327,6 @@ void HandleRecordSync(InstanceData *instance, const http_RequestInfo &request, h
                         incomplete = true;
                         continue;
                     }
-                    if (frag.complete && !token->HasPermission(UserPermission::Validate)) {
-                        LogError("User is not allowed to validate records");
-                        incomplete = true;
-                        return sq_TransactionResult::Rollback;
-                    }
 
                     int64_t anchor;
                     if (!instance->db.Run(R"(INSERT INTO rec_fragments (store, id, version, page,
@@ -332,7 +335,7 @@ void HandleRecordSync(InstanceData *instance, const http_RequestInfo &request, h
                                         handle.table, handle.id, frag.version,
                                         frag.page ? sq_Binding(frag.page) : sq_Binding(), session->username,
                                         frag.mtime, 0 + frag.complete, frag.json))
-                        return sq_TransactionResult::Error;
+                        return false;
                     anchor = sqlite3_last_insert_rowid(instance->db);
 
                     sq_Statement stmt;
@@ -343,7 +346,7 @@ void HandleRecordSync(InstanceData *instance, const http_RequestInfo &request, h
                                                      DO UPDATE SET before = excluded.before,
                                                                    after = excluded.after,
                                                                    anchor = excluded.anchor)", &stmt))
-                        return sq_TransactionResult::Error;
+                        return false;
                     sqlite3_bind_text(stmt, 2, handle.table, -1, SQLITE_STATIC);
                     sqlite3_bind_int64(stmt, 9, anchor);
 
@@ -366,14 +369,14 @@ void HandleRecordSync(InstanceData *instance, const http_RequestInfo &request, h
                         sqlite3_bind_text(stmt, 8, after, -1, SQLITE_STATIC);
 
                         if (!stmt.Run())
-                            return sq_TransactionResult::Error;
+                            return false;
                     }
                 }
 
-                return sq_TransactionResult::Commit;
+                return true;
             });
 
-            if (ret == sq_TransactionResult::Error)
+            if (!success)
                 return;
         }
 
