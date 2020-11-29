@@ -121,29 +121,32 @@ void InstanceData::InitAssets()
 
     // Packed static assets
     for (Size i = 0; i < packed_assets.len; i++) {
-        AssetInfo asset = packed_assets[i];
+        if (!StartsWith(packed_assets[i].name, "demo/")) {
+            AssetInfo asset = packed_assets[i];
+            asset.name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
 
-        if (TestStr(asset.name, "goupile.html")) {
-            asset.name = "/static/goupile.html";
-            asset.data = PatchVariables(asset);
-        } else if (TestStr(asset.name, "manifest.json")) {
-            if (!config.use_offline)
+            if (TestStr(asset.name, "goupile.html")) {
+                asset.name = "/static/goupile.html";
+                asset.data = PatchVariables(asset);
+            } else if (TestStr(asset.name, "manifest.json")) {
+                if (!config.use_offline)
+                    continue;
+
+                asset.name = "/manifest.json";
+                asset.data = PatchVariables(asset);
+            } else if (TestStr(asset.name, "sw.pk.js")) {
+                asset.name = "/sw.pk.js";
+                asset.data = PatchVariables(asset);
+            } else if (TestStr(asset.name, "favicon.png")) {
+                asset.name = "/favicon.png";
+            } else if (TestStr(asset.name, "server.pk.js")) {
                 continue;
+            } else {
+                asset.name = Fmt(&assets_alloc, "/static/%1", asset.name).ptr;
+            }
 
-            asset.name = "/manifest.json";
-            asset.data = PatchVariables(asset);
-        } else if (TestStr(asset.name, "sw.pk.js")) {
-            asset.name = "/sw.pk.js";
-            asset.data = PatchVariables(asset);
-        } else if (TestStr(asset.name, "favicon.png")) {
-            asset.name = "/favicon.png";
-        } else if (TestStr(asset.name, "server.pk.js")) {
-            continue;
-        } else {
-            asset.name = Fmt(&assets_alloc, "/static/%1", asset.name).ptr;
+            assets.Append(asset);
         }
-
-        assets.Append(asset);
     }
     for (const AssetInfo &asset: assets) {
         assets_map.Set(&asset);

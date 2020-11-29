@@ -76,8 +76,16 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     }
 
     if (inst_key == "admin") {
-        if (TestStr(inst_path, "/api/instances/list") && request.method == http_RequestMethod::Get) {
+        if (TestStr(inst_path, "/api/instances/create") && request.method == http_RequestMethod::Post) {
+            HandleCreateInstance(request, io);
+        } else if (TestStr(inst_path, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
+            HandleDeleteInstance(request, io);
+        } else if (TestStr(inst_path, "/api/instances/list") && request.method == http_RequestMethod::Get) {
             HandleListInstances(request, io);
+        } else if (TestStr(inst_path, "/api/users/create") && request.method == http_RequestMethod::Post) {
+            HandleCreateUser(request, io);
+        } else if (TestStr(inst_path, "/api/users/delete") && request.method == http_RequestMethod::Post) {
+            HandleDeleteUser(request, io);
         } else if (TestStr(inst_path, "/api/users/list") && request.method == http_RequestMethod::Get) {
             HandleListUsers(request, io);
         } else {
