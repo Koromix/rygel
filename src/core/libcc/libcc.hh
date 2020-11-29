@@ -1998,6 +1998,23 @@ public:
     }
     void Remove(const KeyType &key) { Remove(Find(key)); }
 
+    void Trim()
+    {
+        if (count) {
+            Size new_capacity = (Size)1 << (64 - CountLeadingZeros((uint64_t)count));
+
+            if (new_capacity < RG_HASHTABLE_BASE_CAPACITY) {
+                new_capacity = RG_HASHTABLE_BASE_CAPACITY;
+            } else if (count > (double)new_capacity * RG_HASHTABLE_MAX_LOAD_FACTOR) {
+                new_capacity *= 2;
+            }
+
+            Rehash(new_capacity);
+        } else {
+            Rehash(0);
+        }
+    }
+
     Size IsEmpty(Size idx) const { return IsEmpty(used, idx); }
 
 private:
@@ -2320,6 +2337,8 @@ public:
     }
     void Remove(const KeyType &key) { Remove(Find(key)); }
 
+    void Trim() { table.Trim(); }
+
     ValueType *Find(const KeyType &key)
         { return (ValueType *)((const HashMap *)this)->Find(key); }
     const ValueType *Find(const KeyType &key) const
@@ -2367,6 +2386,8 @@ public:
 
     void Remove(ValueType *it) { table.Remove(it); }
     void Remove(const ValueType &value) { Remove(Find(value)); }
+
+    void Trim() { table.Trim(); }
 
     ValueType *Find(const ValueType &value) { return table.Find(value); }
     const ValueType *Find(const ValueType &value) const { return table.Find(value); }
