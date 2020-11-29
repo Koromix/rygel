@@ -149,7 +149,6 @@ void HandleFilePut(InstanceData *instance, const http_RequestInfo &request, http
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const Token *token = session ? session->GetToken(instance) : nullptr;
-
     if (!token || !token->HasPermission(UserPermission::Deploy)) {
         LogError("User is not allowed to deploy changes");
         io->AttachError(403);
@@ -305,7 +304,6 @@ void HandleFileDelete(InstanceData *instance, const http_RequestInfo &request, h
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const Token *token = session ? session->GetToken(instance) : nullptr;
-
     if (!token || !token->HasPermission(UserPermission::Deploy)) {
         LogError("User is not allowed to deploy changes");
         io->AttachError(403);

@@ -363,7 +363,6 @@ Options:
 void HandleCreateInstance(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-
     if (!session || !session->admin) {
         LogError("Non-admin users are not allowed to create instances");
         io->AttachError(403);
@@ -519,7 +518,6 @@ void HandleCreateInstance(const http_RequestInfo &request, http_IO *io)
 void HandleDeleteInstance(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-
     if (!session || !session->admin) {
         LogError("Non-admin users are not allowed to delete instances");
         io->AttachError(403);
@@ -564,7 +562,6 @@ void HandleDeleteInstance(const http_RequestInfo &request, http_IO *io)
 void HandleListInstances(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-
     if (!session || !session->admin) {
         LogError("Non-admin users are not allowed to list instances");
         io->AttachError(403);
@@ -588,7 +585,6 @@ void HandleListInstances(const http_RequestInfo &request, http_IO *io)
 void HandleCreateUser(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-
     if (!session || !session->admin) {
         LogError("Non-admin users are not allowed to create users");
         io->AttachError(403);
@@ -664,7 +660,6 @@ void HandleCreateUser(const http_RequestInfo &request, http_IO *io)
 void HandleDeleteUser(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-
     if (!session || !session->admin) {
         LogError("Non-admin users are not allowed to delete users");
         io->AttachError(403);
@@ -702,7 +697,6 @@ void HandleDeleteUser(const http_RequestInfo &request, http_IO *io)
 void HandleListUsers(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-
     if (!session || !session->admin) {
         LogError("Non-admin users are not allowed to list users");
         io->AttachError(403);

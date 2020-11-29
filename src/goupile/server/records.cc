@@ -55,7 +55,6 @@ void HandleRecordLoad(InstanceData *instance, const http_RequestInfo &request, h
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const Token *token = session ? session->GetToken(instance) : nullptr;
-
     if (!token) {
         LogError("User is not allowed to view data");
         io->AttachError(403);
@@ -132,7 +131,6 @@ void HandleRecordLoad(InstanceData *instance, const http_RequestInfo &request, h
 void HandleRecordColumns(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-
     if (!session) {
         LogError("User is not allowed to view data");
         io->AttachError(403);
