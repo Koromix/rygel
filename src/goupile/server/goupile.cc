@@ -18,59 +18,40 @@ namespace RG {
 
 struct InstanceGuard {
     std::atomic_int refcount {0};
-
-    InstanceGuard *next_free = nullptr;
     bool valid = true;
 
     InstanceData instance;
 
-    InstanceData *Ref();
-    void Unref();
+    InstanceData *Ref()
+    {
+        refcount++;
+        return &instance;
+    }
+
+    void Unref()
+    {
+        refcount--;
+    }
 };
 
 DomainData goupile_domain;
 
 static std::shared_mutex instances_mutex;
-static BucketArray<InstanceGuard> instances;
-static InstanceGuard *instances_free = nullptr;
+static HeapArray<InstanceGuard *> instances;
 static HashMap<Span<const char>, InstanceGuard *> instances_map;
 
-InstanceData *InstanceGuard::Ref()
-{
-    refcount++;
-    return &instance;
-}
-
-void InstanceGuard::Unref()
-{
-    if (!--refcount) {
-        std::lock_guard<std::shared_mutex> lock(instances_mutex);
-
-        instances_map.Remove(instance.key);
-        instance.Close();
-
-        next_free = instances_free;
-        instances_free = this;
-    }
-}
-
+// Call with instances_mutex locked
 static bool LoadInstance(const char *key, const char *filename)
 {
-    std::lock_guard<std::shared_mutex> lock(instances_mutex);
+    InstanceGuard *guard = new InstanceGuard();
 
-    if (!instances_free) {
-        instances_free = instances.AppendDefault();
+    if (!guard->instance.Open(key, filename)) {
+        delete guard;
+        return false;
     }
 
-    InstanceGuard *guard = instances_free;
-    if (!guard->instance.Open(key, filename))
-        return false;
-    instances_free = guard->next_free;
-    guard->next_free = nullptr;
-    guard->valid = true;
-
-    InstanceData *instance = guard->Ref();
-    instances_map.Set(instance->key, guard);
+    instances.Append(guard);
+    instances_map.Set(guard->instance.key, guard);
 
     return true;
 }
@@ -82,6 +63,8 @@ static bool InitInstances()
 
     bool success = true;
     HashSet<const char *> keys;
+
+    std::lock_guard<std::shared_mutex> lock(instances_mutex);
 
     // Start new instances (if any)
     {
@@ -99,9 +82,6 @@ static bool InitInstances()
 
                 const char *filename = goupile_domain.config.GetInstanceFileName(key, &temp_alloc);
                 success &= LoadInstance(key, filename);
-            } else if (!guard->valid) {
-                LogDebug("Instance key '%1' is not reusable yet, try again");
-                success = false;
             }
 
             keys.Set(key);
@@ -110,20 +90,48 @@ static bool InitInstances()
     }
 
     // Drop removed instances (if any)
-    for (InstanceGuard &guard: instances) {
-        if (guard.valid) {
-            InstanceData *instance = &guard.instance;
+    {
+        Size j = 0;
+        for (Size i = 0; i < instances.len; i++) {
+            InstanceGuard *guard = instances[i];
+            InstanceData *instance = &guard->instance;
 
-            if (!keys.Find(instance->key)) {
-                LogDebug("Drop instance '%1'", instance->key);
-
-                guard.Unref();
-                guard.valid = false;
+            if (guard->valid && !keys.Find(instance->key)) {
+                guard->valid = false;
+                instances_map.Remove(instance->key);
             }
+
+            if (!guard->valid) {
+                if (!guard->refcount) {
+                    LogDebug("Drop instance '%1'", instance->key);
+                    delete guard;
+                } else {
+                    // We will try again later
+                    success = false;
+                }
+            } else {
+                instances[j++] = instances[i];
+            }
+        }
+
+        if (j < instances.len) {
+            instances.len = j;
+            instances.Trim();
         }
     }
 
     return success;
+}
+
+static void CloseInstances()
+{
+    // This is called when goupile exits and we don't really need the lock
+    // at this point, but take if for consistency.
+    std::lock_guard<std::shared_mutex> lock(instances_mutex);
+
+    for (InstanceGuard *guard: instances) {
+        delete guard;
+    }
 }
 
 static void HandleEvents(InstanceData *, const http_RequestInfo &request, http_IO *io)
@@ -153,11 +161,9 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     if (ReloadAssets()) {
         std::lock_guard<std::shared_mutex> lock(instances_mutex);
 
-        for (InstanceGuard &guard: instances) {
-            if (guard.valid) {
-                InstanceData *instance = &guard.instance;
-                instance->InitAssets();
-            }
+        for (InstanceGuard *guard: instances) {
+            InstanceData *instance = &guard->instance;
+            instance->InitAssets();
         }
     }
 
@@ -194,18 +200,19 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             io->AttachError(404);
         }
     } else {
-        InstanceGuard *guard;
+        InstanceData *instance;
         {
             std::shared_lock<std::shared_mutex> lock(instances_mutex);
-            guard = instances_map.FindValue(inst_key, nullptr);
-        }
-        if (!guard || !guard->valid) {
-            io->AttachError(404);
-            return;
-        }
 
-        InstanceData *instance = guard->Ref();
-        io->AddFinalizer([=]() { guard->Unref(); });
+            InstanceGuard *guard = instances_map.FindValue(inst_key, nullptr);
+            if (!guard) {
+                io->AttachError(404);
+                return;
+            }
+
+            instance = guard->Ref();
+            io->AddFinalizer([=]() { guard->Unref(); });
+        }
 
         // Try application and static assets
         if (request.method == http_RequestMethod::Get) {
@@ -333,8 +340,11 @@ Options:
             return 1;
     }
 
+    RG_DEFER { CloseInstances(); };
+    LogInfo("Load instances");
     if (!InitInstances())
         return 1;
+
     InitJS();
 
     // Run!
