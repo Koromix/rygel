@@ -9,6 +9,9 @@
 
 namespace RG {
 
+int RunInit(Span<const char *> arguments);
+int RunMigrate(Span<const char *> arguments);
+
 void HandleCreateInstance(const http_RequestInfo &request, http_IO *io);
 void HandleDeleteInstance(const http_RequestInfo &request, http_IO *io);
 void HandleListInstances(const http_RequestInfo &request, http_IO *io);

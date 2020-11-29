@@ -170,32 +170,31 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     }
 }
 
-int Main(int argc, char **argv)
+static int RunServe(Span<const char *> arguments)
 {
     const char *config_filename = "goupile.ini";
 
     const auto print_usage = [&](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 [options]%!0
+        PrintLn(fp, R"(Usage: %!..+%1 serve [options]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
                                  %!D..(default: %2)%!0
 
         %!..+--port <port>%!0            Change web server port
-                                 %!D..(default: %3)%!0)",
+                                 %!D..(default: %3)%!0
+
+Other commands:
+    %!..+init%!0                         Create new domain
+    %!..+migrate%!0                      Migrate existing domain
+
+For help about those commands, type: %!..+%1 <command> --help%!0)",
                 FelixTarget, config_filename, goupile_domain.config.http.port);
     };
 
-    // Handle version
-    if (argc >= 2 && TestStr(argv[1], "--version")) {
-        PrintLn("%!R..%1%!0 %2 (domain: %!..+%3%!0, instance: %!..+%4%!0)",
-                FelixTarget, FelixVersion, DomainVersion, InstanceVersion);
-        return 0;
-    }
-
     // Find config filename
     {
-        OptionParser opt(argc, argv, (int)OptionParser::Flag::SkipNonOptions);
+        OptionParser opt(arguments, (int)OptionParser::Flag::SkipNonOptions);
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
@@ -213,7 +212,7 @@ Options:
 
     // Parse arguments
     {
-        OptionParser opt(argc, argv);
+        OptionParser opt(arguments);
 
         while (opt.Next()) {
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
@@ -257,6 +256,53 @@ Options:
     LogInfo("Exit");
 
     return 0;
+}
+
+int Main(int argc, char **argv)
+{
+    // Handle help and version arguments
+    if (argc >= 2) {
+        if (TestStr(argv[1], "--help") || TestStr(argv[1], "help")) {
+            if (argc >= 3 && argv[2][0] != '-') {
+                argv[1] = argv[2];
+                argv[2] = const_cast<char *>("--help");
+            } else {
+                const char *args[] = {"--help"};
+                return RunServe(args);
+            }
+        } else if (TestStr(argv[1], "--version")) {
+            PrintLn("%!R..%1%!0 %2", FelixTarget, FelixVersion);
+            return 0;
+        }
+    }
+
+    int (*cmd_func)(Span<const char *> arguments);
+    Span<const char *> arguments;
+    if (argc >= 2) {
+        const char *cmd = argv[1];
+
+        if (TestStr(cmd, "init")) {
+            cmd_func = RunInit;
+            arguments = MakeSpan((const char **)argv + 2, argc - 2);
+        } else if (TestStr(cmd, "migrate")) {
+            cmd_func = RunMigrate;
+            arguments = MakeSpan((const char **)argv + 2, argc - 2);
+        } else if (TestStr(cmd, "serve")) {
+            cmd_func = RunServe;
+            arguments = MakeSpan((const char **)argv + 2, argc - 2);
+        } else if (cmd[0] == '-') {
+            cmd_func = RunServe;
+            arguments = MakeSpan((const char **)argv + 1, argc - 1);
+        } else {
+            LogError("Unknown command '%1'", cmd);
+            return 1;
+        }
+    } else {
+        cmd_func = RunServe;
+        arguments = {};
+    }
+
+    return cmd_func(arguments);
 }
 
 }

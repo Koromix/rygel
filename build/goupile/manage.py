@@ -47,11 +47,11 @@ def load_config(filename):
     return config
 
 def run_build(config):
-    print('Build goupile and goupile_admin', file = sys.stderr)
+    print('Build goupile', file = sys.stderr)
 
     build_filename = os.path.join(config['Goupile.SourceDirectory'], 'FelixBuild.ini')
     subprocess.run(['felix', '-mFast', '-q', '-C', build_filename,
-                    '-O', config['Goupile.BinaryDirectory'], 'goupile', 'goupile_admin'])
+                    '-O', config['Goupile.BinaryDirectory'], 'goupile'])
 
 def list_domains(root_dir, socket_dir):
     domains = {}
