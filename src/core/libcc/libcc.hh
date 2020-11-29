@@ -2308,6 +2308,21 @@ public:
     void Clear() { table.Clear(); }
     void RemoveAll() { table.RemoveAll(); }
 
+    ValueType *Find(const KeyType &key)
+        { return (ValueType *)((const HashMap *)this)->Find(key); }
+    const ValueType *Find(const KeyType &key) const
+    {
+        const Bucket *table_it = table.Find(key);
+        return table_it ? &table_it->value : nullptr;
+    }
+    ValueType FindValue(const KeyType &key, const ValueType &default_value)
+        { return (ValueType)((const HashMap *)this)->FindValue(key, default_value); }
+    const ValueType FindValue(const KeyType &key, const ValueType &default_value) const
+    {
+        const ValueType *it = Find(key);
+        return it ? *it : default_value;
+    }
+
     ValueType *Set(const KeyType &key, const ValueType &value)
         { return &table.Set({key, value})->value; }
     ValueType *SetDefault(const KeyType &key)
@@ -2338,21 +2353,6 @@ public:
     void Remove(const KeyType &key) { Remove(Find(key)); }
 
     void Trim() { table.Trim(); }
-
-    ValueType *Find(const KeyType &key)
-        { return (ValueType *)((const HashMap *)this)->Find(key); }
-    const ValueType *Find(const KeyType &key) const
-    {
-        const Bucket *table_it = table.Find(key);
-        return table_it ? &table_it->value : nullptr;
-    }
-    ValueType FindValue(const KeyType &key, const ValueType &default_value)
-        { return (ValueType)((const HashMap *)this)->FindValue(key, default_value); }
-    const ValueType FindValue(const KeyType &key, const ValueType &default_value) const
-    {
-        const ValueType *it = Find(key);
-        return it ? *it : default_value;
-    }
 };
 
 template <typename ValueType>
@@ -2381,6 +2381,13 @@ public:
     void Clear() { table.Clear(); }
     void RemoveAll() { table.RemoveAll(); }
 
+    ValueType *Find(const ValueType &value) { return table.Find(value); }
+    const ValueType *Find(const ValueType &value) const { return table.Find(value); }
+    ValueType FindValue(const ValueType &value, const ValueType &default_value)
+        { return table.FindValue(value, default_value); }
+    const ValueType FindValue(const ValueType &value, const ValueType &default_value) const
+        { return table.FindValue(value, default_value); }
+
     ValueType *Set(const ValueType &value) { return table.Set(value); }
     std::pair<ValueType *, bool> TrySet(const ValueType &value) { return table.TrySet(value); }
 
@@ -2388,13 +2395,6 @@ public:
     void Remove(const ValueType &value) { Remove(Find(value)); }
 
     void Trim() { table.Trim(); }
-
-    ValueType *Find(const ValueType &value) { return table.Find(value); }
-    const ValueType *Find(const ValueType &value) const { return table.Find(value); }
-    ValueType FindValue(const ValueType &value, const ValueType &default_value)
-        { return table.FindValue(value, default_value); }
-    const ValueType FindValue(const ValueType &value, const ValueType &default_value) const
-        { return table.FindValue(value, default_value); }
 };
 
 // ------------------------------------------------------------------------
