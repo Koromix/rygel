@@ -75,6 +75,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         inst_path = request.url + offset;
     }
 
+    // If new base URLs are added besides "/admin", RunCreateInstance() must be modified
+    // to forbid the instance key.
     if (inst_key == "admin") {
         if (TestStr(inst_path, "/api/instances/create") && request.method == http_RequestMethod::Post) {
             HandleCreateInstance(request, io);

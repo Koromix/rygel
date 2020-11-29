@@ -39,16 +39,20 @@ static const char *DefaultConfig = R"(
 # AsyncThreads =
 )";
 
-static bool CheckKeyName(Span<const char> key, const char *type)
+static bool CheckInstanceKey(Span<const char> key)
 {
     const auto test_key_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '_'; };
 
     if (!key.len) {
-        LogError("%1 key cannot be empty", type);
+        LogError("Instance key cannot be empty");
         return false;
     }
     if (!std::all_of(key.begin(), key.end(), test_key_char)) {
-        LogError("%1 key must only contain lowercase alphanumeric or '_' characters", type);
+        LogError("Instance key must only contain lowercase alphanumeric or '_' characters");
+        return false;
+    }
+    if (key == "admin") {
+        LogError("The following instance keys are not allowed: admin");
         return false;
     }
 
@@ -382,7 +386,7 @@ void HandleCreateInstance(const http_RequestInfo &request, http_IO *io)
             io->AttachError(422);
             return;
         }
-        if (!CheckKeyName(instance_key, "Instance")) {
+        if (!CheckInstanceKey(instance_key)) {
             io->AttachError(422);
             return;
         }
