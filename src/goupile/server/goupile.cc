@@ -16,124 +16,7 @@
 
 namespace RG {
 
-struct InstanceGuard {
-    std::atomic_int refcount {0};
-    bool valid = true;
-
-    InstanceData instance;
-
-    InstanceData *Ref()
-    {
-        refcount++;
-        return &instance;
-    }
-
-    void Unref()
-    {
-        refcount--;
-    }
-};
-
 DomainData goupile_domain;
-
-static std::shared_mutex instances_mutex;
-static HeapArray<InstanceGuard *> instances;
-static HashMap<Span<const char>, InstanceGuard *> instances_map;
-
-// Call with instances_mutex locked
-static bool LoadInstance(const char *key, const char *filename)
-{
-    InstanceGuard *guard = new InstanceGuard();
-
-    if (!guard->instance.Open(key, filename)) {
-        delete guard;
-        return false;
-    }
-
-    instances.Append(guard);
-    instances_map.Set(guard->instance.key, guard);
-
-    return true;
-}
-
-// Can be called multiple times, from main thread only
-static bool InitInstances()
-{
-    BlockAllocator temp_alloc;
-
-    bool success = true;
-    HashSet<const char *> keys;
-
-    std::lock_guard<std::shared_mutex> lock(instances_mutex);
-
-    // Start new instances (if any)
-    {
-        sq_Statement stmt;
-        if (!goupile_domain.db.Prepare("SELECT instance FROM dom_instances;", &stmt))
-            return false;
-
-        while (stmt.Next()) {
-            const char *key = (const char *)sqlite3_column_text(stmt, 0);
-            key = DuplicateString(key, &temp_alloc).ptr;
-
-            InstanceGuard *guard = instances_map.FindValue(key, nullptr);
-            if (!guard) {
-                LogDebug("Load instance '%1'", key);
-
-                const char *filename = goupile_domain.config.GetInstanceFileName(key, &temp_alloc);
-                success &= LoadInstance(key, filename);
-            }
-
-            keys.Set(key);
-        }
-        success &= stmt.IsValid();
-    }
-
-    // Drop removed instances (if any)
-    {
-        Size j = 0;
-        for (Size i = 0; i < instances.len; i++) {
-            InstanceGuard *guard = instances[i];
-            InstanceData *instance = &guard->instance;
-
-            if (guard->valid && !keys.Find(instance->key)) {
-                guard->valid = false;
-                instances_map.Remove(instance->key);
-            }
-
-            if (!guard->valid) {
-                if (!guard->refcount) {
-                    LogDebug("Drop instance '%1'", instance->key);
-                    delete guard;
-                } else {
-                    // We will try again later
-                    success = false;
-                }
-            } else {
-                instances[j++] = instances[i];
-            }
-        }
-        instances.len = j;
-
-        if (instances.len < instances.capacity / 2) {
-            instances.Trim();
-            instances_map.Trim();
-        }
-    }
-
-    return success;
-}
-
-static void CloseInstances()
-{
-    // This is called when goupile exits and we don't really need the lock
-    // at this point, but take if for consistency.
-    std::lock_guard<std::shared_mutex> lock(instances_mutex);
-
-    for (InstanceGuard *guard: instances) {
-        delete guard;
-    }
-}
 
 static void HandleEvents(InstanceData *, const http_RequestInfo &request, http_IO *io)
 {
@@ -160,9 +43,9 @@ static void HandleFileStatic(InstanceData *instance, const http_RequestInfo &req
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
     if (ReloadAssets()) {
-        std::lock_guard<std::shared_mutex> lock(instances_mutex);
+        std::lock_guard<std::shared_mutex> lock(goupile_domain.instances_mutex);
 
-        for (InstanceGuard *guard: instances) {
+        for (InstanceGuard *guard: goupile_domain.instances) {
             InstanceData *instance = &guard->instance;
             instance->InitAssets();
         }
@@ -203,9 +86,9 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     } else {
         InstanceData *instance;
         {
-            std::shared_lock<std::shared_mutex> lock(instances_mutex);
+            std::shared_lock<std::shared_mutex> lock(goupile_domain.instances_mutex);
 
-            InstanceGuard *guard = instances_map.FindValue(inst_key, nullptr);
+            InstanceGuard *guard = goupile_domain.instances_map.FindValue(inst_key, nullptr);
             if (!guard) {
                 io->AttachError(404);
                 return;
@@ -341,11 +224,9 @@ Options:
             return 1;
     }
 
-    RG_DEFER { CloseInstances(); };
     LogInfo("Load instances");
-    if (!InitInstances())
+    if (!goupile_domain.InitInstances())
         return 1;
-
     InitJS();
 
     // Run!
@@ -361,7 +242,7 @@ Options:
             goupile_domain.config.http.port, SocketTypeNames[(int)goupile_domain.config.http.sock_type]);
 
     while (!WaitForInterruption(30000)) {
-        InitInstances();
+        goupile_domain.InitInstances();
     }
 
     daemon.Stop();

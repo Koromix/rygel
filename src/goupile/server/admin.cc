@@ -6,6 +6,7 @@
 #include "admin.hh"
 #include "domain.hh"
 #include "goupile.hh"
+#include "instance.hh"
 #include "user.hh"
 #include "../../core/libwrap/json.hh"
 
@@ -21,19 +22,15 @@ void HandleListInstances(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
-    sq_Statement stmt;
-    if (!goupile_domain.db.Prepare("SELECT instance FROM dom_instances;", &stmt))
-        return;
+    std::shared_lock<std::shared_mutex> lock(goupile_domain.instances_mutex);
 
     // Export data
     http_JsonPageBuilder json(request.compression_type);
 
     json.StartArray();
-    while (stmt.Next()) {
-        json.String((const char *)sqlite3_column_text(stmt, 0));
+    for (InstanceGuard *guard: goupile_domain.instances) {
+        json.String(guard->instance.key);
     }
-    if (!stmt.IsValid())
-        return;
     json.EndArray();
 
     json.Finish(io);

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "../../core/libcc/libcc.hh"
+#include "instance.hh"
 #include "../../core/libwrap/sqlite.hh"
 #include "../../web/libhttp/libhttp.hh"
 
@@ -34,13 +35,46 @@ struct DomainConfig {
 bool LoadConfig(StreamReader *st, DomainConfig *out_config);
 bool LoadConfig(const char *filename, DomainConfig *out_config);
 
+class InstanceGuard {
+    std::atomic_int refcount {0};
+    bool valid = true;
+
+public:
+    InstanceData instance;
+
+    InstanceData *Ref()
+    {
+        refcount++;
+        return &instance;
+    }
+
+    void Unref()
+    {
+        refcount--;
+    }
+
+    friend class DomainData;
+};
+
 class DomainData {
 public:
     DomainConfig config = {};
     sq_Database db;
 
+    std::shared_mutex instances_mutex;
+    HeapArray<InstanceGuard *> instances;
+    HashMap<Span<const char>, InstanceGuard *> instances_map;
+
+    ~DomainData() { Close(); }
+
     bool Open(const char *filename);
+
+    bool InitInstances();
+
     void Close();
+
+private:
+    bool LoadInstance(const char *key, const char *filename);
 };
 
 bool MigrateDomain(sq_Database *db, const char *instances_directory);
