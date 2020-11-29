@@ -113,10 +113,11 @@ static bool InitInstances()
                 instances[j++] = instances[i];
             }
         }
+        instances.len = j;
 
-        if (j < instances.len) {
-            instances.len = j;
+        if (instances.len < instances.capacity / 2) {
             instances.Trim();
+            instances_map.Trim();
         }
     }
 
