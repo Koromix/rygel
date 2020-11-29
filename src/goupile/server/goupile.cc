@@ -88,6 +88,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleCreateUser(request, io);
         } else if (TestStr(inst_path, "/api/users/delete") && request.method == http_RequestMethod::Post) {
             HandleDeleteUser(request, io);
+        } else if (TestStr(inst_path, "/api/users/assign") && request.method == http_RequestMethod::Post) {
+            HandleAssignUser(request, io);
         } else if (TestStr(inst_path, "/api/users/list") && request.method == http_RequestMethod::Get) {
             HandleListUsers(request, io);
         } else {

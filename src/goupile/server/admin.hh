@@ -18,6 +18,7 @@ void HandleListInstances(const http_RequestInfo &request, http_IO *io);
 
 void HandleCreateUser(const http_RequestInfo &request, http_IO *io);
 void HandleDeleteUser(const http_RequestInfo &request, http_IO *io);
+void HandleAssignUser(const http_RequestInfo &request, http_IO *io);
 void HandleListUsers(const http_RequestInfo &request, http_IO *io);
 
 }

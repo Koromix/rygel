@@ -694,6 +694,131 @@ void HandleDeleteUser(const http_RequestInfo &request, http_IO *io)
     });
 }
 
+static bool ParsePermissionList(Span<const char> remain, uint32_t *out_permissions)
+{
+    uint32_t permissions = 0;
+
+    while (remain.len) {
+        Span<const char> js_perm = TrimStr(SplitStr(remain, ',', &remain), " ");
+
+        if (js_perm.len) {
+            char perm_str[256];
+            ConvertFromJsonName(js_perm, perm_str);
+
+            UserPermission perm;
+            if (!OptionToEnum(UserPermissionNames, perm_str, &perm)) {
+                LogError("Unknown permission '%1'", js_perm);
+                return false;
+            }
+
+            permissions |= 1 << (int)perm;
+        }
+    }
+
+    *out_permissions = permissions;
+    return true;
+}
+
+void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    if (!session || !session->admin) {
+        LogError("Non-admin users are not allowed to delete users");
+        io->AttachError(403);
+        return;
+    }
+
+    io->RunAsync([=]() {
+        // Read POST values
+        HashMap<const char *, const char *> values;
+        if (!io->ReadPostValues(&io->allocator, &values)) {
+            io->AttachError(422);
+            return;
+        }
+
+        const char *instance = values.FindValue("instance", nullptr);
+        const char *username = values.FindValue("user", nullptr);
+        const char *zone = values.FindValue("zone", nullptr);
+        if (!instance || !username) {
+            LogError("Missing parameters");
+            io->AttachError(422);
+            return;
+        }
+        if (zone && !zone[0]) {
+            LogError("Empty zone value is not allowed");
+            io->AttachError(422);
+            return;
+        }
+
+        // Parse permissions
+        uint32_t permissions = 0;
+        {
+            const char *str = values.FindValue("permissions", nullptr);
+            if (str && !ParsePermissionList(str, &permissions)) {
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        sq_TransactionResult ret = goupile_domain.db.Transaction([&]() {
+            // Does instance exist?
+            {
+                sq_Statement stmt;
+                if (!goupile_domain.db.Prepare(R"(SELECT instance FROM dom_instances
+                                                  WHERE instance = ?;)", &stmt))
+                    return sq_TransactionResult::Error;
+                sqlite3_bind_text(stmt, 1, instance, -1, SQLITE_STATIC);
+
+                if (!stmt.Next()) {
+                    if (stmt.IsValid()) {
+                        LogError("Instance '%1' does not exist", instance);
+                        io->AttachError(404);
+                    }
+                    return sq_TransactionResult::Error;
+                }
+            }
+
+            // Does user exist?
+            {
+                sq_Statement stmt;
+                if (!goupile_domain.db.Prepare(R"(SELECT username FROM dom_users
+                                                  WHERE username = ?;)", &stmt))
+                    return sq_TransactionResult::Error;
+                sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
+
+                if (!stmt.Next()) {
+                    if (stmt.IsValid()) {
+                        LogError("User '%1' does not exist", instance);
+                        io->AttachError(404);
+                    }
+                    return sq_TransactionResult::Error;
+                }
+            }
+
+            // Adjust permissions
+            if (permissions) {
+                if (!goupile_domain.db.Run(R"(INSERT INTO dom_permissions (instance, username, permissions, zone)
+                                              VALUES (?, ?, ?, ?)
+                                              ON CONFLICT(instance, username)
+                                                  DO UPDATE SET permissions = excluded.permissions;)",
+                                           instance, username, permissions, zone))
+                    return sq_TransactionResult::Error;
+            } else {
+                if (!goupile_domain.db.Run(R"(DELETE FROM dom_permissions
+                                              WHERE instance = ? AND username = ?;)",
+                                           instance, username))
+                    return sq_TransactionResult::Error;
+            }
+
+            return sq_TransactionResult::Commit;
+        });
+        if (ret != sq_TransactionResult::Commit)
+            return;
+
+        io->AttachText(200, "Done!");
+    });
+}
+
 void HandleListUsers(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);

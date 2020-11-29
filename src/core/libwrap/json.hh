@@ -222,6 +222,7 @@ public:
 
 // This is to be used only with small static strings (e.g. enum strings),
 // the Span<char> output buffer will abort debug builds on out-of-bounds access.
-Size ConvertToJsonName(const char *name, Span<char> out_buf);
+Size ConvertToJsonName(Span<const char> name, Span<char> out_buf);
+Size ConvertFromJsonName(Span<const char> name, Span<char> out_buf);
 
 }

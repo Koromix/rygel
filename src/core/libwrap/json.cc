@@ -356,18 +356,48 @@ bool json_Writer::Raw(Span<const char> str)
     return true;
 }
 
-Size ConvertToJsonName(const char *name, Span<char> out_buf)
+Size ConvertToJsonName(Span<const char> name, Span<char> out_buf)
 {
-    if (name[0]) {
+    RG_ASSERT(out_buf.len - 1 >= name.len);
+
+    if (name.len) {
         out_buf[0] = LowerAscii(name[0]);
 
         Size j = 1;
-        for (Size i = 1; name[i]; i++) {
-            if (name[i] >= 'A' && name[i] <= 'Z') {
+        for (Size i = 1; i < name.len; i++) {
+            char c = name[i];
+
+            if (c >= 'A' && c <= 'Z') {
                 out_buf[j++] = '_';
-                out_buf[j++] = LowerAscii(name[i]);
+                out_buf[j++] = LowerAscii(c);
             } else {
-                out_buf[j++] = name[i];
+                out_buf[j++] = c;
+            }
+        }
+        out_buf[j] = 0;
+
+        return j;
+    } else {
+        out_buf[0] = 0;
+        return 0;
+    }
+}
+
+Size ConvertFromJsonName(Span<const char> name, Span<char> out_buf)
+{
+    RG_ASSERT(out_buf.len - 1 >= name.len);
+
+    if (name.len) {
+        out_buf[0] = UpperAscii(name[0]);
+
+        Size j = 1;
+        for (Size i = 1; i < name.len; i++) {
+            char c = name[i];
+
+            if (c == '_' && i + 1 < name.len) {
+                out_buf[j++] = UpperAscii(name[++i]);
+            } else {
+                out_buf[j++] = c;
             }
         }
         out_buf[j] = 0;
