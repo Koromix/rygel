@@ -91,7 +91,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                 do {
                     if (prop.key == "SocketType" || prop.key == "IPStack") {
                         if (!OptionToEnum(SocketTypeNames, prop.value, &config.http.sock_type)) {
-                            LogError("Unknown IP stack '%1'", prop.value);
+                            LogError("Unknown socket type '%1'", prop.value);
                             valid = false;
                         }
 #ifndef _WIN32

@@ -69,14 +69,9 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
             } else if (prop.section == "HTTP") {
                 do {
                     if (prop.key == "SocketType" || prop.key == "IPStack") {
-                        if (prop.value == "Dual") {
-                            config.http.sock_type = SocketType::Dual;
-                        } else if (prop.value == "IPv4") {
-                            config.http.sock_type = SocketType::IPv4;
-                        } else if (prop.value == "IPv6") {
-                            config.http.sock_type = SocketType::IPv6;
-                        } else {
-                            LogError("Unknown IP version '%1'", prop.value);
+                        if (!OptionToEnum(SocketTypeNames, prop.value, &config.http.sock_type)) {
+                            LogError("Unknown socket type '%1'", prop.value);
+                            valid = false;
                         }
 #ifndef _WIN32
                     } else if (prop.key == "UnixPath") {
