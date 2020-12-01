@@ -132,7 +132,7 @@ bool LoadConfig(const char *filename, DomainConfig *out_config)
     return LoadConfig(&st, out_config);
 }
 
-bool DomainData::Open(const char *filename)
+bool DomainHolder::Open(const char *filename)
 {
     RG_DEFER_N(err_guard) { Close(); };
     Close();
@@ -166,7 +166,7 @@ bool DomainData::Open(const char *filename)
 }
 
 // Can be called multiple times, from main thread only
-bool DomainData::InitInstances()
+bool DomainHolder::InitInstances()
 {
     BlockAllocator temp_alloc;
 
@@ -203,7 +203,7 @@ bool DomainData::InitInstances()
         Size j = 0;
         for (Size i = 0; i < instances.len; i++) {
             InstanceGuard *guard = instances[i];
-            InstanceData *instance = &guard->instance;
+            InstanceHolder *instance = &guard->instance;
 
             if (guard->valid && !keys.Find(instance->key)) {
                 guard->valid = false;
@@ -234,7 +234,7 @@ bool DomainData::InitInstances()
 }
 
 // Call with instances_mutex locked
-bool DomainData::LoadInstance(const char *key, const char *filename)
+bool DomainHolder::LoadInstance(const char *key, const char *filename)
 {
     InstanceGuard *guard = new InstanceGuard();
 
@@ -249,7 +249,7 @@ bool DomainData::LoadInstance(const char *key, const char *filename)
     return true;
 }
 
-void DomainData::Close()
+void DomainHolder::Close()
 {
     db.Close();
     config = {};

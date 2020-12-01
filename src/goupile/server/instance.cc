@@ -15,7 +15,7 @@ const int InstanceVersion = 21;
 
 static std::atomic_int64_t next_unique;
 
-bool InstanceData::Open(const char *key, const char *filename)
+bool InstanceHolder::Open(const char *key, const char *filename)
 {
     RG_DEFER_N(err_guard) { Close(); };
     Close();
@@ -91,7 +91,7 @@ bool InstanceData::Open(const char *key, const char *filename)
     return true;
 }
 
-bool InstanceData::Validate()
+bool InstanceHolder::Validate()
 {
     bool valid = true;
 
@@ -111,7 +111,7 @@ bool InstanceData::Validate()
     return valid;
 }
 
-void InstanceData::InitAssets()
+void InstanceHolder::InitAssets()
 {
     assets.Clear();
     assets_map.Clear();
@@ -160,7 +160,7 @@ void InstanceData::InitAssets()
     }
 }
 
-void InstanceData::Close()
+void InstanceHolder::Close()
 {
     key = nullptr;
     filename = nullptr;
@@ -174,7 +174,7 @@ void InstanceData::Close()
     assets_alloc.ReleaseAll();
 }
 
-Span<const uint8_t> InstanceData::PatchVariables(const AssetInfo &asset)
+Span<const uint8_t> InstanceHolder::PatchVariables(const AssetInfo &asset)
 {
     Span<const uint8_t> data = PatchAsset(asset, &assets_alloc,
                                           [&](const char *key, StreamWriter *writer) {
@@ -569,8 +569,8 @@ bool MigrateInstance(sq_Database *db)
 
                 // Default settings
                 {
-                    decltype(DomainData::config) fake1;
-                    decltype(InstanceData::config) fake2;
+                    decltype(DomainHolder::config) fake1;
+                    decltype(InstanceHolder::config) fake2;
 
                     const char *sql = "INSERT INTO fs_settings (key, value) VALUES (?, ?)";
                     success &= db->Run(sql, "Application.Name", fake2.app_name);

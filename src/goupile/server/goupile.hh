@@ -8,7 +8,7 @@
 
 namespace RG {
 
-class DomainData;
-extern DomainData goupile_domain;
+class DomainHolder;
+extern DomainHolder goupile_domain;
 
 }

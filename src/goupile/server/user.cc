@@ -13,7 +13,7 @@ namespace RG {
 
 static http_SessionManager sessions;
 
-const Token *Session::GetToken(const InstanceData *instance) const
+const Token *Session::GetToken(const InstanceHolder *instance) const
 {
     Token *token;
     {
@@ -117,7 +117,7 @@ RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http
     return session;
 }
 
-void HandleUserLogin(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
+void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     io->RunAsync([=]() {
         // Read POST values
@@ -185,7 +185,7 @@ void HandleUserLogin(InstanceData *instance, const http_RequestInfo &request, ht
     });
 }
 
-void HandleUserLogout(InstanceData *, const http_RequestInfo &request, http_IO *io)
+void HandleUserLogout(InstanceHolder *, const http_RequestInfo &request, http_IO *io)
 {
     sessions.Close(request, io);
 
@@ -196,7 +196,7 @@ void HandleUserLogout(InstanceData *, const http_RequestInfo &request, http_IO *
     io->AttachText(200, "");
 }
 
-void HandleUserProfile(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
+void HandleUserProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const Token *token = session ? session->GetToken(instance) : nullptr;

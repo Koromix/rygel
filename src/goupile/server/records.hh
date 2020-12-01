@@ -13,8 +13,8 @@ class InstaneData;
 
 void InitRecords();
 
-void HandleRecordLoad(InstanceData *instance, const http_RequestInfo &request, http_IO *io);
-void HandleRecordColumns(InstanceData *instance, const http_RequestInfo &request, http_IO *io);
-void HandleRecordSync(InstanceData *instance, const http_RequestInfo &request, http_IO *io);
+void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleRecordColumns(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
 }

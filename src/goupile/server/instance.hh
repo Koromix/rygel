@@ -21,7 +21,7 @@ static const char *const SyncModeNames[] = {
     "Mirror"
 };
 
-class InstanceData {
+class InstanceHolder {
 public:
     int64_t unique = -1;
 
@@ -46,7 +46,7 @@ public:
     BlockAllocator str_alloc;
     BlockAllocator assets_alloc;
 
-    ~InstanceData() { Close(); }
+    ~InstanceHolder() { Close(); }
 
     bool Open(const char *key, const char *filename);
     bool Validate();

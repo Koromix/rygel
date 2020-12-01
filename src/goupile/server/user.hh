@@ -9,7 +9,7 @@
 
 namespace RG {
 
-class InstanceData;
+class InstanceHolder;
 
 enum class UserPermission {
     Develop = 1 << 0,
@@ -45,13 +45,13 @@ public:
     bool admin;
     bool demo;
 
-    const Token *GetToken(const InstanceData *instance) const;
+    const Token *GetToken(const InstanceHolder *instance) const;
 };
 
 RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http_IO *io);
 
-void HandleUserLogin(InstanceData *instance, const http_RequestInfo &request, http_IO *io);
-void HandleUserLogout(InstanceData *instance, const http_RequestInfo &request, http_IO *io);
-void HandleUserProfile(InstanceData *instance, const http_RequestInfo &request, http_IO *io);
+void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleUserLogout(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleUserProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
 }

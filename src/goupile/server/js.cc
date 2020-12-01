@@ -77,7 +77,7 @@ void ScriptPort::Unlock()
     js_cv.notify_one();
 }
 
-void ScriptPort::Setup(InstanceData *instance, const Session &session, const Token &token)
+void ScriptPort::Setup(InstanceHolder *instance, const Session &session, const Token &token)
 {
     JS_SetContextOpaque(ctx, instance);
 
@@ -97,7 +97,7 @@ void ScriptPort::Setup(InstanceData *instance, const Session &session, const Tok
 
 static JSValue ReadFile(JSContext *ctx, JSValueConst, int argc, JSValueConst *argv)
 {
-    InstanceData *instance = (InstanceData *)JS_GetContextOpaque(ctx);
+    InstanceHolder *instance = (InstanceHolder *)JS_GetContextOpaque(ctx);
 
     const char *filename = JS_ToCString(ctx, argv[0]);
     if (!filename)

@@ -16,9 +16,9 @@
 
 namespace RG {
 
-DomainData goupile_domain;
+DomainHolder goupile_domain;
 
-static void HandleEvents(InstanceData *, const http_RequestInfo &request, http_IO *io)
+static void HandleEvents(InstanceHolder *, const http_RequestInfo &request, http_IO *io)
 {
     // Do this to renew session and clear invalid session cookies
     GetCheckedSession(request, io);
@@ -26,7 +26,7 @@ static void HandleEvents(InstanceData *, const http_RequestInfo &request, http_I
     io->AttachText(200, "{}", "application/json");
 }
 
-static void HandleFileStatic(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
+static void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     http_JsonPageBuilder json(request.compression_type);
 
@@ -46,7 +46,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         std::lock_guard<std::shared_mutex> lock(goupile_domain.instances_mutex);
 
         for (InstanceGuard *guard: goupile_domain.instances) {
-            InstanceData *instance = &guard->instance;
+            InstanceHolder *instance = &guard->instance;
             instance->InitAssets();
         }
     }
@@ -96,7 +96,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             io->AttachError(404);
         }
     } else {
-        InstanceData *instance;
+        InstanceHolder *instance;
         {
             std::shared_lock<std::shared_mutex> lock(goupile_domain.instances_mutex);
 

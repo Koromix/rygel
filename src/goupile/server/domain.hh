@@ -40,9 +40,9 @@ class InstanceGuard {
     bool valid = true;
 
 public:
-    InstanceData instance;
+    InstanceHolder instance;
 
-    InstanceData *Ref()
+    InstanceHolder *Ref()
     {
         refcount++;
         return &instance;
@@ -53,10 +53,10 @@ public:
         refcount--;
     }
 
-    friend class DomainData;
+    friend class DomainHolder;
 };
 
-class DomainData {
+class DomainHolder {
 public:
     DomainConfig config = {};
     sq_Database db;
@@ -65,7 +65,7 @@ public:
     HeapArray<InstanceGuard *> instances;
     HashMap<Span<const char>, InstanceGuard *> instances_map;
 
-    ~DomainData() { Close(); }
+    ~DomainHolder() { Close(); }
 
     bool Open(const char *filename);
 

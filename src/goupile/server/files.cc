@@ -12,7 +12,7 @@
 
 namespace RG {
 
-void HandleFileList(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
+void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     sq_Statement stmt;
     if (!instance->db.Prepare(R"(SELECT path, size, sha256 FROM fs_files
@@ -38,7 +38,7 @@ void HandleFileList(InstanceData *instance, const http_RequestInfo &request, htt
 }
 
 // Returns true when request has been handled (file exists or an error has occured)
-bool HandleFileGet(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
+bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     const char *path = request.url + instance->base_url.len - 1;
     const char *client_etag = request.GetHeaderValue("If-None-Match");
@@ -145,7 +145,7 @@ bool HandleFileGet(InstanceData *instance, const http_RequestInfo &request, http
     return true;
 }
 
-void HandleFilePut(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
+void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const Token *token = session ? session->GetToken(instance) : nullptr;
@@ -297,7 +297,7 @@ void HandleFilePut(InstanceData *instance, const http_RequestInfo &request, http
     });
 }
 
-void HandleFileDelete(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
+void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const Token *token = session ? session->GetToken(instance) : nullptr;

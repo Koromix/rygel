@@ -90,7 +90,7 @@ public:
 
     void Unlock();
 
-    void Setup(InstanceData *instance, const Session &session, const Token &token);
+    void Setup(InstanceHolder *instance, const Session &session, const Token &token);
 
     bool ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_handles);
     bool RunRecord(Span<const char> json, const ScriptRecord &handle,

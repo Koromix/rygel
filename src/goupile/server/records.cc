@@ -51,7 +51,7 @@ static void ExportRecord(sq_Statement *stmt, json_Writer *json)
     json->EndObject();
 }
 
-void HandleRecordLoad(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
+void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const Token *token = session ? session->GetToken(instance) : nullptr;
@@ -128,7 +128,7 @@ void HandleRecordLoad(InstanceData *instance, const http_RequestInfo &request, h
     json.Finish(io);
 }
 
-void HandleRecordColumns(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
+void HandleRecordColumns(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     if (!session) {
@@ -193,7 +193,7 @@ void HandleRecordColumns(InstanceData *instance, const http_RequestInfo &request
     json.Finish(io);
 }
 
-void HandleRecordSync(InstanceData *instance, const http_RequestInfo &request, http_IO *io)
+void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const Token *token = session ? session->GetToken(instance) : nullptr;
