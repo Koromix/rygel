@@ -158,6 +158,9 @@ bool DomainData::Open(const char *filename)
         }
     }
 
+    if (!InitInstances())
+        return false;
+
     err_guard.Disable();
     return true;
 }

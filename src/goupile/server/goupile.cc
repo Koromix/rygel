@@ -210,9 +210,11 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
         }
     }
 
-    // Load domain information
+    // Init subsystems
+    LogInfo("Load domain");
     if (!goupile_domain.Open(config_filename))
         return 1;
+    InitJS();
 
     // Parse arguments
     {
@@ -234,11 +236,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
         if (!goupile_domain.config.Validate())
             return 1;
     }
-
-    LogInfo("Load instances");
-    if (!goupile_domain.InitInstances())
-        return 1;
-    InitJS();
 
     // Run!
     http_Daemon daemon;
