@@ -34,7 +34,7 @@ static const char *DefaultConfig = R"(
 
 [HTTP]
 # SocketType = Dual
-# Port = 8889
+# Port = 8888
 # Threads =
 # AsyncThreads =
 )";
