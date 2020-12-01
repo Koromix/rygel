@@ -1,24 +1,6 @@
-Fri 11 Sep 2020 10:08:22 PM CEST
-    Fix crash problem in PostProcessor reported by MD. -CG
-    Fix GnuTLS configure test to check for gnutls_record_uncork. -CG
-
-Wed 19 Aug 2020 09:40:39 AM CEST
-    Add logic to check on MHD_pool_reallocate() failure reported on the
-    mailinglist (will NOT yet fix the issue). -CG
-
-Sun 26 Jul 2020 01:56:54 PM CEST
-    Add MHD_create_response_from_pipe() to allow creating a response based
-    on data read from a pipe. -CG
-
-Fri Jul 10 15:04:51 CEST 2020
-    Fixed Postprocessor URL-encoded parsing if '%' fell on boundary. -CG/MD
-
-Thu 02 Jul 2020 09:56:23 PM CEST
-    Fixed return type of MHD_queue_basic_auth_fail_response. -CA/CG
-
 Sun 28 Jun 2020 09:36:01 PM CEST
-    Fix buffer overflow issue in URL parser.
-    Releasing libmicrohttpd 0.9.71. -CG
+        Fix buffer overflow issue in URL parser.
+        Releasing libmicrohttpd 0.9.71. -CG
 
 Tue 16 Jun 2020 08:44:22 PM CEST
     Add logic to try again if GNUtls uncork() fails. -CG

@@ -48,7 +48,6 @@
 
 #include "platform.h"
 #include "microhttpd.h"
-#include "mhd_itc.h"
 
 #include "test_helpers.h"
 
@@ -70,7 +69,7 @@
 
 static int verbose = 0;
 
-static struct MHD_itc_ kicker = MHD_ITC_STATIC_INIT_INVALID;
+static int kicker[2] = {-1, -1};
 
 enum tls_tool
 {
@@ -589,9 +588,9 @@ make_blocking (MHD_socket fd)
 static void
 kick_select ()
 {
-  if (MHD_ITC_IS_VALID_ (kicker))
+  if (-1 != kicker[1])
   {
-    MHD_itc_activate_ (kicker, "K");
+    (void) write (kicker[1], "K", 1);
   }
 }
 
@@ -610,13 +609,16 @@ send_all (struct wr_socket *sock,
     ret = wr_send (sock,
                    &text[off],
                    len - off);
+    kick_select ();
     if (0 > ret)
     {
-      if (! MHD_SCKT_ERR_IS_EAGAIN_ (MHD_socket_get_error_ ()))
-        abort ();
-      ret = 0;
+      if (MHD_SCKT_ERR_IS_EAGAIN_ (MHD_socket_get_error_ ()))
+      {
+        ret = 0;
+        continue;
+      }
+      abort ();
     }
-    kick_select ();
   }
 }
 
@@ -915,8 +917,9 @@ run_mhd_select_loop (struct MHD_Daemon *daemon)
   MHD_socket max_fd;
   MHD_UNSIGNED_LONG_LONG to;
   struct timeval tv;
+  char drain[128];
 
-  if (! MHD_itc_init_ (kicker))
+  if (0 != pipe (kicker))
     abort ();
   while (! done)
   {
@@ -926,7 +929,7 @@ run_mhd_select_loop (struct MHD_Daemon *daemon)
     max_fd = -1;
     to = 1000;
 
-    FD_SET (MHD_itc_r_fd_ (kicker), &rs);
+    FD_SET (kicker[0], &rs);
     if (MHD_YES !=
         MHD_get_fdset (daemon,
                        &rs,
@@ -946,15 +949,17 @@ run_mhd_select_loop (struct MHD_Daemon *daemon)
                              &es,
                              &tv))
       abort ();
-    if (FD_ISSET (MHD_itc_r_fd_ (kicker), &rs))
-      MHD_itc_clear_ (kicker);
+    if (FD_ISSET (kicker[0], &rs))
+      (void) read (kicker[0], drain, sizeof (drain));
     MHD_run_from_select (daemon,
                          &rs,
                          &ws,
                          &es);
   }
-  MHD_itc_destroy_ (kicker);
-  MHD_itc_set_invalid_ (kicker);
+  close (kicker[0]);
+  close (kicker[1]);
+  kicker[0] = -1;
+  kicker[1] = -1;
 }
 
 
@@ -996,13 +1001,13 @@ run_mhd_epoll_loop (struct MHD_Daemon *daemon)
   di = MHD_get_daemon_info (daemon,
                             MHD_DAEMON_INFO_EPOLL_FD);
   ep = di->listen_fd;
-  if (! MHD_itc_init_ (kicker))
+  if (0 != pipe (kicker))
     abort ();
   while (! done)
   {
     FD_ZERO (&rs);
     to = 1000;
-    FD_SET (MHD_itc_r_fd_ (kicker), &rs);
+    FD_SET (kicker[0], &rs);
     FD_SET (ep, &rs);
     (void) MHD_get_timeout (daemon,
                             &to);
@@ -1019,12 +1024,14 @@ run_mhd_epoll_loop (struct MHD_Daemon *daemon)
          (EAGAIN != errno) &&
          (EINTR != errno) )
       abort ();
-    if (FD_ISSET (MHD_itc_r_fd_ (kicker), &rs))
-      MHD_itc_clear_ (kicker);
+    if (FD_ISSET (kicker[0], &rs))
+      (void) read (kicker[0], drain, sizeof (drain));
     MHD_run (daemon);
   }
-  MHD_itc_destroy_ (kicker);
-  MHD_itc_set_invalid_ (kicker);
+  close (kicker[0]);
+  close (kicker[1]);
+  kicker[0] = -1;
+  kicker[1] = -1;
 }
 
 

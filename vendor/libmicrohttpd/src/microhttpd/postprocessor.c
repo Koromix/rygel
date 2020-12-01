@@ -353,17 +353,21 @@ MHD_create_post_processor (struct MHD_Connection *connection,
 
 
 /**
- * Give a (possibly partial) value to the application callback.  We have some
- * part of the value in the 'pp->xbuf', the rest is between @a value_start and
- * @a value_end.  If @a last_escape is non-NULL, there may be an incomplete
- * escape sequence at at @a value_escape between @a value_start and @a
- * value_end which we should preserve in 'pp->xbuf' for the future.
+ * Give a (possibly partial) value to the
+ * application callback.  We have some
+ * part of the value in the 'pp->xbuf', the
+ * rest is between @a value_start and @a value_end.
+ * If @a last_escape is non-NULL, there may be
+ * an incomplete escape sequence at at @a value_escape
+ * between @a value_start and @a value_end which
+ * we should preserve in 'pp->xbuf' for the future.
  *
- * Unescapes the value and calls the iterator together with the key.  The key
- * must already be in the key buffer allocated and 0-terminated at the end of
- * @a pp at the time of the call.
+ * Unescapes the value and calls the iterator
+ * together with the key.  The key must already
+ * be in the key buffer allocated and 0-terminated
+ * at the end of @a pp at the time of the call.
  *
- * @param[in,out] pp post processor to act upon
+ * @param pp post processor to act upon
  * @param value_start where in memory is the value
  * @param value_end where does the value end
  * @param last_escape last '%'-sign in value range,
@@ -379,7 +383,6 @@ process_value (struct MHD_PostProcessor *pp,
   size_t xoff;
 
   mhd_assert (pp->xbuf_pos < sizeof (xbuf));
-  /* move remaining input from previous round into processing buffer */
   memcpy (xbuf,
           pp->xbuf,
           pp->xbuf_pos);
@@ -401,89 +404,49 @@ process_value (struct MHD_PostProcessor *pp,
           (xoff > 0) )
   {
     size_t delta = value_end - value_start;
-    bool cut = false;
-    size_t clen = 0;
 
     if (delta > XBUF_SIZE - xoff)
       delta = XBUF_SIZE - xoff;
-    /* move (additional) input into processing buffer */
+    /* move input into processing buffer */
     memcpy (&xbuf[xoff],
             value_start,
             delta);
-    xoff += delta;
-    value_start += delta;
     /* find if escape sequence is at the end of the processing buffer;
        if so, exclude those from processing (reduce delta to point at
        end of processed region) */
-    if ( (xoff > 0) &&
-         ('%' == xbuf[xoff - 1]) )
+    if (delta >= XBUF_SIZE - 2)
     {
-      cut = (xoff != XBUF_SIZE);
-      xoff--;
-      if (cut)
-      {
-        /* move escape sequence into buffer for next function invocation */
-        pp->xbuf[0] = '%';
-        pp->xbuf_pos = 1;
-      }
-      else
-      {
-        /* just skip escape sequence for next loop iteration */
-        delta = xoff;
-        clen = 1;
-      }
+      if ((xoff + delta > 0) &&
+          ('%' == xbuf[xoff + delta - 1]))
+        delta--;
+      else if ((xoff + delta > 1) &&
+               ('%' == xbuf[xoff + delta - 2]))
+        delta -= 2;
     }
-    else if ( (xoff > 1) &&
-              ('%' == xbuf[xoff - 2]) )
-    {
-      cut = (xoff != XBUF_SIZE);
-      xoff -= 2;
-      if (cut)
-      {
-        /* move escape sequence into buffer for next function invocation */
-        memcpy (pp->xbuf,
-                &xbuf[xoff],
-                2);
-        pp->xbuf_pos = 2;
-      }
-      else
-      {
-        /* just skip escape sequence for next loop iteration */
-        delta = xoff;
-        clen = 2;
-      }
-    }
+    xoff += delta;
+    value_start += delta;
     mhd_assert (xoff < sizeof (xbuf));
     /* unescape */
     xbuf[xoff] = '\0';        /* 0-terminate in preparation */
     MHD_unescape_plus (xbuf);
     xoff = MHD_http_unescape (xbuf);
     /* finally: call application! */
-    if ( (pp->must_ikvi || (0 != xoff)) )
+    pp->must_ikvi = false;
+    if (MHD_NO == pp->ikvi (pp->cls,
+                            MHD_POSTDATA_KIND,
+                            (const char *) &pp[1],        /* key */
+                            NULL,
+                            NULL,
+                            NULL,
+                            xbuf,
+                            pp->value_offset,
+                            xoff))
     {
-      pp->must_ikvi = false;
-      if (MHD_NO == pp->ikvi (pp->cls,
-                              MHD_POSTDATA_KIND,
-                              (const char *) &pp[1],      /* key */
-                              NULL,
-                              NULL,
-                              NULL,
-                              xbuf,
-                              pp->value_offset,
-                              xoff))
-      {
-        pp->state = PP_Error;
-        return;
-      }
+      pp->state = PP_Error;
+      return;
     }
     pp->value_offset += xoff;
-    if (cut)
-      break;
-    xbuf[delta] = '%';        /* undo 0-termination */
-    memmove (xbuf,
-             &xbuf[delta],
-             clen);
-    xoff = clen;
+    xoff = 0;
   }
 }
 
@@ -578,7 +541,6 @@ post_process_urlencoded (struct MHD_PostProcessor *pp,
           pp->value_offset = 0;
           pp->state = PP_Init;
           start_value = NULL;
-          end_value = NULL;
         }
         continue;
       case '\n':

@@ -47,12 +47,6 @@ struct MHD_itc_
   int fd;
 };
 
-/**
- * Static initialiser for struct MHD_itc_
- */
-#define MHD_ITC_STATIC_INIT_INVALID { -1 }
-
-
 #elif defined(_MHD_ITC_PIPE)
 /* **************** Standard UNIX ITC implementation by pipe ********** */
 
@@ -63,11 +57,6 @@ struct MHD_itc_
 {
   int fd[2];
 };
-
-/**
- * Static initialiser for struct MHD_itc_
- */
-#define MHD_ITC_STATIC_INIT_INVALID { -1, -1 }
 
 
 #elif defined(_MHD_ITC_SOCKETPAIR)
@@ -82,11 +71,6 @@ struct MHD_itc_
 {
   MHD_socket sk[2];
 };
-
-/**
- * Static initialiser for struct MHD_itc_
- */
-#define MHD_ITC_STATIC_INIT_INVALID { MHD_INVALID_SOCKET, MHD_INVALID_SOCKET }
 
 #endif /* _MHD_ITC_SOCKETPAIR */
 

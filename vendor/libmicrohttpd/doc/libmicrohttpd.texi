@@ -619,7 +619,7 @@ flag is very convenient for multiplatform applications.
 Tell the TLS library to support post handshake client authentication.
 Only useful in combination with @code{MHD_USE_TLS}.
 
-This option will only work if the underlying TLS library
+This option will only work if the underyling TLS library
 supports it (i.e. GnuTLS after 3.6.3). If the TLS library
 does not support it, MHD may ignore the option and proceed
 without supporting this features.
@@ -630,7 +630,7 @@ resulting security drawbacks. Only enable this if you really know what
 you are doing. MHD currently does NOT enforce that this only affects
 GET requests! You have been warned.
 
-This option will only work if the underlying TLS library
+This option will only work if the underyling TLS library
 supports it (i.e. GnuTLS after 3.6.3). If the TLS library
 does not support it, MHD may ignore the option and proceed
 without supporting this features.
@@ -2018,21 +2018,6 @@ Return @code{NULL} on error (i.e. invalid arguments, out of memory).
 @end deftypefun
 
 
-@deftypefun {struct MHD_Response *} MHD_create_response_from_pipe (uint64_t size, int fd)
-Create a response object.  The response object can be extended with
-header information and then it can be used ONLY ONCE.
-
-@table @var
-@item fd
-file descriptor of the read-end of the pipe; will be
-closed when response is destroyed.
-The descriptor should be in blocking-IO mode.
-@end table
-
-Return @code{NULL} on error (i.e. out of memory).
-@end deftypefun
-
-
 @deftypefun {struct MHD_Response *} MHD_create_response_from_fd_at_offset (size_t size, int fd, off_t offset)
 Create a response object.  The response object can be extended with
 header information and then it can be used any number of times.
@@ -2507,7 +2492,7 @@ If returned value is not @code{NULL}, the value must be @code{MHD_free()}'ed.
 If returned value is not @code{NULL}, the value must be @code{MHD_free()}'ed.
 @end deftypefun
 
-@deftypefun {enum MHD_Result} MHD_queue_basic_auth_fail_response (struct MHD_Connection *connection, const char *realm, struct MHD_Response *response)
+@deftypefun {int} MHD_queue_basic_auth_fail_response (struct MHD_Connection *connection, const char *realm, struct MHD_Response *response)
 Queues a response to request basic authentication from the client.
 Return @code{MHD_YES} if successful, otherwise @code{MHD_NO}.
 
