@@ -20,11 +20,11 @@ static bk_PrimitiveValue DoPrint(bk_VirtualMachine *vm, Span<const bk_PrimitiveV
 
     for (Size i = 0; i < args.len; i += 2) {
         switch (args[i].type->primitive) {
-            case bk_PrimitiveType::Null: { Print("null"); } break;
-            case bk_PrimitiveType::Bool: { Print("%1", args[i + 1].b); } break;
-            case bk_PrimitiveType::Int: { Print("%1", args[i + 1].i); } break;
-            case bk_PrimitiveType::Float: { Print("%1", FmtDouble(args[i + 1].d, 1, INT_MAX)); } break;
-            case bk_PrimitiveType::Type: { Print("%1", args[i + 1].type->signature); } break;
+            case bk_PrimitiveKind::Null: { Print("null"); } break;
+            case bk_PrimitiveKind::Bool: { Print("%1", args[i + 1].b); } break;
+            case bk_PrimitiveKind::Int: { Print("%1", args[i + 1].i); } break;
+            case bk_PrimitiveKind::Float: { Print("%1", FmtDouble(args[i + 1].d, 1, INT_MAX)); } break;
+            case bk_PrimitiveKind::Type: { Print("%1", args[i + 1].type->signature); } break;
         }
     }
 
@@ -44,9 +44,9 @@ void bk_ImportPrint(bk_Compiler *out_compiler)
 
 void bk_ImportMath(bk_Compiler *out_compiler)
 {
-    out_compiler->AddGlobal("PI", bk_PrimitiveType::Float, bk_PrimitiveValue {.d = 3.141592653589793});
-    out_compiler->AddGlobal("E", bk_PrimitiveType::Float, bk_PrimitiveValue {.d = 2.718281828459045});
-    out_compiler->AddGlobal("TAU", bk_PrimitiveType::Float, bk_PrimitiveValue {.d = 6.283185307179586});
+    out_compiler->AddGlobal("PI", bk_FloatType, bk_PrimitiveValue {.d = 3.141592653589793});
+    out_compiler->AddGlobal("E", bk_FloatType, bk_PrimitiveValue {.d = 2.718281828459045});
+    out_compiler->AddGlobal("TAU", bk_FloatType, bk_PrimitiveValue {.d = 6.283185307179586});
 
     out_compiler->AddFunction("isNormal(Float): Bool", [](bk_VirtualMachine *, Span<const bk_PrimitiveValue> args) { return bk_PrimitiveValue {.b = std::isnormal(args[0].d)}; });
     out_compiler->AddFunction("isInfinity(Float): Bool", [](bk_VirtualMachine *, Span<const bk_PrimitiveValue> args) { return bk_PrimitiveValue {.b = std::isinf(args[0].d)}; });

@@ -12,19 +12,12 @@ struct bk_TypeInfo;
 class bk_VirtualMachine;
 
 // Keep ordering in sync with Push* opcodes!
-enum class bk_PrimitiveType {
+enum class bk_PrimitiveKind {
     Null,
     Bool,
     Int,
     Float,
     Type
-};
-static const char *const bk_PrimitiveTypeNames[] = {
-    "Null",
-    "Bool",
-    "Int",
-    "Float",
-    "Type"
 };
 
 union bk_PrimitiveValue {
@@ -36,10 +29,17 @@ union bk_PrimitiveValue {
 
 struct bk_TypeInfo {
     const char *signature;
-    bk_PrimitiveType primitive;
+    bk_PrimitiveKind primitive;
 
     RG_HASHTABLE_HANDLER(bk_TypeInfo, signature);
 };
+
+extern Span<const bk_TypeInfo> bk_BaseTypes;
+extern const bk_TypeInfo *bk_NullType;
+extern const bk_TypeInfo *bk_BoolType;
+extern const bk_TypeInfo *bk_IntType;
+extern const bk_TypeInfo *bk_FloatType;
+extern const bk_TypeInfo *bk_TypeType;
 
 // XXX: Support native calling conventions to provide seamless integration
 typedef bk_PrimitiveValue bk_NativeFunction(bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args);
@@ -139,10 +139,9 @@ struct bk_Program {
     HeapArray<bk_Instruction> ir;
     HeapArray<bk_SourceInfo> sources;
 
-    BucketArray<bk_TypeInfo> types;
     BucketArray<bk_FunctionInfo> functions;
     BucketArray<bk_VariableInfo> variables;
-    HashTable<const char *, bk_TypeInfo *> types_map;
+    HashTable<const char *, const bk_TypeInfo *> types_map;
     HashTable<const char *, bk_FunctionInfo *> functions_map;
     HashTable<const char *, bk_VariableInfo *> variables_map;
 

@@ -7,6 +7,21 @@
 
 namespace RG {
 
+static bk_TypeInfo BaseTypes[] = {
+    {"Null", bk_PrimitiveKind::Null},
+    {"Bool", bk_PrimitiveKind::Bool},
+    {"Int", bk_PrimitiveKind::Int},
+    {"Float", bk_PrimitiveKind::Float},
+    {"Type", bk_PrimitiveKind::Type}
+};
+
+Span<const bk_TypeInfo> bk_BaseTypes = BaseTypes;
+const bk_TypeInfo *bk_NullType = &BaseTypes[0];
+const bk_TypeInfo *bk_BoolType = &BaseTypes[1];
+const bk_TypeInfo *bk_IntType = &BaseTypes[2];
+const bk_TypeInfo *bk_FloatType = &BaseTypes[3];
+const bk_TypeInfo *bk_TypeType = &BaseTypes[4];
+
 const char *bk_Program::LocateInstruction(Size pc, int32_t *out_line) const
 {
     const bk_SourceInfo *src = std::upper_bound(sources.begin(), sources.end(), pc,

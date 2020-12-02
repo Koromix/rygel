@@ -31,9 +31,6 @@ public:
 
     void AddFunction(const char *signature, std::function<bk_NativeFunction> native);
     void AddGlobal(const char *name, const bk_TypeInfo *type, bk_PrimitiveValue value, bool mut = false);
-    void AddGlobal(const char *name, bk_PrimitiveType primitive, bk_PrimitiveValue value, bool mut = false);
-
-    const bk_TypeInfo *GetBasicType(bk_PrimitiveType primitive);
 };
 
 }

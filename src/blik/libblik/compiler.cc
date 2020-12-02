@@ -78,11 +78,6 @@ public:
     void AddFunction(const char *signature, std::function<bk_NativeFunction> native);
     void AddGlobal(const char *name, const bk_TypeInfo *type, bk_PrimitiveValue value, bool mut);
 
-    inline const bk_TypeInfo *GetBasicType(bk_PrimitiveType primitive)
-    {
-        return &program->types[(int)primitive];
-    }
-
 private:
     void ParsePrototypes(Span<const Size> funcs);
 
@@ -106,8 +101,8 @@ private:
 
     StackSlot ParseExpression(bool tolerate_assign);
     void ProduceOperator(const PendingOperator &op);
-    bool EmitOperator1(bk_PrimitiveType in_primitive, bk_Opcode code, const bk_TypeInfo *out_type);
-    bool EmitOperator2(bk_PrimitiveType in_primitive, bk_Opcode code, const bk_TypeInfo *out_type);
+    bool EmitOperator1(const bk_TypeInfo *in_type, bk_Opcode code, const bk_TypeInfo *out_type);
+    bool EmitOperator2(const bk_TypeInfo *in_type, bk_Opcode code, const bk_TypeInfo *out_type);
     bool ParseCall(const char *name);
     void EmitIntrinsic(const char *name, Size call_addr, Span<const bk_FunctionInfo::Parameter> args);
     void EmitLoad(const bk_VariableInfo &var);
@@ -217,32 +212,20 @@ void bk_Compiler::AddGlobal(const char *name, const bk_TypeInfo *type, bk_Primit
     parser->AddGlobal(name, type, value, mut);
 }
 
-void bk_Compiler::AddGlobal(const char *name, bk_PrimitiveType primitive, bk_PrimitiveValue value, bool mut)
-{
-    const bk_TypeInfo *type = parser->GetBasicType(primitive);
-    parser->AddGlobal(name, type, value, mut);
-}
-
-const bk_TypeInfo *bk_Compiler::GetBasicType(bk_PrimitiveType primitive)
-{
-    return parser->GetBasicType(primitive);
-}
-
 bk_Parser::bk_Parser(bk_Program *program)
     : program(program), ir(program->ir)
 {
     RG_ASSERT(program);
     RG_ASSERT(!ir.len);
 
-    // Basic types
-    for (Size i = 0; i < RG_LEN(bk_PrimitiveTypeNames); i++) {
-        bk_TypeInfo *type = program->types.Append({bk_PrimitiveTypeNames[i], (bk_PrimitiveType)i});
-        program->types_map.Set(type);
+    // Base types
+    for (const bk_TypeInfo &type: bk_BaseTypes) {
+        program->types_map.Set(&type);
     }
 
     // Special values
-    AddGlobal("NaN", GetBasicType(bk_PrimitiveType::Float), bk_PrimitiveValue {.d = (double)NAN}, false);
-    AddGlobal("Inf", GetBasicType(bk_PrimitiveType::Float), bk_PrimitiveValue {.d = (double)INFINITY}, false);
+    AddGlobal("NaN", bk_FloatType, bk_PrimitiveValue {.d = (double)NAN}, false);
+    AddGlobal("Inf", bk_FloatType, bk_PrimitiveValue {.d = (double)INFINITY}, false);
 
     // Intrinsics
     AddFunction("Float(Int): Float", {});
@@ -393,7 +376,7 @@ void bk_Parser::AddFunction(const char *signature, std::function<bk_NativeFuncti
         func->ret_type = program->types_map.FindValue(ptr + 2, nullptr);
         RG_ASSERT(func->ret_type);
     } else {
-        func->ret_type = GetBasicType(bk_PrimitiveType::Null);
+        func->ret_type = bk_NullType;
     }
 
     // Publish it!
@@ -423,6 +406,9 @@ void bk_Parser::AddFunction(const char *signature, std::function<bk_NativeFuncti
 
 void bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type, bk_PrimitiveValue value, bool mut)
 {
+    RG_ASSERT(std::any_of(bk_BaseTypes.begin(), bk_BaseTypes.end(),
+                          [&](const bk_TypeInfo &it) { return &it == type; }));
+
     bk_VariableInfo *var = program->variables.AppendDefault();
 
     var->name = InternString(name);
@@ -430,11 +416,11 @@ void bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type, bk_Primitiv
     var->mut = mut;
 
     switch (type->primitive) {
-        case bk_PrimitiveType::Null: { ir.Append({bk_Opcode::PushNull}); } break;
-        case bk_PrimitiveType::Bool: { ir.Append({bk_Opcode::PushBool, {.b = value.b}}); } break;
-        case bk_PrimitiveType::Int: { ir.Append({bk_Opcode::PushInt, {.i = value.i}}); } break;
-        case bk_PrimitiveType::Float: { ir.Append({bk_Opcode::PushFloat, {.d = value.d}}); } break;
-        case bk_PrimitiveType::Type: { ir.Append({bk_Opcode::PushType, {.type = value.type}}); } break;
+        case bk_PrimitiveKind::Null: { ir.Append({bk_Opcode::PushNull}); } break;
+        case bk_PrimitiveKind::Bool: { ir.Append({bk_Opcode::PushBool, {.b = value.b}}); } break;
+        case bk_PrimitiveKind::Int: { ir.Append({bk_Opcode::PushInt, {.i = value.i}}); } break;
+        case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::PushFloat, {.d = value.d}}); } break;
+        case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::PushType, {.type = value.type}}); } break;
     }
 
     var->global = true;
@@ -542,7 +528,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
         if (MatchToken(bk_TokenKind::Colon)) {
             func->ret_type = ParseType();
         } else {
-            func->ret_type = GetBasicType(bk_PrimitiveType::Null);
+            func->ret_type = bk_NullType;
         }
 
         // Build signature (with parameter and return types)
@@ -555,7 +541,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
                 Fmt(&buf, "%1%2", i ? ", " : "", param.type->signature);
             }
             Fmt(&buf, ")");
-            if (func->ret_type != GetBasicType(bk_PrimitiveType::Null)) {
+            if (func->ret_type != bk_NullType) {
                 Fmt(&buf, ": %1", func->ret_type->signature);
             }
 
@@ -786,7 +772,7 @@ void bk_Parser::ParseFunction()
     }
 
     if (!has_return) {
-        if (func->ret_type == GetBasicType(bk_PrimitiveType::Null)) {
+        if (func->ret_type == bk_NullType) {
             ir.Append({bk_Opcode::PushNull});
             EmitReturn();
         } else {
@@ -809,7 +795,7 @@ void bk_Parser::ParseReturn()
     const bk_TypeInfo *type;
     if (PeekToken(bk_TokenKind::EndOfLine) || PeekToken(bk_TokenKind::Semicolon)) {
         ir.Append({bk_Opcode::PushNull});
-        type = GetBasicType(bk_PrimitiveType::Null);
+        type = bk_NullType;
     } else {
         type = ParseExpression(true).type;
     }
@@ -876,11 +862,11 @@ void bk_Parser::ParseLet()
             slot = {type};
 
             switch (type->primitive) {
-                case bk_PrimitiveType::Null: { ir.Append({bk_Opcode::PushNull}); } break;
-                case bk_PrimitiveType::Bool: { ir.Append({bk_Opcode::PushBool, {.b = false}}); } break;
-                case bk_PrimitiveType::Int: { ir.Append({bk_Opcode::PushInt, {.i = 0}}); } break;
-                case bk_PrimitiveType::Float: { ir.Append({bk_Opcode::PushFloat, {.d = 0.0}}); } break;
-                case bk_PrimitiveType::Type: { ir.Append({bk_Opcode::PushType, {.type = GetBasicType(bk_PrimitiveType::Null)}}); } break;
+                case bk_PrimitiveKind::Null: { ir.Append({bk_Opcode::PushNull}); } break;
+                case bk_PrimitiveKind::Bool: { ir.Append({bk_Opcode::PushBool, {.b = false}}); } break;
+                case bk_PrimitiveKind::Int: { ir.Append({bk_Opcode::PushInt, {.i = 0}}); } break;
+                case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::PushFloat, {.d = 0.0}}); } break;
+                case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::PushType, {.type = bk_NullType}}); } break;
             }
         }
     }
@@ -910,7 +896,7 @@ bool bk_Parser::ParseIf()
 {
     pos++;
 
-    ParseExpressionOfType(GetBasicType(bk_PrimitiveType::Bool));
+    ParseExpressionOfType(bk_BoolType);
 
     Size branch_addr = ir.len;
     ir.Append({bk_Opcode::BranchIfFalse});
@@ -932,7 +918,7 @@ bool bk_Parser::ParseIf()
                 ir[branch_addr].u.i = ir.len - branch_addr;
 
                 if (MatchToken(bk_TokenKind::If)) {
-                    ParseExpressionOfType(GetBasicType(bk_PrimitiveType::Bool));
+                    ParseExpressionOfType(bk_BoolType);
 
                     if (RG_LIKELY(EndStatement())) {
                         branch_addr = ir.len;
@@ -970,7 +956,7 @@ void bk_Parser::ParseWhile()
     // roughly like if (cond) { do { ... } while (cond) }.
     Size condition_addr = ir.len;
     Size condition_line_idx = src->lines.len;
-    ParseExpressionOfType(GetBasicType(bk_PrimitiveType::Bool));
+    ParseExpressionOfType(bk_BoolType);
 
     Size branch_addr = ir.len;
     ir.Append({bk_Opcode::BranchIfFalse});
@@ -1042,16 +1028,16 @@ void bk_Parser::ParseFor()
     }
 
     ConsumeToken(bk_TokenKind::In);
-    ParseExpressionOfType(GetBasicType(bk_PrimitiveType::Int));
+    ParseExpressionOfType(bk_IntType);
     ConsumeToken(bk_TokenKind::Colon);
-    ParseExpressionOfType(GetBasicType(bk_PrimitiveType::Int));
+    ParseExpressionOfType(bk_IntType);
 
     // Make sure start and end value remain on the stack
     var_offset += 3;
 
     // Put iterator value on the stack
     ir.Append({bk_Opcode::LoadLocalInt, {.i = it->offset - 2}});
-    it->type = GetBasicType(bk_PrimitiveType::Int);
+    it->type = bk_IntType;
 
     Size body_addr = ir.len;
 
@@ -1133,9 +1119,9 @@ const bk_TypeInfo *bk_Parser::ParseType()
     {
         const bk_TypeInfo *type = ParseExpression(false).type;
 
-        if (RG_UNLIKELY(type != GetBasicType(bk_PrimitiveType::Type))) {
+        if (RG_UNLIKELY(type != bk_TypeType)) {
             MarkError(type_pos, "Expected a Type expression, not %1", type->signature);
-            return GetBasicType(bk_PrimitiveType::Null);
+            return bk_NullType;
         }
     }
 
@@ -1143,7 +1129,7 @@ const bk_TypeInfo *bk_Parser::ParseType()
     // should work without any change here.
     if (RG_UNLIKELY(ir[ir.len - 1].code != bk_Opcode::PushType)) {
         MarkError(type_pos, "Complex type expression cannot be resolved statically");
-        return GetBasicType(bk_PrimitiveType::Null);
+        return bk_NullType;
     }
 
     const bk_TypeInfo *type = ir[ir.len - 1].u.type;
@@ -1253,19 +1239,19 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
             switch (tok.kind) {
                 case bk_TokenKind::Null: {
                     ir.Append({bk_Opcode::PushNull});
-                    stack.Append({GetBasicType(bk_PrimitiveType::Null)});
+                    stack.Append({bk_NullType});
                 } break;
                 case bk_TokenKind::Bool: {
                     ir.Append({bk_Opcode::PushBool, {.b = tok.u.b}});
-                    stack.Append({GetBasicType(bk_PrimitiveType::Bool)});
+                    stack.Append({bk_BoolType});
                 } break;
                 case bk_TokenKind::Integer: {
                     ir.Append({bk_Opcode::PushInt, {.i = tok.u.i}});
-                    stack.Append({GetBasicType(bk_PrimitiveType::Int)});
+                    stack.Append({bk_IntType});
                 } break;
                 case bk_TokenKind::Float: {
                     ir.Append({bk_Opcode::PushFloat, {.d = tok.u.d}});
-                    stack.Append({GetBasicType(bk_PrimitiveType::Float)});
+                    stack.Append({bk_FloatType});
                 } break;
                 case bk_TokenKind::String: { RG_UNREACHABLE(); } break;
 
@@ -1294,7 +1280,7 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                             }
 
                             ir.Append({bk_Opcode::PushType, {.type = type}});
-                            stack.Append({GetBasicType(bk_PrimitiveType::Type)});
+                            stack.Append({bk_TypeType});
                         }
                     }
                 } break;
@@ -1393,7 +1379,7 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
     if (RG_LIKELY(stack.len)) {
         return stack[stack.len - 1];
     } else {
-        return {GetBasicType(bk_PrimitiveType::Null)};
+        return {bk_NullType};
     }
 
 unexpected:
@@ -1421,7 +1407,7 @@ error:
                                tokens[pos].kind != bk_TokenKind::Semicolon) {
         pos++;
     };
-    return {GetBasicType(bk_PrimitiveType::Null)};
+    return {bk_NullType};
 }
 
 void bk_Parser::ProduceOperator(const PendingOperator &op)
@@ -1459,47 +1445,47 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
             } break;
 
             case bk_TokenKind::PlusAssign: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::AddInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(bk_PrimitiveType::Float, bk_Opcode::AddFloat, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::AddInt, stack[stack.len - 2].type) ||
+                          EmitOperator2(bk_FloatType, bk_Opcode::AddFloat, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::MinusAssign: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::SubstractInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(bk_PrimitiveType::Float, bk_Opcode::SubstractFloat, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::SubstractInt, stack[stack.len - 2].type) ||
+                          EmitOperator2(bk_FloatType, bk_Opcode::SubstractFloat, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::MultiplyAssign: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::MultiplyInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(bk_PrimitiveType::Float, bk_Opcode::MultiplyFloat, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::MultiplyInt, stack[stack.len - 2].type) ||
+                          EmitOperator2(bk_FloatType, bk_Opcode::MultiplyFloat, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::DivideAssign: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::DivideInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(bk_PrimitiveType::Float, bk_Opcode::DivideFloat, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::DivideInt, stack[stack.len - 2].type) ||
+                          EmitOperator2(bk_FloatType, bk_Opcode::DivideFloat, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::ModuloAssign: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::ModuloInt, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::ModuloInt, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::AndAssign: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::AndInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(bk_PrimitiveType::Bool, bk_Opcode::AndBool, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::AndInt, stack[stack.len - 2].type) ||
+                          EmitOperator2(bk_BoolType, bk_Opcode::AndBool, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::OrAssign: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::OrInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(bk_PrimitiveType::Bool, bk_Opcode::OrBool, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::OrInt, stack[stack.len - 2].type) ||
+                          EmitOperator2(bk_BoolType, bk_Opcode::OrBool, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::XorAssign: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::XorInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(bk_PrimitiveType::Bool, bk_Opcode::NotEqualBool, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::XorInt, stack[stack.len - 2].type) ||
+                          EmitOperator2(bk_BoolType, bk_Opcode::NotEqualBool, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::LeftShiftAssign: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::LeftShiftInt, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::LeftShiftInt, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::RightShiftAssign: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::RightShiftInt, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::RightShiftInt, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::LeftRotateAssign: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::LeftRotateInt, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::LeftRotateInt, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::RightRotateAssign: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::RightRotateInt, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::RightRotateInt, stack[stack.len - 2].type);
             } break;
 
             default: { RG_UNREACHABLE(); } break;
@@ -1507,30 +1493,30 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
 
         if (var->global) {
             switch (var->type->primitive) {
-                case bk_PrimitiveType::Null: {} break;
-                case bk_PrimitiveType::Bool: { ir.Append({bk_Opcode::CopyBool, {.i = var->offset}}); } break;
-                case bk_PrimitiveType::Int: { ir.Append({bk_Opcode::CopyInt, {.i = var->offset}}); } break;
-                case bk_PrimitiveType::Float: { ir.Append({bk_Opcode::CopyFloat, {.i = var->offset}}); } break;
-                case bk_PrimitiveType::Type: { ir.Append({bk_Opcode::CopyType, {.i = var->offset}}); } break;
+                case bk_PrimitiveKind::Null: {} break;
+                case bk_PrimitiveKind::Bool: { ir.Append({bk_Opcode::CopyBool, {.i = var->offset}}); } break;
+                case bk_PrimitiveKind::Int: { ir.Append({bk_Opcode::CopyInt, {.i = var->offset}}); } break;
+                case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::CopyFloat, {.i = var->offset}}); } break;
+                case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::CopyType, {.i = var->offset}}); } break;
             }
         } else {
             switch (var->type->primitive) {
-                case bk_PrimitiveType::Null: {} break;
-                case bk_PrimitiveType::Bool: { ir.Append({bk_Opcode::CopyLocalBool, {.i = var->offset}}); } break;
-                case bk_PrimitiveType::Int: { ir.Append({bk_Opcode::CopyLocalInt, {.i = var->offset}}); } break;
-                case bk_PrimitiveType::Float: { ir.Append({bk_Opcode::CopyLocalFloat, {.i = var->offset}}); } break;
-                case bk_PrimitiveType::Type: { ir.Append({bk_Opcode::CopyLocalType, {.i = var->offset}}); } break;
+                case bk_PrimitiveKind::Null: {} break;
+                case bk_PrimitiveKind::Bool: { ir.Append({bk_Opcode::CopyLocalBool, {.i = var->offset}}); } break;
+                case bk_PrimitiveKind::Int: { ir.Append({bk_Opcode::CopyLocalInt, {.i = var->offset}}); } break;
+                case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::CopyLocalFloat, {.i = var->offset}}); } break;
+                case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::CopyLocalType, {.i = var->offset}}); } break;
             }
         }
     } else { // Other operators
         switch (op.kind) {
             case bk_TokenKind::Plus: {
                 if (op.unary) {
-                    success = stack[stack.len - 1].type->primitive == bk_PrimitiveType::Int ||
-                              stack[stack.len - 1].type->primitive == bk_PrimitiveType::Float;
+                    success = stack[stack.len - 1].type == bk_IntType ||
+                              stack[stack.len - 1].type == bk_FloatType;
                 } else {
-                    success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::AddInt, stack[stack.len - 2].type) ||
-                              EmitOperator2(bk_PrimitiveType::Float, bk_Opcode::AddFloat, stack[stack.len - 2].type);
+                    success = EmitOperator2(bk_IntType, bk_Opcode::AddInt, stack[stack.len - 2].type) ||
+                              EmitOperator2(bk_FloatType, bk_Opcode::AddFloat, stack[stack.len - 2].type);
                 }
             } break;
             case bk_TokenKind::Minus: {
@@ -1557,97 +1543,97 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
                         } break;
 
                         default: {
-                            success = EmitOperator1(bk_PrimitiveType::Int, bk_Opcode::NegateInt, stack[stack.len - 1].type) ||
-                                      EmitOperator1(bk_PrimitiveType::Float, bk_Opcode::NegateFloat, stack[stack.len - 1].type);
+                            success = EmitOperator1(bk_IntType, bk_Opcode::NegateInt, stack[stack.len - 1].type) ||
+                                      EmitOperator1(bk_FloatType, bk_Opcode::NegateFloat, stack[stack.len - 1].type);
                         }
                     }
                 } else {
-                    success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::SubstractInt, stack[stack.len - 2].type) ||
-                              EmitOperator2(bk_PrimitiveType::Float, bk_Opcode::SubstractFloat, stack[stack.len - 2].type);
+                    success = EmitOperator2(bk_IntType, bk_Opcode::SubstractInt, stack[stack.len - 2].type) ||
+                              EmitOperator2(bk_FloatType, bk_Opcode::SubstractFloat, stack[stack.len - 2].type);
                 }
             } break;
             case bk_TokenKind::Multiply: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::MultiplyInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(bk_PrimitiveType::Float, bk_Opcode::MultiplyFloat, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::MultiplyInt, stack[stack.len - 2].type) ||
+                          EmitOperator2(bk_FloatType, bk_Opcode::MultiplyFloat, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::Divide: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::DivideInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(bk_PrimitiveType::Float, bk_Opcode::DivideFloat, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::DivideInt, stack[stack.len - 2].type) ||
+                          EmitOperator2(bk_FloatType, bk_Opcode::DivideFloat, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::Modulo: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::ModuloInt, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::ModuloInt, stack[stack.len - 2].type);
             } break;
 
             case bk_TokenKind::Equal: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::EqualInt, GetBasicType(bk_PrimitiveType::Bool)) ||
-                          EmitOperator2(bk_PrimitiveType::Float, bk_Opcode::EqualFloat, GetBasicType(bk_PrimitiveType::Bool)) ||
-                          EmitOperator2(bk_PrimitiveType::Bool, bk_Opcode::EqualBool, GetBasicType(bk_PrimitiveType::Bool)) ||
-                          EmitOperator2(bk_PrimitiveType::Type, bk_Opcode::EqualType, GetBasicType(bk_PrimitiveType::Bool));
+                success = EmitOperator2(bk_IntType, bk_Opcode::EqualInt, bk_BoolType) ||
+                          EmitOperator2(bk_FloatType, bk_Opcode::EqualFloat, bk_BoolType) ||
+                          EmitOperator2(bk_BoolType, bk_Opcode::EqualBool, bk_BoolType) ||
+                          EmitOperator2(bk_TypeType, bk_Opcode::EqualType, bk_BoolType);
             } break;
             case bk_TokenKind::NotEqual: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::NotEqualInt, GetBasicType(bk_PrimitiveType::Bool)) ||
-                          EmitOperator2(bk_PrimitiveType::Float, bk_Opcode::NotEqualFloat, GetBasicType(bk_PrimitiveType::Bool)) ||
-                          EmitOperator2(bk_PrimitiveType::Bool, bk_Opcode::NotEqualBool, GetBasicType(bk_PrimitiveType::Bool)) ||
-                          EmitOperator2(bk_PrimitiveType::Type, bk_Opcode::NotEqualType, GetBasicType(bk_PrimitiveType::Bool));
+                success = EmitOperator2(bk_IntType, bk_Opcode::NotEqualInt, bk_BoolType) ||
+                          EmitOperator2(bk_FloatType, bk_Opcode::NotEqualFloat, bk_BoolType) ||
+                          EmitOperator2(bk_BoolType, bk_Opcode::NotEqualBool, bk_BoolType) ||
+                          EmitOperator2(bk_TypeType, bk_Opcode::NotEqualType, bk_BoolType);
             } break;
             case bk_TokenKind::Greater: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::GreaterThanInt, GetBasicType(bk_PrimitiveType::Bool)) ||
-                          EmitOperator2(bk_PrimitiveType::Float, bk_Opcode::GreaterThanFloat, GetBasicType(bk_PrimitiveType::Bool));
+                success = EmitOperator2(bk_IntType, bk_Opcode::GreaterThanInt, bk_BoolType) ||
+                          EmitOperator2(bk_FloatType, bk_Opcode::GreaterThanFloat, bk_BoolType);
             } break;
             case bk_TokenKind::GreaterOrEqual: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::GreaterOrEqualInt, GetBasicType(bk_PrimitiveType::Bool)) ||
-                          EmitOperator2(bk_PrimitiveType::Float, bk_Opcode::GreaterOrEqualFloat, GetBasicType(bk_PrimitiveType::Bool));
+                success = EmitOperator2(bk_IntType, bk_Opcode::GreaterOrEqualInt, bk_BoolType) ||
+                          EmitOperator2(bk_FloatType, bk_Opcode::GreaterOrEqualFloat, bk_BoolType);
             } break;
             case bk_TokenKind::Less: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::LessThanInt, GetBasicType(bk_PrimitiveType::Bool)) ||
-                          EmitOperator2(bk_PrimitiveType::Float, bk_Opcode::LessThanFloat, GetBasicType(bk_PrimitiveType::Bool));
+                success = EmitOperator2(bk_IntType, bk_Opcode::LessThanInt, bk_BoolType) ||
+                          EmitOperator2(bk_FloatType, bk_Opcode::LessThanFloat, bk_BoolType);
             } break;
             case bk_TokenKind::LessOrEqual: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::LessOrEqualInt, GetBasicType(bk_PrimitiveType::Bool)) ||
-                          EmitOperator2(bk_PrimitiveType::Float, bk_Opcode::LessOrEqualFloat, GetBasicType(bk_PrimitiveType::Bool));
+                success = EmitOperator2(bk_IntType, bk_Opcode::LessOrEqualInt, bk_BoolType) ||
+                          EmitOperator2(bk_FloatType, bk_Opcode::LessOrEqualFloat, bk_BoolType);
             } break;
 
             case bk_TokenKind::And: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::AndInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(bk_PrimitiveType::Bool, bk_Opcode::AndBool, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::AndInt, stack[stack.len - 2].type) ||
+                          EmitOperator2(bk_BoolType, bk_Opcode::AndBool, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::Or: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::OrInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(bk_PrimitiveType::Bool, bk_Opcode::OrBool, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::OrInt, stack[stack.len - 2].type) ||
+                          EmitOperator2(bk_BoolType, bk_Opcode::OrBool, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::XorOrComplement: {
                 if (op.unary) {
-                    success = EmitOperator1(bk_PrimitiveType::Int, bk_Opcode::ComplementInt, stack[stack.len - 1].type) ||
-                              EmitOperator1(bk_PrimitiveType::Bool, bk_Opcode::NotBool, stack[stack.len - 1].type);
+                    success = EmitOperator1(bk_IntType, bk_Opcode::ComplementInt, stack[stack.len - 1].type) ||
+                              EmitOperator1(bk_BoolType, bk_Opcode::NotBool, stack[stack.len - 1].type);
                 } else {
-                    success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::XorInt, stack[stack.len - 1].type) ||
-                              EmitOperator2(bk_PrimitiveType::Bool, bk_Opcode::NotEqualBool, stack[stack.len - 1].type);
+                    success = EmitOperator2(bk_IntType, bk_Opcode::XorInt, stack[stack.len - 1].type) ||
+                              EmitOperator2(bk_BoolType, bk_Opcode::NotEqualBool, stack[stack.len - 1].type);
                 }
             } break;
             case bk_TokenKind::LeftShift: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::LeftShiftInt, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::LeftShiftInt, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::RightShift: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::RightShiftInt, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::RightShiftInt, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::LeftRotate: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::LeftRotateInt, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::LeftRotateInt, stack[stack.len - 2].type);
             } break;
             case bk_TokenKind::RightRotate: {
-                success = EmitOperator2(bk_PrimitiveType::Int, bk_Opcode::RightRotateInt, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_IntType, bk_Opcode::RightRotateInt, stack[stack.len - 2].type);
             } break;
 
             case bk_TokenKind::Not: {
-                success = EmitOperator1(bk_PrimitiveType::Bool, bk_Opcode::NotBool, stack[stack.len - 1].type);
+                success = EmitOperator1(bk_BoolType, bk_Opcode::NotBool, stack[stack.len - 1].type);
             } break;
             case bk_TokenKind::AndAnd: {
-                success = EmitOperator2(bk_PrimitiveType::Bool, bk_Opcode::AndBool, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_BoolType, bk_Opcode::AndBool, stack[stack.len - 2].type);
 
                 RG_ASSERT(op.branch_addr && ir[op.branch_addr].code == bk_Opcode::SkipIfFalse);
                 ir[op.branch_addr].u.i = ir.len - op.branch_addr;
             } break;
             case bk_TokenKind::OrOr: {
-                success = EmitOperator2(bk_PrimitiveType::Bool, bk_Opcode::OrBool, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_BoolType, bk_Opcode::OrBool, stack[stack.len - 2].type);
 
                 RG_ASSERT(op.branch_addr && ir[op.branch_addr].code == bk_Opcode::SkipIfTrue);
                 ir[op.branch_addr].u.i = ir.len - op.branch_addr;
@@ -1672,11 +1658,11 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
     }
 }
 
-bool bk_Parser::EmitOperator1(bk_PrimitiveType in_primitive, bk_Opcode code, const bk_TypeInfo *out_type)
+bool bk_Parser::EmitOperator1(const bk_TypeInfo *in_type, bk_Opcode code, const bk_TypeInfo *out_type)
 {
     const bk_TypeInfo *type = stack[stack.len - 1].type;
 
-    if (type->primitive == in_primitive) {
+    if (type == in_type) {
         ir.Append({code});
         stack[stack.len - 1] = {out_type};
 
@@ -1686,12 +1672,12 @@ bool bk_Parser::EmitOperator1(bk_PrimitiveType in_primitive, bk_Opcode code, con
     }
 }
 
-bool bk_Parser::EmitOperator2(bk_PrimitiveType in_primitive, bk_Opcode code, const bk_TypeInfo *out_type)
+bool bk_Parser::EmitOperator2(const bk_TypeInfo *in_type, bk_Opcode code, const bk_TypeInfo *out_type)
 {
     const bk_TypeInfo *type1 = stack[stack.len - 2].type;
     const bk_TypeInfo *type2 = stack[stack.len - 1].type;
 
-    if (type1->primitive == in_primitive && type2->primitive == in_primitive && type1 == type2) {
+    if (type1 == in_type && type2 == in_type && type1 == type2) {
         ir.Append({code});
         stack[--stack.len - 1] = {out_type};
 
@@ -1712,19 +1698,19 @@ void bk_Parser::EmitLoad(const bk_VariableInfo &var)
         }
 
         switch (var.type->primitive) {
-            case bk_PrimitiveType::Null: { ir.Append({bk_Opcode::PushNull}); } break;
-            case bk_PrimitiveType::Bool: { ir.Append({bk_Opcode::LoadBool, {.i = var.offset}}); } break;
-            case bk_PrimitiveType::Int: { ir.Append({bk_Opcode::LoadInt, {.i = var.offset}}); } break;
-            case bk_PrimitiveType::Float: { ir.Append({bk_Opcode::LoadFloat, {.i = var.offset}});} break;
-            case bk_PrimitiveType::Type: { ir.Append({bk_Opcode::LoadType, {.i = var.offset}}); } break;
+            case bk_PrimitiveKind::Null: { ir.Append({bk_Opcode::PushNull}); } break;
+            case bk_PrimitiveKind::Bool: { ir.Append({bk_Opcode::LoadBool, {.i = var.offset}}); } break;
+            case bk_PrimitiveKind::Int: { ir.Append({bk_Opcode::LoadInt, {.i = var.offset}}); } break;
+            case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::LoadFloat, {.i = var.offset}});} break;
+            case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::LoadType, {.i = var.offset}}); } break;
         }
     } else {
         switch (var.type->primitive) {
-            case bk_PrimitiveType::Null: { ir.Append({bk_Opcode::PushNull}); } break;
-            case bk_PrimitiveType::Bool: { ir.Append({bk_Opcode::LoadLocalBool, {.i = var.offset}}); } break;
-            case bk_PrimitiveType::Int: { ir.Append({bk_Opcode::LoadLocalInt, {.i = var.offset}}); } break;
-            case bk_PrimitiveType::Float: { ir.Append({bk_Opcode::LoadLocalFloat, {.i = var.offset}});} break;
-            case bk_PrimitiveType::Type: { ir.Append({bk_Opcode::LoadLocalType, {.i = var.offset}}); } break;
+            case bk_PrimitiveKind::Null: { ir.Append({bk_Opcode::PushNull}); } break;
+            case bk_PrimitiveKind::Bool: { ir.Append({bk_Opcode::LoadLocalBool, {.i = var.offset}}); } break;
+            case bk_PrimitiveKind::Int: { ir.Append({bk_Opcode::LoadLocalInt, {.i = var.offset}}); } break;
+            case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::LoadLocalFloat, {.i = var.offset}});} break;
+            case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::LoadLocalType, {.i = var.offset}}); } break;
         }
     }
 
@@ -1832,11 +1818,11 @@ bool bk_Parser::ParseCall(const char *name)
 void bk_Parser::EmitIntrinsic(const char *name, Size call_addr, Span<const bk_FunctionInfo::Parameter> args)
 {
     if (TestStr(name, "Float")) {
-        if (args[0].type->primitive == bk_PrimitiveType::Int) {
+        if (args[0].type == bk_IntType) {
             ir.Append({bk_Opcode::IntToFloat});
         }
     } else if (TestStr(name, "Int")) {
-        if (args[0].type->primitive == bk_PrimitiveType::Float) {
+        if (args[0].type == bk_FloatType) {
             ir.Append({bk_Opcode::FloatToInt});
         }
     } else if (TestStr(name, "typeOf")) {
@@ -1921,11 +1907,11 @@ void bk_Parser::EmitReturn()
             const bk_FunctionInfo::Parameter &param = current_func->params[i];
 
             switch (param.type->primitive) {
-                case bk_PrimitiveType::Null: {} break;
-                case bk_PrimitiveType::Bool: { ir.Append({bk_Opcode::StoreLocalBool, {.i = i}}); } break;
-                case bk_PrimitiveType::Int: { ir.Append({bk_Opcode::StoreLocalInt, {.i = i}}); } break;
-                case bk_PrimitiveType::Float: { ir.Append({bk_Opcode::StoreLocalFloat, {.i = i}}); } break;
-                case bk_PrimitiveType::Type: { ir.Append({bk_Opcode::StoreLocalType, {.i = i}}); } break;
+                case bk_PrimitiveKind::Null: {} break;
+                case bk_PrimitiveKind::Bool: { ir.Append({bk_Opcode::StoreLocalBool, {.i = i}}); } break;
+                case bk_PrimitiveKind::Int: { ir.Append({bk_Opcode::StoreLocalInt, {.i = i}}); } break;
+                case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::StoreLocalFloat, {.i = i}}); } break;
+                case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::StoreLocalType, {.i = i}}); } break;
             }
         }
 
