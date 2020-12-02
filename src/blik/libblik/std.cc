@@ -24,7 +24,6 @@ static bk_Value DoPrint(bk_VirtualMachine *vm, Span<const bk_Value> args)
             case bk_PrimitiveType::Bool: { Print("%1", args[i].b); } break;
             case bk_PrimitiveType::Int: { Print("%1", args[i].i); } break;
             case bk_PrimitiveType::Float: { Print("%1", FmtDouble(args[i].d, 1, INT_MAX)); } break;
-            case bk_PrimitiveType::String: { Print("%1", args[i].str); } break;
             case bk_PrimitiveType::Type: { Print("%1", args[i].type->signature); } break;
         }
     }

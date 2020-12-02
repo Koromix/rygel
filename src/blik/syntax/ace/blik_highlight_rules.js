@@ -30,7 +30,7 @@ var BlikHighlightRules = function() {
             regex: /<<=?|>>=?|&&|\|\||[:*%\/+\-&\^|~!<>=]=?/
         }, {
             token: "storage.type",
-            regex: "(Null|Bool|Int|Float|String)\\b"
+            regex: "(Null|Bool|Int|Float)\\b"
         }, {
             token: "constant.language",
             regex: "(?:true|false|null)\\b"

@@ -16,7 +16,6 @@ enum class bk_PrimitiveType {
     Bool,
     Int,
     Float,
-    String,
     Type
 };
 static const char *const bk_PrimitiveTypeNames[] = {
@@ -24,7 +23,6 @@ static const char *const bk_PrimitiveTypeNames[] = {
     "Bool",
     "Int",
     "Float",
-    "String",
     "Type"
 };
 
@@ -39,7 +37,6 @@ union bk_Value {
     bool b;
     int64_t i;
     double d;
-    const char *str;
     const bk_TypeInfo *type;
 };
 

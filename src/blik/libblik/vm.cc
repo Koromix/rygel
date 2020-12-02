@@ -76,10 +76,6 @@ bool bk_VirtualMachine::Run()
             stack.Append({.d = inst->u.d});
             DISPATCH(++pc);
         }
-        CASE(PushString): {
-            stack.Append({.str = inst->u.str});
-            DISPATCH(++pc);
-        }
         CASE(PushType): {
             stack.Append({.type = inst->u.type});
             DISPATCH(++pc);
@@ -101,10 +97,6 @@ bool bk_VirtualMachine::Run()
             stack.Append({.d = stack[inst->u.i].d});
             DISPATCH(++pc);
         }
-        CASE(LoadString): {
-            stack.Append({.str = stack[inst->u.i].str});
-            DISPATCH(++pc);
-        }
         CASE(LoadType): {
             stack.Append({.type = stack[inst->u.i].type});
             DISPATCH(++pc);
@@ -121,10 +113,6 @@ bool bk_VirtualMachine::Run()
             stack[inst->u.i].d = stack.ptr[--stack.len].d;
             DISPATCH(++pc);
         }
-        CASE(StoreString): {
-            stack[inst->u.i].str = stack.ptr[--stack.len].str;
-            DISPATCH(++pc);
-        }
         CASE(StoreType): {
             stack[inst->u.i].type = stack.ptr[--stack.len].type;
             DISPATCH(++pc);
@@ -139,10 +127,6 @@ bool bk_VirtualMachine::Run()
         }
         CASE(CopyFloat): {
             stack[inst->u.i].d = stack[stack.len - 1].d;
-            DISPATCH(++pc);
-        }
-        CASE(CopyString): {
-            stack[inst->u.i].str = stack[stack.len - 1].str;
             DISPATCH(++pc);
         }
         CASE(CopyType): {
@@ -162,10 +146,6 @@ bool bk_VirtualMachine::Run()
             stack.Append({.d = stack[bp + inst->u.i].d});
             DISPATCH(++pc);
         }
-        CASE(LoadLocalString): {
-            stack.Append({.str = stack[bp + inst->u.i].str});
-            DISPATCH(++pc);
-        }
         CASE(LoadLocalType): {
             stack.Append({.type = stack[bp + inst->u.i].type});
             DISPATCH(++pc);
@@ -182,10 +162,6 @@ bool bk_VirtualMachine::Run()
             stack[bp + inst->u.i].d = stack.ptr[--stack.len].d;
             DISPATCH(++pc);
         }
-        CASE(StoreLocalString): {
-            stack[bp + inst->u.i].str = stack.ptr[--stack.len].str;
-            DISPATCH(++pc);
-        }
         CASE(StoreLocalType): {
             stack[bp + inst->u.i].type = stack.ptr[--stack.len].type;
             DISPATCH(++pc);
@@ -200,10 +176,6 @@ bool bk_VirtualMachine::Run()
         }
         CASE(CopyLocalFloat): {
             stack[bp + inst->u.i].d = stack.ptr[stack.len - 1].d;
-            DISPATCH(++pc);
-        }
-        CASE(CopyLocalString): {
-            stack[bp + inst->u.i].str = stack.ptr[stack.len - 1].str;
             DISPATCH(++pc);
         }
         CASE(CopyLocalType): {
@@ -591,40 +563,33 @@ void bk_VirtualMachine::DumpInstruction(Size pc) const
         case bk_Opcode::PushBool: { LogDebug("[0x%1] PushBool %2", FmtHex(pc).Pad0(-5), inst.u.b); } break;
         case bk_Opcode::PushInt: { LogDebug("[0x%1] PushInt %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::PushFloat: { LogDebug("[0x%1] PushFloat %2", FmtHex(pc).Pad0(-5), inst.u.d); } break;
-        case bk_Opcode::PushString: { LogDebug("[0x%1] PushString %2", FmtHex(pc).Pad0(-5), inst.u.str); } break;
         case bk_Opcode::PushType: { LogDebug("[0x%1] PushType %2", FmtHex(pc).Pad0(-5), inst.u.type->signature); } break;
         case bk_Opcode::Pop: { LogDebug("[0x%1] Pop %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
         case bk_Opcode::LoadBool: { LogDebug("[0x%1] LoadBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::LoadInt: { LogDebug("[0x%1] LoadInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::LoadFloat: { LogDebug("[0x%1] LoadFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case bk_Opcode::LoadString: { LogDebug("[0x%1] LoadString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::LoadType: { LogDebug("[0x%1] LoadType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::StoreBool: { LogDebug("[0x%1] StoreBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::StoreInt: { LogDebug("[0x%1] StoreInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::StoreFloat: { LogDebug("[0x%1] StoreFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case bk_Opcode::StoreString: { LogDebug("[0x%1] StoreString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::StoreType: { LogDebug("[0x%1] StoreType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::CopyBool: { LogDebug("[0x%1] CopyBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::CopyInt: { LogDebug("[0x%1] CopyInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::CopyFloat: { LogDebug("[0x%1] CopyFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case bk_Opcode::CopyString: { LogDebug("[0x%1] CopyString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::CopyType: { LogDebug("[0x%1] CopyType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
         case bk_Opcode::LoadLocalBool: { LogDebug("[0x%1] LoadLocalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::LoadLocalInt: { LogDebug("[0x%1] LoadLocalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::LoadLocalFloat: { LogDebug("[0x%1] LoadLocalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case bk_Opcode::LoadLocalString: { LogDebug("[0x%1] LoadLocalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::LoadLocalType: { LogDebug("[0x%1] LoadLocalType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::StoreLocalBool: { LogDebug("[0x%1] StoreLocalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::StoreLocalInt: { LogDebug("[0x%1] StoreLocalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::StoreLocalFloat: { LogDebug("[0x%1] StoreLocalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case bk_Opcode::StoreLocalString: { LogDebug("[0x%1] StoreLocalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::StoreLocalType: { LogDebug("[0x%1] StoreLocalType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::CopyLocalBool: { LogDebug("[0x%1] CopyLocalBool @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::CopyLocalInt: { LogDebug("[0x%1] CopyLocalInt @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::CopyLocalFloat: { LogDebug("[0x%1] CopyLocalFloat @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-        case bk_Opcode::CopyLocalString: { LogDebug("[0x%1] CopyLocalString @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::CopyLocalType: { LogDebug("[0x%1] CopyLocalType @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
         case bk_Opcode::Jump: { LogDebug("[0x%1] Jump 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
