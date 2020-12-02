@@ -19,12 +19,12 @@ static bk_PrimitiveValue DoPrint(bk_VirtualMachine *vm, Span<const bk_PrimitiveV
     RG_ASSERT(args.len % 2 == 0);
 
     for (Size i = 0; i < args.len; i += 2) {
-        switch (args[i + 1].type->primitive) {
+        switch (args[i].type->primitive) {
             case bk_PrimitiveType::Null: { Print("null"); } break;
-            case bk_PrimitiveType::Bool: { Print("%1", args[i].b); } break;
-            case bk_PrimitiveType::Int: { Print("%1", args[i].i); } break;
-            case bk_PrimitiveType::Float: { Print("%1", FmtDouble(args[i].d, 1, INT_MAX)); } break;
-            case bk_PrimitiveType::Type: { Print("%1", args[i].type->signature); } break;
+            case bk_PrimitiveType::Bool: { Print("%1", args[i + 1].b); } break;
+            case bk_PrimitiveType::Int: { Print("%1", args[i + 1].i); } break;
+            case bk_PrimitiveType::Float: { Print("%1", FmtDouble(args[i + 1].d, 1, INT_MAX)); } break;
+            case bk_PrimitiveType::Type: { Print("%1", args[i + 1].type->signature); } break;
         }
     }
 

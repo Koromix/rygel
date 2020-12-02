@@ -1756,11 +1756,17 @@ bool bk_Parser::ParseCall(const char *name)
                 return false;
             }
 
-            const bk_TypeInfo *type = ParseExpression(true).type;
+            if (func0->variadic && args.len >= func0->params.len) {
+                Size type_addr = ir.len;
+                ir.Append({bk_Opcode::PushType});
 
-            args.Append({nullptr, type});
-            if (func0->variadic && args.len > func0->params.len) {
-                ir.Append({bk_Opcode::PushType, {.type = type}});
+                const bk_TypeInfo *type = ParseExpression(true).type;
+                args.Append({nullptr, type});
+
+                ir[type_addr].u.type = type;
+            } else {
+                const bk_TypeInfo *type = ParseExpression(true).type;
+                args.Append({nullptr, type});
             }
         } while (MatchToken(bk_TokenKind::Comma));
 
