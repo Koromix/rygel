@@ -136,7 +136,7 @@ void bk_ReportRuntimeError(const bk_Program &program, Span<const bk_CallFrame> f
         for (Size i = frames.len - 1; i >= 0; i--) {
             const bk_CallFrame &frame = frames[i];
 
-            const char *name = frame.func ? frame.func->signature : "<outside function>";
+            const char *prototype = frame.func ? frame.func->prototype : "<outside function>";
             bool tre = frame.func && frame.func->tre;
 
             int32_t line;
@@ -144,10 +144,10 @@ void bk_ReportRuntimeError(const bk_Program &program, Span<const bk_CallFrame> f
 
             if (filename) {
                 LogInfo(" %!M.+%1%!0 %!..+%2%3%!0 %!D..%4 (%5)%!0",
-                        i ? "   " : ">>>", FmtArg(name).Pad(36), tre ? "(+)" : "   ", filename, line);
+                        i ? "   " : ">>>", FmtArg(prototype).Pad(36), tre ? "(+)" : "   ", filename, line);
             } else {
                 LogInfo(" %!M.+%1%!0 %!..+%2%3%!0 %!D..<native function>%!0",
-                        i ? "   " : ">>>", FmtArg(name).Pad(36), tre ? "(+)" : "   ");
+                        i ? "   " : ">>>", FmtArg(prototype).Pad(36), tre ? "(+)" : "   ");
             }
         }
 

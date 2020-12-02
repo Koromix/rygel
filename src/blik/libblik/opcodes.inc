@@ -64,6 +64,10 @@ OPCODE(OrBool)
 OPCODE(EqualType)
 OPCODE(NotEqualType)
 
+// Function operators
+OPCODE(EqualFunc)
+OPCODE(NotEqualFunc)
+
 // Jumps and branch
 OPCODE(Jump)
 OPCODE(BranchIfTrue)
@@ -73,7 +77,7 @@ OPCODE(SkipIfFalse)
 
 // Functions
 OPCODE(Call)
-OPCODE(CallNative)
+OPCODE(CallDirect)
 OPCODE(Return)
 
 // Intrinsics

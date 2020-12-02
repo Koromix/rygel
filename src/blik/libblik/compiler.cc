@@ -75,8 +75,9 @@ public:
 
     bool Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report);
 
-    void AddFunction(const char *signature, std::function<bk_NativeFunction> native);
-    void AddGlobal(const char *name, const bk_TypeInfo *type, bk_PrimitiveValue value, bool mut);
+    void AddFunction(const char *prototype, std::function<bk_NativeFunction> native);
+    bk_VariableInfo *AddGlobal(const char *name, const bk_TypeInfo *type,
+                               bk_PrimitiveValue value, bool mut, bk_VariableInfo::Scope scope);
 
 private:
     void ParsePrototypes(Span<const Size> funcs);
@@ -103,8 +104,8 @@ private:
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(const bk_TypeInfo *in_type, bk_Opcode code, const bk_TypeInfo *out_type);
     bool EmitOperator2(const bk_TypeInfo *in_type, bk_Opcode code, const bk_TypeInfo *out_type);
-    bool ParseCall(const char *name);
-    void EmitIntrinsic(const char *name, Size call_addr, Span<const bk_FunctionInfo::Parameter> args);
+    bool ParseCall(const bk_FunctionTypeInfo *func_type, const bk_FunctionInfo *func, bool overloaded);
+    void EmitIntrinsic(const char *name, Size call_addr, Span<const bk_TypeInfo *const> args);
     void EmitLoad(const bk_VariableInfo &var);
     bool ParseExpressionOfType(const bk_TypeInfo *type);
 
@@ -117,7 +118,7 @@ private:
     void FixJumps(Size jump_addr, Size target_addr);
     void TrimInstructions(Size count);
 
-    bool TestOverload(const bk_FunctionInfo &proto, Span<const bk_FunctionInfo::Parameter> params2);
+    bool TestOverload(const bk_FunctionTypeInfo &func_type, Span<const bk_TypeInfo *const> params);
 
     bool ConsumeToken(bk_TokenKind kind);
     const char *ConsumeIdentifier();
@@ -201,15 +202,18 @@ bool bk_Compiler::Compile(Span<const char> code, const char *filename, bk_Compil
     return parser->Parse(file, out_report);
 }
 
-void bk_Compiler::AddFunction(const char *signature, std::function<bk_NativeFunction> native)
+void bk_Compiler::AddFunction(const char *prototype, std::function<bk_NativeFunction> native)
 {
     RG_ASSERT(native);
-    parser->AddFunction(signature, native);
+    parser->AddFunction(prototype, native);
 }
 
 void bk_Compiler::AddGlobal(const char *name, const bk_TypeInfo *type, bk_PrimitiveValue value, bool mut)
 {
-    parser->AddGlobal(name, type, value, mut);
+    RG_ASSERT(std::any_of(bk_BaseTypes.begin(), bk_BaseTypes.end(),
+                          [&](const bk_TypeInfo &it) { return &it == type; }));
+
+    parser->AddGlobal(name, type, value, mut, bk_VariableInfo::Scope::Global);
 }
 
 bk_Parser::bk_Parser(bk_Program *program)
@@ -220,19 +224,19 @@ bk_Parser::bk_Parser(bk_Program *program)
 
     // Base types
     for (const bk_TypeInfo &type: bk_BaseTypes) {
-        AddGlobal(type.signature, bk_TypeType, {.type = &type}, false);
+        AddGlobal(type.signature, bk_TypeType, {.type = &type}, false, bk_VariableInfo::Scope::Global);
         program->types_map.Set(&type);
     }
 
     // Special values
-    AddGlobal("NaN", bk_FloatType, bk_PrimitiveValue {.d = (double)NAN}, false);
-    AddGlobal("Inf", bk_FloatType, bk_PrimitiveValue {.d = (double)INFINITY}, false);
+    AddGlobal("NaN", bk_FloatType, bk_PrimitiveValue {.d = (double)NAN}, false, bk_VariableInfo::Scope::Global);
+    AddGlobal("Inf", bk_FloatType, bk_PrimitiveValue {.d = (double)INFINITY}, false, bk_VariableInfo::Scope::Global);
 
     // Intrinsics
-    AddFunction("Float(Int): Float", {});
-    AddFunction("Float(Float): Float", {});
-    AddFunction("Int(Int): Int", {});
-    AddFunction("Int(Float): Int", {});
+    AddFunction("toFloat(Int): Float", {});
+    AddFunction("toFloat(Float): Float", {});
+    AddFunction("toInt(Int): Int", {});
+    AddFunction("toInt(Float): Int", {});
     AddFunction("typeOf(...): Type", {});
 }
 
@@ -244,33 +248,35 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
     RG_DEFER_NC(err_guard, sources_len = program->sources.len,
                            prev_var_offset = var_offset,
                            variables_len = program->variables.len,
-                           functions_len = program->functions.len) {
+                           functions_len = program->functions.len,
+                           function_types_len = program->function_types.len) {
         ir.RemoveFrom(prev_ir_len);
         program->sources.RemoveFrom(sources_len);
 
         var_offset = prev_var_offset;
         DestroyVariables(program->variables.len - variables_len);
 
-        if (functions_len) {
-            for (Size i = functions_len; i < program->functions.len; i++) {
-                bk_FunctionInfo *func = &program->functions[i];
-                bk_FunctionInfo **it = program->functions_map.Find(func->name);
+        for (Size i = functions_len; i < program->functions.len; i++) {
+            bk_FunctionInfo *func = &program->functions[i];
+            bk_FunctionInfo **it = program->functions_map.Find(func->name);
 
-                if (*it == func && func->overload_next == func) {
-                    program->functions_map.Remove(it);
-                } else {
-                    if (*it == func) {
-                        *it = func->overload_next;
-                    }
-
-                    func->overload_next->overload_prev = func->overload_prev;
-                    func->overload_prev->overload_next = func->overload_next;
+            if (*it == func && func->overload_next == func) {
+                program->functions_map.Remove(it);
+            } else {
+                if (*it == func) {
+                    *it = func->overload_next;
                 }
+
+                func->overload_next->overload_prev = func->overload_prev;
+                func->overload_prev->overload_next = func->overload_next;
             }
-        } else {
-            program->functions_map.Clear();
         }
         program->functions.RemoveFrom(functions_len);
+
+        for (Size i = function_types_len; i < program->function_types.len; i++) {
+            const bk_TypeInfo &type = program->function_types[i];
+            program->types_map.Remove(type.signature);
+        }
     };
 
     this->file = &file;
@@ -320,64 +326,90 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
     return valid;
 }
 
-// This is not exposed to user scripts, and the validation of signature is very light,
+// This is not exposed to user scripts, and the validation of prototype is very light,
 // with a few debug-only asserts. Bad function names (even invalid UTF-8 sequences)
 // will go right through. Don't pass in garbage!
-void bk_Parser::AddFunction(const char *signature, std::function<bk_NativeFunction> native)
+void bk_Parser::AddFunction(const char *prototype, std::function<bk_NativeFunction> native)
 {
     bk_FunctionInfo *func = program->functions.AppendDefault();
 
-    char *ptr = DuplicateString(signature, &program->str_alloc).ptr;
-    func->signature = ptr;
+    char *ptr = DuplicateString(prototype, &program->str_alloc).ptr;
+    func->prototype = ptr;
 
-    // Name
+    // Separate name and signature
+    const char *signature;
     {
-        Size len = strcspn(ptr, "()");
-        Span<const char> func_name = TrimStr(MakeSpan(ptr, len));
+        Size len = 0;
+        while (IsAsciiAlphaOrDigit(ptr[len]) || ptr[len] == '_') {
+            len++;
+        }
+        RG_ASSERT(ptr[len] == '(');
 
-        func->name = DuplicateString(func_name, &program->str_alloc).ptr;
+        ptr[len] = 0;
+        func->name = InternString(ptr);
+        ptr[len] = '(';
+
         ptr += len;
+        signature = InternString(ptr);
     }
 
     func->mode = native ? bk_FunctionInfo::Mode::Native : bk_FunctionInfo::Mode::Intrinsic;
     func->native = native;
     func->addr = -1;
 
-    // Parameters
-    RG_ASSERT(ptr[0] == '(');
-    if (ptr[1] != ')') {
-        do {
-            Size len = strcspn(++ptr, ",)");
-            RG_ASSERT(ptr[len]);
+    // Reuse or create function type
+    {
+        const bk_TypeInfo *type = program->types_map.FindValue(signature, nullptr);
 
-            char c = ptr[len];
-            ptr[len] = 0;
+        if (type) {
+            func->type = type->AsFunctionType();
 
-            if (TestStr(ptr, "...")) {
-                RG_ASSERT(c == ')');
-                func->variadic = true;
-            } else {
-                const bk_TypeInfo *type = program->types_map.FindValue(ptr, nullptr);
-                RG_ASSERT(type);
-
+            for (const bk_TypeInfo *type: func->type->params) {
                 func->params.Append({"", type});
             }
+        } else {
+            bk_FunctionTypeInfo *func_type = program->function_types.AppendDefault();
 
-            ptr[len] = c;
-            ptr += len;
-        } while ((ptr++)[0] != ')');
-    } else {
-        ptr += 2;
-    }
+            func_type->primitive = bk_PrimitiveKind::Function;
+            func_type->signature = signature;
 
-    // Return type
-    if (ptr[0] == ':') {
-        RG_ASSERT(ptr[1] == ' ');
+            if (ptr[1] != ')') {
+                do {
+                    Size len = strcspn(++ptr, ",)");
+                    RG_ASSERT(ptr[len]);
 
-        func->ret_type = program->types_map.FindValue(ptr + 2, nullptr);
-        RG_ASSERT(func->ret_type);
-    } else {
-        func->ret_type = bk_NullType;
+                    char c = ptr[len];
+                    ptr[len] = 0;
+
+                    if (TestStr(ptr, "...")) {
+                        RG_ASSERT(c == ')');
+                        func_type->variadic = true;
+                    } else {
+                        const bk_TypeInfo *type = program->types_map.FindValue(ptr, nullptr);
+                        RG_ASSERT(type);
+
+                        func->params.Append({"", type});
+                        func_type->params.Append(type);
+                    }
+
+                    ptr[len] = c;
+                    ptr += len;
+                } while ((ptr++)[0] != ')');
+            } else {
+                ptr += 2;
+            }
+            if (ptr[0] == ':') {
+                RG_ASSERT(ptr[1] == ' ');
+
+                func_type->ret_type = program->types_map.FindValue(ptr + 2, nullptr);
+                RG_ASSERT(func_type->ret_type);
+            } else {
+                func_type->ret_type = bk_NullType;
+            }
+
+            program->types_map.Set(func_type);
+            func->type = func_type;
+        }
     }
 
     // Publish it!
@@ -385,7 +417,7 @@ void bk_Parser::AddFunction(const char *signature, std::function<bk_NativeFuncti
         bk_FunctionInfo *head = *program->functions_map.TrySet(func).first;
 
         if (head != func) {
-            RG_ASSERT(!head->variadic && !func->variadic);
+            RG_ASSERT(!head->type->variadic && !func->type->variadic);
 
             head->overload_prev->overload_next = func;
             func->overload_next = head;
@@ -394,33 +426,35 @@ void bk_Parser::AddFunction(const char *signature, std::function<bk_NativeFuncti
 
 #ifndef NDEBUG
             do {
-                RG_ASSERT(!TestOverload(*head, func->params));
+                RG_ASSERT(!TestOverload(*head->type, func->type->params));
                 head = head->overload_next;
             } while (head != func);
 #endif
         } else {
             func->overload_prev = func;
             func->overload_next = func;
+
+            AddGlobal(func->name, func->type, {.func = func}, false, bk_VariableInfo::Scope::Function);
         }
     }
 }
 
-void bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type, bk_PrimitiveValue value, bool mut)
+bk_VariableInfo *bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type,
+                                      bk_PrimitiveValue value, bool mut, bk_VariableInfo::Scope scope)
 {
     bk_VariableInfo *var = program->variables.AppendDefault();
 
     var->name = InternString(name);
     var->type = type;
     var->mut = mut;
+    var->scope = scope;
+    var->offset = var_offset++;
 
     ir.Append({bk_Opcode::Push, type->primitive, value});
-
-    var->global = true;
-    var->offset = var_offset++;
     var->ready_addr = ir.len;
 
-    bool success = program->variables_map.TrySet(var).second;
-    RG_ASSERT(success);
+    program->variables_map.TrySet(var);
+    return var;
 }
 
 void bk_Parser::ParsePrototypes(Span<const Size> funcs)
@@ -428,14 +462,15 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
     RG_ASSERT(!prototypes_map.count);
     RG_ASSERT(pos == 0);
 
-    // This is a preparse step, clean up main side effets
-    RG_DEFER_C(ir_len = ir.len,
-               lines_len = src->lines.len) {
-        pos = 0;
+    Size prev_ir_len = ir.len;
+    Size prev_lines_len = src->lines.len;
 
-        ir.RemoveFrom(ir_len);
-        src->lines.RemoveFrom(lines_len);
-    };
+    // Reuse for performance
+    HeapArray<char> signature_buf;
+    HeapArray<char> prototype_buf;
+    bk_FunctionTypeInfo type_buf = {};
+
+    HeapArray<const PrototypeInfo *> prototypes;
 
     for (Size i = 0; i < funcs.len; i++) {
         pos = funcs[i] + 1;
@@ -444,38 +479,31 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
         PrototypeInfo *proto = prototypes_map.SetDefault(pos);
         bk_FunctionInfo *func = program->functions.AppendDefault();
         definitions_map.Set(func, pos);
+        prototypes.Append(proto);
 
         proto->pos = pos;
         proto->func = func;
-
         func->name = ConsumeIdentifier();
         func->mode = bk_FunctionInfo::Mode::Blik;
-
-        // Insert in functions map
-        {
-            std::pair<bk_FunctionInfo **, bool> ret = program->functions_map.TrySet(func);
-            bk_FunctionInfo *proto0 = *ret.first;
-
-            if (ret.second) {
-                proto0->overload_prev = proto0;
-                proto0->overload_next = proto0;
-            } else {
-                proto0->overload_prev->overload_next = func;
-                func->overload_next = proto0;
-                func->overload_prev = proto0->overload_prev;
-                proto0->overload_prev = func;
-            }
-        }
 
         // Clean up parameter variables once we're done
         RG_DEFER_C(variables_len = program->variables.len) {
             DestroyVariables(program->variables.len - variables_len);
         };
 
+        // Reset buffers
+        signature_buf.RemoveFrom(0);
+        signature_buf.Append('(');
+        prototype_buf.RemoveFrom(0);
+        prototype_buf.Append(func->name);
+        prototype_buf.Append('(');
+        type_buf.primitive = bk_PrimitiveKind::Function;
+        type_buf.params.RemoveFrom(0);
+
         // Parameters
         ConsumeToken(bk_TokenKind::LeftParenthesis);
         if (!MatchToken(bk_TokenKind::RightParenthesis)) {
-            do {
+            for (;;) {
                 SkipNewLines();
 
                 bk_VariableInfo *var = program->variables.AppendDefault();
@@ -483,6 +511,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
 
                 var->mut = MatchToken(bk_TokenKind::Mut);
                 var->name = ConsumeIdentifier();
+                var->scope = bk_VariableInfo::Scope::Local;
 
                 std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySet(var);
                 if (RG_UNLIKELY(!ret.second)) {
@@ -492,7 +521,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
                     // Error messages for globals are issued in ParseFunction(), because at
                     // this stage some globals (those issues from the same Parse call) may not
                     // yet exist. Better issue all errors about that later.
-                    if (!prev_var->global) {
+                    if (prev_var->scope == bk_VariableInfo::Scope::Local) {
                         MarkError(param_pos, "Parameter named '%1' already exists", var->name);
                     }
                 }
@@ -507,45 +536,99 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
                     param->name = var->name;
                     param->type = var->type;
                     param->mut = var->mut;
+
+                    type_buf.params.Append(var->type);
                 } else {
-                    MarkError(pos - 1, "Functions cannot have more than %1 parameters", RG_LEN(func->params.data));
+                    MarkError(pos - 1, "Functions cannot have more than %1 parameters", RG_LEN(type_buf.params.data));
                 }
-            } while (MatchToken(bk_TokenKind::Comma));
+
+                signature_buf.Append(var->type->signature);
+                Fmt(&prototype_buf, "%1: %2", var->name, var->type->signature);
+
+                if (MatchToken(bk_TokenKind::Comma)) {
+                    signature_buf.Append(", ");
+                    prototype_buf.Append(", ");
+                } else {
+                    break;
+                }
+            }
 
             SkipNewLines();
             ConsumeToken(bk_TokenKind::RightParenthesis);
         }
+        signature_buf.Append(')');
+        prototype_buf.Append(')');
 
         // Return type
         if (MatchToken(bk_TokenKind::Colon)) {
-            func->ret_type = ParseType();
+            type_buf.ret_type = ParseType();
+
+            if (type_buf.ret_type != bk_NullType) {
+                Fmt(&signature_buf, ": %1", type_buf.ret_type->signature);
+                Fmt(&prototype_buf, ": %1", type_buf.ret_type->signature);
+            } else {
+                signature_buf.Append(0);
+                prototype_buf.Append(0);
+            }
         } else {
-            func->ret_type = bk_NullType;
-        }
+            type_buf.ret_type = bk_NullType;
 
-        // Build signature (with parameter and return types)
-        {
-            HeapArray<char> buf(&program->str_alloc);
-
-            Fmt(&buf, "%1(", func->name);
-            for (Size i = 0; i < func->params.len; i++) {
-                const bk_FunctionInfo::Parameter &param = func->params[i];
-                Fmt(&buf, "%1%2", i ? ", " : "", param.type->signature);
-            }
-            Fmt(&buf, ")");
-            if (func->ret_type != bk_NullType) {
-                Fmt(&buf, ": %1", func->ret_type->signature);
-            }
-
-            func->signature = buf.TrimAndLeak(1).ptr;
+            signature_buf.Append(0);
+            prototype_buf.Append(0);
         }
 
         proto->body_pos = pos;
 
+        // Reuse or add function type
+        {
+            const bk_TypeInfo *type = program->types_map.FindValue(signature_buf.ptr, nullptr);
+
+            if (type) {
+                func->type = type->AsFunctionType();
+            } else {
+                type_buf.signature = InternString(signature_buf.ptr);
+
+                bk_FunctionTypeInfo *func_type = program->function_types.AppendDefault();
+                std::swap(*func_type, type_buf);
+                program->types_map.Set(func_type);
+
+                func->type = func_type;
+            }
+        }
+        func->prototype = InternString(prototype_buf.ptr);
+
         // We don't know where it will live yet!
         func->addr = -1;
-        func->earliest_call_pos = RG_SIZE_MAX;
-        func->earliest_call_addr = RG_SIZE_MAX;
+        func->earliest_ref_pos = RG_SIZE_MAX;
+        func->earliest_ref_addr = RG_SIZE_MAX;
+
+        // Publish it!
+        {
+            std::pair<bk_FunctionInfo **, bool> ret = program->functions_map.TrySet(func);
+            bk_FunctionInfo *proto0 = *ret.first;
+
+            if (ret.second) {
+                proto0->overload_prev = proto0;
+                proto0->overload_next = proto0;
+            } else {
+                proto0->overload_prev->overload_next = func;
+                func->overload_next = proto0;
+                func->overload_prev = proto0->overload_prev;
+                proto0->overload_prev = func;
+            }
+        }
+    }
+
+    // This is a preparse step, clean up main side effets
+    pos = 0;
+    ir.RemoveFrom(prev_ir_len);
+    src->lines.RemoveFrom(prev_lines_len);
+
+    // Publish function symbols
+    for (const PrototypeInfo *proto: prototypes) {
+        const bk_FunctionInfo &func = *proto->func;
+        const bk_VariableInfo *var = AddGlobal(func.name, func.type, {.func = &func}, false, bk_VariableInfo::Scope::Function);
+        definitions_map.Set(var, proto->pos);
     }
 }
 
@@ -704,7 +787,7 @@ void bk_Parser::ParseFunction()
         var->name = param.name;
         var->type = param.type;
         var->mut = param.mut;
-
+        var->scope = bk_VariableInfo::Scope::Local;
         var->offset = var_offset++;
 
         std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySet(var);
@@ -714,7 +797,10 @@ void bk_Parser::ParseFunction()
 
             // We should already have issued an error message for the other case (duplicate
             // parameter name) in ParsePrototypes().
-            if (prev_var->global) {
+            if (prev_var->scope == bk_VariableInfo::Scope::Function) {
+                MarkError(param_pos, "Parameter '%1' is not allowed to hide function", var->name);
+                HintDefinition(prev_var, "Function '%1' is defined here", prev_var->name);
+            } else if (prev_var->scope == bk_VariableInfo::Scope::Global) {
                 MarkError(param_pos, "Parameter '%1' is not allowed to hide global variable", var->name);
                 HintDefinition(prev_var, "Global variable '%1' is defined here", prev_var->name);
             } else {
@@ -732,12 +818,12 @@ void bk_Parser::ParseFunction()
         bk_FunctionInfo *overload = program->functions_map.FindValue(func->name, nullptr);
 
         while (overload != func) {
-            if (TestOverload(*overload, func->params)) {
-                if (overload->ret_type == func->ret_type) {
-                    MarkError(func_pos, "Function '%1' is already defined", func->signature);
+            if (TestOverload(*overload->type, func->type->params)) {
+                if (overload->type->ret_type == func->type->ret_type) {
+                    MarkError(func_pos, "Function '%1' is already defined", func->prototype);
                 } else {
                     MarkError(func_pos, "Function '%1' only differs from previously defined '%2' by return type",
-                              func->signature, overload->signature);
+                              func->prototype, overload->prototype);
                 }
                 HintDefinition(overload, "Previous definition is here");
             }
@@ -764,7 +850,7 @@ void bk_Parser::ParseFunction()
     }
 
     if (!has_return) {
-        if (func->ret_type == bk_NullType) {
+        if (func->type->ret_type == bk_NullType) {
             ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Null});
             EmitReturn();
         } else {
@@ -792,9 +878,9 @@ void bk_Parser::ParseReturn()
         type = ParseExpression(true).type;
     }
 
-    if (RG_UNLIKELY(type != current_func->ret_type)) {
+    if (RG_UNLIKELY(type != current_func->type->ret_type)) {
         MarkError(return_pos, "Cannot return %1 value in function defined to return %2",
-                  type->signature, current_func->ret_type->signature);
+                  type->signature, current_func->type->ret_type->signature);
         return;
     }
 
@@ -817,7 +903,10 @@ void bk_Parser::ParseLet()
         const bk_VariableInfo *prev_var = *ret.first;
         var->shadow = prev_var;
 
-        if (current_func && prev_var->global) {
+        if (prev_var->scope == bk_VariableInfo::Scope::Function) {
+            MarkError(var_pos, "Declaration '%1' is not allowed to hide function", var->name);
+            HintDefinition(prev_var, "Function '%1' is defined here", prev_var->name);
+        } else if (current_func && prev_var->scope == bk_VariableInfo::Scope::Global) {
             MarkError(var_pos, "Declaration '%1' is not allowed to hide global variable", var->name);
             HintDefinition(prev_var, "Global variable '%1' is defined here", prev_var->name);
         } else if (current_func && prev_var->offset < 0) {
@@ -859,23 +948,28 @@ void bk_Parser::ParseLet()
                 case bk_PrimitiveKind::Integer:
                 case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::Push, type->primitive}); } break;
                 case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::Push, type->primitive, {.type = bk_NullType}}); } break;
+                case bk_PrimitiveKind::Function: {
+                    MarkError(var_pos, "Variable '%1' (defined as %2) must be explicitely initialized",
+                              var->name, type->signature);
+                } break;
             }
         }
     }
 
     var->type = slot.type;
-    if (slot.var && !slot.var->mut && !var->mut) {
+    if (slot.var && !slot.var->mut && !var->mut && var->ready_addr > 0) {
         // We're about to alias var to slot.var... we need to drop the load instruction.
         // Is it enough, and is it safe?
         TrimInstructions(1);
 
-        var->global = slot.var->global;
+        var->scope = slot.var->scope;
         var->offset = slot.var->offset;
+        var->ready_addr = slot.var->ready_addr;
     } else {
-        var->global = !current_func;
+        var->scope = current_func ? bk_VariableInfo::Scope::Local : bk_VariableInfo::Scope::Global;
         var->offset = var_offset++;
+        var->ready_addr = ir.len;
     }
-    var->ready_addr = ir.len;
 
     // Expressions involving this variable won't issue (visible) errors
     // and will be marked as invalid too.
@@ -1000,7 +1094,7 @@ void bk_Parser::ParseFor()
     for_pos += it->mut;
     definitions_map.Set(it, pos);
     it->name = ConsumeIdentifier();
-
+    it->scope = bk_VariableInfo::Scope::Local;
     it->offset = var_offset + 2;
 
     std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySet(it);
@@ -1008,7 +1102,10 @@ void bk_Parser::ParseFor()
         const bk_VariableInfo *prev_var = *ret.first;
         it->shadow = prev_var;
 
-        if (current_func && prev_var->global) {
+        if (prev_var->scope == bk_VariableInfo::Scope::Function) {
+            MarkError(for_pos, "Iterator '%1' is not allowed to hide function", it->name);
+            HintDefinition(prev_var, "Function '%1' is defined here", prev_var->name);
+        } else if (current_func && prev_var->scope == bk_VariableInfo::Scope::Global) {
             MarkError(for_pos, "Iterator '%1' is not allowed to hide global variable", it->name);
             HintDefinition(prev_var, "Global variable '%1' is defined here", prev_var->name);
         } else {
@@ -1199,11 +1296,20 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
         const bk_Token &tok = tokens[pos++];
 
         if (tok.kind == bk_TokenKind::LeftParenthesis) {
-            if (RG_UNLIKELY(!expect_value))
-                goto unexpected;
+            if (RG_UNLIKELY(!expect_value)) {
+                if (stack.len > start_values_len &&
+                        stack[stack.len - 1].type->primitive == bk_PrimitiveKind::Function) {
+                    const bk_FunctionTypeInfo *func_type = stack[stack.len - 1].type->AsFunctionType();
 
-            operators.Append({tok.kind});
-            parentheses++;
+                    if (!ParseCall(func_type, nullptr, false))
+                        goto error;
+                } else {
+                    goto unexpected;
+                }
+            } else {
+                operators.Append({tok.kind});
+                parentheses++;
+            }
         } else if (parentheses && tok.kind == bk_TokenKind::RightParenthesis) {
             if (RG_UNLIKELY(expect_value))
                 goto unexpected;
@@ -1248,25 +1354,70 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                 case bk_TokenKind::String: { RG_UNREACHABLE(); } break;
 
                 case bk_TokenKind::Identifier: {
-                    if (MatchToken(bk_TokenKind::LeftParenthesis)) {
-                        if (RG_UNLIKELY(!ParseCall(tok.u.str)))
-                            goto error;
-                    } else {
-                        const bk_VariableInfo *var = program->variables_map.FindValue(tok.u.str, nullptr);
+                    const bk_VariableInfo *var = program->variables_map.FindValue(tok.u.str, nullptr);
+                    Size var_pos = pos - 1;
+                    bool call = MatchToken(bk_TokenKind::LeftParenthesis);
 
-                        if (RG_LIKELY(var)) {
-                            show_errors &= !poisoned_set.Find(var);
+                    if (RG_LIKELY(var)) {
+                        show_errors &= !poisoned_set.Find(var);
 
-                            if (RG_LIKELY(var->type)) {
-                                EmitLoad(*var);
-                            } else {
-                                MarkError(pos - 1, "Cannot use variable '%1' before it is defined", var->name);
-                                goto error;
+                        if (RG_LIKELY(var->type)) {
+                            EmitLoad(*var);
+
+                            if (var->scope == bk_VariableInfo::Scope::Function) {
+                                RG_ASSERT(ir[ir.len - 1].code == bk_Opcode::Push &&
+                                          ir[ir.len - 1].primitive == bk_PrimitiveKind::Function);
+
+                                bk_FunctionInfo *func = (bk_FunctionInfo *)ir[ir.len - 1].u.func;
+
+                                if (current_func && current_func != func) {
+                                    func->earliest_ref_pos = std::min(func->earliest_ref_pos, current_func->earliest_ref_pos);
+                                    func->earliest_ref_addr = std::min(func->earliest_ref_addr, current_func->earliest_ref_addr);
+                                } else {
+                                    func->earliest_ref_pos = std::min(func->earliest_ref_pos, var_pos);
+                                    func->earliest_ref_addr = std::min(func->earliest_ref_addr, ir.len);
+                                }
+
+                                if (!call) {
+                                    if (RG_UNLIKELY(func->overload_next != func)) {
+                                        MarkError(var_pos, "Ambiguous reference to overloaded function '%1'", var->name);
+                                        goto error;
+                                    } else if (RG_UNLIKELY(func->mode == bk_FunctionInfo::Mode::Intrinsic)) {
+                                        MarkError(var_pos, "Intrinsic functions must be called directly");
+                                        goto error;
+                                    }
+                                }
+                            }
+
+                            if (call) {
+                                if (RG_LIKELY(var->type->primitive == bk_PrimitiveKind::Function)) {
+                                    if (ir[ir.len - 1].code == bk_Opcode::Push) {
+                                        RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Function);
+
+                                        bk_FunctionInfo *func = (bk_FunctionInfo *)ir[ir.len - 1].u.func;
+                                        bool overloaded = (var->scope == bk_VariableInfo::Scope::Function);
+
+                                        TrimInstructions(1);
+                                        stack.len--;
+
+                                        if (!ParseCall(var->type->AsFunctionType(), func, overloaded))
+                                            goto error;
+                                    } else {
+                                        if (!ParseCall(var->type->AsFunctionType(), nullptr, false))
+                                            goto error;
+                                    }
+                                } else {
+                                    MarkError(var_pos, "Variable '%1' is not a function and cannot be called", var->name);
+                                    goto error;
+                                }
                             }
                         } else {
-                            MarkError(pos - 1, "Reference to unknown identifier '%1'", tok.u.str);
+                            MarkError(var_pos, "Cannot use variable '%1' before it is defined", var->name);
                             goto error;
                         }
+                    } else {
+                        MarkError(var_pos, "Reference to unknown identifier '%1'", tok.u.str);
+                        goto error;
                     }
                 } break;
 
@@ -1476,7 +1627,11 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
             default: { RG_UNREACHABLE(); } break;
         }
 
-        ir.Append({var->global ? bk_Opcode::Copy : bk_Opcode::CopyLocal, var->type->primitive, {.i = var->offset}});
+        if (var->scope != bk_VariableInfo::Scope::Local) {
+            ir.Append({bk_Opcode::Copy, var->type->primitive, {.i = var->offset}});
+        } else {
+            ir.Append({bk_Opcode::CopyLocal, var->type->primitive, {.i = var->offset}});
+        }
     } else { // Other operators
         switch (op.kind) {
             case bk_TokenKind::Plus: {
@@ -1661,36 +1816,32 @@ bool bk_Parser::EmitOperator2(const bk_TypeInfo *in_type, bk_Opcode code, const 
 
 void bk_Parser::EmitLoad(const bk_VariableInfo &var)
 {
-    if (RG_UNLIKELY(var.global && current_func && current_func->earliest_call_addr < var.ready_addr)) {
-        MarkError(definitions_map.FindValue(current_func, -1), "Function '%1' may be called before variable '%2' exists",
+    if (RG_UNLIKELY(var.scope == bk_VariableInfo::Scope::Global &&
+                    current_func && current_func->earliest_ref_addr < var.ready_addr)) {
+        MarkError(definitions_map.FindValue(current_func, -1), "Function '%1' is referenced before global variable '%2' exists",
                   current_func->name, var.name);
-        HintError(current_func->earliest_call_pos, "Function call happens here (it could be indirect)");
+        HintError(current_func->earliest_ref_pos, "Function reference is here (it could be indirect)");
         HintDefinition(&var, "Variable '%1' is defined here", var.name);
     }
 
-    if (!var.mut && ir[var.ready_addr - 1].code == bk_Opcode::Push) {
+    if (!var.mut && var.ready_addr > 0 && ir[var.ready_addr - 1].code == bk_Opcode::Push) {
         ir.Append(ir[var.ready_addr - 1]);
+    } else if (var.scope != bk_VariableInfo::Scope::Local) {
+        ir.Append({bk_Opcode::Load, var.type->primitive, {.i = var.offset}});
     } else {
-        ir.Append({var.global ? bk_Opcode::Load : bk_Opcode::LoadLocal, var.type->primitive, {.i = var.offset}});
+        ir.Append({bk_Opcode::LoadLocal, var.type->primitive, {.i = var.offset}});
     }
 
     stack.Append({var.type, &var});
 }
 
 // Don't try to call from outside ParseExpression()!
-bool bk_Parser::ParseCall(const char *name)
+bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_FunctionInfo *func, bool overloaded)
 {
-    // We only need to store types, but TestOverload() wants bk_FunctionInfo::Parameter.
-    LocalArray<bk_FunctionInfo::Parameter, RG_LEN(bk_FunctionInfo::params.data)> args;
+    LocalArray<const bk_TypeInfo *, RG_LEN(bk_FunctionTypeInfo::params.data)> args;
 
-    Size call_pos = pos - 2;
+    Size call_pos = pos - 1;
     Size call_addr = ir.len;
-
-    bk_FunctionInfo *func0 = program->functions_map.FindValue(name, nullptr);
-    if (RG_UNLIKELY(!func0)) {
-        MarkError(call_pos, "Function '%1' does not exist", name);
-        return false;
-    }
 
     // Parse arguments
     if (!MatchToken(bk_TokenKind::RightParenthesis)) {
@@ -1702,87 +1853,92 @@ bool bk_Parser::ParseCall(const char *name)
                 return false;
             }
 
-            if (func0->variadic && args.len >= func0->params.len) {
+            if (func_type->variadic && args.len >= func_type->params.len) {
                 Size type_addr = ir.len;
                 ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type});
 
                 const bk_TypeInfo *type = ParseExpression(true).type;
-                args.Append({nullptr, type});
+                args.Append(type);
 
                 ir[type_addr].u.type = type;
             } else {
                 const bk_TypeInfo *type = ParseExpression(true).type;
-                args.Append({nullptr, type});
+                args.Append(type);
             }
         } while (MatchToken(bk_TokenKind::Comma));
 
         SkipNewLines();
         ConsumeToken(bk_TokenKind::RightParenthesis);
     }
-    if (func0->variadic) {
-        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = args.len - func0->params.len}});
+    if (func_type->variadic) {
+        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = args.len - func_type->params.len}});
     }
 
     // Find appropriate overload. Variadic functions cannot be overloaded but it
     // does not hurt to use the same logic to check argument types.
-    bk_FunctionInfo *func = func0;
-    while (!TestOverload(*func, args)) {
-        func = func->overload_next;
+    if (func && overloaded) {
+        const bk_FunctionInfo *func0 = func;
 
-        if (RG_UNLIKELY(func == func0)) {
-            LocalArray<char, 1024> buf = {};
-            for (Size i = 0; i < args.len; i++) {
-                buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", args[i].type->signature).len;
+        while (!TestOverload(*func->type, args)) {
+            func = func->overload_next;
+
+            if (RG_UNLIKELY(func == func0)) {
+                LocalArray<char, 1024> buf = {};
+                for (Size i = 0; i < args.len; i++) {
+                    buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", args[i]->signature).len;
+                }
+
+                MarkError(call_pos, "Cannot call '%1' with (%2) arguments", func->name, buf);
+
+                // Show all candidate functions with same name
+                const bk_FunctionInfo *it = func0;
+                do {
+                    HintError(definitions_map.FindValue(it, -1), "Candidate '%1'", it->prototype);
+                    it = it->overload_next;
+                } while (it != func0);
+
+                return false;
             }
-
-            MarkError(call_pos, "Cannot call '%1' with (%2) arguments", func0->name, buf);
-
-            // Show all candidate functions with same name
-            const bk_FunctionInfo *it = func0;
-            do {
-                HintError(definitions_map.FindValue(it, -1), "Candidate '%1'", it->signature);
-                it = it->overload_next;
-            } while (it != func0);
-
-            return false;
         }
+    } else if (!TestOverload(*func_type, args)) {
+        LocalArray<char, 1024> buf = {};
+        for (Size i = 0; i < args.len; i++) {
+            buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", args[i]->signature).len;
+        }
+
+        if (func) {
+            MarkError(call_pos, "Cannot call '%1' with (%2) arguments", func->name, buf);
+            HintError(definitions_map.FindValue(func, -1), "Candidate '%1'", func->prototype);
+        } else {
+            MarkError(call_pos, "Cannot call function typed %1 with (%2) arguments", func_type->signature, buf);
+        }
+        return false;
     }
 
     // Emit intrinsic or call
-    switch (func->mode) {
-        case bk_FunctionInfo::Mode::Intrinsic: {
-            EmitIntrinsic(name, call_addr, args);
-        } break;
-        case bk_FunctionInfo::Mode::Native: {
-            ir.Append({bk_Opcode::CallNative, {}, {.func = func}});
-        } break;
-        case bk_FunctionInfo::Mode::Blik: {
-            if (func->addr < 0) {
-                if (current_func && current_func != func) {
-                    func->earliest_call_pos = std::min(func->earliest_call_pos, current_func->earliest_call_pos);
-                    func->earliest_call_addr = std::min(func->earliest_call_addr, current_func->earliest_call_addr);
-                } else {
-                    func->earliest_call_pos = std::min(func->earliest_call_pos, call_pos);
-                    func->earliest_call_addr = std::min(func->earliest_call_addr, ir.len);
-                }
-            }
+    if (!func) {
+        Size offset = 1 + args.len + (func_type->variadic ? 1 + args.len : 0);
+        ir.Append({bk_Opcode::Call, {}, {.i = -offset}});
 
-            ir.Append({bk_Opcode::Call, {}, {.func = func}});
-        } break;
+        stack.len--;
+    } else if (func->mode == bk_FunctionInfo::Mode::Intrinsic) {
+        EmitIntrinsic(func->name, call_addr, args);
+    } else {
+        ir.Append({bk_Opcode::CallDirect, {}, {.func = func}});
     }
-    stack.Append({func->ret_type});
+    stack.Append({func_type->ret_type});
 
     return true;
 }
 
-void bk_Parser::EmitIntrinsic(const char *name, Size call_addr, Span<const bk_FunctionInfo::Parameter> args)
+void bk_Parser::EmitIntrinsic(const char *name, Size call_addr, Span<const bk_TypeInfo *const> args)
 {
-    if (TestStr(name, "Float")) {
-        if (args[0].type == bk_IntType) {
+    if (TestStr(name, "toFloat")) {
+        if (args[0] == bk_IntType) {
             ir.Append({bk_Opcode::IntToFloat});
         }
-    } else if (TestStr(name, "Int")) {
-        if (args[0].type == bk_FloatType) {
+    } else if (TestStr(name, "toInt")) {
+        if (args[0] == bk_FloatType) {
             ir.Append({bk_Opcode::FloatToInt});
         }
     } else if (TestStr(name, "typeOf")) {
@@ -1796,7 +1952,7 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_addr, Span<const bk_Fu
         // typeOf() does not execute anything!
         TrimInstructions(ir.len - call_addr);
 
-        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = args[0].type}});
+        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = args[0]}});
     } else {
         RG_UNREACHABLE();
     }
@@ -1844,7 +2000,7 @@ void bk_Parser::EmitReturn()
     RG_ASSERT(current_func);
 
     // We support tail recursion elimination (TRE)
-    if (ir[ir.len - 1].code == bk_Opcode::Call && ir[ir.len - 1].u.func == current_func) {
+    if (ir[ir.len - 1].code == bk_Opcode::CallDirect && ir[ir.len - 1].u.func == current_func) {
         ir.len--;
 
         for (Size i = current_func->params.len - 1; i >= 0; i--) {
@@ -1908,18 +2064,18 @@ void bk_Parser::TrimInstructions(Size count)
     }
 }
 
-bool bk_Parser::TestOverload(const bk_FunctionInfo &proto, Span<const bk_FunctionInfo::Parameter> params)
+bool bk_Parser::TestOverload(const bk_FunctionTypeInfo &func_type, Span<const bk_TypeInfo *const> params)
 {
-    if (proto.variadic) {
-        if (proto.params.len > params.len)
+    if (func_type.variadic) {
+        if (func_type.params.len > params.len)
             return false;
     } else {
-        if (proto.params.len != params.len)
+        if (func_type.params.len != params.len)
             return false;
     }
 
-    for (Size i = 0; i < proto.params.len; i++) {
-        if (proto.params[i].type != params[i].type)
+    for (Size i = 0; i < func_type.params.len; i++) {
+        if (func_type.params[i] != params[i])
             return false;
     }
 

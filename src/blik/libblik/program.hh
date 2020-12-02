@@ -12,13 +12,21 @@ struct bk_TypeInfo;
 struct bk_FunctionInfo;
 class bk_VirtualMachine;
 
-// Keep ordering in sync with bk_BaseTypes
 enum class bk_PrimitiveKind {
     Null,
     Boolean,
     Integer,
     Float,
-    Type
+    Type,
+    Function
+};
+static const char *const bk_PrimitiveKindNames[] = {
+    "Null",
+    "Boolean",
+    "Integer",
+    "Float",
+    "Type",
+    "Function"
 };
 
 union bk_PrimitiveValue {
@@ -33,7 +41,18 @@ struct bk_TypeInfo {
     const char *signature;
     bk_PrimitiveKind primitive;
 
+    const struct bk_FunctionTypeInfo *AsFunctionType() const
+    {
+        RG_ASSERT(primitive == bk_PrimitiveKind::Function);
+        return (const bk_FunctionTypeInfo *)this;
+    }
+
     RG_HASHTABLE_HANDLER(bk_TypeInfo, signature);
+};
+struct bk_FunctionTypeInfo: public bk_TypeInfo {
+    LocalArray<const bk_TypeInfo *, 16> params;
+    bool variadic;
+    const bk_TypeInfo *ret_type;
 };
 
 extern Span<const bk_TypeInfo> bk_BaseTypes;
@@ -60,14 +79,12 @@ struct bk_FunctionInfo {
     };
 
     const char *name;
-    const char *signature;
+    const char *prototype;
+    const bk_FunctionTypeInfo *type;
+    LocalArray<Parameter, RG_LEN(bk_FunctionTypeInfo::params.data)> params;
 
     Mode mode;
     std::function<bk_NativeFunction> native;
-
-    LocalArray<Parameter, 16> params;
-    bool variadic;
-    const bk_TypeInfo *ret_type;
 
     Size addr; // IR
     bool tre;
@@ -77,20 +94,26 @@ struct bk_FunctionInfo {
     bk_FunctionInfo *overload_next;
 
     // Used to prevent dangerous forward calls (if relevant globals are not defined yet)
-    Size earliest_call_pos;
-    Size earliest_call_addr;
+    Size earliest_ref_pos;
+    Size earliest_ref_addr;
 
     RG_HASHTABLE_HANDLER(bk_FunctionInfo, name);
 };
 
 struct bk_VariableInfo {
+    enum class Scope {
+        Function,
+        Global,
+        Local
+    };
+
     const char *name;
     const bk_TypeInfo *type;
     bool mut;
 
-    bool global;
+    Scope scope;
     Size offset; // Stack
-    Size ready_addr; // IR (for globals)
+    Size ready_addr; // Only set for globals and locals (not parameters, loop iterators, etc.)
 
     const bk_VariableInfo *shadow;
 
@@ -126,12 +149,14 @@ struct bk_CallFrame {
     const bk_FunctionInfo *func; // Can be NULL
     Size pc;
     Size bp;
+    bool direct;
 };
 
 struct bk_Program {
     HeapArray<bk_Instruction> ir;
     HeapArray<bk_SourceInfo> sources;
 
+    BucketArray<bk_FunctionTypeInfo> function_types;
     BucketArray<bk_FunctionInfo> functions;
     BucketArray<bk_VariableInfo> variables;
     HashTable<const char *, const bk_TypeInfo *> types_map;

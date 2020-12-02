@@ -21,6 +21,7 @@ static void DoPrint1(const bk_TypeInfo *type, const bk_PrimitiveValue &value) {
         case bk_PrimitiveKind::Integer: { Print("%1", value.i); } break;
         case bk_PrimitiveKind::Float: { Print("%1", FmtDouble(value.d, 1, INT_MAX)); } break;
         case bk_PrimitiveKind::Type: { Print("%1", value.type->signature); } break;
+        case bk_PrimitiveKind::Function: { Print("%1", value.func->prototype); } break;
     }
 }
 

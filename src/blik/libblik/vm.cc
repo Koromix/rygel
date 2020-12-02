@@ -352,6 +352,19 @@ bool bk_VirtualMachine::Run()
             DISPATCH(++pc);
         }
 
+        CASE(EqualFunc): {
+            const bk_FunctionInfo *func1 = stack[stack.len - 2].func;
+            const bk_FunctionInfo *func2 = stack[stack.len - 1].func;
+            stack[--stack.len - 1].b = (func1 == func2);
+            DISPATCH(++pc);
+        }
+        CASE(NotEqualFunc): {
+            const bk_FunctionInfo *func1 = stack[stack.len - 2].func;
+            const bk_FunctionInfo *func2 = stack[stack.len - 1].func;
+            stack[--stack.len - 1].b = (func1 != func2);
+            DISPATCH(++pc);
+        }
+
         CASE(Jump): {
             DISPATCH(pc += (Size)inst->u.i);
         }
@@ -373,8 +386,7 @@ bool bk_VirtualMachine::Run()
         }
 
         CASE(Call): {
-            const bk_FunctionInfo *func = inst->u.func;
-            RG_ASSERT(func->mode == bk_FunctionInfo::Mode::Blik);
+            const bk_FunctionInfo *func = stack[stack.len + inst->u.i].func;
 
             // Save current PC
             frame->pc = pc;
@@ -382,54 +394,93 @@ bool bk_VirtualMachine::Run()
             frame = frames.AppendDefault();
             frame->func = func;
             frame->pc = func->addr;
-            frame->bp = stack.len - func->params.len;
+            frame->direct = false;
 
-            bp = frame->bp;
-            DISPATCH(pc = frame->pc);
-        }
-        CASE(CallNative): {
-            const bk_FunctionInfo *func = inst->u.func;
-            RG_ASSERT(func->mode == bk_FunctionInfo::Mode::Native);
+            if (func->mode == bk_FunctionInfo::Mode::Blik) {
+                frame->bp = stack.len - func->params.len;
 
-            // Save current PC
-            frame->pc = pc;
-
-            frame = frames.AppendDefault();
-            frame->func = func;
-            frame->pc = func->addr;
-
-            if (func->variadic) {
-                Span<const bk_PrimitiveValue> args;
-                args.len = func->params.len + (stack[stack.len - 1].i * 2);
-                args.ptr = stack.end() - args.len - 1;
-
-                stack.len -= args.len;
-                stack[stack.len - 1] = func->native(this, args);
+                bp = frame->bp;
+                DISPATCH(pc = frame->pc);
             } else {
-                Span<const bk_PrimitiveValue> args;
-                args.len = func->params.len;
-                args.ptr = stack.end() - args.len;
+                RG_ASSERT(func->mode == bk_FunctionInfo::Mode::Native);
 
-                if (args.len) {
-                    stack.len -= args.len - 1;
+                if (func->type->variadic) {
+                    Span<const bk_PrimitiveValue> args;
+                    args.len = func->params.len + (stack[stack.len - 1].i * 2);
+                    args.ptr = stack.end() - args.len - 1;
+
+                    stack.len -= args.len + 1;
+                    stack[stack.len - 1] = func->native(this, args);
                 } else {
+                    Span<const bk_PrimitiveValue> args;
+                    args.len = func->params.len;
+                    args.ptr = stack.end() - args.len;
+
                     stack.len -= args.len;
-                    stack.AppendDefault();
+                    stack[stack.len - 1] = func->native(this, args);
                 }
-                stack[stack.len - 1] = func->native(this, args);
+
+                frames.RemoveLast(1);
+                frame = &frames[frames.len - 1];
+
+                if (RG_UNLIKELY(!run))
+                    return !error;
+
+                DISPATCH(++pc);
             }
+        }
+        CASE(CallDirect): {
+            const bk_FunctionInfo *func = inst->u.func;
 
-            frames.RemoveLast(1);
-            frame = &frames[frames.len - 1];
+            // Save current PC
+            frame->pc = pc;
 
-            if (RG_UNLIKELY(!run))
-                return !error;
+            frame = frames.AppendDefault();
+            frame->func = func;
+            frame->pc = func->addr;
+            frame->direct = true;
 
-            DISPATCH(++pc);
+            if (func->mode == bk_FunctionInfo::Mode::Blik) {
+                frame->bp = stack.len - func->params.len;
+
+                bp = frame->bp;
+                DISPATCH(pc = frame->pc);
+            } else {
+                RG_ASSERT(func->mode == bk_FunctionInfo::Mode::Native);
+
+                if (func->type->variadic) {
+                    Span<const bk_PrimitiveValue> args;
+                    args.len = func->params.len + (stack[stack.len - 1].i * 2);
+                    args.ptr = stack.end() - args.len - 1;
+
+                    stack.len -= args.len;
+                    stack[stack.len - 1] = func->native(this, args);
+                } else {
+                    Span<const bk_PrimitiveValue> args;
+                    args.len = func->params.len;
+                    args.ptr = stack.end() - args.len;
+
+                    if (args.len) {
+                        stack.len -= args.len - 1;
+                    } else {
+                        stack.len -= args.len;
+                        stack.AppendDefault();
+                    }
+                    stack[stack.len - 1] = func->native(this, args);
+                }
+
+                frames.RemoveLast(1);
+                frame = &frames[frames.len - 1];
+
+                if (RG_UNLIKELY(!run))
+                    return !error;
+
+                DISPATCH(++pc);
+            }
         }
         CASE(Return): {
-            stack[bp] = stack[stack.len - 1];
-            stack.len = bp + 1;
+            stack[bp + frame->direct - 1] = stack[stack.len - 1];
+            stack.len = bp + frame->direct;
 
             frames.RemoveLast(1);
             frame = &frames[frames.len - 1];
@@ -478,16 +529,17 @@ void bk_VirtualMachine::DumpInstruction(Size pc) const
                 case bk_PrimitiveKind::Integer: { LogDebug("[0x%1] Push %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
                 case bk_PrimitiveKind::Float: { LogDebug("[0x%1] Push %2", FmtHex(pc).Pad0(-5), inst.u.d); } break;
                 case bk_PrimitiveKind::Type: { LogDebug("[0x%1] Push %2", FmtHex(pc).Pad0(-5), inst.u.type->signature); } break;
+                case bk_PrimitiveKind::Function: { LogDebug("[0x%1] Push %2", FmtHex(pc).Pad0(-5), inst.u.func->prototype); } break;
             }
         } break;
         case bk_Opcode::Pop: { LogDebug("[0x%1] Pop %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
-        case bk_Opcode::Load: { LogDebug("[0x%1] Load @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_BaseTypes[(int)inst.primitive].signature); } break;
-        case bk_Opcode::Store: { LogDebug("[0x%1] Store @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_BaseTypes[(int)inst.primitive].signature); } break;
-        case bk_Opcode::Copy: { LogDebug("[0x%1] Copy @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_BaseTypes[(int)inst.primitive].signature); } break;
-        case bk_Opcode::LoadLocal: { LogDebug("[0x%1] LoadLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_BaseTypes[(int)inst.primitive].signature); } break;
-        case bk_Opcode::StoreLocal: { LogDebug("[0x%1] StoreLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_BaseTypes[(int)inst.primitive].signature); } break;
-        case bk_Opcode::CopyLocal: { LogDebug("[0x%1] CopyLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_BaseTypes[(int)inst.primitive].signature); } break;
+        case bk_Opcode::Load: { LogDebug("[0x%1] Load @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::Store: { LogDebug("[0x%1] Store @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::Copy: { LogDebug("[0x%1] Copy @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::LoadLocal: { LogDebug("[0x%1] LoadLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::StoreLocal: { LogDebug("[0x%1] StoreLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::CopyLocal: { LogDebug("[0x%1] CopyLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
 
         case bk_Opcode::Jump: { LogDebug("[0x%1] Jump 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
         case bk_Opcode::BranchIfTrue: { LogDebug("[0x%1] BranchIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
@@ -495,11 +547,10 @@ void bk_VirtualMachine::DumpInstruction(Size pc) const
         case bk_Opcode::SkipIfTrue: { LogDebug("[0x%1] SkipIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
         case bk_Opcode::SkipIfFalse: { LogDebug("[0x%1] SkipIfFalse 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
 
-        case bk_Opcode::Call:
-        case bk_Opcode::CallNative: {
+        case bk_Opcode::Call: { LogDebug("[0x%1] %2 %3", FmtHex(pc).Pad0(-5), bk_OpcodeNames[(int)inst.code], inst.u.i); } break;
+        case bk_Opcode::CallDirect: {
             const bk_FunctionInfo *func = inst.u.func;
-            LogDebug("[0x%1] %2 %3 (%4%5)", FmtHex(pc).Pad0(-5), bk_OpcodeNames[(int)inst.code],
-                                            func->name, func->params.len, func->variadic ? "+" : "");
+            LogDebug("[0x%1] %2 %3", FmtHex(pc).Pad0(-5), bk_OpcodeNames[(int)inst.code], func->prototype);
         } break;
 
         default: { LogDebug("[0x%1] %2", FmtHex(pc).Pad0(-5), bk_OpcodeNames[(int)inst.code]); } break;
