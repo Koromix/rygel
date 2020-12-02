@@ -488,14 +488,14 @@ bool bk_VirtualMachine::Run()
             frame->pc = func->addr;
 
             if (func->variadic) {
-                Span<const bk_Value> args;
+                Span<const bk_PrimitiveValue> args;
                 args.len = func->params.len + (stack[stack.len - 1].i * 2);
                 args.ptr = stack.end() - args.len - 1;
 
                 stack.len -= args.len;
                 stack[stack.len - 1] = func->native(this, args);
             } else {
-                Span<const bk_Value> args;
+                Span<const bk_PrimitiveValue> args;
                 args.len = func->params.len;
                 args.ptr = stack.end() - args.len;
 

@@ -22,7 +22,7 @@ public:
     const bk_Program *const program;
 
     HeapArray<bk_CallFrame> frames;
-    HeapArray<bk_Value> stack;
+    HeapArray<bk_PrimitiveValue> stack;
 
     bk_VirtualMachine(const bk_Program *const program);
 

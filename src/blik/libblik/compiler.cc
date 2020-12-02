@@ -76,7 +76,7 @@ public:
     bool Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report);
 
     void AddFunction(const char *signature, std::function<bk_NativeFunction> native);
-    void AddGlobal(const char *name, const bk_TypeInfo *type, bk_Value value, bool mut);
+    void AddGlobal(const char *name, const bk_TypeInfo *type, bk_PrimitiveValue value, bool mut);
 
     inline const bk_TypeInfo *GetBasicType(bk_PrimitiveType primitive)
     {
@@ -212,12 +212,12 @@ void bk_Compiler::AddFunction(const char *signature, std::function<bk_NativeFunc
     parser->AddFunction(signature, native);
 }
 
-void bk_Compiler::AddGlobal(const char *name, const bk_TypeInfo *type, bk_Value value, bool mut)
+void bk_Compiler::AddGlobal(const char *name, const bk_TypeInfo *type, bk_PrimitiveValue value, bool mut)
 {
     parser->AddGlobal(name, type, value, mut);
 }
 
-void bk_Compiler::AddGlobal(const char *name, bk_PrimitiveType primitive, bk_Value value, bool mut)
+void bk_Compiler::AddGlobal(const char *name, bk_PrimitiveType primitive, bk_PrimitiveValue value, bool mut)
 {
     const bk_TypeInfo *type = parser->GetBasicType(primitive);
     parser->AddGlobal(name, type, value, mut);
@@ -241,8 +241,8 @@ bk_Parser::bk_Parser(bk_Program *program)
     }
 
     // Special values
-    AddGlobal("NaN", GetBasicType(bk_PrimitiveType::Float), bk_Value {.d = (double)NAN}, false);
-    AddGlobal("Inf", GetBasicType(bk_PrimitiveType::Float), bk_Value {.d = (double)INFINITY}, false);
+    AddGlobal("NaN", GetBasicType(bk_PrimitiveType::Float), bk_PrimitiveValue {.d = (double)NAN}, false);
+    AddGlobal("Inf", GetBasicType(bk_PrimitiveType::Float), bk_PrimitiveValue {.d = (double)INFINITY}, false);
 
     // Intrinsics
     AddFunction("Float(Int): Float", {});
@@ -421,7 +421,7 @@ void bk_Parser::AddFunction(const char *signature, std::function<bk_NativeFuncti
     }
 }
 
-void bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type, bk_Value value, bool mut)
+void bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type, bk_PrimitiveValue value, bool mut)
 {
     bk_VariableInfo *var = program->variables.AppendDefault();
 

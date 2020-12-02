@@ -8,6 +8,7 @@
 
 namespace RG {
 
+struct bk_TypeInfo;
 class bk_VirtualMachine;
 
 // Keep ordering in sync with Push* opcodes!
@@ -26,6 +27,13 @@ static const char *const bk_PrimitiveTypeNames[] = {
     "Type"
 };
 
+union bk_PrimitiveValue {
+    bool b;
+    int64_t i;
+    double d;
+    const bk_TypeInfo *type;
+};
+
 struct bk_TypeInfo {
     const char *signature;
     bk_PrimitiveType primitive;
@@ -33,15 +41,8 @@ struct bk_TypeInfo {
     RG_HASHTABLE_HANDLER(bk_TypeInfo, signature);
 };
 
-union bk_Value {
-    bool b;
-    int64_t i;
-    double d;
-    const bk_TypeInfo *type;
-};
-
 // XXX: Support native calling conventions to provide seamless integration
-typedef bk_Value bk_NativeFunction(bk_VirtualMachine *vm, Span<const bk_Value> args);
+typedef bk_PrimitiveValue bk_NativeFunction(bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args);
 
 struct bk_FunctionInfo {
     enum class Mode {
