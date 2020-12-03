@@ -1689,14 +1689,20 @@ bool bk_Parser::EmitOperator2(const bk_TypeInfo *in_type, bk_Opcode code, const 
 
 void bk_Parser::EmitLoad(const bk_VariableInfo &var)
 {
-    if (var.global) {
-        if (RG_UNLIKELY(current_func && current_func->earliest_call_addr < var.ready_addr)) {
-            MarkError(definitions_map.FindValue(current_func, -1), "Function '%1' may be called before variable '%2' exists",
-                      current_func->name, var.name);
-            HintError(current_func->earliest_call_pos, "Function call happens here (it could be indirect)");
-            HintDefinition(&var, "Variable '%1' is defined here", var.name);
-        }
+    if (RG_UNLIKELY(var.global && current_func && current_func->earliest_call_addr < var.ready_addr)) {
+        MarkError(definitions_map.FindValue(current_func, -1), "Function '%1' may be called before variable '%2' exists",
+                  current_func->name, var.name);
+        HintError(current_func->earliest_call_pos, "Function call happens here (it could be indirect)");
+        HintDefinition(&var, "Variable '%1' is defined here", var.name);
+    }
 
+    if (!var.mut && (ir[var.ready_addr - 1].code == bk_Opcode::PushNull ||
+                     ir[var.ready_addr - 1].code == bk_Opcode::PushBool ||
+                     ir[var.ready_addr - 1].code == bk_Opcode::PushInt ||
+                     ir[var.ready_addr - 1].code == bk_Opcode::PushFloat ||
+                     ir[var.ready_addr - 1].code == bk_Opcode::PushType)) {
+        ir.Append(ir[var.ready_addr - 1]);
+    } else if (var.global) {
         switch (var.type->primitive) {
             case bk_PrimitiveKind::Null: { ir.Append({bk_Opcode::PushNull}); } break;
             case bk_PrimitiveKind::Boolean: { ir.Append({bk_Opcode::LoadBool, {.i = var.offset}}); } break;
