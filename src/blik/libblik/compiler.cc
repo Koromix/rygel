@@ -879,7 +879,7 @@ void bk_Parser::ParseReturn()
     }
 
     if (RG_UNLIKELY(type != current_func->type->ret_type)) {
-        MarkError(return_pos, "Cannot return %1 value in function defined to return %2",
+        MarkError(return_pos, "Cannot return '%1' value in function defined to return '%2'",
                   type->signature, current_func->type->ret_type->signature);
         return;
     }
@@ -936,7 +936,7 @@ void bk_Parser::ParseLet()
             slot = ParseExpression(true);
 
             if (RG_UNLIKELY(slot.type != type)) {
-                MarkError(expr_pos - 1, "Cannot assign %1 value to variable '%2' (defined as %3)",
+                MarkError(expr_pos - 1, "Cannot assign '%1' value to variable '%2' (defined as '%3')",
                           slot.type->signature, var->name, type->signature);
             }
         } else {
@@ -949,7 +949,7 @@ void bk_Parser::ParseLet()
                 case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::Push, type->primitive}); } break;
                 case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::Push, type->primitive, {.type = bk_NullType}}); } break;
                 case bk_PrimitiveKind::Function: {
-                    MarkError(var_pos, "Variable '%1' (defined as %2) must be explicitely initialized",
+                    MarkError(var_pos, "Variable '%1' (defined as '%2') must be explicitely initialized",
                               var->name, type->signature);
                 } break;
             }
@@ -1209,7 +1209,7 @@ const bk_TypeInfo *bk_Parser::ParseType()
         const bk_TypeInfo *type = ParseExpression(false).type;
 
         if (RG_UNLIKELY(type != bk_TypeType)) {
-            MarkError(type_pos, "Expected a Type expression, not %1", type->signature);
+            MarkError(type_pos, "Expected a Type expression, not '%1'", type->signature);
             return bk_NullType;
         }
     }
@@ -1565,9 +1565,9 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
             return;
         }
         if (RG_UNLIKELY(var->type != expr.type)) {
-            MarkError(op.pos, "Cannot assign %1 value to variable '%2'",
+            MarkError(op.pos, "Cannot assign '%1' value to variable '%2'",
                       expr.type->signature, var->name);
-            HintError(definitions_map.FindValue(var, -1), "Variable '%1' is defined as %2",
+            HintError(definitions_map.FindValue(var, -1), "Variable '%1' is defined as '%2'",
                       var->name, var->type->signature);
             return;
         }
@@ -1770,13 +1770,13 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
 
     if (RG_UNLIKELY(!success)) {
         if (op.unary) {
-            MarkError(op.pos, "Cannot use '%1' operator on %2 value",
+            MarkError(op.pos, "Cannot use '%1' operator on '%2' value",
                       bk_TokenKindNames[(int)op.kind], stack[stack.len - 1].type->signature);
         } else if (stack[stack.len - 2].type == stack[stack.len - 1].type) {
-            MarkError(op.pos, "Cannot use '%1' operator on %2 values",
+            MarkError(op.pos, "Cannot use '%1' operator on '%2' values",
                       bk_TokenKindNames[(int)op.kind], stack[stack.len - 2].type->signature);
         } else {
-            MarkError(op.pos, "Cannot use '%1' operator on %2 and %3 values",
+            MarkError(op.pos, "Cannot use '%1' operator on '%2' and '%3' values",
                       bk_TokenKindNames[(int)op.kind], stack[stack.len - 2].type->signature,
                       stack[stack.len - 1].type->signature);
         }
@@ -1881,7 +1881,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
             func = func->overload_next;
 
             if (RG_UNLIKELY(func == func0)) {
-                LocalArray<char, 1024> buf = {};
+                LocalArray<char, 1024> buf;
                 for (Size i = 0; i < args.len; i++) {
                     buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", args[i]->signature).len;
                 }
@@ -1899,7 +1899,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
             }
         }
     } else if (!TestOverload(*func_type, args)) {
-        LocalArray<char, 1024> buf = {};
+        LocalArray<char, 1024> buf;
         for (Size i = 0; i < args.len; i++) {
             buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", args[i]->signature).len;
         }
@@ -1908,7 +1908,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
             MarkError(call_pos, "Cannot call '%1' with (%2) arguments", func->name, buf);
             HintError(definitions_map.FindValue(func, -1), "Candidate '%1'", func->prototype);
         } else {
-            MarkError(call_pos, "Cannot call function typed %1 with (%2) arguments", func_type->signature, buf);
+            MarkError(call_pos, "Cannot call function typed '%1' with (%2) arguments", func_type->signature, buf);
         }
         return false;
     }
@@ -1962,7 +1962,7 @@ bool bk_Parser::ParseExpressionOfType(const bk_TypeInfo *type)
 
     const bk_TypeInfo *type2 = ParseExpression(true).type;
     if (RG_UNLIKELY(type2 != type)) {
-        MarkError(expr_pos, "Expected expression result type to be %1, not %2",
+        MarkError(expr_pos, "Expected expression result type to be '%1', not '%2'",
                   type->signature, type2->signature);
         return false;
     }
