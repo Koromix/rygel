@@ -1383,9 +1383,17 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                                 if (!call) {
                                     if (RG_UNLIKELY(func->overload_next != func)) {
                                         MarkError(var_pos, "Ambiguous reference to overloaded function '%1'", var->name);
+
+                                        // Show all candidate functions with same name
+                                        const bk_FunctionInfo *it = func;
+                                        do {
+                                            HintError(definitions_map.FindValue(it, -1), "Candidate '%1'", it->prototype);
+                                            it = it->overload_next;
+                                        } while (it != func);
+
                                         goto error;
                                     } else if (RG_UNLIKELY(func->mode == bk_FunctionInfo::Mode::Intrinsic)) {
-                                        MarkError(var_pos, "Intrinsic functions must be called directly");
+                                        MarkError(var_pos, "Intrinsic functions can only be called directly");
                                         goto error;
                                     }
                                 }
