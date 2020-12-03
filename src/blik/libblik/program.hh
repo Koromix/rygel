@@ -14,8 +14,8 @@ class bk_VirtualMachine;
 // Keep ordering in sync with Push* opcodes!
 enum class bk_PrimitiveKind {
     Null,
-    Bool,
-    Int,
+    Boolean,
+    Integer,
     Float,
     Type
 };

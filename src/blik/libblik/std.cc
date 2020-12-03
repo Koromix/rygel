@@ -17,8 +17,8 @@ void bk_ImportAll(bk_Compiler *out_compiler)
 static void DoPrint1(const bk_TypeInfo *type, const bk_PrimitiveValue &value) {
     switch (type->primitive) {
         case bk_PrimitiveKind::Null: { Print("null"); } break;
-        case bk_PrimitiveKind::Bool: { Print("%1", value.b); } break;
-        case bk_PrimitiveKind::Int: { Print("%1", value.i); } break;
+        case bk_PrimitiveKind::Boolean: { Print("%1", value.b); } break;
+        case bk_PrimitiveKind::Integer: { Print("%1", value.i); } break;
         case bk_PrimitiveKind::Float: { Print("%1", FmtDouble(value.d, 1, INT_MAX)); } break;
         case bk_PrimitiveKind::Type: { Print("%1", value.type->signature); } break;
     }

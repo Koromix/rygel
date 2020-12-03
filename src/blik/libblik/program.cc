@@ -9,8 +9,8 @@ namespace RG {
 
 static bk_TypeInfo BaseTypes[] = {
     {"Null", bk_PrimitiveKind::Null},
-    {"Bool", bk_PrimitiveKind::Bool},
-    {"Int", bk_PrimitiveKind::Int},
+    {"Bool", bk_PrimitiveKind::Boolean},
+    {"Int", bk_PrimitiveKind::Integer},
     {"Float", bk_PrimitiveKind::Float},
     {"Type", bk_PrimitiveKind::Type}
 };

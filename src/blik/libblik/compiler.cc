@@ -417,8 +417,8 @@ void bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type, bk_Primitiv
 
     switch (type->primitive) {
         case bk_PrimitiveKind::Null: { ir.Append({bk_Opcode::PushNull}); } break;
-        case bk_PrimitiveKind::Bool: { ir.Append({bk_Opcode::PushBool, {.b = value.b}}); } break;
-        case bk_PrimitiveKind::Int: { ir.Append({bk_Opcode::PushInt, {.i = value.i}}); } break;
+        case bk_PrimitiveKind::Boolean: { ir.Append({bk_Opcode::PushBool, {.b = value.b}}); } break;
+        case bk_PrimitiveKind::Integer: { ir.Append({bk_Opcode::PushInt, {.i = value.i}}); } break;
         case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::PushFloat, {.d = value.d}}); } break;
         case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::PushType, {.type = value.type}}); } break;
     }
@@ -863,8 +863,8 @@ void bk_Parser::ParseLet()
 
             switch (type->primitive) {
                 case bk_PrimitiveKind::Null: { ir.Append({bk_Opcode::PushNull}); } break;
-                case bk_PrimitiveKind::Bool: { ir.Append({bk_Opcode::PushBool, {.b = false}}); } break;
-                case bk_PrimitiveKind::Int: { ir.Append({bk_Opcode::PushInt, {.i = 0}}); } break;
+                case bk_PrimitiveKind::Boolean: { ir.Append({bk_Opcode::PushBool, {.b = false}}); } break;
+                case bk_PrimitiveKind::Integer: { ir.Append({bk_Opcode::PushInt, {.i = 0}}); } break;
                 case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::PushFloat, {.d = 0.0}}); } break;
                 case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::PushType, {.type = bk_NullType}}); } break;
             }
@@ -1494,16 +1494,16 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
         if (var->global) {
             switch (var->type->primitive) {
                 case bk_PrimitiveKind::Null: {} break;
-                case bk_PrimitiveKind::Bool: { ir.Append({bk_Opcode::CopyBool, {.i = var->offset}}); } break;
-                case bk_PrimitiveKind::Int: { ir.Append({bk_Opcode::CopyInt, {.i = var->offset}}); } break;
+                case bk_PrimitiveKind::Boolean: { ir.Append({bk_Opcode::CopyBool, {.i = var->offset}}); } break;
+                case bk_PrimitiveKind::Integer: { ir.Append({bk_Opcode::CopyInt, {.i = var->offset}}); } break;
                 case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::CopyFloat, {.i = var->offset}}); } break;
                 case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::CopyType, {.i = var->offset}}); } break;
             }
         } else {
             switch (var->type->primitive) {
                 case bk_PrimitiveKind::Null: {} break;
-                case bk_PrimitiveKind::Bool: { ir.Append({bk_Opcode::CopyLocalBool, {.i = var->offset}}); } break;
-                case bk_PrimitiveKind::Int: { ir.Append({bk_Opcode::CopyLocalInt, {.i = var->offset}}); } break;
+                case bk_PrimitiveKind::Boolean: { ir.Append({bk_Opcode::CopyLocalBool, {.i = var->offset}}); } break;
+                case bk_PrimitiveKind::Integer: { ir.Append({bk_Opcode::CopyLocalInt, {.i = var->offset}}); } break;
                 case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::CopyLocalFloat, {.i = var->offset}}); } break;
                 case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::CopyLocalType, {.i = var->offset}}); } break;
             }
@@ -1699,16 +1699,16 @@ void bk_Parser::EmitLoad(const bk_VariableInfo &var)
 
         switch (var.type->primitive) {
             case bk_PrimitiveKind::Null: { ir.Append({bk_Opcode::PushNull}); } break;
-            case bk_PrimitiveKind::Bool: { ir.Append({bk_Opcode::LoadBool, {.i = var.offset}}); } break;
-            case bk_PrimitiveKind::Int: { ir.Append({bk_Opcode::LoadInt, {.i = var.offset}}); } break;
+            case bk_PrimitiveKind::Boolean: { ir.Append({bk_Opcode::LoadBool, {.i = var.offset}}); } break;
+            case bk_PrimitiveKind::Integer: { ir.Append({bk_Opcode::LoadInt, {.i = var.offset}}); } break;
             case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::LoadFloat, {.i = var.offset}});} break;
             case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::LoadType, {.i = var.offset}}); } break;
         }
     } else {
         switch (var.type->primitive) {
             case bk_PrimitiveKind::Null: { ir.Append({bk_Opcode::PushNull}); } break;
-            case bk_PrimitiveKind::Bool: { ir.Append({bk_Opcode::LoadLocalBool, {.i = var.offset}}); } break;
-            case bk_PrimitiveKind::Int: { ir.Append({bk_Opcode::LoadLocalInt, {.i = var.offset}}); } break;
+            case bk_PrimitiveKind::Boolean: { ir.Append({bk_Opcode::LoadLocalBool, {.i = var.offset}}); } break;
+            case bk_PrimitiveKind::Integer: { ir.Append({bk_Opcode::LoadLocalInt, {.i = var.offset}}); } break;
             case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::LoadLocalFloat, {.i = var.offset}});} break;
             case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::LoadLocalType, {.i = var.offset}}); } break;
         }
@@ -1908,8 +1908,8 @@ void bk_Parser::EmitReturn()
 
             switch (param.type->primitive) {
                 case bk_PrimitiveKind::Null: {} break;
-                case bk_PrimitiveKind::Bool: { ir.Append({bk_Opcode::StoreLocalBool, {.i = i}}); } break;
-                case bk_PrimitiveKind::Int: { ir.Append({bk_Opcode::StoreLocalInt, {.i = i}}); } break;
+                case bk_PrimitiveKind::Boolean: { ir.Append({bk_Opcode::StoreLocalBool, {.i = i}}); } break;
+                case bk_PrimitiveKind::Integer: { ir.Append({bk_Opcode::StoreLocalInt, {.i = i}}); } break;
                 case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::StoreLocalFloat, {.i = i}}); } break;
                 case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::StoreLocalType, {.i = i}}); } break;
             }
