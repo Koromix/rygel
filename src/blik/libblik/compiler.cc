@@ -1282,8 +1282,11 @@ static int GetOperatorPrecedence(bk_TokenKind kind, bool expect_unary)
 
 StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
 {
-    Size start_values_len = stack.len;
-    RG_DEFER { stack.RemoveFrom(start_values_len); };
+    Size start_stack_len = stack.len;
+    RG_DEFER { stack.RemoveFrom(start_stack_len); };
+
+    // Safety dummy
+    stack.Append({bk_NullType});
 
     LocalArray<PendingOperator, 128> operators;
     bool expect_value = true;
@@ -1297,8 +1300,7 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
 
         if (tok.kind == bk_TokenKind::LeftParenthesis) {
             if (RG_UNLIKELY(!expect_value)) {
-                if (stack.len > start_values_len &&
-                        stack[stack.len - 1].type->primitive == bk_PrimitiveKind::Function) {
+                if (stack[stack.len - 1].type->primitive == bk_PrimitiveKind::Function) {
                     const bk_FunctionTypeInfo *func_type = stack[stack.len - 1].type->AsFunctionType();
 
                     if (!ParseCall(func_type, nullptr, false))
@@ -1511,12 +1513,8 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
         ProduceOperator(op);
     }
 
-    RG_ASSERT(stack.len == start_values_len + 1 || !show_errors);
-    if (RG_LIKELY(stack.len)) {
-        return stack[stack.len - 1];
-    } else {
-        return {bk_NullType};
-    }
+    RG_ASSERT(stack.len == start_stack_len + 2 || !show_errors);
+    return stack[stack.len - 1];
 
 unexpected:
     pos--;
