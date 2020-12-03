@@ -220,6 +220,7 @@ bk_Parser::bk_Parser(bk_Program *program)
 
     // Base types
     for (const bk_TypeInfo &type: bk_BaseTypes) {
+        AddGlobal(type.signature, bk_TypeType, {.type = &type}, false);
         program->types_map.Set(&type);
     }
 
@@ -1263,15 +1264,8 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                                 goto error;
                             }
                         } else {
-                            const bk_TypeInfo *type = program->types_map.FindValue(tok.u.str, nullptr);
-
-                            if (RG_UNLIKELY(!type)) {
-                                MarkError(pos - 1, "Reference to unknown identifier '%1'", tok.u.str);
-                                goto error;
-                            }
-
-                            ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = type}});
-                            stack.Append({bk_TypeType});
+                            MarkError(pos - 1, "Reference to unknown identifier '%1'", tok.u.str);
+                            goto error;
                         }
                     }
                 } break;
