@@ -25,8 +25,8 @@ static const HashMap<Span<const char>, bk_Token> KeywordsMap {
     {"continue", {bk_TokenKind::Continue}},
     {"do", {bk_TokenKind::Do}},
     {"null", {bk_TokenKind::Null}},
-    {"true", {bk_TokenKind::Bool, 0, 0, {.b = true}}},
-    {"false", {bk_TokenKind::Bool, 0, 0, {.b = false}}}
+    {"true", {bk_TokenKind::Boolean, 0, 0, {.b = true}}},
+    {"false", {bk_TokenKind::Boolean, 0, 0, {.b = false}}}
 };
 
 class bk_Lexer {

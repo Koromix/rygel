@@ -24,7 +24,7 @@ TOKEN(Do, "do")
 
 // Immediate values
 TOKEN(Null, "null")
-TOKEN(Bool, "<bool>")
+TOKEN(Boolean, "<bool>")
 TOKEN(Integer, "<integer>")
 TOKEN(Float, "<float>")
 TOKEN(String, "<string>")

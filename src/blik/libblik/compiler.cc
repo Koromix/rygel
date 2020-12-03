@@ -1220,7 +1220,7 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                 ProduceOperator(op);
                 operators.len--;
             }
-        } else if (tok.kind == bk_TokenKind::Null || tok.kind == bk_TokenKind::Bool ||
+        } else if (tok.kind == bk_TokenKind::Null || tok.kind == bk_TokenKind::Boolean ||
                    tok.kind == bk_TokenKind::Integer || tok.kind == bk_TokenKind::Float ||
                    tok.kind == bk_TokenKind::Identifier) {
             if (RG_UNLIKELY(!expect_value))
@@ -1232,7 +1232,7 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                     ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Null});
                     stack.Append({bk_NullType});
                 } break;
-                case bk_TokenKind::Bool: {
+                case bk_TokenKind::Boolean: {
                     ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Boolean, {.b = tok.u.b}});
                     stack.Append({bk_BoolType});
                 } break;
