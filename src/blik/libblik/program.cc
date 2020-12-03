@@ -7,6 +7,7 @@
 
 namespace RG {
 
+// Keep ordering in sync with bk_PrimitiveKind
 static bk_TypeInfo BaseTypes[] = {
     {"Null", bk_PrimitiveKind::Null},
     {"Bool", bk_PrimitiveKind::Boolean},

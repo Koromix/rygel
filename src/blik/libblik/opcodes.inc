@@ -7,40 +7,16 @@
 #endif
 
 // Immediate values
-OPCODE(PushNull)
-OPCODE(PushBool)
-OPCODE(PushInt)
-OPCODE(PushFloat)
-OPCODE(PushType)
+OPCODE(Push)
 OPCODE(Pop)
 
-// Global variables
-OPCODE(LoadBool)
-OPCODE(LoadInt)
-OPCODE(LoadFloat)
-OPCODE(LoadType)
-OPCODE(StoreBool)
-OPCODE(StoreInt)
-OPCODE(StoreFloat)
-OPCODE(StoreType)
-OPCODE(CopyBool)
-OPCODE(CopyInt)
-OPCODE(CopyFloat)
-OPCODE(CopyType)
-
-// Local variables
-OPCODE(LoadLocalBool)
-OPCODE(LoadLocalInt)
-OPCODE(LoadLocalFloat)
-OPCODE(LoadLocalType)
-OPCODE(StoreLocalBool)
-OPCODE(StoreLocalInt)
-OPCODE(StoreLocalFloat)
-OPCODE(StoreLocalType)
-OPCODE(CopyLocalBool)
-OPCODE(CopyLocalInt)
-OPCODE(CopyLocalFloat)
-OPCODE(CopyLocalType)
+// Load/store
+OPCODE(Load)
+OPCODE(Store)
+OPCODE(Copy)
+OPCODE(LoadLocal)
+OPCODE(StoreLocal)
+OPCODE(CopyLocal)
 
 // Integer operators
 OPCODE(NegateInt)

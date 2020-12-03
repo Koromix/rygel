@@ -310,7 +310,7 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
     RG_ASSERT(!current_func);
 
     if (valid) {
-        ir.Append({bk_Opcode::End, {.i = var_offset}});
+        ir.Append({bk_Opcode::End, {}, {.i = var_offset}});
         ir.Trim();
 
         err_guard.Disable();
@@ -406,22 +406,13 @@ void bk_Parser::AddFunction(const char *signature, std::function<bk_NativeFuncti
 
 void bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type, bk_PrimitiveValue value, bool mut)
 {
-    RG_ASSERT(std::any_of(bk_BaseTypes.begin(), bk_BaseTypes.end(),
-                          [&](const bk_TypeInfo &it) { return &it == type; }));
-
     bk_VariableInfo *var = program->variables.AppendDefault();
 
     var->name = InternString(name);
     var->type = type;
     var->mut = mut;
 
-    switch (type->primitive) {
-        case bk_PrimitiveKind::Null: { ir.Append({bk_Opcode::PushNull}); } break;
-        case bk_PrimitiveKind::Boolean: { ir.Append({bk_Opcode::PushBool, {.b = value.b}}); } break;
-        case bk_PrimitiveKind::Integer: { ir.Append({bk_Opcode::PushInt, {.i = value.i}}); } break;
-        case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::PushFloat, {.d = value.d}}); } break;
-        case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::PushType, {.type = value.type}}); } break;
-    }
+    ir.Append({bk_Opcode::Push, type->primitive, value});
 
     var->global = true;
     var->offset = var_offset++;
@@ -773,7 +764,7 @@ void bk_Parser::ParseFunction()
 
     if (!has_return) {
         if (func->ret_type == bk_NullType) {
-            ir.Append({bk_Opcode::PushNull});
+            ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Null});
             EmitReturn();
         } else {
             MarkError(func_pos, "Some code paths do not return a value in function '%1'", func->name);
@@ -794,7 +785,7 @@ void bk_Parser::ParseReturn()
 
     const bk_TypeInfo *type;
     if (PeekToken(bk_TokenKind::EndOfLine) || PeekToken(bk_TokenKind::Semicolon)) {
-        ir.Append({bk_Opcode::PushNull});
+        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Null});
         type = bk_NullType;
     } else {
         type = ParseExpression(true).type;
@@ -862,11 +853,11 @@ void bk_Parser::ParseLet()
             slot = {type};
 
             switch (type->primitive) {
-                case bk_PrimitiveKind::Null: { ir.Append({bk_Opcode::PushNull}); } break;
-                case bk_PrimitiveKind::Boolean: { ir.Append({bk_Opcode::PushBool, {.b = false}}); } break;
-                case bk_PrimitiveKind::Integer: { ir.Append({bk_Opcode::PushInt, {.i = 0}}); } break;
-                case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::PushFloat, {.d = 0.0}}); } break;
-                case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::PushType, {.type = bk_NullType}}); } break;
+                case bk_PrimitiveKind::Null:
+                case bk_PrimitiveKind::Boolean:
+                case bk_PrimitiveKind::Integer:
+                case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::Push, type->primitive}); } break;
+                case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::Push, type->primitive, {.type = bk_NullType}}); } break;
             }
         }
     }
@@ -912,7 +903,7 @@ bool bk_Parser::ParseIf()
 
         if (MatchToken(bk_TokenKind::Else)) {
             Size jump_addr = ir.len;
-            ir.Append({bk_Opcode::Jump, {.i = -1}});
+            ir.Append({bk_Opcode::Jump, {}, {.i = -1}});
 
             do {
                 ir[branch_addr].u.i = ir.len - branch_addr;
@@ -926,7 +917,7 @@ bool bk_Parser::ParseIf()
 
                         has_return &= ParseBlock();
 
-                        ir.Append({bk_Opcode::Jump, {.i = jump_addr}});
+                        ir.Append({bk_Opcode::Jump, {}, {.i = jump_addr}});
                         jump_addr = ir.len - 1;
                     }
                 } else if (RG_LIKELY(EndStatement())) {
@@ -992,7 +983,7 @@ void bk_Parser::ParseWhile()
     ir.Grow(branch_addr - condition_addr);
     ir.Append(ir.Take(condition_addr, branch_addr - condition_addr));
 
-    ir.Append({bk_Opcode::BranchIfTrue, {.i = branch_addr - ir.len + 1}});
+    ir.Append({bk_Opcode::BranchIfTrue, {}, {.i = branch_addr - ir.len + 1}});
     ir[branch_addr].u.i = ir.len - branch_addr;
 
     FixJumps(loop_break_addr, ir.len);
@@ -1036,13 +1027,13 @@ void bk_Parser::ParseFor()
     var_offset += 3;
 
     // Put iterator value on the stack
-    ir.Append({bk_Opcode::LoadLocalInt, {.i = it->offset - 2}});
+    ir.Append({bk_Opcode::LoadLocal, bk_PrimitiveKind::Integer, {.i = it->offset - 2}});
     it->type = bk_IntType;
 
     Size body_addr = ir.len;
 
-    ir.Append({bk_Opcode::LoadLocalInt, {.i = it->offset}});
-    ir.Append({bk_Opcode::LoadLocalInt, {.i = it->offset - 1}});
+    ir.Append({bk_Opcode::LoadLocal, bk_PrimitiveKind::Integer, {.i = it->offset}});
+    ir.Append({bk_Opcode::LoadLocal, bk_PrimitiveKind::Integer, {.i = it->offset - 1}});
     ir.Append({bk_Opcode::LessThanInt});
     ir.Append({bk_Opcode::BranchIfFalse});
 
@@ -1068,9 +1059,9 @@ void bk_Parser::ParseFor()
 
     FixJumps(loop_continue_addr, ir.len);
 
-    ir.Append({bk_Opcode::PushInt, {.i = 1}});
+    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = 1}});
     ir.Append({bk_Opcode::AddInt});
-    ir.Append({bk_Opcode::Jump, {.i = body_addr - ir.len}});
+    ir.Append({bk_Opcode::Jump, {}, {.i = body_addr - ir.len}});
     ir[body_addr + 3].u.i = ir.len - (body_addr + 3);
 
     FixJumps(loop_break_addr, ir.len);
@@ -1092,7 +1083,7 @@ void bk_Parser::ParseBreak()
 
     EmitPop(var_offset - loop_offset);
 
-    ir.Append({bk_Opcode::Jump, {.i = loop_break_addr}});
+    ir.Append({bk_Opcode::Jump, {}, {.i = loop_break_addr}});
     loop_break_addr = ir.len - 1;
 }
 
@@ -1107,7 +1098,7 @@ void bk_Parser::ParseContinue()
 
     EmitPop(var_offset - loop_offset);
 
-    ir.Append({bk_Opcode::Jump, {.i = loop_continue_addr}});
+    ir.Append({bk_Opcode::Jump, {}, {.i = loop_continue_addr}});
     loop_continue_addr = ir.len - 1;
 }
 
@@ -1127,7 +1118,7 @@ const bk_TypeInfo *bk_Parser::ParseType()
 
     // Once we start to implement constant folding and CTFE, more complex expressions
     // should work without any change here.
-    if (RG_UNLIKELY(ir[ir.len - 1].code != bk_Opcode::PushType)) {
+    if (RG_UNLIKELY(ir[ir.len - 1].code != bk_Opcode::Push)) {
         MarkError(type_pos, "Complex type expression cannot be resolved statically");
         return bk_NullType;
     }
@@ -1238,19 +1229,19 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
 
             switch (tok.kind) {
                 case bk_TokenKind::Null: {
-                    ir.Append({bk_Opcode::PushNull});
+                    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Null});
                     stack.Append({bk_NullType});
                 } break;
                 case bk_TokenKind::Bool: {
-                    ir.Append({bk_Opcode::PushBool, {.b = tok.u.b}});
+                    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Boolean, {.b = tok.u.b}});
                     stack.Append({bk_BoolType});
                 } break;
                 case bk_TokenKind::Integer: {
-                    ir.Append({bk_Opcode::PushInt, {.i = tok.u.i}});
+                    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = tok.u.i}});
                     stack.Append({bk_IntType});
                 } break;
                 case bk_TokenKind::Float: {
-                    ir.Append({bk_Opcode::PushFloat, {.d = tok.u.d}});
+                    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Float, {.d = tok.u.d}});
                     stack.Append({bk_FloatType});
                 } break;
                 case bk_TokenKind::String: { RG_UNREACHABLE(); } break;
@@ -1279,7 +1270,7 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                                 goto error;
                             }
 
-                            ir.Append({bk_Opcode::PushType, {.type = type}});
+                            ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = type}});
                             stack.Append({bk_TypeType});
                         }
                     }
@@ -1491,23 +1482,7 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
             default: { RG_UNREACHABLE(); } break;
         }
 
-        if (var->global) {
-            switch (var->type->primitive) {
-                case bk_PrimitiveKind::Null: {} break;
-                case bk_PrimitiveKind::Boolean: { ir.Append({bk_Opcode::CopyBool, {.i = var->offset}}); } break;
-                case bk_PrimitiveKind::Integer: { ir.Append({bk_Opcode::CopyInt, {.i = var->offset}}); } break;
-                case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::CopyFloat, {.i = var->offset}}); } break;
-                case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::CopyType, {.i = var->offset}}); } break;
-            }
-        } else {
-            switch (var->type->primitive) {
-                case bk_PrimitiveKind::Null: {} break;
-                case bk_PrimitiveKind::Boolean: { ir.Append({bk_Opcode::CopyLocalBool, {.i = var->offset}}); } break;
-                case bk_PrimitiveKind::Integer: { ir.Append({bk_Opcode::CopyLocalInt, {.i = var->offset}}); } break;
-                case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::CopyLocalFloat, {.i = var->offset}}); } break;
-                case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::CopyLocalType, {.i = var->offset}}); } break;
-            }
-        }
+        ir.Append({var->global ? bk_Opcode::Copy : bk_Opcode::CopyLocal, var->type->primitive, {.i = var->offset}});
     } else { // Other operators
         switch (op.kind) {
             case bk_TokenKind::Plus: {
@@ -1524,17 +1499,20 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
                     bk_Instruction *inst = &ir[ir.len - 1];
 
                     switch (inst->code) {
-                        case bk_Opcode::PushInt: {
-                            // In theory, this could overflow trying to negate INT64_MIN.. but we
-                            // we can't have INT64_MIN, because numeric literal tokens are always
-                            // positive. inst->u.i will flip between positive and negative values
-                            // if we encounter successive '-' unary operators (e.g. -----64).
-                            inst->u.i = -inst->u.i;
-                            success = true;
-                        } break;
-                        case bk_Opcode::PushFloat: {
-                            inst->u.d = -inst->u.d;
-                            success = true;
+                        case bk_Opcode::Push: {
+                            if (stack[stack.len - 1].type == bk_IntType) {
+                                // In theory, this could overflow trying to negate INT64_MIN.. but we
+                                // we can't have INT64_MIN, because numeric literal tokens are always
+                                // positive. inst->u.i will flip between positive and negative values
+                                // if we encounter successive '-' unary operators (e.g. -----64).
+                                inst->u.i = -inst->u.i;
+                                success = true;
+                            } else if (stack[stack.len - 1].type == bk_FloatType) {
+                                inst->u.d = -inst->u.d;
+                                success = true;
+                            } else {
+                                success = false;
+                            }
                         } break;
                         case bk_Opcode::NegateInt:
                         case bk_Opcode::NegateFloat: {
@@ -1696,28 +1674,10 @@ void bk_Parser::EmitLoad(const bk_VariableInfo &var)
         HintDefinition(&var, "Variable '%1' is defined here", var.name);
     }
 
-    if (!var.mut && (ir[var.ready_addr - 1].code == bk_Opcode::PushNull ||
-                     ir[var.ready_addr - 1].code == bk_Opcode::PushBool ||
-                     ir[var.ready_addr - 1].code == bk_Opcode::PushInt ||
-                     ir[var.ready_addr - 1].code == bk_Opcode::PushFloat ||
-                     ir[var.ready_addr - 1].code == bk_Opcode::PushType)) {
+    if (!var.mut && ir[var.ready_addr - 1].code == bk_Opcode::Push) {
         ir.Append(ir[var.ready_addr - 1]);
-    } else if (var.global) {
-        switch (var.type->primitive) {
-            case bk_PrimitiveKind::Null: { ir.Append({bk_Opcode::PushNull}); } break;
-            case bk_PrimitiveKind::Boolean: { ir.Append({bk_Opcode::LoadBool, {.i = var.offset}}); } break;
-            case bk_PrimitiveKind::Integer: { ir.Append({bk_Opcode::LoadInt, {.i = var.offset}}); } break;
-            case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::LoadFloat, {.i = var.offset}});} break;
-            case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::LoadType, {.i = var.offset}}); } break;
-        }
     } else {
-        switch (var.type->primitive) {
-            case bk_PrimitiveKind::Null: { ir.Append({bk_Opcode::PushNull}); } break;
-            case bk_PrimitiveKind::Boolean: { ir.Append({bk_Opcode::LoadLocalBool, {.i = var.offset}}); } break;
-            case bk_PrimitiveKind::Integer: { ir.Append({bk_Opcode::LoadLocalInt, {.i = var.offset}}); } break;
-            case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::LoadLocalFloat, {.i = var.offset}});} break;
-            case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::LoadLocalType, {.i = var.offset}}); } break;
-        }
+        ir.Append({var.global ? bk_Opcode::Load : bk_Opcode::LoadLocal, var.type->primitive, {.i = var.offset}});
     }
 
     stack.Append({var.type, &var});
@@ -1750,7 +1710,7 @@ bool bk_Parser::ParseCall(const char *name)
 
             if (func0->variadic && args.len >= func0->params.len) {
                 Size type_addr = ir.len;
-                ir.Append({bk_Opcode::PushType});
+                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type});
 
                 const bk_TypeInfo *type = ParseExpression(true).type;
                 args.Append({nullptr, type});
@@ -1766,7 +1726,7 @@ bool bk_Parser::ParseCall(const char *name)
         ConsumeToken(bk_TokenKind::RightParenthesis);
     }
     if (func0->variadic) {
-        ir.Append({bk_Opcode::PushInt, {.i = args.len - func0->params.len}});
+        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = args.len - func0->params.len}});
     }
 
     // Find appropriate overload. Variadic functions cannot be overloaded but it
@@ -1800,7 +1760,7 @@ bool bk_Parser::ParseCall(const char *name)
             EmitIntrinsic(name, call_addr, args);
         } break;
         case bk_FunctionInfo::Mode::Native: {
-            ir.Append({bk_Opcode::CallNative, {.func = func}});
+            ir.Append({bk_Opcode::CallNative, {}, {.func = func}});
         } break;
         case bk_FunctionInfo::Mode::Blik: {
             if (func->addr < 0) {
@@ -1813,7 +1773,7 @@ bool bk_Parser::ParseCall(const char *name)
                 }
             }
 
-            ir.Append({bk_Opcode::Call, {.func = func}});
+            ir.Append({bk_Opcode::Call, {}, {.func = func}});
         } break;
     }
     stack.Append({func->ret_type});
@@ -1842,7 +1802,7 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_addr, Span<const bk_Fu
         // typeOf() does not execute anything!
         TrimInstructions(ir.len - call_addr);
 
-        ir.Append({bk_Opcode::PushType, {.type = args[0].type}});
+        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = args[0].type}});
     } else {
         RG_UNREACHABLE();
     }
@@ -1865,28 +1825,12 @@ bool bk_Parser::ParseExpressionOfType(const bk_TypeInfo *type)
 void bk_Parser::DiscardResult()
 {
     switch (ir[ir.len - 1].code) {
-        case bk_Opcode::PushNull:
-        case bk_Opcode::PushBool:
-        case bk_Opcode::PushInt:
-        case bk_Opcode::PushFloat:
-        case bk_Opcode::PushType:
-        case bk_Opcode::LoadBool:
-        case bk_Opcode::LoadInt:
-        case bk_Opcode::LoadFloat:
-        case bk_Opcode::LoadType:
-        case bk_Opcode::LoadLocalBool:
-        case bk_Opcode::LoadLocalInt:
-        case bk_Opcode::LoadLocalFloat:
-        case bk_Opcode::LoadLocalType: { TrimInstructions(1); } break;
+        case bk_Opcode::Push:
+        case bk_Opcode::Load:
+        case bk_Opcode::LoadLocal: { TrimInstructions(1); } break;
 
-        case bk_Opcode::CopyBool: { ir[ir.len - 1].code = bk_Opcode::StoreBool; } break;
-        case bk_Opcode::CopyInt: { ir[ir.len - 1].code = bk_Opcode::StoreInt; } break;
-        case bk_Opcode::CopyFloat: { ir[ir.len - 1].code = bk_Opcode::StoreFloat; } break;
-        case bk_Opcode::CopyType: { ir[ir.len - 1].code = bk_Opcode::StoreType; } break;
-        case bk_Opcode::CopyLocalBool: { ir[ir.len - 1].code = bk_Opcode::StoreLocalBool; } break;
-        case bk_Opcode::CopyLocalInt: { ir[ir.len - 1].code = bk_Opcode::StoreLocalInt; } break;
-        case bk_Opcode::CopyLocalFloat: { ir[ir.len - 1].code = bk_Opcode::StoreLocalFloat; } break;
-        case bk_Opcode::CopyLocalType: { ir[ir.len - 1].code = bk_Opcode::StoreLocalType; } break;
+        case bk_Opcode::Copy: { ir[ir.len - 1].code = bk_Opcode::Store; } break;
+        case bk_Opcode::CopyLocal: { ir[ir.len - 1].code = bk_Opcode::StoreLocal; } break;
 
         default: { EmitPop(1); } break;
     }
@@ -1897,7 +1841,7 @@ void bk_Parser::EmitPop(int64_t count)
     RG_ASSERT(count >= 0);
 
     if (count) {
-        ir.Append({bk_Opcode::Pop, {.i = count}});
+        ir.Append({bk_Opcode::Pop, {}, {.i = count}});
     }
 }
 
@@ -1911,18 +1855,11 @@ void bk_Parser::EmitReturn()
 
         for (Size i = current_func->params.len - 1; i >= 0; i--) {
             const bk_FunctionInfo::Parameter &param = current_func->params[i];
-
-            switch (param.type->primitive) {
-                case bk_PrimitiveKind::Null: {} break;
-                case bk_PrimitiveKind::Boolean: { ir.Append({bk_Opcode::StoreLocalBool, {.i = i}}); } break;
-                case bk_PrimitiveKind::Integer: { ir.Append({bk_Opcode::StoreLocalInt, {.i = i}}); } break;
-                case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::StoreLocalFloat, {.i = i}}); } break;
-                case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::StoreLocalType, {.i = i}}); } break;
-            }
+            ir.Append({bk_Opcode::StoreLocal, param.type->primitive, {.i = i}});
         }
 
         EmitPop(var_offset - current_func->params.len);
-        ir.Append({bk_Opcode::Jump, {.i = current_func->addr - ir.len}});
+        ir.Append({bk_Opcode::Jump, {}, {.i = current_func->addr - ir.len}});
 
         current_func->tre = true;
     } else {

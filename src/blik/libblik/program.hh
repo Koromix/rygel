@@ -9,9 +9,10 @@
 namespace RG {
 
 struct bk_TypeInfo;
+struct bk_FunctionInfo;
 class bk_VirtualMachine;
 
-// Keep ordering in sync with Push* opcodes!
+// Keep ordering in sync with bk_BaseTypes
 enum class bk_PrimitiveKind {
     Null,
     Boolean,
@@ -25,6 +26,7 @@ union bk_PrimitiveValue {
     int64_t i;
     double d;
     const bk_TypeInfo *type;
+    const bk_FunctionInfo *func;
 };
 
 struct bk_TypeInfo {
@@ -106,17 +108,8 @@ static const char *const bk_OpcodeNames[] = {
 
 struct bk_Instruction {
     bk_Opcode code;
-    union {
-        bool b; // PushBool, Exit
-        int64_t i; // PushInteger, Pop,
-                   // StoreBool, StoreInt, StoreFloat, StoreString,
-                   // LoadBool, LoadInt, LoadFloat, LoadString,
-                   // Jump, BranchIfTrue, BranchIfFalse, Return
-        double d; // PushFloat
-        const char *str; // PushString
-        const bk_TypeInfo *type; // PushType
-        const bk_FunctionInfo *func; // Call
-    } u;
+    bk_PrimitiveKind primitive; // Only set for Push/Load/Store/Copy
+    bk_PrimitiveValue u;
 };
 
 struct bk_SourceInfo {
