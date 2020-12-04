@@ -2350,28 +2350,33 @@ FILE *OpenFile(const char *filename, unsigned int flags)
         return nullptr;
 
     int oflags = -1;
-    const char *mode = nullptr;
+    char mode[16];
     switch (flags & ((int)OpenFileFlag::Read |
                      (int)OpenFileFlag::Write |
                      (int)OpenFileFlag::Append)) {
         case (int)OpenFileFlag::Read: {
-            oflags = _O_RDONLY | _O_BINARY;
-            mode = "rbcN";
+            oflags = _O_RDONLY | _O_BINARY | _O_NOINHERIT;
+            strcpy(mode, "rbc");
         } break;
         case (int)OpenFileFlag::Write: {
-            oflags = _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY;
-            mode = "wbcN";
+            oflags = _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT;
+            strcpy(mode, "wbc");
         } break;
         case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: {
-            oflags = _O_RDWR | _O_CREAT | _O_TRUNC | _O_BINARY;
-            mode = "w+bcN";
+            oflags = _O_RDWR | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT;
+            strcpy(mode, "w+bc");
         } break;
         case (int)OpenFileFlag::Append: {
-            oflags = _O_WRONLY | _O_CREAT | _O_APPEND | _O_BINARY;
-            mode = "abcN";
+            oflags = _O_WRONLY | _O_CREAT | _O_APPEND | _O_BINARY | _O_NOINHERIT;
+            strcpy(mode, "abc");
         } break;
     }
     RG_ASSERT(oflags >= 0);
+
+#if !defined(__GNUC__) || defined(__clang__)
+    // The N modifier does not work in MinGW builds (because of old msvcrt?)
+    strcat(mode, "N");
+#endif
 
     if (flags & (int)OpenFileFlag::Exclusive) {
         oflags |= (int)_O_EXCL;
