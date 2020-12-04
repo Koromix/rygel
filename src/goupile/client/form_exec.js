@@ -717,10 +717,10 @@ let form_exec = new function() {
 
         // Workbook
         let wb = XLSX.utils.book_new();
-        let ws_name = `${env.app_key}_${dates.today()}`;
+        let ws_name = `export_${dates.today()}`;
         XLSX.utils.book_append_sheet(wb, ws, ws_name);
 
-        let filename = `export_${ws_name}.${format}`;
+        let filename = `${env.app_key}_${ws_name}.${format}`;
         switch (format) {
             case 'xlsx': { XLSX.writeFile(wb, filename); } break;
             case 'csv': { XLSX.writeFile(wb, filename, {FS: ';'}); } break;
