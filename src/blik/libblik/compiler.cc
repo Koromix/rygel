@@ -210,8 +210,11 @@ void bk_Compiler::AddFunction(const char *prototype, std::function<bk_NativeFunc
 
 void bk_Compiler::AddGlobal(const char *name, const bk_TypeInfo *type, bk_PrimitiveValue value, bool mut)
 {
-    RG_ASSERT(std::any_of(bk_BaseTypes.begin(), bk_BaseTypes.end(),
-                          [&](const bk_TypeInfo &it) { return &it == type; }));
+#ifndef NDEBUG
+    bool success = std::any_of(bk_BaseTypes.begin(), bk_BaseTypes.end(),
+                               [&](const bk_TypeInfo &it) { return &it == type; });
+    RG_ASSERT(success);
+#endif
 
     parser->AddGlobal(name, type, value, mut, bk_VariableInfo::Scope::Global);
 }
