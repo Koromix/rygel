@@ -480,8 +480,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                 if (keyword) {
                     // In order to have order-independent top-level functions, we need to parse
                     // their declarations first! Tell the parser where to look to help it.
-                    if (keyword->kind == bk_TokenKind::Func &&
-                            (!tokens.len || tokens[tokens.len - 1].kind == bk_TokenKind::EndOfLine)) {
+                    if (keyword->kind == bk_TokenKind::Func) {
                         file->funcs.Append(tokens.len);
                     }
 
