@@ -104,7 +104,7 @@ private:
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(const bk_TypeInfo *in_type, bk_Opcode code, const bk_TypeInfo *out_type);
     bool EmitOperator2(const bk_TypeInfo *in_type, bk_Opcode code, const bk_TypeInfo *out_type);
-    bool ParseCall(const bk_FunctionTypeInfo *func_type, const bk_FunctionInfo *func, bool overloaded);
+    bool ParseCall(const bk_FunctionTypeInfo *func_type, const bk_FunctionInfo *func, bool overload);
     void EmitIntrinsic(const char *name, Size call_addr, Span<const bk_TypeInfo *const> args);
     void EmitLoad(const bk_VariableInfo &var);
     bool ParseExpressionOfType(const bk_TypeInfo *type);
@@ -1408,12 +1408,12 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                                         RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Function);
 
                                         bk_FunctionInfo *func = (bk_FunctionInfo *)ir[ir.len - 1].u.func;
-                                        bool overloaded = (var->scope == bk_VariableInfo::Scope::Function);
+                                        bool overload = (var->scope == bk_VariableInfo::Scope::Function);
 
                                         TrimInstructions(1);
                                         stack.len--;
 
-                                        if (!ParseCall(var->type->AsFunctionType(), func, overloaded))
+                                        if (!ParseCall(var->type->AsFunctionType(), func, overload))
                                             goto error;
                                     } else {
                                         if (!ParseCall(var->type->AsFunctionType(), nullptr, false))
@@ -1845,7 +1845,7 @@ void bk_Parser::EmitLoad(const bk_VariableInfo &var)
 }
 
 // Don't try to call from outside ParseExpression()!
-bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_FunctionInfo *func, bool overloaded)
+bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_FunctionInfo *func, bool overload)
 {
     LocalArray<const bk_TypeInfo *, RG_LEN(bk_FunctionTypeInfo::params.data)> args;
 
@@ -1885,7 +1885,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
 
     // Find appropriate overload. Variadic functions cannot be overloaded but it
     // does not hurt to use the same logic to check argument types.
-    if (func && overloaded) {
+    if (func && overload) {
         const bk_FunctionInfo *func0 = func;
 
         while (!TestOverload(*func->type, args)) {
