@@ -638,7 +638,6 @@ bool MigrateInstance(sq_Database *db)
                                     success &= ParseInt(prop.value, &value);
                                     success &= db->Run(sql, "Application.MaxFileSize", value);
                                 } else if (prop.key == "SyncMode") {
-                                    // XXX: Empty strings?
                                     success &= db->Run(sql, "Application.SyncMode", prop.value);
                                 } else {
                                     LogError("Unknown attribute '%1'", prop.key);

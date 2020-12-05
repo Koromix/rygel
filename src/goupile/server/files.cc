@@ -216,7 +216,6 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
         // Copy and commit to database
         instance->db.Transaction([&]() {
-            // XXX: StreamX::Seek() (and Tell)
             Size file_len = ftell(fp);
             if (fseek(fp, 0, SEEK_SET) < 0) {
                 LogError("fseek('<temp>') failed: %1", strerror(errno));
