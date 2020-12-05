@@ -1915,12 +1915,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
             buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", args[i]->signature).len;
         }
 
-        if (func) {
-            MarkError(call_pos, "Cannot call '%1' with (%2) arguments", func->name, buf);
-            HintError(definitions_map.FindValue(func, -1), "Candidate '%1'", func->prototype);
-        } else {
-            MarkError(call_pos, "Cannot call function typed '%1' with (%2) arguments", func_type->signature, buf);
-        }
+        MarkError(call_pos, "Cannot call function typed '%1' with (%2) arguments", func_type->signature, buf);
         return false;
     }
 
