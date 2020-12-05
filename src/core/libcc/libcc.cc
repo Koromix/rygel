@@ -5442,7 +5442,7 @@ void ConsolePrompter::Prompt()
 
             if (x2 + width >= columns || str[i] == '\n') {
                 FmtArg prefix = FmtArg(str[i] == '\n' ? '.' : ' ').Repeat(prompt_columns - 1);
-                Print(stderr, "\x1B[0K\r\n%!D.+%1%!0 ", prefix);
+                Print(stderr, "\x1B[0K\r\n%!D.+%1%!0 %!..+", prefix);
 
                 x2 = prompt_columns;
                 rows++;
