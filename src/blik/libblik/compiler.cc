@@ -88,7 +88,7 @@ private:
     bool ParseStatement();
     bool ParseDo();
 
-    void ParseFunction();
+    void ParseFunction(const PrototypeInfo *proto);
     void ParseReturn();
     void ParseLet();
     bool ParseIf();
@@ -98,21 +98,23 @@ private:
     void ParseBreak();
     void ParseContinue();
 
-    const bk_TypeInfo *ParseType();
-
     StackSlot ParseExpression(bool tolerate_assign);
+    bool ParseExpression(const bk_TypeInfo *type);
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(const bk_TypeInfo *in_type, bk_Opcode code, const bk_TypeInfo *out_type);
     bool EmitOperator2(const bk_TypeInfo *in_type, bk_Opcode code, const bk_TypeInfo *out_type);
     bool ParseCall(const bk_FunctionTypeInfo *func_type, const bk_FunctionInfo *func, bool overload);
+    const bk_FunctionTypeInfo *ParseFunctionType();
     void EmitIntrinsic(const char *name, Size call_addr, Span<const bk_TypeInfo *const> args);
     void EmitLoad(const bk_VariableInfo &var);
-    bool ParseExpressionOfType(const bk_TypeInfo *type);
+
+    const bk_TypeInfo *ParseTypeExpression();
 
     void DiscardResult();
 
     void EmitPop(int64_t count);
     void EmitReturn();
+
     void DestroyVariables(Size count);
 
     void FixJumps(Size jump_addr, Size target_addr);
@@ -129,6 +131,8 @@ private:
     bool SkipNewLines();
 
     const char *InternString(const char *str);
+    template<typename T>
+    const bk_TypeInfo *InsertType(const T &type_buf, BucketArray<T> *out_types);
 
     template <typename... Args>
     void MarkError(Size pos, const char *fmt, Args... args)
@@ -479,12 +483,15 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
         pos = funcs[i] + 1;
         show_errors = true;
 
-        PrototypeInfo *proto = prototypes_map.SetDefault(pos);
+        if (MatchToken(bk_TokenKind::LeftParenthesis))
+            continue;
+
+        PrototypeInfo *proto = prototypes_map.SetDefault(funcs[i]);
         bk_FunctionInfo *func = program->functions.AppendDefault();
         definitions_map.Set(func, pos);
         prototypes.Append(proto);
 
-        proto->pos = pos;
+        proto->pos = funcs[i];
         proto->func = func;
         func->name = ConsumeIdentifier();
         func->mode = bk_FunctionInfo::Mode::Blik;
@@ -530,7 +537,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
                 }
 
                 ConsumeToken(bk_TokenKind::Colon);
-                var->type = ParseType();
+                var->type = ParseTypeExpression();
 
                 if (RG_LIKELY(func->params.Available())) {
                     bk_FunctionInfo::Parameter *param = func->params.AppendDefault();
@@ -564,7 +571,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
 
         // Return type
         if (MatchToken(bk_TokenKind::Colon)) {
-            type_buf.ret_type = ParseType();
+            type_buf.ret_type = ParseTypeExpression();
 
             if (type_buf.ret_type != bk_NullType) {
                 Fmt(&signature_buf, ": %1", type_buf.ret_type->signature);
@@ -583,21 +590,8 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
         proto->body_pos = pos;
 
         // Reuse or add function type
-        {
-            const bk_TypeInfo *type = program->types_map.FindValue(signature_buf.ptr, nullptr);
-
-            if (type) {
-                func->type = type->AsFunctionType();
-            } else {
-                type_buf.signature = InternString(signature_buf.ptr);
-
-                bk_FunctionTypeInfo *func_type = program->function_types.AppendDefault();
-                std::swap(*func_type, type_buf);
-                program->types_map.Set(func_type);
-
-                func->type = func_type;
-            }
-        }
+        type_buf.signature = InternString(signature_buf.ptr);
+        func->type = InsertType(type_buf, &program->function_types)->AsFunctionType();
         func->prototype = InternString(prototype_buf.ptr);
 
         // We don't know where it will live yet!
@@ -633,6 +627,22 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
         const bk_VariableInfo *var = AddGlobal(func.name, func.type, {.func = &func}, false, bk_VariableInfo::Scope::Function);
         definitions_map.Set(var, proto->pos);
     }
+}
+
+template<typename T>
+const bk_TypeInfo *bk_Parser::InsertType(const T &type_buf, BucketArray<T> *out_types)
+{
+    std::pair<const bk_TypeInfo **, bool> ret = program->types_map.TrySetDefault(type_buf.signature);
+
+    const bk_TypeInfo *type;
+    if (ret.second) {
+        type = out_types->Append(type_buf);
+        *ret.first = type;
+    } else {
+        type = *ret.first;
+    }
+
+    return type;
 }
 
 bool bk_Parser::ParseBlock()
@@ -684,7 +694,15 @@ bool bk_Parser::ParseStatement()
             }
         } break;
         case bk_TokenKind::Func: {
-            ParseFunction();
+            const PrototypeInfo *proto = prototypes_map.Find(pos);
+
+            if (proto) {
+                ParseFunction(proto);
+            } else {
+                ParseExpression(true);
+                DiscardResult();
+            }
+
             EndStatement();
         } break;
         case bk_TokenKind::Return: {
@@ -749,12 +767,9 @@ bool bk_Parser::ParseDo()
     }
 }
 
-void bk_Parser::ParseFunction()
+void bk_Parser::ParseFunction(const PrototypeInfo *proto)
 {
     Size func_pos = ++pos;
-
-    const PrototypeInfo *proto = prototypes_map.Find(func_pos);
-    RG_ASSERT(proto);
 
     bk_FunctionInfo *func = proto->func;
 
@@ -930,7 +945,7 @@ void bk_Parser::ParseLet()
 
         // Don't assign to var->type yet, so that ParseExpression() knows it
         // cannot use this variable.
-        const bk_TypeInfo *type = ParseType();
+        const bk_TypeInfo *type = ParseTypeExpression();
 
         if (MatchToken(bk_TokenKind::Assign)) {
             SkipNewLines();
@@ -985,7 +1000,7 @@ bool bk_Parser::ParseIf()
 {
     pos++;
 
-    ParseExpressionOfType(bk_BoolType);
+    ParseExpression(bk_BoolType);
 
     Size branch_addr = ir.len;
     ir.Append({bk_Opcode::BranchIfFalse});
@@ -1007,7 +1022,7 @@ bool bk_Parser::ParseIf()
                 ir[branch_addr].u.i = ir.len - branch_addr;
 
                 if (MatchToken(bk_TokenKind::If)) {
-                    ParseExpressionOfType(bk_BoolType);
+                    ParseExpression(bk_BoolType);
 
                     if (RG_LIKELY(EndStatement())) {
                         branch_addr = ir.len;
@@ -1045,7 +1060,7 @@ void bk_Parser::ParseWhile()
     // roughly like if (cond) { do { ... } while (cond) }.
     Size condition_addr = ir.len;
     Size condition_line_idx = src->lines.len;
-    ParseExpressionOfType(bk_BoolType);
+    ParseExpression(bk_BoolType);
 
     Size branch_addr = ir.len;
     ir.Append({bk_Opcode::BranchIfFalse});
@@ -1120,9 +1135,9 @@ void bk_Parser::ParseFor()
     }
 
     ConsumeToken(bk_TokenKind::In);
-    ParseExpressionOfType(bk_IntType);
+    ParseExpression(bk_IntType);
     ConsumeToken(bk_TokenKind::Colon);
-    ParseExpressionOfType(bk_IntType);
+    ParseExpression(bk_IntType);
 
     // Make sure start and end value remain on the stack
     var_offset += 3;
@@ -1201,33 +1216,6 @@ void bk_Parser::ParseContinue()
 
     ir.Append({bk_Opcode::Jump, {}, {.i = loop_continue_addr}});
     loop_continue_addr = ir.len - 1;
-}
-
-const bk_TypeInfo *bk_Parser::ParseType()
-{
-    Size type_pos = pos;
-
-    // Parse type expression
-    {
-        const bk_TypeInfo *type = ParseExpression(false).type;
-
-        if (RG_UNLIKELY(type != bk_TypeType)) {
-            MarkError(type_pos, "Expected a Type expression, not '%1'", type->signature);
-            return bk_NullType;
-        }
-    }
-
-    // Once we start to implement constant folding and CTFE, more complex expressions
-    // should work without any change here.
-    if (RG_UNLIKELY(ir[ir.len - 1].code != bk_Opcode::Push)) {
-        MarkError(type_pos, "Complex type expression cannot be resolved statically");
-        return bk_NullType;
-    }
-
-    const bk_TypeInfo *type = ir[ir.len - 1].u.type;
-    TrimInstructions(1);
-
-    return type;
 }
 
 static int GetOperatorPrecedence(bk_TokenKind kind, bool expect_unary)
@@ -1334,7 +1322,7 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
             }
         } else if (tok.kind == bk_TokenKind::Null || tok.kind == bk_TokenKind::Boolean ||
                    tok.kind == bk_TokenKind::Integer || tok.kind == bk_TokenKind::Float ||
-                   tok.kind == bk_TokenKind::Identifier) {
+                   tok.kind == bk_TokenKind::Func || tok.kind == bk_TokenKind::Identifier) {
             if (RG_UNLIKELY(!expect_value))
                 goto unexpected;
             expect_value = false;
@@ -1357,6 +1345,13 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                     stack.Append({bk_FloatType});
                 } break;
                 case bk_TokenKind::String: { RG_UNREACHABLE(); } break;
+
+                case bk_TokenKind::Func: {
+                    const bk_TypeInfo *type = ParseFunctionType();
+
+                    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = type}});
+                    stack.Append({bk_TypeType});
+                } break;
 
                 case bk_TokenKind::Identifier: {
                     const bk_VariableInfo *var = program->variables_map.FindValue(tok.u.str, nullptr);
@@ -1553,6 +1548,20 @@ error:
         pos++;
     };
     return {bk_NullType};
+}
+
+bool bk_Parser::ParseExpression(const bk_TypeInfo *expected_type)
+{
+    Size expr_pos = pos;
+
+    const bk_TypeInfo *type = ParseExpression(true).type;
+    if (RG_UNLIKELY(type != expected_type)) {
+        MarkError(expr_pos, "Expected expression result type to be '%1', not '%2'",
+                  expected_type->signature, type->signature);
+        return false;
+    }
+
+    return true;
 }
 
 void bk_Parser::ProduceOperator(const PendingOperator &op)
@@ -1935,6 +1944,63 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
     return true;
 }
 
+const bk_FunctionTypeInfo *bk_Parser::ParseFunctionType()
+{
+    bk_FunctionTypeInfo type_buf = {};
+    HeapArray<char> signature_buf;
+
+    type_buf.primitive = bk_PrimitiveKind::Function;
+    signature_buf.Append('(');
+
+    // Parameters
+    ConsumeToken(bk_TokenKind::LeftParenthesis);
+
+    if (!MatchToken(bk_TokenKind::RightParenthesis)) {
+        for (;;) {
+            SkipNewLines();
+
+            const bk_TypeInfo *type = ParseTypeExpression();
+
+            if (RG_LIKELY(type_buf.params.Available())) {
+                type_buf.params.Append(type);
+            } else {
+                MarkError(pos - 1, "Functions cannot have more than %1 parameters", RG_LEN(type_buf.params.data));
+            }
+            signature_buf.Append(type->signature);
+
+            if (MatchToken(bk_TokenKind::Comma)) {
+                signature_buf.Append(", ");
+            } else {
+                break;
+            }
+        }
+
+        SkipNewLines();
+        ConsumeToken(bk_TokenKind::RightParenthesis);
+    }
+    signature_buf.Append(')');
+
+    // Return type
+    if (MatchToken(bk_TokenKind::Colon)) {
+        type_buf.ret_type = ParseTypeExpression();
+
+        if (type_buf.ret_type != bk_NullType) {
+            Fmt(&signature_buf, ": %1", type_buf.ret_type->signature);
+        } else {
+            signature_buf.Append(0);
+        }
+    } else {
+        type_buf.ret_type = bk_NullType;
+        signature_buf.Append(0);
+    }
+
+    // Type is complete (in theory)
+    type_buf.signature = InternString(signature_buf.ptr);
+
+    const bk_FunctionTypeInfo *func_type = InsertType(type_buf, &program->function_types)->AsFunctionType();
+    return func_type;
+}
+
 void bk_Parser::EmitIntrinsic(const char *name, Size call_addr, Span<const bk_TypeInfo *const> args)
 {
     if (TestStr(name, "toFloat")) {
@@ -1962,18 +2028,31 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_addr, Span<const bk_Ty
     }
 }
 
-bool bk_Parser::ParseExpressionOfType(const bk_TypeInfo *type)
+const bk_TypeInfo *bk_Parser::ParseTypeExpression()
 {
-    Size expr_pos = pos;
+    Size type_pos = pos;
 
-    const bk_TypeInfo *type2 = ParseExpression(true).type;
-    if (RG_UNLIKELY(type2 != type)) {
-        MarkError(expr_pos, "Expected expression result type to be '%1', not '%2'",
-                  type->signature, type2->signature);
-        return false;
+    // Parse type expression
+    {
+        const bk_TypeInfo *type = ParseExpression(false).type;
+
+        if (RG_UNLIKELY(type != bk_TypeType)) {
+            MarkError(type_pos, "Expected a 'Type' expression, not '%1'", type->signature);
+            return bk_NullType;
+        }
     }
 
-    return true;
+    // Once we start to implement constant folding and CTFE, more complex expressions
+    // should work without any change here.
+    if (RG_UNLIKELY(ir[ir.len - 1].code != bk_Opcode::Push)) {
+        MarkError(type_pos, "Complex type expression cannot be resolved statically");
+        return bk_NullType;
+    }
+
+    const bk_TypeInfo *type = ir[ir.len - 1].u.type;
+    TrimInstructions(1);
+
+    return type;
 }
 
 void bk_Parser::DiscardResult()
