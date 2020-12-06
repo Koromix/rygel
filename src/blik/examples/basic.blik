@@ -131,10 +131,10 @@ printLn("fib(", fib_n, ") = ", fib(fib_n))
 # elles retournent alors la valeur null (seule valeur possible du type Null).
 # On remarque par ailleurs que les fonctions peuvent être appelés avant leur déclaration.
 
-let nn: Null = test()
+let nn: Null = testf()
 printLn(nn)
 
-func test()
+func testf()
     for j in 0:8
     end
 end
