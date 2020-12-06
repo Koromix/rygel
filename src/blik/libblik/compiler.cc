@@ -236,6 +236,7 @@ bk_Parser::bk_Parser(bk_Program *program)
     }
 
     // Special values
+    AddGlobal("Version", bk_StringType, bk_PrimitiveValue {.str = FelixVersion}, false, bk_VariableInfo::Scope::Global);
     AddGlobal("NaN", bk_FloatType, bk_PrimitiveValue {.d = (double)NAN}, false, bk_VariableInfo::Scope::Global);
     AddGlobal("Inf", bk_FloatType, bk_PrimitiveValue {.d = (double)INFINITY}, false, bk_VariableInfo::Scope::Global);
 
@@ -967,6 +968,7 @@ void bk_Parser::ParseLet()
                 case bk_PrimitiveKind::Boolean:
                 case bk_PrimitiveKind::Integer:
                 case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::Push, type->primitive}); } break;
+                case bk_PrimitiveKind::String: { ir.Append({bk_Opcode::Push, type->primitive, {.str = InternString("")}}); } break;
                 case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::Push, type->primitive, {.type = bk_NullType}}); } break;
                 case bk_PrimitiveKind::Function: {
                     MarkError(var_pos, "Variable '%1' (defined as '%2') must be explicitely initialized",
@@ -1324,7 +1326,8 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
             }
         } else if (tok.kind == bk_TokenKind::Null || tok.kind == bk_TokenKind::Boolean ||
                    tok.kind == bk_TokenKind::Integer || tok.kind == bk_TokenKind::Float ||
-                   tok.kind == bk_TokenKind::Func || tok.kind == bk_TokenKind::Identifier) {
+                   tok.kind == bk_TokenKind::String || tok.kind == bk_TokenKind::Func ||
+                   tok.kind == bk_TokenKind::Identifier) {
             if (RG_UNLIKELY(!expect_value))
                 goto unexpected;
             expect_value = false;
@@ -1346,7 +1349,10 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                     ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Float, {.d = tok.u.d}});
                     stack.Append({bk_FloatType});
                 } break;
-                case bk_TokenKind::String: { RG_UNREACHABLE(); } break;
+                case bk_TokenKind::String: {
+                    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::String, {.str = InternString(tok.u.str)}});
+                    stack.Append({bk_StringType});
+                } break;
 
                 case bk_TokenKind::Func: {
                     const bk_TypeInfo *type = ParseFunctionType();
@@ -1715,6 +1721,7 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
                 success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::EqualInt, bk_BoolType) ||
                           EmitOperator2(bk_PrimitiveKind::Float, bk_Opcode::EqualFloat, bk_BoolType) ||
                           EmitOperator2(bk_PrimitiveKind::Boolean, bk_Opcode::EqualBool, bk_BoolType) ||
+                          EmitOperator2(bk_PrimitiveKind::String, bk_Opcode::EqualString, bk_BoolType) ||
                           EmitOperator2(bk_PrimitiveKind::Type, bk_Opcode::EqualType, bk_BoolType) ||
                           EmitOperator2(bk_PrimitiveKind::Function, bk_Opcode::EqualFunc, bk_BoolType);
             } break;
@@ -1722,6 +1729,7 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
                 success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::NotEqualInt, bk_BoolType) ||
                           EmitOperator2(bk_PrimitiveKind::Float, bk_Opcode::NotEqualFloat, bk_BoolType) ||
                           EmitOperator2(bk_PrimitiveKind::Boolean, bk_Opcode::NotEqualBool, bk_BoolType) ||
+                          EmitOperator2(bk_PrimitiveKind::String, bk_Opcode::NotEqualString, bk_BoolType) ||
                           EmitOperator2(bk_PrimitiveKind::Type, bk_Opcode::NotEqualType, bk_BoolType) ||
                           EmitOperator2(bk_PrimitiveKind::Function, bk_Opcode::NotEqualFunc, bk_BoolType);
             } break;

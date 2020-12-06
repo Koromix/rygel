@@ -14,27 +14,19 @@ void bk_ImportAll(bk_Compiler *out_compiler)
     bk_ImportMath(out_compiler);
 }
 
-static void DoPrint1(const bk_TypeInfo *type, const bk_PrimitiveValue &value) {
-    switch (type->primitive) {
-        case bk_PrimitiveKind::Null: { Print("null"); } break;
-        case bk_PrimitiveKind::Boolean: { Print("%1", value.b); } break;
-        case bk_PrimitiveKind::Integer: { Print("%1", value.i); } break;
-        case bk_PrimitiveKind::Float: { Print("%1", FmtDouble(value.d, 1, INT_MAX)); } break;
-        case bk_PrimitiveKind::Type: { Print("%1", value.type->signature); } break;
-        case bk_PrimitiveKind::Function: { Print("%1", value.func->prototype); } break;
-    }
-}
-
 static bk_PrimitiveValue DoPrint(bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args)
 {
     RG_ASSERT(args.len % 2 == 0);
 
-    if (args.len) {
-        DoPrint1(args[0].type, args[1]);
-
-        for (Size i = 2; i < args.len; i += 2) {
-            Print(" ");
-            DoPrint1(args[i].type, args[i + 1]);
+    for (Size i = 0; i < args.len; i += 2) {
+        switch (args[i].type->primitive) {
+            case bk_PrimitiveKind::Null: { Print("null"); } break;
+            case bk_PrimitiveKind::Boolean: { Print("%1", args[i + 1].b); } break;
+            case bk_PrimitiveKind::Integer: { Print("%1", args[i + 1].i); } break;
+            case bk_PrimitiveKind::Float: { Print("%1", FmtDouble(args[i + 1].d, 1, INT_MAX)); } break;
+            case bk_PrimitiveKind::String: { Print("%1", args[i + 1].str); } break;
+            case bk_PrimitiveKind::Type: { Print("%1", args[i + 1].type->signature); } break;
+            case bk_PrimitiveKind::Function: { Print("%1", args[i + 1].func->prototype); } break;
         }
     }
 

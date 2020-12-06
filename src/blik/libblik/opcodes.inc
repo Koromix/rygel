@@ -60,6 +60,10 @@ OPCODE(NotBool)
 OPCODE(AndBool)
 OPCODE(OrBool)
 
+// String operators
+OPCODE(EqualString)
+OPCODE(NotEqualString)
+
 // Type operators
 OPCODE(EqualType)
 OPCODE(NotEqualType)

@@ -339,6 +339,20 @@ bool bk_VirtualMachine::Run()
             DISPATCH(++pc);
         }
 
+        CASE(EqualString): {
+            const char *str1 = stack[stack.len - 2].str;
+            const char *str2 = stack[stack.len - 1].str;
+            // Strings are interned so we only need to compare pointers
+            stack[--stack.len - 1].b = (str1 == str2);
+            DISPATCH(++pc);
+        }
+        CASE(NotEqualString): {
+            const bk_TypeInfo *type1 = stack[stack.len - 2].type;
+            const bk_TypeInfo *type2 = stack[stack.len - 1].type;
+            stack[--stack.len - 1].b = (type1 != type2);
+            DISPATCH(++pc);
+        }
+
         CASE(EqualType): {
             const bk_TypeInfo *type1 = stack[stack.len - 2].type;
             const bk_TypeInfo *type2 = stack[stack.len - 1].type;

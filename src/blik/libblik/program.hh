@@ -17,6 +17,7 @@ enum class bk_PrimitiveKind {
     Boolean,
     Integer,
     Float,
+    String,
     Type,
     Function
 };
@@ -25,6 +26,7 @@ static const char *const bk_PrimitiveKindNames[] = {
     "Boolean",
     "Integer",
     "Float",
+    "String",
     "Type",
     "Function"
 };
@@ -33,6 +35,7 @@ union bk_PrimitiveValue {
     bool b;
     int64_t i;
     double d;
+    const char *str;
     const bk_TypeInfo *type;
     const bk_FunctionInfo *func;
 };
@@ -60,6 +63,7 @@ extern const bk_TypeInfo *bk_NullType;
 extern const bk_TypeInfo *bk_BoolType;
 extern const bk_TypeInfo *bk_IntType;
 extern const bk_TypeInfo *bk_FloatType;
+extern const bk_TypeInfo *bk_StringType;
 extern const bk_TypeInfo *bk_TypeType;
 
 // XXX: Support native calling conventions to provide seamless integration
