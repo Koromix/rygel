@@ -340,26 +340,29 @@ void bk_Parser::AddFunction(const char *prototype, std::function<bk_NativeFuncti
 {
     bk_FunctionInfo *func = program->functions.AppendDefault();
 
-    char *ptr = DuplicateString(prototype, &program->str_alloc).ptr;
-    func->prototype = ptr;
+    // Reserve some space at the beginning to make sure we can replace the name with 'func '
+    HeapArray<char> buf;
+    char *ptr;
+    Fmt(&buf, "     %1", prototype);
+    ptr = buf.ptr + 5;
 
-    // Separate name and signature
+    // Function name and signature
     const char *signature;
     {
-        Size len = 0;
-        while (IsAsciiAlphaOrDigit(ptr[len]) || ptr[len] == '_') {
-            len++;
-        }
-        RG_ASSERT(ptr[len] == '(');
+        Size offset = strcspn(ptr, "(");
+        RG_ASSERT(offset > 0 && ptr[offset] == '(');
 
-        ptr[len] = 0;
+        ptr[offset] = 0;
         func->name = InternString(ptr);
-        ptr[len] = '(';
 
-        ptr += len;
-        signature = InternString(ptr);
+        ptr[offset] = '(';
+        memcpy(buf.ptr + offset, "func ", 5);
+        signature = InternString(buf.ptr + offset);
+
+        ptr += offset;
     }
 
+    func->prototype = InternString(prototype);
     func->mode = native ? bk_FunctionInfo::Mode::Native : bk_FunctionInfo::Mode::Intrinsic;
     func->native = native;
     func->addr = -1;
@@ -503,10 +506,9 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
 
         // Reset buffers
         signature_buf.RemoveFrom(0);
-        signature_buf.Append('(');
+        signature_buf.Append("func (");
         prototype_buf.RemoveFrom(0);
-        prototype_buf.Append(func->name);
-        prototype_buf.Append('(');
+        Fmt(&prototype_buf, "%1 (", func->name);
         type_buf.primitive = bk_PrimitiveKind::Function;
         type_buf.params.RemoveFrom(0);
 
@@ -1950,11 +1952,10 @@ const bk_FunctionTypeInfo *bk_Parser::ParseFunctionType()
     HeapArray<char> signature_buf;
 
     type_buf.primitive = bk_PrimitiveKind::Function;
-    signature_buf.Append('(');
+    signature_buf.Append("func (");
 
     // Parameters
     ConsumeToken(bk_TokenKind::LeftParenthesis);
-
     if (!MatchToken(bk_TokenKind::RightParenthesis)) {
         for (;;) {
             SkipNewLines();

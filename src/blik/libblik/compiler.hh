@@ -29,7 +29,7 @@ public:
     bool Compile(const bk_TokenizedFile &file, bk_CompileReport *out_report = nullptr);
     bool Compile(Span<const char> code, const char *filename, bk_CompileReport *out_report = nullptr);
 
-    void AddFunction(const char *signature, std::function<bk_NativeFunction> native);
+    void AddFunction(const char *prototype, std::function<bk_NativeFunction> native);
     void AddGlobal(const char *name, const bk_TypeInfo *type, bk_PrimitiveValue value, bool mut = false);
 };
 
