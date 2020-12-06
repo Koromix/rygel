@@ -202,3 +202,24 @@ end
 func factorial(n: Int): Int do return factorial(n, 1)
 
 printLn(factorial(18))
+
+# Tests fonctions et types
+
+let ttt = typeOf(printLn)
+let zzz = printLn
+let zzz2: ttt = printLn
+zzz("ALIASED printLn")
+zzz2("ALIASED printLn 2")
+
+func get_math_function(name: String): typeOf(asin)
+    if name == "asin" do return asin
+    if name == "acos" do return acos
+
+    printLn("Erroneous function name '", name, "'")
+    return fake_math_function
+end
+func fake_math_function(f: Float): Float do return NaN
+
+printLn("ASIN 0.5 = ", get_math_function("asin")(0.5))
+printLn("ACOS 0.5 = ", get_math_function("acos")(0.5))
+printLn("ERROR 0.5 = ", get_math_function("error")(0.5))
