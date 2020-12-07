@@ -1867,7 +1867,8 @@ void bk_Parser::EmitLoad(const bk_VariableInfo &var)
     }
 
     if (!var.mut && var.ready_addr > 0 && ir[var.ready_addr - 1].code == bk_Opcode::Push) {
-        ir.Append(ir[var.ready_addr - 1]);
+        bk_Instruction inst = ir[var.ready_addr - 1];
+        ir.Append(inst);
     } else if (var.scope != bk_VariableInfo::Scope::Local) {
         ir.Append({bk_Opcode::Load, var.type->primitive, {.i = var.offset}});
     } else {
