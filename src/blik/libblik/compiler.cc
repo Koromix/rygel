@@ -1523,10 +1523,12 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
     }
 
     if (RG_UNLIKELY(expect_value || parentheses)) {
-        if (out_report && valid) {
-            out_report->unexpected_eof = true;
+        if (valid) {
+            if (out_report) {
+                out_report->unexpected_eof = true;
+            }
+            MarkError(pos - 1, "Unexpected end of file, expected value or '('");
         }
-        MarkError(pos - 1, "Unexpected end of file, expected value or '('");
 
         goto error;
     }
@@ -2189,10 +2191,12 @@ bool bk_Parser::TestOverload(const bk_FunctionTypeInfo &func_type, Span<const bk
 bool bk_Parser::ConsumeToken(bk_TokenKind kind)
 {
     if (RG_UNLIKELY(pos >= tokens.len)) {
-        if (out_report && valid) {
-            out_report->unexpected_eof = true;
+        if (valid) {
+            if (out_report) {
+                out_report->unexpected_eof = true;
+            }
+            MarkError(pos, "Unexpected end of file, expected '%1'", bk_TokenKindNames[(int)kind]);
         }
-        MarkError(pos, "Unexpected end of file, expected '%1'", bk_TokenKindNames[(int)kind]);
 
         return false;
     }
@@ -2234,7 +2238,13 @@ bool bk_Parser::PeekToken(bk_TokenKind kind)
 bool bk_Parser::EndStatement()
 {
     if (RG_UNLIKELY(pos >= tokens.len)) {
-        MarkError(pos, "Unexpected end of file, expected end of statement");
+        if (valid) {
+            if (out_report) {
+                out_report->unexpected_eof = true;
+            }
+            MarkError(pos, "Unexpected end of file, expected end of statement");
+        }
+
         return false;
     }
 
