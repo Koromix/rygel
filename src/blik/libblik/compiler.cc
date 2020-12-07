@@ -1295,233 +1295,267 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
     while (RG_LIKELY(pos < tokens.len)) {
         const bk_Token &tok = tokens[pos++];
 
-        if (tok.kind == bk_TokenKind::LeftParenthesis) {
-            if (RG_UNLIKELY(!expect_value)) {
-                if (stack[stack.len - 1].type->primitive == bk_PrimitiveKind::Function) {
-                    const bk_FunctionTypeInfo *func_type = stack[stack.len - 1].type->AsFunctionType();
+        switch (tok.kind) {
+            case bk_TokenKind::LeftParenthesis: {
+                if (RG_UNLIKELY(!expect_value)) {
+                    if (stack[stack.len - 1].type->primitive == bk_PrimitiveKind::Function) {
+                        const bk_FunctionTypeInfo *func_type = stack[stack.len - 1].type->AsFunctionType();
 
-                    if (!ParseCall(func_type, nullptr, false))
-                        goto error;
-                } else {
-                    goto unexpected;
-                }
-            } else {
-                operators.Append({tok.kind});
-                parentheses++;
-            }
-        } else if (parentheses && tok.kind == bk_TokenKind::RightParenthesis) {
-            if (RG_UNLIKELY(expect_value))
-                goto unexpected;
-            expect_value = false;
-
-            for (;;) {
-                const PendingOperator &op = operators.data[operators.len - 1];
-
-                if (op.kind == bk_TokenKind::LeftParenthesis) {
-                    operators.len--;
-                    parentheses--;
-                    break;
-                }
-
-                ProduceOperator(op);
-                operators.len--;
-            }
-        } else if (tok.kind == bk_TokenKind::Null || tok.kind == bk_TokenKind::Boolean ||
-                   tok.kind == bk_TokenKind::Integer || tok.kind == bk_TokenKind::Float ||
-                   tok.kind == bk_TokenKind::String || tok.kind == bk_TokenKind::Func ||
-                   tok.kind == bk_TokenKind::Identifier) {
-            if (RG_UNLIKELY(!expect_value))
-                goto unexpected;
-            expect_value = false;
-
-            switch (tok.kind) {
-                case bk_TokenKind::Null: {
-                    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Null});
-                    stack.Append({bk_NullType});
-                } break;
-                case bk_TokenKind::Boolean: {
-                    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Boolean, {.b = tok.u.b}});
-                    stack.Append({bk_BoolType});
-                } break;
-                case bk_TokenKind::Integer: {
-                    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = tok.u.i}});
-                    stack.Append({bk_IntType});
-                } break;
-                case bk_TokenKind::Float: {
-                    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Float, {.d = tok.u.d}});
-                    stack.Append({bk_FloatType});
-                } break;
-                case bk_TokenKind::String: {
-                    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::String, {.str = InternString(tok.u.str)}});
-                    stack.Append({bk_StringType});
-                } break;
-
-                case bk_TokenKind::Func: {
-                    const bk_TypeInfo *type = ParseFunctionType();
-
-                    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = type}});
-                    stack.Append({bk_TypeType});
-                } break;
-
-                case bk_TokenKind::Identifier: {
-                    const bk_VariableInfo *var = program->variables_map.FindValue(tok.u.str, nullptr);
-                    Size var_pos = pos - 1;
-                    bool call = MatchToken(bk_TokenKind::LeftParenthesis);
-
-                    if (RG_LIKELY(var)) {
-                        show_errors &= !poisoned_set.Find(var);
-
-                        if (RG_LIKELY(var->type)) {
-                            EmitLoad(*var);
-
-                            if (var->scope == bk_VariableInfo::Scope::Module) {
-                                if (var->type->primitive == bk_PrimitiveKind::Function) {
-                                    RG_ASSERT(ir[ir.len - 1].code == bk_Opcode::Push &&
-                                              ir[ir.len - 1].primitive == bk_PrimitiveKind::Function);
-
-                                    bk_FunctionInfo *func = (bk_FunctionInfo *)ir[ir.len - 1].u.func;
-
-                                    if (current_func && current_func != func) {
-                                        func->earliest_ref_pos = std::min(func->earliest_ref_pos, current_func->earliest_ref_pos);
-                                        func->earliest_ref_addr = std::min(func->earliest_ref_addr, current_func->earliest_ref_addr);
-                                    } else {
-                                        func->earliest_ref_pos = std::min(func->earliest_ref_pos, var_pos);
-                                        func->earliest_ref_addr = std::min(func->earliest_ref_addr, ir.len);
-                                    }
-
-                                    if (!call) {
-                                        if (RG_UNLIKELY(func->overload_next != func)) {
-                                            MarkError(var_pos, "Ambiguous reference to overloaded function '%1'", var->name);
-
-                                            // Show all candidate functions with same name
-                                            const bk_FunctionInfo *it = func;
-                                            do {
-                                                HintError(definitions_map.FindValue(it, -1), "Candidate '%1'", it->prototype);
-                                                it = it->overload_next;
-                                            } while (it != func);
-
-                                            goto error;
-                                        } else if (RG_UNLIKELY(func->mode == bk_FunctionInfo::Mode::Intrinsic)) {
-                                            MarkError(var_pos, "Intrinsic functions can only be called directly");
-                                            goto error;
-                                        }
-                                    }
-                                }
-                            } else if (RG_UNLIKELY(preparse)) {
-                                MarkError(var_pos, "Top-level declaration (prototype) cannot reference variable '%1'", var->name);
-                                goto error;
-                            }
-
-                            if (call) {
-                                if (RG_LIKELY(var->type->primitive == bk_PrimitiveKind::Function)) {
-                                    if (ir[ir.len - 1].code == bk_Opcode::Push) {
-                                        RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Function);
-
-                                        bk_FunctionInfo *func = (bk_FunctionInfo *)ir[ir.len - 1].u.func;
-                                        bool overload = (var->scope == bk_VariableInfo::Scope::Module);
-
-                                        TrimInstructions(1);
-                                        stack.len--;
-
-                                        if (!ParseCall(var->type->AsFunctionType(), func, overload))
-                                            goto error;
-                                    } else {
-                                        if (!ParseCall(var->type->AsFunctionType(), nullptr, false))
-                                            goto error;
-                                    }
-                                } else {
-                                    MarkError(var_pos, "Variable '%1' is not a function and cannot be called", var->name);
-                                    goto error;
-                                }
-                            }
-                        } else {
-                            MarkError(var_pos, "Cannot use variable '%1' before it is defined", var->name);
+                        if (!ParseCall(func_type, nullptr, false))
                             goto error;
-                        }
                     } else {
-                        MarkError(var_pos, "Reference to unknown identifier '%1'", tok.u.str);
-                        if (preparse) {
-                            HintError(-1, "Top-level declaration (prototype) cannot reference variables");
-                        }
-                        goto error;
-                    }
-                } break;
-
-                default: { RG_UNREACHABLE(); } break;
-            }
-        } else {
-            PendingOperator op = {};
-
-            op.kind = tok.kind;
-            op.prec = GetOperatorPrecedence(tok.kind, expect_value);
-            op.unary = expect_value;
-            op.pos = pos - 1;
-
-            // Not an operator? There's a few cases to deal with, including a perfectly
-            // valid one: end of expression!
-            if (op.prec < 0) {
-                if (RG_UNLIKELY(pos == prev_offset + 1)) {
-                    MarkError(pos - 1, "Unexpected token '%1', expected value or expression",
-                              bk_TokenKindNames[(int)tokens[pos - 1].kind]);
-                    goto error;
-                } else if (RG_UNLIKELY(expect_value || parentheses)) {
-                    pos--;
-                    if (RG_LIKELY(SkipNewLines())) {
-                        continue;
-                    } else {
-                        pos++;
                         goto unexpected;
                     }
-                } else if (RG_UNLIKELY(tolerate_assign && tok.kind == bk_TokenKind::Assign)) {
-                    MarkError(pos - 1, "Unexpected token '=', did you mean '==' or ':='?");
-
-                    // Pretend the user meant '==' to recover
-                    op.kind = bk_TokenKind::Equal;
-                    op.prec = GetOperatorPrecedence(bk_TokenKind::Equal, expect_value);
                 } else {
-                    pos--;
-                    break;
+                    operators.Append({tok.kind});
+                    parentheses++;
                 }
-            }
+            } break;
+            case bk_TokenKind::RightParenthesis: {
+                if (RG_UNLIKELY(expect_value))
+                    goto unexpected;
+                expect_value = false;
 
-            if (expect_value != op.unary)
-                goto unexpected;
-            expect_value = true;
+                if (!parentheses) {
+                    if (RG_UNLIKELY(pos == prev_offset + 1)) {
+                        MarkError(pos - 1, "Unexpected token ')', expected value or expression",
+                                  bk_TokenKindNames[(int)tokens[pos - 1].kind]);
+                        goto error;
+                    } else {
+                        pos--;
+                        goto end;
+                    }
+                }
 
-            while (operators.len) {
-                const PendingOperator &op2 = operators[operators.len - 1];
-                bool right_associative = (op2.unary || op2.kind == bk_TokenKind::Reassign);
+                for (;;) {
+                    const PendingOperator &op = operators.data[operators.len - 1];
 
-                if (op2.kind == bk_TokenKind::LeftParenthesis)
-                    break;
-                if (op2.prec - right_associative < op.prec)
-                    break;
+                    if (op.kind == bk_TokenKind::LeftParenthesis) {
+                        operators.len--;
+                        parentheses--;
+                        break;
+                    }
 
-                ProduceOperator(op2);
-                operators.len--;
-            }
+                    ProduceOperator(op);
+                    operators.len--;
+                }
+            } break;
 
-            if (tok.kind == bk_TokenKind::Reassign) {
-                // Remove useless load instruction. We don't remove the variable from
-                // stack slots,  because it will be needed when we emit the store instruction
-                // and will be removed then.
-                TrimInstructions(1);
-            } else if (tok.kind == bk_TokenKind::AndAnd) {
-                op.branch_addr = ir.len;
-                ir.Append({bk_Opcode::SkipIfFalse});
-            } else if (tok.kind == bk_TokenKind::OrOr) {
-                op.branch_addr = ir.len;
-                ir.Append({bk_Opcode::SkipIfTrue});
-            }
+            case bk_TokenKind::Null: {
+                if (RG_UNLIKELY(!expect_value))
+                    goto unexpected;
+                expect_value = false;
 
-            if (RG_UNLIKELY(!operators.Available())) {
-                MarkError(pos - 1, "Too many operators on the stack (compiler limitation)");
-                goto error;
-            }
-            operators.Append(op);
+                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Null});
+                stack.Append({bk_NullType});
+            } break;
+            case bk_TokenKind::Boolean: {
+                if (RG_UNLIKELY(!expect_value))
+                    goto unexpected;
+                expect_value = false;
+
+                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Boolean, {.b = tok.u.b}});
+                stack.Append({bk_BoolType});
+            } break;
+            case bk_TokenKind::Integer: {
+                if (RG_UNLIKELY(!expect_value))
+                    goto unexpected;
+                expect_value = false;
+
+                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = tok.u.i}});
+                stack.Append({bk_IntType});
+            } break;
+            case bk_TokenKind::Float: {
+                if (RG_UNLIKELY(!expect_value))
+                    goto unexpected;
+                expect_value = false;
+
+                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Float, {.d = tok.u.d}});
+                stack.Append({bk_FloatType});
+            } break;
+            case bk_TokenKind::String: {
+                if (RG_UNLIKELY(!expect_value))
+                    goto unexpected;
+                expect_value = false;
+
+                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::String, {.str = InternString(tok.u.str)}});
+                stack.Append({bk_StringType});
+            } break;
+
+            case bk_TokenKind::Func: {
+                if (RG_UNLIKELY(!expect_value))
+                    goto unexpected;
+                expect_value = false;
+
+                const bk_TypeInfo *type = ParseFunctionType();
+
+                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = type}});
+                stack.Append({bk_TypeType});
+            } break;
+
+            case bk_TokenKind::Identifier: {
+                if (RG_UNLIKELY(!expect_value))
+                    goto unexpected;
+                expect_value = false;
+
+                const bk_VariableInfo *var = program->variables_map.FindValue(tok.u.str, nullptr);
+                Size var_pos = pos - 1;
+                bool call = MatchToken(bk_TokenKind::LeftParenthesis);
+
+                if (RG_LIKELY(var)) {
+                    show_errors &= !poisoned_set.Find(var);
+
+                    if (RG_LIKELY(var->type)) {
+                        EmitLoad(*var);
+
+                        if (var->scope == bk_VariableInfo::Scope::Module) {
+                            if (var->type->primitive == bk_PrimitiveKind::Function) {
+                                RG_ASSERT(ir[ir.len - 1].code == bk_Opcode::Push &&
+                                          ir[ir.len - 1].primitive == bk_PrimitiveKind::Function);
+
+                                bk_FunctionInfo *func = (bk_FunctionInfo *)ir[ir.len - 1].u.func;
+
+                                if (current_func && current_func != func) {
+                                    func->earliest_ref_pos = std::min(func->earliest_ref_pos, current_func->earliest_ref_pos);
+                                    func->earliest_ref_addr = std::min(func->earliest_ref_addr, current_func->earliest_ref_addr);
+                                } else {
+                                    func->earliest_ref_pos = std::min(func->earliest_ref_pos, var_pos);
+                                    func->earliest_ref_addr = std::min(func->earliest_ref_addr, ir.len);
+                                }
+
+                                if (!call) {
+                                    if (RG_UNLIKELY(func->overload_next != func)) {
+                                        MarkError(var_pos, "Ambiguous reference to overloaded function '%1'", var->name);
+
+                                        // Show all candidate functions with same name
+                                        const bk_FunctionInfo *it = func;
+                                        do {
+                                            HintError(definitions_map.FindValue(it, -1), "Candidate '%1'", it->prototype);
+                                            it = it->overload_next;
+                                        } while (it != func);
+
+                                        goto error;
+                                    } else if (RG_UNLIKELY(func->mode == bk_FunctionInfo::Mode::Intrinsic)) {
+                                        MarkError(var_pos, "Intrinsic functions can only be called directly");
+                                        goto error;
+                                    }
+                                }
+                            }
+                        } else if (RG_UNLIKELY(preparse)) {
+                            MarkError(var_pos, "Top-level declaration (prototype) cannot reference variable '%1'", var->name);
+                            goto error;
+                        }
+
+                        if (call) {
+                            if (RG_LIKELY(var->type->primitive == bk_PrimitiveKind::Function)) {
+                                if (ir[ir.len - 1].code == bk_Opcode::Push) {
+                                    RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Function);
+
+                                    bk_FunctionInfo *func = (bk_FunctionInfo *)ir[ir.len - 1].u.func;
+                                    bool overload = (var->scope == bk_VariableInfo::Scope::Module);
+
+                                    TrimInstructions(1);
+                                    stack.len--;
+
+                                    if (!ParseCall(var->type->AsFunctionType(), func, overload))
+                                        goto error;
+                                } else {
+                                    if (!ParseCall(var->type->AsFunctionType(), nullptr, false))
+                                        goto error;
+                                }
+                            } else {
+                                MarkError(var_pos, "Variable '%1' is not a function and cannot be called", var->name);
+                                goto error;
+                            }
+                        }
+                    } else {
+                        MarkError(var_pos, "Cannot use variable '%1' before it is defined", var->name);
+                        goto error;
+                    }
+                } else {
+                    MarkError(var_pos, "Reference to unknown identifier '%1'", tok.u.str);
+                    if (preparse) {
+                        HintError(-1, "Top-level declaration (prototype) cannot reference variables");
+                    }
+                    goto error;
+                }
+            } break;
+
+            default: {
+                PendingOperator op = {};
+
+                op.kind = tok.kind;
+                op.prec = GetOperatorPrecedence(tok.kind, expect_value);
+                op.unary = expect_value;
+                op.pos = pos - 1;
+
+                // Not an operator? There's a few cases to deal with, including a perfectly
+                // valid one: end of expression!
+                if (op.prec < 0) {
+                    if (RG_UNLIKELY(pos == prev_offset + 1)) {
+                        MarkError(pos - 1, "Unexpected token '%1', expected value or expression",
+                                  bk_TokenKindNames[(int)tokens[pos - 1].kind]);
+                        goto error;
+                    } else if (RG_UNLIKELY(expect_value || parentheses)) {
+                        pos--;
+                        if (RG_LIKELY(SkipNewLines())) {
+                            continue;
+                        } else {
+                            pos++;
+                            goto unexpected;
+                        }
+                    } else if (RG_UNLIKELY(tolerate_assign && tok.kind == bk_TokenKind::Assign)) {
+                        MarkError(pos - 1, "Unexpected token '=', did you mean '==' or ':='?");
+
+                        // Pretend the user meant '==' to recover
+                        op.kind = bk_TokenKind::Equal;
+                        op.prec = GetOperatorPrecedence(bk_TokenKind::Equal, expect_value);
+                    } else {
+                        pos--;
+                        goto end;
+                    }
+                }
+
+                if (expect_value != op.unary)
+                    goto unexpected;
+                expect_value = true;
+
+                while (operators.len) {
+                    const PendingOperator &op2 = operators[operators.len - 1];
+                    bool right_associative = (op2.unary || op2.kind == bk_TokenKind::Reassign);
+
+                    if (op2.kind == bk_TokenKind::LeftParenthesis)
+                        break;
+                    if (op2.prec - right_associative < op.prec)
+                        break;
+
+                    ProduceOperator(op2);
+                    operators.len--;
+                }
+
+                if (tok.kind == bk_TokenKind::Reassign) {
+                    // Remove useless load instruction. We don't remove the variable from
+                    // stack slots,  because it will be needed when we emit the store instruction
+                    // and will be removed then.
+                    TrimInstructions(1);
+                } else if (tok.kind == bk_TokenKind::AndAnd) {
+                    op.branch_addr = ir.len;
+                    ir.Append({bk_Opcode::SkipIfFalse});
+                } else if (tok.kind == bk_TokenKind::OrOr) {
+                    op.branch_addr = ir.len;
+                    ir.Append({bk_Opcode::SkipIfTrue});
+                }
+
+                if (RG_UNLIKELY(!operators.Available())) {
+                    MarkError(pos - 1, "Too many operators on the stack (compiler limitation)");
+                    goto error;
+                }
+                operators.Append(op);
+            } break;
         }
     }
 
+end:
     if (RG_UNLIKELY(expect_value || parentheses)) {
         if (valid) {
             if (out_report) {
@@ -1544,6 +1578,8 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
 
 unexpected:
     pos--;
+
+    // Issue error message
     {
         const char *expected;
         if (expect_value) {
@@ -1556,6 +1592,7 @@ unexpected:
 
         MarkError(pos, "Unexpected token '%1', expected %2", bk_TokenKindNames[(int)tokens[pos].kind], expected);
     }
+
 error:
     // The goal of this loop is to skip expression until we get to "do" (which is used
     // for single-line constructs) or end of line (which starts a block in some cases,
