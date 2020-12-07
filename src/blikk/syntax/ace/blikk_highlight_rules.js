@@ -30,7 +30,7 @@ var blikkHighlightRules = function() {
             regex: /<<=?|>>=?|&&|\|\||[:*%\/+\-&\^|~!<>=]=?/
         }, {
             token: "storage.type",
-            regex: "(Null|Bool|Int|Float)\\b"
+            regex: "(Null|Bool|Int|Float|String|Type)\\b"
         }, {
             token: "constant.language",
             regex: "(?:true|false|null)\\b"
