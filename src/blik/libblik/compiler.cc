@@ -39,6 +39,7 @@ class bk_Parser {
     // All these members are relevant to the current parse only, and get resetted each time
     const bk_TokenizedFile *file;
     bk_CompileReport *out_report; // Can be NULL
+    bool preparse;
     Span<const bk_Token> tokens;
     Size pos;
     Size prev_ir_len;
@@ -57,7 +58,6 @@ class bk_Parser {
     int depth = 0;
 
     Size var_offset = 0;
-
     Size loop_offset = -1;
     Size loop_break_addr = -1;
     Size loop_continue_addr = -1;
@@ -231,7 +231,7 @@ bk_Parser::bk_Parser(bk_Program *program)
 
     // Base types
     for (const bk_TypeInfo &type: bk_BaseTypes) {
-        AddGlobal(type.signature, bk_TypeType, {.type = &type}, false, bk_VariableInfo::Scope::Global);
+        AddGlobal(type.signature, bk_TypeType, {.type = &type}, false, bk_VariableInfo::Scope::Module);
         program->types_map.Set(&type);
     }
 
@@ -310,10 +310,12 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
     src = program->sources.AppendDefault();
     src->filename = DuplicateString(file.filename, &program->str_alloc).ptr;
 
-    // We want top-level order-independent functions
+    // Preparse (top-level order-independence)
+    preparse = true;
     ParsePrototypes(file.funcs);
 
     // Do the actual parsing!
+    preparse = false;
     src->lines.Append({ir.len, 0});
     while (RG_LIKELY(pos < tokens.len)) {
         ParseStatement();
@@ -445,7 +447,7 @@ void bk_Parser::AddFunction(const char *prototype, std::function<bk_NativeFuncti
             func->overload_prev = func;
             func->overload_next = func;
 
-            AddGlobal(func->name, func->type, {.func = func}, false, bk_VariableInfo::Scope::Function);
+            AddGlobal(func->name, func->type, {.func = func}, false, bk_VariableInfo::Scope::Module);
         }
     }
 }
@@ -627,7 +629,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
     // Publish function symbols
     for (const PrototypeInfo *proto: prototypes) {
         const bk_FunctionInfo &func = *proto->func;
-        const bk_VariableInfo *var = AddGlobal(func.name, func.type, {.func = &func}, false, bk_VariableInfo::Scope::Function);
+        const bk_VariableInfo *var = AddGlobal(func.name, func.type, {.func = &func}, false, bk_VariableInfo::Scope::Module);
         definitions_map.Set(var, proto->pos);
     }
 }
@@ -818,7 +820,7 @@ void bk_Parser::ParseFunction(const PrototypeInfo *proto)
 
             // We should already have issued an error message for the other case (duplicate
             // parameter name) in ParsePrototypes().
-            if (prev_var->scope == bk_VariableInfo::Scope::Function) {
+            if (prev_var->scope == bk_VariableInfo::Scope::Module && prev_var->type->primitive == bk_PrimitiveKind::Function) {
                 MarkError(param_pos, "Parameter '%1' is not allowed to hide function", var->name);
                 HintDefinition(prev_var, "Function '%1' is defined here", prev_var->name);
             } else if (prev_var->scope == bk_VariableInfo::Scope::Global) {
@@ -924,7 +926,7 @@ void bk_Parser::ParseLet()
         const bk_VariableInfo *prev_var = *ret.first;
         var->shadow = prev_var;
 
-        if (prev_var->scope == bk_VariableInfo::Scope::Function) {
+        if (prev_var->scope == bk_VariableInfo::Scope::Module && prev_var->type->primitive == bk_PrimitiveKind::Function) {
             MarkError(var_pos, "Declaration '%1' is not allowed to hide function", var->name);
             HintDefinition(prev_var, "Function '%1' is defined here", prev_var->name);
         } else if (current_func && prev_var->scope == bk_VariableInfo::Scope::Global) {
@@ -1124,7 +1126,7 @@ void bk_Parser::ParseFor()
         const bk_VariableInfo *prev_var = *ret.first;
         it->shadow = prev_var;
 
-        if (prev_var->scope == bk_VariableInfo::Scope::Function) {
+        if (prev_var->scope == bk_VariableInfo::Scope::Module && prev_var->type->primitive == bk_PrimitiveKind::Function) {
             MarkError(for_pos, "Iterator '%1' is not allowed to hide function", it->name);
             HintDefinition(prev_var, "Function '%1' is defined here", prev_var->name);
         } else if (current_func && prev_var->scope == bk_VariableInfo::Scope::Global) {
@@ -1372,37 +1374,42 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                         if (RG_LIKELY(var->type)) {
                             EmitLoad(*var);
 
-                            if (var->scope == bk_VariableInfo::Scope::Function) {
-                                RG_ASSERT(ir[ir.len - 1].code == bk_Opcode::Push &&
-                                          ir[ir.len - 1].primitive == bk_PrimitiveKind::Function);
+                            if (var->scope == bk_VariableInfo::Scope::Module) {
+                                if (var->type->primitive == bk_PrimitiveKind::Function) {
+                                    RG_ASSERT(ir[ir.len - 1].code == bk_Opcode::Push &&
+                                              ir[ir.len - 1].primitive == bk_PrimitiveKind::Function);
 
-                                bk_FunctionInfo *func = (bk_FunctionInfo *)ir[ir.len - 1].u.func;
+                                    bk_FunctionInfo *func = (bk_FunctionInfo *)ir[ir.len - 1].u.func;
 
-                                if (current_func && current_func != func) {
-                                    func->earliest_ref_pos = std::min(func->earliest_ref_pos, current_func->earliest_ref_pos);
-                                    func->earliest_ref_addr = std::min(func->earliest_ref_addr, current_func->earliest_ref_addr);
-                                } else {
-                                    func->earliest_ref_pos = std::min(func->earliest_ref_pos, var_pos);
-                                    func->earliest_ref_addr = std::min(func->earliest_ref_addr, ir.len);
-                                }
+                                    if (current_func && current_func != func) {
+                                        func->earliest_ref_pos = std::min(func->earliest_ref_pos, current_func->earliest_ref_pos);
+                                        func->earliest_ref_addr = std::min(func->earliest_ref_addr, current_func->earliest_ref_addr);
+                                    } else {
+                                        func->earliest_ref_pos = std::min(func->earliest_ref_pos, var_pos);
+                                        func->earliest_ref_addr = std::min(func->earliest_ref_addr, ir.len);
+                                    }
 
-                                if (!call) {
-                                    if (RG_UNLIKELY(func->overload_next != func)) {
-                                        MarkError(var_pos, "Ambiguous reference to overloaded function '%1'", var->name);
+                                    if (!call) {
+                                        if (RG_UNLIKELY(func->overload_next != func)) {
+                                            MarkError(var_pos, "Ambiguous reference to overloaded function '%1'", var->name);
 
-                                        // Show all candidate functions with same name
-                                        const bk_FunctionInfo *it = func;
-                                        do {
-                                            HintError(definitions_map.FindValue(it, -1), "Candidate '%1'", it->prototype);
-                                            it = it->overload_next;
-                                        } while (it != func);
+                                            // Show all candidate functions with same name
+                                            const bk_FunctionInfo *it = func;
+                                            do {
+                                                HintError(definitions_map.FindValue(it, -1), "Candidate '%1'", it->prototype);
+                                                it = it->overload_next;
+                                            } while (it != func);
 
-                                        goto error;
-                                    } else if (RG_UNLIKELY(func->mode == bk_FunctionInfo::Mode::Intrinsic)) {
-                                        MarkError(var_pos, "Intrinsic functions can only be called directly");
-                                        goto error;
+                                            goto error;
+                                        } else if (RG_UNLIKELY(func->mode == bk_FunctionInfo::Mode::Intrinsic)) {
+                                            MarkError(var_pos, "Intrinsic functions can only be called directly");
+                                            goto error;
+                                        }
                                     }
                                 }
+                            } else if (RG_UNLIKELY(preparse)) {
+                                MarkError(var_pos, "Top-level declaration (prototype) cannot reference variable '%1'", var->name);
+                                goto error;
                             }
 
                             if (call) {
@@ -1411,7 +1418,7 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                                         RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Function);
 
                                         bk_FunctionInfo *func = (bk_FunctionInfo *)ir[ir.len - 1].u.func;
-                                        bool overload = (var->scope == bk_VariableInfo::Scope::Function);
+                                        bool overload = (var->scope == bk_VariableInfo::Scope::Module);
 
                                         TrimInstructions(1);
                                         stack.len--;
@@ -1433,6 +1440,9 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                         }
                     } else {
                         MarkError(var_pos, "Reference to unknown identifier '%1'", tok.u.str);
+                        if (preparse) {
+                            HintError(-1, "Top-level declaration (prototype) cannot reference variables");
+                        }
                         goto error;
                     }
                 } break;

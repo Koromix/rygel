@@ -106,7 +106,7 @@ struct bk_FunctionInfo {
 
 struct bk_VariableInfo {
     enum class Scope {
-        Function,
+        Module,
         Global,
         Local
     };
