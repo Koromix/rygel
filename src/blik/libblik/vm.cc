@@ -542,6 +542,7 @@ void bk_VirtualMachine::DumpInstruction(Size pc) const
                 case bk_PrimitiveKind::Boolean: { LogDebug("[0x%1] Push %2", FmtHex(pc).Pad0(-5), inst.u.b); } break;
                 case bk_PrimitiveKind::Integer: { LogDebug("[0x%1] Push %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
                 case bk_PrimitiveKind::Float: { LogDebug("[0x%1] Push %2", FmtHex(pc).Pad0(-5), FmtDouble(inst.u.d, 1, INT_MAX)); } break;
+                case bk_PrimitiveKind::String: { LogDebug("[0x%1] Push '%2'", FmtHex(pc).Pad0(-5), inst.u.str); } break;
                 case bk_PrimitiveKind::Type: { LogDebug("[0x%1] Push %2", FmtHex(pc).Pad0(-5), inst.u.type->signature); } break;
                 case bk_PrimitiveKind::Function: { LogDebug("[0x%1] Push %2", FmtHex(pc).Pad0(-5), inst.u.func->prototype); } break;
             }
