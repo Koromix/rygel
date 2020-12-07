@@ -1402,13 +1402,13 @@ bool GetDebugFlag(const char *name)
 #else
     const char *debug = getenv(name);
 
-    if (!debug || TestStr(debug, "0")) {
-        return false;
-    } else if (TestStr(debug, "1")) {
-        return true;
+    if (debug) {
+        bool ret;
+        ParseBool(debug, &ret);
+
+        return ret;
     } else {
-        LogError("%1 should contain value '0' or '1'", name);
-        return true;
+        return false;
     }
 #endif
 }
