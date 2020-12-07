@@ -65,7 +65,7 @@ static const int32_t bk_UnicodeIdContinueTable[] = {""")
 """)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description = 'Create lexer_xid.hh (blik) from Unicode file DerivedCoreProperties.txt')
+    parser = argparse.ArgumentParser(description = 'Create lexer_xid.hh (blikk) from Unicode file DerivedCoreProperties.txt')
     parser.add_argument('filename', metavar = 'source', type = str, nargs = 1,
                         help = 'path to DerivedCoreProperties.txt')
     args = parser.parse_args()

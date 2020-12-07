@@ -8,7 +8,7 @@ define(function(require, exports, module) {
 var oop = require("../lib/oop");
 var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 
-var BlikHighlightRules = function() {
+var blikkHighlightRules = function() {
     this.$rules = {
         start: [{
             token: "comment",
@@ -49,7 +49,7 @@ var BlikHighlightRules = function() {
     this.normalizeRules();
 };
 
-oop.inherits(BlikHighlightRules, TextHighlightRules);
+oop.inherits(blikkHighlightRules, TextHighlightRules);
 
-exports.BlikHighlightRules = BlikHighlightRules;
+exports.blikkHighlightRules = blikkHighlightRules;
 });

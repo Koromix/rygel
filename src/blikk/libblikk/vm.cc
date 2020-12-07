@@ -410,7 +410,7 @@ bool bk_VirtualMachine::Run()
             frame->pc = func->addr;
             frame->direct = false;
 
-            if (func->mode == bk_FunctionInfo::Mode::Blik) {
+            if (func->mode == bk_FunctionInfo::Mode::blikk) {
                 frame->bp = stack.len - func->params.len;
 
                 bp = frame->bp;
@@ -454,7 +454,7 @@ bool bk_VirtualMachine::Run()
             frame->pc = func->addr;
             frame->direct = true;
 
-            if (func->mode == bk_FunctionInfo::Mode::Blik) {
+            if (func->mode == bk_FunctionInfo::Mode::blikk) {
                 frame->bp = stack.len - func->params.len;
 
                 bp = frame->bp;

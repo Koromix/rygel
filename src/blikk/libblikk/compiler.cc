@@ -500,7 +500,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
         proto->pos = funcs[i];
         proto->func = func;
         func->name = ConsumeIdentifier();
-        func->mode = bk_FunctionInfo::Mode::Blik;
+        func->mode = bk_FunctionInfo::Mode::blikk;
 
         // Clean up parameter variables once we're done
         RG_DEFER_C(variables_len = program->variables.len) {

@@ -14,7 +14,7 @@ let mut p = 8
 
 # Les noms de variables et de fonctions peuvent utiliser des caractères Unicode reconnus
 # par la norme "Unicode Identifier and Pattern Syntax" (http://www.unicode.org/reports/tr31/).
-# Les fichiers doivent être encodés en UTF-8. Attention cependant, blik ne normalise
+# Les fichiers doivent être encodés en UTF-8. Attention cependant, blikk ne normalise
 # pas les séquences de caractères !
 
 let изменяемый = 12
@@ -104,13 +104,13 @@ if test do txt := "BAR"
 printLn(txt)
 
 if empty < 1.0
-    let blik = 2.0
+    let blikk = 2.0
     p := 227
 else if true
-    let blik = 3.0
+    let blikk = 3.0
     p := 89
 else
-    let blik = 4.0
+    let blikk = 4.0
     p := 226
 end
 
@@ -192,7 +192,7 @@ func inline0(): String do return "inline0()"
 printLn("TESTING ", func0())
 printLn("TESTING ", inline0())
 
-# blik optimise la récursivité terminale (TRE = tail recursion elimination).
+# blikk optimise la récursivité terminale (TRE = tail recursion elimination).
 
 func factorial(n: Int, accum: Int): Int
     let soFar = n * accum

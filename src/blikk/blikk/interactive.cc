@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../core/libcc/libcc.hh"
-#include "../libblik/libblik.hh"
+#include "../libblikk/libblikk.hh"
 
 namespace RG {
 
@@ -108,7 +108,7 @@ int RunCommand(Span<const char> code, bool execute)
 
 int RunInteractive(bool execute)
 {
-    LogInfo("%!R..blik%!0 %1", FelixVersion);
+    LogInfo("%!R..blikk%!0 %1", FelixVersion);
 
     bk_Program program;
 

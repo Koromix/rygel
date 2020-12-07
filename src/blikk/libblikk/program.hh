@@ -73,7 +73,7 @@ struct bk_FunctionInfo {
     enum class Mode {
         Intrinsic,
         Native,
-        Blik
+        blikk
     };
 
     struct Parameter {

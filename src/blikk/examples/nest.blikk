@@ -68,13 +68,13 @@ for iter in 1:11
     printLn(txt)
 
     if empty < 1.0
-        let blik = 2.0
+        let blikk = 2.0
         p := 227
     else if true
-        let blik = 3.0
+        let blikk = 3.0
         p := 89
     else
-        let blik = 4.0
+        let blikk = 4.0
         p := 226
     end
 

@@ -1,59 +1,59 @@
 %YAML 1.2
 ---
-name: blik
-file_extensions: [blik]
-scope: source.blik
+name: blikk
+file_extensions: [blikk]
+scope: source.blikk
 
 contexts:
   main:
     - match: \#.*
-      scope: comment.line.blik
+      scope: comment.line.blikk
     - match: \b(if|else|while|begin|end|return|in|do|mut|break|continue)\b
-      scope: keyword.control.blik
+      scope: keyword.control.blikk
     - match: \bfunc\b
-      scope: keyword.control.blik
+      scope: keyword.control.blikk
       push: function
     - match: \blet\b
-      scope: keyword.control.blik
+      scope: keyword.control.blikk
       push: let
     - match: \bfor\b
-      scope: keyword.control.blik
+      scope: keyword.control.blikk
       push: for
     - match: \b(Null|Bool|Int|Float)\b
-      scope: storage.type.blik
+      scope: storage.type.blikk
     - match: (<<=?|>>=?|&&|\|\||[:*%\/+\-&\^|~!<>=]=?)
-      scope: keyword.operator.blik
+      scope: keyword.operator.blikk
     - match: '"'
       push: string
     - match: \(
       push: brackets
     - match: \)
-      scope: invalid.illegal.blik
+      scope: invalid.illegal.blikk
     - match: \b(true|false|null)\b
-      scope: constant.language.blik
+      scope: constant.language.blikk
     - match: \b(0x[0-9a-fA-F_]*|[0-9_]+(\.?[0-9_]*)?|0o[0-8_]*|0b[01_]*)\b
-      scope: constant.numeric.blik
+      scope: constant.numeric.blikk
     - match: \b([[:alpha:]_][[:alnum:]_]*) *\(\b
       captures:
-      1: variable.function.blik
+      1: variable.function.blikk
       push: brackets
 
   function:
     - match: \b[[:alpha:]_][[:alnum:]_]*\b
-      scope: entity.name.function.blik
+      scope: entity.name.function.blikk
       pop: true
 
   let:
     - match: \bmut\b
-      scope: keyword.control.blik
+      scope: keyword.control.blikk
     - match: \b[[:alpha:]_][[:alnum:]_]*\b
-      scope: variable.other.blik
+      scope: variable.other.blikk
       pop: true
   for:
     - match: \bmut\b
-      scope: keyword.control.blik
+      scope: keyword.control.blikk
     - match: \b[[:alpha:]_][[:alnum:]_]*\b
-      scope: variable.other.blik
+      scope: variable.other.blikk
       pop: true
 
   brackets:
@@ -62,8 +62,8 @@ contexts:
     - include: main
 
   string:
-    - meta_scope: string.quoted.double.blik
+    - meta_scope: string.quoted.double.blikk
     - match: \\.
-      scope: constant.character.escape.blik
+      scope: constant.character.escape.blikk
     - match: '"'
       pop: true
