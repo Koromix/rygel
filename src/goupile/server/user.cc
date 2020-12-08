@@ -190,8 +190,6 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
 
             LogError("Invalid username or password");
             io->AttachError(403);
-        } else {
-            LogError("SQLite Error: %1", sqlite3_errmsg(goupile_domain.db));
         }
     });
 }
