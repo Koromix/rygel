@@ -507,7 +507,20 @@ void HandleCreateInstance(const http_RequestInfo &request, http_IO *io)
 
         if (!db.Close())
             return;
-        if (!goupile_domain.db.Run("INSERT INTO dom_instances (instance) VALUES (?);", instance_key))
+
+        bool success = goupile_domain.db.Transaction([&]() {
+            uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
+
+            if (!goupile_domain.db.Run("INSERT INTO dom_instances (instance) VALUES (?);", instance_key))
+                return false;
+            if (!goupile_domain.db.Run(R"(INSERT INTO dom_permissions (instance, username, permissions)
+                                          VALUES (?, ?, ?);)",
+                                       instance_key, session->username, permissions))
+                return false;
+
+            return true;
+        });
+        if (!success)
             return;
 
         db_guard.Disable();
