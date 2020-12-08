@@ -78,7 +78,15 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     // If new base URLs are added besides "/admin", RunCreateInstance() must be modified
     // to forbid the instance key.
     if (inst_key == "admin") {
-        if (TestStr(inst_path, "/api/instances/create") && request.method == http_RequestMethod::Post) {
+        if (TestStr(inst_path, "/api/events") && request.method == http_RequestMethod::Get) {
+            HandleEvents(nullptr, request, io);
+        } else if (TestStr(inst_path, "/api/user/profile") && request.method == http_RequestMethod::Get) {
+            HandleUserProfile(nullptr, request, io);
+        } else if (TestStr(inst_path, "/api/user/login") && request.method == http_RequestMethod::Post) {
+            HandleUserLogin(nullptr, request, io);
+        } else if (TestStr(inst_path, "/api/user/logout") && request.method == http_RequestMethod::Post) {
+            HandleUserLogout(nullptr, request, io);
+        } else if (TestStr(inst_path, "/api/instances/create") && request.method == http_RequestMethod::Post) {
             HandleCreateInstance(request, io);
         } else if (TestStr(inst_path, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
             HandleDeleteInstance(request, io);
