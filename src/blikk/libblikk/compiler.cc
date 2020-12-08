@@ -489,7 +489,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
         pos = funcs[i] + 1;
         show_errors = true;
 
-        if (MatchToken(bk_TokenKind::LeftParenthesis))
+        if (!PeekToken(bk_TokenKind::Identifier))
             continue;
 
         PrototypeInfo *proto = prototypes_map.SetDefault(funcs[i]);
