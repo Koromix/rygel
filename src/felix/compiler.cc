@@ -324,6 +324,9 @@ public:
         if (compile_mode == CompileMode::Fast || compile_mode == CompileMode::LTO) {
             Fmt(&buf, " -D_FORTIFY_SOURCE=2");
         }
+    #if defined(__arm__) || defined(__thumb__)
+        Fmt(&buf, " -Wno-psabi");
+    #endif
 #endif
 
         // Sources and definitions
