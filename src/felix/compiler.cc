@@ -220,6 +220,9 @@ public:
         Fmt(&buf, " -ldl -pthread");
 #else
         Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now");
+    #if defined(__arm__) || defined(__thumb__)
+        Fmt(&buf, " -latomic");
+    #endif
 #endif
 
         if (env_flags) {
@@ -401,6 +404,9 @@ public:
         if (link_type == LinkType::Executable) {
             Fmt(&buf, " -pie");
         }
+    #if defined(__arm__) || defined(__thumb__)
+        Fmt(&buf, " -latomic");
+    #endif
 #endif
 
         if (env_flags) {
