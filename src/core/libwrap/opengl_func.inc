@@ -13,7 +13,8 @@
 #else
 
 #ifndef _WIN32
-      #include <GL/gl.h>
+    #define GL_GLEXT_LEGACY
+    #include <GL/gl.h>
 #else
 
 // OpenGL 1.2
