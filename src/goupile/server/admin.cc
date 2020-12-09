@@ -294,6 +294,7 @@ int RunInit(Span<const char *> arguments)
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 init [options] [directory]%!0
+
 Options:
     %!..+-u, --user <name>%!0            Name of default user
         %!..+--password <pwd>%!0         Password of default user
