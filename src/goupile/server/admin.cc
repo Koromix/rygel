@@ -128,6 +128,157 @@ static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
     return true;
 }
 
+static bool CreateInstance(DomainHolder *domain, const char *instance_key,
+                           const char *app_key, const char *app_name, const char *default_user,
+                           bool *out_conflict = nullptr)
+{
+    BlockAllocator temp_alloc;
+
+    if (out_conflict) {
+        *out_conflict = false;
+    }
+
+    // Check for existing instance
+    {
+        sq_Statement stmt;
+        if (!domain->db.Prepare("SELECT instance FROM dom_instances WHERE instance = ?;", &stmt))
+            return false;
+        sqlite3_bind_text(stmt, 1, instance_key, -1, SQLITE_STATIC);
+
+        if (stmt.Next()) {
+            LogError("Instance '%1' already exists", instance_key);
+            if (out_conflict) {
+                *out_conflict = true;
+            }
+            return false;
+        } else if (!stmt.IsValid()) {
+            return false;
+        }
+    }
+
+    const char *database_filename = domain->config.GetInstanceFileName(instance_key, &temp_alloc);
+    if (TestFile(database_filename)) {
+        LogError("Database '%1' already exists (old deleted instance?)", database_filename);
+        if (out_conflict) {
+            *out_conflict = true;
+        }
+        return false;
+    }
+    RG_DEFER_N(db_guard) { UnlinkFile(database_filename); };
+
+    uid_t owner_uid = 0;
+    gid_t owner_gid = 0;
+#ifndef _WIN32
+    {
+        struct stat sb;
+        if (stat(domain->config.database_filename, &sb) < 0) {
+            LogError("Failed to stat '%1': %2", database_filename, strerror(errno));
+            return false;
+        }
+
+        owner_uid = sb.st_uid;
+        owner_gid = sb.st_gid;
+    }
+#endif
+
+    // Create instance database
+    sq_Database db;
+    if (!db.Open(database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+        return false;
+    if (!MigrateInstance(&db))
+        return false;
+    if (!ChangeFileOwner(database_filename, owner_uid, owner_gid))
+        return false;
+
+    // Set default settings
+    {
+        const char *sql = "UPDATE fs_settings SET value = ? WHERE key = ?";
+        bool success = true;
+
+        success &= db.Run(sql, app_key, "AppKey");
+        success &= db.Run(sql, app_name, "AppName");
+
+        if (!success)
+            return false;
+    }
+
+    // Create default files
+    {
+        Span<const AssetInfo> assets = GetPackedAssets();
+        int64_t mtime = GetUnixTime();
+
+        sq_Statement stmt;
+        if (!db.Prepare(R"(INSERT INTO fs_files (active, path, mtime, blob, compression, sha256, size)
+                           VALUES (1, ?, ?, ?, ?, ?, ?);)", &stmt))
+            return false;
+
+        for (const AssetInfo &asset: assets) {
+            if (StartsWith(asset.name, "demo/")) {
+                const char *path = Fmt(&temp_alloc, "/files/%1", asset.name + 5).ptr;
+
+                HeapArray<uint8_t> gzip;
+                char sha256[65];
+                {
+                    StreamReader reader(asset.data, "<asset>", asset.compression_type);
+                    StreamWriter writer(&gzip, "<gzip>", CompressionType::Gzip);
+
+                    crypto_hash_sha256_state state;
+                    crypto_hash_sha256_init(&state);
+
+                    while (!reader.IsEOF()) {
+                        LocalArray<uint8_t, 16384> buf;
+                        buf.len = reader.Read(buf.data);
+                        if (buf.len < 0)
+                            return false;
+
+                        writer.Write(buf);
+                        crypto_hash_sha256_update(&state, buf.data, buf.len);
+                    }
+
+                    bool success = writer.Close();
+                    RG_ASSERT(success);
+
+                    uint8_t hash[crypto_hash_sha256_BYTES];
+                    crypto_hash_sha256_final(&state, hash);
+                    FormatSha256(hash, sha256);
+                }
+
+                stmt.Reset();
+                sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
+                sqlite3_bind_int64(stmt, 2, mtime);
+                sqlite3_bind_blob64(stmt, 3, gzip.ptr, gzip.len, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 4, "Gzip", -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 5, sha256, -1, SQLITE_STATIC);
+                sqlite3_bind_int64(stmt, 6, asset.data.len);
+
+                if (!stmt.Run())
+                    return false;
+            }
+        }
+    }
+
+    if (!db.Close())
+        return false;
+
+    bool success = domain->db.Transaction([&]() {
+        uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
+
+        if (!domain->db.Run("INSERT INTO dom_instances (instance) VALUES (?);", instance_key))
+            return false;
+        if (!domain->db.Run(R"(INSERT INTO dom_permissions (instance, username, permissions)
+                               VALUES (?, ?, ?);)",
+                        instance_key, default_user, permissions))
+            return false;
+
+        return true;
+    });
+    if (!success)
+        return false;
+
+    db_guard.Disable();
+    return true;
+}
+
 int RunInit(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -135,6 +286,7 @@ int RunInit(Span<const char *> arguments)
     // Options
     const char *username = nullptr;
     const char *password = nullptr;
+    bool empty = false;
     bool change_owner = false;
     uid_t owner_uid = 0;
     gid_t owner_gid = 0;
@@ -144,7 +296,9 @@ int RunInit(Span<const char *> arguments)
         PrintLn(fp, R"(Usage: %!..+%1 init [options] [directory]%!0
 Options:
     %!..+-u, --user <name>%!0            Name of default user
-        %!..+--password <pwd>%!0         Password of default user)", FelixTarget);
+        %!..+--password <pwd>%!0         Password of default user
+
+        %!..+--empty%!0                  Don't create default instance)", FelixTarget);
 
 #ifndef _WIN32
         PrintLn(fp, R"(
@@ -164,6 +318,8 @@ Options:
                 username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 password = opt.current_value;
+            } else if (opt.Test("--empty")) {
+                empty = true;
 #ifndef _WIN32
             } else if (opt.Test("-o", "--owner", OptionType::Value)) {
                 change_owner = true;
@@ -233,7 +389,7 @@ Options:
     LogInfo();
 
     // Create domain
-    DomainConfig config;
+    DomainHolder domain;
     {
         const char *filename = Fmt(&temp_alloc, "%1%/goupile.ini", root_directory).ptr;
         files.Append(filename);
@@ -241,7 +397,7 @@ Options:
         if (!WriteFile(DefaultConfig, filename))
             return 1;
 
-        if (!LoadConfig(filename, &config))
+        if (!LoadConfig(filename, &domain.config))
             return 1;
     }
 
@@ -257,20 +413,19 @@ Options:
             return true;
         };
 
-        if (!make_directory(config.instances_directory))
+        if (!make_directory(domain.config.instances_directory))
             return 1;
-        if (!make_directory(config.temp_directory))
+        if (!make_directory(domain.config.temp_directory))
             return 1;
     }
 
     // Create database
-    sq_Database db;
-    if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+    if (!domain.db.Open(domain.config.database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
         return 1;
-    files.Append(config.database_filename);
-    if (!MigrateDomain(&db, config.instances_directory))
+    files.Append(domain.config.database_filename);
+    if (!MigrateDomain(&domain.db, domain.config.instances_directory))
         return 1;
-    if (change_owner && !ChangeFileOwner(config.database_filename, owner_uid, owner_gid))
+    if (change_owner && !ChangeFileOwner(domain.config.database_filename, owner_uid, owner_gid))
         return 1;
 
     // Create default admin user
@@ -279,11 +434,16 @@ Options:
         if (!HashPassword(password, hash))
             return 1;
 
-        if (!db.Run("INSERT INTO dom_users (username, password_hash, admin) VALUES (?, ?, 1)", username, hash))
+        if (!domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, admin)
+                              VALUES (?, ?, 1);)", username, hash))
             return 1;
     }
 
-    if (!db.Close())
+    // Create default instance
+    if (!empty && !CreateInstance(&domain, "demo", "demo", "DEMO", username))
+        return 1;
+
+    if (!domain.db.Close())
         return 1;
 
     root_guard.Disable();
@@ -390,140 +550,14 @@ void HandleCreateInstance(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        // Check for existing instance
-        {
-            sq_Statement stmt;
-            if (!goupile_domain.db.Prepare("SELECT instance FROM dom_instances WHERE instance = ?;", &stmt))
-                return;
-            sqlite3_bind_text(stmt, 1, instance_key, -1, SQLITE_STATIC);
-
-            if (stmt.Next()) {
-                LogError("Instance '%1' already exists", instance_key);
+        bool conflict;
+        if (!CreateInstance(&goupile_domain, instance_key, app_key, app_name, session->username, &conflict)) {
+            if (conflict) {
                 io->AttachError(409);
-                return;
-            } else if (!stmt.IsValid()) {
-                return;
             }
-        }
-
-        const char *database_filename = goupile_domain.config.GetInstanceFileName(instance_key, &io->allocator);
-        if (TestFile(database_filename)) {
-            LogError("Database '%1' already exists (old deleted instance?)", database_filename);
-            io->AttachError(409);
             return;
         }
-        RG_DEFER_N(db_guard) { UnlinkFile(database_filename); };
 
-        uid_t owner_uid = 0;
-        gid_t owner_gid = 0;
-    #ifndef _WIN32
-        {
-            struct stat sb;
-            if (stat(goupile_domain.config.database_filename, &sb) < 0) {
-                LogError("Failed to stat '%1': %2", goupile_domain.config.database_filename, strerror(errno));
-                return;
-            }
-
-            owner_uid = sb.st_uid;
-            owner_gid = sb.st_gid;
-        }
-    #endif
-
-        // Create instance database
-        sq_Database db;
-        if (!db.Open(database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
-            return;
-        if (!MigrateInstance(&db))
-            return;
-        if (!ChangeFileOwner(database_filename, owner_uid, owner_gid))
-            return;
-
-        // Set default settings
-        {
-            const char *sql = "UPDATE fs_settings SET value = ? WHERE key = ?";
-            bool success = true;
-
-            success &= db.Run(sql, app_key, "AppKey");
-            success &= db.Run(sql, app_name, "AppName");
-
-            if (!success)
-                return;
-        }
-
-        // Create default files
-        {
-            Span<const AssetInfo> assets = GetPackedAssets();
-            int64_t mtime = GetUnixTime();
-
-            sq_Statement stmt;
-            if (!db.Prepare(R"(INSERT INTO fs_files (active, path, mtime, blob, compression, sha256, size)
-                               VALUES (1, ?, ?, ?, ?, ?, ?);)", &stmt))
-                return;
-
-            for (const AssetInfo &asset: assets) {
-                if (StartsWith(asset.name, "demo/")) {
-                    const char *path = Fmt(&io->allocator, "/files/%1", asset.name + 5).ptr;
-
-                    HeapArray<uint8_t> gzip;
-                    char sha256[65];
-                    {
-                        StreamReader reader(asset.data, "<asset>", asset.compression_type);
-                        StreamWriter writer(&gzip, "<gzip>", CompressionType::Gzip);
-
-                        crypto_hash_sha256_state state;
-                        crypto_hash_sha256_init(&state);
-
-                        while (!reader.IsEOF()) {
-                            LocalArray<uint8_t, 16384> buf;
-                            buf.len = reader.Read(buf.data);
-                            if (buf.len < 0)
-                                return;
-
-                            writer.Write(buf);
-                            crypto_hash_sha256_update(&state, buf.data, buf.len);
-                        }
-
-                        bool success = writer.Close();
-                        RG_ASSERT(success);
-
-                        uint8_t hash[crypto_hash_sha256_BYTES];
-                        crypto_hash_sha256_final(&state, hash);
-                        FormatSha256(hash, sha256);
-                    }
-
-                    stmt.Reset();
-                    sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
-                    sqlite3_bind_int64(stmt, 2, mtime);
-                    sqlite3_bind_blob64(stmt, 3, gzip.ptr, gzip.len, SQLITE_STATIC);
-                    sqlite3_bind_text(stmt, 4, "Gzip", -1, SQLITE_STATIC);
-                    sqlite3_bind_text(stmt, 5, sha256, -1, SQLITE_STATIC);
-                    sqlite3_bind_int64(stmt, 6, asset.data.len);
-
-                    if (!stmt.Run())
-                        return;
-                }
-            }
-        }
-
-        if (!db.Close())
-            return;
-
-        bool success = goupile_domain.db.Transaction([&]() {
-            uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
-
-            if (!goupile_domain.db.Run("INSERT INTO dom_instances (instance) VALUES (?);", instance_key))
-                return false;
-            if (!goupile_domain.db.Run(R"(INSERT INTO dom_permissions (instance, username, permissions)
-                                          VALUES (?, ?, ?);)",
-                                       instance_key, session->username, permissions))
-                return false;
-
-            return true;
-        });
-        if (!success)
-            return;
-
-        db_guard.Disable();
         io->AttachText(200, "Done!");
     });
 }
