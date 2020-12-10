@@ -483,7 +483,7 @@ void HandleRecordRecompute(InstanceHolder *instance, const http_RequestInfo &req
                     if (!instance->db.Run(R"(INSERT INTO rec_fragments (store, id, version, page,
                                                                         username, mtime, complete, json)
                                              VALUES (?, ?, ?, ?, ?, ?, ?, ?);)",
-                                          table, id, version + 1, page, username, fragment.mtime,
+                                          table, id, version + 1, page, session->username, fragment.mtime,
                                           complete, fragment.json))
                         return false;
                     if (!instance->db.Run(R"(UPDATE rec_entries SET version = ?, json = ?
