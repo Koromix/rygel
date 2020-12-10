@@ -93,7 +93,10 @@ static RetainPtr<Session> CreateUserSession(const http_RequestInfo &request, htt
     session->username = (char *)session + RG_SIZE(Session);
     strcpy((char *)session->username, username);
 
-    RetainPtr<Session> ptr(session, [](Session *session) { Allocator::Release(nullptr, session, -1); });
+    RetainPtr<Session> ptr(session, [](Session *session) {
+        session->~Session();
+        Allocator::Release(nullptr, session, -1);
+    });
     sessions.Open(request, io, ptr);
 
     return ptr;
