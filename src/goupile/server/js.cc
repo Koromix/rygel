@@ -115,7 +115,7 @@ static JSValue ReadFile(JSContext *ctx, JSValueConst, int argc, JSValueConst *ar
 
     sq_Statement stmt;
     if (!instance->db.Prepare(R"(SELECT compression, blob FROM fs_files
-                                 WHERE path = ? AND sha256 IS NOT NULL;)", &stmt)) {
+                                 WHERE path = ? AND active = 1;)", &stmt)) {
         JS_ThrowInternalError(ctx, "SQLite Error: %s", sqlite3_errmsg(instance->db));
         return JS_EXCEPTION;
     }
