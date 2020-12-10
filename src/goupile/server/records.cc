@@ -210,7 +210,7 @@ void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request,
         ScriptPort *port = LockScriptPort();
         RG_DEFER { port->Unlock(); };
 
-        port->Setup(instance, *session, *token);
+        port->Setup(instance, session->username, token->zone);
 
         // Parse request body (JSON)
         HeapArray<ScriptRecord> handles;
@@ -385,6 +385,119 @@ void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request,
         } else {
             io->AttachText(200, "Done!");
         }
+    });
+}
+
+// XXX: Update columns after recomputation
+void HandleRecordRecompute(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    const Token *token = session ? session->GetToken(instance) : nullptr;
+    if (!token || !token->HasPermission(UserPermission::Recompute)) {
+        LogError("User is not allowed to recompute records");
+        io->AttachError(403);
+        return;
+    }
+
+    io->RunAsync([=]() {
+        // Read POST values
+        HashMap<const char *, const char *> values;
+        if (!io->ReadPostValues(&io->allocator, &values)) {
+            io->AttachError(422);
+            return;
+        }
+
+        // XXX: Check that page actually exists
+        const char *table = values.FindValue("table", nullptr);
+        const char *page = values.FindValue("page", nullptr);
+        if (!table || !page) {
+            LogError("Missing parameters");
+            io->AttachError(422);
+            return;
+        }
+
+        // Find appropriate port
+        ScriptPort *port = LockScriptPort();
+        RG_DEFER { port->Unlock(); };
+
+        int64_t anchor;
+        {
+            sq_Statement stmt;
+            if (!instance->db.Prepare("SELECT seq FROM sqlite_sequence WHERE name = 'rec_fragments';", &stmt))
+                return;
+
+            if (stmt.Next()) {
+                anchor = sqlite3_column_int64(stmt, 0);
+            } else if (stmt.IsValid()) {
+                anchor = -1;
+            } else {
+                return;
+            }
+        }
+
+        sq_Statement stmt;
+        {
+            LocalArray<char, 1024> sql;
+            int bind_idx = 1;
+
+            sql.len += Fmt(sql.TakeAvailable(), R"(SELECT r.id, r.json, r.version, f.username,
+                                                          f.complete, r.zone FROM rec_entries r
+                                                   INNER JOIN rec_fragments f ON (f.store = r.store AND f.id = r.id AND
+                                                                                  f.version = r.version)
+                                                   WHERE r.store = ? AND f.anchor <= ? AND f.page IS NOT NULL)").len;
+            if (token->zone) {
+                sql.len += Fmt(sql.TakeAvailable(), " AND (r.zone IS NULL OR r.zone == ?)").len;
+            }
+
+            if (!instance->db.Prepare(sql.data, &stmt))
+                return;
+
+            sqlite3_bind_text(stmt, bind_idx++, table, -1, SQLITE_STATIC);
+            sqlite3_bind_int64(stmt, bind_idx++, anchor);
+            if (token->zone) {
+               sqlite3_bind_text(stmt, bind_idx++, token->zone, -1, SQLITE_STATIC);
+            }
+        }
+
+        while (stmt.Next()) {
+            bool success = instance->db.Transaction([&]() {
+                Size i = 0;
+                do {
+                    const char *id = (const char *)sqlite3_column_text(stmt, 0);
+                    Span<const char> json = MakeSpan((const char *)sqlite3_column_blob(stmt, 1),
+                                                     sqlite3_column_bytes(stmt, 1));
+                    int version = sqlite3_column_int(stmt, 2);
+                    const char *username = (const char *)sqlite3_column_text(stmt, 3);
+                    bool complete = sqlite3_column_int(stmt, 4);
+                    const char *zone = (const char *)sqlite3_column_text(stmt, 5);
+
+                    port->Setup(instance, username, zone);
+
+                    ScriptFragment fragment;
+                    if (!port->Recompute(table, json, page, &fragment, &json))
+                        return false;
+
+                    if (!instance->db.Run(R"(INSERT INTO rec_fragments (store, id, version, page,
+                                                                        username, mtime, complete, json)
+                                             VALUES (?, ?, ?, ?, ?, ?, ?, ?);)",
+                                          table, id, version + 1, page, username, fragment.mtime,
+                                          complete, fragment.json))
+                        return false;
+                    if (!instance->db.Run(R"(UPDATE rec_entries SET version = ?, json = ?
+                                             WHERE store = ? AND id = ?;)",
+                                          version + 1, json, table, id))
+                        return false;
+                } while (++i < 20 && stmt.Next());
+
+                return true;
+            });
+            if (!success)
+                return;
+        }
+        if (!stmt.IsValid())
+            return;
+
+        io->AttachText(200, "Done!");
     });
 }
 

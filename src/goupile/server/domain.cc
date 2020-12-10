@@ -7,7 +7,7 @@
 
 namespace RG {
 
-const int DomainVersion = 3;
+const int DomainVersion = 4;
 
 bool DomainConfig::Validate() const
 {
@@ -367,9 +367,14 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 3: {
+                if (!db->Run("UPDATE dom_permissions SET permissions = 127 WHERE permissions == 63;"))
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 3);
+            RG_STATIC_ASSERT(DomainVersion == 4);
         }
 
         int64_t time = GetUnixTime();

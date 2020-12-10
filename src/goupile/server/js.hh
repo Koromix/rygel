@@ -9,9 +9,6 @@
 
 namespace RG {
 
-class Session;
-struct Token;
-
 struct ScriptRecord {
     RG_DELETE_COPY(ScriptRecord)
 
@@ -80,6 +77,7 @@ class ScriptPort {
 
     JSValue profile_func = JS_UNDEFINED;
     JSValue validate_func = JS_UNDEFINED;
+    JSValue recompute_func = JS_UNDEFINED;
 
 public:
     JSRuntime *rt = nullptr;
@@ -90,11 +88,14 @@ public:
 
     void Unlock();
 
-    void Setup(InstanceHolder *instance, const Session &session, const Token &token);
+    void Setup(InstanceHolder *instance, const char *username, const char *zone);
 
     bool ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_handles);
     bool RunRecord(Span<const char> json, const ScriptRecord &handle,
                    HeapArray<ScriptFragment> *out_fragments, Span<const char> *out_json);
+
+    bool Recompute(const char *table, Span<const char> json, const char *page,
+                    ScriptFragment *out_fragment, Span<const char> *out_json);
 
     friend void InitJS();
 };

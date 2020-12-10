@@ -176,6 +176,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleRecordColumns(instance, request, io);
         } else if (TestStr(inst_path, "/api/records/sync") && request.method == http_RequestMethod::Post) {
             HandleRecordSync(instance, request, io);
+        } else if (TestStr(inst_path, "/api/records/recompute") && request.method == http_RequestMethod::Post) {
+            HandleRecordRecompute(instance, request, io);
         } else {
             io->AttachError(404);
         }

@@ -47,6 +47,7 @@ ScriptPort::~ScriptPort()
     if (ctx) {
         JS_FreeValue(ctx, profile_func);
         JS_FreeValue(ctx, validate_func);
+        JS_FreeValue(ctx, recompute_func);
         JS_FreeContext(ctx);
     }
     if (rt) {
@@ -77,13 +78,13 @@ void ScriptPort::Unlock()
     js_cv.notify_one();
 }
 
-void ScriptPort::Setup(InstanceHolder *instance, const Session &session, const Token &token)
+void ScriptPort::Setup(InstanceHolder *instance, const char *username, const char *zone)
 {
     JS_SetContextOpaque(ctx, instance);
 
     JSValue args[] = {
-        JS_NewString(ctx, session.username),
-        token.zone ? JS_NewString(ctx, token.zone) : JS_NULL
+        JS_NewString(ctx, username),
+        zone ? JS_NewString(ctx, zone) : JS_NULL
     };
     RG_DEFER {
         JS_FreeValue(ctx, args[0]);
@@ -445,6 +446,40 @@ bool ScriptPort::RunRecord(Span<const char> json, const ScriptRecord &handle,
     return true;
 }
 
+bool ScriptPort::Recompute(const char *table, Span<const char> json, const char *page,
+                           ScriptFragment *out_fragment, Span<const char> *out_json)
+{
+    JSValue ret;
+    {
+        JSValue args[] = {
+            JS_NewString(ctx, table),
+            JS_NewStringLen(ctx, json.ptr, (size_t)json.len),
+            JS_NewString(ctx, page)
+        };
+        RG_DEFER {
+            JS_FreeValue(ctx, args[0]);
+            JS_FreeValue(ctx, args[1]);
+            JS_FreeValue(ctx, args[2]);
+        };
+
+        ret = JS_Call(ctx, recompute_func, JS_UNDEFINED, RG_LEN(args), args);
+    }
+    RG_DEFER { JS_FreeValue(ctx, ret); };
+    if (JS_IsException(ret)) {
+        const char *msg = ConsumeValueStr(ctx, JS_GetException(ctx)).ptr;
+        RG_DEFER { JS_FreeCString(ctx, msg); };
+
+        LogError("JS: %1", msg);
+        return false;
+    }
+
+    out_fragment->mtime = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, ret, "mtime")).ptr;
+    out_fragment->json = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, ret, "frag"));
+    *out_json = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, ret, "json"));
+
+    return true;
+}
+
 void InitJS()
 {
     const AssetInfo *asset = FindPackedAsset("server.pk.js");
@@ -482,6 +517,7 @@ void InitJS()
 
         port->profile_func = JS_GetPropertyStr(port->ctx, server, "changeProfile");
         port->validate_func = JS_GetPropertyStr(port->ctx, server, "validateFragments");
+        port->recompute_func = JS_GetPropertyStr(port->ctx, server, "recompute");
 
         js_idle_ports.Append(port);
     }

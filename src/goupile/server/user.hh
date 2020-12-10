@@ -17,7 +17,8 @@ enum class UserPermission {
     Edit = 1 << 2,
     Deploy = 1 << 3,
     Validate = 1 << 4,
-    Export = 1 << 5
+    Export = 1 << 5,
+    Recompute = 1 << 6
 };
 static const char *const UserPermissionNames[] = {
     "Develop",
@@ -25,7 +26,8 @@ static const char *const UserPermissionNames[] = {
     "Edit",
     "Deploy",
     "Validate",
-    "Export"
+    "Export",
+    "Recompute"
 };
 
 struct Token {

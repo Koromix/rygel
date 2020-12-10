@@ -103,6 +103,30 @@ var server = new function() {
         return ret;
     };
 
+    this.recompute = function(table, json, page) {
+        let values = JSON.parse(json);
+
+        // We don't care about PageState (single execution)
+        let model = new PageModel;
+        let builder = new PageBuilder(new PageState, model);
+        builder.getValue = (key, default_value) => getValue(values, key, default_value);
+
+        // Execute user script
+        let code = readPage(page);
+        let func = Function('shared', 'route', 'go', 'form', 'page', 'scratch', 'values', code);
+        func({}, {}, () => {}, builder, builder, {}, values);
+
+        let frag2_values = gatherValues(model.variables);
+        let values2 = Object.assign(values, frag2_values);
+
+        let ret = {
+            mtime: (new Date).toISOString(),
+            frag: JSON.stringify(frag2_values),
+            json: JSON.stringify(values2)
+        };
+        return ret;
+    };
+
     function readPage(page) {
         let path = `/files/pages/${page}.js`;
         let code = cache.get(path);
