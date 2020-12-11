@@ -13,8 +13,10 @@
 ## Tools
 OPENSSL ?= openssl
 FAKETIME ?= faketime
-MBEDTLS_CERT_WRITE ?= $(PWD)/../../programs/x509/cert_write
-MBEDTLS_CERT_REQ ?= $(PWD)/../../programs/x509/cert_req
+
+TOP_DIR = ../..
+MBEDTLS_CERT_WRITE ?= $(TOP_DIR)/programs/x509/cert_write
+MBEDTLS_CERT_REQ ?= $(TOP_DIR)/programs/x509/cert_req
 
 
 ## Build the generated test data. Note that since the final outputs
@@ -206,7 +208,11 @@ cli-rsa-sha256.crt.der: cli-rsa-sha256.crt
 	$(OPENSSL) x509 -in $< -out $@ -inform PEM -outform DER
 all_final += cli-rsa-sha256.crt.der
 
- cli-rsa.key.der: $(cli_crt_key_file_rsa)
+cli-rsa-sha256-badalg.crt.der: cli-rsa-sha256.crt.der
+	hexdump -ve '1/1 "%.2X"' $< | sed "s/06092A864886F70D01010B0500/06092A864886F70D01010B0900/2" | xxd -r -p > $@
+all_final += cli-rsa-sha256-badalg.crt.der
+
+cli-rsa.key.der: $(cli_crt_key_file_rsa)
 	$(OPENSSL) pkey -in $< -out $@ -inform PEM -outform DER
 all_final += cli-rsa.key.der
 

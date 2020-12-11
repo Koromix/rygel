@@ -273,10 +273,10 @@ class MacroCollector:
                 return
             self.algorithms.add(name)
             # Ad hoc detection of hash algorithms
-            if re.search(r'0x010000[0-9A-Fa-f]{2}', expansion):
+            if re.search(r'0x020000[0-9A-Fa-f]{2}', expansion):
                 self.hash_algorithms.add(name)
             # Ad hoc detection of key agreement algorithms
-            if re.search(r'0x30[0-9A-Fa-f]{2}0000', expansion):
+            if re.search(r'0x09[0-9A-Fa-f]{2}0000', expansion):
                 self.ka_algorithms.add(name)
         elif name.startswith('PSA_ALG_') and parameter == 'hash_alg':
             if name in ['PSA_ALG_DSA', 'PSA_ALG_ECDSA']:
@@ -411,7 +411,7 @@ def generate_psa_constants(header_file_names, output_file_name):
     temp_file_name = output_file_name + '.tmp'
     with open(temp_file_name, 'w') as output_file:
         collector.write_file(output_file)
-    os.rename(temp_file_name, output_file_name)
+    os.replace(temp_file_name, output_file_name)
 
 if __name__ == '__main__':
     if not os.path.isdir('programs') and os.path.isdir('../programs'):

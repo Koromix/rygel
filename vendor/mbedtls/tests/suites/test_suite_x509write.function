@@ -104,7 +104,7 @@ void x509_csr_check( char * key_file, char * cert_req_check_file, int md_type,
     unsigned char buf[4096];
     unsigned char check_buf[4000];
     int ret;
-    size_t olen = 0, pem_len = 0;
+    size_t olen = 0, pem_len = 0, buf_index;
     int der_len = -1;
     FILE *f;
     const char *subject_name = "C=NL,O=PolarSSL,CN=PolarSSL Server 1";
@@ -129,6 +129,11 @@ void x509_csr_check( char * key_file, char * cert_req_check_file, int md_type,
     TEST_ASSERT( ret == 0 );
 
     pem_len = strlen( (char *) buf );
+
+    for( buf_index = pem_len; buf_index < sizeof( buf ); ++buf_index )
+    {
+        TEST_ASSERT( buf[buf_index] == 0 );
+    }
 
     f = fopen( cert_req_check_file, "r" );
     TEST_ASSERT( f != NULL );
@@ -161,7 +166,7 @@ void x509_csr_check_opaque( char *key_file, int md_type, int key_usage,
                                  int cert_type )
 {
     mbedtls_pk_context key;
-    psa_key_handle_t slot = 0;
+    mbedtls_svc_key_id_t key_id = MBEDTLS_SVC_KEY_ID_INIT;
     psa_algorithm_t md_alg_psa;
     mbedtls_x509write_csr req;
     unsigned char buf[4096];
@@ -178,7 +183,7 @@ void x509_csr_check_opaque( char *key_file, int md_type, int key_usage,
 
     mbedtls_pk_init( &key );
     TEST_ASSERT( mbedtls_pk_parse_keyfile( &key, key_file, NULL ) == 0 );
-    TEST_ASSERT( mbedtls_pk_wrap_as_opaque( &key, &slot, md_alg_psa ) == 0 );
+    TEST_ASSERT( mbedtls_pk_wrap_as_opaque( &key, &key_id, md_alg_psa ) == 0 );
 
     mbedtls_x509write_csr_init( &req );
     mbedtls_x509write_csr_set_md_alg( &req, md_type );
@@ -202,7 +207,7 @@ void x509_csr_check_opaque( char *key_file, int md_type, int key_usage,
 exit:
     mbedtls_x509write_csr_free( &req );
     mbedtls_pk_free( &key );
-    psa_destroy_key( slot );
+    psa_destroy_key( key_id );
     PSA_DONE( );
 }
 /* END_CASE */
@@ -224,7 +229,7 @@ void x509_crt_check( char *subject_key_file, char *subject_pwd,
     unsigned char check_buf[5000];
     mbedtls_mpi serial;
     int ret;
-    size_t olen = 0, pem_len = 0;
+    size_t olen = 0, pem_len = 0, buf_index = 0;
     int der_len = -1;
     FILE *f;
     mbedtls_test_rnd_pseudo_info rnd_info;
@@ -292,6 +297,12 @@ void x509_crt_check( char *subject_key_file, char *subject_pwd,
     TEST_ASSERT( ret == 0 );
 
     pem_len = strlen( (char *) buf );
+
+    // check that the rest of the buffer remains clear
+    for( buf_index = pem_len; buf_index < sizeof( buf ); ++buf_index )
+    {
+        TEST_ASSERT( buf[buf_index] == 0 );
+    }
 
     f = fopen( cert_check_file, "r" );
     TEST_ASSERT( f != NULL );
