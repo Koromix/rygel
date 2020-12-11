@@ -25,7 +25,7 @@ main { height: 100%; }
 }
 
 a {
-    color: #ff6600;
+    color: #ef6000;
     text-decoration: underline;
 }
 
@@ -47,8 +47,8 @@ button:disabled {
 }
 button::-moz-focus-inner { border: 0; }
 button:not(:disabled):hover {
-    background: #ff6600;
-    border-color: #ff6600;
+    background: #ef6000;
+    border-color: #ef6000;
     color: white;
 }
 

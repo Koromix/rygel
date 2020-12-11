@@ -72,8 +72,8 @@
 }
 .fm_path > a + a { margin-left: 8px; }
 .fm_path > a.active {
-    background: #ff6600;
-    border-color: #ff6600;
+    background: #ef6000;
+    border-color: #ef6000;
     color: white;
 }
 .fm_path > a.blocked {
@@ -94,7 +94,7 @@
     font-weight: bold;
     content: '✓\FE0E✓\FE0E';
 }
-.fm_path > a:not(.blocked):hover { border-color: #ff6600; }
+.fm_path > a:not(.blocked):hover { border-color: #ef6000; }
 .fm_path > a:focus {
     outline: 2px dotted #999;
     outline-offset: 1px;
@@ -204,7 +204,7 @@
     padding-right: 8px;
     font-size: 0.9em;
     font-weight: bold;
-    color: #ff6600;
+    color: #ef6000;
     content: '✓\FE0E';
 }
 .st_table td.complete::before {
