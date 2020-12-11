@@ -16,34 +16,10 @@ static std::condition_variable js_cv;
 static ScriptPort js_ports[16];
 static LocalArray<ScriptPort *, 16> js_idle_ports;
 
-// These functions do not try to deal with null/undefined values
-static bool ConsumeValueBool(JSContext *ctx, JSValue value)
-{
-    RG_DEFER { JS_FreeValue(ctx, value); };
-    return JS_VALUE_GET_BOOL(value);
-}
-static int ConsumeValueInt(JSContext *ctx, JSValue value)
-{
-    RG_DEFER { JS_FreeValue(ctx, value); };
-    return JS_VALUE_GET_INT(value);
-}
-
-// Returns invalid Span (with ptr set to nullptr) if value is null/undefined
-static Span<const char> ConsumeValueStr(JSContext *ctx, JSValue value)
-{
-    RG_DEFER { JS_FreeValue(ctx, value); };
-
-    if (!JS_IsNull(value) && !JS_IsUndefined(value)) {
-        Span<const char> str;
-        str.ptr = JS_ToCStringLen(ctx, (size_t *)&str.len, value);
-        return str;
-    } else {
-        return {};
-    }
-}
-
 ScriptPort::~ScriptPort()
 {
+    RG_ASSERT(!locked);
+
     if (ctx) {
         JS_FreeValue(ctx, profile_func);
         JS_FreeValue(ctx, validate_func);
@@ -65,17 +41,34 @@ ScriptPort *LockScriptPort()
 
     ScriptPort *port = js_idle_ports[js_idle_ports.len - 1];
     js_idle_ports.RemoveLast(1);
+    port->locked = true;
 
     return port;
 }
 
 void ScriptPort::Unlock()
 {
+    ReleaseAll();
+
     std::unique_lock<std::mutex> lock(js_mutex);
 
     js_idle_ports.Append(this);
+    locked = false;
 
     js_cv.notify_one();
+}
+
+void ScriptPort::ReleaseAll()
+{
+    for (const char *str: strings) {
+        JS_FreeCString(ctx, str);
+    }
+    strings.Clear();
+
+    for (JSValue value: values) {
+        JS_FreeValue(ctx, value);
+    }
+    values.Clear();
 }
 
 void ScriptPort::Setup(InstanceHolder *instance, const char *username, const char *zone)
@@ -83,17 +76,12 @@ void ScriptPort::Setup(InstanceHolder *instance, const char *username, const cha
     JS_SetContextOpaque(ctx, instance);
 
     JSValue args[] = {
-        JS_NewString(ctx, username),
-        zone ? JS_NewString(ctx, zone) : JS_NULL
-    };
-    RG_DEFER {
-        JS_FreeValue(ctx, args[0]);
-        JS_FreeValue(ctx, args[1]);
+        StoreValue(JS_NewString(ctx, username)),
+        zone ? StoreValue(JS_NewString(ctx, zone)) : JS_NULL
     };
 
-    JSValue ret = JS_Call(ctx, profile_func, JS_UNDEFINED, RG_LEN(args), args);
+    JSValue ret = StoreValue(JS_Call(ctx, profile_func, JS_UNDEFINED, RG_LEN(args), args));
     RG_ASSERT(!JS_IsException(ret));
-    RG_DEFER { JS_FreeValue(ctx, ret); };
 }
 
 static JSValue ReadFile(JSContext *ctx, JSValueConst, int argc, JSValueConst *argv)
@@ -173,6 +161,7 @@ bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_h
 
         handle->ctx = ctx;
         handle->fragments = JS_NewArray(ctx);
+        values.Append(handle->fragments);
 
         const char *table = nullptr;
         const char *id = nullptr;
@@ -365,9 +354,9 @@ bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_h
             return false;
         }
 
-        handle->table = ConsumeValueStr(ctx, JS_NewString(ctx, table)).ptr;
-        handle->id = ConsumeValueStr(ctx, JS_NewString(ctx, id)).ptr;
-        handle->zone = zone ? ConsumeValueStr(ctx, JS_NewString(ctx, zone)).ptr : nullptr;
+        handle->table = ConsumeStr(JS_NewString(ctx, table)).ptr;
+        handle->id = ConsumeStr(JS_NewString(ctx, id)).ptr;
+        handle->zone = zone ? ConsumeStr(JS_NewString(ctx, zone)).ptr : nullptr;
     }
     if (!parser.IsValid())
         return false;
@@ -383,62 +372,51 @@ bool ScriptPort::RunRecord(Span<const char> json, const ScriptRecord &handle,
     JSValue ret;
     {
         JSValue args[] = {
-            JS_NewString(ctx, handle.table),
-            JS_NewStringLen(ctx, json.ptr, (size_t)json.len),
-            JS_DupValue(ctx, handle.fragments)
-        };
-        RG_DEFER {
-            JS_FreeValue(ctx, args[0]);
-            JS_FreeValue(ctx, args[1]);
-            JS_FreeValue(ctx, args[2]);
+            StoreValue(JS_NewString(ctx, handle.table)),
+            StoreValue(JS_NewStringLen(ctx, json.ptr, (size_t)json.len)),
+            StoreValue(JS_DupValue(ctx, handle.fragments))
         };
 
-        ret = JS_Call(ctx, validate_func, JS_UNDEFINED, RG_LEN(args), args);
+        ret = StoreValue(JS_Call(ctx, validate_func, JS_UNDEFINED, RG_LEN(args), args));
     }
-    RG_DEFER { JS_FreeValue(ctx, ret); };
     if (JS_IsException(ret)) {
-        const char *msg = ConsumeValueStr(ctx, JS_GetException(ctx)).ptr;
-        RG_DEFER { JS_FreeCString(ctx, msg); };
+        const char *msg = ConsumeStr(JS_GetException(ctx)).ptr;
 
         LogError("JS: %1", msg);
         return false;
     }
 
-    JSValue fragments = JS_GetPropertyStr(ctx, ret, "fragments");
-    int fragments_len = ConsumeValueInt(ctx, JS_GetPropertyStr(ctx, fragments, "length"));
-    RG_DEFER { JS_FreeValue(ctx, fragments); };
-    *out_json = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, ret, "json"));
+    JSValue fragments = StoreValue(JS_GetPropertyStr(ctx, ret, "fragments"));
+    int fragments_len = ConsumeInt(JS_GetPropertyStr(ctx, fragments, "length"));
+    *out_json = ConsumeStr(JS_GetPropertyStr(ctx, ret, "json"));
 
     for (int i = 0; i< fragments_len; i++) {
-        JSValue frag = JS_GetPropertyUint32(ctx, fragments, i);
-        RG_DEFER { JS_FreeValue(ctx, frag); };
+        JSValue frag = StoreValue(JS_GetPropertyUint32(ctx, fragments, i));
 
         ScriptFragment *frag2 = out_fragments->AppendDefault();
         frag2->ctx = ctx;
 
-        frag2->mtime = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, frag, "mtime")).ptr;
-        frag2->version = ConsumeValueInt(ctx, JS_GetPropertyStr(ctx, frag, "version"));
-        frag2->page = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, frag, "page")).ptr;
-        frag2->complete = ConsumeValueBool(ctx, JS_GetPropertyStr(ctx, frag, "complete"));
-        frag2->json = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, frag, "json"));
-        frag2->errors = ConsumeValueInt(ctx, JS_GetPropertyStr(ctx, frag, "errors"));
+        frag2->mtime = ConsumeStr(JS_GetPropertyStr(ctx, frag, "mtime")).ptr;
+        frag2->version = ConsumeInt(JS_GetPropertyStr(ctx, frag, "version"));
+        frag2->page = ConsumeStr(JS_GetPropertyStr(ctx, frag, "page")).ptr;
+        frag2->complete = ConsumeBool(JS_GetPropertyStr(ctx, frag, "complete"));
+        frag2->json = ConsumeStr(JS_GetPropertyStr(ctx, frag, "json"));
+        frag2->errors = ConsumeInt(JS_GetPropertyStr(ctx, frag, "errors"));
 
-        JSValue columns = JS_GetPropertyStr(ctx, frag, "columns");
-        RG_DEFER { JS_FreeValue(ctx, columns); };
+        JSValue columns = StoreValue(JS_GetPropertyStr(ctx, frag, "columns"));
 
         if (!JS_IsNull(columns) && !JS_IsUndefined(columns)) {
-            int columns_len = ConsumeValueInt(ctx, JS_GetPropertyStr(ctx, columns, "length"));
+            int columns_len = ConsumeInt(JS_GetPropertyStr(ctx, columns, "length"));
 
             for (int j = 0; j < columns_len; j++) {
-                JSValue col = JS_GetPropertyUint32(ctx, columns, j);
-                RG_DEFER { JS_FreeValue(ctx, col); };
+                JSValue col = StoreValue(JS_GetPropertyUint32(ctx, columns, j));
 
                 ScriptFragment::Column *col2 = frag2->columns.AppendDefault();
 
-                col2->key = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, col, "key")).ptr;
-                col2->variable = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, col, "variable")).ptr;
-                col2->type = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, col, "type")).ptr;
-                col2->prop = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, col, "prop")).ptr;
+                col2->key = ConsumeStr(JS_GetPropertyStr(ctx, col, "key")).ptr;
+                col2->variable = ConsumeStr(JS_GetPropertyStr(ctx, col, "variable")).ptr;
+                col2->type = ConsumeStr(JS_GetPropertyStr(ctx, col, "type")).ptr;
+                col2->prop = ConsumeStr(JS_GetPropertyStr(ctx, col, "prop")).ptr;
             }
         }
     }
@@ -452,32 +430,60 @@ bool ScriptPort::Recompute(const char *table, Span<const char> json, const char 
     JSValue ret;
     {
         JSValue args[] = {
-            JS_NewString(ctx, table),
-            JS_NewStringLen(ctx, json.ptr, (size_t)json.len),
-            JS_NewString(ctx, page)
-        };
-        RG_DEFER {
-            JS_FreeValue(ctx, args[0]);
-            JS_FreeValue(ctx, args[1]);
-            JS_FreeValue(ctx, args[2]);
+            StoreValue(JS_NewString(ctx, table)),
+            StoreValue(JS_NewStringLen(ctx, json.ptr, (size_t)json.len)),
+            StoreValue(JS_NewString(ctx, page))
         };
 
-        ret = JS_Call(ctx, recompute_func, JS_UNDEFINED, RG_LEN(args), args);
+        ret = StoreValue(JS_Call(ctx, recompute_func, JS_UNDEFINED, RG_LEN(args), args));
     }
-    RG_DEFER { JS_FreeValue(ctx, ret); };
     if (JS_IsException(ret)) {
-        const char *msg = ConsumeValueStr(ctx, JS_GetException(ctx)).ptr;
-        RG_DEFER { JS_FreeCString(ctx, msg); };
+        const char *msg = ConsumeStr(JS_GetException(ctx)).ptr;
 
         LogError("JS: %1", msg);
         return false;
     }
 
-    out_fragment->mtime = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, ret, "mtime")).ptr;
-    out_fragment->json = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, ret, "frag"));
-    *out_json = ConsumeValueStr(ctx, JS_GetPropertyStr(ctx, ret, "json"));
+    out_fragment->mtime = ConsumeStr(JS_GetPropertyStr(ctx, ret, "mtime")).ptr;
+    out_fragment->json = ConsumeStr(JS_GetPropertyStr(ctx, ret, "frag"));
+    *out_json = ConsumeStr(JS_GetPropertyStr(ctx, ret, "json"));
 
     return true;
+}
+
+JSValue ScriptPort::StoreValue(JSValue value)
+{
+    values.Append(value);
+    return value;
+}
+
+// These functions do not try to deal with null/undefined values
+bool ScriptPort::ConsumeBool(JSValue value)
+{
+    RG_DEFER { JS_FreeValue(ctx, value); };
+    return JS_VALUE_GET_BOOL(value);
+}
+int ScriptPort::ConsumeInt(JSValue value)
+{
+    RG_DEFER { JS_FreeValue(ctx, value); };
+    return JS_VALUE_GET_INT(value);
+}
+
+// Returns invalid Span (with ptr set to nullptr) if value is null/undefined
+Span<const char> ScriptPort::ConsumeStr(JSValue value)
+{
+    Span<const char> str = {};
+
+    if (!JS_IsNull(value) && !JS_IsUndefined(value)) {
+        size_t len;
+        str.ptr = JS_ToCStringLen(ctx, &len, value);
+        str.len = (Size)len;
+        strings.Append(str.ptr);
+
+        JS_FreeValue(ctx, value);
+    }
+
+    return str;
 }
 
 void InitJS()

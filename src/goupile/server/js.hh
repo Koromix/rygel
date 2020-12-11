@@ -10,31 +10,14 @@
 namespace RG {
 
 struct ScriptRecord {
-    RG_DELETE_COPY(ScriptRecord)
-
     JSContext *ctx = nullptr;
     const char *table = nullptr;
     const char *id = nullptr;
     const char *zone = nullptr;
     JSValue fragments = JS_UNDEFINED;
-
-    ScriptRecord() = default;
-
-    ~ScriptRecord()
-    {
-        if (ctx) {
-            JS_FreeCString(ctx, table);
-            JS_FreeCString(ctx, id);
-            JS_FreeCString(ctx, zone);
-            JS_FreeValue(ctx, fragments);
-            ctx = nullptr;
-        }
-    }
 };
 
 struct ScriptFragment {
-    RG_DELETE_COPY(ScriptFragment)
-
     struct Column {
         const char *key;
         const char *variable;
@@ -50,26 +33,6 @@ struct ScriptFragment {
     Span<const char> json = {};
     int errors;
     HeapArray<Column> columns;
-
-    ScriptFragment() = default;
-
-    ~ScriptFragment()
-    {
-        if (ctx) {
-            JS_FreeCString(ctx, mtime);
-            JS_FreeCString(ctx, page);
-            JS_FreeCString(ctx, json.ptr);
-
-            for (const Column &col: columns) {
-                JS_FreeCString(ctx, col.key);
-                JS_FreeCString(ctx, col.variable);
-                JS_FreeCString(ctx, col.type);
-                JS_FreeCString(ctx, col.prop);
-            }
-
-            ctx = nullptr;
-        }
-    }
 };
 
 class ScriptPort {
@@ -79,6 +42,11 @@ class ScriptPort {
     JSValue validate_func = JS_UNDEFINED;
     JSValue recompute_func = JS_UNDEFINED;
 
+    HeapArray<JSValue> values;
+    HeapArray<const char *> strings;
+
+    bool locked = false;
+
 public:
     JSRuntime *rt = nullptr;
     JSContext *ctx = nullptr;
@@ -87,6 +55,7 @@ public:
     ~ScriptPort();
 
     void Unlock();
+    void ReleaseAll();
 
     void Setup(InstanceHolder *instance, const char *username, const char *zone);
 
@@ -97,7 +66,15 @@ public:
     bool Recompute(const char *table, Span<const char> json, const char *page,
                     ScriptFragment *out_fragment, Span<const char> *out_json);
 
+private:
+    JSValue StoreValue(JSValue value);
+
+    bool ConsumeBool(JSValue value);
+    int ConsumeInt(JSValue value);
+    Span<const char> ConsumeStr(JSValue value);
+
     friend void InitJS();
+    friend ScriptPort *LockScriptPort();
 };
 
 void InitJS();
