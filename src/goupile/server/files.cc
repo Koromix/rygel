@@ -53,7 +53,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
     sq_Statement stmt;
     if (!instance->db.Prepare(R"(SELECT rowid, compression, sha256 FROM fs_files
-                                 WHERE active = 1 AND path = ?;)", &stmt))
+                                 WHERE active = 1 AND path = ?1;)", &stmt))
         return true;
     sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
 
@@ -225,7 +225,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
             if (client_sha256) {
                 sq_Statement stmt;
                 if (!instance->db.Prepare(R"(SELECT sha256 FROM fs_files
-                                             WHERE active = 1 AND path = ?;)", &stmt))
+                                             WHERE active = 1 AND path = ?1;)", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
 
@@ -251,10 +251,10 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
             int64_t mtime = GetUnixTime();
 
             if (!instance->db.Run(R"(UPDATE fs_files SET active = 0
-                                     WHERE active = 1 AND path = ?;)", path))
+                                     WHERE active = 1 AND path = ?1;)", path))
                 return false;
             if (!instance->db.Run(R"(INSERT INTO fs_files (active, path, mtime, blob, compression, sha256, size)
-                                     VALUES (?, ?, ?, ?, ?, ?, ?);)",
+                                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7);)",
                                      1, path, mtime, sq_Binding::Zeroblob(file_len), "Gzip", sha256, total_len))
                 return false;
 
@@ -313,7 +313,7 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
         if (client_sha256) {
             sq_Statement stmt;
             if (!instance->db.Prepare(R"(SELECT active, sha256 FROM fs_files
-                                         WHERE path = ?
+                                         WHERE path = ?1
                                          ORDER BY active DESC;)", &stmt))
                 return false;
             sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
@@ -338,7 +338,7 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
         }
 
         if (!instance->db.Run(R"(UPDATE fs_files SET active = 0
-                                 WHERE active = 1 AND path = ?;)", path))
+                                 WHERE active = 1 AND path = ?1;)", path))
             return false;
 
         if (sqlite3_changes(instance->db)) {

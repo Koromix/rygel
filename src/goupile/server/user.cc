@@ -26,7 +26,7 @@ const Token *Session::GetToken(const InstanceHolder *instance) const
             do {
                 sq_Statement stmt;
                 if (!goupile_domain.db.Prepare(R"(SELECT zone, permissions FROM dom_permissions
-                                                  WHERE instance = ? AND username = ?;)", &stmt))
+                                                  WHERE instance = ?1 AND username = ?2;)", &stmt))
                     break;
                 sqlite3_bind_text(stmt, 1, instance->key, -1, SQLITE_STATIC);
                 sqlite3_bind_text(stmt, 2, username, -1, SQLITE_STATIC);
@@ -149,14 +149,14 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
         if (instance) {
             if (!goupile_domain.db.Prepare(R"(SELECT u.password_hash, u.admin FROM dom_users u
                                               INNER JOIN dom_permissions p ON (p.username = u.username)
-                                              WHERE u.username = ? AND
-                                                    p.instance = ? AND p.permissions > 0;)", &stmt))
+                                              WHERE u.username = ?1 AND
+                                                    p.instance = ?2 AND p.permissions > 0;)", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
             sqlite3_bind_text(stmt, 2, instance->key, -1, SQLITE_STATIC);
         } else {
             if (!goupile_domain.db.Prepare(R"(SELECT password_hash, admin FROM dom_users
-                                              WHERE username = ? AND admin = 1;)", &stmt))
+                                              WHERE username = ?1 AND admin = 1;)", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
         }
@@ -169,7 +169,7 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
                 int64_t time = GetUnixTime();
 
                 if (!goupile_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username)
-                                              VALUES (?, ?, ?, ?);)",
+                                              VALUES (?1, ?2, ?3, ?4);)",
                                     time, request.client_addr, "login", username))
                     return;
 

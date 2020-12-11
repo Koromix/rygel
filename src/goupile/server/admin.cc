@@ -141,7 +141,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
     // Check for existing instance
     {
         sq_Statement stmt;
-        if (!domain->db.Prepare("SELECT instance FROM dom_instances WHERE instance = ?;", &stmt))
+        if (!domain->db.Prepare("SELECT instance FROM dom_instances WHERE instance = ?1;", &stmt))
             return false;
         sqlite3_bind_text(stmt, 1, instance_key, -1, SQLITE_STATIC);
 
@@ -192,11 +192,11 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
 
     // Set default settings
     {
-        const char *sql = "UPDATE fs_settings SET value = ? WHERE key = ?";
+        const char *sql = "UPDATE fs_settings SET value = ?2 WHERE key = ?1;";
         bool success = true;
 
-        success &= db.Run(sql, app_key, "AppKey");
-        success &= db.Run(sql, app_name, "AppName");
+        success &= db.Run(sql, "AppKey", app_key);
+        success &= db.Run(sql, "AppName", app_name);
 
         if (!success)
             return false;
@@ -209,7 +209,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
 
         sq_Statement stmt;
         if (!db.Prepare(R"(INSERT INTO fs_files (active, path, mtime, blob, compression, sha256, size)
-                           VALUES (1, ?, ?, ?, ?, ?, ?);)", &stmt))
+                           VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6);)", &stmt))
             return false;
 
         for (const AssetInfo &asset: assets) {
@@ -263,10 +263,10 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
     bool success = domain->db.Transaction([&]() {
         uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
 
-        if (!domain->db.Run("INSERT INTO dom_instances (instance) VALUES (?);", instance_key))
+        if (!domain->db.Run("INSERT INTO dom_instances (instance) VALUES (?1);", instance_key))
             return false;
         if (!domain->db.Run(R"(INSERT INTO dom_permissions (instance, username, permissions)
-                               VALUES (?, ?, ?);)",
+                               VALUES (?1, ?2, ?3);)",
                         instance_key, default_user, permissions))
             return false;
 
@@ -436,7 +436,7 @@ Options:
             return 1;
 
         if (!domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, admin)
-                              VALUES (?, ?, 1);)", username, hash))
+                              VALUES (?1, ?2, 1);)", username, hash))
             return 1;
     }
 
@@ -588,9 +588,9 @@ void HandleDeleteInstance(const http_RequestInfo &request, http_IO *io)
         }
 
         goupile_domain.db.Transaction([&]() {
-            if (!goupile_domain.db.Run("DELETE FROM dom_permissions WHERE instance = ?;", instance_key))
+            if (!goupile_domain.db.Run("DELETE FROM dom_permissions WHERE instance = ?1;", instance_key))
                 return false;
-            if (!goupile_domain.db.Run("DELETE FROM dom_instances WHERE instance = ?;", instance_key))
+            if (!goupile_domain.db.Run("DELETE FROM dom_instances WHERE instance = ?1;", instance_key))
                 return false;
 
             if (!sqlite3_changes(goupile_domain.db)) {
@@ -682,7 +682,7 @@ void HandleCreateUser(const http_RequestInfo &request, http_IO *io)
             // Check for existing user
             {
                 sq_Statement stmt;
-                if (!goupile_domain.db.Prepare("SELECT admin FROM dom_users WHERE username = ?", &stmt))
+                if (!goupile_domain.db.Prepare("SELECT admin FROM dom_users WHERE username = ?1;", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
@@ -696,7 +696,7 @@ void HandleCreateUser(const http_RequestInfo &request, http_IO *io)
             }
 
             // Create user
-            if (!goupile_domain.db.Run("INSERT INTO dom_users (username, password_hash, admin) VALUES (?, ?, ?);",
+            if (!goupile_domain.db.Run("INSERT INTO dom_users (username, password_hash, admin) VALUES (?1, ?2, ?3);",
                                        username, hash, 0 + admin))
                 return false;
 
@@ -732,7 +732,7 @@ void HandleDeleteUser(const http_RequestInfo &request, http_IO *io)
         }
 
         goupile_domain.db.Transaction([&]() {
-            if (!goupile_domain.db.Run("DELETE FROM dom_users WHERE username = ?", username))
+            if (!goupile_domain.db.Run("DELETE FROM dom_users WHERE username = ?1;", username))
                 return false;
             if (!sqlite3_changes(goupile_domain.db)) {
                 LogError("User '%1' does not exist", username);
@@ -817,7 +817,7 @@ void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
             {
                 sq_Statement stmt;
                 if (!goupile_domain.db.Prepare(R"(SELECT instance FROM dom_instances
-                                                  WHERE instance = ?;)", &stmt))
+                                                  WHERE instance = ?1;)", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, instance, -1, SQLITE_STATIC);
 
@@ -834,7 +834,7 @@ void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
             {
                 sq_Statement stmt;
                 if (!goupile_domain.db.Prepare(R"(SELECT username FROM dom_users
-                                                  WHERE username = ?;)", &stmt))
+                                                  WHERE username = ?1;)", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
@@ -850,14 +850,14 @@ void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
             // Adjust permissions
             if (permissions) {
                 if (!goupile_domain.db.Run(R"(INSERT INTO dom_permissions (instance, username, permissions, zone)
-                                              VALUES (?, ?, ?, ?)
+                                              VALUES (?1, ?2, ?3, ?4)
                                               ON CONFLICT(instance, username)
                                                   DO UPDATE SET permissions = excluded.permissions;)",
                                            instance, username, permissions, zone))
                     return false;
             } else {
                 if (!goupile_domain.db.Run(R"(DELETE FROM dom_permissions
-                                              WHERE instance = ? AND username = ?;)",
+                                              WHERE instance = ?1 AND username = ?2;)",
                                            instance, username))
                     return false;
             }

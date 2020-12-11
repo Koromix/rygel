@@ -75,23 +75,22 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
     sq_Statement stmt;
     {
         LocalArray<char, 1024> sql;
-        int bind_idx = 1;
 
         sql.len += Fmt(sql.TakeAvailable(), R"(SELECT r.rowid, r.store, r.id, r.sequence, r.zone, f.mtime, f.username,
                                                       f.version, f.page, f.complete, f.json, f.anchor FROM rec_entries r
                                                INNER JOIN rec_fragments f ON (f.store = r.store AND f.id = r.id)
                                                WHERE 1 = 1)").len;
         if (token->zone) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND (r.zone IS NULL OR r.zone == ?)").len;
+            sql.len += Fmt(sql.TakeAvailable(), " AND (r.zone IS NULL OR r.zone == ?1)").len;
         }
         if (table) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND r.store = ?").len;
+            sql.len += Fmt(sql.TakeAvailable(), " AND r.store = ?2").len;
         }
         if (id) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND r.id = ?").len;
+            sql.len += Fmt(sql.TakeAvailable(), " AND r.id = ?3").len;
         }
         if (anchor) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND f.anchor >= ?").len;
+            sql.len += Fmt(sql.TakeAvailable(), " AND f.anchor >= ?4").len;
         }
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY r.rowid, f.anchor;").len;
 
@@ -99,16 +98,16 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
             return;
 
         if (token->zone) {
-            sqlite3_bind_text(stmt, bind_idx++, token->zone, -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 1, token->zone, -1, SQLITE_STATIC);
         }
         if (table) {
-            sqlite3_bind_text(stmt, bind_idx++, table, -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 2, table, -1, SQLITE_STATIC);
         }
         if (id) {
-            sqlite3_bind_text(stmt, bind_idx++, id, -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 3, id, -1, SQLITE_STATIC);
         }
         if (anchor) {
-            sqlite3_bind_int64(stmt, bind_idx++, anchor);
+            sqlite3_bind_int64(stmt, 4, anchor);
         }
     }
 
@@ -150,13 +149,13 @@ void HandleRecordColumns(InstanceHolder *instance, const http_RequestInfo &reque
     sq_Statement stmt;
     if (table) {
         if (!instance->db.Prepare(R"(SELECT store, page, variable, type, prop, before, after FROM rec_columns
-                                     WHERE store = ? AND anchor >= ?)", &stmt))
+                                     WHERE store = ?1 AND anchor >= ?2;)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, table, -1, SQLITE_STATIC);
         sqlite3_bind_int64(stmt, 2, anchor);
     } else {
         if (!instance->db.Prepare(R"(SELECT store, page, variable, type, prop, before, after FROM rec_columns
-                                     WHERE anchor >= ?)", &stmt))
+                                     WHERE anchor >= ?1;)", &stmt))
             return;
         sqlite3_bind_int64(stmt, 1, anchor);
     }
@@ -234,7 +233,7 @@ void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request,
             Span<const char> json;
             {
                 if (!instance->db.Prepare(R"(SELECT zone, version, json FROM rec_entries
-                                             WHERE store = ? AND id = ?)", &stmt))
+                                             WHERE store = ?1 AND id = ?2;)", &stmt))
                     return;
                 sqlite3_bind_text(stmt, 1, handle.table, -1, SQLITE_STATIC);
                 sqlite3_bind_text(stmt, 2, handle.id, -1, SQLITE_STATIC);
@@ -281,7 +280,7 @@ void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request,
                 {
                     sq_Statement stmt;
                     if (!instance->db.Prepare(R"(SELECT sequence FROM rec_sequences
-                                                 WHERE store = ?)", &stmt))
+                                                 WHERE store = ?1;)", &stmt))
                         return false;
                     sqlite3_bind_text(stmt, 1, handle.table, -1, SQLITE_STATIC);
 
@@ -296,7 +295,7 @@ void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request,
 
                 // Insert new entry
                 if (!instance->db.Run(R"(INSERT INTO rec_entries (store, id, zone, sequence, version, json)
-                                         VALUES (?, ?, ?, ?, ?, ?)
+                                         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
                                          ON CONFLICT DO NOTHING)",
                                     handle.table, handle.id, handle.zone ? sq_Binding(handle.zone) : sq_Binding(),
                                     sequence, fragments[fragments.len - 1].version, json))
@@ -305,14 +304,14 @@ void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request,
                 // Update sequence number of existing entry depending on result
                 if (sqlite3_changes(instance->db)) {
                     if (!instance->db.Run(R"(INSERT INTO rec_sequences (store, sequence)
-                                             VALUES (?, ?)
+                                             VALUES (?1, ?2)
                                              ON CONFLICT(store)
                                                  DO UPDATE SET sequence = excluded.sequence)",
                                         handle.table, sequence + 1))
                         return false;
                 } else {
-                    if (!instance->db.Run(R"(UPDATE rec_entries SET version = ?, json = ?
-                                             WHERE store = ? AND id = ?)",
+                    if (!instance->db.Run(R"(UPDATE rec_entries SET version = ?1, json = ?2
+                                             WHERE store = ?3 AND id = ?4;)",
                                         fragments[fragments.len - 1].version, json, handle.table, handle.id))
                         return false;
                 }
@@ -330,8 +329,8 @@ void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request,
 
                     int64_t anchor;
                     if (!instance->db.Run(R"(INSERT INTO rec_fragments (store, id, version, page,
-                                                                      username, mtime, complete, json)
-                                             VALUES (?, ?, ?, ?, ?, ?, ?, ?))",
+                                                                        username, mtime, complete, json)
+                                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8);)",
                                         handle.table, handle.id, frag.version,
                                         frag.page ? sq_Binding(frag.page) : sq_Binding(), session->username,
                                         frag.mtime, 0 + frag.complete, frag.json))
@@ -340,12 +339,12 @@ void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request,
 
                     sq_Statement stmt;
                     if (!instance->db.Prepare(R"(INSERT INTO rec_columns (key, store, page, variable,
-                                                                        type, prop, before, after, anchor)
-                                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                                                          type, prop, before, after, anchor)
+                                                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
                                                  ON CONFLICT(key)
                                                      DO UPDATE SET before = excluded.before,
                                                                    after = excluded.after,
-                                                                   anchor = excluded.anchor)", &stmt))
+                                                                   anchor = excluded.anchor;)", &stmt))
                         return false;
                     sqlite3_bind_text(stmt, 2, handle.table, -1, SQLITE_STATIC);
                     sqlite3_bind_int64(stmt, 9, anchor);
@@ -438,27 +437,25 @@ void HandleRecordRecompute(InstanceHolder *instance, const http_RequestInfo &req
         sq_Statement stmt;
         {
             LocalArray<char, 1024> sql;
-            int bind_idx = 1;
 
             sql.len += Fmt(sql.TakeAvailable(), R"(SELECT r.id, r.json, r.version, f.username,
                                                           f.complete, r.zone FROM rec_entries r
                                                    INNER JOIN rec_fragments f ON (f.store = r.store AND f.id = r.id AND
                                                                                   f.version = r.version)
-                                                   WHERE r.store = ? AND f.anchor <= ? AND f.page IS NOT NULL AND
-                                                         r.id IN (SELECT id FROM rec_fragments WHERE store = ? AND page = ?))").len;
+                                                   WHERE r.store = ?1 AND f.anchor <= ?2 AND f.page IS NOT NULL AND
+                                                         r.id IN (SELECT id FROM rec_fragments WHERE store = ?1 AND page = ?3))").len;
             if (token->zone) {
-                sql.len += Fmt(sql.TakeAvailable(), " AND (r.zone IS NULL OR r.zone == ?)").len;
+                sql.len += Fmt(sql.TakeAvailable(), " AND (r.zone IS NULL OR r.zone == ?4)").len;
             }
 
             if (!instance->db.Prepare(sql.data, &stmt))
                 return;
 
-            sqlite3_bind_text(stmt, bind_idx++, table, -1, SQLITE_STATIC);
-            sqlite3_bind_int64(stmt, bind_idx++, anchor);
-            sqlite3_bind_text(stmt, bind_idx++, table, -1, SQLITE_STATIC);
-            sqlite3_bind_text(stmt, bind_idx++, page, -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 1, table, -1, SQLITE_STATIC);
+            sqlite3_bind_int64(stmt, 2, anchor);
+            sqlite3_bind_text(stmt, 3, page, -1, SQLITE_STATIC);
             if (token->zone) {
-               sqlite3_bind_text(stmt, bind_idx++, token->zone, -1, SQLITE_STATIC);
+               sqlite3_bind_text(stmt, 4, token->zone, -1, SQLITE_STATIC);
             }
         }
 
@@ -482,12 +479,12 @@ void HandleRecordRecompute(InstanceHolder *instance, const http_RequestInfo &req
 
                     if (!instance->db.Run(R"(INSERT INTO rec_fragments (store, id, version, page,
                                                                         username, mtime, complete, json)
-                                             VALUES (?, ?, ?, ?, ?, ?, ?, ?);)",
+                                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8);)",
                                           table, id, version + 1, page, session->username, fragment.mtime,
                                           complete, fragment.json))
                         return false;
-                    if (!instance->db.Run(R"(UPDATE rec_entries SET version = ?, json = ?
-                                             WHERE store = ? AND id = ?;)",
+                    if (!instance->db.Run(R"(UPDATE rec_entries SET version = ?1, json = ?2
+                                             WHERE store = ?3 AND id = ?4;)",
                                           version + 1, json, table, id))
                         return false;
                 } while (++i < 20 && stmt.Next());
