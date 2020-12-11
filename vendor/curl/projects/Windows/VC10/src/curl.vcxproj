@@ -2629,6 +2629,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\..\lib\curl_ctype.c" />
     <ClCompile Include="..\..\..\..\lib\curl_multibyte.c" />
+    <ClCompile Include="..\..\..\..\lib\dynbuf.c" />
     <ClCompile Include="..\..\..\..\lib\nonblock.c" />
     <ClCompile Include="..\..\..\..\lib\strtoofft.c" />
     <ClCompile Include="..\..\..\..\lib\version_win32.c" />
@@ -2680,6 +2681,7 @@
     <ClInclude Include="..\..\..\..\lib\curl_ctype.h" />
     <ClInclude Include="..\..\..\..\lib\curl_multibyte.h" />
     <ClInclude Include="..\..\..\..\lib\curl_setup.h" />
+    <ClInclude Include="..\..\..\..\lib\dynbuf.h" />
     <ClInclude Include="..\..\..\..\lib\nonblock.h" />
     <ClInclude Include="..\..\..\..\lib\strtoofft.h" />
     <ClInclude Include="..\..\..\..\lib\version_win32.h" />

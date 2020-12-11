@@ -9,7 +9,7 @@
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution. The terms
-# are also available at https://curl.haxx.se/docs/copyright.html.
+# are also available at https://curl.se/docs/copyright.html.
 #
 # You may opt to use, copy, modify, merge, publish, distribute and/or sell
 # copies of the Software, and permit persons to whom the Software is
@@ -57,8 +57,9 @@ man_MANS =                                      \
   CURLINFO_PRIMARY_PORT.3                       \
   CURLINFO_PRIVATE.3                            \
   CURLINFO_PROTOCOL.3                           \
-  CURLINFO_PROXYAUTH_AVAIL.3                    \
+  CURLINFO_PROXY_ERROR.3                        \
   CURLINFO_PROXY_SSL_VERIFYRESULT.3             \
+  CURLINFO_PROXYAUTH_AVAIL.3                    \
   CURLINFO_REDIRECT_COUNT.3                     \
   CURLINFO_REDIRECT_TIME.3                      \
   CURLINFO_REDIRECT_TIME_T.3                    \
@@ -179,6 +180,12 @@ man_MANS =                                      \
   CURLOPT_HEADERDATA.3                          \
   CURLOPT_HEADERFUNCTION.3                      \
   CURLOPT_HEADEROPT.3                           \
+  CURLOPT_HSTS.3                                \
+  CURLOPT_HSTSREADDATA.3                        \
+  CURLOPT_HSTSREADFUNCTION.3                    \
+  CURLOPT_HSTSWRITEDATA.3                       \
+  CURLOPT_HSTSWRITEFUNCTION.3                   \
+  CURLOPT_HSTS_CTRL.3                           \
   CURLOPT_HTTP09_ALLOWED.3                      \
   CURLOPT_HTTP200ALIASES.3                      \
   CURLOPT_HTTPAUTH.3                            \
@@ -330,6 +337,7 @@ man_MANS =                                      \
   CURLOPT_SSL_CIPHER_LIST.3                     \
   CURLOPT_SSL_CTX_DATA.3                        \
   CURLOPT_SSL_CTX_FUNCTION.3                    \
+  CURLOPT_SSL_EC_CURVES.3			\
   CURLOPT_SSL_ENABLE_ALPN.3                     \
   CURLOPT_SSL_ENABLE_NPN.3                      \
   CURLOPT_SSL_FALSESTART.3                      \

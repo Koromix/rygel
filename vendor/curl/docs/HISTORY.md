@@ -7,9 +7,12 @@ currency-exchange calculations available to Internet Relay Chat (IRC)
 users. All the necessary data were published on the Web; he just needed to
 automate their retrieval.
 
-Daniel simply adopted an existing command-line open-source tool, httpget, that
-Brazilian Rafael Sagula had written and recently released version 0.1 of. After
-a few minor adjustments, it did just what he needed.
+1996
+----
+
+Daniel adopted an existing command-line open-source tool, httpget, that
+Brazilian Rafael Sagula had written and recently released version 0.1
+of. After a few minor adjustments, it did just what he needed.
 
 1997
 ----
@@ -126,8 +129,10 @@ impossible. Around 5000 downloaded packages each week from the main site gives
 a hint, but the packages are mirrored extensively, bundled with numerous OS
 distributions and otherwise retrieved as part of other software.
 
-September: with the release of curl 7.10 it is released under the MIT license
+October 1: with the release of curl 7.10 it is released under the MIT license
 only.
+
+Starting with 7.10, curl verifies SSL server certificates by default.
 
 2003
 ----
@@ -135,13 +140,13 @@ only.
 January: Started working on the distributed curl tests. The autobuilds.
 
 February: the curl site averages at 20000 visits weekly. At any given moment,
-there's an average of 3 people browsing the curl.haxx.se site.
+there's an average of 3 people browsing the website.
 
 Multiple new authentication schemes are supported: Digest (May), NTLM (June)
 and Negotiate (June).
 
 November: curl 7.10.8 is released. 45000 lines of code. ~55000 unique visitors
-to the curl.haxx.se site. Five official web mirrors.
+to the website. Five official web mirrors.
 
 December: full-fledged SSL for FTP is supported.
 
@@ -322,6 +327,8 @@ April: added the cyassl backend (later renamed to WolfSSL)
 
  October: SSLKEYLOGFILE support, new MIME API
 
+ October: Daniel received the Polhem Prize for his work on curl
+
  November: brotli
 
 2018
@@ -351,9 +358,30 @@ April: added the cyassl backend (later renamed to WolfSSL)
     Public functions in libcurl:  80
     Contributors:                 1808
 
+ December: removed axTLS support
+
 2019
 ----
+
+ March: added experimental alt-svc support
 
  August: the first HTTP/3 requests with curl.
 
  September: 7.66.0 is released and the tool offers parallel downloads
+
+2020
+----
+
+ curl and libcurl are installed in an estimated 10 *billion* instances
+ world-wide.
+
+ January: added BearSSL support
+
+ March: removed support for PolarSSL, added wolfSSH support
+
+ April: experimental MQTT support
+
+ August: zstd support
+
+ November: the website moves to www.curl.se. The website serves 10TB data
+ monthly.

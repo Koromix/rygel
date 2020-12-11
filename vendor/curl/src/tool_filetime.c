@@ -9,7 +9,7 @@
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
- * are also available at https://curl.haxx.se/docs/copyright.html.
+ * are also available at https://curl.se/docs/copyright.html.
  *
  * You may opt to use, copy, modify, merge, publish, distribute and/or sell
  * copies of the Software, and permit persons to whom the Software is
@@ -27,6 +27,11 @@
 #  include <utime.h>
 #elif defined(HAVE_SYS_UTIME_H)
 #  include <sys/utime.h>
+#endif
+
+#if defined(__GNUC__) && defined(__MINGW32__)
+/* GCC 10 on mingw has issues with this, disable */
+#pragma GCC diagnostic ignored "-Wformat"
 #endif
 
 curl_off_t getfiletime(const char *filename, FILE *error_stream)

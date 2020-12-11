@@ -10,7 +10,7 @@
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution. The terms
-# are also available at https://curl.haxx.se/docs/copyright.html.
+# are also available at https://curl.se/docs/copyright.html.
 #
 # You may opt to use, copy, modify, merge, publish, distribute and/or sell
 # copies of the Software, and permit persons to whom the Software is
@@ -163,6 +163,7 @@ my $TELNETPORT=$noport;  # TELNET server port with negotiation
 my $HTTPUNIXPATH;        # HTTP server Unix domain socket path
 
 my $SSHSRVMD5 = "[uninitialized]"; # MD5 of ssh server public key
+my $VERSION;             # curl's reported version number
 
 my $srcdir = $ENV{'srcdir'} || '.';
 my $CURL="../src/curl".exe_ext('TOOL'); # what curl executable to run on the tests
@@ -255,6 +256,7 @@ my $has_cares;      # set if built with c-ares
 my $has_threadedres;# set if built with threaded resolver
 my $has_psl;        # set if libcurl is built with PSL support
 my $has_altsvc;     # set if libcurl is built with alt-svc support
+my $has_hsts;       # set if libcurl is built with HSTS support
 my $has_ldpreload;  # set if curl is built for systems supporting LD_PRELOAD
 my $has_multissl;   # set if curl is build with MultiSSL support
 my $has_manual;     # set if curl is built with built-in manual
@@ -551,7 +553,7 @@ sub checkcmd {
     my ($cmd)=@_;
     my @paths=(split(":", $ENV{'PATH'}), "/usr/sbin", "/usr/local/sbin",
                "/sbin", "/usr/bin", "/usr/local/bin",
-               "./libtest/.libs", "./libtest");
+               "$LIBDIR/.libs", "$LIBDIR");
     for(@paths) {
         if( -x "$_/$cmd" && ! -d "$_/$cmd") {
             # executable bit but not a directory!
@@ -1448,7 +1450,7 @@ sub runhttp2server {
 
     # don't retry if the server doesn't work
     if ($doesntrun{$pidfile}) {
-        return (0,0);
+        return (0, 0, 0);
     }
 
     my $pid = processexists($pidfile);
@@ -1476,9 +1478,9 @@ sub runhttp2server {
 
         if($http2pid <= 0 || !pidexists($http2pid)) {
             # it is NOT alive
-            logmsg "RUN: failed to start the $srvrname server\n";
             stopserver($server, "$pid2");
             $doesntrun{$pidfile} = 1;
+            $http2pid = $pid2 = 0;
             next;
         }
         $doesntrun{$pidfile} = 0;
@@ -1488,6 +1490,8 @@ sub runhttp2server {
         }
         last;
     }
+
+    logmsg "RUN: failed to start the $srvrname server\n" if(!$http2pid);
 
     return ($http2pid, $pid2, $port);
 }
@@ -1529,7 +1533,7 @@ sub runhttpserver {
 
     # don't retry if the server doesn't work
     if ($doesntrun{$pidfile}) {
-        return (0,0);
+        return (0, 0, 0);
     }
 
     my $pid = processexists($pidfile);
@@ -1564,7 +1568,7 @@ sub runhttpserver {
         stopserver($server, "$pid2");
         displaylogs($testnumcheck);
         $doesntrun{$pidfile} = 1;
-        return (0,0);
+        return (0, 0, 0);
     }
 
     # where is it?
@@ -1581,7 +1585,7 @@ sub runhttpserver {
         stopserver($server, "$httppid $pid2");
         displaylogs($testnumcheck);
         $doesntrun{$pidfile} = 1;
-        return (0,0);
+        return (0, 0, 0);
     }
     $pid2 = $pid3;
 
@@ -1613,7 +1617,7 @@ sub runhttpsserver {
     }
 
     if(!$stunnel) {
-        return (0,0);
+        return (0, 0, 0);
     }
 
     $server = servername_id($proto, $ipvnum, $idnum);
@@ -1622,7 +1626,7 @@ sub runhttpsserver {
 
     # don't retry if the server doesn't work
     if ($doesntrun{$pidfile}) {
-        return (0,0);
+        return (0, 0, 0);
     }
 
     my $pid = processexists($pidfile);
@@ -1664,33 +1668,20 @@ sub runhttpsserver {
 
         if($httpspid <= 0 || !pidexists($httpspid)) {
             # it is NOT alive
-            logmsg "RUN: failed to start the $srvrname server\n";
             stopserver($server, "$pid2");
             displaylogs($testnumcheck);
             $doesntrun{$pidfile} = 1;
-            next;
-        }
-
-        # Server is up. Verify that we can speak to it.
-        $pid3 = verifyserver($proto, $ipvnum, $idnum, $ip, $port);
-        if(!$pid3) {
-            logmsg "RUN: $srvrname server failed verification\n";
-            # failed to talk to it properly. Kill the server and return failure
-            stopserver($server, "$httpspid $pid2");
-            displaylogs($testnumcheck);
-            $doesntrun{$pidfile} = 1;
+            $httpspid = $pid2 = 0;
             next;
         }
         # we have a server!
+        if($verbose) {
+            logmsg "RUN: $srvrname server is PID $httpspid port $port\n";
+        }
         last;
     }
-    # Here pid3 is actually the pid returned by the unsecure-http server.
-
     $runcert{$server} = $certfile;
-
-    if($verbose) {
-        logmsg "RUN: $srvrname server is PID $httpspid port $port\n";
-    }
+    logmsg "RUN: failed to start the $srvrname server\n" if(!$httpspid);
 
     return ($httpspid, $pid2, $port);
 }
@@ -1720,7 +1711,7 @@ sub runhttptlsserver {
 
     # don't retry if the server doesn't work
     if ($doesntrun{$pidfile}) {
-        return (0,0);
+        return (0, 0, 0);
     }
 
     my $pid = processexists($pidfile);
@@ -1750,7 +1741,6 @@ sub runhttptlsserver {
 
         if($httptlspid <= 0 || !pidexists($httptlspid)) {
             # it is NOT alive
-            logmsg "RUN: failed to start the $srvrname server\n";
             stopserver($server, "$pid2");
             displaylogs($testnumcheck);
             $doesntrun{$pidfile} = 1;
@@ -1764,6 +1754,7 @@ sub runhttptlsserver {
         }
         last;
     }
+    logmsg "RUN: failed to start the $srvrname server\n" if(!$httptlspid);
     return ($httptlspid, $pid2, $port);
 }
 
@@ -1877,7 +1868,7 @@ sub runpingpongserver {
     }
     else {
         print STDERR "Unsupported protocol $proto!!\n";
-        return 0;
+        return (0,0);
     }
 
     return ($pid2, $ftppid);
@@ -1908,7 +1899,7 @@ sub runftpsserver {
 
     # don't retry if the server doesn't work
     if ($doesntrun{$pidfile}) {
-        return (0,0);
+        return (0, 0, 0);
     }
 
     my $pid = processexists($pidfile);
@@ -1943,24 +1934,14 @@ sub runftpsserver {
 
         if($ftpspid <= 0 || !pidexists($ftpspid)) {
             # it is NOT alive
-            logmsg "RUN: failed to start the $srvrname server\n";
             stopserver($server, "$pid2");
             displaylogs($testnumcheck);
             $doesntrun{$pidfile} = 1;
+            $ftpspid = $pid2 = 0;
             next;
         }
 
-        $pid3 = verifyserver($proto, $ipvnum, $idnum, $ip, $port);
-        if(!$pid3) {
-            logmsg "RUN: $srvrname server failed verification\n";
-            # failed to talk to it properly. Kill the server and return failure
-            stopserver($server, "$ftpspid $pid2");
-            displaylogs($testnumcheck);
-            $doesntrun{$pidfile} = 1;
-            next;
-        }
-        # Here pid3 is actually the pid returned by the unsecure-ftp server.
-
+        $doesntrun{$pidfile} = 0;
         $runcert{$server} = $certfile;
 
         if($verbose) {
@@ -1968,6 +1949,8 @@ sub runftpsserver {
         }
         last;
     }
+
+    logmsg "RUN: failed to start the $srvrname server\n" if(!$ftpspid);
 
     return ($ftpspid, $pid2, $port);
 }
@@ -2000,7 +1983,7 @@ sub runtftpserver {
 
     # don't retry if the server doesn't work
     if ($doesntrun{$pidfile}) {
-        return (0,0);
+        return (0, 0, 0);
     }
 
     my $pid = processexists($pidfile);
@@ -2029,7 +2012,7 @@ sub runtftpserver {
         stopserver($server, "$pid2");
         displaylogs($testnumcheck);
         $doesntrun{$pidfile} = 1;
-        return (0,0);
+        return (0, 0, 0);
     }
 
     my $port = pidfromfile($portfile);
@@ -2042,7 +2025,7 @@ sub runtftpserver {
         stopserver($server, "$tftppid $pid2");
         displaylogs($testnumcheck);
         $doesntrun{$pidfile} = 1;
-        return (0,0);
+        return (0, 0, 0);
     }
     $pid2 = $pid3;
 
@@ -2082,7 +2065,7 @@ sub runrtspserver {
 
     # don't retry if the server doesn't work
     if ($doesntrun{$pidfile}) {
-        return (0,0);
+        return (0, 0, 0);
     }
 
     my $pid = processexists($pidfile);
@@ -2111,7 +2094,7 @@ sub runrtspserver {
         stopserver($server, "$pid2");
         displaylogs($testnumcheck);
         $doesntrun{$pidfile} = 1;
-        return (0,0);
+        return (0, 0, 0);
     }
 
     my $port = pidfromfile($portfile);
@@ -2124,7 +2107,7 @@ sub runrtspserver {
         stopserver($server, "$rtsppid $pid2");
         displaylogs($testnumcheck);
         $doesntrun{$pidfile} = 1;
-        return (0,0);
+        return (0, 0, 0);
     }
     $pid2 = $pid3;
 
@@ -2157,7 +2140,7 @@ sub runsshserver {
 
     # don't retry if the server doesn't work
     if ($doesntrun{$pidfile}) {
-        return (0,0);
+        return (0, 0, 0);
     }
 
     my $sshd = find_sshd();
@@ -2207,26 +2190,11 @@ sub runsshserver {
         # zero pid2 above.
         if($sshpid <= 0 || !pidexists($sshpid)) {
             # it is NOT alive
-            logmsg "RUN: failed to start the $srvrname server on $port\n";
             stopserver($server, "$pid2");
             $doesntrun{$pidfile} = 1;
+            $sshpid = $pid2 = 0;
             next;
         }
-
-        # ssh server verification allows some extra time for the server to
-        # start up and gives us the opportunity of recovering the pid from the
-        # pidfile, when this verification succeeds the recovered pid is
-        # assigned to pid2.
-
-        my $pid3 = verifyserver($proto, $ipvnum, $idnum, $ip, $port);
-        if(!$pid3) {
-            logmsg "RUN: $srvrname server failed verification\n";
-            # failed to fetch server pid. Kill the server and return failure
-            stopserver($server, "$sshpid $pid2");
-            $doesntrun{$pidfile} = 1;
-            next;
-        }
-        $pid2 = $pid3;
 
         # once it is known that the ssh server is alive, sftp server
         # verification is performed actually connecting to it, authenticating
@@ -2245,12 +2213,15 @@ sub runsshserver {
             display_sshdconfig();
             stopserver($server, "$sshpid $pid2");
             $doesntrun{$pidfile} = 1;
+            $sshpid = $pid2 = 0;
             next;
         }
         # we're happy, no need to loop anymore!
+        $doesntrun{$pidfile} = 0;
         $wport = $port;
         last;
     }
+    logmsg "RUN: failed to start the $srvrname server on $port\n" if(!$sshpid);
 
     if(!$wport) {
         logmsg "RUN: couldn't start $srvrname. Tried these ports:";
@@ -2358,7 +2329,7 @@ sub runsocksserver {
 
     # don't retry if the server doesn't work
     if ($doesntrun{$pidfile}) {
-        return (0,0);
+        return (0, 0, 0);
     }
 
     my $pid = processexists($pidfile);
@@ -2385,7 +2356,7 @@ sub runsocksserver {
         logmsg "RUN: failed to start the $srvrname server\n";
         stopserver($server, "$pid2");
         $doesntrun{$pidfile} = 1;
-        return (0,0);
+        return (0, 0, 0);
     }
 
     my $port = pidfromfile($portfile);
@@ -2422,7 +2393,7 @@ sub rundictserver {
 
     # don't retry if the server doesn't work
     if ($doesntrun{$pidfile}) {
-        return (0,0);
+        return (0, 0, 0);
     }
 
     my $pid = processexists($pidfile);
@@ -2451,7 +2422,6 @@ sub rundictserver {
 
         if($dictpid <= 0 || !pidexists($dictpid)) {
             # it is NOT alive
-            logmsg "RUN: failed to start the $srvrname server\n";
             stopserver($server, "$pid2");
             displaylogs($testnumcheck);
             $doesntrun{$pidfile} = 1;
@@ -2465,6 +2435,7 @@ sub rundictserver {
         }
         last;
     }
+    logmsg "RUN: failed to start the $srvrname server\n" if(!$dictpid);
 
     return ($dictpid, $pid2, $port);
 }
@@ -2494,7 +2465,7 @@ sub runsmbserver {
 
     # don't retry if the server doesn't work
     if ($doesntrun{$pidfile}) {
-        return (0,0);
+        return (0, 0, 0);
     }
 
     my $pid = processexists($pidfile);
@@ -2523,7 +2494,6 @@ sub runsmbserver {
 
         if($smbpid <= 0 || !pidexists($smbpid)) {
             # it is NOT alive
-            logmsg "RUN: failed to start the $srvrname server\n";
             stopserver($server, "$pid2");
             displaylogs($testnumcheck);
             $doesntrun{$pidfile} = 1;
@@ -2537,6 +2507,7 @@ sub runsmbserver {
         }
         last;
     }
+    logmsg "RUN: failed to start the $srvrname server\n" if(!$smbpid);
 
     return ($smbpid, $pid2, $port);
 }
@@ -2566,7 +2537,7 @@ sub runnegtelnetserver {
 
     # don't retry if the server doesn't work
     if ($doesntrun{$pidfile}) {
-        return (0,0);
+        return (0, 0, 0);
     }
 
     my $pid = processexists($pidfile);
@@ -2594,7 +2565,6 @@ sub runnegtelnetserver {
 
         if($ntelpid <= 0 || !pidexists($ntelpid)) {
             # it is NOT alive
-            logmsg "RUN: failed to start the $srvrname server\n";
             stopserver($server, "$pid2");
             displaylogs($testnumcheck);
             $doesntrun{$pidfile} = 1;
@@ -2608,6 +2578,7 @@ sub runnegtelnetserver {
         }
         last;
     }
+    logmsg "RUN: failed to start the $srvrname server\n" if(!$ntelpid);
 
     return ($ntelpid, $pid2, $port);
 }
@@ -2744,15 +2715,21 @@ sub cleardir {
     my $file;
 
     # Get all files
-    opendir(DIR, $dir) ||
+    opendir(my $dh, $dir) ||
         return 0; # can't open dir
-    while($file = readdir(DIR)) {
-        if(($file !~ /^\./)) {
-            unlink("$dir/$file");
+    while($file = readdir($dh)) {
+        if(($file !~ /^(\.|\.\.)\z/)) {
+            if(-d "$dir/$file") {
+                cleardir("$dir/$file");
+                rmdir("$dir/$file");
+            }
+            else {
+                unlink("$dir/$file");
+            }
             $count++;
         }
     }
-    closedir DIR;
+    closedir $dh;
     return $count;
 }
 
@@ -2785,7 +2762,9 @@ sub compare {
 }
 
 sub setupfeatures {
+    $feature{"c-ares"} = $has_cares;
     $feature{"alt-svc"} = $has_altsvc;
+    $feature{"HSTS"} = $has_hsts;
     $feature{"brotli"} = $has_brotli;
     $feature{"crypto"} = $has_crypto;
     $feature{"debug"} = $debug_build;
@@ -2888,8 +2867,9 @@ sub checksystem {
     for(@version) {
         chomp;
 
-        if($_ =~ /^curl/) {
+        if($_ =~ /^curl ([^ ]*)/) {
             $curl = $_;
+            $VERSION = $1;
             $curl =~ s/^(.*)(libcurl.*)/$1/g;
 
             $libcurl = $2;
@@ -3057,6 +3037,9 @@ sub checksystem {
             if($feat =~ /alt-svc/i) {
                 # alt-svc enabled
                 $has_altsvc=1;
+            }
+            if($feat =~ /HSTS/i) {
+                $has_hsts=1;
             }
             if($feat =~ /AsynchDNS/i) {
                 if(!$has_cares) {
@@ -3286,6 +3269,7 @@ sub subVariables {
     $$thing =~ s/${prefix}CURL/$CURL/g;
     $$thing =~ s/${prefix}PWD/$pwd/g;
     $$thing =~ s/${prefix}POSIX_PWD/$posix_pwd/g;
+    $$thing =~ s/${prefix}VERSION/$VERSION/g;
 
     my $file_pwd = $pwd;
     if($file_pwd !~ /^\//) {
@@ -3328,6 +3312,20 @@ sub subBase64 {
         my $enc = encode_base64($d, "");
         # put the result into there
         $$thing =~ s/%%B64%%/$enc/;
+    }
+    # hex decode
+    if($$thing =~ s/%hex\[(.*)\]hex%/%%HEX%%/i) {
+        # decode %NN characters
+        my $d = $1;
+        $d =~ s/%([0-9A-Fa-f]{2})/chr(hex($1))/eg;
+        $$thing =~ s/%%HEX%%/$d/;
+    }
+    if($$thing =~ s/%repeat\[(\d+) x (.*)\]%/%%REPEAT%%/i) {
+        # decode %NN characters
+        my ($d, $n) = ($2, $1);
+        $d =~ s/%([0-9A-Fa-f]{2})/chr(hex($1))/eg;
+        my $all = $d x $n;
+        $$thing =~ s/%%REPEAT%%/$all/;
     }
 }
 
@@ -3528,10 +3526,10 @@ sub singletest {
 
     # create test result in CI services
     if(azure_check_environment() && $AZURE_RUN_ID) {
-        $AZURE_RESULT_ID = azure_create_test_result($AZURE_RUN_ID, $testnum, $testname);
+        $AZURE_RESULT_ID = azure_create_test_result($VCURL, $AZURE_RUN_ID, $testnum, $testname);
     }
     elsif(appveyor_check_environment()) {
-        appveyor_create_test_result($testnum, $testname);
+        appveyor_create_test_result($VCURL, $testnum, $testname);
     }
 
     # remove test server commands file before servers are started/verified
@@ -3778,6 +3776,10 @@ sub singletest {
             subVariables(\$fileContent);
             open(OUTFILE, ">$filename");
             binmode OUTFILE; # for crapage systems, use binary
+            if($fileattr{'nonewline'}) {
+                # cut off the final newline
+                chomp($fileContent);
+            }
             print OUTFILE $fileContent;
             close(OUTFILE);
         }
@@ -3953,11 +3955,11 @@ sub singletest {
     if ($torture) {
         $cmdres = torture($CMDLINE,
                           $testnum,
-                          "$gdb --directory libtest $DBGCURL -x $LOGDIR/gdbcmd");
+                          "$gdb --directory $LIBDIR $DBGCURL -x $LOGDIR/gdbcmd");
     }
     elsif($gdbthis) {
         my $GDBW = ($gdbxwin) ? "-w" : "";
-        runclient("$gdb --directory libtest $DBGCURL $GDBW -x $LOGDIR/gdbcmd");
+        runclient("$gdb --directory $LIBDIR $DBGCURL $GDBW -x $LOGDIR/gdbcmd");
         $cmdres=0; # makes it always continue after a debugged run
     }
     else {
@@ -5184,9 +5186,9 @@ disabledtests("$TESTDIR/DISABLED.local");
 # Check options to this test program
 #
 
-# Special case for CMake: replace '${TFLAGS}' by the contents of the
+# Special case for CMake: replace '$TFLAGS' by the contents of the
 # environment variable (if any).
-if(@ARGV && $ARGV[-1] eq '${TFLAGS}') {
+if(@ARGV && $ARGV[-1] eq '$TFLAGS') {
     pop @ARGV;
     push(@ARGV, split(' ', $ENV{'TFLAGS'})) if defined($ENV{'TFLAGS'});
 }
@@ -5687,7 +5689,7 @@ sub displaylogs {
 #
 
 if(azure_check_environment()) {
-    $AZURE_RUN_ID = azure_create_test_run();
+    $AZURE_RUN_ID = azure_create_test_run($VCURL);
     logmsg "Azure Run ID: $AZURE_RUN_ID\n" if ($verbose);
 }
 
@@ -5715,11 +5717,11 @@ foreach $testnum (@at) {
 
     # update test result in CI services
     if(azure_check_environment() && $AZURE_RUN_ID && $AZURE_RESULT_ID) {
-        $AZURE_RESULT_ID = azure_update_test_result($AZURE_RUN_ID, $AZURE_RESULT_ID, $testnum, $error,
+        $AZURE_RESULT_ID = azure_update_test_result($VCURL, $AZURE_RUN_ID, $AZURE_RESULT_ID, $testnum, $error,
                                                     $timeprepini{$testnum}, $timevrfyend{$testnum});
     }
     elsif(appveyor_check_environment()) {
-        appveyor_update_test_result($testnum, $error, $timeprepini{$testnum}, $timevrfyend{$testnum});
+        appveyor_update_test_result($VCURL, $testnum, $error, $timeprepini{$testnum}, $timevrfyend{$testnum});
     }
 
     if($error < 0) {
@@ -5764,7 +5766,7 @@ my $sofar = time() - $start;
 #
 
 if(azure_check_environment() && $AZURE_RUN_ID) {
-    $AZURE_RUN_ID = azure_update_test_run($AZURE_RUN_ID);
+    $AZURE_RUN_ID = azure_update_test_run($VCURL, $AZURE_RUN_ID);
 }
 
 # Tests done, stop the servers
@@ -5779,11 +5781,18 @@ if($total) {
                    $ok/$total*100);
 
     if($ok != $total) {
-        logmsg "TESTFAIL: These test cases failed: $failed\n";
+        logmsg "\nTESTFAIL: These test cases failed: $failed\n\n";
     }
 }
 else {
-    logmsg "TESTFAIL: No tests were performed\n";
+    logmsg "\nTESTFAIL: No tests were performed\n\n";
+    if(scalar(keys %enabled_keywords)) {
+        logmsg "TESTFAIL: Nothing matched these keywords: ";
+        for(keys %enabled_keywords) {
+            logmsg "$_ ";
+        }
+        logmsg "\n";
+    }
 }
 
 if($all) {
@@ -5820,6 +5829,6 @@ if($skipped && !$short) {
     }
 }
 
-if($total && (($ok+$ign) != $total)) {
+if(($total && (($ok+$ign) != $total)) || !$total) {
     exit 1;
 }
