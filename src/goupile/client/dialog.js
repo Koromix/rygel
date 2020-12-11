@@ -176,8 +176,6 @@ let dialog = new function() {
         // Reveal!
         dialog.el.style.visibility = 'visible';
         if (give_focus) {
-            dialog.el.style.minWidth = dialog.el.offsetWidth + 'px';
-
             let widget0 = dialog.el.querySelector(`.af_widget input, .af_widget select,
                                                    .af_widget button, .af_widget textarea`);
             if (widget0 != null)
