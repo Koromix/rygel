@@ -31,6 +31,7 @@ struct PendingOperator {
 struct StackSlot {
     const bk_TypeInfo *type;
     const bk_VariableInfo *var;
+    Size indirect_addr;
 };
 
 class bk_Parser {
@@ -77,7 +78,7 @@ public:
 
     void AddFunction(const char *prototype, std::function<bk_NativeFunction> native);
     bk_VariableInfo *AddGlobal(const char *name, const bk_TypeInfo *type,
-                               bk_PrimitiveValue value, bool mut, bk_VariableInfo::Scope scope);
+                               Span<const bk_PrimitiveValue> values, bool mut, bk_VariableInfo::Scope scope);
 
 private:
     void ParsePrototypes(Span<const Size> funcs);
@@ -91,6 +92,7 @@ private:
     void ParseFunction(const PrototypeInfo *proto);
     void ParseReturn();
     void ParseLet();
+    void PushDefaultValue(Size var_pos, const bk_VariableInfo &var, const bk_TypeInfo *type);
     bool ParseIf();
     void ParseWhile();
     void ParseFor();
@@ -105,6 +107,7 @@ private:
     bool EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *out_type);
     bool ParseCall(const bk_FunctionTypeInfo *func_type, const bk_FunctionInfo *func, bool overload);
     const bk_FunctionTypeInfo *ParseFunctionType();
+    const bk_ArrayTypeInfo *ParseArrayType(const bk_TypeInfo *unit_type);
     void EmitIntrinsic(const char *name, Size call_addr, Span<const bk_TypeInfo *const> args);
     void EmitLoad(const bk_VariableInfo &var);
 
@@ -212,15 +215,9 @@ void bk_Compiler::AddFunction(const char *prototype, std::function<bk_NativeFunc
     parser->AddFunction(prototype, native);
 }
 
-void bk_Compiler::AddGlobal(const char *name, const bk_TypeInfo *type, bk_PrimitiveValue value, bool mut)
+void bk_Compiler::AddGlobal(const char *name, const bk_TypeInfo *type, Span<const bk_PrimitiveValue> values, bool mut)
 {
-#ifndef NDEBUG
-    bool success = std::any_of(bk_BaseTypes.begin(), bk_BaseTypes.end(),
-                               [&](const bk_TypeInfo &it) { return &it == type; });
-    RG_ASSERT(success);
-#endif
-
-    parser->AddGlobal(name, type, value, mut, bk_VariableInfo::Scope::Global);
+    parser->AddGlobal(name, type, values, mut, bk_VariableInfo::Scope::Global);
 }
 
 bk_Parser::bk_Parser(bk_Program *program)
@@ -231,14 +228,14 @@ bk_Parser::bk_Parser(bk_Program *program)
 
     // Base types
     for (const bk_TypeInfo &type: bk_BaseTypes) {
-        AddGlobal(type.signature, bk_TypeType, {.type = &type}, false, bk_VariableInfo::Scope::Module);
+        AddGlobal(type.signature, bk_TypeType, {{.type = &type}}, false, bk_VariableInfo::Scope::Module);
         program->types_map.Set(&type);
     }
 
     // Special values
-    AddGlobal("Version", bk_StringType, bk_PrimitiveValue {.str = FelixVersion}, false, bk_VariableInfo::Scope::Global);
-    AddGlobal("NaN", bk_FloatType, bk_PrimitiveValue {.d = (double)NAN}, false, bk_VariableInfo::Scope::Global);
-    AddGlobal("Inf", bk_FloatType, bk_PrimitiveValue {.d = (double)INFINITY}, false, bk_VariableInfo::Scope::Global);
+    AddGlobal("Version", bk_StringType, {{.str = FelixVersion}}, false, bk_VariableInfo::Scope::Global);
+    AddGlobal("NaN", bk_FloatType, {{.d = (double)NAN}}, false, bk_VariableInfo::Scope::Global);
+    AddGlobal("Inf", bk_FloatType, {{.d = (double)INFINITY}}, false, bk_VariableInfo::Scope::Global);
 
     // Intrinsics
     AddFunction("toFloat(Int): Float", {});
@@ -309,6 +306,9 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
 
     src = program->sources.AppendDefault();
     src->filename = DuplicateString(file.filename, &program->str_alloc).ptr;
+
+    // Protect IR from before this parse step
+    ir.Append({bk_Opcode::Nop});
 
     // Preparse (top-level order-independence)
     preparse = true;
@@ -447,13 +447,13 @@ void bk_Parser::AddFunction(const char *prototype, std::function<bk_NativeFuncti
             func->overload_prev = func;
             func->overload_next = func;
 
-            AddGlobal(func->name, func->type, {.func = func}, false, bk_VariableInfo::Scope::Module);
+            AddGlobal(func->name, func->type, {{.func = func}}, false, bk_VariableInfo::Scope::Module);
         }
     }
 }
 
 bk_VariableInfo *bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type,
-                                      bk_PrimitiveValue value, bool mut, bk_VariableInfo::Scope scope)
+                                      Span<const bk_PrimitiveValue> values, bool mut, bk_VariableInfo::Scope scope)
 {
     bk_VariableInfo *var = program->variables.AppendDefault();
 
@@ -461,9 +461,13 @@ bk_VariableInfo *bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type,
     var->type = type;
     var->mut = mut;
     var->scope = scope;
-    var->offset = var_offset++;
 
-    ir.Append({bk_Opcode::Push, type->primitive, value});
+    var_offset += values.len;
+    var->offset = var_offset - 1;
+
+    for (const bk_PrimitiveValue &value: values) {
+        ir.Append({bk_Opcode::Push, type->primitive, value});
+    }
     var->ready_addr = ir.len;
 
     program->variables_map.TrySet(var);
@@ -629,7 +633,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
     // Publish function symbols
     for (const PrototypeInfo *proto: prototypes) {
         const bk_FunctionInfo &func = *proto->func;
-        const bk_VariableInfo *var = AddGlobal(func.name, func.type, {.func = &func}, false, bk_VariableInfo::Scope::Module);
+        const bk_VariableInfo *var = AddGlobal(func.name, func.type, {{.func = &func}}, false, bk_VariableInfo::Scope::Module);
         definitions_map.Set(var, proto->pos);
     }
 }
@@ -811,7 +815,9 @@ void bk_Parser::ParseFunction(const PrototypeInfo *proto)
         var->type = param.type;
         var->mut = param.mut;
         var->scope = bk_VariableInfo::Scope::Local;
-        var->offset = var_offset++;
+
+        var->offset = var_offset;
+        var_offset++;
 
         std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySet(var);
         if (RG_UNLIKELY(!ret.second)) {
@@ -893,17 +899,22 @@ void bk_Parser::ParseReturn()
         return;
     }
 
-    const bk_TypeInfo *type;
+    StackSlot slot;
     if (PeekToken(bk_TokenKind::EndOfLine) || PeekToken(bk_TokenKind::Semicolon)) {
         ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Null});
-        type = bk_NullType;
+        slot = {bk_NullType};
     } else {
-        type = ParseExpression(true).type;
+        slot = ParseExpression(true);
     }
 
-    if (RG_UNLIKELY(type != current_func->type->ret_type)) {
+    if (RG_UNLIKELY(slot.type != current_func->type->ret_type)) {
         MarkError(return_pos, "Cannot return '%1' value in function defined to return '%2'",
-                  type->signature, current_func->type->ret_type->signature);
+                  slot.type->signature, current_func->type->ret_type->signature);
+        return;
+    }
+    if (RG_UNLIKELY(slot.type->PassByReference() && slot.var &&
+                    slot.var->scope == bk_VariableInfo::Scope::Local)) {
+        MarkError(return_pos, "Cannot return reference to local '%1' value", slot.type->signature);
         return;
     }
 
@@ -963,20 +974,15 @@ void bk_Parser::ParseLet()
                           slot.type->signature, var->name, type->signature);
             }
         } else {
-            slot = {type};
+            Size offset = var_offset;
 
-            switch (type->primitive) {
-                case bk_PrimitiveKind::Null:
-                case bk_PrimitiveKind::Boolean:
-                case bk_PrimitiveKind::Integer:
-                case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::Push, type->primitive}); } break;
-                case bk_PrimitiveKind::String: { ir.Append({bk_Opcode::Push, type->primitive, {.str = InternString("")}}); } break;
-                case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::Push, type->primitive, {.type = bk_NullType}}); } break;
-                case bk_PrimitiveKind::Function: {
-                    MarkError(var_pos, "Variable '%1' (defined as '%2') must be explicitely initialized",
-                              var->name, type->signature);
-                } break;
+            PushDefaultValue(var_pos, *var, type);
+            if (type->PassByReference()) {
+                bk_Opcode code = (var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Lea : bk_Opcode::LeaLocal;
+                ir.Append({code, type->primitive, {.i = offset}});
             }
+
+            slot = {type};
         }
     }
 
@@ -987,18 +993,44 @@ void bk_Parser::ParseLet()
         TrimInstructions(1);
 
         var->scope = slot.var->scope;
-        var->offset = slot.var->offset;
         var->ready_addr = slot.var->ready_addr;
+        var->offset = slot.var->offset;
     } else {
         var->scope = current_func ? bk_VariableInfo::Scope::Local : bk_VariableInfo::Scope::Global;
-        var->offset = var_offset++;
         var->ready_addr = ir.len;
+
+        var->offset = var_offset;
+        var_offset++;
     }
 
     // Expressions involving this variable won't issue (visible) errors
     // and will be marked as invalid too.
     if (RG_UNLIKELY(!show_errors)) {
         poisoned_set.Set(var);
+    }
+}
+
+void bk_Parser::PushDefaultValue(Size var_pos, const bk_VariableInfo &var, const bk_TypeInfo *type)
+{
+    switch (type->primitive) {
+        case bk_PrimitiveKind::Null:
+        case bk_PrimitiveKind::Boolean:
+        case bk_PrimitiveKind::Integer:
+        case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::Push, type->primitive, {.i = 0}}); } break;
+        case bk_PrimitiveKind::String: { ir.Append({bk_Opcode::Push, type->primitive, {.str = InternString("")}}); } break;
+        case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::Push, type->primitive, {.type = bk_NullType}}); } break;
+        case bk_PrimitiveKind::Function: {
+            MarkError(var_pos, "Variable '%1' (defined as '%2') must be explicitely initialized",
+                      var.name, type->signature);
+        } break;
+        case bk_PrimitiveKind::Array: {
+            const bk_ArrayTypeInfo *array_type = type->AsArrayType();
+
+            for (Size i = 0; i < array_type->len; i++) {
+                PushDefaultValue(var_pos, var, array_type->unit_type);
+                var_offset += (array_type->unit_type->primitive != bk_PrimitiveKind::Array);
+            }
+        } break;
     }
 }
 
@@ -1119,7 +1151,6 @@ void bk_Parser::ParseFor()
     definitions_map.Set(it, pos);
     it->name = ConsumeIdentifier();
     it->scope = bk_VariableInfo::Scope::Local;
-    it->offset = var_offset + 2;
 
     std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySet(it);
     if (RG_UNLIKELY(!ret.second)) {
@@ -1146,6 +1177,7 @@ void bk_Parser::ParseFor()
     ParseExpression(bk_IntType);
 
     // Make sure start and end value remain on the stack
+    it->offset = var_offset + 2;
     var_offset += 3;
 
     // Put iterator value on the stack
@@ -1393,6 +1425,62 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                 stack.Append({bk_TypeType});
             } break;
 
+            case bk_TokenKind::LeftBracket: {
+                if (RG_UNLIKELY(expect_value))
+                    goto unexpected;
+
+                if (stack[stack.len - 1].type == bk_TypeType) {
+                    if (RG_LIKELY(ir[ir.len - 1].code == bk_Opcode::Push)) {
+                        RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Type);
+
+                        const bk_TypeInfo *unit_type = ir[ir.len - 1].u.type;
+
+                        TrimInstructions(1);
+                        stack.len--;
+
+                        const bk_TypeInfo *type = ParseArrayType(unit_type);
+
+                        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = type}});
+                        stack.Append({bk_TypeType});
+                    } else {
+                        MarkError(pos - 1, "Complex 'Type' expression cannot be resolved statically");
+                        goto error;
+                    }
+                } else if (stack[stack.len - 1].type->primitive == bk_PrimitiveKind::Array) {
+                    const bk_ArrayTypeInfo *array_type = stack[stack.len - 1].type->AsArrayType();
+
+                    if (stack[stack.len - 1].indirect_addr) {
+                        RG_ASSERT(stack[stack.len - 1].indirect_addr == ir.len - 1);
+                        TrimInstructions(1);
+                    }
+
+                    Size idx_pos = pos;
+                    const bk_TypeInfo *type = ParseExpression(false).type;
+                    if (RG_UNLIKELY(type != bk_IntType)) {
+                        MarkError(idx_pos, "Expected an 'Int' expression, not '%1'", type->signature);
+                        goto error;
+                    }
+                    ConsumeToken(bk_TokenKind::RightBracket);
+
+                    ir.Append({bk_Opcode::CheckIndex, {}, {.i = array_type->len}});
+                    if (array_type->unit_size != 1) {
+                        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = array_type->unit_size}});
+                        ir.Append({bk_Opcode::MultiplyInt});
+                    }
+                    if (stack[stack.len - 1].indirect_addr) {
+                        ir.Append({bk_Opcode::AddInt});
+                    }
+
+                    ir.Append({bk_Opcode::LoadArray});
+
+                    stack[stack.len - 1].type = array_type->unit_type;
+                    stack[stack.len - 1].indirect_addr = ir.len - 1;
+                } else {
+                    MarkError(pos - 1, "Cannot subset non-array expression");
+                    goto error;
+                }
+            } break;
+
             case bk_TokenKind::Identifier: {
                 if (RG_UNLIKELY(!expect_value))
                     goto unexpected;
@@ -1628,24 +1716,24 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
     if (op.prec == 0) { // Assignement operators
         RG_ASSERT(!op.unary);
 
-        const bk_VariableInfo *var = stack[stack.len - 2].var;
+        StackSlot var = stack[stack.len - 2];
         const StackSlot &expr = stack[stack.len - 1];
 
-        if (RG_UNLIKELY(!var)) {
+        if (RG_UNLIKELY(!var.var)) {
             MarkError(op.pos, "Cannot assign result to temporary value; left operand should be a variable");
             return;
         }
-        if (RG_UNLIKELY(!var->mut)) {
-            MarkError(op.pos, "Cannot assign result to non-mutable variable '%1'", var->name);
-            HintError(definitions_map.FindValue(var, -1), "Variable '%1' is defined without 'mut' qualifier", var->name);
+        if (RG_UNLIKELY(!var.var->mut)) {
+            MarkError(op.pos, "Cannot assign result to non-mutable variable '%1'", var.var->name);
+            HintError(definitions_map.FindValue(var.var, -1), "Variable '%1' is defined without 'mut' qualifier", var.var->name);
 
             return;
         }
-        if (RG_UNLIKELY(var->type != expr.type)) {
+        if (RG_UNLIKELY(var.type != expr.type)) {
             MarkError(op.pos, "Cannot assign '%1' value to variable '%2'",
-                      expr.type->signature, var->name);
-            HintError(definitions_map.FindValue(var, -1), "Variable '%1' is defined as '%2'",
-                      var->name, var->type->signature);
+                      expr.type->signature, var.var->name);
+            HintError(definitions_map.FindValue(var.var, -1), "Variable '%1' is defined as '%2'",
+                      var.var->name, var.type->signature);
             return;
         }
 
@@ -1702,10 +1790,18 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
             default: { RG_UNREACHABLE(); } break;
         }
 
-        if (var->scope != bk_VariableInfo::Scope::Local) {
-            ir.Append({bk_Opcode::Copy, var->type->primitive, {.i = var->offset}});
+        if (var.indirect_addr) {
+            // In order for CopyArray to work, the array reference and offset must remain on the stack.
+            // To do so, replace LoadArray (which removes them) with LoadIndirect.
+            if (op.kind != bk_TokenKind::Reassign) {
+                RG_ASSERT(ir[var.indirect_addr].code == bk_Opcode::LoadArray);
+                ir[var.indirect_addr].code = bk_Opcode::LoadIndirect;
+            }
+
+            ir.Append({bk_Opcode::CopyArray, var.type->primitive});
         } else {
-            ir.Append({bk_Opcode::CopyLocal, var->type->primitive, {.i = var->offset}});
+            bk_Opcode code = (var.var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Copy : bk_Opcode::CopyLocal;
+            ir.Append({code, var.type->primitive, {.i = var.var->offset}});
         }
     } else { // Other operators
         switch (op.kind) {
@@ -1906,10 +2002,9 @@ void bk_Parser::EmitLoad(const bk_VariableInfo &var)
     if (!var.mut && var.ready_addr > 0 && ir[var.ready_addr - 1].code == bk_Opcode::Push) {
         bk_Instruction inst = ir[var.ready_addr - 1];
         ir.Append(inst);
-    } else if (var.scope != bk_VariableInfo::Scope::Local) {
-        ir.Append({bk_Opcode::Load, var.type->primitive, {.i = var.offset}});
     } else {
-        ir.Append({bk_Opcode::LoadLocal, var.type->primitive, {.i = var.offset}});
+        bk_Opcode code = (var.scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Load : bk_Opcode::LoadLocal;
+        ir.Append({code, var.type->primitive, {.i = var.offset}});
     }
 
     stack.Append({var.type, &var});
@@ -1924,6 +2019,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
     Size call_addr = ir.len;
 
     // Parse arguments
+    Size args_size = 0;
     if (!MatchToken(bk_TokenKind::RightParenthesis)) {
         do {
             SkipNewLines();
@@ -1939,11 +2035,13 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
 
                 const bk_TypeInfo *type = ParseExpression(true).type;
                 args.Append(type);
+                args_size += 2;
 
                 ir[type_addr].u.type = type;
             } else {
                 const bk_TypeInfo *type = ParseExpression(true).type;
                 args.Append(type);
+                args_size++;
             }
         } while (MatchToken(bk_TokenKind::Comma));
 
@@ -1951,7 +2049,8 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
         ConsumeToken(bk_TokenKind::RightParenthesis);
     }
     if (func_type->variadic) {
-        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = args.len - func_type->params.len}});
+        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = args_size - func_type->params.len}});
+        args_size++;
     }
 
     // Find appropriate overload. Variadic functions cannot be overloaded but it
@@ -1992,7 +2091,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
 
     // Emit intrinsic or call
     if (!func) {
-        Size offset = 1 + args.len + (func_type->variadic ? 1 + args.len : 0);
+        Size offset = 1 + args_size;
         ir.Append({bk_Opcode::Call, {}, {.i = -offset}});
 
         stack.len--;
@@ -2062,6 +2161,58 @@ const bk_FunctionTypeInfo *bk_Parser::ParseFunctionType()
     return func_type;
 }
 
+const bk_ArrayTypeInfo *bk_Parser::ParseArrayType(const bk_TypeInfo *unit_type)
+{
+    Size def_pos = pos;
+
+    bk_ArrayTypeInfo type_buf;
+
+    type_buf.primitive = bk_PrimitiveKind::Array;
+    type_buf.unit_type = unit_type;
+
+    // Unit size
+    if (unit_type->primitive == bk_PrimitiveKind::Array) {
+        const bk_ArrayTypeInfo *array_type = unit_type->AsArrayType();
+        type_buf.unit_size = array_type->len * array_type->unit_size;
+    } else {
+        type_buf.unit_size = 1;
+    }
+
+    // Parse array length
+    {
+        const bk_TypeInfo *type = ParseExpression(false).type;
+
+        ConsumeToken(bk_TokenKind::RightBracket);
+
+        if (RG_LIKELY(type == bk_IntType)) {
+            // Once we start to implement constant folding and CTFE, more complex expressions
+            // should work without any change here.
+            if (RG_LIKELY(ir[ir.len - 1].code == bk_Opcode::Push)) {
+                // XXX: max array length? overflow error?
+                type_buf.len = ir[ir.len - 1].u.i;
+                TrimInstructions(1);
+            } else {
+                MarkError(def_pos, "Complex 'Int' expression cannot be resolved statically");
+                type_buf.len = 0;
+            }
+        } else {
+            MarkError(def_pos, "Expected an 'Int' expression, not '%1'", type->signature);
+            type_buf.len = 0;
+        }
+    }
+
+    // Format type signature
+    {
+        HeapArray<char> signature_buf;
+        Fmt(&signature_buf, "%1 [%2]", unit_type->signature, type_buf.len);
+
+        type_buf.signature = InternString(signature_buf.ptr);
+    }
+
+    const bk_ArrayTypeInfo *array_type = InsertType(type_buf, &program->array_types)->AsArrayType();
+    return array_type;
+}
+
 void bk_Parser::EmitIntrinsic(const char *name, Size call_addr, Span<const bk_TypeInfo *const> args)
 {
     if (TestStr(name, "toFloat")) {
@@ -2103,10 +2254,8 @@ const bk_TypeInfo *bk_Parser::ParseTypeExpression()
         }
     }
 
-    // Once we start to implement constant folding and CTFE, more complex expressions
-    // should work without any change here.
     if (RG_UNLIKELY(ir[ir.len - 1].code != bk_Opcode::Push)) {
-        MarkError(type_pos, "Complex type expression cannot be resolved statically");
+        MarkError(type_pos, "Complex 'Type' expression cannot be resolved statically");
         return bk_NullType;
     }
 
@@ -2125,6 +2274,7 @@ void bk_Parser::DiscardResult()
 
         case bk_Opcode::Copy: { ir[ir.len - 1].code = bk_Opcode::Store; } break;
         case bk_Opcode::CopyLocal: { ir[ir.len - 1].code = bk_Opcode::StoreLocal; } break;
+        case bk_Opcode::CopyArray: { ir[ir.len - 1].code = bk_Opcode::StoreArray; } break;
 
         default: { EmitPop(1); } break;
     }

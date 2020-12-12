@@ -6,17 +6,26 @@
     #error Please define OPCODE() before including opcodes.inc
 #endif
 
+OPCODE(Nop)
+
 // Immediate values
 OPCODE(Push)
 OPCODE(Pop)
 
 // Load/store
 OPCODE(Load)
-OPCODE(Store)
-OPCODE(Copy)
 OPCODE(LoadLocal)
+OPCODE(LoadArray)
+OPCODE(LoadIndirect)
+OPCODE(Lea)
+OPCODE(LeaLocal)
+OPCODE(Store)
 OPCODE(StoreLocal)
+OPCODE(StoreArray)
+OPCODE(Copy)
 OPCODE(CopyLocal)
+OPCODE(CopyArray)
+OPCODE(CheckIndex)
 
 // Integer operators
 OPCODE(NegateInt)

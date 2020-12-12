@@ -419,6 +419,8 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
             case ':': { Token2('=', bk_TokenKind::Reassign) || Token1(bk_TokenKind::Colon); } break;
             case '(': { Token1(bk_TokenKind::LeftParenthesis); } break;
             case ')': { Token1(bk_TokenKind::RightParenthesis); } break;
+            case '[': { Token1(bk_TokenKind::LeftBracket); } break;
+            case ']': { Token1(bk_TokenKind::RightBracket); } break;
             case '+': { Token2('=', bk_TokenKind::PlusAssign) || Token1(bk_TokenKind::Plus); } break;
             case '-': { Token2('=', bk_TokenKind::MinusAssign) || Token1(bk_TokenKind::Minus); } break;
             case '*': { Token2('=', bk_TokenKind::MultiplyAssign) || Token1(bk_TokenKind::Multiply); } break;

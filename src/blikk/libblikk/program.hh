@@ -19,7 +19,8 @@ enum class bk_PrimitiveKind {
     Float,
     String,
     Type,
-    Function
+    Function,
+    Array
 };
 static const char *const bk_PrimitiveKindNames[] = {
     "Null",
@@ -28,7 +29,8 @@ static const char *const bk_PrimitiveKindNames[] = {
     "Float",
     "String",
     "Type",
-    "Function"
+    "Function",
+    "Array"
 };
 
 union bk_PrimitiveValue {
@@ -44,10 +46,17 @@ struct bk_TypeInfo {
     const char *signature;
     bk_PrimitiveKind primitive;
 
+    bool PassByReference() const { return primitive == bk_PrimitiveKind::Array; }
+
     const struct bk_FunctionTypeInfo *AsFunctionType() const
     {
         RG_ASSERT(primitive == bk_PrimitiveKind::Function);
         return (const bk_FunctionTypeInfo *)this;
+    }
+    const struct bk_ArrayTypeInfo *AsArrayType() const
+    {
+        RG_ASSERT(primitive == bk_PrimitiveKind::Array);
+        return (const bk_ArrayTypeInfo *)this;
     }
 
     RG_HASHTABLE_HANDLER(bk_TypeInfo, signature);
@@ -56,6 +65,11 @@ struct bk_FunctionTypeInfo: public bk_TypeInfo {
     LocalArray<const bk_TypeInfo *, 16> params;
     bool variadic;
     const bk_TypeInfo *ret_type;
+};
+struct bk_ArrayTypeInfo: public bk_TypeInfo {
+    const bk_TypeInfo *unit_type;
+    Size unit_size;
+    Size len;
 };
 
 extern Span<const bk_TypeInfo> bk_BaseTypes;
@@ -161,6 +175,7 @@ struct bk_Program {
     HeapArray<bk_SourceInfo> sources;
 
     BucketArray<bk_FunctionTypeInfo> function_types;
+    BucketArray<bk_ArrayTypeInfo> array_types;
     BucketArray<bk_FunctionInfo> functions;
     BucketArray<bk_VariableInfo> variables;
     HashTable<const char *, const bk_TypeInfo *> types_map;

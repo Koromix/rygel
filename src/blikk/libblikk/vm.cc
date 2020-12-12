@@ -60,6 +60,10 @@ bool bk_VirtualMachine::Run()
 #endif
 
     LOOP {
+        CASE(Nop): {
+            DISPATCH(++pc);
+        }
+
         CASE(Push): {
             stack.Append({.i = inst->u.i});
             DISPATCH(++pc);
@@ -73,24 +77,68 @@ bool bk_VirtualMachine::Run()
             stack.Append({.i = stack[inst->u.i].i});
             DISPATCH(++pc);
         }
-        CASE(Store): {
-            stack[inst->u.i].i = stack.ptr[--stack.len].i;
-            DISPATCH(++pc);
-        }
-        CASE(Copy): {
-            stack[inst->u.i].i = stack[stack.len - 1].i;
-            DISPATCH(++pc);
-        }
         CASE(LoadLocal): {
             stack.Append({.i = stack[bp + inst->u.i].i});
+            DISPATCH(++pc);
+        }
+        CASE(LoadArray): {
+            Size ptr = stack[stack.len - 2].i;
+            Size idx = stack[stack.len - 1].i;
+            stack.len -= 2;
+            stack.Append({.i = stack[ptr + idx].i});
+            DISPATCH(++pc);
+        }
+        CASE(LoadIndirect): {
+            Size ptr = stack[stack.len - 2].i;
+            Size idx = stack[stack.len - 1].i;
+            stack.Append({.i = stack[ptr + idx].i});
+            DISPATCH(++pc);
+        }
+        CASE(Lea): {
+            stack.Append({.i = inst->u.i});
+            DISPATCH(++pc);
+        }
+        CASE(LeaLocal): {
+            stack.Append({.i = bp + inst->u.i});
+            DISPATCH(++pc);
+        }
+        CASE(Store): {
+            stack[inst->u.i].i = stack.ptr[--stack.len].i;
             DISPATCH(++pc);
         }
         CASE(StoreLocal): {
             stack[bp + inst->u.i].i = stack.ptr[--stack.len].i;
             DISPATCH(++pc);
         }
+        CASE(StoreArray): {
+            Size ptr = stack[stack.len - 3].i;
+            Size idx = stack[stack.len - 2].i;
+            stack[ptr + idx].i = stack[stack.len - 1].i;
+            stack.len -= 3;
+            DISPATCH(++pc);
+        }
+        CASE(Copy): {
+            stack[inst->u.i].i = stack[stack.len - 1].i;
+            DISPATCH(++pc);
+        }
         CASE(CopyLocal): {
             stack[bp + inst->u.i].i = stack.ptr[stack.len - 1].i;
+            DISPATCH(++pc);
+        }
+        CASE(CopyArray): {
+            Size ptr = stack[stack.len - 3].i;
+            Size idx = stack[stack.len - 2].i;
+            stack[ptr + idx].i = stack[stack.len - 1].i;
+            stack[stack.len - 3] = stack[stack.len - 1];
+            stack.len -= 2;
+            DISPATCH(++pc);
+        }
+        CASE(CheckIndex): {
+            Size idx = stack[stack.len - 1].i;
+            if (RG_UNLIKELY(idx < 0 || idx >= inst->u.i)) {
+                FatalError("Index is out of range: %1 (array length %2)", idx, inst->u.i);
+                return false;
+            }
             DISPATCH(++pc);
         }
 
@@ -420,18 +468,22 @@ bool bk_VirtualMachine::Run()
 
                 if (func->type->variadic) {
                     Span<const bk_PrimitiveValue> args;
-                    args.len = func->params.len + (stack[stack.len - 1].i * 2);
+                    args.len = func->params.len + stack[stack.len - 1].i;
                     args.ptr = stack.end() - args.len - 1;
 
+                    bk_PrimitiveValue ret = func->native(this, args);
+
                     stack.len -= args.len + 1;
-                    stack[stack.len - 1] = func->native(this, args);
+                    stack[stack.len - 1] = ret;
                 } else {
                     Span<const bk_PrimitiveValue> args;
                     args.len = func->params.len;
                     args.ptr = stack.end() - args.len;
 
+                    bk_PrimitiveValue ret = func->native(this, args);
+
                     stack.len -= args.len;
-                    stack[stack.len - 1] = func->native(this, args);
+                    stack[stack.len - 1] = ret;
                 }
 
                 frames.RemoveLast(1);
@@ -464,15 +516,19 @@ bool bk_VirtualMachine::Run()
 
                 if (func->type->variadic) {
                     Span<const bk_PrimitiveValue> args;
-                    args.len = func->params.len + (stack[stack.len - 1].i * 2);
+                    args.len = func->params.len + stack[stack.len - 1].i;
                     args.ptr = stack.end() - args.len - 1;
 
+                    bk_PrimitiveValue ret = func->native(this, args);
+
                     stack.len -= args.len;
-                    stack[stack.len - 1] = func->native(this, args);
+                    stack[stack.len - 1] = ret;
                 } else {
                     Span<const bk_PrimitiveValue> args;
                     args.len = func->params.len;
                     args.ptr = stack.end() - args.len;
+
+                    bk_PrimitiveValue ret = func->native(this, args);
 
                     if (args.len) {
                         stack.len -= args.len - 1;
@@ -480,7 +536,7 @@ bool bk_VirtualMachine::Run()
                         stack.len -= args.len;
                         stack.AppendDefault();
                     }
-                    stack[stack.len - 1] = func->native(this, args);
+                    stack[stack.len - 1] = ret;
                 }
 
                 frames.RemoveLast(1);
@@ -545,16 +601,20 @@ void bk_VirtualMachine::DumpInstruction(Size pc) const
                 case bk_PrimitiveKind::String: { LogDebug("[0x%1] Push '%2'", FmtHex(pc).Pad0(-5), inst.u.str); } break;
                 case bk_PrimitiveKind::Type: { LogDebug("[0x%1] Push %2", FmtHex(pc).Pad0(-5), inst.u.type->signature); } break;
                 case bk_PrimitiveKind::Function: { LogDebug("[0x%1] Push %2", FmtHex(pc).Pad0(-5), inst.u.func->prototype); } break;
+                case bk_PrimitiveKind::Array: { LogDebug("[0x%1] Push @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
             }
         } break;
         case bk_Opcode::Pop: { LogDebug("[0x%1] Pop %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
         case bk_Opcode::Load: { LogDebug("[0x%1] Load @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::Store: { LogDebug("[0x%1] Store @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::Copy: { LogDebug("[0x%1] Copy @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
         case bk_Opcode::LoadLocal: { LogDebug("[0x%1] LoadLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::Lea: { LogDebug("[0x%1] Lea @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::LeaLocal: { LogDebug("[0x%1] LeaLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::Store: { LogDebug("[0x%1] Store @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
         case bk_Opcode::StoreLocal: { LogDebug("[0x%1] StoreLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::Copy: { LogDebug("[0x%1] Copy @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
         case bk_Opcode::CopyLocal: { LogDebug("[0x%1] CopyLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::CheckIndex: { LogDebug("[0x%1] CheckIndex (%2)", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
         case bk_Opcode::Jump: { LogDebug("[0x%1] Jump 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
         case bk_Opcode::BranchIfTrue: { LogDebug("[0x%1] BranchIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
