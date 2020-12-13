@@ -107,7 +107,7 @@ private:
     bool EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *out_type);
     bool ParseCall(const bk_FunctionTypeInfo *func_type, const bk_FunctionInfo *func, bool overload);
     const bk_FunctionTypeInfo *ParseFunctionType();
-    const bk_ArrayTypeInfo *ParseArrayType(const bk_TypeInfo *unit_type);
+    const bk_ArrayTypeInfo *ParseArrayType();
     void EmitIntrinsic(const char *name, Size call_addr, Span<const bk_TypeInfo *const> args);
     void EmitLoad(const bk_VariableInfo &var);
 
@@ -1426,26 +1426,13 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
             } break;
 
             case bk_TokenKind::LeftBracket: {
-                if (RG_UNLIKELY(expect_value))
-                    goto unexpected;
+                if (expect_value) {
+                    expect_value = false;
 
-                if (stack[stack.len - 1].type == bk_TypeType) {
-                    if (RG_LIKELY(ir[ir.len - 1].code == bk_Opcode::Push)) {
-                        RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Type);
+                    const bk_TypeInfo *type = ParseArrayType();
 
-                        const bk_TypeInfo *unit_type = ir[ir.len - 1].u.type;
-
-                        TrimInstructions(1);
-                        stack.len--;
-
-                        const bk_TypeInfo *type = ParseArrayType(unit_type);
-
-                        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = type}});
-                        stack.Append({bk_TypeType});
-                    } else {
-                        MarkError(pos - 1, "Complex 'Type' expression cannot be resolved statically");
-                        goto error;
-                    }
+                    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = type}});
+                    stack.Append({bk_TypeType});
                 } else if (stack[stack.len - 1].type->primitive == bk_PrimitiveKind::Array) {
                     const bk_ArrayTypeInfo *array_type = stack[stack.len - 1].type->AsArrayType();
 
@@ -2161,22 +2148,13 @@ const bk_FunctionTypeInfo *bk_Parser::ParseFunctionType()
     return func_type;
 }
 
-const bk_ArrayTypeInfo *bk_Parser::ParseArrayType(const bk_TypeInfo *unit_type)
+const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
 {
     Size def_pos = pos;
 
-    bk_ArrayTypeInfo type_buf;
+    bk_ArrayTypeInfo type_buf = {};
 
     type_buf.primitive = bk_PrimitiveKind::Array;
-    type_buf.unit_type = unit_type;
-
-    // Unit size
-    if (unit_type->primitive == bk_PrimitiveKind::Array) {
-        const bk_ArrayTypeInfo *array_type = unit_type->AsArrayType();
-        type_buf.unit_size = array_type->len * array_type->unit_size;
-    } else {
-        type_buf.unit_size = 1;
-    }
 
     // Parse array length
     {
@@ -2201,10 +2179,22 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType(const bk_TypeInfo *unit_type)
         }
     }
 
+    // Unit type and size
+    {
+        type_buf.unit_type = ParseTypeExpression();
+
+        if (type_buf.unit_type->primitive == bk_PrimitiveKind::Array) {
+            const bk_ArrayTypeInfo *array_type = type_buf.unit_type->AsArrayType();
+            type_buf.unit_size = array_type->len * array_type->unit_size;
+        } else {
+            type_buf.unit_size = 1;
+        }
+    }
+
     // Format type signature
     {
         HeapArray<char> signature_buf;
-        Fmt(&signature_buf, "%1 [%2]", unit_type->signature, type_buf.len);
+        Fmt(&signature_buf, "[%1] %2", type_buf.len, type_buf.unit_type->signature);
 
         type_buf.signature = InternString(signature_buf.ptr);
     }
