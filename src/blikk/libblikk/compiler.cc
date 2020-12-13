@@ -511,7 +511,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
         signature_buf.RemoveFrom(0);
         signature_buf.Append("func (");
         prototype_buf.RemoveFrom(0);
-        Fmt(&prototype_buf, "%1 (", func->name);
+        Fmt(&prototype_buf, "%1(", func->name);
         type_buf.primitive = bk_PrimitiveKind::Function;
         type_buf.params.RemoveFrom(0);
 
