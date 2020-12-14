@@ -1731,8 +1731,12 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
 
         switch (op.kind) {
             case bk_TokenKind::Reassign: {
-                stack[--stack.len - 1].var = nullptr;
-                success = true;
+                if (RG_LIKELY(!var.type->PassByReference())) {
+                    stack[--stack.len - 1].var = nullptr;
+                    success = true;
+                } else {
+                    success = false;
+                }
             } break;
 
             case bk_TokenKind::PlusAssign: {
