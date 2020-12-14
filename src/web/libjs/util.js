@@ -1188,10 +1188,7 @@ let dates = new function() {
         };
         LocalDate.prototype.minusMonths = function(months) { return this.plusMonths(-months); };
 
-        LocalDate.prototype.valueOf = function() {
-            let value = (this.year << 16) | (this.month << 8) | (this.day);
-            return value;
-        };
+        LocalDate.prototype.valueOf = LocalDate.prototype.toJulianDays;
 
         LocalDate.prototype.toString = function() {
             let year_str = ('' + this.year).padStart(4, '0');
@@ -1315,8 +1312,7 @@ let times = new function() {
 
         LocalTime.prototype.equals = function(other) { return +this === +other; };
 
-        LocalTime.prototype.toDaySeconds = function()
-            { return (this.hour * 3600) + (this.minute * 60) + this.second; };
+        LocalTime.prototype.toDaySeconds = function() { return (this.hour * 3600) + (this.minute * 60) + this.second; };
 
         LocalTime.prototype.diff = function(other) { return this.toDaySeconds() - other.toDaySeconds(); };
 
