@@ -1449,6 +1449,7 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                     }
                     ConsumeToken(bk_TokenKind::RightBracket);
 
+                    // Compute array index
                     ir.Append({bk_Opcode::CheckIndex, {}, {.i = array_type->len}});
                     if (array_type->unit_size != 1) {
                         ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = array_type->unit_size}});
@@ -1458,7 +1459,11 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                         ir.Append({bk_Opcode::AddInt});
                     }
 
-                    ir.Append({bk_Opcode::LoadArray});
+                    if (array_type->unit_type->PassByReference()) {
+                        ir.Append({bk_Opcode::AddInt});
+                    } else {
+                        ir.Append({bk_Opcode::LoadArray});
+                    }
 
                     stack[stack.len - 1].type = array_type->unit_type;
                     stack[stack.len - 1].indirect_addr = ir.len - 1;
