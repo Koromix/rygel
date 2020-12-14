@@ -57,7 +57,7 @@ begin
     let __result =
 )", "<intro>", &intro);
         success &= bk_Tokenize(R"(
-    if typeOf(__result) != Null do printLn(__result)
+    if typeOf(__result) != Null do debug(__result)
 end
 )", "<outro>", &outro);
 

@@ -16,35 +16,65 @@ void bk_ImportAll(bk_Compiler *out_compiler)
     bk_ImportMath(out_compiler);
 }
 
-static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offset)
+static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offset, bool quote)
 {
     switch (type->primitive) {
-        case bk_PrimitiveKind::Null: { Print("null"); offset++; } break;
+        case bk_PrimitiveKind::Null: { fputs("null", stdout); offset++; } break;
         case bk_PrimitiveKind::Boolean: { Print("%1", vm->stack[offset++].b); } break;
         case bk_PrimitiveKind::Integer: { Print("%1", vm->stack[offset++].i); } break;
         case bk_PrimitiveKind::Float: { Print("%1", FmtDouble(vm->stack[offset++].d, 1, INT_MAX)); } break;
-        case bk_PrimitiveKind::String: { Print("%1", vm->stack[offset++].str); } break;
-        case bk_PrimitiveKind::Type: { Print("%1", vm->stack[offset++].type->signature); } break;
-        case bk_PrimitiveKind::Function: { Print("%1", vm->stack[offset++].func->prototype); } break;
+        case bk_PrimitiveKind::String: {
+            if (quote) {
+                const char *str = vm->stack[offset++].str;
+
+                fputc('"', stdout);
+                for (;;) {
+                    Size next = strcspn(str, "\"\r\n\t\f\v\a\b\x1B");
+
+                    fwrite(str, 1, next, stdout);
+
+                    if (!str[next])
+                        break;
+                    switch (str[next]) {
+                        case '\"': { fputs("\\\"", stdout); } break;
+                        case '\r': { fputs("\\r", stdout); } break;
+                        case '\n': { fputs("\\n", stdout); } break;
+                        case '\t': { fputs("\\t", stdout); } break;
+                        case '\f': { fputs("\\f", stdout); } break;
+                        case '\v': { fputs("\\v", stdout); } break;
+                        case '\a': { fputs("\\a", stdout); } break;
+                        case '\b': { fputs("\\b", stdout); } break;
+                        case '\x1B': { fputs("\\e", stdout); } break;
+                    }
+
+                    str += next + 1;
+                }
+                fputc('"', stdout);
+            } else {
+                fputs(vm->stack[offset++].str, stdout);
+            }
+        } break;
+        case bk_PrimitiveKind::Type: { fputs(vm->stack[offset++].type->signature, stdout); } break;
+        case bk_PrimitiveKind::Function: { fputs(vm->stack[offset++].func->prototype, stdout); } break;
         case bk_PrimitiveKind::Array: {
             const bk_ArrayTypeInfo *array_type = type->AsArrayType();
 
-            Print("[");
+            fputc('[', stdout);
             if (array_type->len) {
-                offset = PrintValue(vm, array_type->unit_type, offset);
+                offset = PrintValue(vm, array_type->unit_type, offset, true);
                 for (Size i = 1; i < array_type->len; i++) {
-                    Print(", ");
-                    offset = PrintValue(vm, array_type->unit_type, offset);
+                    fputs(", ", stdout);
+                    offset = PrintValue(vm, array_type->unit_type, offset, true);
                 }
             }
-            Print("]");
+            fputc(']', stdout);
         }
     }
 
     return offset;
 }
 
-static bk_PrimitiveValue DoPrint(bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args)
+static void DoPrint(bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args, bool quote)
 {
     RG_ASSERT(args.len % 2 == 0);
 
@@ -52,22 +82,29 @@ static bk_PrimitiveValue DoPrint(bk_VirtualMachine *vm, Span<const bk_PrimitiveV
         const bk_TypeInfo *type = args[i++].type;
 
         if (type->PassByReference()) {
-            PrintValue(vm, type, args[i].i);
+            PrintValue(vm, type, args[i].i, quote);
         } else {
-            PrintValue(vm, type, args.ptr - vm->stack.ptr + i);
+            PrintValue(vm, type, args.ptr - vm->stack.ptr + i, quote);
         }
     }
-
-    return bk_PrimitiveValue();
 }
 
 void bk_ImportPrint(bk_Compiler *out_compiler)
 {
-    out_compiler->AddFunction("print(...)", DoPrint);
+    out_compiler->AddFunction("print(...)", [](bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args) {
+        DoPrint(vm, args, false);
+        return bk_PrimitiveValue();
+    });
     out_compiler->AddFunction("printLn(...)", [](bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args) {
-        DoPrint(vm, args);
+        DoPrint(vm, args, false);
         PrintLn();
 
+        return bk_PrimitiveValue();
+    });
+
+    out_compiler->AddFunction("debug(...)", [](bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args) {
+        DoPrint(vm, args, true);
+        PrintLn();
         return bk_PrimitiveValue();
     });
 }
