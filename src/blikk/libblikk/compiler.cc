@@ -1708,30 +1708,33 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
     if (op.prec == 0) { // Assignement operators
         RG_ASSERT(!op.unary);
 
-        StackSlot var = stack[stack.len - 2];
+        StackSlot dest = stack[stack.len - 2];
         const StackSlot &expr = stack[stack.len - 1];
 
-        if (RG_UNLIKELY(!var.var)) {
+        if (RG_UNLIKELY(!dest.var)) {
             MarkError(op.pos, "Cannot assign result to temporary value; left operand should be a variable");
             return;
         }
-        if (RG_UNLIKELY(!var.var->mut)) {
-            MarkError(op.pos, "Cannot assign result to non-mutable variable '%1'", var.var->name);
-            HintError(definitions_map.FindValue(var.var, -1), "Variable '%1' is defined without 'mut' qualifier", var.var->name);
+        if (RG_UNLIKELY(!dest.var->mut)) {
+            MarkError(op.pos, "Cannot assign result to non-mutable variable '%1'", dest.var->name);
+            HintError(definitions_map.FindValue(dest.var, -1), "Variable '%1' is defined without 'mut' qualifier", dest.var->name);
 
             return;
         }
-        if (RG_UNLIKELY(var.type != expr.type)) {
-            MarkError(op.pos, "Cannot assign '%1' value to variable '%2'",
-                      expr.type->signature, var.var->name);
-            HintError(definitions_map.FindValue(var.var, -1), "Variable '%1' is defined as '%2'",
-                      var.var->name, var.type->signature);
+        if (RG_UNLIKELY(dest.type != expr.type)) {
+            if (!dest.indirect_addr) {
+                MarkError(op.pos, "Cannot assign '%1' value to variable '%2'", expr.type->signature, dest.var->name);
+            } else {
+                MarkError(op.pos, "Cannot assign '%1' value here, expected '%2'", expr.type->signature, dest.type->signature);
+            }
+            HintError(definitions_map.FindValue(dest.var, -1), "Variable '%1' is defined as '%2'",
+                      dest.var->name, dest.var->type->signature);
             return;
         }
 
         switch (op.kind) {
             case bk_TokenKind::Reassign: {
-                if (RG_LIKELY(!var.type->PassByReference())) {
+                if (RG_LIKELY(!dest.type->PassByReference())) {
                     stack[--stack.len - 1].var = nullptr;
                     success = true;
                 } else {
@@ -1740,64 +1743,64 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
             } break;
 
             case bk_TokenKind::PlusAssign: {
-                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::AddInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(bk_PrimitiveKind::Float, bk_Opcode::AddFloat, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::AddInt, dest.type) ||
+                          EmitOperator2(bk_PrimitiveKind::Float, bk_Opcode::AddFloat, dest.type);
             } break;
             case bk_TokenKind::MinusAssign: {
-                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::SubstractInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(bk_PrimitiveKind::Float, bk_Opcode::SubstractFloat, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::SubstractInt, dest.type) ||
+                          EmitOperator2(bk_PrimitiveKind::Float, bk_Opcode::SubstractFloat, dest.type);
             } break;
             case bk_TokenKind::MultiplyAssign: {
-                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::MultiplyInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(bk_PrimitiveKind::Float, bk_Opcode::MultiplyFloat, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::MultiplyInt, dest.type) ||
+                          EmitOperator2(bk_PrimitiveKind::Float, bk_Opcode::MultiplyFloat, dest.type);
             } break;
             case bk_TokenKind::DivideAssign: {
-                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::DivideInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(bk_PrimitiveKind::Float, bk_Opcode::DivideFloat, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::DivideInt, dest.type) ||
+                          EmitOperator2(bk_PrimitiveKind::Float, bk_Opcode::DivideFloat, dest.type);
             } break;
             case bk_TokenKind::ModuloAssign: {
-                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::ModuloInt, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::ModuloInt, dest.type);
             } break;
             case bk_TokenKind::AndAssign: {
-                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::AndInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(bk_PrimitiveKind::Boolean, bk_Opcode::AndBool, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::AndInt, dest.type) ||
+                          EmitOperator2(bk_PrimitiveKind::Boolean, bk_Opcode::AndBool, dest.type);
             } break;
             case bk_TokenKind::OrAssign: {
-                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::OrInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(bk_PrimitiveKind::Boolean, bk_Opcode::OrBool, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::OrInt, dest.type) ||
+                          EmitOperator2(bk_PrimitiveKind::Boolean, bk_Opcode::OrBool, dest.type);
             } break;
             case bk_TokenKind::XorAssign: {
-                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::XorInt, stack[stack.len - 2].type) ||
-                          EmitOperator2(bk_PrimitiveKind::Boolean, bk_Opcode::NotEqualBool, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::XorInt, dest.type) ||
+                          EmitOperator2(bk_PrimitiveKind::Boolean, bk_Opcode::NotEqualBool, dest.type);
             } break;
             case bk_TokenKind::LeftShiftAssign: {
-                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::LeftShiftInt, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::LeftShiftInt, dest.type);
             } break;
             case bk_TokenKind::RightShiftAssign: {
-                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::RightShiftInt, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::RightShiftInt, dest.type);
             } break;
             case bk_TokenKind::LeftRotateAssign: {
-                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::LeftRotateInt, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::LeftRotateInt, dest.type);
             } break;
             case bk_TokenKind::RightRotateAssign: {
-                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::RightRotateInt, stack[stack.len - 2].type);
+                success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::RightRotateInt, dest.type);
             } break;
 
             default: { RG_UNREACHABLE(); } break;
         }
 
-        if (var.indirect_addr) {
+        if (dest.indirect_addr) {
             // In order for CopyArray to work, the array reference and offset must remain on the stack.
             // To do so, replace LoadArray (which removes them) with LoadIndirect.
             if (op.kind != bk_TokenKind::Reassign) {
-                RG_ASSERT(ir[var.indirect_addr].code == bk_Opcode::LoadArray);
-                ir[var.indirect_addr].code = bk_Opcode::LoadIndirect;
+                RG_ASSERT(ir[dest.indirect_addr].code == bk_Opcode::LoadArray);
+                ir[dest.indirect_addr].code = bk_Opcode::LoadIndirect;
             }
 
-            ir.Append({bk_Opcode::CopyArray, var.type->primitive});
+            ir.Append({bk_Opcode::CopyArray, dest.type->primitive});
         } else {
-            bk_Opcode code = (var.var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Copy : bk_Opcode::CopyLocal;
-            ir.Append({code, var.type->primitive, {.i = var.var->offset}});
+            bk_Opcode code = (dest.var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Copy : bk_Opcode::CopyLocal;
+            ir.Append({code, dest.type->primitive, {.i = dest.var->offset}});
         }
     } else { // Other operators
         switch (op.kind) {
