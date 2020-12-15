@@ -47,6 +47,8 @@ function UserManager(db) {
 
         let success;
         try {
+            username = username.toLowerCase();
+
             if (net.isOnline()) {
                 success = await loginOnline(username, password);
             } else {
@@ -75,7 +77,7 @@ function UserManager(db) {
 
     async function loginOnline(username, password) {
         let query = new URLSearchParams;
-        query.set('username', username.toLowerCase());
+        query.set('username', username);
         query.set('password', password);
 
         let response = await net.fetch(`${env.base_url}api/user/login`, {
