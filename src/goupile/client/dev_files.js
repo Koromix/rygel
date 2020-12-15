@@ -340,7 +340,7 @@ let dev_files = new function() {
 
     function runDeployDialog(e) {
         let msg = 'Voulez-vous vraiment déployer les fichiers ?';
-        return dialog.confirm(e, msg, 'Déployer', async d => {
+        return dialog.confirm(e, msg, 'Déployer', async () => {
             await deployFiles();
             goupile.initMain();
         });
