@@ -35,12 +35,11 @@ const Token *Session::GetToken(const InstanceHolder *instance) const
 
                 uint32_t permissions = sqlite3_column_int(stmt, 1);
                 const char *zone = (const char *)sqlite3_column_text(stmt, 0);
-                zone = zone ? DuplicateString(zone, &tokens_alloc).ptr : nullptr;
 
                 std::lock_guard<std::shared_mutex> lock(tokens_lock);
 
                 token = tokens_map.SetDefault(instance->unique);
-                token->zone = zone;
+                token->zone = zone ? DuplicateString(zone, &tokens_alloc).ptr : nullptr;
                 token->permissions = permissions;
             } while (false);
 
@@ -90,6 +89,7 @@ static RetainPtr<Session> CreateUserSession(const http_RequestInfo &request, htt
     Size len = RG_SIZE(Session) + strlen(username) + 1;
     Session *session = (Session *)Allocator::Allocate(nullptr, len, (int)Allocator::Flag::Zero);
 
+    new (session) Session;
     session->username = (char *)session + RG_SIZE(Session);
     strcpy((char *)session->username, username);
 
