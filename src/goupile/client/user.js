@@ -20,8 +20,12 @@ function UserManager(db) {
 
             d.action('Se connecter', {disabled: !d.isValid()}, async () => {
                 let success = await self.login(username.value, password.value);
-                if (success)
+
+                if (success) {
                     resolve(username.value);
+                } else {
+                    reject(new Error('Échec de la connexion'));
+                }
             });
         });
     };
@@ -33,8 +37,12 @@ function UserManager(db) {
 
             d.action('Connexion', {disabled: !d.isValid()}, async () => {
                 let success = await self.login(username.value, password.value);
-                if (success)
+
+                if (success) {
                     resolve(username.value);
+                } else {
+                    reject(new Error('Échec de la connexion'));
+                }
             });
             d.action('Annuler', {}, () => reject(new Error('Action annulée')));
         });
