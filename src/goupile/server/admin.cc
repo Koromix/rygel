@@ -614,15 +614,19 @@ void HandleListInstances(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
-    std::shared_lock<std::shared_mutex> lock(goupile_domain.instances_mutex);
+    sq_Statement stmt;
+    if (!goupile_domain.db.Prepare(R"(SELECT instance FROM dom_instances ORDER BY instance;)", &stmt))
+        return;
 
     // Export data
     http_JsonPageBuilder json(request.compression_type);
 
     json.StartArray();
-    for (InstanceGuard *guard: goupile_domain.instances) {
-        json.String(guard->instance.key);
+    while (stmt.Next()) {
+        json.String((const char *)sqlite3_column_text(stmt, 0));
     }
+    if (!stmt.IsValid())
+        return;
     json.EndArray();
 
     json.Finish(io);
@@ -895,28 +899,27 @@ void HandleListUsers(const http_RequestInfo &request, http_IO *io)
 
             json.Key("username"); json.String((const char *)sqlite3_column_text(stmt, 1));
             json.Key("admin"); json.Bool(sqlite3_column_int(stmt, 2));
-            json.Key("instances"); json.StartArray();
+            json.Key("instances"); json.StartObject();
             if (sqlite3_column_type(stmt, 3) != SQLITE_NULL) {
                 do {
+                    const char *instance = (const char *)sqlite3_column_text(stmt, 3);
                     uint32_t permissions = (uint32_t)sqlite3_column_int64(stmt, 4);
 
-                    json.StartObject();
-                    json.Key("instance"); json.String((const char *)sqlite3_column_text(stmt, 3));
-                    json.Key("permissions"); json.StartObject();
+                    json.Key(instance); json.StartArray();
                     for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
-                        char js_name[64];
-                        ConvertToJsonName(UserPermissionNames[i], js_name);
+                        if (permissions & (1 << i)) {
+                            char js_name[64];
+                            ConvertToJsonName(UserPermissionNames[i], js_name);
 
-                        json.Key(js_name); json.Bool(permissions & (1 << i));
+                            json.String(js_name);
+                        }
                     }
-                    json.EndObject();
-
-                    json.EndObject();
+                    json.EndArray();
                 } while (stmt.Next() && sqlite3_column_int64(stmt, 0) == rowid);
             } else {
                 stmt.Next();
             }
-            json.EndArray();
+            json.EndObject();
 
             json.EndObject();
         } while (stmt.IsRow());

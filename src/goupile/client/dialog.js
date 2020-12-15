@@ -31,7 +31,7 @@ let dialog = new function() {
     this.run = function(e, func) {
         if (e != null) {
             e.stopPropagation();
-            if (goupile.isTablet())
+            if (window.matchMedia('(pointer: coarse)').matches)
                 e = null;
         }
 

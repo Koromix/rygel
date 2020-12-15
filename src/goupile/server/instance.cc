@@ -113,6 +113,8 @@ bool InstanceHolder::Validate()
 
 void InstanceHolder::InitAssets()
 {
+    RG_ASSERT(goupile_etag[0]);
+
     assets.Clear();
     assets_map.Clear();
     assets_alloc.ReleaseAll();
@@ -121,7 +123,7 @@ void InstanceHolder::InitAssets()
 
     // Packed static assets
     for (Size i = 0; i < packed_assets.len; i++) {
-        if (!StartsWith(packed_assets[i].name, "demo/")) {
+        if (!StartsWith(packed_assets[i].name, "admin/") && !StartsWith(packed_assets[i].name, "demo/")) {
             AssetInfo asset = packed_assets[i];
             asset.name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
 
@@ -150,13 +152,6 @@ void InstanceHolder::InitAssets()
     }
     for (const AssetInfo &asset: assets) {
         assets_map.Set(&asset);
-    }
-
-    // We can use a global ETag because everything is in the binary
-    {
-        uint64_t buf[2];
-        randombytes_buf(&buf, RG_SIZE(buf));
-        Fmt(etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
     }
 }
 
@@ -200,7 +195,7 @@ Span<const uint8_t> InstanceHolder::PatchVariables(const AssetInfo &asset)
             writer->Write(js_name);
             return true;
         } else if (TestStr(key, "CACHE_KEY")) {
-            writer->Write(etag);
+            writer->Write(goupile_etag);
             return true;
         } else if (TestStr(key, "LINK_MANIFEST")) {
             if (config.use_offline) {

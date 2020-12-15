@@ -41,7 +41,6 @@ public:
     Span<const char> base_url = {};
     HeapArray<AssetInfo> assets;
     HashTable<const char *, const AssetInfo *> assets_map;
-    char etag[33];
 
     BlockAllocator str_alloc;
     BlockAllocator assets_alloc;

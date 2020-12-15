@@ -9,6 +9,8 @@
 namespace RG {
 
 class DomainHolder;
+
+extern char goupile_etag[33];
 extern DomainHolder goupile_domain;
 
 }

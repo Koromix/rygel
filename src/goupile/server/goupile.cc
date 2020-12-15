@@ -16,7 +16,42 @@
 
 namespace RG {
 
+char goupile_etag[33];
 DomainHolder goupile_domain;
+
+static HeapArray<AssetInfo> admin_assets;
+static HashTable<const char *, const AssetInfo *> admin_assets_map;
+BlockAllocator admin_assets_alloc;
+
+static void InitAdminAssets()
+{
+    admin_assets.Clear();
+    admin_assets_map.Clear();
+    admin_assets_alloc.ReleaseAll();
+
+    Span<const AssetInfo> packed_assets = GetPackedAssets();
+
+    for (Size i = 0; i < packed_assets.len; i++) {
+        if (StartsWith(packed_assets[i].name, "admin/")) {
+            AssetInfo asset = packed_assets[i];
+
+            asset.name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
+            asset.name = Fmt(&admin_assets_alloc, "/static/%1", asset.name).ptr;
+
+            admin_assets.Append(asset);
+        }
+    }
+    for (const AssetInfo &asset: admin_assets) {
+        admin_assets_map.Set(&asset);
+    }
+
+    // We can use a global ETag because everything is in the binary
+    {
+        uint64_t buf[2];
+        randombytes_buf(&buf, RG_SIZE(buf));
+        Fmt(goupile_etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
+    }
+}
 
 static void HandleEvents(InstanceHolder *, const http_RequestInfo &request, http_IO *io)
 {
@@ -45,6 +80,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     if (ReloadAssets()) {
         std::lock_guard<std::shared_mutex> lock(goupile_domain.instances_mutex);
 
+        InitAdminAssets();
         for (InstanceGuard *guard: goupile_domain.instances) {
             InstanceHolder *instance = &guard->instance;
             instance->InitAssets();
@@ -78,6 +114,37 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     // If new base URLs are added besides "/admin", RunCreateInstance() must be modified
     // to forbid the instance key.
     if (inst_key == "admin") {
+        // Try admin assets
+        {
+            const AssetInfo *asset;
+
+            if (TestStr(inst_path, "/") || StartsWith(inst_path, "/app/") || StartsWith(inst_path, "/main/")) {
+                asset = admin_assets_map.FindValue("/static/admin.html", nullptr);
+                RG_ASSERT(asset);
+            } else {
+                asset = admin_assets_map.FindValue(inst_path, nullptr);
+            }
+
+            if (asset) {
+                const char *client_etag = request.GetHeaderValue("If-None-Match");
+
+                if (client_etag && TestStr(client_etag, goupile_etag)) {
+                    MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+                    io->AttachResponse(304, response);
+                } else {
+                    const char *mimetype = http_GetMimeType(GetPathExtension(asset->name));
+                    io->AttachBinary(200, asset->data, mimetype, asset->compression_type);
+
+                    io->AddCachingHeaders(goupile_domain.config.max_age, goupile_etag);
+                    if (asset->source_map) {
+                        io->AddHeader("SourceMap", asset->source_map);
+                    }
+                }
+
+                return;
+            }
+        }
+
         if (TestStr(inst_path, "/api/events") && request.method == http_RequestMethod::Get) {
             HandleEvents(nullptr, request, io);
         } else if (TestStr(inst_path, "/api/user/profile") && request.method == http_RequestMethod::Get) {
@@ -136,14 +203,14 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             if (asset) {
                 const char *client_etag = request.GetHeaderValue("If-None-Match");
 
-                if (client_etag && TestStr(client_etag, instance->etag)) {
+                if (client_etag && TestStr(client_etag, goupile_etag)) {
                     MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
                     io->AttachResponse(304, response);
                 } else {
                     const char *mimetype = http_GetMimeType(GetPathExtension(asset->name));
                     io->AttachBinary(200, asset->data, mimetype, asset->compression_type);
 
-                    io->AddCachingHeaders(goupile_domain.config.max_age, instance->etag);
+                    io->AddCachingHeaders(goupile_domain.config.max_age, goupile_etag);
                     if (asset->source_map) {
                         io->AddHeader("SourceMap", asset->source_map);
                     }
@@ -221,7 +288,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     }
 
     // Init subsystems
-    LogInfo("Load domain");
+    LogInfo("Init subsystems");
+    InitAdminAssets();
     if (!goupile_domain.Open(config_filename))
         return 1;
     InitJS();

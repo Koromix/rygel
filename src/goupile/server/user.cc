@@ -60,24 +60,26 @@ static void WriteProfileJson(const Session *session, const Token *token, json_Wr
 {
     out_json->StartObject();
 
-    if (session && token) {
+    if (session) {
         out_json->Key("username"); out_json->String(session->username);
         out_json->Key("admin"); out_json->Bool(session->admin);
         out_json->Key("demo"); out_json->Bool(session->demo);
 
-        if (token->zone) {
-            out_json->Key("zone"); out_json->String(token->zone);
-        } else {
-            out_json->Key("zone"); out_json->Null();
-        }
-        out_json->Key("permissions"); out_json->StartObject();
-        for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
-            char js_name[64];
-            ConvertToJsonName(UserPermissionNames[i], js_name);
+        if (token) {
+            if (token->zone) {
+                out_json->Key("zone"); out_json->String(token->zone);
+            } else {
+                out_json->Key("zone"); out_json->Null();
+            }
+            out_json->Key("permissions"); out_json->StartObject();
+            for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
+                char js_name[64];
+                ConvertToJsonName(UserPermissionNames[i], js_name);
 
-            out_json->Key(js_name); out_json->Bool(token->permissions & (1 << i));
+                out_json->Key(js_name); out_json->Bool(token->permissions & (1 << i));
+            }
+            out_json->EndObject();
         }
-        out_json->EndObject();
     }
 
     out_json->EndObject();

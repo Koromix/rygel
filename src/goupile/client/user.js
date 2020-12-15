@@ -259,15 +259,12 @@ function UserManager(db) {
         }
     };
 
-    this.isConnected = function() { return !!session_profile.username; };
+    this.isConnected = function() { return !!session_profile.permissions; };
     this.isConnectedOnline = function() { return session_rnd != null; }
     this.getUserName = function() { return session_profile.username; };
     this.getZone = function() { return session_profile.zone; };
     this.getSessionRnd = function() { return session_rnd; };
-    this.hasPermission = function(perm) {
-        return session_profile.permissions &&
-               !!session_profile.permissions[perm];
-    };
+    this.hasPermission = function(perm) { return self.isConnected() && !!session_profile.permissions[perm]; };
     this.isDemo = function() { return !!session_profile.demo; };
 
     // XXX: Move locking system to ApplicationNavigator eventually, and expose a "secure"

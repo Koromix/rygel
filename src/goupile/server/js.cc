@@ -488,7 +488,7 @@ Span<const char> ScriptPort::ConsumeStr(JSValue value)
 
 void InitJS()
 {
-    const AssetInfo *asset = FindPackedAsset("server.pk.js");
+    const AssetInfo *asset = FindPackedAsset("server/server.pk.js");
     RG_ASSERT(asset);
 
     // QuickJS requires NUL termination, so we need to make a copy anyway
