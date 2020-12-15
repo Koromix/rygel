@@ -358,13 +358,13 @@ bool json_Writer::Raw(Span<const char> str)
 
 Size ConvertToJsonName(Span<const char> name, Span<char> out_buf)
 {
-    RG_ASSERT(out_buf.len - 1 >= name.len);
+    RG_ASSERT(out_buf.len >= 2);
 
     if (name.len) {
         out_buf[0] = LowerAscii(name[0]);
 
         Size j = 1;
-        for (Size i = 1; i < name.len; i++) {
+        for (Size i = 1; i < name.len && j < out_buf.len - 2; i++) {
             char c = name[i];
 
             if (c >= 'A' && c <= 'Z') {
@@ -385,13 +385,13 @@ Size ConvertToJsonName(Span<const char> name, Span<char> out_buf)
 
 Size ConvertFromJsonName(Span<const char> name, Span<char> out_buf)
 {
-    RG_ASSERT(out_buf.len - 1 >= name.len);
+    RG_ASSERT(out_buf.len >= 2);
 
     if (name.len) {
         out_buf[0] = UpperAscii(name[0]);
 
         Size j = 1;
-        for (Size i = 1; i < name.len; i++) {
+        for (Size i = 1; i < name.len && j < out_buf.len - 1; i++) {
             char c = name[i];
 
             if (c == '_' && i + 1 < name.len) {

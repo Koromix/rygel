@@ -220,8 +220,7 @@ public:
     void Flush() { writer.Flush(); }
 };
 
-// This is to be used only with small static strings (e.g. enum strings),
-// the Span<char> output buffer will abort debug builds on out-of-bounds access.
+// This is to be used only with small static strings (e.g. enum strings)
 Size ConvertToJsonName(Span<const char> name, Span<char> out_buf);
 Size ConvertFromJsonName(Span<const char> name, Span<char> out_buf);
 
