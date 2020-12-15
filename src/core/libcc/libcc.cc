@@ -1019,6 +1019,11 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 out = out_buf;
             } break;
 
+            case FmtType::Function: {
+                arg.u.func(append);
+                continue;
+            } break;
+
             case FmtType::Span: {
                 FmtArg arg2;
                 arg2.type = arg.u.span.type;
@@ -1059,6 +1064,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                         case FmtType::MemorySize: { arg2.u.size = *(const Size *)ptr; } break;
                         case FmtType::DiskSize: { arg2.u.size = *(const Size *)ptr; } break;
                         case FmtType::Date: { arg2.u.date = *(const Date *)ptr; } break;
+                        case FmtType::Function: { arg2.u.func = *(FunctionRef<FmtFunction> *)ptr; } break;
                         case FmtType::Span: { RG_UNREACHABLE(); } break;
                     }
                     ptr += arg.u.span.type_len;
@@ -1069,8 +1075,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                     ProcessArg(arg2, append);
                 }
 
-                out = {};
-                pad_len = 0;
+                continue;
             } break;
         }
 

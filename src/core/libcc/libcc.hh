@@ -446,11 +446,12 @@ DeferGuard<Fun> operator+(DeferGuardHelper, Fun &&f)
 #define RG_DEFER_NC(Name, ...) \
     auto Name = RG::DeferGuardHelper() + [&, __VA_ARGS__]()
 
-// Copied the code for FunctionRef from LLVM
+// Heavily inspired from FunctionRef in LLVM
+// Turned into a POD to make it easier to use inside unions
 template<typename Fn> class FunctionRef;
 template<typename Ret, typename ...Params>
 class FunctionRef<Ret(Params...)> {
-    Ret (*callback)(intptr_t callable, Params ...params) = nullptr;
+    Ret (*callback)(intptr_t callable, Params ...params);
     intptr_t callable;
 
     template<typename Callable>
@@ -459,7 +460,6 @@ class FunctionRef<Ret(Params...)> {
 
 public:
     FunctionRef() = default;
-    FunctionRef(std::nullptr_t) {}
 
     template <typename Callable>
     FunctionRef(Callable &&callable,
@@ -470,8 +470,6 @@ public:
 
     Ret operator()(Params ...params) const
         { return callback(callable, std::forward<Params>(params)...); }
-
-    operator bool() const { return callback; }
 };
 
 #define RG_INIT(Name) \
@@ -2802,8 +2800,11 @@ enum class FmtType {
     MemorySize,
     DiskSize,
     Date,
+    Function,
     Span
 };
+
+typedef void FmtFunction(FunctionRef<void(Span<const char>)>);
 
 class FmtArg {
 public:
@@ -2829,6 +2830,7 @@ public:
         const void *ptr;
         Size size;
         Date date;
+        FunctionRef<FmtFunction> func;
 
         struct {
             FmtType type;
@@ -2918,6 +2920,14 @@ static inline FmtArg FmtDiskSize(Size size)
     FmtArg arg;
     arg.type = FmtType::DiskSize;
     arg.u.size = size;
+    return arg;
+}
+
+static inline FmtArg FmtCall(FunctionRef<FmtFunction> func)
+{
+    FmtArg arg;
+    arg.type = FmtType::Function;
+    arg.u.func = func;
     return arg;
 }
 
