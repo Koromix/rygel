@@ -2178,7 +2178,6 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
             // Once we start to implement constant folding and CTFE, more complex expressions
             // should work without any change here.
             if (RG_LIKELY(ir[ir.len - 1].code == bk_Opcode::Push)) {
-                // XXX: max array length? overflow error?
                 type_buf.len = ir[ir.len - 1].u.i;
                 TrimInstructions(1);
             } else {
@@ -2201,6 +2200,15 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
         } else {
             type_buf.unit_size = 1;
         }
+    }
+
+    // Safety checks
+    if (RG_UNLIKELY(type_buf.len < 0)) {
+        MarkError(def_pos, "Negative array size is not valid");
+    }
+    if (RG_UNLIKELY(type_buf.len > UINT16_MAX || type_buf.unit_size > UINT16_MAX ||
+                    type_buf.len * type_buf.unit_size > UINT16_MAX)) {
+        MarkError(def_pos, "Fixed array size is too big");
     }
 
     // Format type signature
