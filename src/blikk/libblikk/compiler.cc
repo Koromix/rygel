@@ -108,7 +108,7 @@ private:
     bool ParseCall(const bk_FunctionTypeInfo *func_type, const bk_FunctionInfo *func, bool overload);
     const bk_FunctionTypeInfo *ParseFunctionType();
     const bk_ArrayTypeInfo *ParseArrayType();
-    void EmitIntrinsic(const char *name, Size call_addr, Span<const bk_TypeInfo *const> args);
+    void EmitIntrinsic(const char *name, Size call_pos, Size call_addr, Span<const bk_TypeInfo *const> args);
     void EmitLoad(const bk_VariableInfo &var);
 
     const bk_TypeInfo *ParseTypeExpression();
@@ -2095,7 +2095,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
 
         stack.len--;
     } else if (func->mode == bk_FunctionInfo::Mode::Intrinsic) {
-        EmitIntrinsic(func->name, call_addr, args);
+        EmitIntrinsic(func->name, call_pos, call_addr, args);
     } else {
         ir.Append({bk_Opcode::CallDirect, {}, {.func = func}});
     }
@@ -2223,7 +2223,7 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
     return array_type;
 }
 
-void bk_Parser::EmitIntrinsic(const char *name, Size call_addr, Span<const bk_TypeInfo *const> args)
+void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, Span<const bk_TypeInfo *const> args)
 {
     if (TestStr(name, "toFloat")) {
         if (args[0] == bk_IntType) {
@@ -2237,7 +2237,7 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_addr, Span<const bk_Ty
         // XXX: We can change the signature from typeOf(...) to typeOf(Any) after Any
         // is implemented, and remove this check.
         if (RG_UNLIKELY(args.len != 1)) {
-            LogError("Intrinsic function typeOf() takes one argument");
+            MarkError(call_pos, "Intrinsic function typeOf() takes one argument");
             return;
         }
 
