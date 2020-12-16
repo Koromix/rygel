@@ -30,7 +30,7 @@ struct PendingOperator {
 
 struct StackSlot {
     const bk_TypeInfo *type;
-    const bk_VariableInfo *var;
+    bk_VariableInfo *var;
     Size indirect_addr;
 };
 
@@ -109,7 +109,7 @@ private:
     const bk_FunctionTypeInfo *ParseFunctionType();
     const bk_ArrayTypeInfo *ParseArrayType();
     void EmitIntrinsic(const char *name, Size call_pos, Size call_addr, Span<const bk_TypeInfo *const> args);
-    void EmitLoad(const bk_VariableInfo &var);
+    void EmitLoad(bk_VariableInfo *var);
 
     const bk_TypeInfo *ParseTypeExpression();
 
@@ -469,6 +469,7 @@ bk_VariableInfo *bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type,
         ir.Append({bk_Opcode::Push, type->primitive, value});
     }
     var->ready_addr = ir.len;
+    var->assign_addr = ir.len;
 
     program->variables_map.TrySet(var);
     return var;
@@ -994,10 +995,12 @@ void bk_Parser::ParseLet()
 
         var->scope = slot.var->scope;
         var->ready_addr = slot.var->ready_addr;
+        var->assign_addr = slot.var->assign_addr;
         var->offset = slot.var->offset;
     } else {
         var->scope = current_func ? bk_VariableInfo::Scope::Local : bk_VariableInfo::Scope::Global;
         var->ready_addr = ir.len;
+        var->assign_addr = ir.len;
 
         var->offset = var_offset;
         var_offset++;
@@ -1478,7 +1481,7 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                     goto unexpected;
                 expect_value = false;
 
-                const bk_VariableInfo *var = program->variables_map.FindValue(tok.u.str, nullptr);
+                bk_VariableInfo *var = program->variables_map.FindValue(tok.u.str, nullptr);
                 Size var_pos = pos - 1;
                 bool call = MatchToken(bk_TokenKind::LeftParenthesis);
 
@@ -1486,7 +1489,7 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                     show_errors &= !poisoned_set.Find(var);
 
                     if (RG_LIKELY(var->type)) {
-                        EmitLoad(*var);
+                        EmitLoad(var);
 
                         if (var->scope == bk_VariableInfo::Scope::Module) {
                             if (var->type->primitive == bk_PrimitiveKind::Function) {
@@ -1799,6 +1802,8 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
 
             ir.Append({bk_Opcode::CopyArray, dest.type->primitive});
         } else {
+            dest.var->assign_addr = ir.len;
+
             bk_Opcode code = (dest.var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Copy : bk_Opcode::CopyLocal;
             ir.Append({code, dest.type->primitive, {.i = dest.var->offset}});
         }
@@ -1988,25 +1993,25 @@ bool bk_Parser::EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, con
     }
 }
 
-void bk_Parser::EmitLoad(const bk_VariableInfo &var)
+void bk_Parser::EmitLoad(bk_VariableInfo *var)
 {
-    if (RG_UNLIKELY(var.scope == bk_VariableInfo::Scope::Global &&
-                    current_func && current_func->earliest_ref_addr < var.ready_addr)) {
+    if (RG_UNLIKELY(var->scope == bk_VariableInfo::Scope::Global &&
+                    current_func && current_func->earliest_ref_addr < var->ready_addr)) {
         MarkError(definitions_map.FindValue(current_func, -1), "Function '%1' is referenced before global variable '%2' exists",
-                  current_func->name, var.name);
+                  current_func->name, var->name);
         HintError(current_func->earliest_ref_pos, "Function reference is here (it could be indirect)");
-        HintDefinition(&var, "Variable '%1' is defined here", var.name);
+        HintDefinition(&var, "Variable '%1' is defined here", var->name);
     }
 
-    if (!var.mut && var.ready_addr > 0 && ir[var.ready_addr - 1].code == bk_Opcode::Push) {
-        bk_Instruction inst = ir[var.ready_addr - 1];
+    if (var->assign_addr > 0 && ir[var->assign_addr - 1].code == bk_Opcode::Push) {
+        bk_Instruction inst = ir[var->assign_addr - 1];
         ir.Append(inst);
     } else {
-        bk_Opcode code = (var.scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Load : bk_Opcode::LoadLocal;
-        ir.Append({code, var.type->primitive, {.i = var.offset}});
+        bk_Opcode code = (var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Load : bk_Opcode::LoadLocal;
+        ir.Append({code, var->type->primitive, {.i = var->offset}});
     }
 
-    stack.Append({var.type, &var});
+    stack.Append({var->type, var});
 }
 
 // Don't try to call from outside ParseExpression()!

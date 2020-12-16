@@ -131,7 +131,10 @@ struct bk_VariableInfo {
 
     Scope scope;
     Size offset; // Stack
-    Size ready_addr; // Only set for globals and locals (not parameters, loop iterators, etc.)
+
+    // Only set for globals and locals (not parameters, loop iterators, etc.)
+    Size ready_addr;
+    Size assign_addr;
 
     const bk_VariableInfo *shadow;
 
