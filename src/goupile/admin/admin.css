@@ -14,7 +14,7 @@ body {
 }
 #gp_root {
     display: flex;
-    max-width: 1000px;
+    max-width: 1200px;
     padding-top: 12em;
     margin: 0 auto;
 }

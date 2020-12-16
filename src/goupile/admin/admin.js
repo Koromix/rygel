@@ -38,10 +38,10 @@ let admin = new function() {
 
                 <table>
                     <colgroup>
-                        <col style="width: 200px;"/>
-                        <col/>
-                        <col/>
-                        <col/>
+                        <col"/>
+                        <col style="width: 100px;"/>
+                        <col style="width: 100px;"/>
+                        <col style="width: 100px;"/>
                     </colgroup>
 
                     <tbody>
@@ -50,14 +50,14 @@ let admin = new function() {
                             <tr class=${instance === select_instance ? 'selected' : ''}>
                                 <td>${instance}</td>
                                 <td><a href=${'/' + instance}>Accéder</a></td>
-                                <td><a @click=${e => toggleSelection(instance)}>Droits</a></td>
-                                <td><a @click=${e => runDeleteDialog(e, instance)}>Fermer</a></td>
+                                <td><a @click=${e => toggleInstance(instance)}>Droits</a></td>
+                                <td><a @click=${e => runDeleteInstanceDialog(e, instance)}>Fermer</a></td>
                             </tr>
                         `)}
                     </tbody>
                 </table>
 
-                <button @click=${runCreateDialog}>Créer une instance</button>
+                <button @click=${runCreateInstanceDialog}>Créer une instance</button>
             </section>
 
             <section>
@@ -66,7 +66,9 @@ let admin = new function() {
                 <table>
                     <colgroup>
                         <col style="width: 100px;"/>
-                        ${select_instance ? html`<col/>` : ''}
+                        <col style="width: 100px;"/>
+                        <col style="width: 100px;"/>
+                        <col/>
                     </colgroup>
 
                     <tbody>
@@ -77,23 +79,26 @@ let admin = new function() {
                             return html`
                                 <tr>
                                     <td>${user.username}</td>
-                                    ${select_instance ? html`
-                                        <td><input style="width: 100%;" type="text"
-                                                    .value=${permissions.join(', ')}
-                                                    @change=${e => assignUser(select_instance, user.username, e.target.value)} /></td>
-                                    ` : ''}
+                                    <td><a @click=${e => log.error('Non disponible pour le moment')}>Modifier</a></td>
+                                    <td><a @click=${e => runDeleteUserDialog(e, user.username)}>Supprimer</a></td>
+                                    <td>
+                                        ${select_instance ?
+                                            html`<input style="width: 100%;" type="text"
+                                                        .value=${permissions.join(', ')}
+                                                        @change=${e => assignUser(select_instance, user.username, e.target.value)} />
+                                    </td>` : ''}
                                 </tr>
                             `;
                         })}
                     </tbody>
                 </table>
 
-                <button @click=${e => log.error('Non disponible pour le moment')}>Créer un utilisateur</button>
+                <button @click=${runCreateUserDialog}>Créer un utilisateur</button>
             </section>
         `, document.querySelector('#gp_root'));
     }
 
-    function toggleSelection(instance) {
+    function toggleInstance(instance) {
         if (instance !== select_instance) {
             select_instance = instance;
         } else {
@@ -102,7 +107,7 @@ let admin = new function() {
         self.run();
     }
 
-    function runCreateDialog(e) {
+    function runCreateInstanceDialog(e) {
         return dialog.run(e, (d, resolve, reject) => {
             let key = d.text('*key', 'Nom de l\'instance');
 
@@ -130,7 +135,7 @@ let admin = new function() {
         });
     }
 
-    function runDeleteDialog(e, instance) {
+    function runDeleteInstanceDialog(e, instance) {
         let msg = `Voulez-vous fermer l'instance ${instance} ?`;
         return dialog.confirm(e, msg, 'Fermer', async () => {
             let query = new URLSearchParams;
@@ -143,6 +148,59 @@ let admin = new function() {
 
             if (response.ok) {
                 log.success('Instance fermée');
+                self.run();
+            } else {
+                let err = (await response.text()).trim();
+                log.error(err);
+            }
+        });
+    }
+
+    function runCreateUserDialog(e) {
+        return dialog.run(e, (d, resolve, reject) => {
+            let username = d.text('*username', 'Nom d\'utilisateur');
+            let password = d.text('*password', 'Mot de passe');
+            let admin = d.boolean('*admin', 'Administrateur', {value: false, untoggle: false});
+
+            d.action('Créer', {disabled: !d.isValid()}, async () => {
+                let query = new URLSearchParams;
+                query.set('username', username.value);
+                query.set('password', password.value);
+                query.set('admin', admin.value ? 1 : 0);
+
+                let response = await net.fetch('/admin/api/users/create', {
+                    method: 'POST',
+                    body: query
+                });
+
+                if (response.ok) {
+                    resolve();
+
+                    log.success('Utilisateur créé');
+                    self.run();
+                } else {
+                    let err = (await response.text()).trim();
+                    log.error(err);
+                    reject(new Error(err));
+                }
+            });
+            d.action('Annuler', {}, () => reject(new Error('Action annulée')));
+        });
+    }
+
+    function runDeleteUserDialog(e, username) {
+        let msg = `Voulez-vous supprimer l'utilisateur ${username} ?`;
+        return dialog.confirm(e, msg, 'Supprimer', async () => {
+            let query = new URLSearchParams;
+            query.set('username', username);
+
+            let response = await net.fetch('/admin/api/users/delete', {
+                method: 'POST',
+                body: query
+            });
+
+            if (response.ok) {
+                log.success('Utilisateur supprimé');
                 self.run();
             } else {
                 let err = (await response.text()).trim();
