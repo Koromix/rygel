@@ -80,7 +80,6 @@ extern const bk_TypeInfo *bk_FloatType;
 extern const bk_TypeInfo *bk_StringType;
 extern const bk_TypeInfo *bk_TypeType;
 
-// XXX: Support native calling conventions to provide seamless integration
 typedef bk_PrimitiveValue bk_NativeFunction(bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args);
 
 struct bk_FunctionInfo {
