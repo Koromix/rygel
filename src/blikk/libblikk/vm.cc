@@ -136,6 +136,7 @@ bool bk_VirtualMachine::Run()
         CASE(CheckIndex): {
             Size idx = stack[stack.len - 1].i;
             if (RG_UNLIKELY(idx < 0 || idx >= inst->u.i)) {
+                frame->pc = pc;
                 FatalError("Index is out of range: %1 (array length %2)", idx, inst->u.i);
                 return false;
             }
@@ -169,6 +170,7 @@ bool bk_VirtualMachine::Run()
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i;
             if (RG_UNLIKELY(i2 == 0)) {
+                frame->pc = pc;
                 FatalError("Integer division by 0 is illegal");
                 return false;
             }
@@ -179,6 +181,7 @@ bool bk_VirtualMachine::Run()
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i;
             if (RG_UNLIKELY(i2 == 0)) {
+                frame->pc = pc;
                 FatalError("Integer division by 0 is illegal");
                 return false;
             }
@@ -252,6 +255,7 @@ bool bk_VirtualMachine::Run()
             } else if (RG_LIKELY(i2 >= 0)) {
                 stack[--stack.len - 1].i = (int64_t)((uint64_t)i1 << i2);
             } else {
+                frame->pc = pc;
                 FatalError("Left-shift by negative value is illegal");
                 return false;
             }
@@ -265,6 +269,7 @@ bool bk_VirtualMachine::Run()
             } else if (RG_LIKELY(i2 >= 0)) {
                 stack[--stack.len - 1].i = (int64_t)((uint64_t)i1 >> i2);
             } else {
+                frame->pc = pc;
                 FatalError("Right-shift by negative value is illegal");
                 return false;
             }
@@ -274,6 +279,7 @@ bool bk_VirtualMachine::Run()
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i % 64;
             if (RG_UNLIKELY(i2 < 0)) {
+                frame->pc = pc;
                 FatalError("Left-rotate by negative value is illegal");
                 return false;
             }
@@ -284,6 +290,7 @@ bool bk_VirtualMachine::Run()
             int64_t i1 = stack[stack.len - 2].i;
             int64_t i2 = stack[stack.len - 1].i % 64;
             if (RG_UNLIKELY(i2 < 0)) {
+                frame->pc = pc;
                 FatalError("Right-rotate by negative value is illegal");
                 return false;
             }
