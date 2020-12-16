@@ -141,6 +141,22 @@ static bool MatchPlatform(Span<const char> name, bool *out_match)
     }
 }
 
+static bool CheckTargetName(Span<const char> name)
+{
+    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_'; };
+
+    if (!name.len) {
+        LogError("Target name cannot be empty");
+        return false;
+    }
+    if (!std::all_of(name.begin(), name.end(), test_char)) {
+        LogError("Target name must only contain alphanumeric or '_' characters");
+        return false;
+    }
+
+    return true;
+}
+
 bool TargetSetBuilder::LoadIni(StreamReader *st)
 {
     RG_DEFER_NC(out_guard, len = set.targets.len) { set.targets.RemoveFrom(len); };
@@ -157,6 +173,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                 LogError("Property is outside section");
                 return false;
             }
+            valid &= CheckTargetName(prop.section);
 
             TargetConfig target_config = {};
 

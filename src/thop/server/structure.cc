@@ -7,6 +7,22 @@
 
 namespace RG {
 
+static bool CheckStructureName(Span<const char> name)
+{
+    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '.' || c == '-' || c == '_' || c == ' '; };
+
+    if (!name.len) {
+        LogError("Structure name cannot be empty");
+        return false;
+    }
+    if (!std::all_of(name.begin(), name.end(), test_char)) {
+        LogError("Structure name must only contain alphanumeric, '.', '-', '_' or ' ' characters");
+        return false;
+    }
+
+    return true;
+}
+
 bool StructureSetBuilder::LoadIni(StreamReader *st)
 {
     RG_DEFER_NC(out_guard, len = set.structures.len) { set.structures.RemoveFrom(len); };
@@ -23,10 +39,9 @@ bool StructureSetBuilder::LoadIni(StreamReader *st)
                 LogError("Property is outside section");
                 return false;
             }
+            valid &= CheckStructureName(prop.section);
 
             Structure structure = {};
-
-            // XXX: Check validity, or maybe the INI parser checks are enough?
             structure.name = DuplicateString(prop.section, &set.str_alloc).ptr;
 
             HashSet<drd_UnitCode> units_set;

@@ -4541,9 +4541,20 @@ bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer)
 // INI
 // ------------------------------------------------------------------------
 
-static inline bool IsAsciiIdChar(char c)
+static bool CheckIniKey(Span<const char> key)
 {
-    return IsAsciiAlphaOrDigit(c) || c == '_' || c == '-' || c == '.' || c == ' ';
+    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_' || c == '-' || c == '.'; };
+
+    if (!key.len) {
+        LogError("INI key cannot be empty");
+        return false;
+    }
+    if (!std::all_of(key.begin(), key.end(), test_char)) {
+        LogError("INI key must only contain alphanumeric, '.', '-' or '_' characters");
+        return false;
+    }
+
+    return true;
 }
 
 IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
@@ -4570,10 +4581,6 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
                 LogError("Empty section name");
                 return LineType::Exit;
             }
-            if (!std::all_of(section.begin(), section.end(), IsAsciiIdChar)) {
-                LogError("Section names can only contain alphanumeric characters, '_', '-', '.' or ' '");
-                return LineType::Exit;
-            }
 
             current_section.RemoveFrom(0);
             current_section.Append(section);
@@ -4587,10 +4594,8 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
                 LogError("Malformed key=value pair");
                 return LineType::Exit;
             }
-            if (!std::all_of(key.begin(), key.end(), IsAsciiIdChar)) {
-                LogError("Key names can only contain alphanumeric characters, '_', '-' or '.'");
+            if (!CheckIniKey(key))
                 return LineType::Exit;
-            }
             value = TrimStr(value);
             *value.end() = 0;
 

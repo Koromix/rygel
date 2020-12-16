@@ -64,6 +64,22 @@ static Span<const char> SplitListValue(Span<const char> str,
     return part;
 }
 
+static bool CheckUserName(Span<const char> name)
+{
+    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '.' || c == '-' || c == '_' || c == ' '; };
+
+    if (!name.len) {
+        LogError("User name cannot be empty");
+        return false;
+    }
+    if (!std::all_of(name.begin(), name.end(), test_char)) {
+        LogError("User name must only contain alphanumeric, '.', '-', '_' or ' ' characters");
+        return false;
+    }
+
+    return true;
+}
+
 bool UserSetBuilder::LoadIni(StreamReader *st)
 {
     RG_DEFER_NC(out_guard, len = set.users.len) { set.users.RemoveFrom(len); };
@@ -85,8 +101,8 @@ bool UserSetBuilder::LoadIni(StreamReader *st)
                 LogError("Property is outside section");
                 return false;
             }
+            valid &= CheckUserName(prop.section);
 
-            // XXX: Check validity, or maybe the INI parser checks are enough?
             const char *name = DuplicateString(prop.section, &set.str_alloc).ptr;
             User *user = set.users.AppendDefault();
             UnitRuleSet rule_set = {};
