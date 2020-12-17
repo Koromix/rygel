@@ -32,7 +32,7 @@ static void InitAdminAssets()
     Span<const AssetInfo> packed_assets = GetPackedAssets();
 
     for (Size i = 0; i < packed_assets.len; i++) {
-        if (StartsWith(packed_assets[i].name, "admin/")) {
+        if (!StartsWith(packed_assets[i].name, "client/") || !StartsWith(packed_assets[i].name, "demo/")) {
             AssetInfo asset = packed_assets[i];
 
             asset.name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
