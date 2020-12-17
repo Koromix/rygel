@@ -105,9 +105,10 @@ private:
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *out_type);
     bool EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *out_type);
-    bool ParseCall(const bk_FunctionTypeInfo *func_type, const bk_FunctionInfo *func, bool overload);
     const bk_FunctionTypeInfo *ParseFunctionType();
     const bk_ArrayTypeInfo *ParseArrayType();
+    void ParseArraySubscript();
+    bool ParseCall(const bk_FunctionTypeInfo *func_type, const bk_FunctionInfo *func, bool overload);
     void EmitIntrinsic(const char *name, Size call_pos, Size call_addr, Span<const bk_TypeInfo *const> args);
     void EmitLoad(bk_VariableInfo *var);
 
@@ -1437,39 +1438,7 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                     ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type, {.type = type}});
                     stack.Append({bk_TypeType});
                 } else if (stack[stack.len - 1].type->primitive == bk_PrimitiveKind::Array) {
-                    const bk_ArrayTypeInfo *array_type = stack[stack.len - 1].type->AsArrayType();
-
-                    if (stack[stack.len - 1].indirect_addr) {
-                        RG_ASSERT(stack[stack.len - 1].indirect_addr == ir.len - 1);
-                        TrimInstructions(1);
-                    }
-
-                    Size idx_pos = pos;
-                    const bk_TypeInfo *type = ParseExpression(false).type;
-                    if (RG_UNLIKELY(type != bk_IntType)) {
-                        MarkError(idx_pos, "Expected an 'Int' expression, not '%1'", type->signature);
-                        goto error;
-                    }
-                    ConsumeToken(bk_TokenKind::RightBracket);
-
-                    // Compute array index
-                    ir.Append({bk_Opcode::CheckIndex, {}, {.i = array_type->len}});
-                    if (array_type->unit_size != 1) {
-                        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = array_type->unit_size}});
-                        ir.Append({bk_Opcode::MultiplyInt});
-                    }
-                    if (stack[stack.len - 1].indirect_addr) {
-                        ir.Append({bk_Opcode::AddInt});
-                    }
-
-                    if (array_type->unit_type->PassByReference()) {
-                        ir.Append({bk_Opcode::AddInt});
-                    } else {
-                        ir.Append({bk_Opcode::LoadArray});
-                    }
-
-                    stack[stack.len - 1].type = array_type->unit_type;
-                    stack[stack.len - 1].indirect_addr = ir.len - 1;
+                    ParseArraySubscript();
                 } else {
                     MarkError(pos - 1, "Cannot subset non-array expression");
                     goto error;
@@ -1993,122 +1962,6 @@ bool bk_Parser::EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, con
     }
 }
 
-void bk_Parser::EmitLoad(bk_VariableInfo *var)
-{
-    if (RG_UNLIKELY(var->scope == bk_VariableInfo::Scope::Global &&
-                    current_func && current_func->earliest_ref_addr < var->ready_addr)) {
-        MarkError(definitions_map.FindValue(current_func, -1), "Function '%1' is referenced before global variable '%2' exists",
-                  current_func->name, var->name);
-        HintError(current_func->earliest_ref_pos, "Function reference is here (it could be indirect)");
-        HintDefinition(&var, "Variable '%1' is defined here", var->name);
-    }
-
-    if (var->assign_addr > 0 && ir[var->assign_addr - 1].code == bk_Opcode::Push) {
-        bk_Instruction inst = ir[var->assign_addr - 1];
-        ir.Append(inst);
-    } else {
-        bk_Opcode code = (var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Load : bk_Opcode::LoadLocal;
-        ir.Append({code, var->type->primitive, {.i = var->offset}});
-    }
-
-    stack.Append({var->type, var});
-}
-
-// Don't try to call from outside ParseExpression()!
-bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_FunctionInfo *func, bool overload)
-{
-    LocalArray<const bk_TypeInfo *, RG_LEN(bk_FunctionTypeInfo::params.data)> args;
-
-    Size call_pos = pos - 1;
-    Size call_addr = ir.len;
-
-    // Parse arguments
-    Size args_size = 0;
-    if (!MatchToken(bk_TokenKind::RightParenthesis)) {
-        do {
-            SkipNewLines();
-
-            if (RG_UNLIKELY(!args.Available())) {
-                MarkError(pos, "Functions cannot take more than %1 arguments", RG_LEN(args.data));
-                return false;
-            }
-
-            if (func_type->variadic && args.len >= func_type->params.len) {
-                Size type_addr = ir.len;
-                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type});
-
-                const bk_TypeInfo *type = ParseExpression(true).type;
-                args.Append(type);
-                args_size += 2;
-
-                ir[type_addr].u.type = type;
-            } else {
-                const bk_TypeInfo *type = ParseExpression(true).type;
-                args.Append(type);
-                args_size++;
-            }
-        } while (MatchToken(bk_TokenKind::Comma));
-
-        SkipNewLines();
-        ConsumeToken(bk_TokenKind::RightParenthesis);
-    }
-    if (func_type->variadic) {
-        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = args_size - func_type->params.len}});
-        args_size++;
-    }
-
-    // Find appropriate overload. Variadic functions cannot be overloaded but it
-    // does not hurt to use the same logic to check argument types.
-    if (func && overload) {
-        const bk_FunctionInfo *func0 = func;
-
-        while (!TestOverload(*func->type, args)) {
-            func = func->overload_next;
-
-            if (RG_UNLIKELY(func == func0)) {
-                LocalArray<char, 1024> buf;
-                for (Size i = 0; i < args.len; i++) {
-                    buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", args[i]->signature).len;
-                }
-
-                MarkError(call_pos, "Cannot call '%1' with (%2) arguments", func->name, buf);
-
-                // Show all candidate functions with same name
-                const bk_FunctionInfo *it = func0;
-                do {
-                    HintError(definitions_map.FindValue(it, -1), "Candidate '%1'", it->prototype);
-                    it = it->overload_next;
-                } while (it != func0);
-
-                return false;
-            }
-        }
-    } else if (!TestOverload(*func_type, args)) {
-        LocalArray<char, 1024> buf;
-        for (Size i = 0; i < args.len; i++) {
-            buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", args[i]->signature).len;
-        }
-
-        MarkError(call_pos, "Cannot call function typed '%1' with (%2) arguments", func_type->signature, buf);
-        return false;
-    }
-
-    // Emit intrinsic or call
-    if (!func) {
-        Size offset = 1 + args_size;
-        ir.Append({bk_Opcode::Call, {}, {.i = -offset}});
-
-        stack.len--;
-    } else if (func->mode == bk_FunctionInfo::Mode::Intrinsic) {
-        EmitIntrinsic(func->name, call_pos, call_addr, args);
-    } else {
-        ir.Append({bk_Opcode::CallDirect, {}, {.func = func}});
-    }
-    stack.Append({func_type->ret_type});
-
-    return true;
-}
-
 const bk_FunctionTypeInfo *bk_Parser::ParseFunctionType()
 {
     bk_FunctionTypeInfo type_buf = {};
@@ -2228,6 +2081,137 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
     return array_type;
 }
 
+void bk_Parser::ParseArraySubscript()
+{
+    const bk_ArrayTypeInfo *array_type = stack[stack.len - 1].type->AsArrayType();
+
+    if (stack[stack.len - 1].indirect_addr) {
+        RG_ASSERT(stack[stack.len - 1].indirect_addr == ir.len - 1);
+        TrimInstructions(1);
+    }
+
+    Size idx_pos = pos;
+    const bk_TypeInfo *type = ParseExpression(false).type;
+    if (RG_UNLIKELY(type != bk_IntType)) {
+        MarkError(idx_pos, "Expected an 'Int' expression, not '%1'", type->signature);
+    }
+    ConsumeToken(bk_TokenKind::RightBracket);
+
+    // Compute array index
+    ir.Append({bk_Opcode::CheckIndex, {}, {.i = array_type->len}});
+    if (array_type->unit_size != 1) {
+        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = array_type->unit_size}});
+        ir.Append({bk_Opcode::MultiplyInt});
+    }
+    if (stack[stack.len - 1].indirect_addr) {
+        ir.Append({bk_Opcode::AddInt});
+    }
+
+    if (array_type->unit_type->PassByReference()) {
+        ir.Append({bk_Opcode::AddInt});
+    } else {
+        ir.Append({bk_Opcode::LoadArray});
+    }
+
+    stack[stack.len - 1].type = array_type->unit_type;
+    stack[stack.len - 1].indirect_addr = ir.len - 1;
+}
+
+// Don't try to call from outside ParseExpression()!
+bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_FunctionInfo *func, bool overload)
+{
+    LocalArray<const bk_TypeInfo *, RG_LEN(bk_FunctionTypeInfo::params.data)> args;
+
+    Size call_pos = pos - 1;
+    Size call_addr = ir.len;
+
+    // Parse arguments
+    Size args_size = 0;
+    if (!MatchToken(bk_TokenKind::RightParenthesis)) {
+        do {
+            SkipNewLines();
+
+            if (RG_UNLIKELY(!args.Available())) {
+                MarkError(pos, "Functions cannot take more than %1 arguments", RG_LEN(args.data));
+                return false;
+            }
+
+            if (func_type->variadic && args.len >= func_type->params.len) {
+                Size type_addr = ir.len;
+                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type});
+
+                const bk_TypeInfo *type = ParseExpression(true).type;
+                args.Append(type);
+                args_size += 2;
+
+                ir[type_addr].u.type = type;
+            } else {
+                const bk_TypeInfo *type = ParseExpression(true).type;
+                args.Append(type);
+                args_size++;
+            }
+        } while (MatchToken(bk_TokenKind::Comma));
+
+        SkipNewLines();
+        ConsumeToken(bk_TokenKind::RightParenthesis);
+    }
+    if (func_type->variadic) {
+        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = args_size - func_type->params.len}});
+        args_size++;
+    }
+
+    // Find appropriate overload. Variadic functions cannot be overloaded but it
+    // does not hurt to use the same logic to check argument types.
+    if (func && overload) {
+        const bk_FunctionInfo *func0 = func;
+
+        while (!TestOverload(*func->type, args)) {
+            func = func->overload_next;
+
+            if (RG_UNLIKELY(func == func0)) {
+                LocalArray<char, 1024> buf;
+                for (Size i = 0; i < args.len; i++) {
+                    buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", args[i]->signature).len;
+                }
+
+                MarkError(call_pos, "Cannot call '%1' with (%2) arguments", func->name, buf);
+
+                // Show all candidate functions with same name
+                const bk_FunctionInfo *it = func0;
+                do {
+                    HintError(definitions_map.FindValue(it, -1), "Candidate '%1'", it->prototype);
+                    it = it->overload_next;
+                } while (it != func0);
+
+                return false;
+            }
+        }
+    } else if (!TestOverload(*func_type, args)) {
+        LocalArray<char, 1024> buf;
+        for (Size i = 0; i < args.len; i++) {
+            buf.len += Fmt(buf.TakeAvailable(), "%1%2", i ? ", " : "", args[i]->signature).len;
+        }
+
+        MarkError(call_pos, "Cannot call function typed '%1' with (%2) arguments", func_type->signature, buf);
+        return false;
+    }
+
+    // Emit intrinsic or call
+    if (!func) {
+        Size offset = 1 + args_size;
+        ir.Append({bk_Opcode::Call, {}, {.i = -offset}});
+
+        stack.len--;
+    } else if (func->mode == bk_FunctionInfo::Mode::Intrinsic) {
+        EmitIntrinsic(func->name, call_pos, call_addr, args);
+    } else {
+        ir.Append({bk_Opcode::CallDirect, {}, {.func = func}});
+    }
+    stack.Append({func_type->ret_type});
+
+    return true;
+}
+
 void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, Span<const bk_TypeInfo *const> args)
 {
     if (TestStr(name, "toFloat")) {
@@ -2253,6 +2237,27 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
     } else {
         RG_UNREACHABLE();
     }
+}
+
+void bk_Parser::EmitLoad(bk_VariableInfo *var)
+{
+    if (RG_UNLIKELY(var->scope == bk_VariableInfo::Scope::Global &&
+                    current_func && current_func->earliest_ref_addr < var->ready_addr)) {
+        MarkError(definitions_map.FindValue(current_func, -1), "Function '%1' is referenced before global variable '%2' exists",
+                  current_func->name, var->name);
+        HintError(current_func->earliest_ref_pos, "Function reference is here (it could be indirect)");
+        HintDefinition(&var, "Variable '%1' is defined here", var->name);
+    }
+
+    if (var->assign_addr > 0 && ir[var->assign_addr - 1].code == bk_Opcode::Push) {
+        bk_Instruction inst = ir[var->assign_addr - 1];
+        ir.Append(inst);
+    } else {
+        bk_Opcode code = (var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Load : bk_Opcode::LoadLocal;
+        ir.Append({code, var->type->primitive, {.i = var->offset}});
+    }
+
+    stack.Append({var->type, var});
 }
 
 const bk_TypeInfo *bk_Parser::ParseTypeExpression()
