@@ -164,9 +164,6 @@
     background: white;
     border: 1px solid #ccc;
     border-width: 0.5px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 .af_select {
     /* This width: 100% is combined with an outer div set to max-width: 100% so that
