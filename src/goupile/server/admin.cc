@@ -736,6 +736,8 @@ void HandleDeleteUser(const http_RequestInfo &request, http_IO *io)
         }
 
         goupile_domain.db.Transaction([&]() {
+            if (!goupile_domain.db.Run("DELETE FROM dom_permissions WHERE username = ?1;", username))
+                return false;
             if (!goupile_domain.db.Run("DELETE FROM dom_users WHERE username = ?1;", username))
                 return false;
             if (!sqlite3_changes(goupile_domain.db)) {
