@@ -477,7 +477,6 @@ void http_IO::AddCachingHeaders(int max_age, const char *etag)
 
 #ifndef NDEBUG
     max_age = 0;
-    etag = nullptr;
 #endif
 
     if (max_age || etag) {
