@@ -237,6 +237,7 @@
 .af_enum > button.active::before {
     width: 16px;
     content: '✓\FE0E';
+    font-size: 0.8em;
 }
 .af_enum > button.active::after { display: none; }
 .af_enum > button.active:hover {
