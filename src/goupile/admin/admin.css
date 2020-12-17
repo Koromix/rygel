@@ -50,6 +50,15 @@ button:not(:disabled):hover {
     color: white;
 }
 
+.gp_tag {
+    display: inline-block;
+    padding: 0px 4px;
+    border-radius: 4px;
+    color: white;
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
 h1 {
     font-size: 1.1em;
     text-align: center;
@@ -97,10 +106,6 @@ table td:first-child { text-align: left; }
 .gp_form button, .gp_form input[type=submit] {
     display: block;
     margin: 0 auto;
-}
-
-table {
-
 }
 
 @media (pointer: coarse) {

@@ -52,6 +52,15 @@ button:not(:disabled):hover {
     color: white;
 }
 
+.gp_tag {
+    display: inline-block;
+    padding: 0px 4px;
+    border-radius: 4px;
+    color: white;
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
 /* -------------------- Overlays -------------------- */
 
 .busy {

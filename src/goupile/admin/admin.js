@@ -33,7 +33,7 @@ let admin = new function() {
             select_instance = null;
 
         render(html`
-            <section>
+            <section style="flex-grow: 2;">
                 <h1>Instances</h1>
 
                 <table>
@@ -60,15 +60,14 @@ let admin = new function() {
                 <button @click=${runCreateInstanceDialog}>Créer une instance</button>
             </section>
 
-            <section>
+            <section style="flex-grow: 3;">
                 <h1>Utilisateurs</h1>
 
                 <table>
                     <colgroup>
                         <col style="width: 100px;"/>
-                        <col style="width: 100px;"/>
-                        <col style="width: 100px;"/>
                         <col/>
+                        <col style="width: 100px;"/>
                     </colgroup>
 
                     <tbody>
@@ -79,14 +78,15 @@ let admin = new function() {
                             return html`
                                 <tr>
                                     <td>${user.username}</td>
-                                    <td><a @click=${e => log.error('Non disponible pour le moment')}>Modifier</a></td>
-                                    <td><a @click=${e => runDeleteUserDialog(e, user.username)}>Supprimer</a></td>
                                     <td>
+                                        ${permissions.map(perm =>
+                                            html`<span class="gp_tag" style="background: #555;">${perm}</span> `)}
                                         ${select_instance ?
-                                            html`<input style="width: 100%;" type="text"
-                                                        .value=${permissions.join(', ')}
-                                                        @change=${e => assignUser(select_instance, user.username, e.target.value)} />
-                                    </td>` : ''}
+                                            html`&nbsp;&nbsp;&nbsp;
+                                                 <a @click=${e => runAssignUserDialog(e, select_instance, user.username,
+                                                                                      permissions)}>${permissions.length ? 'Modifier' : 'Assigner'}</a>` : ''}
+                                    </td>
+                                    <td><a @click=${e => runDeleteUserDialog(e, user.username)}>Supprimer</a></td>
                                 </tr>
                             `;
                         })}
@@ -136,7 +136,7 @@ let admin = new function() {
     }
 
     function runDeleteInstanceDialog(e, instance) {
-        let msg = `Voulez-vous fermer l'instance ${instance} ?`;
+        let msg = `Voulez-vous fermer l'instance '${instance}' ?`;
         return dialog.confirm(e, msg, 'Fermer', async () => {
             let query = new URLSearchParams;
             query.set('key', instance);
@@ -151,7 +151,7 @@ let admin = new function() {
                 self.run();
             } else {
                 let err = (await response.text()).trim();
-                log.error(err);
+                throw new Error(err);
             }
         });
     }
@@ -188,8 +188,44 @@ let admin = new function() {
         });
     }
 
+    function runAssignUserDialog(e, instance, username, prev_permissions) {
+        return dialog.run(e, (d, resolve, reject) => {
+            d.calc("instance", "Instance", instance);
+            d.sameLine(); d.calc("username", "Utilisateur", username);
+
+            let permissions = d.textArea("permissions", "Permissions", {
+                rows: 7, cols: 16,
+                value: prev_permissions.join('\n')
+            });
+
+            d.action('Modifier', {disabled: !d.isValid()}, async () => {
+                let query = new URLSearchParams;
+                query.set('instance', instance);
+                query.set('user', username);
+                query.set('permissions', permissions.value ? permissions.value.split('\n').join(',') : '');
+
+                let response = await net.fetch('/admin/api/users/assign', {
+                    method: 'POST',
+                    body: query
+                });
+
+                if (response.ok) {
+                    resolve();
+
+                    log.success('Droits modifiés');
+                    self.run();
+                } else {
+                    let err = (await response.text()).trim();
+                    log.error(err);
+                    reject(new Error(err));
+                }
+            });
+            d.action('Annuler', {}, () => reject(new Error('Action annulée')));
+        });
+    }
+
     function runDeleteUserDialog(e, username) {
-        let msg = `Voulez-vous supprimer l'utilisateur ${username} ?`;
+        let msg = `Voulez-vous supprimer l'utilisateur '${username}' ?`;
         return dialog.confirm(e, msg, 'Supprimer', async () => {
             let query = new URLSearchParams;
             query.set('username', username);
@@ -204,29 +240,9 @@ let admin = new function() {
                 self.run();
             } else {
                 let err = (await response.text()).trim();
-                log.error(err);
+                throw new Error(err);
             }
         });
-    }
-
-    async function assignUser(instance, user, permissions) {
-        let query = new URLSearchParams;
-        query.set('instance', instance);
-        query.set('user', user);
-        query.set('permissions', permissions);
-
-        let response = await net.fetch('/admin/api/users/assign', {
-            method: 'POST',
-            body: query
-        });
-
-        if (response.ok) {
-            log.success('Droits modifiés');
-            self.run();
-        } else {
-            let err = (await response.text()).trim();
-            log.error(err);
-        }
     }
 
     function runLogin() {
@@ -236,7 +252,7 @@ let admin = new function() {
                     <label>Utilisateur : <input id="usr_username" type="text"/></label>
                     <label>Mot de passe : <input id="usr_password" type="password"/></label>
 
-                    <button>Se connecter</button>
+                    <br/><button>Se connecter</button>
                 </fieldset>
             </form>
         `, document.querySelector('#gp_root'));
