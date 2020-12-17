@@ -124,6 +124,7 @@ let admin = new function() {
                     resolve();
 
                     log.success('Instance créée');
+                    select_instance = key.value;
                     self.run();
                 } else {
                     let err = (await response.text()).trim();
