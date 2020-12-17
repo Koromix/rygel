@@ -160,7 +160,12 @@ let admin = new function() {
     function runCreateUserDialog(e) {
         return dialog.run(e, (d, resolve, reject) => {
             let username = d.text('*username', 'Nom d\'utilisateur');
-            let password = d.text('*password', 'Mot de passe');
+
+            let password = d.password('*password', 'Mot de passe');
+            d.sameLine(); let password2 = d.password('*password2', 'Confirmation');
+            if (password.value != null && password2.value != null && password.value !== password2.value)
+                password2.error("Les mots de passe sont différents");
+
             let admin = d.boolean('*admin', 'Administrateur', {value: false, untoggle: false});
 
             d.action('Créer', {disabled: !d.isValid()}, async () => {
