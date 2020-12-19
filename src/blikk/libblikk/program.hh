@@ -133,7 +133,6 @@ struct bk_VariableInfo {
 
     // Only set for globals and locals (not parameters, loop iterators, etc.)
     Size ready_addr;
-    Size assign_addr;
 
     const bk_VariableInfo *shadow;
 
