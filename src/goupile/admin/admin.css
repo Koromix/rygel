@@ -2,61 +2,13 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-html { height: 100%; }
-body {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    background: white;
-    font-family: 'Open Sans', sans-serif;
-    font-size: 14px;
-    line-height: 1.5;
-}
 #gp_root {
     display: flex;
+    flex-direction: row;
     max-width: 1200px;
+    height: auto;
     padding-top: 12em;
     margin: 0 auto;
-}
-@media (pointer: coarse) {
-    body { font-size: 16px; }
-}
-
-a {
-    color: #ef6000;
-    text-decoration: underline;
-}
-
-button {
-    padding: 0.35em 10px;
-    background: white;
-    border: 1px solid #ced3d8;
-    color: black;
-    font-family: inherit;
-    font-size: 1em;
-    cursor: pointer;
-}
-button:not(:disabled) { cursor: pointer; }
-button:disabled {
-    background: #bbb;
-    border-color: #bbb;
-    color: #eee;
-    cursor: not-allowed;
-}
-button::-moz-focus-inner { border: 0; }
-button:not(:disabled):hover {
-    background: #ef6000;
-    border-color: #ef6000;
-    color: white;
-}
-
-.gp_tag {
-    display: inline-block;
-    padding: 0px 4px;
-    border-radius: 4px;
-    color: white;
-    font-size: 0.9em;
-    white-space: nowrap;
 }
 
 h1 {
@@ -92,36 +44,3 @@ table td {
     border: 1px solid #ddd;
 }
 table td:first-child { text-align: left; }
-
-.gp_form {
-    width: 340px;
-    max-width: 340px;
-    margin: 0 auto;
-}
-.gp_form label {
-    display: block;
-    margin: 0 0 15px 0;
-}
-.gp_form label > * { float: right; }
-.gp_form button, .gp_form input[type=submit] {
-    display: block;
-    margin: 0 auto;
-}
-
-@media (pointer: coarse) {
-    .gp_form {
-        width: auto;
-        margin: 0 auto;
-        padding: 8px;
-    }
-}
-
-.gp_wip {
-    padding: 5px;
-    font-size: 1.4em;
-    text-align: center;
-}
-.gp_wip::before {
-    content: '⚠\FE0E';
-    padding-right: 6px;
-}

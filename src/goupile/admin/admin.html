@@ -31,7 +31,6 @@
                         throw new Error('Cannot work with broken async in IndexedDB');
                 }
 
-                document.querySelector('#gp_root').classList.add('busy');
                 document.addEventListener('readystatechange', function(e) {
                     if (document.readyState === 'complete')
                         admin.startApp();

@@ -252,58 +252,56 @@ let admin = new function() {
     }
 
     function runLogin() {
-        render(html`
-            <form class="gp_form" @submit=${handleLoginSubmit}>
-                <fieldset id="usr_fieldset" style="margin: 0; padding: 0; border: 0;" ?disabled=${false}>
-                    <label>Utilisateur : <input id="usr_username" type="text"/></label>
-                    <label>Mot de passe : <input id="usr_password" type="password"/></label>
+        return dialog.runScreen((d, resolve, reject) => {
+            d.output(html`
+                <img id="usr_logo" src="/admin/favicon.png" alt="" />
+                <br/>
+            `);
 
-                    <br/><button>Se connecter</button>
-                </fieldset>
-            </form>
-        `, document.querySelector('#gp_root'));
-    }
+            let username = d.text('*username', 'Nom d\'utilisateur');
+            let password = d.password('*password', 'Mot de passe');
 
-    function handleLoginSubmit(e) {
-        let fieldset_el = document.querySelector('#usr_fieldset');
-        let username_el = document.querySelector('#usr_username');
-        let password_el = document.querySelector('#usr_password');
+            d.action('Se connecter', {disabled: !d.isValid()}, async () => {
+                let success = await login(username.value, password.value);
 
-        fieldset_el.disabled = true;
-        let p = login(username_el.value, password_el.value);
-
-        p.then(success => {
-            if (success) {
-                self.run();
-            } else {
-                fieldset_el.disabled = false;
-                password_el.focus();
-            }
+                if (success) {
+                    resolve(username.value);
+                } else {
+                    reject(new Error('Échec de la connexion'));
+                }
+            });
         });
-        p.catch(err => {
-            fieldset_el.disabled = false;
-            log.error(err);
-        });
-
-        e.preventDefault();
     }
 
     async function login(username, password) {
-        let query = new URLSearchParams;
-        query.set('username', username.toLowerCase());
-        query.set('password', password);
+        let entry = new log.Entry;
 
-        let response = await net.fetch('/admin/api/user/login', {
-            method: 'POST',
-            body: query
-        });
+        entry.progress('Connexion en cours');
 
-        if (response.ok) {
-            session_profile = await response.json();
-            session_rnd = util.getCookie('session_rnd');
+        try {
+            let query = new URLSearchParams;
+            query.set('username', username.toLowerCase());
+            query.set('password', password);
 
-            return true;
-        } else {
+            let response = await net.fetch('/admin/api/user/login', {
+                method: 'POST',
+                body: query
+            });
+
+            if (response.ok) {
+                session_profile = await response.json();
+                session_rnd = util.getCookie('session_rnd');
+
+                entry.success('Connexion réussie');
+                self.run();
+
+                return true;
+            } else {
+                entry.error('Échec de la connexion');
+                return false;
+            }
+        } catch (e) {
+            entry.error(e);
             return false;
         }
     }
