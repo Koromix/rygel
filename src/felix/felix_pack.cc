@@ -15,7 +15,7 @@ int RunPack(Span<const char *> arguments)
     // Options
     PackMode mode = PackMode::C;
     const char *output_path = nullptr;
-    int strip_count = INT_MAX;
+    int strip_count = 0;
     CompressionType compression_type = CompressionType::None;
     unsigned int merge_flags = 0;
     const char *merge_file = nullptr;
@@ -31,7 +31,7 @@ Options:
     %!..+-O, --output_file <file>%!0     Redirect output to file or directory
 
     %!..+-s, --strip <count>%!0          Strip first count directory components, or 'All'
-                                 %!D..(default: All)%!0
+                                 %!D..(default: 0)%!0
     %!..+-c, --compress <type>%!0        Compress data, see below for available types
                                  %!D..(default: %3)%!0
 
