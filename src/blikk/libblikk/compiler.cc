@@ -2078,38 +2078,43 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
 
 void bk_Parser::ParseArraySubscript()
 {
-    const bk_ArrayTypeInfo *array_type = stack[stack.len - 1].type->AsArrayType();
+    do {
+        const bk_ArrayTypeInfo *array_type = stack[stack.len - 1].type->AsArrayType();
 
-    if (stack[stack.len - 1].indirect_addr) {
-        RG_ASSERT(stack[stack.len - 1].indirect_addr == ir.len - 1);
-        TrimInstructions(1);
-    }
+        if (stack[stack.len - 1].indirect_addr) {
+            RG_ASSERT(stack[stack.len - 1].indirect_addr == ir.len - 1);
+            TrimInstructions(1);
+        }
 
-    Size idx_pos = pos;
-    const bk_TypeInfo *type = ParseExpression(false).type;
-    if (RG_UNLIKELY(type != bk_IntType)) {
-        MarkError(idx_pos, "Expected an 'Int' expression, not '%1'", type->signature);
-    }
+        Size idx_pos = pos;
+        const bk_TypeInfo *type = ParseExpression(false).type;
+        if (RG_UNLIKELY(type != bk_IntType)) {
+            MarkError(idx_pos, "Expected an 'Int' expression, not '%1'", type->signature);
+        }
+
+        // Compute array index
+        ir.Append({bk_Opcode::CheckIndex, {}, {.i = array_type->len}});
+        if (array_type->unit_size != 1) {
+            ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = array_type->unit_size}});
+            ir.Append({bk_Opcode::MultiplyInt});
+        }
+        if (stack[stack.len - 1].indirect_addr) {
+            ir.Append({bk_Opcode::AddInt});
+        }
+
+        // Resolve subscript
+        if (array_type->unit_type->PassByReference()) {
+            ir.Append({bk_Opcode::AddInt});
+        } else {
+            ir.Append({bk_Opcode::LoadArray});
+        }
+
+        stack[stack.len - 1].type = array_type->unit_type;
+        stack[stack.len - 1].indirect_addr = ir.len - 1;
+    } while (stack[stack.len - 1].type->primitive == bk_PrimitiveKind::Array &&
+             MatchToken(bk_TokenKind::Comma));
+
     ConsumeToken(bk_TokenKind::RightBracket);
-
-    // Compute array index
-    ir.Append({bk_Opcode::CheckIndex, {}, {.i = array_type->len}});
-    if (array_type->unit_size != 1) {
-        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = array_type->unit_size}});
-        ir.Append({bk_Opcode::MultiplyInt});
-    }
-    if (stack[stack.len - 1].indirect_addr) {
-        ir.Append({bk_Opcode::AddInt});
-    }
-
-    if (array_type->unit_type->PassByReference()) {
-        ir.Append({bk_Opcode::AddInt});
-    } else {
-        ir.Append({bk_Opcode::LoadArray});
-    }
-
-    stack[stack.len - 1].type = array_type->unit_type;
-    stack[stack.len - 1].indirect_addr = ir.len - 1;
 }
 
 // Don't try to call from outside ParseExpression()!
