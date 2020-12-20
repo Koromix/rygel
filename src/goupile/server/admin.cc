@@ -63,13 +63,17 @@ void InitAdminAssets()
 
 static bool CheckInstanceKey(Span<const char> key)
 {
-    const auto test_key_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '_'; };
+    const auto test_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '_'; };
 
     if (!key.len) {
         LogError("Instance key cannot be empty");
         return false;
     }
-    if (!std::all_of(key.begin(), key.end(), test_key_char)) {
+    if (key.len > 64) {
+        LogError("Instance key cannot have more than 64 characters");
+        return false;
+    }
+    if (!std::all_of(key.begin(), key.end(), test_char)) {
         LogError("Instance key must only contain lowercase alphanumeric or '_' characters");
         return false;
     }
@@ -83,13 +87,17 @@ static bool CheckInstanceKey(Span<const char> key)
 
 static bool CheckUserName(Span<const char> username)
 {
-    const auto test_user_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '_' || c == '.'; };
+    const auto test_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '_' || c == '.'; };
 
     if (!username.len) {
         LogError("Username cannot be empty");
         return false;
     }
-    if (!std::all_of(username.begin(), username.end(), test_user_char)) {
+    if (username.len > 64) {
+        LogError("Username cannot be have more than 64 characters");
+        return false;
+    }
+    if (!std::all_of(username.begin(), username.end(), test_char)) {
         LogError("Username must only contain lowercase alphanumeric, '_' or '.' characters");
         return false;
     }
