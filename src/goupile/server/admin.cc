@@ -39,6 +39,28 @@ static const char *DefaultConfig = R"(
 # AsyncThreads =
 )";
 
+HashMap<const char *, const AssetInfo *> admin_assets_map;
+static BlockAllocator admin_assets_alloc;
+
+void InitAdminAssets()
+{
+    admin_assets_map.Clear();
+    admin_assets_alloc.ReleaseAll();
+
+    for (const AssetInfo &asset: GetPackedAssets()) {
+        if (TestStr(asset.name, "src/goupile/admin/admin.html")) {
+            admin_assets_map.Set("/", &asset);
+        } else if (TestStr(asset.name, "src/goupile/client/images/favicon.png")) {
+            admin_assets_map.Set("/favicon.png", &asset);
+        } else if (StartsWith(asset.name, "src/goupile/admin/") || StartsWith(asset.name, "vendor/")) {
+            const char *name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
+            const char *url = Fmt(&admin_assets_alloc, "/static/%1", name).ptr;
+
+            admin_assets_map.Set(url, &asset);
+        }
+    }
+}
+
 static bool CheckInstanceKey(Span<const char> key)
 {
     const auto test_key_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '_'; };
@@ -204,17 +226,17 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
 
     // Create default files
     {
-        Span<const AssetInfo> assets = GetPackedAssets();
-        int64_t mtime = GetUnixTime();
-
         sq_Statement stmt;
         if (!db.Prepare(R"(INSERT INTO fs_files (active, path, mtime, blob, compression, sha256, size)
                            VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6);)", &stmt))
             return false;
 
-        for (const AssetInfo &asset: assets) {
-            if (StartsWith(asset.name, "demo/")) {
-                const char *path = Fmt(&temp_alloc, "/files/%1", asset.name + 5).ptr;
+        // Use same modification time for all files
+        int64_t mtime = GetUnixTime();
+
+        for (const AssetInfo &asset: GetPackedAssets()) {
+            if (StartsWith(asset.name, "src/goupile/demo/")) {
+                const char *path = Fmt(&temp_alloc, "/files/%1", asset.name + 17).ptr;
 
                 HeapArray<uint8_t> gzip;
                 char sha256[65];

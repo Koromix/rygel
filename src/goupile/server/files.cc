@@ -12,6 +12,21 @@
 
 namespace RG {
 
+void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    http_JsonPageBuilder json(request.compression_type);
+
+    json.StartArray();
+    json.String(instance->base_url.ptr);
+    for (const AssetInfo &asset: instance->assets) {
+        char buf[512];
+        json.String(Fmt(buf, "%1%2", instance->base_url, asset.name + 1).ptr);
+    }
+    json.EndArray();
+
+    json.Finish(io);
+}
+
 void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     sq_Statement stmt;
@@ -50,6 +65,9 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
     } else if (TestStr(path, "/manifest.json")) {
         path = "/files/manifest.json";
     }
+
+    if (!StartsWith(path, "/files/"))
+        return false;
 
     sq_Statement stmt;
     if (!instance->db.Prepare(R"(SELECT rowid, compression, sha256 FROM fs_files

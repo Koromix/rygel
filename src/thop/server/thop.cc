@@ -326,9 +326,11 @@ static void InitRoutes()
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
+#ifndef NDEBUG
     if (ReloadAssets()) {
         InitRoutes();
     }
+#endif
 
     // Find user information
     const User *user = CheckSessionUser(request, io);

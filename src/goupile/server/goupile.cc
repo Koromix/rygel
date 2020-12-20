@@ -19,38 +19,13 @@ namespace RG {
 char goupile_etag[33];
 DomainHolder goupile_domain;
 
-static HeapArray<AssetInfo> admin_assets;
-static HashTable<const char *, const AssetInfo *> admin_assets_map;
-BlockAllocator admin_assets_alloc;
-
-static void InitAdminAssets()
+static void InitETag()
 {
-    admin_assets.Clear();
-    admin_assets_map.Clear();
-    admin_assets_alloc.ReleaseAll();
-
-    Span<const AssetInfo> packed_assets = GetPackedAssets();
-
-    for (Size i = 0; i < packed_assets.len; i++) {
-        if (!StartsWith(packed_assets[i].name, "client/") || !StartsWith(packed_assets[i].name, "demo/")) {
-            AssetInfo asset = packed_assets[i];
-
-            asset.name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
-            asset.name = Fmt(&admin_assets_alloc, "/static/%1", asset.name).ptr;
-
-            admin_assets.Append(asset);
-        }
-    }
-    for (const AssetInfo &asset: admin_assets) {
-        admin_assets_map.Set(&asset);
-    }
-
     // We can use a global ETag because everything is in the binary
-    {
-        uint64_t buf[2];
-        randombytes_buf(&buf, RG_SIZE(buf));
-        Fmt(goupile_etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
-    }
+
+    uint64_t buf[2];
+    randombytes_buf(&buf, RG_SIZE(buf));
+    Fmt(goupile_etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
 }
 
 static void HandleEvents(InstanceHolder *, const http_RequestInfo &request, http_IO *io)
@@ -61,24 +36,29 @@ static void HandleEvents(InstanceHolder *, const http_RequestInfo &request, http
     io->AttachText(200, "{}", "application/json");
 }
 
-static void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+static void AttachAsset(const http_RequestInfo &request, const AssetInfo &asset, http_IO *io)
 {
-    http_JsonPageBuilder json(request.compression_type);
+    const char *client_etag = request.GetHeaderValue("If-None-Match");
 
-    json.StartArray();
-    for (const AssetInfo &asset: instance->assets) {
-        char buf[512];
-        json.String(Fmt(buf, "%1%2", instance->base_url, asset.name + 1).ptr);
+    if (client_etag && TestStr(client_etag, goupile_etag)) {
+        MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+        io->AttachResponse(304, response);
+    } else {
+        const char *mimetype = http_GetMimeType(GetPathExtension(asset.name));
+        io->AttachBinary(200, asset.data, mimetype, asset.compression_type);
+
+        io->AddCachingHeaders(goupile_domain.config.max_age, goupile_etag);
+        if (asset.source_map) {
+            io->AddHeader("SourceMap", asset.source_map);
+        }
     }
-    json.EndArray();
-
-    json.Finish(io);
 }
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
+ #ifndef NDEBUG
     if (ReloadAssets()) {
-        std::lock_guard<std::shared_mutex> lock(goupile_domain.instances_mutex);
+        InitETag();
 
         InitAdminAssets();
         for (InstanceGuard *guard: goupile_domain.instances) {
@@ -86,6 +66,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             instance->InitAssets();
         }
     }
+#endif
 
     // Send these headers whenever possible
     io->AddHeader("Referrer-Policy", "no-referrer");
@@ -114,37 +95,17 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     // If new base URLs are added besides "/admin", RunCreateInstance() must be modified
     // to forbid the instance key.
     if (inst_key == "admin") {
-        // Try admin assets
+        // Try static assets
         {
-            const AssetInfo *asset;
-
-            if (TestStr(inst_path, "/") || StartsWith(inst_path, "/app/") || StartsWith(inst_path, "/main/")) {
-                asset = admin_assets_map.FindValue("/static/admin.html", nullptr);
-                RG_ASSERT(asset);
-            } else {
-                asset = admin_assets_map.FindValue(inst_path, nullptr);
-            }
+            const AssetInfo *asset = admin_assets_map.FindValue(inst_path, nullptr);
 
             if (asset) {
-                const char *client_etag = request.GetHeaderValue("If-None-Match");
-
-                if (client_etag && TestStr(client_etag, goupile_etag)) {
-                    MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-                    io->AttachResponse(304, response);
-                } else {
-                    const char *mimetype = http_GetMimeType(GetPathExtension(asset->name));
-                    io->AttachBinary(200, asset->data, mimetype, asset->compression_type);
-
-                    io->AddCachingHeaders(goupile_domain.config.max_age, goupile_etag);
-                    if (asset->source_map) {
-                        io->AddHeader("SourceMap", asset->source_map);
-                    }
-                }
-
+                AttachAsset(request, *asset, io);
                 return;
             }
         }
 
+        // And now, API endpoints
         if (TestStr(inst_path, "/api/events") && request.method == http_RequestMethod::Get) {
             HandleEvents(nullptr, request, io);
         } else if (TestStr(inst_path, "/api/user/profile") && request.method == http_RequestMethod::Get) {
@@ -185,42 +146,27 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             io->AddFinalizer([=]() { guard->Unref(); });
         }
 
-        // Try application and static assets
+        // Try application files
+        if (request.method == http_RequestMethod::Get && HandleFileGet(instance, request, io))
+            return;
+
+        // Try static assets
         if (request.method == http_RequestMethod::Get) {
             const AssetInfo *asset;
-
-            // Instance asset?
-            if (HandleFileGet(instance, request, io))
-                return;
-
-            if (TestStr(inst_path, "/") || StartsWith(inst_path, "/app/") || StartsWith(inst_path, "/main/")) {
-                asset = instance->assets_map.FindValue("/static/goupile.html", nullptr);
+            if (TestStr(inst_path, "/") || StartsWith(inst_path, "/app/")) {
+                asset = instance->assets_map.FindValue("/index.html", nullptr);
                 RG_ASSERT(asset);
             } else {
                 asset = instance->assets_map.FindValue(inst_path, nullptr);
             }
 
             if (asset) {
-                const char *client_etag = request.GetHeaderValue("If-None-Match");
-
-                if (client_etag && TestStr(client_etag, goupile_etag)) {
-                    MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-                    io->AttachResponse(304, response);
-                } else {
-                    const char *mimetype = http_GetMimeType(GetPathExtension(asset->name));
-                    io->AttachBinary(200, asset->data, mimetype, asset->compression_type);
-
-                    io->AddCachingHeaders(goupile_domain.config.max_age, goupile_etag);
-                    if (asset->source_map) {
-                        io->AddHeader("SourceMap", asset->source_map);
-                    }
-                }
-
+                AttachAsset(request, *asset, io);
                 return;
             }
         }
 
-        // And last (but not least), API endpoints
+        // And now, API endpoints
         if (TestStr(inst_path, "/api/events") && request.method == http_RequestMethod::Get) {
             HandleEvents(instance, request, io);
         } else if (TestStr(inst_path, "/api/user/profile") && request.method == http_RequestMethod::Get) {
@@ -287,11 +233,14 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
         }
     }
 
-    // Init subsystems
-    LogInfo("Init subsystems");
+    InitETag();
+
+    LogInfo("Init instances");
     InitAdminAssets();
     if (!goupile_domain.Open(config_filename))
         return 1;
+
+    LogInfo("Init JS");
     InitJS();
 
     // Parse arguments

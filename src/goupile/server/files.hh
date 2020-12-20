@@ -11,6 +11,7 @@ namespace RG {
 
 class InstanceHolder;
 
+void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);

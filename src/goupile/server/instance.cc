@@ -120,38 +120,33 @@ void InstanceHolder::InitAssets()
     assets_alloc.ReleaseAll();
 
     Span<const AssetInfo> packed_assets = GetPackedAssets();
+    assets.Grow(packed_assets.len);
 
-    // Packed static assets
-    for (Size i = 0; i < packed_assets.len; i++) {
-        if (!StartsWith(packed_assets[i].name, "admin/") && !StartsWith(packed_assets[i].name, "demo/")) {
-            AssetInfo asset = packed_assets[i];
-            asset.name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
-
-            if (TestStr(asset.name, "goupile.html")) {
-                asset.name = "/static/goupile.html";
-                asset.data = PatchVariables(asset);
-            } else if (TestStr(asset.name, "manifest.json")) {
-                if (!config.use_offline)
-                    continue;
-
+    for (AssetInfo asset: packed_assets) {
+        if (TestStr(asset.name, "src/goupile/client/goupile.html")) {
+            asset.name = "/index.html";
+            asset.data = PatchVariables(asset);
+        } else if (TestStr(asset.name, "src/goupile/client/manifest.json")) {
+            if (config.use_offline) {
                 asset.name = "/manifest.json";
                 asset.data = PatchVariables(asset);
-            } else if (TestStr(asset.name, "sw.pk.js")) {
-                asset.name = "/sw.pk.js";
-                asset.data = PatchVariables(asset);
-            } else if (TestStr(asset.name, "favicon.png")) {
-                asset.name = "/favicon.png";
-            } else if (TestStr(asset.name, "server.pk.js")) {
-                continue;
             } else {
-                asset.name = Fmt(&assets_alloc, "/static/%1", asset.name).ptr;
+                continue;
             }
-
-            assets.Append(asset);
+        } else if (TestStr(asset.name, "src/goupile/client/sw.pk.js")) {
+            asset.name = "/sw.pk.js";
+            asset.data = PatchVariables(asset);
+        } else if (TestStr(asset.name, "src/goupile/client/images/favicon.png")) {
+            asset.name = "/favicon.png";
+        } else if (StartsWith(asset.name, "src/goupile/client/") || StartsWith(asset.name, "vendor/")) {
+            const char *name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
+            asset.name = Fmt(&assets_alloc, "/static/%1", name).ptr;
+        } else {
+            continue;
         }
-    }
-    for (const AssetInfo &asset: assets) {
-        assets_map.Set(&asset);
+
+        const AssetInfo *ptr = assets.Append(asset);
+        assets_map.Set(ptr);
     }
 }
 
