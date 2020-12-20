@@ -162,7 +162,7 @@ let admin = new function() {
             let username = d.text('*username', 'Nom d\'utilisateur');
 
             let password = d.password('*password', 'Mot de passe');
-            d.sameLine(); let password2 = d.password('*password2', 'Confirmation');
+            let password2 = d.password('*password2', 'Confirmation');
             if (password.value != null && password2.value != null && password.value !== password2.value)
                 password2.error("Les mots de passe sont différents");
 
