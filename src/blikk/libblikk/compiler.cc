@@ -2292,6 +2292,12 @@ void bk_Parser::DiscardResult()
         case bk_Opcode::Load:
         case bk_Opcode::LoadLocal: { TrimInstructions(1); } break;
 
+        case bk_Opcode::LoadArray:
+        case bk_Opcode::LoadIndirect: {
+            TrimInstructions(1);
+            EmitPop(2);
+        } break;
+
         case bk_Opcode::Copy: { ir[ir.len - 1].code = bk_Opcode::Store; } break;
         case bk_Opcode::CopyLocal: { ir[ir.len - 1].code = bk_Opcode::StoreLocal; } break;
         case bk_Opcode::CopyArray: { ir[ir.len - 1].code = bk_Opcode::StoreArray; } break;
