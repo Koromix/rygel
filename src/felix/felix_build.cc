@@ -21,12 +21,9 @@
 
 namespace RG {
 
-static int RunTarget(const TargetInfo &target, const char *target_filename,
-                     Span<const char *const> arguments)
+static int RunTarget(const char *target_filename, Span<const char *const> arguments)
 {
-    RG_ASSERT(target.type == TargetType::Executable);
-
-    LogInfo("Run target '%1'", target.name);
+    LogInfo("Run '%1'", target_filename);
     LogInfo("%!D..--------------------------------------------------%!0");
 
 #ifdef _WIN32
@@ -400,11 +397,13 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
 
     // Run?
     if (run_target) {
+        RG_ASSERT(run_target->type == TargetType::Executable);
+
         if (run_here && !SetWorkingDirectory(start_directory))
             return 1;
 
         const char *target_filename = builder.target_filenames.FindValue(run_target->name, nullptr);
-        return RunTarget(*run_target, target_filename, run_arguments);
+        return RunTarget(target_filename, run_arguments);
     } else {
         return 0;
     }
