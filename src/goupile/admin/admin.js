@@ -38,7 +38,7 @@ let admin = new function() {
 
                 <table>
                     <colgroup>
-                        <col"/>
+                        <col/>
                         <col style="width: 100px;"/>
                         <col style="width: 100px;"/>
                         <col style="width: 100px;"/>
@@ -164,7 +164,7 @@ let admin = new function() {
             let password = d.password('*password', 'Mot de passe');
             let password2 = d.password('*password2', 'Confirmation');
             if (password.value != null && password2.value != null && password.value !== password2.value)
-                password2.error("Les mots de passe sont différents");
+                password2.error('Les mots de passe sont différents');
 
             let admin = d.boolean('*admin', 'Administrateur', {value: false, untoggle: false});
 
@@ -196,10 +196,10 @@ let admin = new function() {
 
     function runAssignUserDialog(e, instance, username, prev_permissions) {
         return dialog.run(e, (d, resolve, reject) => {
-            d.calc("instance", "Instance", instance);
-            d.sameLine(); d.calc("username", "Utilisateur", username);
+            d.calc('instance', 'Instance', instance);
+            d.sameLine(); d.calc('username', 'Utilisateur', username);
 
-            let permissions = d.textArea("permissions", "Permissions", {
+            let permissions = d.textArea('permissions', 'Permissions', {
                 rows: 7, cols: 16,
                 value: prev_permissions.join('\n')
             });
