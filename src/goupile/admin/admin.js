@@ -107,11 +107,13 @@ let admin = new function() {
 
     function runCreateInstanceDialog(e) {
         return dialog.run(e, (d, resolve, reject) => {
-            let key = d.text('*key', 'Nom de l\'instance');
+            let key = d.text('*key', 'Clé de l\'instance');
+            let name = d.text('name', 'Nom', {placeholder: key.value});
 
             d.action('Créer', {disabled: !d.isValid()}, async () => {
                 let query = new URLSearchParams;
                 query.set('key', key.value);
+                query.set('app_name', name.value || key.value);
 
                 let response = await net.fetch('/admin/api/instances/create', {
                     method: 'POST',

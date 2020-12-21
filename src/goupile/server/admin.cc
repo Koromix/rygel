@@ -585,6 +585,11 @@ void HandleCreateInstance(const http_RequestInfo &request, http_IO *io)
             io->AttachError(422);
             return;
         }
+        if (!app_key[0] || !app_name[0]) {
+            LogError("Empty parameters");
+            io->AttachError(422);
+            return;
+        }
 
         bool conflict;
         if (!CreateInstance(&goupile_domain, instance_key, app_key, app_name, session->username, &conflict)) {
