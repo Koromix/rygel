@@ -342,7 +342,7 @@ void HandleLogin(const http_RequestInfo &request, const User *, http_IO *io)
         if (!user || !user->password_hash ||
                 crypto_pwhash_str_verify(user->password_hash, password, strlen(password)) != 0) {
             int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
-            WaitForDelay(safety_delay);
+            WaitDelay(safety_delay);
 
             LogError("Incorrect username or password");
             io->AttachError(403);

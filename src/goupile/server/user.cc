@@ -191,7 +191,7 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
         if (stmt.IsValid()) {
             // Enforce constant delay if authentification fails
             int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
-            WaitForDelay(safety_delay);
+            WaitDelay(safety_delay);
 
             LogError("Invalid username or password");
             io->AttachError(403);

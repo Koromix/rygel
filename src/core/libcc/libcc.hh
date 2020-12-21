@@ -3650,8 +3650,18 @@ static inline bool ExecuteCommandLine(const char *cmd_line, Span<const char> in_
                               (HeapArray<uint8_t> *)out_buf, out_code);
 }
 
-void WaitForDelay(int64_t delay);
-bool WaitForInterruption(int64_t delay = -1);
+void WaitDelay(int64_t delay);
+
+enum class WaitForResult {
+    Interrupt,
+    Message,
+    Timeout
+};
+
+// After WaitForInterrupt() has been called once (even with timeout 0), a few
+// signals (such as SIGINT, SIGHUP) and their Windows equivalent will be permanently ignored.
+WaitForResult WaitForInterrupt(int64_t timeout = -1);
+void SignalWaitFor();
 
 int GetCoreCount();
 

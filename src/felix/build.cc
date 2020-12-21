@@ -282,7 +282,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
 }
 
 // The caller needs to ignore (or do whetever) SIGINT for the clean up to work if
-// the user interrupts felix. For this you can use libcc: call WaitForInterruption(0).
+// the user interrupts felix. For this you can use libcc: call WaitForInterrupt(0).
 bool Builder::Build(int jobs, bool verbose)
 {
     RG_ASSERT(jobs >= 0);
@@ -329,7 +329,7 @@ bool Builder::Build(int jobs, bool verbose)
                 if (success)
                     return;
 
-                WaitForDelay(150);
+                WaitDelay(150);
             }
         }
 #endif

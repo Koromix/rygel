@@ -377,10 +377,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     if (!build.fake && !MakeDirectoryRec(build.output_directory))
         return 1;
 
-    // The detection of SIGINT (or the Win32 equivalent) by WaitForInterruption()
-    // remains after timing out, which will allow RunBuildNodes() to clean up files
-    // produced by interrupted commands.
-    WaitForInterruption(0);
+    // The detection of SIGINT (or the Win32 equivalent) by WaitForInterrupt() remains after timing out,
+    // which will allow RunBuildNodes() to clean up files produced by interrupted commands.
+    WaitForInterrupt(0);
 
     // Build stuff!
     Builder builder(build);

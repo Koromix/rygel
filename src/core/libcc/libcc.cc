@@ -3206,7 +3206,9 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf, Size m
 
 #ifdef _WIN32
 
-void WaitForDelay(int64_t delay)
+static HANDLE wait_msg_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+
+void WaitDelay(int64_t delay)
 {
     RG_ASSERT(delay >= 0);
     RG_ASSERT(delay < 1000ll * INT32_MAX);
@@ -3219,29 +3221,49 @@ void WaitForDelay(int64_t delay)
     }
 }
 
-bool WaitForInterruption(int64_t delay)
+WaitForResult WaitForInterrupt(int64_t timeout)
 {
     ignore_ctrl_event = InitConsoleCtrlHandler();
     RG_ASSERT(ignore_ctrl_event);
 
-    if (delay >= 0) {
+    HANDLE events[] = {
+        console_ctrl_event,
+        wait_msg_event
+    };
+
+    DWORD ret;
+    if (timeout >= 0) {
         do {
-            DWORD delay32 = (DWORD)std::min(delay, (int64_t)UINT32_MAX);
-            delay -= delay32;
+            DWORD timeout32 = (DWORD)std::min(timeout, (int64_t)UINT32_MAX);
+            timeout -= timeout32;
 
-            if (WaitForSingleObject(console_ctrl_event, delay32) == WAIT_OBJECT_0)
-                return true;
-        } while (delay);
-
-        return false;
+            ret = WaitForMultipleObjects(RG_LEN(events), events, FALSE, timeout32);
+        } while (ret == WAIT_TIMEOUT && timeout);
     } else {
-        return WaitForSingleObject(console_ctrl_event, INFINITE) == WAIT_OBJECT_0;
+        ret = WaitForMultipleObjects(RG_LEN(events), events, FALSE, INFINITE);
     }
+
+    switch (ret) {
+        case WAIT_OBJECT_0: { return WaitForResult::Interrupt; } break;
+        case WAIT_OBJECT_0 + 1: {
+            ResetEvent(wait_msg_event);
+            return WaitForResult::Message;
+        } break;
+        default: {
+            RG_ASSERT(ret == WAIT_TIMEOUT);
+            return WaitForResult::Timeout;
+        } break;
+    }
+}
+
+void SignalWaitFor()
+{
+    SetEvent(wait_msg_event);
 }
 
 #else
 
-void WaitForDelay(int64_t delay)
+void WaitDelay(int64_t delay)
 {
     RG_ASSERT(delay >= 0);
     RG_ASSERT(delay < 1000ll * INT32_MAX);
@@ -3257,31 +3279,45 @@ void WaitForDelay(int64_t delay)
     }
 }
 
-bool WaitForInterruption(int64_t delay)
+WaitForResult WaitForInterrupt(int64_t timeout)
 {
     static volatile bool run = true;
+    static volatile bool message = false;
 
     signal(SIGINT, [](int) { run = false; });
     signal(SIGTERM, [](int) { run = false; });
     signal(SIGHUP, [](int) { run = false; });
+    signal(SIGUSR1, [](int) { message = true; });
 
-    if (delay >= 0) {
+    if (timeout >= 0) {
         struct timespec ts;
-        ts.tv_sec = (int)(delay / 1000);
-        ts.tv_nsec = (int)((delay % 1000) * 1000000);
+        ts.tv_sec = (int)(timeout / 1000);
+        ts.tv_nsec = (int)((timeout % 1000) * 1000000);
 
         struct timespec rem;
-        while (run && nanosleep(&ts, &rem) < 0) {
+        while (run && !message && nanosleep(&ts, &rem) < 0) {
             RG_ASSERT(errno == EINTR);
             ts = rem;
         }
     } else {
-        while (run) {
+        while (run && !message) {
             pause();
         }
     }
 
-    return !run;
+    if (!run) {
+        return WaitForResult::Interrupt;
+    } else if (message) {
+        message = false;
+        return WaitForResult::Message;
+    } else {
+        return WaitForResult::Timeout;
+    }
+}
+
+void SignalWaitFor()
+{
+    raise(SIGUSR1);
 }
 
 #endif
