@@ -220,7 +220,7 @@ local({
 })
 
 # Package version (commit date)
-version <- trimws(system(str_interp('git -C "${src_dir}" log -n1 --pretty=format:%ad --date=format:%Y.%m.%d'),
+version <- trimws(system(str_interp('git -C "${src_dir}" log -n1 --pretty=format:%cd --date=format:%Y.%m%d.%H%M'),
                          show.output.on.console = FALSE, intern = TRUE))
 
 # Bundle, build and register packages

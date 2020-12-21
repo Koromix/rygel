@@ -89,7 +89,7 @@ static const char *BuildGitVersionString(Allocator *alloc)
 
     HeapArray<char> output(alloc);
     int exit_code;
-    if (!ExecuteCommandLine("git log -n1 --pretty=format:%ad_%h --date=format:%Y%m%d",
+    if (!ExecuteCommandLine("git log -n1 --pretty=format:%cd_%h --date=format:%Y%m%d.%H%M",
                             {}, Kilobytes(1), &output, &exit_code))
         return nullptr;
     if (exit_code) {
