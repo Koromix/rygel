@@ -276,8 +276,14 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     LogInfo("Listening on port %1 (%2 stack)",
             goupile_domain.config.http.port, SocketTypeNames[(int)goupile_domain.config.http.sock_type]);
 
-    while (WaitForInterrupt(30000) == WaitForResult::Timeout) {
-        goupile_domain.InitInstances();
+    for (;;) {
+        int timeout = goupile_domain.IsSynced() ? -1 : 30000;
+
+        // Respond to SIGUSR1
+        if (WaitForInterrupt(timeout) == WaitForResult::Interrupt)
+            break;
+
+        goupile_domain.SyncInstances();
     }
 
     daemon.Stop();

@@ -29,7 +29,7 @@ let admin = new function() {
         let instances = await fetch('/admin/api/instances/list').then(response => response.json());
         let users = await fetch('/admin/api/users/list').then(response => response.json());
 
-        if (!instances.includes(select_instance))
+        if (!instances.find(instance => instance.key === select_instance))
             select_instance = null;
 
         render(html`
@@ -41,17 +41,15 @@ let admin = new function() {
                         <col/>
                         <col style="width: 100px;"/>
                         <col style="width: 100px;"/>
-                        <col style="width: 100px;"/>
                     </colgroup>
 
                     <tbody>
                         ${!instances.length ? html`<tr><td colspan="4">Aucune instance</td></tr>` : ''}
                         ${instances.map(instance => html`
-                            <tr class=${instance === select_instance ? 'selected' : ''}>
-                                <td>${instance}</td>
-                                <td><a href=${'/' + instance}>Accéder</a></td>
-                                <td><a @click=${e => toggleInstance(instance)}>Droits</a></td>
-                                <td><a @click=${e => runDeleteInstanceDialog(e, instance)}>Fermer</a></td>
+                            <tr class=${instance.key === select_instance ? 'selected' : ''}>
+                                <td>${instance.key} (<a href=${'/' + instance.key} target="_blank">accès</a>)</td>
+                                <td><a @click=${e => toggleInstance(instance.key)}>Droits</a></td>
+                                <td><a @click=${e => runDeleteInstanceDialog(e, instance.key)}>Fermer</a></td>
                             </tr>
                         `)}
                     </tbody>
@@ -98,9 +96,9 @@ let admin = new function() {
         `, document.querySelector('#gp_root'));
     }
 
-    function toggleInstance(instance) {
-        if (instance !== select_instance) {
-            select_instance = instance;
+    function toggleInstance(key) {
+        if (key !== select_instance) {
+            select_instance = key;
         } else {
             select_instance = null;
         }
@@ -136,11 +134,11 @@ let admin = new function() {
         });
     }
 
-    function runDeleteInstanceDialog(e, instance) {
-        let msg = `Voulez-vous fermer l'instance '${instance}' ?`;
+    function runDeleteInstanceDialog(e, key) {
+        let msg = `Voulez-vous fermer l'instance '${key}' ?`;
         return dialog.confirm(e, msg, 'Fermer', async () => {
             let query = new URLSearchParams;
-            query.set('key', instance);
+            query.set('key', key);
 
             let response = await net.fetch('/admin/api/instances/delete', {
                 method: 'POST',

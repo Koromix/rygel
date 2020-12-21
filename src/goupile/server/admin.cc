@@ -594,6 +594,11 @@ void HandleCreateInstance(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
+        if (!goupile_domain.SyncInstances()) {
+            SignalWaitFor();
+            return;
+        }
+
         io->AttachText(200, "Done!");
     });
 }
@@ -622,7 +627,7 @@ void HandleDeleteInstance(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        goupile_domain.db.Transaction([&]() {
+        bool success = goupile_domain.db.Transaction([&]() {
             if (!goupile_domain.db.Run("DELETE FROM dom_permissions WHERE instance = ?1;", instance_key))
                 return false;
             if (!goupile_domain.db.Run("DELETE FROM dom_instances WHERE instance = ?1;", instance_key))
@@ -634,9 +639,17 @@ void HandleDeleteInstance(const http_RequestInfo &request, http_IO *io)
                 return false;
             }
 
-            io->AttachText(200, "Done!");
             return true;
         });
+        if (!success)
+            return;
+
+        if (!goupile_domain.SyncInstances()) {
+            SignalWaitFor();
+            return;
+        }
+
+        io->AttachText(200, "Done!");
     });
 }
 
@@ -649,19 +662,30 @@ void HandleListInstances(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
-    sq_Statement stmt;
-    if (!goupile_domain.db.Prepare(R"(SELECT instance FROM dom_instances ORDER BY instance;)", &stmt))
-        return;
+    std::shared_lock<std::shared_mutex> lock(goupile_domain.instances_mutex);
 
     // Export data
     http_JsonPageBuilder json(request.compression_type);
 
     json.StartArray();
-    while (stmt.Next()) {
-        json.String((const char *)sqlite3_column_text(stmt, 0));
+    for (InstanceGuard *guard: goupile_domain.instances) {
+        const InstanceHolder &instance = guard->instance;
+        char buf[512];
+
+        json.StartObject();
+
+        json.Key("key"); json.String(instance.key);
+        json.Key("config"); json.StartObject();
+            json.Key("app_key"); json.String(instance.config.app_key);
+            json.Key("app_name"); json.String(instance.config.app_name);
+            json.Key("use_offline"); json.Bool(instance.config.use_offline);
+
+            ConvertToJsonName(SyncModeNames[(int)instance.config.sync_mode], buf);
+            json.Key("sync_mode"); json.String(buf);
+        json.EndObject();
+
+        json.EndObject();
     }
-    if (!stmt.IsValid())
-        return;
     json.EndArray();
 
     json.Finish(io);

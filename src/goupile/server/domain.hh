@@ -57,6 +57,8 @@ public:
 };
 
 class DomainHolder {
+    bool synced = true;
+
 public:
     DomainConfig config = {};
     sq_Database db;
@@ -68,10 +70,10 @@ public:
     ~DomainHolder() { Close(); }
 
     bool Open(const char *filename);
-
-    bool InitInstances();
-
     void Close();
+
+    bool IsSynced() const { return synced; }
+    bool SyncInstances();
 
 private:
     bool LoadInstance(const char *key, const char *filename);

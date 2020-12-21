@@ -153,22 +153,38 @@ bool DomainHolder::Open(const char *filename)
         }
     }
 
-    if (!InitInstances())
+    if (!SyncInstances())
         return false;
 
     err_guard.Disable();
     return true;
 }
 
+void DomainHolder::Close()
+{
+    db.Close();
+    config = {};
+
+    // This is called when goupile exits and we don't really need the lock
+    // at this point, but take if for consistency.
+    std::lock_guard<std::shared_mutex> lock(instances_mutex);
+
+    for (InstanceGuard *guard: instances) {
+        delete guard;
+    }
+    instances.Clear();
+    instances_map.Clear();
+}
+
 // Can be called multiple times, from main thread only
-bool DomainHolder::InitInstances()
+bool DomainHolder::SyncInstances()
 {
     BlockAllocator temp_alloc;
 
-    bool success = true;
-    HashSet<const char *> keys;
-
     std::lock_guard<std::shared_mutex> lock(instances_mutex);
+
+    HashSet<const char *> keys;
+    synced = true;
 
     // Start new instances (if any)
     {
@@ -185,12 +201,12 @@ bool DomainHolder::InitInstances()
                 LogDebug("Load instance '%1'", key);
 
                 const char *filename = config.GetInstanceFileName(key, &temp_alloc);
-                success &= LoadInstance(key, filename);
+                synced &= LoadInstance(key, filename);
             }
 
             keys.Set(key);
         }
-        success &= stmt.IsValid();
+        synced &= stmt.IsValid();
     }
 
     // Drop removed instances (if any)
@@ -211,7 +227,7 @@ bool DomainHolder::InitInstances()
                     delete guard;
                 } else {
                     // We will try again later
-                    success = false;
+                    synced = false;
                 }
             } else {
                 instances[j++] = instances[i];
@@ -225,7 +241,7 @@ bool DomainHolder::InitInstances()
         }
     }
 
-    return success;
+    return synced;
 }
 
 // Call with instances_mutex locked
@@ -242,22 +258,6 @@ bool DomainHolder::LoadInstance(const char *key, const char *filename)
     instances_map.Set(guard->instance.key, guard);
 
     return true;
-}
-
-void DomainHolder::Close()
-{
-    db.Close();
-    config = {};
-
-    // This is called when goupile exits and we don't really need the lock
-    // at this point, but take if for consistency.
-    std::lock_guard<std::shared_mutex> lock(instances_mutex);
-
-    for (InstanceGuard *guard: instances) {
-        delete guard;
-    }
-    instances.Clear();
-    instances_map.Clear();
 }
 
 bool MigrateDomain(sq_Database *db, const char *instances_directory)
