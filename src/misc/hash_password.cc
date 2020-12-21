@@ -14,14 +14,19 @@ int Main(int argc, char **argv)
 
     // Options
     const char *password = nullptr;
+    bool mask = true;
+    bool confirm = true;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1
+R"(Usage: %!..+%1 [options]
        %1 -p <password>%!0
 
 Options:
-    %!..+-p, --password <password>%!0    Use password given as option)", FelixTarget);
+    %!..+-p, --password <password>%!0    Use password given as option
+
+        %!..+--no_mask%!0                Show password as typed
+        %!..+--no_confirm%!0             Ask only once for password)", FelixTarget);
     };
 
     // Handle version
@@ -40,6 +45,10 @@ Options:
                 return 0;
             } else if (opt.Test("-p", OptionType::Value)) {
                 password = opt.current_value;
+            } else if (opt.Test("--no_mask")) {
+                mask = false;
+            } else if (opt.Test("--no_confirm")) {
+                confirm = false;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -53,7 +62,7 @@ Options:
     }
 
     if (!password) {
-        password = Prompt("Password: ", "*", &temp_alloc);
+        password = Prompt("Password: ", mask ? "*" : nullptr, &temp_alloc);
         if (!password)
             return 1;
         if (!password[0]) {
@@ -61,13 +70,15 @@ Options:
             return 1;
         }
 
-        const char *confirm = Prompt("Confirm: ", "*", &temp_alloc);
-        if (!confirm)
-            return 1;
+        if (confirm) {
+            const char *password2 = Prompt("Confirm: ", mask ? "*" : nullptr, &temp_alloc);
+            if (!password2)
+                return 1;
 
-        if (!TestStr(password, confirm)) {
-            LogError("Password mismatch");
-            return 1;
+            if (!TestStr(password, password2)) {
+                LogError("Password mismatch");
+                return 1;
+            }
         }
     } else if (!password[0]) {
         LogError("Password must not be empty");
