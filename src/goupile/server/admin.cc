@@ -52,7 +52,12 @@ void InitAdminAssets()
             admin_assets_map.Set("/", &asset);
         } else if (TestStr(asset.name, "src/goupile/client/images/favicon.png")) {
             admin_assets_map.Set("/favicon.png", &asset);
-        } else if (StartsWith(asset.name, "src/goupile/admin/") || StartsWith(asset.name, "vendor/")) {
+        } else if (StartsWith(asset.name, "src/goupile/admin/") ||
+#ifndef NDEBUG
+                   // For source map files
+                   StartsWith(asset.name, "src/goupile/client/") ||
+#endif
+                   StartsWith(asset.name, "vendor/")) {
             const char *name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
             const char *url = Fmt(&admin_assets_alloc, "/static/%1", name).ptr;
 

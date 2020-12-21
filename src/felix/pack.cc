@@ -113,7 +113,8 @@ static bool BuildJavaScriptMap3(Span<const PackSourceInfo> sources, StreamWriter
     writer.Key("version"); writer.Int(3);
     writer.Key("sources"); writer.StartArray();
     for (const PackSourceInfo &src: sources) {
-        writer.String(src.name);
+        const char *basename = SplitStrReverseAny(src.name, RG_PATH_SEPARATORS).ptr;
+        writer.String(basename);
     }
     writer.EndArray();
     writer.Key("names"); writer.StartArray(); writer.EndArray();
@@ -322,13 +323,13 @@ static const uint8_t raw_data[] = {)");
             PrintLn(&st);
 
             if (asset.source_map_name) {
-                blob.source_map = asset.source_map_name;
+                const char *basename = SplitStrReverseAny(asset.source_map_name, RG_PATH_SEPARATORS).ptr;
+                blob.source_map = basename;
 
                 BlobInfo blob_map = {};
-                blob_map.name = blob.source_map;
 
+                blob_map.name = asset.source_map_name;
                 blob_map.compression_type = asset.compression_type;
-
                 PrintLn(&st, "    // %1", blob_map.name);
                 Print(&st, "    ");
                 blob_map.len = PackSourceMap(asset, [&](Span<const uint8_t> buf) { PrintAsC(buf, use_arrays, &st); });

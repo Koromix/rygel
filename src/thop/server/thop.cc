@@ -260,12 +260,14 @@ static void InitRoutes()
     // Static assets and dictionaries
     AssetInfo html = {};
     for (const AssetInfo &asset: assets) {
-        if (TestStr(asset.name, "thop.html")) {
+        if (TestStr(asset.name, "src/thop/client/thop.html")) {
             html = asset;
-        } else if (TestStr(asset.name, "favicon.png")) {
+        } else if (TestStr(asset.name, "src/thop/client/images/favicon.png")) {
             add_asset_route(http_RequestMethod::Get, "/favicon.png", Route::Matching::Exact, asset);
         } else {
-            const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
+            const char *basename = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
+            const char *url = Fmt(&routes_alloc, "/static/%1", basename).ptr;
+
             add_asset_route(http_RequestMethod::Get, url, Route::Matching::Exact, asset);
         }
     }
