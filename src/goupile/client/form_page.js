@@ -692,6 +692,9 @@ function PageBuilder(state, model, readonly = false) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
+        if (options.value != null)
+            options.value = options.value.toString();
+
         let value = readValue(key, options.value);
         if (typeof value === 'string') {
             value = dates.parseSafe(value);
@@ -743,6 +746,9 @@ function PageBuilder(state, model, readonly = false) {
     this.time = function(key, label, options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
+
+        if (options.value != null)
+            options.value = options.value.toString();
 
         let value = readValue(key, options.value);
         if (typeof value === 'string') {
