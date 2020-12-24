@@ -25,7 +25,8 @@ update.packages(repos = 'https://koromix.dev/files/R', ask = FALSE)
 
 ## Compilation manuelle
 
-Voir le fichier [build.md](build.md).
+Voir le fichier [README.md](../../README.md#how-to-build) présent à la racine du dépôt, les
+instructions sont la section *How to build*.
 
 # Configuration
 
