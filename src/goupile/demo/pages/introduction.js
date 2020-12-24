@@ -3,24 +3,31 @@
 // page.pushOptions({compact: true})
 
 page.output(html`
-    <p>Une <b>fonction</b> est composée d'un <i>nom</i> et de plusieurs <i>paramètres</i> et permet de proposer un outil de saisie (champ texte, menu déroulant ...).
-    <p>Exemple : la fonction page.text("num_patient", "Numéro de patient") propose un champ de saisie texte intitulé <i>Numéro de patient</i> et le stocke dans la variable <i>num_patient</i>.
+    <p>Une fonction est composée d'un nom et de plusieurs paramètres et permet de proposer un <b>champ de saisie</b> (champ texte, menu déroulant ...).
+    <p>Exemple : la fonction <span style="color: #24579d;">page.text("num_inclusion", "N° d'inclusion")</span> propose un champ de saisie texte intitulé <i>N° d'inclusion</i> et le stocke dans la variable <i>num_inclusion</i>.
+    <p>De nombreux <b>autres champs</b> peuvent être utilisés : <span style="color: #24579d;">page.date(), page.number(), page.enum(), page.binary(), page.enumDrop(), page.enumRadio(), page.multiCheck(), page.slider()...</span><br/>
+    <p>Ces champs peuvent être configurés à l'aide de <b>quelques options</b> : <i>value</i> (valeur par défaut), <i>min/max</i> (pour les valeurs numériques et échelles), <i>compact</i> (pour afficher le libellé et le champ sur la même ligne), <i>help</i> (pour donner des précisions), <i>prefix/suffix</i>, etc.
 `)
 
-
-page.section("Nouvelle section", () => {
-    page.output(html`
-        <p>Vous pouvez par exemple copier les fonctions présentées dans la section <b>Exemples</b> dans cette section pour créer votre propre formulaire.
-    `)
-})
-
-page.sameLine(true)
 page.section("Exemples", () => {
-    page.number("*age", "Quel est votre âge ?", {min: 0, max: 120})
+    page.text("*num_inclusion", "N° d'inclusion")
 
-    page.enum("sexe", "Quel est votre sexe ?", [["M", "Homme"], ["F", "Femme"]])
+    page.date("*date_inclusion", "Date d'inclusion")
 
-    page.enumDrop("csp", "Quelle est votre CSP ?", [
+    page.number("*age", "Âge", {
+        min: 0,
+        max: 120
+    })
+
+    page.enum("tabagisme", "Tabagisme", [
+        ["actif", "Tabagisme actif"],
+        ["sevre", "Tabagisme sevré"],
+        ["non", "Non fumeur"]
+    ])
+
+    page.binary("hypertension", "Hypertension artérielle")
+
+    page.enumDrop("csp", "Catégorie socio-professionnelle", [
         [1, "Agriculteur exploitant"],
         [2, "Artisan, commerçant ou chef d'entreprise"],
         [3, "Cadre ou profession intellectuelle supérieure"],
@@ -31,16 +38,26 @@ page.section("Exemples", () => {
         [8, "Autre ou sans activité professionnelle"]
     ])
 
-    page.enumRadio("lieu_vie", "Quel est votre lieu de vie ?", [
+    page.enumRadio("lieu_vie", "Lieu de vie", [
         ["maison", "Maison"],
         ["appartement", "Appartement"]
     ])
 
-    page.multiCheck("sommeil", "Présentez-vous un trouble du sommeil ?", [
+    page.multiCheck("sommeil", "Trouble(s) du sommeil", [
         [1, "Troubles d’endormissement"],
         [2, "Troubles de maintien du sommeil"],
         [3, "Réveil précoce"],
         [4, "Sommeil non récupérateur"],
         [null, "Aucune de ces réponses"]
     ])
+
+    page.slider("eva", "Qualité du sommeil", {
+        min: 1,
+        max: 10,
+        help: "Evaluez la qualité du sommeil avec un score entre 0 (médiocre) et 10 (très bon sommeil)"
+    })
 })
+
+page.output(html`
+    <p>Passez à la <b>page « Avancé »</b> à l'aide de l'onglet en haut de la page pour continuer.
+`)
