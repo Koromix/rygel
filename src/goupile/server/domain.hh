@@ -64,7 +64,7 @@ public:
     DomainConfig config = {};
     sq_Database db;
 
-    std::shared_mutex instances_mutex;
+    std::shared_mutex mutex;
     HeapArray<InstanceGuard *> instances;
     HashMap<Span<const char>, InstanceGuard *> instances_map;
 

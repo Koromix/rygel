@@ -691,8 +691,9 @@ void HandleConfigureInstance(const http_RequestInfo &request, http_IO *io)
         }
 
         InstanceGuard *guard;
+        InstanceHolder *instance;
         {
-            std::shared_lock<std::shared_mutex> lock(goupile_domain.instances_mutex);
+            std::shared_lock<std::shared_mutex> lock(goupile_domain.mutex);
 
             guard = goupile_domain.instances_map.FindValue(instance_key, nullptr);
             if (!guard) {
@@ -700,9 +701,9 @@ void HandleConfigureInstance(const http_RequestInfo &request, http_IO *io)
                 io->AttachError(404);
                 return;
             }
-        }
 
-        InstanceHolder *instance = guard->Ref();
+            instance = guard->Ref();
+        }
         RG_DEFER_N(ref_guard) { guard->Unref(); };
 
         decltype(InstanceHolder::config) config = instance->config;
@@ -778,7 +779,7 @@ void HandleListInstances(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
-    std::shared_lock<std::shared_mutex> lock(goupile_domain.instances_mutex);
+    std::shared_lock<std::shared_mutex> lock(goupile_domain.mutex);
 
     // Export data
     http_JsonPageBuilder json(request.compression_type);

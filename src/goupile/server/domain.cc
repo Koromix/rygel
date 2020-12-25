@@ -167,7 +167,7 @@ void DomainHolder::Close()
 
     // This is called when goupile exits and we don't really need the lock
     // at this point, but take if for consistency.
-    std::lock_guard<std::shared_mutex> lock(instances_mutex);
+    std::lock_guard<std::shared_mutex> lock(mutex);
 
     for (InstanceGuard *guard: instances) {
         delete guard;
@@ -181,7 +181,7 @@ bool DomainHolder::SyncInstances()
 {
     BlockAllocator temp_alloc;
 
-    std::lock_guard<std::shared_mutex> lock(instances_mutex);
+    std::lock_guard<std::shared_mutex> lock(mutex);
 
     HeapArray<InstanceGuard *> new_instances;
     HashMap<Span<const char>, InstanceGuard *> new_map;

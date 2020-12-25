@@ -124,7 +124,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     } else {
         InstanceHolder *instance;
         {
-            std::shared_lock<std::shared_mutex> lock(goupile_domain.instances_mutex);
+            std::shared_lock<std::shared_mutex> lock(goupile_domain.mutex);
 
             InstanceGuard *guard = goupile_domain.instances_map.FindValue(inst_key, nullptr);
             if (!guard) {
