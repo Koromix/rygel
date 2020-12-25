@@ -113,11 +113,16 @@ bool InstanceHolder::Validate()
 
 void InstanceHolder::InitAssets()
 {
-    RG_ASSERT(goupile_etag[0]);
-
     assets.Clear();
     assets_map.Clear();
     assets_alloc.ReleaseAll();
+
+    // Update ETag
+    {
+        uint64_t buf[2];
+        randombytes_buf(&buf, RG_SIZE(buf));
+        Fmt(etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
+    }
 
     Span<const AssetInfo> packed_assets = GetPackedAssets();
     assets.Grow(packed_assets.len);
@@ -190,7 +195,7 @@ Span<const uint8_t> InstanceHolder::PatchVariables(const AssetInfo &asset)
             writer->Write(js_name);
             return true;
         } else if (TestStr(key, "CACHE_KEY")) {
-            writer->Write(goupile_etag);
+            writer->Write(etag);
             return true;
         } else if (TestStr(key, "LINK_MANIFEST")) {
             if (config.use_offline) {

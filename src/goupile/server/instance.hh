@@ -14,10 +14,12 @@ extern const int InstanceVersion;
 
 enum SyncMode {
     Offline,
+    Online,
     Mirror
 };
 static const char *const SyncModeNames[] = {
     "Offline",
+    "Online",
     "Mirror"
 };
 
@@ -39,6 +41,7 @@ public:
     } config;
 
     Span<const char> base_url = {};
+    char etag[33];
     HeapArray<AssetInfo> assets;
     HashTable<const char *, const AssetInfo *> assets_map;
 

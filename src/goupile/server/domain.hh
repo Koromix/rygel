@@ -41,6 +41,7 @@ class InstanceGuard {
 
 public:
     InstanceHolder instance;
+    bool reload = false;
 
     InstanceHolder *Ref()
     {

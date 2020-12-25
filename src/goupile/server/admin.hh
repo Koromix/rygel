@@ -9,6 +9,7 @@
 
 namespace RG {
 
+extern char admin_etag[33];
 extern HashMap<const char *, const AssetInfo *> admin_assets_map;
 
 void InitAdminAssets();
@@ -18,6 +19,7 @@ int RunMigrate(Span<const char *> arguments);
 
 void HandleCreateInstance(const http_RequestInfo &request, http_IO *io);
 void HandleDeleteInstance(const http_RequestInfo &request, http_IO *io);
+void HandleConfigureInstance(const http_RequestInfo &request, http_IO *io);
 void HandleListInstances(const http_RequestInfo &request, http_IO *io);
 
 void HandleCreateUser(const http_RequestInfo &request, http_IO *io);

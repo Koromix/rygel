@@ -39,6 +39,7 @@ static const char *DefaultConfig = R"(
 # AsyncThreads =
 )";
 
+char admin_etag[33];
 HashMap<const char *, const AssetInfo *> admin_assets_map;
 static BlockAllocator admin_assets_alloc;
 
@@ -46,6 +47,13 @@ void InitAdminAssets()
 {
     admin_assets_map.Clear();
     admin_assets_alloc.ReleaseAll();
+
+    // Update ETag
+    {
+        uint64_t buf[2];
+        randombytes_buf(&buf, RG_SIZE(buf));
+        Fmt(admin_etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
+    }
 
     for (const AssetInfo &asset: GetPackedAssets()) {
         if (TestStr(asset.name, "src/goupile/admin/admin.html")) {
@@ -599,12 +607,12 @@ void HandleCreateInstance(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        if (!goupile_domain.SyncInstances()) {
+        if (goupile_domain.SyncInstances()) {
+            io->AttachText(200, "Done!");
+        } else {
+            io->AttachText(202, "Mostly done, but some changes will be applied later");
             SignalWaitFor();
-            return;
         }
-
-        io->AttachText(200, "Done!");
     });
 }
 
@@ -649,12 +657,113 @@ void HandleDeleteInstance(const http_RequestInfo &request, http_IO *io)
         if (!success)
             return;
 
-        if (!goupile_domain.SyncInstances()) {
+        if (goupile_domain.SyncInstances()) {
+            io->AttachText(200, "Done!");
+        } else {
+            io->AttachText(202, "Mostly done, but some changes will be applied later");
             SignalWaitFor();
+        }
+    });
+}
+
+void HandleConfigureInstance(const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    if (!session || !session->admin) {
+        LogError("Non-admin users are not allowed to configure instances");
+        io->AttachError(403);
+        return;
+    }
+
+    io->RunAsync([=]() {
+        // Read POST values
+        HashMap<const char *, const char *> values;
+        if (!io->ReadPostValues(&io->allocator, &values)) {
+            io->AttachError(422);
             return;
         }
 
-        io->AttachText(200, "Done!");
+        const char *instance_key = values.FindValue("key", nullptr);
+        if (!instance_key) {
+            LogError("Missing 'key' parameter");
+            io->AttachError(422);
+            return;
+        }
+
+        InstanceGuard *guard;
+        {
+            std::shared_lock<std::shared_mutex> lock(goupile_domain.instances_mutex);
+
+            guard = goupile_domain.instances_map.FindValue(instance_key, nullptr);
+            if (!guard) {
+                LogError("Instance '%1' does not exist", instance_key);
+                io->AttachError(404);
+                return;
+            }
+        }
+
+        InstanceHolder *instance = guard->Ref();
+        RG_DEFER { guard->Unref(); };
+
+        decltype(InstanceHolder::config) config = instance->config;
+
+        // Parse new configuration values
+        {
+            bool valid = true;
+
+            if (const char *str = values.FindValue("app_name", nullptr); str) {
+                config.app_name = str;
+
+                if (!str[0]) {
+                    LogError("Application name cannot be empty");
+                    valid = false;
+                }
+            }
+            if (const char *str = values.FindValue("use_offline", nullptr); str) {
+                char buf[32];
+                ConvertFromJsonName(str, buf);
+
+                valid &= ParseBool(buf, &config.use_offline);
+            }
+            if (const char *str = values.FindValue("sync_mode", nullptr); str) {
+                char buf[32];
+                ConvertFromJsonName(str, buf);
+
+                if (!OptionToEnum(SyncModeNames, buf, &config.sync_mode)) {
+                    LogError("Unknown sync mode '%1'", str);
+                    valid = false;
+                }
+            }
+
+            if (!valid) {
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        // Write new configuration to database
+        bool success = instance->db.Transaction([&]() {
+            const char *sql = "UPDATE fs_settings SET value = ?2 WHERE key = ?1;";
+            bool success = true;
+
+            success &= instance->db.Run(sql, "AppName", config.app_name);
+            success &= instance->db.Run(sql, "UseOffline", 0 + config.use_offline);
+            success &= instance->db.Run(sql, "SyncMode", SyncModeNames[(int)config.sync_mode]);
+
+            return success;
+        });
+        if (!success)
+            return;
+
+        // Reload when you can
+        guard->reload = true;
+
+        if (goupile_domain.SyncInstances()) {
+            io->AttachText(200, "Done!");
+        } else {
+            io->AttachText(202, "Mostly done, but some changes will be applied later");
+            SignalWaitFor();
+        }
     });
 }
 

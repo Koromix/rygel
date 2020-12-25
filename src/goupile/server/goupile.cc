@@ -16,17 +16,7 @@
 
 namespace RG {
 
-char goupile_etag[33];
 DomainHolder goupile_domain;
-
-static void InitETag()
-{
-    // We can use a global ETag because everything is in the binary
-
-    uint64_t buf[2];
-    randombytes_buf(&buf, RG_SIZE(buf));
-    Fmt(goupile_etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
-}
 
 static void HandleEvents(InstanceHolder *, const http_RequestInfo &request, http_IO *io)
 {
@@ -36,18 +26,18 @@ static void HandleEvents(InstanceHolder *, const http_RequestInfo &request, http
     io->AttachText(200, "{}", "application/json");
 }
 
-static void AttachAsset(const http_RequestInfo &request, const AssetInfo &asset, http_IO *io)
+static void AttachAsset(const http_RequestInfo &request, const AssetInfo &asset, const char *etag, http_IO *io)
 {
     const char *client_etag = request.GetHeaderValue("If-None-Match");
 
-    if (client_etag && TestStr(client_etag, goupile_etag)) {
+    if (client_etag && TestStr(client_etag, etag)) {
         MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
         io->AttachResponse(304, response);
     } else {
         const char *mimetype = http_GetMimeType(GetPathExtension(asset.name));
         io->AttachBinary(200, asset.data, mimetype, asset.compression_type);
 
-        io->AddCachingHeaders(goupile_domain.config.max_age, goupile_etag);
+        io->AddCachingHeaders(goupile_domain.config.max_age, etag);
         if (asset.source_map) {
             io->AddHeader("SourceMap", asset.source_map);
         }
@@ -58,8 +48,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
  #ifndef NDEBUG
     if (ReloadAssets()) {
-        InitETag();
-
         InitAdminAssets();
         for (InstanceGuard *guard: goupile_domain.instances) {
             InstanceHolder *instance = &guard->instance;
@@ -100,7 +88,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             const AssetInfo *asset = admin_assets_map.FindValue(inst_path, nullptr);
 
             if (asset) {
-                AttachAsset(request, *asset, io);
+                AttachAsset(request, *asset, admin_etag, io);
                 return;
             }
         }
@@ -118,6 +106,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleCreateInstance(request, io);
         } else if (TestStr(inst_path, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
             HandleDeleteInstance(request, io);
+        } else if (TestStr(inst_path, "/api/instances/configure") && request.method == http_RequestMethod::Post) {
+            HandleConfigureInstance(request, io);
         } else if (TestStr(inst_path, "/api/instances/list") && request.method == http_RequestMethod::Get) {
             HandleListInstances(request, io);
         } else if (TestStr(inst_path, "/api/users/create") && request.method == http_RequestMethod::Post) {
@@ -140,6 +130,9 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             if (!guard) {
                 io->AttachError(404);
                 return;
+            } else if (guard->reload) {
+                io->AttachError(503);
+                return;
             }
 
             instance = guard->Ref();
@@ -161,7 +154,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             }
 
             if (asset) {
-                AttachAsset(request, *asset, io);
+                AttachAsset(request, *asset, instance->etag, io);
                 return;
             }
         }
@@ -232,8 +225,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             }
         }
     }
-
-    InitETag();
 
     LogInfo("Init instances");
     InitAdminAssets();

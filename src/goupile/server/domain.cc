@@ -197,6 +197,17 @@ bool DomainHolder::SyncInstances()
             key = DuplicateString(key, &temp_alloc).ptr;
 
             InstanceGuard *guard = instances_map.FindValue(key, nullptr);
+            if (guard && guard->reload) {
+                if (!guard->refcount) {
+                    guard->valid = false;
+                    instances_map.Remove(key);
+
+                    guard = nullptr;
+                } else {
+                    // We will try again later
+                    synced = false;
+                }
+            }
             if (!guard) {
                 LogDebug("Load instance '%1'", key);
 

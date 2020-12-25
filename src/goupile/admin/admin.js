@@ -29,6 +29,9 @@ let admin = new function() {
         let instances = await fetch('/admin/api/instances/list').then(response => response.json());
         let users = await fetch('/admin/api/users/list').then(response => response.json());
 
+        // Server does not keep them ordered by key
+        instances.sort((instance1, instance2) => util.compareValues(instance1.key, instance2.key));
+
         if (!instances.find(instance => instance.key === select_instance))
             select_instance = null;
 
@@ -41,6 +44,7 @@ let admin = new function() {
                         <col/>
                         <col style="width: 100px;"/>
                         <col style="width: 100px;"/>
+                        <col style="width: 100px;"/>
                     </colgroup>
 
                     <tbody>
@@ -48,6 +52,7 @@ let admin = new function() {
                         ${instances.map(instance => html`
                             <tr class=${instance.key === select_instance ? 'selected' : ''}>
                                 <td>${instance.key} (<a href=${'/' + instance.key} target="_blank">accès</a>)</td>
+                                <td><a @click=${e => runConfigureInstanceDialog(e, instance)}>Paramétrer</a></td>
                                 <td><a @click=${e => toggleInstance(instance.key)}>Droits</a></td>
                                 <td><a @click=${e => runDeleteInstanceDialog(e, instance.key)}>Fermer</a></td>
                             </tr>
@@ -154,6 +159,45 @@ let admin = new function() {
                 let err = (await response.text()).trim();
                 throw new Error(err);
             }
+        });
+    }
+
+    function runConfigureInstanceDialog(e, instance) {
+        return dialog.run(e, (d, resolve, reject) => {
+            d.pushOptions({untoggle: false});
+
+            let app_name = d.text('*app_name', 'Nom de l\'application', {value: instance.config.app_name});
+            let use_offline = d.boolean('*use_offline', 'Utilisation hors-ligne', {value: instance.config.use_offline});
+            let sync_mode = d.enum('*sync_mode', 'Mode de synchronisation', [
+                ['offline', 'Hors ligne'],
+                ['online', 'En ligne'],
+                ['mirror', 'Mode miroir']
+            ], {value: instance.config.sync_mode});
+
+            d.action('Appliquer', {disabled: !d.isValid()}, async () => {
+                let query = new URLSearchParams();
+                query.set('key', instance.key);
+                query.set('app_name', app_name.value);
+                query.set('use_offline', use_offline.value);
+                query.set('sync_mode', sync_mode.value);
+
+                let response = await net.fetch('/admin/api/instances/configure', {
+                    method: 'POST',
+                    body: query
+                });
+
+                if (response.ok) {
+                    resolve();
+
+                    log.success('Instance configurée');
+                    self.run();
+                } else {
+                    let err = (await response.text()).trim();
+                    log.error(err);
+                    reject(new Error(err));
+                }
+            });
+            d.action('Annuler', {}, () => reject(new Error('Action annulée')));
         });
     }
 
