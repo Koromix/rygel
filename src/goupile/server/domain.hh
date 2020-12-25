@@ -75,9 +75,6 @@ public:
 
     bool IsSynced() const { return synced; }
     bool SyncInstances();
-
-private:
-    bool LoadInstance(const char *key, const char *filename);
 };
 
 bool MigrateDomain(sq_Database *db, const char *instances_directory);

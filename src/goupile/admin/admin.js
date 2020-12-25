@@ -29,9 +29,6 @@ let admin = new function() {
         let instances = await fetch('/admin/api/instances/list').then(response => response.json());
         let users = await fetch('/admin/api/users/list').then(response => response.json());
 
-        // Server does not keep them ordered by key
-        instances.sort((instance1, instance2) => util.compareValues(instance1.key, instance2.key));
-
         if (!instances.find(instance => instance.key === select_instance))
             select_instance = null;
 

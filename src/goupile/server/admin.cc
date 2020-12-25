@@ -703,7 +703,7 @@ void HandleConfigureInstance(const http_RequestInfo &request, http_IO *io)
         }
 
         InstanceHolder *instance = guard->Ref();
-        RG_DEFER { guard->Unref(); };
+        RG_DEFER_N(ref_guard) { guard->Unref(); };
 
         decltype(InstanceHolder::config) config = instance->config;
 
@@ -757,6 +757,8 @@ void HandleConfigureInstance(const http_RequestInfo &request, http_IO *io)
 
         // Reload when you can
         guard->reload = true;
+        guard->Unref();
+        ref_guard.Disable();
 
         if (goupile_domain.SyncInstances()) {
             io->AttachText(200, "Done!");
