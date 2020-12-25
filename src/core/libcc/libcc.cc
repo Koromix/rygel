@@ -614,9 +614,11 @@ bool ParseBool(Span<const char> str, bool *out_value, unsigned int flags,
     TRY_MATCH("1", true);
     TRY_MATCH("On", true);
     TRY_MATCH("Y", true);
+    TRY_MATCH("True", true);
     TRY_MATCH("0", false);
     TRY_MATCH("Off", false);
     TRY_MATCH("N", false);
+    TRY_MATCH("False", false);
 
     if (flags & (int)ParseFlag::Log) {
         LogError("Invalid boolean value '%1'", str);
