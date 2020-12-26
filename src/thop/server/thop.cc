@@ -329,8 +329,13 @@ static void InitRoutes()
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
 #ifndef NDEBUG
-    if (ReloadAssets()) {
-        InitRoutes();
+    {
+        static std::mutex mutex;
+        std::lock_guard<std::mutex> lock(mutex);
+
+        if (ReloadAssets()) {
+            InitRoutes();
+        }
     }
 #endif
 

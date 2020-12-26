@@ -47,9 +47,16 @@ static void AttachAsset(const http_RequestInfo &request, const AssetInfo &asset,
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
  #ifndef NDEBUG
-    if (ReloadAssets()) {
-        InitAdminAssets();
-        goupile_domain.InitAssets();
+    {
+        static std::mutex mutex;
+        std::lock_guard<std::mutex> lock(mutex);
+
+        if (ReloadAssets()) {
+            LogInfo("Reload assets");
+
+            InitAdminAssets();
+            goupile_domain.InitAssets();
+        }
     }
 #endif
 
