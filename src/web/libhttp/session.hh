@@ -7,8 +7,6 @@
 #include "../../core/libcc/libcc.hh"
 #include "http.hh"
 
-#include <shared_mutex>
-
 namespace RG {
 
 class http_SessionManager {

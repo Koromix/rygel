@@ -16,6 +16,7 @@
 #include <limits>
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>

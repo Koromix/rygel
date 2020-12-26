@@ -7,7 +7,6 @@
 #include "../libcc/libcc.hh"
 #include "../../../vendor/sqlite/sqlite3.h"
 
-#include <shared_mutex>
 #include <thread>
 
 namespace RG {
