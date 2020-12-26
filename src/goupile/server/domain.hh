@@ -35,46 +35,53 @@ struct DomainConfig {
 bool LoadConfig(StreamReader *st, DomainConfig *out_config);
 bool LoadConfig(const char *filename, DomainConfig *out_config);
 
-class InstanceGuard {
-    std::atomic_int refcount {0};
-    bool valid = true;
-
-public:
-    InstanceHolder instance;
-    bool reload = false;
-
-    InstanceHolder *Ref()
-    {
-        refcount++;
-        return &instance;
-    }
-
-    void Unref()
-    {
-        refcount--;
-    }
-
-    friend class DomainHolder;
-};
-
 class DomainHolder {
-    bool synced = true;
+    struct InstanceGuard {
+        // Keep first!
+        InstanceHolder instance;
 
-public:
-    DomainConfig config = {};
-    sq_Database db;
+        std::atomic_int refcount {0};
+        bool valid = true;
+        bool reload = false;
+
+        InstanceHolder *Ref()
+        {
+            refcount++;
+            return &instance;
+        }
+
+        void Unref()
+        {
+            refcount--;
+        }
+
+        friend class DomainHolder;
+    };
+
+    bool synced = true;
 
     std::shared_mutex mutex;
     HeapArray<InstanceGuard *> instances;
     HashMap<Span<const char>, InstanceGuard *> instances_map;
+
+public:
+    DomainConfig config = {};
+    sq_Database db;
 
     ~DomainHolder() { Close(); }
 
     bool Open(const char *filename);
     void Close();
 
+    // Can be restarted (for debug builds)
+    void InitAssets();
+
     bool IsSynced() const { return synced; }
-    bool SyncInstances();
+    bool Sync();
+
+    InstanceHolder *Ref(Span<const char> key, bool *out_reload = nullptr);
+    void Unref(InstanceHolder *instance);
+    void MarkForReload(InstanceHolder *instance);
 };
 
 bool MigrateDomain(sq_Database *db, const char *instances_directory);

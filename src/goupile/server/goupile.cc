@@ -49,10 +49,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
  #ifndef NDEBUG
     if (ReloadAssets()) {
         InitAdminAssets();
-        for (InstanceGuard *guard: goupile_domain.instances) {
-            InstanceHolder *instance = &guard->instance;
-            instance->InitAssets();
-        }
+        goupile_domain.InitAssets();
     }
 #endif
 
@@ -60,8 +57,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     io->AddHeader("Referrer-Policy", "no-referrer");
 
     // Separate base URL and path
-    Span<const char> inst_key;
-    const char *inst_path;
+    Span<const char> instance_key;
+    const char *instance_path;
     {
         Size offset = SplitStr(request.url + 1, '/').len + 1;
 
@@ -76,16 +73,16 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        inst_key = MakeSpan(request.url + 1, offset - 1);
-        inst_path = request.url + offset;
+        instance_key = MakeSpan(request.url + 1, offset - 1);
+        instance_path = request.url + offset;
     }
 
     // If new base URLs are added besides "/admin", RunCreateInstance() must be modified
     // to forbid the instance key.
-    if (inst_key == "admin") {
+    if (instance_key == "admin") {
         // Try static assets
         {
-            const AssetInfo *asset = admin_assets_map.FindValue(inst_path, nullptr);
+            const AssetInfo *asset = admin_assets_map.FindValue(instance_path, nullptr);
 
             if (asset) {
                 AttachAsset(request, *asset, admin_etag, io);
@@ -94,50 +91,41 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         }
 
         // And now, API endpoints
-        if (TestStr(inst_path, "/api/events") && request.method == http_RequestMethod::Get) {
+        if (TestStr(instance_path, "/api/events") && request.method == http_RequestMethod::Get) {
             HandleEvents(nullptr, request, io);
-        } else if (TestStr(inst_path, "/api/user/profile") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(instance_path, "/api/user/profile") && request.method == http_RequestMethod::Get) {
             HandleUserProfile(nullptr, request, io);
-        } else if (TestStr(inst_path, "/api/user/login") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_path, "/api/user/login") && request.method == http_RequestMethod::Post) {
             HandleUserLogin(nullptr, request, io);
-        } else if (TestStr(inst_path, "/api/user/logout") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_path, "/api/user/logout") && request.method == http_RequestMethod::Post) {
             HandleUserLogout(nullptr, request, io);
-        } else if (TestStr(inst_path, "/api/instances/create") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_path, "/api/instances/create") && request.method == http_RequestMethod::Post) {
             HandleCreateInstance(request, io);
-        } else if (TestStr(inst_path, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_path, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
             HandleDeleteInstance(request, io);
-        } else if (TestStr(inst_path, "/api/instances/configure") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_path, "/api/instances/configure") && request.method == http_RequestMethod::Post) {
             HandleConfigureInstance(request, io);
-        } else if (TestStr(inst_path, "/api/instances/list") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(instance_path, "/api/instances/list") && request.method == http_RequestMethod::Get) {
             HandleListInstances(request, io);
-        } else if (TestStr(inst_path, "/api/users/create") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_path, "/api/users/create") && request.method == http_RequestMethod::Post) {
             HandleCreateUser(request, io);
-        } else if (TestStr(inst_path, "/api/users/delete") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_path, "/api/users/delete") && request.method == http_RequestMethod::Post) {
             HandleDeleteUser(request, io);
-        } else if (TestStr(inst_path, "/api/users/assign") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_path, "/api/users/assign") && request.method == http_RequestMethod::Post) {
             HandleAssignUser(request, io);
-        } else if (TestStr(inst_path, "/api/users/list") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(instance_path, "/api/users/list") && request.method == http_RequestMethod::Get) {
             HandleListUsers(request, io);
         } else {
             io->AttachError(404);
         }
     } else {
-        InstanceHolder *instance;
-        {
-            std::shared_lock<std::shared_mutex> lock(goupile_domain.mutex);
-
-            InstanceGuard *guard = goupile_domain.instances_map.FindValue(inst_key, nullptr);
-            if (!guard) {
-                io->AttachError(404);
-                return;
-            } else if (guard->reload) {
-                io->AttachError(503);
-                return;
-            }
-
-            instance = guard->Ref();
-            io->AddFinalizer([=]() { guard->Unref(); });
+        bool reload;
+        InstanceHolder *instance = goupile_domain.Ref(instance_key, &reload);
+        if (!instance) {
+            io->AttachError(reload ? 503 : 404);
+            return;
         }
+        io->AddFinalizer([=]() { goupile_domain.Unref(instance); });
 
         // Try application files
         if (request.method == http_RequestMethod::Get && HandleFileGet(instance, request, io))
@@ -146,11 +134,11 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         // Try static assets
         if (request.method == http_RequestMethod::Get) {
             const AssetInfo *asset;
-            if (TestStr(inst_path, "/") || StartsWith(inst_path, "/app/")) {
+            if (TestStr(instance_path, "/") || StartsWith(instance_path, "/app/")) {
                 asset = instance->assets_map.FindValue("/index.html", nullptr);
                 RG_ASSERT(asset);
             } else {
-                asset = instance->assets_map.FindValue(inst_path, nullptr);
+                asset = instance->assets_map.FindValue(instance_path, nullptr);
             }
 
             if (asset) {
@@ -160,29 +148,29 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         }
 
         // And now, API endpoints
-        if (TestStr(inst_path, "/api/events") && request.method == http_RequestMethod::Get) {
+        if (TestStr(instance_path, "/api/events") && request.method == http_RequestMethod::Get) {
             HandleEvents(instance, request, io);
-        } else if (TestStr(inst_path, "/api/user/profile") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(instance_path, "/api/user/profile") && request.method == http_RequestMethod::Get) {
             HandleUserProfile(instance, request, io);
-        } else if (TestStr(inst_path, "/api/user/login") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_path, "/api/user/login") && request.method == http_RequestMethod::Post) {
             HandleUserLogin(instance, request, io);
-        } else if (TestStr(inst_path, "/api/user/logout") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_path, "/api/user/logout") && request.method == http_RequestMethod::Post) {
             HandleUserLogout(instance, request, io);
-        } else if (TestStr(inst_path, "/api/files/list") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(instance_path, "/api/files/list") && request.method == http_RequestMethod::Get) {
              HandleFileList(instance, request, io);
-        } else if (TestStr(inst_path, "/api/files/static") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(instance_path, "/api/files/static") && request.method == http_RequestMethod::Get) {
             HandleFileStatic(instance, request, io);
-        } else if (StartsWith(inst_path, "/files/") && request.method == http_RequestMethod::Put) {
+        } else if (StartsWith(instance_path, "/files/") && request.method == http_RequestMethod::Put) {
             HandleFilePut(instance, request, io);
-        } else if (StartsWith(inst_path, "/files/") && request.method == http_RequestMethod::Delete) {
+        } else if (StartsWith(instance_path, "/files/") && request.method == http_RequestMethod::Delete) {
             HandleFileDelete(instance, request, io);
-        } else if (TestStr(inst_path, "/api/records/load") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(instance_path, "/api/records/load") && request.method == http_RequestMethod::Get) {
             HandleRecordLoad(instance, request, io);
-        } else if (TestStr(inst_path, "/api/records/columns") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(instance_path, "/api/records/columns") && request.method == http_RequestMethod::Get) {
             HandleRecordColumns(instance, request, io);
-        } else if (TestStr(inst_path, "/api/records/sync") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_path, "/api/records/sync") && request.method == http_RequestMethod::Post) {
             HandleRecordSync(instance, request, io);
-        } else if (TestStr(inst_path, "/api/records/recompute") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_path, "/api/records/recompute") && request.method == http_RequestMethod::Post) {
             HandleRecordRecompute(instance, request, io);
         } else {
             io->AttachError(404);
@@ -274,7 +262,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
         if (WaitForInterrupt(timeout) == WaitForResult::Interrupt)
             break;
 
-        goupile_domain.SyncInstances();
+        goupile_domain.Sync();
     }
 
     daemon.Stop();

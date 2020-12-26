@@ -153,7 +153,7 @@ bool DomainHolder::Open(const char *filename)
         }
     }
 
-    if (!SyncInstances())
+    if (!Sync())
         return false;
 
     err_guard.Disable();
@@ -176,8 +176,18 @@ void DomainHolder::Close()
     instances_map.Clear();
 }
 
+void DomainHolder::InitAssets()
+{
+    std::shared_lock<std::shared_mutex> lock(mutex);
+
+    for (InstanceGuard *guard: instances) {
+        InstanceHolder *instance = &guard->instance;
+        instance->InitAssets();
+    }
+}
+
 // Can be called multiple times, from main thread only
-bool DomainHolder::SyncInstances()
+bool DomainHolder::Sync()
 {
     BlockAllocator temp_alloc;
 
@@ -257,6 +267,41 @@ bool DomainHolder::SyncInstances()
     std::swap(instances_map, new_map);
 
     return synced;
+}
+
+InstanceHolder *DomainHolder::Ref(Span<const char> key, bool *out_reload)
+{
+    std::shared_lock<std::shared_mutex> lock(mutex);
+
+    InstanceGuard *guard = instances_map.FindValue(key, nullptr);
+
+    if (!guard) {
+        if (out_reload) {
+            *out_reload = false;
+        }
+        return nullptr;
+    } else if (guard->reload) {
+        if (out_reload) {
+            *out_reload = true;
+        }
+        return nullptr;
+    }
+
+    return guard->Ref();
+}
+
+void DomainHolder::Unref(InstanceHolder *instance)
+{
+    if (instance) {
+        InstanceGuard *guard = (InstanceGuard *)instance;
+        guard->Unref();
+    }
+}
+
+void DomainHolder::MarkForReload(InstanceHolder *instance)
+{
+    InstanceGuard *guard = (InstanceGuard *)instance;
+    guard->reload = true;
 }
 
 bool MigrateDomain(sq_Database *db, const char *instances_directory)

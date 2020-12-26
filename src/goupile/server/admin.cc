@@ -607,7 +607,7 @@ void HandleCreateInstance(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        if (goupile_domain.SyncInstances()) {
+        if (goupile_domain.Sync()) {
             io->AttachText(200, "Done!");
         } else {
             io->AttachText(202, "Mostly done, but some changes will be applied later");
@@ -657,7 +657,7 @@ void HandleDeleteInstance(const http_RequestInfo &request, http_IO *io)
         if (!success)
             return;
 
-        if (goupile_domain.SyncInstances()) {
+        if (goupile_domain.Sync()) {
             io->AttachText(200, "Done!");
         } else {
             io->AttachText(202, "Mostly done, but some changes will be applied later");
@@ -690,21 +690,13 @@ void HandleConfigureInstance(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        InstanceGuard *guard;
-        InstanceHolder *instance;
-        {
-            std::shared_lock<std::shared_mutex> lock(goupile_domain.mutex);
-
-            guard = goupile_domain.instances_map.FindValue(instance_key, nullptr);
-            if (!guard) {
-                LogError("Instance '%1' does not exist", instance_key);
-                io->AttachError(404);
-                return;
-            }
-
-            instance = guard->Ref();
+        InstanceHolder *instance = goupile_domain.Ref(instance_key);
+        if (!instance) {
+            LogError("Instance '%1' does not exist", instance_key);
+            io->AttachError(404);
+            return;
         }
-        RG_DEFER_N(ref_guard) { guard->Unref(); };
+        RG_DEFER_N(ref_guard) { goupile_domain.Unref(instance); };
 
         decltype(InstanceHolder::config) config = instance->config;
 
@@ -757,11 +749,11 @@ void HandleConfigureInstance(const http_RequestInfo &request, http_IO *io)
             return;
 
         // Reload when you can
-        guard->reload = true;
-        guard->Unref();
+        goupile_domain.MarkForReload(instance);
+        goupile_domain.Unref(instance);
         ref_guard.Disable();
 
-        if (goupile_domain.SyncInstances()) {
+        if (goupile_domain.Sync()) {
             io->AttachText(200, "Done!");
         } else {
             io->AttachText(202, "Mostly done, but some changes will be applied later");
@@ -779,30 +771,39 @@ void HandleListInstances(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
-    std::shared_lock<std::shared_mutex> lock(goupile_domain.mutex);
+    sq_Statement stmt;
+    if (!goupile_domain.db.Prepare(R"(SELECT instance FROM dom_instances;)", &stmt))
+        return;
 
     // Export data
     http_JsonPageBuilder json(request.compression_type);
 
     json.StartArray();
-    for (InstanceGuard *guard: goupile_domain.instances) {
-        const InstanceHolder &instance = guard->instance;
+    while (stmt.Next()) {
+        const char *key = (const char *)sqlite3_column_text(stmt, 0);
         char buf[512];
+
+        InstanceHolder *instance = goupile_domain.Ref(key);
+        if (!instance)
+            continue;
+        RG_DEFER { goupile_domain.Unref(instance); };
 
         json.StartObject();
 
-        json.Key("key"); json.String(instance.key);
+        json.Key("key"); json.String(instance->key);
         json.Key("config"); json.StartObject();
-            json.Key("app_key"); json.String(instance.config.app_key);
-            json.Key("app_name"); json.String(instance.config.app_name);
-            json.Key("use_offline"); json.Bool(instance.config.use_offline);
+            json.Key("app_key"); json.String(instance->config.app_key);
+            json.Key("app_name"); json.String(instance->config.app_name);
+            json.Key("use_offline"); json.Bool(instance->config.use_offline);
 
-            ConvertToJsonName(SyncModeNames[(int)instance.config.sync_mode], buf);
+            ConvertToJsonName(SyncModeNames[(int)instance->config.sync_mode], buf);
             json.Key("sync_mode"); json.String(buf);
         json.EndObject();
 
         json.EndObject();
     }
+    if (!stmt.IsValid())
+        return;
     json.EndArray();
 
     json.Finish(io);
