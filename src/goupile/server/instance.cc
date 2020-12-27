@@ -21,8 +21,9 @@ bool InstanceHolder::Open(const char *key, const char *filename)
     Close();
 
     unique = next_unique++;
+    LogDebug("Open instance '%1' (%2)", key, unique);
 
-    this->key = DuplicateString(key, &str_alloc).ptr;
+    this->key = DuplicateString(key, &str_alloc);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     // Open database
@@ -84,7 +85,6 @@ bool InstanceHolder::Open(const char *key, const char *filename)
     if (!Validate())
         return false;
 
-    base_url = Fmt(&str_alloc, "/%1/", key);
     InitAssets();
 
     err_guard.Disable();
@@ -157,12 +157,15 @@ void InstanceHolder::InitAssets()
 
 void InstanceHolder::Close()
 {
-    key = nullptr;
+    if (filename) {
+        LogDebug("Close instance '%1' (%2)", key, unique);
+    }
+
+    key = {};
     filename = nullptr;
     unique = -1;
     db.Close();
     config = {};
-    base_url = {};
     assets.Clear();
     assets_map.Clear();
     str_alloc.ReleaseAll();
@@ -183,7 +186,7 @@ Span<const uint8_t> InstanceHolder::PatchVariables(const AssetInfo &asset)
             writer->Write(config.app_name);
             return true;
         } else if (TestStr(key, "BASE_URL")) {
-            writer->Write(base_url);
+            Print(writer, "/%1/", this->key);
             return true;
         } else if (TestStr(key, "USE_OFFLINE")) {
             writer->Write(config.use_offline ? "true" : "false");
@@ -199,7 +202,7 @@ Span<const uint8_t> InstanceHolder::PatchVariables(const AssetInfo &asset)
             return true;
         } else if (TestStr(key, "LINK_MANIFEST")) {
             if (config.use_offline) {
-                Print(writer, "<link rel=\"manifest\" href=\"%1manifest.json\"/>", base_url);
+                Print(writer, "<link rel=\"manifest\" href=\"/%1/manifest.json\"/>", this->key);
             }
             return true;
         } else {

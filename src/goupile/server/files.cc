@@ -15,12 +15,13 @@ namespace RG {
 void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     http_JsonPageBuilder json(request.compression_type);
+    char buf[512];
 
     json.StartArray();
-    json.String(instance->base_url.ptr);
+    json.String(Fmt(buf, "/%1/", instance->key).ptr);
     for (const AssetInfo &asset: instance->assets) {
         char buf[512];
-        json.String(Fmt(buf, "%1%2", instance->base_url, asset.name + 1).ptr);
+        json.String(Fmt(buf, "/%1/%2", instance->key, asset.name + 1).ptr);
     }
     json.EndArray();
 
@@ -55,7 +56,7 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
 // Returns true when request has been handled (file exists or an error has occured)
 bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    const char *path = request.url + instance->base_url.len - 1;
+    const char *path = request.url + instance->key.len + 1;
     const char *client_etag = request.GetHeaderValue("If-None-Match");
     const char *client_sha256 = request.GetQueryValue("sha256");
 
@@ -173,7 +174,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
         return;
     }
 
-    const char *path = request.url + instance->base_url.len - 1;
+    const char *path = request.url + instance->key.len + 1;
     const char *client_sha256 = request.GetQueryValue("sha256");
 
     // Security checks
@@ -324,7 +325,7 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
         return;
     }
 
-    const char *path = request.url + instance->base_url.len - 1;
+    const char *path = request.url + instance->key.len + 1;
     const char *client_sha256 = request.GetQueryValue("sha256");
 
     instance->db.Transaction([&]() {

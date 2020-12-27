@@ -28,7 +28,7 @@ const Token *Session::GetToken(const InstanceHolder *instance) const
                 if (!goupile_domain.db.Prepare(R"(SELECT zone, permissions FROM dom_permissions
                                                   WHERE instance = ?1 AND username = ?2;)", &stmt))
                     break;
-                sqlite3_bind_text(stmt, 1, instance->key, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 1, instance->key.ptr, instance->key.len, SQLITE_STATIC);
                 sqlite3_bind_text(stmt, 2, username, -1, SQLITE_STATIC);
                 if (!stmt.Next())
                     break;
@@ -155,7 +155,7 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
                                                     p.instance = ?2 AND p.permissions > 0;)", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
-            sqlite3_bind_text(stmt, 2, instance->key, -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 2, instance->key.ptr, instance->key.len, SQLITE_STATIC);
         } else {
             if (!goupile_domain.db.Prepare(R"(SELECT password_hash, admin FROM dom_users
                                               WHERE username = ?1 AND admin = 1;)", &stmt))

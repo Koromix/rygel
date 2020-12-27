@@ -32,7 +32,7 @@ class InstanceHolder {
 public:
     int64_t unique = -1;
 
-    const char *key = nullptr;
+    Span<const char> key = {};
     const char *filename = nullptr;
     sq_Database db;
 
@@ -45,7 +45,6 @@ public:
         SyncMode sync_mode = SyncMode::Offline;
     } config;
 
-    Span<const char> base_url = {};
     char etag[33];
     HeapArray<AssetInfo> assets;
     HashTable<const char *, const AssetInfo *> assets_map;
@@ -65,6 +64,8 @@ public:
 
     void Reload() { reload = true; }
     void Unref() { refcount--; }
+
+    RG_HASHTABLE_HANDLER(InstanceHolder, key);
 
 private:
     Span<const uint8_t> PatchVariables(const AssetInfo &asset);

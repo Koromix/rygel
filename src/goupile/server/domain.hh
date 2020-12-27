@@ -40,7 +40,7 @@ class DomainHolder {
 
     std::shared_mutex mutex;
     HeapArray<InstanceHolder *> instances;
-    HashMap<Span<const char>, InstanceHolder *> instances_map;
+    HashTable<Span<const char>, InstanceHolder *> instances_map;
 
 public:
     DomainConfig config = {};

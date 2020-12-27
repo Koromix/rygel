@@ -790,7 +790,7 @@ void HandleListInstances(const http_RequestInfo &request, http_IO *io)
 
         json.StartObject();
 
-        json.Key("key"); json.String(instance->key);
+        json.Key("key"); json.String(instance->key.ptr);
         json.Key("config"); json.StartObject();
             json.Key("app_key"); json.String(instance->config.app_key);
             json.Key("app_name"); json.String(instance->config.app_name);

@@ -193,7 +193,7 @@ bool DomainHolder::Sync()
     std::lock_guard<std::shared_mutex> lock(mutex);
 
     HeapArray<InstanceHolder *> new_instances;
-    HashMap<Span<const char>, InstanceHolder *> new_map;
+    HashTable<Span<const char>, InstanceHolder *> new_map;
     synced = true;
 
     // Start new instances (if any)
@@ -223,16 +223,14 @@ bool DomainHolder::Sync()
 
             if (instance) {
                 new_instances.Append(instance);
-                new_map.Set(instance->key, instance);
+                new_map.Set(instance);
             } else {
-                LogDebug("Load instance '%1'", key);
-
                 const char *filename = config.GetInstanceFileName(key, &temp_alloc);
                 instance = new InstanceHolder();
 
                 if (instance->Open(key, filename)) {
                     new_instances.Append(instance);
-                    new_map.Set(instance->key, instance);
+                    new_map.Set(instance);
                 } else {
                     delete instance;
                     synced = false;
@@ -251,7 +249,6 @@ bool DomainHolder::Sync()
 
         if (instance->unload) {
             if (!instance->refcount) {
-                LogDebug("Drop instance '%1'", instance->key);
                 delete instance;
             } else {
                 // We will try again later
