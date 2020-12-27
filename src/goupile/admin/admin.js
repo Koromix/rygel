@@ -41,7 +41,6 @@ let admin = new function() {
                         <col/>
                         <col style="width: 100px;"/>
                         <col style="width: 100px;"/>
-                        <col style="width: 100px;"/>
                     </colgroup>
 
                     <tbody>
@@ -49,9 +48,8 @@ let admin = new function() {
                         ${instances.map(instance => html`
                             <tr class=${instance.key === select_instance ? 'selected' : ''}>
                                 <td>${instance.key} (<a href=${'/' + instance.key} target="_blank">accès</a>)</td>
-                                <td><a @click=${e => runConfigureInstanceDialog(e, instance)}>Paramétrer</a></td>
                                 <td><a @click=${e => toggleInstance(instance.key)}>Droits</a></td>
-                                <td><a @click=${e => runDeleteInstanceDialog(e, instance.key)}>Fermer</a></td>
+                                <td><a @click=${e => runEditInstanceDialog(e, instance)}>Modifier</a></td>
                             </tr>
                         `)}
                     </tbody>
@@ -84,7 +82,7 @@ let admin = new function() {
                                         ${select_instance ?
                                             html`&nbsp;&nbsp;&nbsp;
                                                  <a @click=${e => runAssignUserDialog(e, select_instance, user.username,
-                                                                                      permissions)}>${permissions.length ? 'Modifier' : 'Assigner'}</a>` : ''}
+                                                                                      permissions)}>Assigner</a>` : ''}
                                     </td>
                                     <td><a @click=${e => runDeleteUserDialog(e, user.username)}>Supprimer</a></td>
                                 </tr>
@@ -138,63 +136,72 @@ let admin = new function() {
         });
     }
 
-    function runDeleteInstanceDialog(e, key) {
-        let msg = `Voulez-vous fermer l'instance '${key}' ?`;
-        return dialog.confirm(e, msg, 'Fermer', async () => {
-            let query = new URLSearchParams;
-            query.set('key', key);
-
-            let response = await net.fetch('/admin/api/instances/delete', {
-                method: 'POST',
-                body: query
-            });
-
-            if (response.ok) {
-                log.success('Instance fermée');
-                self.run();
-            } else {
-                let err = (await response.text()).trim();
-                throw new Error(err);
-            }
-        });
-    }
-
-    function runConfigureInstanceDialog(e, instance) {
+    function runEditInstanceDialog(e, instance) {
         return dialog.run(e, (d, resolve, reject) => {
             d.pushOptions({untoggle: false});
 
-            let app_name = d.text('*app_name', 'Nom de l\'application', {value: instance.config.app_name});
-            let use_offline = d.boolean('*use_offline', 'Utilisation hors-ligne', {value: instance.config.use_offline});
-            let sync_mode = d.enum('*sync_mode', 'Mode de synchronisation', [
-                ['offline', 'Hors ligne'],
-                ['online', 'En ligne'],
-                ['mirror', 'Mode miroir']
-            ], {value: instance.config.sync_mode});
+            d.tabs('actions', () => {
+                d.tab('Modifier', () => {
+                    let app_name = d.text('*app_name', 'Nom de l\'application', {value: instance.config.app_name});
+                    let use_offline = d.boolean('*use_offline', 'Utilisation hors-ligne', {value: instance.config.use_offline});
+                    let sync_mode = d.enum('*sync_mode', 'Mode de synchronisation', [
+                        ['offline', 'Hors ligne'],
+                        ['online', 'En ligne'],
+                        ['mirror', 'Mode miroir']
+                    ], {value: instance.config.sync_mode});
 
-            d.action('Appliquer', {disabled: !d.isValid()}, async () => {
-                let query = new URLSearchParams();
-                query.set('key', instance.key);
-                query.set('app_name', app_name.value);
-                query.set('use_offline', use_offline.value);
-                query.set('sync_mode', sync_mode.value);
+                    d.action('Modifier', {disabled: !d.isValid()}, async () => {
+                        let query = new URLSearchParams();
+                        query.set('key', instance.key);
+                        query.set('app_name', app_name.value);
+                        query.set('use_offline', use_offline.value);
+                        query.set('sync_mode', sync_mode.value);
 
-                let response = await net.fetch('/admin/api/instances/configure', {
-                    method: 'POST',
-                    body: query
+                        let response = await net.fetch('/admin/api/instances/configure', {
+                            method: 'POST',
+                            body: query
+                        });
+
+                        if (response.ok) {
+                            resolve();
+
+                            log.success('Instance configurée');
+                            self.run();
+                        } else {
+                            let err = (await response.text()).trim();
+                            log.error(err);
+                            reject(new Error(err));
+                        }
+                    });
                 });
 
-                if (response.ok) {
-                    resolve();
+                d.tab('Supprimer', () => {
+                    d.output(`Voulez-vous vraiment supprimer l'instance '${instance.key}' ?`);
 
-                    log.success('Instance configurée');
-                    self.run();
-                } else {
-                    let err = (await response.text()).trim();
-                    log.error(err);
-                    reject(new Error(err));
-                }
-            });
-            d.action('Annuler', {}, () => reject(new Error('Action annulée')));
+                    d.action('Supprimer', {}, async () => {
+                        let query = new URLSearchParams;
+                        query.set('key', instance.key);
+
+                        let response = await net.fetch('/admin/api/instances/delete', {
+                            method: 'POST',
+                            body: query
+                        });
+
+                        if (response.ok) {
+                            resolve();
+
+                            log.success('Instance supprimée');
+                            self.run();
+                        } else {
+                            let err = (await response.text()).trim();
+                            log.error(err);
+                            reject(new Error(err));
+                        }
+                    });
+                });
+
+                d.action('Annuler', {}, () => reject(new Error('Action annulée')));
+            })
         });
     }
 

@@ -1057,9 +1057,15 @@ function PageBuilder(state, model, readonly = false) {
         };
         tabs_ref.push(tab);
 
+        // We don't want to show actions created inside inactive tabs
+        let prev_actions_len = model.actions.length;
+
         let widgets = captureWidgets([], 'tab', () => func(active));
-        if (active)
+        if (active) {
             widgets_ref.push(...widgets);
+        } else {
+            model.actions.length = prev_actions_len;
+        }
         model.widgets.push(...widgets);
     };
 
