@@ -36,33 +36,11 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config);
 bool LoadConfig(const char *filename, DomainConfig *out_config);
 
 class DomainHolder {
-    struct InstanceGuard {
-        // Keep first!
-        InstanceHolder instance;
-
-        std::atomic_int refcount {0};
-        bool valid = true;
-        bool reload = false;
-
-        InstanceHolder *Ref()
-        {
-            refcount++;
-            return &instance;
-        }
-
-        void Unref()
-        {
-            refcount--;
-        }
-
-        friend class DomainHolder;
-    };
-
     bool synced = true;
 
     std::shared_mutex mutex;
-    HeapArray<InstanceGuard *> instances;
-    HashMap<Span<const char>, InstanceGuard *> instances_map;
+    HeapArray<InstanceHolder *> instances;
+    HashMap<Span<const char>, InstanceHolder *> instances_map;
 
 public:
     DomainConfig config = {};
@@ -80,8 +58,6 @@ public:
     bool Sync();
 
     InstanceHolder *Ref(Span<const char> key, bool *out_reload = nullptr);
-    void Unref(InstanceHolder *instance);
-    void MarkForReload(InstanceHolder *instance);
 };
 
 bool MigrateDomain(sq_Database *db, const char *instances_directory);

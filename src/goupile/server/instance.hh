@@ -24,6 +24,11 @@ static const char *const SyncModeNames[] = {
 };
 
 class InstanceHolder {
+    // Managed by DomainHolder
+    std::atomic_int refcount {0};
+    bool unload = false;
+    bool reload = false;
+
 public:
     int64_t unique = -1;
 
@@ -58,8 +63,13 @@ public:
 
     void Close();
 
+    void Reload() { reload = true; }
+    void Unref() { refcount--; }
+
 private:
     Span<const uint8_t> PatchVariables(const AssetInfo &asset);
+
+    friend class DomainHolder;
 };
 
 bool MigrateInstance(sq_Database *db);

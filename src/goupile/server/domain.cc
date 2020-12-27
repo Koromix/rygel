@@ -169,8 +169,8 @@ void DomainHolder::Close()
     // at this point, but take if for consistency.
     std::lock_guard<std::shared_mutex> lock(mutex);
 
-    for (InstanceGuard *guard: instances) {
-        delete guard;
+    for (InstanceHolder *instance: instances) {
+        delete instance;
     }
     instances.Clear();
     instances_map.Clear();
@@ -180,8 +180,7 @@ void DomainHolder::InitAssets()
 {
     std::shared_lock<std::shared_mutex> lock(mutex);
 
-    for (InstanceGuard *guard: instances) {
-        InstanceHolder *instance = &guard->instance;
+    for (InstanceHolder *instance: instances) {
         instance->InitAssets();
     }
 }
@@ -193,8 +192,8 @@ bool DomainHolder::Sync()
 
     std::lock_guard<std::shared_mutex> lock(mutex);
 
-    HeapArray<InstanceGuard *> new_instances;
-    HashMap<Span<const char>, InstanceGuard *> new_map;
+    HeapArray<InstanceHolder *> new_instances;
+    HashMap<Span<const char>, InstanceHolder *> new_map;
     synced = true;
 
     // Start new instances (if any)
@@ -207,35 +206,35 @@ bool DomainHolder::Sync()
             const char *key = (const char *)sqlite3_column_text(stmt, 0);
             key = DuplicateString(key, &temp_alloc).ptr;
 
-            InstanceGuard *guard = instances_map.FindValue(key, nullptr);
+            InstanceHolder *instance = instances_map.FindValue(key, nullptr);
 
             // Should we reload this (happens when configuration changes)?
-            if (guard && guard->reload) {
-                if (!guard->refcount) {
-                    guard->valid = false;
+            if (instance && instance->reload) {
+                if (!instance->refcount) {
                     instances_map.Remove(key);
+                    instance->unload = true;
 
-                    guard = nullptr;
+                    instance = nullptr;
                 } else {
                     // We will try again later
                     synced = false;
                 }
             }
 
-            if (guard) {
-                new_instances.Append(guard);
-                new_map.Set(guard->instance.key, guard);
+            if (instance) {
+                new_instances.Append(instance);
+                new_map.Set(instance->key, instance);
             } else {
                 LogDebug("Load instance '%1'", key);
 
                 const char *filename = config.GetInstanceFileName(key, &temp_alloc);
-                guard = new InstanceGuard();
+                instance = new InstanceHolder();
 
-                if (guard->instance.Open(key, filename)) {
-                    new_instances.Append(guard);
-                    new_map.Set(guard->instance.key, guard);
+                if (instance->Open(key, filename)) {
+                    new_instances.Append(instance);
+                    new_map.Set(instance->key, instance);
                 } else {
-                    delete guard;
+                    delete instance;
                     synced = false;
                 }
             }
@@ -244,18 +243,16 @@ bool DomainHolder::Sync()
     }
 
     // Drop removed instances (if any)
-    for (InstanceGuard *guard: instances) {
-        InstanceHolder *instance = &guard->instance;
-
-        if (guard->valid && !new_map.Find(instance->key)) {
-            guard->valid = false;
+    for (InstanceHolder *instance: instances) {
+        if (!instance->unload && !new_map.Find(instance->key)) {
             instances_map.Remove(instance->key);
+            instance->unload = true;
         }
 
-        if (!guard->valid) {
-            if (!guard->refcount) {
+        if (instance->unload) {
+            if (!instance->refcount) {
                 LogDebug("Drop instance '%1'", instance->key);
-                delete guard;
+                delete instance;
             } else {
                 // We will try again later
                 synced = false;
@@ -273,35 +270,22 @@ InstanceHolder *DomainHolder::Ref(Span<const char> key, bool *out_reload)
 {
     std::shared_lock<std::shared_mutex> lock(mutex);
 
-    InstanceGuard *guard = instances_map.FindValue(key, nullptr);
+    InstanceHolder *instance = instances_map.FindValue(key, nullptr);
 
-    if (!guard) {
+    if (!instance) {
         if (out_reload) {
             *out_reload = false;
         }
         return nullptr;
-    } else if (guard->reload) {
+    } else if (instance->reload) {
         if (out_reload) {
             *out_reload = true;
         }
         return nullptr;
     }
 
-    return guard->Ref();
-}
-
-void DomainHolder::Unref(InstanceHolder *instance)
-{
-    if (instance) {
-        InstanceGuard *guard = (InstanceGuard *)instance;
-        guard->Unref();
-    }
-}
-
-void DomainHolder::MarkForReload(InstanceHolder *instance)
-{
-    InstanceGuard *guard = (InstanceGuard *)instance;
-    guard->reload = true;
+    instance->refcount++;
+    return instance;
 }
 
 bool MigrateDomain(sq_Database *db, const char *instances_directory)

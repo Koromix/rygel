@@ -696,7 +696,7 @@ void HandleConfigureInstance(const http_RequestInfo &request, http_IO *io)
             io->AttachError(404);
             return;
         }
-        RG_DEFER_N(ref_guard) { goupile_domain.Unref(instance); };
+        RG_DEFER_N(ref_guard) { instance->Unref(); };
 
         decltype(InstanceHolder::config) config = instance->config;
 
@@ -749,8 +749,8 @@ void HandleConfigureInstance(const http_RequestInfo &request, http_IO *io)
             return;
 
         // Reload when you can
-        goupile_domain.MarkForReload(instance);
-        goupile_domain.Unref(instance);
+        instance->Reload();
+        instance->Unref();
         ref_guard.Disable();
 
         if (goupile_domain.Sync()) {
@@ -786,7 +786,7 @@ void HandleListInstances(const http_RequestInfo &request, http_IO *io)
         InstanceHolder *instance = goupile_domain.Ref(key);
         if (!instance)
             continue;
-        RG_DEFER { goupile_domain.Unref(instance); };
+        RG_DEFER { instance->Unref(); };
 
         json.StartObject();
 

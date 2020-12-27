@@ -132,7 +132,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             io->AttachError(reload ? 503 : 404);
             return;
         }
-        io->AddFinalizer([=]() { goupile_domain.Unref(instance); });
+        io->AddFinalizer([=]() { instance->Unref(); });
 
         // Try application files
         if (request.method == http_RequestMethod::Get && HandleFileGet(instance, request, io))
