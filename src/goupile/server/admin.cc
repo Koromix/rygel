@@ -613,12 +613,8 @@ void HandleCreateInstance(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        if (goupile_domain.Sync()) {
-            io->AttachText(200, "Done!");
-        } else {
-            io->AttachText(202, "Mostly done, but some changes will be applied later");
-            SignalWaitFor();
-        }
+        SignalWaitFor();
+        io->AttachText(200, "Done!");
     });
 }
 
@@ -663,12 +659,8 @@ void HandleDeleteInstance(const http_RequestInfo &request, http_IO *io)
         if (!success)
             return;
 
-        if (goupile_domain.Sync()) {
-            io->AttachText(200, "Done!");
-        } else {
-            io->AttachText(202, "Mostly done, but some changes will be applied later");
-            SignalWaitFor();
-        }
+        SignalWaitFor();
+        io->AttachText(200, "Done!");
     });
 }
 
@@ -759,12 +751,8 @@ void HandleConfigureInstance(const http_RequestInfo &request, http_IO *io)
         instance->Unref();
         ref_guard.Disable();
 
-        if (goupile_domain.Sync()) {
-            io->AttachText(200, "Done!");
-        } else {
-            io->AttachText(202, "Mostly done, but some changes will be applied later");
-            SignalWaitFor();
-        }
+        SignalWaitFor();
+        io->AttachText(200, "Done!");
     });
 }
 
