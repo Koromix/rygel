@@ -96,6 +96,15 @@ bool Builder::AddTarget(const TargetInfo &target)
 {
     HeapArray<const char *> obj_filenames;
 
+    // Object commands
+    for (const SourceFileInfo *src: target.sources) {
+        const char *obj_filename = AddSource(*src);
+        if (!obj_filename)
+            return false;
+
+        obj_filenames.Append(obj_filename);
+    }
+
     // Assets
     if (target.pack_filenames.len) {
         const char *src_filename = Fmt(&str_alloc, "%1%/cache%/%2_assets.c",
@@ -151,34 +160,6 @@ bool Builder::AddTarget(const TargetInfo &target)
         }
     }
 
-    // Version string
-    if (target.type == TargetType::Executable) {
-        const char *src_filename = Fmt(&str_alloc, "%1%/cache%/%2.c", build.output_directory, target.name).ptr;
-        const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
-
-        if (!UpdateVersionSource(target.name, build.version_str, build.fake, src_filename))
-            return false;
-
-        Command cmd = {};
-        build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
-                                          false, nullptr, {}, {}, build.env,
-                                          obj_filename, &str_alloc, &cmd);
-
-        const char *text = Fmt(&str_alloc, "Build %1 version file", target.name).ptr;
-        AppendNode(text, obj_filename, cmd, src_filename);
-
-        obj_filenames.Append(obj_filename);
-    }
-
-    // Object commands
-    for (const SourceFileInfo *src: target.sources) {
-        const char *obj_filename = AddSource(*src);
-        if (!obj_filename)
-            return false;
-
-        obj_filenames.Append(obj_filename);
-    }
-
     // Some compilers (such as MSVC) also build PCH object files that need to be linked
     if (build.pch) {
         if (target.c_pch_src) {
@@ -197,6 +178,25 @@ bool Builder::AddTarget(const TargetInfo &target)
                 obj_filenames.Append(obj_filename);
             }
         }
+    }
+
+    // Version string
+    if (target.type == TargetType::Executable) {
+        const char *src_filename = Fmt(&str_alloc, "%1%/cache%/%2.c", build.output_directory, target.name).ptr;
+        const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
+
+        if (!UpdateVersionSource(target.name, build.version_str, build.fake, src_filename))
+            return false;
+
+        Command cmd = {};
+        build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
+                                          false, nullptr, {}, {}, build.env,
+                                          obj_filename, &str_alloc, &cmd);
+
+        const char *text = Fmt(&str_alloc, "Build %1 version file", target.name).ptr;
+        AppendNode(text, obj_filename, cmd, src_filename);
+
+        obj_filenames.Append(obj_filename);
     }
 
     // Link commands

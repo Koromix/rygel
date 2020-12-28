@@ -424,23 +424,31 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         target->cxx_pch_src = CreateSource(target, target_config->cxx_pch_filename, SourceType::CXX);
     }
 
-    // Sort and deduplicate library and object arrays
-    std::sort(target->libraries.begin(), target->libraries.end(),
-              [](const char *lib1, const char *lib2) {
-        return CmpStr(lib1, lib2) < 0;
-    });
-    target->libraries.RemoveFrom(std::unique(target->libraries.begin(), target->libraries.end(),
-                                             [](const char *lib1, const char *lib2) {
-        return TestStr(lib1, lib2);
-    }) - target->libraries.begin());
-    std::stable_sort(target->sources.begin(), target->sources.end(),
-                     [](const SourceFileInfo *src1, const SourceFileInfo *src2) {
-        return CmpStr(src1->filename, src2->filename) < 0;
-    });
-    target->sources.RemoveFrom(std::unique(target->sources.begin(), target->sources.end(),
-                                           [](const SourceFileInfo *src1, const SourceFileInfo *src2) {
-        return TestStr(src1->filename, src2->filename);
-    }) - target->sources.begin());
+    // Deduplicate libraries
+    {
+        HashSet<const char *> handled;
+
+        Size j = 0;
+        for (Size i = 0; i < target->libraries.len; i++) {
+            target->libraries[j] = target->libraries[i];
+            j += handled.TrySet(target->libraries[i]).second;
+        }
+        target->libraries.len = j;
+    }
+
+    // Deduplicate sources
+    {
+        HashSet<const char *> handled;
+
+        Size j = 0;
+        for (Size i = 0; i < target->sources.len; i++) {
+            target->sources[j] = target->sources[i];
+
+            const char *key = target->sources[i]->filename;
+            j += handled.TrySet(key).second;
+        }
+        target->sources.len = j;
+    }
 
     // Gather asset filenames
     if (!ResolveFileSet(target_config->pack_file_set, &set.str_alloc, &target->pack_filenames))
