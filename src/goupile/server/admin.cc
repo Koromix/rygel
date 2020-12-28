@@ -573,6 +573,12 @@ void HandleCreateInstance(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
+    if (goupile_domain.CountInstances() >= MaxInstancesPerDomain) {
+        LogError("This domain has too many instances");
+        io->AttachError(403);
+        return;
+    }
+
     io->RunAsync([=]() {
         // Read POST values
         HashMap<const char *, const char *> values;

@@ -13,6 +13,10 @@
 #include "user.hh"
 #include "../../web/libhttp/libhttp.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
+#ifndef _WIN32
+    #include <sys/time.h>
+    #include <sys/resource.h>
+#endif
 
 namespace RG {
 
@@ -220,6 +224,30 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             }
         }
     }
+
+#ifndef _WIN32
+    {
+        const rlim_t max_nofile = 16384;
+        struct rlimit lim;
+
+        // Increase maximum number of open file descriptors
+        if (getrlimit(RLIMIT_NOFILE, &lim) >= 0) {
+            if (lim.rlim_cur < max_nofile) {
+                lim.rlim_cur = std::min(max_nofile, lim.rlim_max);
+
+                if (setrlimit(RLIMIT_NOFILE, &lim) >= 0) {
+                    if (lim.rlim_cur < max_nofile) {
+                        LogError("Maximum number of open descriptors is low: %1 (recommended: %2)", lim.rlim_cur, max_nofile);
+                    }
+                } else {
+                    LogError("Could not raise RLIMIT_NOFILE to %1: %2", max_nofile, strerror(errno));
+                }
+            }
+        } else {
+            LogError("getrlimit(RLIMIT_NOFILE) failed: %1", strerror(errno));
+        }
+    }
+#endif
 
     LogInfo("Init instances");
     InitAdminAssets();

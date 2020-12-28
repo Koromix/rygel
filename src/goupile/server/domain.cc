@@ -8,6 +8,7 @@
 namespace RG {
 
 const int DomainVersion = 4;
+const int MaxInstancesPerDomain = 4096;
 
 bool DomainConfig::Validate() const
 {
@@ -202,6 +203,8 @@ bool DomainHolder::Sync()
         if (!db.Prepare("SELECT instance FROM dom_instances ORDER BY instance;", &stmt))
             return false;
 
+        bool warned = false;
+
         while (stmt.Next()) {
             const char *key = (const char *)sqlite3_column_text(stmt, 0);
             key = DuplicateString(key, &temp_alloc).ptr;
@@ -224,7 +227,7 @@ bool DomainHolder::Sync()
             if (instance) {
                 new_instances.Append(instance);
                 new_map.Set(instance);
-            } else {
+            } else if (new_instances.len < MaxInstancesPerDomain) {
                 const char *filename = config.GetInstanceFileName(key, &temp_alloc);
                 instance = new InstanceHolder();
 
@@ -235,6 +238,9 @@ bool DomainHolder::Sync()
                     delete instance;
                     synced = false;
                 }
+            } else if (!warned) {
+                LogError("Too many instances on this domain, maximum = %1", MaxInstancesPerDomain);
+                warned = true;
             }
         }
         synced &= stmt.IsValid();

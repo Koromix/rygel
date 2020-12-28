@@ -12,6 +12,7 @@
 namespace RG {
 
 extern const int DomainVersion;
+extern const int MaxInstancesPerDomain;
 
 struct DomainConfig {
     const char *database_filename = nullptr;
@@ -38,7 +39,7 @@ bool LoadConfig(const char *filename, DomainConfig *out_config);
 class DomainHolder {
     bool synced = true;
 
-    std::shared_mutex mutex;
+    mutable std::shared_mutex mutex;
     HeapArray<InstanceHolder *> instances;
     HashTable<Span<const char>, InstanceHolder *> instances_map;
 
@@ -56,6 +57,12 @@ public:
 
     bool IsSynced() const { return synced; }
     bool Sync();
+
+    Size CountInstances() const
+    {
+        std::shared_lock<std::shared_mutex> lock(mutex);
+        return instances_map.count;
+    }
 
     InstanceHolder *Ref(Span<const char> key, bool *out_reload = nullptr);
 };
