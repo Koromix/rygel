@@ -3319,7 +3319,7 @@ WaitForResult WaitForInterrupt(int64_t timeout)
 
 void SignalWaitFor()
 {
-    raise(SIGUSR1);
+    kill(getpid(), SIGUSR1);
 }
 
 #endif

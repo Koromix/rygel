@@ -3661,6 +3661,7 @@ enum class WaitForResult {
 
 // After WaitForInterrupt() has been called once (even with timeout 0), a few
 // signals (such as SIGINT, SIGHUP) and their Windows equivalent will be permanently ignored.
+// Beware, on Unix platforms, this may not work correctly if not called from the main thread.
 WaitForResult WaitForInterrupt(int64_t timeout = -1);
 void SignalWaitFor();
 
