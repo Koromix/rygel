@@ -120,12 +120,12 @@ MHD_basic_auth_get_username_password (struct MHD_Connection *connection,
  * @return #MHD_YES on success, #MHD_NO otherwise
  * @ingroup authentication
  */
-int
+enum MHD_Result
 MHD_queue_basic_auth_fail_response (struct MHD_Connection *connection,
                                     const char *realm,
                                     struct MHD_Response *response)
 {
-  int ret;
+  enum MHD_Result ret;
   int res;
   size_t hlen = strlen (realm) + strlen ("Basic realm=\"\"") + 1;
   char *header;
@@ -151,7 +151,7 @@ MHD_queue_basic_auth_fail_response (struct MHD_Connection *connection,
     ret = MHD_NO;
 
   free (header);
-  if (MHD_YES == ret)
+  if (MHD_NO != ret)
   {
     ret = MHD_queue_response (connection,
                               MHD_HTTP_UNAUTHORIZED,

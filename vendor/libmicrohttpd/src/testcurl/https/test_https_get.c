@@ -107,9 +107,9 @@ ahc_empty (void *cls,
   (void) cls;
   (void) url;
   (void) url;
-  (void) version;  /* Unused. Silent compiler warning. */
+  (void) version;          /* Unused. Silent compiler warning. */
   (void) upload_data;
-  (void) upload_data_size;     /* Unused. Silent compiler warning. */
+  (void) upload_data_size; /* Unused. Silent compiler warning. */
 
   if (0 != strcasecmp ("GET",
                        method))
@@ -236,7 +236,7 @@ main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
   const char *aes256_sha_tlsv1   = "AES256-SHA";
-  (void) argc;   /* Unused. Silent compiler warning. */
+  (void) argc; (void) argv;   /* Unused. Silent compiler warning. */
 
 #ifdef MHD_HTTPS_REQUIRE_GRYPT
   gcry_control (GCRYCTL_ENABLE_QUICK_RANDOM, 0);

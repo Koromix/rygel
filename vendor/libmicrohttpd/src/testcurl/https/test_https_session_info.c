@@ -50,7 +50,7 @@ query_session_ahc (void *cls, struct MHD_Connection *connection,
   struct MHD_Response *response;
   enum MHD_Result ret;
   int gret;
-  (void) cls; (void) url; (void) method; (void) version;       /* Unused. Silent compiler warning. */
+  (void) cls; (void) url; (void) method; (void) version;   /* Unused. Silent compiler warning. */
   (void) upload_data; (void) upload_data_size;             /* Unused. Silent compiler warning. */
 
   if (NULL == *ptr)

@@ -213,12 +213,12 @@ MHD_parse_arguments_ (struct MHD_Connection *connection,
         key_len = daemon->unescape_callback (daemon->unescape_callback_cls,
                                              connection,
                                              args);
-        if (MHD_YES != cb (connection,
-                           args,
-                           key_len,
-                           NULL,
-                           0,
-                           kind))
+        if (MHD_NO == cb (connection,
+                          args,
+                          key_len,
+                          NULL,
+                          0,
+                          kind))
           return MHD_NO;
         (*num_headers)++;
         break;
@@ -234,12 +234,12 @@ MHD_parse_arguments_ (struct MHD_Connection *connection,
       value_len = daemon->unescape_callback (daemon->unescape_callback_cls,
                                              connection,
                                              equals);
-      if (MHD_YES != cb (connection,
-                         args,
-                         key_len,
-                         equals,
-                         value_len,
-                         kind))
+      if (MHD_NO == cb (connection,
+                        args,
+                        key_len,
+                        equals,
+                        value_len,
+                        kind))
         return MHD_NO;
       (*num_headers)++;
       break;
@@ -255,12 +255,12 @@ MHD_parse_arguments_ (struct MHD_Connection *connection,
       key_len = daemon->unescape_callback (daemon->unescape_callback_cls,
                                            connection,
                                            args);
-      if (MHD_YES != cb (connection,
-                         args,
-                         key_len,
-                         NULL,
-                         0,
-                         kind))
+      if (MHD_NO == cb (connection,
+                        args,
+                        key_len,
+                        NULL,
+                        0,
+                        kind))
         return MHD_NO;
       /* continue with 'bar' */
       (*num_headers)++;
@@ -279,12 +279,12 @@ MHD_parse_arguments_ (struct MHD_Connection *connection,
     value_len = daemon->unescape_callback (daemon->unescape_callback_cls,
                                            connection,
                                            equals);
-    if (MHD_YES != cb (connection,
-                       args,
-                       key_len,
-                       equals,
-                       value_len,
-                       kind))
+    if (MHD_NO == cb (connection,
+                      args,
+                      key_len,
+                      equals,
+                      value_len,
+                      kind))
       return MHD_NO;
     (*num_headers)++;
     args = amper;

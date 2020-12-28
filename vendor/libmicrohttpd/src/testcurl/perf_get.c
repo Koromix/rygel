@@ -51,18 +51,26 @@
 #include <sys/socket.h>
 #endif
 
-#if defined(CPU_COUNT) && (CPU_COUNT + 0) < 2
-#undef CPU_COUNT
+#if defined(MHD_CPU_COUNT) && (MHD_CPU_COUNT + 0) < 2
+#undef MHD_CPU_COUNT
 #endif
-#if ! defined(CPU_COUNT)
-#define CPU_COUNT 2
+#if ! defined(MHD_CPU_COUNT)
+#define MHD_CPU_COUNT 2
 #endif
 
 /**
  * How many rounds of operations do we do for each
  * test?
  */
+#if MHD_CPU_COUNT > 8
+#ifndef _WIN32
+#define ROUNDS (1 + (30000 / 12) / MHD_CPU_COUNT)
+#else /* _WIN32 */
+#define ROUNDS (1 + (3000 / 12) / MHD_CPU_COUNT)
+#endif /* _WIN32 */
+#else
 #define ROUNDS 500
+#endif
 
 /**
  * Do we use HTTP 1.1?
@@ -360,7 +368,8 @@ testMultithreadedPoolGet (int port, int poll_flag)
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG
                         | poll_flag,
                         port, NULL, NULL, &ahc_echo, "GET",
-                        MHD_OPTION_THREAD_POOL_SIZE, CPU_COUNT, MHD_OPTION_END);
+                        MHD_OPTION_THREAD_POOL_SIZE, MHD_CPU_COUNT,
+                        MHD_OPTION_END);
   if (d == NULL)
     return 16;
   if (0 == port)
@@ -569,7 +578,8 @@ testExternalGet (int port)
          in actual runtime right now, even though the
          number of select calls is virtually cut in half
          (and 'select' is the most expensive of our system
-         calls according to 'strace') */if (0)
+         calls according to 'strace') */
+      if (0)
         MHD_run (d);
       else
         MHD_run_from_select (d, &rs, &ws, &es);

@@ -150,8 +150,6 @@ libmicrohttpd_la_SOURCES += \
   connection_https.c connection_https.h
 endif
 
-.NOTPARALLEL:
-
 check_PROGRAMS = \
   test_str_compare \
   test_str_to_value \
@@ -233,7 +231,7 @@ test_upgrade_LDADD = \
   $(PTHREAD_LIBS)
 
 test_upgrade_large_SOURCES = \
-  test_upgrade_large.c test_helpers.h mhd_sockets.h
+  test_upgrade_large.c test_helpers.h mhd_sockets.h mhd_sockets.c mhd_itc.h mhd_itc_types.h mhd_itc.c
 test_upgrade_large_CPPFLAGS = \
   $(AM_CPPFLAGS) $(MHD_TLS_LIB_CPPFLAGS)
 test_upgrade_large_CFLAGS = \
@@ -259,7 +257,7 @@ test_upgrade_tls_LDADD = \
   $(PTHREAD_LIBS)
 
 test_upgrade_large_tls_SOURCES = \
-  test_upgrade_large.c test_helpers.h mhd_sockets.h
+  test_upgrade_large.c test_helpers.h mhd_sockets.h mhd_sockets.c mhd_itc.h mhd_itc_types.h mhd_itc.c
 test_upgrade_large_tls_CPPFLAGS = \
   $(AM_CPPFLAGS) $(MHD_TLS_LIB_CPPFLAGS)
 test_upgrade_large_tls_CFLAGS = \
@@ -297,6 +295,13 @@ test_postprocessor_large_CFLAGS = \
   $(AM_CFLAGS) $(MHD_TLS_LIB_CFLAGS)
 test_postprocessor_large_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la
+
+test_postprocessor_md_SOURCES = \
+  test_postprocessor_md.c
+test_postprocessor_md_CPPFLAGS = \
+  $(AM_CPPFLAGS) $(MHD_TLS_LIB_CPPFLAGS)
+test_postprocessor_md_CFLAGS = \
+  $(AM_CFLAGS) $(MHD_TLS_LIB_CFLAGS)
 
 test_shutdown_select_SOURCES = \
   test_shutdown_select.c
@@ -342,9 +347,6 @@ test_str_to_value_SOURCES = \
 
 test_str_token_SOURCES = \
   test_str_token.c mhd_str.c
-
-test_postprocessor_md_SOURCES = \
-  test_postprocessor_md.c
 
 test_http_reasons_SOURCES = \
   test_http_reasons.c \

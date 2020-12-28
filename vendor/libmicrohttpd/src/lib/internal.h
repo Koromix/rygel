@@ -831,7 +831,7 @@ struct UpgradeEpollHandle
    *
    * Similarly, for writing to TLS, this epoll() will be on the
    * connection's `socket_fd`, and this will merely be the FD which
-   * the applicatio would write to.  Hence this struct must always be
+   * the application would write to.  Hence this struct must always be
    * interpreted based on which field in `struct
    * MHD_UpgradeResponseHandle` it is (`app` or `mhd`).
    */

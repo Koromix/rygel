@@ -48,11 +48,11 @@
 #include <sys/socket.h>
 #endif
 
-#if defined(CPU_COUNT) && (CPU_COUNT + 0) < 2
-#undef CPU_COUNT
+#if defined(MHD_CPU_COUNT) && (MHD_CPU_COUNT + 0) < 2
+#undef MHD_CPU_COUNT
 #endif
-#if ! defined(CPU_COUNT)
-#define CPU_COUNT 2
+#if ! defined(MHD_CPU_COUNT)
+#define MHD_CPU_COUNT 2
 #endif
 
 static int oneone;
@@ -341,7 +341,7 @@ testMultithreadedPoolGet (int poll_flag)
                         | poll_flag,
                         global_port, NULL, NULL,
                         &ahc_echo, "GET",
-                        MHD_OPTION_THREAD_POOL_SIZE, CPU_COUNT,
+                        MHD_OPTION_THREAD_POOL_SIZE, MHD_CPU_COUNT,
                         MHD_OPTION_URI_LOG_CALLBACK, &log_cb, NULL,
                         MHD_OPTION_END);
   if (d == NULL)
@@ -730,9 +730,9 @@ ahc_empty (void *cls,
   (void) cls;
   (void) url;
   (void) url;
-  (void) version;  /* Unused. Silent compiler warning. */
+  (void) version;          /* Unused. Silent compiler warning. */
   (void) upload_data;
-  (void) upload_data_size;     /* Unused. Silent compiler warning. */
+  (void) upload_data_size; /* Unused. Silent compiler warning. */
 
   if (0 != strcasecmp ("GET", method))
     return MHD_NO;              /* unexpected method */

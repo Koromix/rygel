@@ -69,13 +69,13 @@ ahc_echo (void *cls,
     *ptr = &aptr;
     return MHD_YES;
   }
-  *ptr = NULL;                  /* reset when done */
+  *ptr = NULL;                     /* reset when done */
   /* WARNING: direct usage of url as filename is for example only!
    * NEVER pass received data directly as parameter to file manipulation
    * functions. Always check validity of data before using.
    */
   if (NULL != strstr (url, "../")) /* Very simplified check! */
-    fd = -1; /* Do not allow usage of parent directories. */
+    fd = -1;                       /* Do not allow usage of parent directories. */
   else
     fd = open (url + 1, O_RDONLY);
   if (-1 != fd)

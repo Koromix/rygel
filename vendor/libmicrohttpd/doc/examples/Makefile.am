@@ -12,10 +12,14 @@ endif
 
 # example programs
 noinst_PROGRAMS = \
-  basicauthentication \
   hellobrowser \
   logging \
-  responseheaders 
+  responseheaders
+  
+if ENABLE_BAUTH
+noinst_PROGRAMS += \
+  basicauthentication
+endif
 
 if ENABLE_HTTPS
 noinst_PROGRAMS += \

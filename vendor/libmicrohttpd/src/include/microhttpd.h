@@ -130,9 +130,10 @@ typedef intptr_t ssize_t;
 
 /**
  * Current version of the library.
- * 0x01093001 = 1.9.30-1.
+ * @note While it is a hexadecimal number, it is parsed as decimal number.
+ * Example: 0x01093001 = 1.9.30-1.
  */
-#define MHD_VERSION 0x00097002
+#define MHD_VERSION 0x00097200
 
 /**
  * Operational results from MHD calls.
@@ -539,7 +540,7 @@ MHD_get_reason_phrase_for (unsigned int code);
  * @defgroup headers HTTP headers
  * These are the standard headers found in HTTP requests and responses.
  * See: http://www.iana.org/assignments/message-headers/message-headers.xml
- * Registry export date: 2019-06-09
+ * Registry export date: 2020-09-20
  * @{
  */
 
@@ -646,6 +647,8 @@ MHD_get_reason_phrase_for (unsigned int code);
 #define MHD_HTTP_HEADER_A_IM "A-IM"
 /* No category.   RFC4229 */
 #define MHD_HTTP_HEADER_ACCEPT_ADDITIONS "Accept-Additions"
+/* Experimental.  RFC-ietf-httpbis-client-hints-15, Section 3.1 */
+#define MHD_HTTP_HEADER_ACCEPT_CH "Accept-CH"
 /* Informational. RFC7089 */
 #define MHD_HTTP_HEADER_ACCEPT_DATETIME "Accept-Datetime"
 /* No category.   RFC4229 */
@@ -684,6 +687,10 @@ MHD_get_reason_phrase_for (unsigned int code);
 #define MHD_HTTP_HEADER_CALDAV_TIMEZONES "CalDAV-Timezones"
 /* Standard.      RFC8586 */
 #define MHD_HTTP_HEADER_CDN_LOOP "CDN-Loop"
+/* Standard.      RFC8739, Section 3.3 */
+#define MHD_HTTP_HEADER_CERT_NOT_AFTER "Cert-Not-After"
+/* Standard.      RFC8739, Section 3.3 */
+#define MHD_HTTP_HEADER_CERT_NOT_BEFORE "Cert-Not-Before"
 /* Obsoleted.     RFC2068; RFC2616 */
 #define MHD_HTTP_HEADER_CONTENT_BASE "Content-Base"
 /* Standard.      RFC6266 */
@@ -759,6 +766,14 @@ MHD_get_reason_phrase_for (unsigned int code);
 #define MHD_HTTP_HEADER_METER "Meter"
 /* No category.   RFC4229 */
 #define MHD_HTTP_HEADER_NEGOTIATE "Negotiate"
+/* Standard.      OData Version 4.01 Part 1: Protocol; OASIS; Chet_Ensign */
+#define MHD_HTTP_HEADER_ODATA_ENTITYID "OData-EntityId"
+/* Standard.      OData Version 4.01 Part 1: Protocol; OASIS; Chet_Ensign */
+#define MHD_HTTP_HEADER_ODATA_ISOLATION "OData-Isolation"
+/* Standard.      OData Version 4.01 Part 1: Protocol; OASIS; Chet_Ensign */
+#define MHD_HTTP_HEADER_ODATA_MAXVERSION "OData-MaxVersion"
+/* Standard.      OData Version 4.01 Part 1: Protocol; OASIS; Chet_Ensign */
+#define MHD_HTTP_HEADER_ODATA_VERSION "OData-Version"
 /* No category.   RFC4229 */
 #define MHD_HTTP_HEADER_OPT "Opt"
 /* Experimental.  RFC8053, Section 3 */
@@ -767,7 +782,7 @@ MHD_get_reason_phrase_for (unsigned int code);
 #define MHD_HTTP_HEADER_ORDERING_TYPE "Ordering-Type"
 /* Standard.      RFC6454 */
 #define MHD_HTTP_HEADER_ORIGIN "Origin"
-/* Standard.      RFC-ietf-core-object-security-16, Section 11.1 */
+/* Standard.      RFC8613, Section 11.1 */
 #define MHD_HTTP_HEADER_OSCORE "OSCORE"
 /* Standard.      RFC4918 */
 #define MHD_HTTP_HEADER_OVERWRITE "Overwrite"
@@ -893,7 +908,7 @@ MHD_get_reason_phrase_for (unsigned int code);
  * @defgroup methods HTTP methods
  * HTTP methods (as strings).
  * See: http://www.iana.org/assignments/http-methods/http-methods.xml
- * Registry export date: 2019-06-09
+ * Registry export date: 2020-09-20
  * @{
  */
 
@@ -3127,6 +3142,20 @@ MHD_create_response_from_fd (size_t size,
 
 /**
  * Create a response object.  The response object can be extended with
+ * header information and then be used ONLY ONCE.
+ *
+ * @param fd file descriptor referring to a read-end of a pipe with the
+ *        data; will be closed when response is destroyed;
+ *        fd should be in 'blocking' mode
+ * @return NULL on error (i.e. invalid arguments, out of memory)
+ * @ingroup response
+ */
+_MHD_EXTERN struct MHD_Response *
+MHD_create_response_from_pipe (int fd);
+
+
+/**
+ * Create a response object.  The response object can be extended with
  * header information and then be used any number of times.
  *
  * @param size size of the data portion of the response;
@@ -3745,7 +3774,7 @@ MHD_basic_auth_get_username_password (struct MHD_Connection *connection,
  * @return #MHD_YES on success, #MHD_NO otherwise
  * @ingroup authentication
  */
-_MHD_EXTERN int
+_MHD_EXTERN enum MHD_Result
 MHD_queue_basic_auth_fail_response (struct MHD_Connection *connection,
                                     const char *realm,
                                     struct MHD_Response *response);

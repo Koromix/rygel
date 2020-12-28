@@ -122,6 +122,10 @@
 typedef intptr_t ssize_t;
 #endif /* !_SSIZE_T_DEFINED */
 
+#ifdef __FreeBSD__
+#include <sys/param.h> /* For __FreeBSD_version */
+#endif /* __FreeBSD__ */
+
 #include "mhd_limits.h"
 
 #ifdef _MHD_FD_SETSIZE_IS_DEFAULT
@@ -157,27 +161,27 @@ typedef SOCKET MHD_socket;
 #endif /* ! MHD_SOCKET_DEFINED */
 
 #ifdef SOCK_CLOEXEC
-#  define MAYBE_SOCK_CLOEXEC SOCK_CLOEXEC
+#  define SOCK_CLOEXEC_OR_ZERO SOCK_CLOEXEC
 #else  /* ! SOCK_CLOEXEC */
-#  define MAYBE_SOCK_CLOEXEC 0
+#  define SOCK_CLOEXEC_OR_ZERO 0
 #endif /* ! SOCK_CLOEXEC */
 
 #ifdef HAVE_SOCK_NONBLOCK
-#  define MAYBE_SOCK_NONBLOCK SOCK_NONBLOCK
+#  define SOCK_NONBLOCK_OR_ZERO SOCK_NONBLOCK
 #else  /* ! HAVE_SOCK_NONBLOCK */
-#  define MAYBE_SOCK_NONBLOCK 0
+#  define SOCK_NONBLOCK_OR_ZERO 0
 #endif /* ! HAVE_SOCK_NONBLOCK */
 
 #ifdef SOCK_NOSIGPIPE
-#  define MAYBE_SOCK_NOSIGPIPE SOCK_NOSIGPIPE
+#  define SOCK_NOSIGPIPE_OR_ZERO SOCK_NOSIGPIPE
 #else  /* ! HAVE_SOCK_NONBLOCK */
-#  define MAYBE_SOCK_NOSIGPIPE 0
+#  define SOCK_NOSIGPIPE_OR_ZERO 0
 #endif /* ! HAVE_SOCK_NONBLOCK */
 
 #ifdef MSG_NOSIGNAL
-#  define MAYBE_MSG_NOSIGNAL MSG_NOSIGNAL
+#  define MSG_NOSIGNAL_OR_ZERO MSG_NOSIGNAL
 #else  /* ! MSG_NOSIGNAL */
-#  define MAYBE_MSG_NOSIGNAL 0
+#  define MSG_NOSIGNAL_OR_ZERO 0
 #endif /* ! MSG_NOSIGNAL */
 
 #if ! defined(SHUT_WR) && defined(SD_SEND)
@@ -218,6 +222,61 @@ typedef SOCKET MHD_socket;
  */
 #define MHD_TCP_CORK_NOPUSH TCP_NOPUSH
 #endif /* TCP_NOPUSH */
+
+
+#ifdef MHD_TCP_CORK_NOPUSH
+#ifdef __linux__
+/**
+ * Indicate that reset of TCP_CORK / TCP_NOPUSH push data to the network
+ */
+#define _MHD_CORK_RESET_PUSH_DATA 1
+/**
+ * Indicate that reset of TCP_CORK / TCP_NOPUSH push data to the network
+ * even if TCP_CORK/TCP_NOPUSH was in switched off state.
+ */
+#define _MHD_CORK_RESET_PUSH_DATA_ALWAYS 1
+#endif /* __linux__ */
+#if defined(__FreeBSD__) && \
+  ((__FreeBSD__ + 0) >= 5 || (__FreeBSD_version + 0) >= 450000)
+/* FreeBSD pushes data to the network with reset of TCP_NOPUSH
+ * starting from version 4.5. */
+/**
+ * Indicate that reset of TCP_CORK / TCP_NOPUSH push data to the network
+ */
+#define _MHD_CORK_RESET_PUSH_DATA 1
+#endif /* __FreeBSD_version >= 450000 */
+#ifdef __OpenBSD__
+/* OpenBSD took implementation from FreeBSD */
+/**
+ * Indicate that reset of TCP_CORK / TCP_NOPUSH push data to the network
+ */
+#define _MHD_CORK_RESET_PUSH_DATA 1
+#endif /* __OpenBSD__ */
+#endif /* MHD_TCP_CORK_NOPUSH */
+
+#ifdef __linux__
+/**
+ * Indicate that set of TCP_NODELAY push data to the network
+ */
+#define _MHD_NODELAY_SET_PUSH_DATA 1
+/**
+ * Indicate that set of TCP_NODELAY push data to the network even
+ * if TCP_DELAY was already set and regardless of TCP_CORK / TCP_NOPUSH state
+ */
+#define _MHD_NODELAY_SET_PUSH_DATA_ALWAYS 1
+#endif /* __linux__ */
+
+#ifdef MSG_MORE
+#ifdef __linux__
+/* MSG_MORE signal kernel to buffer outbond data and works like
+ * TCP_CORK per call without actually setting TCP_CORK value.
+ * It's known to work on Linux. Add more OSes if they are compatible. */
+/**
+ * Indicate MSG_MORE is usable for buffered send().
+ */
+#define MHD_USE_MSG_MORE 1
+#endif /* __linux__ */
+#endif /* MSG_MORE */
 
 
 /**
@@ -276,15 +335,26 @@ typedef int MHD_SCKT_SEND_SIZE_;
 
 
 /**
- * MHD_send_ is wrapper for system's send()
+ * MHD_send4_ is a wrapper for system's send()
+ * @param s the socket to use
+ * @param b the buffer with data to send
+ * @param l the length of data in @a b
+ * @param f the additional flags
+ * @return ssize_t type value
+ */
+#define MHD_send4_(s,b,l,f) \
+  ((ssize_t) send ((s),(const void*) (b),(MHD_SCKT_SEND_SIZE_) (l), \
+                   ((MSG_NOSIGNAL_OR_ZERO) | (f))))
+
+
+/**
+ * MHD_send_ is a simple wrapper for system's send()
  * @param s the socket to use
  * @param b the buffer with data to send
  * @param l the length of data in @a b
  * @return ssize_t type value
  */
-#define MHD_send_(s,b,l) \
-  ((ssize_t) send ((s),(const void*) (b),(MHD_SCKT_SEND_SIZE_) (l), \
-                   MAYBE_MSG_NOSIGNAL))
+#define MHD_send_(s,b,l) MHD_send4_((s),(b),(l), 0)
 
 
 /**
@@ -861,9 +931,20 @@ static const int _MHD_socket_int_one = 1;
 #define MHD_socket_nosignal_(sock) \
   (! setsockopt ((sock),SOL_SOCKET,SO_NOSIGPIPE,&_MHD_socket_int_one, \
                  sizeof(_MHD_socket_int_one)))
-#elif defined(MHD_POSIX_SOCKETS) && defined(SOCK_NOSIGPIPE) && \
-  defined(SOCK_CLOEXEC)
-#endif
+#endif /* SOL_SOCKET && SO_NOSIGPIPE */
+
+
+#if defined(MHD_WINSOCK_SOCKETS) || defined(MHD_socket_nosignal_) || \
+  defined(MSG_NOSIGNAL)
+/**
+ * Indicate that SIGPIPE can be suppressed for normal send() by flags
+ * or socket options.
+ * If this macro is undefined, MHD cannot suppress SIGPIPE for normal
+ * processing so sendfile() or writev() calls is not avoided.
+ */
+#define HAVE_SEND_SIGPIPE_SUPPRESS      1
+#endif /* MHD_WINSOCK_SOCKETS || MHD_socket_nosignal_ || MSG_NOSIGNAL */
+
 
 /**
  * Create a listen socket, with noninheritable flag if possible.
@@ -873,5 +954,6 @@ static const int _MHD_socket_int_one = 1;
  */
 MHD_socket
 MHD_socket_create_listen_ (int pf);
+
 
 #endif /* ! MHD_SOCKETS_H */

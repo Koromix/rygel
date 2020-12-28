@@ -49,7 +49,8 @@
 #if defined(HAVE_PTHREAD_ATTR_SETNAME_NP_NETBSD) || \
   defined(HAVE_PTHREAD_ATTR_SETNAME_NP_IBMI)
 #  define MHD_USE_THREAD_ATTR_SETNAME 1
-#endif /* HAVE_PTHREAD_ATTR_SETNAME_NP_NETBSD || HAVE_PTHREAD_ATTR_SETNAME_NP_IBMI */
+#endif \
+  /* HAVE_PTHREAD_ATTR_SETNAME_NP_NETBSD || HAVE_PTHREAD_ATTR_SETNAME_NP_IBMI */
 
 #if defined(HAVE_PTHREAD_SETNAME_NP_GNU) || \
   defined(HAVE_PTHREAD_SET_NAME_NP_FREEBSD) \
@@ -80,7 +81,8 @@ MHD_set_thread_name_ (const MHD_thread_ID_ thread_id,
    *                         third argument is single argument for printf;
    * OSF1 use 3 arguments too, but last one always must be zero (NULL).
    * MHD doesn't use '%' in thread names, so both form are used in same way.
-   */return ! pthread_setname_np (thread_id, thread_name, 0);
+   */
+  return ! pthread_setname_np (thread_id, thread_name, 0);
 #endif /* HAVE_PTHREAD_SETNAME_NP_NETBSD */
 }
 
@@ -310,7 +312,8 @@ MHD_create_named_thread_ (MHD_thread_handle_ID_ *thread,
      *                         third argument is single argument for printf;
      * OSF1 use 3 arguments too, but last one always must be zero (NULL).
      * MHD doesn't use '%' in thread names, so both form are used in same way.
-     */res = pthread_attr_setname_np (&attr,
+     */
+    res = pthread_attr_setname_np (&attr,
                                    thread_name,
                                    0);
 #elif defined(HAVE_PTHREAD_ATTR_SETNAME_NP_IBMI)

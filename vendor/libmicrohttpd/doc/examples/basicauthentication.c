@@ -26,7 +26,7 @@ answer_to_connection (void *cls, struct MHD_Connection *connection,
   char *user;
   char *pass;
   int fail;
-  int ret;
+  enum MHD_Result ret;
   struct MHD_Response *response;
   (void) cls;               /* Unused. Silent compiler warning. */
   (void) url;               /* Unused. Silent compiler warning. */

@@ -33,23 +33,17 @@
 #include <pthread.h>
 #include "gauger.h"
 
-#if defined(CPU_COUNT) && (CPU_COUNT + 0) < 2
-#undef CPU_COUNT
+#if defined(MHD_CPU_COUNT) && (MHD_CPU_COUNT + 0) < 2
+#undef MHD_CPU_COUNT
 #endif
-#if ! defined(CPU_COUNT)
-#define CPU_COUNT 2
+#if ! defined(MHD_CPU_COUNT)
+#define MHD_CPU_COUNT 2
 #endif
-
-/**
- * How many rounds of operations do we do for each
- * test (total number of requests will be ROUNDS * PAR).
- */
-#define ROUNDS 50000
 
 /**
  * How many requests do we do in parallel?
  */
-#define PAR (CPU_COUNT * 4)
+#define PAR (MHD_CPU_COUNT * 4)
 
 /**
  * Do we use HTTP 1.1?
@@ -72,6 +66,11 @@ static volatile int continue_requesting;
 static volatile int watchdog_continue;
 
 static const char *watchdog_obj;
+
+/**
+ * Indicate that client detected error
+ */
+static volatile CURLcode client_error;
 
 static void *
 thread_watchdog (void *param)
@@ -142,9 +141,9 @@ ahc_echo (void *cls,
           const char *version,
           const char *upload_data,
           size_t *upload_data_size,
-          void **unused)
+          void **usr_data)
 {
-  static int ptr;
+  static int marker;
   const char *me = cls;
   enum MHD_Result ret;
   (void) url; (void) version;                      /* Unused. Silent compiler warning. */
@@ -152,12 +151,12 @@ ahc_echo (void *cls,
 
   if (0 != strcmp (me, method))
     return MHD_NO;              /* unexpected method */
-  if (&ptr != *unused)
+  if (&marker != *usr_data)
   {
-    *unused = &ptr;
+    *usr_data = &marker;
     return MHD_YES;
   }
-  *unused = NULL;
+  *usr_data = NULL;
   ret = MHD_queue_response (connection,
                             MHD_HTTP_OK,
                             response);
@@ -201,6 +200,7 @@ thread_gets (void *param)
     if (CURLE_OK != errornum)
     {
       curl_easy_cleanup (c);
+      client_error = errornum;
       return NULL;
     }
   }
@@ -264,7 +264,9 @@ testMultithreadedGet (int port,
 {
   struct MHD_Daemon *d;
   pthread_t p;
+  int result;
 
+  result = 0;
   d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
                         | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG
                         | poll_flag,
@@ -284,14 +286,21 @@ testMultithreadedGet (int port,
     }
     port = (int) dinfo->port;
   }
+  client_error = CURLE_OK; /* clear client error state */
   p = start_gets (port);
   (void) sleep (1);
   start_watchdog (10, "daemon_stop() in testMultithreadedGet");
+  if (CURLE_OK != client_error) /* poor sync, but enough for test */
+  {
+    result = 64;
+    fprintf (stderr, "libcurl reported at least one error: \"%s\"\n",
+             curl_easy_strerror (client_error));
+  }
   MHD_stop_daemon (d);
   stop_watchdog ();
   continue_requesting = 0;
   pthread_join (p, NULL);
-  return 0;
+  return result;
 }
 
 
@@ -301,13 +310,15 @@ testMultithreadedPoolGet (int port,
 {
   struct MHD_Daemon *d;
   pthread_t p;
+  int result;
 
+  result = 0;
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG
                         | poll_flag,
                         port,
                         NULL, NULL,
                         &ahc_echo, "GET",
-                        MHD_OPTION_THREAD_POOL_SIZE, CPU_COUNT,
+                        MHD_OPTION_THREAD_POOL_SIZE, MHD_CPU_COUNT,
                         MHD_OPTION_END);
   if (d == NULL)
     return 16;
@@ -321,14 +332,21 @@ testMultithreadedPoolGet (int port,
     }
     port = (int) dinfo->port;
   }
+  client_error = CURLE_OK; /* clear client error state */
   p = start_gets (port);
   (void) sleep (1);
   start_watchdog (10, "daemon_stop() in testMultithreadedPoolGet");
+  if (CURLE_OK != client_error) /* poor sync, but enough for test */
+  {
+    result = 64;
+    fprintf (stderr, "libcurl reported at least one error: \"%s\"\n",
+             curl_easy_strerror (client_error));
+  }
   MHD_stop_daemon (d);
   stop_watchdog ();
   continue_requesting = 0;
   pthread_join (p, NULL);
-  return 0;
+  return result;
 }
 
 

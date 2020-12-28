@@ -28,7 +28,7 @@
 
 struct MD5Context
 {
-  uint32_t state[4];      /* state */
+  uint32_t state[4];  /* state */
   uint64_t count;     /* number of bytes, mod 2^64 */
   uint8_t buffer[MD5_BLOCK_SIZE]; /* input buffer */
 };

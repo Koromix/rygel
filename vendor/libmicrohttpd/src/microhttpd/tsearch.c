@@ -24,7 +24,7 @@ typedef struct node
 /*	$NetBSD: tsearch.c,v 1.5 2005/11/29 03:12:00 christos Exp $	*/
 /* find or insert datum into search tree */
 void *
-tsearch (const void *vkey,    /* key to be located */
+tsearch (const void *vkey,  /* key to be located */
          void **vrootp,     /* address of tree root */
          int (*compar)(const void *, const void *))
 {
@@ -38,19 +38,19 @@ tsearch (const void *vkey,    /* key to be located */
   {   /* Knuth's T1: */
     int r;
 
-    if ((r = (*compar)(vkey, (*rootp)->key)) == 0)    /* T2: */
-      return *rootp;      /* we found it! */
+    if ((r = (*compar)(vkey, (*rootp)->key)) == 0) /* T2: */
+      return *rootp;                               /* we found it! */
 
     rootp = (r < 0) ?
             &(*rootp)->llink : /* T3: follow left branch */
             &(*rootp)->rlink; /* T4: follow right branch */
   }
 
-  q = malloc (sizeof(node_t));    /* T5: key not found */
+  q = malloc (sizeof(node_t)); /* T5: key not found */
   if (q)
-  {         /* make new node */
-    *rootp = q;       /* link new node to old */
-    q->key = vkey;      /* initialize new node */
+  {                            /* make new node */
+    *rootp = q;                /* link new node to old */
+    q->key = vkey;             /* initialize new node */
     q->llink = q->rlink = NULL;
   }
   return q;
@@ -73,8 +73,8 @@ tfind (const void *vkey,         /* key to be found */
   {     /* T1: */
     int r;
 
-    if ((r = (*compar)(vkey, (*rootp)->key)) == 0)    /* T2: */
-      return *rootp;      /* key found */
+    if ((r = (*compar)(vkey, (*rootp)->key)) == 0) /* T2: */
+      return *rootp;                               /* key found */
     rootp = (r < 0) ?
             &(*rootp)->llink : /* T3: follow left branch */
             &(*rootp)->rlink; /* T4: follow right branch */
@@ -112,17 +112,17 @@ tdelete (const void *__restrict vkey,
             &(*rootp)->llink : /* follow llink branch */
             &(*rootp)->rlink; /* follow rlink branch */
     if (*rootp == NULL)
-      return NULL;      /* key not found */
+      return NULL;                   /* key not found */
   }
-  r = (*rootp)->rlink;      /* D1: */
-  if ((q = (*rootp)->llink) == NULL)  /* Left NULL? */
+  r = (*rootp)->rlink;               /* D1: */
+  if ((q = (*rootp)->llink) == NULL) /* Left NULL? */
   {
     q = r;
   }
   else if (r != NULL)
   {       /* Right link is NULL? */
     if (r->llink == NULL)
-    {       /* D2: Find successor */
+    {     /* D2: Find successor */
       r->llink = q;
       q = r;
     }
@@ -135,7 +135,7 @@ tdelete (const void *__restrict vkey,
       q->rlink = (*rootp)->rlink;
     }
   }
-  free (*rootp);       /* D4: Free node */
+  free (*rootp);    /* D4: Free node */
   *rootp = q;       /* link parent to new node */
   return p;
 }

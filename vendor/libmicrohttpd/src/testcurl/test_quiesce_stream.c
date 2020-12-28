@@ -143,7 +143,7 @@ http_AccessHandlerCallback (void *cls,
                             void **con_cls)
 {
   enum MHD_Result ret;
-  (void) cls; (void) url;                          /* Unused. Silent compiler warning. */
+  (void) cls; (void) url;                        /* Unused. Silent compiler warning. */
   (void) method; (void) version; (void) upload_data; /* Unused. Silent compiler warning. */
   (void) upload_data_size;                       /* Unused. Silent compiler warning. */
 

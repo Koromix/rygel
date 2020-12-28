@@ -36,7 +36,7 @@
   "<title>WebSocket chat</title>\n"                                           \
   "<script>\n"                                                                \
   "document.addEventListener('DOMContentLoaded', function() {\n"              \
-  "  const ws = new WebSocket('ws://' + window.location.host);\n"             \
+  "  const ws = new WebSocket('ws:// ' + window.location.host);\n"        /*  \
   "  const btn = document.getElementById('send');\n"                          \
   "  const msg = document.getElementById('msg');\n"                           \
   "  const log = document.getElementById('log');\n"                           \
@@ -69,7 +69,7 @@
   "<input type='button' id='send' value='Send' /><br /><br />\n"              \
   "<textarea id='log' rows='20' cols='28'></textarea>\n"                      \
   "</body>\n"                                                                 \
-  "</html>"
+  "</html>"                                                               */
 #define BAD_REQUEST_PAGE                                                      \
   "<html>\n"                                                                  \
   "<head>\n"                                                                  \
@@ -101,7 +101,7 @@
 
 #define MAX_CLIENTS 10
 
-static int CLIENT_SOCKS[MAX_CLIENTS];
+static MHD_socket CLIENT_SOCKS[MAX_CLIENTS];
 
 static pthread_mutex_t MUTEX = PTHREAD_MUTEX_INITIALIZER;
 
@@ -482,7 +482,7 @@ ws_get_accept_value (const char *key, char **val)
   char *str;
   ssize_t len;
 
-  if (NULL == key)
+  if ( (NULL == key) || (WS_KEY_LEN != strlen (key)))
   {
     return MHD_NO;
   }
@@ -491,8 +491,8 @@ ws_get_accept_value (const char *key, char **val)
   {
     return MHD_NO;
   }
-  strcpy (str, key);
-  strcat (str, WS_GUID);
+  strncpy (str, key, (WS_KEY_LEN + 1));
+  strncat (str, WS_GUID, WS_GUID_LEN);
   SHA1Reset (&ctx);
   SHA1Input (&ctx, (const unsigned char *) str, WS_KEY_GUID_LEN);
   SHA1Result (&ctx, hash);
@@ -535,7 +535,7 @@ send_all (MHD_socket sock, const unsigned char *buf, size_t len)
 
   for (off = 0; off < len; off += ret)
   {
-    ret = send (sock, &buf[off], len - off, 0);
+    ret = send (sock, (const void*) &buf[off], len - off, 0);
     if (0 > ret)
     {
       if (EAGAIN == errno)
@@ -555,14 +555,14 @@ send_all (MHD_socket sock, const unsigned char *buf, size_t len)
 
 
 static int
-ws_send_frame (int sock, const char *msg, size_t length)
+ws_send_frame (MHD_socket sock, const char *msg, size_t length)
 {
   unsigned char *response;
   unsigned char frame[10];
   unsigned char idx_first_rdata;
   int idx_response;
   int output;
-  int isock;
+  MHD_socket isock;
   size_t i;
 
   frame[0] = (WS_FIN | WS_OPCODE_TEXT_FRAME);
@@ -613,7 +613,7 @@ ws_send_frame (int sock, const char *msg, size_t length)
   for (i = 0; i < MAX_CLIENTS; i++)
   {
     isock = CLIENT_SOCKS[i];
-    if ((isock > -1) && (isock != sock))
+    if ((isock != MHD_INVALID_SOCKET) && (isock != sock))
     {
       output += send_all (isock, response, idx_response);
     }
@@ -699,7 +699,7 @@ run_usock (void *cls)
   make_blocking (ws->sock);
   while (1)
   {
-    got = recv (ws->sock, buf, sizeof (buf), 0);
+    got = recv (ws->sock, (void*) buf, sizeof (buf), 0);
     if (0 >= got)
     {
       break;
@@ -711,19 +711,19 @@ run_usock (void *cls)
     }
     if (type == WS_OPCODE_TEXT_FRAME)
     {
-      size = sprintf (client, "User#%d: ", ws->sock);
+      size = sprintf (client, "User#%d: ", (int) ws->sock);
       size += got;
       text = malloc (size);
-      if (NULL != buf)
+      if (NULL != text)
       {
         sprintf (text, "%s%s", client, msg);
         sent = ws_send_frame (ws->sock, text, size);
+        free (text);
       }
       else
       {
         sent = -1;
       }
-      free (text);
       free (msg);
       if (-1 == sent)
       {
@@ -744,7 +744,7 @@ run_usock (void *cls)
   {
     if (CLIENT_SOCKS[i] == ws->sock)
     {
-      CLIENT_SOCKS[i] = -1;
+      CLIENT_SOCKS[i] = MHD_INVALID_SOCKET;
       break;
     }
   }
@@ -781,7 +781,7 @@ uh_cb (void *cls, struct MHD_Connection *con, void *con_cls,
   pthread_mutex_lock (&MUTEX);
   for (i = 0; i < MAX_CLIENTS; i++)
   {
-    if (-1 == CLIENT_SOCKS[i])
+    if (MHD_INVALID_SOCKET == CLIENT_SOCKS[i])
     {
       CLIENT_SOCKS[i] = ws->sock;
       sock_overflow = MHD_NO;
@@ -816,6 +816,7 @@ ahc_cb (void *cls, struct MHD_Connection *con, const char *url,
   const char *ws_key_header;
   char *ws_ac_value;
   enum MHD_Result ret;
+  size_t key_size;
 
   (void) cls;               /* Unused. Silent compiler warning. */
   (void) url;               /* Unused. Silent compiler warning. */
@@ -848,9 +849,12 @@ ahc_cb (void *cls, struct MHD_Connection *con, const char *url,
   {
     return send_upgrade_required (con);
   }
-  ws_key_header = MHD_lookup_connection_value (
-    con, MHD_HEADER_KIND, MHD_HTTP_HEADER_SEC_WEBSOCKET_KEY);
-  if ((NULL == ws_key_header) || (strlen (ws_key_header) != 24))
+  ret = MHD_lookup_connection_value_n (
+    con, MHD_HEADER_KIND,
+    MHD_HTTP_HEADER_SEC_WEBSOCKET_KEY,
+    strlen (MHD_HTTP_HEADER_SEC_WEBSOCKET_KEY),
+    &ws_key_header, &key_size);
+  if ((MHD_NO == ret) || (key_size != WS_KEY_LEN))
   {
     return send_bad_request (con);
   }
@@ -875,6 +879,7 @@ main (int argc, char *const *argv)
 {
   struct MHD_Daemon *d;
   uint16_t port;
+  size_t i;
 
   if (argc != 2)
   {
@@ -887,7 +892,8 @@ main (int argc, char *const *argv)
                         port, NULL, NULL, &ahc_cb, &port, MHD_OPTION_END);
   if (NULL == d)
     return 1;
-  memset (CLIENT_SOCKS, -1, sizeof (CLIENT_SOCKS));
+  for (i = 0; i < sizeof(CLIENT_SOCKS) / sizeof(CLIENT_SOCKS[0]); ++i)
+    CLIENT_SOCKS[i] = MHD_INVALID_SOCKET;
   (void) getc (stdin);
   MHD_stop_daemon (d);
   return 0;

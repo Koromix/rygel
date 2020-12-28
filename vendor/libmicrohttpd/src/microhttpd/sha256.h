@@ -55,7 +55,7 @@ struct sha256_ctx
 {
   uint32_t H[_SHA256_DIGEST_LENGTH];    /**< Intermediate hash value / digest at end of calculation */
   uint64_t count;                       /**< number of bytes, mod 2^64 */
-  uint8_t buffer[SHA256_BLOCK_SIZE];     /**< SHA256 input data buffer */
+  uint8_t buffer[SHA256_BLOCK_SIZE];    /**< SHA256 input data buffer */
 };
 
 /**

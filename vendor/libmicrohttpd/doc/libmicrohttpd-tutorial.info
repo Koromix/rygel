@@ -1,4 +1,4 @@
-This is libmicrohttpd-tutorial.info, produced by makeinfo version 6.7
+This is libmicrohttpd-tutorial.info, produced by makeinfo version 6.5
 from libmicrohttpd-tutorial.texi.
 
 This tutorial documents GNU libmicrohttpd version 0.9.48, last updated 2
@@ -4462,8 +4462,3 @@ Node: sessions.c128442
 Node: tlsauthentication.c151908
 
 End Tag Table
-
-
-Local Variables:
-coding: utf-8
-End:

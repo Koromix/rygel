@@ -43,7 +43,7 @@ value_checker (void *cls,
                const char *data, uint64_t off, size_t size)
 {
   unsigned int *pos = cls;
-  (void) kind; (void) key; (void) filename; (void) content_type;  /* Unused. Silent compiler warning. */
+  (void) kind; (void) key; (void) filename; (void) content_type; /* Unused. Silent compiler warning. */
   (void) transfer_encoding; (void) data; (void) off;             /* Unused. Silent compiler warning. */
 #if 0
   fprintf (stderr,

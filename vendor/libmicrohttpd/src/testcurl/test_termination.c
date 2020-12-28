@@ -57,7 +57,7 @@ connection_handler (void *cls,
                     void **ptr)
 {
   static int i;
-  (void) cls; (void) url;                          /* Unused. Silent compiler warning. */
+  (void) cls; (void) url;                        /* Unused. Silent compiler warning. */
   (void) method; (void) version; (void) upload_data; /* Unused. Silent compiler warning. */
   (void) upload_data_size;                       /* Unused. Silent compiler warning. */
 

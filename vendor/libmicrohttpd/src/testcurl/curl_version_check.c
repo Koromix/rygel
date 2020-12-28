@@ -103,7 +103,8 @@ curl_check_version (const char *req_version)
    * this call relies on the cURL string to be of the exact following format :
    * 'libcurl/7.16.4 OpenSSL/0.9.8g zlib/1.2.3.3 libidn/0.6.5' OR
    * 'libcurl/7.18.2 GnuTLS/2.4.0 zlib/1.2.3.3 libidn/0.6.5'
-   */curl_ver = strchr (ver, '/');
+   */
+  curl_ver = strchr (ver, '/');
   if (curl_ver == NULL)
     return -1;
   curl_ver++;

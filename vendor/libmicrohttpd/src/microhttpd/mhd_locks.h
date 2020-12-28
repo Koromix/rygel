@@ -39,6 +39,8 @@
 
 #include "mhd_options.h"
 
+#ifdef MHD_USE_THREADS
+
 #if defined(MHD_USE_W32_THREADS)
 #  define MHD_W32_MUTEX_ 1
 #  ifndef WIN32_LEAN_AND_MEAN
@@ -182,5 +184,16 @@ typedef CRITICAL_SECTION MHD_mutex_;
       MHD_PANIC (_ ("Failed to unlock mutex.\n")); \
 } while (0)
 
+#else  /* ! MHD_USE_THREADS */
+
+#define MHD_mutex_init_(ignore) (! 0)
+#define MHD_mutex_destroy_(ignore) (! 0)
+#define MHD_mutex_destroy_chk_(ignore) (void)0
+#define MHD_mutex_lock_(ignore) (! 0)
+#define MHD_mutex_lock_chk_(ignore) (void)0
+#define MHD_mutex_unlock_(ignore) (! 0)
+#define MHD_mutex_unlock_chk_(ignore) (void)0
+
+#endif /* ! MHD_USE_THREADS */
 
 #endif /* ! MHD_LOCKS_H */

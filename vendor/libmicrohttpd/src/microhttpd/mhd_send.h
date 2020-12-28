@@ -1,5 +1,6 @@
 /*
   This file is part of libmicrohttpd
+  Copyright (C) 2017, 2020 Karlson2k (Evgeny Grin)
   Copyright (C) 2019 ng0
 
   This library is free software; you can redistribute it and/or
@@ -20,8 +21,9 @@
 
 /**
  * @file mhd_send.h
- * @brief Implementation of send() wrappers.
+ * @brief Declarations of send() wrappers.
  * @author ng0
+ * @author Karlson2k (Evgeny Grin)
  */
 
 #ifndef MHD_SEND_H
@@ -39,59 +41,71 @@
 #include "connection_https.h"
 #endif
 
-#ifdef MHD_LINUX_SOLARIS_SENDFILE
-#include <sys/sendfile.h>
-#endif /* MHD_LINUX_SOLARIS_SENDFILE */
-#if defined(HAVE_FREEBSD_SENDFILE) || defined(HAVE_DARWIN_SENDFILE)
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/uio.h>
-#endif /* HAVE_FREEBSD_SENDFILE || HAVE_DARWIN_SENDFILE */
+#ifdef HAVE_FREEBSD_SENDFILE
+/**
+ * Initialises static variables
+ */
+void
+MHD_send_init_static_vars_ (void);
 
-#ifdef HAVE_SYS_PARAM_H
-/* For FreeBSD version identification */
-#include <sys/param.h>
-#endif /* HAVE_SYS_PARAM_H */
+#endif /* HAVE_FREEBSD_SENDFILE */
+
 
 /**
- * The enumeration of send socket options.
+ * Send buffer to the client, push data from network buffer if requested
+ * and full buffer is sent.
+ *
+ * @param connection the MHD_Connection structure
+ * @param buffer content of the buffer to send
+ * @param buffer_size the size of the @a buffer (in bytes)
+ * @param push_data set to true to force push the data to the network from
+ *                  system buffers (usually set for the last piece of data),
+ *                  set to false to prefer holding incomplete network packets
+ *                  (more data will be send for the same reply).
+ * @return sum of the number of bytes sent from both buffers or
+ *         error code (negative)
  */
-enum MHD_SendSocketOptions
-{
-  /**
-   * definitely no corking (use NODELAY, or explicitly disable cork)
-   */
-  MHD_SSO_NO_CORK = 0,
-  /**
-   * should enable corking (use MSG_MORE, or explicitly enable cork)
-   */
-  MHD_SSO_MAY_CORK = 1,
-  /**
-   * consider tcpi_snd_mss and consider not corking for the header
-   * part if the size of the header is close to the MSS.
-   * Only used if we are NOT doing 100 Continue and are still
-   * sending the header (provided in full as the buffer to
-   * MHD_send_on_connection_ or as the header to
-   * MHD_send_on_connection2_).
-   */
-  MHD_SSO_HDR_CORK = 2
-};
-
-
 ssize_t
-MHD_send_on_connection_ (struct MHD_Connection *connection,
-                         const char *buffer,
-                         size_t buffer_size,
-                         enum MHD_SendSocketOptions options);
+MHD_send_data_ (struct MHD_Connection *connection,
+                const char *buffer,
+                size_t buffer_size,
+                bool push_data);
 
+
+/**
+ * Send reply header with optional reply body.
+ *
+ * @param connection the MHD_Connection structure
+ * @param header content of header to send
+ * @param header_size the size of the @a header (in bytes)
+ * @param never_push_hdr set to true to disable internal algorithm
+ *                       that can push automatically header data
+ *                       alone to the network
+ * @param body content of the body to send (optional, may be NULL)
+ * @param body_size the size of the @a body (in bytes)
+ * @param complete_response set to true if complete response
+ *                          is provided by @a header and @a body,
+ *                          set to false if additional body data
+ *                          will be sent later
+ * @return sum of the number of bytes sent from both buffers or
+ *         error code (negative)
+ */
 ssize_t
-MHD_send_on_connection2_ (struct MHD_Connection *connection,
-                          const char *header,
-                          size_t header_size,
-                          const char *buffer,
-                          size_t buffer_size);
+MHD_send_hdr_and_body_ (struct MHD_Connection *connection,
+                        const char *header,
+                        size_t header_size,
+                        bool never_push_hdr,
+                        const char *body,
+                        size_t body_size,
+                        bool complete_response);
 
 #if defined(_MHD_HAVE_SENDFILE)
+/**
+ * Function for sending responses backed by file FD.
+ *
+ * @param connection the MHD connection structure
+ * @return actual number of bytes sent
+ */
 ssize_t
 MHD_send_sendfile_ (struct MHD_Connection *connection);
 

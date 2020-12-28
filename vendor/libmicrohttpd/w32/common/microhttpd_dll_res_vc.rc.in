@@ -23,7 +23,7 @@ BEGIN
             VALUE "ProductName", "GNU libmicrohttpd\0"
             VALUE "ProductVersion", "@PACKAGE_VERSION@\0"
             VALUE "FileVersion", "@PACKAGE_VERSION@\0"
-            VALUE "FileDescription", "GNU libmicrohttpd dll for Windows (VC build)\0"
+            VALUE "FileDescription", "GNU libmicrohttpd DLL for Windows (VC build)\0"
             VALUE "InternalName", "libmicrohttpd\0"
 #if defined(_DEBUG)
             VALUE "OriginalFilename", "libmicrohttpd-dll_d.dll\0"
@@ -31,7 +31,7 @@ BEGIN
             VALUE "OriginalFilename", "libmicrohttpd-dll.dll\0"
 #endif
             VALUE "CompanyName", "Free Software Foundation\0"
-            VALUE "LegalCopyright",  "Copyright (C) 2007-2017 Christian Grothoff and project contributors\0"
+            VALUE "LegalCopyright",  "Copyright (C) 2007-2020 Christian Grothoff, Evgeny Grin and project contributors\0"
             VALUE "Comments", "http://www.gnu.org/software/libmicrohttpd/\0"
         END
     END

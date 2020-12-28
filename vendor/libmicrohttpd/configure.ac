@@ -22,15 +22,15 @@
 #
 AC_PREREQ([2.64])
 LT_PREREQ([2.4.0])
-AC_INIT([GNU Libmicrohttpd],[0.9.71],[libmicrohttpd@gnu.org])
+AC_INIT([GNU Libmicrohttpd],[0.9.72],[libmicrohttpd@gnu.org])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([silent-rules] [subdir-objects])
 AC_CONFIG_HEADERS([MHD_config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
-LIB_VERSION_CURRENT=68
+LIB_VERSION_CURRENT=69
 LIB_VERSION_REVISION=0
-LIB_VERSION_AGE=56
+LIB_VERSION_AGE=57
 AC_SUBST(LIB_VERSION_CURRENT)
 AC_SUBST(LIB_VERSION_REVISION)
 AC_SUBST(LIB_VERSION_AGE)
@@ -376,6 +376,172 @@ AS_CASE(["$host_os"],
 AM_CONDITIONAL([CYGWIN_TARGET], [[test "x$os_is_windows" = "xyes" && \
                                   test "x${os_is_native_w32}" != "xyes"]])
 
+AS_VAR_IF([os_is_windows], ["yes"],
+  [
+    AC_MSG_CHECKING([[whether target W32 version is specified by precomiler defines]])
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+/* Note: check logic is reversed for easy log reading */
+#ifdef WINVER
+#error WINVER is defined
+choke me now;
+#endif
+#ifdef _WIN32_WINNT
+#error _WIN32_WINNT is defined
+choke me now;
+#endif
+#ifdef NTDDI
+#error NTDDI is defined
+choke me now;
+#endif
+        ]],[[(void)0]])
+      ], [[mhd_w32_ver_preselect=no]], [[mhd_w32_ver_preselect=yes]]
+    )
+    AC_MSG_RESULT([[${mhd_w32_ver_preselect}]])
+    AC_CHECK_HEADERS([windows.h sdkddkver.h], [], [], [AC_INCLUDES_DEFAULT])
+    AS_VAR_IF([mhd_w32_ver_preselect],["yes"],
+     [
+       AC_MSG_CHECKING([[for specified target W32 version]])
+       AS_UNSET([[mhd_w32_ver]])
+       AS_UNSET([[mhd_w32_ver_msg]])
+       AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#if _WIN32_WINNT+0 < 0x0501
+/* Check before headers inclusion */
+#error _WIN32_WINNT is less than 0x0501
+choke me now;
+#endif
+
+#ifdef HAVE_SDKDDKVER_H
+#include <sdkddkver.h>
+#endif
+#ifdef HAVE_WINDOWS_H
+#include <windows.h>
+#endif
+
+#if _WIN32_WINNT+0 < 0x0501
+#error _WIN32_WINNT is less than 0x0501
+choke me now;
+#endif
+           ]],[[(void)0]])
+         ], [], [
+           AC_MSG_RESULT([[pre-WinXP]])
+           AC_MSG_ERROR([[libmicrohttpd cannot be compiled for Windows version before Windows XP]])
+         ]
+       )
+       AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#ifdef HAVE_SDKDDKVER_H
+#include <sdkddkver.h>
+#endif
+#ifdef HAVE_WINDOWS_H
+#include <windows.h>
+#endif
+
+#if _WIN32_WINNT+0 == 0x0501
+#error _WIN32_WINNT is 0x0501
+choke me now;
+#endif
+#if _WIN32_WINNT+0 == 0x0502
+#error _WIN32_WINNT is 0x0502
+choke me now;
+#endif
+           ]],[[(void)0]])
+         ], [], [
+           mhd_w32_ver="WinXP"
+           mhd_w32_ver_msg="WinXP (selected by precompiler flags)"
+         ]
+       )
+       AS_VAR_SET_IF([mhd_w32_ver], [],
+         [
+           AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#ifdef HAVE_SDKDDKVER_H
+#include <sdkddkver.h>
+#endif
+#ifdef HAVE_WINDOWS_H
+#include <windows.h>
+#endif
+
+#if _WIN32_WINNT+0 < 0x0600
+#error _WIN32_WINNT is less than 0x0600 but greater than 0x0502
+choke me now;
+#endif
+                ]],[[(void)0]])
+             ], [], [
+               AC_MSG_ERROR([[_WIN32_WINNT value is wrong (less than 0x0600 but greater than 0x0502)]])
+             ]
+           )
+
+           AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#ifdef HAVE_SDKDDKVER_H
+#include <sdkddkver.h>
+#endif
+#ifdef HAVE_WINDOWS_H
+#include <windows.h>
+#endif
+
+#if _WIN32_WINNT+0 == 0x0600
+#error _WIN32_WINNT is 0x0600
+choke me now;
+#endif
+                ]],[[(void)0]])
+             ], [], [
+               mhd_w32_ver="Vista"
+               mhd_w32_ver_msg="Vista (selected by precompiler flags)"
+             ]
+           )
+         ]
+       )
+
+       AS_VAR_SET_IF([mhd_w32_ver], [],
+         [
+           AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#ifdef HAVE_SDKDDKVER_H
+#include <sdkddkver.h>
+#endif
+#ifdef HAVE_WINDOWS_H
+#include <windows.h>
+#endif
+
+#if _WIN32_WINNT+0 > 0x0600
+#error _WIN32_WINNT is greater than 0x0600
+choke me now;
+#endif
+                ]],[[(void)0]])
+             ], [
+               mhd_w32_ver="unknown"
+               mhd_w32_ver_msg="unknown (cannot be detected)"
+             ], [
+               mhd_w32_ver="newer than Vista"
+               mhd_w32_ver_msg="newer than Vista (selected by precompiler flags)"
+             ]
+           )
+         ]
+       )
+       AC_MSG_RESULT([[${mhd_w32_ver}]])
+     ], [
+       mhd_w32_ver="Vista"
+       mhd_w32_ver_msg="Vista (default, override by CPPFLAGS=-D_WIN32_WINNT=0xNNNN)"
+       CPPFLAGS="$CPPFLAGS -D_WIN32_WINNT=0x0600"
+       AC_MSG_CHECKING([[whether headers accept _WIN32_WINNT=0x0600]])
+       AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#ifdef HAVE_SDKDDKVER_H
+#include <sdkddkver.h>
+#endif
+#ifdef HAVE_WINDOWS_H
+#include <windows.h>
+#endif
+#include <stdio.h>
+            ]],[[(void)0]])
+         ], [
+           AC_MSG_RESULT([[yes]])
+         ], [
+           AC_MSG_RESULT([[no]])
+           AC_MSG_ERROR([Headers do not accept _WIN32_WINNT=0x0600. Consider override target W32 version by CPPFLAGS=-D_WIN32_WINNT=0xNNNN])
+         ]
+       )
+     ]
+    )
+  ]
+)
+
 AC_ARG_WITH([threads],
    [AS_HELP_STRING([--with-threads=LIB],[choose threading library (posix, w32, auto, none) [auto]])],
    [], [with_threads='auto'])
@@ -385,16 +551,36 @@ AS_CASE([[$with_threads]],
   [[posix]], [[:]],
   [[w32]], [[:]],
   [[none]], [[with_threads='none']],
+  [[no]], [[with_threads='none']],
   [[auto]], [[:]],
     [AC_MSG_ERROR([[incorrect parameter "$with_threads" specified for --with-threads]])]
 )
 
 # Check for posix threads support, regardless of configure parameters as
-# testsuite use only posix threads.
+# testsuite uses only posix threads.
 AX_PTHREAD(
   [
     mhd_have_posix_threads='yes'
     AC_DEFINE([[HAVE_PTHREAD_H]],[[1]],[Define to 1 if you have the <pthread.h> header file.])
+	AC_CACHE_CHECK([[whether pthread_sigmask(3) is available]],
+	  [[mhd_cv_func_pthread_sigmask]], [dnl
+	  save_LIBS="$LIBS"
+	  save_CFLAGS="$CFLAGS"
+	  LIBS="$PTHREAD_LIBS $LIBS"
+  	  CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
+	  AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <signal.h>]],
+	    [[
+	      sigset_t nset, oset;
+	      sigemptyset (&nset);
+	      sigaddset (&nset, SIGPIPE);
+	      if (0 != pthread_sigmask(SIG_BLOCK, &nset, &oset)) return 1;
+	    ]])],
+	    [[mhd_cv_func_pthread_sigmask="yes"]],[[mhd_cv_func_pthread_sigmask="no"]])
+	  LIBS="${save_LIBS}"
+	  CFLAGS="${save_CFLAGS}"
+	])
+	AS_VAR_IF([mhd_cv_func_pthread_sigmask],["yes"],
+	  [AC_DEFINE([[HAVE_PTHREAD_SIGMASK]],[[1]],[Define to 1 if you have the pthread_sigmask(3) function.])])
   ],[[mhd_have_posix_threads='no']])
 AM_CONDITIONAL([HAVE_POSIX_THREADS],[test "x$mhd_have_posix_threads" = "xyes"])
 
@@ -455,7 +641,7 @@ AM_CONDITIONAL([DISABLE_THREADS], [test "x$USE_THREADS" = "xnone"])
 AC_MSG_RESULT([$USE_THREADS])
 
 AC_ARG_ENABLE([[thread-names]],
-   [AS_HELP_STRING([--disable-thread-names [auto] ],[do not set names on MHD generated threads])],
+   [AS_HELP_STRING([--disable-thread-names],[do not set names on MHD generated threads [auto]])],
    [], [enable_thread_names='auto'])
 
 AS_IF([test "x$enable_thread_names" != "xno" && test "x$USE_THREADS" = "xposix"],[
@@ -672,25 +858,8 @@ AM_CONDITIONAL([HAVE_LISTEN_SHUTDOWN], [test "x$mhd_cv_host_shtdwn_trgr_select" 
 
 # SENDMSG. Should we check for SCM_RIGHTS instead?
 # https://lists.x.org/archives/xorg-devel/2013-November/038687.html
-AC_MSG_CHECKING([whether sendmsg is available])
-AC_SEARCH_LIBS(sendmsg, socket, AC_DEFINE([HAVE_SENDMSG],1,[Define if your platform supports sendmsg]))
-AC_MSG_CHECKING([whether writev is available])
+AC_SEARCH_LIBS([sendmsg], [socket], [AC_DEFINE([HAVE_SENDMSG],[1],[Define if your platform supports sendmsg])])
 AC_CHECK_FUNCS([writev])
-
-# check MSG_MORE defined
-AC_MSG_CHECKING([whether MSG_MORE is defined])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-#include <sys/types.h>
-#include <sys/socket.h>
-]],[[return MSG_MORE;]]
-    )],
-    [
-      AC_MSG_RESULT(yes)
-      AC_DEFINE(HAVE_MSG_MORE, [1], [have MSG_MORE])
-    ],
-    [
-      AC_MSG_RESULT(no)
-    ])
 
 # set GCC options
 # use '-fno-strict-aliasing', but only if the compiler
@@ -700,6 +869,23 @@ AX_CHECK_LINK_FLAG([-fno-strict-aliasing],
 
 AC_C_BIGENDIAN
 AC_C_VARARRAYS
+
+AC_CACHE_CHECK([[whether __func__ magic-macro is available]],
+  [[mhd_cv_macro___func___avail]], [dnl
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stddef.h>]],[[const char *funcname = __func__ ; if (NULL == funcname) return 1;]])],
+    [[mhd_cv_macro___func___avail="yes"]],[[mhd_cv_macro___func___avail="no"]])
+])
+AS_VAR_IF([mhd_cv_macro___func___avail], ["yes"],
+  [AC_DEFINE([HAVE___FUNC__], [1], [Define to 1 if your compiler supports __func__ magic-macro.])],
+  [
+    AC_CACHE_CHECK([[whether __FUNCTION__ magic-macro is available]],
+      [[mhd_cv_macro___function___avail]], [dnl
+      AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stddef.h>]],[[const char *funcname = __FUNCTION__ ; if (NULL == funcname) return 1;]])],
+        [[mhd_cv_macro___function___avail="yes"]],[[mhd_cv_macro___function___avail="no"]])
+    ])
+    AC_DEFINE([HAVE___FUNCTION__], [1], [Define to 1 if your compiler supports __FUNCTION__ magic-macro.])
+  ]
+)
 AC_CACHE_CHECK([[whether __builtin_bswap32() is available]],
   [[mhd_cv_func___builtin_bswap32_avail]], [dnl
   AC_TRY_LINK([#include<stdint.h>],[uint32_t a = 1; uint32_t b = __builtin_bswap32(a); a = b;],
@@ -748,9 +934,6 @@ AS_IF([test "$enable_poll" != "no"],
 		[AC_INCLUDES_DEFAULT]),
              [AC_MSG_CHECKING([for WSAPoll()])
               AC_LINK_IFELSE([AC_LANG_PROGRAM([[
-#if defined(_WIN32) && ! defined(__CYGWIN__) && ! defined(_WIN32_WINNT)
-#define _WIN32_WINNT 0x0501
-#endif
 #include <winsock2.h>
               ]],[[
 WSAPOLLFD fda[2];
@@ -801,6 +984,7 @@ AC_CHECK_HEADERS_ONCE([fcntl.h math.h errno.h limits.h stdio.h locale.h sys/stat
 AC_CHECK_HEADERS([sys/types.h sys/time.h sys/msg.h time.h sys/mman.h sys/ioctl.h \
   sys/socket.h sys/select.h netdb.h netinet/in.h netinet/ip.h netinet/tcp.h arpa/inet.h \
   endian.h machine/endian.h sys/endian.h sys/param.h sys/machine.h sys/byteorder.h machine/param.h sys/isa_defs.h \
+  signal.h \
   inttypes.h stddef.h unistd.h \
   sockLib.h inetLib.h net/if.h], [], [], [AC_INCLUDES_DEFAULT])
 
@@ -1252,7 +1436,7 @@ have_inet6=no
 ])
 AC_MSG_RESULT($have_inet6)
 
-MHD_CHECK_FUNC([[sysconf]], [[#include <unitstd.h>]], [[long a = sysconf(0); if (a) return 1;]])
+MHD_CHECK_FUNC([[sysconf]], [[#include <unistd.h>]], [[long a = sysconf(0); if (a) return 1;]])
 
 HIDDEN_VISIBILITY_CFLAGS=""
 AS_CASE(["$host"],
@@ -1508,7 +1692,7 @@ ssize_t sendfile(int out_fd, int in_fd,
   ]
 )
 AS_IF([[test "x$found_sendfile" = "xno" && test "x$enable_sendfile" = "xyes"]],
-  AC_MSG_ERROR([[sendfile() usage was requested by configure parameter, but no usable sendfile() function is detected]])
+  [AC_MSG_ERROR([[sendfile() usage was requested by configure parameter, but no usable sendfile() function is detected]])]
 )
 
 # optional: have error messages ?
@@ -1966,6 +2150,99 @@ AC_CACHE_CHECK([[for calloc()]], [[mhd_cv_have_func_calloc]],
 AS_VAR_IF([[mhd_cv_have_func_calloc]], [["yes"]],
   [AC_DEFINE([[HAVE_CALLOC]], [[1]], [Define to 1 if you have the usable `calloc' function.])])
 
+# Some systems have IPv6 disabled in kernel at run-time
+AS_IF([[test "x${have_inet6}" = "xyes" && test "x${cross_compiling}" = "xno"]],
+ [
+   AC_CACHE_CHECK([whether IPv6 could be used for testing],[mhd_cv_ipv6_for_testing],
+     [
+       AC_RUN_IFELSE(
+         [
+           AC_LANG_SOURCE([[
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+#ifdef HAVE_WINSOCK2_H
+#include <winsock2.h>
+#endif
+#ifdef HAVE_WS2TCPIP_H
+#include <ws2tcpip.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef HAVE_NETINET_IP_H
+#include <netinet/ip.h>
+#endif
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
+#ifdef HAVE_NETINET_TCP_H
+#include <netinet/tcp.h>
+#endif
+
+static void zr_mem(void *ptr, socklen_t size)
+{ char *mem = ptr; while(size--) {mem[0] = 0; mem++;} }
+
+int main(void)
+{
+  int ret = 30;
+  struct sockaddr_in6 sa;
+#if !defined(_WIN32) || defined(__CYGWIN__)
+  int sckt;
+  const int invld_sckt = -1;
+#else
+  SOCKET sckt;
+  const SOCKET invld_sckt = INVALID_SOCKET;
+  WSADATA wsa_data;
+
+  WSAStartup(MAKEWORD(2, 2), &wsa_data);
+#endif
+  zr_mem(&sa, sizeof(sa));
+  sa.sin6_family = AF_INET6;
+  sa.sin6_port = 0;
+  sa.sin6_addr = in6addr_loopback;
+#ifdef HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN
+  sa.sin6_len = sizeof(sa);
+#endif
+  sckt = socket (PF_INET6, SOCK_STREAM, 0);
+  if (invld_sckt != sckt)
+  {
+    if (0 == bind (sckt, (struct sockaddr *)&sa, sizeof(sa)))
+    {
+      if (0 == listen (sckt, 1))
+        ret = 0;
+      else
+        ret = 1; /* listen() failed */
+    } else ret = 2; /* bind() failed */
+#if !defined(_WIN32) || defined(__CYGWIN__)
+    close (sckt);
+#else
+    closesocket (sckt);
+#endif
+  } else ret = 3; /* socket() failed */
+#if defined(_WIN32) && !defined(__CYGWIN__)
+  WSACleanup();
+#endif
+  return ret;
+}
+           ]])
+         ], [[mhd_cv_ipv6_for_testing="yes"]], [[mhd_cv_ipv6_for_testing="no"]], [[mhd_cv_ipv6_for_testing="no"]]
+       )
+     ]
+   )
+ ]
+)
+AS_VAR_IF([mhd_cv_ipv6_for_testing],["yes"],
+	[AC_DEFINE([[USE_IPV6_TESTING]], [[1]], [Define to 1 if your kernel supports IPv6 and IPv6 is enabled and useful for testing.])]
+)
+
+
 # Check for fork() and waitpid(). They are used for tests.
 AC_MSG_CHECKING([[for fork()]])
 mhd_have_fork_waitpid='no'
@@ -2137,11 +2414,16 @@ AS_IF([test "x$enable_curl" != "xyes"],
  [MSG_CURL="no, many unit tests will not run"],
  [MSG_CURL="yes"])
 
+AS_VAR_IF([os_is_windows], ["yes"],
+  [os_ver_msg="
+  Target W32 ver:    ${mhd_w32_ver_msg}"], [AS_UNSET([[os_ver_msg]])])
+
+
 AC_MSG_NOTICE([GNU libmicrohttpd ${PACKAGE_VERSION} Configuration Summary:
   Target directory:  ${prefix}
   Cross-compiling:   ${cross_compiling}
-  Operating System:  ${host_os}
-  Shutdown of listening socket trigger select: ${mhd_cv_host_shtdwn_trgr_select}
+  Operating System:  ${host_os}${os_ver_msg}
+  Shutdown of listening socket triggers select: ${mhd_cv_host_shtdwn_trgr_select}
   Inter-thread comm: ${use_itc}
   poll support:      ${enable_poll=no}
   epoll support:     ${enable_epoll=no}

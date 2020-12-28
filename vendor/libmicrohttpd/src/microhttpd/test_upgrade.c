@@ -298,7 +298,8 @@ wr_connect (struct wr_socket *s,
      * it require processing on MHD side and
      * when testing with "external" polling,
      * test will call MHD processing only
-     * after return from wr_connect(). */s->tls_connected = 0;
+     * after return from wr_connect(). */
+    s->tls_connected = 0;
     return 0;
   }
 #endif /* HTTPS_SUPPORT */

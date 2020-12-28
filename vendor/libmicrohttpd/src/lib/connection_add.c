@@ -188,8 +188,8 @@ thread_main_handle_connection (void *data)
       }
 #endif /* HAVE_POLL */
       MHD_itc_clear_ (daemon->itc);
-      continue;     /* Check again for resume. */
-    }     /* End of "suspended" branch. */
+      continue; /* Check again for resume. */
+    }           /* End of "suspended" branch. */
 
     if (was_suspended)
     {
@@ -1047,7 +1047,7 @@ MHD_accept_connection_ (struct MHD_Daemon *daemon)
     /* This could be a common occurrence with multiple worker threads */
     if (MHD_SCKT_ERR_IS_ (err,
                           MHD_SCKT_EINVAL_))
-      return MHD_SC_DAEMON_ALREADY_SHUTDOWN;   /* can happen during shutdown, let's hope this is the cause... */
+      return MHD_SC_DAEMON_ALREADY_SHUTDOWN;  /* can happen during shutdown, let's hope this is the cause... */
     if (MHD_SCKT_ERR_IS_DISCNN_BEFORE_ACCEPT_ (err))
       return MHD_SC_ACCEPT_FAST_DISCONNECT;   /* do not print error if client just disconnected early */
     if (MHD_SCKT_ERR_IS_EAGAIN_ (err) )

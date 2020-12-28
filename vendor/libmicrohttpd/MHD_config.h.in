@@ -165,9 +165,6 @@
 /* Define to 1 to enable support for error messages. */
 #undef HAVE_MESSAGES
 
-/* have MSG_MORE */
-#undef HAVE_MSG_MORE
-
 /* Define to 1 if you have the `[nanosleep]' function. */
 #undef HAVE_NANOSLEEP
 
@@ -233,6 +230,9 @@
 /* Define if you have FreeBSD form of pthread_set_name_np(3) function. */
 #undef HAVE_PTHREAD_SET_NAME_NP_FREEBSD
 
+/* Define to 1 if you have the pthread_sigmask(3) function. */
+#undef HAVE_PTHREAD_SIGMASK
+
 /* Define to 1 if you have the `rand' function. */
 #undef HAVE_RAND
 
@@ -241,6 +241,9 @@
 
 /* Define to 1 if you have the real boolean type. */
 #undef HAVE_REAL_BOOL
+
+/* Define to 1 if you have the <sdkddkver.h> header file. */
+#undef HAVE_SDKDDKVER_H
 
 /* Define to 1 if you have the <search.h> header file and your system have
    properly functioning tsearch(), tfind() and tdelete() functions */
@@ -251,6 +254,9 @@
 
 /* Define if your platform supports sendmsg */
 #undef HAVE_SENDMSG
+
+/* Define to 1 if you have the <signal.h> header file. */
+#undef HAVE_SIGNAL_H
 
 /* Define to 1 if you have the `snprintf' function. */
 #undef HAVE_SNPRINTF
@@ -358,6 +364,9 @@
 /* Define to 1 if you have the usable `waitpid' function. */
 #undef HAVE_WAITPID
 
+/* Define to 1 if you have the <windows.h> header file. */
+#undef HAVE_WINDOWS_H
+
 /* Define to 1 if you have the <winsock2.h> header file. */
 #undef HAVE_WINSOCK2_H
 
@@ -369,6 +378,12 @@
 
 /* Define to 1 if you have the <zlib.h> header file. */
 #undef HAVE_ZLIB_H
+
+/* Define to 1 if your compiler supports __FUNCTION__ magic-macro. */
+#undef HAVE___FUNCTION__
+
+/* Define to 1 if your compiler supports __func__ magic-macro. */
+#undef HAVE___FUNC__
 
 /* Define to 1 if libmicrohttpd is compiled with HTTPS support. */
 #undef HTTPS_SUPPORT
@@ -538,6 +553,10 @@
 
 /* Define to 1 if libmicrohttpd is compiled with HTTP Upgrade support. */
 #undef UPGRADE_SUPPORT
+
+/* Define to 1 if your kernel supports IPv6 and IPv6 is enabled and useful for
+   testing. */
+#undef USE_IPV6_TESTING
 
 /* Version number of package */
 #undef VERSION

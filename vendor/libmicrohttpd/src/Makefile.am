@@ -22,3 +22,5 @@ endif
 EXTRA_DIST = \
  datadir/cert-and-key.pem \
  datadir/cert-and-key-for-wireshark.pem 
+
+.NOTPARALLEL:

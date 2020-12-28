@@ -92,7 +92,8 @@ ahc_echo (void *cls,
   const char *password = "testpass";
   const char *realm = "test@example.com";
   enum MHD_Result ret;
-  (void) cls; (void) url;                          /* Unused. Silent compiler warning. */
+  int ret_i;
+  (void) cls; (void) url;                         /* Unused. Silent compiler warning. */
   (void) method; (void) version; (void) upload_data; /* Unused. Silent compiler warning. */
   (void) upload_data_size; (void) unused;         /* Unused. Silent compiler warning. */
 
@@ -112,15 +113,15 @@ ahc_echo (void *cls,
     MHD_destroy_response (response);
     return ret;
   }
-  ret = MHD_digest_auth_check2 (connection,
-                                realm,
-                                username,
-                                password,
-                                300,
-                                MHD_DIGEST_ALG_SHA256);
+  ret_i = MHD_digest_auth_check2 (connection,
+                                  realm,
+                                  username,
+                                  password,
+                                  300,
+                                  MHD_DIGEST_ALG_SHA256);
   free (username);
-  if ( (ret == MHD_INVALID_NONCE) ||
-       (ret == MHD_NO) )
+  if ( (ret_i == MHD_INVALID_NONCE) ||
+       (ret_i == MHD_NO) )
   {
     response = MHD_create_response_from_buffer (strlen (DENIED),
                                                 DENIED,
@@ -131,8 +132,8 @@ ahc_echo (void *cls,
                                          realm,
                                          MY_OPAQUE,
                                          response,
-                                         (MHD_INVALID_NONCE == ret) ? MHD_YES :
-                                         MHD_NO,
+                                         (MHD_INVALID_NONCE == ret_i) ?
+                                         MHD_YES : MHD_NO,
                                          MHD_DIGEST_ALG_SHA256);
     MHD_destroy_response (response);
     return ret;
@@ -168,7 +169,7 @@ testDigestAuth ()
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
   else
-    port = 1165;
+    port = 1167;
 
   cbc.buf = buf;
   cbc.size = 2048;
@@ -295,6 +296,11 @@ main (int argc, char *const *argv)
   unsigned int errorCount = 0;
   curl_version_info_data *d = curl_version_info (CURLVERSION_NOW);
   (void) argc; (void) argv; /* Unused. Silent compiler warning. */
+
+#ifdef CURL_VERSION_SSPI
+  if (0 != (d->features & CURL_VERSION_SSPI))
+    return 77; /* Skip test, W32 SSPI doesn't support sha256 digest */
+#endif /* CURL_VERSION_SSPI */
 
   /* curl added SHA256 support in 7.57 = 7.0x39 */
   if (d->version_num < 0x073900)

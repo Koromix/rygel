@@ -17,7 +17,7 @@ endif
 
 .NOTPARALLEL:
 
-CPU_COUNT_DEF = -DCPU_COUNT=$(CPU_COUNT)
+MHD_CPU_COUNT_DEF = -DMHD_CPU_COUNT=$(CPU_COUNT)
 
 AM_CPPFLAGS = \
   -I$(top_srcdir)/src/include \
@@ -83,7 +83,7 @@ test_https_get_parallel_SOURCES = \
   tls_test_common.h \
   tls_test_common.c
 test_https_get_parallel_CPPFLAGS = \
-  $(AM_CPPFLAGS) $(CPU_COUNT_DEF)
+  $(AM_CPPFLAGS) $(MHD_CPU_COUNT_DEF)
 test_https_get_parallel_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
 test_https_get_parallel_LDADD = \
@@ -107,7 +107,7 @@ test_https_get_parallel_threads_SOURCES = \
   tls_test_common.h \
   tls_test_common.c
 test_https_get_parallel_threads_CPPFLAGS = \
-  $(AM_CPPFLAGS) $(CPU_COUNT_DEF)
+  $(AM_CPPFLAGS) $(MHD_CPU_COUNT_DEF)
 test_https_get_parallel_threads_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
 test_https_get_parallel_threads_LDADD = \

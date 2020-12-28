@@ -87,6 +87,7 @@ answer_to_connection (void *cls, struct MHD_Connection *connection,
   char *user;
   char *pass;
   int fail;
+  enum MHD_Result ret;
   struct MHD_Response *response;
 
   if (0 != strcmp (method, MHD_HTTP_METHOD_GET))

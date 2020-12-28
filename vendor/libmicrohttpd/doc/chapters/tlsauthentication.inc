@@ -421,7 +421,7 @@ to this callback, as the GnuTLS API unfortunately does not permit this at this
 point.
 
 The @code{hosts} list can be initialized by loading the private keys and X.509
-certificats from disk as follows:
+certificates from disk as follows:
 
 @verbatim
 static void

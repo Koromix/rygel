@@ -23,7 +23,7 @@ BEGIN
             VALUE "InternalName", "libmicrohttpd\0"
             VALUE "OriginalFilename", "libmicrohttpd-@MHD_W32_DLL_SUFF@.dll\0"
             VALUE "CompanyName", "Free Software Foundation\0"
-            VALUE "LegalCopyright",  "Copyright (C) 2007-2017 Christian Grothoff and project contributors\0"
+            VALUE "LegalCopyright",  "Copyright (C) 2007-2020 Christian Grothoff, Evgeny Grin and project contributors\0"
             VALUE "Comments", "http://www.gnu.org/software/libmicrohttpd/\0"
         END
     END

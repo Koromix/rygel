@@ -1,6 +1,6 @@
 /*
      This file is part of libmicrohttpd
-     Copyright (C) 2007,2013,2019 Christian Grothoff
+     Copyright (C) 2007, 2013, 2019, 2020 Christian Grothoff
 
      libmicrohttpd is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published
@@ -462,6 +462,9 @@ value_checker2 (void *cls,
                 uint64_t off,
                 size_t size)
 {
+  (void) cls; (void) kind; (void) key; /* Mute compiler warnings */
+  (void) filename; (void) content_type; (void) transfer_encoding;
+  (void) data; (void) off; (void) size;
   return MHD_YES;
 }
 

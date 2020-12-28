@@ -31,6 +31,7 @@
 #include "mhd_mono_clock.h"
 #include "mhd_str.h"
 #include "mhd_compat.h"
+#include "mhd_assert.h"
 
 #if defined(MHD_W32_MUTEX_)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -555,7 +556,8 @@ check_nonce_nc (struct MHD_Connection *connection,
    * Look for the nonce, if it does exist and its corresponding
    * nonce counter is less than the current nonce counter by 1,
    * then only increase the nonce counter by one.
-   */nn = &daemon->nnc[off];
+   */
+  nn = &daemon->nnc[off];
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   MHD_mutex_lock_chk_ (&daemon->nnc_lock);
 #endif
@@ -604,9 +606,9 @@ check_nonce_nc (struct MHD_Connection *connection,
   }
   /* Nonce is larger, shift bitmask and bump limit */
   if (64 > nc - nn->nc)
-    nn->nmask <<= (nc - nn->nc); /* small jump, less than mask width */
+    nn->nmask <<= (nc - nn->nc);  /* small jump, less than mask width */
   else
-    nn->nmask = 0; /* big jump, unset all bits in the mask */
+    nn->nmask = 0;                /* big jump, unset all bits in the mask */
   nn->nc = nc;
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   MHD_mutex_unlock_chk_ (&daemon->nnc_lock);
@@ -665,7 +667,7 @@ MHD_digest_auth_get_username (struct MHD_Connection *connection)
  * @param uri HTTP URI (in MHD, without the arguments ("?k=v")
  * @param realm A string of characters that describes the realm of auth.
  * @param da digest algorithm to use
- * @param nonce A pointer to a character array for the nonce to put in,
+ * @param[out] nonce A pointer to a character array for the nonce to put in,
  *        must provide NONCE_STD_LEN(da->digest_size)+1 bytes
  */
 static void
@@ -814,7 +816,7 @@ check_argument_match (struct MHD_Connection *connection,
                               &test_header,
                               &num_headers);
   free (argb);
-  if (MHD_YES != ret)
+  if (MHD_NO == ret)
   {
     return MHD_NO;
   }
@@ -937,7 +939,8 @@ digest_auth_check_all (struct MHD_Connection *connection,
        large, but of course in theory the
        #MHD_OPTION_CONNECTION_MEMORY_LIMIT might be very large
        and would thus permit sending a >32k authorization
-       header value. */return MHD_NO;
+       header value. */
+    return MHD_NO;
   }
   if (TIMESTAMP_BIN_SIZE * 2 !=
       MHD_strx_to_uint32_n_ (nonce + len - TIMESTAMP_BIN_SIZE * 2,
@@ -955,7 +958,8 @@ digest_auth_check_all (struct MHD_Connection *connection,
    * First level vetting for the nonce validity: if the timestamp
    * attached to the nonce exceeds `nonce_timeout', then the nonce is
    * invalid.
-   */if ( (t > nonce_time + nonce_timeout) ||
+   */
+  if ( (t > nonce_time + nonce_timeout) ||
        (nonce_time + nonce_timeout < nonce_time) )
   {
     /* too old */
@@ -978,7 +982,8 @@ digest_auth_check_all (struct MHD_Connection *connection,
    * able to generate a "sane" nonce, which if he does
    * not, the nonce fabrication process going to be
    * very hard to achieve.
-   */if (0 != strcmp (nonce,
+   */
+  if (0 != strcmp (nonce,
                    noncehashexp))
   {
     return MHD_INVALID_NONCE;
@@ -1025,7 +1030,8 @@ digest_auth_check_all (struct MHD_Connection *connection,
    * Checking if that combination of nonce and nc is sound
    * and not a replay attack attempt. Also adds the nonce
    * to the nonce-nc map if it does not exist there.
-   */if (MHD_YES !=
+   */
+  if (MHD_NO ==
       check_nonce_nc (connection,
                       nonce,
                       nci))
@@ -1114,7 +1120,7 @@ digest_auth_check_all (struct MHD_Connection *connection,
         args = "";
       else
         args++;
-      if (MHD_YES !=
+      if (MHD_NO ==
           check_argument_match (connection,
                                 args) )
       {
@@ -1199,7 +1205,7 @@ MHD_digest_auth_check (struct MHD_Connection *connection,
       da.digest = &MHD_MD5Final;                        \
       break;                                        \
     case MHD_DIGEST_ALG_AUTO:                             \
-    /* auto == SHA256, fall-though thus intentional! */ \
+  /* auto == SHA256, fall-though thus intentional! */ \
     case MHD_DIGEST_ALG_SHA256:                           \
       da.digest_size = SHA256_DIGEST_SIZE;                \
       da.ctx = &ctx.sha256;                               \
@@ -1208,6 +1214,9 @@ MHD_digest_auth_check (struct MHD_Connection *connection,
       da.init = &MHD_SHA256_init;                             \
       da.update = &MHD_SHA256_update;                         \
       da.digest = &sha256_finish;                         \
+      break;                                              \
+    default:                                              \
+      mhd_assert (false);                                 \
       break;                                              \
     }                                                     \
   } while (0)
@@ -1363,7 +1372,7 @@ MHD_queue_auth_fail_response2 (struct MHD_Connection *connection,
                      realm,
                      &da,
                      nonce);
-    if (MHD_YES !=
+    if (MHD_NO ==
         check_nonce_nc (connection,
                         nonce,
                         0))
@@ -1417,7 +1426,7 @@ MHD_queue_auth_fail_response2 (struct MHD_Connection *connection,
       else
         ret = MHD_NO;
 #if 0
-      if ( (MHD_YES == ret) && (AND in state : 100 continue aborting ...))
+      if ( (MHD_NO != ret) && (AND in state : 100 continue aborting ...))
         ret = MHD_add_response_header (response,
                                        MHD_HTTP_HEADER_CONNECTION,
                                        "close");
@@ -1428,7 +1437,7 @@ MHD_queue_auth_fail_response2 (struct MHD_Connection *connection,
       ret = MHD_NO;
   }
 
-  if (MHD_YES == ret)
+  if (MHD_NO != ret)
   {
     ret = MHD_queue_response (connection,
                               MHD_HTTP_UNAUTHORIZED,

@@ -54,7 +54,7 @@ string_to_base64 (const char *message)
   }
 
   if (length % 3)
-    strncat (tmp, "===", 3 - length % 3);
+    strncat (tmp, "==", 3 - length % 3);
 
   return tmp;
 }

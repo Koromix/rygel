@@ -189,7 +189,7 @@ http_ahc (void *cls,
   static int aptr;
   struct MHD_Response *response;
   enum MHD_Result ret;
-  (void) cls; (void) url; (void) version;            /* Unused. Silent compiler warning. */
+  (void) cls; (void) url; (void) version;          /* Unused. Silent compiler warning. */
   (void) upload_data; (void) upload_data_size;     /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (method, MHD_HTTP_METHOD_GET))

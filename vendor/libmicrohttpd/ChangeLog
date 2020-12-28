@@ -1,6 +1,94 @@
+Mon 28 Dec 2020 21:36:00 MSK
+    Releasing libmicrohttpd 0.9.72. -EG
+
+Mon 28 Dec 2020 09:37:00 MSK
+    Completely reworked and rewritten TCP_CORK, TCP_NOPUSH, TCP_NODELAY and
+    MSG_MORE handling. Reduced number of sys-calls, fixed portability for
+    FreeBSD, OpenBSD, NetBSD, Darwin, W32, Solaris.
+    Removed usage of gnutls_record_cork() as it fully blocks stream until
+    final block is ready.
+    Fixed compatibility with C90 compilers.
+    Really started using sendmsg() for header + body combined single-call
+    response sending.
+    Fixed sending of response body by sendmsg() when it shouldn't be sent,
+    like responses for HEAD requests.
+    Improved error handling for gnutls_record_send().
+    Updated W32 resources for .DLLs.
+    Fixed building with various disabled features (like messages, HTTPS,
+    http-upgrade, authorization etc.)
+    Fixed possible SIGPIPE generation when sendfile() is used (it was always
+    possible on Linux that sendfile() produce SIGPIPE, now it's fixed).
+    Several compiler warnings muted and/or fixed in the lib code and in
+    the examples. -EG
+
+Sun 01 Nov 2020 17:17:00 MSK
+    Fixed conflict with system CPU_COUNT macro.
+    Minor improvements of error reporting in MHD daemon.
+    Fixed FTBFS with GnuTLS versions before 3.1.9
+    Fixed test_add_conn for multi-CPU machines.
+    Fixed analyzer warnings. 
+    Fixed use-after-free and resources leaks for upgraded connections
+    in TLS mode with thread-per-connection. -EG
+
+Sun 25 Oct 2020 19:31:00 MSK
+    Fixed epoll mode without listening socket.
+    Minor improvements of thread sync.
+    Fixed broken sendfile on FreeBSD.
+    Fixed broken MHD with thread-pool and without listening socket.
+    Added four tests for MHD_add_connection().
+    Fixed several resources leaks in error handlers.
+    Re-implemented scheme of handling of externally added connections,
+    fixed thread-safety. -EG
+
+Wed 21 Oct 2020 10:00:58 AM CEST
+    Corking should be OFF when sending the footer (#6610). -AP/CG
+
+Wed 07 Oct 2020 11:07:00 MSK
+    W32 default target version changed to Vista, XP is still supported.
+    Minor fixes and additional asserts for memorypool.
+    IPv6 tests are not used if IPv6 is disabled at run-time. -EG
+
+Sun 27 Sep 2020 10:08:03 PM CEST
+    Fixed incorrect triggering of epoll edge polling for
+    "upgraded" TLS connections.  Fixed a few cases where
+    gnutls_record_uncork() return value was still ignored,
+    possibly causing buffer to not be flushed correctly. -CG
+
+Sat 26 Sep 2020 08:18:02 PM CEST
+    Make MHD_USE_NO_LISTEN_SOCKET work in conjunction with
+    MHD internal threads. -CG/DE
+
+Thu 24 Sep 2020 16:55:00 MSK
+    Fixed compiler warnings on W32.
+    Minor optimisation of MHD_YES/MHD_NO internal usage.
+    Refactor and cleanup of internal debugging macros.
+    Updated HTTP status codes, header names and methods from
+    the registries.
+    Fixed portability of test_upgrade_large.
+    Minor testsuite fixes.
+    Restored parallel build of libmicrohttpd (except tests). -EG
+
+Fri 11 Sep 2020 10:08:22 PM CEST
+    Fix crash problem in PostProcessor reported by MD. -CG
+    Fix GnuTLS configure test to check for gnutls_record_uncork. -CG
+
+Wed 19 Aug 2020 09:40:39 AM CEST
+    Add logic to check on MHD_pool_reallocate() failure reported on the
+    mailinglist (will NOT yet fix the issue). -CG
+
+Sun 26 Jul 2020 01:56:54 PM CEST
+    Add MHD_create_response_from_pipe() to allow creating a response based
+    on data read from a pipe. -CG
+
+Fri Jul 10 15:04:51 CEST 2020
+    Fixed Postprocessor URL-encoded parsing if '%' fell on boundary. -CG/MD
+
+Thu 02 Jul 2020 09:56:23 PM CEST
+    Fixed return type of MHD_queue_basic_auth_fail_response. -CA/CG
+
 Sun 28 Jun 2020 09:36:01 PM CEST
-        Fix buffer overflow issue in URL parser.
-        Releasing libmicrohttpd 0.9.71. -CG
+    Fix buffer overflow issue in URL parser.
+    Releasing libmicrohttpd 0.9.71. -CG
 
 Tue 16 Jun 2020 08:44:22 PM CEST
     Add logic to try again if GNUtls uncork() fails. -CG
@@ -167,11 +255,11 @@ Mon May 20 15:39:35 MSK 2019
 	Compiler warning fixes. -EG/CG
 	Fixed example for non-64bits platforms. -EG
 
-Web May 15 23:51:49 MSK 2019
+Wed May 15 23:51:49 MSK 2019
 	Optimized and improved processing speed by using precalculated and
 	already calculated lengths of strings. -EG
 
-Web May 15 14:54:00 MSK 2019
+Wed May 15 14:54:00 MSK 2019
 	Fixed build from source on GNU Hurd. -EG
 
 Mon May  6 11:58:00 MSK 2019
@@ -1105,7 +1193,7 @@ Fri Feb  5 20:43:11 CET 2016
 
 Thu Feb  4 11:38:11 CET 2016
 	Added some buffer overrun protection.
-	Fixed handling of misformed URI with spaces. -EG
+	Fixed handling of malformed URI with spaces. -EG
 
 Wed Feb  3 15:41:57 CET 2016
 	Make signal-pipe non-blocking and drain it. -CG

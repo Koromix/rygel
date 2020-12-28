@@ -67,11 +67,11 @@ configure_listen_reuse (struct MHD_Daemon *daemon)
     }
     return MHD_SC_OK;
 #endif /* ! MHD_WINSOCK_SOCKETS */
-       /* Use SO_REUSEADDR on Windows and SO_REUSEPORT on most platforms.
-        * Fail if SO_REUSEPORT is not defined or setsockopt fails.
-        */
-       /* SO_REUSEADDR on W32 has the same semantics
-    as SO_REUSEPORT on BSD/Linux */
+    /* Use SO_REUSEADDR on Windows and SO_REUSEPORT on most platforms.
+     * Fail if SO_REUSEPORT is not defined or setsockopt fails.
+     */
+    /* SO_REUSEADDR on W32 has the same semantics
+ as SO_REUSEPORT on BSD/Linux */
 #if defined(MHD_WINSOCK_SOCKETS) || defined(SO_REUSEPORT)
     if (0 > setsockopt (daemon->listen_socket,
                         SOL_SOCKET,
@@ -93,8 +93,8 @@ configure_listen_reuse (struct MHD_Daemon *daemon)
     }
     return MHD_SC_OK;
 #else  /* !MHD_WINSOCK_SOCKETS && !SO_REUSEPORT */
-       /* we're supposed to allow address:port re-use, but
-    on this platform we cannot; fail hard */
+    /* we're supposed to allow address:port re-use, but
+ on this platform we cannot; fail hard */
 #ifdef HAVE_MESSAGES
     MHD_DLOG (daemon,
               MHD_SC_LISTEN_ADDRESS_REUSE_ENABLE_NOT_SUPPORTED,

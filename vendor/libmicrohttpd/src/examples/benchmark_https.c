@@ -25,11 +25,11 @@
 #include "platform.h"
 #include <microhttpd.h>
 
-#if defined(CPU_COUNT) && (CPU_COUNT + 0) < 2
-#undef CPU_COUNT
+#if defined(MHD_CPU_COUNT) && (MHD_CPU_COUNT + 0) < 2
+#undef MHD_CPU_COUNT
 #endif
-#if ! defined(CPU_COUNT)
-#define CPU_COUNT 2
+#if ! defined(MHD_CPU_COUNT)
+#define MHD_CPU_COUNT 2
 #endif
 
 #define PAGE \
@@ -42,7 +42,7 @@
  * Number of threads to run in the thread pool.  Should (roughly) match
  * the number of cores on your system.
  */
-#define NUMBER_OF_THREADS CPU_COUNT
+#define NUMBER_OF_THREADS MHD_CPU_COUNT
 
 static unsigned int small_deltas[SMALL];
 

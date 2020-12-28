@@ -38,10 +38,10 @@ MHD_connection_update_last_activity_ (struct MHD_Connection *connection)
   struct MHD_Daemon *daemon = connection->daemon;
 
   if (0 == connection->connection_timeout)
-    return; /* Skip update of activity for connections
+    return;  /* Skip update of activity for connections
                without timeout timer. */
   if (connection->suspended)
-    return; /* no activity on suspended connections */
+    return;  /* no activity on suspended connections */
 
   connection->last_activity = MHD_monotonic_sec_counter ();
   if (MHD_TM_THREAD_PER_CONNECTION == daemon->threading_mode)

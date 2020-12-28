@@ -294,9 +294,9 @@ MHD_daemon_poll_all_ (struct MHD_Daemon *daemon,
       prev = pos->prev;
       /* first, sanity checks */
       if (i >= num_connections)
-        break;   /* connection list changed somehow, retry later ... */
+        break;     /* connection list changed somehow, retry later ... */
       if (p[poll_server + i].fd != pos->socket_fd)
-        continue;   /* fd mismatch, something else happened, retry later ... */
+        continue;  /* fd mismatch, something else happened, retry later ... */
       MHD_connection_call_handlers_ (pos,
                                      0 != (p[poll_server + i].revents & POLLIN),
                                      0 != (p[poll_server + i].revents

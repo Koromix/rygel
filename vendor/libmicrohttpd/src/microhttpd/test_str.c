@@ -50,9 +50,9 @@ static const char *const locale_names[] = {
   "C",
   "",        /* System default locale */
 #if defined(_WIN32) && ! defined(__CYGWIN__)
-  ".OCP",     /* W32 system default OEM code page */
-  ".ACP",     /* W32 system default ANSI code page */
-  ".65001",   /* UTF-8 */
+  ".OCP",    /* W32 system default OEM code page */
+  ".ACP",    /* W32 system default ANSI code page */
+  ".65001",  /* UTF-8 */
   ".437",
   ".850",
   ".857",
@@ -455,50 +455,50 @@ static const struct two_neq_strs neq_strings[] = {
   {D_STR_W_LEN ("zyxwvutsrqponwMLKJIHGFEDCBA"), D_STR_W_LEN (
      "ZYXWVUTSRQPON%mlkjihgfedcba"), 13},
 
-  {D_STR_W_LEN ("S\xbdur veulent plus d'\xbdufs."),     /* "Sœur veulent plus d'œufs." in ISO-8859-15 */
+  {D_STR_W_LEN ("S\xbdur veulent plus d'\xbdufs."),         /* "Sœur veulent plus d'œufs." in ISO-8859-15 */
    D_STR_W_LEN ("S\xbcUR VEULENT PLUS D'\xbcUFS."), 1}, /* "SŒUR VEULENT PLUS D'ŒUFS." in ISO-8859-15 */
-  {D_STR_W_LEN ("S\x9cur veulent plus d'\x9cufs."),     /* "Sœur veulent plus d'œufs." in CP1252 */
+  {D_STR_W_LEN ("S\x9cur veulent plus d'\x9cufs."),         /* "Sœur veulent plus d'œufs." in CP1252 */
    D_STR_W_LEN ("S\x8cUR VEULENT PLUS D'\x8cUFS."), 1}, /* "SŒUR VEULENT PLUS D'ŒUFS." in CP1252 */
-  {D_STR_W_LEN ("S\xc5\x93ur veulent plus d'\xc5\x93ufs."),     /* "Sœur veulent plus d'œufs." in UTF-8 */
+  {D_STR_W_LEN ("S\xc5\x93ur veulent plus d'\xc5\x93ufs."), /* "Sœur veulent plus d'œufs." in UTF-8 */
    D_STR_W_LEN ("S\xc5\x92UR VEULENT PLUS D'\xc5\x92UFS."), 2}, /* "SŒUR VEULENT PLUS D'ŒUFS." in UTF-8 */
 
-  {D_STR_W_LEN ("Um ein sch\x94nes M\x84" "dchen zu k\x81ssen."),      /* "Um ein schönes Mädchen zu küssen." in CP850 */
+  {D_STR_W_LEN ("Um ein sch\x94nes M\x84" "dchen zu k\x81ssen."),              /* "Um ein schönes Mädchen zu küssen." in CP850 */
    D_STR_W_LEN ("UM EIN SCH\x99NES M\x8e" "DCHEN ZU K\x9aSSEN."), 10}, /* "UM EIN SCHÖNES MÄDCHEN ZU KÜSSEN." in CP850 */
-  {D_STR_W_LEN ("Um ein sch\xf6nes M\xe4" "dchen zu k\xfcssen."),      /* "Um ein schönes Mädchen zu küssen." in ISO-8859-1/ISO-8859-15/CP1250/CP1252 */
+  {D_STR_W_LEN ("Um ein sch\xf6nes M\xe4" "dchen zu k\xfcssen."),              /* "Um ein schönes Mädchen zu küssen." in ISO-8859-1/ISO-8859-15/CP1250/CP1252 */
    D_STR_W_LEN ("UM EIN SCH\xd6NES M\xc4" "DCHEN ZU K\xdcSSEN."), 10}, /* "UM EIN SCHÖNES MÄDCHEN ZU KÜSSEN." in ISO-8859-1/ISO-8859-15/CP1250/CP1252 */
-  {D_STR_W_LEN ("Um ein sch\xc3\xb6nes M\xc3\xa4" "dchen zu k\xc3\xbcssen."),      /* "Um ein schönes Mädchen zu küssen." in UTF-8 */
+  {D_STR_W_LEN ("Um ein sch\xc3\xb6nes M\xc3\xa4" "dchen zu k\xc3\xbcssen."),  /* "Um ein schönes Mädchen zu küssen." in UTF-8 */
    D_STR_W_LEN ("UM EIN SCH\xc3\x96NES M\xc3\x84" "DCHEN ZU K\xc3\x9cSSEN."),
-   11},                                                                            /* "UM EIN SCHÖNES MÄDCHEN ZU KÜSSEN." in UTF-8 */
+   11},                                                                        /* "UM EIN SCHÖNES MÄDCHEN ZU KÜSSEN." in UTF-8 */
 
-  {D_STR_W_LEN ("\x98stanbul"),            /* "İstanbul" in CP857 */
-   D_STR_W_LEN ("istanbul"), 0},           /* "istanbul" in CP857 */
-  {D_STR_W_LEN ("\xddstanbul"),            /* "İstanbul" in ISO-8859-9/CP1254 */
-   D_STR_W_LEN ("istanbul"), 0},           /* "istanbul" in ISO-8859-9/CP1254 */
-  {D_STR_W_LEN ("\xc4\xb0stanbul"),        /* "İstanbul" in UTF-8 */
-   D_STR_W_LEN ("istanbul"), 0},           /* "istanbul" in UTF-8 */
-  {D_STR_W_LEN ("Diyarbak\x8dr"),          /* "Diyarbakır" in CP857 */
-   D_STR_W_LEN ("DiyarbakIR"), 8},         /* "DiyarbakIR" in CP857 */
-  {D_STR_W_LEN ("Diyarbak\xfdr"),          /* "Diyarbakır" in ISO-8859-9/CP1254 */
-   D_STR_W_LEN ("DiyarbakIR"), 8},         /* "DiyarbakIR" in ISO-8859-9/CP1254 */
-  {D_STR_W_LEN ("Diyarbak\xc4\xb1r"),      /* "Diyarbakır" in UTF-8 */
-   D_STR_W_LEN ("DiyarbakIR"), 8},         /* "DiyarbakIR" in UTF-8 */
+  {D_STR_W_LEN ("\x98stanbul"),                                                /* "İstanbul" in CP857 */
+   D_STR_W_LEN ("istanbul"), 0},                                               /* "istanbul" in CP857 */
+  {D_STR_W_LEN ("\xddstanbul"),                                                /* "İstanbul" in ISO-8859-9/CP1254 */
+   D_STR_W_LEN ("istanbul"), 0},                                               /* "istanbul" in ISO-8859-9/CP1254 */
+  {D_STR_W_LEN ("\xc4\xb0stanbul"),                                            /* "İstanbul" in UTF-8 */
+   D_STR_W_LEN ("istanbul"), 0},                                               /* "istanbul" in UTF-8 */
+  {D_STR_W_LEN ("Diyarbak\x8dr"),                                              /* "Diyarbakır" in CP857 */
+   D_STR_W_LEN ("DiyarbakIR"), 8},                                             /* "DiyarbakIR" in CP857 */
+  {D_STR_W_LEN ("Diyarbak\xfdr"),                                              /* "Diyarbakır" in ISO-8859-9/CP1254 */
+   D_STR_W_LEN ("DiyarbakIR"), 8},                                             /* "DiyarbakIR" in ISO-8859-9/CP1254 */
+  {D_STR_W_LEN ("Diyarbak\xc4\xb1r"),                                          /* "Diyarbakır" in UTF-8 */
+   D_STR_W_LEN ("DiyarbakIR"), 8},                                             /* "DiyarbakIR" in UTF-8 */
 
-  {D_STR_W_LEN ("\x92\xa5\xe1\xe2\xae\xa2\xa0\xef \x91\xe2\xe0\xae\xaa\xa0."),      /* "Тестовая Строка." in CP866 */
+  {D_STR_W_LEN ("\x92\xa5\xe1\xe2\xae\xa2\xa0\xef \x91\xe2\xe0\xae\xaa\xa0."), /* "Тестовая Строка." in CP866 */
    D_STR_W_LEN ("\x92\x85\x91\x92\x8e\x82\x80\x9f \x91\x92\x90\x8e\x8a\x80."),
-   1},                                                                              /* "ТЕСТОВАЯ СТРОКА." in CP866 */
-  {D_STR_W_LEN ("\xd2\xe5\xf1\xf2\xee\xe2\xe0\xff \xd1\xf2\xf0\xee\xea\xe0."),      /* "Тестовая Строка." in CP1251 */
+   1},                                                                         /* "ТЕСТОВАЯ СТРОКА." in CP866 */
+  {D_STR_W_LEN ("\xd2\xe5\xf1\xf2\xee\xe2\xe0\xff \xd1\xf2\xf0\xee\xea\xe0."), /* "Тестовая Строка." in CP1251 */
    D_STR_W_LEN ("\xd2\xc5\xd1\xd2\xce\xc2\xc0\xdf \xd1\xd2\xd0\xce\xca\xc0."),
-   1},                                                                              /* "ТЕСТОВАЯ СТРОКА." in CP1251 */
-  {D_STR_W_LEN ("\xf4\xc5\xd3\xd4\xcf\xd7\xc1\xd1 \xf3\xd4\xd2\xcf\xcb\xc1."),      /* "Тестовая Строка." in KOI8-R */
+   1},                                                                         /* "ТЕСТОВАЯ СТРОКА." in CP1251 */
+  {D_STR_W_LEN ("\xf4\xc5\xd3\xd4\xcf\xd7\xc1\xd1 \xf3\xd4\xd2\xcf\xcb\xc1."), /* "Тестовая Строка." in KOI8-R */
    D_STR_W_LEN ("\xf4\xe5\xf3\xf4\xef\xf7\xe1\xf1 \xf3\xf4\xf2\xef\xeb\xe1."),
-   1},                                                                              /* "ТЕСТОВАЯ СТРОКА." in KOI8-R */
-  {D_STR_W_LEN ("\xc2\xd5\xe1\xe2\xde\xd2\xd0\xef \xc1\xe2\xe0\xde\xda\xd0."),      /* "Тестовая Строка." in ISO-8859-5 */
+   1},                                                                         /* "ТЕСТОВАЯ СТРОКА." in KOI8-R */
+  {D_STR_W_LEN ("\xc2\xd5\xe1\xe2\xde\xd2\xd0\xef \xc1\xe2\xe0\xde\xda\xd0."), /* "Тестовая Строка." in ISO-8859-5 */
    D_STR_W_LEN ("\xc2\xb5\xc1\xc2\xbe\xb2\xb0\xcf \xc1\xc2\xc0\xbe\xba\xb0."),
-   1},                                                                              /* "ТЕСТОВАЯ СТРОКА." in ISO-8859-5 */
+   1},                                                                         /* "ТЕСТОВАЯ СТРОКА." in ISO-8859-5 */
   {D_STR_W_LEN ("\xd0\xa2\xd0\xb5\xd1\x81\xd1\x82\xd0\xbe\xd0\xb2\xd0\xb0\xd1"
-                "\x8f \xd0\xa1\xd1\x82\xd1\x80\xd0\xbe\xd0\xba\xd0\xb0."),          /* "Тестовая Строка." in UTF-8 */
+                "\x8f \xd0\xa1\xd1\x82\xd1\x80\xd0\xbe\xd0\xba\xd0\xb0."),     /* "Тестовая Строка." in UTF-8 */
    D_STR_W_LEN ("\xd0\xa2\xd0\x95\xd0\xa1\xd0\xa2\xd0\x9e\xd0\x92\xd0\x90\xd0"
-                "\xaf \xd0\xa1\xd0\xa2\xd0\xa0\xd0\x9e\xd0\x9a\xd0\x90."), 3}       /* "ТЕСТОВАЯ СТРОКА." in UTF-8 */
+                "\xaf \xd0\xa1\xd0\xa2\xd0\xa0\xd0\x9e\xd0\x9a\xd0\x90."), 3}  /* "ТЕСТОВАЯ СТРОКА." in UTF-8 */
 };
 
 
@@ -900,15 +900,15 @@ static const struct str_with_value dstrs_w_values[] = {
   {D_STR_W_LEN ("00000000000000000000000031295483"), 32, 31295483},
 
   /* numbers below and above limits */
-  {D_STR_W_LEN ("127"), 3, 127},  /* 0x7F, SCHAR_MAX */
-  {D_STR_W_LEN ("128"), 3, 128},  /* 0x80, SCHAR_MAX+1 */
-  {D_STR_W_LEN ("255"), 3, 255},  /* 0xFF, UCHAR_MAX */
-  {D_STR_W_LEN ("256"), 3, 256},  /* 0x100, UCHAR_MAX+1 */
-  {D_STR_W_LEN ("32767"), 5, 32767},  /* 0x7FFF, INT16_MAX */
-  {D_STR_W_LEN ("32768"), 5, 32768},  /* 0x8000, INT16_MAX+1 */
-  {D_STR_W_LEN ("65535"), 5, 65535},  /* 0xFFFF, UINT16_MAX */
-  {D_STR_W_LEN ("65536"), 5, 65536},  /* 0x10000, UINT16_MAX+1 */
-  {D_STR_W_LEN ("2147483647"), 10, 2147483647},  /* 0x7FFFFFFF, INT32_MAX */
+  {D_STR_W_LEN ("127"), 3, 127},                /* 0x7F, SCHAR_MAX */
+  {D_STR_W_LEN ("128"), 3, 128},                /* 0x80, SCHAR_MAX+1 */
+  {D_STR_W_LEN ("255"), 3, 255},                /* 0xFF, UCHAR_MAX */
+  {D_STR_W_LEN ("256"), 3, 256},                /* 0x100, UCHAR_MAX+1 */
+  {D_STR_W_LEN ("32767"), 5, 32767},            /* 0x7FFF, INT16_MAX */
+  {D_STR_W_LEN ("32768"), 5, 32768},            /* 0x8000, INT16_MAX+1 */
+  {D_STR_W_LEN ("65535"), 5, 65535},            /* 0xFFFF, UINT16_MAX */
+  {D_STR_W_LEN ("65536"), 5, 65536},            /* 0x10000, UINT16_MAX+1 */
+  {D_STR_W_LEN ("2147483647"), 10, 2147483647}, /* 0x7FFFFFFF, INT32_MAX */
   {D_STR_W_LEN ("2147483648"), 10, UINT64_C (2147483648)}, /* 0x80000000, INT32_MAX+1 */
   {D_STR_W_LEN ("4294967295"), 10, UINT64_C (4294967295)}, /* 0xFFFFFFFF, UINT32_MAX */
   {D_STR_W_LEN ("4294967296"), 10, UINT64_C (4294967296)}, /* 0x100000000, UINT32_MAX+1 */
@@ -968,14 +968,14 @@ const struct str_with_len str_ovflw[] = {
 const struct str_with_len str_no_num[] = {
   D_STR_W_LEN ("zero"),
   D_STR_W_LEN ("one"),
-  D_STR_W_LEN ("\xb9\xb2\xb3"),                 /* superscript "123" in ISO-8859-1/CP1252 */
-  D_STR_W_LEN ("\xc2\xb9\xc2\xb2\xc2\xb3"),     /* superscript "123" in UTF-8 */
-  D_STR_W_LEN ("\xd9\xa1\xd9\xa2\xd9\xa3"),     /* Arabic-Indic "١٢٣" in UTF-8 */
-  D_STR_W_LEN ("\xdb\xb1\xdb\xb2\xdb\xb3"),     /* Ext Arabic-Indic "۱۲۳" in UTF-8 */
-  D_STR_W_LEN ("\xe0\xa5\xa7\xe0\xa5\xa8\xe0\xa5\xa9"),  /* Devanagari "१२३" in UTF-8 */
-  D_STR_W_LEN ("\xe4\xb8\x80\xe4\xba\x8c\xe4\xb8\x89"),  /* Chinese "一二三" in UTF-8 */
-  D_STR_W_LEN ("\xd2\xbb\xb6\xfe\xc8\xfd"),     /* Chinese "一二三" in GB2312/CP936 */
-  D_STR_W_LEN ("\x1B\x24\x29\x41\x0E\x52\x3B\x36\x7E\x48\x7D\x0F")  /* Chinese "一二三" in ISO-2022-CN */
+  D_STR_W_LEN ("\xb9\xb2\xb3"),                                    /* superscript "123" in ISO-8859-1/CP1252 */
+  D_STR_W_LEN ("\xc2\xb9\xc2\xb2\xc2\xb3"),                        /* superscript "123" in UTF-8 */
+  D_STR_W_LEN ("\xd9\xa1\xd9\xa2\xd9\xa3"),                        /* Arabic-Indic "١٢٣" in UTF-8 */
+  D_STR_W_LEN ("\xdb\xb1\xdb\xb2\xdb\xb3"),                        /* Ext Arabic-Indic "۱۲۳" in UTF-8 */
+  D_STR_W_LEN ("\xe0\xa5\xa7\xe0\xa5\xa8\xe0\xa5\xa9"),            /* Devanagari "१२३" in UTF-8 */
+  D_STR_W_LEN ("\xe4\xb8\x80\xe4\xba\x8c\xe4\xb8\x89"),            /* Chinese "一二三" in UTF-8 */
+  D_STR_W_LEN ("\xd2\xbb\xb6\xfe\xc8\xfd"),                        /* Chinese "一二三" in GB2312/CP936 */
+  D_STR_W_LEN ("\x1B\x24\x29\x41\x0E\x52\x3B\x36\x7E\x48\x7D\x0F") /* Chinese "一二三" in ISO-2022-CN */
 };
 
 /* valid hex string for conversion to unsigned integer value */
@@ -1013,25 +1013,25 @@ static const struct str_with_value xdstrs_w_values[] = {
   {D_STR_W_LEN ("0000000000000000000000003A29e4C3"), 32, 0x3A29E4C3},
 
   /* numbers below and above limits */
-  {D_STR_W_LEN ("7F"), 2, 127},  /* 0x7F, SCHAR_MAX */
-  {D_STR_W_LEN ("7f"), 2, 127},  /* 0x7F, SCHAR_MAX */
-  {D_STR_W_LEN ("80"), 2, 128},  /* 0x80, SCHAR_MAX+1 */
-  {D_STR_W_LEN ("fF"), 2, 255},  /* 0xFF, UCHAR_MAX */
-  {D_STR_W_LEN ("Ff"), 2, 255},  /* 0xFF, UCHAR_MAX */
-  {D_STR_W_LEN ("FF"), 2, 255},  /* 0xFF, UCHAR_MAX */
-  {D_STR_W_LEN ("ff"), 2, 255},  /* 0xFF, UCHAR_MAX */
-  {D_STR_W_LEN ("100"), 3, 256},  /* 0x100, UCHAR_MAX+1 */
-  {D_STR_W_LEN ("7fff"), 4, 32767},  /* 0x7FFF, INT16_MAX */
-  {D_STR_W_LEN ("7FFF"), 4, 32767},  /* 0x7FFF, INT16_MAX */
-  {D_STR_W_LEN ("7Fff"), 4, 32767},  /* 0x7FFF, INT16_MAX */
-  {D_STR_W_LEN ("8000"), 4, 32768},  /* 0x8000, INT16_MAX+1 */
-  {D_STR_W_LEN ("ffff"), 4, 65535},  /* 0xFFFF, UINT16_MAX */
-  {D_STR_W_LEN ("FFFF"), 4, 65535},  /* 0xFFFF, UINT16_MAX */
-  {D_STR_W_LEN ("FffF"), 4, 65535},  /* 0xFFFF, UINT16_MAX */
-  {D_STR_W_LEN ("10000"), 5, 65536},  /* 0x10000, UINT16_MAX+1 */
-  {D_STR_W_LEN ("7FFFFFFF"), 8, 2147483647},  /* 0x7FFFFFFF, INT32_MAX */
-  {D_STR_W_LEN ("7fffffff"), 8, 2147483647},  /* 0x7FFFFFFF, INT32_MAX */
-  {D_STR_W_LEN ("7FFffFff"), 8, 2147483647},  /* 0x7FFFFFFF, INT32_MAX */
+  {D_STR_W_LEN ("7F"), 2, 127},              /* 0x7F, SCHAR_MAX */
+  {D_STR_W_LEN ("7f"), 2, 127},              /* 0x7F, SCHAR_MAX */
+  {D_STR_W_LEN ("80"), 2, 128},              /* 0x80, SCHAR_MAX+1 */
+  {D_STR_W_LEN ("fF"), 2, 255},              /* 0xFF, UCHAR_MAX */
+  {D_STR_W_LEN ("Ff"), 2, 255},              /* 0xFF, UCHAR_MAX */
+  {D_STR_W_LEN ("FF"), 2, 255},              /* 0xFF, UCHAR_MAX */
+  {D_STR_W_LEN ("ff"), 2, 255},              /* 0xFF, UCHAR_MAX */
+  {D_STR_W_LEN ("100"), 3, 256},             /* 0x100, UCHAR_MAX+1 */
+  {D_STR_W_LEN ("7fff"), 4, 32767},          /* 0x7FFF, INT16_MAX */
+  {D_STR_W_LEN ("7FFF"), 4, 32767},          /* 0x7FFF, INT16_MAX */
+  {D_STR_W_LEN ("7Fff"), 4, 32767},          /* 0x7FFF, INT16_MAX */
+  {D_STR_W_LEN ("8000"), 4, 32768},          /* 0x8000, INT16_MAX+1 */
+  {D_STR_W_LEN ("ffff"), 4, 65535},          /* 0xFFFF, UINT16_MAX */
+  {D_STR_W_LEN ("FFFF"), 4, 65535},          /* 0xFFFF, UINT16_MAX */
+  {D_STR_W_LEN ("FffF"), 4, 65535},          /* 0xFFFF, UINT16_MAX */
+  {D_STR_W_LEN ("10000"), 5, 65536},         /* 0x10000, UINT16_MAX+1 */
+  {D_STR_W_LEN ("7FFFFFFF"), 8, 2147483647}, /* 0x7FFFFFFF, INT32_MAX */
+  {D_STR_W_LEN ("7fffffff"), 8, 2147483647}, /* 0x7FFFFFFF, INT32_MAX */
+  {D_STR_W_LEN ("7FFffFff"), 8, 2147483647}, /* 0x7FFFFFFF, INT32_MAX */
   {D_STR_W_LEN ("80000000"), 8, UINT64_C (2147483648)}, /* 0x80000000, INT32_MAX+1 */
   {D_STR_W_LEN ("FFFFFFFF"), 8, UINT64_C (4294967295)}, /* 0xFFFFFFFF, UINT32_MAX */
   {D_STR_W_LEN ("ffffffff"), 8, UINT64_C (4294967295)}, /* 0xFFFFFFFF, UINT32_MAX */
@@ -1124,8 +1124,8 @@ const struct str_with_len strx_ovflw[] = {
   D_STR_W_LEN ("434532891232591226417"),
   D_STR_W_LEN ("10000000000000000a"),
   D_STR_W_LEN ("10000000000000000E"),
-  D_STR_W_LEN ("100000000000000000 and nothing"),  /* 0x10000000000000000, UINT64_MAX+1 */
-  D_STR_W_LEN ("100000000000000000xx"),         /* 0x10000000000000000, UINT64_MAX+1 */
+  D_STR_W_LEN ("100000000000000000 and nothing"), /* 0x10000000000000000, UINT64_MAX+1 */
+  D_STR_W_LEN ("100000000000000000xx"),           /* 0x10000000000000000, UINT64_MAX+1 */
   D_STR_W_LEN ("99999999999999999999"),
   D_STR_W_LEN ("18446744073709551616abcd"),
   D_STR_W_LEN ("20000000000000000000 suffix"),

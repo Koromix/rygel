@@ -40,11 +40,11 @@
 #include <unistd.h>
 #endif
 
-#if defined(CPU_COUNT) && (CPU_COUNT + 0) < 2
-#undef CPU_COUNT
+#if defined(MHD_CPU_COUNT) && (MHD_CPU_COUNT + 0) < 2
+#undef MHD_CPU_COUNT
 #endif
-#if ! defined(CPU_COUNT)
-#define CPU_COUNT 2
+#if ! defined(MHD_CPU_COUNT)
+#define MHD_CPU_COUNT 2
 #endif
 
 struct CBC
@@ -121,7 +121,7 @@ ahc_echo (void *cls,
   enum MHD_Result ret;
 
   (void) url;
-  (void) version;                      /* Unused. Silent compiler warning. */
+  (void) version;              /* Unused. Silent compiler warning. */
   (void) upload_data;
   (void) upload_data_size;     /* Unused. Silent compiler warning. */
 
@@ -325,7 +325,8 @@ testMultithreadedPoolGet ()
   cbc.pos = 0;
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
                         port, NULL, NULL, &ahc_echo, "GET",
-                        MHD_OPTION_THREAD_POOL_SIZE, CPU_COUNT, MHD_OPTION_END);
+                        MHD_OPTION_THREAD_POOL_SIZE, MHD_CPU_COUNT,
+                        MHD_OPTION_END);
   if (d == NULL)
     return 16;
   if (0 == port)

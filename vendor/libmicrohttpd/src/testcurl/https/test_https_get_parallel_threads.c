@@ -38,11 +38,11 @@
 #endif /* MHD_HTTPS_REQUIRE_GRYPT */
 #include "tls_test_common.h"
 
-#if defined(CPU_COUNT) && (CPU_COUNT + 0) < 4
-#undef CPU_COUNT
+#if defined(MHD_CPU_COUNT) && (MHD_CPU_COUNT + 0) < 4
+#undef MHD_CPU_COUNT
 #endif
-#if ! defined(CPU_COUNT)
-#define CPU_COUNT 4
+#if ! defined(MHD_CPU_COUNT)
+#define MHD_CPU_COUNT 4
 #endif
 
 extern const char srv_key_pem[];
@@ -106,7 +106,7 @@ test_parallel_clients (void *cls, int port, const char *cipher_suite,
                        int curl_proto_version)
 {
   int i;
-  int client_count = (CPU_COUNT - 1);
+  int client_count = (MHD_CPU_COUNT - 1);
   void *client_thread_ret;
   pthread_t client_arr[client_count];
   struct https_test_data client_args =

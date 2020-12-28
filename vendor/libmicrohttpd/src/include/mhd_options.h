@@ -74,6 +74,12 @@
 #define MHD_LINUX_SOLARIS_SENDFILE 1
 #endif /* HAVE_LINUX_SENDFILE || HAVE_SOLARIS_SENDFILE */
 
+#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
+#  ifndef MHD_USE_THREADS
+#    define MHD_USE_THREADS 1
+#  endif
+#endif /* MHD_USE_POSIX_THREADS || MHD_USE_W32_THREADS */
+
 #if OS390
 #define _OPEN_THREADS
 #define _OPEN_SYS_SOCK_IPV6
@@ -87,7 +93,7 @@
 /* Do not warn about POSIX name usage */
 #define _CRT_NONSTDC_NO_WARNINGS 1
 #ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0501
+#define _WIN32_WINNT 0x0600
 #else /* _WIN32_WINNT */
 #if _WIN32_WINNT < 0x0501
 #error "Headers for Windows XP or later are required"

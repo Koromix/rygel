@@ -254,8 +254,8 @@ MHD_monotonic_sec_counter_init (void)
     LARGE_INTEGER freq;
     LARGE_INTEGER perf_counter;
 
-    QueryPerformanceFrequency (&freq);   /* never fail on XP and later */
-    QueryPerformanceCounter (&perf_counter);   /* never fail on XP and later */
+    QueryPerformanceFrequency (&freq);       /* never fail on XP and later */
+    QueryPerformanceCounter (&perf_counter); /* never fail on XP and later */
     perf_freq = freq.QuadPart;
     perf_start = perf_counter.QuadPart;
     mono_clock_source = _MHD_CLOCK_PERFCOUNTER;

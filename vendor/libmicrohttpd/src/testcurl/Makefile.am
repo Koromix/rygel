@@ -10,7 +10,7 @@ if ENABLE_HTTPS
 endif
 
 AM_CPPFLAGS = \
--DCPU_COUNT=$(CPU_COUNT) \
+-DMHD_CPU_COUNT=$(CPU_COUNT) \
 -I$(top_srcdir) \
 -I$(top_srcdir)/src/microhttpd \
 -I$(top_srcdir)/src/include \
@@ -23,16 +23,15 @@ THREAD_ONLY_TESTS = \
   test_long_header11 \
   test_iplimit11 \
   test_termination \
+  test_add_conn_cleanup \
+  test_add_conn_cleanup_nolisten \
   test_timeout
-
-.NOTPARALLEL:
 
 if HAVE_POSIX_THREADS
 THREAD_ONLY_TESTS += \
   perf_get_concurrent11 \
   test_quiesce \
-  test_concurrent_stop \
-  perf_get_concurrent
+  test_concurrent_stop
 
 if HAVE_CURL_BINARY
 THREAD_ONLY_TESTS += \
@@ -47,6 +46,11 @@ if ENABLE_DAUTH
     test_digestauth_with_arguments
 endif
 
+if HAVE_POSIX_THREADS
+THREAD_ONLY_TESTS += \
+  perf_get_concurrent
+endif
+  
 if HAVE_CURL
 check_PROGRAMS = \
   test_get \
@@ -54,6 +58,8 @@ check_PROGRAMS = \
   test_delete \
   test_patch \
   test_put \
+  test_add_conn \
+  test_add_conn_nolisten \
   test_process_headers \
   test_process_arguments \
   test_parse_cookies \
@@ -267,6 +273,38 @@ test_put_LDADD = \
 test_put_chunked_SOURCES = \
   test_put_chunked.c
 test_put_chunked_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  @LIBCURL@
+  
+test_add_conn_SOURCES = \
+  test_add_conn.c $(top_srcdir)/src/microhttpd/test_helpers.h
+test_add_conn_CFLAGS = \
+  $(PTHREAD_CFLAGS) $(AM_CFLAGS)
+test_add_conn_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  @LIBCURL@
+
+test_add_conn_nolisten_SOURCES = \
+  test_add_conn.c $(top_srcdir)/src/microhttpd/test_helpers.h
+test_add_conn_nolisten_CFLAGS = \
+  $(PTHREAD_CFLAGS) $(AM_CFLAGS)
+test_add_conn_nolisten_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  @LIBCURL@
+
+test_add_conn_cleanup_SOURCES = \
+  test_add_conn.c $(top_srcdir)/src/microhttpd/test_helpers.h
+test_add_conn_cleanup_CFLAGS = \
+  $(PTHREAD_CFLAGS) $(AM_CFLAGS)
+test_add_conn_cleanup_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  @LIBCURL@
+
+test_add_conn_cleanup_nolisten_SOURCES = \
+  test_add_conn.c $(top_srcdir)/src/microhttpd/test_helpers.h
+test_add_conn_cleanup_nolisten_CFLAGS = \
+  $(PTHREAD_CFLAGS) $(AM_CFLAGS)
+test_add_conn_cleanup_nolisten_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 

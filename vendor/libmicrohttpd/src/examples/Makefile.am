@@ -7,7 +7,7 @@ AM_CPPFLAGS = \
 
 AM_CFLAGS = @LIBGCRYPT_CFLAGS@
 
-CPU_COUNT_DEF = -DCPU_COUNT=$(CPU_COUNT)
+MHD_CPU_COUNT_DEF = -DMHD_CPU_COUNT=$(CPU_COUNT)
 
 if USE_COVERAGE
   AM_CFLAGS += --coverage
@@ -128,7 +128,7 @@ demo_SOURCES = \
 demo_CFLAGS = \
  $(PTHREAD_CFLAGS) $(AM_CFLAGS)
 demo_CPPFLAGS = \
- $(AM_CPPFLAGS) $(CPU_COUNT_DEF)
+ $(AM_CPPFLAGS) $(MHD_CPU_COUNT_DEF)
 demo_LDADD = \
  $(top_builddir)/src/microhttpd/libmicrohttpd.la  \
  $(PTHREAD_LIBS)
@@ -141,7 +141,7 @@ demo_https_SOURCES = \
 demo_https_CFLAGS = \
  $(PTHREAD_CFLAGS) $(AM_CFLAGS)
 demo_https_CPPFLAGS = \
- $(AM_CPPFLAGS) $(CPU_COUNT_DEF)
+ $(AM_CPPFLAGS) $(MHD_CPU_COUNT_DEF)
 demo_https_LDADD = \
  $(top_builddir)/src/microhttpd/libmicrohttpd.la  \
  $(PTHREAD_LIBS)
@@ -152,21 +152,21 @@ endif
 benchmark_SOURCES = \
  benchmark.c
 benchmark_CPPFLAGS = \
- $(AM_CPPFLAGS) $(CPU_COUNT_DEF)
+ $(AM_CPPFLAGS) $(MHD_CPU_COUNT_DEF)
 benchmark_LDADD = \
  $(top_builddir)/src/microhttpd/libmicrohttpd.la
 
 suspend_resume_epoll_SOURCES = \
  suspend_resume_epoll.c
 suspend_resume_epoll_CPPFLAGS = \
- $(AM_CPPFLAGS) $(CPU_COUNT_DEF)
+ $(AM_CPPFLAGS) $(MHD_CPU_COUNT_DEF)
 suspend_resume_epoll_LDADD = \
  $(top_builddir)/src/microhttpd/libmicrohttpd.la
 
 benchmark_https_SOURCES = \
  benchmark_https.c
 benchmark_https_CPPFLAGS = \
- $(AM_CPPFLAGS) $(CPU_COUNT_DEF)
+ $(AM_CPPFLAGS) $(MHD_CPU_COUNT_DEF)
 benchmark_https_LDADD = \
  $(top_builddir)/src/microhttpd/libmicrohttpd.la
 

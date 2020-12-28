@@ -69,11 +69,23 @@
 
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
 #include "mhd_threads.h"
-#include "mhd_locks.h"
 #endif
+#include "mhd_locks.h"
 #include "mhd_sockets.h"
 #include "mhd_itc_types.h"
 
+
+/**
+ * @def _MHD_MACRO_NO
+ * "Negative answer"/"false" for use in macros, meaningful for precompiler
+ */
+#define _MHD_MACRO_NO   0
+
+/**
+ * @def _MHD_MACRO_YES
+ * "Positive answer"/"true" for use in macros, meaningful for precompiler
+ */
+#define _MHD_MACRO_YES  1
 
 /**
  * Close FD and abort execution if error is detected.
@@ -84,11 +96,33 @@
       MHD_PANIC (_ ("Failed to close FD.\n"));            \
 } while (0)
 
-/**
- * Should we perform additional sanity checks at runtime (on our internal
- * invariants)?  This may lead to aborts, but can be useful for debugging.
+/*
+#define EXTRA_CHECKS _MHD_MACRO_NO
+ * Not used. Behaviour is controlled by _DEBUG/NDEBUG macros.
  */
-#define EXTRA_CHECKS MHD_NO
+
+#ifndef _MHD_DEBUG_CONNECT
+/**
+ * Print extra messages when establishing
+ * connections? (only adds non-error messages).
+ */
+#define _MHD_DEBUG_CONNECT _MHD_MACRO_NO
+#endif /* ! _MHD_DEBUG_CONNECT */
+
+#ifndef _MHD_DEBUG_SEND_DATA
+/**
+ * Should all data send be printed to stderr?
+ */
+#define _MHD_DEBUG_SEND_DATA _MHD_MACRO_NO
+#endif /* ! _MHD_DEBUG_SEND_DATA */
+
+#ifndef _MHD_DEBUG_CLOSE
+/**
+ * Add extra debug messages with reasons for closing connections
+ * (non-error reasons).
+ */
+#define _MHD_DEBUG_CLOSE _MHD_MACRO_NO
+#endif /* ! _MHD_DEBUG_CLOSE */
 
 #define MHD_MAX(a,b) (((a)<(b)) ? (b) : (a))
 #define MHD_MIN(a,b) (((a)<(b)) ? (a) : (b))
@@ -130,6 +164,17 @@ extern void *mhd_panic_cls;
  */
 #define MHD_STATICSTR_LEN_(macro) (sizeof(macro) / sizeof(char) - 1)
 #endif /* ! MHD_STATICSTR_LEN_ */
+
+
+/**
+ * Tri-state on/off/unknown
+ */
+enum MHD_tristate
+{
+  _MHD_UNKNOWN = -1,    /**< State is not yet checked nor set */
+  _MHD_OFF     = false, /**< State is "off" / "disabled" */
+  _MHD_ON      = true   /**< State is "on"  / "enabled" */
+};
 
 
 /**
@@ -380,7 +425,7 @@ struct MHD_Response
   size_t data_size;
 
   /**
-   * Size of the data buffer @e data.
+   * Size of the writable data buffer @e data.
    */
   size_t data_buffer_size;
 
@@ -399,6 +444,11 @@ struct MHD_Response
    * Flags set for the MHD response.
    */
   enum MHD_ResponseFlags flags;
+
+  /**
+   * If the @e fd is a pipe (no sendfile()).
+   */
+  bool is_pipe;
 
 };
 
@@ -879,10 +929,19 @@ struct MHD_Connection
   bool sk_nonblck;
 
   /**
-   * Indicate whether connection socket has TCP_CORK / Nagle’s algorithm turned on/off
-   * on this socket.
+   * true if connection socket has set SIGPIPE suppression
    */
-  bool sk_cork_on;
+  bool sk_spipe_suppress;
+
+  /**
+   * Tracks TCP_CORK / TCP_NOPUSH of the connection socket.
+   */
+  enum MHD_tristate sk_corked;
+
+  /**
+   * Tracks TCP_NODELAY state of the connection socket.
+   */
+  enum MHD_tristate sk_nodelay;
 
   /**
    * Has this socket been closed for reading (i.e.  other side closed
@@ -1014,7 +1073,7 @@ struct MHD_Connection
   /**
    * Is the connection wanting to resume?
    */
-  bool resuming;
+  volatile bool resuming;
 };
 
 
@@ -1055,7 +1114,7 @@ struct UpgradeEpollHandle
    *
    * Similarly, for writing to TLS, this epoll() will be on the
    * connection's `socket_fd`, and this will merely be the FD which
-   * the applicatio would write to.  Hence this struct must always be
+   * the application would write to.  Hence this struct must always be
    * interpreted based on which field in `struct
    * MHD_UpgradeResponseHandle` it is (`app` or `mhd`).
    */
@@ -1209,7 +1268,7 @@ struct MHD_UpgradeResponseHandle
    * @remark This flag could be changed from thread that process
    * connection's recv(), send() and response.
    */
-  bool clean_ready;
+  volatile bool clean_ready;
 };
 #endif /* UPGRADE_SUPPORT */
 
@@ -1263,6 +1322,24 @@ struct MHD_Daemon
   void *default_handler_cls;
 
   /**
+   * Daemon's flags (bitfield).
+   *
+   * @remark Keep this member after pointer value to keep it
+   * properly aligned as it will be used as member of union MHD_DaemonInfo.
+   */
+  enum MHD_FLAG options;
+
+  /**
+   * Head of doubly-linked list of new, externally added connections.
+   */
+  struct MHD_Connection *new_connections_head;
+
+  /**
+   * Tail of doubly-linked list of new, externally added connections.
+   */
+  struct MHD_Connection *new_connections_tail;
+
+  /**
    * Head of doubly-linked list of our current, active connections.
    */
   struct MHD_Connection *connections_head;
@@ -1303,7 +1380,35 @@ struct MHD_Daemon
    */
   struct MHD_Connection *eready_tail;
 
+  /**
+   * File descriptor associated with our epoll loop.
+   *
+   * @remark Keep this member after pointer value to keep it
+   * properly aligned as it will be used as member of union MHD_DaemonInfo.
+   */
+  int epoll_fd;
+
+  /**
+   * true if the listen socket is in the 'epoll' set,
+   * false if not.
+   */
+  bool listen_socket_in_epoll;
+
 #ifdef UPGRADE_SUPPORT
+#ifdef HTTPS_SUPPORT
+  /**
+   * File descriptor associated with the #run_epoll_for_upgrade() loop.
+   * Only available if #MHD_USE_HTTPS_EPOLL_UPGRADE is set.
+   */
+  int epoll_upgrade_fd;
+
+  /**
+   * true if @e epoll_upgrade_fd is in the 'epoll' set,
+   * false if not.
+   */
+  bool upgrade_fd_in_epoll;
+#endif /* HTTPS_SUPPORT */
+
   /**
    * Head of EDLL of upgraded connections ready for processing (in epoll mode).
    */
@@ -1411,6 +1516,14 @@ struct MHD_Daemon
    */
   void *unescape_callback_cls;
 
+  /**
+   * Listen port.
+   *
+   * @remark Keep this member after pointer value to keep it
+   * properly aligned as it will be used as member of union MHD_DaemonInfo.
+   */
+  uint16_t port;
+
 #ifdef HAVE_MESSAGES
   /**
    * Function for logging error messages (if we
@@ -1429,6 +1542,14 @@ struct MHD_Daemon
    */
   struct MHD_Daemon *master;
 
+  /**
+   * Listen socket.
+   *
+   * @remark Keep this member after pointer value to keep it
+   * properly aligned as it will be used as member of union MHD_DaemonInfo.
+   */
+  MHD_socket listen_fd;
+
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   /**
    * Worker daemons (one per thread)
@@ -1440,6 +1561,14 @@ struct MHD_Daemon
    * Table storing number of connections per IP
    */
   void *per_ip_connection_count;
+
+  /**
+   * Number of active parallel connections.
+   *
+   * @remark Keep this member after pointer value to keep it
+   * properly aligned as it will be used as member of union MHD_DaemonInfo.
+   */
+  unsigned int connections;
 
   /**
    * Size of the per-connection memory pools.
@@ -1477,6 +1606,11 @@ struct MHD_Daemon
    * "manual_timeout" DLLs.
    */
   MHD_mutex_ cleanup_connection_mutex;
+
+  /**
+   * Mutex for any access to the "new connections" DL-list.
+   */
+  MHD_mutex_ new_connections_mutex;
 #endif
 
   /**
@@ -1484,11 +1618,6 @@ struct MHD_Daemon
    * which sanity checks are off.
    */
   enum MHD_DisableSanityCheck insanity_level;
-
-  /**
-   * Listen socket.
-   */
-  MHD_socket listen_fd;
 
   /**
    * Whether to allow/disallow/ignore reuse of listening address.
@@ -1501,33 +1630,6 @@ struct MHD_Daemon
    */
   int listening_address_reuse;
 
-#ifdef EPOLL_SUPPORT
-  /**
-   * File descriptor associated with our epoll loop.
-   */
-  int epoll_fd;
-
-  /**
-   * true if the listen socket is in the 'epoll' set,
-   * false if not.
-   */
-  bool listen_socket_in_epoll;
-
-#if defined(HTTPS_SUPPORT) && defined(UPGRADE_SUPPORT)
-  /**
-   * File descriptor associated with the #run_epoll_for_upgrade() loop.
-   * Only available if #MHD_USE_HTTPS_EPOLL_UPGRADE is set.
-   */
-  int epoll_upgrade_fd;
-
-  /**
-   * true if @e epoll_upgrade_fd is in the 'epoll' set,
-   * false if not.
-   */
-  bool upgrade_fd_in_epoll;
-#endif /* HTTPS_SUPPORT && UPGRADE_SUPPORT */
-
-#endif
 
   /**
    * Inter-thread communication channel (also used to unblock
@@ -1559,7 +1661,13 @@ struct MHD_Daemon
   /*
    * Do we need to process resuming connections?
    */
-  bool resuming;
+  volatile bool resuming;
+
+  /**
+   * Indicate that new connections in @e new_connections_head list
+   * need to be processed.
+   */
+  volatile bool have_new;
 
   /**
    * 'True' if some data is already waiting to be processed.
@@ -1571,11 +1679,6 @@ struct MHD_Daemon
    * data for response, data waiting in TLS buffers etc.)
    */
   bool data_already_pending;
-
-  /**
-   * Number of active parallel connections.
-   */
-  unsigned int connections;
 
   /**
    * Limit on the number of parallel connections.
@@ -1595,19 +1698,14 @@ struct MHD_Daemon
   unsigned int per_ip_connection_limit;
 
   /**
-   * Daemon's flags (bitfield).
-   */
-  enum MHD_FLAG options;
-
-  /**
-   * Listen port.
-   */
-  uint16_t port;
-
-  /**
    * Be neutral (zero), strict (1) or permissive (-1) to client.
    */
   int strict_for_client;
+
+  /**
+   * True if SIGPIPE is blocked
+   */
+  bool sigpipe_blocked;
 
 #ifdef HTTPS_SUPPORT
 #ifdef UPGRADE_SUPPORT

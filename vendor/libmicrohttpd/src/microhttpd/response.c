@@ -262,10 +262,10 @@ MHD_get_response_headers (struct MHD_Response *response,
   {
     numHeaders++;
     if ((NULL != iterator) &&
-        (MHD_YES != iterator (iterator_cls,
-                              pos->kind,
-                              pos->header,
-                              pos->value)))
+        (MHD_NO == iterator (iterator_cls,
+                             pos->kind,
+                             pos->header,
+                             pos->value)))
       break;
   }
   return numHeaders;
@@ -527,6 +527,45 @@ file_reader (void *cls,
 
 
 /**
+ * Given a pipe descriptor, read data from the pipe
+ * to generate the response.
+ *
+ * @param cls pointer to the response
+ * @param pos offset in the pipe to access (ignored)
+ * @param buf where to write the data
+ * @param max number of bytes to write at most
+ * @return number of bytes written
+ */
+static ssize_t
+pipe_reader (void *cls,
+             uint64_t pos,
+             char *buf,
+             size_t max)
+{
+  struct MHD_Response *response = cls;
+  ssize_t n;
+
+  (void) pos;
+#ifndef _WIN32
+  if (SSIZE_MAX < max)
+    max = SSIZE_MAX;
+#else  /* _WIN32 */
+  if (UINT_MAX < max)
+    max = UINT_MAX;
+#endif /* _WIN32 */
+
+  n = read (response->fd,
+            buf,
+            (MHD_SCKT_SEND_SIZE_) max);
+  if (0 == n)
+    return MHD_CONTENT_READER_END_OF_STREAM;
+  if (n < 0)
+    return MHD_CONTENT_READER_END_WITH_ERROR;
+  return n;
+}
+
+
+/**
  * Destroy file reader context.  Closes the file
  * descriptor.
  *
@@ -614,7 +653,37 @@ MHD_create_response_from_fd_at_offset64 (uint64_t size,
   if (NULL == response)
     return NULL;
   response->fd = fd;
+  response->is_pipe = false;
   response->fd_off = offset;
+  response->crc_cls = response;
+  return response;
+}
+
+
+/**
+ * Create a response object.  The response object can be extended with
+ * header information and then be used ONLY ONCE.
+ *
+ * @param fd file descriptor referring to a read-end of a pipe with the
+ *        data; will be closed when response is destroyed;
+ *        fd should be in 'blocking' mode
+ * @return NULL on error (i.e. invalid arguments, out of memory)
+ * @ingroup response
+ */
+_MHD_EXTERN struct MHD_Response *
+MHD_create_response_from_pipe (int fd)
+{
+  struct MHD_Response *response;
+
+  response = MHD_create_response_from_callback (MHD_SIZE_UNKNOWN,
+                                                MHD_FILE_READ_BLOCK_SIZE,
+                                                &pipe_reader,
+                                                NULL,
+                                                &free_callback);
+  if (NULL == response)
+    return NULL;
+  response->fd = fd;
+  response->is_pipe = true;
   response->crc_cls = response;
   return response;
 }
@@ -720,6 +789,8 @@ MHD_create_response_from_data (size_t size,
   response->total_size = size;
   response->data = data;
   response->data_size = size;
+  if (must_copy)
+    response->data_buffer_size = size;
   return response;
 }
 
@@ -831,49 +902,27 @@ MHD_upgrade_action (struct MHD_UpgradeResponseHandle *urh,
     MHD_resume_connection (connection);
     return MHD_YES;
   case MHD_UPGRADE_ACTION_CORK_ON:
-    if (connection->sk_cork_on)
+    if (_MHD_ON == connection->sk_corked)
       return MHD_YES;
-#ifdef HTTPS_SUPPORT
-    if (0 != (daemon->options & MHD_USE_TLS) )
+    if (0 !=
+        MHD_socket_cork_ (connection->socket_fd,
+                          true))
     {
-      gnutls_record_cork (connection->tls_session);
-      connection->sk_cork_on = true;
+      connection->sk_corked = _MHD_ON;
       return MHD_YES;
     }
-    else
-#endif
-    {
-      if (0 ==
-          MHD_socket_cork_ (connection->socket_fd,
-                            true))
-      {
-        connection->sk_cork_on = true;
-        return MHD_YES;
-      }
-      return MHD_NO;
-    }
+    return MHD_NO;
   case MHD_UPGRADE_ACTION_CORK_OFF:
-    if (! connection->sk_cork_on)
+    if (_MHD_OFF == connection->sk_corked)
       return MHD_YES;
-#ifdef HTTPS_SUPPORT
-    if (0 != (daemon->options & MHD_USE_TLS) )
+    if (0 !=
+        MHD_socket_cork_ (connection->socket_fd,
+                          false))
     {
-      gnutls_record_uncork (connection->tls_session, 0);
-      connection->sk_cork_on = false;
+      connection->sk_corked = _MHD_OFF;
       return MHD_YES;
     }
-    else
-#endif
-    {
-      if (0 ==
-          MHD_socket_cork_ (connection->socket_fd,
-                            false))
-      {
-        connection->sk_cork_on = false;
-        return MHD_YES;
-      }
-      return MHD_NO;
-    }
+    return MHD_NO;
   default:
     /* we don't understand this one */
     return MHD_NO;
@@ -901,6 +950,11 @@ MHD_response_execute_upgrade_ (struct MHD_Response *response,
   struct MHD_Daemon *daemon = connection->daemon;
   struct MHD_UpgradeResponseHandle *urh;
   size_t rbo;
+
+#ifdef MHD_USE_THREADS
+  mhd_assert ( (0 == (daemon->options & MHD_USE_INTERNAL_POLLING_THREAD)) || \
+               MHD_thread_ID_match_current_ (connection->pid) );
+#endif /* MHD_USE_THREADS */
 
   if (0 == (daemon->options & MHD_ALLOW_UPGRADE))
     return MHD_NO;

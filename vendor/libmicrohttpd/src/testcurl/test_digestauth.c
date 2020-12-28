@@ -91,7 +91,8 @@ ahc_echo (void *cls,
   const char *password = "testpass";
   const char *realm = "test@example.com";
   enum MHD_Result ret;
-  (void) cls; (void) url;                          /* Unused. Silent compiler warning. */
+  int ret_i;
+  (void) cls; (void) url;                         /* Unused. Silent compiler warning. */
   (void) method; (void) version; (void) upload_data; /* Unused. Silent compiler warning. */
   (void) upload_data_size; (void) unused;         /* Unused. Silent compiler warning. */
 
@@ -110,14 +111,14 @@ ahc_echo (void *cls,
     MHD_destroy_response (response);
     return ret;
   }
-  ret = MHD_digest_auth_check (connection,
-                               realm,
-                               username,
-                               password,
-                               300);
+  ret_i = MHD_digest_auth_check (connection,
+                                 realm,
+                                 username,
+                                 password,
+                                 300);
   free (username);
-  if ( (ret == MHD_INVALID_NONCE) ||
-       (ret == MHD_NO) )
+  if ( (ret_i == MHD_INVALID_NONCE) ||
+       (ret_i == MHD_NO) )
   {
     response = MHD_create_response_from_buffer (strlen (DENIED),
                                                 DENIED,
@@ -128,8 +129,8 @@ ahc_echo (void *cls,
                                         realm,
                                         MY_OPAQUE,
                                         response,
-                                        (MHD_INVALID_NONCE == ret) ? MHD_YES :
-                                        MHD_NO);
+                                        (MHD_INVALID_NONCE == ret_i) ?
+                                        MHD_YES : MHD_NO);
     MHD_destroy_response (response);
     return ret;
   }

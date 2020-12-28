@@ -1,11 +1,11 @@
 #define PACKAGE "libmicrohttpd"
 #define PACKAGE_BUGREPORT "libmicrohttpd@gnu.org"
 #define PACKAGE_NAME "GNU Libmicrohttpd"
-#define PACKAGE_STRING "GNU Libmicrohttpd 0.9.71"
+#define PACKAGE_STRING "GNU Libmicrohttpd 0.9.72"
 #define PACKAGE_TARNAME "libmicrohttpd"
 #define PACKAGE_URL "http://www.gnu.org/software/libmicrohttpd/"
-#define PACKAGE_VERSION "0.9.71"
-#define VERSION "0.9.71"
+#define PACKAGE_VERSION "0.9.72"
+#define VERSION "0.9.72"
 
 #if defined(__MINGW32__)
     #define BAUTH_SUPPORT 1
@@ -33,6 +33,7 @@
     #define HAVE_PTHREAD_PRIO_INHERIT 1
     #define HAVE_RAND 1
     #define HAVE_REAL_BOOL 1
+    #define HAVE_SDKDDKVER_H 1
     #define HAVE_SEARCH_H 1
     #define HAVE_SNPRINTF 1
     #define HAVE_STDBOOL_H 1
@@ -51,8 +52,11 @@
     #define HAVE_UNISTD_H 1
     #define HAVE_USLEEP 1
     #define HAVE_W32_GMTIME_S 1
+    #define HAVE_WINDOWS_H 1
     #define HAVE_WINSOCK2_H 1
     #define HAVE_WS2TCPIP_H 1
+    #define HAVE___FUNCTION__ 1
+    #define HAVE___FUNC__ 1
     #define INLINE_FUNC 1
     #define LT_OBJDIR ".libs/"
     #define MHD_HAVE___BUILTIN_BSWAP32 1
@@ -104,6 +108,7 @@
     #define HAVE_LOCALE_H 1
     #define HAVE_MATH_H 1
     #define HAVE_MEMORY_H 1
+    #define HAVE_SDKDDKVER_H 1
     #define HAVE_STDINT_H 1
     #define HAVE_STDIO_H 1
     #define HAVE_STDLIB_H 1
@@ -114,6 +119,9 @@
     #define HAVE_TIME_H 1
     #define HAVE_STDDEF_H 1
     #define HAVE_STDBOOL_H 1
+    #define HAVE_WINDOWS_H 1
+    #define HAVE___FUNCTION__ 1
+    #define HAVE___FUNC__ 1
     #define _GNU_SOURCE  1
     #define STDC_HEADERS 1
     #define __STDC_NO_VLA__ 1
@@ -161,11 +169,13 @@
     #define HAVE_PTHREAD_H 1
     #define HAVE_PTHREAD_PRIO_INHERIT 1
     #define HAVE_PTHREAD_SETNAME_NP_DARWIN 1
+    #define HAVE_PTHREAD_SIGMASK 1
     #define HAVE_RAND 1
     #define HAVE_RANDOM 1
     #define HAVE_REAL_BOOL 1
     #define HAVE_SEARCH_H 1
     #define HAVE_SENDMSG 1
+    #define HAVE_SIGNAL_H 1
     #define HAVE_SNPRINTF 1
     #define HAVE_SOCKADDR_IN_SIN_LEN 1
     #define HAVE_STDBOOL_H 1
@@ -190,6 +200,8 @@
     #define HAVE_USLEEP 1
     #define HAVE_WAITPID 1
     #define HAVE_WRITEV 1
+    #define HAVE___FUNCTION__ 1
+    #define HAVE___FUNC__ 1
     #define INLINE_FUNC 1
     #define OSX 1
     #define LT_OBJDIR ".libs/"
@@ -237,7 +249,6 @@
     #define HAVE_MEMMEM 1
     #define HAVE_MEMORY_H 1
     #define HAVE_MESSAGES 1
-    #define HAVE_MSG_MORE 1
     #define HAVE_NANOSLEEP 1
     #define HAVE_NETDB_H 1
     #define HAVE_NETINET_IN_H 1
@@ -252,12 +263,14 @@
     #define HAVE_PTHREAD_H 1
     #define HAVE_PTHREAD_PRIO_INHERIT 1
     #define HAVE_PTHREAD_SETNAME_NP_GNU 1
+    #define HAVE_PTHREAD_SIGMASK 1
     #define HAVE_RAND 1
     #define HAVE_RANDOM 1
     #define HAVE_REAL_BOOL 1
     #define HAVE_SEARCH_H 1
     #define HAVE_SENDMSG 1
     #define HAVE_SENDFILE64 1
+    #define HAVE_SIGNAL_H 1
     #define HAVE_SNPRINTF 1
     #define HAVE_SOCK_NONBLOCK 1
     #define HAVE_STDBOOL_H 1
@@ -284,6 +297,8 @@
     #define HAVE_USLEEP 1
     #define HAVE_WAITPID 1
     #define HAVE_WRITEV 1
+    #define HAVE___FUNCTION__ 1
+    #define HAVE___FUNC__ 1
     #define INLINE_FUNC 1
     #define LINUX 1
     #define LT_OBJDIR ".libs/"

@@ -1,8 +1,8 @@
 This is libmicrohttpd.info, produced by makeinfo version 6.7 from
 libmicrohttpd.texi.
 
-This manual is for GNU libmicrohttpd (version 0.9.71, 10 June 2020), a
-library for embedding an HTTP(S) server into C applications.
+This manual is for GNU libmicrohttpd (version 0.9.72, 21 September
+2020), a library for embedding an HTTP(S) server into C applications.
 
    Copyright © 2007–2019 Christian Grothoff
 
@@ -23,8 +23,8 @@ File: libmicrohttpd.info,  Node: Top,  Next: microhttpd-intro,  Up: (dir)
 The GNU libmicrohttpd Library
 *****************************
 
-This manual is for GNU libmicrohttpd (version 0.9.71, 10 June 2020), a
-library for embedding an HTTP(S) server into C applications.
+This manual is for GNU libmicrohttpd (version 0.9.72, 21 September
+2020), a library for embedding an HTTP(S) server into C applications.
 
    Copyright © 2007–2019 Christian Grothoff
 
@@ -547,7 +547,7 @@ File: libmicrohttpd.info,  Node: microhttpd-const,  Next: microhttpd-struct,  Pr
           authentication.  Only useful in combination with
           ‘MHD_USE_TLS’.
 
-          This option will only work if the underyling TLS library
+          This option will only work if the underlying TLS library
           supports it (i.e.  GnuTLS after 3.6.3).  If the TLS library
           does not support it, MHD may ignore the option and proceed
           without supporting this features.
@@ -559,7 +559,7 @@ File: libmicrohttpd.info,  Node: microhttpd-const,  Next: microhttpd-struct,  Pr
           enforce that this only affects GET requests!  You have been
           warned.
 
-          This option will only work if the underyling TLS library
+          This option will only work if the underlying TLS library
           supports it (i.e.  GnuTLS after 3.6.3).  If the TLS library
           does not support it, MHD may ignore the option and proceed
           without supporting this features.
@@ -1784,6 +1784,18 @@ File: libmicrohttpd.info,  Node: microhttpd-response create,  Next: microhttpd-r
 
      Return ‘NULL’ on error (i.e.  invalid arguments, out of memory).
 
+ -- Function: struct MHD_Response * MHD_create_response_from_pipe
+          (uint64_t size, int fd)
+     Create a response object.  The response object can be extended with
+     header information and then it can be used ONLY ONCE.
+
+     FD
+          file descriptor of the read-end of the pipe; will be closed
+          when response is destroyed.  The descriptor should be in
+          blocking-IO mode.
+
+     Return ‘NULL’ on error (i.e.  out of memory).
+
  -- Function: struct MHD_Response *
           MHD_create_response_from_fd_at_offset (size_t size, int fd,
           off_t offset)
@@ -2248,7 +2260,7 @@ File: libmicrohttpd.info,  Node: microhttpd-dauth basic,  Next: microhttpd-dauth
      ‘NULL’.  If returned value is not ‘NULL’, the value must be
      ‘MHD_free()’’ed.
 
- -- Function: int MHD_queue_basic_auth_fail_response (struct
+ -- Function: enum MHD_Result MHD_queue_basic_auth_fail_response (struct
           MHD_Connection *connection, const char *realm, struct
           MHD_Response *response)
      Queues a response to request basic authentication from the client.
@@ -4565,16 +4577,18 @@ Function and Data Index
                                                               (line  10)
 * MHD_create_post_processor:             microhttpd-post api. (line   6)
 * MHD_create_response_from_buffer:       microhttpd-response create.
-                                                              (line  92)
+                                                              (line 104)
 * MHD_create_response_from_buffer_with_free_callback: microhttpd-response create.
-                                                              (line 113)
+                                                              (line 125)
 * MHD_create_response_from_callback:     microhttpd-response create.
                                                               (line   6)
 * MHD_create_response_from_data:         microhttpd-response create.
-                                                              (line 131)
+                                                              (line 143)
 * MHD_create_response_from_fd:           microhttpd-response create.
                                                               (line  32)
 * MHD_create_response_from_fd_at_offset: microhttpd-response create.
+                                                              (line  62)
+* MHD_create_response_from_pipe:         microhttpd-response create.
                                                               (line  50)
 * MHD_destroy_response:                  microhttpd-response enqueue.
                                                               (line  29)
@@ -4685,44 +4699,44 @@ Type Index
 
 
 Tag Table:
-Node: Top814
-Node: microhttpd-intro3122
-Ref: fig:performance8039
-Ref: tbl:supported9010
-Node: microhttpd-const16987
-Node: microhttpd-struct52927
-Node: microhttpd-cb53711
-Node: microhttpd-init63971
-Node: microhttpd-inspect69853
-Node: microhttpd-requests72634
-Node: microhttpd-responses76714
-Node: microhttpd-response enqueue77913
-Ref: microhttpd-response enqueue-Footnote-180242
-Node: microhttpd-response create80477
-Node: microhttpd-response headers87147
-Node: microhttpd-response options89645
-Node: microhttpd-response inspect90528
-Node: microhttpd-response upgrade91749
-Node: microhttpd-flow97127
-Node: microhttpd-dauth100445
-Node: microhttpd-dauth basic101996
-Node: microhttpd-dauth digest103390
-Node: microhttpd-post113610
-Node: microhttpd-post api116609
-Node: microhttpd-info119277
-Node: microhttpd-info daemon119699
-Node: microhttpd-info conn123159
-Node: microhttpd-option conn128218
-Node: microhttpd-util129298
-Node: microhttpd-util feature129569
-Node: microhttpd-util unescape133155
-Node: GNU-LGPL133803
-Node: eCos License161994
-Node: GNU-GPL163385
-Node: GNU-FDL182692
-Node: Concept Index207961
-Node: Function and Data Index217407
-Node: Type Index224003
+Node: Top819
+Node: microhttpd-intro3132
+Ref: fig:performance8049
+Ref: tbl:supported9020
+Node: microhttpd-const16997
+Node: microhttpd-struct52937
+Node: microhttpd-cb53721
+Node: microhttpd-init63981
+Node: microhttpd-inspect69863
+Node: microhttpd-requests72644
+Node: microhttpd-responses76724
+Node: microhttpd-response enqueue77923
+Ref: microhttpd-response enqueue-Footnote-180252
+Node: microhttpd-response create80487
+Node: microhttpd-response headers87620
+Node: microhttpd-response options90118
+Node: microhttpd-response inspect91001
+Node: microhttpd-response upgrade92222
+Node: microhttpd-flow97600
+Node: microhttpd-dauth100918
+Node: microhttpd-dauth basic102469
+Node: microhttpd-dauth digest103875
+Node: microhttpd-post114095
+Node: microhttpd-post api117094
+Node: microhttpd-info119762
+Node: microhttpd-info daemon120184
+Node: microhttpd-info conn123644
+Node: microhttpd-option conn128703
+Node: microhttpd-util129783
+Node: microhttpd-util feature130054
+Node: microhttpd-util unescape133640
+Node: GNU-LGPL134288
+Node: eCos License162479
+Node: GNU-GPL163870
+Node: GNU-FDL183177
+Node: Concept Index208446
+Node: Function and Data Index217892
+Node: Type Index224630
 
 End Tag Table
 

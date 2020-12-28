@@ -65,10 +65,10 @@
 #define ROUND_TO_ALIGN(n) (((n) + (ALIGN_SIZE - 1)) \
                            / (ALIGN_SIZE) *(ALIGN_SIZE))
 
-#if defined(PAGE_SIZE)
+#if defined(PAGE_SIZE) && (0 < (PAGE_SIZE + 0))
 #define MHD_DEF_PAGE_SIZE_ PAGE_SIZE
-#elif defined(PAGESIZE)
-#define MHD_DEF_PAGE_SIZE_ PAGE_SIZE
+#elif defined(PAGESIZE) && (0 < (PAGESIZE + 0))
+#define MHD_DEF_PAGE_SIZE_ PAGESIZE
 #else  /* ! PAGESIZE */
 #define MHD_DEF_PAGE_SIZE_ (4096)
 #endif /* ! PAGESIZE */
@@ -98,6 +98,7 @@ MHD_init_mem_pools_ (void)
 #else
   MHD_sys_page_size_ = MHD_DEF_PAGE_SIZE_;
 #endif /* _WIN32 */
+  mhd_assert (0 == (MHD_sys_page_size_ % ALIGN_SIZE));
 }
 
 
@@ -147,6 +148,7 @@ MHD_pool_create (size_t max)
   struct MemoryPool *pool;
   size_t alloc_size;
 
+  mhd_assert (max > 0);
   pool = malloc (sizeof (struct MemoryPool));
   if (NULL == pool)
     return NULL;
@@ -195,6 +197,7 @@ MHD_pool_create (size_t max)
     pool->is_mmap = true;
   }
 #endif /* _WIN32 || MAP_ANONYMOUS */
+  mhd_assert (0 == (((uintptr_t) pool->memory) % ALIGN_SIZE));
   pool->pos = 0;
   pool->end = alloc_size;
   pool->size = alloc_size;
@@ -321,7 +324,7 @@ MHD_pool_reallocate (struct MemoryPool *pool,
   mhd_assert (old == NULL || pool->memory + pool->size >= (uint8_t*) old
               + old_size);
   /* Blocks "from the end" must not be reallocated */
-  mhd_assert (old == NULL || old_size == 0 ||
+  mhd_assert (old == NULL || old_size == 0 || \
               pool->memory + pool->pos > (uint8_t*) old);
 
   if (0 != old_size)
@@ -337,10 +340,10 @@ MHD_pool_reallocate (struct MemoryPool *pool,
     {     /* "old" block is the last allocated block */
       const size_t new_apos = ROUND_TO_ALIGN (old_offset + new_size);
       if (! shrinking)
-      {       /* Grow in-place, check for enough space. */
+      {                               /* Grow in-place, check for enough space. */
         if ( (new_apos > pool->end) ||
-             (new_apos < pool->pos) )       /* Value wrap */
-          return NULL;       /* No space */
+             (new_apos < pool->pos) ) /* Value wrap */
+          return NULL;                /* No space */
       }
       /* Resized in-place */
       pool->pos = new_apos;

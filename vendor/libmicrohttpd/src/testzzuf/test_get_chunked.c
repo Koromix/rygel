@@ -104,7 +104,7 @@ ahc_echo (void *cls,
   enum MHD_Result ret;
 
   (void) url;
-  (void) version;                      /* Unused. Silent compiler warning. */
+  (void) version;              /* Unused. Silent compiler warning. */
   (void) upload_data;
   (void) upload_data_size;     /* Unused. Silent compiler warning. */
 

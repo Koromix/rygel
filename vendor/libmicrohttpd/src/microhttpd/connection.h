@@ -62,16 +62,6 @@
 #define MHD_ERR_INVAL_ (-3078)
 
 
-#ifdef HAVE_FREEBSD_SENDFILE
-/**
- * Initialises static variables
- */
-void
-MHD_conn_init_static_ (void);
-
-#endif /* HAVE_FREEBSD_SENDFILE */
-
-
 /**
  * Set callbacks for this connection to those for HTTP.
  *

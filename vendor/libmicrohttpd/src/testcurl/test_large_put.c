@@ -38,11 +38,11 @@
 
 #include "test_helpers.h"
 
-#if defined(CPU_COUNT) && (CPU_COUNT + 0) < 2
-#undef CPU_COUNT
+#if defined(MHD_CPU_COUNT) && (MHD_CPU_COUNT + 0) < 2
+#undef MHD_CPU_COUNT
 #endif
-#if ! defined(CPU_COUNT)
-#define CPU_COUNT 2
+#if ! defined(MHD_CPU_COUNT)
+#define MHD_CPU_COUNT 2
 #endif
 
 static int oneone;
@@ -379,7 +379,7 @@ testPutThreadPool (unsigned int add_flag)
                         | add_flag,
                         port,
                         NULL, NULL, &ahc_echo, &done_flag,
-                        MHD_OPTION_THREAD_POOL_SIZE, CPU_COUNT,
+                        MHD_OPTION_THREAD_POOL_SIZE, MHD_CPU_COUNT,
                         MHD_OPTION_CONNECTION_MEMORY_LIMIT,
                         (size_t) (incr_read ? 1024 : (PUT_SIZE * 4)),
                         MHD_OPTION_END);
