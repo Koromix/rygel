@@ -16,7 +16,7 @@ let data = new function() {
         return fetchAndCache(json_cache, url, url, json => json); };
 
     this.fetchDictionary = async function(name) {
-        let url = `${env.base_url}dictionaries/${name}.json`;
+        let url = `${ENV.base_url}dictionaries/${name}.json`;
         return fetchAndCache(dict_cache, name, url, parseDictionary);
     };
     this.fetchCachedDictionary = function(name) { return dict_cache.get(name); }

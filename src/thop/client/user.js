@@ -9,7 +9,7 @@ let user = new function() {
     this.route = route;
 
     this.run = async function() {
-        if (!env.has_users)
+        if (!ENV.has_users)
             throw new Error('Le module utilisateur est désactivé');
 
         switch (route.mode) {
@@ -31,7 +31,7 @@ let user = new function() {
 
     this.makeURL = function(args = {}) {
         args = util.assignDeep({}, route, args);
-        return `${env.base_url}user/${args.mode}/`;
+        return `${ENV.base_url}user/${args.mode}/`;
     };
 
     // ------------------------------------------------------------------------
@@ -88,7 +88,7 @@ let user = new function() {
         query.set('username', username.toLowerCase());
         query.set('password', password);
 
-        let response = await net.fetch(`${env.base_url}api/user/login`, {
+        let response = await net.fetch(`${ENV.base_url}api/user/login`, {
             method: 'POST',
             body: query
         });
@@ -104,7 +104,7 @@ let user = new function() {
     };
 
     this.logout = async function() {
-        let response = await net.fetch(`${env.base_url}api/user/logout`, {method: 'POST'});
+        let response = await net.fetch(`${ENV.base_url}api/user/logout`, {method: 'POST'});
 
         if (response.ok) {
             log.info('Vous êtes déconnecté(e)');

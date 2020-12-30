@@ -133,7 +133,7 @@ let thop = new function() {
         if (typeof mod === 'string') {
             let url = new URL(mod, window.location.href);
 
-            let path_str = url.pathname.substr(env.base_url.length);
+            let path_str = url.pathname.substr(ENV.base_url.length);
             let [mod_name, ...mod_path] = path_str.split('/');
 
             let params = {};
@@ -190,7 +190,7 @@ let thop = new function() {
     }
 
     async function updateSettings() {
-        if (env.has_users)
+        if (ENV.has_users)
             user.readSessionCookies();
         if (settings_rnd === user.getSessionRnd())
             return;
@@ -202,7 +202,7 @@ let thop = new function() {
         // Fetch new settings
         {
             // We'll parse it manually to revive dates. It's relatively small anyway.
-            let url = util.pasteURL(`${env.base_url}api/user/settings`, {rnd: user.getSessionRnd()});
+            let url = util.pasteURL(`${ENV.base_url}api/user/settings`, {rnd: user.getSessionRnd()});
             let json = await net.fetch(url).then(response => response.text());
 
             settings = JSON.parse(json, (key, value) => {
@@ -216,7 +216,7 @@ let thop = new function() {
         }
 
         // Update session information
-        if (env.has_users) {
+        if (ENV.has_users) {
             render(html`
                 ${!user.isConnected() ?
                     html`<a href=${user.makeURL({mode: 'login'})}>Se connecter</a>` : ''}

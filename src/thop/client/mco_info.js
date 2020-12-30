@@ -137,7 +137,7 @@ let mco_info = new function() {
             } break;
         }
 
-        return util.pasteURL(`${env.base_url}${path.join('/')}`, params);
+        return util.pasteURL(`${ENV.base_url}${path.join('/')}`, params);
     };
 
     // ------------------------------------------------------------------------
@@ -151,7 +151,7 @@ let mco_info = new function() {
         let [mco, ghmghs] = await Promise.all([
             data.fetchDictionary('mco'),
 
-            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco/ghmghs`, {
+            data.fetchJSON(util.pasteURL(`${ENV.base_url}api/mco/ghmghs`, {
                 sector: route.sector || 'public',
                 date: version.begin_date
             }))
@@ -180,7 +180,7 @@ let mco_info = new function() {
         let [mco, ghmghs] = await Promise.all([
             data.fetchDictionary('mco'),
 
-            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco/ghmghs`, {
+            data.fetchJSON(util.pasteURL(`${ENV.base_url}api/mco/ghmghs`, {
                 sector: route.sector,
                 date: version.begin_date
             }))
@@ -243,7 +243,7 @@ let mco_info = new function() {
         let [cim10, diagnoses] = await Promise.all([
             data.fetchDictionary('cim10'),
 
-            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco/diagnoses`, {
+            data.fetchJSON(util.pasteURL(`${ENV.base_url}api/mco/diagnoses`, {
                 date: version.begin_date,
                 spec: route.diagnoses.list
             }))
@@ -286,7 +286,7 @@ let mco_info = new function() {
         let [ccam, procedures] = await Promise.all([
             data.fetchDictionary('ccam'),
 
-            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco/procedures`, {
+            data.fetchJSON(util.pasteURL(`${ENV.base_url}api/mco/procedures`, {
                 date: version.begin_date,
                 spec: route.procedures.list
             }))
@@ -504,7 +504,7 @@ let mco_info = new function() {
 
     async function exportListToXLSX(records, handler) {
         if (typeof XLSX === 'undefined')
-            await net.loadScript(`${env.base_url}static/xlsx.core.min.js`);
+            await net.loadScript(`${ENV.base_url}static/xlsx.core.min.js`);
 
         let ws = XLSX.utils.aoa_to_sheet([
             handler.columns.map(col => col.key),
@@ -542,11 +542,11 @@ let mco_info = new function() {
         let [mco, ghmghs, ghmghs_diff] = await Promise.all([
             data.fetchDictionary('mco'),
 
-            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco/ghmghs`, {
+            data.fetchJSON(util.pasteURL(`${ENV.base_url}api/mco/ghmghs`, {
                 sector: route.sector,
                 date: version.begin_date
             })),
-            version_diff ? data.fetchJSON(util.pasteURL(`${env.base_url}api/mco/ghmghs`, {
+            version_diff ? data.fetchJSON(util.pasteURL(`${ENV.base_url}api/mco/ghmghs`, {
                 sector: route.sector,
                 date: version_diff.begin_date
             })) : null
@@ -619,7 +619,7 @@ let mco_info = new function() {
         // Render grid or plot
         if (route.ghs.plot) {
             if (typeof Chart === 'undefined')
-                await net.loadScript(`${env.base_url}static/chart.bundle.min.js`);
+                await net.loadScript(`${ENV.base_url}static/chart.bundle.min.js`);
 
             render(chart_canvas, document.querySelector('#th_view'));
             updatePriceChart(mco.ghm_roots.describe(route.ghs.ghm_root), columns,
@@ -975,10 +975,10 @@ let mco_info = new function() {
         let [mco, tree_nodes, highlight_map] = await Promise.all([
             data.fetchDictionary('mco'),
 
-            data.fetchJSON(util.pasteURL(`${env.base_url}api/mco/tree`, {
+            data.fetchJSON(util.pasteURL(`${ENV.base_url}api/mco/tree`, {
                 date: version.begin_date
             })),
-            route.tree.filter ? data.fetchJSON(util.pasteURL(`${env.base_url}api/mco/highlight`, {
+            route.tree.filter ? data.fetchJSON(util.pasteURL(`${ENV.base_url}api/mco/highlight`, {
                 date: version.begin_date,
                 diag: route.tree.diag ? route.tree.diag.replace('.', '').trim() : null,
                 proc: route.tree.proc ? route.tree.proc.trim() : null
