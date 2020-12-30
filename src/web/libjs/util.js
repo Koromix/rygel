@@ -80,7 +80,7 @@ if (typeof Blob !== 'undefined' && !Blob.prototype.text) {
 // Utility
 // ------------------------------------------------------------------------
 
-let util = new function() {
+const util = new function() {
     let self = this;
 
     this.clamp = function(value, min, max) {
@@ -483,7 +483,7 @@ let util = new function() {
 // Log
 // ------------------------------------------------------------------------
 
-let log = new function() {
+const log = new function() {
     let self = this;
 
     let handlers = [];
@@ -619,7 +619,7 @@ let log = new function() {
 // Network
 // ------------------------------------------------------------------------
 
-let net = new function() {
+const net = new function() {
     let self = this;
 
     let online = true;
@@ -1078,7 +1078,7 @@ function BTree(order = 64) {
 // Date and time
 // ------------------------------------------------------------------------
 
-let dates = new function() {
+const dates = new function() {
     let self = this;
 
     this.isLeapYear = function(year) {
@@ -1288,7 +1288,7 @@ let dates = new function() {
     };
 };
 
-let times = new function() {
+const times = new function() {
     let self = this;
 
     function LocalTime(hour = 0, minute = 0, second = 0) {

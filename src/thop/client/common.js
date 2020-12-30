@@ -6,7 +6,7 @@
 // Data
 // ------------------------------------------------------------------------
 
-let data = new function() {
+const data = new function() {
     let self = this;
 
     let json_cache = new LruMap(4);
@@ -103,7 +103,7 @@ let data = new function() {
 // Format
 // ------------------------------------------------------------------------
 
-let format = new function() {
+const format = new function() {
     this.number = function(n, show_plus = false) {
         return (show_plus && n > 0 ? '+' : '') +
                n.toLocaleString('fr-FR');

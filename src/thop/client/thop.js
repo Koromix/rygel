@@ -5,7 +5,7 @@
 // Fetched from THOP server
 let settings = {};
 
-let thop = new function() {
+const thop = new function() {
     let self = this;
 
     let deployer_targets = [];
