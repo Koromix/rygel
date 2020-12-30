@@ -154,9 +154,6 @@ bool DomainHolder::Open(const char *filename)
         }
     }
 
-    if (!Sync())
-        return false;
-
     err_guard.Disable();
     return true;
 }
@@ -175,15 +172,6 @@ void DomainHolder::Close()
     }
     instances.Clear();
     instances_map.Clear();
-}
-
-void DomainHolder::InitAssets()
-{
-    std::shared_lock<std::shared_mutex> lock(mutex);
-
-    for (InstanceHolder *instance: instances) {
-        instance->InitAssets();
-    }
 }
 
 // Can be called multiple times, from main thread only

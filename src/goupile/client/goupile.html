@@ -10,31 +10,25 @@
         <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1"/>
 
         <link rel="icon" href="{BASE_URL}favicon.png" />
-        <title>{APP_NAME}</title>
+        <title>{TITLE}</title>
 
         <script>
             // Goupile {VERSION}
             // https://goupile.fr/
 
-            var env = {
-                app_key: '{APP_KEY}',
-                app_name: '{APP_NAME}',
+            var ENV = {
+                title: '{TITLE}',
                 base_url: '{BASE_URL}',
-
-                use_offline: {USE_OFFLINE},
-                sync_mode: '{SYNC_MODE}',
-
-                cache_key: '{CACHE_KEY}'
             };
         </script>
         <script src="{BASE_URL}static/goupile.pk.js"></script>
 
         <link rel="stylesheet" href="{BASE_URL}static/goupile.pk.css"/>
-        {LINK_MANIFEST}
     </head>
 
     <body>
         <div id="gp_root"></div>
+
         <script>
             try {
                 eval('async function test() {}');
@@ -47,14 +41,12 @@
                         throw new Error('Cannot work with broken async in IndexedDB');
                 }
 
-                document.querySelector('#gp_root').classList.add('busy');
                 document.addEventListener('readystatechange', function(e) {
                     if (document.readyState === 'complete')
-                        goupile.startApp();
+                        goupile.start();
                 });
             } catch (err) {
-                let el = document.querySelector('#gp_root');
-                el.innerHTML =
+                document.querySelector('#gp_root').innerHTML =
                     '<div class="gp_wip">' +
                     '    <b>Ce navigateur n\'est pas supporté, ou il s\'agit d\'une version trop ancienne</b><br/>' +
                     '    Vous pouvez utiliser Chrome (version ≥ 55), Firefox (version ≥ 60), Edge (version ≥ 17), Safari (≥ 11)' +

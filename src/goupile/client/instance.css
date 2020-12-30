@@ -1,0 +1,11 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+   License, v. 2.0. If a copy of the MPL was not distributed with this
+   file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+html.instance {
+    --menu_color: #24579d;
+    --page_color: #ef6000;
+}
+
+.ins_panel { padding: 1em; }
+.ins_panel + .ins_panel { border-left: 1px solid #dfdfdf; }

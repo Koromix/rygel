@@ -12,22 +12,6 @@
 
 namespace RG {
 
-void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
-{
-    http_JsonPageBuilder json(request.compression_type);
-    char buf[512];
-
-    json.StartArray();
-    json.String(Fmt(buf, "/%1/", instance->key).ptr);
-    for (const AssetInfo &asset: instance->assets) {
-        char buf[512];
-        json.String(Fmt(buf, "/%1/%2", instance->key, asset.name + 1).ptr);
-    }
-    json.EndArray();
-
-    json.Finish(io);
-}
-
 void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     sq_Statement stmt;
@@ -192,7 +176,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
     io->RunAsync([=]() {
         // Create temporary file
         FILE *fp = nullptr;
-        const char *tmp_filename = CreateTemporaryFile(goupile_domain.config.temp_directory, ".tmp",
+        const char *tmp_filename = CreateTemporaryFile(gp_domain.config.temp_directory, ".tmp",
                                                        &io->allocator, &fp);
         if (!tmp_filename)
             return;
@@ -274,7 +258,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
                 return false;
             if (!instance->db.Run(R"(INSERT INTO fs_files (active, path, mtime, blob, compression, sha256, size)
                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7);)",
-                                     1, path, mtime, sq_Binding::Zeroblob(file_len), "Gzip", sha256, total_len))
+                                  1, path, mtime, sq_Binding::Zeroblob(file_len), "Gzip", sha256, total_len))
                 return false;
 
             int64_t rowid = sqlite3_last_insert_rowid(instance->db);

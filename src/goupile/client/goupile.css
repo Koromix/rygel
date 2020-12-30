@@ -2,7 +2,7 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* -------------------- Layout and basic elements -------------------- */
+/* -------------------- Layout -------------------- */
 
 html { height: 100%; }
 body {
@@ -24,9 +24,17 @@ main { height: 100%; }
     body { font-size: 16px; }
 }
 
+/* -------------------- Base elements -------------------- */
+
 a {
-    color: #ef6000;
+    color: var(--page_color);
     text-decoration: underline;
+}
+
+*:focus {
+    outline: 2px dotted #999;
+    outline-offset: 1px;
+    z-index: 99999;
 }
 
 button {
@@ -47,8 +55,8 @@ button:disabled {
 }
 button::-moz-focus-inner { border: 0; }
 button:not(:disabled):hover {
-    background: #ef6000;
-    border-color: #ef6000;
+    background: var(--page_color);
+    border-color: var(--page_color);
     color: white;
 }
 
@@ -61,249 +69,15 @@ button:not(:disabled):hover {
     white-space: nowrap;
 }
 
-/* -------------------- Overlays -------------------- */
+/* -------------------- Main screens -------------------- */
 
-.busy {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    visibility: hidden;
-    animation: gp_busy 0.2s 1 linear;
-    animation-fill-mode: forwards;
-    animation-delay: 0.3s;
-}
-.busy::after {
-    content: ' ';
-    display: block;
-    width: 48px;
-    height: 48px;
-    margin: 1px;
-    border-radius: 50%;
-    border: 12px solid white;
-    border-color: white transparent white transparent;
-    animation: gp_busy_spinner 0.8s ease-in-out infinite;
-}
-.busy > * { display: none !important; }
-@keyframes gp_busy {
-    100% {
-        visibility: visible;
-        background: #24579d;
-    }
-}
-@keyframes gp_busy_spinner {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.broken:not(:empty) {
-    filter: grayscale(100%);
-    opacity: 0.5;
-}
-.broken:empty::after {
+#gp_logo {
     position: absolute;
-    top: calc(50% - 0.7em);
-    left: calc(50% - 0.3em);
-    font-size: 14em;
-    font-weight: bold;
-    color: red;
-    content: 'X';
+    left: calc(50% - 48px);
+    margin-top: -64px;
+    width: 96px;
+    height: 96px;
 }
-
-/* -------------------- Toolbars -------------------- */
-
-.gp_toolbar {
-    display: flex;
-    position: sticky;
-    box-sizing: border-box;
-    width: 100%;
-    height: 2.4em;
-    min-height: 2.4em;
-    left: 0;
-    top: 0;
-    margin: 0;
-    padding: 0;
-    align-items: center;
-    background: #2d62ac;
-    color: white;
-    user-select: none;
-    -moz-user-select: none;
-    -webkit-user-select: none;
-    -ms-user-select: none;
-    z-index: 9999;
-}
-
-.gp_toolbar button {
-    display: inline-block;
-    height: 100%;
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0 10px;
-    background-color: inherit;
-    border: 0;
-    color: inherit;
-    text-decoration: none;
-}
-.gp_toolbar button::-moz-focus-inner { border: 0; }
-.gp_toolbar button:focus { outline: 0; }
-.gp_toolbar button:not(.active):hover { background-color: #376db9; }
-.gp_toolbar button.active { background-color: #3b7ad1; }
-.gp_toolbar button:disabled { filter: brightness(75%) !important; }
-
-.gp_dropdown {
-    position: relative;
-    display: inline-block;
-    height: 100%;
-    margin: 0;
-    background-color: inherit;
-}
-.gp_dropdown > div {
-    display: none;
-    position: absolute;
-    min-width: 160px;
-    background-color: #376db9;
-    z-index: 9999;
-}
-.gp_dropdown.right > div { right: 0; }
-.gp_dropdown:hover > div {
-    display: flex;
-    flex-direction: column;
-}
-.gp_dropdown:hover > button:not(.active) { background-color: #376db9; }
-.gp_dropdown > div button {
-    height: 2.4em;
-    text-align: left;
-}
-.gp_dropdown > div button:not(.active):hover { background-color: #3b7ad1; }
-.gp_dropdown hr {
-    width: 94%;
-    border: none;
-    border-top: 0.5px solid #376db9;
-    height: 3px;
-}
-
-.gp_toolbar.dev { background: #383936; }
-.gp_toolbar.dev button.active { background: #272822; }
-.gp_toolbar.dev button:not(.active):hover { background: #2a2a27; }
-.gp_toolbar.dev .gp_dropdown > div { background-color: #31322e; }
-.gp_toolbar.dev .gp_dropdown:hover > button:not(.active) { background-color: #31322e; }
-
-/* -------------------- Main header -------------------- */
-
-#gp_menu {
-    position: fixed;
-    display: flex;
-    top: 0;
-    width: 100%;
-    z-index: 99999;
-    background: #24579d;
-}
-#gp_menu.locked { filter: saturate(0%); }
-
-#gp_assets {
-    flex-grow: 1;
-    padding: 3px 28px 3px 6px;
-    min-width: 5em;
-    background: inherit;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAALCAYAAABs3u23AAAAmUlEQVQ4jbXSsQpBARgFYC+hDLJISZQUA2UymCzKi8uiDEqhUKKw+Cx3+AeEe5066/mWk0MeU9wz6hrV3LuggFkG2Ab1t1hAi5inwHZofoQFtITFD9gB7a+wgJax/AI7ovsTFtAKVh9gJ/RTYQGtJY97hZ0xyAQLaAPbJ9gFw0yxgLawD9gVo79gAe0kT7xh/FcsoD1M0u48ACpt+mWbBapLAAAAAElFTkSuQmCC");
-    background-repeat: no-repeat;
-    background-position: right;
-    border: 0;
-    outline: 0;
-    color: inherit;
-    font-size: 1.3em;
-    font-weight: normal;
-    text-align: center;
-    text-align-last: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-@-moz-document url-prefix() {
-    #gp_assets > optgroup {
-        background: DodgerBlue;
-        color: white;
-    }
-}
-
-.gp_toolbar button.icon {
-    padding-left: 36px;
-    background-image: url('icons.png');
-    background-repeat: no-repeat;
-    background-size: 22px 550px;
-    background-position-x: 6px;
-}
-@media screen and (max-width: 580px) {
-    .gp_toolbar button.icon {
-        min-width: 3em;
-        max-width: 3em;
-        padding: 0 !important;
-        text-indent: 200px;
-        white-space: nowrap;
-        overflow: hidden;
-        background-position-x: center;
-    }
-}
-
-#gp_status {
-    height: 100%;
-    min-width: 3em;
-    max-width: 3em;
-    background-image: url('icons.png');
-    background-repeat: no-repeat;
-    background-size: 22px 550px;
-    background-position-x: center;
-}
-
-/* -------------------- Panels -------------------- */
-
-.gp_panel { min-height: 100%; }
-.gp_panel.left {
-    position: fixed;
-    left: 0;
-    top: 2.4em;
-    width: 50vw;
-    height: calc(100% - 2.4em);
-    display: flex;
-    flex-direction: column;
-    overflow: auto;
-    border-right: 1px solid #dfdfdf;
-}
-.gp_panel.fixed {
-    position: fixed;
-    left: 0;
-    top: 2.4em;
-    width: 100%;
-    height: calc(100% - 2.4em);
-    display: flex;
-    flex-direction: column;
-    overflow: auto;
-}
-.gp_panel.right { margin-left: 50vw; }
-.gp_panel.overview { width: 100%; }
-.gp_panel:empty { background: rgba(136, 136, 136, 0.08); }
-
-#gp_menu + main {
-    height: calc(100% - 2.4em);
-    margin-top: 2.4em;
-}
-#gp_menu + main * { scroll-margin: 80px; }
-#gp_menu + main > .gp_panel { min-height: calc(100% - 2.4em); }
-
-#gp_error {
-    position: fixed;
-    bottom: 0;
-    right: 0;
-    padding: 6px;
-    background: #db0a0a;
-    color: white;
-    white-space: pre-wrap;
-    z-index: 9999;
-}
-
-/* -------------------- Misc -------------------- */
 
 .gp_wip {
     padding: 5px;

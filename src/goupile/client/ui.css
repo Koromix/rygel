@@ -1,0 +1,152 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+   License, v. 2.0. If a copy of the MPL was not distributed with this
+   file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* -------------------- Menu -------------------- */
+
+#ui_menu {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 2.5em;
+    display: flex;
+    background: var(--menu_color);
+    color: white;
+}
+
+#ui_menu button {
+    display: block;
+    height: 100%;
+    box-sizing: border-box;
+    background-color: inherit;
+    border: 0;
+    color: inherit;
+    text-decoration: none;
+}
+#ui_menu > button:not(.active):hover { filter: brightness(124%); }
+#ui_menu button.active { filter: brightness(134%); }
+#ui_menu button:disabled { filter: brightness(70%) !important; }
+
+#ui_menu button.icon {
+    padding-left: 36px;
+    background-image: url('icons.png');
+    background-repeat: no-repeat;
+    background-size: 22px 550px;
+    background-position-x: 6px;
+}
+@media screen and (max-width: 580px) {
+    #ui_menu button.icon {
+        min-width: 3em;
+        max-width: 3em;
+        padding: 0 !important;
+        text-indent: 200px;
+        white-space: nowrap;
+        overflow: hidden;
+        background-position-x: center;
+    }
+}
+
+#ui_menu > .drop {
+    position: relative;
+    display: inline-block;
+    height: 100%;
+    margin: 0;
+    background-color: inherit;
+}
+#ui_menu > .drop > div {
+    display: none;
+    position: absolute;
+    min-width: 160px;
+    background-color: inherit;
+    z-index: 9999;
+}
+#ui_menu > .drop.right > div { right: 0; }
+#ui_menu > .drop > div button {
+    height: 2.4em;
+    text-align: left;
+}
+#ui_menu > .drop > div hr {
+    width: 94%;
+    border: none;
+    border-top: 0.5px solid #376db9;
+    height: 3px;
+}
+#ui_menu > .drop:hover { filter: brightness(124%); }
+#ui_menu > .drop:hover > div {
+    display: flex;
+    flex-direction: column;
+}
+#ui_menu > .drop > div button:not(.active):hover { filter: brightness(110%); }
+
+/* -------------------- Panels -------------------- */
+
+#ui_panels { display: flex; }
+#ui_menu + #ui_panels { margin-top: 2.5em; }
+#ui_panels > div { flex: 1; }
+
+/* -------------------- Dialogs and popups -------------------- */
+
+.ui_modal {
+    display: none;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    justify-content: center;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.82);
+}
+.ui_modal.active { display: flex; }
+.ui_modal > form {
+    display: block;
+    position: absolute;
+    width: 300px;
+    max-width: 90%;
+    padding: 16px;
+    background: #f8f8f8;
+}
+
+.ui_popup {
+    display: none;
+    position: fixed;
+    box-sizing: border-box;
+    padding: 8px;
+    background: #f8f8f8;
+    border: 1px solid #e6e6e6;
+    box-shadow: 2px 2px rgba(136, 136, 136, 0.12);
+}
+.ui_popup.active { display: block; }
+
+/* -------------------- Tables -------------------- */
+
+.ui_table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 0;
+}
+.ui_table tr:nth-child(2n + 1) { background: #f8f8f8; }
+.ui_table tr:nth-child(2n) { background: white; }
+.ui_table td {
+    padding: 3px 6px;
+    border: 1px solid #dfdfdf;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ui_table tr.active {
+    background: #666;
+    color: white;
+}
+.ui_table tr.active a { color: inherit; }
+
+/* -------------------- Actions -------------------- */
+
+.ui_actions { margin-top: 2em; }
+.ui_actions > button {
+    display: block;
+    margin: 1em auto 0 auto;
+    width: 200px;
+}

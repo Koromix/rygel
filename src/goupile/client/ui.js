@@ -2,12 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let dialog = new function() {
+const ui = new function() {
     let self = this;
 
-    let init = false;
+    let menu;
+    let panels = new Map;
 
-    let count = 0;
+    let init_dialogs = false;
+
     let dialogs = {
         prev: null,
         next: null
@@ -15,20 +17,61 @@ let dialog = new function() {
     dialogs.prev = dialogs;
     dialogs.next = dialogs;
 
-    this.runScreen = function(func) {
-        render('', document.querySelector('#gp_root'));
+    this.render = function() {
+        // Render main screen
+        render(html`
+            ${menu != null ? html`<nav id="ui_menu">${menu()}</nav>` : ''}
 
-        // Close all dialogs and popups
-        let it = dialogs.next;
-        while (it !== dialogs) {
-            it.reject();
-            it = it.next;
+            <main id="ui_panels">
+                ${util.map(panels.values(), panel => panel.enabled ? panel.render() : '')}
+            </main>
+        `, document.querySelector('#gp_root'));
+
+        // Run dialog functions
+        {
+            let it = dialogs.next;
+
+            while (it !== dialogs) {
+                it.render();
+                it = it.next;
+            }
+        }
+    };
+
+    this.setMenu = function(func) {
+        menu = func;
+    };
+
+    this.createPanel = function(key, func) {
+        panels.set(key, {
+            render: func,
+            enabled: true
+        });
+    };
+
+    this.isPanelEnabled = function(key) {
+        let panel = panels.get(key);
+        return panel.enabled;
+    };
+
+    this.togglePanel = function(key, enable = undefined) {
+        let panel = panels.get(key);
+
+        if (enable != null) {
+            panel.enabled = enable;
+        } else {
+            panel.enabled = !panel.enabled;
         }
 
+        self.render();
+    };
+
+    this.runScreen = function(func) {
+        render('', document.querySelector('#gp_root'));
         return runDialog(null, 'modal', false, func);
     };
 
-    this.run = function(e, func) {
+    this.runDialog = function(e, func) {
         if (e != null) {
             e.stopPropagation();
             if (window.matchMedia('(pointer: coarse)').matches)
@@ -39,9 +82,9 @@ let dialog = new function() {
     };
 
     function runDialog(e, type, closeable, func) {
-        if (!init) {
+        if (!init_dialogs) {
             document.addEventListener('click', handleDocumentClick);
-            init = true;
+            init_dialogs = true;
         }
 
         return new Promise((resolve, reject) => {
@@ -51,8 +94,9 @@ let dialog = new function() {
 
                 type: type,
                 el: document.createElement('div'),
-                state: new PageState,
-                refresh: () => buildDialog(dialog, e, func),
+                state: new FormState,
+                render: () => buildDialog(dialog, e, func),
+                closeable: closeable,
 
                 resolve: value => {
                     if (dialog.el != null) {
@@ -71,21 +115,20 @@ let dialog = new function() {
             // Complete linked list insertion
             dialogs.prev.next = dialog;
             dialogs.prev = dialog;
-            count++;
 
             // Modal or popup?
-            dialog.el.setAttribute('id', `dlg_${type}`);
+            dialog.el.className = `ui_${type}`;
             if (closeable) {
                 dialog.el.addEventListener('keydown', e => {
                     if (e.keyCode == 27)
                         dialog.reject(new Error('Action annulée'));
                 });
             }
-            dialog.el.style.zIndex = 999999 + count;
+            dialog.el.style.zIndex = 999999;
 
             // Show it!
             document.body.appendChild(dialog.el);
-            dialog.refresh();
+            dialog.render();
         });
     };
 
@@ -93,17 +136,24 @@ let dialog = new function() {
         let it = dialogs.next;
 
         while (it !== dialogs) {
-            let target = e.target.parentNode;
+            if (it.closeable) {
+                if (it.type === 'popup') {
+                    let target = e.target.parentNode;
 
-            if (it.type === 'popup') {
-                for (;;) {
-                    if (target === it.el) {
-                        break;
-                    } else if (target == null) {
-                        it.reject(new Error('Action annulée'));
-                        break;
+                    for (;;) {
+                        if (target === it.el) {
+                            break;
+                        } else if (target == null) {
+                            it.reject(new Error('Action annulée'));
+                            break;
+                        }
+                        target = target.parentNode;
                     }
-                    target = target.parentNode;
+                } else if (it.type === 'modal') {
+                    let target = e.target;
+
+                    if (target === it.el)
+                        it.reject(new Error('Action annulée'));
                 }
             }
 
@@ -112,9 +162,9 @@ let dialog = new function() {
     }
 
     function buildDialog(dialog, e, func) {
-        let model = new PageModel('@popup');
+        let model = new FormModel('@popup');
 
-        let builder = new PageBuilder(dialog.state, model);
+        let builder = new FormBuilder(dialog.state, model);
         builder.changeHandler = () => buildDialog(...arguments);
         builder.pushOptions({
             missing_mode: 'disable',
@@ -176,8 +226,7 @@ let dialog = new function() {
         // Reveal!
         dialog.el.style.visibility = 'visible';
         if (give_focus) {
-            let widget0 = dialog.el.querySelector(`.af_widget input, .af_widget select,
-                                                   .af_widget button, .af_widget textarea`);
+            let widget0 = dialog.el.querySelector('input, select, button, textarea');
             if (widget0 != null)
                 widget0.focus();
         }
@@ -186,14 +235,13 @@ let dialog = new function() {
     function closeDialog(dialog) {
         dialog.next.prev = dialog.prev;
         dialog.prev.next = dialog.next;
-        count--;
 
         document.body.removeChild(dialog.el);
         dialog.el = null;
     }
 
-    this.confirm = function(e, msg, action, func) {
-        return self.run(e, (d, resolve, reject) => {
+    this.runConfirm = function(e, msg, action, func) {
+        return self.runDialog(e, (d, resolve, reject) => {
             d.output(msg);
 
             d.action(action, {disabled: !d.isValid()}, async () => {
@@ -207,14 +255,5 @@ let dialog = new function() {
             });
             d.action('Annuler', {}, () => reject(new Error('Action annulée')));
         });
-    };
-
-    this.refreshAll = function() {
-        let it = dialogs.next;
-
-        while (it !== dialogs) {
-            it.refresh();
-            it = it.next;
-        }
     };
 };

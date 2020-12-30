@@ -2,42 +2,30 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let admin = new function() {
+function AdminController() {
     let self = this;
 
-    let session_profile = {};
-    let session_rnd;
+    let instances;
+    let users;
 
     let select_instance;
 
-    this.startApp = async function() {
-        log.pushHandler(log.notifyHandler);
-        self.run();
-    };
+    this.init = async function() {
+        ui.setMenu(el => html`
+            <button>Admin</button>
+            <button class=${ui.isPanelEnabled('instances') ? 'active' : ''}
+                    @click=${e => ui.togglePanel('instances')}>Instances</button>
+            <button class=${ui.isPanelEnabled('users') ? 'active' : ''}
+                    @click=${e => ui.togglePanel('users')}>Utilisateurs</button>
+            <div style="flex: 1;"></div>
+            <button @click=${goupile.logout}>Se déconnecter</button>
+        `);
 
-    this.run = async function() {
-        await syncProfile();
-
-        if (isConnected()) {
-            runAdmin();
-        } else {
-            runLogin();
-        }
-    };
-
-    async function runAdmin() {
-        let instances = await fetch('/admin/api/instances/list').then(response => response.json());
-        let users = await fetch('/admin/api/users/list').then(response => response.json());
-
-        if (!instances.find(instance => instance.key === select_instance))
-            select_instance = null;
-
-        render(html`
-            <section style="flex-grow: 2;">
-                <h1>Instances</h1>
-
-                <table>
+        ui.createPanel('instances', () => html`
+            <div class="adm_panel">
+                <table class="ui_table">
                     <colgroup>
+                        <col style="width: 200px;"/>
                         <col/>
                         <col style="width: 100px;"/>
                         <col style="width: 100px;"/>
@@ -46,22 +34,25 @@ let admin = new function() {
                     <tbody>
                         ${!instances.length ? html`<tr><td colspan="4">Aucune instance</td></tr>` : ''}
                         ${instances.map(instance => html`
-                            <tr class=${instance.key === select_instance ? 'selected' : ''}>
-                                <td>${instance.key} (<a href=${'/' + instance.key} target="_blank">accès</a>)</td>
-                                <td><a @click=${e => toggleInstance(instance.key)}>Droits</a></td>
-                                <td><a @click=${e => runEditInstanceDialog(e, instance)}>Modifier</a></td>
+                            <tr class=${instance.key === select_instance ? 'active' : ''}>
+                                <td style="text-align: left;">${instance.key} (<a href=${'/' + instance.key} target="_blank">accès</a>)</td>
+                                <td></td>
+                                <td><a role="button" tabindex="0" @click=${e => toggleInstance(instance.key)}>Droits</a></td>
+                                <td><a role="button" tabindex="0" @click=${e => runEditInstanceDialog(e, instance)}>Modifier</a></td>
                             </tr>
                         `)}
                     </tbody>
                 </table>
 
-                <button @click=${runCreateInstanceDialog}>Créer une instance</button>
-            </section>
+                <div class="ui_actions">
+                    <button @click=${runCreateInstanceDialog}>Créer une instance</button>
+                </div>
+            </div>
+        `);
 
-            <section style="flex-grow: 3;">
-                <h1>Utilisateurs</h1>
-
-                <table>
+        ui.createPanel('users', () => html`
+            <div class="adm_panel" style="flex-grow: 1.5;">
+                <table class="ui_table">
                     <colgroup>
                         <col style="width: 100px;"/>
                         <col/>
@@ -75,26 +66,46 @@ let admin = new function() {
 
                             return html`
                                 <tr>
-                                    <td>${user.username}</td>
+                                    <td style="text-align: left;">${user.username}</td>
                                     <td>
                                         ${permissions.map(perm =>
-                                            html`<span class="gp_tag" style="background: #555;">${perm}</span> `)}
+                                            html`<span class="gp_tag" style="background: #666;">${perm}</span> `)}
                                         ${select_instance ?
                                             html`&nbsp;&nbsp;&nbsp;
-                                                 <a @click=${e => runAssignUserDialog(e, select_instance, user.username,
+                                                 <a role="button" tabindex="0"
+                                                    @click=${e => runAssignUserDialog(e, select_instance, user.username,
                                                                                       permissions)}>Assigner</a>` : ''}
                                     </td>
-                                    <td><a @click=${e => runDeleteUserDialog(e, user.username)}>Supprimer</a></td>
+                                    <td><a role="button" tabindex="0"
+                                           @click=${e => runDeleteUserDialog(e, user.username)}>Supprimer</a></td>
                                 </tr>
                             `;
                         })}
                     </tbody>
                 </table>
 
-                <button @click=${runCreateUserDialog}>Créer un utilisateur</button>
-            </section>
-        `, document.querySelector('#gp_root'));
-    }
+                <div class="ui_actions">
+                    <button @click=${runCreateUserDialog}>Créer un utilisateur</button>
+                <div>
+            </div>
+        `);
+    };
+
+    this.run = async function() {
+        await goupile.syncProfile();
+
+        if (!goupile.isAuthorized()) {
+            goupile.runLogin();
+            return;
+        }
+
+        instances = await fetch('/admin/api/instances/list').then(response => response.json());
+        users = await fetch('/admin/api/users/list').then(response => response.json());
+        if (!instances.find(instance => instance.key === select_instance))
+            select_instance = null;
+
+        ui.render();
+    };
 
     function toggleInstance(key) {
         if (key !== select_instance) {
@@ -106,7 +117,7 @@ let admin = new function() {
     }
 
     function runCreateInstanceDialog(e) {
-        return dialog.run(e, (d, resolve, reject) => {
+        return ui.runDialog(e, (d, resolve, reject) => {
             let key = d.text('*key', 'Clé de l\'instance');
             let name = d.text('name', 'Nom', {placeholder: key.value});
 
@@ -137,7 +148,7 @@ let admin = new function() {
     }
 
     function runEditInstanceDialog(e, instance) {
-        return dialog.run(e, (d, resolve, reject) => {
+        return ui.runDialog(e, (d, resolve, reject) => {
             d.pushOptions({untoggle: false});
 
             d.tabs('actions', () => {
@@ -206,7 +217,7 @@ let admin = new function() {
     }
 
     function runCreateUserDialog(e) {
-        return dialog.run(e, (d, resolve, reject) => {
+        return ui.runDialog(e, (d, resolve, reject) => {
             let username = d.text('*username', 'Nom d\'utilisateur');
 
             let password = d.password('*password', 'Mot de passe');
@@ -243,7 +254,7 @@ let admin = new function() {
     }
 
     function runAssignUserDialog(e, instance, username, prev_permissions) {
-        return dialog.run(e, (d, resolve, reject) => {
+        return ui.runDialog(e, (d, resolve, reject) => {
             d.calc('instance', 'Instance', instance);
             d.sameLine(); d.calc('username', 'Utilisateur', username);
 
@@ -279,8 +290,8 @@ let admin = new function() {
     }
 
     function runDeleteUserDialog(e, username) {
-        let msg = `Voulez-vous supprimer l'utilisateur '${username}' ?`;
-        return dialog.confirm(e, msg, 'Supprimer', async () => {
+        return ui.runConfirm(e, `Voulez-vous supprimer l'utilisateur '${username}' ?`,
+                             'Supprimer', async () => {
             let query = new URLSearchParams;
             query.set('username', username);
 
@@ -298,73 +309,4 @@ let admin = new function() {
             }
         });
     }
-
-    function runLogin() {
-        return dialog.runScreen((d, resolve, reject) => {
-            d.output(html`
-                <img id="usr_logo" src="/admin/favicon.png" alt="" />
-                <br/>
-            `);
-
-            let username = d.text('*username', 'Nom d\'utilisateur');
-            let password = d.password('*password', 'Mot de passe');
-
-            d.action('Se connecter', {disabled: !d.isValid()}, async () => {
-                let success = await login(username.value, password.value);
-
-                if (success) {
-                    resolve(username.value);
-                } else {
-                    reject(new Error('Échec de la connexion'));
-                }
-            });
-        });
-    }
-
-    async function login(username, password) {
-        let entry = new log.Entry;
-
-        entry.progress('Connexion en cours');
-
-        try {
-            let query = new URLSearchParams;
-            query.set('username', username.toLowerCase());
-            query.set('password', password);
-
-            let response = await net.fetch('/admin/api/user/login', {
-                method: 'POST',
-                body: query
-            });
-
-            if (response.ok) {
-                session_profile = await response.json();
-                session_rnd = util.getCookie('session_rnd');
-
-                entry.success('Connexion réussie');
-                self.run();
-
-                return true;
-            } else {
-                entry.error('Échec de la connexion');
-                return false;
-            }
-        } catch (e) {
-            entry.error(e);
-            return false;
-        }
-    }
-
-    async function syncProfile() {
-        let new_rnd = util.getCookie('session_rnd');
-
-        if (new_rnd !== session_rnd) {
-            let response = await net.fetch('/admin/api/user/profile');
-            let profile = await response.json();
-
-            session_profile = profile;
-            session_rnd = util.getCookie('session_rnd');
-        }
-    }
-
-    function isConnected() { return !!session_profile.username; }
 };

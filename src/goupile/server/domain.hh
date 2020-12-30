@@ -52,9 +52,6 @@ public:
     bool Open(const char *filename);
     void Close();
 
-    // Can be restarted (for debug builds)
-    void InitAssets();
-
     bool IsSynced() const { return synced; }
     bool Sync();
 

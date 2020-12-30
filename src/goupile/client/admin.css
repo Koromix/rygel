@@ -2,10 +2,11 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#usr_logo {
-    position: absolute;
-    left: calc(50% - 48px);
-    margin-top: -64px;
-    width: 96px;
-    height: 96px;
+html.admin {
+    --menu_color: #ef6000;
+    --page_color: #cb2c1b;
+}
+
+.adm_panel {
+    padding: 3em;
 }

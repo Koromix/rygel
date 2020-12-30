@@ -23,17 +23,46 @@
 
 namespace RG {
 
-DomainHolder goupile_domain;
+struct TemplateValues {
+    const char *key;
+    const char *title;
+};
 
-static void HandleEvents(InstanceHolder *, const http_RequestInfo &request, http_IO *io)
+DomainHolder gp_domain;
+
+static std::shared_mutex assets_mutex;
+static HashMap<const char *, const AssetInfo *> assets_map;
+static LinkedAllocator assets_alloc;
+static char etag[33];
+
+static void InitAssets()
 {
-    // Do this to renew session and clear invalid session cookies
-    GetCheckedSession(request, io);
+    assets_map.Clear();
+    assets_alloc.ReleaseAll();
 
-    io->AttachText(200, "{}", "application/json");
+    for (const AssetInfo &asset: GetPackedAssets()) {
+        if (TestStr(asset.name, "src/goupile/client/goupile.html")) {
+            assets_map.Set("/", &asset);
+        } else if (TestStr(asset.name, "src/goupile/client/images/favicon.png")) {
+            assets_map.Set("/favicon.png", &asset);
+        } else if (StartsWith(asset.name, "src/goupile/client/") ||
+                   StartsWith(asset.name, "vendor/")) {
+            const char *name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
+            const char *url = Fmt(&assets_alloc, "/static/%1", name).ptr;
+
+            assets_map.Set(url, &asset);
+        }
+    }
+
+    // Update ETag
+    {
+        uint64_t buf[2];
+        randombytes_buf(&buf, RG_SIZE(buf));
+        Fmt(etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
+    }
 }
 
-static void AttachAsset(const http_RequestInfo &request, const AssetInfo &asset, const char *etag, http_IO *io)
+static void AttachStatic(const AssetInfo &asset, const http_RequestInfo &request, http_IO *io)
 {
     const char *client_etag = request.GetHeaderValue("If-None-Match");
 
@@ -44,25 +73,52 @@ static void AttachAsset(const http_RequestInfo &request, const AssetInfo &asset,
         const char *mimetype = http_GetMimeType(GetPathExtension(asset.name));
         io->AttachBinary(200, asset.data, mimetype, asset.compression_type);
 
-        io->AddCachingHeaders(goupile_domain.config.max_age, etag);
+        io->AddCachingHeaders(gp_domain.config.max_age, etag);
         if (asset.source_map) {
             io->AddHeader("SourceMap", asset.source_map);
         }
     }
 }
 
+static void AttachTemplate(AssetInfo asset, const TemplateValues &values, const http_RequestInfo &request, http_IO *io)
+{
+    // XXX: Use some kind of dynamic cache to avoid doing this all the time
+    asset.data = PatchAsset(asset, &io->allocator, [&](const char *key, StreamWriter *writer) {
+        if (TestStr(key, "VERSION")) {
+            writer->Write(FelixVersion);
+            return true;
+        } else if (TestStr(key, "TITLE")) {
+            writer->Write(values.title);
+            return true;
+        } else if (TestStr(key, "BASE_URL")) {
+            Print(writer, "/%1/", values.key);
+            return true;
+        } else {
+            return false;
+        }
+    });
+
+    AttachStatic(asset, request, io);
+}
+
+static void HandleEvents(InstanceHolder *, const http_RequestInfo &request, http_IO *io)
+{
+    // Do this to renew session and clear invalid session cookies
+    GetCheckedSession(request, io);
+
+    io->AttachText(200, "{}", "application/json");
+}
+
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
- #ifndef NDEBUG
+#ifndef NDEBUG
     {
         static std::mutex mutex;
         std::lock_guard<std::mutex> lock(mutex);
 
         if (ReloadAssets()) {
             LogInfo("Reload assets");
-
-            InitAdminAssets();
-            goupile_domain.InitAssets();
+            InitAssets();
         }
     }
 #endif
@@ -96,10 +152,19 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     if (instance_key == "admin") {
         // Try static assets
         {
-            const AssetInfo *asset = admin_assets_map.FindValue(instance_path, nullptr);
+            const AssetInfo *asset = assets_map.FindValue(instance_path, nullptr);
 
-            if (asset) {
-                AttachAsset(request, *asset, admin_etag, io);
+            if (TestStr(instance_path, "/")) {
+                RG_ASSERT(asset);
+
+                AttachTemplate(*asset, {
+                    .key = "admin",
+                    .title = "Goupile Admin"
+                }, request, io);
+
+                return;
+            } else if (asset) {
+                AttachStatic(*asset, request, io);
                 return;
             }
         }
@@ -134,7 +199,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         }
     } else {
         bool reload;
-        InstanceHolder *instance = goupile_domain.Ref(instance_key, &reload);
+        InstanceHolder *instance = gp_domain.Ref(instance_key, &reload);
         if (!instance) {
             io->AttachError(reload ? 503 : 404);
             return;
@@ -147,16 +212,19 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
         // Try static assets
         if (request.method == http_RequestMethod::Get) {
-            const AssetInfo *asset;
-            if (TestStr(instance_path, "/") || StartsWith(instance_path, "/app/")) {
-                asset = instance->assets_map.FindValue("/index.html", nullptr);
-                RG_ASSERT(asset);
-            } else {
-                asset = instance->assets_map.FindValue(instance_path, nullptr);
-            }
+            const AssetInfo *asset = assets_map.FindValue(instance_path, nullptr);
 
-            if (asset) {
-                AttachAsset(request, *asset, instance->etag, io);
+            if (TestStr(instance_path, "/")) {
+                RG_ASSERT(asset);
+
+                AttachTemplate(*asset, {
+                    .key = instance->key.ptr,
+                    .title = instance->config.title
+                }, request, io);
+
+                return;
+            } else if (asset) {
+                AttachStatic(*asset, request, io);
                 return;
             }
         }
@@ -172,8 +240,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleUserLogout(instance, request, io);
         } else if (TestStr(instance_path, "/api/files/list") && request.method == http_RequestMethod::Get) {
              HandleFileList(instance, request, io);
-        } else if (TestStr(instance_path, "/api/files/static") && request.method == http_RequestMethod::Get) {
-            HandleFileStatic(instance, request, io);
         } else if (StartsWith(instance_path, "/files/") && request.method == http_RequestMethod::Put) {
             HandleFilePut(instance, request, io);
         } else if (StartsWith(instance_path, "/files/") && request.method == http_RequestMethod::Delete) {
@@ -211,7 +277,7 @@ Other commands:
     %!..+migrate%!0                      Migrate existing domain
 
 For help about those commands, type: %!..+%1 <command> --help%!0)",
-                FelixTarget, config_filename, goupile_domain.config.http.port);
+                FelixTarget, config_filename, gp_domain.config.http.port);
     };
 
     // Find config filename
@@ -252,11 +318,13 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     }
 #endif
 
+    LogInfo("Init assets");
+    InitAssets();
     LogInfo("Init instances");
-    InitAdminAssets();
-    if (!goupile_domain.Open(config_filename))
+    if (!gp_domain.Open(config_filename))
         return 1;
-
+    if (!gp_domain.Sync())
+        return 1;
     LogInfo("Init JS");
     InitJS();
 
@@ -268,7 +336,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
             } else if (opt.Test("--port", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &goupile_domain.config.http.port))
+                if (!ParseInt(opt.current_value, &gp_domain.config.http.port))
                     return 1;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
@@ -277,30 +345,30 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
         }
 
         // We may have changed some stuff (such as HTTP port), so revalidate
-        if (!goupile_domain.config.Validate())
+        if (!gp_domain.config.Validate())
             return 1;
     }
 
     // Run!
     http_Daemon daemon;
-    if (!daemon.Start(goupile_domain.config.http, HandleRequest))
+    if (!daemon.Start(gp_domain.config.http, HandleRequest))
         return 1;
 #ifndef _WIN32
-    if (goupile_domain.config.http.sock_type == SocketType::Unix) {
-        LogInfo("Listening on socket '%1' (Unix stack)", goupile_domain.config.http.unix_path);
+    if (gp_domain.config.http.sock_type == SocketType::Unix) {
+        LogInfo("Listening on socket '%1' (Unix stack)", gp_domain.config.http.unix_path);
     } else
 #endif
     LogInfo("Listening on port %1 (%2 stack)",
-            goupile_domain.config.http.port, SocketTypeNames[(int)goupile_domain.config.http.sock_type]);
+            gp_domain.config.http.port, SocketTypeNames[(int)gp_domain.config.http.sock_type]);
 
     for (;;) {
-        int timeout = goupile_domain.IsSynced() ? -1 : 30000;
+        int timeout = gp_domain.IsSynced() ? -1 : 30000;
 
         // Respond to SIGUSR1
         if (WaitForInterrupt(timeout) == WaitForResult::Interrupt)
             break;
 
-        goupile_domain.Sync();
+        gp_domain.Sync();
 
 #ifdef __GLIBC__
         // Actually release memory to the OS, because for some reason glibc doesn't want to

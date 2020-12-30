@@ -578,6 +578,8 @@ const log = new function() {
             entry.timer_id = setTimeout(() => closeEntry(entry), timeout);
 
         func(is_new ? 'open' : 'edit', entry);
+
+        return entry;
     }
 
     function closeEntry(entry) {
@@ -592,27 +594,28 @@ const log = new function() {
         this.msg = null;
         this.timer_id = null;
 
-        this.debug = function(msg, timeout = 6000) { updateEntry(self, 'debug', msg, timeout); };
-        this.info = function(msg, timeout = 6000) { updateEntry(self, 'info', msg, timeout); };
-        this.success = function(msg, timeout = 6000) { updateEntry(self, 'success', msg, timeout); };
-        this.error = function(msg, timeout = 6000) { updateEntry(self, 'error', msg, timeout); };
+        this.debug = function(msg, timeout = 6000) { return updateEntry(self, 'debug', msg, timeout); };
+        this.info = function(msg, timeout = 6000) { return updateEntry(self, 'info', msg, timeout); };
+        this.success = function(msg, timeout = 6000) { return updateEntry(self, 'success', msg, timeout); };
+        this.error = function(msg, timeout = 6000) { return updateEntry(self, 'error', msg, timeout); };
 
         this.progress = function(action, value = null, max = null) {
             if (value != null) {
                 let msg = `${action}: ${value}${max != null ? ('/' + max) : ''}`;
-                updateEntry(self, 'progress', msg, -1);
+                return updateEntry(self, 'progress', msg, -1);
             } else {
-                updateEntry(self, 'progress', action, -1);
+                return updateEntry(self, 'progress', action, -1);
             }
         };
 
         this.close = function() { closeEntry(self); };
     };
 
-    this.debug = function(msg, timeout = 6000) { new self.Entry().debug(msg, timeout); };
-    this.info = function(msg, timeout = 6000) { new self.Entry().info(msg, timeout); };
-    this.success = function(msg, timeout = 6000) { new self.Entry().success(msg, timeout); };
-    this.error = function(msg, timeout = 6000) { new self.Entry().error(msg, timeout); };
+    this.debug = function(msg, timeout = 6000) { return (new self.Entry).debug(msg, timeout); };
+    this.info = function(msg, timeout = 6000) { return (new self.Entry).info(msg, timeout); };
+    this.success = function(msg, timeout = 6000) { return (new self.Entry).success(msg, timeout); };
+    this.error = function(msg, timeout = 6000) { return (new self.Entry).error(msg, timeout); };
+    this.progress = function(action, value = null, max = null) { return (new self.Entry).progress(action, value, max); };
 };
 
 // ------------------------------------------------------------------------

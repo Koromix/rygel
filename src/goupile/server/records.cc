@@ -297,8 +297,8 @@ void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request,
                 if (!instance->db.Run(R"(INSERT INTO rec_entries (store, id, zone, sequence, version, json)
                                          VALUES (?1, ?2, ?3, ?4, ?5, ?6)
                                          ON CONFLICT DO NOTHING)",
-                                    handle.table, handle.id, handle.zone ? sq_Binding(handle.zone) : sq_Binding(),
-                                    sequence, fragments[fragments.len - 1].version, json))
+                                      handle.table, handle.id, handle.zone ? sq_Binding(handle.zone) : sq_Binding(),
+                                      sequence, fragments[fragments.len - 1].version, json))
                     return false;
 
                 // Update sequence number of existing entry depending on result
@@ -307,7 +307,7 @@ void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request,
                                              VALUES (?1, ?2)
                                              ON CONFLICT(store)
                                                  DO UPDATE SET sequence = excluded.sequence)",
-                                        handle.table, sequence + 1))
+                                          handle.table, sequence + 1))
                         return false;
                 } else {
                     if (!instance->db.Run(R"(UPDATE rec_entries SET version = ?1, json = ?2
@@ -331,9 +331,9 @@ void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request,
                     if (!instance->db.Run(R"(INSERT INTO rec_fragments (store, id, version, page,
                                                                         username, mtime, complete, json)
                                              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8);)",
-                                        handle.table, handle.id, frag.version,
-                                        frag.page ? sq_Binding(frag.page) : sq_Binding(), session->username,
-                                        frag.mtime, 0 + frag.complete, frag.json))
+                                          handle.table, handle.id, frag.version,
+                                          frag.page ? sq_Binding(frag.page) : sq_Binding(), session->username,
+                                          frag.mtime, 0 + frag.complete, frag.json))
                         return false;
                     anchor = sqlite3_last_insert_rowid(instance->db);
 

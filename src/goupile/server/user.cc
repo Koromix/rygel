@@ -25,8 +25,8 @@ const Token *Session::GetToken(const InstanceHolder *instance) const
         if (!token) {
             do {
                 sq_Statement stmt;
-                if (!goupile_domain.db.Prepare(R"(SELECT zone, permissions FROM dom_permissions
-                                                  WHERE instance = ?1 AND username = ?2;)", &stmt))
+                if (!gp_domain.db.Prepare(R"(SELECT zone, permissions FROM dom_permissions
+                                             WHERE instance = ?1 AND username = ?2;)", &stmt))
                     break;
                 sqlite3_bind_text(stmt, 1, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
                 sqlite3_bind_text(stmt, 2, username, -1, SQLITE_STATIC);
@@ -109,7 +109,7 @@ static RetainPtr<Session> CreateDemoSession(const http_RequestInfo &request, htt
     // Make sure there is no session related Set-Cookie header left
     io->ResetResponse();
 
-    RetainPtr<Session>session = CreateUserSession(request, io, goupile_domain.config.demo_user);
+    RetainPtr<Session>session = CreateUserSession(request, io, gp_domain.config.demo_user);
     session->demo = true;
 
     return session;
@@ -119,7 +119,7 @@ RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http
 {
     RetainPtr<Session> session = sessions.Find<Session>(request, io);
 
-    if (goupile_domain.config.demo_user && !session) {
+    if (gp_domain.config.demo_user && !session) {
         session = CreateDemoSession(request, io);
     }
 
@@ -149,16 +149,16 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
 
         sq_Statement stmt;
         if (instance) {
-            if (!goupile_domain.db.Prepare(R"(SELECT u.password_hash, u.admin FROM dom_users u
-                                              INNER JOIN dom_permissions p ON (p.username = u.username)
-                                              WHERE u.username = ?1 AND
-                                                    p.instance = ?2 AND p.permissions > 0;)", &stmt))
+            if (!gp_domain.db.Prepare(R"(SELECT u.password_hash, u.admin FROM dom_users u
+                                         INNER JOIN dom_permissions p ON (p.username = u.username)
+                                         WHERE u.username = ?1 AND
+                                               p.instance = ?2 AND p.permissions > 0;)", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
             sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
         } else {
-            if (!goupile_domain.db.Prepare(R"(SELECT password_hash, admin FROM dom_users
-                                              WHERE username = ?1 AND admin = 1;)", &stmt))
+            if (!gp_domain.db.Prepare(R"(SELECT password_hash, admin FROM dom_users
+                                         WHERE username = ?1 AND admin = 1;)", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
         }
@@ -170,9 +170,9 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
             if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
                 int64_t time = GetUnixTime();
 
-                if (!goupile_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username)
-                                              VALUES (?1, ?2, ?3, ?4);)",
-                                    time, request.client_addr, "login", username))
+                if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username)
+                                         VALUES (?1, ?2, ?3, ?4);)",
+                                      time, request.client_addr, "login", username))
                     return;
 
                 RetainPtr<Session> session = CreateUserSession(request, io, username);
@@ -203,7 +203,7 @@ void HandleUserLogout(InstanceHolder *, const http_RequestInfo &request, http_IO
 {
     sessions.Close(request, io);
 
-    if (goupile_domain.config.demo_user) {
+    if (gp_domain.config.demo_user) {
         CreateDemoSession(request, io);
     }
 

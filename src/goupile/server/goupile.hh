@@ -9,6 +9,6 @@
 namespace RG {
 
 class DomainHolder;
-extern DomainHolder goupile_domain;
+extern DomainHolder gp_domain;
 
 }

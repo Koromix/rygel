@@ -11,7 +11,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 21;
+const int InstanceVersion = 22;
 
 static std::atomic_int64_t next_unique;
 
@@ -58,10 +58,8 @@ bool InstanceHolder::Open(const char *key, const char *filename)
             const char *value = (const char *)sqlite3_column_text(stmt, 1);
 
             if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
-                if (TestStr(key, "AppName")) {
-                    config.app_name = DuplicateString(value, &str_alloc).ptr;
-                } else if (TestStr(key, "AppKey")) {
-                    config.app_key = DuplicateString(value, &str_alloc).ptr;
+                if (TestStr(key, "Title")) {
+                    config.title = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(key, "UseOffline")) {
                     valid &= ParseBool(value, &config.use_offline);
                 } else if (TestStr(key, "MaxFileSize")) {
@@ -85,8 +83,6 @@ bool InstanceHolder::Open(const char *key, const char *filename)
     if (!Validate())
         return false;
 
-    InitAssets();
-
     err_guard.Disable();
     return true;
 }
@@ -96,12 +92,8 @@ bool InstanceHolder::Validate()
     bool valid = true;
 
     // Settings
-    if (!config.app_key || !config.app_key[0]) {
-        LogError("Project key must not be empty");
-        valid = false;
-    }
-    if (!config.app_name) {
-        config.app_name = config.app_key;
+    if (!config.title) {
+        config.title = key.ptr;
     }
     if (config.max_file_size <= 0) {
         LogError("Maximum file size must be >= 0");
@@ -109,50 +101,6 @@ bool InstanceHolder::Validate()
     }
 
     return valid;
-}
-
-void InstanceHolder::InitAssets()
-{
-    assets.Clear();
-    assets_map.Clear();
-    assets_alloc.ReleaseAll();
-
-    // Update ETag
-    {
-        uint64_t buf[2];
-        randombytes_buf(&buf, RG_SIZE(buf));
-        Fmt(etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
-    }
-
-    Span<const AssetInfo> packed_assets = GetPackedAssets();
-    assets.Grow(packed_assets.len);
-
-    for (AssetInfo asset: packed_assets) {
-        if (TestStr(asset.name, "src/goupile/client/goupile.html")) {
-            asset.name = "/index.html";
-            asset.data = PatchVariables(asset);
-        } else if (TestStr(asset.name, "src/goupile/client/manifest.json")) {
-            if (config.use_offline) {
-                asset.name = "/manifest.json";
-                asset.data = PatchVariables(asset);
-            } else {
-                continue;
-            }
-        } else if (TestStr(asset.name, "src/goupile/client/sw.pk.js")) {
-            asset.name = "/sw.pk.js";
-            asset.data = PatchVariables(asset);
-        } else if (TestStr(asset.name, "src/goupile/client/images/favicon.png")) {
-            asset.name = "/favicon.png";
-        } else if (StartsWith(asset.name, "src/goupile/client/") || StartsWith(asset.name, "vendor/")) {
-            const char *name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
-            asset.name = Fmt(&assets_alloc, "/static/%1", name).ptr;
-        } else {
-            continue;
-        }
-
-        const AssetInfo *ptr = assets.Append(asset);
-        assets_map.Set(ptr);
-    }
 }
 
 void InstanceHolder::Close()
@@ -166,51 +114,7 @@ void InstanceHolder::Close()
     unique = -1;
     db.Close();
     config = {};
-    assets.Clear();
-    assets_map.Clear();
     str_alloc.ReleaseAll();
-    assets_alloc.ReleaseAll();
-}
-
-Span<const uint8_t> InstanceHolder::PatchVariables(const AssetInfo &asset)
-{
-    Span<const uint8_t> data = PatchAsset(asset, &assets_alloc,
-                                          [&](const char *key, StreamWriter *writer) {
-        if (TestStr(key, "VERSION")) {
-            writer->Write(FelixVersion);
-            return true;
-        } else if (TestStr(key, "APP_KEY")) {
-            writer->Write(config.app_key);
-            return true;
-        } else if (TestStr(key, "APP_NAME")) {
-            writer->Write(config.app_name);
-            return true;
-        } else if (TestStr(key, "BASE_URL")) {
-            Print(writer, "/%1/", this->key);
-            return true;
-        } else if (TestStr(key, "USE_OFFLINE")) {
-            writer->Write(config.use_offline ? "true" : "false");
-            return true;
-        } else if (TestStr(key, "SYNC_MODE")) {
-            char js_name[64];
-            ConvertToJsonName(SyncModeNames[(int)config.sync_mode], js_name);
-
-            writer->Write(js_name);
-            return true;
-        } else if (TestStr(key, "CACHE_KEY")) {
-            writer->Write(etag);
-            return true;
-        } else if (TestStr(key, "LINK_MANIFEST")) {
-            if (config.use_offline) {
-                Print(writer, "<link rel=\"manifest\" href=\"/%1/manifest.json\"/>", this->key);
-            }
-            return true;
-        } else {
-            return false;
-        }
-    });
-
-    return data;
 }
 
 bool MigrateInstance(sq_Database *db)
@@ -571,8 +475,8 @@ bool MigrateInstance(sq_Database *db)
                     decltype(InstanceHolder::config) fake2;
 
                     const char *sql = "INSERT INTO fs_settings (key, value) VALUES (?, ?)";
-                    success &= db->Run(sql, "Application.Name", fake2.app_name);
-                    success &= db->Run(sql, "Application.ClientKey", fake2.app_key);
+                    success &= db->Run(sql, "Application.Name", fake2.title);
+                    success &= db->Run(sql, "Application.ClientKey", nullptr);
                     success &= db->Run(sql, "Application.UseOffline", 0 + fake2.use_offline);
                     success &= db->Run(sql, "Application.MaxFileSize", fake2.max_file_size);
                     success &= db->Run(sql, "Application.SyncMode", SyncModeNames[(int)fake2.sync_mode]);
@@ -843,9 +747,18 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 21: {
+                bool success = db->Run(R"(
+                    UPDATE fs_settings SET key = 'Title' WHERE key = 'AppName';
+                    DELETE FROM fs_settings WHERE key = 'AppKey';
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 21);
+            RG_STATIC_ASSERT(InstanceVersion == 22);
         }
 
         int64_t time = GetUnixTime();

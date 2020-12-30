@@ -9,11 +9,6 @@
 
 namespace RG {
 
-extern char admin_etag[33];
-extern HashMap<const char *, const AssetInfo *> admin_assets_map;
-
-void InitAdminAssets();
-
 int RunInit(Span<const char *> arguments);
 int RunMigrate(Span<const char *> arguments);
 

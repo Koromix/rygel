@@ -37,28 +37,18 @@ public:
     sq_Database db;
 
     struct {
-        const char *app_key = nullptr;
-        const char *app_name = nullptr;
-
+        const char *title = nullptr;
         bool use_offline = false;
         int max_file_size = (int)Megabytes(8);
         SyncMode sync_mode = SyncMode::Offline;
     } config;
 
-    char etag[33];
-    HeapArray<AssetInfo> assets;
-    HashTable<const char *, const AssetInfo *> assets_map;
-
     BlockAllocator str_alloc;
-    BlockAllocator assets_alloc;
 
     ~InstanceHolder() { Close(); }
 
     bool Open(const char *key, const char *filename);
     bool Validate();
-
-    // Can be restarted (for debug builds)
-    void InitAssets();
 
     void Close();
 
@@ -66,9 +56,6 @@ public:
     void Unref() { refcount--; }
 
     RG_HASHTABLE_HANDLER(InstanceHolder, key);
-
-private:
-    Span<const uint8_t> PatchVariables(const AssetInfo &asset);
 
     friend class DomainHolder;
 };

@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function PageState() {
+function FormState() {
     this.values = {};
     this.changed = false;
 
@@ -13,12 +13,9 @@ function PageState() {
 
     this.take_delayed = new Set;
     this.changed_variables = new Set;
-
-    // Used for "real forms" by FormExecutor
-    this.scratch = {};
 }
 
-function PageModel(key) {
+function FormModel(key) {
     let self = this;
 
     this.key = key;
@@ -35,15 +32,15 @@ function PageModel(key) {
 
     this.render = function() {
         return html`
-            <div class="af_main">${self.renderWidgets()}</div>
-            <div class="af_actions">${self.renderActions()}</div>
+            <div class="fm_main">${self.renderWidgets()}</div>
+            <div class="fm_actions">${self.renderActions()}</div>
         `;
     };
     this.renderWidgets = function() { return self.widgets0.map(intf => intf.render()); };
     this.renderActions = function() { return self.actions.map(intf => intf.render()); };
 }
 
-function PageBuilder(state, model, readonly = false) {
+function FormBuilder(state, model, readonly = false) {
     let self = this;
 
     // XXX: Temporary workaround for lack of date and time inputs in Safari
@@ -129,13 +126,13 @@ function PageBuilder(state, model, readonly = false) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
-            <input id=${id} type="text" class="af_input" style=${makeInputStyle(options)}
+            ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
+            <input id=${id} type="text" class="fm_input" style=${makeInputStyle(options)}
                    placeholder=${options.placeholder || ''}
                    .value=${value || ''}
                    ?disabled=${options.disabled} ?readonly=${options.readonly}
                    @input=${e => handleTextInput(e, key)} />
-            ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
+            ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
 
         let intf = makeWidget('text', label, render, options);
@@ -154,7 +151,7 @@ function PageBuilder(state, model, readonly = false) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <textarea id=${id} class="af_input" style=${makeInputStyle(options)}
+            <textarea id=${id} class="fm_input" style=${makeInputStyle(options)}
                    rows=${options.rows || 5} cols=${options.cols || 40}
                    placeholder=${options.placeholder || ''}
                    .value=${value || ''}
@@ -178,12 +175,12 @@ function PageBuilder(state, model, readonly = false) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
-            <input id=${id} type="password" class="af_input" style=${makeInputStyle(options)}
+            ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
+            <input id=${id} type="password" class="fm_input" style=${makeInputStyle(options)}
                    .value=${value || ''}
                    ?disabled=${options.disabled} ?readonly=${options.readonly}
                    @input=${e => handleTextInput(e, key)} />
-            ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
+            ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
 
         let intf = makeWidget('password', label, render, options);
@@ -204,15 +201,15 @@ function PageBuilder(state, model, readonly = false) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
-            <input id=${id} type="text" class="af_input" style=${makeInputStyle(options)}
+            ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
+            <input id=${id} type="text" class="fm_input" style=${makeInputStyle(options)}
                    inputmode="none" .value=${value || ''}
                    placeholder=${options.placeholder || ''}
                    ?disabled=${options.disabled} ?readonly=${options.readonly}
                    @input=${e => handleTextInput(e, key)} />
-            ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
+            ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
             ${!options.readonly ? html`
-                <div class="af_pin">
+                <div class="fm_pin">
                     ${[7, 8, 9, 4, 5, 6, 1, 2, 3].map(i =>
                         html`<button type="button" ?disabled=${options.disabled}
                                      @click=${e => handlePinButton(e, key, value)}>${i}</button>`)}
@@ -262,13 +259,13 @@ function PageBuilder(state, model, readonly = false) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
-            <input id=${id} type="number" class="af_input" style=${makeInputStyle(options)}
+            ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
+            <input id=${id} type="number" class="fm_input" style=${makeInputStyle(options)}
                    step=${1 / Math.pow(10, options.decimals || 0)} .value=${value}
                    placeholder=${options.placeholder || ''}
                    ?disabled=${options.disabled} ?readonly=${options.readonly}
                    @input=${e => handleNumberChange(e, key)}/>
-            ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
+            ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
 
         let intf = makeWidget('number', label, render, options);
@@ -324,12 +321,12 @@ function PageBuilder(state, model, readonly = false) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <div class=${'af_slider' + (missing ? ' missing' : '') + (options.readonly ? ' readonly' : '')}
+            <div class=${'fm_slider' + (missing ? ' missing' : '') + (options.readonly ? ' readonly' : '')}
                  style=${makeInputStyle(options)}>
                 <span style=${options.untoggle ? ' cursor: pointer;': ''}
                       @click=${e => handleSliderClick(e, key, value, options.min, options.max)}>${value.toFixed(options.decimals)}</span>
                 <div>
-                    ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
+                    ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                     <input id=${id} type="range" style=${`--webkit_progress: ${webkit_progress * 100}%`}
                            min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
                            .value=${thumb_value} data-value=${thumb_value}
@@ -338,7 +335,7 @@ function PageBuilder(state, model, readonly = false) {
                            @click=${e => { e.target.value = fix_value; handleSliderChange(e, key); }}
                            @dblclick=${e => handleSliderClick(e, key, value, options.min, options.max)}
                            @input=${e => handleSliderChange(e, key)}/>
-                    ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
+                    ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
                 </div>
             </div>
         `);
@@ -379,7 +376,7 @@ function PageBuilder(state, model, readonly = false) {
         if (!isModifiable(key))
             return;
 
-        return dialog.run(e, (d, resolve, reject) => {
+        return ui.runDialog(e, (d, resolve, reject) => {
             let number = d.number('number', 'Valeur :', {min: min, max: max, value: value});
 
             d.action('Modifier', {disabled: !d.isValid()}, () => {
@@ -400,7 +397,7 @@ function PageBuilder(state, model, readonly = false) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <div class=${options.readonly ? 'af_enum readonly' : 'af_enum'} id=${id}>
+            <div class=${options.readonly ? 'fm_enum readonly' : 'fm_enum'} id=${id}>
                 ${props.map((p, i) =>
                     html`<button type="button" data-value=${util.valueToStr(p.value)}
                                  .className=${value === p.value ? 'active' : ''}
@@ -457,7 +454,7 @@ function PageBuilder(state, model, readonly = false) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div style=${'display: inline-block; max-width: 100%; ' + makeInputStyle(options)}>
-                <select id=${id} class="af_select" ?disabled=${options.disabled}
+                <select id=${id} class="fm_select" ?disabled=${options.disabled}
                         @change=${e => handleEnumDropChange(e, key)}>
                     ${options.untoggle || !props.some(p => p != null && value === p.value) ?
                         html`<option value="undefined" .selected=${value == null}
@@ -493,7 +490,7 @@ function PageBuilder(state, model, readonly = false) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <div class=${options.readonly ? 'af_radio readonly' : 'af_radio'} id=${id}>
+            <div class=${options.readonly ? 'fm_radio readonly' : 'fm_radio'} id=${id}>
                 ${props.map((p, i) =>
                     html`<input type="radio" name=${id} id=${`${id}.${i}`} value=${util.valueToStr(p.value)}
                                 ?disabled=${options.disabled} .checked=${value === p.value}
@@ -534,7 +531,7 @@ function PageBuilder(state, model, readonly = false) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <div class=${options.readonly ? 'af_enum readonly' : 'af_enum'} id=${id}>
+            <div class=${options.readonly ? 'fm_enum readonly' : 'fm_enum'} id=${id}>
                 ${props.map((p, i) =>
                     html`<button type="button" data-value=${util.valueToStr(p.value)}
                                  .className=${value.includes(p.value) ? 'active' : ''}
@@ -601,7 +598,7 @@ function PageBuilder(state, model, readonly = false) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <div class=${options.readonly ? 'af_multi readonly' : 'af_multi'} id=${id}>
+            <div class=${options.readonly ? 'fm_multi readonly' : 'fm_multi'} id=${id}>
                 ${props.map((p, i) =>
                     html`<input type="checkbox" id=${`${id}.${i}`} value=${util.valueToStr(p.value)}
                                 ?disabled=${options.disabled} .checked=${value.includes(p.value)}
@@ -705,14 +702,14 @@ function PageBuilder(state, model, readonly = false) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
+            ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type=${has_input_date ? 'date' : 'text'}
-                   class="af_input" style=${makeInputStyle(options)}
+                   class="fm_input" style=${makeInputStyle(options)}
                    .value=${value ? (has_input_date ? value.toString() : value.toLocaleString()) : ''}
                    placeholder=${!has_input_date ? 'DD/MM/YYYY' : ''}
                    ?disabled=${options.disabled} ?readonly=${options.readonly}
                    @input=${e => handleDateInput(e, key)}/>
-            ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
+            ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
 
         let intf = makeWidget('date', label, render, options);
@@ -760,15 +757,15 @@ function PageBuilder(state, model, readonly = false) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
+            ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type=${has_input_date ? 'time' : 'text'} step
-                   class="af_input" style=${makeInputStyle(options)}
+                   class="fm_input" style=${makeInputStyle(options)}
                    .value=${value ? value.toString().substr(0, options.seconds ? 8 : 5) : ''}
                    placeholder=${!has_input_date ? 'HH:MM:SS'.substr(0, options.seconds ? 8 : 5) : ''}
                    step=${options.seconds ? 1 : 60}
                    ?disabled=${options.disabled} ?readonly=${options.readonly}
                    @input=${e => handleTimeInput(e, key)} />
-            ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
+            ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
 
         let intf = makeWidget('date', label, render, options);
@@ -867,9 +864,9 @@ function PageBuilder(state, model, readonly = false) {
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             <label for=${id}>${label || key}</label>
-            ${makePrefixOrSuffix('af_prefix', options.prefix, value)}
-            <span id="${id}" class="af_calc">${text}</span>
-            ${makePrefixOrSuffix('af_suffix', options.suffix, value)}
+            ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
+            <span id="${id}" class="fm_calc">${text}</span>
+            ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
 
         let intf = makeWidget('calc', label, render, options);
@@ -887,7 +884,7 @@ function PageBuilder(state, model, readonly = false) {
 
         // This helps avoid garbage output when the user types 'page.output(html);'
         if (content != null && content !== html && content !== svg) {
-            let render = intf => html`<div class="af_wrap">${content}</div>`;
+            let render = intf => html`<div class="fm_wrap">${content}</div>`;
 
             let intf = makeWidget('output', null, render, options);
             addWidget(intf);
@@ -922,11 +919,11 @@ function PageBuilder(state, model, readonly = false) {
 
         let widgets = [];
         let render = intf => html`
-            <fieldset class="af_container af_section">
-                ${label ? html`<div class="af_legend" @click=${e => handleSectionClick(e, label)}>${label}</div>` : ''}
+            <fieldset class="fm_container fm_section">
+                ${label ? html`<div class="fm_legend" @click=${e => handleSectionClick(e, label)}>${label}</div>` : ''}
                 ${deploy ?
                     widgets.map(intf => intf.render()) :
-                    html`<a class="af_deploy"
+                    html`<a class="fm_deploy"
                             @click=${e => handleSectionClick(e, label)}>(ouvrir la section)</a>`}
             </fieldset>
         `;
@@ -950,8 +947,8 @@ function PageBuilder(state, model, readonly = false) {
         let render = intf => {
             if (self.hasErrors() || options.force) {
                 return html`
-                    <fieldset class="af_container af_section error">
-                        <div class="af_legend">${options.label || 'Liste des erreurs'}</div>
+                    <fieldset class="fm_container fm_section error">
+                        <div class="fm_legend">${options.label || 'Liste des erreurs'}</div>
                         ${!self.hasErrors() ? 'Aucune erreur' : ''}
                         ${model.widgets.map(intf => {
                             if (intf.errors.length) {
@@ -988,8 +985,8 @@ function PageBuilder(state, model, readonly = false) {
         let widgets = [];
 
         let render = intf => tabs.length ? html`
-            <div class="af_container af_section tabs">
-                <div class="af_tabs">
+            <div class="fm_container fm_section tabs">
+                <div class="fm_tabs">
                     ${tabs.map((tab, idx) =>
                         html`<button type="button" class=${idx === tab_idx ? 'active' : ''}
                                      ?disabled=${tab.disable}
@@ -1079,7 +1076,7 @@ function PageBuilder(state, model, readonly = false) {
 
         let widgets = [];
         let render = intf => html`
-            <div class="af_container af_columns">
+            <div class="fm_container fm_columns">
                 ${widgets.map(intf => html`
                     <div style=${options.wide ? 'flex: 1;' : ''}>
                         ${intf.render()}
@@ -1178,14 +1175,6 @@ instead of:
         self.restart();
     }
 
-    // XXX: Deprecated, remove soon
-    this.actions = function(actions, options = {}) {
-        console.error('page.actions() is deprecated and will eventually be removed');
-
-        for (let action of actions)
-            self.action(action[0], {disabled: !action[1]}, action[1]);
-    };
-
     this.submit = async function() {
         if (self.triggerErrors()) {
             return await self.submitHandler();
@@ -1229,11 +1218,11 @@ instead of:
     }
 
     function makeID(key) {
-        return `af_var_${model.key}_${key}`;
+        return `fm_var_${model.key}_${key}`;
     }
 
     function renderWrappedWidget(intf, frag) {
-        let cls = 'af_widget';
+        let cls = 'fm_widget';
         if (intf.errors.length)
             cls += ' error';
         if (intf.options.mandatory)
@@ -1242,13 +1231,13 @@ instead of:
             cls += ' compact';
 
         return html`
-            <div class=${intf.options.disabled ? 'af_wrap disabled' : 'af_wrap'}>
+            <div class=${intf.options.disabled ? 'fm_wrap disabled' : 'fm_wrap'}>
                 <div class=${cls}>
                     ${frag}
                     ${intf.errors.length ?
-                        html`<div class="af_error">${intf.errors.map(err => html`${err}<br/>`)}</div>` : ''}
+                        html`<div class="fm_error">${intf.errors.map(err => html`${err}<br/>`)}</div>` : ''}
                 </div>
-                ${intf.options.help ? html`<p class="af_help">${intf.options.help}</p>` : ''}
+                ${intf.options.help ? html`<p class="fm_help">${intf.options.help}</p>` : ''}
             </div>
         `;
     }
