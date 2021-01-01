@@ -111,6 +111,7 @@ const ui = new function() {
                     }
                 }
             };
+            dialog.state.changeHandler = dialog.render;
 
             // Complete linked list insertion
             dialogs.prev.next = dialog;
@@ -162,15 +163,13 @@ const ui = new function() {
     }
 
     function buildDialog(dialog, e, func) {
-        let model = new FormModel('@popup');
-
+        let model = new FormModel;
         let builder = new FormBuilder(dialog.state, model);
-        builder.changeHandler = () => buildDialog(...arguments);
+
         builder.pushOptions({
             missing_mode: 'disable',
             wide: true
         });
-
         func(builder, dialog.resolve, dialog.reject);
 
         render(html`

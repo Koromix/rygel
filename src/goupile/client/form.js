@@ -3,8 +3,16 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 function FormState() {
+    // Interoperate
+    this.decodeKey = key => key;
+    this.setValue = (key, value) => {};
+    this.getValue = (key, default_value) => default_value;
+    this.changeHandler = model => {};
+
+    // Stored values
     this.values = {};
 
+    // Internal state
     this.unique_id = FormState.next_unique_id++;
     this.sections_state = {};
     this.tabs_state = {};
@@ -18,10 +26,8 @@ function FormState() {
 }
 FormState.next_unique_id = 0;
 
-function FormModel(key) {
+function FormModel() {
     let self = this;
-
-    this.key = key;
 
     this.widgets = [];
     this.widgets0 = [];
@@ -73,15 +79,6 @@ function FormBuilder(state, model, readonly = false) {
     let selected_tab;
 
     let restart = false;
-
-    // Key and value handling
-    this.decodeKey = key => key;
-    this.setValue = (key, value) => {};
-    this.getValue = (key, default_value) => default_value;
-
-    // Change and submission handling
-    this.changeHandler = model => {};
-    this.submitHandler = null;
 
     this.hasChanged = function() { return !!state.changed_variables.size; };
     this.isValid = function() { return model.valid; };
@@ -1176,17 +1173,9 @@ instead of:
         self.restart();
     }
 
-    this.submit = async function() {
-        if (self.triggerErrors()) {
-            return await self.submitHandler();
-        } else {
-            return false;
-        }
-    };
-
     this.restart = function() {
         if (!restart) {
-            setTimeout(() => self.changeHandler(self), 0);
+            setTimeout(() => state.changeHandler(model), 0);
             restart = true;
         }
     };
@@ -1204,7 +1193,7 @@ instead of:
             }
         }
 
-        return self.decodeKey(key);
+        return state.decodeKey(key);
     }
 
     function expandOptions(options) {
@@ -1374,7 +1363,7 @@ instead of:
 
     function readValue(key, default_value) {
         if (!state.changed_variables.has(key.toString())) {
-            let value = self.getValue(key, default_value);
+            let value = state.getValue(key, default_value);
 
             state.cached_values[key] = value;
             state.values[key] = value;
@@ -1402,7 +1391,7 @@ instead of:
             }
             state.updated_variables.add(key.toString());
 
-            self.setValue(key, value);
+            state.setValue(key, value);
             if (refresh)
                 self.restart();
         }
