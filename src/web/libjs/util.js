@@ -487,7 +487,6 @@ const log = new function() {
     let self = this;
 
     let handlers = [];
-    let entries = [];
 
     // Log to console
     this.defaultHandler = function(action, entry) {
@@ -502,63 +501,6 @@ const log = new function() {
         }
     };
     handlers.push(self.defaultHandler);
-
-    // Show to user
-    this.notifyHandler = function(action, entry) {
-        if (typeof lithtml !== 'undefined' && entry.type !== 'debug') {
-            switch (action) {
-                case 'open': {
-                    entries.unshift(entry);
-
-                    if (entry.type === 'progress') {
-                        // Wait a bit to show progress entries to prevent quick actions from showing up
-                        setTimeout(renderLog, 300);
-                    } else {
-                        renderLog();
-                    }
-                } break;
-                case 'edit': {
-                    renderLog();
-                } break;
-                case 'close': {
-                    entries = entries.filter(it => it !== entry);
-                    renderLog();
-                } break;
-            }
-        }
-
-        self.defaultHandler(action, entry);
-    };
-
-    function closeLogEntry(idx) {
-        entries.splice(idx, 1);
-        renderLog();
-    }
-
-    function renderLog() {
-        let log_el = document.querySelector('#ut_log');
-        if (!log_el) {
-            log_el = document.createElement('div');
-            log_el.id = 'ut_log';
-            document.body.appendChild(log_el);
-        }
-
-        render(entries.map((entry, idx) => {
-            let msg = (entry.msg instanceof Error) ? entry.msg.message : entry.msg;
-
-            if (entry.type === 'progress') {
-                return html`<div class="ut_log_entry progress">
-                    <div class="ut_log_spin"></div>
-                    ${msg.split('\n').map(line => [line, html`<br/>`])}
-                </div>`;
-            } else {
-                return html`<div class=${'ut_log_entry ' + entry.type} @click=${e => closeLogEntry(idx)}>
-                    <button class="ut_log_close">X</button>
-                    ${msg.split('\n').map(line => [line, html`<br/>`])}
-                </div>`;
-            }
-        }), log_el);
-    }
 
     this.pushHandler = function(func) { handlers.push(func); };
     this.popHandler = function() { handlers.pop(); };

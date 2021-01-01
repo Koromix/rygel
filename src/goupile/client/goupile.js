@@ -11,6 +11,8 @@ const goupile = new function() {
     let controller;
 
     this.start = async function() {
+        ui.init();
+
         if (ENV.base_url === '/admin/') {
             document.documentElement.classList.add('admin');
             controller = new AdminController;

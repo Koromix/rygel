@@ -18,13 +18,15 @@ const thop = new function() {
 
     let settings_rnd;
 
+    let log_entries = [];
+
     document.addEventListener('readystatechange', e => {
         if (document.readyState === 'complete')
             self.startApp();
     });
 
     this.startApp = async function() {
-        log.pushHandler(log.notifyHandler);
+        log.pushHandler(notifyHandler);
         initNavigation();
 
         // We deal with this
@@ -297,5 +299,61 @@ const thop = new function() {
     function makeMenuLink(label, url, current_url) {
         let active = current_url.startsWith(url);
         return html`<a class=${active ? 'active': ''} href=${url}>${label}</a>`;
+    }
+
+    function notifyHandler(action, entry) {
+        if (typeof lithtml !== 'undefined' && entry.type !== 'debug') {
+            switch (action) {
+                case 'open': {
+                    log_entries.unshift(entry);
+
+                    if (entry.type === 'progress') {
+                        // Wait a bit to show progress entries to prevent quick actions from showing up
+                        setTimeout(renderLog, 300);
+                    } else {
+                        renderLog();
+                    }
+                } break;
+                case 'edit': {
+                    renderLog();
+                } break;
+                case 'close': {
+                    log_entries = log_entries.filter(it => it !== entry);
+                    renderLog();
+                } break;
+            }
+        }
+
+        log.defaultHandler(action, entry);
+    };
+
+    function closeLogEntry(idx) {
+        log_entries.splice(idx, 1);
+        renderLog();
+    }
+
+    function renderLog() {
+        let log_el = document.querySelector('#th_log');
+        if (!log_el) {
+            log_el = document.createElement('div');
+            log_el.id = 'th_log';
+            document.body.appendChild(log_el);
+        }
+
+        render(log_entries.map((entry, idx) => {
+            let msg = (entry.msg instanceof Error) ? entry.msg.message : entry.msg;
+
+            if (entry.type === 'progress') {
+                return html`<div class="th_log_entry progress">
+                    <div class="th_log_spin"></div>
+                    ${msg.split('\n').map(line => [line, html`<br/>`])}
+                </div>`;
+            } else {
+                return html`<div class=${'th_log_entry ' + entry.type} @click=${e => closeLogEntry(idx)}>
+                    <button class="th_log_close">X</button>
+                    ${msg.split('\n').map(line => [line, html`<br/>`])}
+                </div>`;
+            }
+        }), log_el);
     }
 };

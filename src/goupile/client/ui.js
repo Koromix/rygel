@@ -8,14 +8,19 @@ const ui = new function() {
     let menu;
     let panels = new Map;
 
-    let init_dialogs = false;
-
     let dialogs = {
         prev: null,
         next: null
     };
     dialogs.prev = dialogs;
     dialogs.next = dialogs;
+
+    let log_entries = [];
+
+    this.init = function() {
+        log.pushHandler(notifyHandler);
+        document.addEventListener('click', handleDocumentClick);
+    }
 
     this.render = function() {
         // Render main screen
@@ -82,11 +87,6 @@ const ui = new function() {
     };
 
     function runDialog(e, type, closeable, func) {
-        if (!init_dialogs) {
-            document.addEventListener('click', handleDocumentClick);
-            init_dialogs = true;
-        }
-
         return new Promise((resolve, reject) => {
             let dialog = {
                 prev: dialogs.prev,
@@ -256,4 +256,60 @@ const ui = new function() {
             d.action('Annuler', {}, () => reject(new Error('Action annulée')));
         });
     };
+
+    function notifyHandler(action, entry) {
+        if (typeof lithtml !== 'undefined' && entry.type !== 'debug') {
+            switch (action) {
+                case 'open': {
+                    log_entries.unshift(entry);
+
+                    if (entry.type === 'progress') {
+                        // Wait a bit to show progress entries to prevent quick actions from showing up
+                        setTimeout(renderLog, 300);
+                    } else {
+                        renderLog();
+                    }
+                } break;
+                case 'edit': {
+                    renderLog();
+                } break;
+                case 'close': {
+                    log_entries = log_entries.filter(it => it !== entry);
+                    renderLog();
+                } break;
+            }
+        }
+
+        log.defaultHandler(action, entry);
+    };
+
+    function closeLogEntry(idx) {
+        log_entries.splice(idx, 1);
+        renderLog();
+    }
+
+    function renderLog() {
+        let log_el = document.querySelector('#ui_log');
+        if (!log_el) {
+            log_el = document.createElement('div');
+            log_el.id = 'ui_log';
+            document.body.appendChild(log_el);
+        }
+
+        render(log_entries.map((entry, idx) => {
+            let msg = (entry.msg instanceof Error) ? entry.msg.message : entry.msg;
+
+            if (entry.type === 'progress') {
+                return html`<div class="ui_log_entry progress">
+                    <div class="ui_log_spin"></div>
+                    ${msg.split('\n').map(line => [line, html`<br/>`])}
+                </div>`;
+            } else {
+                return html`<div class=${'ui_log_entry ' + entry.type} @click=${e => closeLogEntry(idx)}>
+                    <button class="ui_log_close">X</button>
+                    ${msg.split('\n').map(line => [line, html`<br/>`])}
+                </div>`;
+            }
+        }), log_el);
+    }
 };
