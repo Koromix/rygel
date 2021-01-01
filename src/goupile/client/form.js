@@ -4,16 +4,19 @@
 
 function FormState() {
     this.values = {};
-    this.changed = false;
 
+    this.unique_id = FormState.next_unique_id++;
     this.sections_state = {};
     this.tabs_state = {};
     this.file_lists = new Map;
     this.click_events = new Set;
-
     this.take_delayed = new Set;
+
+    this.cached_values = {};
     this.changed_variables = new Set;
+    this.updated_variables = new Set;
 }
+FormState.next_unique_id = 0;
 
 function FormModel(key) {
     let self = this;
@@ -58,9 +61,7 @@ function FormBuilder(state, model, readonly = false) {
     let variables_map = {};
     let options_stack = [{
         deploy: true,
-        untoggle: true,
-        store: true,
-        export: true
+        untoggle: true
     }];
     let widgets_ref = model.widgets0;
 
@@ -82,7 +83,7 @@ function FormBuilder(state, model, readonly = false) {
     this.changeHandler = model => {};
     this.submitHandler = null;
 
-    this.hasChanged = function() { return state.changed; };
+    this.hasChanged = function() { return !!state.changed_variables.size; };
     this.isValid = function() { return model.valid; };
     this.hasErrors = function() { return !!model.errors; };
     this.triggerErrors = function() {
@@ -1195,10 +1196,6 @@ instead of:
             for (;;) {
                 if (key[0] === '*') {
                     options.mandatory = true;
-                } else if (key[0] === '!') {
-                    options.store = false;
-                } else if (key[0] === '@') {
-                    options.export = false;
                 } else {
                     break;
                 }
@@ -1218,7 +1215,7 @@ instead of:
     }
 
     function makeID(key) {
-        return `fm_var_${model.key}_${key}`;
+        return `fm_var_${state.unique_id}_${key}`;
     }
 
     function renderWrappedWidget(intf, frag) {
@@ -1268,6 +1265,10 @@ instead of:
         let intf = {
             type: type,
             label: label,
+            options: options,
+
+            errors: [],
+
             render: () => {
                 intf.render = () => '';
 
@@ -1277,9 +1278,7 @@ instead of:
                     return '';
                 }
             },
-            toHTML: () => intf.render(),
-            options: options,
-            errors: []
+            toHTML: () => intf.render()
         };
 
         return intf;
@@ -1302,12 +1301,12 @@ instead of:
             throw new Error(`Variable '${key}' already exists`);
 
         Object.assign(intf, {
-            page: model.key,
             key: key,
             value: value,
 
             missing: missing || intf.options.missing,
             changed: state.changed_variables.has(key.toString()),
+            updated: state.updated_variables.has(key.toString()),
 
             error: (msg, delay = false) => {
                 if (!delay || state.take_delayed.has(key.toString())) {
@@ -1320,7 +1319,7 @@ instead of:
                 return intf;
             }
         });
-        state.changed_variables.delete(key.toString());
+        state.updated_variables.delete(key.toString());
 
         if (props != null) {
             intf.props = props;
@@ -1334,8 +1333,7 @@ instead of:
                 valid = false;
         }
 
-        if (intf.options.store)
-            model.variables.push(intf);
+        model.variables.push(intf);
         variables_map[key] = intf;
 
         model.values[key] = value;
@@ -1375,8 +1373,12 @@ instead of:
     }
 
     function readValue(key, default_value) {
-        if (!state.values.hasOwnProperty(key))
-            state.values[key] = self.getValue(key, default_value);
+        if (!state.changed_variables.has(key.toString())) {
+            let value = self.getValue(key, default_value);
+
+            state.cached_values[key] = value;
+            state.values[key] = value;
+        }
 
         return state.values[key];
     }
@@ -1388,16 +1390,19 @@ instead of:
 
     function updateValue(key, value, refresh = true) {
         if (value !== state.values[key]) {
-           let intf = variables_map[key];
+            let intf = variables_map[key];
 
             state.values[key] = value;
-            state.changed |= intf.options.store;
 
             state.take_delayed.delete(key.toString());
-            state.changed_variables.add(key.toString());
+            if (value !== state.cached_values[key]) {
+                state.changed_variables.add(key.toString());
+            } else {
+                state.changed_variables.delete(key.toString());
+            }
+            state.updated_variables.add(key.toString());
 
-            if (intf.options.store)
-                self.setValue(key, value);
+            self.setValue(key, value);
             if (refresh)
                 self.restart();
         }
