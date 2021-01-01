@@ -119,7 +119,7 @@ function FormBuilder(state, model, readonly = false) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
-        let value = readValue(key, options.value);
+        let value = readValue(key, options.value, value => (value != null) ? String(value) : undefined);
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -134,7 +134,7 @@ function FormBuilder(state, model, readonly = false) {
         `);
 
         let intf = makeWidget('text', label, render, options);
-        fillVariableInfo(intf, key, value, value == null);
+        fillVariableInfo(intf, key, value);
         addWidget(intf);
 
         return intf;
@@ -144,7 +144,7 @@ function FormBuilder(state, model, readonly = false) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
-        let value = readValue(key, options.value);
+        let value = readValue(key, options.value, value => (value != null) ? String(value) : undefined);
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -158,7 +158,7 @@ function FormBuilder(state, model, readonly = false) {
         `);
 
         let intf = makeWidget('text', label, render, options);
-        fillVariableInfo(intf, key, value, value == null);
+        fillVariableInfo(intf, key, value);
         addWidget(intf);
 
         return intf;
@@ -168,7 +168,7 @@ function FormBuilder(state, model, readonly = false) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
-        let value = readValue(key, options.value);
+        let value = readValue(key, options.value, value => (value != null) ? String(value) : undefined);
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -182,7 +182,7 @@ function FormBuilder(state, model, readonly = false) {
         `);
 
         let intf = makeWidget('password', label, render, options);
-        fillVariableInfo(intf, key, value, value == null);
+        fillVariableInfo(intf, key, value);
         addWidget(intf);
 
         return intf;
@@ -192,7 +192,7 @@ function FormBuilder(state, model, readonly = false) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
-        let value = readValue(key, options.value);
+        let value = readValue(key, options.value, value => (value != null) ? String(value) : undefined);
         if (value != null)
             value = '' + value;
 
@@ -221,7 +221,7 @@ function FormBuilder(state, model, readonly = false) {
         `);
 
         let intf = makeWidget('pin', label, render, options);
-        fillVariableInfo(intf, key, value, value == null);
+        fillVariableInfo(intf, key, value);
         addWidget(intf);
 
         if (value && !value.match(/^[0-9]*$/))
@@ -249,10 +249,12 @@ function FormBuilder(state, model, readonly = false) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
-        let value = parseFloat(readValue(key, options.value));
-        let missing = (value == null || Number.isNaN(value));
-        if (missing)
-            value = undefined;
+        let value = readValue(key, options.value, value => {
+            value = parseFloat(value);
+            if (Number.isNan(value))
+                value = undefined;
+            return value;
+        });
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -267,7 +269,7 @@ function FormBuilder(state, model, readonly = false) {
         `);
 
         let intf = makeWidget('number', label, render, options);
-        fillVariableInfo(intf, key, value, missing);
+        fillVariableInfo(intf, key, value);
         addWidget(intf);
 
         validateMinMax(intf);
@@ -305,21 +307,25 @@ function FormBuilder(state, model, readonly = false) {
         if (range <= 0)
             throw new Error('Range (options.max - options.min) must be positive');
 
-        let value = parseFloat(readValue(key, options.value));
-        let missing = (value == null || Number.isNaN(value));
+        let value = readValue(key, options.value, value => {
+            value = parseFloat(value);
+            if (Number.isNan(value))
+                value = undefined;
+            return value;
+        });
 
-        let thumb_value = !missing ? value : ((options.max + options.min) / 2);
-        let fix_value = !missing ? util.clamp(value, options.min, options.max)
-                                 : ((options.min + options.max) / 2);
+        let thumb_value = (value != null) ? value : ((options.max + options.min) / 2);
+        let fix_value = (value != null) ? util.clamp(value, options.min, options.max)
+                                        : ((options.min + options.max) / 2);
 
         // WebKit and Blink don't have anything like ::-moz-range-progress...
         // We use a gradient background set from a CSS property. Yuck.
-        let webkit_progress = !missing ? ((fix_value - options.min) / range) : 0;
+        let webkit_progress = (value != null) ? ((fix_value - options.min) / range) : 0;
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
-            <div class=${'fm_slider' + (missing ? ' missing' : '') + (options.readonly ? ' readonly' : '')}
+            <div class=${'fm_slider' + (value == null ? ' missing' : '') + (options.readonly ? ' readonly' : '')}
                  style=${makeInputStyle(options)}>
                 <span style=${options.untoggle ? ' cursor: pointer;': ''}
                       @click=${e => handleSliderClick(e, key, value, options.min, options.max)}>${value.toFixed(options.decimals)}</span>
@@ -339,7 +345,7 @@ function FormBuilder(state, model, readonly = false) {
         `);
 
         let intf = makeWidget('slider', label, render, options);
-        fillVariableInfo(intf, key, value, missing);
+        fillVariableInfo(intf, key, value);
         addWidget(intf);
 
         validateMinMax(intf);
@@ -390,7 +396,12 @@ function FormBuilder(state, model, readonly = false) {
         key = decodeKey(key, options);
         props = normalizePropositions(props);
 
-        let value = readValue(key, options.value);
+        let value = readValue(key, options.value, value => {
+            if (Array.isArray(value))
+                value = (value.length === 1) ? value[0] : undefined;
+
+            return value;
+        });
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -406,7 +417,7 @@ function FormBuilder(state, model, readonly = false) {
         `);
 
         let intf = makeWidget('enum', label, render, options);
-        fillVariableInfo(intf, key, value, value == null, props, false);
+        fillVariableInfo(intf, key, value, props, false);
         addWidget(intf);
 
         return intf;
@@ -446,7 +457,12 @@ function FormBuilder(state, model, readonly = false) {
         key = decodeKey(key, options);
         props = normalizePropositions(props);
 
-        let value = readValue(key, options.value);
+        let value = readValue(key, options.value, value => {
+            if (Array.isArray(value))
+                value = (value.length === 1) ? value[0] : undefined;
+
+            return value;
+        });
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -465,7 +481,7 @@ function FormBuilder(state, model, readonly = false) {
         `);
 
         let intf = makeWidget('enumDrop', label, render, options);
-        fillVariableInfo(intf, key, value, value == null, props, false);
+        fillVariableInfo(intf, key, value, props, false);
         addWidget(intf);
 
         return intf;
@@ -483,7 +499,12 @@ function FormBuilder(state, model, readonly = false) {
         key = decodeKey(key, options);
         props = normalizePropositions(props);
 
-        let value = readValue(key, options.value);
+        let value = readValue(key, options.value, value => {
+            if (Array.isArray(value))
+                value = (value.length === 1) ? value[0] : undefined;
+
+            return value;
+        });
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -499,7 +520,7 @@ function FormBuilder(state, model, readonly = false) {
         `);
 
         let intf = makeWidget('enumRadio', label, render, options);
-        fillVariableInfo(intf, key, value, value == null, props, false);
+        fillVariableInfo(intf, key, value, props, false);
         addWidget(intf);
 
         return intf;
@@ -522,9 +543,18 @@ function FormBuilder(state, model, readonly = false) {
         key = decodeKey(key, options);
         props = normalizePropositions(props);
 
-        let value = readValue(key, options.value);
-        if (!Array.isArray(value))
-            value = [];
+        let value = readValue(key, options.value, value => {
+            if (!Array.isArray(value)) {
+                if (value != null) {
+                    value = [value];
+                } else {
+                    let nullable = props.some(p => p.value == null);
+                    value = nullable ? undefined : [];
+                }
+            }
+
+            return value;
+        });
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -532,7 +562,7 @@ function FormBuilder(state, model, readonly = false) {
             <div class=${options.readonly ? 'fm_enum readonly' : 'fm_enum'} id=${id}>
                 ${props.map((p, i) =>
                     html`<button type="button" data-value=${util.valueToStr(p.value)}
-                                 .className=${value.includes(p.value) ? 'active' : ''}
+                                 .className=${value != null && value.includes(p.value) ? 'active' : ''}
                                  ?disabled=${options.disabled}
                                  @click=${e => handleMultiChange(e, key)}
                                  @keydown=${handleEnumOrMultiKey} tabindex=${i ? -1 : 0}>${p.label}</button>`)}
@@ -540,8 +570,7 @@ function FormBuilder(state, model, readonly = false) {
         `);
 
         let intf = makeWidget('multi', label, render, options);
-        let missing = !value.length && props.some(p => p.value == null);
-        fillVariableInfo(intf, key, value, missing, props, true);
+        fillVariableInfo(intf, key, value, props, true);
         addWidget(intf);
 
         return intf;
@@ -589,9 +618,18 @@ function FormBuilder(state, model, readonly = false) {
         key = decodeKey(key, options);
         props = normalizePropositions(props);
 
-        let value = readValue(key, options.value);
-        if (!Array.isArray(value))
-            value = [];
+        let value = readValue(key, options.value, value => {
+            if (!Array.isArray(value)) {
+                if (value != null) {
+                    value = [value];
+                } else {
+                    let nullable = props.some(p => p.value == null);
+                    value = nullable ? undefined : [];
+                }
+            }
+
+            return value;
+        });
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -599,7 +637,7 @@ function FormBuilder(state, model, readonly = false) {
             <div class=${options.readonly ? 'fm_multi readonly' : 'fm_multi'} id=${id}>
                 ${props.map((p, i) =>
                     html`<input type="checkbox" id=${`${id}.${i}`} value=${util.valueToStr(p.value)}
-                                ?disabled=${options.disabled} .checked=${value.includes(p.value)}
+                                ?disabled=${options.disabled} .checked=${value != null && value.includes(p.value)}
                                 @click=${e => handleMultiCheckChange(e, key)}
                                 @keydown=${handleRadioOrCheckKey} tabindex=${i ? -1 : 0} />
                          <label for=${`${id}.${i}`}>${p.label}</label><br/>`)}
@@ -607,8 +645,7 @@ function FormBuilder(state, model, readonly = false) {
         `);
 
         let intf = makeWidget('multiCheck', label, render, options);
-        let missing = !value.length && props.some(p => p.value == null);
-        fillVariableInfo(intf, key, value, missing, props, true);
+        fillVariableInfo(intf, key, value, props, true);
         addWidget(intf);
 
         return intf;
@@ -690,12 +727,15 @@ function FormBuilder(state, model, readonly = false) {
         if (options.value != null)
             options.value = options.value.toString();
 
-        let value = readValue(key, options.value);
-        if (typeof value === 'string') {
-            value = dates.parseSafe(value);
-        } else if (value == null || value.constructor.name !== 'LocalDate') {
-            value = null;
-        }
+        let value = readValue(key, options.value, value => {
+            if (typeof value === 'string') {
+                value = dates.parseSafe(value);
+            } else if (value != null && value.constructor.name !== 'LocalDate') {
+                value = undefined;
+            }
+
+            return value;
+        });
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -711,7 +751,7 @@ function FormBuilder(state, model, readonly = false) {
         `);
 
         let intf = makeWidget('date', label, render, options);
-        fillVariableInfo(intf, key, value, value == null);
+        fillVariableInfo(intf, key, value);
         addWidget(intf);
 
         validateMinMax(intf, dates.parse);
@@ -724,14 +764,14 @@ function FormBuilder(state, model, readonly = false) {
             return;
 
         if (has_input_date) {
-            // Store as string, for serialization purposes
-            updateValue(key, e.target.value || undefined);
+            let date = dates.parse(e.target.value || null);
+            updateValue(key, date || undefined);
         } else {
             try {
                 let date = dates.parse(e.target.value || null);
 
                 e.target.setCustomValidity('');
-                updateValue(key, date ? date.toString() : null);
+                updateValue(key, date || undefined);
             } catch (err) {
                 e.target.setCustomValidity('Date malformée ou ambiguë');
             }
@@ -745,12 +785,15 @@ function FormBuilder(state, model, readonly = false) {
         if (options.value != null)
             options.value = options.value.toString();
 
-        let value = readValue(key, options.value);
-        if (typeof value === 'string') {
-            value = times.parseSafe(value);
-        } else if (value == null || value.constructor.name !== 'LocalTime') {
-            value = null;
-        }
+        let value = readValue(key, options.value, value => {
+            if (typeof value === 'string') {
+                value = times.parseSafe(value);
+            } else if (value != null && value.constructor.name !== 'LocalTime') {
+                value = undefined;
+            }
+
+            return value;
+        });
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -767,7 +810,7 @@ function FormBuilder(state, model, readonly = false) {
         `);
 
         let intf = makeWidget('date', label, render, options);
-        fillVariableInfo(intf, key, value, value == null);
+        fillVariableInfo(intf, key, value);
         addWidget(intf);
 
         validateMinMax(intf, times.parse);
@@ -780,14 +823,14 @@ function FormBuilder(state, model, readonly = false) {
             return;
 
         if (has_input_date) {
-            // Store as string, for serialization purposes
-            updateValue(key, e.target.value || undefined);
+            let time = times.parse(e.target.value || null);
+            updateValue(key, time || undefined);
         } else {
             try {
                 let time = times.parse(e.target.value || null);
 
                 e.target.setCustomValidity('');
-                updateValue(key, time ? time.toString() : null);
+                updateValue(key, time || undefined);
             } catch (err) {
                 e.target.setCustomValidity('Horaire malformé');
             }
@@ -798,9 +841,12 @@ function FormBuilder(state, model, readonly = false) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
-        let value = readValue(key, options.value);
-        if (!(value instanceof File))
-            value = null;
+        let value = readValue(key, options.value, value => {
+            if (!(value instanceof File))
+                value = undefined;
+
+            return value;
+        });
 
         // Setting files on input file elements is fragile. At least on Firefox, assigning
         // its own value to the property results in an empty FileList for some reason.
@@ -824,7 +870,7 @@ function FormBuilder(state, model, readonly = false) {
         `);
 
         let intf = makeWidget('file', label, render, options);
-        fillVariableInfo(intf, key, value, value == null);
+        fillVariableInfo(intf, key, value);
         addWidget(intf);
 
         return intf;
@@ -842,9 +888,17 @@ function FormBuilder(state, model, readonly = false) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
+        if (value != null && typeof value !== 'string' &&
+                             typeof value !== 'number' &&
+                             value.constructor.name !== 'LocalDate' &&
+                             value.constructor.name !== 'LocalTime')
+            throw new Error('Calculated value must be a string, a number, a date or a time');
+        if (Number.isNaN(value))
+            value = undefined;
+
         let text = value;
         if (!options.raw && typeof value !== 'string') {
-            if (value == null || Number.isNaN(value)) {
+            if (value == null) {
                 value = undefined;
                 text = 'Non calculable';
             } else if (isFinite(value)) {
@@ -868,10 +922,10 @@ function FormBuilder(state, model, readonly = false) {
         `);
 
         let intf = makeWidget('calc', label, render, options);
-        fillVariableInfo(intf, key, value, value == null || Number.isNaN(value));
+        fillVariableInfo(intf, key, value);
         addWidget(intf);
 
-        readValue(key);
+        readValue(key, undefined, value => value);
         updateValue(key, value, false);
 
         return intf;
@@ -1285,7 +1339,7 @@ instead of:
         model.widgets.push(intf);
     }
 
-    function fillVariableInfo(intf, key, value, missing, props = null, multi = false) {
+    function fillVariableInfo(intf, key, value, props = null, multi = false) {
         if (variables_map[key])
             throw new Error(`Variable '${key}' already exists`);
 
@@ -1293,7 +1347,7 @@ instead of:
             key: key,
             value: value,
 
-            missing: missing || intf.options.missing,
+            missing: value == null,
             changed: state.changed_variables.has(key.toString()),
             updated: state.updated_variables.has(key.toString()),
 
@@ -1361,15 +1415,30 @@ instead of:
         }
     }
 
-    function readValue(key, default_value) {
+    function readValue(key, default_value, func) {
+        let value;
         if (!state.changed_variables.has(key.toString())) {
-            let value = state.getValue(key, default_value);
+            value = state.getValue(key, default_value);
 
             state.cached_values[key] = value;
             state.values[key] = value;
+        } else {
+            value = state.values[key];
         }
 
-        return state.values[key];
+        value = func(value);
+        if (value == null)
+            value = undefined;
+        if (value !== state.values[key]) {
+            if (value !== state.cached_values[key]) {
+                state.changed_variables.add(key.toString());
+            } else {
+                state.changed_variables.delete(key.toString());
+            }
+            state.values[key] = value;
+        }
+
+        return value;
     }
 
     function isModifiable(key) {
