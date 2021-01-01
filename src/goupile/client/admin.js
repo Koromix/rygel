@@ -124,7 +124,7 @@ function AdminController() {
             d.action('Créer', {disabled: !d.isValid()}, async () => {
                 let query = new URLSearchParams;
                 query.set('key', key.value);
-                query.set('app_name', name.value || key.value);
+                query.set('title', name.value || key.value);
 
                 let response = await net.fetch('/admin/api/instances/create', {
                     method: 'POST',
@@ -153,7 +153,7 @@ function AdminController() {
 
             d.tabs('actions', () => {
                 d.tab('Modifier', () => {
-                    let app_name = d.text('*app_name', 'Nom de l\'application', {value: instance.config.app_name});
+                    let title = d.text('*title', 'Nom de l\'application', {value: instance.config.title});
                     let use_offline = d.boolean('*use_offline', 'Utilisation hors-ligne', {value: instance.config.use_offline});
                     let sync_mode = d.enum('*sync_mode', 'Mode de synchronisation', [
                         ['offline', 'Hors ligne'],
@@ -164,7 +164,7 @@ function AdminController() {
                     d.action('Modifier', {disabled: !d.isValid()}, async () => {
                         let query = new URLSearchParams();
                         query.set('key', instance.key);
-                        query.set('app_name', app_name.value);
+                        query.set('title', title.value);
                         query.set('use_offline', use_offline.value);
                         query.set('sync_mode', sync_mode.value);
 
