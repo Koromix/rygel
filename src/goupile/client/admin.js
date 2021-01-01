@@ -18,7 +18,7 @@ function AdminController() {
             <button class=${ui.isPanelEnabled('users') ? 'active' : ''}
                     @click=${e => ui.togglePanel('users')}>Utilisateurs</button>
             <div style="flex: 1;"></div>
-            <button @click=${goupile.logout}>Se déconnecter</button>
+            <button @click=${ui.wrapClick(goupile.logout)}>Se déconnecter</button>
         `);
 
         ui.createPanel('instances', () => html`
@@ -38,14 +38,14 @@ function AdminController() {
                                 <td style="text-align: left;">${instance.key} (<a href=${'/' + instance.key} target="_blank">accès</a>)</td>
                                 <td></td>
                                 <td><a role="button" tabindex="0" @click=${e => toggleInstance(instance.key)}>Droits</a></td>
-                                <td><a role="button" tabindex="0" @click=${e => runEditInstanceDialog(e, instance)}>Modifier</a></td>
+                                <td><a role="button" tabindex="0" @click=${ui.wrapClick(e => runEditInstanceDialog(e, instance))}>Modifier</a></td>
                             </tr>
                         `)}
                     </tbody>
                 </table>
 
                 <div class="ui_actions">
-                    <button @click=${runCreateInstanceDialog}>Créer une instance</button>
+                    <button @click=${ui.wrapClick(runCreateInstanceDialog)}>Créer une instance</button>
                 </div>
             </div>
         `);
@@ -73,11 +73,11 @@ function AdminController() {
                                         ${select_instance ?
                                             html`&nbsp;&nbsp;&nbsp;
                                                  <a role="button" tabindex="0"
-                                                    @click=${e => runAssignUserDialog(e, select_instance, user.username,
-                                                                                      permissions)}>Assigner</a>` : ''}
+                                                    @click=${ui.wrapClick(e => runAssignUserDialog(e, select_instance, user.username,
+                                                                                                   permissions))}>Assigner</a>` : ''}
                                     </td>
                                     <td><a role="button" tabindex="0"
-                                           @click=${e => runDeleteUserDialog(e, user.username)}>Supprimer</a></td>
+                                           @click=${ui.wrapClick(e => runDeleteUserDialog(e, user.username))}>Supprimer</a></td>
                                 </tr>
                             `;
                         })}
@@ -85,7 +85,7 @@ function AdminController() {
                 </table>
 
                 <div class="ui_actions">
-                    <button @click=${runCreateUserDialog}>Créer un utilisateur</button>
+                    <button @click=${ui.wrapClick(runCreateUserDialog)}>Créer un utilisateur</button>
                 <div>
             </div>
         `);

@@ -257,6 +257,31 @@ const ui = new function() {
         });
     };
 
+    this.wrapClick = function(func) {
+        return async e => {
+            let target = e.target;
+
+            if (target.disabled != null) {
+                try {
+                    target.disabled = true;
+                    await func(e);
+                } finally {
+                    target.disabled = false;
+                }
+            } else {
+                if (target.classList.contains('disabled'))
+                    return;
+
+                try {
+                    target.classList.add('disabled');
+                    await func(e);
+                } finally {
+                    target.classList.remove('disabled');
+                }
+            }
+        };
+    };
+
     function notifyHandler(action, entry) {
         if (typeof lithtml !== 'undefined' && entry.type !== 'debug') {
             switch (action) {

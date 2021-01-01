@@ -1160,7 +1160,7 @@ instead of:
             let type = model.actions.length ? 'button' : 'submit';
 
             render = intf => html`<button type=${type} ?disabled=${options.disabled}
-                                          @click=${func}>${label}</button>`;
+                                          @click=${ui.wrapClick(func)}>${label}</button>`;
         }
 
         let intf = makeWidget('action', label, render, options);
