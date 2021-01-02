@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 // XXX: Support degraded mode when IDB is not available (e.g. private browsing)
-const idb = new function() {
+const indexeddb = new function() {
     this.open = function(db_name, version = undefined, version_func = undefined) {
         let req;
         if (version != null) {
