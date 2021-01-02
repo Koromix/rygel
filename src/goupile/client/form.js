@@ -201,7 +201,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let value = readValue(key, options.value, value => {
             value = parseFloat(value);
-            if (Number.isNan(value))
+            if (Number.isNaN(value))
                 value = undefined;
             return value;
         });
@@ -259,7 +259,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let value = readValue(key, options.value, value => {
             value = parseFloat(value);
-            if (Number.isNan(value))
+            if (Number.isNaN(value))
                 value = undefined;
             return value;
         });
@@ -278,7 +278,7 @@ function FormBuilder(state, model, readonly = false) {
             <div class=${'fm_slider' + (value == null ? ' missing' : '') + (options.readonly ? ' readonly' : '')}
                  style=${makeInputStyle(options)}>
                 <span style=${options.untoggle ? ' cursor: pointer;': ''}
-                      @click=${e => handleSliderClick(e, key, value, options.min, options.max)}>${value.toFixed(options.decimals)}</span>
+                      @click=${e => handleSliderClick(e, key, value, options.min, options.max)}>${value != null ? value.toFixed(options.decimals) : '?'}</span>
                 <div>
                     ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                     <input id=${id} type="range" style=${`--webkit_progress: ${webkit_progress * 100}%`}
