@@ -5,7 +5,16 @@
 function InstanceController() {
     let self = this;
 
+    let editor_el;
+    let editor;
+
+    let state = new FormState;
+
     this.init = async function() {
+        initUI();
+    };
+
+    function initUI() {
         ui.setMenu(() => html`
             <div class="drop">
                 <button class="icon" style="background-position-y: calc(-538px + 1.2em);">${ENV.title}</button>
@@ -24,9 +33,43 @@ function InstanceController() {
             <button @click=${goupile.logout}>Se déconnecter</button>
         `);
 
-        ui.createPanel('editor', () => html`<div class="ins_panel">Editeur</div>`);
-        ui.createPanel('form', () => html`<div class="ins_panel">Formulaire</div>`);
+        ui.createPanel('editor', syncEditor);
+        ui.createPanel('form', () => {
+            let script = (editor != null) ? editor.getValue() : '';
+            let func = new Function('form', script);
+
+            let model = new FormModel;
+            let builder = new FormBuilder(state, model);
+
+            func(builder);
+
+            return html`<div class="ins_panel">${model.render()}</div>`
+        });
     };
+
+    function syncEditor() {
+        if (editor_el == null) {
+            if (typeof ace === 'undefined')
+                return net.loadScript(`${ENV.base_url}static/ace.js`).then(syncEditor);
+
+            editor_el = document.createElement('div');
+            editor_el.style.height = '100%';
+            editor = ace.edit(editor_el);
+
+            editor.setTheme('ace/theme/merbivore_soft');
+            editor.setShowPrintMargin(false);
+            editor.setFontSize(13);
+            editor.setBehavioursEnabled(false);
+
+            let session = new ace.EditSession('', 'ace/mode/javascript');
+            session.setOption('useWorker', false);
+            session.on('change', e => self.run());
+
+            editor.setSession(session);
+        }
+
+        return html`<div>${editor_el}</div>`;
+    }
 
     this.run = async function() {
         await goupile.syncProfile();

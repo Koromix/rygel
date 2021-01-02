@@ -13,6 +13,7 @@
     display: flex;
     background: var(--menu_color);
     color: white;
+    z-index: 9999;
 }
 
 #ui_menu button {
@@ -82,8 +83,11 @@
 /* -------------------- Panels -------------------- */
 
 #ui_panels { display: flex; }
-#ui_menu + #ui_panels { margin-top: 2.5em; }
-#ui_panels > div { flex: 1; }
+#ui_menu + #ui_panels > div { margin-top: 2.5em; }
+#ui_panels > div {
+    flex: 1;
+    overflow-y: auto;
+}
 
 /* -------------------- Dialogs and popups -------------------- */
 
@@ -212,4 +216,37 @@
 @keyframes ui_log_spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* -------------------- Overlays -------------------- */
+
+.ui_busy {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    visibility: hidden;
+    animation: ui_busy 0.2s 1 linear;
+    animation-fill-mode: forwards;
+    animation-delay: 0.3s;
+}
+.ui_busy::after {
+    content: ' ';
+    display: block;
+    width: 48px;
+    height: 48px;
+    margin: 1px;
+    border-radius: 50%;
+    border: 12px solid white;
+    border-color: white transparent white transparent;
+    animation: ui_busy_spinner 0.8s ease-in-out infinite;
+}
+@keyframes ui_busy {
+    100% {
+        visibility: visible;
+        background: #24579d;
+    }
+}
+@keyframes ui_busy_spinner {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }

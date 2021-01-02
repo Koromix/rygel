@@ -28,7 +28,13 @@ const ui = new function() {
             ${menu != null ? html`<nav id="ui_menu">${menu()}</nav>` : ''}
 
             <main id="ui_panels">
-                ${util.map(panels.values(), panel => panel.enabled ? panel.render() : '')}
+                ${util.map(panels.values(), panel => {
+                    if (panel.enabled) {
+                        return lithtml.until(panel.render(), html`<div class="ui_busy"></div>`)
+                    } else {
+                        return '';
+                    }
+                })}
             </main>
         `, document.querySelector('#gp_root'));
 

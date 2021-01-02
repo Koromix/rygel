@@ -11,6 +11,10 @@ function AdminController() {
     let select_instance;
 
     this.init = async function() {
+        initUI();
+    };
+
+    function initUI() {
         ui.setMenu(el => html`
             <button>Admin</button>
             <button class=${ui.isPanelEnabled('instances') ? 'active' : ''}
@@ -89,7 +93,7 @@ function AdminController() {
                 <div>
             </div>
         `);
-    };
+    }
 
     this.run = async function() {
         await goupile.syncProfile();
