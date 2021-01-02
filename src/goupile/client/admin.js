@@ -10,11 +10,14 @@ function AdminController() {
 
     let select_instance;
 
-    this.init = async function() {
+    this.start = async function() {
         initUI();
+        self.run();
     };
 
     function initUI() {
+        document.documentElement.className = 'admin';
+
         ui.setMenu(el => html`
             <button>Admin</button>
             <button class=${ui.isPanelEnabled('instances') ? 'active' : ''}
@@ -98,10 +101,8 @@ function AdminController() {
     this.run = async function() {
         await goupile.syncProfile();
 
-        if (!goupile.isAuthorized()) {
-            goupile.runLogin();
-            return;
-        }
+        if (!goupile.isAuthorized())
+            await goupile.runLogin();
 
         instances = await fetch('/admin/api/instances/list').then(response => response.json());
         users = await fetch('/admin/api/users/list').then(response => response.json());

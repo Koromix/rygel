@@ -212,9 +212,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
         // Try static assets
         if (request.method == http_RequestMethod::Get) {
-            const AssetInfo *asset = assets_map.FindValue(instance_path, nullptr);
-
-            if (TestStr(instance_path, "/")) {
+            if (TestStr(instance_path, "/") || StartsWith(instance_path, "/main/")) {
+                const AssetInfo *asset = assets_map.FindValue("/", nullptr);
                 RG_ASSERT(asset);
 
                 AttachTemplate(*asset, {
@@ -223,9 +222,12 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 }, request, io);
 
                 return;
-            } else if (asset) {
-                AttachStatic(*asset, request, io);
-                return;
+            } else {
+                const AssetInfo *asset = assets_map.FindValue(instance_path, nullptr);
+                if (asset) {
+                    AttachStatic(*asset, request, io);
+                    return;
+                }
             }
         }
 

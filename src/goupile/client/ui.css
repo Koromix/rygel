@@ -2,10 +2,10 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* -------------------- Menu -------------------- */
+/* -------------------- Toolbars -------------------- */
 
-#ui_menu {
-    position: fixed;
+.ui_toolbar {
+    position: sticky;
     left: 0;
     top: 0;
     width: 100%;
@@ -16,7 +16,7 @@
     z-index: 9999;
 }
 
-#ui_menu button {
+.ui_toolbar button {
     display: block;
     height: 100%;
     box-sizing: border-box;
@@ -25,11 +25,12 @@
     color: inherit;
     text-decoration: none;
 }
-#ui_menu > button:not(.active):hover { filter: brightness(124%); }
-#ui_menu button.active { filter: brightness(134%); }
-#ui_menu button:disabled { filter: brightness(70%) !important; }
+.ui_toolbar button:not(.active):hover { background-color: inherit; }
+.ui_toolbar > button:not(.active):hover { filter: brightness(124%); }
+.ui_toolbar button.active { filter: brightness(134%); }
+.ui_toolbar button:disabled { filter: brightness(70%) !important; }
 
-#ui_menu button.icon {
+.ui_toolbar button.icon {
     padding-left: 36px;
     background-image: url('icons.png');
     background-repeat: no-repeat;
@@ -37,7 +38,7 @@
     background-position-x: 6px;
 }
 @media screen and (max-width: 580px) {
-    #ui_menu button.icon {
+    .ui_toolbar button.icon {
         min-width: 3em;
         max-width: 3em;
         padding: 0 !important;
@@ -48,42 +49,44 @@
     }
 }
 
-#ui_menu > .drop {
+.ui_toolbar > .drop {
     position: relative;
     display: inline-block;
     height: 100%;
     margin: 0;
     background-color: inherit;
 }
-#ui_menu > .drop > div {
+.ui_toolbar > .drop > div {
     display: none;
     position: absolute;
     min-width: 160px;
     background-color: inherit;
     z-index: 9999;
 }
-#ui_menu > .drop.right > div { right: 0; }
-#ui_menu > .drop > div button {
+.ui_toolbar > .drop.right > div { right: 0; }
+.ui_toolbar > .drop > div button {
     height: 2.4em;
     text-align: left;
 }
-#ui_menu > .drop > div hr {
+.ui_toolbar > .drop > div hr {
     width: 94%;
     border: none;
     border-top: 0.5px solid #376db9;
     height: 3px;
 }
-#ui_menu > .drop:hover { filter: brightness(124%); }
-#ui_menu > .drop:hover > div {
+.ui_toolbar > .drop:hover { filter: brightness(124%); }
+.ui_toolbar > .drop:hover > div {
     display: flex;
     flex-direction: column;
 }
-#ui_menu > .drop > div button:not(.active):hover { filter: brightness(110%); }
+.ui_toolbar > .drop > div button:not(.active):hover { filter: brightness(110%); }
 
 /* -------------------- Panels -------------------- */
 
-#ui_panels { display: flex; }
-#ui_menu + #ui_panels > div { margin-top: 2.5em; }
+#ui_panels {
+    height: calc(100% - 2.5em);
+    display: flex;
+}
 #ui_panels > div {
     flex: 1;
     overflow-y: auto;

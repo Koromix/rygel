@@ -25,7 +25,7 @@ const ui = new function() {
     this.render = function() {
         // Render main screen
         render(html`
-            ${menu != null ? html`<nav id="ui_menu">${menu()}</nav>` : ''}
+            ${menu != null ? html`<nav class="ui_toolbar" style="z-index: 999999;">${menu()}</nav>` : ''}
 
             <main id="ui_panels">
                 ${util.map(panels.values(), panel => {

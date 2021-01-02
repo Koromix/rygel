@@ -14,19 +14,16 @@ const goupile = new function() {
         ui.init();
 
         if (ENV.base_url === '/admin/') {
-            document.documentElement.classList.add('admin');
             controller = new AdminController;
         } else {
-            document.documentElement.classList.add('instance');
             controller = new InstanceController;
         }
 
-        await controller.init();
-        controller.run();
+        await controller.start();
     };
 
     this.runLogin = function() {
-        ui.runScreen((d, resolve, reject) => {
+        return ui.runScreen((d, resolve, reject) => {
             d.output(html`
                 <img id="gp_logo" src="/admin/favicon.png" alt="" />
                 <br/>

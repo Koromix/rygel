@@ -7,5 +7,16 @@ html.instance {
     --page_color: #ef6000;
 }
 
-.ins_panel { padding: 1em; }
+.ins_panel {
+    display: flex;
+    flex-direction: column;
+}
 .ins_panel + .ins_panel { border-left: 1px solid #dfdfdf; }
+
+#ins_form {
+    max-width: 960px;
+    margin: auto;
+    background: #f8f8f8;
+    border: 1em solid white;
+    padding: 1em;
+}
