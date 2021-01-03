@@ -9,6 +9,7 @@ const goupile = new function() {
     let session_rnd;
 
     let controller;
+    let current_url;
 
     this.start = async function() {
         ui.init();
@@ -33,17 +34,19 @@ const goupile = new function() {
             let password = d.password('*password', 'Mot de passe');
 
             d.action('Se connecter', {disabled: !d.isValid()}, async () => {
-                let success = await self.login(username.value, password.value);
-
-                // Never reject because we want to keep the screen open
-                if (success)
+                try {
+                    await self.login(username.value, password.value);
                     resolve(username.value);
+                } catch (err) {
+                    // Never reject because we want to keep the screen open
+                    log.error(err);
+                }
             });
         });
-    }
+    };
 
     this.login = async function(username, password) {
-        let notification = log.progress('Connexion en cours');
+        let progress = log.progress('Connexion en cours');
 
         try {
             let query = new URLSearchParams;
@@ -59,24 +62,20 @@ const goupile = new function() {
                 session_profile = await response.json();
                 session_rnd = util.getCookie('session_rnd');
 
-                notification.success('Connexion réussie');
-                controller.run();
-
-                return true;
+                progress.success('Connexion réussie');
+                controller.go();
             } else {
                 let err = (await response.text()).trim();
-                notification.error(err);
-
-                return false;
+                throw new Error(err);
             }
         } catch (err) {
-            notification.error(err);
-            return false;
+            progress.close();
+            throw err;
         }
     }
 
     this.logout = async function() {
-        let notification = log.progress('Connexion en cours');
+        let progress = log.progress('Déconnexion en cours');
 
         try {
             let response = await net.fetch('/admin/api/user/logout', {method: 'POST'})
@@ -85,17 +84,15 @@ const goupile = new function() {
                 session_profile = {};
                 session_rnd = undefined;
 
-                notification.success('Déconnexion réussie');
-                controller.run();
-
-                return true;
+                progress.success('Déconnexion réussie');
+                controller.go();
             } else {
-                notification.error('Échec de la connexion');
-                return false;
+                let err = (await response.text()).trim();
+                throw new Error(err);
             }
         } catch (err) {
-            notification.error(err);
-            return false;
+            progress.close();
+            throw err;
         }
     }
 
@@ -112,4 +109,14 @@ const goupile = new function() {
     };
 
     this.isAuthorized = function() { return !!session_profile.username; }
+
+    this.syncHistory = function(url, push = true) {
+        if (push && current_url != null && url !== current_url) {
+            window.history.pushState(null, null, url);
+        } else {
+            window.history.replaceState(null, null, url);
+        }
+
+        current_url = url;
+    };
 };

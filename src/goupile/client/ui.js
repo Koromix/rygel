@@ -65,16 +65,9 @@ const ui = new function() {
         return panel.enabled;
     };
 
-    this.togglePanel = function(key, enable = undefined) {
+    this.setPanelState = function(key, enable) {
         let panel = panels.get(key);
-
-        if (enable != null) {
-            panel.enabled = enable;
-        } else {
-            panel.enabled = !panel.enabled;
-        }
-
-        self.render();
+        panel.enabled = enable;
     };
 
     this.runScreen = function(func) {
@@ -262,7 +255,7 @@ const ui = new function() {
         });
     };
 
-    this.wrapClick = function(func) {
+    this.wrapAction = function(func) {
         return async e => {
             let target = e.target;
 
@@ -270,6 +263,9 @@ const ui = new function() {
                 try {
                     target.disabled = true;
                     await func(e);
+                } catch (err) {
+                    log.error(err);
+                    throw err;
                 } finally {
                     target.disabled = false;
                 }
@@ -280,6 +276,9 @@ const ui = new function() {
                 try {
                     target.classList.add('disabled');
                     await func(e);
+                } catch (err) {
+                    log.error(err);
+                    throw err;
                 } finally {
                     target.classList.remove('disabled');
                 }

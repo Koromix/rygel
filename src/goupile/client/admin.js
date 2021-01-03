@@ -12,7 +12,7 @@ function AdminController() {
 
     this.start = async function() {
         initUI();
-        self.run();
+        self.go();
     };
 
     function initUI() {
@@ -21,11 +21,11 @@ function AdminController() {
         ui.setMenu(el => html`
             <button>Admin</button>
             <button class=${ui.isPanelEnabled('instances') ? 'active' : ''}
-                    @click=${e => ui.togglePanel('instances')}>Instances</button>
+                    @click=${e => togglePanel('instances')}>Instances</button>
             <button class=${ui.isPanelEnabled('users') ? 'active' : ''}
-                    @click=${e => ui.togglePanel('users')}>Utilisateurs</button>
+                    @click=${e => togglePanel('users')}>Utilisateurs</button>
             <div style="flex: 1;"></div>
-            <button @click=${ui.wrapClick(goupile.logout)}>Se déconnecter</button>
+            <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
         `);
 
         ui.createPanel('instances', () => html`
@@ -45,14 +45,14 @@ function AdminController() {
                                 <td style="text-align: left;">${instance.key} (<a href=${'/' + instance.key} target="_blank">accès</a>)</td>
                                 <td></td>
                                 <td><a role="button" tabindex="0" @click=${e => toggleInstance(instance.key)}>Droits</a></td>
-                                <td><a role="button" tabindex="0" @click=${ui.wrapClick(e => runEditInstanceDialog(e, instance))}>Modifier</a></td>
+                                <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runEditInstanceDialog(e, instance))}>Modifier</a></td>
                             </tr>
                         `)}
                     </tbody>
                 </table>
 
                 <div class="ui_actions">
-                    <button @click=${ui.wrapClick(runCreateInstanceDialog)}>Créer une instance</button>
+                    <button @click=${ui.wrapAction(runCreateInstanceDialog)}>Créer une instance</button>
                 </div>
             </div>
         `);
@@ -80,11 +80,11 @@ function AdminController() {
                                         ${select_instance ?
                                             html`&nbsp;&nbsp;&nbsp;
                                                  <a role="button" tabindex="0"
-                                                    @click=${ui.wrapClick(e => runAssignUserDialog(e, select_instance, user.username,
+                                                    @click=${ui.wrapAction(e => runAssignUserDialog(e, select_instance, user.username,
                                                                                                    permissions))}>Assigner</a>` : ''}
                                     </td>
                                     <td><a role="button" tabindex="0"
-                                           @click=${ui.wrapClick(e => runDeleteUserDialog(e, user.username))}>Supprimer</a></td>
+                                           @click=${ui.wrapAction(e => runDeleteUserDialog(e, user.username))}>Supprimer</a></td>
                                 </tr>
                             `;
                         })}
@@ -92,15 +92,14 @@ function AdminController() {
                 </table>
 
                 <div class="ui_actions">
-                    <button @click=${ui.wrapClick(runCreateUserDialog)}>Créer un utilisateur</button>
+                    <button @click=${ui.wrapAction(runCreateUserDialog)}>Créer un utilisateur</button>
                 <div>
             </div>
         `);
     }
 
-    this.run = async function() {
+    this.go = async function(url = null) {
         await goupile.syncProfile();
-
         if (!goupile.isAuthorized())
             await goupile.runLogin();
 
@@ -112,13 +111,18 @@ function AdminController() {
         ui.render();
     };
 
+    function togglePanel(key) {
+        ui.setPanelState(key, !ui.isPanelEnabled(key));
+        self.go();
+    }
+
     function toggleInstance(key) {
         if (key !== select_instance) {
             select_instance = key;
         } else {
             select_instance = null;
         }
-        self.run();
+        self.go();
     }
 
     function runCreateInstanceDialog(e) {
@@ -141,7 +145,7 @@ function AdminController() {
 
                     log.success('Instance créée');
                     select_instance = key.value;
-                    self.run();
+                    self.go();
                 } else {
                     let err = (await response.text()).trim();
                     log.error(err);
@@ -182,7 +186,7 @@ function AdminController() {
                             resolve();
 
                             log.success('Instance configurée');
-                            self.run();
+                            self.go();
                         } else {
                             let err = (await response.text()).trim();
                             log.error(err);
@@ -207,7 +211,7 @@ function AdminController() {
                             resolve();
 
                             log.success('Instance supprimée');
-                            self.run();
+                            self.go();
                         } else {
                             let err = (await response.text()).trim();
                             log.error(err);
@@ -247,7 +251,7 @@ function AdminController() {
                     resolve();
 
                     log.success('Utilisateur créé');
-                    self.run();
+                    self.go();
                 } else {
                     let err = (await response.text()).trim();
                     log.error(err);
@@ -283,7 +287,7 @@ function AdminController() {
                     resolve();
 
                     log.success('Droits modifiés');
-                    self.run();
+                    self.go();
                 } else {
                     let err = (await response.text()).trim();
                     log.error(err);
@@ -307,7 +311,7 @@ function AdminController() {
 
             if (response.ok) {
                 log.success('Utilisateur supprimé');
-                self.run();
+                self.go();
             } else {
                 let err = (await response.text()).trim();
                 throw new Error(err);
