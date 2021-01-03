@@ -63,7 +63,6 @@ const goupile = new function() {
                 session_rnd = util.getCookie('session_rnd');
 
                 progress.success('Connexion réussie');
-                controller.go();
             } else {
                 let err = (await response.text()).trim();
                 throw new Error(err);
@@ -85,7 +84,6 @@ const goupile = new function() {
                 session_rnd = undefined;
 
                 progress.success('Déconnexion réussie');
-                controller.go();
             } else {
                 let err = (await response.text()).trim();
                 throw new Error(err);

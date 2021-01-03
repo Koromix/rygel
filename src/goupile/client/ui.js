@@ -121,7 +121,7 @@ const ui = new function() {
             if (closeable) {
                 dialog.el.addEventListener('keydown', e => {
                     if (e.keyCode == 27)
-                        dialog.reject(new Error('Action annulée'));
+                        dialog.reject(null);
                 });
             }
             dialog.el.style.zIndex = 999999;
@@ -144,7 +144,7 @@ const ui = new function() {
                         if (target === it.el) {
                             break;
                         } else if (target == null) {
-                            it.reject(new Error('Action annulée'));
+                            it.reject(null);
                             break;
                         }
                         target = target.parentNode;
@@ -153,7 +153,7 @@ const ui = new function() {
                     let target = e.target;
 
                     if (target === it.el)
-                        it.reject(new Error('Action annulée'));
+                        it.reject(null);
                 }
             }
 
@@ -170,6 +170,8 @@ const ui = new function() {
             wide: true
         });
         func(builder, dialog.resolve, dialog.reject);
+        if (dialog.closeable)
+            builder.action('Annuler', {}, () => dialog.reject(null));
 
         render(html`
             <form @submit=${e => e.preventDefault()}>
@@ -247,11 +249,9 @@ const ui = new function() {
                     await func();
                     resolve();
                 } catch (err) {
-                    log.error(err);
                     reject(err);
                 }
             });
-            d.action('Annuler', {}, () => reject(new Error('Action annulée')));
         });
     };
 
@@ -264,8 +264,10 @@ const ui = new function() {
                     target.disabled = true;
                     await func(e);
                 } catch (err) {
-                    log.error(err);
-                    throw err;
+                    if (err != null) {
+                        log.error(err);
+                        throw err;
+                    }
                 } finally {
                     target.disabled = false;
                 }
@@ -277,8 +279,10 @@ const ui = new function() {
                     target.classList.add('disabled');
                     await func(e);
                 } catch (err) {
-                    log.error(err);
-                    throw err;
+                    if (err != null) {
+                        log.error(err);
+                        throw err;
+                    }
                 } finally {
                     target.classList.remove('disabled');
                 }

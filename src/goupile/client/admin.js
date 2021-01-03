@@ -8,7 +8,7 @@ function AdminController() {
     let instances;
     let users;
 
-    let select_instance;
+    let selected_instance;
 
     this.start = async function() {
         initUI();
@@ -25,7 +25,7 @@ function AdminController() {
             <button class=${ui.isPanelEnabled('users') ? 'active' : ''}
                     @click=${e => togglePanel('users')}>Utilisateurs</button>
             <div style="flex: 1;"></div>
-            <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
+            <button @click=${ui.wrapAction(handleLogout)}>Se déconnecter</button>
         `);
 
         ui.createPanel('instances', () => html`
@@ -41,10 +41,10 @@ function AdminController() {
                     <tbody>
                         ${!instances.length ? html`<tr><td colspan="4">Aucune instance</td></tr>` : ''}
                         ${instances.map(instance => html`
-                            <tr class=${instance.key === select_instance ? 'active' : ''}>
+                            <tr class=${instance.key === selected_instance ? 'active' : ''}>
                                 <td style="text-align: left;">${instance.key} (<a href=${'/' + instance.key} target="_blank">accès</a>)</td>
                                 <td></td>
-                                <td><a role="button" tabindex="0" @click=${e => toggleInstance(instance.key)}>Droits</a></td>
+                                <td><a role="button" tabindex="0" @click=${e => toggleSelectedInstance(instance.key)}>Droits</a></td>
                                 <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runEditInstanceDialog(e, instance))}>Modifier</a></td>
                             </tr>
                         `)}
@@ -69,7 +69,7 @@ function AdminController() {
                     <tbody>
                         ${!users.length ? html`<tr><td colspan="2">Aucun utilisateur</td></tr>` : ''}
                         ${users.map(user => {
-                            let permissions = user.instances[select_instance] || [];
+                            let permissions = user.instances[selected_instance] || [];
 
                             return html`
                                 <tr>
@@ -77,10 +77,10 @@ function AdminController() {
                                     <td>
                                         ${permissions.map(perm =>
                                             html`<span class="gp_tag" style="background: #666;">${perm}</span> `)}
-                                        ${select_instance ?
+                                        ${selected_instance ?
                                             html`&nbsp;&nbsp;&nbsp;
                                                  <a role="button" tabindex="0"
-                                                    @click=${ui.wrapAction(e => runAssignUserDialog(e, select_instance, user.username,
+                                                    @click=${ui.wrapAction(e => runAssignUserDialog(e, selected_instance, user.username,
                                                                                                    permissions))}>Assigner</a>` : ''}
                                     </td>
                                     <td><a role="button" tabindex="0"
@@ -98,15 +98,22 @@ function AdminController() {
         `);
     }
 
+    async function handleLogout() {
+        await goupile.logout();
+        self.go();
+    }
+
     this.go = async function(url = null) {
         await goupile.syncProfile();
         if (!goupile.isAuthorized())
             await goupile.runLogin();
 
-        instances = await fetch('/admin/api/instances/list').then(response => response.json());
-        users = await fetch('/admin/api/users/list').then(response => response.json());
-        if (!instances.find(instance => instance.key === select_instance))
-            select_instance = null;
+        if (instances == null)
+            instances = await fetch('/admin/api/instances/list').then(response => response.json());
+        if (users == null)
+            users = await fetch('/admin/api/users/list').then(response => response.json());
+        if (!instances.find(instance => instance.key === selected_instance))
+            selected_instance = null;
 
         ui.render();
     };
@@ -116,11 +123,11 @@ function AdminController() {
         self.go();
     }
 
-    function toggleInstance(key) {
-        if (key !== select_instance) {
-            select_instance = key;
+    function toggleSelectedInstance(key) {
+        if (key !== selected_instance) {
+            selected_instance = key;
         } else {
-            select_instance = null;
+            selected_instance = null;
         }
         self.go();
     }
@@ -142,17 +149,17 @@ function AdminController() {
 
                 if (response.ok) {
                     resolve();
+                    log.success(`Instance '${key.value}' créée`);
 
-                    log.success('Instance créée');
-                    select_instance = key.value;
+                    instances = null;
+                    selected_instance = key.value;
+
                     self.go();
                 } else {
                     let err = (await response.text()).trim();
-                    log.error(err);
                     reject(new Error(err));
                 }
             });
-            d.action('Annuler', {}, () => reject(new Error('Action annulée')));
         });
     }
 
@@ -184,12 +191,11 @@ function AdminController() {
 
                         if (response.ok) {
                             resolve();
+                            log.success(`Instance '${instance.key}' modifiée`);
 
-                            log.success('Instance configurée');
                             self.go();
                         } else {
                             let err = (await response.text()).trim();
-                            log.error(err);
                             reject(new Error(err));
                         }
                     });
@@ -209,19 +215,18 @@ function AdminController() {
 
                         if (response.ok) {
                             resolve();
+                            log.success(`Instance '${instance.key}' supprimée`);
 
-                            log.success('Instance supprimée');
+                            instances = null;
+
                             self.go();
                         } else {
                             let err = (await response.text()).trim();
-                            log.error(err);
                             reject(new Error(err));
                         }
                     });
                 });
-
-                d.action('Annuler', {}, () => reject(new Error('Action annulée')));
-            })
+            });
         });
     }
 
@@ -249,16 +254,16 @@ function AdminController() {
 
                 if (response.ok) {
                     resolve();
+                    log.success(`Utilisateur '${username.value}' créé`);
 
-                    log.success('Utilisateur créé');
+                    users = null;
+
                     self.go();
                 } else {
                     let err = (await response.text()).trim();
-                    log.error(err);
                     reject(new Error(err));
                 }
             });
-            d.action('Annuler', {}, () => reject(new Error('Action annulée')));
         });
     }
 
@@ -285,16 +290,16 @@ function AdminController() {
 
                 if (response.ok) {
                     resolve();
+                    log.success(`Droits de '${username}' sur l'instance '${instance}' ${permissions.value ? 'modifiés' : 'supprimés'}`);
 
-                    log.success('Droits modifiés');
+                    users = null;
+
                     self.go();
                 } else {
                     let err = (await response.text()).trim();
-                    log.error(err);
                     reject(new Error(err));
                 }
             });
-            d.action('Annuler', {}, () => reject(new Error('Action annulée')));
         });
     }
 
@@ -310,7 +315,10 @@ function AdminController() {
             });
 
             if (response.ok) {
-                log.success('Utilisateur supprimé');
+                log.success(`Utilisateur '${username}' supprimé`);
+
+                users = null;
+
                 self.go();
             } else {
                 let err = (await response.text()).trim();

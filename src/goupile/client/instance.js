@@ -62,7 +62,7 @@ function InstanceController() {
                     style="background-position-y: calc(-318px + 1.2em);"
                     @click=${e => togglePanel('form')}>Formulaire</button>
             <div style="flex: 1;"></div>
-            <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
+            <button @click=${ui.wrapAction(handleLogout)}>Se déconnecter</button>
         `);
 
         ui.createPanel('editor', () => {
@@ -121,6 +121,11 @@ function InstanceController() {
 
     function togglePanel(key) {
         ui.setPanelState(key, !ui.isPanelEnabled(key));
+        self.go();
+    }
+
+    async function handleLogout() {
+        await goupile.logout();
         self.go();
     }
 
