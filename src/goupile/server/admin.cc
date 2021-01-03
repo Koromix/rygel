@@ -729,7 +729,7 @@ void HandleListInstances(const http_RequestInfo &request, http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!gp_domain.db.Prepare("SELECT instance FROM dom_instances;", &stmt))
+    if (!gp_domain.db.Prepare("SELECT instance FROM dom_instances ORDER BY instance;", &stmt))
         return;
 
     // Export data
@@ -1023,8 +1023,8 @@ void HandleListUsers(const http_RequestInfo &request, http_IO *io)
 
     sq_Statement stmt;
     if (!gp_domain.db.Prepare(R"(SELECT u.rowid, u.username, u.admin, p.instance, p.permissions FROM dom_users u
-                                      LEFT JOIN dom_permissions p ON (p.username = u.username)
-                                      ORDER BY u.rowid, p.instance;)", &stmt))
+                                 LEFT JOIN dom_permissions p ON (p.username = u.username)
+                                 ORDER BY u.username, p.instance;)", &stmt))
         return;
 
     // Export data
