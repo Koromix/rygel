@@ -128,6 +128,15 @@
 
 /* -------------------- Tables -------------------- */
 
+.ui_quick {
+    color: #666;
+}
+.ui_quick > a {
+    float: right;
+    color: inherit;
+    text-decoration: none;
+}
+
 .ui_table {
     width: 100%;
     border-collapse: collapse;

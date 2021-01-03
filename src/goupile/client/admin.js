@@ -30,6 +30,11 @@ function AdminController() {
 
         ui.createPanel('instances', () => html`
             <div class="adm_panel">
+                <div class="ui_quick">
+                    Instances
+                    <a @click=${ui.wrapAction(e => { instances = null; return self.go(); })}>🗘</a>
+                </div>
+
                 <table class="ui_table">
                     <colgroup>
                         <col style="width: 200px;"/>
@@ -59,6 +64,11 @@ function AdminController() {
 
         ui.createPanel('users', () => html`
             <div class="adm_panel" style="flex-grow: 1.5;">
+                <div class="ui_quick">
+                    Utilisateurs
+                    <a @click=${ui.wrapAction(e => { users = null; return self.go(); })}>🗘</a>
+                </div>
+
                 <table class="ui_table">
                     <colgroup>
                         <col style="width: 100px;"/>
