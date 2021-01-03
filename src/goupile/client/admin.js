@@ -67,7 +67,7 @@ function AdminController() {
                     </colgroup>
 
                     <tbody>
-                        ${!users.length ? html`<tr><td colspan="2">Aucun utilisateur</td></tr>` : ''}
+                        ${!users.length ? html`<tr><td colspan="3">Aucun utilisateur</td></tr>` : ''}
                         ${users.map(user => {
                             let permissions = user.instances[selected_instance] || [];
 
