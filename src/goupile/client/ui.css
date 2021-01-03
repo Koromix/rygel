@@ -37,16 +37,15 @@
     background-size: 22px 550px;
     background-position-x: 6px;
 }
-@media screen and (max-width: 580px) {
-    .ui_toolbar button.icon {
-        min-width: 3em;
-        max-width: 3em;
-        padding: 0 !important;
-        text-indent: 200px;
-        white-space: nowrap;
-        overflow: hidden;
-        background-position-x: center;
-    }
+
+html.small .ui_toolbar button.icon {
+    min-width: 3em;
+    max-width: 3em;
+    padding: 0 !important;
+    text-indent: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    background-position-x: center;
 }
 
 .ui_toolbar > .drop {

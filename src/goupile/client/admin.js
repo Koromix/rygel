@@ -106,6 +106,9 @@ function AdminController() {
                 <div>
             </div>
         `);
+
+        // Push to the top of priority list
+        ui.setPanelState('instances', true);
     }
 
     async function handleLogout() {

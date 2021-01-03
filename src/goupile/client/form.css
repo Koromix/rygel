@@ -48,11 +48,9 @@
 }
 .fm_section.error > .fm_legend::before { display: none; }
 
-@media (max-width: 580px) {
-    .fm_section {
-        margin-left: -16px;
-        margin-right: -16px;
-    }
+html.small .fm_section {
+    margin-left: -16px;
+    margin-right: -16px;
 }
 
 .fm_section.tabs {
@@ -87,10 +85,8 @@
     color: white;
 }
 
-@media (min-width: 701px) {
-    .fm_columns { display: flex; }
-    .fm_columns > div + div { padding-left: 12px; }
-}
+html:not(.small) .fm_columns { display: flex; }
+html:not(.small) .fm_columns > div + div { padding-left: 12px; }
 
 /* -------------------- Widgets -------------------- */
 
@@ -137,23 +133,21 @@
 .fm_prefix { margin-right: 3px; }
 .fm_suffix { margin-left: 3px; }
 
-@media screen and (min-width: 581px) {
-    .fm_widget.compact {
-        flex: 1;
-        display: flex;
-        align-items: start;
-    }
-    .fm_widget.compact > label {
-        width: 270px;
-        min-width: 270px;
-        margin-bottom: 0;
-        padding-right: 4px;
-        font-weight: normal;
-    }
-    .fm_widget.compact .fm_error {
-        flex: 1;
-        text-align: right;
-    }
+html:not(.small) .fm_widget.compact {
+    flex: 1;
+    display: flex;
+    align-items: start;
+}
+html:not(.small) .fm_widget.compact > label {
+    width: 270px;
+    min-width: 270px;
+    margin-bottom: 0;
+    padding-right: 4px;
+    font-weight: normal;
+}
+html:not(.small) .fm_widget.compact .fm_error {
+    flex: 1;
+    text-align: right;
 }
 
 /* -------------------- Simple widgets -------------------- */

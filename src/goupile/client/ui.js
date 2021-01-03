@@ -7,6 +7,7 @@ const ui = new function() {
 
     let menu;
     let panels = new Map;
+    let enabled_panels = new LruMap(3);
 
     let dialogs = {
         prev: null,
@@ -19,7 +20,29 @@ const ui = new function() {
 
     this.init = function() {
         log.pushHandler(notifyHandler);
+
+        window.addEventListener('resize', () => {
+            adaptToViewport();
+            ui.render();
+        });
+        adaptToViewport();
+
         document.addEventListener('click', handleDocumentClick);
+    }
+
+    function adaptToViewport() {
+        let min_width = 580;
+
+        // Activate CSS for small screens
+        let small = window.innerWidth < min_width;
+        document.documentElement.classList.toggle('small', small);
+
+        // Avoid small panels
+        while (enabled_panels.size >= 2 &&
+               window.innerWidth / enabled_panels.size < min_width) {
+            let key = enabled_panels.oldest();
+            enabled_panels.delete(key);
+        }
     }
 
     this.render = function() {
@@ -28,9 +51,11 @@ const ui = new function() {
             ${menu != null ? html`<nav class="ui_toolbar" style="z-index: 999999;">${menu()}</nav>` : ''}
 
             <main id="ui_panels">
-                ${util.map(panels.values(), panel => {
-                    if (panel.enabled) {
-                        return lithtml.until(panel.render(), html`<div class="ui_busy"></div>`)
+                ${util.map(panels, it => {
+                    let [key, func] = it;
+
+                    if (enabled_panels.has(key)) {
+                        return lithtml.until(func(), html`<div class="ui_busy"></div>`);
                     } else {
                         return '';
                     }
@@ -54,20 +79,25 @@ const ui = new function() {
     };
 
     this.createPanel = function(key, func) {
-        panels.set(key, {
-            render: func,
-            enabled: true
-        });
+        panels.set(key, func);
+        enabled_panels.set(key, func);
+
+        adaptToViewport();
     };
 
     this.isPanelEnabled = function(key) {
-        let panel = panels.get(key);
-        return panel.enabled;
+        return enabled_panels.has(key);
     };
 
     this.setPanelState = function(key, enable) {
-        let panel = panels.get(key);
-        panel.enabled = enable;
+        if (enable) {
+            let panel = panels.get(key);
+            enabled_panels.set(key, panel);
+
+            adaptToViewport();
+        } else {
+            enabled_panels.delete(key);
+        }
     };
 
     this.runScreen = function(func) {
