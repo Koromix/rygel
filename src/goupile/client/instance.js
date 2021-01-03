@@ -119,7 +119,7 @@ function InstanceController() {
                     </div>
                 `;
             } catch (err) {
-                return 'NOP';
+                return html`<div class="ins_panel gp_wip">${err.message}</div>`;
             }
         });
     };
@@ -140,9 +140,10 @@ function InstanceController() {
             func(...Object.values(arguments));
         } catch (err) {
             let line = util.parseEvalErrorLine(err);
-            log.error(`${line != null ? `Ligne ${line} : ` : ''}${err.message}`);
+            let msg = `${line != null ? `Ligne ${line} : ` : ''}${err.message}`;
 
-            throw err;
+            log.error(msg);
+            throw new Error(msg);
         }
     }
 
