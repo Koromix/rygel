@@ -124,8 +124,14 @@ function InstanceController() {
         });
     };
 
-    function togglePanel(key) {
-        ui.setPanelState(key, !ui.isPanelEnabled(key));
+    function togglePanel(key, enable = null) {
+        if (enable == null) {
+            enable = !ui.isPanelEnabled(key);
+        } else if (enable === ui.isPanelEnabled(key)) {
+            return;
+        }
+
+        ui.setPanelState(key, enable);
         self.go();
     }
 

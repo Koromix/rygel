@@ -137,14 +137,21 @@ function AdminController() {
     };
     this.go = util.serializeAsync(this.go);
 
-    function togglePanel(key) {
-        ui.setPanelState(key, !ui.isPanelEnabled(key));
+    function togglePanel(key, enable = null) {
+        if (enable == null) {
+            enable = !ui.isPanelEnabled(key);
+        } else if (enable === ui.isPanelEnabled(key)) {
+            return;
+        }
+
+        ui.setPanelState(key, enable);
         self.go();
     }
 
     function toggleSelectedInstance(key) {
         if (key !== selected_instance) {
             selected_instance = key;
+            togglePanel('users', true);
         } else {
             selected_instance = null;
         }
@@ -171,7 +178,6 @@ function AdminController() {
                     log.success(`Instance '${key.value}' créée`);
 
                     instances = null;
-                    selected_instance = key.value;
 
                     self.go();
                 } else {
