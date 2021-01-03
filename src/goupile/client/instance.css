@@ -15,7 +15,7 @@ html.instance {
 
 #ins_form {
     max-width: 960px;
-    margin: auto;
+    margin: 0 auto;
     background: #f8f8f8;
     border: 1em solid white;
     padding: 1em;
