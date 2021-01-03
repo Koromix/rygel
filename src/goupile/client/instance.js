@@ -227,6 +227,7 @@ function InstanceController() {
 
         ui.render();
     };
+    this.go = util.serializeAsync(this.go);
 
     function getPageFileName(key) { return `pages/${key}.js`; };
     function makePageURL(key) { return `${ENV.base_url}main/${key}`; }

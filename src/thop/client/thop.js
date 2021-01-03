@@ -14,7 +14,6 @@ const thop = new function() {
     let route_url = '';
     let prev_url;
     let scroll_cache = new LruMap(128);
-    let running = false;
 
     let settings_rnd;
 
@@ -82,40 +81,32 @@ const thop = new function() {
     }
 
     this.go = async function(mod, args = {}, push_history = true) {
-        if (running)
+        let url = route(mod, args, push_history);
+        if (!url)
             return;
 
-        try {
-            running = true;
+        // Update URL quickly, even though we'll do it again after module run because some
+        // parts may depend on fetched resources. Same thing for session.
+        updateHistory(url, push_history && url !== route_url);
+        await updateSettings();
 
-            let url = route(mod, args, push_history);
-            if (!url)
-                return;
+        // Run!
+        await run();
+        await updateSettings();
 
-            // Update URL quickly, even though we'll do it again after module run because some
-            // parts may depend on fetched resources. Same thing for session.
-            updateHistory(url, push_history && url !== route_url);
-            await updateSettings();
-
-            // Run!
-            await run();
-            await updateSettings();
-
-            // Update again, even though we probably got it right earlier... but maybe not?
-            {
-                let hash = url.substr(url.indexOf('#'));
-                url = `${route_mod.makeURL()}${hash.startsWith('#') ? hash : ''}`;
-            }
-
-            updateHistory(url, false);
-            updateScroll(route_url, url);
-            updateMenu(url);
-
-            route_url = url;
-        } finally {
-            running = false;
+        // Update again, even though we probably got it right earlier... but maybe not?
+        {
+            let hash = url.substr(url.indexOf('#'));
+            url = `${route_mod.makeURL()}${hash.startsWith('#') ? hash : ''}`;
         }
+
+        updateHistory(url, false);
+        updateScroll(route_url, url);
+        updateMenu(url);
+
+        route_url = url;
     };
+    this.go = util.serializeAsync(this.go);
 
     this.goBack = function() { self.go(prev_url || '/'); };
 

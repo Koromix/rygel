@@ -127,6 +127,7 @@ function AdminController() {
 
         ui.render();
     };
+    this.go = util.serializeAsync(this.go);
 
     function togglePanel(key) {
         ui.setPanelState(key, !ui.isPanelEnabled(key));

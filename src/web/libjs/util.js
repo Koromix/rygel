@@ -448,31 +448,15 @@ const util = new function() {
         });
     };
 
-    this.serialize = function(func) {
-        let resolves = [];
-        let rejects = [];
+    this.serializeAsync = function(func) {
+        let queue = Promise.resolve();
 
-        return (...args) => new Promise((resolve, reject) => {
-            resolves.push(resolve);
-            rejects.push(reject);
+        return (...args) => {
+            let p = queue.then(() => func(...args));
+            queue = p.catch(() => {});
 
-            if (resolves.length === 1) {
-                let p = func(...args);
-
-                p.then(value => {
-                    for (let resolve of resolves)
-                        resolve(value);
-                });
-                p.catch(err => {
-                    for (let reject of rejects)
-                        reject(err);
-                });
-                p.finally(() => {
-                    resolves.length = 0;
-                    rejects.length = 0;
-                });
-            }
-        });
+            return p;
+        };
     };
 };
 
