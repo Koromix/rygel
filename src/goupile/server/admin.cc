@@ -867,6 +867,11 @@ void HandleDeleteUser(const http_RequestInfo &request, http_IO *io)
             io->AttachError(422);
             return;
         }
+        if (TestStr(username, session->username)) {
+            LogError("You cannot delete yourself");
+            io->AttachError(403);
+            return;
+        }
 
         gp_domain.db.Transaction([&]() {
             if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE username = ?1;", username))
