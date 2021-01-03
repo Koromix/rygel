@@ -29,7 +29,7 @@ function AdminController() {
         `);
 
         ui.createPanel('instances', () => html`
-            <div class="adm_panel">
+            <div class="adm_panel" style="background: #f8f8f8;">
                 <div class="ui_quick">
                     Instances
                     <a @click=${ui.wrapAction(e => { instances = null; return self.go(); })}>🗘</a>
