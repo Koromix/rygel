@@ -25,7 +25,12 @@ function AdminController() {
             <button class=${ui.isPanelEnabled('users') ? 'active' : ''}
                     @click=${e => togglePanel('users')}>Utilisateurs</button>
             <div style="flex: 1;"></div>
-            <button @click=${ui.wrapAction(handleLogout)}>Se déconnecter</button>
+            <div class="drop right">
+                <button>${goupile.getUserName()}</button>
+                <div>
+                    <button @click=${ui.wrapAction(handleLogout)}>Se déconnecter</button>
+                </div>
+            </div>
         `);
 
         ui.createPanel('instances', () => html`

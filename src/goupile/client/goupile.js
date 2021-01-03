@@ -106,7 +106,8 @@ const goupile = new function() {
         }
     };
 
-    this.isAuthorized = function() { return !!session_profile.username; }
+    this.isAuthorized = function() { return !!session_profile.username; };
+    this.getUserName = function() { return session_profile.username; };
 
     this.syncHistory = function(url, push = true) {
         if (push && current_url != null && url !== current_url) {
