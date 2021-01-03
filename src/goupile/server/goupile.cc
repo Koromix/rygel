@@ -30,27 +30,33 @@ struct TemplateValues {
 
 DomainHolder gp_domain;
 
-static std::shared_mutex assets_mutex;
 static HashMap<const char *, const AssetInfo *> assets_map;
+static HeapArray<const char *> assets_for_cache;
 static LinkedAllocator assets_alloc;
 static char etag[33];
 
 static void InitAssets()
 {
     assets_map.Clear();
+    assets_for_cache.Clear();
     assets_alloc.ReleaseAll();
 
     for (const AssetInfo &asset: GetPackedAssets()) {
         if (TestStr(asset.name, "src/goupile/client/goupile.html")) {
             assets_map.Set("/", &asset);
+            assets_for_cache.Append("/");
+        } else if (TestStr(asset.name, "src/goupile/client/sw.pk.js")) {
+            assets_map.Set("/sw.pk.js", &asset);
         } else if (TestStr(asset.name, "src/goupile/client/images/favicon.png")) {
             assets_map.Set("/favicon.png", &asset);
+            assets_for_cache.Append("/favicon.png");
         } else if (StartsWith(asset.name, "src/goupile/client/") ||
                    StartsWith(asset.name, "vendor/")) {
             const char *name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
             const char *url = Fmt(&assets_alloc, "/static/%1", name).ptr;
 
             assets_map.Set(url, &asset);
+            assets_for_cache.Append(url);
         }
     }
 
@@ -107,6 +113,20 @@ static void HandleEvents(InstanceHolder *, const http_RequestInfo &request, http
     GetCheckedSession(request, io);
 
     io->AttachText(200, "{}", "application/json");
+}
+
+static void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    http_JsonPageBuilder json(request.compression_type);
+
+    json.StartArray();
+    for (const char *url: assets_for_cache) {
+        char buf[512];
+        json.String(Fmt(buf, "/%1%2", instance->key, url).ptr);
+    }
+    json.EndArray();
+
+    json.Finish(io);
 }
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
@@ -240,6 +260,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleUserLogin(instance, request, io);
         } else if (TestStr(instance_path, "/api/user/logout") && request.method == http_RequestMethod::Post) {
             HandleUserLogout(instance, request, io);
+        } else if (TestStr(instance_path, "/api/files/static") && request.method == http_RequestMethod::Get) {
+             HandleFileStatic(instance, request, io);
         } else if (TestStr(instance_path, "/api/files/list") && request.method == http_RequestMethod::Get) {
              HandleFileList(instance, request, io);
         } else if (StartsWith(instance_path, "/files/") && request.method == http_RequestMethod::Put) {
