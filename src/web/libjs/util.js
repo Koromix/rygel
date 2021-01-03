@@ -603,7 +603,8 @@ function LruMap(limit) {
     let self = this;
 
     let map = {};
-    let count = 0;
+
+    this.size = 0;
 
     let root_bucket = {}
     root_bucket.prev = root_bucket;
@@ -632,7 +633,7 @@ function LruMap(limit) {
                 link(bucket);
             }
         } else {
-            if (count >= limit)
+            if (self.size >= limit)
                 deleteBucket(root_bucket.next);
 
             bucket = {
@@ -644,7 +645,7 @@ function LruMap(limit) {
 
             map[key] = bucket;
             link(bucket);
-            count++;
+            self.size++;
         }
     };
 
@@ -657,7 +658,7 @@ function LruMap(limit) {
     function deleteBucket(bucket) {
         unlink(bucket);
         delete map[bucket.key];
-        count--;
+        self.size--;
     }
 
     this.get = function(key) {
@@ -675,18 +676,43 @@ function LruMap(limit) {
         }
     };
 
+    this.has = function(key) {
+        let bucket = map[key];
+        return bucket !== undefined;
+    };
+
+    this.newest = function() { return root_bucket.prev.key; };
+    this.oldest = function() { return root_bucket.next.key; };
+
     this.clear = function() {
         root_bucket.prev = root_bucket;
         root_bucket.next = root_bucket;
 
         map = {};
-        count = 0;
+        self.size = 0;
     };
 
-    this[Symbol.iterator] = function*() {
+    this.entries = function*() {
         let it = root_bucket.next;
         while (it !== root_bucket) {
             yield [it.key, it.value];
+            it = it.next;
+        }
+    };
+    this[Symbol.iterator] = self.entries;
+
+    this.keys = function*() {
+        let it = root_bucket.next;
+        while (it !== root_bucket) {
+            yield it.key;
+            it = it.next;
+        }
+    };
+
+    this.values = function*() {
+        let it = root_bucket.next;
+        while (it !== root_bucket) {
+            yield it.value;
             it = it.next;
         }
     };
@@ -795,18 +821,6 @@ function BTree(order = 64) {
         while (leaf) {
             for (let i = 0; i < leaf.keys.length; i++)
                 yield leaf.values[i];
-            leaf = leaf.next;
-        }
-    };
-
-    this.first = function() { return leaf0 ? leaf0.values[0] : undefined; };
-
-    this.forEach = function(func, this_arg) {
-        let leaf = leaf0;
-
-        while (leaf) {
-            for (let i = 0; i < leaf.keys.length; i++)
-                func.call(this_arg, leaf.values[i], leaf.keys[i], self);
             leaf = leaf.next;
         }
     };
