@@ -72,7 +72,7 @@ function InstanceController() {
             </div>
         `);
 
-        ui.createPanel('editor', () => {
+        ui.createPanel('editor', false, () => {
             let tabs = [];
 
             tabs.push({
@@ -98,7 +98,7 @@ function InstanceController() {
             `;
         });
 
-        ui.createPanel('form', () => {
+        ui.createPanel('form', true, () => {
             let model = new FormModel;
             let builder = new FormBuilder(page_state, model);
 

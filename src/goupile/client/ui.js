@@ -78,9 +78,10 @@ const ui = new function() {
         menu = func;
     };
 
-    this.createPanel = function(key, func) {
+    this.createPanel = function(key, enable, func) {
         panels.set(key, func);
-        enabled_panels.set(key, func);
+        if (enable)
+            enabled_panels.set(key, func);
 
         adaptToViewport();
     };
