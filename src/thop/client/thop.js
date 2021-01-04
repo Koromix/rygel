@@ -318,11 +318,6 @@ const thop = new function() {
         log.defaultHandler(action, entry);
     };
 
-    function closeLogEntry(idx) {
-        log_entries.splice(idx, 1);
-        renderLog();
-    }
-
     function renderLog() {
         let log_el = document.querySelector('#th_log');
         if (!log_el) {
@@ -340,7 +335,7 @@ const thop = new function() {
                     ${msg.split('\n').map(line => [line, html`<br/>`])}
                 </div>`;
             } else {
-                return html`<div class=${'th_log_entry ' + entry.type} @click=${e => closeLogEntry(idx)}>
+                return html`<div class=${'th_log_entry ' + entry.type} @click=${e => entry.close()}>
                     <button class="th_log_close">X</button>
                     ${msg.split('\n').map(line => [line, html`<br/>`])}
                 </div>`;

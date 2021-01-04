@@ -530,8 +530,11 @@ const log = new function() {
     }
 
     function closeEntry(entry) {
-        let func = handlers[handlers.length - 1];
-        func('close', entry);
+        if (entry.type != null) {
+            let func = handlers[handlers.length - 1];
+            func('close', entry);
+            entry.type = null;
+        }
     }
 
     this.Entry = function() {
