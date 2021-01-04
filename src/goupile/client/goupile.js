@@ -16,6 +16,8 @@ const goupile = new function() {
 
     this.start = async function() {
         ui.init();
+
+        await registerSW();
         await initDB();
 
         if (ENV.base_url === '/admin/') {
@@ -26,6 +28,42 @@ const goupile = new function() {
 
         await controller.start();
     };
+
+    async function registerSW() {
+        if (navigator.serviceWorker != null) {
+            if (ENV.cache_offline) {
+                let registration = await navigator.serviceWorker.register(`${ENV.base_url}sw.pk.js`);
+                let entry = new log.Entry;
+
+                if (registration.waiting) {
+                    entry.error('Fermez tous les onglets pour terminer la mise à jour');
+                } else {
+                    registration.addEventListener('updatefound', () => {
+                        entry.progress('Mise à jour en cours, veuillez patienter');
+
+                        registration.installing.addEventListener('statechange', e => {
+                            if (e.target.state === 'installed') {
+                                entry.success('Mise à jour effectuée, l\'application va redémarrer');
+                                setTimeout(() => document.location.reload(), 3000);
+                            }
+                        });
+                    });
+                }
+            } else {
+                let registration = await navigator.serviceWorker.getRegistration();
+                let entry = new log.Entry;
+
+                if (registration != null) {
+                    entry.progress('Mise à jour en cours, veuillez patienter');
+
+                    await registration.unregister();
+
+                    entry.success('Mise à jour effectuée, l\'application va redémarrer');
+                    setTimeout(() => document.location.reload(), 3000);
+                }
+            }
+        }
+    }
 
     async function initDB() {
         let db_name = `goupile:${ENV.base_url}`;

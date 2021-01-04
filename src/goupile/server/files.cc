@@ -15,9 +15,9 @@ namespace RG {
 void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     sq_Statement stmt;
-    if (!instance->db.Prepare(R"(SELECT path, size, sha256 FROM fs_files
+    if (!instance->db.Prepare(R"(SELECT url, size, sha256 FROM fs_files
                                  WHERE active = 1
-                                 ORDER BY path;)", &stmt))
+                                 ORDER BY url;)", &stmt))
         return;
 
     http_JsonPageBuilder json(request.compression_type);
@@ -25,7 +25,7 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
     json.StartArray();
     while (stmt.Next()) {
         json.StartObject();
-        json.Key("path"); json.String((const char *)sqlite3_column_text(stmt, 0));
+        json.Key("url"); json.String((const char *)sqlite3_column_text(stmt, 0));
         json.Key("size"); json.Int64(sqlite3_column_int64(stmt, 1));
         json.Key("sha256"); json.String((const char *)sqlite3_column_text(stmt, 2));
         json.EndObject();
@@ -40,25 +40,25 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
 // Returns true when request has been handled (file exists or an error has occured)
 bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    const char *path = request.url + instance->key.len + 1;
+    const char *url = request.url + instance->key.len + 1;
     const char *client_etag = request.GetHeaderValue("If-None-Match");
     const char *client_sha256 = request.GetQueryValue("sha256");
 
     // Handle special paths
-    if (TestStr(path, "/favicon.png")) {
-        path ="/files/favicon.png";
-    } else if (TestStr(path, "/manifest.json")) {
-        path = "/files/manifest.json";
+    if (TestStr(url, "/favicon.png")) {
+        url ="/files/favicon.png";
+    } else if (TestStr(url, "/manifest.json")) {
+        url = "/files/manifest.json";
     }
 
-    if (!StartsWith(path, "/files/"))
+    if (!StartsWith(url, "/files/"))
         return false;
 
     sq_Statement stmt;
     if (!instance->db.Prepare(R"(SELECT rowid, compression, sha256 FROM fs_files
-                                 WHERE active = 1 AND path = ?1;)", &stmt))
+                                 WHERE active = 1 AND url = ?1;)", &stmt))
         return true;
-    sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 1, url, -1, SQLITE_STATIC);
 
     // File does not exist, or an error has occured
     if (!stmt.Next())
@@ -137,7 +137,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
                 offset += copy_len;
                 return copy_len;
-            }, path, compression_type);
+            }, url, compression_type);
 
             // Not much we can do at this stage in case of error. Client will get truncated data.
             SpliceStream(&reader, -1, &writer);
@@ -158,16 +158,16 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
         return;
     }
 
-    const char *path = request.url + instance->key.len + 1;
+    const char *url = request.url + instance->key.len + 1;
     const char *client_sha256 = request.GetQueryValue("sha256");
 
     // Security checks
-    if (!StartsWith(path, "/files/")) {
+    if (!StartsWith(url, "/files/")) {
         LogError("Cannot write to file outside '/files/'");
         io->AttachError(403);
         return;
     }
-    if (PathContainsDotDot(path)) {
+    if (PathContainsDotDot(url)) {
         LogError("Path must not contain any '..' component");
         io->AttachError(403);
         return;
@@ -228,9 +228,9 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
             if (client_sha256) {
                 sq_Statement stmt;
                 if (!instance->db.Prepare(R"(SELECT sha256 FROM fs_files
-                                             WHERE active = 1 AND path = ?1;)", &stmt))
+                                             WHERE active = 1 AND url = ?1;)", &stmt))
                     return false;
-                sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 1, url, -1, SQLITE_STATIC);
 
                 if (stmt.Next()) {
                     const char *sha256 = (const char *)sqlite3_column_text(stmt, 0);
@@ -254,11 +254,11 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
             int64_t mtime = GetUnixTime();
 
             if (!instance->db.Run(R"(UPDATE fs_files SET active = 0
-                                     WHERE active = 1 AND path = ?1;)", path))
+                                     WHERE active = 1 AND url = ?1;)", url))
                 return false;
-            if (!instance->db.Run(R"(INSERT INTO fs_files (active, path, mtime, blob, compression, sha256, size)
+            if (!instance->db.Run(R"(INSERT INTO fs_files (active, url, mtime, blob, compression, sha256, size)
                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7);)",
-                                  1, path, mtime, sq_Binding::Zeroblob(file_len), "Gzip", sha256, total_len))
+                                  1, url, mtime, sq_Binding::Zeroblob(file_len), "Gzip", sha256, total_len))
                 return false;
 
             int64_t rowid = sqlite3_last_insert_rowid(instance->db);
@@ -309,17 +309,17 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
         return;
     }
 
-    const char *path = request.url + instance->key.len + 1;
+    const char *url = request.url + instance->key.len + 1;
     const char *client_sha256 = request.GetQueryValue("sha256");
 
     instance->db.Transaction([&]() {
         if (client_sha256) {
             sq_Statement stmt;
             if (!instance->db.Prepare(R"(SELECT active, sha256 FROM fs_files
-                                         WHERE path = ?1
+                                         WHERE url = ?1
                                          ORDER BY active DESC;)", &stmt))
                 return false;
-            sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 1, url, -1, SQLITE_STATIC);
 
             if (stmt.Next()) {
                 bool active = sqlite3_column_int(stmt, 0);
@@ -341,7 +341,7 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
         }
 
         if (!instance->db.Run(R"(UPDATE fs_files SET active = 0
-                                 WHERE active = 1 AND path = ?1;)", path))
+                                 WHERE active = 1 AND url = ?1;)", url))
             return false;
 
         if (sqlite3_changes(instance->db)) {

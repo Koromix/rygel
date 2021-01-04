@@ -28,7 +28,7 @@ DomainHolder gp_domain;
 static HashMap<const char *, const AssetInfo *> assets_map;
 static HeapArray<const char *> assets_for_cache;
 static LinkedAllocator assets_alloc;
-static char etag[33];
+static char etag[17];
 
 static void InitAssets()
 {
@@ -57,13 +57,13 @@ static void InitAssets()
 
     // Update ETag
     {
-        uint64_t buf[2];
+        uint64_t buf;
         randombytes_buf(&buf, RG_SIZE(buf));
-        Fmt(etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
+        Fmt(etag, "%1", FmtHex(buf).Pad0(-16));
     }
 }
 
-static void AttachStatic(const AssetInfo &asset, const http_RequestInfo &request, http_IO *io)
+static void AttachStatic(const AssetInfo &asset, const char *etag, const http_RequestInfo &request, http_IO *io)
 {
     const char *client_etag = request.GetHeaderValue("If-None-Match");
 
@@ -95,8 +95,7 @@ static void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &r
 
     json.StartArray();
     for (const char *url: assets_for_cache) {
-        char buf[512];
-        json.String(Fmt(buf, "/%1%2", instance->key, url).ptr);
+        json.String(url);
     }
     json.EndArray();
 
@@ -159,7 +158,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         writer->Write("Goupile Admin");
                     } else if (TestStr(key, "BASE_URL")) {
                         writer->Write("/admin/");
-                    } else if (TestStr(key, "ENV")) {
+                    } else if (TestStr(key, "ENV_JSON")) {
                         json_Writer json(writer);
 
                         json.StartObject();
@@ -171,10 +170,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                     }
                 });
 
-                AttachStatic(copy, request, io);
+                AttachStatic(copy, etag, request, io);
                 return;
             } else if (asset) {
-                AttachStatic(*asset, request, io);
+                AttachStatic(*asset, etag, request, io);
                 return;
             }
         }
@@ -222,8 +221,13 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
         // Try static assets
         if (request.method == http_RequestMethod::Get) {
-            if (TestStr(instance_path, "/") || StartsWith(instance_path, "/main/")) {
-                const AssetInfo *asset = assets_map.FindValue("/", nullptr);
+            if (StartsWith(instance_path, "/main/")) {
+                instance_path = "/";
+            }
+
+            const AssetInfo *asset = assets_map.FindValue(instance_path, nullptr);
+
+            if (TestStr(instance_path, "/") || TestStr(instance_path, "/sw.pk.js")) {
                 RG_ASSERT(asset);
 
                 // XXX: Use some kind of dynamic cache to avoid doing this all the time
@@ -235,28 +239,31 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         writer->Write(instance->config.title);
                     } else if (TestStr(key, "BASE_URL")) {
                         Print(writer, "/%1/", instance->key);
-                    } else if (TestStr(key, "ENV")) {
+                    } else if (TestStr(key, "ENV_JSON")) {
                         json_Writer json(writer);
                         char buf[512];
 
                         json.StartObject();
                         json.Key("base_url"); json.String(Fmt(buf, "/%1/", instance->key).ptr);
                         json.Key("title"); json.String(instance->config.title);
-                        json.Key("use_offline"); json.Bool(instance->config.use_offline);
+                        json.Key("cache_offline"); json.Bool(instance->config.use_offline);
+                        if (instance->config.use_offline) {
+                            json.Key("cache_key"); json.String(Fmt(buf, "%1_%2", etag, instance->unique).ptr);
+                        }
                         json.EndObject();
                     } else {
                         Print(writer, "{%1}", key);
                     }
                 });
 
-                AttachStatic(copy, request, io);
+                char specific_etag[33];
+                Fmt(specific_etag, "%1_%2", etag, instance->unique);
+
+                AttachStatic(copy, specific_etag, request, io);
                 return;
-            } else {
-                const AssetInfo *asset = assets_map.FindValue(instance_path, nullptr);
-                if (asset) {
-                    AttachStatic(*asset, request, io);
-                    return;
-                }
+            } else if (asset) {
+                AttachStatic(*asset, etag, request, io);
+                return;
             }
         }
 
