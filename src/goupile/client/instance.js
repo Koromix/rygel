@@ -171,6 +171,7 @@ function InstanceController() {
 
             session = new ace.EditSession('', 'ace/mode/javascript');
             session.setOption('useWorker', false);
+            session.setUndoManager(new ace.UndoManager());
             session.setUseWrapMode(true);
             session.doc.setValue(code);
             session.on('change', e => self.go());
