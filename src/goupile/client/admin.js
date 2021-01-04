@@ -42,18 +42,16 @@ function AdminController() {
 
                 <table class="ui_table">
                     <colgroup>
-                        <col style="width: 200px;"/>
                         <col/>
                         <col style="width: 100px;"/>
                         <col style="width: 100px;"/>
                     </colgroup>
 
                     <tbody>
-                        ${!instances.length ? html`<tr><td colspan="4">Aucune instance</td></tr>` : ''}
+                        ${!instances.length ? html`<tr><td colspan="3">Aucune instance</td></tr>` : ''}
                         ${instances.map(instance => html`
                             <tr class=${instance.key === selected_instance ? 'active' : ''}>
                                 <td style="text-align: left;">${instance.key} (<a href=${'/' + instance.key} target="_blank">accès</a>)</td>
-                                <td></td>
                                 <td><a role="button" tabindex="0" @click=${e => toggleSelectedInstance(instance.key)}>Droits</a></td>
                                 <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runEditInstanceDialog(e, instance))}>Modifier</a></td>
                             </tr>
@@ -76,7 +74,7 @@ function AdminController() {
 
                 <table class="ui_table">
                     <colgroup>
-                        <col style="width: 100px;"/>
+                        ${selected_instance != null ? html`<col style="width: 100px;"/>` : ''}
                         <col/>
                         <col style="width: 100px;"/>
                     </colgroup>
@@ -89,15 +87,16 @@ function AdminController() {
                             return html`
                                 <tr>
                                     <td style="text-align: left;">${user.username}</td>
-                                    <td>
-                                        ${permissions.map(perm =>
-                                            html`<span class="gp_tag" style="background: #666;">${perm}</span> `)}
-                                        ${selected_instance ?
-                                            html`&nbsp;&nbsp;&nbsp;
-                                                 <a role="button" tabindex="0"
-                                                    @click=${ui.wrapAction(e => runAssignUserDialog(e, selected_instance, user.username,
-                                                                                                   permissions))}>Assigner</a>` : ''}
-                                    </td>
+                                    ${selected_instance != null ? html`
+                                        <td>
+                                            ${permissions.map(perm =>
+                                                html`<span class="gp_tag" style="background: #666;">${perm}</span> `)}
+                                            &nbsp;&nbsp;&nbsp;
+                                            <a role="button" tabindex="0"
+                                               @click=${ui.wrapAction(e => runAssignUserDialog(e, selected_instance, user.username,
+                                                                                               permissions))}>Assigner</a>
+                                        </td>
+                                    ` : ''}
                                     <td><a role="button" tabindex="0"
                                            @click=${ui.wrapAction(e => runDeleteUserDialog(e, user.username))}>Supprimer</a></td>
                                 </tr>
