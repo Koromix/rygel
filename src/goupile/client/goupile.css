@@ -78,6 +78,7 @@ button:not(.active):not(:disabled):hover {
     padding: 5px;
     font-size: 1.4em;
     text-align: center;
+    white-space: pre;
 }
 .gp_wip::before {
     content: '⚠\FE0E';

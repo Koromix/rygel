@@ -17,6 +17,7 @@ function InstanceController() {
     let editor_sessions = new LruMap(32);
 
     let code_cache = new LruMap(4);
+    let error_entries = {};
 
     this.start = async function() {
         initUI();
@@ -32,7 +33,7 @@ function InstanceController() {
             let new_app = new ApplicationInfo;
             let builder = new ApplicationBuilder(new_app);
 
-            runUserCode(code, {
+            runUserCode('Application', code, {
                 app: builder
             });
             if (new_app.pages.size)
@@ -102,7 +103,7 @@ function InstanceController() {
             let builder = new FormBuilder(page_state, model);
 
             try {
-                runUserCode(page_code, {
+                runUserCode('Page', page_code, {
                     form: builder
                 });
 
@@ -114,7 +115,11 @@ function InstanceController() {
                     </div>
                 `;
             } catch (err) {
-                return html`<div class="ins_panel gp_wip">${err.message}</div>`;
+                return html`
+                    <div class="ins_panel">
+                        <span class="gp_wip">${err.message}</span>
+                    </div>
+                `;
             }
         });
     };
@@ -124,15 +129,23 @@ function InstanceController() {
         self.go();
     }
 
-    function runUserCode(code, arguments) {
+    function runUserCode(title, code, arguments) {
+        let entry = error_entries[title];
+        if (entry == null) {
+            entry = new log.Entry;
+            error_entries[title] = entry;
+        }
+
         try {
             let func = new Function(...Object.keys(arguments), code);
             func(...Object.values(arguments));
+
+            entry.close();
         } catch (err) {
             let line = util.parseEvalErrorLine(err);
-            let msg = `${line != null ? `Ligne ${line} : ` : ''}${err.message}`;
+            let msg = `Erreur sur ${title}\n${line != null ? `Ligne ${line} : ` : ''}${err.message}`;
 
-            log.error(msg);
+            entry.error(msg, -1);
             throw new Error(msg);
         }
     }
