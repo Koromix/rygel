@@ -26,7 +26,7 @@ const goupile = new function() {
     this.runLogin = function() {
         return ui.runScreen((d, resolve, reject) => {
             d.output(html`
-                <img id="gp_logo" src="/admin/favicon.png" alt="" />
+                <img id="gp_logo" src=${ENV.base_url + 'favicon.png'} alt="" />
                 <br/>
             `);
 
@@ -53,7 +53,7 @@ const goupile = new function() {
             query.set('username', username.toLowerCase());
             query.set('password', password);
 
-            let response = await net.fetch('/admin/api/user/login', {
+            let response = await net.fetch(`${ENV.base_url}api/user/login`, {
                 method: 'POST',
                 body: query
             });
@@ -77,7 +77,7 @@ const goupile = new function() {
         let progress = log.progress('Déconnexion en cours');
 
         try {
-            let response = await net.fetch('/admin/api/user/logout', {method: 'POST'})
+            let response = await net.fetch(`${ENV.base_url}api/user/logout`, {method: 'POST'})
 
             if (response.ok) {
                 session_profile = {};
@@ -98,7 +98,7 @@ const goupile = new function() {
         let new_rnd = util.getCookie('session_rnd');
 
         if (new_rnd !== session_rnd) {
-            let response = await net.fetch('/admin/api/user/profile');
+            let response = await net.fetch(`${ENV.base_url}api/user/profile`);
             let profile = await response.json();
 
             session_profile = profile;
