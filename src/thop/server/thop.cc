@@ -281,15 +281,12 @@ static void InitRoutes()
     html.data = PatchAsset(html, &routes_alloc, [](const char *key, StreamWriter *writer) {
         if (TestStr(key, "VERSION")) {
             writer->Write(FelixVersion);
-            return true;
         } else if (TestStr(key, "BASE_URL")) {
             writer->Write(thop_config.base_url);
-            return true;
         } else if (TestStr(key, "HAS_USERS")) {
             writer->Write(thop_has_casemix ? "true" : "false");
-            return true;
         } else {
-            return false;
+            Print(writer, "{%1}", key);
         }
     });
 

@@ -92,15 +92,12 @@ static void AttachTemplate(AssetInfo asset, const TemplateValues &values, const 
     asset.data = PatchAsset(asset, &io->allocator, [&](const char *key, StreamWriter *writer) {
         if (TestStr(key, "VERSION")) {
             writer->Write(FelixVersion);
-            return true;
         } else if (TestStr(key, "TITLE")) {
             writer->Write(values.title);
-            return true;
         } else if (TestStr(key, "BASE_URL")) {
             Print(writer, "/%1/", values.key);
-            return true;
         } else {
-            return false;
+            Print(writer, "{%1}", key);
         }
     });
 

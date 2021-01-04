@@ -4797,7 +4797,7 @@ void InitPackedMap(Span<const AssetInfo> assets)
 // This won't win any beauty or speed contest (especially when writing
 // a compressed stream) but whatever.
 Span<const uint8_t> PatchAsset(const AssetInfo &asset, Allocator *alloc,
-                               FunctionRef<bool(const char *, StreamWriter *)> func)
+                               FunctionRef<void(const char *, StreamWriter *)> func)
 {
     RG_ASSERT(alloc);
 
@@ -4813,7 +4813,6 @@ Span<const uint8_t> PatchAsset(const AssetInfo &asset, Allocator *alloc,
             Size name_len = reader.Read(1, &name[0]);
             RG_ASSERT(name_len >= 0);
 
-            bool valid = false;
             if (IsAsciiAlpha(name[0]) || name[0] == '_') {
                 do {
                     Size read_len = reader.Read(1, &name[name_len]);
@@ -4821,20 +4820,19 @@ Span<const uint8_t> PatchAsset(const AssetInfo &asset, Allocator *alloc,
 
                     if (name[name_len] == '}') {
                         name[name_len] = 0;
-                        valid = func(name, &writer);
-                        name[name_len++] = '}';
+                        func(name, &writer);
 
                         break;
                     } else if (!IsAsciiAlphaOrDigit(name[name_len]) && name[name_len] != '_') {
-                        name_len++;
+                        writer.Write('{');
+                        writer.Write(name, name_len + 1);
+
                         break;
                     }
                 } while (++name_len < RG_SIZE(name));
-            }
-
-            if (!valid) {
+            } else {
                 writer.Write('{');
-                writer.Write(name, name_len);
+                writer.Write(name[0]);
             }
         } else {
             writer.Write(c);

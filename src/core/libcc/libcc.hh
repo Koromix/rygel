@@ -3811,7 +3811,7 @@ const AssetInfo *FindPackedAsset(const char *name);
 #endif
 
 Span<const uint8_t> PatchAsset(const AssetInfo &asset, Allocator *alloc,
-                               FunctionRef<bool(const char *, StreamWriter *)> func);
+                               FunctionRef<void(const char *, StreamWriter *)> func);
 
 // ------------------------------------------------------------------------
 // Options
