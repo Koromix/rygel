@@ -5,6 +5,8 @@
 const goupile = new function() {
     let self = this;
 
+    let db;
+
     let session_profile = {};
     let session_rnd;
     let passport;
@@ -14,6 +16,7 @@ const goupile = new function() {
 
     this.start = async function() {
         ui.init();
+        await initDB();
 
         if (ENV.base_url === '/admin/') {
             controller = new AdminController;
@@ -23,6 +26,18 @@ const goupile = new function() {
 
         await controller.start();
     };
+
+    async function initDB() {
+        let db_name = `goupile:${ENV.base_url}`;
+
+        db = await indexeddb.open(db_name, 1, (db, old_version) => {
+            switch (old_version) {
+                case null: {
+                    db.createStore('usr_profiles');
+                } // fallthrough
+            }
+        });
+    }
 
     this.runLogin = function() {
         return ui.runScreen((d, resolve, reject) => {
@@ -64,6 +79,19 @@ const goupile = new function() {
                 session_rnd = util.getCookie('session_rnd');
                 passport = (session_profile.passport != null) ? util.base64ToBytes(session_profile.passport) : null;
 
+                // Save for offline login
+                {
+                    let salt = nacl.randomBytes(24);
+                    let key = await deriveKey(password, salt);
+
+                    let enc = await encrypt(session_profile, key);
+
+                    await db.saveWithKey('usr_profiles', username, {
+                        salt: util.bytesToBase64(salt),
+                        profile: enc
+                    });
+                }
+
                 progress.success('Connexion réussie');
             } else {
                 let err = (await response.text()).trim();
@@ -73,6 +101,18 @@ const goupile = new function() {
             progress.close();
             throw err;
         }
+    }
+
+    function deriveKey(password, salt) {
+        return new Promise((resolve, reject) => {
+            scrypt(password, salt, {
+                N: 16384,
+                r: 8,
+                p: 1,
+                dkLen: 32,
+                encoding: 'binary'
+            }, resolve);
+        });
     }
 
     this.logout = async function() {
