@@ -23,11 +23,6 @@
 
 namespace RG {
 
-struct TemplateValues {
-    const char *key;
-    const char *title;
-};
-
 DomainHolder gp_domain;
 
 static HashMap<const char *, const AssetInfo *> assets_map;
@@ -84,24 +79,6 @@ static void AttachStatic(const AssetInfo &asset, const http_RequestInfo &request
             io->AddHeader("SourceMap", asset.source_map);
         }
     }
-}
-
-static void AttachTemplate(AssetInfo asset, const TemplateValues &values, const http_RequestInfo &request, http_IO *io)
-{
-    // XXX: Use some kind of dynamic cache to avoid doing this all the time
-    asset.data = PatchAsset(asset, &io->allocator, [&](const char *key, StreamWriter *writer) {
-        if (TestStr(key, "VERSION")) {
-            writer->Write(FelixVersion);
-        } else if (TestStr(key, "TITLE")) {
-            writer->Write(values.title);
-        } else if (TestStr(key, "BASE_URL")) {
-            Print(writer, "/%1/", values.key);
-        } else {
-            Print(writer, "{%1}", key);
-        }
-    });
-
-    AttachStatic(asset, request, io);
 }
 
 static void HandleEvents(InstanceHolder *, const http_RequestInfo &request, http_IO *io)
@@ -174,11 +151,27 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             if (TestStr(instance_path, "/")) {
                 RG_ASSERT(asset);
 
-                AttachTemplate(*asset, {
-                    .key = "admin",
-                    .title = "Goupile Admin"
-                }, request, io);
+                AssetInfo copy = *asset;
+                copy.data = PatchAsset(copy, &io->allocator, [&](const char *key, StreamWriter *writer) {
+                    if (TestStr(key, "VERSION")) {
+                        writer->Write(FelixVersion);
+                    } else if (TestStr(key, "TITLE")) {
+                        writer->Write("Goupile Admin");
+                    } else if (TestStr(key, "BASE_URL")) {
+                        writer->Write("/admin/");
+                    } else if (TestStr(key, "ENV")) {
+                        json_Writer json(writer);
 
+                        json.StartObject();
+                        json.Key("base_url"); json.String("/admin/");
+                        json.Key("title"); json.String("Goupile Admin");
+                        json.EndObject();
+                    } else {
+                        Print(writer, "{%1}", key);
+                    }
+                });
+
+                AttachStatic(copy, request, io);
                 return;
             } else if (asset) {
                 AttachStatic(*asset, request, io);
@@ -233,11 +226,30 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 const AssetInfo *asset = assets_map.FindValue("/", nullptr);
                 RG_ASSERT(asset);
 
-                AttachTemplate(*asset, {
-                    .key = instance->key.ptr,
-                    .title = instance->config.title
-                }, request, io);
+                // XXX: Use some kind of dynamic cache to avoid doing this all the time
+                AssetInfo copy = *asset;
+                copy.data = PatchAsset(copy, &io->allocator, [&](const char *key, StreamWriter *writer) {
+                    if (TestStr(key, "VERSION")) {
+                        writer->Write(FelixVersion);
+                    } else if (TestStr(key, "TITLE")) {
+                        writer->Write(instance->config.title);
+                    } else if (TestStr(key, "BASE_URL")) {
+                        Print(writer, "/%1/", instance->key);
+                    } else if (TestStr(key, "ENV")) {
+                        json_Writer json(writer);
+                        char buf[512];
 
+                        json.StartObject();
+                        json.Key("base_url"); json.String(Fmt(buf, "/%1/", instance->key).ptr);
+                        json.Key("title"); json.String(instance->config.title);
+                        json.Key("use_offline"); json.Bool(instance->config.use_offline);
+                        json.EndObject();
+                    } else {
+                        Print(writer, "{%1}", key);
+                    }
+                });
+
+                AttachStatic(copy, request, io);
                 return;
             } else {
                 const AssetInfo *asset = assets_map.FindValue(instance_path, nullptr);
