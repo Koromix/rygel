@@ -206,6 +206,8 @@ function AdminController() {
                             resolve();
                             log.success(`Instance '${instance.key}' modifiée`);
 
+                            instances = null;
+
                             self.go();
                         } else {
                             let err = (await response.text()).trim();
