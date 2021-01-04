@@ -458,6 +458,24 @@ const util = new function() {
             return p;
         };
     };
+
+    this.bytesToBase64 = function(bytes) {
+        let binary = "";
+        let len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return window.btoa(binary);
+    }
+
+    this.base64ToBytes = function(base64) {
+        let binary_string =  window.atob(base64);
+        let len = binary_string.length;
+        let bytes = new Uint8Array(len);
+        for (var i = 0; i < len; i++)
+            bytes[i] = binary_string.charCodeAt(i);
+        return bytes;
+    }
 };
 
 // ------------------------------------------------------------------------
