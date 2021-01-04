@@ -80,6 +80,8 @@ static void WriteProfileJson(const Session *session, const Token *token, json_Wr
             }
             out_json->EndObject();
         }
+
+        out_json->Key("passport"); out_json->String(session->passport);
     }
 
     out_json->EndObject();
@@ -149,7 +151,7 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
 
         sq_Statement stmt;
         if (instance) {
-            if (!gp_domain.db.Prepare(R"(SELECT u.password_hash, u.admin FROM dom_users u
+            if (!gp_domain.db.Prepare(R"(SELECT u.password_hash, u.admin, u.passport FROM dom_users u
                                          INNER JOIN dom_permissions p ON (p.username = u.username)
                                          WHERE u.username = ?1 AND
                                                p.instance = ?2 AND p.permissions > 0;)", &stmt))
@@ -157,7 +159,7 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
             sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
         } else {
-            if (!gp_domain.db.Prepare(R"(SELECT password_hash, admin FROM dom_users
+            if (!gp_domain.db.Prepare(R"(SELECT password_hash, admin, passport FROM dom_users
                                          WHERE username = ?1 AND admin = 1;)", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
@@ -166,6 +168,13 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
         if (stmt.Next()) {
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
             bool admin = (sqlite3_column_int(stmt, 1) == 1);
+            const char *passport = (const char *)sqlite3_column_text(stmt, 2);
+
+            // Should never happen, but let's be careful
+            if (RG_UNLIKELY(sqlite3_column_bytes(stmt, 2) >= RG_SIZE(Session::passport))) {
+                LogError("User passport is too big");
+                return;
+            }
 
             if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
                 int64_t time = GetUnixTime();
@@ -177,6 +186,7 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
 
                 RetainPtr<Session> session = CreateUserSession(request, io, username);
                 session->admin = admin;
+                strcpy(session->passport, passport);
 
                 const Token *token = session->GetToken(instance);
 

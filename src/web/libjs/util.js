@@ -459,23 +459,29 @@ const util = new function() {
         };
     };
 
-    this.bytesToBase64 = function(bytes) {
-        let binary = "";
-        let len = bytes.byteLength;
-        for (let i = 0; i < len; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
-        return window.btoa(binary);
-    }
+    this.bytesToString = function(bytes) {
+        let str = '';
+        for (let i = 0; i < bytes.byteLength; i++)
+            str += String.fromCharCode(bytes[i]);
+        return str;
+    };
 
-    this.base64ToBytes = function(base64) {
-        let binary_string =  window.atob(base64);
-        let len = binary_string.length;
-        let bytes = new Uint8Array(len);
-        for (var i = 0; i < len; i++)
-            bytes[i] = binary_string.charCodeAt(i);
+    this.stringToBytes = function(str) {
+        let bytes = new Uint8Array(str.length);
+        for (let i = 0; i < str.length; i++)
+            bytes[i] = str.charCodeAt(i);
         return bytes;
-    }
+    };
+
+    this.base64ToBytes = function(b64) {
+        let str = window.atob(b64);
+        return self.stringToBytes(str);
+    };
+
+    this.bytesToBase64 = function(bytes) {
+        let str = self.bytesToString(bytes);
+        return window.btoa(str);
+    };
 };
 
 // ------------------------------------------------------------------------

@@ -4,10 +4,11 @@
 
 #include "../../core/libcc/libcc.hh"
 #include "domain.hh"
+#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
 
-const int DomainVersion = 4;
+const int DomainVersion = 5;
 const int MaxInstancesPerDomain = 4096;
 
 bool DomainConfig::Validate() const
@@ -391,9 +392,65 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
             case 3: {
                 if (!db->Run("UPDATE dom_permissions SET permissions = 127 WHERE permissions == 63;"))
                     return false;
+            } [[fallthrough]];
+
+            case 4: {
+                bool success = db->Run(R"(
+                    ALTER TABLE dom_users RENAME TO dom_users_BAK;
+                    ALTER TABLE dom_permissions RENAME TO dom_permissions_BAK;
+                    DROP INDEX dom_users_u;
+                    DROP INDEX dom_permissions_ui;
+
+                    CREATE TABLE dom_users (
+                        username TEXT NOT NULL,
+                        password_hash TEXT NOT NULL,
+                        admin INTEGER CHECK(admin IN (0, 1)) NOT NULL,
+                        passport TEXT NOT NULL
+                    );
+                    CREATE UNIQUE INDEX dom_users_u ON dom_users (username);
+
+                    CREATE TABLE dom_permissions (
+                        username TEXT NOT NULL REFERENCES dom_users (username),
+                        instance TEXT NOT NULL REFERENCES dom_instances (instance),
+                        permissions INTEGER NOT NULL,
+                        zone TEXT
+                    );
+                    CREATE UNIQUE INDEX dom_permissions_ui ON dom_permissions (username, instance);
+
+                    INSERT INTO dom_users (username, password_hash, admin, passport)
+                        SELECT username, password_hash, admin, '' FROM dom_users_BAK;
+                    INSERT INTO dom_permissions (username, instance, permissions, zone)
+                        SELECT username, instance, permissions, zone FROM dom_permissions_BAK;
+
+                    DROP TABLE dom_users_BAK;
+                    DROP TABLE dom_permissions_BAK;
+                )");
+                if (!success)
+                    return false;
+
+                sq_Statement stmt;
+                if (!db->Prepare("SELECT rowid FROM dom_users;", &stmt))
+                    return false;
+
+                while (stmt.Next()) {
+                    int64_t rowid = sqlite3_column_int64(stmt, 0);
+
+                    // Create passport key
+                    char passport[64];
+                    {
+                        uint8_t buf[32];
+                        randombytes_buf(&buf, RG_SIZE(buf));
+                        sodium_bin2base64(passport, RG_SIZE(passport), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+                    }
+
+                    if (!db->Run("UPDATE dom_users SET passport = ?2 WHERE rowid = ?1;", rowid, passport))
+                        return false;
+                }
+                if (!stmt.IsValid())
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 4);
+            RG_STATIC_ASSERT(DomainVersion == 5);
         }
 
         int64_t time = GetUnixTime();

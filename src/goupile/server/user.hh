@@ -46,6 +46,7 @@ public:
     const char *username;
     bool admin;
     bool demo;
+    char passport[64];
 
     const Token *GetToken(const InstanceHolder *instance) const;
 };

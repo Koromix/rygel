@@ -7,6 +7,7 @@ const goupile = new function() {
 
     let session_profile = {};
     let session_rnd;
+    let passport;
 
     let controller;
     let current_url;
@@ -61,6 +62,7 @@ const goupile = new function() {
             if (response.ok) {
                 session_profile = await response.json();
                 session_rnd = util.getCookie('session_rnd');
+                passport = (session_profile.passport != null) ? util.base64ToBytes(session_profile.passport) : null;
 
                 progress.success('Connexion réussie');
             } else {
@@ -82,6 +84,7 @@ const goupile = new function() {
             if (response.ok) {
                 session_profile = {};
                 session_rnd = undefined;
+                passport = undefined;
 
                 progress.success('Déconnexion réussie');
             } else {
@@ -103,6 +106,7 @@ const goupile = new function() {
 
             session_profile = profile;
             session_rnd = util.getCookie('session_rnd');
+            passport = (session_profile.passport != null) ? util.base64ToBytes(session_profile.passport) : null;
         }
     };
 
@@ -118,4 +122,47 @@ const goupile = new function() {
 
         current_url = url;
     };
+
+    this.encryptWithPassport = function(obj) {
+        if (passport == null)
+            throw new Error('Cannot encrypt without passport');
+
+        return encrypt(obj, passport);
+    };
+
+    this.decryptWithPassport = function(enc) {
+        if (passport == null)
+            throw new Error('Cannot decrypt without passport');
+
+        return decrypt(enc, passport);
+    };
+
+    async function encrypt(obj, key) {
+        let nonce = new Uint8Array(24);
+        crypto.getRandomValues(nonce);
+
+        let json = JSON.stringify(obj);
+        let message = util.stringToBytes(json);
+        let box = nacl.secretbox(message, nonce, key);
+
+        let enc = {
+            nonce: util.bytesToBase64(nonce),
+            box: util.bytesToBase64(box)
+        };
+        return enc;
+    }
+
+    async function decrypt(enc, key) {
+        let nonce = util.base64ToBytes(enc.nonce);
+        let box = util.base64ToBytes(enc.box);
+
+        let message = nacl.secretbox.open(box, nonce, key);
+        if (message == null)
+            throw new Error('Failed to decrypt message: wrong key?');
+
+        let json = util.bytesToString(message);
+        let obj = JSON.parse(json);
+
+        return obj;
+    }
 };

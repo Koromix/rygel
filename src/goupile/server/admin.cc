@@ -815,6 +815,14 @@ void HandleCreateUser(const http_RequestInfo &request, http_IO *io)
         if (!HashPassword(password, hash))
             return;
 
+        // Create passport key
+        char passport[64];
+        {
+            uint8_t buf[32];
+            randombytes_buf(&buf, RG_SIZE(buf));
+            sodium_bin2base64(passport, RG_SIZE(passport), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+        }
+
         gp_domain.db.Transaction([&]() {
             // Check for existing user
             {
@@ -833,8 +841,9 @@ void HandleCreateUser(const http_RequestInfo &request, http_IO *io)
             }
 
             // Create user
-            if (!gp_domain.db.Run("INSERT INTO dom_users (username, password_hash, admin) VALUES (?1, ?2, ?3);",
-                                  username, hash, 0 + admin))
+            if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, admin, passport)
+                                     VALUES (?1, ?2, ?3, ?4);)",
+                                  username, hash, 0 + admin, passport))
                 return false;
 
             io->AttachText(200, "Done!");
