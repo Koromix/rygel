@@ -89,12 +89,14 @@ const ui = new function() {
         return enabled_panels.has(key);
     };
 
-    this.setPanelState = function(key, enable) {
+    this.setPanelState = function(key, enable, raise = true) {
         if (enable) {
             let panel = panels.get(key);
-            enabled_panels.set(key, panel);
 
-            adaptToViewport();
+            if (raise || !enabled_panels.has(key)) {
+                enabled_panels.set(key, panel);
+                adaptToViewport();
+            }
         } else {
             enabled_panels.delete(key);
         }

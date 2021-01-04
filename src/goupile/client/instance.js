@@ -125,13 +125,7 @@ function InstanceController() {
     };
 
     function togglePanel(key, enable = null) {
-        if (enable == null) {
-            enable = !ui.isPanelEnabled(key);
-        } else if (enable === ui.isPanelEnabled(key)) {
-            return;
-        }
-
-        ui.setPanelState(key, enable);
+        ui.setPanelState(key, !ui.isPanelEnabled(key));
         self.go();
     }
 

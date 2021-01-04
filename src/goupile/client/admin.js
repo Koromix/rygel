@@ -136,21 +136,15 @@ function AdminController() {
     };
     this.go = util.serializeAsync(this.go);
 
-    function togglePanel(key, enable = null) {
-        if (enable == null) {
-            enable = !ui.isPanelEnabled(key);
-        } else if (enable === ui.isPanelEnabled(key)) {
-            return;
-        }
-
-        ui.setPanelState(key, enable);
+    function togglePanel(key) {
+        ui.setPanelState(key, !ui.isPanelEnabled(key));
         self.go();
     }
 
     function toggleSelectedInstance(key) {
         if (key !== selected_instance) {
             selected_instance = key;
-            togglePanel('users', true);
+            ui.setPanelState('users', true, false);
         } else {
             selected_instance = null;
         }
