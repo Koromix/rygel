@@ -7,14 +7,16 @@ function InstanceController() {
 
     let app;
 
-    let route_key;
+    let page_key;
+    let page_code;
+    let page_state;
 
     let editor_el;
     let editor_ace;
     let editor_filename;
     let editor_sessions = new LruMap(32);
 
-    let page_state;
+    let code_cache = new LruMap(4);
 
     this.start = async function() {
         initUI();
@@ -24,8 +26,7 @@ function InstanceController() {
     };
 
     async function initApp() {
-        let response = await fetch(`${ENV.base_url}files/main.js`);
-        let code = await response.text();
+        let code = await fetchCode('main.js');
 
         try {
             let new_app = new ApplicationInfo;
@@ -77,10 +78,10 @@ function InstanceController() {
                 title: 'Application',
                 filename: 'main.js'
             });
-            if (route_key != null) {
+            if (page_key != null) {
                 tabs.push({
                     title: 'Page',
-                    filename: getPageFileName(route_key)
+                    filename: getPageFileName(page_key)
                 });
             }
 
@@ -97,17 +98,11 @@ function InstanceController() {
         });
 
         ui.createPanel('form', () => {
-            if (page_state == null) {
-                page_state = new FormState;
-                page_state.changeHandler = () => self.go();
-            }
-
             let model = new FormModel;
             let builder = new FormBuilder(page_state, model);
-            let code = (editor_ace != null) ? editor_ace.getValue() : '';
 
             try {
-                runUserCode(code, {
+                runUserCode(page_code, {
                     form: builder
                 });
 
@@ -159,8 +154,7 @@ function InstanceController() {
 
         let session = editor_sessions.get(editor_filename);
         if (session == null) {
-            let response = await fetch(`${ENV.base_url}files/${editor_filename}`);
-            let code = await response.text();
+            let code = await fetchCode(editor_filename);
 
             session = new ace.EditSession('', 'ace/mode/javascript');
             session.setOption('useWorker', false);
@@ -183,13 +177,14 @@ function InstanceController() {
         if (!goupile.isAuthorized())
             await goupile.runLogin();
 
+        // Find page
         if (url != null) {
             if (!url.endsWith('/'))
                 url += '/';
             url = new URL(url, window.location.href);
 
             if (url.pathname === ENV.base_url) {
-                route_key = app.home;
+                page_key = app.home;
             } else {
                 let prefix = `${ENV.base_url}main/`;
 
@@ -197,38 +192,60 @@ function InstanceController() {
                     let path = url.pathname.substr(prefix.length);
                     let [key, id] = path.split('/');
 
-                    route_key = key;
+                    page_key = key;
                 } else {
                     window.location.href = url.href;
                 }
             }
         }
 
-        if (route_key != null) {
-            let page = app.pages.get(route_key);
+        // Fetch page code and sync state
+        if (page_key != null && !app.pages.has(page_key)) {
+            log.error(`La page ${page_key} n'existe pas`);
+            page_key = app.home;
+        }
+        if (page_key != null) {
+            let url = makePageURL(page_key);
+            let filename = getPageFileName(page_key);
 
-            if (page == null) {
-                log.error(`La page ${route_key} n'existe pas`);
-
-                route_key = app.home;
-                page = app.pages.get(route_key);
-            }
-
-            let url = makePageURL(route_key);
             goupile.syncHistory(url);
+
+            page_code = await fetchCode(filename);
         } else {
             goupile.syncHistory(ENV.base_url);
+            page_code = null;
+        }
+        if (page_state == null) {
+            page_state = new FormState;
+            page_state.changeHandler = () => self.go();
         }
 
+        // Sync editor (if needed)
         if (ui.isPanelEnabled('editor')) {
             if (editor_filename == null)
-                editor_filename = (route_key != null) ? getPageFileName(route_key) : 'main.js';
+                editor_filename = (page_key != null) ? getPageFileName(page_key) : 'main.js';
             await syncEditor();
         }
 
         ui.render();
     };
     this.go = util.serializeAsync(this.go);
+
+    async function fetchCode(filename) {
+        let session = editor_sessions.get(filename);
+        if (session != null)
+            return session.doc.getValue();
+
+        let code = code_cache.get(filename);
+        if (code == null) {
+            let response = await fetch(`${ENV.base_url}files/${filename}`);
+            code = await response.text();
+
+            code_cache.set(filename, code);
+        }
+
+        return code;
+    }
 
     function getPageFileName(key) { return `pages/${key}.js`; };
     function makePageURL(key) { return `${ENV.base_url}main/${key}`; }
