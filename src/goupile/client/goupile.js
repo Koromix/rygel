@@ -126,7 +126,8 @@ const goupile = new function() {
                 session_rnd = undefined;
                 passport = undefined;
 
-                progress.success('Déconnexion réussie');
+                // Clear state and start from fresh as a precaution
+                document.location.reload();
             } else {
                 let err = (await response.text()).trim();
                 throw new Error(err);

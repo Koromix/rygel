@@ -28,7 +28,7 @@ function AdminController() {
             <div class="drop right">
                 <button>${goupile.getUserName()}</button>
                 <div>
-                    <button @click=${ui.wrapAction(handleLogout)}>Se déconnecter</button>
+                    <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
                 </div>
             </div>
         `);
@@ -113,11 +113,6 @@ function AdminController() {
 
         // Push to the top of priority list
         ui.setPanelState('instances', true);
-    }
-
-    async function handleLogout() {
-        await goupile.logout();
-        self.go();
     }
 
     this.go = async function(url = null) {

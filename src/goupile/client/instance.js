@@ -65,7 +65,7 @@ function InstanceController() {
             <div class="drop right">
                 <button>${goupile.getUserName()}</button>
                 <div>
-                    <button @click=${ui.wrapAction(handleLogout)}>Se déconnecter</button>
+                    <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
                 </div>
             </div>
         `);
@@ -126,11 +126,6 @@ function InstanceController() {
 
     function togglePanel(key, enable = null) {
         ui.setPanelState(key, !ui.isPanelEnabled(key));
-        self.go();
-    }
-
-    async function handleLogout() {
-        await goupile.logout();
         self.go();
     }
 
