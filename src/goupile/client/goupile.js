@@ -43,18 +43,18 @@ const goupile = new function() {
         if (navigator.serviceWorker != null) {
             if (ENV.cache_offline) {
                 let registration = await navigator.serviceWorker.register(`${ENV.base_url}sw.pk.js`);
-                let entry = new log.Entry;
+                let progress = new log.Entry;
 
                 if (registration.waiting) {
-                    entry.error('Fermez tous les onglets pour terminer la mise à jour');
+                    progress.error('Fermez tous les onglets pour terminer la mise à jour');
                 } else {
                     registration.addEventListener('updatefound', () => {
                         if (registration.active) {
-                            entry.progress('Mise à jour en cours, veuillez patienter');
+                            progress.progress('Mise à jour en cours, veuillez patienter');
 
                             registration.installing.addEventListener('statechange', e => {
                                 if (e.target.state === 'installed') {
-                                    entry.success('Mise à jour effectuée, l\'application va redémarrer');
+                                    progress.success('Mise à jour effectuée, l\'application va redémarrer');
                                     setTimeout(() => document.location.reload(), 3000);
                                 }
                             });
@@ -63,14 +63,14 @@ const goupile = new function() {
                 }
             } else {
                 let registration = await navigator.serviceWorker.getRegistration();
-                let entry = new log.Entry;
+                let progress = new log.Entry;
 
                 if (registration != null) {
-                    entry.progress('Mise à jour en cours, veuillez patienter');
+                    progress.progress('Nettoyage de l\'instance en cache, veuillez patienter');
 
                     await registration.unregister();
 
-                    entry.success('Mise à jour effectuée, l\'application va redémarrer');
+                    progress.success('Nettoyage effectué, l\'application va redémarrer');
                     setTimeout(() => document.location.reload(), 3000);
                 }
             }
