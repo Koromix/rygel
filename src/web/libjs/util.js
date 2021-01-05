@@ -394,17 +394,22 @@ const util = new function() {
                 let target = self.findParent(e.target, el => el.tagName === 'a' ||
                                                              el.tagName === 'A');
 
-                if (target && (target.tagName === 'A' || target.tagName === 'a') &&
-                        !target.getAttribute('download')) {
-                    let href = target.getAttribute('href');
-                    if (href) {
-                        if (!href.match(/^[a-z]+:/) && href[0] != '#') {
-                            func(e, href);
-                            e.preventDefault();
-                        }
-                    } else {
+                if (target == null)
+                    return;
+                if (target.getAttribute('download'))
+                    return;
+                if (target.getAttribute('target') == '_blank')
+                    return;
+
+                let href = target.getAttribute('href');
+
+                if (href) {
+                    if (!href.match(/^[a-z]+:/) && href[0] != '#') {
+                        func(e, href);
                         e.preventDefault();
                     }
+                } else {
+                    e.preventDefault();
                 }
             }
         });
