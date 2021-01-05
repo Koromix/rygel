@@ -577,6 +577,17 @@ const log = new function() {
 // Network
 // ------------------------------------------------------------------------
 
+function NetworkError() {
+    if (Error.captureStackTrace) {
+        Error.captureStackTrace(this, this.constructor);
+    } else {
+        this.stack = (new Error()).stack;
+    }
+    this.message = 'Request failure: network error';
+}
+NetworkError.prototype = new Error();
+NetworkError.prototype.name = 'NetworkError';
+
 const net = new function() {
     let self = this;
 
@@ -595,7 +606,7 @@ const net = new function() {
             return response;
         } catch (err) {
             self.setOnline(false);
-            throw new Error('Request failure: network error');
+            throw new NetworkError;
         }
     };
 
