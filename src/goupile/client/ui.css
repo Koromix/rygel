@@ -108,7 +108,7 @@ html.small .ui_toolbar button.icon {
 .ui_modal > form {
     display: block;
     position: absolute;
-    width: 300px;
+    min-width: 260px;
     max-width: 90%;
     padding: 16px;
     background: #f8f8f8;
