@@ -87,6 +87,7 @@ html.small .ui_toolbar button.icon {
     display: flex;
 }
 #ui_panels > div {
+    position: relative;
     flex: 1;
     overflow-y: auto;
 }
@@ -102,7 +103,7 @@ html.small .ui_toolbar button.icon {
     height: 100vh;
     justify-content: center;
     align-items: center;
-    background: rgba(255, 255, 255, 0.82);
+    background: rgba(255, 255, 255, 0.96);
 }
 .ui_modal.active { display: flex; }
 .ui_modal > form {
@@ -128,11 +129,11 @@ html.small .ui_toolbar button.icon {
 /* -------------------- Tables -------------------- */
 
 .ui_quick {
+    margin: 2px 0;
     color: #666;
 }
 .ui_quick > a {
     float: right;
-    color: inherit;
     text-decoration: none;
 }
 
@@ -151,6 +152,7 @@ html.small .ui_toolbar button.icon {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+.ui_table a { text-decoration: none; }
 .ui_table tr.active {
     background: #666;
     color: white;
@@ -162,7 +164,7 @@ html.small .ui_toolbar button.icon {
 .ui_actions {
     width: 60%;
     max-width: 340px;
-    margin: 32px auto 12px auto;
+    margin: 40px auto 0 auto;
 }
 .ui_actions:empty { display: none; }
 .ui_actions > button {
@@ -190,7 +192,7 @@ html.small .ui_toolbar button.icon {
     -ms-user-select: none;
 }
 
-.ui_log_entry {
+#ui_log > div {
     margin-bottom: 8px;
     padding: 10px;
     background: #373737;
@@ -200,10 +202,10 @@ html.small .ui_toolbar button.icon {
     filter: opacity(96%);
 }
 @media (hover: hover) {
-    .ui_log_entry:hover { filter: opacity(40%); }
+    #ui_log > div:hover { filter: opacity(40%); }
 }
-.ui_log_entry.success { background: #016a27; }
-.ui_log_entry.error { background: #db0a0a; }
+#ui_log > div.success { background: #016a27; }
+#ui_log > div.error { background: #db0a0a; }
 
 .ui_log_close {
     float: right;

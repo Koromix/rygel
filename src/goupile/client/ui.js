@@ -361,12 +361,12 @@ const ui = new function() {
             let msg = (entry.msg instanceof Error) ? entry.msg.message : entry.msg;
 
             if (entry.type === 'progress') {
-                return html`<div class="ui_log_entry progress">
+                return html`<div class="progress">
                     <div class="ui_log_spin"></div>
                     ${msg.split('\n').map(line => [line, html`<br/>`])}
                 </div>`;
             } else {
-                return html`<div class=${'ui_log_entry ' + entry.type} @click=${e => entry.close()}>
+                return html`<div class=${entry.type} @click=${e => entry.close()}>
                     <button class="ui_log_close">X</button>
                     ${msg.split('\n').map(line => [line, html`<br/>`])}
                 </div>`;

@@ -197,7 +197,7 @@ html:not(.small) .fm_widget.compact .fm_error {
     font-size: 0.9em;
     content: '';
 }
-.fm_enum > button:not(.active):hover {
+.fm_enum > button:not(.active):not(:disabled):hover {
     background: white;
     border-color: var(--page_color);
     color: black;

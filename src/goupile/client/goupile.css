@@ -55,16 +55,7 @@ button:not(.active):not(:disabled):hover {
     color: white;
 }
 
-.gp_tag {
-    display: inline-block;
-    padding: 0px 4px;
-    border-radius: 4px;
-    color: white;
-    font-size: 0.9em;
-    white-space: nowrap;
-}
-
-/* -------------------- Main screens -------------------- */
+/* -------------------- Misc -------------------- */
 
 #gp_logo {
     position: absolute;
@@ -72,6 +63,15 @@ button:not(.active):not(:disabled):hover {
     margin-top: -64px;
     width: 96px;
     height: 96px;
+}
+
+.gp_tag {
+    display: inline-block;
+    padding: 0px 4px;
+    border-radius: 4px;
+    color: white;
+    font-size: 0.9em;
+    white-space: nowrap;
 }
 
 .gp_wip {
