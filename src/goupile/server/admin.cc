@@ -212,7 +212,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
     // Create default files
     {
         sq_Statement stmt;
-        if (!db.Prepare(R"(INSERT INTO fs_files (active, path, mtime, blob, compression, sha256, size)
+        if (!db.Prepare(R"(INSERT INTO fs_files (active, url, mtime, blob, compression, sha256, size)
                            VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6);)", &stmt))
             return false;
 
@@ -221,7 +221,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
 
         for (const AssetInfo &asset: GetPackedAssets()) {
             if (StartsWith(asset.name, "src/goupile/demo/")) {
-                const char *path = Fmt(&temp_alloc, "/files/%1", asset.name + 17).ptr;
+                const char *url = Fmt(&temp_alloc, "/files/%1", asset.name + 17).ptr;
 
                 HeapArray<uint8_t> gzip;
                 char sha256[65];
@@ -251,7 +251,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
                 }
 
                 stmt.Reset();
-                sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 1, url, -1, SQLITE_STATIC);
                 sqlite3_bind_int64(stmt, 2, mtime);
                 sqlite3_bind_blob64(stmt, 3, gzip.ptr, gzip.len, SQLITE_STATIC);
                 sqlite3_bind_text(stmt, 4, "Gzip", -1, SQLITE_STATIC);
@@ -442,8 +442,16 @@ Options:
         if (!HashPassword(password, hash))
             return 1;
 
-        if (!domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, admin)
-                              VALUES (?1, ?2, 1);)", username, hash))
+        // Create passport key
+        char passport[64];
+        {
+            uint8_t buf[32];
+            randombytes_buf(&buf, RG_SIZE(buf));
+            sodium_bin2base64(passport, RG_SIZE(passport), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+        }
+
+        if (!domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, admin, passport)
+                              VALUES (?1, ?2, 1, ?3);)", username, hash, passport))
             return 1;
     }
 
