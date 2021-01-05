@@ -225,6 +225,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
 
                 HeapArray<uint8_t> gzip;
                 char sha256[65];
+                Size total_len = 0;
                 {
                     StreamReader reader(asset.data, "<asset>", asset.compression_type);
                     StreamWriter writer(&gzip, "<gzip>", CompressionType::Gzip);
@@ -237,6 +238,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
                         buf.len = reader.Read(buf.data);
                         if (buf.len < 0)
                             return false;
+                        total_len += buf.len;
 
                         writer.Write(buf);
                         crypto_hash_sha256_update(&state, buf.data, buf.len);
@@ -256,7 +258,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
                 sqlite3_bind_blob64(stmt, 3, gzip.ptr, gzip.len, SQLITE_STATIC);
                 sqlite3_bind_text(stmt, 4, "Gzip", -1, SQLITE_STATIC);
                 sqlite3_bind_text(stmt, 5, sha256, -1, SQLITE_STATIC);
-                sqlite3_bind_int64(stmt, 6, asset.data.len);
+                sqlite3_bind_int64(stmt, 6, total_len);
 
                 if (!stmt.Run())
                     return false;
