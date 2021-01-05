@@ -159,11 +159,21 @@ html.small .ui_toolbar button.icon {
 
 /* -------------------- Actions -------------------- */
 
-.ui_actions { margin-top: 2em; }
+.ui_actions {
+    width: 60%;
+    max-width: 340px;
+    margin: 32px auto 12px auto;
+}
+.ui_actions:empty { display: none; }
 .ui_actions > button {
     display: block;
-    margin: 1em auto 0 auto;
-    width: 200px;
+    width: 100%;
+}
+.ui_actions > button + button { margin-top: 6px; }
+.ui_actions > hr {
+    border: none;
+    border-top: 1px solid #efefef;
+    border-top-width: 0.5px;
 }
 
 /* -------------------- Notifications -------------------- */

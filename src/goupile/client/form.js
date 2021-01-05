@@ -42,7 +42,7 @@ function FormModel() {
     this.render = function() {
         return html`
             <div class="fm_main">${self.renderWidgets()}</div>
-            <div class="fm_actions">${self.renderActions()}</div>
+            <div class="ui_actions">${self.renderActions()}</div>
         `;
     };
     this.renderWidgets = function() { return self.widgets0.map(intf => intf.render()); };
