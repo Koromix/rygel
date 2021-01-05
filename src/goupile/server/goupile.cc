@@ -42,6 +42,8 @@ static void InitAssets()
             assets_for_cache.Append("/");
         } else if (TestStr(asset.name, "src/goupile/client/sw.pk.js")) {
             assets_map.Set("/sw.pk.js", &asset);
+        } else if (TestStr(asset.name, "src/goupile/client/manifest.json")) {
+            assets_map.Set("/manifest.json", &asset);
         } else if (TestStr(asset.name, "src/goupile/client/images/favicon.png")) {
             assets_map.Set("/favicon.png", &asset);
             assets_for_cache.Append("/favicon.png");
@@ -165,6 +167,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         json.Key("base_url"); json.String("/admin/");
                         json.Key("title"); json.String("Goupile Admin");
                         json.EndObject();
+                    } else if (TestStr(key, "HEAD_TAGS")) {
+                        // Nothing to add
                     } else {
                         Print(writer, "{%1}", key);
                     }
@@ -227,7 +231,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
             const AssetInfo *asset = assets_map.FindValue(instance_path, nullptr);
 
-            if (TestStr(instance_path, "/") || TestStr(instance_path, "/sw.pk.js")) {
+            if (TestStr(instance_path, "/") || TestStr(instance_path, "/sw.pk.js") ||
+                                               TestStr(instance_path, "/manifest.json")) {
                 RG_ASSERT(asset);
 
                 // XXX: Use some kind of dynamic cache to avoid doing this all the time
@@ -251,6 +256,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                             json.Key("cache_key"); json.String(Fmt(buf, "%1_%2", etag, instance->unique).ptr);
                         }
                         json.EndObject();
+                    } else if (TestStr(key, "HEAD_TAGS")) {
+                        if (instance->config.use_offline) {
+                            Print(writer, "<link rel=\"manifest\" href=\"/%1/manifest.json\"/>", instance->key);
+                        }
                     } else {
                         Print(writer, "{%1}", key);
                     }
