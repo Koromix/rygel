@@ -186,7 +186,7 @@ function InstanceController() {
         self.go();
     }
 
-    this.go = async function(url = null) {
+    this.go = async function(url = null, push_history = true) {
         await goupile.syncProfile();
         if (!goupile.isAuthorized())
             await goupile.runLogin();
@@ -222,11 +222,11 @@ function InstanceController() {
             let url = makePageURL(page_key);
             let filename = getPageFileName(page_key);
 
-            goupile.syncHistory(url);
+            goupile.syncHistory(url, push_history);
 
             page_code = await fetchCode(filename);
         } else {
-            goupile.syncHistory(ENV.base_url);
+            goupile.syncHistory(ENV.base_url, push_history);
             page_code = null;
         }
         if (page_state == null) {
@@ -236,8 +236,9 @@ function InstanceController() {
 
         // Sync editor (if needed)
         if (ui.isPanelEnabled('editor')) {
-            if (editor_filename == null)
+            if (editor_filename == null || editor_filename.startsWith('pages/'))
                 editor_filename = (page_key != null) ? getPageFileName(page_key) : 'main.js';
+
             await syncEditor();
         }
 

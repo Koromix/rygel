@@ -25,9 +25,19 @@ const goupile = new function() {
         } else {
             controller = new InstanceController;
         }
-
         await controller.start();
+
+        initNavigation();
     };
+
+    function initNavigation() {
+        window.addEventListener('popstate', e => controller.go(window.location.href, false));
+
+        util.interceptLocalAnchors((e, href) => {
+            controller.go(href);
+            e.preventDefault();
+        });
+    }
 
     async function registerSW() {
         if (navigator.serviceWorker != null) {

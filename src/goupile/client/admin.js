@@ -115,7 +115,7 @@ function AdminController() {
         ui.setPanelState('instances', true);
     }
 
-    this.go = async function(url = null) {
+    this.go = async function(url = null, push_history = true) {
         await goupile.syncProfile();
         if (!goupile.isAuthorized())
             await goupile.runLogin();
