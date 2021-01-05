@@ -8,8 +8,8 @@ self.addEventListener('install', e => {
     e.waitUntil(async function() {
         if (ENV.cache_offline) {
             let [assets, files, cache] = await Promise.all([
-                net.fetch(`${ENV.base_url}api/files/static`).then(response => response.json()),
-                net.fetch(`${ENV.base_url}api/files/list`).then(response => response.json()),
+                fetch(`${ENV.base_url}api/files/static`).then(response => response.json()),
+                fetch(`${ENV.base_url}api/files/list`).then(response => response.json()),
                 caches.open(ENV.cache_key)
             ]);
 
@@ -42,12 +42,12 @@ self.addEventListener('fetch', e => {
             let path = url.pathname.substr(ENV.base_url.length - 1);
 
             if (path.startsWith('/main/')) {
-                return await caches.match(ENV.base_url) || await net.fetch(ENV.base_url);
+                return await caches.match(ENV.base_url) || await fetch(ENV.base_url);
             } else {
-                return await caches.match(e.request) || await net.fetch(e.request);
+                return await caches.match(e.request) || await fetch(e.request);
             }
         }
 
-        return await net.fetch(e.request);
+        return await fetch(e.request);
     }());
 });
