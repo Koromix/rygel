@@ -185,6 +185,18 @@ const indexeddb = new function() {
             });
         };
 
+        this.count = function(where, range = undefined) {
+            let [store, index] = where.split('/');
+
+            return executeQuery('readonly', store, (t, resolve, reject) => {
+                let obj = openStoreOrIndex(t, store, index);
+                let req = obj.count();
+
+                req.onsuccess = e => resolve(e.target.result);
+                req.onerror = e => logAndReject(reject, e.target.error);
+            });
+        };
+
         this.delete = function(store, key) {
             return executeQuery('readwrite', store, (t, resolve, reject) => {
                 let obj = t.objectStore(store);
