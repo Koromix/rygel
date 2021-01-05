@@ -14,7 +14,9 @@ html.instance {
 .ins_panel + .ins_panel { border-left: 1px solid #dfdfdf; }
 
 #ins_form {
-    max-width: 960px;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 980px;
     margin: 0 auto;
     background: #f8f8f8;
     border: 1em solid white;
