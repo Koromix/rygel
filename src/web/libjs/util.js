@@ -463,30 +463,6 @@ const util = new function() {
             return p;
         };
     };
-
-    this.bytesToString = function(bytes) {
-        let str = '';
-        for (let i = 0; i < bytes.byteLength; i++)
-            str += String.fromCharCode(bytes[i]);
-        return str;
-    };
-
-    this.stringToBytes = function(str) {
-        let bytes = new Uint8Array(str.length);
-        for (let i = 0; i < str.length; i++)
-            bytes[i] = str.charCodeAt(i);
-        return bytes;
-    };
-
-    this.base64ToBytes = function(b64) {
-        let str = window.atob(b64);
-        return self.stringToBytes(str);
-    };
-
-    this.bytesToBase64 = function(bytes) {
-        let str = self.bytesToString(bytes);
-        return window.btoa(str);
-    };
 };
 
 // ------------------------------------------------------------------------

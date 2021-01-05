@@ -111,45 +111,74 @@ const goupile = new function() {
         });
     };
 
-    this.login = async function(username, password) {
+    this.login = function(username, password) {
         let progress = log.progress('Connexion en cours');
+        return login(username, password, progress, true);
+    };
 
+    async function login(username, password, progress, retry) {
         try {
-            let query = new URLSearchParams;
-            query.set('username', username.toLowerCase());
-            query.set('password', password);
+            if (net.isOnline() || !ENV.cache_offline) {
+                let query = new URLSearchParams;
+                query.set('username', username.toLowerCase());
+                query.set('password', password);
 
-            let response = await net.fetch(`${ENV.base_url}api/user/login`, {
-                method: 'POST',
-                body: query
-            });
+                let response = await net.fetch(`${ENV.base_url}api/user/login`, {
+                    method: 'POST',
+                    body: query
+                });
 
-            if (response.ok) {
-                profile = await response.json();
-                session_rnd = util.getCookie('session_rnd');
-                passport = (profile.passport != null) ? util.base64ToBytes(profile.passport) : null;
+                if (response.ok) {
+                    profile = await response.json();
+                    session_rnd = util.getCookie('session_rnd');
+                    passport = (profile.passport != null) ? base64ToBytes(profile.passport) : null;
 
-                // Save for offline login
-                {
-                    let salt = nacl.randomBytes(24);
-                    let key = await deriveKey(password, salt);
+                    // Save for offline login
+                    {
+                        let salt = nacl.randomBytes(24);
+                        let key = await deriveKey(password, salt);
 
-                    let enc = await encrypt(profile, key);
+                        let enc = await encrypt(profile, key);
 
-                    await db.saveWithKey('usr_profiles', username, {
-                        salt: util.bytesToBase64(salt),
-                        profile: enc
-                    });
+                        await db.saveWithKey('usr_profiles', username, {
+                            salt: bytesToBase64(salt),
+                            profile: enc
+                        });
+                    }
+
+                    progress.success('Connexion réussie');
+                } else {
+                    let err = (await response.text()).trim();
+                    throw new Error(err);
                 }
+            } else if (ENV.cache_offline) {
+                // Instantaneous login feels weird
+                await util.waitFor(800);
 
-                progress.success('Connexion réussie');
-            } else {
-                let err = (await response.text()).trim();
-                throw new Error(err);
+                let enc = await db.load('usr_profiles', username);
+                if (enc == null)
+                    throw new Error('Profil hors ligne inconnu');
+
+                let key = await deriveKey(password, base64ToBytes(enc.salt));
+
+                try {
+                    profile = await decrypt(enc.profile, key);
+                    session_rnd = util.getCookie('session_rnd');
+                    passport = (profile.passport != null) ? base64ToBytes(profile.passport) : null;
+
+                    progress.success('Connexion réussie (hors ligne)');
+                } catch (err) {
+                    // throw new Error('Mot de passe hors ligne non reconnu');
+                    throw err;
+                }
             }
         } catch (err) {
-            progress.close();
-            throw err;
+            if ((err instanceof NetworkError) && retry) {
+                return login(username, password, progress, false);
+            } else {
+                progress.close();
+                throw err;
+            }
         }
     }
 
@@ -188,15 +217,21 @@ const goupile = new function() {
         }
     }
 
+    // XXX: Exponential backoff
     this.syncProfile = async function() {
         let new_rnd = util.getCookie('session_rnd');
 
         if (new_rnd !== session_rnd) {
-            let response = await net.fetch(`${ENV.base_url}api/user/profile`);
+            try {
+                let response = await net.fetch(`${ENV.base_url}api/user/profile`);
 
-            profile = await response.json();
-            session_rnd = util.getCookie('session_rnd');
-            passport = (profile.passport != null) ? util.base64ToBytes(profile.passport) : null;
+                profile = await response.json();
+                session_rnd = util.getCookie('session_rnd');
+                passport = (profile.passport != null) ? base64ToBytes(profile.passport) : null;
+            } catch (err) {
+                if (!ENV.cache_offline)
+                    throw err;
+            }
         }
     };
 
@@ -232,25 +267,25 @@ const goupile = new function() {
         crypto.getRandomValues(nonce);
 
         let json = JSON.stringify(obj);
-        let message = util.stringToBytes(json);
+        let message = base64ToBytes(window.btoa(json));
         let box = nacl.secretbox(message, nonce, key);
 
         let enc = {
-            nonce: util.bytesToBase64(nonce),
-            box: util.bytesToBase64(box)
+            nonce: bytesToBase64(nonce),
+            box: bytesToBase64(box)
         };
         return enc;
     }
 
     async function decrypt(enc, key) {
-        let nonce = util.base64ToBytes(enc.nonce);
-        let box = util.base64ToBytes(enc.box);
+        let nonce = base64ToBytes(enc.nonce);
+        let box = base64ToBytes(enc.box);
 
         let message = nacl.secretbox.open(box, nonce, key);
         if (message == null)
             throw new Error('Failed to decrypt message: wrong key?');
 
-        let json = util.bytesToString(message);
+        let json = window.atob(bytesToBase64(message));
         let obj = JSON.parse(json);
 
         return obj;
