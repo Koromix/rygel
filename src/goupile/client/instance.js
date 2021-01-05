@@ -50,13 +50,8 @@ function InstanceController() {
         document.documentElement.className = 'instance';
 
         ui.setMenu(() => html`
-            <div class="drop">
-                <button class="icon" style="background-position-y: calc(-538px + 1.2em);">${ENV.title}</button>
-                <div>
-                    <button>A</button>
-                    <button>B</button>
-                </div>
-            </div>
+            <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
+                    @click=${e => self.go(ENV.base_url)}>${ENV.title}</button>
             <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
                     style="background-position-y: calc(-274px + 1.2em);"
                     @click=${e => togglePanel('editor')}>Éditeur</button>
