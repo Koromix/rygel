@@ -11,7 +11,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 23;
+const int InstanceVersion = 24;
 
 static std::atomic_int64_t next_unique;
 
@@ -766,9 +766,20 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 23: {
+                bool success = db->Run(R"(
+                    DROP INDEX fs_files_ua;
+                    ALTER TABLE fs_files RENAME COLUMN url TO filename;
+                    UPDATE fs_files SET filename = SUBSTR(filename, 8);
+                    CREATE INDEX fs_files_fa ON fs_files (filename, active);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 23);
+            RG_STATIC_ASSERT(InstanceVersion == 24);
         }
 
         int64_t time = GetUnixTime();

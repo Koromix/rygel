@@ -2,6 +2,8 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/* -------------------- Layout -------------------- */
+
 html.instance {
     --menu_color: #24579d;
     --page_color: #ef6000;
@@ -21,4 +23,60 @@ html.instance {
     background: #f8f8f8;
     border: 1em solid white;
     padding: 1em;
+}
+
+#ins_notice {
+    position: sticky;
+    left: calc(50% - 160px);
+    bottom: 0;
+    width: 320px;
+    padding: 3px 6px;
+    background: #db0a0a;
+    color: white;
+    text-align: center;
+    z-index: 9999999;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+#ins_notice::before {
+    content: '⚠\FE0E';
+    padding-right: 3px;
+}
+@media (hover: hover) {
+    #ins_notice:hover { filter: opacity(20%); }
+}
+
+/* -------------------- Deploy dialog -------------------- */
+
+.ins_deploy td.actions { text-align: center; }
+.ins_deploy td.actions > a { padding: 0 6px 0 6px; }
+.ins_deploy td.actions > a.active {
+    background: var(--page_color);
+    border-radius: 50%;
+    color: white;
+    pointer-events: none;
+}
+
+.ins_deploy td.path { text-align: left; }
+.ins_deploy td.path.overwrite {
+    color: red;
+    font-style: italic;
+}
+.ins_deploy td.path.delete {
+    font-style: italic;
+    text-decoration: line-through;
+}
+.ins_deploy td.path.virtual { opacity: 0.4; }
+.ins_deploy td.path.none { opacity: 0; }
+
+.ins_deploy td.size {
+    color: #999;
+    text-align: right;
+    font-style: italic;
+}
+.ins_deploy span.conflict {
+    font-style: normal;
+    color: red;
 }

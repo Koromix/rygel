@@ -13,10 +13,8 @@ self.addEventListener('install', e => {
                 caches.open(ENV.cache_key)
             ]);
 
-            let prefix = ENV.base_url.substr(0, ENV.base_url.length - 1);
-
-            await cache.addAll(assets.map(url => `${prefix}${url}`));
-            await cache.addAll(files.map(file => `${prefix}${file.url}`));
+            await cache.addAll(assets.map(url => `${ENV.base_url}${url}`));
+            await cache.addAll(files.map(file => `${ENV.base_url}files/${file.filename}`));
         }
 
         await self.skipWaiting();

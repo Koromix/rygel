@@ -212,7 +212,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
     // Create default files
     {
         sq_Statement stmt;
-        if (!db.Prepare(R"(INSERT INTO fs_files (active, url, mtime, blob, compression, sha256, size)
+        if (!db.Prepare(R"(INSERT INTO fs_files (active, filename, mtime, blob, compression, sha256, size)
                            VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6);)", &stmt))
             return false;
 
@@ -221,7 +221,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
 
         for (const AssetInfo &asset: GetPackedAssets()) {
             if (StartsWith(asset.name, "src/goupile/demo/")) {
-                const char *url = Fmt(&temp_alloc, "/files/%1", asset.name + 17).ptr;
+                const char *filename = asset.name + 17;
 
                 HeapArray<uint8_t> gzip;
                 char sha256[65];
@@ -253,7 +253,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
                 }
 
                 stmt.Reset();
-                sqlite3_bind_text(stmt, 1, url, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
                 sqlite3_bind_int64(stmt, 2, mtime);
                 sqlite3_bind_blob64(stmt, 3, gzip.ptr, gzip.len, SQLITE_STATIC);
                 sqlite3_bind_text(stmt, 4, "Gzip", -1, SQLITE_STATIC);

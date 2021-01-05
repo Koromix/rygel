@@ -97,7 +97,8 @@ static void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &r
 
     json.StartArray();
     for (const char *url: assets_for_cache) {
-        json.String(url);
+        // Skip the leading slash
+        json.String(url + 1);
     }
     json.EndArray();
 
