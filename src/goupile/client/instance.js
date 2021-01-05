@@ -58,9 +58,9 @@ function InstanceController() {
             <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
                     style="background-position-y: calc(-274px + 1.2em);"
                     @click=${e => togglePanel('editor')}>Éditeur</button>
-            <button class=${'icon' + (ui.isPanelEnabled('form') ? ' active' : '')}
+            <button class=${'icon' + (ui.isPanelEnabled('page') ? ' active' : '')}
                     style="background-position-y: calc(-318px + 1.2em);"
-                    @click=${e => togglePanel('form')}>Formulaire</button>
+                    @click=${e => togglePanel('page')}>Page</button>
             <div style="flex: 1;"></div>
             <div class="drop right">
                 <button>${profile.username}</button>
@@ -99,7 +99,7 @@ function InstanceController() {
             `;
         });
 
-        ui.createPanel('form', true, () => {
+        ui.createPanel('page', true, () => {
             let model = new FormModel;
             let builder = new FormBuilder(page_state, model);
 
