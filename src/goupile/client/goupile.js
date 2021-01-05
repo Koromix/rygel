@@ -2,12 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+// Global variables
+let profile = {};
+let db;
+
 const goupile = new function() {
     let self = this;
 
-    let db;
-
-    let profile = {};
     let session_rnd;
     let passport;
 
@@ -236,7 +237,6 @@ const goupile = new function() {
     };
 
     this.isAuthorized = function() { return !!profile.username; };
-    this.getUserName = function() { return profile.username; };
 
     this.syncHistory = function(url, push = true) {
         if (push && current_url != null && url !== current_url) {

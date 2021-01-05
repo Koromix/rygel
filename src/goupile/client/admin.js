@@ -26,7 +26,7 @@ function AdminController() {
                     @click=${e => togglePanel('users')}>Utilisateurs</button>
             <div style="flex: 1;"></div>
             <div class="drop right">
-                <button>${goupile.getUserName()}</button>
+                <button>${profile.username}</button>
                 <div>
                     <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
                 </div>
