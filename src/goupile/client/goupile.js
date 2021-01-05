@@ -7,7 +7,7 @@ const goupile = new function() {
 
     let db;
 
-    let session_profile = {};
+    let profile = {};
     let session_rnd;
     let passport;
 
@@ -113,16 +113,16 @@ const goupile = new function() {
             });
 
             if (response.ok) {
-                session_profile = await response.json();
+                profile = await response.json();
                 session_rnd = util.getCookie('session_rnd');
-                passport = (session_profile.passport != null) ? util.base64ToBytes(session_profile.passport) : null;
+                passport = (profile.passport != null) ? util.base64ToBytes(profile.passport) : null;
 
                 // Save for offline login
                 {
                     let salt = nacl.randomBytes(24);
                     let key = await deriveKey(password, salt);
 
-                    let enc = await encrypt(session_profile, key);
+                    let enc = await encrypt(profile, key);
 
                     await db.saveWithKey('usr_profiles', username, {
                         salt: util.bytesToBase64(salt),
@@ -160,7 +160,7 @@ const goupile = new function() {
             let response = await net.fetch(`${ENV.base_url}api/user/logout`, {method: 'POST'})
 
             if (response.ok) {
-                session_profile = {};
+                profile = {};
                 session_rnd = undefined;
                 passport = undefined;
 
@@ -181,16 +181,15 @@ const goupile = new function() {
 
         if (new_rnd !== session_rnd) {
             let response = await net.fetch(`${ENV.base_url}api/user/profile`);
-            let profile = await response.json();
 
-            session_profile = profile;
+            profile = await response.json();
             session_rnd = util.getCookie('session_rnd');
-            passport = (session_profile.passport != null) ? util.base64ToBytes(session_profile.passport) : null;
+            passport = (profile.passport != null) ? util.base64ToBytes(profile.passport) : null;
         }
     };
 
-    this.isAuthorized = function() { return !!session_profile.username; };
-    this.getUserName = function() { return session_profile.username; };
+    this.isAuthorized = function() { return !!profile.username; };
+    this.getUserName = function() { return profile.username; };
 
     this.syncHistory = function(url, push = true) {
         if (push && current_url != null && url !== current_url) {
