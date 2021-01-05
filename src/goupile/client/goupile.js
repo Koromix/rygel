@@ -39,14 +39,16 @@ const goupile = new function() {
                     entry.error('Fermez tous les onglets pour terminer la mise à jour');
                 } else {
                     registration.addEventListener('updatefound', () => {
-                        entry.progress('Mise à jour en cours, veuillez patienter');
+                        if (registration.active) {
+                            entry.progress('Mise à jour en cours, veuillez patienter');
 
-                        registration.installing.addEventListener('statechange', e => {
-                            if (e.target.state === 'installed') {
-                                entry.success('Mise à jour effectuée, l\'application va redémarrer');
-                                setTimeout(() => document.location.reload(), 3000);
-                            }
-                        });
+                            registration.installing.addEventListener('statechange', e => {
+                                if (e.target.state === 'installed') {
+                                    entry.success('Mise à jour effectuée, l\'application va redémarrer');
+                                    setTimeout(() => document.location.reload(), 3000);
+                                }
+                            });
+                        }
                     });
                 }
             } else {
