@@ -177,8 +177,7 @@ const goupile = new function() {
 
                     progress.success('Connexion réussie (hors ligne)');
                 } catch (err) {
-                    // throw new Error('Mot de passe hors ligne non reconnu');
-                    throw err;
+                    throw new Error('Mot de passe hors ligne non reconnu');
                 }
             }
         } catch (err) {
