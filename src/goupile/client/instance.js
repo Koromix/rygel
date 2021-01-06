@@ -778,7 +778,7 @@ function InstanceController() {
                         filename: filename.value,
                         size: file.value.size,
                         sha256: await computeSha256(filename.value),
-                        blob: filename.value
+                        blob: file.value
                     })
 
                     let buffer = editor_buffers.get(file.filename);
