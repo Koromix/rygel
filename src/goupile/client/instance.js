@@ -172,8 +172,13 @@ function InstanceController() {
                 });
                 page_meta.hid = meta.hid;
 
+                builder.errorList();
+
                 if (model.variables.length) {
-                    builder.action('Enregistrer', {}, saveRecord);
+                    builder.action('Enregistrer', {}, () => {
+                        if (builder.triggerErrors())
+                            return saveRecord();
+                    });
                     builder.action('-');
                     builder.action('Nouveau', {disabled: !page_state.hasChanged()}, () => {
                         page_ulid = null;
