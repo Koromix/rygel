@@ -6,16 +6,14 @@ let ENV = {ENV_JSON};
 
 self.addEventListener('install', e => {
     e.waitUntil(async function() {
-        if (ENV.cache_offline) {
-            let [assets, files, cache] = await Promise.all([
-                fetch(`${ENV.base_url}api/files/static`).then(response => response.json()),
-                fetch(`${ENV.base_url}api/files/list`).then(response => response.json()),
-                caches.open(ENV.cache_key)
-            ]);
+        let [assets, files, cache] = await Promise.all([
+            fetch(`${ENV.base_url}api/files/static`).then(response => response.json()),
+            fetch(`${ENV.base_url}api/files/list`).then(response => response.json()),
+            caches.open(ENV.cache_key)
+        ]);
 
-            await cache.addAll(assets.map(url => `${ENV.base_url}${url}`));
-            await cache.addAll(files.map(file => `${ENV.base_url}files/${file.filename}`));
-        }
+        await cache.addAll(assets.map(url => `${ENV.base_url}${url}`));
+        await cache.addAll(files.map(file => `${ENV.base_url}files/${file.filename}`));
 
         await self.skipWaiting();
     }());
@@ -43,6 +41,27 @@ self.addEventListener('fetch', e => {
                 return await caches.match(ENV.base_url) || await fetch(ENV.base_url);
             } else {
                 return await caches.match(e.request) || await fetch(e.request);
+            }
+        }
+
+        // Update cached files after deploy
+        if (e.request.method === 'PUT' || e.request.method === 'DELETE') {
+            let prefix = `${ENV.base_url}files/`;
+
+            if (url.pathname.startsWith(prefix)) {
+                let response = await fetch(e.request);
+
+                if (response.ok) {
+                    let cache = await caches.open(ENV.cache_key);
+
+                    if (e.request.method === 'PUT') {
+                        await cache.add(url.pathname);
+                    } else {
+                        await cache.delete(url.pathname);
+                    }
+                }
+
+                return response;
             }
         }
 
