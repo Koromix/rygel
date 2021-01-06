@@ -167,7 +167,8 @@ function InstanceController() {
                     </table>
 
                     <div class="ui_actions">
-                        <button @click=${newRecord}>Créer un nouvel enregistrement</button>
+                        <button @click=${newRecord}
+                                ?disabled=${!page_meta.version}>Créer un nouvel enregistrement</button>
                     </div>
                 </div>
             `;
@@ -191,12 +192,18 @@ function InstanceController() {
                 builder.errorList();
 
                 if (model.variables.length) {
-                    builder.action('Enregistrer', {}, () => {
+                    let enable_save = !model.hasErrors() && page_state.hasChanged();
+
+                    builder.action('Enregistrer', {disabled: !enable_save}, () => {
                         if (builder.triggerErrors())
                             return saveRecord();
                     });
                     builder.action('-');
-                    builder.action('Nouveau', {disabled: !page_state.hasChanged()}, newRecord);
+                    if (page_meta.version > 0) {
+                        builder.action('Nouveau', {}, newRecord);
+                    } else {
+                        builder.action('Réinitialiser', {disabled: !page_state.hasChanged()}, newRecord);
+                    }
                 }
             } catch (err) {
                 error = err;
