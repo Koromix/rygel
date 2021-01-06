@@ -271,19 +271,21 @@ function InstanceController() {
 
             d.output(html`
                 <table class="ui_table">
-                    ${util.mapRange(0, page_meta.fragments.length, idx => {
-                        let version = page_meta.fragments.length - idx;
-                        let fragment = page_meta.fragments[version - 1];
-                        let url = makePageURL(fragment.page) + `/${ulid}/${version}`;
+                    <tbody>
+                        ${util.mapRange(0, page_meta.fragments.length, idx => {
+                            let version = page_meta.fragments.length - idx;
+                            let fragment = page_meta.fragments[version - 1];
+                            let url = makePageURL(fragment.page) + `/${ulid}/${version}`;
 
-                        return html`
-                            <tr class=${version === page_meta.version ? 'active' : ''}>
-                                <td><a href=${url}>🔍\uFE0E</a></td>
-                                <td>${fragment.user}</td>
-                                <td>${fragment.mtime.toLocaleString()}</td>
-                            </tr>
-                        `;
-                    })}
+                            return html`
+                                <tr class=${version === page_meta.version ? 'active' : ''}>
+                                    <td><a href=${url}>🔍\uFE0E</a></td>
+                                    <td>${fragment.user}</td>
+                                    <td>${fragment.mtime.toLocaleString()}</td>
+                                </tr>
+                            `;
+                        })}
+                    </tbody>
                 </table>
             `);
         });
