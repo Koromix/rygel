@@ -13,7 +13,6 @@ html.instance {
     display: flex;
     flex-direction: column;
 }
-.ins_panel + .ins_panel { border-left: 1px solid #dfdfdf; }
 
 #ins_page {
     box-sizing: border-box;
