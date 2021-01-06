@@ -855,6 +855,8 @@ function InstanceController() {
 
                         page_key = key;
                         if (ulid && ulid !== page_ulid) {
+                            if (ulid === 'new')
+                                ulid = null;
                             page_ulid = ulid;
                             page_version = null;
                         }
