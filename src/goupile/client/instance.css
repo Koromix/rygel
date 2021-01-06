@@ -23,16 +23,6 @@ html.instance {
     padding: 1em;
 }
 
-#ins_form > .ui_actions {
-    position: fixed;
-    display: inline-block;
-    left: calc(50% + 480px);
-    top: calc(2.5em + 11px + 1em);
-    width: auto;
-    margin-top: 0;
-    z-index: 999;
-}
-
 #ins_notice {
     position: sticky;
     left: calc(50% - 160px);
