@@ -37,6 +37,7 @@ function AdminController() {
             <div class="adm_panel" style="background: #f8f8f8;">
                 <div class="ui_quick">
                     Instances
+                    <div style="flex: 1;"></div>
                     <a @click=${ui.wrapAction(e => { instances = null; return self.go(); })}>🗘</a>
                 </div>
 
@@ -69,6 +70,7 @@ function AdminController() {
             <div class="adm_panel" style="flex-grow: 1.5;">
                 <div class="ui_quick">
                     Utilisateurs
+                    <div style="flex: 1;"></div>
                     <a @click=${ui.wrapAction(e => { users = null; return self.go(); })}>🗘</a>
                 </div>
 
@@ -90,7 +92,7 @@ function AdminController() {
                                     ${selected_instance != null ? html`
                                         <td>
                                             ${permissions.map(perm =>
-                                                html`<span class="gp_tag" style="background: #666;">${perm}</span> `)}
+                                                html`<span class="gp_tag" style="background: #777;">${perm}</span> `)}
                                             &nbsp;&nbsp;&nbsp;
                                             <a role="button" tabindex="0"
                                                @click=${ui.wrapAction(e => runAssignUserDialog(e, selected_instance, user.username,

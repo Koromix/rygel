@@ -266,6 +266,7 @@ function InstanceController() {
             d.output(html`
                 <div class="ui_quick">
                     ${modifications || 'Aucune'} ${modifications.length > 1 ? 'modifications' : 'modification'} à effectuer
+                    <div style="flex: 1;"></div>
                     <a @click=${ui.wrapAction(e => { users = null; return self.go(); })}>🗘</a>
                 </div>
 
@@ -322,6 +323,7 @@ function InstanceController() {
                 </table>
 
                 <div class="ui_quick">
+                    <div style="flex: 1;"></div>
                     <a @click=${ui.wrapAction(runAddFileDialog)}>Ajouter un fichier</a>
                 </div>
             `);

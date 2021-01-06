@@ -129,13 +129,12 @@ html.small .ui_toolbar button.icon {
 /* -------------------- Tables -------------------- */
 
 .ui_quick {
+    display: flex;
     margin: 2px 0;
-    color: #666;
+    font-size: 0.9em;
+    color: #777;
 }
-.ui_quick > a {
-    float: right;
-    text-decoration: none;
-}
+.ui_quick > a { text-decoration: none; }
 
 .ui_table {
     width: 100%;
@@ -154,7 +153,7 @@ html.small .ui_toolbar button.icon {
 }
 .ui_table a { text-decoration: none; }
 .ui_table tr.active {
-    background: #666;
+    background: #777;
     color: white;
 }
 .ui_table tr.active a { color: inherit; }
@@ -164,12 +163,13 @@ html.small .ui_toolbar button.icon {
 .ui_actions {
     width: 60%;
     max-width: 340px;
-    margin: 40px auto 0 auto;
+    margin: 32px auto 0 auto;
 }
 .ui_actions:empty { display: none; }
 .ui_actions > button {
     display: block;
     width: 100%;
+    padding: 0.3em 22px;
 }
 .ui_actions > button + button { margin-top: 6px; }
 .ui_actions > hr {
