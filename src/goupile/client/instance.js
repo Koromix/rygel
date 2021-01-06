@@ -175,8 +175,10 @@ function InstanceController() {
         });
 
         ui.createPanel('page', true, () => {
+            let readonly = (page_meta.version < page_meta.fragments.length);
+
             let model = new FormModel;
-            let builder = new FormBuilder(page_state, model);
+            let builder = new FormBuilder(page_state, model, readonly);
 
             let error;
             try {
@@ -220,8 +222,11 @@ function InstanceController() {
                             `  : ''}
                             <div style="flex: 1;"></div>
                             ${page_meta.version > 0 ? html`
-                                Version ${page_meta.version}
-                                (<a @click=${ui.wrapAction(e => runTrailDialog(e, page_meta.ulid))}>historique</a>)
+                                ${page_meta.version < page_meta.fragments.length ?
+                                    html`<span style="color: red;">Ancienne version du ${page_meta.mtime.toLocaleString()}</span>` : ''}
+                                ${page_meta.version === page_meta.fragments.length ? html`<span>Version actuelle</span>` : ''}
+
+                                &nbsp;(<a @click=${ui.wrapAction(e => runTrailDialog(e, page_meta.ulid))}>historique</a>)
                             ` : ''}
                         </div>
 
@@ -351,6 +356,7 @@ function InstanceController() {
                         ulid: record.ulid,
                         hid: record.hid,
                         version: page_version,
+                        mtime: fragments[fragments.length - 1].mtime,
                         fragments: fragments,
                         status: new Set(fragments.map(fragment => fragment.page))
                     };
@@ -375,6 +381,7 @@ function InstanceController() {
                 ulid: page_ulid,
                 hid: null,
                 version: 0,
+                mtime: null,
                 fragments: [],
                 status: new Set()
             };
