@@ -147,17 +147,23 @@ html.small .ui_toolbar button.icon {
 .ui_table {
     width: 100%;
     border-collapse: collapse;
-    border: 0;
+    border: 1px solid #dfdfdf;
 }
-.ui_table tr:nth-child(2n + 1) { background: #f8f8f8; }
-.ui_table tr:nth-child(2n) { background: white; }
-.ui_table td {
+.ui_table thead th { background: #f8f8f8; }
+.ui_table tbody tr:nth-child(2n + 1) { background: #f8f8f8; }
+.ui_table tbody tr:nth-child(2n) { background: white; }
+.ui_table th, .ui_table td {
     padding: 3px 6px;
     border: 1px solid #dfdfdf;
     text-align: center;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+.ui_table th { border: 0; }
+.ui_table td.missing {
+    font-style: italic;
+    color: #cbcbcb;
 }
 .ui_table a { text-decoration: none; }
 .ui_table tr.active {

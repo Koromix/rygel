@@ -14,6 +14,8 @@ function InstanceController() {
     let page_state;
     let page_meta;
 
+    let data_rows;
+
     let editor_el;
     let editor_ace;
     let editor_filename;
@@ -62,6 +64,9 @@ function InstanceController() {
             <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
                     style="background-position-y: calc(-230px + 1.2em);"
                     @click=${e => togglePanel('editor')}>Code</button>
+            <button class=${'icon' + (ui.isPanelEnabled('data') ? ' active' : '')}
+                    style="background-position-y: calc(-274px + 1.2em);"
+                    @click=${e => togglePanel('data')}>Suivi</button>
             <button class=${'icon' + (ui.isPanelEnabled('page') ? ' active' : '')}
                     style="background-position-y: calc(-318px + 1.2em);"
                     @click=${e => togglePanel('page')}>Page</button>
@@ -99,6 +104,56 @@ function InstanceController() {
                     </div>
 
                     ${editor_el}
+                </div>
+            `;
+        });
+
+        ui.createPanel('data', false, () => {
+            return html`
+                <div class="padded" style="background: #f8f8f8;">
+                    <div class="ui_quick">
+                        ${data_rows.length || 'Aucune'} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
+                        <div style="flex: 1;"></div>
+                        <a @click=${ui.wrapAction(e => { data_rows = null; return self.go(); })}>🗘</a>
+                    </div>
+
+                    <table class="ui_table" id="ins_data">
+                        <colgroup>
+                            <col style="width: 2em;"/>
+                            <col style="width: 160px;"/>
+                            ${util.mapRange(0, app.pages.size, () => html`<col/>`)}
+                        </colgroup>
+
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Identifiant</th>
+                                ${util.map(app.pages.values(), page => html`<th>${page.title}</th>`)}
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            ${data_rows.map(row => html`
+                                <tr>
+                                    <td>
+                                        <a @click=${e => runDeleteRecordDialog(e, row.ulid)}>✕</a>
+                                    </td>
+                                    <td class=${row.hid == null ? 'missing' : ''}>${row.hid != null ? row.hid : 'NA'}</td>
+                                    ${util.map(app.pages.values(), page => {
+                                        let url = makePageURL(page.key) + `/${row.ulid}`;
+
+                                        if (row.status.has(page.key)) {
+                                            return html`<td class="saved"><a href=${url}
+                                                                             @click=${e => ui.setPanelState('page', true, false)}>Enregistré</a></td>`;
+                                        } else {
+                                            return html`<td class="missing"><a href=${url}
+                                                                            @click=${e => ui.setPanelState('page', true, false)}>Non rempli</a></td>`;
+                                        }
+                                    })}
+                                </tr>
+                            `)}
+                        </tbody>
+                    </table>
                 </div>
             `;
         });
@@ -343,15 +398,58 @@ function InstanceController() {
 
             progress.success('Enregistrement effectué');
 
-            // Trigger reload
+            // Trigger reloads
             page_version = null;
             page_meta = null;
+            data_rows = null;
 
             self.go();
         } catch (err) {
             progress.close();
             throw err;
         }
+    }
+
+    function runDeleteRecordDialog(e, ulid) {
+        return ui.runConfirm(e, 'Voulez-vous vraiment supprimer cet enregistrement ?', 'Supprimer', async () => {
+            let progress = log.progress('Suppression en cours');
+
+            try {
+                let key = `${profile.username}:${ulid}`;
+                let fragment = {
+                    user: profile.username,
+                    mtime: new Date,
+                    page: null,
+                    values: {}
+                };
+
+                await db.transaction('rw', ['rec_records'], async () => {
+                    let enc = await db.load('rec_records', key);
+                    if (enc == null)
+                        throw new Error('Cet enregistrement est introuvable');
+
+                    let record = await goupile.decryptWithPassport(enc);
+
+                    record.fragments.push(fragment);
+
+                    enc = await goupile.encryptWithPassport(record);
+                    await db.saveWithKey('rec_records', key, enc);
+                });
+
+                progress.success('Suppression effectuée');
+
+                if (page_ulid === ulid) {
+                    page_ulid = null;
+                    page_version = null;
+                }
+                data_rows = null;
+
+                self.go();
+            } catch (err) {
+                progress.close();
+                throw err;
+            }
+        })
     }
 
     function enablePersistence() {
@@ -806,6 +904,33 @@ function InstanceController() {
                     editor_filename = (page_key != null) ? getPageFileName(page_key) : 'main.js';
 
                 await syncEditor();
+            }
+
+            // Load rows for data panel
+            if (data_rows == null && ui.isPanelEnabled('data')) {
+                let range = IDBKeyRange.bound(profile.username + ':', profile.username + '`', false, true);
+                let rows = await db.loadAll('rec_records');
+
+                data_rows = [];
+                for (let enc of rows) {
+                    try {
+                        let record = await goupile.decryptWithPassport(enc);
+                        let fragments = record.fragments;
+
+                        // Deleted record
+                        if (fragments[fragments.length - 1].page == null)
+                            continue;
+
+                        let row = {
+                            ulid: record.ulid,
+                            hid: record.hid,
+                            status: new Set(fragments.map(fragment => fragment.page))
+                        };
+                        data_rows.push(row);
+                    } catch (err) {
+                        console.log(err);
+                    }
+                }
             }
 
             ui.render();

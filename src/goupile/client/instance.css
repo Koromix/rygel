@@ -56,6 +56,14 @@ html.instance {
     #ins_notice:hover { filter: opacity(20%); }
 }
 
+#ins_data td.saved::before {
+    padding-right: 8px;
+    font-size: 0.9em;
+    font-weight: bold;
+    color: #ef6000;
+    content: '✓\FE0E';
+}
+
 /* -------------------- Deploy dialog -------------------- */
 
 .ins_deploy td.actions { text-align: center; }
