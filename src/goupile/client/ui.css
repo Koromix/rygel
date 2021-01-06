@@ -166,11 +166,11 @@ html.small .ui_toolbar button.icon {
     color: #cbcbcb;
 }
 .ui_table a { text-decoration: none; }
-.ui_table tr.active {
+.ui_table tbody tr.active {
     background: #777;
     color: white;
 }
-.ui_table tr.active a { color: inherit; }
+.ui_table tbody tr.active a { color: inherit; }
 
 /* -------------------- Actions -------------------- */
 

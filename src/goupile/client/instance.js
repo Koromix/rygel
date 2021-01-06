@@ -139,7 +139,7 @@ function InstanceController() {
 
                         <tbody>
                             ${data_rows.map(row => html`
-                                <tr>
+                                <tr class=${row.ulid === page_ulid ? 'active' : ''}>
                                     <td>
                                         <a @click=${e => runDeleteRecordDialog(e, row.ulid)}>✕</a>
                                     </td>
