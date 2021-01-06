@@ -133,7 +133,6 @@ function InstanceController() {
                 }
             } catch (err) {
                 error = err;
-                console.log(err, error);
             }
 
             return html`
