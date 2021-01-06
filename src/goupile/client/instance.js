@@ -70,7 +70,12 @@ function InstanceController() {
             <button class=${'icon' + (ui.isPanelEnabled('page') ? ' active' : '')}
                     style="background-position-y: calc(-318px + 1.2em);"
                     @click=${e => togglePanel('page')}>Page</button>
+
             <div style="flex: 1;"></div>
+            ${util.map(app.pages.values(), page => html`<button class=${page.key === page_key ? 'active' : ''}
+                                                                @click=${e => self.go(makePageURL(page.key))}>${page.title}</button>`)}
+            <div style="flex: 1;"></div>
+
             <div class="drop right">
                 <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
                 <div>
@@ -197,7 +202,8 @@ function InstanceController() {
                         <div class="ui_quick">
                             ${model.variables.length ? html`
                                 ${!page_meta.version ? 'Nouvel enregistrement' : ''}
-                                ${page_meta.version > 0 ? 'Enregistrement local' : ''}
+                                ${page_meta.version > 0 && page_meta.hid != null ? `Enregistrement : ${page_meta.hid}` : ''}
+                                ${page_meta.version > 0 && page_meta.hid == null ? 'Enregistrement local' : ''}
                             `  : ''}
                             <div style="flex: 1;"></div>
                             ${page_meta.version > 0 ? html`
