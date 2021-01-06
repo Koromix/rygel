@@ -852,6 +852,8 @@ function InstanceController() {
         } catch (err) {
             progress.close();
             throw err;
+        } finally {
+            code_cache.clear();
         }
     };
 
