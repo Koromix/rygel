@@ -56,8 +56,8 @@ function InstanceController() {
             <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
                     @click=${e => self.go(ENV.base_url)}>${ENV.title}</button>
             <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
-                    style="background-position-y: calc(-274px + 1.2em);"
-                    @click=${e => togglePanel('editor')}>Éditeur</button>
+                    style="background-position-y: calc(-230px + 1.2em);"
+                    @click=${e => togglePanel('editor')}>Code</button>
             <button class=${'icon' + (ui.isPanelEnabled('page') ? ' active' : '')}
                     style="background-position-y: calc(-318px + 1.2em);"
                     @click=${e => togglePanel('page')}>Page</button>
