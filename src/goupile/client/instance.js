@@ -297,7 +297,6 @@ function InstanceController() {
             // Help the user fill a new form
             document.querySelector('#ins_page').parentNode.scrollTop = 0;
         });
-        log.info('Nouvel enregistrement');
 
         ui.setPanelState('page', true, false);
         self.go();
