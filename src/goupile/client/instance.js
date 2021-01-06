@@ -116,7 +116,7 @@ function InstanceController() {
             return html`
                 <div class="ins_panel">
                     ${error == null ? html`
-                        <form id="ins_form">
+                        <form id="ins_form" @submit=${e => e.preventDefault()}>
                             ${model.render()}
                         </form>
                     ` : ''}
