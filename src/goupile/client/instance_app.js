@@ -20,7 +20,9 @@ function PageInfo() {
 function ApplicationBuilder(app) {
     let self = this;
 
-    let options_stack = [{}];
+    let options_stack = [{
+        dependencies: []
+    }];
     let store_ref = null;
     let menu_ref = null;
 
@@ -69,13 +71,15 @@ function ApplicationBuilder(app) {
         if (app.pages.has(key))
             throw new Error(`Page key '${key}' is already used`);
 
+        options = expandOptions(options);
+
         let page = new PageInfo;
 
         page.key = key;
         page.title = title;
         page.store = store_ref != null ? store_ref : key;
         page.menu = menu_ref != null ? menu_ref : [];
-        page.options = expandOptions(options);
+        page.dependencies = options.dependencies.filter(dep => dep !== key);
 
         page.menu.push(page);
         app.pages.set(key, page);

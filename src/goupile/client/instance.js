@@ -8,6 +8,7 @@ function InstanceController() {
     let app;
 
     let page_key;
+    let page_info;
     let page_ulid;
     let page_version;
     let page_code;
@@ -74,8 +75,11 @@ function InstanceController() {
                     @click=${e => togglePanel('page')}>Page</button>
 
             <div style="flex: 1;"></div>
-            ${util.map(app.pages.values(), page => html`<button class=${page.key === page_key ? 'active' : ''}
-                                                                @click=${e => self.go(makePageURL(page.key))}>${page.title}</button>`)}
+            ${util.map(app.pages.values(), page => {
+                let missing = page.dependencies.some(dep => !page_meta.status.has(dep));
+                return html`<button class=${page.key === page_key ? 'active' : ''} ?disabled=${missing}
+                                    @click=${e => self.go(makePageURL(page.key))}>${page.title}</button>`;
+            })}
             <div style="flex: 1;"></div>
 
             <div class="drop right">
@@ -892,20 +896,42 @@ function InstanceController() {
                 develop = !!count;
             }
 
-            // Fetch page code
-            if (page_key != null && !app.pages.has(page_key)) {
-                log.error(`La page ${page_key} n'existe pas`);
-                page_key = app.home;
+            // Find page info
+            if (page_key != null) {
+                page_info = app.pages.get(page_key);
+
+                if (page_info == null) {
+                    log.error(`La page '${page_key}' n'existe pas`);
+
+                    page_key = app.home;
+                    page_info = app.pages.get(page_key);
+                }
+            } else {
+                page_info = null;
             }
+
+            // Load record
+            await loadRecord();
+
+            // Check dependencies and redirect if needed
+            if (page_key != null) {
+                let missing = page_info.dependencies.some(dep => !page_meta.status.has(dep));
+
+                if (missing) {
+                    let dep0 = page_info.dependencies[0];
+
+                    page_key = dep0;
+                    page_info = app.pages.get(page_key);
+                }
+            }
+
+            // Fetch page code
             if (page_key != null) {
                 let filename = getPageFileName(page_key);
                 page_code = await fetchCode(filename);
             } else {
                 page_code = null;
             }
-
-            // Load record
-            await loadRecord();
 
             // Update browser URL
             if (page_key != null) {
