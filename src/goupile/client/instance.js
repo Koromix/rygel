@@ -146,7 +146,7 @@ function InstanceController() {
                             ${data_rows.map(row => html`
                                 <tr class=${row.ulid === page_ulid ? 'active' : ''}>
                                     <td>
-                                        <a @click=${e => runDeleteRecordDialog(e, row.ulid)}>✕</a>
+                                        <a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a>
                                     </td>
                                     <td class=${row.hid == null ? 'missing' : ''}>${row.hid != null ? row.hid : 'NA'}</td>
                                     ${util.map(app.pages.values(), page => {
