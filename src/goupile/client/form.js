@@ -2,7 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function FormState() {
+function FormState(values = {}) {
+    let self = this;
+
     // Interoperate
     this.decodeKey = key => key;
     this.setValue = (key, value) => {};
@@ -10,7 +12,7 @@ function FormState() {
     this.changeHandler = model => {};
 
     // Stored values
-    this.values = {};
+    this.values = Object.assign({}, values);
 
     // Internal state
     this.unique_id = FormState.next_unique_id++;
@@ -20,9 +22,11 @@ function FormState() {
     this.click_events = new Set;
     this.take_delayed = new Set;
 
-    this.cached_values = {};
-    this.changed_variables = new Set;
+    this.cached_values = Object.assign({}, values);
+    this.changed_variables = new Set(Object.keys(values));
     this.updated_variables = new Set;
+
+    this.hasChanged = function() { return !!self.changed_variables.size; };
 }
 FormState.next_unique_id = 0;
 
@@ -80,7 +84,7 @@ function FormBuilder(state, model, readonly = false) {
 
     let restart = false;
 
-    this.hasChanged = function() { return !!state.changed_variables.size; };
+    this.hasChanged = function() { return state.hasChanged(); };
     this.isValid = function() { return model.valid; };
     this.hasErrors = function() { return !!model.errors; };
     this.triggerErrors = function() {
@@ -1162,6 +1166,7 @@ instead of:
             let type = model.actions.length ? 'button' : 'submit';
 
             render = intf => html`<button type=${type} ?disabled=${options.disabled}
+                                          title=${options.tooltip || ''}
                                           @click=${ui.wrapAction(func)}>${label}</button>`;
         }
 

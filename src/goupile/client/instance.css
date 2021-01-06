@@ -15,14 +15,26 @@ html.instance {
 }
 .ins_panel + .ins_panel { border-left: 1px solid #dfdfdf; }
 
-#ins_form {
+#ins_page {
     box-sizing: border-box;
     width: 100%;
     max-width: 980px;
     margin: 0 auto;
+    border: 12px solid white;
+}
+#ins_form {
     background: #f8f8f8;
-    border: 1em solid white;
     padding: 1em;
+}
+
+#ins_form > .ui_actions {
+    position: fixed;
+    display: inline-block;
+    left: calc(50% + 480px);
+    top: calc(2.5em + 11px + 1em);
+    width: auto;
+    margin-top: 0;
+    z-index: 999;
 }
 
 #ins_notice {

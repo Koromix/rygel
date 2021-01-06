@@ -8,8 +8,11 @@ function InstanceController() {
     let app;
 
     let page_key;
+    let page_ulid;
+    let page_version;
     let page_code;
     let page_state;
+    let page_meta;
 
     let editor_el;
     let editor_ace;
@@ -42,11 +45,12 @@ function InstanceController() {
             if (new_app.pages.size)
                 new_app.home = new_app.pages.values().next().value.key;
 
-            app = new_app;
+            app = Object.freeze(new_app);
         } catch (err) {
             if (app == null)
-                app = new ApplicationInfo;
+                app = Object.freeze(new ApplicationInfo);
         }
+
     }
 
     function initUI() {
@@ -107,7 +111,23 @@ function InstanceController() {
             try {
                 runUserCode('Page', page_code, {
                     form: builder,
+                    meta: page_meta,
                     go: self.go
+                });
+
+                builder.action('Enregistrer', {}, saveRecord);
+                builder.action('-');
+                builder.action('Nouveau', {disabled: !page_state.hasChanged()}, () => {
+                    page_ulid = null;
+                    page_version = null;
+
+                    setTimeout(() => {
+                        // Help the user fill a new form
+                        document.querySelector('#ins_page').parentNode.scrollTop = 0;
+                    });
+                    log.info('Nouvel enregistrement');
+
+                    self.go();
                 });
             } catch (err) {
                 error = err;
@@ -116,20 +136,31 @@ function InstanceController() {
 
             return html`
                 <div class="ins_panel">
-                    ${error == null ? html`
-                        <form id="ins_form" @submit=${e => e.preventDefault()}>
-                            ${model.render()}
-                        </form>
-                    ` : ''}
-                    ${error != null ? html`<span class="gp_wip">${error.message}</span>` : ''}
-
-                    ${develop ? html`
-                        <div style="flex: 1;"></div>
-                        <div id="ins_notice">
-                            Formulaires en développement<br/>
-                            Déployez les avant d'enregistrer des données
+                    <div id="ins_page">
+                        <div class="ui_quick">
+                            ${!page_meta.version ? 'Nouvel enregistrement' : 'Enregistrement local'}
+                            <div style="flex: 1;"></div>
+                            ${page_meta.version > 0 ? html`
+                                Version ${page_meta.version}
+                                (<a @click=${ui.wrapAction(e => runTrailDialog(e, page_meta.ulid))}>historique</a>)
+                            ` : ''}
                         </div>
-                    ` : ''}
+
+                        ${error == null ? html`
+                            <form id="ins_form" @submit=${e => e.preventDefault()}>
+                                ${model.render()}
+                            </form>
+                        ` : ''}
+                        ${error != null ? html`<span class="gp_wip">${error.message}</span>` : ''}
+
+                        ${develop ? html`
+                            <div style="flex: 1;"></div>
+                            <div id="ins_notice">
+                                Formulaires en développement<br/>
+                                Déployez les avant d'enregistrer des données
+                            </div>
+                        ` : ''}
+                    </div>
                 </div>
             `;
         });
@@ -158,6 +189,155 @@ function InstanceController() {
 
             entry.error(msg, -1);
             throw new Error(msg);
+        }
+    }
+
+    function runTrailDialog(e, ulid) {
+        return ui.runDialog(e, (d, resolve, reject) => {
+            if (ulid !== page_meta.ulid)
+                reject();
+
+            d.output(html`
+                <table class="ui_table">
+                    ${util.mapRange(0, page_meta.fragments.length, idx => {
+                        let version = page_meta.fragments.length - idx;
+                        let fragment = page_meta.fragments[version - 1];
+                        let url = makePageURL(fragment.page) + `/${ulid}/${version}`;
+
+                        return html`
+                            <tr class=${version === page_meta.version ? 'active' : ''}>
+                                <td><a href=${url}>🔍\uFE0E</a></td>
+                                <td>${fragment.user}</td>
+                                <td>${fragment.mtime.toLocaleString()}</td>
+                            </tr>
+                        `;
+                    })}
+                </table>
+            `);
+        });
+    }
+
+    async function loadRecord() {
+        if (page_ulid == null) {
+            page_meta = null;
+        } else if (page_meta == null || page_meta.ulid !== page_ulid ||
+                                        page_meta.version !== page_version) {
+            let key = `${profile.username}:${page_ulid}`;
+            let enc = await db.load('rec_records', key);
+
+            if (enc != null) {
+                try {
+                    let record = await goupile.decryptWithPassport(enc);
+                    let fragments = record.fragments;
+
+                    // Deleted record
+                    if (fragments[fragments.length - 1].page == null)
+                        throw new Error('L\'enregistrement demandé est supprimé');
+
+                    if (page_version == null) {
+                        page_version = fragments.length;
+                    } else if (page_version > fragments.length) {
+                        throw new Error(`Cet enregistrement n'a pas de version ${page_version}`);
+                    }
+
+                    let values = {};
+                    for (let i = 0; i < page_version; i++) {
+                        let fragment = fragments[i];
+                        Object.assign(values, fragment.values);
+                    }
+                    for (let fragment of fragments) {
+                        fragment.mtime = new Date(fragment.mtime);
+                        delete fragment.values;
+                    }
+
+                    page_meta = Object.freeze({
+                        page: page_key,
+                        ulid: page_ulid,
+                        version: page_version,
+                        fragments: fragments,
+                        status: new Set(fragments.map(fragment => fragment.page))
+                    });
+
+                    page_state = new FormState(values);
+                    page_state.changeHandler = () => self.go();
+                } catch (err) {
+                    log.error(err);
+                    page_meta = null;
+                }
+            } else {
+                log.error('L\'enregistrement demandé n\'existe pas');
+                page_meta = null;
+            }
+        }
+        if (page_meta == null) {
+            page_ulid = util.makeULID();
+            page_version = 0;
+
+            page_meta = Object.freeze({
+                page: page_key,
+                ulid: page_ulid,
+                version: 0,
+                fragments: [],
+                status: new Set()
+            });
+
+            page_state = new FormState;
+            page_state.changeHandler = () => self.go();
+        }
+    }
+
+    async function saveRecord() {
+        if (develop)
+            throw new Error('Enregistrement refusé : formulaire non déployé');
+
+        let progress = log.progress('Enregistrement en cours');
+
+        try {
+            let values = Object.assign({}, page_state.values);
+            for (let key in values) {
+                if (values[key] === undefined)
+                    values[key] = null;
+            }
+
+            let key = `${profile.username}:${page_meta.ulid}`;
+            let fragment = {
+                user: profile.username,
+                mtime: new Date,
+                page: page_key,
+                values: values
+            };
+
+            await db.transaction('rw', ['rec_records'], async t => {
+                let enc = await db.load('rec_records', key);
+
+                let record;
+                if (enc != null) {
+                    record = await goupile.decryptWithPassport(enc);
+                } else {
+                    record = {
+                        ulid: page_meta.ulid,
+                        fragments: []
+                    };
+                }
+
+                if (page_meta.version !== record.fragments.length)
+                    throw new Error('Cannot overwrite old record fragment');
+                record.fragments.push(fragment);
+
+                enc = await goupile.encryptWithPassport(record);
+                await db.saveWithKey('rec_records', key, enc);
+            });
+
+            progress.success('Enregistrement effectué');
+
+            // Trigger reload
+            page_version = null;
+            page_meta = null;
+
+            self.go();
+        } catch (err) {
+            progress.close();
+            throw err;
         }
     }
 
@@ -513,70 +693,96 @@ function InstanceController() {
     };
 
     this.go = async function(url = null, push_history = true) {
-        await goupile.syncProfile();
-        if (!goupile.isAuthorized())
-            await goupile.runLogin();
+        try {
+            await goupile.syncProfile();
+            if (!goupile.isAuthorized())
+                await goupile.runLogin();
 
-        // Find page
-        if (url != null) {
-            if (!url.endsWith('/'))
-                url += '/';
-            url = new URL(url, window.location.href);
+            // Find page
+            if (url != null) {
+                if (!url.endsWith('/'))
+                    url += '/';
+                url = new URL(url, window.location.href);
 
-            if (url.pathname === ENV.base_url) {
-                page_key = app.home;
-            } else {
-                let prefix = `${ENV.base_url}main/`;
-
-                if (url.pathname.startsWith(prefix)) {
-                    let path = url.pathname.substr(prefix.length);
-                    let [key, id] = path.split('/');
-
-                    page_key = key;
+                if (url.pathname === ENV.base_url) {
+                    page_key = app.home;
                 } else {
-                    window.location.href = url.href;
+                    let prefix = `${ENV.base_url}main/`;
+
+                    if (url.pathname.startsWith(prefix)) {
+                        let path = url.pathname.substr(prefix.length);
+                        let [key, ulid, version] = path.split('/').map(str => str.trim());
+
+                        page_key = key;
+                        if (ulid && ulid !== page_ulid) {
+                            page_ulid = ulid;
+                            page_version = null;
+                        }
+                        if (version) {
+                            version = version.trim();
+
+                            if (version.match(/^[0-9]+$/)) {
+                                page_version = parseInt(version, 10);
+                            } else {
+                                log.error('L\'indicateur de version n\'est pas un nombre');
+                                page_version = null;
+                            }
+                        }
+                    } else {
+                        window.location.href = url.href;
+                    }
                 }
             }
+
+            // Is the user changing stuff?
+            {
+                let range = IDBKeyRange.bound(profile.username + ':', profile.username + '`', false, true);
+                let count = await db.count('fs_files', range);
+
+                develop = !!count;
+            }
+
+            // Fetch page code
+            if (page_key != null && !app.pages.has(page_key)) {
+                log.error(`La page ${page_key} n'existe pas`);
+                page_key = app.home;
+            }
+            if (page_key != null) {
+                let filename = getPageFileName(page_key);
+                page_code = await fetchCode(filename);
+            } else {
+                page_code = null;
+            }
+
+            // Load record
+            await loadRecord();
+
+            // Update browser URL
+            if (page_key != null) {
+                let url = makePageURL(page_key);
+                if (page_meta.version > 0) {
+                    url += `/${page_meta.ulid}`;
+                    if (page_meta.version < page_meta.fragments.length)
+                        url += `/${page_meta.version}`;
+                }
+                goupile.syncHistory(url, push_history);
+            } else {
+                goupile.syncHistory(ENV.base_url, push_history);
+                page_code = null;
+            }
+
+            // Sync editor (if needed)
+            if (ui.isPanelEnabled('editor')) {
+                if (editor_filename == null || editor_filename.startsWith('pages/'))
+                    editor_filename = (page_key != null) ? getPageFileName(page_key) : 'main.js';
+
+                await syncEditor();
+            }
+
+            ui.render();
+        } catch (err) {
+            log.error(err);
         }
-
-        // Is the user changing stuff?
-        {
-            let range = IDBKeyRange.bound(profile.username + ':', profile.username + '`', false, true);
-            let count = await db.count('fs_files', range);
-
-            develop = !!count;
-        }
-
-        // Fetch page code and sync state
-        if (page_key != null && !app.pages.has(page_key)) {
-            log.error(`La page ${page_key} n'existe pas`);
-            page_key = app.home;
-        }
-        if (page_key != null) {
-            let url = makePageURL(page_key);
-            let filename = getPageFileName(page_key);
-
-            goupile.syncHistory(url, push_history);
-
-            page_code = await fetchCode(filename);
-        } else {
-            goupile.syncHistory(ENV.base_url, push_history);
-            page_code = null;
-        }
-        if (page_state == null) {
-            page_state = new FormState;
-            page_state.changeHandler = () => self.go();
-        }
-
-        // Sync editor (if needed)
-        if (ui.isPanelEnabled('editor')) {
-            if (editor_filename == null || editor_filename.startsWith('pages/'))
-                editor_filename = (page_key != null) ? getPageFileName(page_key) : 'main.js';
-
-            await syncEditor();
-        }
-
-        ui.render();
     };
     this.go = util.serializeAsync(this.go);
 
