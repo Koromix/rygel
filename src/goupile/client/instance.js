@@ -110,8 +110,7 @@ function InstanceController() {
                         ${tabs.map(tab => html`<button class=${editor_filename === tab.filename ? 'active' : ''}
                                                        @click=${ui.wrapAction(e => toggleEditorFile(tab.filename))}>${tab.title}</button>`)}
                         <div style="flex: 1;"></div>
-                        <button @click=${ui.wrapAction(runDeployDialog)}
-                                ?disabled=${!develop}>Déployer</button>
+                        <button @click=${ui.wrapAction(runDeployDialog)}>Déployer</button>
                     </div>
 
                     ${editor_el}
