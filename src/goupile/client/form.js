@@ -8,7 +8,16 @@ function FormState(values = {}) {
     // Interoperate
     this.decodeKey = key => key;
     this.setValue = (key, value) => {};
-    this.getValue = (key, default_value) => default_value;
+    this.getValue = (key, default_value) => {
+        if (values.hasOwnProperty(key)) {
+            let value = values[key];
+            if (value == null)
+                value = undefined;
+            return value;
+        } else {
+            return default_value;
+        }
+    };
     this.changeHandler = model => {};
 
     // Stored values
@@ -22,8 +31,8 @@ function FormState(values = {}) {
     this.click_events = new Set;
     this.take_delayed = new Set;
 
-    this.cached_values = Object.assign({}, values);
-    this.changed_variables = new Set(Object.keys(values));
+    this.cached_values = {};
+    this.changed_variables = new Set;
     this.updated_variables = new Set;
 
     this.hasChanged = function() { return !!self.changed_variables.size; };
@@ -42,6 +51,9 @@ function FormModel() {
 
     this.errors = 0;
     this.valid = true;
+
+    this.isValid = function() { return self.valid; };
+    this.hasErrors = function() { return !!self.errors; };
 
     this.render = function() {
         return html`
@@ -85,8 +97,8 @@ function FormBuilder(state, model, readonly = false) {
     let restart = false;
 
     this.hasChanged = function() { return state.hasChanged(); };
-    this.isValid = function() { return model.valid; };
-    this.hasErrors = function() { return !!model.errors; };
+    this.isValid = function() { return model.isValid(); };
+    this.hasErrors = function() { return model.hasErrors(); };
     this.triggerErrors = function() {
         if (self.isValid()) {
             return true;
@@ -1371,29 +1383,26 @@ instead of:
     }
 
     function readValue(key, default_value, func) {
-        let value;
-        if (!state.changed_variables.has(key.toString())) {
-            value = state.getValue(key, default_value);
+        if (state.changed_variables.has(key.toString())) {
+            let value = state.values[key];
+
+            value = func(value);
+            if (value == null)
+                value = undefined;
+
+            return value;
+        } else {
+            let value = state.getValue(key, default_value);
+
+            value = func(value);
+            if (value == null)
+                value = undefined;
 
             state.cached_values[key] = value;
             state.values[key] = value;
-        } else {
-            value = state.values[key];
-        }
 
-        value = func(value);
-        if (value == null)
-            value = undefined;
-        if (value !== state.values[key]) {
-            if (value !== state.cached_values[key]) {
-                state.changed_variables.add(key.toString());
-            } else {
-                state.changed_variables.delete(key.toString());
-            }
-            state.values[key] = value;
+            return value;
         }
-
-        return value;
     }
 
     function isModifiable(key) {
@@ -1404,9 +1413,6 @@ instead of:
     function updateValue(key, value, refresh = true) {
         if (value === state.values[key])
             return;
-        if (JSON.stringify(value) === JSON.stringify(state.values[key]))
-            return;
-
         state.values[key] = value;
 
         state.take_delayed.delete(key.toString());
