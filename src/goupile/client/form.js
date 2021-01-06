@@ -851,11 +851,11 @@ function FormBuilder(state, model, readonly = false) {
             value = undefined;
 
         let text = value;
-        if (!options.raw && typeof value !== 'string') {
+        if (!options.raw) {
             if (value == null) {
                 value = undefined;
                 text = 'Non calculable';
-            } else if (isFinite(value)) {
+            } else if (typeof value === 'number' && isFinite(value)) {
                 if (options.decimals != null) {
                     text = value.toFixed(options.decimals);
                 } else {
@@ -1402,22 +1402,23 @@ instead of:
     }
 
     function updateValue(key, value, refresh = true) {
-        if (value !== state.values[key]) {
-            let intf = variables_map[key];
+        if (value === state.values[key])
+            return;
+        if (JSON.stringify(value) === JSON.stringify(state.values[key]))
+            return;
 
-            state.values[key] = value;
+        state.values[key] = value;
 
-            state.take_delayed.delete(key.toString());
-            if (value !== state.cached_values[key]) {
-                state.changed_variables.add(key.toString());
-            } else {
-                state.changed_variables.delete(key.toString());
-            }
-            state.updated_variables.add(key.toString());
-
-            state.setValue(key, value);
-            if (refresh)
-                self.restart();
+        state.take_delayed.delete(key.toString());
+        if (value !== state.cached_values[key]) {
+            state.changed_variables.add(key.toString());
+        } else {
+            state.changed_variables.delete(key.toString());
         }
+        state.updated_variables.add(key.toString());
+
+        state.setValue(key, value);
+        if (refresh)
+            self.restart();
     }
 }
