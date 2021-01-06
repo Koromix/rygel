@@ -63,7 +63,7 @@ function InstanceController() {
                     @click=${e => togglePanel('page')}>Page</button>
             <div style="flex: 1;"></div>
             <div class="drop right">
-                <button>${profile.username}</button>
+                <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
                 <div>
                     <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
                 </div>

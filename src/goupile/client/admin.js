@@ -19,14 +19,14 @@ function AdminController() {
         document.documentElement.className = 'admin';
 
         ui.setMenu(el => html`
-            <button>Admin</button>
+            <button class="icon" style="background-position-y: calc(-538px + 1.2em);">Admin</button>
             <button class=${ui.isPanelEnabled('instances') ? 'active' : ''}
                     @click=${e => togglePanel('instances')}>Instances</button>
             <button class=${ui.isPanelEnabled('users') ? 'active' : ''}
                     @click=${e => togglePanel('users')}>Utilisateurs</button>
             <div style="flex: 1;"></div>
             <div class="drop right">
-                <button>${profile.username}</button>
+                <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
                 <div>
                     <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
                 </div>
