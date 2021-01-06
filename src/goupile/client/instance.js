@@ -163,6 +163,7 @@ function InstanceController() {
                                     })}
                                 </tr>
                             `)}
+                            ${!data_rows.length ? html`<tr><td colspan=${2 + app.pages.size}>Aucune ligne à afficher</td></tr>` : ''}
                         </tbody>
                     </table>
 
