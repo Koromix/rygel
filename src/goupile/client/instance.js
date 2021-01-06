@@ -154,6 +154,10 @@ function InstanceController() {
                             `)}
                         </tbody>
                     </table>
+
+                    <div class="ui_actions">
+                        <button @click=${newRecord}>Créer un nouvel enregistrement</button>
+                    </div>
                 </div>
             `;
         });
@@ -181,18 +185,7 @@ function InstanceController() {
                             return saveRecord();
                     });
                     builder.action('-');
-                    builder.action('Nouveau', {disabled: !page_state.hasChanged()}, () => {
-                        page_ulid = null;
-                        page_version = null;
-
-                        setTimeout(() => {
-                            // Help the user fill a new form
-                            document.querySelector('#ins_page').parentNode.scrollTop = 0;
-                        });
-                        log.info('Nouvel enregistrement');
-
-                        self.go();
-                    });
+                    builder.action('Nouveau', {disabled: !page_state.hasChanged()}, newRecord);
                 }
             } catch (err) {
                 error = err;
@@ -282,6 +275,20 @@ function InstanceController() {
                 </table>
             `);
         });
+    }
+
+    function newRecord() {
+        page_ulid = null;
+        page_version = null;
+
+        setTimeout(() => {
+            // Help the user fill a new form
+            document.querySelector('#ins_page').parentNode.scrollTop = 0;
+        });
+        log.info('Nouvel enregistrement');
+
+        ui.setPanelState('page', true, false);
+        self.go();
     }
 
     async function loadRecord() {
