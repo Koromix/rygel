@@ -115,7 +115,7 @@ function InstanceController() {
 
         ui.createPanel('data', false, () => {
             return html`
-                <div class="padded" style="background: #f8f8f8;">
+                <div class="padded">
                     <div class="ui_quick">
                         ${data_rows.length || 'Aucune'} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
                         <div style="flex: 1;"></div>
