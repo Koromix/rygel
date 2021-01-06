@@ -39,6 +39,7 @@
                         throw new Error('Cannot work with broken async in IndexedDB');
                 }
 
+                render(html`<div class="ui_busy"></div>`, document.querySelector('#gp_root'));
                 document.addEventListener('readystatechange', function(e) {
                     if (document.readyState === 'complete')
                         goupile.start();

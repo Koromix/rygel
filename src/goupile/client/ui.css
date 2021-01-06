@@ -259,6 +259,7 @@ html.small .ui_toolbar button.icon {
 
 .ui_busy {
     display: flex;
+    height: 100%;
     align-items: center;
     justify-content: center;
     visibility: hidden;
