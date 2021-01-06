@@ -293,6 +293,8 @@ function InstanceController() {
         let progress = log.progress('Enregistrement en cours');
 
         try {
+            enablePersistence();
+
             let values = Object.assign({}, page_state.values);
             for (let key in values) {
                 if (values[key] === undefined)
@@ -338,6 +340,22 @@ function InstanceController() {
         } catch (err) {
             progress.close();
             throw err;
+        }
+    }
+
+    function enablePersistence() {
+        let storage_warning = 'Impossible d\'activer le stockage local persistant';
+
+        if (navigator.storage && navigator.storage.persist) {
+            navigator.storage.persist().then(granted => {
+                if (granted) {
+                    console.log('Stockage persistant activé');
+                } else {
+                    console.log(storage_warning);
+                }
+            });
+        } else {
+            console.log(storage_warning);
         }
     }
 
