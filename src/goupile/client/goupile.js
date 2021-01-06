@@ -139,7 +139,7 @@ const goupile = new function() {
                     passport = (profile.passport != null) ? base64ToBytes(profile.passport) : null;
 
                     // Save for offline login
-                    {
+                    if (ENV.cache_offline) {
                         let salt = nacl.randomBytes(24);
                         let key = await deriveKey(password, salt);
 
