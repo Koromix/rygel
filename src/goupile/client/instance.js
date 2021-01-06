@@ -167,6 +167,7 @@ function InstanceController() {
                 let meta = util.assignDeep({}, page_meta);
                 runUserCode('Page', page_code, {
                     form: builder,
+                    values: page_state.values,
                     meta: meta,
                     go: self.go
                 });
