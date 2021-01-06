@@ -61,9 +61,11 @@ function InstanceController() {
         ui.setMenu(() => html`
             <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
                     @click=${e => self.go(ENV.base_url)}>${ENV.title}</button>
-            <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
-                    style="background-position-y: calc(-230px + 1.2em);"
-                    @click=${e => togglePanel('editor')}>Code</button>
+            ${goupile.hasPermission('develop') ? html`
+                <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
+                        style="background-position-y: calc(-230px + 1.2em);"
+                        @click=${e => togglePanel('editor')}>Code</button>
+            ` : ''}
             <button class=${'icon' + (ui.isPanelEnabled('data') ? ' active' : '')}
                     style="background-position-y: calc(-274px + 1.2em);"
                     @click=${e => togglePanel('data')}>Suivi</button>

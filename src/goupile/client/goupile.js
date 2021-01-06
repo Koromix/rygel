@@ -245,6 +245,10 @@ const goupile = new function() {
     };
 
     this.isAuthorized = function() { return !!profile.username; };
+    this.hasPermission = function(perm) {
+        return profile.permissions != null &&
+               profile.permissions[perm];
+    }
 
     this.syncHistory = function(url, push = true) {
         if (push && current_url != null && url !== current_url) {
