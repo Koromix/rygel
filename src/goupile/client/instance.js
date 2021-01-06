@@ -106,7 +106,8 @@ function InstanceController() {
             let error;
             try {
                 runUserCode('Page', page_code, {
-                    form: builder
+                    form: builder,
+                    go: self.go
                 });
             } catch (err) {
                 error = err;
