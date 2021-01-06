@@ -6,7 +6,14 @@ function FormState(values = {}) {
     let self = this;
 
     // Interoperate
-    this.decodeKey = key => key;
+    this.decodeKey = key => {
+        if (!key)
+            throw new Error('Empty keys are not allowed');
+        if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
+            throw new Error('Allowed key characters: a-z, _ and 0-9 (not as first character)');
+
+        return key;
+    };
     this.setValue = (key, value) => {};
     this.getValue = (key, default_value) => {
         if (values.hasOwnProperty(key)) {
