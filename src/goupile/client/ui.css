@@ -90,6 +90,14 @@ html.small .ui_toolbar button.icon {
     position: relative;
     flex: 1;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+#ui_panels > div.padded { padding: 2em; }
+#ui_panels > div.padded::after {
+    content: "";
+    display: block;
+    height: 2em;
 }
 
 /* -------------------- Dialogs and popups -------------------- */

@@ -89,7 +89,7 @@ function InstanceController() {
             }
 
             return html`
-                <div class="ins_panel" style="--menu_color: #383936;">
+                <div style="--menu_color: #383936;">
                     <div class="ui_toolbar">
                         ${tabs.map(tab => html`<button class=${editor_filename === tab.filename ? 'active' : ''}
                                                        @click=${ui.wrapAction(e => toggleEditorFile(tab.filename))}>${tab.title}</button>`)}
@@ -135,7 +135,7 @@ function InstanceController() {
             }
 
             return html`
-                <div class="ins_panel">
+                <div>
                     <div id="ins_page">
                         <div class="ui_quick">
                             ${!page_meta.version ? 'Nouvel enregistrement' : 'Enregistrement local'}

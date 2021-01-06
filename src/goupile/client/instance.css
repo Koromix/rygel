@@ -9,11 +9,6 @@ html.instance {
     --page_color: #ef6000;
 }
 
-.ins_panel {
-    display: flex;
-    flex-direction: column;
-}
-
 #ins_page {
     box-sizing: border-box;
     width: 100%;

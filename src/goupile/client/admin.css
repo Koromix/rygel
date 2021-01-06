@@ -6,10 +6,3 @@ html.admin {
     --menu_color: #ef6000;
     --page_color: #cb2c1b;
 }
-
-.adm_panel { padding: 2em; }
-.adm_panel::after {
-    content: "";
-    display: block;
-    height: 2em;
-}
