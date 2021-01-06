@@ -119,7 +119,7 @@ function InstanceController() {
             `;
         });
 
-        ui.createPanel('data', false, () => {
+        ui.createPanel('data', true, () => {
             return html`
                 <div class="padded">
                     <div class="ui_quick">
@@ -236,6 +236,8 @@ function InstanceController() {
                 </div>
             `;
         });
+
+        ui.setPanelState('data', true);
     };
 
     function togglePanel(key, enable = null) {
