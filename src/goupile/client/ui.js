@@ -98,7 +98,7 @@ const ui = new function() {
                 enabled_panels.set(key, panel);
                 adaptToViewport();
             }
-        } else {
+        } else if (enabled_panels.size > 1) {
             enabled_panels.delete(key);
         }
     };
