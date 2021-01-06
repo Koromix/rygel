@@ -109,11 +109,13 @@ function InstanceController() {
 
             let error;
             try {
+                let meta = util.assignDeep({}, page_meta);
                 runUserCode('Page', page_code, {
                     form: builder,
-                    meta: page_meta,
+                    meta: meta,
                     go: self.go
                 });
+                page_meta.hid = meta.hid;
 
                 if (model.variables.length) {
                     builder.action('Enregistrer', {}, saveRecord);
@@ -254,13 +256,14 @@ function InstanceController() {
                         delete fragment.values;
                     }
 
-                    page_meta = Object.freeze({
+                    page_meta = {
                         page: page_key,
-                        ulid: page_ulid,
+                        ulid: record.ulid,
+                        hid: record.hid,
                         version: page_version,
                         fragments: fragments,
                         status: new Set(fragments.map(fragment => fragment.page))
-                    });
+                    };
 
                     page_state = new FormState(values);
                     page_state.changeHandler = () => self.go();
@@ -277,13 +280,14 @@ function InstanceController() {
             page_ulid = util.makeULID();
             page_version = 0;
 
-            page_meta = Object.freeze({
+            page_meta = {
                 page: page_key,
                 ulid: page_ulid,
+                hid: null,
                 version: 0,
                 fragments: [],
                 status: new Set()
-            });
+            };
 
             page_state = new FormState;
             page_state.changeHandler = () => self.go();
@@ -319,9 +323,12 @@ function InstanceController() {
                 let record;
                 if (enc != null) {
                     record = await goupile.decryptWithPassport(enc);
+                    if (page_meta.hid != null)
+                        record.hid = page_meta.hid;
                 } else {
                     record = {
                         ulid: page_meta.ulid,
+                        hid: page_meta.hid,
                         fragments: []
                     };
                 }
