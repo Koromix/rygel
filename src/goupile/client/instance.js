@@ -115,20 +115,22 @@ function InstanceController() {
                     go: self.go
                 });
 
-                builder.action('Enregistrer', {}, saveRecord);
-                builder.action('-');
-                builder.action('Nouveau', {disabled: !page_state.hasChanged()}, () => {
-                    page_ulid = null;
-                    page_version = null;
+                if (model.variables.length) {
+                    builder.action('Enregistrer', {}, saveRecord);
+                    builder.action('-');
+                    builder.action('Nouveau', {disabled: !page_state.hasChanged()}, () => {
+                        page_ulid = null;
+                        page_version = null;
 
-                    setTimeout(() => {
-                        // Help the user fill a new form
-                        document.querySelector('#ins_page').parentNode.scrollTop = 0;
+                        setTimeout(() => {
+                            // Help the user fill a new form
+                            document.querySelector('#ins_page').parentNode.scrollTop = 0;
+                        });
+                        log.info('Nouvel enregistrement');
+
+                        self.go();
                     });
-                    log.info('Nouvel enregistrement');
-
-                    self.go();
-                });
+                }
             } catch (err) {
                 error = err;
                 console.log(err, error);
@@ -138,7 +140,10 @@ function InstanceController() {
                 <div>
                     <div id="ins_page">
                         <div class="ui_quick">
-                            ${!page_meta.version ? 'Nouvel enregistrement' : 'Enregistrement local'}
+                            ${model.variables.length ? html`
+                                ${!page_meta.version ? 'Nouvel enregistrement' : ''}
+                                ${page_meta.version > 0 ? 'Enregistrement local' : ''}
+                            `  : ''}
                             <div style="flex: 1;"></div>
                             ${page_meta.version > 0 ? html`
                                 Version ${page_meta.version}
