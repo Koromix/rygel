@@ -152,15 +152,15 @@ function InstanceController() {
                             </form>
                         ` : ''}
                         ${error != null ? html`<span class="gp_wip">${error.message}</span>` : ''}
-
-                        ${develop ? html`
-                            <div style="flex: 1;"></div>
-                            <div id="ins_notice">
-                                Formulaires en développement<br/>
-                                Déployez les avant d'enregistrer des données
-                            </div>
-                        ` : ''}
                     </div>
+
+                    ${develop ? html`
+                        <div style="flex: 1;"></div>
+                        <div id="ins_notice">
+                            Formulaires en développement<br/>
+                            Déployez les avant d'enregistrer des données
+                        </div>
+                    ` : ''}
                 </div>
             `;
         });
