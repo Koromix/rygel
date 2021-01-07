@@ -75,12 +75,14 @@ function InstanceController() {
                     @click=${e => togglePanel('page')}>Page</button>
 
             <div style="flex: 1;"></div>
-            ${util.map(app.pages.values(), page => {
-                let missing = page.dependencies.some(dep => !page_meta.status.has(dep));
-                return html`<button class=${page.key === page_key ? 'active' : ''} ?disabled=${missing}
-                                    @click=${e => self.go(makePageURL(page.key))}>${page.title}</button>`;
-            })}
-            <div style="flex: 1;"></div>
+            ${ui.isPanelEnabled('editor') || ui.isPanelEnabled('page') ? html`
+                ${util.map(app.pages.values(), page => {
+                    let missing = page.dependencies.some(dep => !page_meta.status.has(dep));
+                    return html`<button class=${page.key === page_key ? 'active' : ''} ?disabled=${missing}
+                                        @click=${e => self.go(makePageURL(page.key))}>${page.title}</button>`;
+                })}
+                <div style="flex: 1;"></div>
+            ` : ''}
 
             <div class="drop right">
                 <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
