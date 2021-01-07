@@ -484,8 +484,13 @@ function FormBuilder(state, model, readonly = false) {
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class=${options.readonly ? 'fm_radio readonly' : 'fm_radio'} id=${id}>
                 ${props.map((p, i) =>
-                    html`<input type="radio" name=${id} id=${`${id}.${i}`} value=${util.valueToStr(p.value)}
-                                ?disabled=${options.disabled} .checked=${value === p.value}
+                    // Remember to set name (and id) after .checked, because otherwise when we update
+                    // the form with a new FormState on the same page, a previously checked radio button
+                    // can unset a previous one when it's name is updated but the checked value is
+                    // still true, meaning '.checked=false' hasn't run yet.
+                    html`<input type="radio" value=${util.valueToStr(p.value)}
+                                ?disabled=${options.disabled || false} .checked=${value === p.value}
+                                name=${id} id=${`${id}.${i}`}
                                 @click=${e => handleEnumRadioChange(e, key, options.untoggle && value === p.value)}
                                 @keydown=${handleRadioOrCheckKey} tabindex=${i ? -1 : 0} />
                          <label for=${`${id}.${i}`}>${p.label}</label><br/>`)}
