@@ -579,13 +579,27 @@ void HandleCreateInstance(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        bool conflict;
-        if (!CreateInstance(&gp_domain, instance_key, title, session->username, &conflict)) {
-            if (conflict) {
-                io->AttachError(409);
+        bool success = gp_domain.db.Transaction([&]() {
+            // Log action
+            int64_t time = GetUnixTime();
+            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                                     VALUES (?1, ?2, ?3, ?4, ?5);)",
+                                  time, request.client_addr, "create_instance", session->username,
+                                  instance_key))
+                return false;
+
+            bool conflict;
+            if (!CreateInstance(&gp_domain, instance_key, title, session->username, &conflict)) {
+                if (conflict) {
+                    io->AttachError(409);
+                }
+                return false;
             }
+
+            return true;
+        });
+        if (!success)
             return;
-        }
 
         SignalWaitFor();
         io->AttachText(200, "Done!");
@@ -617,6 +631,14 @@ void HandleDeleteInstance(const http_RequestInfo &request, http_IO *io)
         }
 
         bool success = gp_domain.db.Transaction([&]() {
+            // Log action
+            int64_t time = GetUnixTime();
+            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                                     VALUES (?1, ?2, ?3, ?4, ?5);)",
+                                  time, request.client_addr, "delete_instance", session->username,
+                                  instance_key))
+                return false;
+
             if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE instance = ?1;", instance_key))
                 return false;
             if (!gp_domain.db.Run("DELETE FROM dom_instances WHERE instance = ?1;", instance_key))
@@ -708,6 +730,14 @@ void HandleConfigureInstance(const http_RequestInfo &request, http_IO *io)
 
         // Write new configuration to database
         bool success = instance->db.Transaction([&]() {
+            // Log action
+            int64_t time = GetUnixTime();
+            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                                     VALUES (?1, ?2, ?3, ?4, ?5);)",
+                                  time, request.client_addr, "edit_instance", session->username,
+                                  instance_key))
+                return false;
+
             const char *sql = "UPDATE fs_settings SET value = ?2 WHERE key = ?1;";
             bool success = true;
 
@@ -851,6 +881,14 @@ void HandleCreateUser(const http_RequestInfo &request, http_IO *io)
                 }
             }
 
+            // Log action
+            int64_t time = GetUnixTime();
+            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                                     VALUES (?1, ?2, ?3, ?4, ?5);)",
+                                  time, request.client_addr, "create_user", session->username,
+                                  username))
+                return false;
+
             // Create user
             if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, admin, passport)
                                      VALUES (?1, ?2, ?3, ?4);)",
@@ -894,15 +932,32 @@ void HandleDeleteUser(const http_RequestInfo &request, http_IO *io)
         }
 
         gp_domain.db.Transaction([&]() {
+            sq_Statement stmt;
+            if (!gp_domain.db.Prepare("SELECT passport FROM dom_users;", &stmt))
+                return false;
+
+            if (!stmt.Next()) {
+                if (!stmt.IsValid()) {
+                    LogError("User '%1' does not exist", username);
+                    io->AttachError(404);
+                }
+                return false;
+            }
+
+            const char *passport = (const char *)sqlite3_column_text(stmt, 0);
+            int64_t time = GetUnixTime();
+
+            // Log action
+            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                                     VALUES (?1, ?2, ?3, ?4, ?5 || ':' || ?6);)",
+                                  time, request.client_addr, "delete_user", session->username,
+                                  username, passport))
+                return false;
+
             if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE username = ?1;", username))
                 return false;
             if (!gp_domain.db.Run("DELETE FROM dom_users WHERE username = ?1;", username))
                 return false;
-            if (!sqlite3_changes(gp_domain.db)) {
-                LogError("User '%1' does not exist", username);
-                io->AttachError(404);
-                return false;
-            }
 
             io->AttachError(200, "Done!");
             return true;
@@ -1010,6 +1065,14 @@ void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
                     return false;
                 }
             }
+
+            // Log action
+            int64_t time = GetUnixTime();
+            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                                     VALUES (?1, ?2, ?3, ?4, ?5 || '+' || ?6 || ':' || ?7 || '@' || ?8);)",
+                                  time, request.client_addr, "assign_user", session->username,
+                                  instance, username, permissions, zone))
+                return false;
 
             // Adjust permissions
             if (permissions) {
