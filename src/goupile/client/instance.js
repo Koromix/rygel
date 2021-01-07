@@ -79,7 +79,7 @@ function InstanceController() {
                 ${util.map(app.pages.values(), page => {
                     let missing = page.dependencies.some(dep => !page_meta.status.has(dep));
                     return html`<button class=${page.key === page_key ? 'active' : ''} ?disabled=${missing}
-                                        @click=${e => self.go(makePageURL(page.key))}>${page.title}</button>`;
+                                        @click=${ui.wrapAction(e => self.go(makePageURL(page.key)))}>${page.title}</button>`;
                 })}
                 <div style="flex: 1;"></div>
             ` : ''}
