@@ -23,8 +23,8 @@
 
 namespace RG {
 
-static const char *DefaultConfig = R"(
-[Resources]
+static const char *DefaultConfig =
+R"([Resources]
 # DatabaseFile = goupile.db
 # InstanceDirectory = instances
 # TempDirectory = tmp
@@ -37,6 +37,7 @@ static const char *DefaultConfig = R"(
 # Port = 8888
 # Threads =
 # AsyncThreads =
+# TrustXRealIP = Off
 )";
 
 static bool CheckInstanceKey(Span<const char> key)

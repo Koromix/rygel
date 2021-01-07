@@ -399,6 +399,12 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             return 1;
     }
 
+#ifdef NDEBUG
+    if (!gp_domain.config.http.use_xrealip) {
+        LogInfo("If you run this behind a reverse proxy, you may want to enable the HTTP.TrustXRealIP setting in goupile.ini");
+    }
+#endif
+
     // Run!
     http_Daemon daemon;
     if (!daemon.Start(gp_domain.config.http, HandleRequest))
