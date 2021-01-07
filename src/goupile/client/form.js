@@ -360,7 +360,6 @@ function FormBuilder(state, model, readonly = false) {
                 updateValue(key, number.value);
                 resolve(number.value);
             });
-            d.action('Annuler', {}, () => reject(new Error('Action annulée')));
         });
     }
 
