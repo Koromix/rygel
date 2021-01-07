@@ -169,8 +169,7 @@ function InstanceController() {
                     </table>
 
                     <div class="ui_actions">
-                        <button @click=${newRecord}
-                                ?disabled=${!page_meta.version}>Créer un nouvel enregistrement</button>
+                        <button @click=${ui.wrapAction(runNewRecordDialog)}>Créer un nouvel enregistrement</button>
                     </div>
                 </div>
             `;
@@ -204,9 +203,9 @@ function InstanceController() {
                     });
                     builder.action('-');
                     if (page_meta.version > 0) {
-                        builder.action('Nouveau', {}, newRecord);
+                        builder.action('Nouveau', {}, runNewRecordDialog);
                     } else {
-                        builder.action('Réinitialiser', {disabled: !page_state.hasChanged()}, newRecord);
+                        builder.action('Réinitialiser', {disabled: !page_state.hasChanged()}, runNewRecordDialog);
                     }
                 }
             } catch (err) {
@@ -307,17 +306,19 @@ function InstanceController() {
         });
     }
 
-    function newRecord() {
-        page_ulid = null;
-        page_version = null;
+    function runNewRecordDialog(e) {
+        return ui.runConfirm(e, 'Êtes-vous sûr de vouloir fermer cet enregistrement ?', 'Nouveau', () => {
+            page_ulid = null;
+            page_version = null;
 
-        setTimeout(() => {
-            // Help the user fill a new form
-            document.querySelector('#ins_page').parentNode.scrollTop = 0;
+            setTimeout(() => {
+                // Help the user fill a new form
+                document.querySelector('#ins_page').parentNode.scrollTop = 0;
+            });
+
+            ui.setPanelState('page', true, false);
+            self.go();
         });
-
-        ui.setPanelState('page', true, false);
-        self.go();
     }
 
     async function loadRecord() {
