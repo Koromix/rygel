@@ -38,7 +38,7 @@ function AdminController() {
                 <div class="ui_quick">
                     Instances
                     <div style="flex: 1;"></div>
-                    <a @click=${ui.wrapAction(e => { instances = null; return self.go(); })}>🗘</a>
+                    <a @click=${ui.wrapAction(e => { instances = null; return self.go(); })}>Rafraichir</a>
                 </div>
 
                 <table class="ui_table">
@@ -71,7 +71,7 @@ function AdminController() {
                 <div class="ui_quick">
                     Utilisateurs
                     <div style="flex: 1;"></div>
-                    <a @click=${ui.wrapAction(e => { users = null; return self.go(); })}>🗘</a>
+                    <a @click=${ui.wrapAction(e => { users = null; return self.go(); })}>Rafraichir</a>
                 </div>
 
                 <table class="ui_table">

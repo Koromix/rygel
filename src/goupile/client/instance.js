@@ -126,7 +126,7 @@ function InstanceController() {
                     <div class="ui_quick">
                         ${data_rows.length || 'Aucune'} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
                         <div style="flex: 1;"></div>
-                        <a @click=${ui.wrapAction(e => { data_rows = null; return self.go(); })}>🗘</a>
+                        <a @click=${ui.wrapAction(e => { data_rows = null; return self.go(); })}>Rafraichir</a>
                     </div>
 
                     <table class="ui_table" id="ins_data">
@@ -619,7 +619,7 @@ function InstanceController() {
                 <div class="ui_quick">
                     ${modifications || 'Aucune'} ${modifications.length > 1 ? 'modifications' : 'modification'} à effectuer
                     <div style="flex: 1;"></div>
-                    <a @click=${ui.wrapAction(e => { users = null; return self.go(); })}>🗘</a>
+                    <a @click=${ui.wrapAction(e => { users = null; return self.go(); })}>Rafraichir</a>
                 </div>
 
                 <table class="ui_table ins_deploy">
