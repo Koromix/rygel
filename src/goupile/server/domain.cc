@@ -269,7 +269,7 @@ InstanceHolder *DomainHolder::Ref(Span<const char> key, bool *out_reload)
             *out_reload = false;
         }
         return nullptr;
-    } else if (instance->reload) {
+    } else if (instance->reload.load(std::memory_order_relaxed)) {
         if (out_reload) {
             *out_reload = true;
         }

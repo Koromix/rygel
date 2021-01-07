@@ -27,7 +27,7 @@ class InstanceHolder {
     // Managed by DomainHolder
     std::atomic_int refcount {0};
     bool unload = false;
-    bool reload = false;
+    std::atomic_bool reload {false};
 
 public:
     int64_t unique = -1;

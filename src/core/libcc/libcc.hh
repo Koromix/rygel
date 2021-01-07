@@ -3700,7 +3700,7 @@ static const char *const SocketTypeNames[] = {
 class Async {
     RG_DELETE_COPY(Async)
 
-    std::atomic_int success {1};
+    std::atomic_bool success {true};
     std::atomic_int remaining_tasks {0};
 
     class AsyncPool *pool;

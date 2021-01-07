@@ -3598,7 +3598,7 @@ void AsyncPool::RunTask(Task *task)
     async_running_task = true;
 
     pending_tasks--;
-    if (async->success && !task->func()) {
+    if (async->success.load(std::memory_order_relaxed) && !task->func()) {
         async->success = false;
     }
 
