@@ -586,6 +586,17 @@ const net = new function() {
         }
     };
 
+    this.fetchJson = async function(request, init) {
+        let response = await self.fetch(request, init);
+
+        if (!response.ok) {
+            let err = (await response.text()).trim();
+            throw new Error(err);
+        }
+
+        return response.json();
+    };
+
     this.loadScript = function(url) {
         return new Promise((resolve, reject) => {
             let script = document.createElement('script');

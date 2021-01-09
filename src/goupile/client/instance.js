@@ -692,7 +692,7 @@ function InstanceController() {
     async function computeDeployActions() {
         let [local_files, remote_files] = await Promise.all([
             db.loadAll('fs_files'),
-            net.fetch(`${ENV.base_url}api/files/list`).then(response => response.json())
+            net.fetchJson(`${ENV.base_url}api/files/list`)
         ]);
 
         let local_map = util.arrayToObject(local_files, file => file.filename);

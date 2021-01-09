@@ -7,8 +7,8 @@ let ENV = {ENV_JSON};
 self.addEventListener('install', e => {
     e.waitUntil(async function() {
         let [assets, files, cache] = await Promise.all([
-            net.fetch(`${ENV.base_url}api/files/static`).then(response => response.json()),
-            net.fetch(`${ENV.base_url}api/files/list`).then(response => response.json()),
+            net.fetchJson(`${ENV.base_url}api/files/static`),
+            net.fetchJson(`${ENV.base_url}api/files/list`),
             caches.open(ENV.cache_key)
         ]);
 
