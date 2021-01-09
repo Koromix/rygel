@@ -72,7 +72,7 @@ function InstanceController() {
                     @click=${ui.wrapAction(e => togglePanel('data'))}>Suivi</button>
             <button class=${'icon' + (ui.isPanelEnabled('page') ? ' active' : '')}
                     style="background-position-y: calc(-318px + 1.2em);"
-                    @click=${ui.wrapAction(e => togglePanel('page'))}>Page</button>
+                    @click=${ui.wrapAction(e => togglePanel('page'))}>Formulaire</button>
 
             <div style="flex: 1;"></div>
             ${ui.isPanelEnabled('editor') || ui.isPanelEnabled('page') ? html`
@@ -101,7 +101,7 @@ function InstanceController() {
             });
             if (page_key != null) {
                 tabs.push({
-                    title: 'Page',
+                    title: 'Formulaire',
                     filename: getPageFileName(page_key)
                 });
             }
@@ -184,7 +184,7 @@ function InstanceController() {
             let error;
             try {
                 let meta = util.assignDeep({}, page_meta);
-                runUserCode('Page', page_code, {
+                runUserCode('Formulaire', page_code, {
                     form: builder,
                     values: page_state.values,
                     meta: meta,
