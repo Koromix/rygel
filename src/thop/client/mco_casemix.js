@@ -17,7 +17,7 @@ const mco_casemix = new function() {
         // Fetch resources
         let [mco, structures] = await Promise.all([
             data.fetchDictionary('mco'),
-            data.fetchJSON(`${ENV.base_url}api/structures`)
+            data.fetchJson(`${ENV.base_url}api/structures`)
         ]);
 
         // Check options
@@ -240,7 +240,7 @@ const mco_casemix = new function() {
     async function runSummary(by) {
         let [mco, structures] = await Promise.all([
             data.fetchDictionary('mco'),
-            data.fetchJSON(`${ENV.base_url}api/structures`)
+            data.fetchJson(`${ENV.base_url}api/structures`)
         ]);
 
         document.title = `THOP – Casemix`;
@@ -266,7 +266,7 @@ const mco_casemix = new function() {
     async function runValorisation() {
         let [mco, structures] = await Promise.all([
             data.fetchDictionary('mco'),
-            data.fetchJSON(`${ENV.base_url}api/structures`)
+            data.fetchJson(`${ENV.base_url}api/structures`)
         ]);
 
         document.title = `THOP – Valorisation`;
@@ -309,7 +309,7 @@ const mco_casemix = new function() {
     async function runRSS() {
         let [mco, structures] = await Promise.all([
             data.fetchDictionary('mco'),
-            data.fetchJSON(`${ENV.base_url}api/structures`)
+            data.fetchJson(`${ENV.base_url}api/structures`)
         ]);
 
         document.title = `THOP – RSS`;

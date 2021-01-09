@@ -12,7 +12,7 @@ const data = new function() {
     let json_cache = new LruMap(4);
     let dict_cache = new LruMap(4);
 
-    this.fetchJSON = async function(url) {
+    this.fetchJson = async function(url) {
         return fetchAndCache(json_cache, url, url, json => json); };
 
     this.fetchDictionary = async function(name) {
