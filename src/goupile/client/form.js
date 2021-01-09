@@ -865,29 +865,34 @@ function FormBuilder(state, model, readonly = false) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
+        if (Number.isNaN(value) || value == null)
+            value = undefined;
         if (value != null && typeof value !== 'string' &&
                              typeof value !== 'number' &&
                              value.constructor.name !== 'LocalDate' &&
                              value.constructor.name !== 'LocalTime')
             throw new Error('Calculated value must be a string, a number, a date or a time');
-        if (Number.isNaN(value))
-            value = undefined;
 
-        let text = value;
-        if (!options.raw) {
-            if (value == null) {
-                value = undefined;
-                text = 'Non calculable';
-            } else if (typeof value === 'number' && isFinite(value)) {
-                if (options.decimals != null) {
-                    text = value.toFixed(options.decimals);
-                } else {
-                    // This is a garbage way to round numbers
-                    let multiplicator = Math.pow(10, 2);
-                    let n = parseFloat((value * multiplicator).toFixed(11));
-                    text = Math.round(n) / multiplicator;
-                }
+        let text;
+        if (value == null) {
+            text = 'Non calculable';
+        } else if (options.text != null) {
+            if (typeof options.text === 'function') {
+                text = options.text(value);
+            } else {
+                text = options.text;
             }
+        } else if (typeof value === 'number' && isFinite(value)) {
+            if (options.decimals != null) {
+                text = value.toFixed(options.decimals);
+            } else {
+                // This is a garbage way to round numbers
+                let multiplicator = Math.pow(10, 2);
+                let n = parseFloat((value * multiplicator).toFixed(11));
+                text = Math.round(n) / multiplicator;
+            }
+        } else {
+            text = value;
         }
 
         let id = makeID(key);
