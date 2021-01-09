@@ -142,7 +142,7 @@ function FormBuilder(state, model, readonly = false) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
-        let value = readValue(key, options.value, value => (value != null) ? String(value) : undefined);
+        let value = readValue(key, options, value => (value != null) ? String(value) : undefined);
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -167,7 +167,7 @@ function FormBuilder(state, model, readonly = false) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
-        let value = readValue(key, options.value, value => (value != null) ? String(value) : undefined);
+        let value = readValue(key, options, value => (value != null) ? String(value) : undefined);
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -191,7 +191,7 @@ function FormBuilder(state, model, readonly = false) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
-        let value = readValue(key, options.value, value => (value != null) ? String(value) : undefined);
+        let value = readValue(key, options, value => (value != null) ? String(value) : undefined);
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
@@ -222,7 +222,7 @@ function FormBuilder(state, model, readonly = false) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
-        let value = readValue(key, options.value, value => {
+        let value = readValue(key, options, value => {
             value = parseFloat(value);
             if (Number.isNaN(value))
                 value = undefined;
@@ -280,7 +280,7 @@ function FormBuilder(state, model, readonly = false) {
         if (range <= 0)
             throw new Error('Range (options.max - options.min) must be positive');
 
-        let value = readValue(key, options.value, value => {
+        let value = readValue(key, options, value => {
             value = parseFloat(value);
             if (Number.isNaN(value))
                 value = undefined;
@@ -368,7 +368,7 @@ function FormBuilder(state, model, readonly = false) {
         key = decodeKey(key, options);
         props = normalizePropositions(props);
 
-        let value = readValue(key, options.value, value => {
+        let value = readValue(key, options, value => {
             if (Array.isArray(value))
                 value = (value.length === 1) ? value[0] : undefined;
 
@@ -429,7 +429,7 @@ function FormBuilder(state, model, readonly = false) {
         key = decodeKey(key, options);
         props = normalizePropositions(props);
 
-        let value = readValue(key, options.value, value => {
+        let value = readValue(key, options, value => {
             if (Array.isArray(value))
                 value = (value.length === 1) ? value[0] : undefined;
 
@@ -471,7 +471,7 @@ function FormBuilder(state, model, readonly = false) {
         key = decodeKey(key, options);
         props = normalizePropositions(props);
 
-        let value = readValue(key, options.value, value => {
+        let value = readValue(key, options, value => {
             if (Array.isArray(value))
                 value = (value.length === 1) ? value[0] : undefined;
 
@@ -520,7 +520,7 @@ function FormBuilder(state, model, readonly = false) {
         key = decodeKey(key, options);
         props = normalizePropositions(props);
 
-        let value = readValue(key, options.value, value => {
+        let value = readValue(key, options, value => {
             if (!Array.isArray(value)) {
                 if (value != null) {
                     value = [value];
@@ -595,7 +595,7 @@ function FormBuilder(state, model, readonly = false) {
         key = decodeKey(key, options);
         props = normalizePropositions(props);
 
-        let value = readValue(key, options.value, value => {
+        let value = readValue(key, options, value => {
             if (!Array.isArray(value)) {
                 if (value != null) {
                     value = [value];
@@ -704,7 +704,7 @@ function FormBuilder(state, model, readonly = false) {
         if (options.value != null)
             options.value = options.value.toString();
 
-        let value = readValue(key, options.value, value => {
+        let value = readValue(key, options, value => {
             if (typeof value === 'string') {
                 value = dates.parseSafe(value);
             } else if (value != null && value.constructor.name !== 'LocalDate') {
@@ -762,7 +762,7 @@ function FormBuilder(state, model, readonly = false) {
         if (options.value != null)
             options.value = options.value.toString();
 
-        let value = readValue(key, options.value, value => {
+        let value = readValue(key, options, value => {
             if (typeof value === 'string') {
                 value = times.parseSafe(value);
             } else if (value != null && value.constructor.name !== 'LocalTime') {
@@ -818,7 +818,7 @@ function FormBuilder(state, model, readonly = false) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
-        let value = readValue(key, options.value, value => {
+        let value = readValue(key, options, value => {
             if (!(value instanceof File))
                 value = undefined;
 
@@ -907,7 +907,7 @@ function FormBuilder(state, model, readonly = false) {
         fillVariableInfo(intf, key, value);
         addWidget(intf);
 
-        readValue(key, undefined, value => value);
+        readValue(key, {}, value => value);
         updateValue(key, value, false);
 
         return intf;
@@ -1401,7 +1401,7 @@ instead of:
         }
     }
 
-    function readValue(key, default_value, func) {
+    function readValue(key, options, func) {
         if (state.changed_variables.has(key.toString())) {
             let value = state.values[key];
 
@@ -1411,7 +1411,7 @@ instead of:
 
             return value;
         } else {
-            let value = state.getValue(key, default_value);
+            let value = state.getValue(key, options.value);
 
             value = func(value);
             if (value == null)
