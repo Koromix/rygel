@@ -95,9 +95,9 @@ html.small .ui_toolbar button.icon {
 }
 #ui_panels > div.padded { padding: 2em; }
 #ui_panels > div.padded::after {
-    content: "";
     display: block;
-    height: 2em;
+    min-height: 2em;
+    content: "";
 }
 
 /* -------------------- Dialogs and popups -------------------- */
