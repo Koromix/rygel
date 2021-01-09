@@ -65,14 +65,14 @@ function InstanceController() {
             ${goupile.hasPermission('develop') ? html`
                 <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
                         style="background-position-y: calc(-230px + 1.2em);"
-                        @click=${e => togglePanel('editor')}>Code</button>
+                        @click=${ui.wrapAction(e => togglePanel('editor'))}>Code</button>
             ` : ''}
             <button class=${'icon' + (ui.isPanelEnabled('data') ? ' active' : '')}
                     style="background-position-y: calc(-274px + 1.2em);"
-                    @click=${e => togglePanel('data')}>Suivi</button>
+                    @click=${ui.wrapAction(e => togglePanel('data'))}>Suivi</button>
             <button class=${'icon' + (ui.isPanelEnabled('page') ? ' active' : '')}
                     style="background-position-y: calc(-318px + 1.2em);"
-                    @click=${e => togglePanel('page')}>Page</button>
+                    @click=${ui.wrapAction(e => togglePanel('page'))}>Page</button>
 
             <div style="flex: 1;"></div>
             ${ui.isPanelEnabled('editor') || ui.isPanelEnabled('page') ? html`
@@ -255,7 +255,7 @@ function InstanceController() {
 
     function togglePanel(key, enable = null) {
         ui.setPanelState(key, !ui.isPanelEnabled(key));
-        self.go();
+        return self.go();
     }
 
     function runUserCode(title, code, arguments) {
@@ -560,7 +560,7 @@ function InstanceController() {
 
     function toggleEditorFile(filename) {
         editor_filename = filename;
-        self.go();
+        return self.go();
     }
 
     async function handleFileChange(filename) {

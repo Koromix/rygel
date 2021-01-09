@@ -21,9 +21,9 @@ function AdminController() {
         ui.setMenu(el => html`
             <button class="icon" style="background-position-y: calc(-538px + 1.2em);">Admin</button>
             <button class=${ui.isPanelEnabled('instances') ? 'active' : ''}
-                    @click=${e => togglePanel('instances')}>Instances</button>
+                    @click=${ui.wrapAction(e => togglePanel('instances'))}>Instances</button>
             <button class=${ui.isPanelEnabled('users') ? 'active' : ''}
-                    @click=${e => togglePanel('users')}>Utilisateurs</button>
+                    @click=${ui.wrapAction(e => togglePanel('users'))}>Utilisateurs</button>
             <div style="flex: 1;"></div>
             <div class="drop right">
                 <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
@@ -135,7 +135,7 @@ function AdminController() {
 
     function togglePanel(key) {
         ui.setPanelState(key, !ui.isPanelEnabled(key));
-        self.go();
+        return self.go();
     }
 
     function toggleSelectedInstance(key) {
@@ -145,7 +145,7 @@ function AdminController() {
         } else {
             selected_instance = null;
         }
-        self.go();
+        return self.go();
     }
 
     function runCreateInstanceDialog(e) {
@@ -169,7 +169,7 @@ function AdminController() {
 
                     instances = null;
 
-                    self.go();
+                    return self.go();
                 } else {
                     let err = (await response.text()).trim();
                     reject(new Error(err));
