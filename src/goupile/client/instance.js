@@ -74,14 +74,14 @@ function InstanceController() {
                     style="background-position-y: calc(-318px + 1.2em);"
                     @click=${ui.wrapAction(e => togglePanel('page'))}>Formulaire</button>
 
-            <div style="flex: 1;"></div>
+            <div style="flex: 1; min-width: 20px;"></div>
             ${ui.isPanelEnabled('editor') || ui.isPanelEnabled('page') ? html`
                 ${util.map(app.pages.values(), page => {
                     let missing = page.dependencies.some(dep => !page_meta.status.has(dep));
                     return html`<button class=${page.key === page_key ? 'active' : ''} ?disabled=${missing}
                                         @click=${ui.wrapAction(e => self.go(makePageURL(page.key)))}>${page.title}</button>`;
                 })}
-                <div style="flex: 1;"></div>
+                <div style="flex: 1; min-width: 20px;"></div>
             ` : ''}
 
             <div class="drop right">
