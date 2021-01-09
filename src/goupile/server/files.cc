@@ -14,6 +14,15 @@ namespace RG {
 
 void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    const Token *token = session ? session->GetToken(instance) : nullptr;
+    if (!instance->config.use_offline &&
+            (!token || !token->HasPermission(UserPermission::Deploy))) {
+        LogError("User is not allowed to deploy changes");
+        io->AttachError(403);
+        return;
+    }
+
     sq_Statement stmt;
     if (!instance->db.Prepare(R"(SELECT filename, size, sha256 FROM fs_files
                                  WHERE active = 1
