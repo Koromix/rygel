@@ -535,7 +535,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${label ? html`<label for=${id}>${label}</label>` : ''}
             <div class=${options.readonly ? 'fm_enum readonly' : 'fm_enum'} id=${id}>
                 ${props.map((p, i) =>
                     html`<button type="button" data-value=${util.valueToStr(p.value)}
