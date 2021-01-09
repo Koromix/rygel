@@ -1040,7 +1040,7 @@ function InstanceController() {
 
         // The server is our last hope
         {
-            let response = await fetch(`${ENV.base_url}files/${filename}`);
+            let response = await net.fetch(`${ENV.base_url}files/${filename}`);
 
             if (response.ok) {
                 let code = await response.text();

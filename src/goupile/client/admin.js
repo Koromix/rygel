@@ -123,9 +123,9 @@ function AdminController() {
             await goupile.runLogin();
 
         if (instances == null)
-            instances = await fetch('/admin/api/instances/list').then(response => response.json());
+            instances = await net.fetch('/admin/api/instances/list').then(response => response.json());
         if (users == null)
-            users = await fetch('/admin/api/users/list').then(response => response.json());
+            users = await net.fetch('/admin/api/users/list').then(response => response.json());
         if (!instances.find(instance => instance.key === selected_instance))
             selected_instance = null;
 

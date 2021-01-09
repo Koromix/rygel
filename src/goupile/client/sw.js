@@ -7,8 +7,8 @@ let ENV = {ENV_JSON};
 self.addEventListener('install', e => {
     e.waitUntil(async function() {
         let [assets, files, cache] = await Promise.all([
-            fetch(`${ENV.base_url}api/files/static`).then(response => response.json()),
-            fetch(`${ENV.base_url}api/files/list`).then(response => response.json()),
+            net.fetch(`${ENV.base_url}api/files/static`).then(response => response.json()),
+            net.fetch(`${ENV.base_url}api/files/list`).then(response => response.json()),
             caches.open(ENV.cache_key)
         ]);
 
@@ -38,9 +38,9 @@ self.addEventListener('fetch', e => {
             let path = url.pathname.substr(ENV.base_url.length - 1);
 
             if (path.startsWith('/main/')) {
-                return await caches.match(ENV.base_url) || await fetch(ENV.base_url);
+                return await caches.match(ENV.base_url) || await net.fetch(ENV.base_url);
             } else {
-                return await caches.match(e.request) || await fetch(e.request);
+                return await caches.match(e.request) || await net.fetch(e.request);
             }
         }
 
@@ -49,7 +49,7 @@ self.addEventListener('fetch', e => {
             let prefix = `${ENV.base_url}files/`;
 
             if (url.pathname.startsWith(prefix)) {
-                let response = await fetch(e.request);
+                let response = await net.fetch(e.request);
 
                 if (response.ok) {
                     let cache = await caches.open(ENV.cache_key);
@@ -65,6 +65,6 @@ self.addEventListener('fetch', e => {
             }
         }
 
-        return await fetch(e.request);
+        return await net.fetch(e.request);
     }());
 });
