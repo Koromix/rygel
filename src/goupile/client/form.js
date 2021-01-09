@@ -1330,7 +1330,7 @@ instead of:
             key: key,
             value: value,
 
-            missing: value == null,
+            missing: !intf.options.disabled && value == null,
             changed: state.changed_variables.has(key.toString()),
             updated: state.updated_variables.has(key.toString()),
 
