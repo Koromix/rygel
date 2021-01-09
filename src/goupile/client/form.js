@@ -173,7 +173,7 @@ function FormBuilder(state, model, readonly = false) {
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <textarea id=${id} class="fm_input" style=${makeInputStyle(options)}
-                   rows=${options.rows || 5} cols=${options.cols || 40}
+                   rows=${options.rows || 3} cols=${options.cols || 40}
                    placeholder=${options.placeholder || ''}
                    .value=${value || ''}
                    ?disabled=${options.disabled} ?readonly=${options.readonly}
