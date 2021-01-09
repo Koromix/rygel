@@ -1260,7 +1260,10 @@ instead of:
                     ${intf.errors.length ?
                         html`<div class="fm_error">${intf.errors.map(err => html`${err}<br/>`)}</div>` : ''}
                 </div>
-                ${intf.options.help ? html`<p class="fm_help">${intf.options.help}</p>` : ''}
+                ${intf.options.help && Array.isArray(intf.options.help) ?
+                    intf.options.help.map(help => html`<p class="fm_help">${help}</p>`) : ''}
+                ${intf.options.help && !Array.isArray(intf.options.help) ?
+                    html`<p class="fm_help">${intf.options.help}</p>` : ''}
             </div>
         `;
     }
