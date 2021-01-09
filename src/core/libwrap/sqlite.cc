@@ -109,30 +109,45 @@ bool sq_Database::SetUserVersion(int version)
 
 bool sq_Database::Transaction(FunctionRef<bool()> func)
 {
-    std::lock_guard<std::shared_mutex> lock(transact_mutex);
+    std::unique_lock<std::mutex> lock(transact_mutex);
 
-    transact_thread = std::this_thread::get_id();
-    RG_DEFER { transact_thread = std::thread::id(); };
+    if (std::this_thread::get_id() != transact_thread) {
+        std::unique_lock<std::shared_mutex> lock_ex(transact_rwl);
 
-    if (!Run("BEGIN IMMEDIATE TRANSACTION"))
-        return false;
-    RG_DEFER_N(rollback_guard) { Run("ROLLBACK"); };
+        transact_thread = std::this_thread::get_id();
+        lock.unlock();
+        RG_DEFER {
+            lock.lock();
+            transact_thread = std::thread::id();
+        };
 
-    if (!func())
-        return false;
-    if (!Run("COMMIT"))
-        return false;
+        if (!Run("BEGIN IMMEDIATE TRANSACTION"))
+            return false;
+        RG_DEFER_N(rollback_guard) { Run("ROLLBACK"); };
 
-    rollback_guard.Disable();
-    return true;
+        if (!func())
+            return false;
+        if (!Run("COMMIT"))
+            return false;
+
+        rollback_guard.Disable();
+        return true;
+    } else {
+        lock.unlock();
+        return func();
+    }
 }
 
 bool sq_Database::Run(const char *sql)
 {
-    std::shared_lock<std::shared_mutex> lock(transact_mutex, std::defer_lock);
+    std::shared_lock<std::shared_mutex> lock(transact_rwl, std::try_to_lock);
 
-    if (std::this_thread::get_id() != transact_thread) {
-        lock.lock();
+    if (!lock.owns_lock()) {
+        std::lock_guard<std::mutex> lock2(transact_mutex);
+
+        if (std::this_thread::get_id() != transact_thread) {
+            lock.lock();
+        }
     }
 
     char *error = nullptr;
@@ -148,10 +163,14 @@ bool sq_Database::Run(const char *sql)
 
 bool sq_Database::Prepare(const char *sql, sq_Statement *out_stmt)
 {
-    std::shared_lock<std::shared_mutex> lock(transact_mutex, std::defer_lock);
+    std::shared_lock<std::shared_mutex> lock(transact_rwl, std::try_to_lock);
 
-    if (std::this_thread::get_id() != transact_thread) {
-        lock.lock();
+    if (!lock.owns_lock()) {
+        std::lock_guard<std::mutex> lock2(transact_mutex);
+
+        if (std::this_thread::get_id() != transact_thread) {
+            lock.lock();
+        }
     }
 
     sqlite3_stmt *stmt;

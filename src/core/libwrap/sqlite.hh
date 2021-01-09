@@ -87,8 +87,9 @@ class sq_Database {
 
     sqlite3 *db = nullptr;
 
-    std::shared_mutex transact_mutex;
-    std::atomic<std::thread::id> transact_thread;
+    std::shared_mutex transact_rwl;
+    std::mutex transact_mutex;
+    std::thread::id transact_thread;
 
 public:
     sq_Database() {}
