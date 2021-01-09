@@ -18,7 +18,7 @@ const Token *Session::GetToken(const InstanceHolder *instance) const
     if (instance) {
         Token *token;
         {
-            std::shared_lock<std::shared_mutex> lock(tokens_lock);
+            std::shared_lock<std::shared_mutex> lock_shr(tokens_lock);
             token = tokens_map.Find(instance->unique);
         }
 
@@ -36,7 +36,7 @@ const Token *Session::GetToken(const InstanceHolder *instance) const
                 uint32_t permissions = sqlite3_column_int(stmt, 1);
                 const char *zone = (const char *)sqlite3_column_text(stmt, 0);
 
-                std::lock_guard<std::shared_mutex> lock(tokens_lock);
+                std::lock_guard<std::shared_mutex> lock_excl(tokens_lock);
 
                 token = tokens_map.SetDefault(instance->unique);
                 token->zone = zone ? DuplicateString(zone, &tokens_alloc).ptr : nullptr;
@@ -45,7 +45,7 @@ const Token *Session::GetToken(const InstanceHolder *instance) const
 
             // User is not assigned to this instance, cache this information
             if (!token) {
-                std::lock_guard<std::shared_mutex> lock(tokens_lock);
+                std::lock_guard<std::shared_mutex> lock_excl(tokens_lock);
                 token = tokens_map.SetDefault(instance->unique);
             }
         }

@@ -112,7 +112,7 @@ bool sq_Database::Transaction(FunctionRef<bool()> func)
     std::unique_lock<std::mutex> lock(transact_mutex);
 
     if (std::this_thread::get_id() != transact_thread) {
-        std::unique_lock<std::shared_mutex> lock_ex(transact_rwl);
+        std::lock_guard<std::shared_mutex> lock_excl(transact_rwl);
 
         transact_thread = std::this_thread::get_id();
         lock.unlock();
@@ -140,13 +140,13 @@ bool sq_Database::Transaction(FunctionRef<bool()> func)
 
 bool sq_Database::Run(const char *sql)
 {
-    std::shared_lock<std::shared_mutex> lock(transact_rwl, std::try_to_lock);
+    std::shared_lock<std::shared_mutex> lock_shr(transact_rwl, std::try_to_lock);
 
-    if (!lock.owns_lock()) {
-        std::lock_guard<std::mutex> lock2(transact_mutex);
+    if (!lock_shr.owns_lock()) {
+        std::lock_guard<std::mutex> lock(transact_mutex);
 
         if (std::this_thread::get_id() != transact_thread) {
-            lock.lock();
+            lock_shr.lock();
         }
     }
 
@@ -163,13 +163,13 @@ bool sq_Database::Run(const char *sql)
 
 bool sq_Database::Prepare(const char *sql, sq_Statement *out_stmt)
 {
-    std::shared_lock<std::shared_mutex> lock(transact_rwl, std::try_to_lock);
+    std::shared_lock<std::shared_mutex> lock_shr(transact_rwl, std::try_to_lock);
 
-    if (!lock.owns_lock()) {
-        std::lock_guard<std::mutex> lock2(transact_mutex);
+    if (!lock_shr.owns_lock()) {
+        std::lock_guard<std::mutex> lock(transact_mutex);
 
         if (std::this_thread::get_id() != transact_thread) {
-            lock.lock();
+            lock_shr.lock();
         }
     }
 

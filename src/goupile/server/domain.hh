@@ -57,7 +57,7 @@ public:
 
     Size CountInstances() const
     {
-        std::shared_lock<std::shared_mutex> lock(mutex);
+        std::shared_lock<std::shared_mutex> lock_shr(mutex);
         return instances_map.count;
     }
 

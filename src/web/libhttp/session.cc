@@ -15,7 +15,7 @@ static const int64_t RegenerateDelay = 5 * 60000;
 
 void http_SessionManager::Open2(const http_RequestInfo &request, http_IO *io, RetainPtr<RetainObject> udata)
 {
-    std::unique_lock<std::shared_mutex> lock(mutex);
+    std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
     Session *session = CreateSession(request, io);
     if (!session)
@@ -83,7 +83,7 @@ http_SessionManager::Session *
 
 void http_SessionManager::Close(const http_RequestInfo &request, http_IO *io)
 {
-    std::unique_lock<std::shared_mutex> lock(mutex);
+    std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
     sessions.Remove(FindSession(request));
     DeleteSessionCookies(request, io);
@@ -93,7 +93,7 @@ RetainObject *http_SessionManager::Find2(const http_RequestInfo &request, http_I
 {
     PruneStaleSessions();
 
-    std::shared_lock<std::shared_mutex> lock(mutex);
+    std::shared_lock<std::shared_mutex> lock_shr(mutex);
 
     bool mismatch = false;
     Session *session = FindSession(request, &mismatch);
@@ -106,7 +106,7 @@ RetainObject *http_SessionManager::Find2(const http_RequestInfo &request, http_I
         if (now - session->register_time >= RegenerateDelay) {
             int64_t login_time = session->login_time;
 
-            lock.unlock();
+            lock_shr.unlock();
 
             Session *session = CreateSession(request, io);
 
@@ -187,7 +187,7 @@ void http_SessionManager::PruneStaleSessions()
         last_pruning = now;
     }
 
-    std::unique_lock<std::shared_mutex> lock(mutex);
+    std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
     for (auto it = sessions.begin(); it != sessions.end(); it++) {
         const Session &session = *it;
