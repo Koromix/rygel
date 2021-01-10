@@ -73,7 +73,7 @@ html.small .fm_section {
     z-index: 999;
 }
 .fm_tabs > button + button { margin-left: 8px; }
-.fm_tabs > button:not(.active):hover {
+.fm_tabs > button:not(.active):not(:disabled):hover {
     background: white;
     border-color: var(--page_color);
     color: black;
