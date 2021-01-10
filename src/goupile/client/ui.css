@@ -281,7 +281,7 @@ html.small .ui_toolbar button.icon {
 @keyframes ui_busy {
     100% {
         visibility: visible;
-        background: #24579d;
+        background: var(--menu_color);
     }
 }
 @keyframes ui_busy_spinner {
