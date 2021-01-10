@@ -94,7 +94,6 @@ function InstanceController() {
 
         ui.createPanel('editor', 0, false, () => {
             let tabs = [];
-
             tabs.push({
                 title: 'Application',
                 filename: 'main.js'
@@ -105,6 +104,9 @@ function InstanceController() {
                     filename: getPageFileName(page_key)
                 });
             }
+
+            // Ask ACE to adjust if needed, it needs to happen after the render
+            setTimeout(() => editor_ace.resize(false), 0);
 
             return html`
                 <div style="--menu_color: #383936;">
