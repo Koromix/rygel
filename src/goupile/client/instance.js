@@ -307,18 +307,24 @@ function InstanceController() {
     }
 
     function runNewRecordDialog(e) {
-        return ui.runConfirm(e, 'Êtes-vous sûr de vouloir fermer cet enregistrement ?', 'Nouveau', () => {
-            page_ulid = null;
-            page_version = null;
+        if (page_state.hasChanged()) {
+            return ui.runConfirm(e, 'Êtes-vous sûr de vouloir fermer cet enregistrement ?', 'Nouveau', newRecord);
+        } else {
+            newRecord();
+        }
+    }
 
-            setTimeout(() => {
-                // Help the user fill a new form
-                document.querySelector('#ins_page').parentNode.scrollTop = 0;
-            });
+    function newRecord() {
+        page_ulid = null;
+        page_version = null;
 
-            ui.setPanelState('page', true, false);
-            self.go();
+        setTimeout(() => {
+            // Help the user fill a new form
+            document.querySelector('#ins_page').parentNode.scrollTop = 0;
         });
+
+        ui.setPanelState('page', true, false);
+        self.go();
     }
 
     async function loadRecord() {
