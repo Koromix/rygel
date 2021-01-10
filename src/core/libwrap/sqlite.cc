@@ -11,7 +11,9 @@ sq_Statement &sq_Statement::operator=(sq_Statement &&other)
 {
     Finalize();
 
+    db = other.db;
     stmt = other.stmt;
+    other.db = nullptr;
     other.stmt = nullptr;
 
     return *this;
@@ -19,7 +21,12 @@ sq_Statement &sq_Statement::operator=(sq_Statement &&other)
 
 void sq_Statement::Finalize()
 {
-    sqlite3_finalize(stmt);
+    if (db) {
+        db->UnlockShared();
+        sqlite3_finalize(stmt);
+    }
+
+    db = nullptr;
     stmt = nullptr;
 }
 
@@ -48,8 +55,15 @@ void sq_Statement::Reset()
 
 sqlite3_stmt *sq_Statement::Leak()
 {
-    RG_DEFER { stmt = nullptr; };
-    return stmt;
+    RG_ASSERT(db);
+
+    sqlite3_stmt *copy = stmt;
+
+    db->UnlockShared();
+    db = nullptr;
+    stmt = nullptr;
+
+    return copy;
 }
 
 bool sq_Database::Open(const char *filename, unsigned int flags)
@@ -109,18 +123,12 @@ bool sq_Database::SetUserVersion(int version)
 
 bool sq_Database::Transaction(FunctionRef<bool()> func)
 {
-    std::unique_lock<std::mutex> lock(transact_mutex);
+    bool nested = LockExclusive();
+    RG_DEFER { UnlockExclusive(); };
 
-    if (std::this_thread::get_id() != transact_thread) {
-        std::lock_guard<std::shared_mutex> lock_excl(transact_rwl);
-
-        transact_thread = std::this_thread::get_id();
-        lock.unlock();
-        RG_DEFER {
-            lock.lock();
-            transact_thread = std::thread::id();
-        };
-
+    if (nested) {
+        return func();
+    } else {
         if (!Run("BEGIN IMMEDIATE TRANSACTION"))
             return false;
         RG_DEFER_N(rollback_guard) { Run("ROLLBACK"); };
@@ -132,23 +140,33 @@ bool sq_Database::Transaction(FunctionRef<bool()> func)
 
         rollback_guard.Disable();
         return true;
-    } else {
-        lock.unlock();
-        return func();
     }
+}
+
+bool sq_Database::Prepare(const char *sql, sq_Statement *out_stmt)
+{
+    LockShared();
+    RG_DEFER_N(lock_guard) { UnlockShared(); };
+
+    sqlite3_stmt *stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        LogError("SQLite request failed: %1", sqlite3_errmsg(db));
+        return false;
+    }
+
+    // sq_Statement will call UnlockShared()
+    lock_guard.Disable();
+    out_stmt->Finalize();
+    out_stmt->db = this;
+    out_stmt->stmt = stmt;
+
+    return true;
 }
 
 bool sq_Database::Run(const char *sql)
 {
-    std::shared_lock<std::shared_mutex> lock_shr(transact_rwl, std::try_to_lock);
-
-    if (!lock_shr.owns_lock()) {
-        std::lock_guard<std::mutex> lock(transact_mutex);
-
-        if (std::this_thread::get_id() != transact_thread) {
-            lock_shr.lock();
-        }
-    }
+    LockShared();
+    RG_DEFER { UnlockShared(); };
 
     char *error = nullptr;
     if (sqlite3_exec(db, sql, nullptr, nullptr, &error) != SQLITE_OK) {
@@ -161,28 +179,50 @@ bool sq_Database::Run(const char *sql)
     return true;
 }
 
-bool sq_Database::Prepare(const char *sql, sq_Statement *out_stmt)
+bool sq_Database::LockExclusive()
 {
-    std::shared_lock<std::shared_mutex> lock_shr(transact_rwl, std::try_to_lock);
+    std::unique_lock<std::mutex> lock(mutex);
 
-    if (!lock_shr.owns_lock()) {
-        std::lock_guard<std::mutex> lock(transact_mutex);
-
-        if (std::this_thread::get_id() != transact_thread) {
-            lock_shr.lock();
-        }
+    if ((running_transaction && running_transaction_thread != std::this_thread::get_id()) ||
+            running_requests) {
+        do {
+            transactions_cv.wait(lock);
+        } while (running_transaction || running_requests);
     }
+    running_transaction++;
+    running_transaction_thread = std::this_thread::get_id();
 
-    sqlite3_stmt *stmt;
-    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-        LogError("SQLite request failed: %1", sqlite3_errmsg(db));
-        return false;
+    return running_transaction > 1;
+}
+
+void sq_Database::UnlockExclusive()
+{
+    std::unique_lock<std::mutex> lock(mutex);
+
+    running_transaction--;
+    transactions_cv.notify_one();
+    requests_cv.notify_all();
+}
+
+void sq_Database::LockShared()
+{
+    std::unique_lock<std::mutex> lock(mutex);
+
+    if (running_transaction && running_transaction_thread != std::this_thread::get_id()) {
+        do {
+            requests_cv.wait(lock);
+        } while (running_transaction);
     }
+    running_requests++;
+}
 
-    out_stmt->Finalize();
-    out_stmt->stmt = stmt;
+void sq_Database::UnlockShared()
+{
+    std::unique_lock<std::mutex> lock(mutex);
 
-    return true;
+    if (!--running_requests) {
+        transactions_cv.notify_one();
+    }
 }
 
 bool sq_Database::RunWithBindings(const char *sql, Span<const sq_Binding> bindings)

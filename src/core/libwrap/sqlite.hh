@@ -11,6 +11,8 @@
 
 namespace RG {
 
+class sq_Database;
+
 class sq_Binding {
 public:
     enum class Type {
@@ -56,6 +58,7 @@ public:
 class sq_Statement {
     RG_DELETE_COPY(sq_Statement)
 
+    sq_Database *db = nullptr;
     sqlite3_stmt *stmt = nullptr;
     int rc;
 
@@ -87,9 +90,12 @@ class sq_Database {
 
     sqlite3 *db = nullptr;
 
-    std::shared_mutex transact_rwl;
-    std::mutex transact_mutex;
-    std::thread::id transact_thread;
+    std::mutex mutex;
+    std::condition_variable transactions_cv;
+    std::condition_variable requests_cv;
+    int running_transaction = 0;
+    std::thread::id running_transaction_thread;
+    int running_requests = 0;
 
 public:
     sq_Database() {}
@@ -106,6 +112,7 @@ public:
 
     bool Transaction(FunctionRef<bool()> func);
 
+    bool Prepare(const char *sql, sq_Statement *out_stmt);
     bool Run(const char *sql);
     template <typename... Args>
     bool Run(const char *sql, Args... args)
@@ -114,12 +121,17 @@ public:
         return RunWithBindings(sql, bindings);
     }
 
-    bool Prepare(const char *sql, sq_Statement *out_stmt);
-
     operator sqlite3 *() { return db; }
 
 private:
+    bool LockExclusive();
+    void UnlockExclusive();
+    void LockShared();
+    void UnlockShared();
+
     bool RunWithBindings(const char *sql, Span<const sq_Binding> bindings);
+
+    friend class sq_Statement;
 };
 
 }
