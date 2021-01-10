@@ -33,7 +33,7 @@ function AdminController() {
             </div>
         `);
 
-        ui.createPanel('instances', true, () => html`
+        ui.createPanel('instances', 1, true, () => html`
             <div class="padded" style="background: #f8f8f8;">
                 <div class="ui_quick">
                     Instances
@@ -66,7 +66,7 @@ function AdminController() {
             </div>
         `);
 
-        ui.createPanel('users', true, () => html`
+        ui.createPanel('users', 0, true, () => html`
             <div class="padded" style="flex-grow: 1.5;">
                 <div class="ui_quick">
                     Utilisateurs

@@ -5,9 +5,9 @@
 const ui = new function() {
     let self = this;
 
-    let menu;
+    let menu_render;
     let panels = new Map;
-    let enabled_panels = new LruMap(3);
+    let active_panels = 0;
 
     let dialogs = {
         prev: null,
@@ -30,36 +30,37 @@ const ui = new function() {
         document.addEventListener('click', handleDocumentClick);
     }
 
-    function adaptToViewport() {
+    function adaptToViewport(keep_panel = null) {
         let min_width = 580;
 
-        // Activate CSS for small screens
         let small = window.innerWidth < min_width;
-        document.documentElement.classList.toggle('small', small);
+        let max_panels = util.clamp(Math.floor(window.innerWidth / min_width), 1, 2);
 
-        // Avoid small panels
-        while (enabled_panels.size >= 2 &&
-               window.innerWidth / enabled_panels.size < min_width) {
-            let key = enabled_panels.oldest();
-            enabled_panels.delete(key);
+        while (active_panels > max_panels) {
+            let disable_priority = Number.MAX_SAFE_INTEGER;
+            let disable_panel;
+
+            for (let panel of panels.values()) {
+                if (panel !== keep_panel && panel.active && panel.priority < disable_priority) {
+                    disable_priority = panel.priority;
+                    disable_panel = panel;
+                }
+            }
+
+            disable_panel.active = null;
+            active_panels--;
         }
+
+        document.documentElement.classList.toggle('small', small);
     }
 
     this.render = function() {
         // Render main screen
         render(html`
-            ${menu != null ? html`<nav class="ui_toolbar" style="z-index: 999999;">${menu()}</nav>` : ''}
+            ${menu_render != null ? html`<nav class="ui_toolbar" style="z-index: 999999;">${menu_render()}</nav>` : ''}
 
             <main id="ui_panels">
-                ${util.map(panels, it => {
-                    let [key, func] = it;
-
-                    if (enabled_panels.has(key)) {
-                        return lithtml.until(func(), html`<div class="ui_busy"></div>`);
-                    } else {
-                        return '';
-                    }
-                })}
+                ${util.map(panels.values(), panel => panel.active ? panel.render() : '')}
             </main>
         `, document.querySelector('#gp_root'));
 
@@ -75,31 +76,34 @@ const ui = new function() {
     };
 
     this.setMenu = function(func) {
-        menu = func;
+        menu_render = func;
     };
 
-    this.createPanel = function(key, enable, func) {
-        panels.set(key, func);
-        if (enable)
-            enabled_panels.set(key, func);
+    this.createPanel = function(key, priority, active, func) {
+        panels.set(key, {
+            render: func,
+            priority: priority,
+            active: active
+        });
+        active_panels += active;
 
         adaptToViewport();
     };
 
     this.isPanelEnabled = function(key) {
-        return enabled_panels.has(key);
+        let panel = panels.get(key);
+        return panel.active;
     };
 
-    this.setPanelState = function(key, enable, raise = true) {
-        if (enable) {
-            let panel = panels.get(key);
+    this.setPanelState = function(key, active) {
+        let panel = panels.get(key);
 
-            if (raise || !enabled_panels.has(key)) {
-                enabled_panels.set(key, panel);
-                adaptToViewport();
-            }
-        } else if (enabled_panels.size > 1) {
-            enabled_panels.delete(key);
+        if (panel.active !== active) {
+            panel.active = active;
+            active_panels += active ? 1 : -1;
+
+            if (active)
+                adaptToViewport(panel);
         }
     };
 

@@ -92,7 +92,7 @@ function InstanceController() {
             </div>
         `);
 
-        ui.createPanel('editor', false, () => {
+        ui.createPanel('editor', 0, false, () => {
             let tabs = [];
 
             tabs.push({
@@ -120,7 +120,7 @@ function InstanceController() {
             `;
         });
 
-        ui.createPanel('data', true, () => {
+        ui.createPanel('data', 0, true, () => {
             return html`
                 <div class="padded">
                     <div class="ui_quick">
@@ -175,7 +175,7 @@ function InstanceController() {
             `;
         });
 
-        ui.createPanel('page', true, () => {
+        ui.createPanel('page', 1, true, () => {
             let readonly = (page_meta.version < page_meta.fragments.length);
 
             let model = new FormModel;
