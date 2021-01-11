@@ -318,79 +318,6 @@ function InstanceController() {
         return self.go(e, url);
     }
 
-    async function syncRecord() {
-        if (page_ulid == null) {
-            page_meta = null;
-        } else if (page_meta == null || page_meta.ulid !== page_ulid ||
-                                        page_meta.version !== page_version) {
-            let key = `${profile.username}:${page_ulid}`;
-            let enc = await db.load('rec_records', key);
-
-            if (enc != null) {
-                try {
-                    let record = await goupile.decryptWithPassport(enc);
-                    let fragments = record.fragments;
-
-                    // Deleted record
-                    if (fragments[fragments.length - 1].page == null)
-                        throw new Error('L\'enregistrement demandé est supprimé');
-
-                    if (page_version == null) {
-                        page_version = fragments.length;
-                    } else if (page_version > fragments.length) {
-                        throw new Error(`Cet enregistrement n'a pas de version ${page_version}`);
-                    }
-
-                    let values = {};
-                    for (let i = 0; i < page_version; i++) {
-                        let fragment = fragments[i];
-                        Object.assign(values, fragment.values);
-                    }
-                    for (let fragment of fragments) {
-                        fragment.mtime = new Date(fragment.mtime);
-                        delete fragment.values;
-                    }
-
-                    page_meta = {
-                        page: page_key,
-                        ulid: record.ulid,
-                        hid: record.hid,
-                        version: page_version,
-                        mtime: fragments[fragments.length - 1].mtime,
-                        fragments: fragments,
-                        status: new Set(fragments.map(fragment => fragment.page))
-                    };
-
-                    page_state = new FormState(values);
-                    page_state.changeHandler = () => self.go(null, null, false);
-                } catch (err) {
-                    log.error(err);
-                    page_meta = null;
-                }
-            } else {
-                log.error('L\'enregistrement demandé n\'existe pas');
-                page_meta = null;
-            }
-        }
-        if (page_meta == null) {
-            page_ulid = util.makeULID();
-            page_version = 0;
-
-            page_meta = {
-                page: page_key,
-                ulid: page_ulid,
-                hid: null,
-                version: 0,
-                mtime: null,
-                fragments: [],
-                status: new Set()
-            };
-
-            page_state = new FormState;
-            page_state.changeHandler = () => self.go(null, null, false);
-        }
-    }
-
     async function saveRecord() {
         if (develop)
             throw new Error('Enregistrement refusé : formulaire non déployé');
@@ -954,7 +881,76 @@ function InstanceController() {
             }
 
             // Load record
-            await syncRecord();
+            if (page_ulid == null) {
+                page_meta = null;
+            } else if (page_meta == null || page_meta.ulid !== page_ulid ||
+                                            page_meta.version !== page_version) {
+                let key = `${profile.username}:${page_ulid}`;
+                let enc = await db.load('rec_records', key);
+
+                if (enc != null) {
+                    try {
+                        let record = await goupile.decryptWithPassport(enc);
+                        let fragments = record.fragments;
+
+                        // Deleted record
+                        if (fragments[fragments.length - 1].page == null)
+                            throw new Error('L\'enregistrement demandé est supprimé');
+
+                        if (page_version == null) {
+                            page_version = fragments.length;
+                        } else if (page_version > fragments.length) {
+                            throw new Error(`Cet enregistrement n'a pas de version ${page_version}`);
+                        }
+
+                        let values = {};
+                        for (let i = 0; i < page_version; i++) {
+                            let fragment = fragments[i];
+                            Object.assign(values, fragment.values);
+                        }
+                        for (let fragment of fragments) {
+                            fragment.mtime = new Date(fragment.mtime);
+                            delete fragment.values;
+                        }
+
+                        page_meta = {
+                            page: page_key,
+                            ulid: record.ulid,
+                            hid: record.hid,
+                            version: page_version,
+                            mtime: fragments[fragments.length - 1].mtime,
+                            fragments: fragments,
+                            status: new Set(fragments.map(fragment => fragment.page))
+                        };
+
+                        page_state = new FormState(values);
+                        page_state.changeHandler = () => self.go(null, null, false);
+                    } catch (err) {
+                        log.error(err);
+                        page_meta = null;
+                    }
+                } else {
+                    log.error('L\'enregistrement demandé n\'existe pas');
+                    page_meta = null;
+                }
+            }
+            if (page_meta == null) {
+                page_ulid = util.makeULID();
+                page_version = 0;
+
+                page_meta = {
+                    page: page_key,
+                    ulid: page_ulid,
+                    hid: null,
+                    version: 0,
+                    mtime: null,
+                    fragments: [],
+                    status: new Set()
+                };
+
+                page_state = new FormState;
+                page_state.changeHandler = () => self.go(null, null, false);
+            }
 
             // Check dependencies and redirect if needed
             if (page_key != null) {
