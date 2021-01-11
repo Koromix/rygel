@@ -975,29 +975,23 @@ function FormBuilder(state, model, readonly = false) {
         self.restart();
     }
 
-    this.errorList = function(options = {}) {
+    this.errorList = function(label, options = {}) {
         options = expandOptions(options);
 
-        let render = intf => {
-            if (self.hasErrors() || options.force) {
-                return html`
-                    <fieldset class="fm_container fm_section error">
-                        <div class="fm_legend">${options.label || 'Liste des erreurs'}</div>
-                        ${!self.hasErrors() ? 'Aucune erreur' : ''}
-                        ${model.widgets.map(intf => {
-                            if (intf.errors.length) {
-                                return html`${intf.errors.length} ${intf.errors.length > 1 ? 'erreurs' : 'erreur'} sur :
-                                            <a href=${'#' + makeID(intf.key)}>${intf.label}</a><br/>`;
-                             } else {
-                                return '';
-                             }
-                        })}
-                    </fieldset>
-                `;
-            } else {
-                return '';
-            }
-        };
+        let render = intf => html`
+            <fieldset class="fm_container fm_section error">
+                <div class="fm_legend">${label || 'Liste des erreurs'}</div>
+                ${!self.hasErrors() ? 'Aucune erreur' : ''}
+                ${model.widgets.map(intf => {
+                    if (intf.errors.length) {
+                        return html`${intf.errors.length} ${intf.errors.length > 1 ? 'erreurs' : 'erreur'} sur :
+                                    <a href=${'#' + makeID(intf.key)}>${intf.label}</a><br/>`;
+                     } else {
+                        return '';
+                     }
+                })}
+            </fieldset>
+        `;
 
         let intf = makeWidget('errorList', null, render, options);
         addWidget(intf);

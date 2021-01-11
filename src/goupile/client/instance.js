@@ -206,7 +206,8 @@ function InstanceController() {
                 });
                 form_meta.hid = meta.hid;
 
-                builder.errorList();
+                if (model.hasErrors())
+                    builder.errorList();
 
                 if (model.variables.length) {
                     let enable_save = !model.hasErrors() && form_state.hasChanged();
