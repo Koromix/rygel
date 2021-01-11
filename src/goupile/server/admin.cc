@@ -150,7 +150,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
     // Check for existing instance
     {
         sq_Statement stmt;
-        if (!domain->db.Prepare("SELECT instance FROM dom_instances WHERE instance = ?1;", &stmt))
+        if (!domain->db.Prepare("SELECT instance FROM dom_instances WHERE instance = ?1", &stmt))
             return false;
         sqlite3_bind_text(stmt, 1, instance_key, -1, SQLITE_STATIC);
 
@@ -201,7 +201,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
 
     // Set default settings
     {
-        const char *sql = "UPDATE fs_settings SET value = ?2 WHERE key = ?1;";
+        const char *sql = "UPDATE fs_settings SET value = ?2 WHERE key = ?1";
         bool success = true;
 
         success &= db.Run(sql, "Title", title);
@@ -214,7 +214,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
     {
         sq_Statement stmt;
         if (!db.Prepare(R"(INSERT INTO fs_files (active, filename, mtime, blob, compression, sha256, size)
-                           VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6);)", &stmt))
+                           VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6))", &stmt))
             return false;
 
         // Use same modification time for all files
@@ -273,10 +273,10 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
     bool success = domain->db.Transaction([&]() {
         uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
 
-        if (!domain->db.Run("INSERT INTO dom_instances (instance) VALUES (?1);", instance_key))
+        if (!domain->db.Run("INSERT INTO dom_instances (instance) VALUES (?1)", instance_key))
             return false;
         if (!domain->db.Run(R"(INSERT INTO dom_permissions (instance, username, permissions)
-                               VALUES (?1, ?2, ?3);)",
+                               VALUES (?1, ?2, ?3))",
                             instance_key, default_user, permissions))
             return false;
 
@@ -454,7 +454,7 @@ Options:
         }
 
         if (!domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, admin, passport)
-                              VALUES (?1, ?2, 1, ?3);)", username, hash, passport))
+                              VALUES (?1, ?2, 1, ?3))", username, hash, passport))
             return 1;
     }
 
@@ -515,7 +515,7 @@ Options:
     // Migrate instances
     {
         sq_Statement stmt;
-        if (!db.Prepare("SELECT instance FROM dom_instances;", &stmt))
+        if (!db.Prepare("SELECT instance FROM dom_instances", &stmt))
             return 1;
 
         bool success = true;
@@ -583,7 +583,7 @@ void HandleCreateInstance(const http_RequestInfo &request, http_IO *io)
             // Log action
             int64_t time = GetUnixTime();
             if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                     VALUES (?1, ?2, ?3, ?4, ?5);)",
+                                     VALUES (?1, ?2, ?3, ?4, ?5))",
                                   time, request.client_addr, "create_instance", session->username,
                                   instance_key))
                 return false;
@@ -634,14 +634,14 @@ void HandleDeleteInstance(const http_RequestInfo &request, http_IO *io)
             // Log action
             int64_t time = GetUnixTime();
             if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                     VALUES (?1, ?2, ?3, ?4, ?5);)",
+                                     VALUES (?1, ?2, ?3, ?4, ?5))",
                                   time, request.client_addr, "delete_instance", session->username,
                                   instance_key))
                 return false;
 
-            if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE instance = ?1;", instance_key))
+            if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE instance = ?1", instance_key))
                 return false;
-            if (!gp_domain.db.Run("DELETE FROM dom_instances WHERE instance = ?1;", instance_key))
+            if (!gp_domain.db.Run("DELETE FROM dom_instances WHERE instance = ?1", instance_key))
                 return false;
 
             if (!sqlite3_changes(gp_domain.db)) {
@@ -733,12 +733,12 @@ void HandleConfigureInstance(const http_RequestInfo &request, http_IO *io)
             // Log action
             int64_t time = GetUnixTime();
             if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                     VALUES (?1, ?2, ?3, ?4, ?5);)",
+                                     VALUES (?1, ?2, ?3, ?4, ?5))",
                                   time, request.client_addr, "edit_instance", session->username,
                                   instance_key))
                 return false;
 
-            const char *sql = "UPDATE fs_settings SET value = ?2 WHERE key = ?1;";
+            const char *sql = "UPDATE fs_settings SET value = ?2 WHERE key = ?1";
             bool success = true;
 
             success &= instance->db.Run(sql, "Title", config.title);
@@ -770,7 +770,7 @@ void HandleListInstances(const http_RequestInfo &request, http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!gp_domain.db.Prepare("SELECT instance FROM dom_instances ORDER BY instance;", &stmt))
+    if (!gp_domain.db.Prepare("SELECT instance FROM dom_instances ORDER BY instance", &stmt))
         return;
 
     // Export data
@@ -868,7 +868,7 @@ void HandleCreateUser(const http_RequestInfo &request, http_IO *io)
             // Check for existing user
             {
                 sq_Statement stmt;
-                if (!gp_domain.db.Prepare("SELECT admin FROM dom_users WHERE username = ?1;", &stmt))
+                if (!gp_domain.db.Prepare("SELECT admin FROM dom_users WHERE username = ?1", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
@@ -884,14 +884,14 @@ void HandleCreateUser(const http_RequestInfo &request, http_IO *io)
             // Log action
             int64_t time = GetUnixTime();
             if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                     VALUES (?1, ?2, ?3, ?4, ?5);)",
+                                     VALUES (?1, ?2, ?3, ?4, ?5))",
                                   time, request.client_addr, "create_user", session->username,
                                   username))
                 return false;
 
             // Create user
             if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, admin, passport)
-                                     VALUES (?1, ?2, ?3, ?4);)",
+                                     VALUES (?1, ?2, ?3, ?4))",
                                   username, hash, 0 + admin, passport))
                 return false;
 
@@ -933,7 +933,7 @@ void HandleDeleteUser(const http_RequestInfo &request, http_IO *io)
 
         gp_domain.db.Transaction([&]() {
             sq_Statement stmt;
-            if (!gp_domain.db.Prepare("SELECT passport FROM dom_users;", &stmt))
+            if (!gp_domain.db.Prepare("SELECT passport FROM dom_users", &stmt))
                 return false;
 
             if (!stmt.Next()) {
@@ -949,14 +949,14 @@ void HandleDeleteUser(const http_RequestInfo &request, http_IO *io)
 
             // Log action
             if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                     VALUES (?1, ?2, ?3, ?4, ?5 || ':' || ?6);)",
+                                     VALUES (?1, ?2, ?3, ?4, ?5 || ':' || ?6))",
                                   time, request.client_addr, "delete_user", session->username,
                                   username, passport))
                 return false;
 
-            if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE username = ?1;", username))
+            if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE username = ?1", username))
                 return false;
-            if (!gp_domain.db.Run("DELETE FROM dom_users WHERE username = ?1;", username))
+            if (!gp_domain.db.Run("DELETE FROM dom_users WHERE username = ?1", username))
                 return false;
 
             io->AttachError(200, "Done!");
@@ -1035,8 +1035,7 @@ void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
             // Does instance exist?
             {
                 sq_Statement stmt;
-                if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_instances
-                                                  WHERE instance = ?1;)", &stmt))
+                if (!gp_domain.db.Prepare("SELECT instance FROM dom_instances WHERE instance = ?1", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, instance, -1, SQLITE_STATIC);
 
@@ -1052,8 +1051,7 @@ void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
             // Does user exist?
             {
                 sq_Statement stmt;
-                if (!gp_domain.db.Prepare(R"(SELECT username FROM dom_users
-                                                  WHERE username = ?1;)", &stmt))
+                if (!gp_domain.db.Prepare("SELECT username FROM dom_users WHERE username = ?1", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
@@ -1069,7 +1067,7 @@ void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
             // Log action
             int64_t time = GetUnixTime();
             if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                     VALUES (?1, ?2, ?3, ?4, ?5 || '+' || ?6 || ':' || ?7 || '@' || ?8);)",
+                                     VALUES (?1, ?2, ?3, ?4, ?5 || '+' || ?6 || ':' || ?7 || '@' || ?8))",
                                   time, request.client_addr, "assign_user", session->username,
                                   instance, username, permissions, zone))
                 return false;
@@ -1079,12 +1077,11 @@ void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
                 if (!gp_domain.db.Run(R"(INSERT INTO dom_permissions (instance, username, permissions, zone)
                                          VALUES (?1, ?2, ?3, ?4)
                                          ON CONFLICT(instance, username)
-                                             DO UPDATE SET permissions = excluded.permissions;)",
+                                             DO UPDATE SET permissions = excluded.permissions)",
                                       instance, username, permissions, zone))
                     return false;
             } else {
-                if (!gp_domain.db.Run(R"(DELETE FROM dom_permissions
-                                         WHERE instance = ?1 AND username = ?2;)",
+                if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE instance = ?1 AND username = ?2",
                                       instance, username))
                     return false;
             }
@@ -1107,7 +1104,7 @@ void HandleListUsers(const http_RequestInfo &request, http_IO *io)
     sq_Statement stmt;
     if (!gp_domain.db.Prepare(R"(SELECT u.rowid, u.username, u.admin, p.instance, p.permissions FROM dom_users u
                                  LEFT JOIN dom_permissions p ON (p.username = u.username)
-                                 ORDER BY u.username, p.instance;)", &stmt))
+                                 ORDER BY u.username, p.instance)", &stmt))
         return;
 
     // Export data

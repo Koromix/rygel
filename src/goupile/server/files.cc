@@ -26,7 +26,7 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
     sq_Statement stmt;
     if (!instance->db.Prepare(R"(SELECT filename, size, sha256 FROM fs_files
                                  WHERE active = 1
-                                 ORDER BY filename;)", &stmt))
+                                 ORDER BY filename)", &stmt))
         return;
 
     http_JsonPageBuilder json(request.compression_type);
@@ -66,7 +66,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
     sq_Statement stmt;
     if (!instance->db.Prepare(R"(SELECT rowid, compression, sha256 FROM fs_files
-                                 WHERE active = 1 AND filename = ?1;)", &stmt))
+                                 WHERE active = 1 AND filename = ?1)", &stmt))
         return true;
     sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
 
@@ -240,7 +240,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
             if (client_sha256) {
                 sq_Statement stmt;
                 if (!instance->db.Prepare(R"(SELECT sha256 FROM fs_files
-                                             WHERE active = 1 AND filename = ?1;)", &stmt))
+                                             WHERE active = 1 AND filename = ?1)", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
 
@@ -266,10 +266,10 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
             int64_t mtime = GetUnixTime();
 
             if (!instance->db.Run(R"(UPDATE fs_files SET active = 0
-                                     WHERE active = 1 AND filename = ?1;)", filename))
+                                     WHERE active = 1 AND filename = ?1)", filename))
                 return false;
             if (!instance->db.Run(R"(INSERT INTO fs_files (active, filename, mtime, blob, compression, sha256, size)
-                                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7);)",
+                                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
                                   1, filename, mtime, sq_Binding::Zeroblob(file_len), "Gzip", sha256, total_len))
                 return false;
 
@@ -338,7 +338,7 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
             sq_Statement stmt;
             if (!instance->db.Prepare(R"(SELECT active, sha256 FROM fs_files
                                          WHERE filename = ?1
-                                         ORDER BY active DESC;)", &stmt))
+                                         ORDER BY active DESC)", &stmt))
                 return false;
             sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
 
@@ -362,7 +362,7 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
         }
 
         if (!instance->db.Run(R"(UPDATE fs_files SET active = 0
-                                 WHERE active = 1 AND filename = ?1;)", filename))
+                                 WHERE active = 1 AND filename = ?1)", filename))
             return false;
 
         if (sqlite3_changes(instance->db)) {

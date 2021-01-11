@@ -26,7 +26,7 @@ const Token *Session::GetToken(const InstanceHolder *instance) const
             do {
                 sq_Statement stmt;
                 if (!gp_domain.db.Prepare(R"(SELECT zone, permissions FROM dom_permissions
-                                             WHERE instance = ?1 AND username = ?2;)", &stmt))
+                                             WHERE instance = ?1 AND username = ?2)", &stmt))
                     break;
                 sqlite3_bind_text(stmt, 1, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
                 sqlite3_bind_text(stmt, 2, username, -1, SQLITE_STATIC);
@@ -154,13 +154,13 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
             if (!gp_domain.db.Prepare(R"(SELECT u.password_hash, u.admin, u.passport FROM dom_users u
                                          INNER JOIN dom_permissions p ON (p.username = u.username)
                                          WHERE u.username = ?1 AND
-                                               p.instance = ?2 AND p.permissions > 0;)", &stmt))
+                                               p.instance = ?2 AND p.permissions > 0)", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
             sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
         } else {
             if (!gp_domain.db.Prepare(R"(SELECT password_hash, admin, passport FROM dom_users
-                                         WHERE username = ?1 AND admin = 1;)", &stmt))
+                                         WHERE username = ?1 AND admin = 1)", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
         }
@@ -180,7 +180,7 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
                 int64_t time = GetUnixTime();
 
                 if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username)
-                                         VALUES (?1, ?2, ?3, ?4);)",
+                                         VALUES (?1, ?2, ?3, ?4))",
                                       time, request.client_addr, "login", username))
                     return;
 

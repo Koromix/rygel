@@ -105,7 +105,7 @@ bool sq_Database::Close()
 bool sq_Database::GetUserVersion(int *out_version)
 {
     sq_Statement stmt;
-    if (!Prepare("PRAGMA user_version;", &stmt))
+    if (!Prepare("PRAGMA user_version", &stmt))
         return false;
     if (!stmt.Next())
         return false;
@@ -117,7 +117,7 @@ bool sq_Database::GetUserVersion(int *out_version)
 bool sq_Database::SetUserVersion(int version)
 {
     char buf[128];
-    Fmt(buf, "PRAGMA user_version = %1;", version);
+    Fmt(buf, "PRAGMA user_version = %1", version);
     return Run(buf);
 }
 
@@ -163,7 +163,7 @@ bool sq_Database::Prepare(const char *sql, sq_Statement *out_stmt)
     return true;
 }
 
-bool sq_Database::Run(const char *sql)
+bool sq_Database::RunMany(const char *sql)
 {
     LockShared();
     RG_DEFER { UnlockShared(); };

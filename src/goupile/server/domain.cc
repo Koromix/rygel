@@ -189,7 +189,7 @@ bool DomainHolder::Sync()
     // Start new instances (if any)
     {
         sq_Statement stmt;
-        if (!db.Prepare("SELECT instance FROM dom_instances ORDER BY instance;", &stmt))
+        if (!db.Prepare("SELECT instance FROM dom_instances ORDER BY instance", &stmt))
             return false;
 
         bool warned = false;
@@ -298,7 +298,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
     bool success = db->Transaction([&]() {
         switch (version) {
             case 0: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     CREATE TABLE adm_events (
                         time INTEGER NOT NULL,
                         address TEXT,
@@ -325,7 +325,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
             } [[fallthrough]];
 
             case 1: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     CREATE TABLE dom_permissions (
                         username TEXT NOT NULL REFERENCES dom_users (username),
                         instance TEXT NOT NULL,
@@ -339,7 +339,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
             } [[fallthrough]];
 
             case 2: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     ALTER TABLE dom_permissions RENAME TO dom_permissions_BAK;
                     DROP INDEX dom_permissions_ui;
 
@@ -354,7 +354,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 // Insert existing instances
                 if (version) {
                     sq_Statement stmt;
-                    if (!db->Prepare("INSERT INTO dom_instances (instance) VALUES (?);", &stmt))
+                    if (!db->Prepare("INSERT INTO dom_instances (instance) VALUES (?)", &stmt))
                         return false;
 
                     EnumStatus status = EnumerateDirectory(instances_directory, "*.db", -1,
@@ -371,7 +371,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                         return false;
                 }
 
-                success = db->Run(R"(
+                success = db->RunMany(R"(
                     CREATE TABLE dom_permissions (
                         username TEXT NOT NULL REFERENCES dom_users (username),
                         instance TEXT NOT NULL REFERENCES dom_instances (instance),
@@ -390,12 +390,12 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
             } [[fallthrough]];
 
             case 3: {
-                if (!db->Run("UPDATE dom_permissions SET permissions = 127 WHERE permissions == 63;"))
+                if (!db->RunMany("UPDATE dom_permissions SET permissions = 127 WHERE permissions == 63"))
                     return false;
             } [[fallthrough]];
 
             case 4: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     ALTER TABLE dom_users RENAME TO dom_users_BAK;
                     ALTER TABLE dom_permissions RENAME TO dom_permissions_BAK;
                     DROP INDEX dom_users_u;
@@ -429,7 +429,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     return false;
 
                 sq_Statement stmt;
-                if (!db->Prepare("SELECT rowid FROM dom_users;", &stmt))
+                if (!db->Prepare("SELECT rowid FROM dom_users", &stmt))
                     return false;
 
                 while (stmt.Next()) {
@@ -443,7 +443,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                         sodium_bin2base64(passport, RG_SIZE(passport), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
                     }
 
-                    if (!db->Run("UPDATE dom_users SET passport = ?2 WHERE rowid = ?1;", rowid, passport))
+                    if (!db->Run("UPDATE dom_users SET passport = ?2 WHERE rowid = ?1", rowid, passport))
                         return false;
                 }
                 if (!stmt.IsValid())

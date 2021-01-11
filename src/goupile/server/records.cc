@@ -92,7 +92,7 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
         if (anchor) {
             sql.len += Fmt(sql.TakeAvailable(), " AND f.anchor >= ?4").len;
         }
-        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY r.rowid, f.anchor;").len;
+        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY r.rowid, f.anchor").len;
 
         if (!instance->db.Prepare(sql.data, &stmt))
             return;
@@ -149,13 +149,13 @@ void HandleRecordColumns(InstanceHolder *instance, const http_RequestInfo &reque
     sq_Statement stmt;
     if (table) {
         if (!instance->db.Prepare(R"(SELECT store, page, variable, type, prop, before, after FROM rec_columns
-                                     WHERE store = ?1 AND anchor >= ?2;)", &stmt))
+                                     WHERE store = ?1 AND anchor >= ?2)", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, table, -1, SQLITE_STATIC);
         sqlite3_bind_int64(stmt, 2, anchor);
     } else {
         if (!instance->db.Prepare(R"(SELECT store, page, variable, type, prop, before, after FROM rec_columns
-                                     WHERE anchor >= ?1;)", &stmt))
+                                     WHERE anchor >= ?1)", &stmt))
             return;
         sqlite3_bind_int64(stmt, 1, anchor);
     }
@@ -233,7 +233,7 @@ void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request,
             Span<const char> json;
             {
                 if (!instance->db.Prepare(R"(SELECT zone, version, json FROM rec_entries
-                                             WHERE store = ?1 AND id = ?2;)", &stmt))
+                                             WHERE store = ?1 AND id = ?2)", &stmt))
                     return;
                 sqlite3_bind_text(stmt, 1, handle.table, -1, SQLITE_STATIC);
                 sqlite3_bind_text(stmt, 2, handle.id, -1, SQLITE_STATIC);
@@ -280,7 +280,7 @@ void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request,
                 {
                     sq_Statement stmt;
                     if (!instance->db.Prepare(R"(SELECT sequence FROM rec_sequences
-                                                 WHERE store = ?1;)", &stmt))
+                                                 WHERE store = ?1)", &stmt))
                         return false;
                     sqlite3_bind_text(stmt, 1, handle.table, -1, SQLITE_STATIC);
 
@@ -311,7 +311,7 @@ void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request,
                         return false;
                 } else {
                     if (!instance->db.Run(R"(UPDATE rec_entries SET version = ?1, json = ?2
-                                             WHERE store = ?3 AND id = ?4;)",
+                                             WHERE store = ?3 AND id = ?4)",
                                         fragments[fragments.len - 1].version, json, handle.table, handle.id))
                         return false;
                 }
@@ -330,7 +330,7 @@ void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request,
                     int64_t anchor;
                     if (!instance->db.Run(R"(INSERT INTO rec_fragments (store, id, version, page,
                                                                         username, mtime, complete, json)
-                                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8);)",
+                                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8))",
                                           handle.table, handle.id, frag.version,
                                           frag.page ? sq_Binding(frag.page) : sq_Binding(), session->username,
                                           frag.mtime, 0 + frag.complete, frag.json))
@@ -344,7 +344,7 @@ void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request,
                                                  ON CONFLICT(key)
                                                      DO UPDATE SET before = excluded.before,
                                                                    after = excluded.after,
-                                                                   anchor = excluded.anchor;)", &stmt))
+                                                                   anchor = excluded.anchor)", &stmt))
                         return false;
                     sqlite3_bind_text(stmt, 2, handle.table, -1, SQLITE_STATIC);
                     sqlite3_bind_int64(stmt, 9, anchor);
@@ -422,7 +422,7 @@ void HandleRecordRecompute(InstanceHolder *instance, const http_RequestInfo &req
         int64_t anchor;
         {
             sq_Statement stmt;
-            if (!instance->db.Prepare("SELECT seq FROM sqlite_sequence WHERE name = 'rec_fragments';", &stmt))
+            if (!instance->db.Prepare("SELECT seq FROM sqlite_sequence WHERE name = 'rec_fragments'", &stmt))
                 return;
 
             if (stmt.Next()) {
@@ -479,12 +479,12 @@ void HandleRecordRecompute(InstanceHolder *instance, const http_RequestInfo &req
 
                     if (!instance->db.Run(R"(INSERT INTO rec_fragments (store, id, version, page,
                                                                         username, mtime, complete, json)
-                                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8);)",
+                                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8))",
                                           table, id, version + 1, page, session->username, fragment.mtime,
                                           complete, fragment.json))
                         return false;
                     if (!instance->db.Run(R"(UPDATE rec_entries SET version = ?1, json = ?2
-                                             WHERE store = ?3 AND id = ?4;)",
+                                             WHERE store = ?3 AND id = ?4)",
                                           version + 1, json, table, id))
                         return false;
                 } while (++i < 20 && stmt.Next());

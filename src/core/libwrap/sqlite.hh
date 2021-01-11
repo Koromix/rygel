@@ -113,13 +113,15 @@ public:
     bool Transaction(FunctionRef<bool()> func);
 
     bool Prepare(const char *sql, sq_Statement *out_stmt);
-    bool Run(const char *sql);
+    bool Run(const char *sql) { return RunWithBindings(sql, {}); }
     template <typename... Args>
     bool Run(const char *sql, Args... args)
     {
         const sq_Binding bindings[] = { sq_Binding(args)... };
         return RunWithBindings(sql, bindings);
     }
+
+    bool RunMany(const char *sql);
 
     operator sqlite3 *() { return db; }
 

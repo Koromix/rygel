@@ -48,7 +48,7 @@ bool InstanceHolder::Open(const char *key, const char *filename)
     // Load configuration
     {
         sq_Statement stmt;
-        if (!db.Prepare("SELECT key, value FROM fs_settings;", &stmt))
+        if (!db.Prepare("SELECT key, value FROM fs_settings", &stmt))
             return false;
 
         bool valid = true;
@@ -125,7 +125,7 @@ bool MigrateInstance(sq_Database *db)
     const char *filename;
     {
         sq_Statement stmt;
-        if (!db->Prepare("PRAGMA database_list;", &stmt))
+        if (!db->Prepare("PRAGMA database_list", &stmt))
             return false;
         if (!stmt.Next())
             return false;
@@ -151,7 +151,7 @@ bool MigrateInstance(sq_Database *db)
     bool success = db->Transaction([&]() {
         switch (version) {
             case 0: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     CREATE TABLE rec_entries (
                         table_name TEXT NOT NULL,
                         id TEXT NOT NULL,
@@ -218,7 +218,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 1: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     ALTER TABLE rec_fragments RENAME TO rec_fragments_BAK;
                     DROP INDEX rec_fragments_tip;
 
@@ -244,7 +244,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 2: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     DROP INDEX rec_entries_ti;
                     DROP INDEX rec_fragments_tip;
                     DROP INDEX rec_columns_tpkp;
@@ -265,7 +265,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 3: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     CREATE TABLE adm_migrations (
                         version INTEGER NOT NULL,
                         build TEXT NOT NULL,
@@ -277,14 +277,14 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 4: {
-                if (!db->Run("UPDATE usr_users SET permissions = 31 WHERE permissions == 7;"))
+                if (!db->RunMany("UPDATE usr_users SET permissions = 31 WHERE permissions == 7"))
                     return false;
             } [[fallthrough]];
 
             case 5: {
                 // Incomplete migration that breaks down (because NOT NULL constraint)
                 // if there is any fragment, which is not ever the case yet.
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     ALTER TABLE rec_entries ADD COLUMN json TEXT NOT NULL;
                     ALTER TABLE rec_entries ADD COLUMN version INTEGER NOT NULL;
                     ALTER TABLE rec_fragments ADD COLUMN version INEGER NOT NULL;
@@ -294,7 +294,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 6: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     DROP INDEX rec_columns_spkp;
                     ALTER TABLE rec_columns RENAME COLUMN key TO variable;
                     CREATE UNIQUE INDEX rec_fragments_siv ON rec_fragments(store, id, version);
@@ -305,7 +305,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 7: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     ALTER TABLE rec_columns RENAME TO rec_columns_BAK;
                     DROP INDEX rec_columns_spvp;
 
@@ -330,12 +330,12 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 8: {
-                if (!db->Run("UPDATE usr_users SET permissions = 63 WHERE permissions == 31;"))
+                if (!db->RunMany("UPDATE usr_users SET permissions = 63 WHERE permissions == 31"))
                     return false;
             } [[fallthrough]];
 
             case 9: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     DROP TABLE rec_columns;
 
                     CREATE TABLE rec_columns (
@@ -360,7 +360,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 10: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     ALTER TABLE rec_entries ADD COLUMN zone TEXT;
                     ALTER TABLE usr_users ADD COLUMN zone TEXT;
 
@@ -371,7 +371,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 11: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     CREATE TABLE adm_events (
                         time INTEGER NOT NULL,
                         address TEXT,
@@ -384,7 +384,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 12: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     ALTER TABLE adm_events RENAME COLUMN details TO username;
                     ALTER TABLE adm_events ADD COLUMN zone TEXT;
                     ALTER TABLE adm_events ADD COLUMN details TEXT;
@@ -394,7 +394,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 13: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     CREATE TABLE fs_files (
                         path TEXT NOT NULL,
                         blob BLOB,
@@ -453,14 +453,14 @@ bool MigrateInstance(sq_Database *db)
 #endif
 
                         if (!db->Run(R"(INSERT INTO fs_files (path, blob, compression, sha256)
-                                        VALUES (?, ?, ?, ?);)", path, gzip, "Gzip", sha256))
+                                        VALUES (?, ?, ?, ?))", path, gzip, "Gzip", sha256))
                             return false;
                     }
                 }
             } [[fallthrough]];
 
             case 14: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     CREATE TABLE fs_settings (
                         key TEXT NOT NULL,
                         value TEXT
@@ -594,7 +594,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 15: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     DROP INDEX sched_resources_sdt;
                     DROP INDEX sched_meetings_sd;
                     DROP TABLE sched_meetings;
@@ -605,7 +605,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 16: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     ALTER TABLE fs_files ADD COLUMN size INTEGER;
                 )");
                 if (!success)
@@ -613,7 +613,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 17: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     UPDATE fs_settings SET key = 'Application.BaseUrl' WHERE key = 'HTTP.BaseUrl';
                     UPDATE fs_settings SET key = 'Application.AppKey' WHERE key = 'Application.ClientKey';
                     UPDATE fs_settings SET key = 'Application.AppName' WHERE key = 'Application.Name';
@@ -642,7 +642,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 18: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     DROP TABLE dom_permissions;
                 )");
 
@@ -655,7 +655,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 19: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     ALTER TABLE fs_files RENAME TO fs_files_BAK;
                     DROP INDEX fs_files_p;
 
@@ -679,7 +679,7 @@ bool MigrateInstance(sq_Database *db)
                     return false;
 
                 sq_Statement stmt;
-                if (!db->Prepare("SELECT rowid, path, compression FROM fs_files;", &stmt))
+                if (!db->Prepare("SELECT rowid, path, compression FROM fs_files", &stmt))
                     return false;
 
                 int64_t mtime = GetUnixTime();
@@ -734,7 +734,7 @@ bool MigrateInstance(sq_Database *db)
                     }
 
                     if (!db->Run(R"(UPDATE fs_files SET mtime = ?, size = ?
-                                    WHERE active = 1 AND path = ?;)", mtime, real_len, path))
+                                    WHERE active = 1 AND path = ?)", mtime, real_len, path))
                         return false;
                 }
                 if (!stmt.IsValid())
@@ -742,7 +742,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 20: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     DELETE FROM fs_settings WHERE key = 'BaseUrl';
                 )");
                 if (!success)
@@ -750,7 +750,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 21: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     UPDATE fs_settings SET key = 'Title' WHERE key = 'AppName';
                     DELETE FROM fs_settings WHERE key = 'AppKey';
                 )");
@@ -759,7 +759,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 22: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     DROP INDEX fs_files_pa;
                     ALTER TABLE fs_files RENAME COLUMN path TO url;
                     CREATE INDEX fs_files_ua ON fs_files (url, active);
@@ -769,7 +769,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 23: {
-                bool success = db->Run(R"(
+                bool success = db->RunMany(R"(
                     DROP INDEX fs_files_ua;
                     ALTER TABLE fs_files RENAME COLUMN url TO filename;
                     UPDATE fs_files SET filename = SUBSTR(filename, 8);
