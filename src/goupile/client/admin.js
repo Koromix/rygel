@@ -21,9 +21,9 @@ function AdminController() {
         ui.setMenu(el => html`
             <button class="icon" style="background-position-y: calc(-538px + 1.2em);">Admin</button>
             <button class=${ui.isPanelEnabled('instances') ? 'active' : ''}
-                    @click=${ui.wrapAction(e => togglePanel('instances'))}>Instances</button>
+                    @click=${ui.wrapAction(e => togglePanel(e, 'instances'))}>Instances</button>
             <button class=${ui.isPanelEnabled('users') ? 'active' : ''}
-                    @click=${ui.wrapAction(e => togglePanel('users'))}>Utilisateurs</button>
+                    @click=${ui.wrapAction(e => togglePanel(e, 'users'))}>Utilisateurs</button>
             <div style="flex: 1;"></div>
             <div class="drop right">
                 <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
@@ -38,7 +38,7 @@ function AdminController() {
                 <div class="ui_quick">
                     Instances
                     <div style="flex: 1;"></div>
-                    <a @click=${ui.wrapAction(e => { instances = null; return self.go(); })}>Rafraichir</a>
+                    <a @click=${ui.wrapAction(e => { instances = null; return self.go(e); })}>Rafraichir</a>
                 </div>
 
                 <table class="ui_table">
@@ -53,7 +53,7 @@ function AdminController() {
                         ${instances.map(instance => html`
                             <tr class=${instance.key === selected_instance ? 'active' : ''}>
                                 <td style="text-align: left;">${instance.key} (<a href=${'/' + instance.key} target="_blank">accès</a>)</td>
-                                <td><a role="button" tabindex="0" @click=${e => toggleSelectedInstance(instance.key)}>Droits</a></td>
+                                <td><a role="button" tabindex="0" @click=${e => toggleSelectedInstance(e, instance.key)}>Droits</a></td>
                                 <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runEditInstanceDialog(e, instance))}>Modifier</a></td>
                             </tr>
                         `)}
@@ -71,7 +71,7 @@ function AdminController() {
                 <div class="ui_quick">
                     Utilisateurs
                     <div style="flex: 1;"></div>
-                    <a @click=${ui.wrapAction(e => { users = null; return self.go(); })}>Rafraichir</a>
+                    <a @click=${ui.wrapAction(e => { users = null; return self.go(e); })}>Rafraichir</a>
                 </div>
 
                 <table class="ui_table">
@@ -117,7 +117,7 @@ function AdminController() {
         ui.setPanelState('instances', true);
     }
 
-    this.go = async function(url = null, push_history = true) {
+    this.go = async function(e = null, url = null, push_history = true) {
         await goupile.syncProfile();
         if (!goupile.isAuthorized())
             await goupile.runLogin();
@@ -133,19 +133,19 @@ function AdminController() {
     };
     this.go = util.serializeAsync(this.go);
 
-    function togglePanel(key) {
+    function togglePanel(e, key) {
         ui.setPanelState(key, !ui.isPanelEnabled(key));
-        return self.go();
+        return self.go(e);
     }
 
-    function toggleSelectedInstance(key) {
+    function toggleSelectedInstance(e, key) {
         if (key !== selected_instance) {
             selected_instance = key;
             ui.setPanelState('users', true, false);
         } else {
             selected_instance = null;
         }
-        return self.go();
+        return self.go(e);
     }
 
     function runCreateInstanceDialog(e) {

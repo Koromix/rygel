@@ -32,10 +32,10 @@ const goupile = new function() {
     };
 
     function initNavigation() {
-        window.addEventListener('popstate', e => controller.go(window.location.href, false));
+        window.addEventListener('popstate', e => controller.go(null, window.location.href, false));
 
         util.interceptLocalAnchors((e, href) => {
-            let func = ui.wrapAction(e => controller.go(href));
+            let func = ui.wrapAction(e => controller.go(e, href));
             func(e);
 
             e.preventDefault();

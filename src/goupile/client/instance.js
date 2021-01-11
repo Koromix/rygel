@@ -32,7 +32,12 @@ function InstanceController() {
         initUI();
         await initApp();
 
-        self.go(window.location.href);
+        window.onbeforeunload = e => {
+            if (page_state != null && page_state.hasChanged())
+                return 'Si vous confirmez vouloir quitter la page, les modifications en cours seront perdues !';
+        };
+
+        self.go(null, window.location.href);
     };
 
     async function initApp() {
@@ -61,25 +66,25 @@ function InstanceController() {
 
         ui.setMenu(() => html`
             <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
-                    @click=${e => self.go(ENV.base_url)}>${ENV.title}</button>
+                    @click=${e => self.go(e, ENV.base_url)}>${ENV.title}</button>
             ${goupile.hasPermission('develop') ? html`
                 <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
                         style="background-position-y: calc(-230px + 1.2em);"
-                        @click=${ui.wrapAction(e => togglePanel('editor'))}>Code</button>
+                        @click=${ui.wrapAction(e => togglePanel(e, 'editor'))}>Code</button>
             ` : ''}
             <button class=${'icon' + (ui.isPanelEnabled('data') ? ' active' : '')}
                     style="background-position-y: calc(-274px + 1.2em);"
-                    @click=${ui.wrapAction(e => togglePanel('data'))}>Suivi</button>
+                    @click=${ui.wrapAction(e => togglePanel(e, 'data'))}>Suivi</button>
             <button class=${'icon' + (ui.isPanelEnabled('page') ? ' active' : '')}
                     style="background-position-y: calc(-318px + 1.2em);"
-                    @click=${ui.wrapAction(e => togglePanel('page'))}>Formulaire</button>
+                    @click=${ui.wrapAction(e => togglePanel(e, 'page'))}>Formulaire</button>
 
             <div style="flex: 1; min-width: 20px;"></div>
             ${ui.isPanelEnabled('editor') || ui.isPanelEnabled('page') ? html`
                 ${util.map(app.pages.values(), page => {
                     let missing = page.dependencies.some(dep => !page_meta.status.has(dep));
                     return html`<button class=${page.key === page_key ? 'active' : ''} ?disabled=${missing}
-                                        @click=${ui.wrapAction(e => self.go(makePageURL(page.key)))}>${page.title}</button>`;
+                                        @click=${ui.wrapAction(e => self.go(e, makePageURL(page.key)))}>${page.title}</button>`;
                 })}
                 <div style="flex: 1; min-width: 20px;"></div>
             ` : ''}
@@ -128,7 +133,7 @@ function InstanceController() {
                     <div class="ui_quick">
                         ${data_rows.length || 'Aucune'} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
                         <div style="flex: 1;"></div>
-                        <a @click=${ui.wrapAction(e => { data_rows = null; return self.go(); })}>Rafraichir</a>
+                        <a @click=${ui.wrapAction(e => { data_rows = null; return self.go(e); })}>Rafraichir</a>
                     </div>
 
                     <table class="ui_table" id="ins_data">
@@ -171,13 +176,13 @@ function InstanceController() {
                     </table>
 
                     <div class="ui_actions">
-                        <button @click=${ui.wrapAction(runNewRecordDialog)}>Créer un nouvel enregistrement</button>
+                        <button @click=${ui.wrapAction(goNewRecord)}>Créer un nouvel enregistrement</button>
                     </div>
                 </div>
             `;
         });
 
-        ui.createPanel('page', 1, true, () => {
+        ui.createPanel('page', 1, false, () => {
             let readonly = (page_meta.version < page_meta.fragments.length);
 
             let model = new FormModel;
@@ -190,7 +195,7 @@ function InstanceController() {
                     form: builder,
                     values: page_state.values,
                     meta: meta,
-                    go: self.go
+                    go: (url) => self.go(null, url)
                 });
                 page_meta.hid = meta.hid;
 
@@ -205,9 +210,9 @@ function InstanceController() {
                     });
                     builder.action('-');
                     if (page_meta.version > 0) {
-                        builder.action('Nouveau', {}, runNewRecordDialog);
+                        builder.action('Nouveau', {}, goNewRecord);
                     } else {
-                        builder.action('Réinitialiser', {disabled: !page_state.hasChanged()}, runNewRecordDialog);
+                        builder.action('Réinitialiser', {disabled: !page_state.hasChanged()}, goNewRecord);
                     }
                 }
             } catch (err) {
@@ -255,9 +260,9 @@ function InstanceController() {
         ui.setPanelState('data', true);
     };
 
-    function togglePanel(key, enable = null) {
+    function togglePanel(e, key, enable = null) {
         ui.setPanelState(key, !ui.isPanelEnabled(key));
-        return self.go();
+        return self.go(e);
     }
 
     function runUserCode(title, code, arguments) {
@@ -308,28 +313,12 @@ function InstanceController() {
         });
     }
 
-    function runNewRecordDialog(e) {
-        if (page_state.hasChanged()) {
-            return ui.runConfirm(e, 'Êtes-vous sûr de vouloir fermer cet enregistrement ?', 'Nouveau', newRecord);
-        } else {
-            newRecord();
-        }
+    function goNewRecord(e) {
+        let url = makePageURL(page_key) + '/new';
+        return self.go(e, url);
     }
 
-    function newRecord() {
-        page_ulid = null;
-        page_version = null;
-
-        setTimeout(() => {
-            // Help the user fill a new form
-            document.querySelector('#ins_page').parentNode.scrollTop = 0;
-        });
-
-        ui.setPanelState('page', true, false);
-        self.go();
-    }
-
-    async function loadRecord() {
+    async function syncRecord() {
         if (page_ulid == null) {
             page_meta = null;
         } else if (page_meta == null || page_meta.ulid !== page_ulid ||
@@ -373,7 +362,7 @@ function InstanceController() {
                     };
 
                     page_state = new FormState(values);
-                    page_state.changeHandler = () => self.go();
+                    page_state.changeHandler = () => self.go(null, null, false);
                 } catch (err) {
                     log.error(err);
                     page_meta = null;
@@ -398,7 +387,7 @@ function InstanceController() {
             };
 
             page_state = new FormState;
-            page_state.changeHandler = () => self.go();
+            page_state.changeHandler = () => self.go(null, null, false);
         }
     }
 
@@ -618,6 +607,7 @@ function InstanceController() {
         return sha256.finalize();
     }
 
+    // XXX: Broken refresh, etc
     async function runDeployDialog(e) {
         let actions = await computeDeployActions();
         let modifications = actions.reduce((acc, action) => acc + (action.type !== 'noop'), 0);
@@ -627,7 +617,7 @@ function InstanceController() {
                 <div class="ui_quick">
                     ${modifications || 'Aucune'} ${modifications.length > 1 ? 'modifications' : 'modification'} à effectuer
                     <div style="flex: 1;"></div>
-                    <a @click=${ui.wrapAction(e => { users = null; return self.go(); })}>Rafraichir</a>
+                    <a @click=${ui.wrapAction(e => { actions = null; return self.go(); })}>Rafraichir</a>
                 </div>
 
                 <table class="ui_table ins_deploy">
@@ -874,47 +864,70 @@ function InstanceController() {
         }
     };
 
-    this.go = async function(url = null, push_history = true) {
+    this.go = async function(e = null, url = null, push_history = true) {
         try {
             await goupile.syncProfile();
             if (!goupile.isAuthorized())
                 await goupile.runLogin();
 
-            // Find page
+            // Update current route
             if (url != null) {
                 if (!url.endsWith('/'))
                     url += '/';
                 url = new URL(url, window.location.href);
+                if (url.pathname === ENV.base_url)
+                    url = new URL(makePageURL(app.home), window.location.href);
 
-                if (url.pathname === ENV.base_url) {
-                    page_key = app.home;
-                } else {
-                    let prefix = `${ENV.base_url}main/`;
+                if (url.pathname.startsWith(`${ENV.base_url}main/`)) {
+                    let path = url.pathname.substr(ENV.base_url.length + 5);
+                    let [key, ulid, version] = path.split('/').map(str => str.trim());
 
-                    if (url.pathname.startsWith(prefix)) {
-                        let path = url.pathname.substr(prefix.length);
-                        let [key, ulid, version] = path.split('/').map(str => str.trim());
+                    // Popping history
+                    if (!ulid && !push_history)
+                        ulid = 'new';
 
-                        page_key = key;
-                        if (ulid && ulid !== page_ulid) {
-                            if (ulid === 'new')
-                                ulid = null;
-                            page_ulid = ulid;
-                            page_version = null;
-                        }
-                        if (version) {
-                            version = version.trim();
-
-                            if (version.match(/^[0-9]+$/)) {
-                                page_version = parseInt(version, 10);
-                            } else {
-                                log.error('L\'indicateur de version n\'est pas un nombre');
-                                page_version = null;
+                    // Confirm dangerous action (risk of data loss)
+                    if ((ulid && ulid !== page_ulid || (version && version !== page_version))) {
+                        if (page_state != null && page_state.hasChanged()) {
+                            try {
+                                await ui.runConfirm(e, "Si vous continuez, vous perdrez les modifications en cours. Voulez-vous continuer ?",
+                                                       "Continuer", () => {});
+                            } catch (err) {
+                                // If we're popping state, this will fuck up navigation history but we can't
+                                // refuse popstate events. History mess is better than data loss.
+                                self.go();
+                                return;
                             }
                         }
-                    } else {
-                        window.location.href = url.href;
                     }
+
+                    page_key = key || null;
+                    if (ulid && ulid !== page_ulid) {
+                        if (ulid === 'new')
+                            ulid = null;
+                        page_ulid = ulid;
+                        page_version = null;
+
+                        // Help the user fill forms
+                        setTimeout(() => {
+                            let page = document.querySelector('#ins_page');
+                            if (page != null)
+                                page.parentNode.scrollTop = 0;
+                        });
+                        ui.setPanelState('page', true, false);
+                    }
+                    if (version) {
+                        version = version.trim();
+
+                        if (version.match(/^[0-9]+$/)) {
+                            page_version = parseInt(version, 10);
+                        } else {
+                            log.error('L\'indicateur de version n\'est pas un nombre');
+                            page_version = null;
+                        }
+                    }
+                } else {
+                    window.location.href = url.href;
                 }
             }
 
@@ -941,7 +954,7 @@ function InstanceController() {
             }
 
             // Load record
-            await loadRecord();
+            await syncRecord();
 
             // Check dependencies and redirect if needed
             if (page_key != null) {
