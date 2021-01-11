@@ -18,7 +18,7 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
     const Token *token = session ? session->GetToken(instance) : nullptr;
     if (!instance->config.use_offline &&
             (!token || !token->HasPermission(UserPermission::Deploy))) {
-        LogError("User is not allowed to deploy changes");
+        LogError("User is not allowed to list files");
         io->AttachError(403);
         return;
     }
