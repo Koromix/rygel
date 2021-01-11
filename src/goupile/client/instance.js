@@ -307,7 +307,7 @@ function InstanceController() {
                             let fragment = form_meta.fragments[version - 1];
 
                             let page = app.pages.get(fragment.page) || route.page;
-                            let url = page.url + `/${ulid}/${version}`;
+                            let url = page.url + `/${ulid}@${version}`;
 
                             return html`
                                 <tr class=${version === route.version ? 'active' : ''}>
@@ -817,13 +817,15 @@ function InstanceController() {
 
                 if (url.pathname.startsWith(`${ENV.base_url}main/`)) {
                     let path = url.pathname.substr(ENV.base_url.length + 5);
-                    let [key, ulid, version] = path.split('/').map(str => str.trim());
+                    let [key, what] = path.split('/').map(str => str.trim());
 
-                    if (key && key.match(/^[A-Z0-9]{26}$/)) {
-                        version = ulid;
-                        ulid = key;
+                    // Support shorthand URLs: /main/<ULID>(@<VERSION>)
+                    if (key && key.match(/^[A-Z0-9]{26}(@[0-9]+)?$/)) {
+                        what = key;
                         key = app.home.key;
                     }
+
+                    let [ulid, version] = what ? what.split('@') : [null, null];
 
                     // Popping history
                     if (!ulid && !push_history)
@@ -979,7 +981,7 @@ function InstanceController() {
                 if (route.version > 0) {
                     url += `/${route.ulid}`;
                     if (route.version < form_meta.fragments.length)
-                        url += `/${route.version}`;
+                        url += `@${route.version}`;
                 }
                 goupile.syncHistory(url, push_history);
             }
