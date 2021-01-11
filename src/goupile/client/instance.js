@@ -819,6 +819,12 @@ function InstanceController() {
                     let path = url.pathname.substr(ENV.base_url.length + 5);
                     let [key, ulid, version] = path.split('/').map(str => str.trim());
 
+                    if (key && key.match(/^[A-Z0-9]{26}$/)) {
+                        version = ulid;
+                        ulid = key;
+                        key = app.home.key;
+                    }
+
                     // Popping history
                     if (!ulid && !push_history)
                         ulid = 'new';
