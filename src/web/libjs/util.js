@@ -404,7 +404,7 @@ const util = new function() {
                 let href = target.getAttribute('href');
 
                 if (href) {
-                    if (!href.match(/^[a-z]+:/) && href[0] != '#') {
+                    if (!href.match(/^[a-z]+:/)) {
                         func(e, href);
                         e.preventDefault();
                     }
