@@ -875,7 +875,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let text;
         if (value == null) {
-            text = 'Non calculable';
+            text = 'Non disponible';
         } else if (options.text != null) {
             if (typeof options.text === 'function') {
                 text = options.text(value);
