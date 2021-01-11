@@ -243,7 +243,7 @@ function InstanceController() {
                                 ${model.render()}
                             </form>
                         ` : ''}
-                        ${error != null ? html`<span class="gp_wip">${error.message}</span>` : ''}
+                        ${error != null ? html`<span class="ui_wip">${error.message}</span>` : ''}
                     </div>
 
                     ${develop ? html`

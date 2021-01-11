@@ -62,7 +62,7 @@ const ui = new function() {
             <main id="ui_panels">
                 ${util.map(panels.values(), panel => panel.active ? panel.render() : '')}
             </main>
-        `, document.querySelector('#gp_root'));
+        `, document.querySelector('#ui_root'));
 
         // Run dialog functions
         {
@@ -108,7 +108,7 @@ const ui = new function() {
     };
 
     this.runScreen = function(func) {
-        render('', document.querySelector('#gp_root'));
+        render('', document.querySelector('#ui_root'));
         return runDialog(null, 'modal', false, func);
     };
 

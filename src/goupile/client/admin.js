@@ -92,7 +92,7 @@ function AdminController() {
                                     ${selected_instance != null ? html`
                                         <td>
                                             ${permissions.map(perm =>
-                                                html`<span class="gp_tag" style="background: #777;">${perm}</span> `)}
+                                                html`<span class="ui_tag" style="background: #777;">${perm}</span> `)}
                                             &nbsp;&nbsp;&nbsp;
                                             <a role="button" tabindex="0"
                                                @click=${ui.wrapAction(e => runAssignUserDialog(e, selected_instance, user.username,

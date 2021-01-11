@@ -2,61 +2,42 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* -------------------- Layout -------------------- */
+/* -------------------- Loading screen -------------------- */
 
-html { height: 100%; }
-body {
+.gp_loading {
+    display: flex;
     height: 100%;
-    margin: 0;
-    padding: 0;
-    background: white;
-    font-family: 'Open Sans', sans-serif;
-    font-size: 14px;
-    line-height: 1.5;
-    color: #202020;
+    align-items: center;
+    justify-content: center;
+    visibility: hidden;
+    animation: gp_loading_wait 0.2s 1 linear;
+    animation-fill-mode: forwards;
+    animation-delay: 0.3s;
 }
-#gp_root { height: 100%; }
-@media (pointer: coarse) {
-    body { font-size: 16px; }
+.gp_loading::after {
+    content: ' ';
+    display: block;
+    width: 48px;
+    height: 48px;
+    margin: 1px;
+    border-radius: 50%;
+    border: 12px solid var(--menu_color);
+    border-color: var(--menu_color) transparent var(--menu_color) transparent;
+    animation: gp_loading_spinner 0.8s ease-in-out infinite;
 }
-
-/* -------------------- Base elements -------------------- */
-
-a {
-    color: var(--page_color);
-    text-decoration: underline;
+.gp_loading > * { display: none !important; }
+@keyframes gp_loading_wait {
+    100% {
+        visibility: visible;
+        background: white;
+    }
 }
-
-*:focus {
-    outline: 2px dotted #999;
-    outline-offset: 1px;
-    z-index: 99999;
-}
-
-button {
-    padding: 0.3em 10px;
-    background: white;
-    border: 1px solid #ced3d8;
-    color: black;
-    font-family: inherit;
-    font-size: 1em;
-    cursor: pointer;
-}
-button:not(:disabled) { cursor: pointer; }
-button:disabled {
-    background-color: #bbb;
-    border-color: #bbb;
-    color: #eee;
-    cursor: not-allowed;
-}
-button::-moz-focus-inner { border: 0; }
-button:not(.active):not(:disabled):hover {
-    background-color: var(--page_color);
-    border-color: var(--page_color);
-    color: white;
+@keyframes gp_loading_spinner {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
-/* -------------------- Misc -------------------- */
+/* --------------------  Login -------------------- */
 
 #gp_logo {
     position: absolute;
@@ -64,24 +45,4 @@ button:not(.active):not(:disabled):hover {
     margin-top: -64px;
     width: 96px;
     height: 96px;
-}
-
-.gp_tag {
-    display: inline-block;
-    padding: 0px 4px;
-    border-radius: 4px;
-    color: white;
-    font-size: 0.9em;
-    white-space: nowrap;
-}
-
-.gp_wip {
-    padding: 5px;
-    font-size: 1.4em;
-    text-align: center;
-    white-space: pre;
-}
-.gp_wip::before {
-    content: '⚠\FE0E';
-    padding-right: 6px;
 }

@@ -25,11 +25,11 @@
     </head>
 
     <body>
-        <div id="gp_root"></div>
+        <div id="ui_root"></div>
 
         <script>
             try {
-                eval('async function test() {}');
+                eval('let test = async function() {}');
 
                 // See here: https://github.com/dfahlander/Dexie.js/issues/317
                 let m = navigator.userAgent.match('Firefox/([0-9]+)');
@@ -39,19 +39,31 @@
                         throw new Error('Cannot work with broken async in IndexedDB');
                 }
 
-                render(html`<div class="ui_busy"></div>`, document.querySelector('#gp_root'));
+                document.body.classList.add('gp_loading');
                 document.addEventListener('readystatechange', function(e) {
-                    if (document.readyState === 'complete')
-                        goupile.start();
+                    if (document.readyState === 'complete') {
+                        let p = goupile.start();
+
+                        p.catch(function(err) {
+                            document.querySelector('#ui_root').innerHTML =
+                                '<div class="ui_wip">' +
+                                    '<b>Une erreur est survenue pendant le chargement</b>\n' +
+                                    err.message +
+                                '</div>';
+                        });
+                        p.finally(function() {
+                            document.body.classList.remove('gp_loading');
+                        });
+                    }
                 });
             } catch (err) {
-                document.querySelector('#gp_root').innerHTML =
-                    '<div class="gp_wip">' +
-                    '    <b>Ce navigateur n\'est pas supporté, ou il s\'agit d\'une version trop ancienne</b>\n' +
-                    '    Vous pouvez utiliser Chrome (version ≥ 55), Firefox (version ≥ 60), Edge (version ≥ 17), Safari (≥ 11)' +
+                document.querySelector('#ui_root').innerHTML =
+                    '<div class="ui_wip">' +
+                        '<b>Ce navigateur n\'est pas supporté, ou il s\'agit d\'une version trop ancienne</b>\n' +
+                        'Vous pouvez utiliser Chrome (version ≥ 55), Firefox (version ≥ 60), Edge (version ≥ 17), Safari (≥ 11)' +
                     '</div>';
             }
         </script>
-        <noscript><div class="gp_wip">Cette application nécessite un support Javascript</div></noscript>
+        <noscript><div class="ui_wip">Cette application nécessite un support Javascript</div></noscript>
     </body>
 </html>
