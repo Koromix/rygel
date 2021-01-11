@@ -11,6 +11,13 @@ form.section("Conditions", () => {
         help: "L'étoile au début du nom de la variable rend la saise obligatoire; cette étoile ne sera pas présente dans le nom de la variable par la suite. L'option mandatory (utilisée pour le champ date_inclusion ci-après) est équivalente."
     })
 
+    // Chaque enregistrement dans Goupile dispose de deux identifiants uniques : le premier est
+    // appelé ULID, il s'agit d'un identifiant interne généré aléatoirement. Le deuxième est
+    // appelé HID (pour Human ID), il doit être renseigné par votre script. Par exemple ici, nous
+    // affectons la valeur du champ num_inclusion au HID. De cette manière, ce numéro d'inclusion
+    // sera visible comme identifiant dans le tableau de suivi.
+    meta.hid = form.value("num_inclusion")
+
     form.date("date_inclusion", "Date d'inclusion", {
         value: dates.today(),
         help: "On peut tester la validité d'une ou plusieurs valeurs à l'aide de la fonction à l'aide du code. Ici, une valeur postérieure à la date actuelle entraine une erreur. Des conditions très complexes peuvent être programmées en cas de besoin.."

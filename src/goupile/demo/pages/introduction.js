@@ -9,9 +9,7 @@ form.output(html`
     <p>Ces champs peuvent être configurés à l'aide de <b>quelques options</b> : <i>value</i> (valeur par défaut), <i>min/max</i> (pour les valeurs numériques et échelles), <i>compact</i> (pour afficher le libellé et le champ sur la même ligne), <i>help</i> (pour donner des précisions), <i>prefix/suffix</i>, etc.
 `)
 
-form.section("Exemples", () => {
-    form.text("*num_inclusion", "N° d'inclusion")
-
+form.section("Champs simples", () => {
     form.date("*date_inclusion", "Date d'inclusion")
 
     form.number("*age", "Âge", {
