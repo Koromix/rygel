@@ -15,6 +15,9 @@ function PageInfo() {
     this.store = null;
     this.menu = null;
     this.options = {};
+
+    this.url = null;
+    this.filename = null;
 }
 
 function ApplicationBuilder(app) {
@@ -80,6 +83,8 @@ function ApplicationBuilder(app) {
         page.store = store_ref != null ? store_ref : key;
         page.menu = menu_ref != null ? menu_ref : [];
         page.dependencies = options.dependencies.filter(dep => dep !== key);
+        page.url = `${ENV.base_url}main/${key}`;
+        page.filename = `pages/${key}.js`;
 
         page.menu.push(page);
         app.pages.set(key, page);

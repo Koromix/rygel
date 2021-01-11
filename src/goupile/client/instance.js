@@ -7,14 +7,17 @@ function InstanceController() {
 
     let app;
 
-    let page_key;
-    let page_info;
-    let page_ulid;
-    let page_version;
-    let page_code;
-    let page_state;
-    let page_meta;
+    let route = {
+        page: null,
+        ulid: null,
+        version: null
+    };
 
+    let code_cache = new LruMap(4);
+    let page_code;
+
+    let form_meta;
+    let form_state;
     let data_rows;
 
     let editor_el;
@@ -22,8 +25,6 @@ function InstanceController() {
     let editor_filename;
     let editor_buffers = new LruMap(32);
     let editor_ignore_change = false;
-
-    let code_cache = new LruMap(4);
 
     let develop = false;
     let error_entries = {};
@@ -33,7 +34,7 @@ function InstanceController() {
         await initApp();
 
         window.onbeforeunload = e => {
-            if (page_state != null && page_state.hasChanged())
+            if (form_state != null && form_state.hasChanged())
                 return 'Si vous confirmez vouloir quitter la page, les modifications en cours seront perdues !';
         };
 
@@ -50,15 +51,23 @@ function InstanceController() {
             runUserCode('Application', code, {
                 app: builder
             });
-            if (new_app.pages.size)
-                new_app.home = new_app.pages.values().next().value.key;
+            if (!new_app.pages.size)
+                throw new Error('Main script does not define any page');
 
+            new_app.home = new_app.pages.values().next().value;
             app = Object.freeze(new_app);
         } catch (err) {
-            if (app == null)
-                app = Object.freeze(new ApplicationInfo);
-        }
+            if (app == null) {
+                let new_app = new ApplicationInfo;
+                let builder = new ApplicationBuilder(new_app);
 
+                // For simplicity, a lot of code assumes at least one page exists
+                builder.page("default", "Page par défaut");
+
+                new_app.home = new_app.pages.values().next().value;
+                app = Object.freeze(new_app);
+            }
+        }
     }
 
     function initUI() {
@@ -82,9 +91,9 @@ function InstanceController() {
             <div style="flex: 1; min-width: 20px;"></div>
             ${ui.isPanelEnabled('editor') || ui.isPanelEnabled('page') ? html`
                 ${util.map(app.pages.values(), page => {
-                    let missing = page.dependencies.some(dep => !page_meta.status.has(dep));
-                    return html`<button class=${page.key === page_key ? 'active' : ''} ?disabled=${missing}
-                                        @click=${ui.wrapAction(e => self.go(e, makePageURL(page.key)))}>${page.title}</button>`;
+                    let missing = page.dependencies.some(dep => !form_meta.status.has(dep));
+                    return html`<button class=${page === route.page ? 'active' : ''} ?disabled=${missing}
+                                        @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`;
                 })}
                 <div style="flex: 1; min-width: 20px;"></div>
             ` : ''}
@@ -103,12 +112,10 @@ function InstanceController() {
                 title: 'Application',
                 filename: 'main.js'
             });
-            if (page_key != null) {
-                tabs.push({
-                    title: 'Formulaire',
-                    filename: getPageFileName(page_key)
-                });
-            }
+            tabs.push({
+                title: 'Formulaire',
+                filename: route.page.filename
+            });
 
             // Ask ACE to adjust if needed, it needs to happen after the render
             setTimeout(() => editor_ace.resize(false), 0);
@@ -153,13 +160,13 @@ function InstanceController() {
 
                         <tbody>
                             ${data_rows.map(row => html`
-                                <tr class=${row.ulid === page_ulid ? 'active' : ''}>
+                                <tr class=${row.ulid === route.ulid ? 'active' : ''}>
                                     <td>
                                         <a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a>
                                     </td>
                                     <td class=${row.hid == null ? 'missing' : ''}>${row.hid != null ? row.hid : 'NA'}</td>
                                     ${util.map(app.pages.values(), page => {
-                                        let url = makePageURL(page.key) + `/${row.ulid}`;
+                                        let url = page.url + `/${row.ulid}`;
 
                                         if (row.status.has(page.key)) {
                                             return html`<td class="saved"><a href=${url}
@@ -183,36 +190,36 @@ function InstanceController() {
         });
 
         ui.createPanel('page', 1, false, () => {
-            let readonly = (page_meta.version < page_meta.fragments.length);
+            let readonly = (route.version < form_meta.fragments.length);
 
             let model = new FormModel;
-            let builder = new FormBuilder(page_state, model, readonly);
+            let builder = new FormBuilder(form_state, model, readonly);
 
             let error;
             try {
-                let meta = util.assignDeep({}, page_meta);
+                let meta = util.assignDeep({}, form_meta);
                 runUserCode('Formulaire', page_code, {
                     form: builder,
-                    values: page_state.values,
+                    values: form_state.values,
                     meta: meta,
                     go: (url) => self.go(null, url)
                 });
-                page_meta.hid = meta.hid;
+                form_meta.hid = meta.hid;
 
                 builder.errorList();
 
                 if (model.variables.length) {
-                    let enable_save = !model.hasErrors() && page_state.hasChanged();
+                    let enable_save = !model.hasErrors() && form_state.hasChanged();
 
                     builder.action('Enregistrer', {disabled: !enable_save}, () => {
                         if (builder.triggerErrors())
                             return saveRecord();
                     });
                     builder.action('-');
-                    if (page_meta.version > 0) {
+                    if (route.version > 0) {
                         builder.action('Nouveau', {}, goNewRecord);
                     } else {
-                        builder.action('Réinitialiser', {disabled: !page_state.hasChanged()}, goNewRecord);
+                        builder.action('Réinitialiser', {disabled: !form_state.hasChanged()}, goNewRecord);
                     }
                 }
             } catch (err) {
@@ -224,17 +231,17 @@ function InstanceController() {
                     <div id="ins_page">
                         <div class="ui_quick">
                             ${model.variables.length ? html`
-                                ${!page_meta.version ? 'Nouvel enregistrement' : ''}
-                                ${page_meta.version > 0 && page_meta.hid != null ? `Enregistrement : ${page_meta.hid}` : ''}
-                                ${page_meta.version > 0 && page_meta.hid == null ? 'Enregistrement local' : ''}
+                                ${!route.version ? 'Nouvel enregistrement' : ''}
+                                ${route.version > 0 && form_meta.hid != null ? `Enregistrement : ${form_meta.hid}` : ''}
+                                ${route.version > 0 && form_meta.hid == null ? 'Enregistrement local' : ''}
                             `  : ''}
                             <div style="flex: 1;"></div>
-                            ${page_meta.version > 0 ? html`
-                                ${page_meta.version < page_meta.fragments.length ?
-                                    html`<span style="color: red;">Ancienne version du ${page_meta.mtime.toLocaleString()}</span>` : ''}
-                                ${page_meta.version === page_meta.fragments.length ? html`<span>Version actuelle</span>` : ''}
+                            ${route.version > 0 ? html`
+                                ${route.version < form_meta.fragments.length ?
+                                    html`<span style="color: red;">Ancienne version du ${form_meta.mtime.toLocaleString()}</span>` : ''}
+                                ${route.version === form_meta.fragments.length ? html`<span>Version actuelle</span>` : ''}
 
-                                &nbsp;(<a @click=${ui.wrapAction(e => runTrailDialog(e, page_meta.ulid))}>historique</a>)
+                                &nbsp;(<a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>historique</a>)
                             ` : ''}
                         </div>
 
@@ -288,19 +295,21 @@ function InstanceController() {
 
     function runTrailDialog(e, ulid) {
         return ui.runDialog(e, (d, resolve, reject) => {
-            if (ulid !== page_meta.ulid)
+            if (ulid !== route.ulid)
                 reject();
 
             d.output(html`
                 <table class="ui_table">
                     <tbody>
-                        ${util.mapRange(0, page_meta.fragments.length, idx => {
-                            let version = page_meta.fragments.length - idx;
-                            let fragment = page_meta.fragments[version - 1];
-                            let url = makePageURL(fragment.page) + `/${ulid}/${version}`;
+                        ${util.mapRange(0, form_meta.fragments.length, idx => {
+                            let version = form_meta.fragments.length - idx;
+                            let fragment = form_meta.fragments[version - 1];
+
+                            let page = app.pages.get(fragment.page) || route.page;
+                            let url = page.url + `/${ulid}/${version}`;
 
                             return html`
-                                <tr class=${version === page_meta.version ? 'active' : ''}>
+                                <tr class=${version === route.version ? 'active' : ''}>
                                     <td><a href=${url}>🔍\uFE0E</a></td>
                                     <td>${fragment.user}</td>
                                     <td>${fragment.mtime.toLocaleString()}</td>
@@ -314,7 +323,7 @@ function InstanceController() {
     }
 
     function goNewRecord(e) {
-        let url = makePageURL(page_key) + '/new';
+        let url = route.page.url + '/new';
         return self.go(e, url);
     }
 
@@ -327,17 +336,17 @@ function InstanceController() {
         try {
             enablePersistence();
 
-            let values = Object.assign({}, page_state.values);
+            let values = Object.assign({}, form_state.values);
             for (let key in values) {
                 if (values[key] === undefined)
                     values[key] = null;
             }
 
-            let key = `${profile.username}:${page_meta.ulid}`;
+            let key = `${profile.username}:${form_meta.ulid}`;
             let fragment = {
                 user: profile.username,
                 mtime: new Date,
-                page: page_key,
+                page: route.page.key,
                 values: values
             };
 
@@ -347,17 +356,17 @@ function InstanceController() {
                 let record;
                 if (enc != null) {
                     record = await goupile.decryptWithPassport(enc);
-                    if (page_meta.hid != null)
-                        record.hid = page_meta.hid;
+                    if (form_meta.hid != null)
+                        record.hid = form_meta.hid;
                 } else {
                     record = {
-                        ulid: page_meta.ulid,
-                        hid: page_meta.hid,
+                        ulid: form_meta.ulid,
+                        hid: form_meta.hid,
                         fragments: []
                     };
                 }
 
-                if (page_meta.version !== record.fragments.length)
+                if (form_meta.version !== record.fragments.length)
                     throw new Error('Cannot overwrite old record fragment');
                 record.fragments.push(fragment);
 
@@ -368,8 +377,8 @@ function InstanceController() {
             progress.success('Enregistrement effectué');
 
             // Trigger reloads
-            page_version = null;
-            page_meta = null;
+            route.version = null;
+            form_meta = null;
             data_rows = null;
 
             self.go();
@@ -407,9 +416,9 @@ function InstanceController() {
 
                 progress.success('Suppression effectuée');
 
-                if (page_ulid === ulid) {
-                    page_ulid = null;
-                    page_version = null;
+                if (route.ulid === ulid) {
+                    route.ulid = null;
+                    route.version = null;
                 }
                 data_rows = null;
 
@@ -803,7 +812,7 @@ function InstanceController() {
                     url += '/';
                 url = new URL(url, window.location.href);
                 if (url.pathname === ENV.base_url)
-                    url = new URL(makePageURL(app.home), window.location.href);
+                    url = new URL(app.home.url, window.location.href);
 
                 if (url.pathname.startsWith(`${ENV.base_url}main/`)) {
                     let path = url.pathname.substr(ENV.base_url.length + 5);
@@ -814,8 +823,8 @@ function InstanceController() {
                         ulid = 'new';
 
                     // Confirm dangerous action (risk of data loss)
-                    if ((ulid && ulid !== page_ulid || (version && version !== page_version))) {
-                        if (page_state != null && page_state.hasChanged()) {
+                    if ((ulid && ulid !== route.ulid || (version && version !== route.version))) {
+                        if (form_state != null && form_state.hasChanged()) {
                             try {
                                 await ui.runConfirm(e, "Si vous continuez, vous perdrez les modifications en cours. Voulez-vous continuer ?",
                                                        "Continuer", () => {});
@@ -828,29 +837,38 @@ function InstanceController() {
                         }
                     }
 
-                    page_key = key || null;
-                    if (ulid && ulid !== page_ulid) {
+                    // Deal with page
+                    route.page = app.pages.get(key);
+                    if (route.page == null) {
+                        log.error(`La page '${key}' n'existe pas`);
+                        route.page = app.home;
+                    }
+
+                    // Deal with ULID
+                    if (ulid && ulid !== route.ulid) {
                         if (ulid === 'new')
                             ulid = null;
-                        page_ulid = ulid;
-                        page_version = null;
+                        route.ulid = ulid;
+                        route.version = null;
 
                         // Help the user fill forms
                         setTimeout(() => {
-                            let page = document.querySelector('#ins_page');
-                            if (page != null)
-                                page.parentNode.scrollTop = 0;
+                            let el = document.querySelector('#ins_page');
+                            if (el != null)
+                                el.parentNode.scrollTop = 0;
                         });
                         ui.setPanelState('page', true, false);
                     }
+
+                    // And with version!
                     if (version) {
                         version = version.trim();
 
                         if (version.match(/^[0-9]+$/)) {
-                            page_version = parseInt(version, 10);
+                            route.version = parseInt(version, 10);
                         } else {
                             log.error('L\'indicateur de version n\'est pas un nombre');
-                            page_version = null;
+                            route.version = null;
                         }
                     }
                 } else {
@@ -866,26 +884,12 @@ function InstanceController() {
                 develop = !!count;
             }
 
-            // Find page info
-            if (page_key != null) {
-                page_info = app.pages.get(page_key);
-
-                if (page_info == null) {
-                    log.error(`La page '${page_key}' n'existe pas`);
-
-                    page_key = app.home;
-                    page_info = app.pages.get(page_key);
-                }
-            } else {
-                page_info = null;
-            }
-
             // Load record
-            if (page_ulid == null) {
-                page_meta = null;
-            } else if (page_meta == null || page_meta.ulid !== page_ulid ||
-                                            page_meta.version !== page_version) {
-                let key = `${profile.username}:${page_ulid}`;
+            if (route.ulid == null) {
+                form_meta = null;
+            } else if (form_meta == null || form_meta.ulid !== route.ulid ||
+                                            form_meta.version !== route.version) {
+                let key = `${profile.username}:${route.ulid}`;
                 let enc = await db.load('rec_records', key);
 
                 if (enc != null) {
@@ -897,14 +901,14 @@ function InstanceController() {
                         if (fragments[fragments.length - 1].page == null)
                             throw new Error('L\'enregistrement demandé est supprimé');
 
-                        if (page_version == null) {
-                            page_version = fragments.length;
-                        } else if (page_version > fragments.length) {
-                            throw new Error(`Cet enregistrement n'a pas de version ${page_version}`);
+                        if (route.version == null) {
+                            route.version = fragments.length;
+                        } else if (route.version > fragments.length) {
+                            throw new Error(`Cet enregistrement n'a pas de version ${route.version}`);
                         }
 
                         let values = {};
-                        for (let i = 0; i < page_version; i++) {
+                        for (let i = 0; i < route.version; i++) {
                             let fragment = fragments[i];
                             Object.assign(values, fragment.values);
                         }
@@ -913,34 +917,34 @@ function InstanceController() {
                             delete fragment.values;
                         }
 
-                        page_meta = {
-                            page: page_key,
-                            ulid: record.ulid,
+                        form_meta = {
+                            page: route.page,
+                            ulid: route.ulid,
                             hid: record.hid,
-                            version: page_version,
+                            version: route.version,
                             mtime: fragments[fragments.length - 1].mtime,
                             fragments: fragments,
                             status: new Set(fragments.map(fragment => fragment.page))
                         };
 
-                        page_state = new FormState(values);
-                        page_state.changeHandler = () => self.go(null, null, false);
+                        form_state = new FormState(values);
+                        form_state.changeHandler = () => self.go(null, null, false);
                     } catch (err) {
                         log.error(err);
-                        page_meta = null;
+                        form_meta = null;
                     }
                 } else {
                     log.error('L\'enregistrement demandé n\'existe pas');
-                    page_meta = null;
+                    form_meta = null;
                 }
             }
-            if (page_meta == null) {
-                page_ulid = util.makeULID();
-                page_version = 0;
+            if (form_meta == null) {
+                route.ulid = util.makeULID();
+                route.version = 0;
 
-                page_meta = {
-                    page: page_key,
-                    ulid: page_ulid,
+                form_meta = {
+                    page: route.page,
+                    ulid: route.ulid,
                     hid: null,
                     version: 0,
                     mtime: null,
@@ -948,48 +952,35 @@ function InstanceController() {
                     status: new Set()
                 };
 
-                page_state = new FormState;
-                page_state.changeHandler = () => self.go(null, null, false);
+                form_state = new FormState;
+                form_state.changeHandler = () => self.go(null, null, false);
             }
 
             // Check dependencies and redirect if needed
-            if (page_key != null) {
-                let missing = page_info.dependencies.some(dep => !page_meta.status.has(dep));
+            {
+                let missing = route.page.dependencies.some(dep => !form_meta.status.has(dep));
 
                 if (missing) {
-                    let dep0 = page_info.dependencies[0];
-
-                    page_key = dep0;
-                    page_info = app.pages.get(page_key);
+                    let dep0 = route.page.dependencies[0];
+                    route.page = app.pages.get(dep0);
                 }
-            }
-
-            // Fetch page code
-            if (page_key != null) {
-                let filename = getPageFileName(page_key);
-                page_code = await fetchCode(filename);
-            } else {
-                page_code = null;
             }
 
             // Update browser URL
-            if (page_key != null) {
-                let url = makePageURL(page_key);
-                if (page_meta.version > 0) {
-                    url += `/${page_meta.ulid}`;
-                    if (page_meta.version < page_meta.fragments.length)
-                        url += `/${page_meta.version}`;
+            {
+                let url = route.page.url;
+                if (route.version > 0) {
+                    url += `/${route.ulid}`;
+                    if (route.version < form_meta.fragments.length)
+                        url += `/${route.version}`;
                 }
                 goupile.syncHistory(url, push_history);
-            } else {
-                goupile.syncHistory(ENV.base_url, push_history);
-                page_code = null;
             }
 
             // Sync editor (if needed)
             if (ui.isPanelEnabled('editor')) {
                 if (editor_filename == null || editor_filename.startsWith('pages/'))
-                    editor_filename = (page_key != null) ? getPageFileName(page_key) : 'main.js';
+                    editor_filename = route.page.filename;
 
                 await syncEditor();
             }
@@ -1020,6 +1011,9 @@ function InstanceController() {
                     }
                 }
             }
+
+            // Fetch page code (for page panel)
+            page_code = await fetchCode(route.page.filename);
 
             ui.render();
         } catch (err) {
@@ -1068,7 +1062,4 @@ function InstanceController() {
             }
         }
     }
-
-    function getPageFileName(key) { return `pages/${key}.js`; };
-    function makePageURL(key) { return `${ENV.base_url}main/${key}`; }
 };
