@@ -263,7 +263,7 @@ html.small .ui_toolbar button.icon {
     align-items: center;
     justify-content: center;
     visibility: hidden;
-    animation: ui_busy 0.2s 1 linear;
+    animation: ui_busy_wait 0.2s 1 linear;
     animation-fill-mode: forwards;
     animation-delay: 0.3s;
 }
@@ -274,14 +274,14 @@ html.small .ui_toolbar button.icon {
     height: 48px;
     margin: 1px;
     border-radius: 50%;
-    border: 12px solid white;
-    border-color: white transparent white transparent;
+    border: 12px solid var(--menu_color);
+    border-color: var(--menu_color) transparent var(--menu_color) transparent;
     animation: ui_busy_spinner 0.8s ease-in-out infinite;
 }
-@keyframes ui_busy {
+@keyframes ui_busy_wait {
     100% {
         visibility: visible;
-        background: var(--menu_color);
+        background: white;
     }
 }
 @keyframes ui_busy_spinner {
