@@ -18,8 +18,11 @@ const goupile = new function() {
     this.start = async function() {
         ui.init();
 
+        await self.syncProfile();
         await registerSW();
         await initDB();
+
+        initNavigation();
 
         if (ENV.base_url === '/admin/') {
             controller = new AdminController;
@@ -27,8 +30,6 @@ const goupile = new function() {
             controller = new InstanceController;
         }
         await controller.start();
-
-        initNavigation();
     };
 
     function initNavigation() {
@@ -83,7 +84,7 @@ const goupile = new function() {
     async function initDB() {
         let db_name = `goupile:${ENV.base_url}`;
 
-        db = await indexeddb.open(db_name, 3, (db, old_version) => {
+        db = await indexeddb.open(db_name, 4, (db, old_version) => {
             switch (old_version) {
                 case null: {
                     db.createStore('usr_profiles');
@@ -95,6 +96,10 @@ const goupile = new function() {
 
                 case 2: {
                     db.createStore('rec_records');
+                } // fallthrough
+
+                case 3: {
+                    db.createIndex('rec_records', 'form', 'fkey', {unique: false});
                 } // fallthrough
             }
         });

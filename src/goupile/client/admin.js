@@ -12,7 +12,7 @@ function AdminController() {
 
     this.start = async function() {
         initUI();
-        self.go();
+        self.go(null, window.location.href);
     };
 
     function initUI() {
@@ -38,7 +38,7 @@ function AdminController() {
                 <div class="ui_quick">
                     Instances
                     <div style="flex: 1;"></div>
-                    <a @click=${ui.wrapAction(e => { instances = null; return self.go(e); })}>Rafraichir</a>
+                    <a @click=${ui.wrapAction(e => { instances = null; return self.run(); })}>Rafraichir</a>
                 </div>
 
                 <table class="ui_table">
@@ -71,7 +71,7 @@ function AdminController() {
                 <div class="ui_quick">
                     Utilisateurs
                     <div style="flex: 1;"></div>
-                    <a @click=${ui.wrapAction(e => { users = null; return self.go(e); })}>Rafraichir</a>
+                    <a @click=${ui.wrapAction(e => { users = null; return self.run(); })}>Rafraichir</a>
                 </div>
 
                 <table class="ui_table">
@@ -122,6 +122,11 @@ function AdminController() {
         if (!goupile.isAuthorized())
             await goupile.runLogin();
 
+        await self.run(push_history);
+    };
+    this.go = util.serializeAsync(this.go);
+
+    this.run = async function(push_history = false) {
         if (instances == null)
             instances = await net.fetchJson('/admin/api/instances/list');
         if (users == null)
@@ -131,11 +136,11 @@ function AdminController() {
 
         ui.render();
     };
-    this.go = util.serializeAsync(this.go);
+    this.run = util.serializeAsync(this.run);
 
     function togglePanel(e, key) {
         ui.setPanelState(key, !ui.isPanelEnabled(key));
-        return self.go(e);
+        return self.run();
     }
 
     function toggleSelectedInstance(e, key) {
@@ -145,7 +150,7 @@ function AdminController() {
         } else {
             selected_instance = null;
         }
-        return self.go(e);
+        return self.run();
     }
 
     function runCreateInstanceDialog(e) {
@@ -169,7 +174,7 @@ function AdminController() {
 
                     instances = null;
 
-                    return self.go();
+                    self.run();
                 } else {
                     let err = (await response.text()).trim();
                     reject(new Error(err));
@@ -210,7 +215,7 @@ function AdminController() {
 
                             instances = null;
 
-                            self.go();
+                            self.run();
                         } else {
                             let err = (await response.text()).trim();
                             reject(new Error(err));
@@ -236,7 +241,7 @@ function AdminController() {
 
                             instances = null;
 
-                            self.go();
+                            self.run();
                         } else {
                             let err = (await response.text()).trim();
                             reject(new Error(err));
@@ -275,7 +280,7 @@ function AdminController() {
 
                     users = null;
 
-                    self.go();
+                    self.run();
                 } else {
                     let err = (await response.text()).trim();
                     reject(new Error(err));
@@ -311,7 +316,7 @@ function AdminController() {
 
                     users = null;
 
-                    self.go();
+                    self.run();
                 } else {
                     let err = (await response.text()).trim();
                     reject(new Error(err));
@@ -336,7 +341,7 @@ function AdminController() {
 
                 users = null;
 
-                self.go();
+                self.run();
             } else {
                 let err = (await response.text()).trim();
                 throw new Error(err);

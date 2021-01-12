@@ -78,7 +78,7 @@ static void AttachStatic(const AssetInfo &asset, const char *etag, const http_Re
 
         io->AddCachingHeaders(gp_domain.config.max_age, etag);
         if (asset.source_map) {
-            io->AddHeader("SourceMap", asset.source_map);
+            // io->AddHeader("SourceMap", asset.source_map);
         }
     }
 }

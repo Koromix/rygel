@@ -8,6 +8,7 @@ function InstanceController() {
     let app;
 
     let route = {
+        form: null,
         page: null,
         ulid: null,
         version: null
@@ -18,13 +19,15 @@ function InstanceController() {
 
     let form_meta;
     let form_state;
-    let data_rows;
 
     let editor_el;
     let editor_ace;
     let editor_filename;
     let editor_buffers = new LruMap(32);
     let editor_ignore_change = false;
+
+    let data_form;
+    let data_rows;
 
     let develop = false;
     let error_entries = {};
@@ -38,7 +41,12 @@ function InstanceController() {
                 return 'Si vous confirmez vouloir quitter la page, les modifications en cours seront perdues !';
         };
 
-        self.go(null, window.location.href);
+        self.go(null, window.location.href).catch(err => {
+            log.error(err);
+
+            // Fall back to home page
+            self.go(null, ENV.base_url);
+        });
     };
 
     async function initApp() {
@@ -73,38 +81,60 @@ function InstanceController() {
     function initUI() {
         document.documentElement.className = 'instance';
 
-        ui.setMenu(() => html`
-            <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
-                    @click=${e => self.go(e, ENV.base_url)}>${ENV.title}</button>
-            ${goupile.hasPermission('develop') ? html`
-                <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
-                        style="background-position-y: calc(-230px + 1.2em);"
-                        @click=${ui.wrapAction(e => togglePanel(e, 'editor'))}>Code</button>
-            ` : ''}
-            <button class=${'icon' + (ui.isPanelEnabled('data') ? ' active' : '')}
-                    style="background-position-y: calc(-274px + 1.2em);"
-                    @click=${ui.wrapAction(e => togglePanel(e, 'data'))}>Suivi</button>
-            <button class=${'icon' + (ui.isPanelEnabled('page') ? ' active' : '')}
-                    style="background-position-y: calc(-318px + 1.2em);"
-                    @click=${ui.wrapAction(e => togglePanel(e, 'page'))}>Formulaire</button>
+        ui.setMenu(() => {
+            return html`
+                <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
+                        @click=${e => self.go(e, ENV.base_url)}>${ENV.title}</button>
+                ${goupile.hasPermission('develop') ? html`
+                    <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
+                            style="background-position-y: calc(-230px + 1.2em);"
+                            @click=${ui.wrapAction(e => togglePanel(e, 'editor'))}>Code</button>
+                ` : ''}
+                <button class=${'icon' + (ui.isPanelEnabled('data') ? ' active' : '')}
+                        style="background-position-y: calc(-274px + 1.2em);"
+                        @click=${ui.wrapAction(e => togglePanel(e, 'data'))}>Suivi</button>
+                <button class=${'icon' + (ui.isPanelEnabled('page') ? ' active' : '')}
+                        style="background-position-y: calc(-318px + 1.2em);"
+                        @click=${ui.wrapAction(e => togglePanel(e, 'page'))}>Formulaire</button>
 
-            <div style="flex: 1; min-width: 20px;"></div>
-            ${ui.isPanelEnabled('editor') || ui.isPanelEnabled('page') ? html`
-                ${util.map(app.pages.values(), page => {
-                    let missing = page.dependencies.some(dep => !form_meta.status.has(dep));
-                    return html`<button class=${page === route.page ? 'active' : ''} ?disabled=${missing}
-                                        @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`;
-                })}
                 <div style="flex: 1; min-width: 20px;"></div>
-            ` : ''}
+                ${ui.isPanelEnabled('editor') || ui.isPanelEnabled('page') ? html`
+                    ${route.form.parent != null ? html`
+                        <div class="drop">
+                            <button>${route.form.parent.title}</button>
+                            <div>
+                                ${util.map(route.form.parent.pages.values(), page =>
+                                    html`<button @click=${e => self.go(e, page.url)}>${page.title}</button>`)}
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${util.map(route.form.pages.values(), page => {
+                        let missing = page.dependencies.some(dep => !form_meta.status.has(dep));
+                        return html`<button class=${page === route.page ? 'active' : ''} ?disabled=${missing}
+                                            @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`;
+                    })}
+                    ${util.map(route.form.children.values(), child_form => html`
+                        <div class="drop">
+                            <button ?disabled=${!form_meta.version}>${child_form.title}</button>
+                            ${form_meta.version > 0 ? html`
+                                <div>
+                                    ${util.map(child_form.pages.values(), page =>
+                                        html`<button @click=${e => self.go(e, page.url)}>${page.title}</button>`)}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `)}
+                    <div style="flex: 1; min-width: 20px;"></div>
+                ` : ''}
 
-            <div class="drop right">
-                <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
-                <div>
-                    <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
+                <div class="drop right">
+                    <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
+                    <div>
+                        <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
+                    </div>
                 </div>
-            </div>
-        `);
+            `;
+        });
 
         ui.createPanel('editor', 0, false, () => {
             let tabs = [];
@@ -135,26 +165,29 @@ function InstanceController() {
         });
 
         ui.createPanel('data', 0, true, () => {
+            let columns = data_form.pages.size + data_form.children.size;
+
             return html`
                 <div class="padded">
                     <div class="ui_quick">
                         ${data_rows.length || 'Aucune'} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
                         <div style="flex: 1;"></div>
-                        <a @click=${ui.wrapAction(e => { data_rows = null; return self.go(e); })}>Rafraichir</a>
+                        <a @click=${ui.wrapAction(e => { data_rows = null; return self.run(); })}>Rafraichir</a>
                     </div>
 
                     <table class="ui_table" id="ins_data">
                         <colgroup>
                             <col style="width: 2em;"/>
                             <col style="width: 160px;"/>
-                            ${util.mapRange(0, app.pages.size, () => html`<col/>`)}
+                            ${util.mapRange(0, columns, () => html`<col/>`)}
                         </colgroup>
 
                         <thead>
                             <tr>
                                 <th></th>
                                 <th>Identifiant</th>
-                                ${util.map(app.pages.values(), page => html`<th>${page.title}</th>`)}
+                                ${util.map(data_form.pages.values(), page => html`<th>${page.title}</th>`)}
+                                ${util.map(data_form.children.values(), child_form => html`<th>${child_form.title}</th>`)}
                             </tr>
                         </thead>
 
@@ -165,7 +198,7 @@ function InstanceController() {
                                         <a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a>
                                     </td>
                                     <td class=${row.hid == null ? 'missing' : ''}>${row.hid != null ? row.hid : 'NA'}</td>
-                                    ${util.map(app.pages.values(), page => {
+                                    ${util.map(data_form.pages.values(), page => {
                                         let url = page.url + `/${row.ulid}`;
 
                                         if (row.status.has(page.key)) {
@@ -173,18 +206,42 @@ function InstanceController() {
                                                                              @click=${e => ui.setPanelState('page', true, false)}>Enregistré</a></td>`;
                                         } else {
                                             return html`<td class="missing"><a href=${url}
-                                                                            @click=${e => ui.setPanelState('page', true, false)}>Non rempli</a></td>`;
+                                                                               @click=${e => ui.setPanelState('page', true, false)}>Non rempli</a></td>`;
+                                        }
+                                    })}
+                                    ${util.map(data_form.children.values(), child_form => {
+                                        let child_row = data_form.children.get()
+
+                                        if (row.status.has(child_form.key)) {
+                                            let child = row.children.get(child_form.key);
+                                            let url = child_form.url + `/${child.ulid}@${child.version}`;
+
+                                            return html`
+                                                <td class="saved">
+                                                    <a href=${url} @click=${e => ui.setPanelState('page', true, false)}>Enregistré</a>
+                                                </td>
+                                            `;
+                                        } else {
+                                            let url = child_form.url + `/${row.ulid}`;
+
+                                            return html`
+                                                <td class="missing">
+                                                    <a href=${url} @click=${e => ui.setPanelState('page', true, false)}>Non rempli</a>
+                                                </td>
+                                            `;
                                         }
                                     })}
                                 </tr>
                             `)}
-                            ${!data_rows.length ? html`<tr><td colspan=${2 + app.pages.size}>Aucune ligne à afficher</td></tr>` : ''}
+                            ${!data_rows.length ? html`<tr><td colspan=${2 + columns}>Aucune ligne à afficher</td></tr>` : ''}
                         </tbody>
                     </table>
 
-                    <div class="ui_actions">
-                        <button @click=${ui.wrapAction(goNewRecord)}>Créer un nouvel enregistrement</button>
-                    </div>
+                    ${route.form.parent == null ? html`
+                        <div class="ui_actions">
+                            <button @click=${ui.wrapAction(goNewRecord)}>Créer un nouvel enregistrement</button>
+                        </div>
+                    ` : ''}
                 </div>
             `;
         });
@@ -216,11 +273,13 @@ function InstanceController() {
                         if (builder.triggerErrors())
                             return saveRecord();
                     });
-                    builder.action('-');
-                    if (route.version > 0) {
-                        builder.action('Nouveau', {}, goNewRecord);
-                    } else {
-                        builder.action('Réinitialiser', {disabled: !form_state.hasChanged()}, goNewRecord);
+                    if (route.form.parent == null) {
+                        builder.action('-');
+                        if (route.version > 0) {
+                            builder.action('Nouveau', {}, goNewRecord);
+                        } else {
+                            builder.action('Réinitialiser', {disabled: !form_state.hasChanged()}, goNewRecord);
+                        }
                     }
                 }
             } catch (err) {
@@ -270,7 +329,7 @@ function InstanceController() {
 
     function togglePanel(e, key, enable = null) {
         ui.setPanelState(key, !ui.isPanelEnabled(key));
-        return self.go(e);
+        return self.run();
     }
 
     function runUserCode(title, code, arguments) {
@@ -328,6 +387,8 @@ function InstanceController() {
         return self.go(e, url);
     }
 
+    // XXX: Make sure nothing changes while this runs, with some kind of multi-stage serializeAsync?
+    //      Or copy state, which is probably better :)
     async function saveRecord() {
         if (develop)
             throw new Error('Enregistrement refusé : formulaire non déployé');
@@ -345,6 +406,7 @@ function InstanceController() {
 
             let key = `${profile.username}:${form_meta.ulid}`;
             let fragment = {
+                type: 'save',
                 user: profile.username,
                 mtime: new Date,
                 page: route.page.key,
@@ -352,37 +414,61 @@ function InstanceController() {
             };
 
             await db.transaction('rw', ['rec_records'], async t => {
-                let enc = await db.load('rec_records', key);
+                let obj = await t.load('rec_records', key);
 
                 let record;
-                if (enc != null) {
-                    record = await goupile.decryptWithPassport(enc);
+                if (obj != null) {
+                    record = await goupile.decryptWithPassport(obj.enc);
                     if (form_meta.hid != null)
                         record.hid = form_meta.hid;
                 } else {
+                    obj = {
+                        fkey: `${profile.username}/${route.form.key}:${form_meta.ulid}`,
+                        enc: null
+                    };
                     record = {
                         ulid: form_meta.ulid,
                         hid: form_meta.hid,
+                        parent: form_meta.parent,
+                        form: route.form.key,
                         fragments: []
                     };
+
+                    if (form_meta.parent != null) {
+                        record.parent = {
+                            form: form_meta.parent.form.key,
+                            ulid: form_meta.parent.ulid,
+                            version: form_meta.parent.version
+                        };
+                    }
                 }
 
                 if (form_meta.version !== record.fragments.length)
                     throw new Error('Cannot overwrite old record fragment');
                 record.fragments.push(fragment);
 
-                enc = await goupile.encryptWithPassport(record);
-                await db.saveWithKey('rec_records', key, enc);
+                obj.enc = await goupile.encryptWithPassport(record);
+                await t.saveWithKey('rec_records', key, obj);
+
+                if (record.parent != null) {
+                    let child = {
+                        form: record.form,
+                        ulid: record.ulid,
+                        version: record.fragments.length
+                    };
+                    await updateRecordParents(t, record.parent, child, 'save_child', fragment.mtime);
+                }
             });
 
             progress.success('Enregistrement effectué');
 
-            // Trigger reloads
+            // XXX: Trigger reload in a better way...
             route.version = null;
             form_meta = null;
+            form_state = null;
             data_rows = null;
 
-            self.go();
+            self.go(null, window.location.href);
         } catch (err) {
             progress.close();
             throw err;
@@ -396,23 +482,32 @@ function InstanceController() {
             try {
                 let key = `${profile.username}:${ulid}`;
                 let fragment = {
+                    type: 'delete',
                     user: profile.username,
-                    mtime: new Date,
-                    page: null,
-                    values: {}
+                    mtime: new Date
                 };
 
-                await db.transaction('rw', ['rec_records'], async () => {
-                    let enc = await db.load('rec_records', key);
-                    if (enc == null)
+                await db.transaction('rw', ['rec_records'], async t => {
+                    let obj = await t.load('rec_records', key);
+                    if (obj == null)
                         throw new Error('Cet enregistrement est introuvable');
 
-                    let record = await goupile.decryptWithPassport(enc);
+                    let record = await goupile.decryptWithPassport(obj.enc);
 
+                    // Mark as deleted with special fragment
                     record.fragments.push(fragment);
 
-                    enc = await goupile.encryptWithPassport(record);
-                    await db.saveWithKey('rec_records', key, enc);
+                    obj.enc = await goupile.encryptWithPassport(record);
+                    await t.saveWithKey('rec_records', key, obj);
+
+                    if (record.parent != null) {
+                        let child = {
+                            form: record.form,
+                            ulid: record.ulid,
+                            version: record.fragments.length
+                        };
+                        await updateRecordParents(t, record.parent, child, 'delete_child', fragment.mtime);
+                    }
                 });
 
                 progress.success('Suppression effectuée');
@@ -423,12 +518,41 @@ function InstanceController() {
                 }
                 data_rows = null;
 
-                self.go();
+                self.run();
             } catch (err) {
                 progress.close();
                 throw err;
             }
         })
+    }
+
+    // Call in transaction!
+    async function updateRecordParents(t, parent, child, type, mtime) {
+        while (parent != null) {
+            let parent_key = `${profile.username}:${parent.ulid}`;
+            let parent_obj = await t.load('rec_records', parent_key);
+            let parent_record = await goupile.decryptWithPassport(parent_obj.enc);
+
+            let parent_fragment = {
+                type: type,
+                user: profile.username,
+                mtime: mtime,
+                child: child
+            };
+            parent_record.fragments.push(parent_fragment);
+
+            parent_obj.enc = await goupile.encryptWithPassport(parent_record);
+            await t.saveWithKey('rec_records', parent_key, parent_obj);
+
+            type = 'save_child';
+
+            child = {
+                form: parent_record.form,
+                ulid: parent_record.ulid,
+                version: parent_record.fragments.length
+            };
+            parent = parent_record.parent;
+        }
     }
 
     function enablePersistence() {
@@ -494,7 +618,7 @@ function InstanceController() {
 
     function toggleEditorFile(filename) {
         editor_filename = filename;
-        return self.go();
+        return self.run();
     }
 
     async function handleFileChange(filename) {
@@ -517,7 +641,7 @@ function InstanceController() {
             });
         }
 
-        self.go();
+        self.run();
     }
 
     // Javascript Blob/File API sucks, plain and simple
@@ -554,7 +678,7 @@ function InstanceController() {
                 <div class="ui_quick">
                     ${modifications || 'Aucune'} ${modifications.length > 1 ? 'modifications' : 'modification'} à effectuer
                     <div style="flex: 1;"></div>
-                    <a @click=${ui.wrapAction(e => { actions = null; return self.go(); })}>Rafraichir</a>
+                    <a @click=${ui.wrapAction(e => { actions = null; return self.run(); })}>Rafraichir</a>
                 </div>
 
                 <table class="ui_table ins_deploy">
@@ -619,7 +743,7 @@ function InstanceController() {
                 await deploy(actions);
 
                 resolve();
-                self.go();
+                self.run();
             });
         });
     }
@@ -732,7 +856,7 @@ function InstanceController() {
                     progress.success('Fichier enregistré');
                     resolve();
 
-                    self.go();
+                    self.run();
                 } catch (err) {
                     progress.close();
                     reject(err);
@@ -802,217 +926,321 @@ function InstanceController() {
     };
 
     this.go = async function(e = null, url = null, push_history = true) {
-        try {
-            await goupile.syncProfile();
-            if (!goupile.isAuthorized())
-                await goupile.runLogin();
+        await goupile.syncProfile();
+        if (!goupile.isAuthorized())
+            await goupile.runLogin();
 
-            // Update current route
-            if (url != null) {
-                if (!url.endsWith('/'))
-                    url += '/';
-                url = new URL(url, window.location.href);
-                if (url.pathname === ENV.base_url)
-                    url = new URL(app.home.url, window.location.href);
+        let new_route = Object.assign({}, route);
+        let new_meta = form_meta;
+        let new_state = form_state;
 
-                if (url.pathname.startsWith(`${ENV.base_url}main/`)) {
-                    let path = url.pathname.substr(ENV.base_url.length + 5);
-                    let [key, what] = path.split('/').map(str => str.trim());
+        // Fix up URL
+        if (!url.endsWith('/'))
+            url += '/';
+        url = new URL(url, window.location.href);
+        if (url.pathname === ENV.base_url)
+            url = new URL(app.home.url, window.location.href);
 
-                    // Support shorthand URLs: /main/<ULID>(@<VERSION>)
-                    if (key && key.match(/^[A-Z0-9]{26}(@[0-9]+)?$/)) {
-                        what = key;
-                        key = app.home.key;
-                    }
+        // Goodbye!
+        if (!url.pathname.startsWith(`${ENV.base_url}main/`))
+            window.location.href = url.href;
 
-                    let [ulid, version] = what ? what.split('@') : [null, null];
+        // Parse new URL
+        {
+            let path = url.pathname.substr(ENV.base_url.length + 5);
+            let [key, what] = path.split('/').map(str => str.trim());
 
-                    // Popping history
-                    if (!ulid && !push_history)
-                        ulid = 'new';
+            // Support shorthand URLs: /main/<ULID>(@<VERSION>)
+            if (key && key.match(/^[A-Z0-9]{26}(@[0-9]+)?$/)) {
+                what = key;
+                key = app.home.key;
+            }
 
-                    // Confirm dangerous action (risk of data loss)
-                    if ((ulid && ulid !== route.ulid || (version && version !== route.version))) {
-                        if (form_state != null && form_state.hasChanged()) {
-                            try {
-                                await ui.runConfirm(e, "Si vous continuez, vous perdrez les modifications en cours. Voulez-vous continuer ?",
-                                                       "Continuer", () => {});
-                            } catch (err) {
-                                // If we're popping state, this will fuck up navigation history but we can't
-                                // refuse popstate events. History mess is better than data loss.
-                                self.go();
-                                return;
-                            }
-                        }
-                    }
+            // Find page information
+            new_route.page = app.pages.get(key);
+            if (new_route.page == null) {
+                log.error(`La page '${key}' n'existe pas`);
+                new_route.page = app.home;
+            }
+            new_route.form = new_route.page.form;
 
-                    // Deal with page
-                    route.page = app.pages.get(key);
-                    if (route.page == null) {
-                        log.error(`La page '${key}' n'existe pas`);
-                        route.page = app.home;
-                    }
+            let [ulid, version] = what ? what.split('@') : [null, null];
 
-                    // Deal with ULID
-                    if (ulid && ulid !== route.ulid) {
-                        if (ulid === 'new')
-                            ulid = null;
-                        route.ulid = ulid;
-                        route.version = null;
+            // Popping history
+            if (!ulid && !push_history)
+                ulid = 'new';
 
-                        // Help the user fill forms
-                        setTimeout(() => {
-                            let el = document.querySelector('#ins_page');
-                            if (el != null)
-                                el.parentNode.scrollTop = 0;
-                        });
-                        ui.setPanelState('page', true, false);
-                    }
+            // Deal with ULID
+            if (ulid && ulid !== new_route.ulid) {
+                if (ulid === 'new')
+                    ulid = null;
 
-                    // And with version!
-                    if (version) {
-                        version = version.trim();
+                new_route.ulid = ulid;
+                new_route.version = null;
+            }
 
-                        if (version.match(/^[0-9]+$/)) {
-                            route.version = parseInt(version, 10);
-                        } else {
-                            log.error('L\'indicateur de version n\'est pas un nombre');
-                            route.version = null;
-                        }
-                    }
+            // And with version!
+            if (version) {
+                version = version.trim();
+
+                if (version.match(/^[0-9]+$/)) {
+                    new_route.version = parseInt(version, 10);
                 } else {
-                    window.location.href = url.href;
+                    log.error('L\'indicateur de version n\'est pas un nombre');
+                    new_route.version = null;
+                }
+            }
+        }
+
+        // Go to parent or child automatically
+        if (new_meta != null && new_route.ulid === new_meta.ulid &&
+                                new_route.version === new_meta.version &&
+                                new_route.form !== new_meta.form) {
+            if (new_route.form == new_meta.form.parent) {
+                new_route.ulid = new_meta.parent.ulid;
+                new_route.version = new_meta.parent.version;
+            } else {
+                let child = new_meta.children.get(new_route.form.key);
+
+                if (child != null) {
+                    new_route.ulid = child.ulid;
+                    new_route.version = child.version;
+                } else {
+                    new_route.ulid = null;
+                    new_route.version = null;
                 }
             }
 
-            // Is the user changing stuff?
-            {
-                let range = IDBKeyRange.bound(profile.username + ':', profile.username + '`', false, true);
-                let count = await db.count('fs_files', range);
+            new_meta = null;
+        }
 
-                develop = !!count;
-            }
+        // Load record if needed
+        if (new_meta != null && (new_route.ulid !== new_meta.ulid ||
+                                 new_route.version !== new_meta.version))
+            new_meta = null;
+        if (new_meta == null && new_route.ulid != null) {
+            let key = `${profile.username}:${new_route.ulid}`;
+            let obj = await db.load('rec_records', key);
 
-            // Load record
-            if (route.ulid == null) {
-                form_meta = null;
-            } else if (form_meta == null || form_meta.ulid !== route.ulid ||
-                                            form_meta.version !== route.version) {
-                let key = `${profile.username}:${route.ulid}`;
-                let enc = await db.load('rec_records', key);
+            if (obj != null) {
+                try {
+                    let record = await goupile.decryptWithPassport(obj.enc);
+                    let fragments = record.fragments;
 
-                if (enc != null) {
-                    try {
-                        let record = await goupile.decryptWithPassport(enc);
-                        let fragments = record.fragments;
+                    // Deleted record
+                    if (fragments[fragments.length - 1].type === 'delete')
+                        throw new Error('L\'enregistrement demandé est supprimé');
 
-                        // Deleted record
-                        if (fragments[fragments.length - 1].page == null)
-                            throw new Error('L\'enregistrement demandé est supprimé');
-
-                        if (route.version == null) {
-                            route.version = fragments.length;
-                        } else if (route.version > fragments.length) {
-                            throw new Error(`Cet enregistrement n'a pas de version ${route.version}`);
-                        }
-
-                        let values = {};
-                        for (let i = 0; i < route.version; i++) {
-                            let fragment = fragments[i];
-                            Object.assign(values, fragment.values);
-                        }
-                        for (let fragment of fragments) {
-                            fragment.mtime = new Date(fragment.mtime);
-                            delete fragment.values;
-                        }
-
-                        form_meta = {
-                            page: route.page,
-                            ulid: route.ulid,
-                            hid: record.hid,
-                            version: route.version,
-                            mtime: fragments[fragments.length - 1].mtime,
-                            fragments: fragments,
-                            status: new Set(fragments.map(fragment => fragment.page))
-                        };
-
-                        form_state = new FormState(values);
-                        form_state.changeHandler = () => self.go(null, null, false);
-                    } catch (err) {
-                        log.error(err);
-                        form_meta = null;
+                    if (new_route.version == null) {
+                        new_route.version = fragments.length;
+                    } else if (new_route.version > fragments.length) {
+                        throw new Error(`Cet enregistrement n'a pas de version ${new_route.version}`);
                     }
-                } else {
-                    log.error('L\'enregistrement demandé n\'existe pas');
-                    form_meta = null;
-                }
-            }
-            if (form_meta == null) {
-                route.ulid = util.makeULID();
-                route.version = 0;
 
-                form_meta = {
-                    page: route.page,
-                    ulid: route.ulid,
-                    hid: null,
-                    version: 0,
-                    mtime: null,
-                    fragments: [],
-                    status: new Set()
+                    let values = {};
+                    let children = new Map;
+                    let status = new Set;
+                    for (let i = 0; i < new_route.version; i++) {
+                        let fragment = fragments[i];
+
+                        switch (fragment.type) {
+                            case 'save': {
+                                Object.assign(values, fragment.values);
+                                status.add(fragment.page);
+                            } break;
+                            case 'save_child': {
+                                children.set(fragment.child.form, fragment.child);
+                                status.add(fragment.child.form);
+                            } break;
+                            case 'delete_child': {
+                                children.delete(fragment.child.form);
+                                status.delete(fragment.child.form);
+                            } break;
+                        }
+                    }
+                    for (let fragment of fragments) {
+                        fragment.mtime = new Date(fragment.mtime);
+
+                        delete fragment.child;
+                        delete fragment.values;
+                    }
+
+                    new_meta = {
+                        form: app.forms.get(record.form),
+                        ulid: new_route.ulid,
+                        hid: record.hid,
+                        version: new_route.version,
+                        parent: record.parent,
+                        children: children,
+                        mtime: fragments[fragments.length - 1].mtime,
+                        fragments: fragments,
+                        status: status
+                    };
+                    if (new_meta.form == null)
+                        throw new Error(`Le formulaire '${record.form}' n'existe pas ou plus`);
+
+                    new_state = new FormState(values);
+                    new_state.changeHandler = () => self.run();
+                } catch (err) {
+                    log.error(err);
+                    new_meta = null;
+                }
+            } else {
+                log.error('L\'enregistrement demandé n\'existe pas');
+                new_meta = null;
+            }
+        }
+
+        // Create new record if needed
+        if (new_route.ulid == null || new_meta == null) {
+            new_route.ulid = util.makeULID();
+            new_route.version = 0;
+
+            new_meta = {
+                form: new_route.form,
+                ulid: new_route.ulid,
+                hid: null,
+                version: 0,
+                parent: null,
+                children: [],
+                mtime: null,
+                fragments: [],
+                status: new Set
+            };
+
+            if (new_meta.form.parent != null) {
+                if (form_meta == null) {
+                    throw new Error('Impossible de créer cet enregistrement sans parent');
+                } else if (form_meta.form !== new_meta.form.parent) {
+                    throw new Error('Le formulaire parent ne correspond pas au type attendu');
+                }
+
+                new_meta.parent = {
+                    form: form_meta.form.key,
+                    ulid: form_meta.ulid,
+                    version: form_meta.version
                 };
-
-                form_state = new FormState;
-                form_state.changeHandler = () => self.go(null, null, false);
             }
 
-            // Check dependencies and redirect if needed
-            {
-                let missing = route.page.dependencies.some(dep => !form_meta.status.has(dep));
+            new_state = new FormState;
+            new_state.changeHandler = () => self.run();
+        }
 
-                if (missing) {
-                    let dep0 = route.page.dependencies[0];
-                    route.page = app.pages.get(dep0);
-                }
+        // Confirm dangerous actions (at risk of data loss)
+        if (form_state != null && form_state.hasChanged() && new_meta !== form_meta) {
+            try {
+                // XXX: Improve message if going to child form
+                await ui.runConfirm(e, "Si vous continuez, vous perdrez les modifications en cours. Voulez-vous continuer ?",
+                                       "Continuer", () => {});
+            } catch (err) {
+                // If we're popping state, this will fuck up navigation history but we can't
+                // refuse popstate events. History mess is better than data loss.
+                return self.run();
+            }
+        }
+
+        // Check dependencies and redirect if needed
+        {
+            let missing = new_route.page.dependencies.some(dep => !new_meta.status.has(dep));
+
+            if (missing) {
+                let dep0 = new_route.page.dependencies[0];
+                new_route.page = app.pages.get(dep0);
+            }
+        }
+
+        // Help the user fill new forms
+        if (form_meta != null && new_meta.ulid !== form_meta.ulid) {
+            setTimeout(() => {
+                let el = document.querySelector('#ins_page');
+                if (el != null)
+                    el.parentNode.scrollTop = 0;
+            });
+
+            ui.setPanelState('page', true, false);
+        } else if (form_meta == null && new_meta.version > 0) {
+            ui.setPanelState('page', true, false);
+        }
+
+        // Commit!
+        route = new_route;
+        form_meta = new_meta;
+        form_state = new_state;
+
+        await self.run(push_history);
+    };
+    this.go = util.serializeAsync(this.go);
+
+    this.run = async function(push_history = false) {
+        // Is the user developing?
+        {
+            let range = IDBKeyRange.bound(profile.username + ':', profile.username + '`', false, true);
+            let count = await db.count('fs_files', range);
+
+            develop = !!count;
+        }
+
+        // Update browser URL
+        {
+            let url = route.page.url;
+            if (route.version > 0) {
+                url += `/${route.ulid}`;
+                if (route.version < form_meta.fragments.length)
+                    url += `@${route.version}`;
+            }
+            goupile.syncHistory(url, push_history);
+        }
+
+        // Sync editor (if needed)
+        if (ui.isPanelEnabled('editor')) {
+            if (editor_filename == null || editor_filename.startsWith('pages/'))
+                editor_filename = route.page.filename;
+
+            await syncEditor();
+        }
+
+        // Load rows for data panel
+        if (ui.isPanelEnabled('data')) {
+            if (data_form !== route.form) {
+                data_form = route.form;
+                data_rows = null;
             }
 
-            // Update browser URL
-            {
-                let url = route.page.url;
-                if (route.version > 0) {
-                    url += `/${route.ulid}`;
-                    if (route.version < form_meta.fragments.length)
-                        url += `@${route.version}`;
-                }
-                goupile.syncHistory(url, push_history);
-            }
-
-            // Sync editor (if needed)
-            if (ui.isPanelEnabled('editor')) {
-                if (editor_filename == null || editor_filename.startsWith('pages/'))
-                    editor_filename = route.page.filename;
-
-                await syncEditor();
-            }
-
-            // Load rows for data panel
-            if (data_rows == null && ui.isPanelEnabled('data')) {
-                let range = IDBKeyRange.bound(profile.username + ':', profile.username + '`', false, true);
-                let rows = await db.loadAll('rec_records');
+            if (data_rows == null) {
+                let prefix = `${profile.username}/${data_form.key}`;
+                let range = IDBKeyRange.bound(prefix + ':', prefix + '`', false, true);
+                let objects = await db.loadAll('rec_records/form', range);
 
                 data_rows = [];
-                for (let enc of rows) {
+                for (let obj of objects) {
                     try {
-                        let record = await goupile.decryptWithPassport(enc);
+                        let record = await goupile.decryptWithPassport(obj.enc);
                         let fragments = record.fragments;
 
-                        // Deleted record
-                        if (fragments[fragments.length - 1].page == null)
+                        if (fragments[fragments.length - 1].type == 'delete')
                             continue;
+
+                        let children = new Map;
+                        let status = new Set;
+                        for (let fragment of fragments) {
+                            switch (fragment.type) {
+                                case 'save': { status.add(fragment.page); } break;
+                                case 'save_child': {
+                                    children.set(fragment.child.form, fragment.child);
+                                    status.add(fragment.child.form);
+                                } break;
+                                case 'delete_child': {
+                                    children.delete(fragment.child.form);
+                                    status.delete(fragment.child.form);
+                                } break;
+                            }
+                        }
 
                         let row = {
                             ulid: record.ulid,
                             hid: record.hid,
-                            status: new Set(fragments.map(fragment => fragment.page))
+                            children: children,
+                            status: status
                         };
                         data_rows.push(row);
                     } catch (err) {
@@ -1020,16 +1248,14 @@ function InstanceController() {
                     }
                 }
             }
-
-            // Fetch page code (for page panel)
-            page_code = await fetchCode(route.page.filename);
-
-            ui.render();
-        } catch (err) {
-            log.error(err);
         }
+
+        // Fetch page code (for page panel)
+        page_code = await fetchCode(route.page.filename);
+
+        ui.render();
     };
-    this.go = util.serializeAsync(this.go);
+    this.run = util.serializeAsync(this.run);
 
     async function fetchCode(filename) {
         // Anything in the editor?

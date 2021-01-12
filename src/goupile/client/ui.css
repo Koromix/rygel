@@ -109,6 +109,16 @@ html.small .ui_toolbar button.icon {
     margin: 0;
     background-color: inherit;
 }
+.ui_toolbar > .drop.disabled {
+    background-color: #bbb;
+    border-color: #bbb;
+    filter: brightness(70%) !important;
+}
+.ui_toolbar > .drop.disabled > button:disabled {
+    color: inherit;
+    cursor: not-allowed;
+    pointer-events: none;
+}
 .ui_toolbar > .drop > div {
     display: none;
     position: absolute;

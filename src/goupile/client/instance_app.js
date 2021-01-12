@@ -8,18 +8,21 @@ function ApplicationInfo() {
     this.home = null;
 }
 
-function FormInfo(key) {
+function FormInfo(key, title, parent) {
     this.key = key;
+    this.title = title;
+    this.parent = parent;
+    // this.children = [];
     this.pages = new Map;
+    this.children = new Map;
+    this.url = null;
 }
 
-function PageInfo(key) {
+function PageInfo(key, title) {
     this.key = key;
-    this.title = null;
-
+    this.title = title;
     this.form = null;
     this.options = {};
-
     this.url = null;
     this.filename = null;
 }
@@ -43,32 +46,32 @@ function ApplicationBuilder(app) {
         options_stack.pop();
     };
 
-    this.form = function(key, func = null, options = {}) {
-        if (form_ref != null)
-            throw new Error('fuck');
-
-        if (typeof func === 'string') {
-            self.page(key, func, options);
+    this.form = function(key, title, func = null, options = {}) {
+        if (func == null) {
+            self.page(key, title);
         } else {
             checkKey(key);
             if (app.forms.has(key))
                 throw new Error(`Form key '${key}' is already used`);
 
             let prev_options = options_stack;
+            let prev_form = form_ref;
 
             try {
                 options_stack = [expandOptions(options)];
-                form_ref = new FormInfo(key);
+                form_ref = new FormInfo(key, title, form_ref);
 
                 func(self);
 
                 if (!form_ref.pages.size)
                     throw new Error(`Form '${key}' must contain at least one page`);
 
+                if (prev_form != null)
+                    prev_form.children.set(key, form_ref);
                 app.forms.set(key, form_ref);
             } finally {
                 options_stack = prev_options;
-                form_ref = null;
+                form_ref = prev_form;
             }
         }
     };
@@ -80,13 +83,15 @@ function ApplicationBuilder(app) {
 
         options = expandOptions(options);
 
-        let page = new PageInfo(key);
+        let page = new PageInfo(key, title);
 
-        page.title = title;
-        page.form = form_ref != null ? form_ref : new FormInfo(key);
+        page.form = form_ref != null ? form_ref : new FormInfo(key, title);
         page.dependencies = options.dependencies.filter(dep => dep !== key);
         page.url = `${ENV.base_url}main/${key}`;
         page.filename = `pages/${key}.js`;
+
+        if (page.form.url == null)
+            page.form.url = page.url;
 
         page.form.pages.set(key, page);
         app.pages.set(key, page);
