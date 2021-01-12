@@ -3,17 +3,21 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 function ApplicationInfo() {
-    this.forms = new Set;
+    this.forms = new Map;
     this.pages = new Map;
     this.home = null;
 }
 
-function PageInfo() {
-    this.key = null;
+function FormInfo(key) {
+    this.key = key;
+    this.pages = new Map;
+}
+
+function PageInfo(key) {
+    this.key = key;
     this.title = null;
 
-    this.store = null;
-    this.menu = null;
+    this.form = null;
     this.options = {};
 
     this.url = null;
@@ -26,8 +30,7 @@ function ApplicationBuilder(app) {
     let options_stack = [{
         dependencies: []
     }];
-    let store_ref = null;
-    let menu_ref = null;
+    let form_ref = null;
 
     this.pushOptions = function(options = {}) {
         options = expandOptions(options);
@@ -41,6 +44,9 @@ function ApplicationBuilder(app) {
     };
 
     this.form = function(key, func = null, options = {}) {
+        if (form_ref != null)
+            throw new Error('fuck');
+
         if (typeof func === 'string') {
             self.page(key, func, options);
         } else {
@@ -52,20 +58,18 @@ function ApplicationBuilder(app) {
 
             try {
                 options_stack = [expandOptions(options)];
-                menu_ref = [];
-                store_ref = key;
+                form_ref = new FormInfo(key);
 
                 func(self);
 
-                if (!menu_ref.length)
+                if (!form_ref.pages.size)
                     throw new Error(`Form '${key}' must contain at least one page`);
+
+                app.forms.set(key, form_ref);
             } finally {
                 options_stack = prev_options;
-                store_ref = null;
-                menu_ref = null;
+                form_ref = null;
             }
-
-            app.forms.add(key);
         }
     };
 
@@ -76,17 +80,15 @@ function ApplicationBuilder(app) {
 
         options = expandOptions(options);
 
-        let page = new PageInfo;
+        let page = new PageInfo(key);
 
-        page.key = key;
         page.title = title;
-        page.store = store_ref != null ? store_ref : key;
-        page.menu = menu_ref != null ? menu_ref : [];
+        page.form = form_ref != null ? form_ref : new FormInfo(key);
         page.dependencies = options.dependencies.filter(dep => dep !== key);
         page.url = `${ENV.base_url}main/${key}`;
         page.filename = `pages/${key}.js`;
 
-        page.menu.push(page);
+        page.form.pages.set(key, page);
         app.pages.set(key, page);
     };
 
