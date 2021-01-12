@@ -998,7 +998,7 @@ function InstanceController() {
                                 new_route.form !== new_meta.form) {
             if (new_route.form == new_meta.form.parent) {
                 new_route.ulid = new_meta.parent.ulid;
-                new_route.version = new_meta.parent.version;
+                new_route.version = null;
             } else {
                 let child = new_meta.children.get(new_route.form.key);
 
