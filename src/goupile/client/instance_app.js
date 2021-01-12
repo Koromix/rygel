@@ -47,32 +47,32 @@ function ApplicationBuilder(app) {
     };
 
     this.form = function(key, title, func = null, options = {}) {
-        if (func == null) {
-            self.page(key, title);
-        } else {
-            checkKey(key);
-            if (app.forms.has(key))
-                throw new Error(`Form key '${key}' is already used`);
+        checkKey(key);
+        if (app.forms.has(key))
+            throw new Error(`Form key '${key}' is already used`);
 
-            let prev_options = options_stack;
-            let prev_form = form_ref;
+        let prev_options = options_stack;
+        let prev_form = form_ref;
 
-            try {
-                options_stack = [expandOptions(options)];
-                form_ref = new FormInfo(key, title, form_ref);
+        try {
+            options_stack = [expandOptions(options)];
+            form_ref = new FormInfo(key, title, form_ref);
 
+            if (func != null) {
                 func(self);
-
-                if (!form_ref.pages.size)
-                    throw new Error(`Form '${key}' must contain at least one page`);
-
-                if (prev_form != null)
-                    prev_form.children.set(key, form_ref);
-                app.forms.set(key, form_ref);
-            } finally {
-                options_stack = prev_options;
-                form_ref = prev_form;
+            } else {
+                self.page(key, title);
             }
+
+            if (!form_ref.pages.size)
+                throw new Error(`Form '${key}' must contain at least one page`);
+
+            if (prev_form != null)
+                prev_form.children.set(key, form_ref);
+            app.forms.set(key, form_ref);
+        } finally {
+            options_stack = prev_options;
+            form_ref = prev_form;
         }
     };
 
