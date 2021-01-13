@@ -104,19 +104,17 @@ function InstanceController() {
                     @click=${ui.wrapAction(e => togglePanel(e, 'page'))}>Formulaire</button>
 
             <div style="flex: 1; min-width: 20px;"></div>
-            ${ui.isPanelEnabled('editor') || ui.isPanelEnabled('page') ? html`
-                ${util.mapRange(0, route.form.parents.length, idx => {
-                    let parent_form = route.form.parents[route.form.parents.length - idx - 1];
-                    return renderFormMenu(parent_form);
-                })}
-                ${util.map(route.form.pages.values(), page => {
-                    let missing = page.dependencies.some(dep => !form_meta.status.has(dep));
-                    return html`<button class=${page === route.page ? 'active' : ''} ?disabled=${missing}
-                                        @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`;
-                })}
-                ${util.map(route.form.children.values(), child_form => renderFormMenu(child_form, form_meta.version > 0))}
-                <div style="flex: 1; min-width: 20px;"></div>
-            ` : ''}
+            ${util.mapRange(0, route.form.parents.length, idx => {
+                let parent_form = route.form.parents[route.form.parents.length - idx - 1];
+                return renderFormMenu(parent_form);
+            })}
+            ${util.map(route.form.pages.values(), page => {
+                let missing = page.dependencies.some(dep => !form_meta.status.has(dep));
+                return html`<button class=${page === route.page ? 'active' : ''} ?disabled=${missing}
+                                    @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`;
+            })}
+            ${util.map(route.form.children.values(), child_form => renderFormMenu(child_form, form_meta.version > 0))}
+            <div style="flex: 1; min-width: 20px;"></div>
 
             <div class="drop right">
                 <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
@@ -134,17 +132,14 @@ function InstanceController() {
                     <button>${form.title}</button>
                     <div>
                         ${util.map(form.pages.values(), page =>
-                            html`<button @click=${e => self.go(e, page.url)}>${page.title}</button>`)}
+                            html`<button @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`)}
                         ${util.map(form.children.values(), child_form =>
-                            html`<button @click=${e => self.go(e, child_form.url)}>${child_form.title}</button>`)}
+                            html`<button @click=${ui.wrapAction(e => self.go(e, child_form.url))}>${child_form.title}</button>`)}
                     </div>
                 </div>
             `;
-        } else if (form.pages.size) {
-            let page = form.pages.values().next().value;
-            return html`<button ?disabled=${!enabled} @click=${e => self.go(e, page.url)}>${page.title}</button>`;
         } else {
-            return '';
+            return html`<button ?disabled=${!enabled} @click=${e => self.go(e, form.url)}>${form.title}</button>`;
         }
     }
 
