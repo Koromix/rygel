@@ -957,7 +957,7 @@ function InstanceController() {
 
         let new_route = Object.assign({}, route);
         let new_meta = form_meta;
-        let parent_meta = form_meta;
+        let prev_meta = form_meta;
         let new_state = form_state;
 
         // Fix up URL
