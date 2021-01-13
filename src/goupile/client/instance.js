@@ -507,6 +507,7 @@ function InstanceController() {
                     mtime: new Date
                 };
 
+                // XXX: Delete children (cascade)
                 await db.transaction('rw', ['rec_records'], async t => {
                     let obj = await t.load('rec_records', key);
                     if (obj == null)
