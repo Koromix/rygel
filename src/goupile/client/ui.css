@@ -122,7 +122,7 @@ html.small .ui_toolbar button.icon {
 .ui_toolbar > .drop > div {
     display: none;
     position: absolute;
-    min-width: 160px;
+    min-width: 220px;
     background-color: inherit;
     z-index: 9999;
 }
