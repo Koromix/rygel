@@ -124,11 +124,9 @@ function InstanceController() {
                                         @click=${ui.wrapAction(e => self.go(e, form.url))}>${form.title}</button>`;
                 }
             })}
-            ${util.map(route.form.pages.values(), page => {
-                let missing = page.dependencies.some(dep => !form_meta.status.has(dep));
-                return html`<button class=${page === route.page ? 'active' : ''} ?disabled=${missing}
-                                    @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`;
-            })}
+            ${util.map(route.form.pages.values(), page =>
+                html`<button class=${page === route.page ? 'active' : ''}
+                             @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`)}
             ${util.map(route.form.children.values(), form => {
                 if (form_meta.version > 0 && (form.pages.size > 1 || form.children.size > 0)) {
                     return html`
@@ -1113,16 +1111,6 @@ function InstanceController() {
                 // If we're popping state, this will fuck up navigation history but we can't
                 // refuse popstate events. History mess is better than data loss.
                 return self.run();
-            }
-        }
-
-        // Check dependencies and redirect if needed
-        {
-            let missing = new_route.page.dependencies.some(dep => !new_meta.status.has(dep));
-
-            if (missing) {
-                let dep0 = new_route.page.dependencies[0];
-                new_route.page = app.pages.get(dep0);
             }
         }
 

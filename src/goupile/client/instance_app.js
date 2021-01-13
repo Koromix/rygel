@@ -22,7 +22,6 @@ function PageInfo(key, title) {
     this.key = key;
     this.title = title;
     this.form = null;
-    this.options = {};
     this.url = null;
     this.filename = null;
 }
@@ -30,9 +29,7 @@ function PageInfo(key, title) {
 function ApplicationBuilder(app) {
     let self = this;
 
-    let options_stack = [{
-        dependencies: []
-    }];
+    let options_stack = [{}];
     let form_ref = null;
 
     this.pushOptions = function(options = {}) {
@@ -93,7 +90,6 @@ function ApplicationBuilder(app) {
         } else {
             page.form = new FormInfo(key, title);
         }
-        page.dependencies = options.dependencies.filter(dep => dep !== key);
         page.url = `${ENV.base_url}main/${key}`;
         page.filename = (options.filename != null) ? options.filename : `pages/${key}.js`;
 
