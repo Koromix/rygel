@@ -222,11 +222,9 @@ function InstanceController() {
                                     }
                                 })}
                                 ${util.map(data_form.children.values(), child_form => {
-                                    let child_row = data_form.children.get()
-
                                     if (row.status.has(child_form.key)) {
                                         let child = row.children.get(child_form.key);
-                                        let url = child_form.url + `/${child.ulid}@${child.version}`;
+                                        let url = child_form.url + `/${child.ulid}`;
 
                                         return html`
                                             <td class="saved">
@@ -936,6 +934,7 @@ function InstanceController() {
 
         let new_route = Object.assign({}, route);
         let new_meta = form_meta;
+        let parent_meta = form_meta;
         let new_state = form_state;
 
         // Fix up URL
@@ -996,101 +995,59 @@ function InstanceController() {
             }
         }
 
-        // Go to parent or child automatically
-        if (new_meta != null && new_route.ulid === new_meta.ulid &&
-                                new_route.version === new_meta.version &&
-                                new_route.form !== new_meta.form) {
-            if (new_route.form == new_meta.form.parents[0]) {
-                new_route.ulid = new_meta.parent.ulid;
-                new_route.version = null;
-            } else {
-                let child = new_meta.children.get(new_route.form.key);
-
-                if (child != null) {
-                    new_route.ulid = child.ulid;
-                    new_route.version = child.version;
-                } else {
-                    new_route.ulid = null;
-                    new_route.version = null;
-                }
-            }
-
-            new_meta = null;
-        }
-
         // Load record if needed
         if (new_meta != null && (new_route.ulid !== new_meta.ulid ||
                                  new_route.version !== new_meta.version))
             new_meta = null;
         if (new_meta == null && new_route.ulid != null) {
-            let key = `${profile.username}:${new_route.ulid}`;
-            let obj = await db.load('rec_records', key);
+            let [meta, values] = await loadRecord(new_route.ulid, new_route.version);
 
-            if (obj != null) {
-                try {
-                    let record = await goupile.decryptWithPassport(obj.enc);
-                    let fragments = record.fragments;
+            new_meta = meta;
+            new_state = new FormState(values);
+            new_state.changeHandler = () => self.run();
+        }
 
-                    // Deleted record
-                    if (fragments[fragments.length - 1].type === 'delete')
-                        throw new Error('L\'enregistrement demandé est supprimé');
+        // Go to parent or child automatically
+        if (new_meta != null && new_meta.form !== new_route.form) {
+            let path = computePath(new_meta.form, new_route.form);
 
-                    if (new_route.version == null) {
-                        new_route.version = fragments.length;
-                    } else if (new_route.version > fragments.length) {
-                        throw new Error(`Cet enregistrement n'a pas de version ${new_route.version}`);
+            if (path != null) {
+                let values;
+
+                for (let form of path.up) {
+                    [new_meta, values] = await loadRecord(new_meta.parent.ulid, null);
+
+                    if (new_meta.form !== form)
+                        throw new Error('Saut impossible en raison d\'un changement de schéma');
+                }
+
+                for (let i = 0; i < path.down.length; i++) {
+                    let form = path.down[i];
+                    let child = new_meta.children.get(form.key);
+
+                    if (child != null) {
+                        [new_meta, values] = await loadRecord(child.ulid, child.version);
+
+                        if (new_meta.form !== form)
+                            throw new Error('Saut impossible en raison d\'un changement de schéma');
+                    } else if (i === path.down.length - 1) {
+                        // Make a new record, only if we have reached end of path
+                        prev_meta = new_meta;
+                        new_meta = null;
+                    } else {
+                        throw new Error('Saut impossible car un enregistrement intermédiaire est manquant');
                     }
+                }
 
-                    let values = {};
-                    let children = new Map;
-                    let status = new Set;
-                    for (let i = 0; i < new_route.version; i++) {
-                        let fragment = fragments[i];
-
-                        switch (fragment.type) {
-                            case 'save': {
-                                Object.assign(values, fragment.values);
-                                status.add(fragment.page);
-                            } break;
-                            case 'save_child': {
-                                children.set(fragment.child.form, fragment.child);
-                                status.add(fragment.child.form);
-                            } break;
-                            case 'delete_child': {
-                                children.delete(fragment.child.form);
-                                status.delete(fragment.child.form);
-                            } break;
-                        }
-                    }
-                    for (let fragment of fragments) {
-                        fragment.mtime = new Date(fragment.mtime);
-
-                        delete fragment.child;
-                        delete fragment.values;
-                    }
-
-                    new_meta = {
-                        form: app.forms.get(record.form),
-                        ulid: new_route.ulid,
-                        hid: record.hid,
-                        version: new_route.version,
-                        parent: record.parent,
-                        children: children,
-                        mtime: fragments[fragments.length - 1].mtime,
-                        fragments: fragments,
-                        status: status
-                    };
-                    if (new_meta.form == null)
-                        throw new Error(`Le formulaire '${record.form}' n'existe pas ou plus`);
+                if (new_meta != null) {
+                    new_route.ulid = new_meta.ulid;
+                    new_route.version = new_meta.version;
 
                     new_state = new FormState(values);
                     new_state.changeHandler = () => self.run();
-                } catch (err) {
-                    log.error(err);
-                    new_meta = null;
                 }
             } else {
-                log.error('L\'enregistrement demandé n\'existe pas');
+                new_route.ulid = null;
                 new_meta = null;
             }
         }
@@ -1106,23 +1063,23 @@ function InstanceController() {
                 hid: null,
                 version: 0,
                 parent: null,
-                children: [],
+                children: new Map,
                 mtime: null,
                 fragments: [],
                 status: new Set
             };
 
             if (new_meta.form.parents.length) {
-                if (form_meta == null) {
+                if (prev_meta == null) {
                     throw new Error('Impossible de créer cet enregistrement sans parent');
-                } else if (form_meta.form !== new_meta.form.parents[0]) {
+                } else if (prev_meta.form !== new_meta.form.parents[0]) {
                     throw new Error('Le formulaire parent ne correspond pas au type attendu');
                 }
 
                 new_meta.parent = {
-                    form: form_meta.form.key,
-                    ulid: form_meta.ulid,
-                    version: form_meta.version
+                    form: prev_meta.form.key,
+                    ulid: prev_meta.ulid,
+                    version: prev_meta.version
                 };
             }
 
@@ -1162,18 +1119,124 @@ function InstanceController() {
             });
 
             ui.setPanelState('page', true, false);
-        } else if (form_meta == null && new_meta.version > 0) {
+        } else if (form_meta == null && (new_meta.version > 0 ||
+                                         new_meta.parent != null)) {
             ui.setPanelState('page', true, false);
         }
 
         // Commit!
         route = new_route;
+        route.version = new_meta.version;
         form_meta = new_meta;
         form_state = new_state;
 
         await self.run(push_history);
     };
-    this.go = util.serializeAsync(this.go);
+    // this.go = util.serializeAsync(this.go);
+
+    async function loadRecord(ulid, version) {
+        let key = `${profile.username}:${ulid}`;
+        let obj = await db.load('rec_records', key);
+
+        if (obj == null)
+            throw new Error('L\'enregistrement demandé n\'existe pas');
+
+        let record = await goupile.decryptWithPassport(obj.enc);
+        let fragments = record.fragments;
+
+        // Deleted record
+        if (fragments[fragments.length - 1].type === 'delete')
+            throw new Error('L\'enregistrement demandé est supprimé');
+
+        if (version == null) {
+            version = fragments.length;
+        } else if (version > fragments.length) {
+            throw new Error(`Cet enregistrement n'a pas de version ${version}`);
+        }
+
+        let values = {};
+        let children = new Map;
+        let status = new Set;
+        for (let i = 0; i < version; i++) {
+            let fragment = fragments[i];
+
+            switch (fragment.type) {
+                case 'save': {
+                    Object.assign(values, fragment.values);
+                    status.add(fragment.page);
+                } break;
+                case 'save_child': {
+                    children.set(fragment.child.form, fragment.child);
+                    status.add(fragment.child.form);
+                } break;
+                case 'delete_child': {
+                    children.delete(fragment.child.form);
+                    status.delete(fragment.child.form);
+                } break;
+            }
+        }
+        for (let fragment of fragments) {
+            fragment.mtime = new Date(fragment.mtime);
+
+            delete fragment.child;
+            delete fragment.values;
+        }
+
+        let meta = {
+            form: app.forms.get(record.form),
+            ulid: ulid,
+            hid: record.hid,
+            version: version,
+            parent: record.parent,
+            children: children,
+            mtime: fragments[fragments.length - 1].mtime,
+            fragments: fragments,
+            status: status
+        };
+        if (meta.form == null)
+            throw new Error(`Le formulaire '${record.form}' n'existe pas ou plus`);
+
+        return [meta, values];
+    }
+
+    // Assumes from != to
+    function computePath(from, to) {
+        let prefix_len = 0;
+        while (prefix_len < from.parents.length && prefix_len < to.parents.length) {
+            let parent1 = from.parents[from.parents.length - prefix_len - 1];
+            let parent2 = to.parents[to.parents.length - prefix_len - 1];
+
+            if (parent1 !== parent2)
+                break;
+
+            prefix_len++;
+        }
+
+        let up = from.parents.length - prefix_len - 1;
+        let down = to.parents.length - prefix_len - 1;
+
+        if (from.parents[up] === to) {
+            let path = {
+                up: [...from.parents.slice(0, up), to],
+                down: []
+            };
+            return path;
+        } else if (to.parents[down] === from) {
+            let path = {
+                up: [],
+                down: [...to.parents.slice(0, down).reverse(), to]
+            };
+            return path;
+        } else if (prefix_len) {
+            let path = {
+                up: from.parents.slice(0, up + 2),
+                down: [...to.parents.slice(0, down - 1).reverse(), to]
+            };
+            return path;
+        } else {
+            return null;
+        }
+    }
 
     this.run = async function(push_history = false) {
         // Is the user developing?
@@ -1191,6 +1254,8 @@ function InstanceController() {
                 url += `/${route.ulid}`;
                 if (route.version < form_meta.fragments.length)
                     url += `@${route.version}`;
+            } else if (form_meta.parent != null) {
+                url += `/${form_meta.parent.ulid}`;
             }
             goupile.syncHistory(url, push_history);
         }
