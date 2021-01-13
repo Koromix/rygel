@@ -197,7 +197,7 @@ function InstanceController() {
                     <thead>
                         <tr>
                             <th></th>
-                            <th>Identifiant</th>
+                            <th>Numéro</th>
                             ${util.map(data_form.pages.values(), page => html`<th>${page.title}</th>`)}
                             ${util.map(data_form.children.values(), child_form => html`<th>${child_form.title}</th>`)}
                         </tr>
