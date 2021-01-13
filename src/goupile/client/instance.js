@@ -278,6 +278,8 @@ function InstanceController() {
 
         let error;
         try {
+            builder.pushOptions({});
+
             let meta = util.assignDeep({}, form_meta);
             runUserCode('Formulaire', page_code, {
                 form: builder,
@@ -286,6 +288,8 @@ function InstanceController() {
                 go: (url) => self.go(null, url)
             });
             form_meta.hid = meta.hid;
+
+            builder.popOptions({});
 
             if (model.hasErrors())
                 builder.errorList();
