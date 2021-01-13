@@ -528,13 +528,11 @@ function InstanceController() {
 
                 progress.success('Suppression effectuée');
 
-                if (route.ulid === ulid) {
-                    route.ulid = null;
-                    route.version = null;
-                }
+                form_meta = null;
                 data_rows = null;
 
-                self.run();
+                let url = route.page.url + '/new';
+                self.go(null, url);
             } catch (err) {
                 progress.close();
                 throw err;
