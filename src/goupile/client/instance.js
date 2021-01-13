@@ -443,7 +443,8 @@ function InstanceController() {
                         record.hid = form_meta.hid;
                 } else {
                     obj = {
-                        fkey: `${profile.username}/${route.form.key}:${form_meta.ulid}`,
+                        fkey: `${profile.username}/${route.form.key}`,
+                        pkey: null,
                         enc: null
                     };
                     record = {
@@ -455,6 +456,7 @@ function InstanceController() {
                     };
 
                     if (form_meta.parent != null) {
+                        obj.pkey = `${profile.username}:${form_meta.parent.ulid}`;
                         record.parent = {
                             form: form_meta.parent.form.key,
                             ulid: form_meta.parent.ulid,
@@ -1283,9 +1285,14 @@ function InstanceController() {
             }
 
             if (data_rows == null) {
-                let prefix = `${profile.username}/${data_form.key}`;
-                let range = IDBKeyRange.bound(prefix + ':', prefix + '`', false, true);
-                let objects = await db.loadAll('rec_records/form', range);
+                let objects;
+                if (!data_form.parents.length) {
+                    let range = IDBKeyRange.only(`${profile.username}/${data_form.key}`);
+                    objects = await db.loadAll('rec_records/form', range);
+                } else {
+                    let range = IDBKeyRange.only(`${profile.username}:${form_meta.parent.ulid}`);
+                    objects = await db.loadAll('rec_records/parent', range);
+                }
 
                 data_rows = [];
                 for (let obj of objects) {

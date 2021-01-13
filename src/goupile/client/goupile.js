@@ -84,22 +84,22 @@ const goupile = new function() {
     async function initDB() {
         let db_name = `goupile:${ENV.base_url}`;
 
-        db = await indexeddb.open(db_name, 4, (db, old_version) => {
+        db = await indexeddb.open(db_name, 5, (db, old_version) => {
             switch (old_version) {
                 case null: {
                     db.createStore('usr_profiles');
                 } // fallthrough
-
                 case 1: {
                     db.createStore('fs_files');
                 } // fallthrough
-
                 case 2: {
                     db.createStore('rec_records');
                 } // fallthrough
-
                 case 3: {
                     db.createIndex('rec_records', 'form', 'fkey', {unique: false});
+                } // fallthrough
+                case 4: {
+                    db.createIndex('rec_records', 'parent', 'pkey', {unique: false});
                 } // fallthrough
             }
         });
