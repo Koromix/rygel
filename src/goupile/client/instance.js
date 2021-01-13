@@ -103,18 +103,52 @@ function InstanceController() {
                     style="background-position-y: calc(-318px + 1.2em);"
                     @click=${ui.wrapAction(e => togglePanel(e, 'page'))}>Formulaire</button>
 
-            <div style="flex: 1; min-width: 20px;"></div>
+            <div style="flex: 1; min-width: 15px;"></div>
             ${util.mapRange(0, route.form.parents.length, idx => {
-                let parent_form = route.form.parents[route.form.parents.length - idx - 1];
-                return renderFormMenu(parent_form);
+                let form = route.form.parents[route.form.parents.length - idx - 1];
+
+                if (form.pages.size > 1 || form.children.size > 0) {
+                    return html`
+                        <div class="drop">
+                            <button>${form.title}</button>
+                            <div>
+                                ${util.map(form.pages.values(), page =>
+                                    html`<button @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`)}
+                                ${util.map(form.children.values(), child_form =>
+                                    html`<button @click=${ui.wrapAction(e => self.go(e, child_form.url))}>${child_form.title}</button>`)}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    return html`<button ?disabled=${!enabled}
+                                        @click=${ui.wrapAction(e => self.go(e, form.url))}>${form.title}</button>`;
+                }
             })}
             ${util.map(route.form.pages.values(), page => {
                 let missing = page.dependencies.some(dep => !form_meta.status.has(dep));
                 return html`<button class=${page === route.page ? 'active' : ''} ?disabled=${missing}
                                     @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`;
             })}
-            ${util.map(route.form.children.values(), child_form => renderFormMenu(child_form, form_meta.version > 0))}
-            <div style="flex: 1; min-width: 20px;"></div>
+            ${util.map(route.form.children.values(), form => {
+                if (form_meta.version > 0 && (form.pages.size > 1 || form.children.size > 0)) {
+                    return html`
+                        <div class="drop">
+                            <button>${form.title}</button>
+                            <div>
+                                ${util.map(form.pages.values(), page =>
+                                    html`<button @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`)}
+                                ${util.map(form.children.values(), child_form =>
+                                    html`<button ?disabled=${!form_meta.children.has(form.key)}
+                                                 @click=${ui.wrapAction(e => self.go(e, child_form.url))}>${child_form.title}</button>`)}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    return html`<button ?disabled=${!form_meta.version}
+                                        @click=${ui.wrapAction(e => self.go(e, form.url))}>${form.title}</button>`;
+                }
+            })}
+            <div style="flex: 1; min-width: 15px;"></div>
 
             <div class="drop right">
                 <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
@@ -123,24 +157,6 @@ function InstanceController() {
                 </div>
             </div>
         `;
-    }
-
-    function renderFormMenu(form, enabled = true) {
-        if (enabled && (form.pages.size > 1 || form.children.size > 0)) {
-            return html`
-                <div class="drop">
-                    <button>${form.title}</button>
-                    <div>
-                        ${util.map(form.pages.values(), page =>
-                            html`<button @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`)}
-                        ${util.map(form.children.values(), child_form =>
-                            html`<button @click=${ui.wrapAction(e => self.go(e, child_form.url))}>${child_form.title}</button>`)}
-                    </div>
-                </div>
-            `;
-        } else {
-            return html`<button ?disabled=${!enabled} @click=${e => self.go(e, form.url)}>${form.title}</button>`;
-        }
     }
 
     function togglePanel(e, key, enable = null) {
