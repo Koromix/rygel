@@ -63,7 +63,7 @@ function InstanceController() {
                 throw new Error('Main script does not define any page');
 
             new_app.home = new_app.pages.values().next().value;
-            app = Object.freeze(new_app);
+            app = util.deepFreeze(new_app);
         } catch (err) {
             if (app == null) {
                 let new_app = new ApplicationInfo;
@@ -73,7 +73,7 @@ function InstanceController() {
                 builder.page("default", "Page par défaut");
 
                 new_app.home = new_app.pages.values().next().value;
-                app = Object.freeze(new_app);
+                app = util.deepFreeze(new_app);
             }
         }
     }
