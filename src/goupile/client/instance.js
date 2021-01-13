@@ -285,7 +285,11 @@ function InstanceController() {
                 form: builder,
                 values: form_state.values,
                 meta: meta,
-                go: (url) => self.go(null, url)
+                nav: {
+                    form: route.form,
+                    page: route.page,
+                    go: (url) => self.go(null, url)
+                }
             });
             form_meta.hid = meta.hid;
 
