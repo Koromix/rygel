@@ -8,10 +8,10 @@ function ApplicationInfo() {
     this.home = null;
 }
 
-function FormInfo(key, title, parent) {
+function FormInfo(key, title) {
     this.key = key;
     this.title = title;
-    this.parent = parent;
+    this.parents = [];
     // this.children = [];
     this.pages = new Map;
     this.children = new Map;
@@ -56,7 +56,10 @@ function ApplicationBuilder(app) {
 
         try {
             options_stack = [expandOptions(options)];
-            form_ref = new FormInfo(key, title, form_ref);
+
+            form_ref = new FormInfo(key, title);
+            if (prev_form != null)
+                form_ref.parents = [prev_form, ...prev_form.parents];
 
             if (func != null) {
                 func(self);
@@ -85,7 +88,11 @@ function ApplicationBuilder(app) {
 
         let page = new PageInfo(key, title);
 
-        page.form = form_ref != null ? form_ref : new FormInfo(key, title);
+        if (form_ref != null) {
+            page.form = form_ref;
+        } else {
+            page.form = new FormInfo(key, title);
+        }
         page.dependencies = options.dependencies.filter(dep => dep !== key);
         page.url = `${ENV.base_url}main/${key}`;
         page.filename = (options.filename != null) ? options.filename : `pages/${key}.js`;

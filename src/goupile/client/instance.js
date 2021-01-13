@@ -105,7 +105,10 @@ function InstanceController() {
 
             <div style="flex: 1; min-width: 20px;"></div>
             ${ui.isPanelEnabled('editor') || ui.isPanelEnabled('page') ? html`
-                ${route.form.parent != null ? renderFormMenu(route.form.parent) : ''}
+                ${util.mapRange(0, route.form.parents.length, idx => {
+                    let parent_form = route.form.parents[route.form.parents.length - idx - 1];
+                    return renderFormMenu(parent_form);
+                })}
                 ${util.map(route.form.pages.values(), page => {
                     let missing = page.dependencies.some(dep => !form_meta.status.has(dep));
                     return html`<button class=${page === route.page ? 'active' : ''} ?disabled=${missing}
@@ -125,17 +128,19 @@ function InstanceController() {
     }
 
     function renderFormMenu(form, enabled = true) {
-        if (enabled && form.pages.size > 1) {
+        if (enabled && (form.pages.size > 1 || form.children.size > 0)) {
             return html`
                 <div class="drop">
                     <button>${form.title}</button>
                     <div>
                         ${util.map(form.pages.values(), page =>
                             html`<button @click=${e => self.go(e, page.url)}>${page.title}</button>`)}
+                        ${util.map(form.children.values(), child_form =>
+                            html`<button @click=${e => self.go(e, child_form.url)}>${child_form.title}</button>`)}
                     </div>
                 </div>
             `;
-        } else if (form.pages.size === 1) {
+        } else if (form.pages.size) {
             let page = form.pages.values().next().value;
             return html`<button ?disabled=${!enabled} @click=${e => self.go(e, page.url)}>${page.title}</button>`;
         } else {
@@ -249,7 +254,7 @@ function InstanceController() {
                     </tbody>
                 </table>
 
-                ${route.form.parent == null ? html`
+                ${!route.form.parents.length ? html`
                     <div class="ui_actions">
                         <button @click=${ui.wrapAction(goNewRecord)}>Créer un nouvel enregistrement</button>
                     </div>
@@ -285,7 +290,7 @@ function InstanceController() {
                     if (builder.triggerErrors())
                         return saveRecord();
                 });
-                if (route.form.parent == null) {
+                if (!route.form.parents.length) {
                     builder.action('-');
                     if (route.version > 0) {
                         builder.action('Nouveau', {}, goNewRecord);
@@ -1000,7 +1005,7 @@ function InstanceController() {
         if (new_meta != null && new_route.ulid === new_meta.ulid &&
                                 new_route.version === new_meta.version &&
                                 new_route.form !== new_meta.form) {
-            if (new_route.form == new_meta.form.parent) {
+            if (new_route.form == new_meta.form.parents[0]) {
                 new_route.ulid = new_meta.parent.ulid;
                 new_route.version = null;
             } else {
@@ -1112,10 +1117,10 @@ function InstanceController() {
                 status: new Set
             };
 
-            if (new_meta.form.parent != null) {
+            if (new_meta.form.parents.length) {
                 if (form_meta == null) {
                     throw new Error('Impossible de créer cet enregistrement sans parent');
-                } else if (form_meta.form !== new_meta.form.parent) {
+                } else if (form_meta.form !== new_meta.form.parents[0]) {
                     throw new Error('Le formulaire parent ne correspond pas au type attendu');
                 }
 
