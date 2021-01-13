@@ -81,255 +81,259 @@ function InstanceController() {
     function initUI() {
         document.documentElement.className = 'instance';
 
-        ui.setMenu(() => {
-            return html`
-                <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
-                        @click=${e => self.go(e, ENV.base_url)}>${ENV.title}</button>
-                ${goupile.hasPermission('develop') ? html`
-                    <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
-                            style="background-position-y: calc(-230px + 1.2em);"
-                            @click=${ui.wrapAction(e => togglePanel(e, 'editor'))}>Code</button>
-                ` : ''}
-                <button class=${'icon' + (ui.isPanelEnabled('data') ? ' active' : '')}
-                        style="background-position-y: calc(-274px + 1.2em);"
-                        @click=${ui.wrapAction(e => togglePanel(e, 'data'))}>Suivi</button>
-                <button class=${'icon' + (ui.isPanelEnabled('page') ? ' active' : '')}
-                        style="background-position-y: calc(-318px + 1.2em);"
-                        @click=${ui.wrapAction(e => togglePanel(e, 'page'))}>Formulaire</button>
-
-                <div style="flex: 1; min-width: 20px;"></div>
-                ${ui.isPanelEnabled('editor') || ui.isPanelEnabled('page') ? html`
-                    ${route.form.parent != null ? html`
-                        <div class="drop">
-                            <button>${route.form.parent.title}</button>
-                            <div>
-                                ${util.map(route.form.parent.pages.values(), page =>
-                                    html`<button @click=${e => self.go(e, page.url)}>${page.title}</button>`)}
-                            </div>
-                        </div>
-                    ` : ''}
-                    ${util.map(route.form.pages.values(), page => {
-                        let missing = page.dependencies.some(dep => !form_meta.status.has(dep));
-                        return html`<button class=${page === route.page ? 'active' : ''} ?disabled=${missing}
-                                            @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`;
-                    })}
-                    ${util.map(route.form.children.values(), child_form => html`
-                        <div class="drop">
-                            <button ?disabled=${!form_meta.version}>${child_form.title}</button>
-                            ${form_meta.version > 0 ? html`
-                                <div>
-                                    ${util.map(child_form.pages.values(), page =>
-                                        html`<button @click=${e => self.go(e, page.url)}>${page.title}</button>`)}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `)}
-                    <div style="flex: 1; min-width: 20px;"></div>
-                ` : ''}
-
-                <div class="drop right">
-                    <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
-                    <div>
-                        <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
-                    </div>
-                </div>
-            `;
-        });
-
-        ui.createPanel('editor', 0, false, () => {
-            let tabs = [];
-            tabs.push({
-                title: 'Application',
-                filename: 'main.js'
-            });
-            tabs.push({
-                title: 'Formulaire',
-                filename: route.page.filename
-            });
-
-            // Ask ACE to adjust if needed, it needs to happen after the render
-            setTimeout(() => editor_ace.resize(false), 0);
-
-            return html`
-                <div style="--menu_color: #383936;">
-                    <div class="ui_toolbar">
-                        ${tabs.map(tab => html`<button class=${editor_filename === tab.filename ? 'active' : ''}
-                                                       @click=${ui.wrapAction(e => toggleEditorFile(tab.filename))}>${tab.title}</button>`)}
-                        <div style="flex: 1;"></div>
-                        <button @click=${ui.wrapAction(runDeployDialog)}>Déployer</button>
-                    </div>
-
-                    ${editor_el}
-                </div>
-            `;
-        });
-
-        ui.createPanel('data', 0, true, () => {
-            let columns = data_form.pages.size + data_form.children.size;
-
-            return html`
-                <div class="padded">
-                    <div class="ui_quick">
-                        ${data_rows.length || 'Aucune'} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
-                        <div style="flex: 1;"></div>
-                        <a @click=${ui.wrapAction(e => { data_rows = null; return self.run(); })}>Rafraichir</a>
-                    </div>
-
-                    <table class="ui_table" id="ins_data">
-                        <colgroup>
-                            <col style="width: 2em;"/>
-                            <col style="width: 160px;"/>
-                            ${util.mapRange(0, columns, () => html`<col/>`)}
-                        </colgroup>
-
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th>Identifiant</th>
-                                ${util.map(data_form.pages.values(), page => html`<th>${page.title}</th>`)}
-                                ${util.map(data_form.children.values(), child_form => html`<th>${child_form.title}</th>`)}
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            ${data_rows.map(row => html`
-                                <tr class=${row.ulid === route.ulid ? 'active' : ''}>
-                                    <td>
-                                        <a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a>
-                                    </td>
-                                    <td class=${row.hid == null ? 'missing' : ''}>${row.hid != null ? row.hid : 'NA'}</td>
-                                    ${util.map(data_form.pages.values(), page => {
-                                        let url = page.url + `/${row.ulid}`;
-
-                                        if (row.status.has(page.key)) {
-                                            return html`<td class="saved"><a href=${url}
-                                                                             @click=${e => ui.setPanelState('page', true, false)}>Enregistré</a></td>`;
-                                        } else {
-                                            return html`<td class="missing"><a href=${url}
-                                                                               @click=${e => ui.setPanelState('page', true, false)}>Non rempli</a></td>`;
-                                        }
-                                    })}
-                                    ${util.map(data_form.children.values(), child_form => {
-                                        let child_row = data_form.children.get()
-
-                                        if (row.status.has(child_form.key)) {
-                                            let child = row.children.get(child_form.key);
-                                            let url = child_form.url + `/${child.ulid}@${child.version}`;
-
-                                            return html`
-                                                <td class="saved">
-                                                    <a href=${url} @click=${e => ui.setPanelState('page', true, false)}>Enregistré</a>
-                                                </td>
-                                            `;
-                                        } else {
-                                            let url = child_form.url + `/${row.ulid}`;
-
-                                            return html`
-                                                <td class="missing">
-                                                    <a href=${url} @click=${e => ui.setPanelState('page', true, false)}>Non rempli</a>
-                                                </td>
-                                            `;
-                                        }
-                                    })}
-                                </tr>
-                            `)}
-                            ${!data_rows.length ? html`<tr><td colspan=${2 + columns}>Aucune ligne à afficher</td></tr>` : ''}
-                        </tbody>
-                    </table>
-
-                    ${route.form.parent == null ? html`
-                        <div class="ui_actions">
-                            <button @click=${ui.wrapAction(goNewRecord)}>Créer un nouvel enregistrement</button>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-        });
-
-        ui.createPanel('page', 1, false, () => {
-            let readonly = (route.version < form_meta.fragments.length);
-
-            let model = new FormModel;
-            let builder = new FormBuilder(form_state, model, readonly);
-
-            let error;
-            try {
-                let meta = util.assignDeep({}, form_meta);
-                runUserCode('Formulaire', page_code, {
-                    form: builder,
-                    values: form_state.values,
-                    meta: meta,
-                    go: (url) => self.go(null, url)
-                });
-                form_meta.hid = meta.hid;
-
-                if (model.hasErrors())
-                    builder.errorList();
-
-                if (model.variables.length) {
-                    let enable_save = !model.hasErrors() && form_state.hasChanged();
-
-                    builder.action('Enregistrer', {disabled: !enable_save}, () => {
-                        if (builder.triggerErrors())
-                            return saveRecord();
-                    });
-                    if (route.form.parent == null) {
-                        builder.action('-');
-                        if (route.version > 0) {
-                            builder.action('Nouveau', {}, goNewRecord);
-                        } else {
-                            builder.action('Réinitialiser', {disabled: !form_state.hasChanged()}, goNewRecord);
-                        }
-                    }
-                }
-            } catch (err) {
-                error = err;
-            }
-
-            return html`
-                <div>
-                    <div id="ins_page">
-                        <div class="ui_quick">
-                            ${model.variables.length ? html`
-                                ${!route.version ? 'Nouvel enregistrement' : ''}
-                                ${route.version > 0 && form_meta.hid != null ? `Enregistrement : ${form_meta.hid}` : ''}
-                                ${route.version > 0 && form_meta.hid == null ? 'Enregistrement local' : ''}
-                            `  : ''}
-                            <div style="flex: 1;"></div>
-                            ${route.version > 0 ? html`
-                                ${route.version < form_meta.fragments.length ?
-                                    html`<span style="color: red;">Ancienne version du ${form_meta.mtime.toLocaleString()}</span>` : ''}
-                                ${route.version === form_meta.fragments.length ? html`<span>Version actuelle</span>` : ''}
-
-                                &nbsp;(<a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>historique</a>)
-                            ` : ''}
-                        </div>
-
-                        ${error == null ? html`
-                            <form id="ins_form" @submit=${e => e.preventDefault()}>
-                                ${model.render()}
-                            </form>
-                        ` : ''}
-                        ${error != null ? html`<span class="ui_wip">${error.message}</span>` : ''}
-                    </div>
-
-                    ${develop ? html`
-                        <div style="flex: 1;"></div>
-                        <div id="ins_notice">
-                            Formulaires en développement<br/>
-                            Déployez les avant d'enregistrer des données
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-        });
-
-        ui.setPanelState('data', true);
+        ui.setMenu(renderMenu);
+        ui.createPanel('editor', 0, false, renderEditor);
+        ui.createPanel('data', 0, true, renderData);
+        ui.createPanel('page', 1, false, renderPage);
     };
+
+    function renderMenu() {
+        return html`
+            <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
+                    @click=${e => self.go(e, ENV.base_url)}>${ENV.title}</button>
+            ${goupile.hasPermission('develop') ? html`
+                <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
+                        style="background-position-y: calc(-230px + 1.2em);"
+                        @click=${ui.wrapAction(e => togglePanel(e, 'editor'))}>Code</button>
+            ` : ''}
+            <button class=${'icon' + (ui.isPanelEnabled('data') ? ' active' : '')}
+                    style="background-position-y: calc(-274px + 1.2em);"
+                    @click=${ui.wrapAction(e => togglePanel(e, 'data'))}>Suivi</button>
+            <button class=${'icon' + (ui.isPanelEnabled('page') ? ' active' : '')}
+                    style="background-position-y: calc(-318px + 1.2em);"
+                    @click=${ui.wrapAction(e => togglePanel(e, 'page'))}>Formulaire</button>
+
+            <div style="flex: 1; min-width: 20px;"></div>
+            ${ui.isPanelEnabled('editor') || ui.isPanelEnabled('page') ? html`
+                ${route.form.parent != null ? renderFormMenu(route.form.parent) : ''}
+                ${util.map(route.form.pages.values(), page => {
+                    let missing = page.dependencies.some(dep => !form_meta.status.has(dep));
+                    return html`<button class=${page === route.page ? 'active' : ''} ?disabled=${missing}
+                                        @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`;
+                })}
+                ${util.map(route.form.children.values(), child_form => renderFormMenu(child_form, form_meta.version > 0))}
+                <div style="flex: 1; min-width: 20px;"></div>
+            ` : ''}
+
+            <div class="drop right">
+                <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
+                <div>
+                    <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderFormMenu(form, enabled = true) {
+        if (enabled && form.pages.size > 1) {
+            return html`
+                <div class="drop">
+                    <button>${form.title}</button>
+                    <div>
+                        ${util.map(form.pages.values(), page =>
+                            html`<button @click=${e => self.go(e, page.url)}>${page.title}</button>`)}
+                    </div>
+                </div>
+            `;
+        } else if (form.pages.size === 1) {
+            let page = form.pages.values().next().value;
+            return html`<button ?disabled=${!enabled} @click=${e => self.go(e, page.url)}>${page.title}</button>`;
+        } else {
+            return '';
+        }
+    }
 
     function togglePanel(e, key, enable = null) {
         ui.setPanelState(key, !ui.isPanelEnabled(key));
         return self.run();
+    }
+
+    function renderEditor() {
+        let tabs = [];
+        tabs.push({
+            title: 'Application',
+            filename: 'main.js'
+        });
+        tabs.push({
+            title: 'Formulaire',
+            filename: route.page.filename
+        });
+
+        // Ask ACE to adjust if needed, it needs to happen after the render
+        setTimeout(() => editor_ace.resize(false), 0);
+
+        return html`
+            <div style="--menu_color: #383936;">
+                <div class="ui_toolbar">
+                    ${tabs.map(tab => html`<button class=${editor_filename === tab.filename ? 'active' : ''}
+                                                   @click=${ui.wrapAction(e => toggleEditorFile(tab.filename))}>${tab.title}</button>`)}
+                    <div style="flex: 1;"></div>
+                    <button @click=${ui.wrapAction(runDeployDialog)}>Déployer</button>
+                </div>
+
+                ${editor_el}
+            </div>
+        `;
+    }
+
+    function renderData() {
+        let columns = data_form.pages.size + data_form.children.size;
+
+        return html`
+            <div class="padded">
+                <div class="ui_quick">
+                    ${data_rows.length || 'Aucune'} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
+                    <div style="flex: 1;"></div>
+                    <a @click=${ui.wrapAction(e => { data_rows = null; return self.run(); })}>Rafraichir</a>
+                </div>
+
+                <table class="ui_table" id="ins_data">
+                    <colgroup>
+                        <col style="width: 2em;"/>
+                        <col style="width: 160px;"/>
+                        ${util.mapRange(0, columns, () => html`<col/>`)}
+                    </colgroup>
+
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Identifiant</th>
+                            ${util.map(data_form.pages.values(), page => html`<th>${page.title}</th>`)}
+                            ${util.map(data_form.children.values(), child_form => html`<th>${child_form.title}</th>`)}
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        ${data_rows.map(row => html`
+                            <tr class=${row.ulid === route.ulid ? 'active' : ''}>
+                                <td>
+                                    <a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a>
+                                </td>
+                                <td class=${row.hid == null ? 'missing' : ''}>${row.hid != null ? row.hid : 'NA'}</td>
+                                ${util.map(data_form.pages.values(), page => {
+                                    let url = page.url + `/${row.ulid}`;
+
+                                    if (row.status.has(page.key)) {
+                                        return html`<td class="saved"><a href=${url}
+                                                                         @click=${e => ui.setPanelState('page', true, false)}>Enregistré</a></td>`;
+                                    } else {
+                                        return html`<td class="missing"><a href=${url}
+                                                                           @click=${e => ui.setPanelState('page', true, false)}>Non rempli</a></td>`;
+                                    }
+                                })}
+                                ${util.map(data_form.children.values(), child_form => {
+                                    let child_row = data_form.children.get()
+
+                                    if (row.status.has(child_form.key)) {
+                                        let child = row.children.get(child_form.key);
+                                        let url = child_form.url + `/${child.ulid}@${child.version}`;
+
+                                        return html`
+                                            <td class="saved">
+                                                <a href=${url} @click=${e => ui.setPanelState('page', true, false)}>Enregistré</a>
+                                            </td>
+                                        `;
+                                    } else {
+                                        let url = child_form.url + `/${row.ulid}`;
+
+                                        return html`
+                                            <td class="missing">
+                                                <a href=${url} @click=${e => ui.setPanelState('page', true, false)}>Non rempli</a>
+                                            </td>
+                                        `;
+                                    }
+                                })}
+                            </tr>
+                        `)}
+                        ${!data_rows.length ? html`<tr><td colspan=${2 + columns}>Aucune ligne à afficher</td></tr>` : ''}
+                    </tbody>
+                </table>
+
+                ${route.form.parent == null ? html`
+                    <div class="ui_actions">
+                        <button @click=${ui.wrapAction(goNewRecord)}>Créer un nouvel enregistrement</button>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    function renderPage() {
+        let readonly = (route.version < form_meta.fragments.length);
+
+        let model = new FormModel;
+        let builder = new FormBuilder(form_state, model, readonly);
+
+        let error;
+        try {
+            let meta = util.assignDeep({}, form_meta);
+            runUserCode('Formulaire', page_code, {
+                form: builder,
+                values: form_state.values,
+                meta: meta,
+                go: (url) => self.go(null, url)
+            });
+            form_meta.hid = meta.hid;
+
+            if (model.hasErrors())
+                builder.errorList();
+
+            if (model.variables.length) {
+                let enable_save = !model.hasErrors() && form_state.hasChanged();
+
+                builder.action('Enregistrer', {disabled: !enable_save}, () => {
+                    if (builder.triggerErrors())
+                        return saveRecord();
+                });
+                if (route.form.parent == null) {
+                    builder.action('-');
+                    if (route.version > 0) {
+                        builder.action('Nouveau', {}, goNewRecord);
+                    } else {
+                        builder.action('Réinitialiser', {disabled: !form_state.hasChanged()}, goNewRecord);
+                    }
+                }
+            }
+        } catch (err) {
+            error = err;
+        }
+
+        return html`
+            <div>
+                <div id="ins_page">
+                    <div class="ui_quick">
+                        ${model.variables.length ? html`
+                            ${!route.version ? 'Nouvel enregistrement' : ''}
+                            ${route.version > 0 && form_meta.hid != null ? `Enregistrement : ${form_meta.hid}` : ''}
+                            ${route.version > 0 && form_meta.hid == null ? 'Enregistrement local' : ''}
+                        `  : ''}
+                        <div style="flex: 1;"></div>
+                        ${route.version > 0 ? html`
+                            ${route.version < form_meta.fragments.length ?
+                                html`<span style="color: red;">Ancienne version du ${form_meta.mtime.toLocaleString()}</span>` : ''}
+                            ${route.version === form_meta.fragments.length ? html`<span>Version actuelle</span>` : ''}
+
+                            &nbsp;(<a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>historique</a>)
+                        ` : ''}
+                    </div>
+
+                    ${error == null ? html`
+                        <form id="ins_form" @submit=${e => e.preventDefault()}>
+                            ${model.render()}
+                        </form>
+                    ` : ''}
+                    ${error != null ? html`<span class="ui_wip">${error.message}</span>` : ''}
+                </div>
+
+                ${develop ? html`
+                    <div style="flex: 1;"></div>
+                    <div id="ins_notice">
+                        Formulaires en développement<br/>
+                        Déployez les avant d'enregistrer des données
+                    </div>
+                ` : ''}
+            </div>
+        `;
     }
 
     function runUserCode(title, code, arguments) {

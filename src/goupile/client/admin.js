@@ -18,7 +18,13 @@ function AdminController() {
     function initUI() {
         document.documentElement.className = 'admin';
 
-        ui.setMenu(el => html`
+        ui.setMenu(renderMenu);
+        ui.createPanel('instances', 1, true, renderInstances);
+        ui.createPanel('users', 0, true, renderUsers);
+    }
+
+    function renderMenu() {
+        return html`
             <button class="icon" style="background-position-y: calc(-538px + 1.2em);">Admin</button>
             <button class=${ui.isPanelEnabled('instances') ? 'active' : ''}
                     @click=${ui.wrapAction(e => togglePanel(e, 'instances'))}>Instances</button>
@@ -31,9 +37,16 @@ function AdminController() {
                     <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
                 </div>
             </div>
-        `);
+        `;
+    }
 
-        ui.createPanel('instances', 1, true, () => html`
+    function togglePanel(e, key) {
+        ui.setPanelState(key, !ui.isPanelEnabled(key));
+        return self.run();
+    }
+
+    function renderInstances() {
+        return html`
             <div class="padded" style="background: #f8f8f8;">
                 <div class="ui_quick">
                     Instances
@@ -64,9 +77,11 @@ function AdminController() {
                     <button @click=${ui.wrapAction(runCreateInstanceDialog)}>Créer une instance</button>
                 </div>
             </div>
-        `);
+        `;
+    }
 
-        ui.createPanel('users', 0, true, () => html`
+    function renderUsers() {
+        return html`
             <div class="padded" style="flex-grow: 1.5;">
                 <div class="ui_quick">
                     Utilisateurs
@@ -111,10 +126,7 @@ function AdminController() {
                     <button @click=${ui.wrapAction(runCreateUserDialog)}>Créer un utilisateur</button>
                 <div>
             </div>
-        `);
-
-        // Push to the top of priority list
-        ui.setPanelState('instances', true);
+        `;
     }
 
     this.go = async function(e = null, url = null, push_history = true) {
@@ -137,11 +149,6 @@ function AdminController() {
         ui.render();
     };
     this.run = util.serializeAsync(this.run);
-
-    function togglePanel(e, key) {
-        ui.setPanelState(key, !ui.isPanelEnabled(key));
-        return self.run();
-    }
 
     function toggleSelectedInstance(e, key) {
         if (key !== selected_instance) {
