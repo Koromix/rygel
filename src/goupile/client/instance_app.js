@@ -88,7 +88,7 @@ function ApplicationBuilder(app) {
         page.form = form_ref != null ? form_ref : new FormInfo(key, title);
         page.dependencies = options.dependencies.filter(dep => dep !== key);
         page.url = `${ENV.base_url}main/${key}`;
-        page.filename = `pages/${key}.js`;
+        page.filename = (options.filename != null) ? options.filename : `pages/${key}.js`;
 
         if (page.form.url == null)
             page.form.url = page.url;
