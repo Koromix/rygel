@@ -38,6 +38,7 @@ function FormState(values = {}) {
     this.tabs_state = {};
     this.file_lists = new Map;
     this.click_events = new Set;
+    this.invalid_numbers = new Set;
     this.take_delayed = new Set;
 
     this.cached_values = {};
@@ -249,6 +250,9 @@ function FormBuilder(state, model, readonly = false) {
 
         validateMinMax(intf);
 
+        if (state.invalid_numbers.has(key.toString()))
+            intf.error('Nombre invalide (décimales ?)');
+
         return intf;
     };
 
@@ -258,13 +262,18 @@ function FormBuilder(state, model, readonly = false) {
 
         // Hack to accept incomplete values, mainly in the case of a '-' being typed first,
         // in which case we don't want to clear the field immediately.
-        if (!e.target.validity || e.target.validity.valid) {
-            let value = parseFloat(e.target.value);
-            if (Number.isNaN(value))
-                value = undefined;
-
-            updateValue(key, value);
+        if (e.target.validity && !e.target.validity.valid) {
+            state.invalid_numbers.add(key.toString());
+            self.restart();
+            return;
         }
+        if (state.invalid_numbers.delete(key.toString()))
+            self.restart();
+
+        let value = parseFloat(e.target.value);
+        if (Number.isNaN(value))
+            value = undefined;
+        updateValue(key, value);
     }
 
     this.slider = function(key, label, options = {}) {
