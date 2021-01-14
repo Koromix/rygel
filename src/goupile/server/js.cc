@@ -226,8 +226,16 @@ bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_h
                         } else if (TestStr(key, "values")) {
                             parser.ParseObject();
                             while (parser.InObject()) {
-                                const char *obj_key = nullptr;
+                                const char *obj_key = "";
                                 parser.ParseKey(&obj_key);
+
+                                if (!obj_key[0]) {
+                                    LogError("Empty variable key is not allowed");
+                                    return false;
+                                } else if (StartsWith(key, "__")) {
+                                    LogError("Keys must not start with '__'");
+                                    return false;
+                                }
 
                                 JSAtom obj_prop = JS_NewAtom(ctx, obj_key);
                                 RG_DEFER { JS_FreeAtom(ctx, obj_prop); };
@@ -260,7 +268,7 @@ bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_h
                                         JS_SetProperty(ctx, values, obj_prop, JS_NewFloat64(ctx, d));
                                     } break;
                                     case json_TokenType::String: {
-                                        Span<const char> str;
+                                        Span<const char> str = "";
                                         parser.ParseString(&str);
 
                                         JS_SetProperty(ctx, values, obj_prop, JS_NewStringLen(ctx, str.ptr, (size_t)str.len));
@@ -302,7 +310,7 @@ bool ScriptPort::ParseFragments(StreamReader *st, HeapArray<ScriptRecord> *out_h
                                                     JS_SetPropertyUint32(ctx, array, len++, JS_NewFloat64(ctx, d));
                                                 } break;
                                                 case json_TokenType::String: {
-                                                    Span<const char> str;
+                                                    Span<const char> str = "";
                                                     parser.ParseString(&str);
 
                                                     JS_SetPropertyUint32(ctx, array, len++, JS_NewStringLen(ctx, str.ptr, (size_t)str.len));

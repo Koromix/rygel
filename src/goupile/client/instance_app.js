@@ -105,6 +105,8 @@ function ApplicationBuilder(app) {
             throw new Error('Empty keys are not allowed');
         if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
             throw new Error('Allowed key characters: a-z, _ and 0-9 (not as first character)');
+        if (key.startsWith('__'))
+            throw new Error('Keys must not start with \'__\'');
     }
 
     function expandOptions(options) {
