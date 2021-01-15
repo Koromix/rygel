@@ -340,3 +340,15 @@ html.small .ui_toolbar button.icon {
     content: '⚠\FE0E';
     padding-right: 6px;
 }
+
+/* -------------------- Print -------------------- */
+
+@media print {
+    *:focus { outline: none !important; }
+
+    .ui_toolbar { display: none !important; }
+    #ui_panels > div:not(.print) { display: none  !important; }
+    #ui_panels > div.print { overflow: visible !important; }
+
+    .ui_actions { display: none !important; }
+}

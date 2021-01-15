@@ -206,6 +206,8 @@ html:not(.small) .fm_widget.compact .fm_error {
     background: #555;
     border-color: #555;
     color: white;
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
 }
 .fm_enum > button.active::before {
     width: 16px;
@@ -253,6 +255,8 @@ html:not(.small) .fm_widget.compact .fm_error {
     border-radius: 50%;
     z-index: 1;
     content: ' ';
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
 }
 .fm_radio > input + label::after {
     display: inline-block;
@@ -265,6 +269,8 @@ html:not(.small) .fm_widget.compact .fm_error {
     background-color: black;
     border: 4px solid white;
     border-radius: 50%;
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
 }
 .fm_radio > input:checked + label::before { background: none; }
 .fm_radio > input:checked + label::after { content: ''; }
@@ -297,6 +303,8 @@ html:not(.small) .fm_widget.compact .fm_error {
     border-width: 0.5px;
     background: white;
     content: ' ';
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
 }
 .fm_multi > input + label::after {
     display: inline-block;
@@ -308,6 +316,8 @@ html:not(.small) .fm_widget.compact .fm_error {
     border-left: 1px solid black;
     border-bottom: 1px solid black;
     transform: rotate(-45deg);
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
 }
 .fm_multi > input:checked + label::after { content: ''; }
 .fm_multi > input:hover + label::before,
@@ -403,6 +413,8 @@ html:not(.small) .fm_widget.compact .fm_error {
     background: #555;
     border: none;
     border-radius: 50%;
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
 }
 .fm_slider input::-moz-range-thumb {
     -webkit-appearance: none;
@@ -412,6 +424,8 @@ html:not(.small) .fm_widget.compact .fm_error {
     background: #555;
     border: none;
     border-radius: 50%;
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
 }
 
 .fm_slider.missing > span { visibility: hidden; }

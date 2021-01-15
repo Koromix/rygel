@@ -319,7 +319,7 @@ function InstanceController() {
         }
 
         return html`
-            <div>
+            <div class="print">
                 <div id="ins_page">
                     <div class="ui_quick">
                         ${model.variables.length ? html`
@@ -327,12 +327,12 @@ function InstanceController() {
                             ${route.version > 0 && form_meta.hid != null ? `Enregistrement : ${form_meta.hid}` : ''}
                             ${route.version > 0 && form_meta.hid == null ? 'Enregistrement local' : ''}
                         `  : ''}
+                        &nbsp;(<a @click=${e => window.print()}>imprimer</a>)
                         <div style="flex: 1;"></div>
                         ${route.version > 0 ? html`
                             ${route.version < form_meta.fragments.length ?
                                 html`<span style="color: red;">Ancienne version du ${form_meta.mtime.toLocaleString()}</span>` : ''}
                             ${route.version === form_meta.fragments.length ? html`<span>Version actuelle</span>` : ''}
-
                             &nbsp;(<a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>historique</a>)
                         ` : ''}
                     </div>
