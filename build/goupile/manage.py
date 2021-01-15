@@ -17,6 +17,7 @@ from dataclasses import dataclass
 @dataclass
 class DomainConfig:
     directory = None
+    binary = None
     domain = None
     socket = None
     mismatch = False
@@ -65,6 +66,7 @@ def list_domains(root_dir, socket_dir):
 
             info = DomainConfig()
             info.directory = directory
+            info.binary = os.path.join(directory, 'goupile')
             info.domain = domain
             info.socket = os.path.join(socket_dir, domain) + '.sock'
 
@@ -142,9 +144,11 @@ def run_sync(config):
     services = list_services()
 
     # Detect binary mismatches
-    binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
-    binary_inode = os.stat(binary).st_ino
     for domain, info in domains.items():
+        if not os.file.exists(info.binary):
+            binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
+            os.symlink(binary, info.binary)
+        binary_inode = os.stat(info.binary).st_ino
         status = services.get(domain)
         if status is not None and status.running and status.inode != binary_inode:
             print(f'Domain {domain} is running old version')
