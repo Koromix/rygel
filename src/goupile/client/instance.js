@@ -1202,7 +1202,7 @@ function InstanceController() {
             version: version,
             parent: record.parent,
             children: children,
-            mtime: fragments[fragments.length - 1].mtime,
+            mtime: fragments[version - 1].mtime,
             fragments: fragments,
             status: status
         };
