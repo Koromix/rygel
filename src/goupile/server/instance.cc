@@ -11,7 +11,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 24;
+const int InstanceVersion = 25;
 
 static std::atomic_int64_t next_unique;
 
@@ -69,6 +69,8 @@ bool InstanceHolder::Open(const char *key, const char *filename)
                         LogError("Unknown sync mode '%1'", value);
                         valid = false;
                     }
+                } else if (TestStr(key, "BackupKey")) {
+                    config.backup_key = DuplicateString(value, &str_alloc).ptr;
                 } else {
                     LogError("Unknown setting '%1'", key);
                     valid = false;
@@ -98,6 +100,10 @@ bool InstanceHolder::Validate()
     if (config.max_file_size <= 0) {
         LogError("Maximum file size must be >= 0");
         valid = false;
+    }
+    if (config.backup_key && config.sync_mode != SyncMode::Offline) {
+        LogError("Ignoring non-NULL BackupKey in this sync mode");
+        config.backup_key = nullptr;
     }
 
     return valid;
@@ -777,9 +783,18 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 24: {
+                bool success = db->RunMany(R"(
+                    INSERT INTO fs_settings (key) VALUES ('BackupKey')
+                        ON CONFLICT DO NOTHING;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 24);
+            RG_STATIC_ASSERT(InstanceVersion == 25);
         }
 
         int64_t time = GetUnixTime();

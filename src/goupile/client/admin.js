@@ -203,6 +203,8 @@ function AdminController() {
                         ['online', 'En ligne'],
                         ['mirror', 'Mode miroir']
                     ], {value: instance.config.sync_mode});
+                    let backup_key = (sync_mode.value == 'offline') ?
+                                     d.text('backup_key', 'Clé d\'archivage', {value: instance.config.backup_key}) : {};
 
                     d.action('Modifier', {disabled: !d.isValid()}, async () => {
                         let query = new URLSearchParams();
@@ -210,6 +212,8 @@ function AdminController() {
                         query.set('title', title.value);
                         query.set('use_offline', use_offline.value);
                         query.set('sync_mode', sync_mode.value);
+                        if (sync_mode.value === 'offline')
+                            query.set('backup_key', backup_key.value || '');
 
                         let response = await net.fetch('/admin/api/instances/configure', {
                             method: 'POST',

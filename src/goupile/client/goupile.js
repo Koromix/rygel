@@ -154,7 +154,7 @@ const goupile = new function() {
                         let salt = nacl.randomBytes(24);
                         let key = await deriveKey(password, salt);
 
-                        let enc = await encrypt(profile, key);
+                        let enc = await encryptSecretBox(profile, key);
 
                         await db.saveWithKey('usr_profiles', username, {
                             salt: bytesToBase64(salt),
@@ -178,7 +178,7 @@ const goupile = new function() {
                 let key = await deriveKey(password, base64ToBytes(enc.salt));
 
                 try {
-                    profile = await decrypt(enc.profile, key);
+                    profile = await decryptSecretBox(enc.profile, key);
                     session_rnd = util.getCookie('session_rnd');
                     passport = (profile.passport != null) ? base64ToBytes(profile.passport) : null;
 
@@ -270,17 +270,27 @@ const goupile = new function() {
         if (passport == null)
             throw new Error('Cannot encrypt without passport');
 
-        return encrypt(obj, passport);
+        return encryptSecretBox(obj, passport);
     };
 
     this.decryptWithPassport = function(enc) {
         if (passport == null)
             throw new Error('Cannot decrypt without passport');
 
-        return decrypt(enc, passport);
+        return decryptSecretBox(enc, passport);
     };
 
-    async function encrypt(obj, key) {
+    this.encryptBackup = function(obj) {
+        if (ENV.backup_key == null)
+            throw new Error('This instance is not configured for offline backups');
+        if (passport == null)
+            throw new Error('Cannot encrypt without passport');
+
+        let backup_key = base64ToBytes(ENV.backup_key);
+        return encryptBox(obj, backup_key, passport);
+    }
+
+    async function encryptSecretBox(obj, key) {
         let nonce = new Uint8Array(24);
         crypto.getRandomValues(nonce);
 
@@ -295,7 +305,7 @@ const goupile = new function() {
         return enc;
     }
 
-    async function decrypt(enc, key) {
+    async function decryptSecretBox(enc, key) {
         let nonce = base64ToBytes(enc.nonce);
         let box = base64ToBytes(enc.box);
 
@@ -307,5 +317,20 @@ const goupile = new function() {
         let obj = JSON.parse(json);
 
         return obj;
+    }
+
+    async function encryptBox(obj, public_key, secret_key) {
+        let nonce = new Uint8Array(24);
+        crypto.getRandomValues(nonce);
+
+        let json = JSON.stringify(obj);
+        let message = base64ToBytes(window.btoa(json));
+        let box = nacl.box(message, nonce, public_key, secret_key);
+
+        let enc = {
+            nonce: bytesToBase64(nonce),
+            box: bytesToBase64(box)
+        };
+        return enc;
     }
 };

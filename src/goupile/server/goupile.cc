@@ -256,6 +256,9 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         if (instance->config.use_offline) {
                             json.Key("cache_key"); json.String(Fmt(buf, "%1_%2", etag, instance->unique).ptr);
                         }
+                        if (instance->config.backup_key) {
+                            json.Key("backup_key"); json.String(instance->config.backup_key);
+                        }
                         json.EndObject();
                     } else if (TestStr(key, "HEAD_TAGS")) {
                         if (instance->config.use_offline) {
@@ -294,6 +297,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleFilePut(instance, request, io);
         } else if (StartsWith(instance_path, "/files/") && request.method == http_RequestMethod::Delete) {
             HandleFileDelete(instance, request, io);
+        } else if (TestStr(instance_path, "/api/files/backup") && request.method == http_RequestMethod::Post) {
+             HandleFileBackup(instance, request, io);
         } else if (TestStr(instance_path, "/api/records/load") && request.method == http_RequestMethod::Get) {
             HandleRecordLoad(instance, request, io);
         } else if (TestStr(instance_path, "/api/records/columns") && request.method == http_RequestMethod::Get) {

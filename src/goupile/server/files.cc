@@ -365,4 +365,78 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
     });
 }
 
+void HandleFileBackup(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    const Token *token = session ? session->GetToken(instance) : nullptr;
+    if (!token || !token->HasPermission(UserPermission::Deploy)) {
+        LogError("User is not allowed to upload client backups");
+        io->AttachError(403);
+        return;
+    }
+
+    if (!instance->config.backup_key) {
+        LogError("This instance does not accept client backups");
+        io->AttachError(403);
+        return;
+    }
+
+    int64_t time = GetUnixTime() / 10000 * 10000;
+    const char *filename = Fmt(&io->allocator, "%1%/offline_%2@%3.gz",
+                               gp_domain.config.backup_directory, session->username, time).ptr;
+
+    if (TestFile(filename)) {
+        LogError("A recent backup already exists for this user");
+        io->AttachError(409);
+        return;
+    }
+
+    io->RunAsync([=]() {
+        // Create temporary file
+        FILE *fp = nullptr;
+        const char *tmp_filename = CreateTemporaryFile(gp_domain.config.temp_directory, ".tmp",
+                                                       &io->allocator, &fp);
+        if (!tmp_filename)
+            return;
+        RG_DEFER {
+            if (fp) {
+                fclose(fp);
+            }
+            UnlinkFile(tmp_filename);
+        };
+
+        // Read and compress request body
+        Size total_len = 0;
+        {
+            StreamWriter writer(fp, "<temp>", CompressionType::Gzip);
+            StreamReader reader;
+            if (!io->OpenForRead(instance->config.max_file_size, &reader))
+                return;
+
+            while (!reader.IsEOF()) {
+                LocalArray<uint8_t, 16384> buf;
+                buf.len = reader.Read(buf.data);
+                if (buf.len < 0)
+                    return;
+                total_len += buf.len;
+
+                if (!writer.Write(buf))
+                    return;
+            }
+            if (!writer.Close())
+                return;
+
+            fclose(fp);
+            fp = nullptr;
+        }
+
+        // Move to final destination
+        if (!RenameFile(tmp_filename, filename, false))
+            return;
+
+        io->AttachText(200, "Done!");
+        return;
+    });
+}
+
 }

@@ -41,6 +41,7 @@ public:
         bool use_offline = false;
         int max_file_size = (int)Megabytes(8);
         SyncMode sync_mode = SyncMode::Offline;
+        const char *backup_key = nullptr;
     } config;
 
     BlockAllocator str_alloc;
