@@ -54,6 +54,8 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         config.instances_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "TempDirectory") {
                         config.temp_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                    } else if (prop.key == "BackupDirectory") {
+                        config.backup_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -118,6 +120,9 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
     if (!config.temp_directory) {
         config.temp_directory = NormalizePath("tmp", root_directory, &config.str_alloc).ptr;
     }
+    if (!config.backup_directory) {
+        config.backup_directory = NormalizePath("backup", root_directory, &config.str_alloc).ptr;
+    }
 
     std::swap(*out_config, config);
     return true;
@@ -154,6 +159,13 @@ bool DomainHolder::Open(const char *filename)
             return false;
         }
     }
+
+    // XXX: Check that temp_directory and backup_directory are one the same volume,
+    // because we might want to rename from one to the other atomically.
+    if (!MakeDirectory(config.temp_directory, false))
+        return false;
+    if (!MakeDirectory(config.backup_directory, false))
+        return false;
 
     err_guard.Disable();
     return true;
