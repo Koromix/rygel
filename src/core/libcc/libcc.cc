@@ -1615,7 +1615,7 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
     return true;
 }
 
-bool RenameFile(const char *src_filename, const char *dest_filename, bool)
+bool RenameFile(const char *src_filename, const char *dest_filename, bool overwrite, bool)
 {
     wchar_t src_filename_w[4096];
     wchar_t dest_filename_w[4096];
@@ -1624,7 +1624,8 @@ bool RenameFile(const char *src_filename, const char *dest_filename, bool)
     if (ConvertUtf8ToWin32Wide(dest_filename, dest_filename_w) < 0)
         return false;
 
-    if (!MoveFileExW(src_filename_w, dest_filename_w, MOVEFILE_REPLACE_EXISTING)) {
+    DWORD flags = overwrite ? MOVEFILE_REPLACE_EXISTING : 0;
+    if (!MoveFileExW(src_filename_w, dest_filename_w, flags)) {
         LogError("Failed to rename file '%1' to '%2': %3", src_filename, dest_filename, GetWin32ErrorString());
         return false;
     }
@@ -1767,8 +1768,22 @@ static bool SyncFileDirectory(const char *filename)
     return true;
 }
 
-bool RenameFile(const char *src_filename, const char *dest_filename, bool sync)
+bool RenameFile(const char *src_filename, const char *dest_filename, bool overwrite, bool sync)
 {
+    int fd = -1;
+    if (!overwrite) {
+        fd = open(dest_filename, O_CREAT | O_EXCL, 0644);
+        if (fd < 0) {
+            if (errno == EEXIST) {
+                LogError("Refusing to overwrite '%1'", dest_filename);
+            } else {
+                LogError("Failed to rename '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
+            }
+            return false;
+        }
+    }
+    RG_DEFER { close(fd); };
+
     // Rename the file
     if (rename(src_filename, dest_filename) < 0) {
         LogError("Failed to rename '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
