@@ -1,0 +1,33 @@
+{
+    "name": "XXXXX",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "start": "electron index.js",
+        "pack": "electron-builder --dir --ia32",
+        "dist": "electron-builder --ia32"
+    },
+    "build": {
+        "files": [
+            "**/*",
+            "build/icon.*"
+        ],
+        "win": {
+            "target": "nsis"
+        },
+        "nsis": {
+            "artifactName": "${name}.exe",
+            "uninstallDisplayName": "${name}"
+        }
+    },
+    "author": "",
+    "license": "",
+    "dependencies": {
+        "esm": "^3.2.25"
+    },
+    "devDependencies": {
+        "electron": "^9.1.2",
+        "electron-builder": "^22.8.1"
+    }
+}
