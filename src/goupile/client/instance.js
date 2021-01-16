@@ -1145,7 +1145,7 @@ function InstanceController() {
 
         await self.run(push_history);
     };
-    // this.go = util.serializeAsync(this.go);
+    this.go = util.serializeAsync(this.go);
 
     async function loadRecord(ulid, version) {
         let key = `${profile.username}:${ulid}`;
