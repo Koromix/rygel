@@ -86,7 +86,7 @@ def list_services():
         parts = re.split(' +', line)
 
         if len(parts) >= 4:
-            match = re.search('^goupile@([0-9A-Za-z_\\-]+)\\.service$', parts[1])
+            match = re.search('^goupile@([0-9A-Za-z_\\-\\.]+)\\.service$', parts[1])
 
             if match is not None:
                 name = match.group(1)
@@ -128,6 +128,9 @@ def update_domain_config(info):
 def update_nginx_config(directory, domain, socket, include = None):
     filename = os.path.join(directory, f'{domain}.conf')
 
+    compat_dir = os.path.join(directory, 'compat.d')
+    custom_dir = os.path.join(directory, 'custom.d')
+
     with open(filename, 'w') as f:
         print(f'server {{', file = f)
         print(f'    server_name {domain};', file = f)
@@ -136,6 +139,10 @@ def update_nginx_config(directory, domain, socket, include = None):
         print(f'    location / {{', file = f)
         print(f'        proxy_pass http://unix:{socket}:;', file = f)
         print(f'    }}', file = f)
+        if os.path.isdir(compat_dir):
+            print(f'    include {compat_dir}/{domain}[.]conf;', file = f)
+        if os.path.isdir(custom_dir):
+            print(f'    include {custom_dir}/{domain}[.]conf;', file = f)
         print(f'}}', file = f)
 
 def run_sync(config):
@@ -144,7 +151,7 @@ def run_sync(config):
 
     # Detect binary mismatches
     for domain, info in domains.items():
-        if not os.file.exists(info.binary):
+        if not os.path.exists(info.binary):
             binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
             os.symlink(binary, info.binary)
         binary_inode = os.stat(info.binary).st_ino

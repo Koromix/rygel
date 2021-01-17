@@ -7,8 +7,8 @@ Group=goupile
 PermissionsStartOnly=true
 ExecStartPre=-/bin/mkdir -p -m 0755 /run/goupile
 ExecStartPre=-/bin/chown goupile:goupile /run/goupile
-ExecStart=/srv/www/goupile/bin/goupile -C %i/goupile.ini --migrate
-WorkingDirectory=/srv/www/goupile/domains
+ExecStart=/srv/www/goupile/domains/%i/goupile
+WorkingDirectory=/srv/www/goupile/domains/%i
 
 Restart=on-failure
 TimeoutStopSec=20
