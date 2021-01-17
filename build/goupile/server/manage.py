@@ -18,7 +18,6 @@ from dataclasses import dataclass
 class DomainConfig:
     directory = None
     binary = None
-    domain = None
     socket = None
     mismatch = False
 
@@ -67,7 +66,6 @@ def list_domains(root_dir, socket_dir):
             info = DomainConfig()
             info.directory = directory
             info.binary = os.path.join(directory, 'goupile')
-            info.domain = domain
             info.socket = os.path.join(socket_dir, domain) + '.sock'
 
             prev_socket = config.get('HTTP.UnixPath')
@@ -127,17 +125,18 @@ def update_domain_config(info):
     with open(filename, 'w') as f:
         ini.write(f)
 
-def update_nginx_config(filename, domains, include = None):
+def update_nginx_config(directory, domain, socket, include = None):
+    filename = os.path.join(directory, f'{domain}.conf')
+
     with open(filename, 'w') as f:
-        for domain, info in domains.items():
-            print(f'server {{', file = f)
-            print(f'    server_name {domain};', file = f)
-            if include is not None:
-                print(f'    include {include};', file = f)
-            print(f'    location / {{', file = f)
-            print(f'        proxy_pass http://unix:{info.socket}:;', file = f)
-            print(f'    }}', file = f)
-            print(f'}}', file = f)
+        print(f'server {{', file = f)
+        print(f'    server_name {domain};', file = f)
+        if include is not None:
+            print(f'    include {include};', file = f)
+        print(f'    location / {{', file = f)
+        print(f'        proxy_pass http://unix:{socket}:;', file = f)
+        print(f'    }}', file = f)
+        print(f'}}', file = f)
 
 def run_sync(config):
     domains = list_domains(config['Goupile.DomainDirectory'], config['Goupile.SocketDirectory'])
@@ -154,11 +153,20 @@ def run_sync(config):
             print(f'Domain {domain} is running old version')
             info.mismatch = True
 
-    # Update configuration files
+    # Update instance configuration files
     print('Write configuration files', file = sys.stderr)
     for domain, info in domains.items():
         update_domain_config(info)
-    update_nginx_config(config['NGINX.ConfigFile'], domains, config.get('NGINX.ServerInclude'))
+
+    # Update NGINX configuration files
+    print('Write NGINX configuration files', file = sys.stderr)
+    for name in os.listdir(config['NGINX.ConfigDirectory']):
+        if name.endswith('.conf'):
+            filename = os.path.join(config['NGINX.ConfigDirectory'], name)
+            os.unlink(filename)
+    for domain, info in domains.items():
+        update_nginx_config(config['NGINX.ConfigDirectory'], domain, info.socket,
+                            include = config.get('NGINX.ServerInclude'))
 
     # Sync systemd services
     for domain in services:
