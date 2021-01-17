@@ -11,7 +11,7 @@ import requests
 import shutil
 import subprocess
 import urllib.parse
-from PIL import Image
+from wand.image import Image
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'Bundle Goupile instance as EXE for offline use')
@@ -54,9 +54,13 @@ if __name__ == "__main__":
         raise ValueError('Failed to download favicon.png from this instance')
     with open(build_directory + '/build/icon.png', 'wb') as f:
         f.write(response.content)
-    img = Image.open(build_directory + '/build/icon.png')
-    img.save(build_directory + '/build/icon.ico', format = 'ICO',
-             sizes = [(16, 16), (24, 24), (32,32), (48, 48), (64, 64), (128, 128), (256, 256)])
+    with Image() as ico:
+        with Image(filename = build_directory + '/build/icon.png') as img:
+            for size in [16, 24, 32, 48, 64, 96, 128, 256]:
+                with img.clone() as it:
+                    it.resize(size, size)
+                    ico.sequence.append(it)
+        ico.save(filename = build_directory + '/build/icon.ico')
 
     # Run electron-builder
     subprocess.run('npm install', shell = True, cwd = build_directory)
