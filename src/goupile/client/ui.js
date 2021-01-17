@@ -265,7 +265,7 @@ const ui = new function() {
         if (give_focus) {
             let widget0 = dialog.el.querySelector('input, select, button, textarea');
             if (widget0 != null)
-                widget0.focus();
+                setTimeout(() => widget0.focus(), 0);
         }
     }
 
