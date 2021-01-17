@@ -35,7 +35,7 @@ if __name__ == "__main__":
     manifest = json.loads(response.content)
 
     # Prepare build directory
-    build_directory = os.path.join(root_directory, 'bin/Electron', manifest["name"])
+    build_directory = os.path.join(root_directory, 'bin/GoupilePortable', manifest["name"])
     os.makedirs(build_directory + '/build', exist_ok = True)
     shutil.copytree('app', build_directory, dirs_exist_ok = True)
 
