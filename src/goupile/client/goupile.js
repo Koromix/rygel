@@ -18,7 +18,6 @@ const goupile = new function() {
     this.start = async function() {
         ui.init();
 
-        await self.syncProfile();
         await registerSW();
         await initDB();
 
@@ -256,6 +255,8 @@ const goupile = new function() {
                 session_rnd = undefined;
                 passport = undefined;
 
+                util.setCookie('session_rnd', 'LOGIN', ENV.base_url);
+
                 // Clear state and start from fresh as a precaution
                 document.location.reload();
             } else {
@@ -271,6 +272,13 @@ const goupile = new function() {
     // XXX: Exponential backoff
     this.syncProfile = async function() {
         let new_rnd = util.getCookie('session_rnd');
+
+        // Hack to force login screen to show up once when DemoUser setting is in use,
+        // this cookie value is set in logout() just before page refresh.
+        if (new_rnd === 'LOGIN') {
+            util.deleteCookie('session_rnd', ENV.base_url);
+            return;
+        }
 
         if (new_rnd !== session_rnd) {
             try {
