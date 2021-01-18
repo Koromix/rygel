@@ -1437,9 +1437,11 @@ function InstanceController() {
             });
 
             if (response.ok) {
-                progress.success('Archive sécurisée envoyée');
+                console.log('Archive sécurisée envoyée');
+                progress.close();
             } else if (response.status === 409) {
-                progress.info('Archivage ignoré (archive récente)');
+                console.log('Archivage ignoré (archive récente)');
+                progress.close();
             } else {
                 let err = (await response.text()).trim();
                 throw new Error(err);
