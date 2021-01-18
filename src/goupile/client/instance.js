@@ -517,7 +517,7 @@ function InstanceController() {
                     mtime: new Date
                 };
 
-                // XXX: Delete children (cascade)
+                // XXX: Delete children (cascade)?
                 await db.transaction('rw', ['rec_records'], async t => {
                     let obj = await t.load('rec_records', key);
                     if (obj == null)
@@ -543,11 +543,18 @@ function InstanceController() {
 
                 progress.success('Suppression effectuée');
 
-                form_meta = null;
                 data_rows = null;
-
-                let url = route.page.url + '/new';
-                self.go(null, url);
+                if (form_chain.some(meta => meta.ulid === ulid)) {
+                    if (form_chain.length > 1) {
+                        let url = route.form.parents[0].url + '/new';
+                        self.go(null, url);
+                    } else {
+                        let url = route.page.url + '/new';
+                        self.go(null, url);
+                    }
+                } else {
+                    self.run();
+                }
             } catch (err) {
                 progress.close();
                 throw err;
@@ -1121,21 +1128,17 @@ function InstanceController() {
         }
 
         // Load record parents
-        if (new_meta.parent != null) {
-            if (new_chain == null || new_chain[new_chain.length - 1] !== new_meta) {
-                new_chain = [new_meta];
-
-                let meta = new_meta;
-                while (meta.parent != null) {
-                    let [parent, ] = await loadRecord(meta.parent.ulid);
-                    new_chain.push(parent);
-                    meta = parent;
-                }
-
-                new_chain.reverse();
-            }
-        } else {
+        if (new_chain == null || new_chain[new_chain.length - 1] !== new_meta) {
             new_chain = [new_meta];
+
+            let meta = new_meta;
+            while (meta.parent != null) {
+                let [parent, ] = await loadRecord(meta.parent.ulid);
+                new_chain.push(parent);
+                meta = parent;
+            }
+
+            new_chain.reverse();
         }
 
         // Confirm dangerous actions (at risk of data loss)
