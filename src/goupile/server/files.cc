@@ -369,7 +369,7 @@ void HandleFileBackup(InstanceHolder *instance, const http_RequestInfo &request,
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const Token *token = session ? session->GetToken(instance) : nullptr;
-    if (!token || !token->HasPermission(UserPermission::Deploy)) {
+    if (!token) {
         LogError("User is not allowed to upload client backups");
         io->AttachError(403);
         return;
