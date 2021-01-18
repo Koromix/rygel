@@ -18,6 +18,7 @@ function InstanceController() {
     let page_code;
 
     let form_meta;
+    let form_chain;
     let form_state;
 
     let editor_el;
@@ -218,45 +219,49 @@ function InstanceController() {
                     </thead>
 
                     <tbody>
-                        ${data_rows.map(row => html`
-                            <tr class=${row.ulid === route.ulid ? 'active' : ''}>
-                                <td>
-                                    <a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a>
-                                </td>
-                                <td class=${row.hid == null ? 'missing' : ''}>${row.hid != null ? row.hid : 'NA'}</td>
-                                ${util.map(data_form.pages.values(), page => {
-                                    let url = page.url + `/${row.ulid}`;
+                        ${data_rows.map(row => {
+                            let active = form_chain.some(meta => meta.ulid === row.ulid);
 
-                                    if (row.status.has(page.key)) {
-                                        return html`<td class="saved"><a href=${url}
-                                                                         @click=${e => ui.setPanelState('page', true, false)}>Enregistré</a></td>`;
-                                    } else {
-                                        return html`<td class="missing"><a href=${url}
-                                                                           @click=${e => ui.setPanelState('page', true, false)}>Non rempli</a></td>`;
-                                    }
-                                })}
-                                ${util.map(data_form.children.values(), child_form => {
-                                    if (row.status.has(child_form.key)) {
-                                        let child = row.children.get(child_form.key);
-                                        let url = child_form.url + `/${child.ulid}`;
+                            return html`
+                                <tr class=${active ? 'active' : ''}>
+                                    <td>
+                                        <a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a>
+                                    </td>
+                                    <td class=${row.hid == null ? 'missing' : ''}>${row.hid != null ? row.hid : 'NA'}</td>
+                                    ${util.map(data_form.pages.values(), page => {
+                                        let url = page.url + `/${row.ulid}`;
 
-                                        return html`
-                                            <td class="saved">
-                                                <a href=${url} @click=${e => ui.setPanelState('page', true, false)}>Enregistré</a>
-                                            </td>
-                                        `;
-                                    } else {
-                                        let url = child_form.url + `/${row.ulid}`;
+                                        if (row.status.has(page.key)) {
+                                            return html`<td class="saved"><a href=${url}
+                                                                             @click=${e => ui.setPanelState('page', true, false)}>Enregistré</a></td>`;
+                                        } else {
+                                            return html`<td class="missing"><a href=${url}
+                                                                               @click=${e => ui.setPanelState('page', true, false)}>Non rempli</a></td>`;
+                                        }
+                                    })}
+                                    ${util.map(data_form.children.values(), child_form => {
+                                        if (row.status.has(child_form.key)) {
+                                            let child = row.children.get(child_form.key);
+                                            let url = child_form.url + `/${child.ulid}`;
 
-                                        return html`
-                                            <td class="missing">
-                                                <a href=${url} @click=${e => ui.setPanelState('page', true, false)}>Non rempli</a>
-                                            </td>
-                                        `;
-                                    }
-                                })}
-                            </tr>
-                        `)}
+                                            return html`
+                                                <td class="saved">
+                                                    <a href=${url} @click=${e => ui.setPanelState('page', true, false)}>Enregistré</a>
+                                                </td>
+                                            `;
+                                        } else {
+                                            let url = child_form.url + `/${row.ulid}`;
+
+                                            return html`
+                                                <td class="missing">
+                                                    <a href=${url} @click=${e => ui.setPanelState('page', true, false)}>Non rempli</a>
+                                                </td>
+                                            `;
+                                        }
+                                    })}
+                                </tr>
+                            `;
+                        })}
                         ${!data_rows.length ? html`<tr><td colspan=${2 + columns}>Aucune ligne à afficher</td></tr>` : ''}
                     </tbody>
                 </table>
@@ -323,11 +328,11 @@ function InstanceController() {
                 <div id="ins_page">
                     <div class="ui_quick">
                         ${model.variables.length ? html`
-                            ${!route.version ? 'Nouvel enregistrement' : ''}
-                            ${route.version > 0 && form_meta.hid != null ? `Enregistrement : ${form_meta.hid}` : ''}
-                            ${route.version > 0 && form_meta.hid == null ? 'Enregistrement local' : ''}
+                            ${!form_chain[0].version ? 'Nouvel enregistrement' : ''}
+                            ${form_chain[0].version > 0 && form_chain[0].hid != null ? `Enregistrement : ${form_chain[0].hid}` : ''}
+                            ${form_chain[0].version > 0 && form_chain[0].hid == null ? 'Enregistrement local' : ''}
                         `  : ''}
-                        &nbsp;(<a @click=${e => window.print()}>imprimer</a>)
+                        (<a @click=${e => window.print()}>imprimer</a>)
                         <div style="flex: 1;"></div>
                         ${route.version > 0 ? html`
                             ${route.version < form_meta.fragments.length ?
@@ -962,6 +967,7 @@ function InstanceController() {
         let new_route = Object.assign({}, route);
         let new_meta = form_meta;
         let prev_meta = form_meta;
+        let new_chain = form_chain;
         let new_state = form_state;
 
         // Fix up URL
@@ -1114,6 +1120,24 @@ function InstanceController() {
             new_state.changeHandler = () => self.run();
         }
 
+        // Load record parents
+        if (new_meta.parent != null) {
+            if (new_chain == null || new_chain[new_chain.length - 1] !== new_meta) {
+                new_chain = [new_meta];
+
+                let meta = new_meta;
+                while (meta.parent != null) {
+                    let [parent, ] = await loadRecord(meta.parent.ulid);
+                    new_chain.push(parent);
+                    meta = parent;
+                }
+
+                new_chain.reverse();
+            }
+        } else {
+            new_chain = [new_meta];
+        }
+
         // Confirm dangerous actions (at risk of data loss)
         if (form_state != null && form_state.hasChanged() && new_meta !== form_meta) {
             try {
@@ -1145,6 +1169,7 @@ function InstanceController() {
         route = new_route;
         route.version = new_meta.version;
         form_meta = new_meta;
+        form_chain = new_chain;
         form_state = new_state;
 
         await self.run(push_history);
@@ -1287,8 +1312,8 @@ function InstanceController() {
 
         // Load rows for data panel
         if (ui.isPanelEnabled('data')) {
-            if (data_form !== route.form) {
-                data_form = route.form;
+            if (data_form !== form_chain[0].form) {
+                data_form = form_chain[0].form;
                 data_rows = null;
             }
 
