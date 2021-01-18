@@ -432,7 +432,7 @@ function InstanceController() {
                     values[key] = null;
             }
 
-            let key = `${profile.username}:${form_meta.ulid}`;
+            let key = `${profile.userid}:${form_meta.ulid}`;
             let fragment = {
                 type: 'save',
                 user: profile.username,
@@ -451,7 +451,7 @@ function InstanceController() {
                         record.hid = form_meta.hid;
                 } else {
                     obj = {
-                        fkey: `${profile.username}/${route.form.key}`,
+                        fkey: `${profile.userid}/${route.form.key}`,
                         pkey: null,
                         enc: null
                     };
@@ -464,7 +464,7 @@ function InstanceController() {
                     };
 
                     if (form_meta.parent != null) {
-                        obj.pkey = `${profile.username}:${form_meta.parent.ulid}`;
+                        obj.pkey = `${profile.userid}:${form_meta.parent.ulid}`;
                         record.parent = {
                             form: form_meta.parent.form.key,
                             ulid: form_meta.parent.ulid,
@@ -510,7 +510,7 @@ function InstanceController() {
             let progress = log.progress('Suppression en cours');
 
             try {
-                let key = `${profile.username}:${ulid}`;
+                let key = `${profile.userid}:${ulid}`;
                 let fragment = {
                     type: 'delete',
                     user: profile.username,
@@ -558,7 +558,7 @@ function InstanceController() {
     // Call in transaction!
     async function updateRecordParents(t, parent, child, type, mtime) {
         while (parent != null) {
-            let parent_key = `${profile.username}:${parent.ulid}`;
+            let parent_key = `${profile.userid}:${parent.ulid}`;
             let parent_obj = await t.load('rec_records', parent_key);
             let parent_record = await goupile.decryptWithPassport(parent_obj.enc);
 
@@ -658,7 +658,7 @@ function InstanceController() {
 
         // Should never fail, but who knows..
         if (buffer != null) {
-            let key = `${profile.username}:${filename}`;
+            let key = `${profile.userid}:${filename}`;
             let blob = new Blob([buffer.session.doc.getValue()]);
             let sha256 = await computeSha256(blob);
 
@@ -870,7 +870,7 @@ function InstanceController() {
 
                 progress.progress('Enregistrement du fichier');
                 try {
-                    let key = `${profile.username}:${filename.value}`;
+                    let key = `${profile.userid}:${filename.value}`;
                     await db.saveWithKey('fs_files', key, {
                         filename: filename.value,
                         size: file.value.size,
@@ -912,7 +912,7 @@ function InstanceController() {
                             let url = util.pasteURL(`${ENV.base_url}files/${action.filename}`, {sha256: action.remote_sha256 || ''});
 
                             if (action.local_sha256 != null) {
-                                let key = `${profile.username}:${action.filename}`;
+                                let key = `${profile.userid}:${action.filename}`;
                                 let file = await db.load('fs_files', key);
 
                                 let response = await net.fetch(url, {method: 'PUT', body: file.blob});
@@ -933,7 +933,7 @@ function InstanceController() {
 
                         case 'noop':
                         case 'pull': {
-                            let key = `${profile.username}:${action.filename}`;
+                            let key = `${profile.userid}:${action.filename}`;
                             await db.delete('fs_files', key);
 
                             let buffer = editor_buffers.get(action.filename);
@@ -1176,7 +1176,7 @@ function InstanceController() {
     this.go = util.serializeAsync(this.go);
 
     async function loadRecord(ulid, version) {
-        let key = `${profile.username}:${ulid}`;
+        let key = `${profile.userid}:${ulid}`;
         let obj = await db.load('rec_records', key);
 
         if (obj == null)
@@ -1282,7 +1282,7 @@ function InstanceController() {
     this.run = async function(push_history = false) {
         // Is the user developing?
         {
-            let range = IDBKeyRange.bound(profile.username + ':', profile.username + '`', false, true);
+            let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
             let count = await db.count('fs_files', range);
 
             develop = !!count;
@@ -1319,10 +1319,10 @@ function InstanceController() {
             if (data_rows == null) {
                 let objects;
                 if (!data_form.parents.length) {
-                    let range = IDBKeyRange.only(`${profile.username}/${data_form.key}`);
+                    let range = IDBKeyRange.only(`${profile.userid}/${data_form.key}`);
                     objects = await db.loadAll('rec_records/form', range);
                 } else {
-                    let range = IDBKeyRange.only(`${profile.username}:${form_meta.parent.ulid}`);
+                    let range = IDBKeyRange.only(`${profile.userid}:${form_meta.parent.ulid}`);
                     objects = await db.loadAll('rec_records/parent', range);
                 }
 
@@ -1389,7 +1389,7 @@ function InstanceController() {
 
         // Try locally saved files
         if (goupile.isAuthorized()) {
-            let key = `${profile.username}:${filename}`;
+            let key = `${profile.userid}:${filename}`;
             let file = await db.load('fs_files', key);
 
             if (file != null) {
@@ -1417,7 +1417,7 @@ function InstanceController() {
         let progress = log.progress('Archivage sécurisé des données');
 
         try {
-            let range = IDBKeyRange.bound(profile.username + ':', profile.username + '`', false, true);
+            let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
             let objects = await db.loadAll('rec_records', range);
 
             let records = [];

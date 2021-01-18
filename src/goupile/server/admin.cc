@@ -139,7 +139,7 @@ static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
 }
 
 static bool CreateInstance(DomainHolder *domain, const char *instance_key,
-                           const char *title, const char *default_user,
+                           const char *title, int64_t default_userid,
                            bool *out_conflict = nullptr)
 {
     BlockAllocator temp_alloc;
@@ -276,9 +276,9 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
 
         if (!domain->db.Run("INSERT INTO dom_instances (instance) VALUES (?1)", instance_key))
             return false;
-        if (!domain->db.Run(R"(INSERT INTO dom_permissions (instance, username, permissions)
+        if (!domain->db.Run(R"(INSERT INTO dom_permissions (userid, instance, permissions)
                                VALUES (?1, ?2, ?3))",
-                            instance_key, default_user, permissions))
+                            default_userid, instance_key, permissions))
             return false;
 
         return true;
@@ -456,13 +456,13 @@ Options:
             sodium_bin2base64(passport, RG_SIZE(passport), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
         }
 
-        if (!domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, admin, passport)
-                              VALUES (?1, ?2, 1, ?3))", username, hash, passport))
+        if (!domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash, admin, passport)
+                              VALUES (1, ?1, ?2, 1, ?3))", username, hash, passport))
             return 1;
     }
 
     // Create default instance
-    if (!empty && !CreateInstance(&domain, "demo", "DEMO", username))
+    if (!empty && !CreateInstance(&domain, "demo", "DEMO", 1))
         return 1;
 
     if (!domain.db.Close())
@@ -592,7 +592,7 @@ void HandleCreateInstance(const http_RequestInfo &request, http_IO *io)
                 return false;
 
             bool conflict;
-            if (!CreateInstance(&gp_domain, instance_key, title, session->username, &conflict)) {
+            if (!CreateInstance(&gp_domain, instance_key, title, session->userid, &conflict)) {
                 if (conflict) {
                     io->AttachError(409);
                 }
@@ -927,14 +927,22 @@ void HandleDeleteUser(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        // Username and password
-        const char *username = values.FindValue("username", nullptr);
-        if (!username) {
-            LogError("Missing parameters");
-            io->AttachError(422);
-            return;
+        // User ID
+        int64_t userid;
+        {
+            const char *str = values.FindValue("userid", nullptr);
+            if (!str) {
+                LogError("Missing 'userid' parameter");
+                io->AttachError(422);
+                return;
+            } else if (!ParseInt(str, &userid)) {
+                io->AttachError(422);
+                return;
+            }
         }
-        if (TestStr(username, session->username)) {
+
+        // Safety check
+        if (userid == session->userid) {
             LogError("You cannot delete yourself");
             io->AttachError(403);
             return;
@@ -942,18 +950,20 @@ void HandleDeleteUser(const http_RequestInfo &request, http_IO *io)
 
         gp_domain.db.Transaction([&]() {
             sq_Statement stmt;
-            if (!gp_domain.db.Prepare("SELECT passport FROM dom_users", &stmt))
+            if (!gp_domain.db.Prepare("SELECT username, passport FROM dom_users WHERE userid = ?1", &stmt))
                 return false;
+            sqlite3_bind_int64(stmt, 1, userid);
 
             if (!stmt.Next()) {
                 if (!stmt.IsValid()) {
-                    LogError("User '%1' does not exist", username);
+                    LogError("User ID '%1' does not exist", userid);
                     io->AttachError(404);
                 }
                 return false;
             }
 
-            const char *passport = (const char *)sqlite3_column_text(stmt, 0);
+            const char *username = (const char *)sqlite3_column_text(stmt, 0);
+            const char *passport = (const char *)sqlite3_column_text(stmt, 1);
             int64_t time = GetUnixTime();
 
             // Log action
@@ -963,9 +973,9 @@ void HandleDeleteUser(const http_RequestInfo &request, http_IO *io)
                                   username, passport))
                 return false;
 
-            if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE username = ?1", username))
+            if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE userid = ?1", userid))
                 return false;
-            if (!gp_domain.db.Run("DELETE FROM dom_users WHERE username = ?1", username))
+            if (!gp_domain.db.Run("DELETE FROM dom_users WHERE userid = ?1", userid))
                 return false;
 
             io->AttachError(200, "Done!");
@@ -1016,11 +1026,25 @@ void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
+        // User ID
+        int64_t userid;
+        {
+            const char *str = values.FindValue("userid", nullptr);
+            if (!str) {
+                LogError("Missing 'userid' parameter");
+                io->AttachError(422);
+                return;
+            } else if (!ParseInt(str, &userid)) {
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        // Instance and zone
         const char *instance = values.FindValue("instance", nullptr);
-        const char *username = values.FindValue("user", nullptr);
         const char *zone = values.FindValue("zone", nullptr);
-        if (!instance || !username) {
-            LogError("Missing parameters");
+        if (!instance) {
+            LogError("Missing 'instance' parameter");
             io->AttachError(422);
             return;
         }
@@ -1034,7 +1058,11 @@ void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
         uint32_t permissions = 0;
         {
             const char *str = values.FindValue("permissions", nullptr);
-            if (str && !ParsePermissionList(str, &permissions)) {
+            if (!str) {
+                LogError("Missing 'permissions' parameter");
+                io->AttachError(422);
+                return;
+            } else if (!ParsePermissionList(str, &permissions)) {
                 io->AttachError(422);
                 return;
             }
@@ -1058,19 +1086,22 @@ void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
             }
 
             // Does user exist?
+            const char *username;
             {
                 sq_Statement stmt;
-                if (!gp_domain.db.Prepare("SELECT username FROM dom_users WHERE username = ?1", &stmt))
+                if (!gp_domain.db.Prepare("SELECT username FROM dom_users WHERE userid = ?1", &stmt))
                     return false;
-                sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
+                sqlite3_bind_int64(stmt, 1, userid);
 
                 if (!stmt.Next()) {
                     if (stmt.IsValid()) {
-                        LogError("User '%1' does not exist", instance);
+                        LogError("User ID '%1' does not exist", userid);
                         io->AttachError(404);
                     }
                     return false;
                 }
+
+                username = DuplicateString((const char *)sqlite3_column_text(stmt, 0), &io->allocator).ptr;
             }
 
             // Log action
@@ -1083,15 +1114,15 @@ void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
 
             // Adjust permissions
             if (permissions) {
-                if (!gp_domain.db.Run(R"(INSERT INTO dom_permissions (instance, username, permissions, zone)
+                if (!gp_domain.db.Run(R"(INSERT INTO dom_permissions (instance, userid, permissions, zone)
                                          VALUES (?1, ?2, ?3, ?4)
-                                         ON CONFLICT(instance, username)
+                                         ON CONFLICT(instance, userid)
                                              DO UPDATE SET permissions = excluded.permissions)",
-                                      instance, username, permissions, zone))
+                                      instance, userid, permissions, zone))
                     return false;
             } else {
-                if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE instance = ?1 AND username = ?2",
-                                      instance, username))
+                if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE instance = ?1 AND userid = ?2",
+                                      instance, userid))
                     return false;
             }
 
@@ -1111,8 +1142,8 @@ void HandleListUsers(const http_RequestInfo &request, http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!gp_domain.db.Prepare(R"(SELECT u.rowid, u.username, u.admin, p.instance, p.permissions FROM dom_users u
-                                 LEFT JOIN dom_permissions p ON (p.username = u.username)
+    if (!gp_domain.db.Prepare(R"(SELECT u.rowid, u.userid, u.username, u.admin, p.instance, p.permissions FROM dom_users u
+                                 LEFT JOIN dom_permissions p ON (p.userid = u.userid)
                                  ORDER BY u.username, p.instance)", &stmt))
         return;
 
@@ -1126,13 +1157,14 @@ void HandleListUsers(const http_RequestInfo &request, http_IO *io)
 
             json.StartObject();
 
-            json.Key("username"); json.String((const char *)sqlite3_column_text(stmt, 1));
-            json.Key("admin"); json.Bool(sqlite3_column_int(stmt, 2));
+            json.Key("userid"); json.Int64(sqlite3_column_int64(stmt, 1));
+            json.Key("username"); json.String((const char *)sqlite3_column_text(stmt, 2));
+            json.Key("admin"); json.Bool(sqlite3_column_int(stmt, 3));
             json.Key("instances"); json.StartObject();
-            if (sqlite3_column_type(stmt, 3) != SQLITE_NULL) {
+            if (sqlite3_column_type(stmt, 4) != SQLITE_NULL) {
                 do {
-                    const char *instance = (const char *)sqlite3_column_text(stmt, 3);
-                    uint32_t permissions = (uint32_t)sqlite3_column_int64(stmt, 4);
+                    const char *instance = (const char *)sqlite3_column_text(stmt, 4);
+                    uint32_t permissions = (uint32_t)sqlite3_column_int64(stmt, 5);
 
                     json.Key(instance); json.StartArray();
                     for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {

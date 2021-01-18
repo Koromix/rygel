@@ -8,7 +8,7 @@
 
 namespace RG {
 
-const int DomainVersion = 5;
+const int DomainVersion = 6;
 const int MaxInstancesPerDomain = 4096;
 
 bool DomainConfig::Validate() const
@@ -460,9 +460,46 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 }
                 if (!stmt.IsValid())
                     return false;
+            } [[fallthrough]];
+
+            case 5: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE dom_users RENAME TO dom_users_BAK;
+                    ALTER TABLE dom_permissions RENAME TO dom_permissions_BAK;
+                    DROP INDEX dom_users_u;
+                    DROP INDEX dom_permissions_ui;
+
+                    CREATE TABLE dom_users (
+                        userid INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT NOT NULL,
+                        password_hash TEXT NOT NULL,
+                        admin INTEGER CHECK(admin IN (0, 1)) NOT NULL,
+                        passport TEXT NOT NULL
+                    );
+                    CREATE UNIQUE INDEX dom_users_u ON dom_users (username);
+
+                    CREATE TABLE dom_permissions (
+                        userid INTEGER NOT NULL REFERENCES dom_users (userid),
+                        instance TEXT NOT NULL REFERENCES dom_instances (instance),
+                        permissions INTEGER NOT NULL,
+                        zone TEXT
+                    );
+                    CREATE UNIQUE INDEX dom_permissions_ui ON dom_permissions (userid, instance);
+
+                    INSERT INTO dom_users (username, password_hash, admin, passport)
+                        SELECT username, password_hash, admin, passport FROM dom_users_BAK;
+                    INSERT INTO dom_permissions (userid, instance, permissions, zone)
+                        SELECT u.userid, p.instance, p.permissions, p.zone FROM dom_permissions_BAK p
+                        LEFT JOIN dom_users u ON (u.username = p.username);
+
+                    DROP TABLE dom_users_BAK;
+                    DROP TABLE dom_permissions_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 5);
+            RG_STATIC_ASSERT(DomainVersion == 6);
         }
 
         int64_t time = GetUnixTime();

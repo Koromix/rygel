@@ -43,6 +43,7 @@ class Session: public RetainObject {
     mutable BlockAllocator tokens_alloc;
 
 public:
+    int64_t userid;
     const char *username;
     bool admin;
     bool demo;

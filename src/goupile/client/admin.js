@@ -114,12 +114,12 @@ function AdminController() {
                                                 html`<span class="ui_tag" style="background: #777;">${perm}</span> `)}
                                             &nbsp;&nbsp;&nbsp;
                                             <a role="button" tabindex="0"
-                                               @click=${ui.wrapAction(e => runAssignUserDialog(e, selected_instance, user.username,
-                                                                                               permissions))}>Assigner</a>
+                                               @click=${ui.wrapAction(e => runAssignUserDialog(e, selected_instance, user,
+                                                                                                  permissions))}>Assigner</a>
                                         </td>
                                     ` : ''}
                                     <td><a role="button" tabindex="0"
-                                           @click=${ui.wrapAction(e => runDeleteUserDialog(e, user.username))}>Supprimer</a></td>
+                                           @click=${ui.wrapAction(e => runDeleteUserDialog(e, user))}>Supprimer</a></td>
                                 </tr>
                             `;
                         })}
@@ -304,10 +304,10 @@ function AdminController() {
         });
     }
 
-    function runAssignUserDialog(e, instance, username, prev_permissions) {
+    function runAssignUserDialog(e, instance, user, prev_permissions) {
         return ui.runDialog(e, (d, resolve, reject) => {
             d.calc('instance', 'Instance', instance);
-            d.sameLine(); d.calc('username', 'Utilisateur', username);
+            d.sameLine(); d.calc('username', 'Utilisateur', user.username);
 
             let permissions = d.textArea('permissions', 'Permissions', {
                 rows: 7, cols: 16,
@@ -317,7 +317,7 @@ function AdminController() {
             d.action('Modifier', {disabled: !d.isValid()}, async () => {
                 let query = new URLSearchParams;
                 query.set('instance', instance);
-                query.set('user', username);
+                query.set('userid', user.userid);
                 query.set('permissions', permissions.value ? permissions.value.split('\n').join(',') : '');
 
                 let response = await net.fetch('/admin/api/users/assign', {
@@ -327,7 +327,7 @@ function AdminController() {
 
                 if (response.ok) {
                     resolve();
-                    log.success(`Droits de '${username}' sur l'instance '${instance}' ${permissions.value ? 'modifiés' : 'supprimés'}`);
+                    log.success(`Droits de '${user.username}' sur l'instance '${instance}' ${permissions.value ? 'modifiés' : 'supprimés'}`);
 
                     users = null;
 
@@ -340,11 +340,11 @@ function AdminController() {
         });
     }
 
-    function runDeleteUserDialog(e, username) {
-        return ui.runConfirm(e, `Voulez-vous supprimer l'utilisateur '${username}' ?`,
-                             'Supprimer', async () => {
+    function runDeleteUserDialog(e, user) {
+        return ui.runConfirm(e, `Voulez-vous supprimer l'utilisateur '${user.username}' ?`,
+                                'Supprimer', async () => {
             let query = new URLSearchParams;
-            query.set('username', username);
+            query.set('userid', user.userid);
 
             let response = await net.fetch('/admin/api/users/delete', {
                 method: 'POST',
@@ -352,7 +352,7 @@ function AdminController() {
             });
 
             if (response.ok) {
-                log.success(`Utilisateur '${username}' supprimé`);
+                log.success(`Utilisateur '${user.username}' supprimé`);
 
                 users = null;
 
