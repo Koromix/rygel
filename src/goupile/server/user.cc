@@ -89,15 +89,22 @@ static void WriteProfileJson(const Session *session, const Token *token, json_Wr
 }
 
 static RetainPtr<Session> CreateUserSession(const http_RequestInfo &request, http_IO *io,
-                                            int64_t userid, const char *username)
+                                            int64_t userid, const char *username, const char *passport)
 {
     Size len = RG_SIZE(Session) + strlen(username) + 1;
     Session *session = (Session *)Allocator::Allocate(nullptr, len, (int)Allocator::Flag::Zero);
+
+    // Should never happen, but let's be careful
+    if (RG_UNLIKELY(strlen(passport) >= RG_SIZE(Session::passport))) {
+        LogError("User passport is too big");
+        return {};
+    }
 
     new (session) Session;
     session->userid = userid;
     session->username = (char *)session + RG_SIZE(Session);
     strcpy((char *)session->username, username);
+    strcpy(session->passport, passport);
 
     RetainPtr<Session> ptr(session, [](Session *session) {
         session->~Session();
@@ -110,30 +117,43 @@ static RetainPtr<Session> CreateUserSession(const http_RequestInfo &request, htt
 
 static RetainPtr<Session> CreateDemoSession(const http_RequestInfo &request, http_IO *io)
 {
-    static std::atomic_int64_t userid_cache {-1};
-    int64_t userid = userid_cache.load(std::memory_order_relaxed);
+    static std::once_flag once;
+    static int64_t demo_userid = -1;
+    static char demo_passport[RG_SIZE(Session::passport)];
 
-    if (userid < 0) {
+    std::call_once(once, []() {
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare("SELECT userid FROM dom_users WHERE username = ?1", &stmt))
-            return {};
+        if (!gp_domain.db.Prepare("SELECT userid, passport FROM dom_users WHERE username = ?1", &stmt))
+            return;
         sqlite3_bind_text(stmt, 1, gp_domain.config.demo_user, -1, SQLITE_STATIC);
 
         if (!stmt.Next()) {
             if (stmt.IsValid()) {
                 LogError("Demo user '%1' does not exist", gp_domain.config.demo_user);
             }
-            return {};
+            return;
         }
 
-        userid = sqlite3_column_int64(stmt, 0);
-        userid_cache.store(userid, std::memory_order_relaxed);
-    }
+        int64_t userid = sqlite3_column_int64(stmt, 0);
+        const char *passport = (const char *)sqlite3_column_text(stmt, 1);
+
+        // Should never happen, but let's be careful
+        if (RG_UNLIKELY(strlen(passport) >= RG_SIZE(demo_passport))) {
+            LogError("Demo user passport is too big");
+            return;
+        }
+
+        demo_userid = userid;
+        strcpy(demo_passport, passport);
+    });
+    if (RG_UNLIKELY(demo_userid < 0))
+        return {};
 
     // Make sure there is no session related Set-Cookie header left
     io->ResetResponse();
 
-    RetainPtr<Session>session = CreateUserSession(request, io, userid, gp_domain.config.demo_user);
+    RetainPtr<Session>session = CreateUserSession(request, io, demo_userid,
+                                                  gp_domain.config.demo_user, demo_passport);
     session->demo = true;
 
     return session;
@@ -193,12 +213,6 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
             bool admin = (sqlite3_column_int(stmt, 2) == 1);
             const char *passport = (const char *)sqlite3_column_text(stmt, 3);
 
-            // Should never happen, but let's be careful
-            if (RG_UNLIKELY(sqlite3_column_bytes(stmt, 3) >= RG_SIZE(Session::passport))) {
-                LogError("User passport is too big");
-                return;
-            }
-
             if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
                 int64_t time = GetUnixTime();
 
@@ -207,15 +221,17 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
                                       time, request.client_addr, "login", username))
                     return;
 
-                RetainPtr<Session> session = CreateUserSession(request, io, userid, username);
-                session->admin = admin;
-                strcpy(session->passport, passport);
+                RetainPtr<Session> session = CreateUserSession(request, io, userid, username, passport);
 
-                const Token *token = session->GetToken(instance);
+                if (RG_LIKELY(session)) {
+                    session->admin = admin;
 
-                http_JsonPageBuilder json(request.compression_type);
-                WriteProfileJson(session.GetRaw(), token, &json);
-                json.Finish(io);
+                    const Token *token = session->GetToken(instance);
+
+                    http_JsonPageBuilder json(request.compression_type);
+                    WriteProfileJson(session.GetRaw(), token, &json);
+                    json.Finish(io);
+                }
 
                 return;
             }
