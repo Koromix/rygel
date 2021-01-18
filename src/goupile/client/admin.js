@@ -15,6 +15,10 @@ function AdminController() {
         self.go(null, window.location.href);
     };
 
+    this.hasUnsavedData = function() {
+        return false;
+    };
+
     function initUI() {
         document.documentElement.className = 'admin';
 

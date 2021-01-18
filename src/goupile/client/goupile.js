@@ -41,6 +41,42 @@ const goupile = new function() {
 
             e.preventDefault();
         });
+
+        // Copied that crap from a random corner of the internet
+        let electron = (typeof process !== 'undefined' && typeof process.versions === 'object' &&
+                        !!process.versions.electron);
+        if (electron) {
+            let protect = true;
+
+            window.onbeforeunload = e => {
+                if (protect && controller.hasUnsavedData()) {
+                    e.returnValue = "NO!";
+
+                    let remote = require('electron').remote;
+                    let dialog = remote.dialog;
+
+                    let win = remote.getCurrentWindow();
+                    let p = dialog.showMessageBox(win, {
+                        type: 'warning',
+                        buttons: ['Quitter', 'Annuler'],
+                        title: 'Données non enregistrées',
+                        message: 'Si vous continuer vous allez perdre les modifications non enregistrées, voulez-vous continuer ?'
+                    });
+
+                    p.then(r => {
+                        if (r.response === 0) {
+                            protect = false;
+                            win.close();
+                        }
+                    });
+                }
+            };
+        } else {
+            window.onbeforeunload = e => {
+                if (controller.hasUnsavedData())
+                    return 'Si vous confirmez vouloir quitter la page, les modifications en cours seront perdues !';
+            };
+        }
     }
 
     async function registerSW() {

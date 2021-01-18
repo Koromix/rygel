@@ -37,21 +37,16 @@ function InstanceController() {
         initUI();
         await initApp();
 
-        // XXX: Confirm dangerous exit in Electron somehow (window.onbeforeunload behaves badly there)
-        let electron = (typeof process !== 'undefined' && typeof process.versions === 'object' && !!process.versions.electron);
-        if (!electron) {
-            window.onbeforeunload = e => {
-                if (form_state != null && form_state.hasChanged())
-                    return 'Si vous confirmez vouloir quitter la page, les modifications en cours seront perdues !';
-            };
-        }
-
         self.go(null, window.location.href).catch(err => {
             log.error(err);
 
             // Fall back to home page
             self.go(null, ENV.base_url);
         });
+    };
+
+    this.hasUnsavedData = function() {
+        return form_state != null && form_state.hasChanged();
     };
 
     async function initApp() {
