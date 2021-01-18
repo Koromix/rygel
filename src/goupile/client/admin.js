@@ -135,7 +135,7 @@ function AdminController() {
 
     this.go = async function(e = null, url = null, push_history = true) {
         await goupile.syncProfile();
-        if (!goupile.isAuthorized())
+        if (!goupile.isAuthorized() || !profile.admin)
             await goupile.runLogin();
 
         await self.run(push_history);
