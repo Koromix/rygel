@@ -55,6 +55,21 @@ const ui = new function() {
     }
 
     this.render = function() {
+        // Run dialog functions
+        {
+            let it = dialogs.next;
+
+            while (it !== dialogs) {
+                it.render();
+
+                // No need to refresh anything underneath
+                if (it.type === 'modal')
+                    return;
+
+                it = it.next;
+            }
+        }
+
         // Render main screen
         render(html`
             ${menu_render != null ? html`<nav class="ui_toolbar" style="z-index: 999999;">${menu_render()}</nav>` : ''}
@@ -63,16 +78,6 @@ const ui = new function() {
                 ${util.map(panels.values(), panel => panel.active ? panel.render() : '')}
             </main>
         `, document.querySelector('#ui_root'));
-
-        // Run dialog functions
-        {
-            let it = dialogs.next;
-
-            while (it !== dialogs) {
-                it.render();
-                it = it.next;
-            }
-        }
     };
 
     this.setMenu = function(func) {
