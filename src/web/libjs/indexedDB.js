@@ -190,7 +190,7 @@ const indexeddb = new function() {
 
             return executeQuery('readonly', store, (t, resolve, reject) => {
                 let obj = openStoreOrIndex(t, store, index);
-                let req = obj.count();
+                let req = obj.count(range);
 
                 req.onsuccess = e => resolve(e.target.result);
                 req.onerror = e => logAndReject(reject, e.target.error);

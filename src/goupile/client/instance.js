@@ -778,8 +778,9 @@ function InstanceController() {
     }
 
     async function computeDeployActions() {
+        let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
         let [local_files, remote_files] = await Promise.all([
-            db.loadAll('fs_files'),
+            db.loadAll('fs_files', range),
             net.fetchJson(`${ENV.base_url}api/files/list`)
         ]);
 
