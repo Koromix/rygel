@@ -168,11 +168,13 @@ function AdminController() {
         return ui.runDialog(e, (d, resolve, reject) => {
             let key = d.text('*key', 'Clé de l\'instance');
             let name = d.text('name', 'Nom', {value: key.value});
+            let demo = d.boolean('demo', 'Ajouter les pages par défaut', {value: true, untoggle: false});
 
             d.action('Créer', {disabled: !d.isValid()}, async () => {
                 let query = new URLSearchParams;
                 query.set('key', key.value);
                 query.set('title', name.value);
+                query.set('demo', 0 + demo.value);
 
                 let response = await net.fetch('/admin/api/instances/create', {
                     method: 'POST',

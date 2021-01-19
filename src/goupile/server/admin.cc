@@ -139,7 +139,7 @@ static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
 }
 
 static bool CreateInstance(DomainHolder *domain, const char *instance_key,
-                           const char *title, int64_t default_userid,
+                           const char *title, int64_t default_userid, bool demo,
                            bool *out_conflict = nullptr)
 {
     BlockAllocator temp_alloc;
@@ -212,7 +212,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
     }
 
     // Create default files
-    {
+    if (demo) {
         sq_Statement stmt;
         if (!db.Prepare(R"(INSERT INTO fs_files (active, filename, mtime, blob, compression, sha256, size)
                            VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6))", &stmt))
@@ -462,7 +462,7 @@ Options:
     }
 
     // Create default instance
-    if (demo && !CreateInstance(&domain, "demo", "DEMO", 1))
+    if (demo && !CreateInstance(&domain, "demo", "DEMO", 1, true))
         return 1;
 
     if (!domain.db.Close())
@@ -565,10 +565,11 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
+        // Parse strings
         const char *instance_key = values.FindValue("key", nullptr);
         const char *title = values.FindValue("title", instance_key);
         if (!instance_key) {
-            LogError("Missing parameters");
+            LogError("Missing 'instance' parameter");
             io->AttachError(422);
             return;
         }
@@ -577,9 +578,18 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
             return;
         }
         if (!title[0]) {
-            LogError("Empty parameters");
+            LogError("Application title cannot be empty");
             io->AttachError(422);
             return;
+        }
+
+        // Create demo pages?
+        bool demo = true;
+        if (const char *str = values.FindValue("demo", nullptr); str) {
+            if (!ParseBool(str, &demo)) {
+                io->AttachError(422);
+                return;
+            }
         }
 
         bool success = gp_domain.db.Transaction([&]() {
@@ -592,7 +602,7 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
                 return false;
 
             bool conflict;
-            if (!CreateInstance(&gp_domain, instance_key, title, session->userid, &conflict)) {
+            if (!CreateInstance(&gp_domain, instance_key, title, session->userid, demo, &conflict)) {
                 if (conflict) {
                     io->AttachError(409);
                 }
