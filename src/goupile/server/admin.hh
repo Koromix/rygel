@@ -12,14 +12,14 @@ namespace RG {
 int RunInit(Span<const char *> arguments);
 int RunMigrate(Span<const char *> arguments);
 
-void HandleCreateInstance(const http_RequestInfo &request, http_IO *io);
-void HandleDeleteInstance(const http_RequestInfo &request, http_IO *io);
-void HandleConfigureInstance(const http_RequestInfo &request, http_IO *io);
-void HandleListInstances(const http_RequestInfo &request, http_IO *io);
+void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io);
+void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io);
+void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io);
+void HandleInstanceList(const http_RequestInfo &request, http_IO *io);
 
-void HandleCreateUser(const http_RequestInfo &request, http_IO *io);
-void HandleDeleteUser(const http_RequestInfo &request, http_IO *io);
-void HandleAssignUser(const http_RequestInfo &request, http_IO *io);
-void HandleListUsers(const http_RequestInfo &request, http_IO *io);
+void HandleUserCreate(const http_RequestInfo &request, http_IO *io);
+void HandleUserDelete(const http_RequestInfo &request, http_IO *io);
+void HandleUserAssign(const http_RequestInfo &request, http_IO *io);
+void HandleUserList(const http_RequestInfo &request, http_IO *io);
 
 }

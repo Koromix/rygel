@@ -542,7 +542,7 @@ Options:
     return 0;
 }
 
-void HandleCreateInstance(const http_RequestInfo &request, http_IO *io)
+void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     if (!session || !session->admin) {
@@ -609,7 +609,7 @@ void HandleCreateInstance(const http_RequestInfo &request, http_IO *io)
     });
 }
 
-void HandleDeleteInstance(const http_RequestInfo &request, http_IO *io)
+void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     if (!session || !session->admin) {
@@ -663,7 +663,7 @@ void HandleDeleteInstance(const http_RequestInfo &request, http_IO *io)
     });
 }
 
-void HandleConfigureInstance(const http_RequestInfo &request, http_IO *io)
+void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     if (!session || !session->admin) {
@@ -767,7 +767,7 @@ void HandleConfigureInstance(const http_RequestInfo &request, http_IO *io)
     });
 }
 
-void HandleListInstances(const http_RequestInfo &request, http_IO *io)
+void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     if (!session || !session->admin) {
@@ -815,7 +815,7 @@ void HandleListInstances(const http_RequestInfo &request, http_IO *io)
     json.Finish(io);
 }
 
-void HandleCreateUser(const http_RequestInfo &request, http_IO *io)
+void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     if (!session || !session->admin) {
@@ -910,7 +910,7 @@ void HandleCreateUser(const http_RequestInfo &request, http_IO *io)
     });
 }
 
-void HandleDeleteUser(const http_RequestInfo &request, http_IO *io)
+void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     if (!session || !session->admin) {
@@ -1009,7 +1009,7 @@ static bool ParsePermissionList(Span<const char> remain, uint32_t *out_permissio
     return true;
 }
 
-void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
+void HandleUserAssign(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     if (!session || !session->admin) {
@@ -1132,7 +1132,7 @@ void HandleAssignUser(const http_RequestInfo &request, http_IO *io)
     });
 }
 
-void HandleListUsers(const http_RequestInfo &request, http_IO *io)
+void HandleUserList(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     if (!session || !session->admin) {

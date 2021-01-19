@@ -193,21 +193,21 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         } else if (TestStr(instance_path, "/api/user/logout") && request.method == http_RequestMethod::Post) {
             HandleUserLogout(nullptr, request, io);
         } else if (TestStr(instance_path, "/api/instances/create") && request.method == http_RequestMethod::Post) {
-            HandleCreateInstance(request, io);
+            HandleInstanceCreate(request, io);
         } else if (TestStr(instance_path, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
-            HandleDeleteInstance(request, io);
+            HandleInstanceDelete(request, io);
         } else if (TestStr(instance_path, "/api/instances/configure") && request.method == http_RequestMethod::Post) {
-            HandleConfigureInstance(request, io);
+            HandleInstanceConfigure(request, io);
         } else if (TestStr(instance_path, "/api/instances/list") && request.method == http_RequestMethod::Get) {
-            HandleListInstances(request, io);
+            HandleInstanceList(request, io);
         } else if (TestStr(instance_path, "/api/users/create") && request.method == http_RequestMethod::Post) {
-            HandleCreateUser(request, io);
+            HandleUserCreate(request, io);
         } else if (TestStr(instance_path, "/api/users/delete") && request.method == http_RequestMethod::Post) {
-            HandleDeleteUser(request, io);
+            HandleUserDelete(request, io);
         } else if (TestStr(instance_path, "/api/users/assign") && request.method == http_RequestMethod::Post) {
-            HandleAssignUser(request, io);
+            HandleUserAssign(request, io);
         } else if (TestStr(instance_path, "/api/users/list") && request.method == http_RequestMethod::Get) {
-            HandleListUsers(request, io);
+            HandleUserList(request, io);
         } else {
             io->AttachError(404);
         }
