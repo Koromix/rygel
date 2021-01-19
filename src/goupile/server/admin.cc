@@ -297,7 +297,7 @@ int RunInit(Span<const char *> arguments)
     // Options
     const char *username = nullptr;
     const char *password = nullptr;
-    bool empty = false;
+    bool demo = false;
     bool change_owner = false;
     uid_t owner_uid = 0;
     gid_t owner_gid = 0;
@@ -310,7 +310,7 @@ Options:
     %!..+-u, --user <name>%!0            Name of default user
         %!..+--password <pwd>%!0         Password of default user
 
-        %!..+--empty%!0                  Don't create default instance)", FelixTarget);
+        %!..+--demo%!0                   Create default instance (demo))", FelixTarget);
 
 #ifndef _WIN32
         PrintLn(fp, R"(
@@ -330,8 +330,8 @@ Options:
                 username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 password = opt.current_value;
-            } else if (opt.Test("--empty")) {
-                empty = true;
+            } else if (opt.Test("--demo")) {
+                demo = true;
 #ifndef _WIN32
             } else if (opt.Test("-o", "--owner", OptionType::Value)) {
                 change_owner = true;
@@ -462,7 +462,7 @@ Options:
     }
 
     // Create default instance
-    if (!empty && !CreateInstance(&domain, "demo", "DEMO", 1))
+    if (demo && !CreateInstance(&domain, "demo", "DEMO", 1))
         return 1;
 
     if (!domain.db.Close())
