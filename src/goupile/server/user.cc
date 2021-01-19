@@ -174,18 +174,22 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
 {
     io->RunAsync([=]() {
         // Read POST values
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
-        }
+        const char *username;
+        const char *password;
+        {
+            HashMap<const char *, const char *> values;
+            if (!io->ReadPostValues(&io->allocator, &values)) {
+                io->AttachError(422);
+                return;
+            }
 
-        const char *username = values.FindValue("username", nullptr);
-        const char *password = values.FindValue("password", nullptr);
-        if (!username || !password) {
-            LogError("Missing parameters");
-            io->AttachError(422);
-            return;
+            username = values.FindValue("username", nullptr);
+            password = values.FindValue("password", nullptr);
+            if (!username || !password) {
+                LogError("Missing 'username' or 'password' parameter");
+                io->AttachError(422);
+                return;
+            }
         }
 
         // We use this to extend/fix the response delay in case of error

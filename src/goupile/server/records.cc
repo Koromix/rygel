@@ -400,19 +400,23 @@ void HandleRecordRecompute(InstanceHolder *instance, const http_RequestInfo &req
 
     io->RunAsync([=]() {
         // Read POST values
-        HashMap<const char *, const char *> values;
-        if (!io->ReadPostValues(&io->allocator, &values)) {
-            io->AttachError(422);
-            return;
-        }
+        const char *table;
+        const char *page;
+        {
+            HashMap<const char *, const char *> values;
+            if (!io->ReadPostValues(&io->allocator, &values)) {
+                io->AttachError(422);
+                return;
+            }
 
-        // XXX: Check that page actually exists
-        const char *table = values.FindValue("table", nullptr);
-        const char *page = values.FindValue("page", nullptr);
-        if (!table || !page) {
-            LogError("Missing parameters");
-            io->AttachError(422);
-            return;
+            // XXX: Check that page actually exists
+            table = values.FindValue("table", nullptr);
+            page = values.FindValue("page", nullptr);
+            if (!table || !page) {
+                LogError("Missing 'table' or 'page' parameter");
+                io->AttachError(422);
+                return;
+            }
         }
 
         // Find appropriate port

@@ -329,7 +329,7 @@ void HandleLogin(const http_RequestInfo &request, const User *, http_IO *io)
             username = values.FindValue("username", nullptr);
             password = values.FindValue("password", nullptr);
             if (!username || !password) {
-                LogError("Missing parameters");
+                LogError("Missing 'username' or 'password' parameter");
                 io->AttachError(422);
                 return;
             }

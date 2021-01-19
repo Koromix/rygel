@@ -558,35 +558,36 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        // Read POST values
         HashMap<const char *, const char *> values;
         if (!io->ReadPostValues(&io->allocator, &values)) {
             io->AttachError(422);
             return;
         }
 
-        // Parse strings
-        const char *instance_key = values.FindValue("key", nullptr);
-        const char *title = values.FindValue("title", instance_key);
-        if (!instance_key) {
-            LogError("Missing 'instance' parameter");
-            io->AttachError(422);
-            return;
-        }
-        if (!CheckInstanceKey(instance_key)) {
-            io->AttachError(422);
-            return;
-        }
-        if (!title[0]) {
-            LogError("Application title cannot be empty");
-            io->AttachError(422);
-            return;
-        }
+        // Read POST values
+        const char *instance_key;
+        const char *title;
+        bool demo;
+        {
+            bool valid = true;
 
-        // Create demo pages?
-        bool demo = true;
-        if (const char *str = values.FindValue("demo", nullptr); str) {
-            if (!ParseBool(str, &demo)) {
+            instance_key = values.FindValue("key", nullptr);
+            if (!instance_key) {
+                LogError("Missing 'key' parameter");
+                valid = false;
+            } else if (!CheckInstanceKey(instance_key)) {
+                valid = false;
+            }
+
+            title = values.FindValue("title", instance_key);
+            if (title && !title[0]) {
+                LogError("Application title cannot be empty");
+                valid = false;
+            }
+
+            valid &= ParseBool(values.FindValue("demo", "1"), &demo);
+
+            if (!valid) {
                 io->AttachError(422);
                 return;
             }
@@ -629,16 +630,16 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        // Read POST values
         HashMap<const char *, const char *> values;
         if (!io->ReadPostValues(&io->allocator, &values)) {
             io->AttachError(422);
             return;
         }
 
+        // Read POST values
         const char *instance_key = values.FindValue("key", nullptr);
         if (!instance_key) {
-            LogError("Missing parameters");
+            LogError("Missing 'key' parameter");
             io->AttachError(422);
             return;
         }
@@ -683,7 +684,6 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        // Read POST values
         HashMap<const char *, const char *> values;
         if (!io->ReadPostValues(&io->allocator, &values)) {
             io->AttachError(422);
@@ -705,9 +705,8 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
         }
         RG_DEFER_N(ref_guard) { instance->Unref(); };
 
-        decltype(InstanceHolder::config) config = instance->config;
-
         // Parse new configuration values
+        decltype(InstanceHolder::config) config = instance->config;
         {
             bool valid = true;
 
@@ -719,12 +718,14 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
                     valid = false;
                 }
             }
+
             if (const char *str = values.FindValue("use_offline", nullptr); str) {
                 char buf[32];
                 ConvertFromJsonName(str, buf);
 
                 valid &= ParseBool(buf, &config.use_offline);
             }
+
             if (const char *str = values.FindValue("sync_mode", nullptr); str) {
                 char buf[32];
                 ConvertFromJsonName(str, buf);
@@ -734,6 +735,7 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
                     valid = false;
                 }
             }
+
             config.backup_key = values.FindValue("backup_key", config.backup_key);
             if (config.backup_key && !config.backup_key[0])
                 config.backup_key = nullptr;
@@ -835,36 +837,36 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        // Read POST values
         HashMap<const char *, const char *> values;
         if (!io->ReadPostValues(&io->allocator, &values)) {
             io->AttachError(422);
             return;
         }
 
-        // Username and password
-        const char *username = values.FindValue("username", nullptr);
-        const char *password = values.FindValue("password", nullptr);
-        if (!username || !password) {
-            LogError("Missing parameters");
-            io->AttachError(422);
-            return;
-        }
-        if (!CheckUserName(username)) {
-            io->AttachError(422);
-            return;
-        }
-        if (!password[0]) {
-            LogError("Empty password is not allowed");
-            io->AttachError(422);
-            return;
-        }
-
-        // Create admin user?
-        bool admin = false;
+        // Read POST values
+        const char *username;
+        const char *password;
+        bool admin;
         {
-            const char *str = values.FindValue("admin", nullptr);
-            if (str && !ParseBool(str, &admin)) {
+            bool valid = true;
+
+            username = values.FindValue("username", nullptr);
+            password = values.FindValue("password", nullptr);
+            if (!username || !password) {
+                LogError("Missing 'username' or 'password' parameter");
+                valid = false;
+            }
+            if (username && !CheckUserName(username)) {
+                valid = false;
+            }
+            if (password && !password[0]) {
+                LogError("Empty password is not allowed");
+                valid = false;
+            }
+
+            valid &= ParseBool(values.FindValue("admin", "0"), &admin);
+
+            if (!valid) {
                 io->AttachError(422);
                 return;
             }
@@ -930,22 +932,26 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        // Read POST values
         HashMap<const char *, const char *> values;
         if (!io->ReadPostValues(&io->allocator, &values)) {
             io->AttachError(422);
             return;
         }
 
-        // User ID
+        // Read POST values
         int64_t userid;
         {
-            const char *str = values.FindValue("userid", nullptr);
-            if (!str) {
+            bool valid = true;
+
+            // User ID
+            if (const char *str = values.FindValue("userid", nullptr); str) {
+                valid &= ParseInt(str, &userid);
+            } else {
                 LogError("Missing 'userid' parameter");
-                io->AttachError(422);
-                return;
-            } else if (!ParseInt(str, &userid)) {
+                valid = false;
+            }
+
+            if (!valid) {
                 io->AttachError(422);
                 return;
             }
@@ -1029,50 +1035,46 @@ void HandleUserAssign(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        // Read POST values
         HashMap<const char *, const char *> values;
         if (!io->ReadPostValues(&io->allocator, &values)) {
             io->AttachError(422);
             return;
         }
 
-        // User ID
+        // Read POST values
         int64_t userid;
+        const char *instance;
+        const char *zone;
+        uint32_t permissions;
         {
-            const char *str = values.FindValue("userid", nullptr);
-            if (!str) {
+            bool valid = true;
+
+            if (const char *str = values.FindValue("userid", nullptr); str) {
+                valid &= ParseInt(str, &userid);
+            } else {
                 LogError("Missing 'userid' parameter");
-                io->AttachError(422);
-                return;
-            } else if (!ParseInt(str, &userid)) {
-                io->AttachError(422);
-                return;
+                valid = false;
             }
-        }
 
-        // Instance and zone
-        const char *instance = values.FindValue("instance", nullptr);
-        const char *zone = values.FindValue("zone", nullptr);
-        if (!instance) {
-            LogError("Missing 'instance' parameter");
-            io->AttachError(422);
-            return;
-        }
-        if (zone && !zone[0]) {
-            LogError("Empty zone value is not allowed");
-            io->AttachError(422);
-            return;
-        }
+            instance = values.FindValue("instance", nullptr);
+            zone = values.FindValue("zone", nullptr);
+            if (!instance) {
+                LogError("Missing 'instance' parameter");
+                valid = false;
+            }
+            if (zone && !zone[0]) {
+                LogError("Empty zone value is not allowed");
+                valid = false;
+            }
 
-        // Parse permissions
-        uint32_t permissions = 0;
-        {
-            const char *str = values.FindValue("permissions", nullptr);
-            if (!str) {
+            if (const char *str = values.FindValue("permissions", nullptr); str) {
+                valid &= ParsePermissionList(str, &permissions);
+            } else {
                 LogError("Missing 'permissions' parameter");
-                io->AttachError(422);
-                return;
-            } else if (!ParsePermissionList(str, &permissions)) {
+                valid = false;
+            }
+
+            if (!valid) {
                 io->AttachError(422);
                 return;
             }
