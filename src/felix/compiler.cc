@@ -59,8 +59,16 @@ bool Compiler::Test() const
 
 class ClangCompiler final: public Compiler {
 public:
+#if defined(_WIN32)
     ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::AES |
                                                               (int)CompileFeature::ASan) {}
+#elif defined( __linux__)
+    ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::AES |
+                                                              (int)CompileFeature::ASan |
+                                                              (int)CompileFeature::TSan) {}
+#else
+    ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::AES) {}
+#endif
 
 #ifdef _WIN32
     const char *GetObjectExtension() const override { return ".obj"; }
@@ -153,6 +161,9 @@ public:
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
         }
+        if (features & (int)CompileFeature::TSan) {
+            Fmt(&buf, " -fsanitize=thread");
+        }
 
         // Sources and definitions
         Fmt(&buf, " -DFELIX -c \"%1\"", src_filename);
@@ -238,6 +249,9 @@ public:
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
         }
+        if (features & (int)CompileFeature::TSan) {
+            Fmt(&buf, " -fsanitize=thread");
+        }
 
         if (env_flags) {
             AddEnvironmentFlags("LDFLAGS", &buf);
@@ -253,15 +267,18 @@ public:
 
 class GnuCompiler final: public Compiler {
 public:
-#ifdef _WIN32
+#if defined( __linux__)
+    GnuCompiler(const char *name) : Compiler(name, "gcc", (int)CompileFeature::AES |
+                                                          (int)CompileFeature::ASan |
+                                                          (int)CompileFeature::TSan) {}
+#else
     GnuCompiler(const char *name) : Compiler(name, "gcc", (int)CompileFeature::AES) {}
+#endif
 
+#ifdef _WIN32
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetExecutableExtension() const override { return ".exe"; }
 #else
-    GnuCompiler(const char *name) : Compiler(name, "gcc", (int)CompileFeature::AES |
-                                                          (int)CompileFeature::ASan) {}
-
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetExecutableExtension() const override { return ""; }
 #endif
@@ -354,6 +371,9 @@ public:
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
         }
+        if (features & (int)CompileFeature::TSan) {
+            Fmt(&buf, " -fsanitize=thread");
+        }
 
         // Sources and definitions
         Fmt(&buf, " -DFELIX -c \"%1\"", src_filename);
@@ -441,6 +461,9 @@ public:
         // Features
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
+        }
+        if (features & (int)CompileFeature::TSan) {
+            Fmt(&buf, " -fsanitize=thread");
         }
 
         if (env_flags) {
