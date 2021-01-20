@@ -20,6 +20,7 @@ struct BuildSettings {
     CompileMode compile_mode = CompileMode::Debug;
     const char *version_str = "(unknown version)";
     bool rebuild = false;
+    uint32_t features = 0;
     bool env = false;
     bool fake = false;
 };

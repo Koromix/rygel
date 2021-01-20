@@ -149,7 +149,7 @@ bool Builder::AddTarget(const TargetInfo &target)
 
             Command cmd = {};
             build.compiler->MakeLinkCommand(obj_filename, CompileMode::Debug, {},
-                                            LinkType::SharedLibrary, build.env,
+                                            LinkType::SharedLibrary, 0, build.env,
                                             module_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Link %1",
@@ -203,10 +203,11 @@ bool Builder::AddTarget(const TargetInfo &target)
     if (target.type == TargetType::Executable) {
         const char *target_filename = Fmt(&str_alloc, "%1%/%2%3", build.output_directory,
                                           target.name, build.compiler->GetExecutableExtension()).ptr;
+        uint32_t features = build.features | target.features;
 
         Command cmd = {};
         build.compiler->MakeLinkCommand(obj_filenames, build.compile_mode, target.libraries,
-                                        LinkType::Executable, build.env, target_filename,
+                                        LinkType::Executable, features, build.env, target_filename,
                                         &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, "Link %1", SplitStrReverseAny(target_filename, RG_PATH_SEPARATORS)).ptr;
@@ -242,11 +243,12 @@ const char *Builder::AddSource(const SourceFileInfo &src)
             if (!pch_filename) {
                 pch_filename = BuildObjectPath(pch->filename, build.output_directory, pch_ext, &str_alloc);
                 bool warnings = (pch->target->type != TargetType::ExternalLibrary);
+                uint32_t features = build.features | pch->target->features;
 
                 Command cmd = {};
                 build.compiler->MakePchCommand(pch_filename, pch->type, build.compile_mode, warnings,
                                                pch->target->definitions, pch->target->include_directories,
-                                               build.env, &str_alloc, &cmd);
+                                               features, build.env, &str_alloc, &cmd);
 
                 const char *text = Fmt(&str_alloc, "Precompile %1", pch->filename).ptr;
                 if (AppendNode(text, pch_filename, cmd, pch->filename)) {
@@ -264,11 +266,12 @@ const char *Builder::AddSource(const SourceFileInfo &src)
         obj_filename = BuildObjectPath(src.filename, build.output_directory,
                                        build.compiler->GetObjectExtension(), &str_alloc);
         bool warnings = (src.target->type != TargetType::ExternalLibrary);
+        uint32_t features = build.features | src.target->features;
 
         Command cmd = {};
         build.compiler->MakeObjectCommand(src.filename, src.type, build.compile_mode, warnings,
                                           pch_filename, src.target->definitions, src.target->include_directories,
-                                          src.target->features, build.env, obj_filename, &str_alloc, &cmd);
+                                          features, build.env, obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, "Build %1", src.filename).ptr;
         if (pch_filename ? AppendNode(text, obj_filename, cmd, {src.filename, pch_filename})

@@ -133,6 +133,7 @@ Options:
                                  %!D..(default: %2)%!0
     %!..+-m, --mode <mode>%!0            Set build mode, see below
                                  %!D..(default: %3)%!0
+    %!..+-f, --features <features>%!0    Compiler features (see below)
     %!..+-e, --environment%!0            Use compiler flags found in environment (CFLAGS, LDFLAGS, etc.)
         %!..+--no_pch%!0                 Disable header precompilation (PCH)
 
@@ -158,7 +159,9 @@ Supported compilers:)", FelixTarget, build.compiler ? build.compiler->name : "?"
         }
 
         PrintLn(fp, R"(
-Supported compilation modes: %!..+%1%!0)", FmtSpan(CompileModeNames));
+Supported compilation modes: %!..+%1%!0
+Supported compiler features: %!..+%2%!0)", FmtSpan(CompileModeNames),
+                                           FmtSpan(CompileFeatureNames));
 
         PrintLn(fp, R"(
 Felix can also run the following special commands:
@@ -199,6 +202,22 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 if (!OptionToEnum(CompileModeNames, opt.current_value, &build.compile_mode)) {
                     LogError("Unknown build mode '%1'", opt.current_value);
                     return 1;
+                }
+            } else if (opt.Test("-f", "--features", OptionType::Value)) {
+                const char *features_str = opt.current_value;
+
+                while (features_str[0]) {
+                    Span<const char> part = TrimStr(SplitStr(features_str, ',', &features_str), " ");
+
+                    if (part.len) {
+                        CompileFeature feature;
+                        if (!OptionToEnum(CompileFeatureNames, part, &feature)) {
+                            LogError("Unknown target feature '%1'", part);
+                            return 1;
+                        }
+
+                        build.features |= 1u << (int)feature;
+                    }
                 }
             } else if (opt.Test("-e", "--environment")) {
                 build.env = true;
@@ -252,6 +271,22 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         return 1;
     } else if (!build.compiler->Test()) {
         LogError("Cannot find %1 compiler in PATH [%2]", build.compiler->name, build.compiler->binary);
+        return 1;
+    }
+
+    // Check compiler features
+    if (build.features & ~build.compiler->supported_features) {
+        uint32_t missing = build.features & ~build.compiler->supported_features;
+
+        LocalArray<const char *, RG_LEN(CompileFeatureNames)> list;
+        for (int i = 0; i < RG_LEN(CompileFeatureNames); i++) {
+            if (missing & (1u << i)) {
+                list.Append(CompileFeatureNames[i]);
+            }
+        }
+
+        LogError("Some features are not supported by %1: %2",
+                 build.compiler->name, FmtSpan((Span<const char *>)list));
         return 1;
     }
 

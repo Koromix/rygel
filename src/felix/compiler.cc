@@ -59,7 +59,8 @@ bool Compiler::Test() const
 
 class ClangCompiler final: public Compiler {
 public:
-    ClangCompiler(const char *name) : Compiler(name, "clang") {}
+    ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::AES |
+                                                              (int)CompileFeature::ASan) {}
 
 #ifdef _WIN32
     const char *GetObjectExtension() const override { return ".obj"; }
@@ -80,12 +81,12 @@ public:
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                         bool warnings, Span<const char *const> definitions,
-                        Span<const char *const> include_directories, bool env_flags,
+                        Span<const char *const> include_directories, uint32_t features, bool env_flags,
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr, definitions,
-                          include_directories, 0, env_flags, nullptr, alloc, out_cmd);
+                          include_directories, features, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
@@ -149,6 +150,9 @@ public:
         if (features & (int)CompileFeature::AES) {
             Fmt(&buf, " -maes");
         }
+        if (features & (int)CompileFeature::ASan) {
+            Fmt(&buf, " -fsanitize=address");
+        }
 
         // Sources and definitions
         Fmt(&buf, " -DFELIX -c \"%1\"", src_filename);
@@ -182,7 +186,7 @@ public:
 
     void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
                          Span<const char *const> libraries, LinkType link_type,
-                         bool env_flags, const char *dest_filename,
+                         uint32_t features, bool env_flags, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
@@ -230,6 +234,11 @@ public:
     #endif
 #endif
 
+        // Features
+        if (features & (int)CompileFeature::ASan) {
+            Fmt(&buf, " -fsanitize=address");
+        }
+
         if (env_flags) {
             AddEnvironmentFlags("LDFLAGS", &buf);
         }
@@ -244,12 +253,15 @@ public:
 
 class GnuCompiler final: public Compiler {
 public:
-    GnuCompiler(const char *name) : Compiler(name, "gcc") {}
-
 #ifdef _WIN32
+    GnuCompiler(const char *name) : Compiler(name, "gcc", (int)CompileFeature::AES) {}
+
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetExecutableExtension() const override { return ".exe"; }
 #else
+    GnuCompiler(const char *name) : Compiler(name, "gcc", (int)CompileFeature::AES |
+                                                          (int)CompileFeature::ASan) {}
+
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetExecutableExtension() const override { return ""; }
 #endif
@@ -265,12 +277,12 @@ public:
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                         bool warnings, Span<const char *const> definitions,
-                        Span<const char *const> include_directories, bool env_flags,
+                        Span<const char *const> include_directories, uint32_t features, bool env_flags,
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr,
-                          definitions, include_directories, 0, env_flags, nullptr, alloc, out_cmd);
+                          definitions, include_directories, features, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
@@ -339,6 +351,9 @@ public:
         if (features & (int)CompileFeature::AES) {
             Fmt(&buf, " -maes");
         }
+        if (features & (int)CompileFeature::ASan) {
+            Fmt(&buf, " -fsanitize=address");
+        }
 
         // Sources and definitions
         Fmt(&buf, " -DFELIX -c \"%1\"", src_filename);
@@ -372,7 +387,7 @@ public:
 
     void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
                          Span<const char *const> libraries, LinkType link_type,
-                         bool env_flags, const char *dest_filename,
+                         uint32_t features, bool env_flags, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
@@ -423,6 +438,11 @@ public:
     #endif
 #endif
 
+        // Features
+        if (features & (int)CompileFeature::ASan) {
+            Fmt(&buf, " -fsanitize=address");
+        }
+
         if (env_flags) {
             AddEnvironmentFlags("LDFLAGS", &buf);
         }
@@ -438,7 +458,7 @@ public:
 #ifdef _WIN32
 class MsCompiler final: public Compiler {
 public:
-    MsCompiler(const char *name) : Compiler(name, "cl") {}
+    MsCompiler(const char *name) : Compiler(name, "cl", (int)CompileFeature::AES) {}
 
     const char *GetObjectExtension() const override { return ".obj"; }
     const char *GetExecutableExtension() const override { return ".exe"; }
@@ -456,12 +476,12 @@ public:
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                         bool warnings, Span<const char *const> definitions,
-                        Span<const char *const> include_directories, bool env_flags,
+                        Span<const char *const> include_directories, uint32_t features, bool env_flags,
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr, definitions,
-                          include_directories, 0, env_flags, nullptr, alloc, out_cmd);
+                          include_directories, features, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchObject(const char *pch_filename, Allocator *alloc) const override
@@ -537,7 +557,7 @@ public:
 
     void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
                          Span<const char *const> libraries, LinkType link_type,
-                         bool env_flags, const char *dest_filename,
+                         uint32_t features, bool env_flags, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
@@ -581,7 +601,7 @@ public:
 
 class EmsdkCompiler final: public Compiler {
 public:
-    EmsdkCompiler(const char *name) : Compiler(name, "emcc") {}
+    EmsdkCompiler(const char *name) : Compiler(name, "emcc", (int)CompileFeature::AES) {}
 
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetExecutableExtension() const override { return ".js"; }
@@ -597,12 +617,12 @@ public:
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                         bool warnings, Span<const char *const> definitions,
-                        Span<const char *const> include_directories, bool env_flags,
+                        Span<const char *const> include_directories, uint32_t features, bool env_flags,
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr,
-                          definitions, include_directories, 0, env_flags, nullptr, alloc, out_cmd);
+                          definitions, include_directories, features, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
@@ -681,7 +701,7 @@ public:
 
     void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
                          Span<const char *const> libraries, LinkType link_type,
-                         bool env_flags, const char *dest_filename,
+                         uint32_t features, bool env_flags, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);

@@ -22,10 +22,12 @@ static const char *const CompileModeNames[] = {
 };
 
 enum class CompileFeature {
-    AES = 1 << 0
+    AES = 1 << 0,
+    ASan = 1 << 1
 };
 static const char *const CompileFeatureNames[] = {
-    "AES"
+    "AES",
+    "ASan"
 };
 
 enum class SourceType {
@@ -63,9 +65,10 @@ class Compiler {
 public:
     const char *name;
     const char *binary;
+    uint32_t supported_features;
 
-    Compiler(const char *name, const char *binary)
-        : name(name), binary(binary) {}
+    Compiler(const char *name, const char *binary, uint32_t supported_features)
+        : name(name), binary(binary), supported_features(supported_features) {}
 
     bool Test() const;
 
@@ -78,7 +81,7 @@ public:
 
     virtual void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
                                 bool warnings, Span<const char *const> definitions,
-                                Span<const char *const> include_directories, bool env_flags,
+                                Span<const char *const> include_directories, uint32_t features, bool env_flags,
                                 Allocator *alloc, Command *out_cmd) const = 0;
     virtual const char *GetPchObject(const char *pch_filename, Allocator *alloc) const = 0;
 
@@ -89,7 +92,7 @@ public:
 
     virtual void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
                                  Span<const char *const> libraries, LinkType link_type,
-                                 bool env_flags, const char *dest_filename,
+                                 uint32_t features, bool env_flags, const char *dest_filename,
                                  Allocator *alloc, Command *out_cmd) const = 0;
 };
 
