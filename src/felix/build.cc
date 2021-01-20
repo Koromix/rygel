@@ -130,11 +130,11 @@ bool Builder::AddTarget(const TargetInfo &target)
             Command cmd = {};
             if (module) {
                 build.compiler->MakeObjectCommand(src_filename, SourceType::C, CompileMode::Debug,
-                                                  false, nullptr, {"EXPORT"}, {}, build.env,
+                                                  false, nullptr, {"EXPORT"}, {}, 0, build.env,
                                                   obj_filename, &str_alloc, &cmd);
             } else {
                 build.compiler->MakeObjectCommand(src_filename, SourceType::C, CompileMode::Debug,
-                                                  false, nullptr, {}, {}, build.env,
+                                                  false, nullptr, {}, {}, 0, build.env,
                                                   obj_filename,  &str_alloc, &cmd);
             }
 
@@ -190,7 +190,7 @@ bool Builder::AddTarget(const TargetInfo &target)
 
         Command cmd = {};
         build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
-                                          false, nullptr, {}, {}, build.env,
+                                          false, nullptr, {}, {}, 0, build.env,
                                           obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, "Build %1 version file", target.name).ptr;
@@ -268,7 +268,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
         Command cmd = {};
         build.compiler->MakeObjectCommand(src.filename, src.type, build.compile_mode, warnings,
                                           pch_filename, src.target->definitions, src.target->include_directories,
-                                          build.env, obj_filename, &str_alloc, &cmd);
+                                          src.target->features, build.env, obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, "Build %1", src.filename).ptr;
         if (pch_filename ? AppendNode(text, obj_filename, cmd, {src.filename, pch_filename})

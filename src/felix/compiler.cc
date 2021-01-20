@@ -85,14 +85,14 @@ public:
     {
         RG_ASSERT(alloc);
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr, definitions,
-                          include_directories, env_flags, nullptr, alloc, out_cmd);
+                          include_directories, 0, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, bool env_flags,
+                           Span<const char *const> include_directories, uint32_t features, bool env_flags,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
@@ -144,6 +144,11 @@ public:
             Fmt(&buf, " -D_FORTIFY_SOURCE=2");
         }
 #endif
+
+        // Features
+        if (features & (int)CompileFeature::AES) {
+            Fmt(&buf, " -maes");
+        }
 
         // Sources and definitions
         Fmt(&buf, " -DFELIX -c \"%1\"", src_filename);
@@ -265,14 +270,14 @@ public:
     {
         RG_ASSERT(alloc);
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr,
-                          definitions, include_directories, env_flags, nullptr, alloc, out_cmd);
+                          definitions, include_directories, 0, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, bool env_flags,
+                           Span<const char *const> include_directories, uint32_t features, bool env_flags,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
@@ -329,6 +334,11 @@ public:
         Fmt(&buf, " -Wno-psabi");
     #endif
 #endif
+
+        // Features
+        if (features & (int)CompileFeature::AES) {
+            Fmt(&buf, " -maes");
+        }
 
         // Sources and definitions
         Fmt(&buf, " -DFELIX -c \"%1\"", src_filename);
@@ -451,7 +461,7 @@ public:
     {
         RG_ASSERT(alloc);
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr, definitions,
-                          include_directories, env_flags, nullptr, alloc, out_cmd);
+                          include_directories, 0, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchObject(const char *pch_filename, Allocator *alloc) const override
@@ -464,7 +474,7 @@ public:
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, bool env_flags,
+                           Span<const char *const> include_directories, uint32_t features, bool env_flags,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
@@ -592,14 +602,14 @@ public:
     {
         RG_ASSERT(alloc);
         MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr,
-                          definitions, include_directories, env_flags, nullptr, alloc, out_cmd);
+                          definitions, include_directories, 0, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, bool env_flags,
+                           Span<const char *const> include_directories, uint32_t features, bool env_flags,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);

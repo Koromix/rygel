@@ -40,6 +40,7 @@ struct TargetInfo {
     HeapArray<const char *> export_definitions;
     HeapArray<const char *> include_directories;
     HeapArray<const char *> libraries;
+    uint32_t features;
 
     const SourceFileInfo *c_pch_src;
     const SourceFileInfo *cxx_pch_src;

@@ -21,6 +21,13 @@ static const char *const CompileModeNames[] = {
     "LTO"
 };
 
+enum class CompileFeature {
+    AES = 1 << 0
+};
+static const char *const CompileFeatureNames[] = {
+    "AES"
+};
+
 enum class SourceType {
     C,
     CXX
@@ -77,7 +84,7 @@ public:
 
     virtual void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
                                    bool warnings, const char *pch_filename, Span<const char *const> definitions,
-                                   Span<const char *const> include_directories, bool env_flags,
+                                   Span<const char *const> include_directories, uint32_t features, bool env_flags,
                                    const char *dest_filename, Allocator *alloc, Command *out_cmd) const = 0;
 
     virtual void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,

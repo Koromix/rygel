@@ -30,6 +30,7 @@ struct TargetConfig {
     HeapArray<const char *> export_definitions;
     HeapArray<const char *> include_directories;
     HeapArray<const char *> libraries;
+    uint32_t features;
 
     FileSet pack_file_set;
     const char *pack_options;
@@ -271,6 +272,20 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         AppendListValues(prop.value, &set.str_alloc, &target_config.definitions);
                     } else if (prop.key == "ExportDefinitions") {
                         AppendListValues(prop.value, &set.str_alloc, &target_config.export_definitions);
+                    } else if (prop.key == "Features") {
+                        while (prop.value.len) {
+                            Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
+
+                            if (part.len) {
+                                CompileFeature feature;
+                                if (OptionToEnum(CompileFeatureNames, part, &feature)) {
+                                    target_config.features |= 1u << (int)feature;
+                                } else {
+                                    LogError("Unknown target feature '%1'", part);
+                                    valid = false;
+                                }
+                            }
+                        }
                     } else if (prop.key == "Link") {
                         AppendListValues(prop.value, &set.str_alloc, &target_config.libraries);
                     } else if (prop.key == "AssetDirectory") {
@@ -359,6 +374,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     std::swap(target->export_definitions, target_config->export_definitions);
     std::swap(target->include_directories, target_config->include_directories);
     std::swap(target->libraries, target_config->libraries);
+    target->features = target_config->features;
     target->pack_options = target_config->pack_options;
 
     // Resolve imported targets
