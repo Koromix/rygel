@@ -120,11 +120,15 @@ html:not(.small) .fm_columns > div + div { padding-left: 12px; }
     font-style: italic;
 }
 .fm_help {
+    display: flex;
     font-size: 0.9em;
     font-style: italic;
     margin-top: 0.4em;
 }
-.fm_help::before { content: '☞\FE0E  '; }
+.fm_help::before {
+    content: '☞\FE0E';
+    padding-right: 5px;
+}
 .fm_prefix, .fm_suffix {
     padding-top: 5px;
     font-size: 0.85em;
