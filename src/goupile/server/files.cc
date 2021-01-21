@@ -382,8 +382,8 @@ void HandleFileBackup(InstanceHolder *instance, const http_RequestInfo &request,
     }
 
     int64_t time = GetUnixTime() / 10000 * 10000;
-    const char *filename = Fmt(&io->allocator, "%1%/offline_%2@%3.gz",
-                               gp_domain.config.backup_directory, session->username, time).ptr;
+    const char *filename = Fmt(&io->allocator, "%1%/%2_offline_%3@%4.gz",
+                               gp_domain.config.backup_directory, instance->key, session->username, time).ptr;
 
     if (TestFile(filename)) {
         LogError("A recent backup already exists for this user");
