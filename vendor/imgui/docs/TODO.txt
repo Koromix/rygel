@@ -6,7 +6,7 @@ The list below consist mostly of ideas noted down before they are requested/disc
 It's mostly a bunch of personal notes, probably incomplete. Feel free to query if you have any questions.
 
  - doc/test: add a proper documentation+regression testing system (#435)
- - doc/test: checklist app to verify binding/integration of imgui (test inputs, rendering, callback, etc.).
+ - doc/test: checklist app to verify backends/integration of imgui (test inputs, rendering, callback, etc.).
  - doc/tips: tips of the day: website? applet in imgui_club?
  - doc/wiki: work on the wiki https://github.com/ocornut/imgui/wiki
 
@@ -129,18 +129,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - group: IsHovered() after EndGroup() covers whole aabb rather than the intersection of individual items. Is that desirable?
  - group: merge deactivation/activation within same group (fwd WasEdited flag). (#2550)
 
- - columns: sizing policy (e.g. for each column: fixed size, %, fill, distribute default size among fills) (#513, #125)
- - columns: add a conditional parameter to SetColumnOffset() (#513, #125)
- - columns: headers. re-orderable. (#513, #125)
- - columns: optional sorting modifiers (up/down), sort list so sorting can be done multi-criteria. notify user when sort order changed.
- - columns: option to alternate background colors on odd/even scanlines.
- - columns: allow columns to recurse.
- - columns: allow a same columns set to be interrupted by e.g. CollapsingHeader and resume with columns in sync when moving them.
- - columns: sizing is lossy when columns width is very small (default width may turn negative etc.)
- - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (#125)
- - columns: flag to add horizontal separator above/below)
- - columns/layout: setup minimum line height (equivalent of automatically calling AlignFirstTextHeightToWidgets)
-
 !- color: the color conversion helpers/types are a mess and needs sorting out.
  - color: (api breaking) ImGui::ColorConvertXXX functions should be loose ImColorConvertXX to match imgui_internals.h
 
@@ -167,7 +155,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - dock: dock out from a collapsing header? would work nicely but need emitting window to keep submitting the code.
 
  - tabs: "there is currently a problem because TabItem() will try to submit their own tooltip after 0.50 second, and this will have the effect of making your tooltip flicker once." -> tooltip priority work
- - tabs: close button tends to overlap unsaved-document star 
+ - tabs: close button tends to overlap unsaved-document star
  - tabs: consider showing the star at the same spot as the close button, like VS Code does.
  - tabs: make EndTabBar fail if users doesn't respect BeginTabBar return value, for consistency/future-proofing.
  - tabs: persistent order/focus in BeginTabBar() api (#261, #351)
@@ -271,6 +259,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - filters: fuzzy matches (may use code at blog.forrestthewoods.com/4cffeed33fdb)
 
  - drag and drop: fix/support/options for overlapping drag sources.
+ - drag and drop: focus drag target window on hold (even without open)
  - drag and drop: releasing a drop shows the "..." tooltip for one frame - since e13e598 (#1725)
  - drag and drop: drag source on a group object (would need e.g. an invisible button covering group in EndGroup) https://twitter.com/paniq/status/1121446364909535233
  - drag and drop: have some way to know when a drag begin from BeginDragDropSource() pov. (see 2018/01/11 post in #143)
@@ -370,7 +359,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - inputs/io: clarify/standardize/expose repeat rate and repeat delays (#1808)
  - inputs/scrolling: support for smooth scrolling (#2462, #2569)
 
- - misc: idle: expose "woken up" boolean (set by inputs) and/or animation time (for cursor blink) for back-end to be able stop refreshing easily.
+ - misc: idle: expose "woken up" boolean (set by inputs) and/or animation time (for cursor blink) for backend to be able stop refreshing easily.
  - misc: idle: if cursor blink if the _only_ visible animation, core imgui could rewrite vertex alpha to avoid CPU pass on ImGui:: calls.
  - misc: idle: if cursor blink if the _only_ visible animation, could even expose a dirty rectangle that optionally can be leverage by some app to render in a smaller viewport, getting rid of much pixel shading cost.
  - misc: no way to run a root-most GetID() with ImGui:: api since there's always a Debug window in the stack. (mentioned in #2960)
