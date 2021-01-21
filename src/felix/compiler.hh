@@ -23,11 +23,13 @@ static const char *const CompileModeNames[] = {
 
 enum class CompileFeature {
     AES = 1 << 0,
-    ASan = 1 << 1,
-    TSan = 1 << 2
+    SSE41 = 1 << 1,
+    ASan = 1 << 2,
+    TSan = 1 << 3
 };
 static const char *const CompileFeatureNames[] = {
     "AES",
+    "SSE41",
     "ASan",
     "TSan"
 };

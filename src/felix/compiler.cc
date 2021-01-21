@@ -61,13 +61,16 @@ class ClangCompiler final: public Compiler {
 public:
 #if defined(_WIN32)
     ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::AES |
+                                                              (int)CompileFeature::SSE41 |
                                                               (int)CompileFeature::ASan) {}
 #elif defined( __linux__)
     ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::AES |
+                                                              (int)CompileFeature::SSE41 |
                                                               (int)CompileFeature::ASan |
                                                               (int)CompileFeature::TSan) {}
 #else
-    ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::AES) {}
+    ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::AES |
+                                                              (int)CompileFeature::SSE41) {}
 #endif
 
 #ifdef _WIN32
@@ -157,6 +160,9 @@ public:
         // Features
         if (features & (int)CompileFeature::AES) {
             Fmt(&buf, " -maes");
+        }
+        if (features & (int)CompileFeature::SSE41) {
+            Fmt(&buf, " -msse4.1");
         }
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
@@ -269,10 +275,12 @@ class GnuCompiler final: public Compiler {
 public:
 #if defined( __linux__)
     GnuCompiler(const char *name) : Compiler(name, "gcc", (int)CompileFeature::AES |
+                                                          (int)CompileFeature::SSE41 |
                                                           (int)CompileFeature::ASan |
                                                           (int)CompileFeature::TSan) {}
 #else
-    GnuCompiler(const char *name) : Compiler(name, "gcc", (int)CompileFeature::AES) {}
+    GnuCompiler(const char *name) : Compiler(name, "gcc", (int)CompileFeature::AES |
+                                                          (int)CompileFeature::SSE41) {}
 #endif
 
 #ifdef _WIN32
@@ -367,6 +375,9 @@ public:
         // Features
         if (features & (int)CompileFeature::AES) {
             Fmt(&buf, " -maes");
+        }
+        if (features & (int)CompileFeature::SSE41) {
+            Fmt(&buf, " -msse4.1");
         }
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
@@ -481,7 +492,8 @@ public:
 #ifdef _WIN32
 class MsCompiler final: public Compiler {
 public:
-    MsCompiler(const char *name) : Compiler(name, "cl", (int)CompileFeature::AES) {}
+    MsCompiler(const char *name) : Compiler(name, "cl", (int)CompileFeature::AES |
+                                                        (int)CompileFeature::SSE41) {}
 
     const char *GetObjectExtension() const override { return ".obj"; }
     const char *GetExecutableExtension() const override { return ".exe"; }
@@ -624,7 +636,7 @@ public:
 
 class EmsdkCompiler final: public Compiler {
 public:
-    EmsdkCompiler(const char *name) : Compiler(name, "emcc", (int)CompileFeature::AES) {}
+    EmsdkCompiler(const char *name) : Compiler(name, "emcc", 0) {}
 
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetExecutableExtension() const override { return ".js"; }
