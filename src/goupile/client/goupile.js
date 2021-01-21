@@ -193,12 +193,16 @@ const goupile = new function() {
 
                         await db.saveWithKey('usr_profiles', username, {
                             salt: bytesToBase64(salt),
+                            errors: 0,
                             profile: enc
                         });
                     }
 
                     progress.success('Connexion réussie');
                 } else {
+                    if (response.status === 403)
+                        await db.delete('usr_profiles', username);
+
                     let err = (await response.text()).trim();
                     throw new Error(err);
                 }
@@ -219,6 +223,14 @@ const goupile = new function() {
 
                     progress.success('Connexion réussie (hors ligne)');
                 } catch (err) {
+                    enc.errors = (enc.errors || 0) + 1;
+
+                    if (enc.errors >= 3) {
+                        await db.delete('usr_profiles', username);
+                    } else {
+                        await db.saveWithKey('usr_profiles', username, enc);
+                    }
+
                     throw new Error('Mot de passe hors ligne non reconnu');
                 }
             }
