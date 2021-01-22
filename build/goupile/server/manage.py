@@ -86,11 +86,13 @@ def run_build(config):
     # Install goupile
     print('>>> Install goupile', file = sys.stderr)
     src_binary = os.path.join(config['Build.BuildDirectory'], 'goupile')
+    src_manage = os.path.join(config['Build.SourceDirectory'], 'build/goupile/server/manage.py')
     subprocess.run(['install', src_binary, config['Build.BinaryDirectory'] + '/'])
+    subprocess.run(['install', src_manage, config['Build.BinaryDirectory'] + '/'])
 
     # Create directories
     print('>>> Create directories', file = sys.stderr)
-    subprocess.run(['mkdir', '-m0755', 'domains', 'nginx'])
+    subprocess.run(['mkdir', '-p', '-m0755', 'domains', 'nginx'])
     subprocess.run(['touch', 'nginx/include.conf'])
     subprocess.run(['chown', config['Goupile.RunUser'] + ':', 'domains'])
 
@@ -283,12 +285,11 @@ def run_sync(config):
 
 if __name__ == '__main__':
     # Always work from manage.py directory
-    directory = os.path.dirname(os.path.abspath(__file__))
+    script = os.path.abspath(__file__)
+    directory = os.path.dirname(script)
     os.chdir(directory)
 
     parser = argparse.ArgumentParser(description = 'Manage goupile.fr domains')
-    parser.add_argument('-C', '--config', dest = 'config', action = 'store',
-                        default = 'manage.ini', help = 'Change configuration file')
     parser.add_argument('-b', '--build', dest = 'build', action = 'store_true',
                         default = False, help = 'Build and install goupile binaries')
     parser.add_argument('-s', '--sync', dest = 'sync', action = 'store_true',
@@ -298,9 +299,11 @@ if __name__ == '__main__':
     if not args.build and not args.sync:
         raise ValueError('Call with --sync and/or --build')
 
-    config = load_config(args.config, array_sections = ['Domains'])
+    config = load_config('manage.ini', array_sections = ['Domains'])
 
     if args.build:
         run_build(config)
-    if args.sync:
+        if args.sync:
+            subprocess.run(['./' + os.path.basename(script), '--sync'])
+    elif args.sync:
         run_sync(config)
