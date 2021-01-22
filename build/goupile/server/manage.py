@@ -58,43 +58,43 @@ def load_config(filename, array_sections = []):
     return config
 
 def run_build(config):
-    felix_binary = os.path.join(config['Build.SourceDirectory'], 'felix')
+    felix_binary = os.path.join(config['Goupile.SourceDirectory'], 'felix')
 
     # Update source
     print('>>> Update source', file = sys.stderr)
-    if not os.path.exists(config['Build.SourceDirectory']):
-        subprocess.run(['sudo', '-u', config['Build.SudoUser'],
-                        'git', 'clone', config['Build.SourceRepository'], config['Build.SourceDirectory']])
-    subprocess.run(['sudo', '-u', config['Build.SudoUser'],
-                    'git', '-C', config['Build.SourceDirectory'], 'pull'])
-    subprocess.run(['sudo', '-u', config['Build.SudoUser'],
-                    'git', '-C', config['Build.SourceDirectory'], 'checkout', config['Build.SourceCommit']])
+    if not os.path.exists(config['Goupile.SourceDirectory']):
+        subprocess.run(['sudo', '-u', config['Users.BuildUser'],
+                        'git', 'clone', config['Goupile.SourceRepository'], config['Goupile.SourceDirectory']])
+    subprocess.run(['sudo', '-u', config['Users.BuildUser'],
+                    'git', '-C', config['Goupile.SourceDirectory'], 'pull'])
+    subprocess.run(['sudo', '-u', config['Users.BuildUser'],
+                    'git', '-C', config['Goupile.SourceDirectory'], 'checkout', config['Goupile.SourceCommit']])
 
     # Build felix if needed
     if not os.path.exists(felix_binary):
         print('>>> Bootstrap felix', file = sys.stderr)
-        build_felix = os.path.join(config['Build.SourceDirectory'], 'build/felix/build_posix.sh')
-        subprocess.run(['sudo', '-u', config['Build.SudoUser'], build_felix])
+        build_felix = os.path.join(config['Goupile.SourceDirectory'], 'build/felix/build_posix.sh')
+        subprocess.run(['sudo', '-u', config['Users.BuildUser'], build_felix])
 
     # Build goupile
     print('>>> Build goupile', file = sys.stderr)
-    build_filename = os.path.join(config['Build.SourceDirectory'], 'FelixBuild.ini')
-    subprocess.run(['sudo', '-u', config['Build.SudoUser'],
+    build_filename = os.path.join(config['Goupile.SourceDirectory'], 'FelixBuild.ini')
+    subprocess.run(['sudo', '-u', config['Users.BuildUser'],
                     felix_binary, '-mFast', '-C', build_filename,
-                    '-O', config['Build.BuildDirectory'], 'goupile'])
+                    '-O', config['Goupile.BuildDirectory'], 'goupile'])
 
     # Install goupile
     print('>>> Install goupile', file = sys.stderr)
-    src_binary = os.path.join(config['Build.BuildDirectory'], 'goupile')
-    src_manage = os.path.join(config['Build.SourceDirectory'], 'build/goupile/server/manage.py')
-    subprocess.run(['install', src_binary, config['Build.BinaryDirectory'] + '/'])
-    subprocess.run(['install', src_manage, config['Build.BinaryDirectory'] + '/'])
+    src_binary = os.path.join(config['Goupile.BuildDirectory'], 'goupile')
+    src_manage = os.path.join(config['Goupile.SourceDirectory'], 'build/goupile/server/manage.py')
+    subprocess.run(['install', src_binary, config['Goupile.BinaryDirectory'] + '/'])
+    subprocess.run(['install', src_manage, config['Goupile.BinaryDirectory'] + '/'])
 
     # Create directories
     print('>>> Create directories', file = sys.stderr)
     subprocess.run(['mkdir', '-p', '-m0755', 'domains', 'nginx'])
     subprocess.run(['touch', 'nginx/include.conf'])
-    subprocess.run(['chown', config['Goupile.RunUser'] + ':', 'domains'])
+    subprocess.run(['chown', config['Users.RunUser'] + ':', 'domains'])
 
 def list_domains(root_dir):
     domains = {}
@@ -222,7 +222,7 @@ def update_nginx_config(directory, domain, socket, include = None):
         print(f'}}', file = f)
 
 def run_sync(config):
-    default_binary = os.path.join(config['Build.BinaryDirectory'], 'goupile')
+    default_binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
 
     # List existing domains and services
     domains = list_domains(config['Goupile.DomainDirectory'])
@@ -232,7 +232,7 @@ def run_sync(config):
     for domain in config['Domains']:
         info = domains.get(domain)
         if info is None:
-            create_domain(default_binary, config['Goupile.DomainDirectory'], domain, config['Goupile.RunUser'])
+            create_domain(default_binary, config['Goupile.DomainDirectory'], domain, config['Users.RunUser'])
 
     # Detect binary mismatches
     for domain in config['Domains']:
@@ -263,7 +263,7 @@ def run_sync(config):
                             include = config.get('NGINX.ServerInclude'))
 
     # Sync systemd services
-    update_systemd_unit(config['Goupile.RunUser'])
+    update_systemd_unit(config['Users.RunUser'])
     for domain in services:
         info = domains.get(domain)
         if info is None:
