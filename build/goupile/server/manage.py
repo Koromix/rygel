@@ -112,6 +112,29 @@ def run_service_command(domain, cmd):
     print(f'{cmd.capitalize()} {service}', file = sys.stderr)
     subprocess.run(['systemctl', cmd, '--quiet', service])
 
+def update_systemd_unit(run_user, run_group):
+    SYSTEMD_SERVICE = f'''\
+[Service]
+Type=simple
+
+User={run_user}
+Group={run_group}
+
+RuntimeDirectory=goupile
+ExecStart=/srv/www/goupile/domains/%i/goupile
+WorkingDirectory=/srv/www/goupile/domains/%i
+
+Restart=on-failure
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
+'''
+
+    if not os.path.exists('/etc/systemd/system/goupile@.service'):
+        with open('/etc/systemd/system/goupile@.service', 'w') as f:
+            f.write(SYSTEMD_SERVICE)
+
 def update_domain_config(info):
     filename = os.path.join(info.directory, 'goupile.ini')
     ini = parse_ini(filename)
@@ -176,6 +199,7 @@ def run_sync(config):
                             include = config.get('NGINX.ServerInclude'))
 
     # Sync systemd services
+    update_systemd_unit(config['Install.RunUser'], config['Install.RunGroup'])
     for domain in services:
         info = domains.get(domain)
         if info is None:
