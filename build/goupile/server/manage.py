@@ -80,7 +80,7 @@ def run_build(config):
     print('Build goupile')
     build_filename = os.path.join(config['Build.SourceDirectory'], 'FelixBuild.ini')
     subprocess.run(['sudo', '-u', config['Build.SudoUser'],
-                    felix_binary, '-mFast', '-q', '-C', build_filename,
+                    felix_binary, '-mFast', '-C', build_filename,
                     '-O', config['Build.BuildDirectory'], 'goupile'])
 
     # Install goupile
