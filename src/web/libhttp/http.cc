@@ -560,7 +560,7 @@ bool http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_
 void http_IO::AttachError(int code, const char *details)
 {
     if (!details) {
-        details = last_err ? last_err : "";
+        details = (code < 500 && last_err) ? last_err : "";
     }
 
     Span<char> page = Fmt(&allocator, "Error %1: %2\n%3", code,
