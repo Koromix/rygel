@@ -92,6 +92,11 @@ def create_domain(binary, root_dir, domain, owner_user):
     print(f'Create domain {domain} ({directory})', file = sys.stderr)
     subprocess.run([binary, 'init', '-o', owner_user, directory])
 
+def migrate_domain(domain, info):
+    print(f'Migrate domain {domain} ({info.directory})', file = sys.stderr)
+    filename = os.path.join(info.directory, 'goupile.ini')
+    subprocess.run([info.binary, 'migrate', '-C', filename])
+
 def list_services():
     services = {}
 
@@ -237,9 +242,10 @@ def run_sync(config):
         status = services.get(domain)
         if status is None:
             run_service_command(domain, 'enable')
+        if status is None or info.mismatch or not status.running:
+            run_service_command(domain, 'stop')
+            migrate_domain(domain, info)
             run_service_command(domain, 'start')
-        elif info.mismatch or not status.running:
-            run_service_command(domain, 'restart')
 
     # Reload NGINX configuration
     print('Reload NGINX server', file = sys.stderr)
