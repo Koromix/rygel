@@ -265,11 +265,9 @@ function InstanceController() {
                     </tbody>
                 </table>
 
-                ${!route.form.parents.length ? html`
-                    <div class="ui_actions">
-                        <button @click=${ui.wrapAction(goNewRecord)}>Créer un nouvel enregistrement</button>
-                    </div>
-                ` : ''}
+                <div class="ui_actions">
+                    <button @click=${ui.wrapAction(goNewRecord)}>Créer un nouvel enregistrement</button>
+                </div>
             </div>
         `;
     }
@@ -309,14 +307,8 @@ function InstanceController() {
                     if (builder.triggerErrors())
                         return saveRecord();
                 });
-                if (!route.form.parents.length) {
-                    builder.action('-');
-                    if (route.version > 0) {
-                        builder.action('Nouveau', {}, goNewRecord);
-                    } else {
-                        builder.action('Réinitialiser', {disabled: !form_state.hasChanged()}, goNewRecord);
-                    }
-                }
+                builder.action('-');
+                builder.action('Nouveau', {}, goNewRecord);
             }
         } catch (err) {
             error = err;
@@ -411,8 +403,13 @@ function InstanceController() {
     }
 
     function goNewRecord(e) {
-        let url = route.page.url + '/new';
-        return self.go(e, url);
+        if (form_chain.length > 1) {
+            let url = route.form.parents[0].url + '/new';
+            return self.go(e, url);
+        } else {
+            let url = route.page.url + '/new';
+            return self.go(e, url);
+        }
     }
 
     // XXX: Make sure nothing changes while this runs, with some kind of multi-stage serializeAsync?
@@ -545,13 +542,8 @@ function InstanceController() {
 
                 data_rows = null;
                 if (form_chain.some(meta => meta.ulid === ulid)) {
-                    if (form_chain.length > 1) {
-                        let url = route.form.parents[0].url + '/new';
-                        self.go(null, url);
-                    } else {
-                        let url = route.page.url + '/new';
-                        self.go(null, url);
-                    }
+                    form_state = null;
+                    goNewRecord(null);
                 } else {
                     self.run();
                 }
