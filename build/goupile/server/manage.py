@@ -26,8 +26,8 @@ class ServiceStatus:
     running = False
     inode = None
 
-def parse_ini(filename):
-    ini = configparser.ConfigParser()
+def parse_ini(filename, allow_no_value = False):
+    ini = configparser.ConfigParser(allow_no_value = allow_no_value)
     ini.optionxform = str
 
     with open(filename, 'r') as f:
@@ -35,14 +35,25 @@ def parse_ini(filename):
 
     return ini
 
-def load_config(filename):
-    ini = parse_ini(filename)
+def load_config(filename, array_sections = []):
+    ini = parse_ini(filename, allow_no_value = True)
     config = {}
 
     for section in ini.sections():
-        for key, value in ini.items(section):
-            name = f'{section}.{key}'
-            config[name] = value
+        if section in array_sections:
+            for key, value in ini.items(section):
+                if value:
+                    raise ValueError(f'Unexpected value in {filename}')
+
+                array = config.get(section)
+                if array is None:
+                    array = []
+                    config[section] = array
+                array.append(key)
+        else:
+            for key, value in ini.items(section):
+                name = f'{section}.{key}'
+                config[name] = value
 
     return config
 
@@ -75,6 +86,11 @@ def list_domains(root_dir):
             domains[domain] = info
 
     return domains
+
+def create_domain(binary, root_dir, domain, owner_user):
+    directory = os.path.join(root_dir, domain)
+    print(f'Create domain {domain} ({directory})', file = sys.stderr)
+    subprocess.run([binary, 'init', '-o', owner_user, directory])
 
 def list_services():
     services = {}
@@ -169,14 +185,23 @@ def update_nginx_config(directory, domain, socket, include = None):
         print(f'}}', file = f)
 
 def run_sync(config):
+    default_binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
+
+    # List existing domains and services
     domains = list_domains(config['Goupile.DomainDirectory'])
     services = list_services()
 
+    # Create missing domains
+    for domain in config['Domains']:
+        info = domains.get(domain)
+        if info is None:
+            create_domain(default_binary, config['Goupile.DomainDirectory'], domain, config['Install.RunUser'])
+
     # Detect binary mismatches
-    for domain, info in domains.items():
+    for domain in config['Domains']:
+        info = domains.get(domain)
         if not os.path.exists(info.binary):
-            binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
-            os.symlink(binary, info.binary)
+            os.symlink(default_binary, info.binary)
         binary_inode = os.stat(info.binary).st_ino
         status = services.get(domain)
         if status is not None and status.running and status.inode != binary_inode:
@@ -185,7 +210,8 @@ def run_sync(config):
 
     # Update instance configuration files
     print('Write configuration files', file = sys.stderr)
-    for domain, info in domains.items():
+    for domain, info in config['Domains']:
+        info = domains.get(domain)
         update_domain_config(info)
 
     # Update NGINX configuration files
@@ -194,7 +220,8 @@ def run_sync(config):
         if name.endswith('.conf'):
             filename = os.path.join(config['NGINX.ConfigDirectory'], name)
             os.unlink(filename)
-    for domain, info in domains.items():
+    for domain in config['Domains']:
+        info = domains.get(domain)
         update_nginx_config(config['NGINX.ConfigDirectory'], domain, info.socket,
                             include = config.get('NGINX.ServerInclude'))
 
@@ -205,7 +232,8 @@ def run_sync(config):
         if info is None:
             run_service_command(domain, 'stop')
             run_service_command(domain, 'disable')
-    for domain, info in domains.items():
+    for domain in config['Domains']:
+        info = domains.get(domain)
         status = services.get(domain)
         if status is None:
             run_service_command(domain, 'enable')
@@ -231,7 +259,7 @@ if __name__ == '__main__':
     if not args.build and not args.sync:
         raise ValueError('Call with --sync and/or --build')
 
-    config = load_config(args.config)
+    config = load_config(args.config, array_sections = ['Domains'])
 
     if args.build:
         run_build(config)
