@@ -88,6 +88,12 @@ def run_build(config):
     src_binary = os.path.join(config['Build.BuildDirectory'], 'goupile')
     subprocess.run(['install', src_binary, config['Build.BinaryDirectory'] + '/'])
 
+    # Create directories
+    print('>>> Create directories', file = sys.stderr)
+    subprocess.run(['mkdir', '-m0755', 'domains', 'nginx'])
+    subprocess.run(['touch', 'nginx/include.conf'])
+    subprocess.run(['chown', config['Goupile.RunUser'] + ':', 'domains'])
+
 def list_domains(root_dir):
     domains = {}
 

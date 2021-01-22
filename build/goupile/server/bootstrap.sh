@@ -3,6 +3,7 @@
 # Dependencies
 
 sudo apt install build-essential curl python3 git
+sudo useradd -r -d /nonexistent -s /usr/sbin/nologin goupile
 
 # Install manage.py
 
