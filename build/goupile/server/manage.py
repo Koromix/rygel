@@ -275,19 +275,18 @@ def run_sync(config):
     subprocess.run(['systemctl', 'reload', 'nginx.service'])
 
 if __name__ == '__main__':
+    # Always work from manage.py directory
+    directory = os.path.dirname(os.path.abspath(__file__))
+    os.chdir(directory)
+
     parser = argparse.ArgumentParser(description = 'Manage goupile.fr domains')
     parser.add_argument('-C', '--config', dest = 'config', action = 'store',
-                        default = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.ini'),
-                        help = 'Change configuration file')
+                        default = 'manage.ini', help = 'Change configuration file')
     parser.add_argument('-b', '--build', dest = 'build', action = 'store_true',
                         default = False, help = 'Build and install goupile binaries')
     parser.add_argument('-s', '--sync', dest = 'sync', action = 'store_true',
                         default = False, help = 'Sync domains, NGINX and systemd')
     args = parser.parse_args()
-
-    # Always work from manage.py directory
-    directory = os.path.dirname(os.path.abspath(__file__))
-    os.chdir(directory)
 
     if not args.build and not args.sync:
         raise ValueError('Call with --sync and/or --build')
