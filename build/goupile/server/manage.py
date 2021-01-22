@@ -61,7 +61,7 @@ def run_build(config):
     felix_binary = os.path.join(config['Build.SourceDirectory'], 'felix')
 
     # Update source
-    print('Update source', file = sys.stderr)
+    print('>>> Update source', file = sys.stderr)
     if not os.path.exists(config['Build.SourceDirectory']):
         subprocess.run(['sudo', '-u', config['Build.SudoUser'],
                         'git', 'clone', config['Build.SourceRepository'], config['Build.SourceDirectory']])
@@ -72,18 +72,19 @@ def run_build(config):
 
     # Build felix if needed
     if not os.path.exists(felix_binary):
-        print('Bootstrap felix')
+        print('>>> Bootstrap felix', file = sys.stderr)
         build_felix = os.path.join(config['Build.SourceDirectory'], 'build/felix/build_posix.sh')
         subprocess.run(['sudo', '-u', config['Build.SudoUser'], build_felix])
 
     # Build goupile
-    print('Build goupile')
+    print('>>> Build goupile', file = sys.stderr)
     build_filename = os.path.join(config['Build.SourceDirectory'], 'FelixBuild.ini')
     subprocess.run(['sudo', '-u', config['Build.SudoUser'],
                     felix_binary, '-mFast', '-C', build_filename,
                     '-O', config['Build.BuildDirectory'], 'goupile'])
 
     # Install goupile
+    print('>>> Install goupile', file = sys.stderr)
     src_binary = os.path.join(config['Build.BuildDirectory'], 'goupile')
     subprocess.run(['install', src_binary, config['Build.BinaryDirectory'] + '/'])
 
@@ -112,11 +113,11 @@ def list_domains(root_dir):
 
 def create_domain(binary, root_dir, domain, owner_user):
     directory = os.path.join(root_dir, domain)
-    print(f'Create domain {domain} ({directory})', file = sys.stderr)
+    print(f'>>> Create domain {domain} ({directory})', file = sys.stderr)
     subprocess.run([binary, 'init', '-o', owner_user, directory])
 
 def migrate_domain(domain, info):
-    print(f'Migrate domain {domain} ({info.directory})', file = sys.stderr)
+    print(f'>>> Migrate domain {domain} ({info.directory})', file = sys.stderr)
     filename = os.path.join(info.directory, 'goupile.ini')
     subprocess.run([info.binary, 'migrate', '-C', filename])
 
@@ -153,7 +154,7 @@ def list_services():
 
 def run_service_command(domain, cmd):
     service = f'goupile@{domain}.service'
-    print(f'{cmd.capitalize()} {service}', file = sys.stderr)
+    print(f'>>> {cmd.capitalize()} {service}', file = sys.stderr)
     subprocess.run(['systemctl', cmd, '--quiet', service])
 
 def update_systemd_unit(run_user):
@@ -233,17 +234,17 @@ def run_sync(config):
         binary_inode = os.stat(info.binary).st_ino
         status = services.get(domain)
         if status is not None and status.running and status.inode != binary_inode:
-            print(f'Domain {domain} is running old version')
+            print(f'+++ Domain {domain} is running old version')
             info.mismatch = True
 
     # Update instance configuration files
-    print('Write configuration files', file = sys.stderr)
+    print('>>> Write configuration files', file = sys.stderr)
     for domain, info in config['Domains']:
         info = domains.get(domain)
         update_domain_config(info)
 
     # Update NGINX configuration files
-    print('Write NGINX configuration files', file = sys.stderr)
+    print('>>> Write NGINX configuration files', file = sys.stderr)
     for name in os.listdir(config['NGINX.ConfigDirectory']):
         if name.endswith('.conf'):
             filename = os.path.join(config['NGINX.ConfigDirectory'], name)
@@ -271,7 +272,7 @@ def run_sync(config):
             run_service_command(domain, 'start')
 
     # Reload NGINX configuration
-    print('Reload NGINX server', file = sys.stderr)
+    print('>>> Reload NGINX server', file = sys.stderr)
     subprocess.run(['systemctl', 'reload', 'nginx.service'])
 
 if __name__ == '__main__':
