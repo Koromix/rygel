@@ -53,7 +53,7 @@ def run_build(config):
     subprocess.run(['felix', '-mFast', '-q', '-C', build_filename,
                     '-O', config['Goupile.BinaryDirectory'], 'goupile'])
 
-def list_domains(root_dir, socket_dir):
+def list_domains(root_dir):
     domains = {}
 
     for domain in sorted(os.listdir(root_dir)):
@@ -66,7 +66,7 @@ def list_domains(root_dir, socket_dir):
             info = DomainConfig()
             info.directory = directory
             info.binary = os.path.join(directory, 'goupile')
-            info.socket = os.path.join(socket_dir, domain) + '.sock'
+            info.socket = f'/run/goupile/{domain}.sock'
 
             prev_socket = config.get('HTTP.UnixPath')
             if prev_socket != info.socket:
@@ -169,7 +169,7 @@ def update_nginx_config(directory, domain, socket, include = None):
         print(f'}}', file = f)
 
 def run_sync(config):
-    domains = list_domains(config['Goupile.DomainDirectory'], config['Goupile.SocketDirectory'])
+    domains = list_domains(config['Goupile.DomainDirectory'])
     services = list_services()
 
     # Detect binary mismatches
