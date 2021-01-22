@@ -197,6 +197,7 @@ def update_nginx_config(directory, domain, socket, include = None):
     with open(filename, 'w') as f:
         print(f'server {{', file = f)
         print(f'    server_name {domain};', file = f)
+        print(f'    client_max_body_size 32M;', file = f)
         if include is not None:
             print(f'    include {include};', file = f)
         print(f'    location / {{', file = f)
