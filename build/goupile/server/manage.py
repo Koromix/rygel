@@ -58,11 +58,30 @@ def load_config(filename, array_sections = []):
     return config
 
 def run_build(config):
-    print('Build goupile', file = sys.stderr)
+    felix_binary = os.path.join(config['Goupile.SourceDirectory'], 'felix')
 
+    # Update source
+    print('Update source', file = sys.stderr)
+    if not os.path.exists(config['Goupile.SourceDirectory']):
+        subprocess.run(['git', 'clone', config['Goupile.SourceRepository'], config['Goupile.SourceDirectory']])
+    subprocess.run(['git', '-C', config['Goupile.SourceDirectory'], 'pull'])
+    subprocess.run(['git', '-C', config['Goupile.SourceDirectory'], 'checkout', config['Goupile.SourceCommit']])
+
+    # Build felix if needed
+    if not os.path.exists(felix_binary):
+        print('Bootstrap felix')
+        build_felix = os.path.join(config['Goupile.SourceDirectory'], 'build/felix/build_posix.sh')
+        subprocess.run([build_felix])
+
+    # Build goupile
+    print('Build goupile')
     build_filename = os.path.join(config['Goupile.SourceDirectory'], 'FelixBuild.ini')
-    subprocess.run(['felix', '-mFast', '-q', '-C', build_filename,
-                    '-O', config['Goupile.BinaryDirectory'], 'goupile'])
+    subprocess.run([felix_binary, '-mFast', '-q', '-C', build_filename,
+                    '-O', config['Goupile.BuildDirectory'], 'goupile'])
+
+    # Install goupile
+    src_binary = os.path.join(config['Goupile.BuildDirectory'], 'goupile')
+    subprocess.run(['install', src_binary, config['Goupile.BinaryDirectory'] + '/'])
 
 def list_domains(root_dir):
     domains = {}
@@ -200,7 +219,7 @@ def run_sync(config):
     for domain in config['Domains']:
         info = domains.get(domain)
         if info is None:
-            create_domain(default_binary, config['Goupile.DomainDirectory'], domain, config['Install.RunUser'])
+            create_domain(default_binary, config['Goupile.DomainDirectory'], domain, config['Goupile.RunUser'])
 
     # Detect binary mismatches
     for domain in config['Domains']:
@@ -231,7 +250,7 @@ def run_sync(config):
                             include = config.get('NGINX.ServerInclude'))
 
     # Sync systemd services
-    update_systemd_unit(config['Install.RunUser'], config['Install.RunGroup'])
+    update_systemd_unit(config['Goupile.RunUser'], config['Goupile.RunGroup'])
     for domain in services:
         info = domains.get(domain)
         if info is None:
@@ -261,6 +280,10 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--sync', dest = 'sync', action = 'store_true',
                         default = False, help = 'Sync domains, NGINX and systemd')
     args = parser.parse_args()
+
+    # Always work from manage.py directory
+    directory = os.path.dirname(os.path.abspath(__file__))
+    os.chdir(directory)
 
     if not args.build and not args.sync:
         raise ValueError('Call with --sync and/or --build')
