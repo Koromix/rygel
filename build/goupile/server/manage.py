@@ -165,7 +165,9 @@ def run_service_command(domain, cmd):
     print(f'>>> {cmd.capitalize()} {service}', file = sys.stderr)
     subprocess.run(['systemctl', cmd, '--quiet', service])
 
-def update_systemd_unit(run_user):
+def update_systemd_unit(root_dir, run_user):
+    root_dir = os.path.abspath(root_dir)
+
     SYSTEMD_SERVICE = f'''\
 [Service]
 Type=simple
@@ -173,8 +175,8 @@ Type=simple
 User={run_user}
 
 RuntimeDirectory=goupile
-ExecStart=/srv/www/goupile/domains/%i/goupile
-WorkingDirectory=/srv/www/goupile/domains/%i
+ExecStart={root_dir}/%i/goupile
+WorkingDirectory={root_dir}/%i
 
 Restart=on-failure
 TimeoutStopSec=30
@@ -264,7 +266,7 @@ def run_sync(config):
                             include = config.get('NGINX.ServerInclude'))
 
     # Sync systemd services
-    update_systemd_unit(config['Users.RunUser'])
+    update_systemd_unit(config['Goupile.DomainDirectory'], config['Users.RunUser'])
     for domain in services:
         info = domains.get(domain)
         if info is None:
