@@ -87,8 +87,7 @@ def run_build(config):
     print('>>> Install goupile', file = sys.stderr)
     src_binary = os.path.join(config['Goupile.BuildDirectory'], 'goupile')
     src_manage = os.path.join(config['Goupile.SourceDirectory'], 'build/goupile/server/manage.py')
-    subprocess.run(['install', src_binary, config['Goupile.BinaryDirectory'] + '/'])
-    subprocess.run(['install', src_manage, config['Goupile.BinaryDirectory'] + '/'])
+    subprocess.run(['install', '-C', src_binary, src_manage, config['Goupile.BinaryDirectory'] + '/'])
 
     # Create directories
     print('>>> Create directories', file = sys.stderr)
