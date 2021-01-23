@@ -202,6 +202,10 @@ def update_domain_config(info):
     with open(filename, 'w') as f:
         ini.write(f)
 
+def update_nginx_site(filename, directory):
+    with open(filename, 'w') as f:
+        print(f'include {directory}/*.conf;', file = f)
+
 def update_nginx_config(directory, domain, socket, include = None):
     filename = os.path.join(directory, f'{domain}.conf')
 
@@ -260,6 +264,8 @@ def run_sync(config):
 
     # Update NGINX configuration files
     print('>>> Write NGINX configuration files', file = sys.stderr)
+    if config.get('NGINX.IncludeFile') is not None:
+        update_nginx_site(config['NGINX.IncludeFile'], config['NGINX.ConfigDirectory'])
     for name in os.listdir(config['NGINX.ConfigDirectory']):
         if name.endswith('.conf'):
             filename = os.path.join(config['NGINX.ConfigDirectory'], name)
