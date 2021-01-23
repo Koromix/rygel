@@ -307,7 +307,7 @@ int RunInit(Span<const char *> arguments)
         PrintLn(fp, R"(Usage: %!..+%1 init [options] [directory]%!0
 
 Options:
-    %!..+-u, --user <name>%!0            Name of default user
+    %!..+-u, --username <username>%!0    Name of default user
         %!..+--password <pwd>%!0         Password of default user
 
         %!..+--demo%!0                   Create default instance (demo))", FelixTarget);
@@ -326,7 +326,7 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-u", "--user", OptionType::Value)) {
+            } else if (opt.Test("-u", "--username", OptionType::Value)) {
                 username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 password = opt.current_value;
@@ -351,7 +351,7 @@ Options:
 
     // Errors and defaults
     if (password && !username) {
-        LogError("Option --password cannot be used without --user");
+        LogError("Option --password cannot be used without --username");
         return 1;
     }
 
