@@ -92,7 +92,7 @@ def run_build(config):
 
     # Create directories
     print('>>> Create directories', file = sys.stderr)
-    subprocess.run(['mkdir', '-p', '-m0755', 'domains', 'nginx'])
+    subprocess.run(['mkdir', '-p', '-m0755', 'domains', 'nginx', 'nginx/domains.d'])
     subprocess.run(['touch', 'nginx/include.conf'])
     subprocess.run(['chown', config['Users.RunUser'] + ':', 'domains'])
 
@@ -224,21 +224,22 @@ def update_nginx_config(directory, domain, socket, include = None):
 def run_sync(config):
     default_binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
 
+    # Create missing domains
+    for domain in config['Domains']:
+        directory = os.path.join(config['Goupile.DomainDirectory'], domain)
+        if not os.path.exists(directory):
+            create_domain(default_binary, config['Goupile.DomainDirectory'], domain, config['Users.RunUser'])
+
     # List existing domains and services
     domains = list_domains(config['Goupile.DomainDirectory'])
     services = list_services()
 
-    # Create missing domains
-    for domain in config['Domains']:
-        info = domains.get(domain)
-        if info is None:
-            create_domain(default_binary, config['Goupile.DomainDirectory'], domain, config['Users.RunUser'])
-
     # Detect binary mismatches
     for domain in config['Domains']:
-        info = domains.get(domain)
+        info = domains[domain]
         if not os.path.exists(info.binary):
-            os.symlink(default_binary, info.binary)
+            os.unlink(info.binary)
+            os.symlink(os.path.abspath(default_binary), info.binary)
         binary_inode = os.stat(info.binary).st_ino
         status = services.get(domain)
         if status is not None and status.running and status.inode != binary_inode:
@@ -247,8 +248,8 @@ def run_sync(config):
 
     # Update instance configuration files
     print('>>> Write configuration files', file = sys.stderr)
-    for domain, info in config['Domains']:
-        info = domains.get(domain)
+    for domain in config['Domains']:
+        info = domains[domain]
         update_domain_config(info)
 
     # Update NGINX configuration files
@@ -258,7 +259,7 @@ def run_sync(config):
             filename = os.path.join(config['NGINX.ConfigDirectory'], name)
             os.unlink(filename)
     for domain in config['Domains']:
-        info = domains.get(domain)
+        info = domains[domain]
         update_nginx_config(config['NGINX.ConfigDirectory'], domain, info.socket,
                             include = config.get('NGINX.ServerInclude'))
 
@@ -270,7 +271,7 @@ def run_sync(config):
             run_service_command(domain, 'stop')
             run_service_command(domain, 'disable')
     for domain in config['Domains']:
-        info = domains.get(domain)
+        info = domains[domain]
         status = services.get(domain)
         if status is None:
             run_service_command(domain, 'enable')
