@@ -1,0 +1,77 @@
+- name: Create Goupile user
+  user:
+    name: goupile
+    create_home: no
+    home: /nonexistent
+    shell: /usr/sbin/nologin
+    system: yes
+  become: yes
+
+- name: Prepare Goupile directories
+  file:
+    path: '{{item.path}}'
+    state: 'directory'
+    owner: '{{item.owner}}'
+    mode: '0755'
+  loop:
+    - path: /opt/goupile
+      owner: 'root'
+    - path: /opt/goupile/src
+      owner: '{{lookup("env", "USER")}}'
+    - path: /opt/goupile/domains
+      owner: 'goupile'
+    - path: /opt/goupile/nginx/domains.d
+      owner: 'root'
+  become: yes
+
+- name: Fetch Goupile repository
+  git:
+    repo: https://framagit.org/interhop/goupile.git
+    dest: /opt/goupile/src
+
+- name: Bootstrap Felix
+  shell:
+    cmd: /opt/goupile/src/build/felix/build_posix.sh
+    creates: /opt/goupile/src/felix
+    chdir: /opt/goupile/src
+
+- name: Build Goupile
+  command:
+    cmd: /opt/goupile/src/felix -cGCC -mFast goupile
+    chdir: /opt/goupile/src
+
+- name: Install Goupile
+  copy:
+    src: '{{item.src}}'
+    remote_src: yes
+    dest: '{{item.dest}}'
+    owner: 'root'
+    group: 'root'
+    mode: '0755'
+  loop:
+    - src: /opt/goupile/src/bin/GCC_Fast/goupile
+      dest: /opt/goupile/goupile
+    - src: /opt/goupile/src/build/goupile/server/sync.py
+      dest: /opt/goupile/sync.py
+  become: yes
+
+- name: Upload configuration files
+  copy:
+    src: '{{item.src}}'
+    dest: '{{item.dest}}'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+  loop:
+    - src: sync.ini
+      dest: /opt/goupile/sync.ini
+    - src: goupile@.service
+      dest: /etc/systemd/system/goupile@.service
+    - src: include.conf
+      dest: /opt/goupile/nginx/include.conf
+  become: yes
+
+- name: Sync Goupile, NGINX and systemd
+  command:
+    cmd: /opt/goupile/sync.py
+  become: yes
