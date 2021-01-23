@@ -186,8 +186,10 @@ WantedBy=multi-user.target
 '''
 
     if not os.path.exists('/etc/systemd/system/goupile@.service'):
+        print('>>> Update systemd service file', file = sys.stderr)
         with open('/etc/systemd/system/goupile@.service', 'w') as f:
             f.write(SYSTEMD_SERVICE)
+        subprocess.run(['systemctl', 'daemon-reload'])
 
 def update_domain_config(info):
     filename = os.path.join(info.directory, 'goupile.ini')
