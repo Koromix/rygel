@@ -241,7 +241,10 @@ def run_sync(config):
     for domain in config['Domains']:
         info = domains[domain]
         if not os.path.exists(info.binary):
-            os.unlink(info.binary)
+            try:
+                os.unlink(info.binary)
+            except Exception:
+                pass
             os.symlink(os.path.abspath(default_binary), info.binary)
         binary_inode = os.stat(info.binary).st_ino
         status = services.get(domain)
