@@ -318,6 +318,7 @@ if __name__ == '__main__':
     config['Goupile.BinaryDirectory'] = os.path.abspath(config['Goupile.BinaryDirectory'])
     config['Goupile.DomainDirectory'] = os.path.abspath(config['Goupile.DomainDirectory'])
     config['NGINX.ConfigDirectory'] = os.path.abspath(config['NGINX.ConfigDirectory'])
+    config['NGINX.ServerInclude'] = os.path.abspath(config['NGINX.ServerInclude'])
 
     if args.build:
         run_build(config)
