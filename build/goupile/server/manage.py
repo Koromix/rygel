@@ -89,11 +89,16 @@ def run_build(config):
     src_manage = os.path.join(config['Goupile.SourceDirectory'], 'build/goupile/server/manage.py')
     subprocess.run(['install', '-C', src_binary, src_manage, config['Goupile.BinaryDirectory'] + '/'])
 
-    # Create directories
+    # Create directories and files
     print('>>> Create directories', file = sys.stderr)
-    subprocess.run(['mkdir', '-p', '-m0755', 'domains', 'nginx', 'nginx/domains.d'])
-    subprocess.run(['touch', 'nginx/include.conf'])
-    subprocess.run(['chown', config['Users.RunUser'] + ':', 'domains'])
+    subprocess.run(['mkdir', '-p', '-m0755', config['Goupile.DomainDirectory'], config['NGINX.ConfigDirectory']])
+    subprocess.run(['chown', config['Users.RunUser'] + ':', config['Goupile.DomainDirectory']])
+
+    # Create default NGINX include file
+    if not os.path.exists(config['NGINX.ServerInclude']):
+        with open(config['NGINX.ServerInclude'], 'w') as f:
+            print(f'# Replace with correct server directives if needed (SSL, etc.)', file = f)
+            print(f'listen 80;', file = f)
 
 def list_domains(root_dir):
     domains = {}
