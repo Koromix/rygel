@@ -165,8 +165,6 @@ def run_service_command(domain, cmd):
     subprocess.run(['systemctl', cmd, '--quiet', service])
 
 def update_systemd_unit(root_dir, run_user):
-    root_dir = os.path.abspath(root_dir)
-
     SYSTEMD_SERVICE = f'''\
 [Service]
 Type=simple
@@ -245,7 +243,7 @@ def run_sync(config):
                 os.unlink(info.binary)
             except Exception:
                 pass
-            os.symlink(os.path.abspath(default_binary), info.binary)
+            os.symlink(default_binary, info.binary)
         binary_inode = os.stat(info.binary).st_ino
         status = services.get(domain)
         if status is not None and status.running and status.inode != binary_inode:
@@ -307,6 +305,11 @@ if __name__ == '__main__':
         raise ValueError('Call with --sync and/or --build')
 
     config = load_config('manage.ini', array_sections = ['Domains'])
+    config['Goupile.SourceDirectory'] = os.path.abspath(config['Goupile.SourceDirectory'])
+    config['Goupile.BuildDirectory'] = os.path.abspath(config['Goupile.BuildDirectory'])
+    config['Goupile.BinaryDirectory'] = os.path.abspath(config['Goupile.BinaryDirectory'])
+    config['Goupile.DomainDirectory'] = os.path.abspath(config['Goupile.DomainDirectory'])
+    config['NGINX.ConfigDirectory'] = os.path.abspath(config['NGINX.ConfigDirectory'])
 
     if args.build:
         run_build(config)
