@@ -2,13 +2,18 @@
 
 # Dependencies
 
-sudo apt install build-essential curl python3 git nginx
+sudo apt -y install build-essential curl python3 git nginx
 sudo useradd -r -d /nonexistent -s /usr/sbin/nologin goupile
 
 # Install manage.py
 
-mkdir goupile
-cd goupile
-curl -O https://git.sr.ht/~koromix/rygel/blob/WIP/build/goupile/server/manage.py
-curl -O https://git.sr.ht/~koromix/rygel/blob/WIP/build/goupile/server/manage.ini
+curl -O https://framagit.org/interhop/goupile/-/raw/master/build/goupile/server/manage.py
+curl -O https://framagit.org/interhop/goupile/-/raw/master/build/goupile/server/manage.ini
 chmod +x manage.py
+
+# Instructions
+
+echo "------------------------------------------------"
+echo ""
+echo "You need to adjust section [Users] and the list of domains in manage.ini"
+echo "Once this is done, continue with: sudo ./manage.py -bs"
