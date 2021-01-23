@@ -118,10 +118,11 @@ def list_domains(root_dir):
 
     return domains
 
-def create_domain(binary, root_dir, domain, owner_user):
+def create_domain(binary, root_dir, domain, owner_user, admin_username, admin_password):
     directory = os.path.join(root_dir, domain)
     print(f'>>> Create domain {domain} ({directory})', file = sys.stderr)
-    subprocess.run([binary, 'init', '-o', owner_user, directory])
+    subprocess.run([binary, 'init', '-o', owner_user,
+                    '--username', admin_username, '--password', admin_password, directory])
 
 def migrate_domain(domain, info):
     print(f'>>> Migrate domain {domain} ({info.directory})', file = sys.stderr)
@@ -229,7 +230,8 @@ def run_sync(config):
     for domain in config['Domains']:
         directory = os.path.join(config['Goupile.DomainDirectory'], domain)
         if not os.path.exists(directory):
-            create_domain(default_binary, config['Goupile.DomainDirectory'], domain, config['Users.RunUser'])
+            create_domain(default_binary, config['Goupile.DomainDirectory'], domain,
+                          config['Users.RunUser'], config['Goupile.DefaultAdmin'], config['Goupile.DefaultPassword'])
 
     # List existing domains and services
     domains = list_domains(config['Goupile.DomainDirectory'])
