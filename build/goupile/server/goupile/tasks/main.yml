@@ -39,6 +39,8 @@
   command:
     cmd: /opt/goupile/src/felix -cGCC -mFast goupile
     chdir: /opt/goupile/src
+  register: build
+  changed_when: 'build.stderr_lines[-1] == "Nothind to do!" or build.stderr_lines[-2] == "Nothind to do!"'
 
 - name: Install Goupile
   copy:
