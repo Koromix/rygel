@@ -4,14 +4,9 @@
   register: whoami
   become: false
 
-- name: Update package cache
+- name: Install packages (apt)
   apt:
     update_cache: yes
-    cache_valid_time: 3600
-  become: yes
-
-- name: Install packages
-  apt:
     pkg:
       - nginx
       - git
@@ -19,6 +14,19 @@
       - g++
     state: latest
   become: yes
+  when: 'ansible_os_family == "Debian"'
+
+- name: Install packages (yum)
+  yum:
+    update_cache: yes
+    pkg:
+      - nginx
+      - git
+      - gcc
+      - g++
+    state: latest
+  become: yes
+  when: 'ansible_os_family == "RedHat"'
 
 - name: Create Goupile user
   user:
@@ -103,6 +111,13 @@
   systemd:
     daemon_reload: yes
   when: configuration.changed
+  become: yes
+
+- name: Enable and start NGINX
+  systemd:
+    name: 'nginx'
+    enabled: yes
+    state: 'started'
   become: yes
 
 - name: Sync Goupile, NGINX and systemd
