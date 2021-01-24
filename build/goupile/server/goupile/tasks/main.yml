@@ -1,3 +1,9 @@
+- name: Get connected user name
+  command: whoami
+  changed_when: false
+  register: whoami
+  become: false
+
 - name: Create Goupile user
   user:
     name: goupile
@@ -17,7 +23,7 @@
     - path: /opt/goupile
       owner: 'root'
     - path: /opt/goupile/src
-      owner: '{{lookup("env", "USER")}}'
+      owner: '{{whoami.stdout}}'
     - path: /opt/goupile/domains
       owner: 'goupile'
     - path: /opt/goupile/nginx/domains.d
@@ -28,12 +34,14 @@
   git:
     repo: https://framagit.org/interhop/goupile.git
     dest: /opt/goupile/src
+  become: no
 
 - name: Bootstrap Felix
   shell:
     cmd: /opt/goupile/src/build/felix/build_posix.sh
     creates: /opt/goupile/src/felix
     chdir: /opt/goupile/src
+  become: no
 
 - name: Build Goupile
   command:
@@ -41,6 +49,7 @@
     chdir: /opt/goupile/src
   register: build
   changed_when: 'build.stderr_lines[-1] == "Nothind to do!" or build.stderr_lines[-2] == "Nothind to do!"'
+  become: no
 
 - name: Install Goupile
   copy:
