@@ -69,6 +69,13 @@
       dest: /etc/systemd/system/goupile@.service
     - src: include.conf
       dest: /opt/goupile/nginx/include.conf
+  register: configuration
+  become: yes
+
+- name: Reload systemd units
+  systemd:
+    daemon_reload: yes
+  when: configuration.changed
   become: yes
 
 - name: Sync Goupile, NGINX and systemd
