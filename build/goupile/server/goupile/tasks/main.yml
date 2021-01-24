@@ -4,6 +4,22 @@
   register: whoami
   become: false
 
+- name: Update package cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  become: yes
+
+- name: Install packages
+  apt:
+    pkg:
+      - nginx
+      - git
+      - gcc
+      - g++
+    state: latest
+  become: yes
+
 - name: Create Goupile user
   user:
     name: goupile
