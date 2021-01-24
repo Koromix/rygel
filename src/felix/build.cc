@@ -380,16 +380,22 @@ bool Builder::Build(int jobs, bool verbose)
     Async async(jobs - 1);
 
     // Run nodes
+    bool busy = false;
     for (Size i = 0; i < nodes.len; i++) {
         Node *node = &nodes[i];
 
         if (!node->success && !node->semaphore) {
             async.Run([=, &async, this]() { return RunNode(&async, node, verbose); });
+            busy = true;
         }
     }
 
     if (async.Sync()) {
-        LogInfo("Done (%1s)", FmtDouble((double)(GetMonotonicTime() - now) / 1000.0, 1));
+        if (busy) {
+            LogInfo("Done (%1s)", FmtDouble((double)(GetMonotonicTime() - now) / 1000.0, 1));
+        } else {
+            LogInfo("Nothing to do!");
+        }
         return true;
     } else if (interrupted) {
         LogError("Build was interrupted");
