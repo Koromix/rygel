@@ -25,7 +25,10 @@ function InstanceController() {
     let editor_ace;
     let editor_filename;
     let editor_buffers = new LruMap(32);
-    let editor_ignore_change = false;
+
+    let ignore_editor_change = false;
+    let ignore_editor_scroll = false;
+    let ignore_page_scroll = false;
 
     let data_form;
     let data_rows;
@@ -157,9 +160,18 @@ function InstanceController() {
         `;
     }
 
-    function togglePanel(e, key, enable = null) {
-        ui.setPanelState(key, !ui.isPanelEnabled(key));
-        return self.run();
+    async function togglePanel(e, key) {
+        let enable = !ui.isPanelEnabled(key);
+        ui.setPanelState(key, enable);
+
+        await self.run();
+
+        if (enable && key === 'page') {
+            syncFormScroll();
+            syncFormHighlight();
+        } else if (enable && key === 'editor') {
+            syncEditorScroll();
+        }
     }
 
     function renderEditor() {
@@ -315,7 +327,7 @@ function InstanceController() {
         }
 
         return html`
-            <div class="print">
+            <div class="print" @scroll=${syncEditorScroll}}>
                 <div id="ins_page">
                     <div class="ui_quick">
                         ${model.variables.length ? html`
@@ -612,6 +624,9 @@ function InstanceController() {
             editor_ace.setShowPrintMargin(false);
             editor_ace.setFontSize(13);
             editor_ace.setBehavioursEnabled(false);
+            editor_ace.setOptions({
+                scrollPastEnd: 1
+            });
         }
 
         let buffer = editor_buffers.get(editor_filename);
@@ -626,6 +641,12 @@ function InstanceController() {
             session.setUndoManager(new ace.UndoManager());
             session.on('change', e => handleFileChange(editor_filename));
 
+            session.on('changeScrollTop', () => {
+                if (ui.isPanelEnabled('page'))
+                    setTimeout(syncFormScroll, 0);
+            });
+            session.selection.on('changeCursor', syncFormHighlight);
+
             buffer = {
                 session: session,
                 reload: false
@@ -634,9 +655,9 @@ function InstanceController() {
         } else if (buffer.reload) {
             let code = await fetchCode(editor_filename);
 
-            editor_ignore_change = true;
+            ignore_editor_change = true;
             buffer.session.doc.setValue(code);
-            editor_ignore_change = false;
+            ignore_editor_change = false;
 
             buffer.reload = false;
         }
@@ -650,7 +671,7 @@ function InstanceController() {
     }
 
     async function handleFileChange(filename) {
-        if (editor_ignore_change)
+        if (ignore_editor_change)
             return;
 
         let buffer = editor_buffers.get(filename);
@@ -670,6 +691,157 @@ function InstanceController() {
         }
 
         self.run();
+    }
+
+    function syncFormScroll() {
+        if (!ui.isPanelEnabled('page'))
+            return;
+        if (ignore_editor_scroll) {
+            ignore_editor_scroll = false;
+            return;
+        }
+
+        try {
+            let panel_el = document.querySelector('#ins_page').parentNode;
+            let widget_els = panel_el.querySelectorAll('*[data-line]');
+
+            let editor_line = editor_ace.getFirstVisibleRow() + 1;
+
+            let prev_line;
+            for (let i = 0; i < widget_els.length; i++) {
+                let line = parseInt(widget_els[i].dataset.line, 10);
+
+                if (line >= editor_line) {
+                    if (!i) {
+                        ignore_page_scroll = true;
+                        panel_el.scrollTop = 0;
+                    } else if (i === widget_els.length - 1) {
+                        let top = computeRelativeTop(panel_el, widget_els[i]);
+
+                        ignore_page_scroll = true;
+                        panel_el.scrollTop = top;
+                    } else {
+                        let top1 = computeRelativeTop(panel_el, widget_els[i - 1]);
+                        let top2 = computeRelativeTop(panel_el, widget_els[i]);
+                        let frac = (editor_line - prev_line) / (line - prev_line);
+
+                        ignore_page_scroll = true;
+                        panel_el.scrollTop = top1 + frac * (top2 - top1);
+                    }
+
+                    break;
+                }
+
+                prev_line = line;
+            }
+        } catch (err) {
+            // Meh, don't wreck the editor if for some reason we can't sync the
+            // two views, this is not serious so just log it.
+            console.log(err);
+        }
+    }
+
+    function computeRelativeTop(parent, el) {
+        let top = 0;
+        while (el !== parent) {
+            top += el.offsetTop;
+            el = el.offsetParent;
+        }
+        return top;
+    }
+
+    function syncFormHighlight() {
+        if (!ui.isPanelEnabled('page'))
+            return;
+
+        try {
+            let panel_el = document.querySelector('#ins_page').parentNode;
+            let widget_els = panel_el.querySelectorAll('*[data-line]');
+
+            let selection = editor_ace.session.selection;
+            let editor_line = selection.getLineRange().start.row + 1;
+
+            let highlight_idx;
+            for (let i = 0;; i++) {
+                let line = parseInt(widget_els[i].dataset.line, 10);
+
+                if (line > editor_line) {
+                    if (i > 0)
+                        highlight_idx = i - 1;
+                    break;
+                }
+
+                if (i >= widget_els.length - 1) {
+                    highlight_idx = i;
+                    break;
+                }
+            }
+
+            for (let i = 0; i < widget_els.length; i++)
+                widget_els[i].classList.toggle('ui_highlight', i === highlight_idx);
+
+            if (highlight_idx != null) {
+                let el = widget_els[highlight_idx];
+                let rect = el.getBoundingClientRect();
+
+                if (rect.top < 0) {
+                    ignore_page_scroll = true;
+                    panel_el.scrollTop += rect.top - 50;
+                } else if (rect.bottom >= window.innerHeight) {
+                    ignore_page_scroll = true;
+                    panel_el.scrollTop += rect.bottom - window.innerHeight + 30;
+                }
+            }
+        } catch (err) {
+            // Meh, don't wreck the editor if for some reason we can't sync the
+            // two views, this is not serious so just log it.
+            console.log(err);
+        }
+    }
+
+    function syncEditorScroll() {
+        if (!ui.isPanelEnabled('editor'))
+            return;
+        if (ignore_page_scroll) {
+            ignore_page_scroll = false;
+            return;
+        }
+
+        try {
+            let panel_el = document.querySelector('#ins_page').parentNode;
+            let widget_els = panel_el.querySelectorAll('*[data-line]');
+
+            let prev_top;
+            let prev_line;
+            for (let i = 0; i < widget_els.length; i++) {
+                let el = widget_els[i];
+
+                let top = el.getBoundingClientRect().top;
+                let line = parseInt(el.dataset.line, 10);
+
+                if (top >= 0) {
+                    if (!i) {
+                        ignore_editor_scroll = true;
+                        editor_ace.renderer.scrollToLine(0);
+                    } else {
+                        let frac = -prev_top / (top - prev_top);
+                        let line2 = Math.floor(prev_line + frac * (line - prev_line));
+
+                        ignore_editor_scroll = true;
+                        editor_ace.renderer.scrollToLine(line2);
+                    }
+
+                    break;
+                }
+
+                prev_top = top;
+                prev_line = line;
+            }
+        } catch (err) {
+            // Meh, don't wreck anything if for some reason we can't sync the
+            // two views, this is not serious so just log it.
+            console.log(err);
+        }
     }
 
     // Javascript Blob/File API sucks, plain and simple

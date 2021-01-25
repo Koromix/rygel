@@ -929,7 +929,11 @@ function FormBuilder(state, model, readonly = false) {
 
         // This helps avoid garbage output when the user types 'page.output(html);'
         if (content != null && content !== html && content !== svg) {
-            let render = intf => html`<div class="fm_wrap">${content}</div>`;
+            let render = intf => html`
+                <div class="fm_wrap" data-line=${intf.line}>
+                    ${content}
+                </div>
+            `;
 
             let intf = makeWidget('output', null, render, options);
             addWidget(intf);
@@ -1259,7 +1263,7 @@ instead of:
             cls += ' compact';
 
         return html`
-            <div class=${intf.options.disabled ? 'fm_wrap disabled' : 'fm_wrap'}>
+            <div class=${intf.options.disabled ? 'fm_wrap disabled' : 'fm_wrap'} data-line=${intf.line}>
                 <div class=${cls}>
                     ${frag}
                     ${intf.errors.length ?
@@ -1300,6 +1304,7 @@ instead of:
             type: type,
             label: label,
             options: options,
+            line: util.parseEvalErrorLine(new Error()),
 
             errors: [],
 
