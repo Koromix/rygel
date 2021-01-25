@@ -1,10 +1,10 @@
-goupile_root_path: /opt/goupile
+goupile_root_path: /opt/goupile # Installation directory
 goupile_compiler: GCC # Supports GCC, Clang
-goupile_run_user: goupile
+goupile_run_user: goupile # POSIX user that will run goupile services
 
-goupile_domains:
+goupile_domains: # List of goupile domains to configure and run
   - demo.goupile.fr
-goupile_default_username: admin
+goupile_default_username: admin # Default admin username and password for newly created goupile domains
 goupile_default_password: admin
 
-nginx_conf_path: /etc/nginx/conf.d
+nginx_conf_path: /etc/nginx/conf.d # A file will be deposited here, and will include NGINX conf files for goupile domains
