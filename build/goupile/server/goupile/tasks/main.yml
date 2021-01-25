@@ -123,7 +123,7 @@
 
 - name: Enable and start NGINX
   systemd:
-    name: nginx
+    name: '{{nginx_service_name}}'
     enabled: yes
     state: started
   become: yes

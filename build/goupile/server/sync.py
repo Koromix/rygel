@@ -266,7 +266,7 @@ def run_sync(config):
 
     # Reload NGINX configuration
     print('>>> Reload NGINX server', file = sys.stderr)
-    execute_command(['systemctl', 'reload', 'nginx.service'])
+    execute_command(['systemctl', 'reload', config['NGINX.ServiceName']])
 
 if __name__ == '__main__':
     # Always work from sync.py directory

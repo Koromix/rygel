@@ -9,6 +9,7 @@ DefaultPassword = admin
 [NGINX]
 ConfigDirectory = nginx/domains.d
 ServerInclude = nginx/include.conf
+ServiceName = {{nginx_service_name}}
 
 [Domains]
 {% for domain in goupile_domains -%}
