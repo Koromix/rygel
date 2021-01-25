@@ -44,33 +44,33 @@
     owner: '{{item.owner}}'
     mode: '0755'
   loop:
-    - path: /opt/goupile
+    - path: '{{goupile_root}}'
       owner: 'root'
-    - path: /opt/goupile/src
+    - path: '{{goupile_root}}/src'
       owner: '{{whoami.stdout}}'
-    - path: /opt/goupile/domains
+    - path: '{{goupile_root}}/domains'
       owner: 'goupile'
-    - path: /opt/goupile/nginx/domains.d
+    - path: '{{goupile_root}}/nginx/domains.d'
       owner: 'root'
   become: yes
 
 - name: Fetch Goupile repository
   git:
     repo: https://framagit.org/interhop/goupile.git
-    dest: /opt/goupile/src
+    dest: '{{goupile_root}}/src'
   become: no
 
 - name: Bootstrap Felix
   shell:
-    cmd: /opt/goupile/src/build/felix/build_posix.sh
-    creates: /opt/goupile/src/felix
-    chdir: /opt/goupile/src
+    cmd: '{{goupile_root}}/src/build/felix/build_posix.sh'
+    creates: '{{goupile_root}}/src/felix'
+    chdir: '{{goupile_root}}/src'
   become: no
 
 - name: Build Goupile
   command:
-    cmd: /opt/goupile/src/felix -cGCC -mFast goupile
-    chdir: /opt/goupile/src
+    cmd: '{{goupile_root}}/src/felix -cGCC -mFast goupile'
+    chdir: '{{goupile_root}}/src'
   register: build
   changed_when: 'build.stderr_lines[-1] == "Nothind to do!" or build.stderr_lines[-2] == "Nothind to do!"'
   become: no
@@ -84,10 +84,10 @@
     group: 'root'
     mode: '0755'
   loop:
-    - src: /opt/goupile/src/bin/GCC_Fast/goupile
-      dest: /opt/goupile/goupile
-    - src: /opt/goupile/src/build/goupile/server/sync.py
-      dest: /opt/goupile/sync.py
+    - src: '{{goupile_root}}/src/bin/GCC_Fast/goupile'
+      dest: '{{goupile_root}}/goupile'
+    - src: '{{goupile_root}}/src/build/goupile/server/sync.py'
+      dest: '{{goupile_root}}/sync.py'
   become: yes
 
 - name: Upload configuration files
@@ -99,11 +99,11 @@
     mode: '0644'
   loop:
     - src: sync.ini
-      dest: /opt/goupile/sync.ini
+      dest: '{{goupile_root}}/sync.ini'
     - src: goupile@.service
       dest: /etc/systemd/system/goupile@.service
     - src: include.conf
-      dest: /opt/goupile/nginx/include.conf
+      dest: '{{goupile_root}}/nginx/include.conf'
   register: configuration
   become: yes
 
@@ -122,5 +122,5 @@
 
 - name: Sync Goupile, NGINX and systemd
   command:
-    cmd: /opt/goupile/sync.py
+    cmd: '{{goupile_root}}/sync.py'
   become: yes
