@@ -83,10 +83,10 @@ def commit_file(filename, data):
     else:
         return False
 
-def list_domains(root_dir):
+def list_domains(root_dir, names):
     domains = {}
 
-    for domain in sorted(os.listdir(root_dir)):
+    for domain in names:
         directory = os.path.join(root_dir, domain)
         filename = os.path.join(directory, 'goupile.ini')
 
@@ -201,12 +201,11 @@ def run_sync(config):
                           config['Goupile.RunUser'], config['Goupile.DefaultAdmin'], config['Goupile.DefaultPassword'])
 
     # List existing domains and services
-    domains = list_domains(config['Goupile.DomainDirectory'])
+    domains = list_domains(config['Goupile.DomainDirectory'], config['Domains'])
     services = list_services()
 
     # Detect binary mismatches
-    for domain in config['Domains']:
-        info = domains[domain]
+    for domain, info in domains.items():
         if not os.path.exists(info.binary):
             try:
                 os.unlink(info.binary)
@@ -223,8 +222,7 @@ def run_sync(config):
 
     # Update instance configuration files
     print('>>> Write configuration files', file = sys.stderr)
-    for domain in config['Domains']:
-        info = domains[domain]
+    for domain, info in domains.items():
         if update_domain_config(info):
             changed = True
 
@@ -239,8 +237,7 @@ def run_sync(config):
         filename = os.path.join(config['NGINX.ConfigDirectory'], name)
         os.unlink(filename)
         changed = True
-    for domain in config['Domains']:
-        info = domains[domain]
+    for domain, info in domains.items():
         if update_nginx_config(config['NGINX.ConfigDirectory'], domain, info.socket,
                                include = config.get('NGINX.ServerInclude')):
             changed = True
@@ -252,8 +249,7 @@ def run_sync(config):
             run_service_command(domain, 'stop')
             run_service_command(domain, 'disable')
             changed = True
-    for domain in config['Domains']:
-        info = domains[domain]
+    for domain, info in domains.items():
         status = services.get(domain)
         if status is None:
             run_service_command(domain, 'enable')
