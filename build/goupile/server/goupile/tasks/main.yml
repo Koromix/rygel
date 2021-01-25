@@ -102,16 +102,20 @@
     dest: '{{item.dest}}'
     owner: root
     group: root
-    mode: '0644'
+    mode: '{{item.mode}}'
   loop:
     - src: sync.ini.j2
       dest: '{{goupile_root_path}}/sync.ini'
+      mode: '0600'
     - src: goupile@.service.j2
       dest: /etc/systemd/system/goupile@.service
+      mode: '0644'
     - src: nginx.conf.j2
       dest: '{{nginx_conf_path}}/goupile.conf'
+      mode: '0644'
     - src: include.conf.j2
       dest: '{{goupile_root_path}}/nginx/include.conf'
+      mode: '0644'
   register: upload_config
   become: yes
 
