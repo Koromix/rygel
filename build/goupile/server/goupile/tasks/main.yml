@@ -47,38 +47,34 @@
     dest: '{{goupile_root_path}}/src'
   become: no
 
-- name: Check existing Felix build system
-  stat:
-    path: '{{goupile_root_path}}/src/felix'
-  register: felix_stat
-  become: no
-
-- name: Get Felix version
+- name: Update Felix build system
   command:
-    cmd: '{{goupile_root_path}}/src/felix --version'
-  changed_when: no
-  when: 'felix_stat.stat.exists'
-  register: felix_version
-  become: no
-
-- name: Get repository version
-  command:
-    cmd: 'git -C "{{goupile_root_path}}/src" log -n1 --pretty=format:%cd_%h --date=format:%Y%m%d.%H%M'
-  changed_when: no
-  when: 'felix_stat.stat.exists'
-  register: repo_version
+    cmd: '{{goupile_root_path}}/src/bin/GCC_Fast/felix -cGCC -mFast felix'
+    chdir: '{{goupile_root_path}}/src'
+  ignore_errors: yes
+  register: felix_update
   become: no
 
 - name: Bootstrap Felix
-  shell:
-    cmd: '{{goupile_root_path}}/src/build/felix/build_posix.sh'
-    chdir: '{{goupile_root_path}}/src'
-  when: 'not felix_stat.stat.exists or not (repo_version.stdout in felix_version.stdout)'
+  block:
+    - name: 'Bootstrap Felix'
+      shell:
+        cmd: '{{goupile_root_path}}/src/build/felix/build_posix.sh'
+        chdir: '{{goupile_root_path}}/src'
+    - name: Update Felix build system
+      command:
+        cmd: '{{goupile_root_path}}/src/felix -cGCC -mFast felix'
+        chdir: '{{goupile_root_path}}/src'
+    - name: Delete bootstrapped Felix
+      file:
+        path: '{{goupile_root_path}}/src/felix'
+        state: 'absent'
+  when: 'felix_update.rc != 0'
   become: no
 
 - name: Build Goupile
   command:
-    cmd: '{{goupile_root_path}}/src/felix -cGCC -mFast goupile'
+    cmd: '{{goupile_root_path}}/src/bin/GCC_Fast/felix -cGCC -mFast goupile'
     chdir: '{{goupile_root_path}}/src'
   register: build_goupile
   changed_when: 'build_goupile.stderr_lines[-1] != "Nothing to do!" and build_goupile.stderr_lines[-2] != "Nothing to do!"'
