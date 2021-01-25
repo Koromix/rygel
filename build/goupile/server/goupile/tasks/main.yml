@@ -36,7 +36,7 @@
     - path: '{{goupile_root}}/src'
       owner: '{{whoami.stdout}}'
     - path: '{{goupile_root}}/domains'
-      owner: 'goupile'
+      owner: '{{goupile_run_user}}'
     - path: '{{goupile_root}}/nginx/domains.d'
       owner: 'root'
   become: yes

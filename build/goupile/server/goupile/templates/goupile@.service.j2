@@ -1,8 +1,7 @@
 [Service]
 Type = simple
 
-User = goupile
-Group = goupile
+User = {{goupile_run_user}}
 
 RuntimeDirectory = goupile
 ExecStart = {{goupile_root}}/domains/%i/goupile

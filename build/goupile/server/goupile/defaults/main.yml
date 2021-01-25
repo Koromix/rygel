@@ -1,3 +1,7 @@
 goupile_root: '/opt/goupile'
+goupile_run_user: goupile
+
 goupile_domains:
   - demo.goupile.fr
+goupile_default_username: admin
+goupile_default_password: admin
