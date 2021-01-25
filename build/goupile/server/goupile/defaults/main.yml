@@ -5,7 +5,13 @@ goupile_run_user: goupile # POSIX user that will run goupile services
 goupile_domains: # List of goupile domains to configure and run
   - demo.goupile.fr
 goupile_default_username: admin # Default admin username and password for newly created goupile domains
-goupile_default_password: admin
+goupile_default_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          66336266623265613734373234653331396165636636613433333933366136363137313432353730
+          6235376465323365626339316532316139646537623437380a613461646464313865313337386163
+          37346466613464373039393665383132333336383765643235393534333830373736663864643531
+          3930656463633533660a363264343064393935353031623237363439306438363266333964643838
+          33373566376434313239333366396431343765363732653832363065306133383833
 
 nginx_service_name: nginx.service # NGINX systemd unit name
 nginx_conf_path: /etc/nginx/conf.d # A file will be deposited here, and will include NGINX conf files for goupile domains
