@@ -27,18 +27,18 @@
 - name: Prepare Goupile directories
   file:
     path: '{{item.path}}'
-    state: 'directory'
+    state: directory
     owner: '{{item.owner}}'
     mode: '0755'
   loop:
     - path: '{{goupile_root_path}}'
-      owner: 'root'
+      owner: root
     - path: '{{goupile_root_path}}/src'
       owner: '{{whoami.stdout}}'
     - path: '{{goupile_root_path}}/domains'
       owner: '{{goupile_run_user}}'
     - path: '{{goupile_root_path}}/nginx/domains.d'
-      owner: 'root'
+      owner: root
   become: yes
 
 - name: Fetch Goupile repository
@@ -57,7 +57,7 @@
 
 - name: Bootstrap Felix
   block:
-    - name: 'Bootstrap Felix'
+    - name: Bootstrap Felix
       shell:
         cmd: '{{goupile_root_path}}/src/build/felix/build_posix.sh'
         chdir: '{{goupile_root_path}}/src'
@@ -68,7 +68,7 @@
     - name: Delete bootstrapped Felix
       file:
         path: '{{goupile_root_path}}/src/felix'
-        state: 'absent'
+        state: absent
   when: 'felix_update.rc != 0'
   become: no
 
@@ -85,8 +85,8 @@
     src: '{{item.src}}'
     remote_src: yes
     dest: '{{item.dest}}'
-    owner: 'root'
-    group: 'root'
+    owner: root
+    group: root
     mode: '0755'
   loop:
     - src: '{{goupile_root_path}}/src/bin/{{goupile_compiler}}_Fast/goupile'
@@ -99,8 +99,8 @@
   template:
     src: '{{item.src}}'
     dest: '{{item.dest}}'
-    owner: 'root'
-    group: 'root'
+    owner: root
+    group: root
     mode: '0644'
   loop:
     - src: sync.ini.j2
@@ -120,9 +120,9 @@
 
 - name: Enable and start NGINX
   systemd:
-    name: 'nginx'
+    name: nginx
     enabled: yes
-    state: 'started'
+    state: started
   become: yes
 
 - name: Sync Goupile, NGINX and systemd
