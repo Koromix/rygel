@@ -31,31 +31,31 @@
     owner: '{{item.owner}}'
     mode: '0755'
   loop:
-    - path: '{{goupile_root}}'
+    - path: '{{goupile_root_path}}'
       owner: 'root'
-    - path: '{{goupile_root}}/src'
+    - path: '{{goupile_root_path}}/src'
       owner: '{{whoami.stdout}}'
-    - path: '{{goupile_root}}/domains'
+    - path: '{{goupile_root_path}}/domains'
       owner: '{{goupile_run_user}}'
-    - path: '{{goupile_root}}/nginx/domains.d'
+    - path: '{{goupile_root_path}}/nginx/domains.d'
       owner: 'root'
   become: yes
 
 - name: Fetch Goupile repository
   git:
     repo: https://framagit.org/interhop/goupile.git
-    dest: '{{goupile_root}}/src'
+    dest: '{{goupile_root_path}}/src'
   become: no
 
 - name: Check existing Felix build system
   stat:
-    path: '{{goupile_root}}/src/felix'
+    path: '{{goupile_root_path}}/src/felix'
   register: felix_stat
   become: no
 
 - name: Get Felix version
   command:
-    cmd: '{{goupile_root}}/src/felix --version'
+    cmd: '{{goupile_root_path}}/src/felix --version'
   changed_when: no
   when: 'felix_stat.stat.exists'
   register: felix_version
@@ -63,7 +63,7 @@
 
 - name: Get repository version
   command:
-    cmd: 'git -C "{{goupile_root}}/src" log -n1 --pretty=format:%cd_%h --date=format:%Y%m%d.%H%M'
+    cmd: 'git -C "{{goupile_root_path}}/src" log -n1 --pretty=format:%cd_%h --date=format:%Y%m%d.%H%M'
   changed_when: no
   when: 'felix_stat.stat.exists'
   register: repo_version
@@ -71,15 +71,15 @@
 
 - name: Bootstrap Felix
   shell:
-    cmd: '{{goupile_root}}/src/build/felix/build_posix.sh'
-    chdir: '{{goupile_root}}/src'
+    cmd: '{{goupile_root_path}}/src/build/felix/build_posix.sh'
+    chdir: '{{goupile_root_path}}/src'
   when: 'not felix_stat.stat.exists or not (repo_version.stdout in felix_version.stdout)'
   become: no
 
 - name: Build Goupile
   command:
-    cmd: '{{goupile_root}}/src/felix -cGCC -mFast goupile'
-    chdir: '{{goupile_root}}/src'
+    cmd: '{{goupile_root_path}}/src/felix -cGCC -mFast goupile'
+    chdir: '{{goupile_root_path}}/src'
   register: build_goupile
   changed_when: 'build_goupile.stderr_lines[-1] != "Nothing to do!" and build_goupile.stderr_lines[-2] != "Nothing to do!"'
   become: no
@@ -93,10 +93,10 @@
     group: 'root'
     mode: '0755'
   loop:
-    - src: '{{goupile_root}}/src/bin/GCC_Fast/goupile'
-      dest: '{{goupile_root}}/goupile'
-    - src: '{{goupile_root}}/src/build/goupile/server/sync.py'
-      dest: '{{goupile_root}}/sync.py'
+    - src: '{{goupile_root_path}}/src/bin/GCC_Fast/goupile'
+      dest: '{{goupile_root_path}}/goupile'
+    - src: '{{goupile_root_path}}/src/build/goupile/server/sync.py'
+      dest: '{{goupile_root_path}}/sync.py'
   become: yes
 
 - name: Upload configuration files
@@ -108,11 +108,11 @@
     mode: '0644'
   loop:
     - src: sync.ini.j2
-      dest: '{{goupile_root}}/sync.ini'
+      dest: '{{goupile_root_path}}/sync.ini'
     - src: goupile@.service.j2
       dest: /etc/systemd/system/goupile@.service
     - src: include.conf.j2
-      dest: '{{goupile_root}}/nginx/include.conf'
+      dest: '{{goupile_root_path}}/nginx/include.conf'
   register: upload_config
   become: yes
 
@@ -131,5 +131,5 @@
 
 - name: Sync Goupile, NGINX and systemd
   command:
-    cmd: '{{goupile_root}}/sync.py'
+    cmd: '{{goupile_root_path}}/sync.py'
   become: yes

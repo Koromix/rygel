@@ -4,8 +4,8 @@ Type = simple
 User = {{goupile_run_user}}
 
 RuntimeDirectory = goupile
-ExecStart = {{goupile_root}}/domains/%i/goupile
-WorkingDirectory = {{goupile_root}}/domains/%i
+ExecStart = {{goupile_root_path}}/domains/%i/goupile
+WorkingDirectory = {{goupile_root_path}}/domains/%i
 
 Restart = on-failure
 TimeoutStopSec = 30

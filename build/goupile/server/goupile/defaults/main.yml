@@ -1,4 +1,4 @@
-goupile_root: '/opt/goupile'
+goupile_root_path: '/opt/goupile'
 goupile_run_user: goupile
 
 goupile_domains:
