@@ -5,8 +5,8 @@ User = goupile
 Group = goupile
 
 RuntimeDirectory = goupile
-ExecStart = /opt/goupile/domains/%i/goupile
-WorkingDirectory = /opt/goupile/domains/%i
+ExecStart = {{goupile_root}}/domains/%i/goupile
+WorkingDirectory = {{goupile_root}}/domains/%i
 
 Restart = on-failure
 TimeoutStopSec = 30

@@ -1,1 +1,3 @@
 goupile_root: '/opt/goupile'
+goupile_domains:
+  - demo.goupile.fr

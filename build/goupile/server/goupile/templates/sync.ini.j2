@@ -12,4 +12,6 @@ ConfigDirectory = nginx/domains.d
 ServerInclude = nginx/include.conf
 
 [Domains]
-demo.goupile.fr
+{% for domain in goupile_domains -%}
+    {{ domain }}
+{% endfor %}

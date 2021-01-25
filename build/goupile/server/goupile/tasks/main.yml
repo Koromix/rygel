@@ -100,18 +100,18 @@
   become: yes
 
 - name: Upload configuration files
-  copy:
+  template:
     src: '{{item.src}}'
     dest: '{{item.dest}}'
     owner: 'root'
     group: 'root'
     mode: '0644'
   loop:
-    - src: sync.ini
+    - src: sync.ini.j2
       dest: '{{goupile_root}}/sync.ini'
-    - src: goupile@.service
+    - src: goupile@.service.j2
       dest: /etc/systemd/system/goupile@.service
-    - src: include.conf
+    - src: include.conf.j2
       dest: '{{goupile_root}}/nginx/include.conf'
   register: upload_config
   become: yes
