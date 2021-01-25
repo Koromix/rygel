@@ -1,8 +1,8 @@
 - name: Get connected user name
   command: whoami
-  changed_when: false
+  changed_when: no
   register: whoami
-  become: false
+  become: no
 
 - name: Install packages
   package:
