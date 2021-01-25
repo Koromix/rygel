@@ -96,7 +96,7 @@
       dest: '{{goupile_root_path}}/sync.py'
   become: yes
 
-- name: Upload configuration files
+- name: Update configuration files
   template:
     src: '{{item.src}}'
     dest: '{{item.dest}}'
