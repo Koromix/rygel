@@ -6,3 +6,5 @@ goupile_domains:
   - demo.goupile.fr
 goupile_default_username: admin
 goupile_default_password: admin
+
+nginx_conf_path: /etc/nginx/conf.d

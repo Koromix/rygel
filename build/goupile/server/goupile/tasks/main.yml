@@ -108,6 +108,8 @@
       dest: '{{goupile_root_path}}/sync.ini'
     - src: goupile@.service.j2
       dest: /etc/systemd/system/goupile@.service
+    - src: nginx.conf.j2
+      dest: '{{nginx_conf_path}}/goupile.conf'
     - src: include.conf.j2
       dest: '{{goupile_root_path}}/nginx/include.conf'
   register: upload_config
@@ -129,4 +131,6 @@
 - name: Sync Goupile, NGINX and systemd
   command:
     cmd: '{{goupile_root_path}}/sync.py'
+  register: sync
+  changed_when: 'sync.stderr_lines[-1] != ">>> Nothing has changed" and sync.stderr_lines[-2] != ">>> Nothing has changed"'
   become: yes

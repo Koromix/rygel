@@ -6,6 +6,7 @@
 
 import argparse
 import configparser
+import hashlib
 import io
 import itertools
 import os
@@ -59,6 +60,28 @@ def load_config(filename, array_sections = []):
 
 def execute_command(args):
     subprocess.run(args, check = True)
+
+def commit_file(filename, data):
+    try:
+        with open(filename, 'rb') as f:
+            m = hashlib.sha256()
+            for chunk in iter(lambda: f.read(4096), b""):
+                m.update(chunk)
+            hash1 = m.digest()
+    except Exception:
+        hash1 = None
+
+    data = data.encode('UTF-8')
+    m = hashlib.sha256()
+    m.update(data)
+    hash2 = m.digest()
+
+    if hash1 != hash2:
+        with open(filename, 'wb') as f:
+            f.write(data)
+        return True
+    else:
+        return False
 
 def list_domains(root_dir):
     domains = {}
@@ -118,7 +141,7 @@ def list_services():
 
                         sb = os.stat(f'/proc/{pid}/exe')
                         status.inode = sb.st_ino
-                    except:
+                    except Exception:
                         status.running = False
 
                 services[name] = status
@@ -140,12 +163,9 @@ def update_domain_config(info):
     ini.set('HTTP', 'UnixPath', info.socket)
     ini.remove_option('HTTP', 'Port')
 
-    with open(filename, 'w') as f:
+    with io.StringIO() as f:
         ini.write(f)
-
-def update_nginx_site(filename, directory):
-    with open(filename, 'w') as f:
-        print(f'include {directory}/*.conf;', file = f)
+        return commit_file(filename, f.getvalue())
 
 def update_nginx_config(directory, domain, socket, include = None):
     filename = os.path.join(directory, f'{domain}.conf')
@@ -153,7 +173,7 @@ def update_nginx_config(directory, domain, socket, include = None):
     compat_dir = os.path.join(directory, 'compat.d')
     custom_dir = os.path.join(directory, 'custom.d')
 
-    with open(filename, 'w') as f:
+    with io.StringIO() as f:
         print(f'server {{', file = f)
         print(f'    server_name {domain};', file = f)
         print(f'    client_max_body_size 32M;', file = f)
@@ -167,6 +187,8 @@ def update_nginx_config(directory, domain, socket, include = None):
         if os.path.isdir(custom_dir):
             print(f'    include {custom_dir}/{domain}[.]conf;', file = f)
         print(f'}}', file = f)
+
+        return commit_file(filename, f.getvalue())
 
 def run_sync(config):
     default_binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
@@ -197,24 +219,31 @@ def run_sync(config):
             print(f'+++ Domain {domain} is running old version')
             info.mismatch = True
 
+    changed = False
+
     # Update instance configuration files
     print('>>> Write configuration files', file = sys.stderr)
     for domain in config['Domains']:
         info = domains[domain]
-        update_domain_config(info)
+        if update_domain_config(info):
+            changed = True
 
     # Update NGINX configuration files
     print('>>> Write NGINX configuration files', file = sys.stderr)
-    if config.get('NGINX.IncludeFile') is not None:
-        update_nginx_site(config['NGINX.IncludeFile'], config['NGINX.ConfigDirectory'])
     for name in os.listdir(config['NGINX.ConfigDirectory']):
-        if name.endswith('.conf'):
-            filename = os.path.join(config['NGINX.ConfigDirectory'], name)
-            os.unlink(filename)
+        match = re.search('^([0-9A-Za-z_\\-\\.]+)\\.conf$', name)
+        if match is not None:
+            domain = match.group(1)
+            if domains.get(domain) is not None:
+                continue
+        filename = os.path.join(config['NGINX.ConfigDirectory'], name)
+        os.unlink(filename)
+        changed = True
     for domain in config['Domains']:
         info = domains[domain]
-        update_nginx_config(config['NGINX.ConfigDirectory'], domain, info.socket,
-                            include = config.get('NGINX.ServerInclude'))
+        if update_nginx_config(config['NGINX.ConfigDirectory'], domain, info.socket,
+                               include = config.get('NGINX.ServerInclude')):
+            changed = True
 
     # Sync systemd services
     for domain in services:
@@ -222,6 +251,7 @@ def run_sync(config):
         if info is None:
             run_service_command(domain, 'stop')
             run_service_command(domain, 'disable')
+            changed = True
     for domain in config['Domains']:
         info = domains[domain]
         status = services.get(domain)
@@ -231,6 +261,12 @@ def run_sync(config):
             run_service_command(domain, 'stop')
             migrate_domain(domain, info)
             run_service_command(domain, 'start')
+            changed = True
+
+    # Nothing changed!
+    if not changed:
+        print('>>> Nothing has changed', file = sys.stderr)
+        return
 
     # Reload NGINX configuration
     print('>>> Reload NGINX server', file = sys.stderr)
