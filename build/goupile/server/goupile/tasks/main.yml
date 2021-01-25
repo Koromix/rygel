@@ -75,7 +75,7 @@
 
 - name: Build Goupile
   command:
-    cmd: '{{goupile_root_path}}/src/bin/{{goupile_compiler}}_Fast/felix -c{{goupile_compiler}} -mFast goupile'
+    cmd: '{{goupile_root_path}}/src/bin/{{goupile_compiler}}_Fast/felix -c{{goupile_compiler}} -mFast goupile felix'
     chdir: '{{goupile_root_path}}/src'
   register: build_goupile
   changed_when: 'build_goupile.stderr_lines[-1] != "Nothing to do!" and build_goupile.stderr_lines[-2] != "Nothing to do!"'
