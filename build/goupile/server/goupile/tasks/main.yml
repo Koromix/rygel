@@ -4,8 +4,8 @@
   register: whoami
   become: false
 
-- name: Install packages (apt)
-  apt:
+- name: Install packages
+  package:
     update_cache: yes
     pkg:
       - nginx
@@ -14,19 +14,6 @@
       - g++
     state: latest
   become: yes
-  when: 'ansible_os_family == "Debian"'
-
-- name: Install packages (yum)
-  yum:
-    update_cache: yes
-    pkg:
-      - nginx
-      - git
-      - gcc
-      - g++
-    state: latest
-  become: yes
-  when: 'ansible_os_family == "RedHat"'
 
 - name: Create Goupile user
   user:
