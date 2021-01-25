@@ -52,7 +52,8 @@
     cmd: '{{goupile_root_path}}/src/bin/{{goupile_compiler}}_Fast/felix -c{{goupile_compiler}} -mFast felix'
     chdir: '{{goupile_root_path}}/src'
   ignore_errors: yes
-  register: felix_update
+  register: build_felix
+  changed_when: 'not build_felix.failed and build_felix.stderr_lines[-1] != "Nothing to do!" and build_felix.stderr_lines[-2] != "Nothing to do!"'
   become: no
 
 - name: Bootstrap Felix
@@ -69,7 +70,7 @@
       file:
         path: '{{goupile_root_path}}/src/felix'
         state: absent
-  when: 'felix_update.rc != 0'
+  when: 'build_felix.rc != 0'
   become: no
 
 - name: Build Goupile
