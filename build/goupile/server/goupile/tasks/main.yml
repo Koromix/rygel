@@ -49,7 +49,7 @@
 
 - name: Update Felix build system
   command:
-    cmd: '{{goupile_root_path}}/src/bin/GCC_Fast/felix -cGCC -mFast felix'
+    cmd: '{{goupile_root_path}}/src/bin/{{goupile_compiler}}_Fast/felix -c{{goupile_compiler}} -mFast felix'
     chdir: '{{goupile_root_path}}/src'
   ignore_errors: yes
   register: felix_update
@@ -63,7 +63,7 @@
         chdir: '{{goupile_root_path}}/src'
     - name: Update Felix build system
       command:
-        cmd: '{{goupile_root_path}}/src/felix -cGCC -mFast felix'
+        cmd: '{{goupile_root_path}}/src/felix -c{{goupile_compiler}} -mFast felix'
         chdir: '{{goupile_root_path}}/src'
     - name: Delete bootstrapped Felix
       file:
@@ -74,7 +74,7 @@
 
 - name: Build Goupile
   command:
-    cmd: '{{goupile_root_path}}/src/bin/GCC_Fast/felix -cGCC -mFast goupile'
+    cmd: '{{goupile_root_path}}/src/bin/{{goupile_compiler}}_Fast/felix -c{{goupile_compiler}} -mFast goupile'
     chdir: '{{goupile_root_path}}/src'
   register: build_goupile
   changed_when: 'build_goupile.stderr_lines[-1] != "Nothing to do!" and build_goupile.stderr_lines[-2] != "Nothing to do!"'
@@ -89,7 +89,7 @@
     group: 'root'
     mode: '0755'
   loop:
-    - src: '{{goupile_root_path}}/src/bin/GCC_Fast/goupile'
+    - src: '{{goupile_root_path}}/src/bin/{{goupile_compiler}}_Fast/goupile'
       dest: '{{goupile_root_path}}/goupile'
     - src: '{{goupile_root_path}}/src/build/goupile/server/sync.py'
       dest: '{{goupile_root_path}}/sync.py'

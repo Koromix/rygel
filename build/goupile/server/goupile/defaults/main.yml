@@ -1,4 +1,5 @@
 goupile_root_path: '/opt/goupile'
+goupile_compiler: 'GCC' # Supports GCC, Clang
 goupile_run_user: goupile
 
 goupile_domains:
