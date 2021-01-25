@@ -645,7 +645,10 @@ function InstanceController() {
                 if (ui.isPanelEnabled('page'))
                     setTimeout(syncFormScroll, 0);
             });
-            session.selection.on('changeCursor', syncFormHighlight);
+            session.selection.on('changeCursor', () => {
+                syncFormHighlight();
+                ignore_editor_scroll = true;
+            });
 
             buffer = {
                 session: session,
@@ -759,29 +762,45 @@ function InstanceController() {
             let widget_els = panel_el.querySelectorAll('*[data-line]');
 
             let selection = editor_ace.session.selection;
-            let editor_line = selection.getLineRange().start.row + 1;
+            let editor_lines = [
+                selection.getRange().start.row + 1,
+                selection.getRange().end.row + 1
+            ];
 
-            let highlight_idx;
+            let highlight_first;
+            let highlight_last;
             for (let i = 0;; i++) {
                 let line = parseInt(widget_els[i].dataset.line, 10);
 
-                if (line > editor_line) {
+                if (line > editor_lines[0]) {
                     if (i > 0)
-                        highlight_idx = i - 1;
+                        highlight_first = i - 1;
                     break;
                 }
 
                 if (i >= widget_els.length - 1) {
-                    highlight_idx = i;
+                    highlight_first = i;
                     break;
                 }
             }
+            if (highlight_first != null) {
+                highlight_last = highlight_first;
+
+                while (highlight_last < widget_els.length) {
+                    let line = parseInt(widget_els[highlight_last].dataset.line, 10);
+                    if (line > editor_lines[1])
+                        break;
+                    highlight_last++;
+                }
+                highlight_last--;
+            }
 
             for (let i = 0; i < widget_els.length; i++)
-                widget_els[i].classList.toggle('ui_highlight', i === highlight_idx);
+                widget_els[i].classList.toggle('ui_highlight', i >= highlight_first && i <= highlight_last);
 
-            if (highlight_idx != null) {
-                let el = widget_els[highlight_idx];
+            // Make sure widget is in viewport
+            if (highlight_first != null && highlight_last === highlight_first) {
+                let el = widget_els[highlight_first];
                 let rect = el.getBoundingClientRect();
 
                 if (rect.top < 0) {
