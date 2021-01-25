@@ -81,7 +81,7 @@
     cmd: '{{goupile_root}}/src/felix -cGCC -mFast goupile'
     chdir: '{{goupile_root}}/src'
   register: build_goupile
-  changed_when: 'build_goupile.stderr_lines[-1] == "Nothind to do!" or build_goupile.stderr_lines[-2] == "Nothind to do!"'
+  changed_when: 'build_goupile.stderr_lines[-1] != "Nothing to do!" and build_goupile.stderr_lines[-2] != "Nothing to do!"'
   become: no
 
 - name: Install Goupile
