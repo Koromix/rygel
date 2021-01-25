@@ -232,11 +232,10 @@ def run_sync(config):
         match = re.search('^([0-9A-Za-z_\\-\\.]+)\\.conf$', name)
         if match is not None:
             domain = match.group(1)
-            if domains.get(domain) is not None:
-                continue
-        filename = os.path.join(config['NGINX.ConfigDirectory'], name)
-        os.unlink(filename)
-        changed = True
+            if domains.get(domain) is None:
+                filename = os.path.join(config['NGINX.ConfigDirectory'], name)
+                os.unlink(filename)
+                changed = True
     for domain, info in domains.items():
         if update_nginx_config(config['NGINX.ConfigDirectory'], domain, info.socket,
                                include = config.get('NGINX.ServerInclude')):
