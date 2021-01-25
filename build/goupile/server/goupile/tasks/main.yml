@@ -47,19 +47,41 @@
     dest: '{{goupile_root}}/src'
   become: no
 
+- name: Check existing Felix build system
+  stat:
+    path: '{{goupile_root}}/src/felix'
+  register: felix_stat
+  become: no
+
+- name: Get Felix version
+  command:
+    cmd: '{{goupile_root}}/src/felix --version'
+  changed_when: no
+  when: 'felix_stat.stat.exists'
+  register: felix_version
+  become: no
+
+- name: Get repository version
+  command:
+    cmd: 'git -C "{{goupile_root}}/src" log -n1 --pretty=format:%cd_%h --date=format:%Y%m%d.%H%M'
+  changed_when: no
+  when: 'felix_stat.stat.exists'
+  register: repo_version
+  become: no
+
 - name: Bootstrap Felix
   shell:
     cmd: '{{goupile_root}}/src/build/felix/build_posix.sh'
-    creates: '{{goupile_root}}/src/felix'
     chdir: '{{goupile_root}}/src'
+  when: 'not felix_stat.stat.exists or not (repo_version.stdout in felix_version.stdout)'
   become: no
 
 - name: Build Goupile
   command:
     cmd: '{{goupile_root}}/src/felix -cGCC -mFast goupile'
     chdir: '{{goupile_root}}/src'
-  register: build
-  changed_when: 'build.stderr_lines[-1] == "Nothind to do!" or build.stderr_lines[-2] == "Nothind to do!"'
+  register: build_goupile
+  changed_when: 'build_goupile.stderr_lines[-1] == "Nothind to do!" or build_goupile.stderr_lines[-2] == "Nothind to do!"'
   become: no
 
 - name: Install Goupile
@@ -91,13 +113,13 @@
       dest: /etc/systemd/system/goupile@.service
     - src: include.conf
       dest: '{{goupile_root}}/nginx/include.conf'
-  register: configuration
+  register: upload_config
   become: yes
 
 - name: Reload systemd units
   systemd:
     daemon_reload: yes
-  when: configuration.changed
+  when: upload_config.changed
   become: yes
 
 - name: Enable and start NGINX
