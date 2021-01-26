@@ -194,7 +194,7 @@ function InstanceController() {
                     ${tabs.map(tab => html`<button class=${editor_filename === tab.filename ? 'active' : ''}
                                                    @click=${ui.wrapAction(e => toggleEditorFile(tab.filename))}>${tab.title}</button>`)}
                     <div style="flex: 1;"></div>
-                    <button @click=${ui.wrapAction(runDeployDialog)}>Déployer</button>
+                    <button @click=${ui.wrapAction(runDeployDialog)}>Publier</button>
                 </div>
 
                 ${editor_el}
@@ -357,7 +357,7 @@ function InstanceController() {
                     <div style="flex: 1;"></div>
                     <div id="ins_notice">
                         Formulaires en développement<br/>
-                        Déployez les avant d'enregistrer des données
+                        Publiez les avant d'enregistrer des données
                     </div>
                 ` : ''}
             </div>
@@ -428,7 +428,7 @@ function InstanceController() {
     //      Or copy state, which is probably better :)
     async function saveRecord() {
         if (develop)
-            throw new Error('Enregistrement refusé : formulaire non déployé');
+            throw new Error('Enregistrement refusé : formulaire non publié');
 
         let progress = log.progress('Enregistrement en cours');
 
@@ -958,7 +958,7 @@ function InstanceController() {
                 </div>
             `);
 
-            d.action('Déployer', {disabled: !d.isValid()}, async () => {
+            d.action('Publier', {disabled: !d.isValid()}, async () => {
                 await deploy(actions);
 
                 resolve();
