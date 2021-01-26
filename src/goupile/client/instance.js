@@ -1227,7 +1227,7 @@ function InstanceController() {
 
             new_meta = meta;
             new_state = new FormState(values);
-            new_state.changeHandler = () => self.run();
+            new_state.changeHandler = handleStateChange;
         }
 
         // Go to parent or child automatically
@@ -1267,7 +1267,7 @@ function InstanceController() {
                     new_route.version = new_meta.version;
 
                     new_state = new FormState(values);
-                    new_state.changeHandler = () => self.run();
+                    new_state.changeHandler = handleStateChange;
                 }
             } else {
                 new_route.ulid = null;
@@ -1307,7 +1307,7 @@ function InstanceController() {
             }
 
             new_state = new FormState;
-            new_state.changeHandler = () => self.run();
+            new_state.changeHandler = handleStateChange;
         }
 
         // Load record parents
@@ -1361,6 +1361,14 @@ function InstanceController() {
         await self.run(push_history);
     };
     this.go = util.serializeAsync(this.go);
+
+    async function handleStateChange() {
+        await self.run();
+
+        // Highlight might need to change (conditions, etc.)
+        if (ui.isPanelEnabled('editor'))
+            syncFormHighlight();
+    }
 
     async function loadRecord(ulid, version) {
         let key = `${profile.userid}:${ulid}`;
