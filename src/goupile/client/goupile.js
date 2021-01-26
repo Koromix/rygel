@@ -79,39 +79,46 @@ const goupile = new function() {
     }
 
     async function registerSW() {
-        if (navigator.serviceWorker != null) {
-            if (ENV.cache_offline) {
-                let registration = await navigator.serviceWorker.register(`${ENV.base_url}sw.pk.js`);
-                let progress = new log.Entry;
+        try {
+            if (navigator.serviceWorker != null) {
+                if (ENV.cache_offline) {
+                    let registration = await navigator.serviceWorker.register(`${ENV.base_url}sw.pk.js`);
+                    let progress = new log.Entry;
 
-                if (registration.waiting) {
-                    progress.error('Fermez tous les onglets pour terminer la mise à jour');
+                    if (registration.waiting) {
+                        progress.error('Fermez tous les onglets pour terminer la mise à jour');
+                    } else {
+                        registration.addEventListener('updatefound', () => {
+                            if (registration.active) {
+                                progress.progress('Mise à jour en cours, veuillez patienter');
+
+                                registration.installing.addEventListener('statechange', e => {
+                                    if (e.target.state === 'installed') {
+                                        progress.success('Mise à jour effectuée, l\'application va redémarrer');
+                                        setTimeout(() => document.location.reload(), 3000);
+                                    }
+                                });
+                            }
+                        });
+                    }
                 } else {
-                    registration.addEventListener('updatefound', () => {
-                        if (registration.active) {
-                            progress.progress('Mise à jour en cours, veuillez patienter');
+                    let registration = await navigator.serviceWorker.getRegistration();
+                    let progress = new log.Entry;
 
-                            registration.installing.addEventListener('statechange', e => {
-                                if (e.target.state === 'installed') {
-                                    progress.success('Mise à jour effectuée, l\'application va redémarrer');
-                                    setTimeout(() => document.location.reload(), 3000);
-                                }
-                            });
-                        }
-                    });
+                    if (registration != null) {
+                        progress.progress('Nettoyage de l\'instance en cache, veuillez patienter');
+
+                        await registration.unregister();
+
+                        progress.success('Nettoyage effectué, l\'application va redémarrer');
+                        setTimeout(() => document.location.reload(), 3000);
+                    }
                 }
-            } else {
-                let registration = await navigator.serviceWorker.getRegistration();
-                let progress = new log.Entry;
-
-                if (registration != null) {
-                    progress.progress('Nettoyage de l\'instance en cache, veuillez patienter');
-
-                    await registration.unregister();
-
-                    progress.success('Nettoyage effectué, l\'application va redémarrer');
-                    setTimeout(() => document.location.reload(), 3000);
-                }
+            }
+        } catch (err) {
+            if (ENV.cache_offline) {
+                console.log(err);
+                console.log("Service worker API is not available");
             }
         }
     }
