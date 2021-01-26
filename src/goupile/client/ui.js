@@ -103,7 +103,7 @@ const ui = new function() {
     this.setPanelState = function(key, active) {
         let panel = panels.get(key);
 
-        if (panel.active !== active) {
+        if (active !== panel.active && (active || active_panels > 1)) {
             panel.active = active;
             active_panels += active ? 1 : -1;
 
