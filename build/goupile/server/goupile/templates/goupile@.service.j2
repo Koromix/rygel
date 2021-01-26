@@ -2,11 +2,34 @@
 Type = simple
 
 User = {{goupile_run_user}}
+TemporaryFileSystem = /
+BindPaths = {{goupile_root_path}}/domains/%i:/goupile/domain
+BindReadOnlyPaths = /lib:/lib /lib64:/lib64 /usr/lib:/usr/lib /usr/lib64:/usr/lib64 {{goupile_root_path}}/goupile:/goupile/goupile
+PrivateUsers = yes
+MountAPIVFS = yes
+ProtectProc = invisible
+ProcSubset = pid
+PrivateTmp = yes
+PrivateDevices = yes
+DevicePolicy = closed
+ProtectHostname = yes
+ProtectClock = yes
+ProtectControlGroups = yes
+ProtectKernelModules = yes
+ProtectKernelTunables = yes
+ProtectKernelLogs = yes
+RestrictAddressFamilies = AF_UNIX
+RestrictNamespaces = yes
+RestrictRealtime = yes
+RestrictSUIDSGID = yes
+MemoryDenyWriteExecute = yes
+LockPersonality = yes
+SystemCallFilter = @system-service
+NoNewPrivileges = yes
 
 RuntimeDirectory = goupile
-ExecStart = {{goupile_root_path}}/domains/%i/goupile
-WorkingDirectory = {{goupile_root_path}}/domains/%i
-
+ExecStart = /goupile/goupile
+WorkingDirectory = /goupile/domain
 Restart = on-failure
 TimeoutStopSec = 30
 

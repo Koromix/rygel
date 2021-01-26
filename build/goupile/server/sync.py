@@ -205,14 +205,8 @@ def run_sync(config):
     services = list_services()
 
     # Detect binary mismatches
+    binary_inode = os.stat(default_binary).st_ino
     for domain, info in domains.items():
-        if not os.path.exists(info.binary):
-            try:
-                os.unlink(info.binary)
-            except Exception:
-                pass
-            os.symlink(default_binary, info.binary)
-        binary_inode = os.stat(info.binary).st_ino
         status = services.get(domain)
         if status is not None and status.running and status.inode != binary_inode:
             print(f'+++ Domain {domain} is running old version')
