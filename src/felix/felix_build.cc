@@ -139,6 +139,7 @@ Options:
 
     %!..+-j, --jobs <count>%!0           Set maximum number of parallel jobs
                                  %!D..(default: %4)%!0
+    %!..+-s, --stop_after_error%!0       Continue build after errors
         %!..+--rebuild%!0                Force rebuild all files
 
     %!..+-q, --quiet%!0                  Hide felix progress statements
@@ -230,6 +231,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                     LogError("Jobs count cannot be < 1");
                     return 1;
                 }
+            } else if (opt.Test("-s", "--stop_after_error")) {
+                build.stop_after_error = true;
             } else if (opt.Test("--rebuild")) {
                 build.rebuild = true;
             } else if (opt.Test("-q", "--quiet")) {

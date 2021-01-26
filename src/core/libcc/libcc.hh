@@ -3700,13 +3700,14 @@ static const char *const SocketTypeNames[] = {
 class Async {
     RG_DELETE_COPY(Async)
 
+    bool stop_after_error;
     std::atomic_bool success {true};
     std::atomic_int remaining_tasks {0};
 
     class AsyncPool *pool;
 
 public:
-    Async(int workers = -1);
+    Async(int workers = -1, bool stop_after_error = true);
     ~Async();
 
     void Run(const std::function<bool()> &f);

@@ -3421,7 +3421,8 @@ static RG_THREAD_LOCAL AsyncPool *async_running_pool = nullptr;
 static RG_THREAD_LOCAL int async_running_worker_idx;
 static RG_THREAD_LOCAL bool async_running_task = false;
 
-Async::Async(int workers)
+Async::Async(int workers, bool stop_after_error)
+    : stop_after_error(stop_after_error)
 {
     if (workers >= 0) {
         if (workers > RG_ASYNC_MAX_WORKERS) {
@@ -3612,8 +3613,11 @@ void AsyncPool::RunTask(Task *task)
     RG_DEFER_C(running = async_running_task) { async_running_task = running; };
     async_running_task = true;
 
+    bool run = !async->stop_after_error ||
+               async->success.load(std::memory_order_relaxed);
+
     pending_tasks--;
-    if (async->success.load(std::memory_order_relaxed) && !task->func()) {
+    if (run && !task->func()) {
         async->success = false;
     }
 

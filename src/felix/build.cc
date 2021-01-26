@@ -377,7 +377,7 @@ bool Builder::Build(int jobs, bool verbose)
     LogInfo("Building...");
     int64_t now = GetMonotonicTime();
 
-    Async async(jobs - 1);
+    Async async(jobs - 1, build.stop_after_error);
 
     // Run nodes
     bool busy = false;
@@ -401,6 +401,9 @@ bool Builder::Build(int jobs, bool verbose)
         LogError("Build was interrupted");
         return false;
     } else {
+        if (!build.stop_after_error) {
+            LogError("Some errors have occured (use %!..+felix -s%!0 to stop after first error)");
+        }
         return false;
     }
 }
