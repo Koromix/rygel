@@ -31,7 +31,7 @@ function AdminController() {
         return html`
             <button class="icon" style="background-position-y: calc(-538px + 1.2em);">Admin</button>
             <button class=${ui.isPanelEnabled('instances') ? 'active' : ''}
-                    @click=${ui.wrapAction(e => togglePanel(e, 'instances'))}>Instances</button>
+                    @click=${ui.wrapAction(e => togglePanel(e, 'instances'))}>Projets</button>
             <button class=${ui.isPanelEnabled('users') ? 'active' : ''}
                     @click=${ui.wrapAction(e => togglePanel(e, 'users'))}>Utilisateurs</button>
             <div style="flex: 1;"></div>
@@ -53,7 +53,7 @@ function AdminController() {
         return html`
             <div class="padded" style="background: #f8f8f8;">
                 <div class="ui_quick">
-                    Instances
+                    Projets
                     <div style="flex: 1;"></div>
                     <a @click=${ui.wrapAction(e => { instances = null; return self.run(); })}>Rafraichir</a>
                 </div>
@@ -66,7 +66,7 @@ function AdminController() {
                     </colgroup>
 
                     <tbody>
-                        ${!instances.length ? html`<tr><td colspan="3">Aucune instance</td></tr>` : ''}
+                        ${!instances.length ? html`<tr><td colspan="3">Aucun projet</td></tr>` : ''}
                         ${instances.map(instance => html`
                             <tr class=${instance.key === selected_instance ? 'active' : ''}>
                                 <td style="text-align: left;">${instance.key} (<a href=${'/' + instance.key} target="_blank">accès</a>)</td>
@@ -78,7 +78,7 @@ function AdminController() {
                 </table>
 
                 <div class="ui_actions">
-                    <button @click=${ui.wrapAction(runCreateInstanceDialog)}>Créer une instance</button>
+                    <button @click=${ui.wrapAction(runCreateInstanceDialog)}>Créer un projet</button>
                 </div>
             </div>
         `;
@@ -166,7 +166,7 @@ function AdminController() {
 
     function runCreateInstanceDialog(e) {
         return ui.runDialog(e, (d, resolve, reject) => {
-            let key = d.text('*key', 'Clé de l\'instance');
+            let key = d.text('*key', 'Clé du projet');
             let name = d.text('name', 'Nom', {value: key.value});
             let demo = d.boolean('demo', 'Ajouter les pages par défaut', {value: true, untoggle: false});
 
@@ -183,7 +183,7 @@ function AdminController() {
 
                 if (response.ok) {
                     resolve();
-                    log.success(`Instance '${key.value}' créée`);
+                    log.success(`Projet '${key.value}' créé`);
 
                     instances = null;
 
@@ -228,7 +228,7 @@ function AdminController() {
 
                         if (response.ok) {
                             resolve();
-                            log.success(`Instance '${instance.key}' modifiée`);
+                            log.success(`Projet '${instance.key}' modifié`);
 
                             instances = null;
 
@@ -241,7 +241,7 @@ function AdminController() {
                 });
 
                 d.tab('Supprimer', () => {
-                    d.output(`Voulez-vous vraiment supprimer l'instance '${instance.key}' ?`);
+                    d.output(`Voulez-vous vraiment supprimer le projet '${instance.key}' ?`);
 
                     d.action('Supprimer', {}, async () => {
                         let query = new URLSearchParams;
@@ -254,7 +254,7 @@ function AdminController() {
 
                         if (response.ok) {
                             resolve();
-                            log.success(`Instance '${instance.key}' supprimée`);
+                            log.success(`Projet '${instance.key}' supprimé`);
 
                             instances = null;
 
@@ -308,7 +308,7 @@ function AdminController() {
 
     function runAssignUserDialog(e, instance, user, prev_permissions) {
         return ui.runDialog(e, (d, resolve, reject) => {
-            d.calc('instance', 'Instance', instance);
+            d.calc('instance', 'Projet', instance);
             d.sameLine(); d.calc('username', 'Utilisateur', user.username);
 
             let permissions = d.textArea('permissions', 'Permissions', {
@@ -329,7 +329,7 @@ function AdminController() {
 
                 if (response.ok) {
                     resolve();
-                    log.success(`Droits de '${user.username}' sur l'instance '${instance}' ${permissions.value ? 'modifiés' : 'supprimés'}`);
+                    log.success(`Droits de '${user.username}' sur le projet '${instance}' ${permissions.value ? 'modifiés' : 'supprimés'}`);
 
                     users = null;
 
