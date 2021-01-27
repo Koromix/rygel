@@ -37,7 +37,7 @@
       owner: root
     - path: '{{goupile_root_path}}/src'
       owner: '{{whoami.stdout}}'
-    - path: '{{goupile_root_path}}/bundles'
+    - path: '{{goupile_root_path}}/containers'
       owner: root
     - path: '{{goupile_root_path}}/nginx/domains.d'
       owner: root
