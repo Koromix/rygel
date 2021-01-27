@@ -20,6 +20,7 @@ from dataclasses import dataclass
 class DomainConfig:
     bundle = None
     directory = None
+    runtime = None
     socket = None
     mismatch = False
 
@@ -98,7 +99,8 @@ def list_domains(root_dir, names):
             info = DomainConfig()
             info.bundle = bundle
             info.directory = directory
-            info.socket = f'/run/goupile/domains/{domain}/http.sock'
+            info.runtime = f'/run/goupile/domains/{domain}'
+            info.socket = info.runtime + '/http.sock'
 
             prev_socket = config.get('HTTP.UnixPath')
             if prev_socket != info.socket:
@@ -168,27 +170,31 @@ def update_bundle_config(directory, template_filename, domain, binary):
     libraries = list_system_libraries(binary)
 
     config['hostname'] = domain
-    for mount in config['mounts']:
-        if mount['destination'] == '/run/goupile':
-            mount['source'] += f'/domains/{domain}'
-            mount['destination'] += f'/domains/{domain}'
+
+    # Mount required shared libraries
     for lib in libraries:
         mount = {
-            "destination": lib,
-            "source": lib,
-            "options": [
-                "bind",
-                "ro"
+            'destination': lib,
+            'source': lib,
+            'options': [
+                'bind',
+                'ro'
             ]
         }
         config['mounts'].append(mount)
 
+    # Mount runtime directory
+    mount = {
+        'destination': f'/run/goupile/domains/{domain}',
+        'source': f'/run/goupile/domains/{domain}',
+        'options': [
+            'bind'
+        ]
+    }
+    config['mounts'].append(mount)
+
     filename = os.path.join(directory, 'config.json')
     json_str = json.dumps(config, indent = 4)
-
-    # Remove symlinks made by previous version of sync.py
-    if os.path.islink(filename):
-        os.unlink(filename)
 
     return commit_file(filename, json_str)
 
@@ -275,12 +281,14 @@ def run_sync(config):
     print('>>> Write OCI bundle files')
     for domain, info in domains.items():
         if update_bundle_config(info.bundle, config['runC.BundleTemplate'], domain, binary):
+            info.mismatch = True
             changed = True
 
     # Update instance configuration files
     print('>>> Write Goupile configuration files', file = sys.stderr)
     for domain, info in domains.items():
         if update_domain_config(info):
+            info.mismatch = True
             changed = True
 
     # Update NGINX configuration files
