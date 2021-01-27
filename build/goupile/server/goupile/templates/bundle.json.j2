@@ -7,13 +7,13 @@
             "gid": 0
         },
         "args": [
-            "/goupile"
+            "/app/goupile"
         ],
         "env": [
             "PATH=/bin",
             "TERM=xterm"
         ],
-        "cwd": "/",
+        "cwd": "/app",
         "capabilities": {
             "bounding": [],
             "effective": [],
@@ -31,13 +31,20 @@
         "noNewPrivileges": true
     },
     "root": {
-        "path": "domain",
-        "readonly": false
+        "path": "rootfs",
+        "readonly": true
     },
     "hostname": "goupile",
     "mounts": [
         {
-            "destination": "/goupile",
+            "destination": "/app",
+            "source": "app",
+            "options": [
+                "bind"
+            ]
+        },
+        {
+            "destination": "/app/goupile",
             "source": "{{goupile_root_path}}/goupile",
             "options": [
                 "bind",

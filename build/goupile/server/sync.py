@@ -12,6 +12,7 @@ import itertools
 import json
 import os
 import re
+import shutil
 import sys
 import subprocess
 from dataclasses import dataclass
@@ -90,7 +91,7 @@ def list_domains(root_dir, names):
 
     for domain in names:
         bundle = os.path.join(root_dir, domain)
-        directory = os.path.join(bundle, 'domain')
+        directory = os.path.join(bundle, 'app')
         filename = os.path.join(directory, 'goupile.ini')
 
         if os.path.isfile(filename):
@@ -116,7 +117,7 @@ def create_domain(binary, root_dir, domain, owner_user, owner_group,
     print(f'>>> Create domain {domain} ({directory})', file = sys.stderr)
     os.mkdir(directory)
 
-    domain_directory = os.path.join(directory, 'domain')
+    domain_directory = os.path.join(directory, 'app')
     execute_command([binary, 'init', '-o', owner_user,
                     '--username', admin_username, '--password', admin_password, domain_directory])
 
@@ -164,10 +165,13 @@ def run_service_command(domain, cmd):
     print(f'>>> {cmd.capitalize()} {service}', file = sys.stderr)
     execute_command(['systemctl', cmd, '--quiet', service])
 
-def update_bundle_config(directory, template_filename, domain, binary):
+def update_bundle_config(directory, template_filename, domain, owner_user, owner_group, binary):
     with open(template_filename, 'r') as f:
         config = json.load(f)
     libraries = list_system_libraries(binary)
+
+    os.makedirs(directory + '/rootfs', exist_ok = True)
+    shutil.chown(directory + '/rootfs', owner_user, owner_group)
 
     config['hostname'] = domain
 
@@ -280,7 +284,8 @@ def run_sync(config):
     # Update bundle (OCI) configuration files
     print('>>> Write OCI bundle files')
     for domain, info in domains.items():
-        if update_bundle_config(info.bundle, config['runC.BundleTemplate'], domain, binary):
+        if update_bundle_config(info.bundle, config['runC.BundleTemplate'], domain,
+                                config['Goupile.RunUser'], config['Goupile.RunGroup'], binary):
             info.mismatch = True
             changed = True
 
