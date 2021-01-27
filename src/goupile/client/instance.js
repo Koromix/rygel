@@ -168,7 +168,7 @@ function InstanceController() {
 
         if (enable && key === 'page') {
             syncFormScroll();
-            syncFormHighlight();
+            syncFormHighlight(true);
         } else if (enable && key === 'editor') {
             syncEditorScroll();
         }
@@ -646,7 +646,7 @@ function InstanceController() {
                     setTimeout(syncFormScroll, 0);
             });
             session.selection.on('changeCursor', () => {
-                syncFormHighlight();
+                syncFormHighlight(true);
                 ignore_editor_scroll = true;
             });
 
@@ -753,7 +753,7 @@ function InstanceController() {
         return top;
     }
 
-    function syncFormHighlight() {
+    function syncFormHighlight(scroll) {
         if (!ui.isPanelEnabled('page'))
             return;
 
@@ -799,7 +799,8 @@ function InstanceController() {
                 widget_els[i].classList.toggle('ui_highlight', i >= highlight_first && i <= highlight_last);
 
             // Make sure widget is in viewport
-            if (highlight_first != null && highlight_last === highlight_first) {
+            if (scroll && highlight_first != null &&
+                          highlight_last === highlight_first) {
                 let el = widget_els[highlight_first];
                 let rect = el.getBoundingClientRect();
 
@@ -1367,7 +1368,7 @@ function InstanceController() {
 
         // Highlight might need to change (conditions, etc.)
         if (ui.isPanelEnabled('editor'))
-            syncFormHighlight();
+            syncFormHighlight(false);
     }
 
     async function loadRecord(ulid, version) {
