@@ -111,11 +111,11 @@
     - src: sync.ini.j2
       dest: '{{goupile_root_path}}/sync/sync.ini'
       mode: '0600'
+    - src: bundle.json.j2
+      dest: '{{goupile_root_path}}/sync/bundle.json'
+      mode: '0644'
     - src: goupile@.service.j2
       dest: /etc/systemd/system/goupile@.service
-      mode: '0644'
-    - src: bundle.json.j2
-      dest: '{{goupile_root_path}}/bundle.json'
       mode: '0644'
     - src: nginx.conf.j2
       dest: '{{nginx_conf_path}}/goupile.conf'

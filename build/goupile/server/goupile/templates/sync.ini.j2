@@ -13,7 +13,7 @@ ServerInclude = ../nginx/include.conf
 ServiceName = {{nginx_service_name}}
 
 [runC]
-BundleFile = ../bundle.json
+BundleTemplate = bundle.json
 
 [Domains]
 {% for domain in goupile_domains -%}

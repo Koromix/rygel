@@ -9,6 +9,7 @@ import configparser
 import hashlib
 import io
 import itertools
+import json
 import os
 import re
 import sys
@@ -17,6 +18,7 @@ from dataclasses import dataclass
 
 @dataclass
 class DomainConfig:
+    bundle = None
     directory = None
     socket = None
     mismatch = False
@@ -86,13 +88,15 @@ def list_domains(root_dir, names):
     domains = {}
 
     for domain in names:
-        directory = os.path.join(root_dir, domain, 'domain')
+        bundle = os.path.join(root_dir, domain)
+        directory = os.path.join(bundle, 'domain')
         filename = os.path.join(directory, 'goupile.ini')
 
         if os.path.isfile(filename):
             config = load_config(filename)
 
             info = DomainConfig()
+            info.bundle = bundle
             info.directory = directory
             info.socket = f'/run/goupile/{domain}.sock'
 
@@ -104,8 +108,8 @@ def list_domains(root_dir, names):
 
     return domains
 
-def create_domain(binary, root_dir, domain, bundle_filename,
-                  owner_user, owner_group, admin_username, admin_password):
+def create_domain(binary, root_dir, domain, owner_user, owner_group,
+                  admin_username, admin_password):
     directory = os.path.join(root_dir, domain)
     print(f'>>> Create domain {domain} ({directory})', file = sys.stderr)
     os.mkdir(directory)
@@ -113,15 +117,14 @@ def create_domain(binary, root_dir, domain, bundle_filename,
     domain_directory = os.path.join(directory, 'domain')
     execute_command([binary, 'init', '-o', owner_user,
                     '--username', admin_username, '--password', admin_password, domain_directory])
-    os.chmod(domain_directory, 0o700)
-
-    bundle_symlink = os.path.join(directory, 'config.json')
-    os.symlink(bundle_filename, bundle_symlink)
 
 def migrate_domain(binary, domain, info):
     print(f'>>> Migrate domain {domain} ({info.directory})', file = sys.stderr)
     filename = os.path.join(info.directory, 'goupile.ini')
     execute_command([binary, 'migrate', '-C', filename])
+
+    # Does not hurt safety
+    os.chmod(info.directory, 0o700)
 
 def list_services():
     services = {}
@@ -158,6 +161,44 @@ def run_service_command(domain, cmd):
     service = f'goupile@{domain}.service'
     print(f'>>> {cmd.capitalize()} {service}', file = sys.stderr)
     execute_command(['systemctl', cmd, '--quiet', service])
+
+def update_bundle_config(directory, template_filename, hostname, binary):
+    with open(template_filename, 'r') as f:
+        config = json.load(f)
+    libraries = list_system_libraries(binary)
+
+    config['hostname'] = hostname
+    for lib in libraries:
+        mount = {
+            "destination": lib,
+            "source": lib,
+            "options": [
+                "bind",
+                "ro"
+            ]
+        }
+        config['mounts'].append(mount)
+
+    filename = os.path.join(directory, 'config.json')
+    json_str = json.dumps(config, indent = 4)
+
+    # Remove symlinks made by previous version of sync.py
+    if os.path.islink(filename):
+        os.unlink(filename)
+
+    return commit_file(filename, json_str)
+
+def list_system_libraries(binary):
+    output = subprocess.check_output(['ldd', binary])
+    output = output.decode()
+
+    libraries = []
+    for line in output.splitlines():
+        match = re.search('(?:=> )?(\\/.*) \\(0x[0-9abcdefABCDEF]+\\)$', line)
+        if match is not None:
+            libraries.append(match.group(1))
+
+    return libraries
 
 def update_domain_config(info):
     filename = os.path.join(info.directory, 'goupile.ini')
@@ -204,7 +245,7 @@ def run_sync(config):
         directory = os.path.join(config['Goupile.BundleDirectory'], domain)
         if not os.path.exists(directory):
             create_domain(binary, config['Goupile.BundleDirectory'], domain,
-                          config['runC.BundleFile'], config['Goupile.RunUser'], config['Goupile.RunGroup'],
+                          config['Goupile.RunUser'], config['Goupile.RunGroup'],
                           config['Goupile.DefaultAdmin'], config['Goupile.DefaultPassword'])
 
     # List existing domains and services
@@ -221,8 +262,14 @@ def run_sync(config):
 
     changed = False
 
+    # Update bundle (OCI) configuration files
+    print('>>> Write OCI bundle files')
+    for domain, info in domains.items():
+        if update_bundle_config(info.bundle, config['runC.BundleTemplate'], domain, binary):
+            changed = True
+
     # Update instance configuration files
-    print('>>> Write configuration files', file = sys.stderr)
+    print('>>> Write Goupile configuration files', file = sys.stderr)
     for domain, info in domains.items():
         if update_domain_config(info):
             changed = True
@@ -280,6 +327,6 @@ if __name__ == '__main__':
     config['Goupile.BundleDirectory'] = os.path.abspath(config['Goupile.BundleDirectory'])
     config['NGINX.ConfigDirectory'] = os.path.abspath(config['NGINX.ConfigDirectory'])
     config['NGINX.ServerInclude'] = os.path.abspath(config['NGINX.ServerInclude'])
-    config['runC.BundleFile'] = os.path.abspath(config['runC.BundleFile'])
+    config['runC.BundleTemplate'] = os.path.abspath(config['runC.BundleTemplate'])
 
     run_sync(config)
