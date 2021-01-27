@@ -422,6 +422,11 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     LogInfo("Listening on port %1 (%2 stack)",
             gp_domain.config.http.port, SocketTypeNames[(int)gp_domain.config.http.sock_type]);
 
+#ifdef __linux__
+    if (!NotifySystemd())
+        return 1;
+#endif
+
     for (;;) {
         int timeout = gp_domain.IsSynced() ? -1 : 30000;
 

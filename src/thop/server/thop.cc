@@ -536,6 +536,11 @@ Options:
     LogInfo("Listening on port %1 (%2 stack)",
             thop_config.http.port, SocketTypeNames[(int)thop_config.http.sock_type]);
 
+#ifdef __linux__
+    if (!NotifySystemd())
+        return 1;
+#endif
+
     WaitForInterrupt();
 
     // Make sure the "Exit" message comes after the daemon has effectively stopped

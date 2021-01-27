@@ -3667,6 +3667,10 @@ void SignalWaitFor();
 
 int GetCoreCount();
 
+#ifdef __linux__
+bool NotifySystemd();
+#endif
+
 enum class SocketType {
     Dual,
     IPv4,

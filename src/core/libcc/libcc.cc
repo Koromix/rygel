@@ -40,8 +40,10 @@
     #include <signal.h>
     #include <spawn.h>
     #include <sys/ioctl.h>
+    #include <sys/socket.h>
     #include <sys/stat.h>
     #include <sys/types.h>
+    #include <sys/un.h>
     #include <sys/wait.h>
     #include <termios.h>
     #include <time.h>
@@ -3367,6 +3369,64 @@ int GetCoreCount()
     return cores;
 #endif
 }
+
+#ifdef __linux__
+bool NotifySystemd()
+{
+    const char *addr_str = getenv("NOTIFY_SOCKET");
+    if (!addr_str)
+        return true;
+
+    struct sockaddr_un addr;
+    if (addr_str[0] == '@') {
+        addr_str++;
+
+        if (strlen(addr_str) >= sizeof(addr.sun_path) - 1) {
+            LogError("Abstract socket address in NOTIFY_SOCKET is too long");
+            return false;
+        }
+
+        addr.sun_family = AF_UNIX;
+        addr.sun_path[0] = 0;
+        strcpy(addr.sun_path + 1, addr_str);
+    } else if (addr_str[0] == '/') {
+        if (strlen(addr_str) >= sizeof(addr.sun_path)) {
+            LogError("Socket pathname in NOTIFY_SOCKET is too long");
+            return false;
+        }
+
+        addr.sun_family = AF_UNIX;
+        strcpy(addr.sun_path, addr_str);
+    } else {
+        LogError("Invalid socket address in NOTIFY_SOCKET");
+        return false;
+    }
+
+    int fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+    if (fd < 0) {
+        LogError("Failed to create UNIX socket: %1", strerror(errno));
+        return false;
+    }
+    RG_DEFER { close(fd); };
+
+    struct iovec iov = {};
+    struct msghdr msg = {};
+    iov.iov_base = (void *)"READY=1";
+    iov.iov_len = strlen("READY=1");
+    msg.msg_name = &addr;
+    msg.msg_namelen = RG_OFFSET_OF(struct sockaddr_un, sun_path) + strlen(addr_str);
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+
+    if (sendmsg(fd, &msg, MSG_NOSIGNAL) < 0) {
+        LogError("Failed to send message to systemd: %1", strerror(errno));
+        return false;
+    }
+
+    unsetenv("NOTIFY_SOCKET");
+    return true;
+}
+#endif
 
 // ------------------------------------------------------------------------
 // Tasks
