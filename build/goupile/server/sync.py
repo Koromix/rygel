@@ -18,7 +18,6 @@ from dataclasses import dataclass
 @dataclass
 class DomainConfig:
     directory = None
-    binary = None
     socket = None
     mismatch = False
 
@@ -87,7 +86,7 @@ def list_domains(root_dir, names):
     domains = {}
 
     for domain in names:
-        directory = os.path.join(root_dir, domain)
+        directory = os.path.join(root_dir, domain, 'domain')
         filename = os.path.join(directory, 'goupile.ini')
 
         if os.path.isfile(filename):
@@ -95,7 +94,6 @@ def list_domains(root_dir, names):
 
             info = DomainConfig()
             info.directory = directory
-            info.binary = os.path.join(directory, 'goupile')
             info.socket = f'/run/goupile/{domain}.sock'
 
             prev_socket = config.get('HTTP.UnixPath')
@@ -106,16 +104,24 @@ def list_domains(root_dir, names):
 
     return domains
 
-def create_domain(binary, root_dir, domain, owner_user, admin_username, admin_password):
+def create_domain(binary, root_dir, domain, bundle_filename,
+                  owner_user, owner_group, admin_username, admin_password):
     directory = os.path.join(root_dir, domain)
     print(f'>>> Create domain {domain} ({directory})', file = sys.stderr)
-    execute_command([binary, 'init', '-o', owner_user,
-                    '--username', admin_username, '--password', admin_password, directory])
+    os.mkdir(directory)
 
-def migrate_domain(domain, info):
+    domain_directory = os.path.join(directory, 'domain')
+    execute_command([binary, 'init', '-o', owner_user,
+                    '--username', admin_username, '--password', admin_password, domain_directory])
+    os.chmod(domain_directory, 0o700)
+
+    bundle_symlink = os.path.join(directory, 'config.json')
+    os.symlink(bundle_filename, bundle_symlink)
+
+def migrate_domain(binary, domain, info):
     print(f'>>> Migrate domain {domain} ({info.directory})', file = sys.stderr)
     filename = os.path.join(info.directory, 'goupile.ini')
-    execute_command([info.binary, 'migrate', '-C', filename])
+    execute_command([binary, 'migrate', '-C', filename])
 
 def list_services():
     services = {}
@@ -191,21 +197,22 @@ def update_nginx_config(directory, domain, socket, include = None):
         return commit_file(filename, f.getvalue())
 
 def run_sync(config):
-    default_binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
+    binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
 
     # Create missing domains
     for domain in config['Domains']:
-        directory = os.path.join(config['Goupile.DomainDirectory'], domain)
+        directory = os.path.join(config['Goupile.BundleDirectory'], domain)
         if not os.path.exists(directory):
-            create_domain(default_binary, config['Goupile.DomainDirectory'], domain,
-                          config['Goupile.RunUser'], config['Goupile.DefaultAdmin'], config['Goupile.DefaultPassword'])
+            create_domain(binary, config['Goupile.BundleDirectory'], domain,
+                          config['runC.BundleFile'], config['Goupile.RunUser'], config['Goupile.RunGroup'],
+                          config['Goupile.DefaultAdmin'], config['Goupile.DefaultPassword'])
 
     # List existing domains and services
-    domains = list_domains(config['Goupile.DomainDirectory'], config['Domains'])
+    domains = list_domains(config['Goupile.BundleDirectory'], config['Domains'])
     services = list_services()
 
     # Detect binary mismatches
-    binary_inode = os.stat(default_binary).st_ino
+    binary_inode = os.stat(binary).st_ino
     for domain, info in domains.items():
         status = services.get(domain)
         if status is not None and status.running and status.inode != binary_inode:
@@ -248,7 +255,7 @@ def run_sync(config):
             run_service_command(domain, 'enable')
         if status is None or info.mismatch or not status.running:
             run_service_command(domain, 'stop')
-            migrate_domain(domain, info)
+            migrate_domain(binary, domain, info)
             run_service_command(domain, 'start')
             changed = True
 
@@ -270,8 +277,9 @@ if __name__ == '__main__':
     # Parse configuration
     config = load_config('sync.ini', array_sections = ['Domains'])
     config['Goupile.BinaryDirectory'] = os.path.abspath(config['Goupile.BinaryDirectory'])
-    config['Goupile.DomainDirectory'] = os.path.abspath(config['Goupile.DomainDirectory'])
+    config['Goupile.BundleDirectory'] = os.path.abspath(config['Goupile.BundleDirectory'])
     config['NGINX.ConfigDirectory'] = os.path.abspath(config['NGINX.ConfigDirectory'])
     config['NGINX.ServerInclude'] = os.path.abspath(config['NGINX.ServerInclude'])
+    config['runC.BundleFile'] = os.path.abspath(config['runC.BundleFile'])
 
     run_sync(config)

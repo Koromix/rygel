@@ -1,15 +1,19 @@
 [Goupile]
-BinaryDirectory = .
-DomainDirectory = domains
+BinaryDirectory = ..
+BundleDirectory = ../bundles
 RunUser = {{goupile_run_user}}
+RunGroup = {{goupile_run_group}}
 
 DefaultAdmin = {{goupile_default_username}}
 DefaultPassword = {{goupile_default_password}}
 
 [NGINX]
-ConfigDirectory = nginx/domains.d
-ServerInclude = nginx/include.conf
+ConfigDirectory = ../nginx/domains.d
+ServerInclude = ../nginx/include.conf
 ServiceName = {{nginx_service_name}}
+
+[runC]
+BundleFile = ../bundle.json
 
 [Domains]
 {% for domain in goupile_domains -%}

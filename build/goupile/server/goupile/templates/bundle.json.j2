@@ -1,0 +1,188 @@
+{
+    "ociVersion": "1.0.1",
+    "process": {
+        "terminal": false,
+        "user": {
+            "uid": 0,
+            "gid": 0
+        },
+        "args": [
+            "/goupile"
+        ],
+        "env": [
+            "PATH=/bin",
+            "TERM=xterm"
+        ],
+        "cwd": "/",
+        "capabilities": {
+            "bounding": [],
+            "effective": [],
+            "inheritable": [],
+            "permitted": [],
+            "ambient": []
+        },
+        "rlimits": [
+            {
+                "type": "RLIMIT_NOFILE",
+                "hard": 16384,
+                "soft": 16384
+            }
+        ],
+        "noNewPrivileges": true
+    },
+    "root": {
+        "path": "domain",
+        "readonly": false
+    },
+    "hostname": "goupile",
+    "mounts": [
+        {
+            "destination": "/goupile",
+            "source": "{{goupile_root_path}}/goupile",
+            "options": [
+                "bind",
+                "ro"
+            ]
+        },
+        {
+            "destination": "/lib",
+            "source": "/lib",
+            "options": [
+                "bind",
+                "ro"
+            ]
+        },
+        {
+            "destination": "/lib64",
+            "source": "/lib64",
+            "options": [
+                "bind",
+                "ro"
+            ]
+        },
+        {
+            "destination": "/run/goupile",
+            "source": "/run/goupile",
+            "options": [
+                "bind"
+            ]
+        },
+        {
+            "destination": "/proc",
+            "type": "proc",
+            "source": "proc",
+            "options": [
+                "hidepid=2"
+            ]
+        },
+        {
+            "destination": "/dev",
+            "type": "tmpfs",
+            "source": "tmpfs",
+            "options": [
+                "nosuid",
+                "strictatime",
+                "mode=755",
+                "size=65536k"
+            ]
+        },
+        {
+            "destination": "/dev/pts",
+            "type": "devpts",
+            "source": "devpts",
+            "options": [
+                "nosuid",
+                "noexec",
+                "newinstance",
+                "ptmxmode=0666",
+                "mode=0620"
+            ]
+        },
+        {
+            "destination": "/dev/shm",
+            "type": "tmpfs",
+            "source": "shm",
+            "options": [
+                "nosuid",
+                "noexec",
+                "nodev",
+                "mode=1777",
+                "size=65536k"
+            ]
+        },
+        {
+            "destination": "/dev/mqueue",
+            "type": "mqueue",
+            "source": "mqueue",
+            "options": [
+                "nosuid",
+                "noexec",
+                "nodev"
+            ]
+        },
+        {
+            "destination": "/sys",
+            "type": "none",
+            "source": "/sys",
+            "options": [
+                "rbind",
+                "nosuid",
+                "noexec",
+                "nodev",
+                "ro"
+            ]
+        }
+    ],
+    "linux": {
+        "uidMappings": [
+            {
+                "containerID": 0,
+                "hostID": {{goupile_user.uid}},
+                "size": 1
+            }
+        ],
+        "gidMappings": [
+            {
+                "containerID": 0,
+                "hostID": {{goupile_user.group}},
+                "size": 1
+            }
+        ],
+        "namespaces": [
+            {
+                "type": "pid"
+            },
+            {
+                "type": "ipc"
+            },
+            {
+                "type": "uts"
+            },
+            {
+                "type": "mount"
+            },
+            {
+                "type": "user"
+            }
+        ],
+        "maskedPaths": [
+            "/proc/acpi",
+            "/proc/asound",
+            "/proc/kcore",
+            "/proc/keys",
+            "/proc/latency_stats",
+            "/proc/timer_list",
+            "/proc/timer_stats",
+            "/proc/sched_debug",
+            "/sys/firmware",
+            "/proc/scsi"
+        ],
+        "readonlyPaths": [
+            "/proc/bus",
+            "/proc/fs",
+            "/proc/irq",
+            "/proc/sys",
+            "/proc/sysrq-trigger"
+        ]
+    }
+}

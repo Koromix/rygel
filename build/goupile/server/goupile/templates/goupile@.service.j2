@@ -1,37 +1,24 @@
+[Unit]
+Description = Goupile eCRF (%i)
+Documentation = https://goupile.fr/
+
 [Service]
 Type = simple
-
 User = {{goupile_run_user}}
-TemporaryFileSystem = /
-BindPaths = {{goupile_root_path}}/domains/%i:/goupile/domain
-BindReadOnlyPaths = /lib:/lib /lib64:/lib64 /usr/lib:/usr/lib /usr/lib64:/usr/lib64 {{goupile_root_path}}/goupile:/goupile/goupile
-PrivateUsers = yes
-MountAPIVFS = yes
-ProtectProc = invisible
-ProcSubset = pid
-PrivateTmp = yes
-PrivateDevices = yes
-DevicePolicy = closed
-ProtectHostname = yes
-ProtectClock = yes
-ProtectControlGroups = yes
-ProtectKernelModules = yes
-ProtectKernelTunables = yes
-ProtectKernelLogs = yes
-RestrictAddressFamilies = AF_UNIX
-RestrictNamespaces = yes
-RestrictRealtime = yes
-RestrictSUIDSGID = yes
-MemoryDenyWriteExecute = yes
-LockPersonality = yes
-SystemCallFilter = @system-service
-NoNewPrivileges = yes
-
+Group = {{goupile_run_group}}
 RuntimeDirectory = goupile
-ExecStart = /goupile/goupile
-WorkingDirectory = /goupile/domain
+ExecStart = /usr/sbin/runc --root /run/goupile run runc_%i
+WorkingDirectory = {{goupile_root_path}}/bundles/%i
 Restart = on-failure
 TimeoutStopSec = 30
+LimitNOFILE = 16384
+
+# Allow rootless runC to manipulate namespaces despite
+# kernel.unprivileged_userns_clone=0.
+# runC will then run goupile without any capability.
+SecureBits = keep-caps
+CapabilityBoundingSet = CAP_SYS_ADMIN
+AmbientCapabilities = CAP_SYS_ADMIN
 
 [Install]
 WantedBy = multi-user.target

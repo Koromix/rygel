@@ -1,6 +1,7 @@
 goupile_root_path: /opt/goupile # Installation directory
 goupile_compiler: GCC # Supports GCC, Clang
 goupile_run_user: goupile # POSIX user that will run goupile services
+goupile_run_group: goupile # POSIX group that will run goupile services
 
 goupile_domains: # List of goupile domains to configure and run
   - demo.goupile.fr

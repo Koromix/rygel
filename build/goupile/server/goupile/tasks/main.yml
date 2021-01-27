@@ -12,6 +12,7 @@
       - git
       - gcc
       - g++
+      - runc
     state: latest
   become: yes
 
@@ -22,6 +23,7 @@
     home: /nonexistent
     shell: /usr/sbin/nologin
     system: yes
+  register: goupile_user
   become: yes
 
 - name: Prepare Goupile directories
@@ -35,9 +37,11 @@
       owner: root
     - path: '{{goupile_root_path}}/src'
       owner: '{{whoami.stdout}}'
-    - path: '{{goupile_root_path}}/domains'
-      owner: '{{goupile_run_user}}'
+    - path: '{{goupile_root_path}}/bundles'
+      owner: root
     - path: '{{goupile_root_path}}/nginx/domains.d'
+      owner: root
+    - path: '{{goupile_root_path}}/sync'
       owner: root
   become: yes
 
@@ -93,7 +97,7 @@
     - src: '{{goupile_root_path}}/src/bin/{{goupile_compiler}}_Fast/goupile'
       dest: '{{goupile_root_path}}/goupile'
     - src: '{{goupile_root_path}}/src/build/goupile/server/sync.py'
-      dest: '{{goupile_root_path}}/sync.py'
+      dest: '{{goupile_root_path}}/sync/sync.py'
   become: yes
 
 - name: Update configuration files
@@ -105,10 +109,13 @@
     mode: '{{item.mode}}'
   loop:
     - src: sync.ini.j2
-      dest: '{{goupile_root_path}}/sync.ini'
+      dest: '{{goupile_root_path}}/sync/sync.ini'
       mode: '0600'
     - src: goupile@.service.j2
       dest: /etc/systemd/system/goupile@.service
+      mode: '0644'
+    - src: bundle.json.j2
+      dest: '{{goupile_root_path}}/bundle.json'
       mode: '0644'
     - src: nginx.conf.j2
       dest: '{{nginx_conf_path}}/goupile.conf'
@@ -134,7 +141,7 @@
 
 - name: Sync Goupile, NGINX and systemd
   command:
-    cmd: '{{goupile_root_path}}/sync.py'
+    cmd: '{{goupile_root_path}}/sync/sync.py'
   register: sync
   changed_when: 'sync.stderr_lines[-1] != ">>> Nothing has changed" and sync.stderr_lines[-2] != ">>> Nothing has changed"'
   become: yes
