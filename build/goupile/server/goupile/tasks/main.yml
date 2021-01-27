@@ -35,7 +35,7 @@
   loop:
     - path: '{{goupile_root_path}}'
       owner: root
-    - path: '{{goupile_root_path}}/src'
+    - path: '{{goupile_root_path}}/repo'
       owner: '{{whoami.stdout}}'
     - path: '{{goupile_root_path}}/containers'
       owner: root
@@ -48,13 +48,13 @@
 - name: Fetch Goupile repository
   git:
     repo: https://framagit.org/interhop/goupile.git
-    dest: '{{goupile_root_path}}/src'
+    dest: '{{goupile_root_path}}/repo'
   become: no
 
 - name: Update Felix build system
   command:
-    cmd: '{{goupile_root_path}}/src/bin/{{goupile_compiler}}_Fast/felix -c{{goupile_compiler}} -mFast felix'
-    chdir: '{{goupile_root_path}}/src'
+    cmd: '{{goupile_root_path}}/repo/bin/{{goupile_compiler}}_Fast/felix -c{{goupile_compiler}} -mFast felix'
+    chdir: '{{goupile_root_path}}/repo'
   ignore_errors: yes
   register: build_felix
   changed_when: 'not build_felix.failed and build_felix.stderr_lines[-1] != "Nothing to do!" and build_felix.stderr_lines[-2] != "Nothing to do!"'
@@ -64,23 +64,23 @@
   block:
     - name: Bootstrap Felix
       shell:
-        cmd: '{{goupile_root_path}}/src/build/felix/build_posix.sh'
-        chdir: '{{goupile_root_path}}/src'
+        cmd: '{{goupile_root_path}}/repo/build/felix/build_posix.sh'
+        chdir: '{{goupile_root_path}}/repo'
     - name: Update Felix build system
       command:
-        cmd: '{{goupile_root_path}}/src/felix -c{{goupile_compiler}} -mFast felix'
-        chdir: '{{goupile_root_path}}/src'
+        cmd: '{{goupile_root_path}}/repo/felix -c{{goupile_compiler}} -mFast felix'
+        chdir: '{{goupile_root_path}}/repo'
     - name: Delete bootstrapped Felix
       file:
-        path: '{{goupile_root_path}}/src/felix'
+        path: '{{goupile_root_path}}/repo/felix'
         state: absent
   when: 'build_felix.rc != 0'
   become: no
 
 - name: Build Goupile
   command:
-    cmd: '{{goupile_root_path}}/src/bin/{{goupile_compiler}}_Fast/felix -c{{goupile_compiler}} -mFast goupile felix'
-    chdir: '{{goupile_root_path}}/src'
+    cmd: '{{goupile_root_path}}/repo/bin/{{goupile_compiler}}_Fast/felix -c{{goupile_compiler}} -mFast goupile felix'
+    chdir: '{{goupile_root_path}}/repo'
   register: build_goupile
   changed_when: 'build_goupile.stderr_lines[-1] != "Nothing to do!" and build_goupile.stderr_lines[-2] != "Nothing to do!"'
   become: no
@@ -94,9 +94,9 @@
     group: root
     mode: '0755'
   loop:
-    - src: '{{goupile_root_path}}/src/bin/{{goupile_compiler}}_Fast/goupile'
+    - src: '{{goupile_root_path}}/repo/bin/{{goupile_compiler}}_Fast/goupile'
       dest: '{{goupile_root_path}}/goupile'
-    - src: '{{goupile_root_path}}/src/build/goupile/server/sync.py'
+    - src: '{{goupile_root_path}}/repo/build/goupile/server/sync.py'
       dest: '{{goupile_root_path}}/sync/sync.py'
   become: yes
 
