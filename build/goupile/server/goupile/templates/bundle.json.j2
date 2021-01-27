@@ -52,14 +52,6 @@
             ]
         },
         {
-            "destination": "/proc",
-            "type": "proc",
-            "source": "proc",
-            "options": [
-                "hidepid=2"
-            ]
-        },
-        {
             "destination": "/dev",
             "type": "tmpfs",
             "source": "tmpfs",
@@ -105,15 +97,11 @@
             ]
         },
         {
-            "destination": "/sys",
-            "type": "none",
-            "source": "/sys",
+            "destination": "/proc",
+            "type": "proc",
+            "source": "proc",
             "options": [
-                "rbind",
-                "nosuid",
-                "noexec",
-                "nodev",
-                "ro"
+                "hidepid=2"
             ]
         }
     ],
