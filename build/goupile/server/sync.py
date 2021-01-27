@@ -212,6 +212,7 @@ def update_domain_config(info):
         ini.add_section('HTTP')
     ini.set('HTTP', 'SocketType', 'Unix')
     ini.set('HTTP', 'UnixPath', info.socket)
+    ini.set('HTTP', 'TrustXRealIP', 'On')
     ini.remove_option('HTTP', 'Port')
 
     with io.StringIO() as f:
@@ -231,6 +232,10 @@ def update_nginx_config(directory, domain, socket, include = None):
         if include is not None:
             print(f'    include {include};', file = f)
         print(f'    location / {{', file = f)
+        print(f'        proxy_set_header Host $http_host;', file = f)
+        print(f'        proxy_set_header X-Real-IP $remote_addr;', file = f)
+        print(f'        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;', file = f)
+        print(f'        proxy_set_header X-Forwarded-Proto $scheme;', file = f)
         print(f'        proxy_pass http://unix:{socket}:;', file = f)
         print(f'    }}', file = f)
         if os.path.isdir(compat_dir):
