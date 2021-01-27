@@ -3,13 +3,15 @@ Description = Goupile eCRF (%i)
 Documentation = https://goupile.fr/
 
 [Service]
-Type = simple
+Type = forking
 User = {{goupile_run_user}}
 Group = {{goupile_run_group}}
 RuntimeDirectory = goupile/domains/%i goupile/runc
 RuntimeDirectoryPreserve = yes
-ExecStart = /usr/sbin/runc --root /run/goupile/runc run runc_%i
+ExecStart = /usr/sbin/runc --root /run/goupile/runc run -d --pid-file /run/goupile/runc/%i.pid %i
+ExecStopPost = /usr/sbin/runc --root /run/goupile/runc delete %i
 WorkingDirectory = {{goupile_root_path}}/containers/%i
+PIDFile = /run/goupile/runc/%i.pid
 Restart = on-failure
 TimeoutStopSec = 30
 LimitNOFILE = 16384
