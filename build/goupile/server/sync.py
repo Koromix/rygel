@@ -98,7 +98,7 @@ def list_domains(root_dir, names):
             info = DomainConfig()
             info.bundle = bundle
             info.directory = directory
-            info.socket = f'/run/goupile/{domain}.sock'
+            info.socket = f'/run/goupile/domains/{domain}/http.sock'
 
             prev_socket = config.get('HTTP.UnixPath')
             if prev_socket != info.socket:
@@ -162,12 +162,16 @@ def run_service_command(domain, cmd):
     print(f'>>> {cmd.capitalize()} {service}', file = sys.stderr)
     execute_command(['systemctl', cmd, '--quiet', service])
 
-def update_bundle_config(directory, template_filename, hostname, binary):
+def update_bundle_config(directory, template_filename, domain, binary):
     with open(template_filename, 'r') as f:
         config = json.load(f)
     libraries = list_system_libraries(binary)
 
-    config['hostname'] = hostname
+    config['hostname'] = domain
+    for mount in config['mounts']:
+        if mount['destination'] == '/run/goupile':
+            mount['source'] += f'/domains/{domain}'
+            mount['destination'] += f'/domains/{domain}'
     for lib in libraries:
         mount = {
             "destination": lib,
