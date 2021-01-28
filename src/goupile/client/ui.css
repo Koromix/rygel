@@ -341,11 +341,6 @@ html.small .ui_toolbar button.icon {
     padding-right: 6px;
 }
 
-.ui_highlight {
-    outline: 2px dashed #24579d;
-    outline-offset: 4px;
-}
-
 /* -------------------- Print -------------------- */
 
 @media print {

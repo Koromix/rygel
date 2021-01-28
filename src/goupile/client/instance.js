@@ -796,7 +796,7 @@ function InstanceController() {
             }
 
             for (let i = 0; i < widget_els.length; i++)
-                widget_els[i].classList.toggle('ui_highlight', i >= highlight_first && i <= highlight_last);
+                widget_els[i].classList.toggle('ins_highlight', i >= highlight_first && i <= highlight_last);
 
             // Make sure widget is in viewport
             if (scroll && highlight_first != null &&

@@ -23,6 +23,8 @@ html.instance {
     padding: 1em;
 }
 
+/* -------------------- Misc -------------------- */
+
 #ins_notice {
     position: sticky;
     left: calc(50% - 160px);
@@ -52,6 +54,11 @@ html.instance {
     font-weight: bold;
     color: #ef6000;
     content: '✓\FE0E';
+}
+
+.ins_highlight {
+    outline: 2px dotted #24579d;
+    outline-offset: 3px;
 }
 
 /* -------------------- Deploy dialog -------------------- */
