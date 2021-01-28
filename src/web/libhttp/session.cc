@@ -57,7 +57,7 @@ http_SessionManager::Session *
 
         if (RG_LIKELY(ret.second)) {
             session = ret.first;
-            strcpy(session->session_key, session_key);
+            CopyString(session_key, session->session_key);
             break;
         }
     }
@@ -72,7 +72,7 @@ http_SessionManager::Session *
     }
 
     // Fill extra security values
-    strncpy(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1);
+    CopyString(user_agent, session->user_agent);
 
     // Set session cookies
     io->AddCookieHeader(cookie_path, "session_key", session->session_key, true);

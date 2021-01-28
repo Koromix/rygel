@@ -3054,6 +3054,7 @@ void PopLogFilter();
 // Strings
 // ------------------------------------------------------------------------
 
+bool CopyString(const char *str, Span<char> buf);
 Span<char> DuplicateString(Span<const char> str, Allocator *alloc);
 
 static inline bool IsAsciiAlpha(char c)

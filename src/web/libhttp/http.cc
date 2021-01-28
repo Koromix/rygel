@@ -86,7 +86,10 @@ bool http_Daemon::Start(const http_Config &config,
 
             struct sockaddr_un addr = {};
             addr.sun_family = AF_UNIX;
-            strncpy(addr.sun_path, config.unix_path, sizeof(addr.sun_path) - 1);
+            if (!CopyString(config.unix_path, addr.sun_path)) {
+                LogError("Excessive UNIX socket path length");
+                return false;
+            }
 
             unlink(config.unix_path);
             if (bind(unix_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
@@ -158,9 +161,7 @@ static bool GetClientAddress(MHD_Connection *conn, bool use_xrealip, Span<char> 
         const char *xrealip = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "X-Real-IP");
 
         if (xrealip) {
-            strncpy(out_address.ptr, xrealip, out_address.len - 1);
-            out_address[out_address.len - 1] = 0;
-
+            CopyString(xrealip, out_address);
             return true;
         }
     }
@@ -177,9 +178,7 @@ static bool GetClientAddress(MHD_Connection *conn, bool use_xrealip, Span<char> 
             case AF_INET6: { addr = &((sockaddr_in6 *)saddr)->sin6_addr; } break;
 #ifndef _WIN32
             case AF_UNIX: {
-                strncpy(out_address.ptr, "unix", out_address.len - 1);
-                out_address[out_address.len - 1] = 0;
-
+                CopyString("unix", out_address);
                 return true;
             } break;
 #endif

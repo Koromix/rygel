@@ -91,25 +91,25 @@ static void WriteProfileJson(const Session *session, const Token *token, json_Wr
 static RetainPtr<Session> CreateUserSession(const http_RequestInfo &request, http_IO *io,
                                             int64_t userid, const char *username, const char *passport)
 {
-    Size len = RG_SIZE(Session) + strlen(username) + 1;
+    Size username_len = strlen(username);
+    Size len = RG_SIZE(Session) + username_len + 1;
     Session *session = (Session *)Allocator::Allocate(nullptr, len, (int)Allocator::Flag::Zero);
 
-    // Should never happen, but let's be careful
-    if (RG_UNLIKELY(strlen(passport) >= RG_SIZE(Session::passport))) {
-        LogError("User passport is too big");
-        return {};
-    }
-
     new (session) Session;
-    session->userid = userid;
-    session->username = (char *)session + RG_SIZE(Session);
-    strcpy((char *)session->username, username);
-    strcpy(session->passport, passport);
-
     RetainPtr<Session> ptr(session, [](Session *session) {
         session->~Session();
         Allocator::Release(nullptr, session, -1);
     });
+
+    session->userid = userid;
+    session->username = (char *)session + RG_SIZE(Session);
+    CopyString(username, MakeSpan((char *)session->username, username_len + 1));
+    if (!CopyString(passport, session->passport)) {
+        // Should never happen, but let's be careful
+        LogError("User passport is too big");
+        return {};
+    }
+
     sessions.Open(request, io, ptr);
 
     return ptr;
@@ -144,7 +144,7 @@ static RetainPtr<Session> CreateDemoSession(const http_RequestInfo &request, htt
         }
 
         demo_userid = userid;
-        strcpy(demo_passport, passport);
+        CopyString(passport, demo_passport);
     });
     if (RG_UNLIKELY(demo_userid < 0))
         return {};

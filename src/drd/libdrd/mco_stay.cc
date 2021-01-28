@@ -32,7 +32,7 @@ bool mco_StaySet::SavePack(StreamWriter *st) const
 {
     PackHeader bh = {};
 
-    strcpy(bh.signature, PACK_SIGNATURE);
+    CopyString(PACK_SIGNATURE, bh.signature);
     bh.version = PACK_VERSION;
     bh.native_size = (uint8_t)RG_SIZE(Size);
     bh.endianness = (int8_t)RG_ARCH_ENDIANNESS;

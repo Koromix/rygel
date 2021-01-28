@@ -584,6 +584,28 @@ int64_t GetMonotonicTime()
 // Strings
 // ------------------------------------------------------------------------
 
+bool CopyString(const char *str, Span<char> buf)
+{
+#ifndef NDEBUG
+    RG_ASSERT(buf.len > 0);
+#else
+    if (RG_UNLIKELY(!buf.len))
+        return false;
+#endif
+
+    Size i = 0;
+    for (; str[i]; i++) {
+        if (RG_UNLIKELY(i >= buf.len - 1)) {
+            buf[buf.len - 1] = 0;
+            return false;
+        }
+        buf[i] = str[i];
+    }
+    buf[i] = 0;
+
+    return true;
+}
+
 Span<char> DuplicateString(Span<const char> str, Allocator *alloc)
 {
     char *new_str = (char *)Allocator::Allocate(alloc, str.len + 1);
@@ -2184,7 +2206,7 @@ const char *GetApplicationExecutable()
         RG_ASSERT(path_buf);
         RG_ASSERT(strlen(path_buf) < RG_SIZE(executable_path));
 
-        strncpy(executable_path, path_buf, RG_SIZE(executable_path) - 1);
+        CopyString(path_buf, executable_path);
         free(path_buf);
     }
 
@@ -2197,7 +2219,7 @@ const char *GetApplicationExecutable()
         RG_ASSERT(path_buf);
         RG_ASSERT(strlen(path_buf) < RG_SIZE(executable_path));
 
-        strncpy(executable_path, path_buf, RG_SIZE(executable_path) - 1);
+        CopyString(path_buf, executable_path);
         free(path_buf);
     }
 
@@ -2380,19 +2402,19 @@ FILE *OpenFile(const char *filename, unsigned int flags)
                      (int)OpenFileFlag::Append)) {
         case (int)OpenFileFlag::Read: {
             oflags = _O_RDONLY | _O_BINARY | _O_NOINHERIT;
-            strcpy(mode, "rbc");
+            CopyString("rbc", mode);
         } break;
         case (int)OpenFileFlag::Write: {
             oflags = _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT;
-            strcpy(mode, "wbc");
+            CopyString("wbc", mode);
         } break;
         case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: {
             oflags = _O_RDWR | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT;
-            strcpy(mode, "w+bc");
+            CopyString("w+bc", mode);
         } break;
         case (int)OpenFileFlag::Append: {
             oflags = _O_WRONLY | _O_CREAT | _O_APPEND | _O_BINARY | _O_NOINHERIT;
-            strcpy(mode, "abc");
+            CopyString("abc", mode);
         } break;
     }
     RG_ASSERT(oflags >= 0);
@@ -3388,7 +3410,7 @@ bool NotifySystemd()
 
         addr.sun_family = AF_UNIX;
         addr.sun_path[0] = 0;
-        strcpy(addr.sun_path + 1, addr_str);
+        CopyString(addr_str, MakeSpan(addr.sun_path + 1, RG_SIZE(addr.sun_path) - 1));
     } else if (addr_str[0] == '/') {
         if (strlen(addr_str) >= sizeof(addr.sun_path)) {
             LogError("Socket pathname in NOTIFY_SOCKET is too long");
@@ -3396,7 +3418,7 @@ bool NotifySystemd()
         }
 
         addr.sun_family = AF_UNIX;
-        strcpy(addr.sun_path, addr_str);
+        CopyString(addr_str, addr.sun_path);
     } else {
         LogError("Invalid socket address in NOTIFY_SOCKET");
         return false;

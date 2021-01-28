@@ -221,8 +221,7 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
         }
 
         // Table type
-        strncpy(table.raw_type, raw_table_header.name, RG_SIZE(raw_table_header.name));
-        table.raw_type[RG_SIZE(table.raw_type) - 1] = '\0';
+        CopyString(raw_table_header.name, table.raw_type);
         table.raw_type[strcspn(table.raw_type, " ")] = '\0';
         if (TestStr(table.raw_type, "ARBREDEC")) {
             table.type = mco_TableType::GhmDecisionTree;
@@ -1395,10 +1394,10 @@ bool mco_TableSetBuilder::LoadPrices(StreamReader *st)
             } else if (prop.key == "Sector") {
                 if (prop.value == "Public") {
                     table_info.type = mco_TableType::PriceTablePublic;
-                    strcpy(table_info.raw_type, "PRICEPUB");
+                    CopyString("PRICEPUB", table_info.raw_type);
                 } else if (prop.value == "Private") {
                     table_info.type = mco_TableType::PriceTablePrivate;
-                    strcpy(table_info.raw_type, "PRICEPRI");
+                    CopyString("PRICEPRI", table_info.raw_type);
                 } else {
                     LogError("Unknown sector type '%1'", prop.value);
                     valid = false;

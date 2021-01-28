@@ -1609,9 +1609,7 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
                     }
 
                     if (unique_paths == 1) {
-                        strncpy(path_buf, path.ptr, RG_SIZE(path_buf));
-                        path_buf[RG_SIZE(path_buf) - 1] = 0;
-
+                        CopyString(path.ptr, path_buf);
                         path_enable = true;
                     } else {
                         path_enable = false;
