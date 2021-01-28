@@ -21,6 +21,7 @@ const goupile = new function() {
         await registerSW();
         await initDB();
 
+        initPing();
         initNavigation();
 
         if (ENV.base_url === '/admin/') {
@@ -30,6 +31,13 @@ const goupile = new function() {
         }
         await controller.start();
     };
+
+    function initPing() {
+        net.idleHandler = () => {
+            if (net.isOnline())
+                net.fetch(`${ENV.base_url}api/session/ping`);
+        };
+    }
 
     function initNavigation() {
         window.addEventListener('popstate', e => controller.go(null, window.location.href, false));
@@ -181,7 +189,7 @@ const goupile = new function() {
                 query.set('username', username.toLowerCase());
                 query.set('password', password);
 
-                let response = await net.fetch(`${ENV.base_url}api/user/login`, {
+                let response = await net.fetch(`${ENV.base_url}api/session/login`, {
                     method: 'POST',
                     body: query
                 });
@@ -267,7 +275,7 @@ const goupile = new function() {
         let progress = log.progress('Déconnexion en cours');
 
         try {
-            let response = await net.fetch(`${ENV.base_url}api/user/logout`, {method: 'POST'})
+            let response = await net.fetch(`${ENV.base_url}api/session/logout`, {method: 'POST'})
 
             if (response.ok) {
                 profile = {};
@@ -301,7 +309,7 @@ const goupile = new function() {
 
         if (new_rnd !== session_rnd) {
             try {
-                let response = await net.fetch(`${ENV.base_url}api/user/profile`);
+                let response = await net.fetch(`${ENV.base_url}api/session/profile`);
 
                 profile = await response.json();
                 session_rnd = util.getCookie('session_rnd');

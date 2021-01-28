@@ -83,12 +83,12 @@ static void AttachStatic(const AssetInfo &asset, const char *etag, const http_Re
     }
 }
 
-static void HandleEvents(InstanceHolder *, const http_RequestInfo &request, http_IO *io)
+static void HandlePing(const http_RequestInfo &request, http_IO *io)
 {
     // Do this to renew session and clear invalid session cookies
     GetCheckedSession(request, io);
 
-    io->AttachText(200, "{}", "application/json");
+    io->AttachText(200, "Pong!");
 }
 
 static void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
@@ -184,13 +184,13 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         }
 
         // And now, API endpoints
-        if (TestStr(instance_path, "/api/events") && request.method == http_RequestMethod::Get) {
-            HandleEvents(nullptr, request, io);
-        } else if (TestStr(instance_path, "/api/user/profile") && request.method == http_RequestMethod::Get) {
+        if (TestStr(instance_path, "/api/session/ping") && request.method == http_RequestMethod::Get) {
+            HandlePing(request, io);
+        } else if (TestStr(instance_path, "/api/session/profile") && request.method == http_RequestMethod::Get) {
             HandleUserProfile(nullptr, request, io);
-        } else if (TestStr(instance_path, "/api/user/login") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_path, "/api/session/login") && request.method == http_RequestMethod::Post) {
             HandleUserLogin(nullptr, request, io);
-        } else if (TestStr(instance_path, "/api/user/logout") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_path, "/api/session/logout") && request.method == http_RequestMethod::Post) {
             HandleUserLogout(nullptr, request, io);
         } else if (TestStr(instance_path, "/api/instances/create") && request.method == http_RequestMethod::Post) {
             HandleInstanceCreate(request, io);
@@ -281,13 +281,13 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         }
 
         // And now, API endpoints
-        if (TestStr(instance_path, "/api/events") && request.method == http_RequestMethod::Get) {
-            HandleEvents(instance, request, io);
-        } else if (TestStr(instance_path, "/api/user/profile") && request.method == http_RequestMethod::Get) {
+        if (TestStr(instance_path, "/api/session/ping") && request.method == http_RequestMethod::Get) {
+            HandlePing(request, io);
+        } else if (TestStr(instance_path, "/api/session/profile") && request.method == http_RequestMethod::Get) {
             HandleUserProfile(instance, request, io);
-        } else if (TestStr(instance_path, "/api/user/login") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_path, "/api/session/login") && request.method == http_RequestMethod::Post) {
             HandleUserLogin(instance, request, io);
-        } else if (TestStr(instance_path, "/api/user/logout") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_path, "/api/session/logout") && request.method == http_RequestMethod::Post) {
             HandleUserLogout(instance, request, io);
         } else if (TestStr(instance_path, "/api/files/static") && request.method == http_RequestMethod::Get) {
              HandleFileStatic(instance, request, io);

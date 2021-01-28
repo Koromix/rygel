@@ -567,11 +567,23 @@ NetworkError.prototype.name = 'NetworkError';
 const net = new function() {
     let self = this;
 
+    let idle_timer;
     let online = true;
 
+    this.idleHandler = null;
     this.changeHandler = online => {};
 
     this.fetch = async function(request, init) {
+        if (self.idleHandler != null) {
+            if (idle_timer != null)
+                clearTimeout(idle_timer);
+
+            idle_timer = setTimeout(() => {
+                idle_timer = null;
+                self.idleHandler();
+            }, 600 * 1000);
+        }
+
         try {
             if (init == null)
                 init = {};
@@ -579,6 +591,7 @@ const net = new function() {
                 init.credentials = 'same-origin';
 
             let response = await fetch(request, init);
+
             return response;
         } catch (err) {
             self.setOnline(false);
@@ -616,7 +629,7 @@ const net = new function() {
     this.setOnline = function(online2) {
         if (online2 !== online) {
             online = online2;
-            self.changeHandler();
+            self.changeHandler(online);
         }
     };
     this.isOnline = function() { return online; };
