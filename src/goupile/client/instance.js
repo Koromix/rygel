@@ -900,7 +900,7 @@ function InstanceController() {
         let actions = await computeDeployActions();
         let modifications = actions.reduce((acc, action) => acc + (action.type !== 'noop'), 0);
 
-        return ui.runDialog(null, (d, resolve, reject) => {
+        return ui.runDialog(e, (d, resolve, reject) => {
             d.output(html`
                 <div class="ui_quick">
                     ${modifications || 'Aucune'} ${modifications.length > 1 ? 'modifications' : 'modification'} à effectuer
