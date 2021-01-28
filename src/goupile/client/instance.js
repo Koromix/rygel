@@ -169,8 +169,10 @@ function InstanceController() {
         if (enable && key === 'page') {
             syncFormScroll();
             syncFormHighlight(true);
-        } else if (enable && key === 'editor') {
-            syncEditorScroll();
+        } else if (key === 'editor') {
+            if (enable)
+                syncEditorScroll();
+            syncFormHighlight(false);
         }
     }
 
@@ -761,56 +763,61 @@ function InstanceController() {
             let panel_el = document.querySelector('#ins_page').parentNode;
             let widget_els = panel_el.querySelectorAll('*[data-line]');
 
-            let selection = editor_ace.session.selection;
-            let editor_lines = [
-                selection.getRange().start.row + 1,
-                selection.getRange().end.row + 1
-            ];
+            if (ui.isPanelEnabled('editor')) {
+                let selection = editor_ace.session.selection;
+                let editor_lines = [
+                    selection.getRange().start.row + 1,
+                    selection.getRange().end.row + 1
+                ];
 
-            let highlight_first;
-            let highlight_last;
-            for (let i = 0;; i++) {
-                let line = parseInt(widget_els[i].dataset.line, 10);
+                let highlight_first;
+                let highlight_last;
+                for (let i = 0;; i++) {
+                    let line = parseInt(widget_els[i].dataset.line, 10);
 
-                if (line > editor_lines[0]) {
-                    if (i > 0)
-                        highlight_first = i - 1;
-                    break;
-                }
-
-                if (i >= widget_els.length - 1) {
-                    highlight_first = i;
-                    break;
-                }
-            }
-            if (highlight_first != null) {
-                highlight_last = highlight_first;
-
-                while (highlight_last < widget_els.length) {
-                    let line = parseInt(widget_els[highlight_last].dataset.line, 10);
-                    if (line > editor_lines[1])
+                    if (line > editor_lines[0]) {
+                        if (i > 0)
+                            highlight_first = i - 1;
                         break;
-                    highlight_last++;
+                    }
+
+                    if (i >= widget_els.length - 1) {
+                        highlight_first = i;
+                        break;
+                    }
                 }
-                highlight_last--;
-            }
+                if (highlight_first != null) {
+                    highlight_last = highlight_first;
 
-            for (let i = 0; i < widget_els.length; i++)
-                widget_els[i].classList.toggle('ins_highlight', i >= highlight_first && i <= highlight_last);
-
-            // Make sure widget is in viewport
-            if (scroll && highlight_first != null &&
-                          highlight_last === highlight_first) {
-                let el = widget_els[highlight_first];
-                let rect = el.getBoundingClientRect();
-
-                if (rect.top < 0) {
-                    ignore_page_scroll = true;
-                    panel_el.scrollTop += rect.top - 50;
-                } else if (rect.bottom >= window.innerHeight) {
-                    ignore_page_scroll = true;
-                    panel_el.scrollTop += rect.bottom - window.innerHeight + 30;
+                    while (highlight_last < widget_els.length) {
+                        let line = parseInt(widget_els[highlight_last].dataset.line, 10);
+                        if (line > editor_lines[1])
+                            break;
+                        highlight_last++;
+                    }
+                    highlight_last--;
                 }
+
+                for (let i = 0; i < widget_els.length; i++)
+                    widget_els[i].classList.toggle('ins_highlight', i >= highlight_first && i <= highlight_last);
+
+                // Make sure widget is in viewport
+                if (scroll && highlight_first != null &&
+                              highlight_last === highlight_first) {
+                    let el = widget_els[highlight_first];
+                    let rect = el.getBoundingClientRect();
+
+                    if (rect.top < 0) {
+                        ignore_page_scroll = true;
+                        panel_el.scrollTop += rect.top - 50;
+                    } else if (rect.bottom >= window.innerHeight) {
+                        ignore_page_scroll = true;
+                        panel_el.scrollTop += rect.bottom - window.innerHeight + 30;
+                    }
+                }
+            } else {
+                for (let el of widget_els)
+                    el.classList.remove('ins_highlight');
             }
         } catch (err) {
             // Meh, don't wreck the editor if for some reason we can't sync the
