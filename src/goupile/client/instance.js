@@ -645,7 +645,7 @@ function InstanceController() {
                 if (ui.isPanelEnabled('page'))
                     setTimeout(syncFormScroll, 0);
             });
-            session.selection.on('changeCursor', () => {
+            session.selection.on('changeSelection', () => {
                 syncFormHighlight(true);
                 ignore_editor_scroll = true;
             });
