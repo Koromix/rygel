@@ -9,7 +9,7 @@ DefaultPassword = {{goupile_default_password}}
 
 [NGINX]
 ConfigDirectory = ../nginx/domains.d
-ServerInclude = ../nginx/include.conf
+ServerTemplate = nginx.conf.j2
 ServiceName = {{nginx_service_name}}
 
 [runC]

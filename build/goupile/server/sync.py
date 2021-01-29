@@ -9,6 +9,7 @@ import configparser
 import hashlib
 import io
 import itertools
+from jinja2 import Template
 import json
 import os
 import re
@@ -229,32 +230,18 @@ def update_domain_config(info):
         ini.write(f)
         return commit_file(filename, f.getvalue())
 
-def update_nginx_config(directory, domain, socket, include = None):
+def update_nginx_config(directory, template_filename, domain, socket):
+    with open(template_filename) as f:
+        template = f.read()
+        template = Template(template)
+
     filename = os.path.join(directory, f'{domain}.conf')
+    content = template.render({
+        "goupile_domain": domain,
+        "goupile_socket": socket
+    })
 
-    compat_dir = os.path.join(directory, 'compat.d')
-    custom_dir = os.path.join(directory, 'custom.d')
-
-    with io.StringIO() as f:
-        print(f'server {{', file = f)
-        print(f'    server_name {domain};', file = f)
-        print(f'    client_max_body_size 32M;', file = f)
-        if include is not None:
-            print(f'    include {include};', file = f)
-        print(f'    location / {{', file = f)
-        print(f'        proxy_set_header Host $http_host;', file = f)
-        print(f'        proxy_set_header X-Real-IP $remote_addr;', file = f)
-        print(f'        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;', file = f)
-        print(f'        proxy_set_header X-Forwarded-Proto $scheme;', file = f)
-        print(f'        proxy_pass http://unix:{socket}:;', file = f)
-        print(f'    }}', file = f)
-        if os.path.isdir(compat_dir):
-            print(f'    include {compat_dir}/{domain}[.]conf;', file = f)
-        if os.path.isdir(custom_dir):
-            print(f'    include {custom_dir}/{domain}[.]conf;', file = f)
-        print(f'}}', file = f)
-
-        return commit_file(filename, f.getvalue())
+    return commit_file(filename, content)
 
 def run_sync(config):
     binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
@@ -307,8 +294,8 @@ def run_sync(config):
                 os.unlink(filename)
                 changed = True
     for domain, info in domains.items():
-        if update_nginx_config(config['NGINX.ConfigDirectory'], domain, info.socket,
-                               include = config.get('NGINX.ServerInclude')):
+        if update_nginx_config(config['NGINX.ConfigDirectory'], config.get('NGINX.ServerTemplate'),
+                               domain, info.socket):
             changed = True
 
     # Sync systemd services
@@ -348,7 +335,7 @@ if __name__ == '__main__':
     config['Goupile.BinaryDirectory'] = os.path.abspath(config['Goupile.BinaryDirectory'])
     config['Goupile.BundleDirectory'] = os.path.abspath(config['Goupile.BundleDirectory'])
     config['NGINX.ConfigDirectory'] = os.path.abspath(config['NGINX.ConfigDirectory'])
-    config['NGINX.ServerInclude'] = os.path.abspath(config['NGINX.ServerInclude'])
+    config['NGINX.ServerTemplate'] = os.path.abspath(config['NGINX.ServerTemplate'])
     config['runC.BundleTemplate'] = os.path.abspath(config['runC.BundleTemplate'])
 
     run_sync(config)
