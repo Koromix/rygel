@@ -293,6 +293,7 @@ html.small .ui_toolbar button.icon {
     color: white;
     font-weight: bold;
 }
+.ui_log_close:hover { background: none !important; }
 
 /* Came from https://loading.io/css/ */
 .ui_log_spin {
