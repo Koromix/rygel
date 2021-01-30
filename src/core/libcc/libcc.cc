@@ -1777,7 +1777,7 @@ static bool SyncFileDirectory(const char *filename)
     memcpy(directory0, directory.ptr, directory.len);
     directory0[directory.len] = 0;
 
-    int dirfd = open(directory0, O_RDONLY | O_CLOEXEC);
+    int dirfd = RG_POSIX_RESTART_EINTR(open(directory0, O_RDONLY | O_CLOEXEC), < 0);
     if (dirfd < 0) {
         LogError("Failed to sync directory '%1': %2", directory, strerror(errno));
         return false;
@@ -1827,7 +1827,7 @@ bool RenameFile(const char *src_filename, const char *dest_filename, bool overwr
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, FileType)> func)
 {
-    DIR *dirp = opendir(dirname);
+    DIR *dirp = RG_POSIX_RESTART_EINTR(opendir(dirname), == nullptr);
     if (!dirp) {
         LogError("Cannot enumerate directory '%1': %2", dirname, strerror(errno));
         return EnumStatus::Error;
@@ -2617,7 +2617,7 @@ FILE *OpenFile(const char *filename, unsigned int flags)
         oflags |= O_EXCL;
     }
 
-    int fd = open(filename, oflags, 0644);
+    int fd = RG_POSIX_RESTART_EINTR(open(filename, oflags, 0644), < 0);
     if (fd < 0) {
         LogError("Cannot open '%1': %2", filename, strerror(errno));
         return nullptr;
@@ -3139,7 +3139,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
             pfds[pfds_count++] = {out_pfd[0], POLLIN};
         }
 
-        if (RG_POSIX_RESTART_EINTR(poll(pfds, pfds_count, -1)) < 0) {
+        if (RG_POSIX_RESTART_EINTR(poll(pfds, pfds_count, -1), < 0) < 0) {
             LogError("Failed to read process output: %1", strerror(errno));
             break;
         }
@@ -3204,7 +3204,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
 
     // Wait for process exit
     int status;
-    if (RG_POSIX_RESTART_EINTR(waitpid(pid, &status, 0)) < 0) {
+    if (RG_POSIX_RESTART_EINTR(waitpid(pid, &status, 0), < 0) < 0) {
         LogError("Failed to wait for process exit: %1", strerror(errno));
         return false;
     }

@@ -3690,10 +3690,10 @@ static const char *const SocketTypeNames[] = {
 };
 
 #ifndef _WIN32
-    #define RG_POSIX_RESTART_EINTR(CallCode) \
+    #define RG_POSIX_RESTART_EINTR(CallCode, ErrorCond) \
         ([&]() { \
             decltype(CallCode) ret; \
-            while ((ret = (CallCode)) < 0 && errno == EINTR); \
+            while ((ret = (CallCode)) ErrorCond && errno == EINTR); \
             return ret; \
         })()
 #endif
