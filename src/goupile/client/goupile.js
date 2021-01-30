@@ -94,11 +94,13 @@ const goupile = new function() {
                     let progress = new log.Entry;
 
                     if (registration.waiting) {
-                        progress.error('Fermez tous les onglets pour terminer la mise à jour');
+                        progress.error('Fermez tous les onglets pour terminer la mise à jour puis rafraichissez la page');
+                        document.querySelector('#ui_root').classList.add('disabled');
                     } else {
                         registration.addEventListener('updatefound', () => {
                             if (registration.active) {
                                 progress.progress('Mise à jour en cours, veuillez patienter');
+                                document.querySelector('#ui_root').classList.add('disabled');
 
                                 registration.installing.addEventListener('statechange', e => {
                                     if (e.target.state === 'installed') {
@@ -115,6 +117,7 @@ const goupile = new function() {
 
                     if (registration != null) {
                         progress.progress('Nettoyage de l\'instance en cache, veuillez patienter');
+                        document.querySelector('#ui_root').classList.add('disabled');
 
                         await registration.unregister();
 

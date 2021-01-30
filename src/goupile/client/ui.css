@@ -15,7 +15,7 @@ body {
     line-height: 1.5;
     color: #202020;
 }
-#ui_root { height: 100%; }
+#ui_root, #ui_main { height: 100%; }
 @media (pointer: coarse) {
     body { font-size: 16px; }
 }

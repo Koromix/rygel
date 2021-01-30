@@ -30,7 +30,9 @@
     </head>
 
     <body>
-        <div id="ui_root"></div>
+        <div id="ui_root">
+            <div id="ui_main"></div>
+        </div>
 
         <script>
             try {
@@ -50,7 +52,7 @@
                         let p = goupile.start();
 
                         p.catch(function(err) {
-                            document.querySelector('#ui_root').innerHTML =
+                            document.querySelector('#ui_main').innerHTML =
                                 '<div class="ui_wip">' +
                                     '<b>Une erreur est survenue pendant le chargement</b>\n' +
                                     err.message +
@@ -62,7 +64,7 @@
                     }
                 });
             } catch (err) {
-                document.querySelector('#ui_root').innerHTML =
+                document.querySelector('#ui_main').innerHTML =
                     '<div class="ui_wip">' +
                         '<b>Ce navigateur n\'est pas supporté, ou il s\'agit d\'une version trop ancienne</b>\n' +
                         'Vous pouvez utiliser Chrome (version ≥ 55), Firefox (version ≥ 60), Edge (version ≥ 17), Safari (≥ 11)' +

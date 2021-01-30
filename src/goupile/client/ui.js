@@ -77,7 +77,7 @@ const ui = new function() {
             <main id="ui_panels">
                 ${util.map(panels.values(), panel => panel.active ? panel.render() : '')}
             </main>
-        `, document.querySelector('#ui_root'));
+        `, document.querySelector('#ui_main'));
     };
 
     this.setMenu = function(func) {
@@ -113,7 +113,7 @@ const ui = new function() {
     };
 
     this.runScreen = function(func) {
-        render('', document.querySelector('#ui_root'));
+        render('', document.querySelector('#ui_main'));
         return runDialog(null, 'modal', false, func);
     };
 
@@ -169,7 +169,7 @@ const ui = new function() {
             dialog.el.style.zIndex = 999999;
 
             // Show it!
-            document.body.appendChild(dialog.el);
+            document.querySelector('#ui_root').appendChild(dialog.el);
             dialog.render();
         });
     };
@@ -278,7 +278,7 @@ const ui = new function() {
         dialog.next.prev = dialog.prev;
         dialog.prev.next = dialog.next;
 
-        document.body.removeChild(dialog.el);
+        document.querySelector('#ui_root').removeChild(dialog.el);
         dialog.el = null;
     }
 
