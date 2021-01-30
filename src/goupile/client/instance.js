@@ -16,6 +16,7 @@ function InstanceController() {
 
     let code_cache = new LruMap(4);
     let page_code;
+    let page_div = document.createElement('div');
 
     let form_meta;
     let form_chain;
@@ -292,7 +293,6 @@ function InstanceController() {
         let model = new FormModel;
         let builder = new FormBuilder(form_state, model, readonly);
 
-        let error;
         try {
             builder.pushOptions({});
 
@@ -324,8 +324,13 @@ function InstanceController() {
                 builder.action('-');
                 builder.action('Nouveau', {}, goNewRecord);
             }
+
+            render(model.render(), page_div);
+            page_div.classList.remove('disabled');
         } catch (err) {
-            error = err;
+            if (!page_div.children.length)
+                render('Impossible de générer la page à cause d\'une erreur', page_div);
+            page_div.classList.add('disabled');
         }
 
         return html`
@@ -347,12 +352,9 @@ function InstanceController() {
                         ` : ''}
                     </div>
 
-                    ${error == null ? html`
-                        <form id="ins_form" @submit=${e => e.preventDefault()}>
-                            ${model.render()}
-                        </form>
-                    ` : ''}
-                    ${error != null ? html`<span class="ui_wip">${error.message}</span>` : ''}
+                    <form id="ins_form" @submit=${e => e.preventDefault()}>
+                        ${page_div}
+                    </form>
                 </div>
 
                 ${develop ? html`
