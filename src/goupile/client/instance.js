@@ -701,7 +701,7 @@ function InstanceController() {
     }
 
     function syncFormScroll() {
-        if (!ui.isPanelEnabled('page'))
+        if (!ui.isPanelEnabled('editor') || !ui.isPanelEnabled('page'))
             return;
         if (ignore_editor_scroll) {
             ignore_editor_scroll = false;
@@ -765,7 +765,7 @@ function InstanceController() {
             let panel_el = document.querySelector('#ins_page').parentNode;
             let widget_els = panel_el.querySelectorAll('*[data-line]');
 
-            if (ui.isPanelEnabled('editor')) {
+            if (ui.isPanelEnabled('editor') && widget_els.length) {
                 let selection = editor_ace.session.selection;
                 let editor_lines = [
                     selection.getRange().start.row + 1,
@@ -829,7 +829,7 @@ function InstanceController() {
     }
 
     function syncEditorScroll() {
-        if (!ui.isPanelEnabled('editor'))
+        if (!ui.isPanelEnabled('editor') || !ui.isPanelEnabled('page'))
             return;
         if (ignore_page_scroll) {
             ignore_page_scroll = false;
