@@ -18,13 +18,56 @@
 
             var ENV = {ENV_JSON};
         </script>
-        <script src="{BASE_URL}static/goupile.pk.js"></script>
-        <link rel="stylesheet" href="{BASE_URL}static/goupile.pk.css"/>
+        <script src="{BASE_URL}static/goupile.pk.js" async></script>
+        <link rel="stylesheet" href="{BASE_URL}static/goupile.pk.css" async/>
 
         <link rel="preload" href="{BASE_URL}static/OpenSans_v17_Latin_Regular.woff2" as="font" type="font/woff2" crossorigin/>
         <link rel="preload" href="{BASE_URL}static/OpenSans_v17_Latin_Bold.woff2" as="font" type="font/woff2" crossorigin/>
         <link rel="preload" href="{BASE_URL}static/OpenSans_v17_Latin_Italic.woff2" as="font" type="font/woff2" crossorigin/>
         <link rel="preload" href="{BASE_URL}static/OpenSans_v17_Latin_BoldItalic.woff2" as="font" type="font/woff2" crossorigin/>
+
+        <style>
+            .gp_loading {
+                display: flex;
+                height: 100%;
+                align-items: center;
+                justify-content: center;
+                visibility: hidden;
+                animation: gp_loading_wait 0.2s 1 linear;
+                animation-fill-mode: forwards;
+                animation-delay: 0.3s;
+            }
+            .gp_loading::after {
+                content: ' ';
+                display: block;
+                width: 48px;
+                height: 48px;
+                margin: 1px;
+                border-radius: 50%;
+                border: 12px solid var(--menu_color);
+                border-color: var(--menu_color) transparent var(--menu_color) transparent;
+                animation: gp_loading_spinner 0.8s ease-in-out infinite;
+            }
+            .gp_loading > * { display: none !important; }
+            @keyframes gp_loading_wait {
+                100% {
+                    visibility: visible;
+                    background: white;
+                }
+            }
+            @keyframes gp_loading_spinner {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            #gp_logo {
+                position: absolute;
+                left: calc(50% - 48px);
+                margin-top: -64px;
+                width: 96px;
+                height: 96px;
+            }
+        </style>
 
         {HEAD_TAGS}
     </head>
@@ -47,21 +90,19 @@
                 }
 
                 document.body.classList.add('gp_loading');
-                document.addEventListener('readystatechange', function(e) {
-                    if (document.readyState === 'complete') {
-                        let p = goupile.start();
+                window.addEventListener('load', function(e) {
+                    let p = goupile.start();
 
-                        p.catch(function(err) {
-                            document.querySelector('#ui_main').innerHTML =
-                                '<div class="ui_wip">' +
-                                    '<b>Une erreur est survenue pendant le chargement</b>\n' +
-                                    err.message +
-                                '</div>';
-                        });
-                        p.finally(function() {
-                            document.body.classList.remove('gp_loading');
-                        });
-                    }
+                    p.catch(function(err) {
+                        document.querySelector('#ui_main').innerHTML =
+                            '<div class="ui_wip">' +
+                                '<b>Une erreur est survenue pendant le chargement</b>\n' +
+                                err.message +
+                            '</div>';
+                    });
+                    p.finally(function() {
+                        document.body.classList.remove('gp_loading');
+                    });
                 });
             } catch (err) {
                 document.querySelector('#ui_main').innerHTML =
