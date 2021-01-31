@@ -213,6 +213,10 @@ function InstanceController() {
                 <div class="ui_quick">
                     ${data_rows.length || 'Aucune'} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
                     <div style="flex: 1;"></div>
+                    ${ENV.backup_key != null ? html`
+                        <a @click=${e => backupClientData('file')}>Faire une sauvegarde chiffrée</a>
+                        <div style="flex: 1;"></div>
+                    ` : ''}
                     <a @click=${ui.wrapAction(e => { data_rows = null; return self.run(); })}>Rafraichir</a>
                 </div>
 
@@ -1160,8 +1164,8 @@ function InstanceController() {
         if (!goupile.isAuthorized()) {
             await goupile.runLogin();
 
-            if (ENV.backup_key != null)
-                await backupClientData();
+            if (net.isOnline() && ENV.backup_key != null)
+                await backupClientData('server');
         }
 
         let new_route = Object.assign({}, route);
@@ -1618,7 +1622,7 @@ function InstanceController() {
         }
     }
 
-    async function backupClientData() {
+    async function backupClientData(dest) {
         let progress = log.progress('Archivage sécurisé des données');
 
         try {
@@ -1636,20 +1640,36 @@ function InstanceController() {
             }
 
             let enc = await goupile.encryptBackup(records);
-            let response = await fetch(`${ENV.base_url}api/files/backup`, {
-                method: 'POST',
-                body: JSON.stringify(enc)
-            });
+            let json = JSON.stringify(enc);
 
-            if (response.ok) {
-                console.log('Archive sécurisée envoyée');
+            if (dest === 'server') {
+                let response = await fetch(`${ENV.base_url}api/files/backup`, {
+                    method: 'POST',
+                    body: JSON.stringify(enc)
+                });
+
+                if (response.ok) {
+                    console.log('Archive sécurisée envoyée');
+                    progress.close();
+                } else if (response.status === 409) {
+                    console.log('Archivage ignoré (archive récente)');
+                    progress.close();
+                } else {
+                    let err = (await response.text()).trim();
+                    throw new Error(err);
+                }
+            } else if (dest === 'file') {
+                let blob = new Blob([json], {
+                    type: 'application/octet-stream'
+                });
+
+                console.log('Archive sécurisée créée');
                 progress.close();
-            } else if (response.status === 409) {
-                console.log('Archivage ignoré (archive récente)');
-                progress.close();
+
+                let filename = `${ENV.base_url.replaceAll('/', '')}_${profile.username}_${dates.today()}.backup`;
+                util.saveBlob(blob, filename);
             } else {
-                let err = (await response.text()).trim();
-                throw new Error(err);
+                throw new Error(`Invalid backup destination '${dest}'`);
             }
         } catch (err) {
             progress.close();
