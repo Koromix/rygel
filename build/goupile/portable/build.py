@@ -16,7 +16,7 @@ from wand.image import Image
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'Bundle Goupile instance as EXE for offline use')
     parser.add_argument('url', type = str, help = 'URL of instance')
-    parser.add_argument('-O', '--output_file', dest = 'output', action = 'store', help = 'Output file')
+    parser.add_argument('-O', '--output_dir', dest = 'output_dir', action = 'store', help = 'Output directory')
     args = parser.parse_args()
 
     # Find repository directory
@@ -35,15 +35,26 @@ if __name__ == "__main__":
     manifest = json.loads(response.content)
 
     # Prepare build directory
-    build_directory = os.path.join(root_directory, 'bin/GoupilePortable', manifest["name"])
+    if args.output_dir is None:
+        build_directory = os.path.join(root_directory, 'bin/GoupilePortable', manifest["name"])
+    else:
+        build_directory = args.output_dir
     os.makedirs(build_directory + '/build', exist_ok = True)
     shutil.copytree('app', build_directory, dirs_exist_ok = True)
+
+    # Update settings
+    update_version = subprocess.check_output('git log -n1 --pretty=format:%cd --date=format:%Y.%m.%d', shell = True)
+    update_version = update_version.decode()
+    update_version = update_version.replace('.0', '.')
+    update_url = f'https://goupile.fr/files/{manifest["name"].lower()}/'
 
     # Update package.json
     with open(build_directory + '/package.json', 'r') as f:
         package = json.load(f)
     package["name"] = manifest["name"]
     package["homepage"] = args.url
+    package["version"] = update_version
+    package["build"]["publish"][0]["url"] = update_url
     with open(build_directory + '/package.json', 'w') as f:
         json.dump(package, f, indent = 4, ensure_ascii = False)
 
@@ -65,9 +76,3 @@ if __name__ == "__main__":
     # Run electron-builder
     subprocess.run('npm install', shell = True, cwd = build_directory)
     subprocess.run('npm run dist', shell = True, cwd = build_directory)
-
-    # Copy artifact file to final destination
-    output = args.output
-    if output is None:
-        output = f'{build_directory}/../{manifest["name"]}Portable.exe'
-    shutil.copy(f'{build_directory}/dist/{manifest["name"]}.exe', output)

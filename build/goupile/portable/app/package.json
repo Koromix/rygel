@@ -1,6 +1,7 @@
 {
     "name": "XXXXX",
-    "version": "1.0.0",
+    "homepage": "XXXXX",
+    "version": "XXXXX",
     "description": "",
     "main": "index.js",
     "scripts": {
@@ -19,11 +20,18 @@
         "nsis": {
             "artifactName": "${name}.exe",
             "uninstallDisplayName": "${name}"
-        }
+        },
+        "publish": [
+            {
+                "provider": "generic",
+                "url": "XXXXX"
+            }
+        ]
     },
     "author": "",
     "license": "",
     "dependencies": {
+        "electron-updater": "^4.3.5",
         "esm": "^3.2.25"
     },
     "devDependencies": {

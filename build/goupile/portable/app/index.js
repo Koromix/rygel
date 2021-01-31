@@ -3,8 +3,12 @@
 const settings = require('./package.json');
 const path = require('path');
 const { app, BrowserWindow } = require('electron');
+const { autoUpdater } = require('electron-updater');
 
 app.on('ready', async () => {
+    if (isPackaged())
+        autoUpdater.checkForUpdatesAndNotify();
+
     let win = new BrowserWindow({
         width: 1600,
         height: 900,
