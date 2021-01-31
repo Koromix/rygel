@@ -214,7 +214,7 @@ function InstanceController() {
                     ${data_rows.length || 'Aucune'} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
                     <div style="flex: 1;"></div>
                     ${ENV.backup_key != null ? html`
-                        <a @click=${e => backupClientData('file')}>Faire une sauvegarde chiffrée</a>
+                        <a @click=${ui.wrapAction(e => backupClientData('file'))}>Faire une sauvegarde chiffrée</a>
                         <div style="flex: 1;"></div>
                     ` : ''}
                     <a @click=${ui.wrapAction(e => { data_rows = null; return self.run(); })}>Rafraichir</a>
