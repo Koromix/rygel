@@ -432,8 +432,6 @@ function InstanceController() {
         }
     }
 
-    // XXX: Make sure nothing changes while this runs, with some kind of multi-stage serializeAsync?
-    //      Or copy state, which is probably better :)
     async function saveRecord() {
         if (develop)
             throw new Error('Enregistrement refusé : formulaire non publié');
@@ -443,18 +441,22 @@ function InstanceController() {
         try {
             enablePersistence();
 
+            let page = route.page;
+            let meta = form_meta;
             let values = Object.assign({}, form_state.values);
+
+            // Can't store undefined in IndexedDB...
             for (let key in values) {
                 if (values[key] === undefined)
                     values[key] = null;
             }
 
-            let key = `${profile.userid}:${form_meta.ulid}`;
+            let key = `${profile.userid}:${meta.ulid}`;
             let fragment = {
                 type: 'save',
                 user: profile.username,
                 mtime: new Date,
-                page: route.page.key,
+                page: page.key,
                 values: values
             };
 
@@ -464,33 +466,33 @@ function InstanceController() {
                 let record;
                 if (obj != null) {
                     record = await goupile.decryptWithPassport(obj.enc);
-                    if (form_meta.hid != null)
-                        record.hid = form_meta.hid;
+                    if (meta.hid != null)
+                        record.hid = meta.hid;
                 } else {
                     obj = {
-                        fkey: `${profile.userid}/${route.form.key}`,
+                        fkey: `${profile.userid}/${page.form.key}`,
                         pkey: null,
                         enc: null
                     };
                     record = {
-                        ulid: form_meta.ulid,
-                        hid: form_meta.hid,
-                        parent: form_meta.parent,
-                        form: route.form.key,
+                        ulid: meta.ulid,
+                        hid: meta.hid,
+                        parent: meta.parent,
+                        form: page.form.key,
                         fragments: []
                     };
 
-                    if (form_meta.parent != null) {
-                        obj.pkey = `${profile.userid}:${form_meta.parent.ulid}`;
+                    if (meta.parent != null) {
+                        obj.pkey = `${profile.userid}:${meta.parent.ulid}`;
                         record.parent = {
-                            form: form_meta.parent.form.key,
-                            ulid: form_meta.parent.ulid,
-                            version: form_meta.parent.version
+                            form: meta.parent.form.key,
+                            ulid: meta.parent.ulid,
+                            version: meta.parent.version
                         };
                     }
                 }
 
-                if (form_meta.version !== record.fragments.length)
+                if (meta.version !== record.fragments.length)
                     throw new Error('Cannot overwrite old record fragment');
                 record.fragments.push(fragment);
 
