@@ -211,6 +211,15 @@ function AdminController() {
                     ], {value: instance.config.sync_mode});
                     let backup_key = (sync_mode.value == 'offline') ?
                                      d.text('backup_key', 'Clé d\'archivage', {value: instance.config.backup_key}) : {};
+                    if (backup_key.value != null) {
+                        try {
+                            let key = base64ToBytes(backup_key.value);
+                            if (key.length !== 32)
+                                throw new Error('Key length must be 32 bytes');
+                        } catch (err) {
+                            backup_key.error('Clé non valide');
+                        }
+                    }
 
                     d.action('Modifier', {disabled: !d.isValid()}, async () => {
                         let query = new URLSearchParams();
