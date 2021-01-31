@@ -20,9 +20,9 @@ const goupile = new function() {
 
         await registerSW();
         await initDB();
-
         initPing();
         initNavigation();
+        await goupile.syncProfile();
 
         if (ENV.base_url === '/admin/') {
             controller = new AdminController;
