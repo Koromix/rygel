@@ -45,10 +45,11 @@ class Session: public RetainObject {
 public:
     int64_t userid;
     const char *username;
-    bool admin;
+    int64_t admin_until;
     bool demo;
     char passport[64];
 
+    bool IsAdmin() const { return admin_until && admin_until > GetMonotonicTime(); }
     const Token *GetToken(const InstanceHolder *instance) const;
 };
 

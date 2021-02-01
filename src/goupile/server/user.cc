@@ -63,7 +63,7 @@ static void WriteProfileJson(const Session *session, const Token *token, json_Wr
     if (session) {
         out_json->Key("userid"); out_json->Int64(session->userid);
         out_json->Key("username"); out_json->String(session->username);
-        out_json->Key("admin"); out_json->Bool(session->admin);
+        out_json->Key("admin"); out_json->Bool(session->IsAdmin());
         out_json->Key("demo"); out_json->Bool(session->demo);
 
         if (token) {
@@ -228,7 +228,10 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
                 RetainPtr<Session> session = CreateUserSession(request, io, userid, username, passport);
 
                 if (RG_LIKELY(session)) {
-                    session->admin = admin;
+                    if (admin && !instance) {
+                        // Require regular relogin (every 20 minutes) to access admin panel
+                        session->admin_until = GetMonotonicTime() + 1200 * 1000;
+                    }
 
                     const Token *token = session->GetToken(instance);
 
