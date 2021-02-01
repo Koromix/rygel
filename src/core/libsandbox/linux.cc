@@ -48,8 +48,8 @@ sb_SandboxBuilder::~sb_SandboxBuilder()
 
 void sb_SandboxBuilder::IsolateProcess()
 {
-    unshare_flags |= CLONE_NEWNS | CLONE_NEWUSER | CLONE_NEWIPC |
-                     CLONE_NEWNET | CLONE_NEWPID | CLONE_NEWUTS;
+    unshare_flags |= CLONE_NEWNS | CLONE_NEWUSER | CLONE_NEWIPC | CLONE_NEWUTS |
+                     CLONE_NEWNET | CLONE_NEWPID | CLONE_NEWCGROUP;
 }
 
 void sb_SandboxBuilder::MountPath(const char *src, const char *dest, bool readonly)
