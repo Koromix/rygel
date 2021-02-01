@@ -179,7 +179,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
     io->RunAsync([=]() {
         // Create temporary file
         FILE *fp = nullptr;
-        const char *tmp_filename = CreateTemporaryFile(gp_domain.config.temp_directory, ".tmp",
+        const char *tmp_filename = CreateTemporaryFile(gp_domain.config.temp_directory, "", ".tmp",
                                                        &io->allocator, &fp);
         if (!tmp_filename)
             return;
@@ -394,7 +394,7 @@ void HandleFileBackup(InstanceHolder *instance, const http_RequestInfo &request,
     io->RunAsync([=]() {
         // Create temporary file
         FILE *fp = nullptr;
-        const char *tmp_filename = CreateTemporaryFile(gp_domain.config.temp_directory, ".tmp",
+        const char *tmp_filename = CreateTemporaryFile(gp_domain.config.temp_directory, "", ".tmp",
                                                        &io->allocator, &fp);
         if (!tmp_filename)
             return;

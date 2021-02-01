@@ -2715,16 +2715,17 @@ bool UnlinkFile(const char *filename, bool error_if_missing)
 
 #endif
 
-const char *CreateTemporaryFile(const char *directory, const char *extension,
-                                Allocator *alloc, FILE **out_fp)
+static const char *CreateTemporaryPath(const char *directory, const char *prefix, const char *extension,
+                                       Allocator *alloc, FunctionRef<bool(const char *path)> create)
 {
     RG_ASSERT(alloc);
 
     HeapArray<char> filename(alloc);
     filename.Append(directory);
     filename.Append(*RG_PATH_SEPARATORS);
+    filename.Append(prefix);
 
-    Size name_offset = filename.len;
+    Size change_offset = filename.len;
 
     PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
     RG_DEFER_N(log_guard) { PopLogFilter(); };
@@ -2736,7 +2737,7 @@ const char *CreateTemporaryFile(const char *directory, const char *extension,
             log_guard.Disable();
         }
 
-        filename.RemoveFrom(name_offset);
+        filename.RemoveFrom(change_offset);
         for (Size j = 0; j < 24; j++) {
             static const char *chars = "abcdefghijklmnopqrstuvwxyz0123456789";
 
@@ -2749,8 +2750,22 @@ const char *CreateTemporaryFile(const char *directory, const char *extension,
         filename.Append(extension);
         filename.Append(0);
 
-        FILE *fp = OpenFile(filename.ptr, (int)OpenFileFlag::Read | (int)OpenFileFlag::Write |
-                                          (int)OpenFileFlag::Exclusive);
+        if (create(filename.ptr)) {
+            const char *ret = filename.TrimAndLeak(1).ptr;
+            return ret;
+        }
+    }
+
+    return nullptr;
+}
+
+const char *CreateTemporaryFile(const char *directory, const char *prefix, const char *extension,
+                                Allocator *alloc, FILE **out_fp)
+{
+    return CreateTemporaryPath(directory, prefix, extension, alloc, [&](const char *path) {
+        FILE *fp = OpenFile(path, (int)OpenFileFlag::Read | (int)OpenFileFlag::Write |
+                                  (int)OpenFileFlag::Exclusive);
+
         if (fp) {
             if (out_fp) {
                 *out_fp = fp;
@@ -2758,12 +2773,12 @@ const char *CreateTemporaryFile(const char *directory, const char *extension,
                 fclose(fp);
             }
 
-            const char *ret = filename.TrimAndLeak(1).ptr;
-            return ret;
+            return true;
+        } else {
+            return false;
         }
-    }
+    });
 
-    return nullptr;
 }
 
 bool EnsureDirectoryExists(const char *filename)
