@@ -2778,7 +2778,13 @@ const char *CreateTemporaryFile(const char *directory, const char *prefix, const
             return false;
         }
     });
+}
 
+const char *CreateTemporaryDirectory(const char *directory, const char *prefix, Allocator *alloc)
+{
+    return CreateTemporaryPath(directory, prefix, "", alloc, [&](const char *path) {
+        return MakeDirectory(path);
+    });
 }
 
 bool EnsureDirectoryExists(const char *filename)
