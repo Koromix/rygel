@@ -159,18 +159,22 @@ bool sb_SandboxBuilder::Apply()
 
     // Set up FS namespace
     if (unshare_flags & CLONE_NEWNS) {
-        const char *fs_root = CreateTemporaryDirectory("/tmp", "sandbox_", &alloc);
-        if (!fs_root)
+        if (!MakeDirectory("/tmp/sandbox", false))
             return false;
-
-        LogDebug("Sandbox FS root: '%1'", fs_root);
-
-        // Create root FS with tmpfs
-        if (mount(nullptr, "/tmp", nullptr, MS_PRIVATE, nullptr) < 0) {
-            LogError("Failed to set MS_PRIVATE on '/tmp': %1", strerror(errno));
+        if (mount("tmpfs", "/tmp/sandbox", "tmpfs", 0, "size=4k") < 0 && errno != EBUSY) {
+            LogError("Failed to mount tmpfs on '/tmp/sandbox': %2", strerror(errno));
             return false;
         }
-        if (mount("tmpfs", fs_root, "tmpfs", 0, "size=1M") < 0) {
+        if (mount(nullptr, "/tmp/sandbox", nullptr, MS_PRIVATE, nullptr) < 0) {
+            LogError("Failed to set MS_PRIVATE on '/tmp/sandbox': %1", strerror(errno));
+            return false;
+        }
+
+        // Create root FS with tmpfs
+        const char *fs_root = CreateTemporaryDirectory("/tmp/sandbox", "", &alloc);
+        if (!fs_root)
+            return false;
+        if (mount("tmpfs", fs_root, "tmpfs", 0, "size=4k") < 0) {
             LogError("Failed to mount tmpfs on '%1': %2", fs_root, strerror(errno));
             return false;
         }
@@ -178,6 +182,7 @@ bool sb_SandboxBuilder::Apply()
             LogError("Failed to set MS_PRIVATE on '%1': %2", fs_root, strerror(errno));
             return false;
         }
+        LogDebug("Sandbox FS root: '%1'", fs_root);
 
         // Mount requested paths
         for (const BindMount &bind: mounts) {
