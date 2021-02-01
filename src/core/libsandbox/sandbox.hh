@@ -16,6 +16,8 @@ enum class sb_SyscallAction {
     Kill
 };
 
+bool sb_IsSandboxSupported();
+
 class sb_SandboxBuilder final {
     RG_DELETE_COPY(sb_SandboxBuilder)
 
@@ -40,8 +42,6 @@ class sb_SandboxBuilder final {
 public:
     sb_SandboxBuilder() {};
     ~sb_SandboxBuilder();
-
-    bool IsSupported() const;
 
     void IsolateProcess();
     void MountPath(const char *src, const char *dest, bool readonly);

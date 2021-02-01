@@ -4,18 +4,49 @@
 
 #include "../../core/libcc/libcc.hh"
 #include "../libblikk/libblikk.hh"
+#include "../../core/libsandbox/sandbox.hh"
 
 namespace RG {
 
 int RunCommand(Span<const char> code, bool execute);
 int RunInteractive(bool execute);
 
-static int RunFile(const char *filename, bool execute)
+static bool ApplySandbox()
+{
+    if (!sb_IsSandboxSupported()) {
+        LogError("Sandbox mode is not supported on this platform");
+        return false;
+    }
+
+    sb_SandboxBuilder sb;
+
+    sb.IsolateProcess();
+    sb.InitSyscallFilter(sb_SyscallAction::Kill);
+    sb.FilterSyscalls(sb_SyscallAction::Allow, {
+        "exit", "exit_group",
+        "brk", "mmap",
+        "read", "readv",
+        "write", "writev",
+        "fstat", "ioctl", // Meh
+        "rt_sigaction"
+    });
+    sb.FilterSyscalls(sb_SyscallAction::Block, {
+        "fsync", "sync", "syncfs",
+        "close"
+    });
+
+    return sb.Apply();
+}
+
+static int RunFile(const char *filename, bool sandbox, bool execute)
 {
     bk_Program program;
     {
         HeapArray<char> code;
         if (ReadFile(filename, Megabytes(256), &code) < 0)
+            return 1;
+
+        if (sandbox && !ApplySandbox())
             return 1;
 
         bk_Compiler compiler(&program);
@@ -39,6 +70,7 @@ int Main(int argc, char **argv)
     // Options
     RunMode mode = RunMode::File;
     const char *filename_or_code = nullptr;
+    bool sandbox = false;
     bool execute = true;
 
     const auto print_usage = [](FILE *fp) {
@@ -49,6 +81,8 @@ int Main(int argc, char **argv)
 Options:
     %!..+-c, --command%!0                Run code directly from argument
     %!..+-i, --interactive%!0            Run code interactively (REPL)
+
+        %!..+--sandbox%!0                Run in strict OS sandbox (if supported)
 
         %!..+--no_execute%!0             Parse code but don't run it)", FelixTarget);
     };
@@ -81,6 +115,8 @@ Options:
                 }
 
                 mode = RunMode::Interactive;
+            } else if (opt.Test("--sandbox")) {
+                sandbox = true;
             } else if (opt.Test("--no_execute")) {
                 execute = false;
             } else {
@@ -93,7 +129,12 @@ Options:
     }
 
     switch (mode) {
-        case RunMode::Interactive: { return RunInteractive(execute); } break;
+        case RunMode::Interactive: {
+            if (sandbox && !ApplySandbox())
+                return 1;
+
+            return RunInteractive(execute);
+        } break;
 
         case RunMode::File: {
             if (!filename_or_code) {
@@ -101,13 +142,16 @@ Options:
                 return 1;
             }
 
-            return RunFile(filename_or_code, execute);
+            return RunFile(filename_or_code, sandbox, execute);
         } break;
         case RunMode::Command: {
             if (!filename_or_code) {
                 LogError("No command provided");
                 return 1;
             }
+
+            if (sandbox && !ApplySandbox())
+                return 1;
 
             return RunCommand(filename_or_code, execute);
         } break;

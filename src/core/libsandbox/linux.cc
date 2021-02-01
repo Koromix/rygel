@@ -19,16 +19,16 @@
 
 namespace RG {
 
+bool sb_IsSandboxSupported()
+{
+    return true;
+}
+
 sb_SandboxBuilder::~sb_SandboxBuilder()
 {
     if (seccomp_ctx) {
         seccomp_release(seccomp_ctx);
     }
-}
-
-bool sb_SandboxBuilder::IsSupported() const
-{
-    return true;
 }
 
 void sb_SandboxBuilder::IsolateProcess()

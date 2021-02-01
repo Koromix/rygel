@@ -9,14 +9,14 @@
 
 namespace RG {
 
+bool sb_IsSandboxSupported()
+{
+    return false;
+}
+
 sb_SandboxBuilder::~sb_SandboxBuilder()
 {
     // Nothing to do
-}
-
-bool sb_SandboxBuilder::IsSupported() const
-{
-    return false;
 }
 
 void sb_SandboxBuilder::IsolateProcess()
