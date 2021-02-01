@@ -274,7 +274,12 @@ const goupile = new function() {
         });
     }
 
-    this.logout = async function() {
+    this.logout = async function(e) {
+        if (controller.hasUnsavedData()) {
+            await ui.runConfirm(e, "Si vous continuez, vous perdrez les modifications en cours. Voulez-vous continuer ?",
+                                   "Continuer", () => {});
+        }
+
         let progress = log.progress('Déconnexion en cours');
 
         try {
@@ -288,6 +293,7 @@ const goupile = new function() {
                 util.setCookie('session_rnd', 'LOGIN', ENV.base_url);
 
                 // Clear state and start from fresh as a precaution
+                window.onbeforeunload = null;
                 document.location.reload();
             } else {
                 let err = (await response.text()).trim();
