@@ -1668,7 +1668,7 @@ function InstanceController() {
                 console.log('Archive sécurisée créée');
                 progress.close();
 
-                let filename = `${ENV.base_url.replaceAll('/', '')}_${profile.username}_${dates.today()}.backup`;
+                let filename = `${ENV.base_url.replace(/\//g, '')}_${profile.username}_${dates.today()}.backup`;
                 util.saveBlob(blob, filename);
             } else {
                 throw new Error(`Invalid backup destination '${dest}'`);
