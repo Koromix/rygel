@@ -8,14 +8,15 @@
 #include "sandbox.hh"
 
 #include <fcntl.h>
+#include <sched.h>
+#include <seccomp.h>
 #include <sys/mount.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/prctl.h>
 #include <sys/syscall.h>
-#include <sched.h>
+#include <termios.h>
 #include <unistd.h>
-#include <seccomp.h>
 
 // For some reason sys/capability.h is in some crap separate package, because why make
 // it simple when you could instead make it a mess and require users to install
@@ -99,24 +100,44 @@ bool sb_SandboxBuilder::FilterSyscalls(sb_SyscallAction action, Span<const char 
     RG_ASSERT(seccomp_ctx);
 
     for (const char *name: names) {
-        int syscall = seccomp_syscall_resolve_name(name);
+        if (action != default_action) {
+            int ret = 0;
 
-        if (syscall != __NR_SCMP_ERROR) {
-            if (!filtered_syscalls.TrySet(syscall).second) {
-                LogError("Duplicate syscall filter for '%1'", name);
-                return false;
-            }
+            if (TestStr(name, "ioctl/tty")) {
+                int syscall = seccomp_syscall_resolve_name("ioctl");
+                RG_ASSERT(syscall != __NR_SCMP_ERROR);
 
-            if (action != default_action) {
-                int ret = seccomp_rule_add(seccomp_ctx, TranslateAction(action), syscall, 0);
+#ifdef RG_ARCH_64
+                ret = seccomp_rule_add(seccomp_ctx, TranslateAction(action), syscall, 1,
+                                       SCMP_A1_64(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFFFFFFF00ul, 0x5400u));
+#else
+                ret = seccomp_rule_add(seccomp_ctx, TranslateAction(action), syscall, 1,
+                                       SCMP_A1_32(SCMP_CMP_MASKED_EQ, 0xFFFFFF00ul, 0x5400u));
+#endif
+            } else {
+                int syscall = seccomp_syscall_resolve_name(name);
 
-                if (ret < 0) {
-                    LogError("Invalid seccomp syscall '%1': %2", name, strerror(-ret));
-                    return false;
+                if (syscall != __NR_SCMP_ERROR) {
+                    if (!filtered_syscalls.TrySet(syscall).second) {
+                        LogError("Duplicate syscall filter for '%1'", name);
+                        return false;
+                    }
+
+                    ret = seccomp_rule_add(seccomp_ctx, TranslateAction(action), syscall, 0);
+                } else {
+                    if (strchr(name, '/')) {
+                        LogError("Unknown syscall specifier '%1'", name);
+                        return false;
+                    } else {
+                        LogError("Ignoring unknown syscall '%1'", name);
+                    }
                 }
             }
-        } else {
-            LogError("Ignoring unknown syscall '%1'", name);
+
+            if (ret < 0) {
+                LogError("Invalid seccomp syscall '%1': %2", name, strerror(-ret));
+                return false;
+            }
         }
     }
 

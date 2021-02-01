@@ -28,7 +28,7 @@ static bool ApplySandbox()
         "brk", "mmap",
         "read", "readv",
         "write", "writev",
-        "fstat", "ioctl", // Meh
+        "fstat", "ioctl/tty",
         "rt_sigaction"
     });
     sb.FilterSyscalls(sb_SyscallAction::Block, {
