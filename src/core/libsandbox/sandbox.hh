@@ -35,6 +35,8 @@ class sb_SandboxBuilder final {
     uint32_t seccomp_kill_action;
     HashSet<int> filtered_syscalls;
     sb_SyscallAction default_action;
+
+    bool drop_caps = false;
 #endif
 
     BlockAllocator alloc;
@@ -48,6 +50,8 @@ public:
 
     bool InitSyscallFilter(sb_SyscallAction default_action);
     bool FilterSyscalls(sb_SyscallAction action, Span<const char *const> names);
+
+    void DropCapabilities();
 
     bool Apply();
 

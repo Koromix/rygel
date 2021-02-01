@@ -41,6 +41,11 @@ bool sb_SandboxBuilder::FilterSyscalls(sb_SyscallAction, Span<const char *const>
     return false;
 }
 
+void sb_SandboxBuilder::DropCapabilities()
+{
+    RG_ASSERT(false);
+}
+
 bool sb_SandboxBuilder::Apply()
 {
     RG_ASSERT(false);

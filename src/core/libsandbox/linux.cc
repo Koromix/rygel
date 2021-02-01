@@ -17,6 +17,20 @@
 #include <unistd.h>
 #include <seccomp.h>
 
+// For some reason sys/capability.h is in some crap separate package, because why make
+// it simple when you could instead make it a mess and require users to install
+// random distribution-specifc packages to do anything of value.
+#define _LINUX_CAPABILITY_VERSION_3  0x20080522
+struct cap_user_header {
+    uint32_t version;
+    int pid;
+};
+struct cap_user_data {
+    uint32_t effective;
+    uint32_t permitted;
+    uint32_t inheritable;
+};
+
 namespace RG {
 
 bool sb_IsSandboxSupported()
@@ -107,6 +121,11 @@ bool sb_SandboxBuilder::FilterSyscalls(sb_SyscallAction action, Span<const char 
     }
 
     return true;
+}
+
+void sb_SandboxBuilder::DropCapabilities()
+{
+    drop_caps = true;
 }
 
 bool sb_SandboxBuilder::Apply()
@@ -277,6 +296,29 @@ bool sb_SandboxBuilder::Apply()
         // Set current working directory
         if (chdir("/") < 0) {
             LogError("Failed to change current directory to new '/': %1", strerror(errno));
+            return false;
+        }
+    }
+
+    // Drop all capabilities
+    if (drop_caps) {
+        LogDebug("Dropping all capabilities");
+
+        // PR_CAPBSET_DROP is thread-specific, so hopefully the sandbox is run before any thread
+        // has been created. Who designs this crap??
+        for (int i = 0; i < 64; i++) {
+            if (prctl(PR_CAPBSET_DROP, i, 0, 0, 0) < 0 && errno != EINVAL) {
+                LogError("Failed to drop bounding capability set: %1", strerror(errno));
+                return false;
+            }
+        }
+
+        cap_user_header hdr = {_LINUX_CAPABILITY_VERSION_3, 0};
+        cap_user_data data[2];
+        memset(data, 0, RG_SIZE(data));
+
+        if (syscall(__NR_capset, &hdr, data) < 0) {
+            LogError("Failed top drop capabilities: %1", strerror(errno));
             return false;
         }
     }
