@@ -151,8 +151,13 @@ void sb_SandboxBuilder::DropCapabilities()
 
 bool sb_SandboxBuilder::Apply()
 {
-    uid_t uid = geteuid();
-    gid_t gid = getegid();
+    uid_t uid = getuid();
+    gid_t gid = getgid();
+
+    if (!uid) {
+        LogError("Refusing to sandbox as root");
+        return false;
+    }
 
     // Start namespacing
     if (unshare_flags && unshare(unshare_flags) < 0) {
