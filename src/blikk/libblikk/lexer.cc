@@ -167,8 +167,6 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                             } else if (RG_UNLIKELY(digit < 10)) {
                                 MarkUnexpected(next, "Invalid binary digit");
                                 return false;
-                            } else if (code[next] == '_') {
-                                // Ignore underscores in number literals (e.g. 0b1000_0000_0001)
                             } else {
                                 break;
                             }
@@ -196,8 +194,6 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                             } else if (RG_UNLIKELY(digit < 10)) {
                                 MarkUnexpected(next, "Invalid octal digit");
                                 return false;
-                            } else if (code[next] == '_') {
-                                // Ignore underscores in number literals (e.g. 0o700_777)
                             } else {
                                 break;
                             }
@@ -223,9 +219,6 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                                 if (IsAsciiAlpha(code[next])) {
                                     MarkError(next, "Invalid hexadecimal digit");
                                     return false;
-                                } else if (code[next] == '_') {
-                                    // Ignore underscores in number literals (e.g. 0b1000_0000_0001)
-                                    continue;
                                 } else {
                                     break;
                                 }
@@ -272,8 +265,6 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                     } else if (code[next] == '.' || code[next] == 'e' || code[next] == 'E') {
                         fp = true;
                         break;
-                    } else if (code[next] == '_') {
-                        // Ignore underscores in number literals (e.g. 10_000_000)
                     } else {
                         break;
                     }
@@ -571,16 +562,7 @@ unsigned int bk_Lexer::ConvertHexaDigit(Size pos)
 void bk_Lexer::TokenizeFloat()
 {
     LocalArray<char, 256> buf;
-    for (Size i = offset; i < next; i++) {
-        if (code[i] != '_') {
-            if (RG_UNLIKELY(buf.len >= RG_SIZE(buf.data) - 2)) {
-                MarkError(offset, "Number literal is too long (max = %1 characters)", RG_SIZE(buf.data) - 1);
-                return;
-            }
-
-            buf.Append(code[i]);
-        }
-    }
+    buf.Append(MakeSpan(code.ptr + offset, next - offset));
     while (next < code.len) {
         if (IsAsciiDigit(code[next]) || code[next] == 'e' || code[next] == 'E') {
             if (RG_UNLIKELY(buf.len >= RG_SIZE(buf.data) - 2)) {
@@ -589,8 +571,6 @@ void bk_Lexer::TokenizeFloat()
             }
 
             buf.Append(code[next]);
-        } else if (code[next] == '_') {
-            // Skip
         } else if (code[next] == '.') {
             MarkError(next, "Number literals cannot contain multiple '.' characters");
             return;
