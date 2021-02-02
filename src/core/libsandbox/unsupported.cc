@@ -14,11 +14,6 @@ bool sb_IsSandboxSupported()
     return false;
 }
 
-sb_SandboxBuilder::~sb_SandboxBuilder()
-{
-    // Nothing to do
-}
-
 void sb_SandboxBuilder::IsolateProcess()
 {
     RG_ASSERT(false);

@@ -42,13 +42,6 @@ bool sb_IsSandboxSupported()
     return true;
 }
 
-sb_SandboxBuilder::~sb_SandboxBuilder()
-{
-    if (seccomp_ctx) {
-        seccomp_release(seccomp_ctx);
-    }
-}
-
 void sb_SandboxBuilder::DropPrivileges()
 {
     drop_caps = true;
@@ -71,97 +64,31 @@ void sb_SandboxBuilder::MountPath(const char *src, const char *dest, bool readon
     RG_ASSERT(dest[0] == '/');
 
     BindMount bind = {};
-    bind.src = DuplicateString(src, &alloc).ptr;
-    bind.dest = DuplicateString(dest, &alloc).ptr;
+    bind.src = DuplicateString(src, &str_alloc).ptr;
+    bind.dest = DuplicateString(dest, &str_alloc).ptr;
     bind.readonly = readonly;
     mounts.Append(bind);
 }
 
-bool sb_SandboxBuilder::InitSyscallFilter(sb_SyscallAction default_action)
+void sb_SandboxBuilder::FilterSyscalls(sb_FilterAction default_action, Span<const sb_FilterItem> items)
 {
-    RG_ASSERT(!seccomp_ctx);
+    RG_ASSERT(!filter_syscalls);
 
-    if (prctl(PR_GET_SECCOMP, 0, 0, 0, 0) < 0) {
-        LogError("Cannot sandbox syscalls: seccomp is not available");
-        return false;
-    }
-
-    // Check support for KILL_PROCESS action
-    {
-        uint32_t action = SCMP_ACT_KILL_PROCESS;
-        if (!syscall(__NR_seccomp, 2, 0, &action)) { // SECCOMP_GET_ACTION_AVAIL
-            seccomp_kill_action = SCMP_ACT_KILL_PROCESS;
-        } else {
-            LogError("Seccomp action KILL_PROCESS is not available; falling back to KILL_THREAD");
-            seccomp_kill_action = SCMP_ACT_KILL_THREAD;
-        }
-    }
-
-    seccomp_ctx = seccomp_init(TranslateAction(default_action));
-    if (!seccomp_ctx) {
-        LogError("Cannot sandbox syscalls: seccomp_init() failed");
-        return false;
-    }
+    filter_syscalls = true;
     this->default_action = default_action;
 
-    return true;
+    FilterSyscalls(items);
 }
 
-bool sb_SandboxBuilder::FilterSyscalls(sb_SyscallAction action, Span<const char *const> names)
+void sb_SandboxBuilder::FilterSyscalls(Span<const sb_FilterItem> items)
 {
-    RG_ASSERT(seccomp_ctx);
+    RG_ASSERT(filter_syscalls);
 
-    for (const char *name: names) {
-        if (action != default_action) {
-            int ret = 0;
-
-            if (TestStr(name, "ioctl/tty")) {
-                int syscall = seccomp_syscall_resolve_name("ioctl");
-                RG_ASSERT(syscall != __NR_SCMP_ERROR);
-
-#ifdef RG_ARCH_64
-                ret = seccomp_rule_add(seccomp_ctx, TranslateAction(action), syscall, 1,
-                                       SCMP_A1_64(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFFFFFFF00ul, 0x5400u));
-#else
-                ret = seccomp_rule_add(seccomp_ctx, TranslateAction(action), syscall, 1,
-                                       SCMP_A1_32(SCMP_CMP_MASKED_EQ, 0xFFFFFF00ul, 0x5400u));
-#endif
-            } else if (TestStr(name, "mmap/anon")) {
-                int syscall = seccomp_syscall_resolve_name("mmap");
-                RG_ASSERT(syscall != __NR_SCMP_ERROR);
-
-                // Only allow MAP_PRIVATE | MAP_ANONYMOUS, and enforce fd = -1 argument
-                ret = seccomp_rule_add(seccomp_ctx, TranslateAction(action), syscall, 3,
-                                       SCMP_A0(SCMP_CMP_EQ, 0), SCMP_A3(SCMP_CMP_EQ, 0x22),
-                                       SCMP_A4(SCMP_CMP_EQ, -1));
-            } else {
-                int syscall = seccomp_syscall_resolve_name(name);
-
-                if (syscall != __NR_SCMP_ERROR) {
-                    if (!filtered_syscalls.TrySet(syscall).second) {
-                        LogError("Duplicate syscall filter for '%1'", name);
-                        return false;
-                    }
-
-                    ret = seccomp_rule_add(seccomp_ctx, TranslateAction(action), syscall, 0);
-                } else {
-                    if (strchr(name, '/')) {
-                        LogError("Unknown syscall specifier '%1'", name);
-                        return false;
-                    } else {
-                        LogError("Ignoring unknown syscall '%1'", name);
-                    }
-                }
-            }
-
-            if (ret < 0) {
-                LogError("Invalid seccomp syscall '%1': %2", name, strerror(-ret));
-                return false;
-            }
-        }
+    filter_items.Reserve(items.len);
+    for (sb_FilterItem item: items) {
+        item.name = DuplicateString(item.name, &str_alloc).ptr;
+        filter_items.Append(item);
     }
-
-    return true;
 }
 
 static bool WriteUidGidMap(pid_t pid, uid_t uid, gid_t gid)
@@ -375,7 +302,7 @@ bool sb_SandboxBuilder::Apply()
             }
 
             // Create root FS with tmpfs
-            const char *fs_root = CreateTemporaryDirectory("/tmp/sandbox", "", &alloc);
+            const char *fs_root = CreateTemporaryDirectory("/tmp/sandbox", "", &str_alloc);
             if (!fs_root)
                 return false;
             if (mount("tmpfs", fs_root, "tmpfs", 0, "size=4k") < 0) {
@@ -390,7 +317,7 @@ bool sb_SandboxBuilder::Apply()
 
             // Mount requested paths
             for (const BindMount &bind: mounts) {
-                const char *dest = Fmt(&alloc, "%1%2", fs_root, bind.dest).ptr;
+                const char *dest = Fmt(&str_alloc, "%1%2", fs_root, bind.dest).ptr;
                 int flags = MS_BIND | MS_REC | (bind.readonly ? MS_RDONLY : 0);
 
                 // Ensure destination exists
@@ -516,10 +443,93 @@ bool sb_SandboxBuilder::Apply()
     }
 
     // Install syscall filters
-    if (seccomp_ctx) {
+    if (filter_syscalls) {
         LogDebug("Applying syscall filters");
 
-        int ret = seccomp_load(seccomp_ctx);
+        if (prctl(PR_GET_SECCOMP, 0, 0, 0, 0) < 0) {
+            LogError("Cannot sandbox syscalls: seccomp is not available");
+            return false;
+        }
+
+        // Check support for KILL_PROCESS action
+        uint32_t kill_code;
+        {
+            uint32_t action = SCMP_ACT_KILL_PROCESS;
+            if (!syscall(__NR_seccomp, 2, 0, &action)) { // SECCOMP_GET_ACTION_AVAIL
+                kill_code = SCMP_ACT_KILL_PROCESS;
+            } else {
+                LogDebug("Seccomp action KILL_PROCESS is not available; falling back to KILL_THREAD");
+                kill_code = SCMP_ACT_KILL_THREAD;
+            }
+        }
+
+        const auto translate_action = [&](sb_FilterAction action) {
+            uint32_t seccomp_action = UINT32_MAX;
+            switch (action) {
+                case sb_FilterAction::Allow: { seccomp_action = SCMP_ACT_ALLOW; } break;
+                case sb_FilterAction::Log: { seccomp_action = SCMP_ACT_LOG; } break;
+                case sb_FilterAction::Block: { seccomp_action = SCMP_ACT_ERRNO(EPERM); } break;
+                case sb_FilterAction::Trap: { seccomp_action = SCMP_ACT_TRAP; } break;
+                case sb_FilterAction::Kill: { seccomp_action = kill_code; } break;
+            }
+            RG_ASSERT(seccomp_action != UINT32_MAX);
+
+            return seccomp_action;
+        };
+
+        scmp_filter_ctx ctx = seccomp_init(translate_action(default_action));
+        if (!ctx) {
+            LogError("Cannot sandbox syscalls: seccomp_init() failed");
+            return false;
+        }
+        RG_DEFER { seccomp_release(ctx); };
+
+        for (const sb_FilterItem &item: filter_items) {
+            if (item.action != default_action) {
+                int ret = 0;
+
+                if (TestStr(item.name, "ioctl/tty")) {
+                    int syscall = seccomp_syscall_resolve_name("ioctl");
+                    RG_ASSERT(syscall != __NR_SCMP_ERROR);
+
+#ifdef RG_ARCH_64
+                    ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 1,
+                                           SCMP_A1_64(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFFFFFFF00ul, 0x5400u));
+#else
+                    ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 1,
+                                           SCMP_A1_32(SCMP_CMP_MASKED_EQ, 0xFFFFFF00ul, 0x5400u));
+#endif
+                } else if (TestStr(item.name, "mmap/anon")) {
+                    int syscall = seccomp_syscall_resolve_name("mmap");
+                    RG_ASSERT(syscall != __NR_SCMP_ERROR);
+
+                    // Only allow MAP_PRIVATE | MAP_ANONYMOUS, and enforce fd = -1 argument
+                    ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 3,
+                                           SCMP_A0(SCMP_CMP_EQ, 0), SCMP_A3(SCMP_CMP_EQ, 0x22),
+                                           SCMP_A4(SCMP_CMP_EQ, -1));
+                } else {
+                    int syscall = seccomp_syscall_resolve_name(item.name);
+
+                    if (syscall != __NR_SCMP_ERROR) {
+                        ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 0);
+                    } else {
+                        if (strchr(item.name, '/')) {
+                            LogError("Unknown syscall specifier '%1'", item.name);
+                            return false;
+                        } else {
+                            LogError("Ignoring unknown syscall '%1'", item.name);
+                        }
+                    }
+                }
+
+                if (ret < 0) {
+                    LogError("Invalid seccomp syscall '%1': %2", item.name, strerror(-ret));
+                    return false;
+                }
+            }
+        }
+
+        int ret = seccomp_load(ctx);
         if (ret < 0) {
             LogError("Failed to install syscall filters: %1", strerror(-ret));
             return false;
@@ -527,21 +537,6 @@ bool sb_SandboxBuilder::Apply()
     }
 
     return true;
-}
-
-uint32_t sb_SandboxBuilder::TranslateAction(sb_SyscallAction action) const
-{
-    uint32_t seccomp_action = UINT32_MAX;
-    switch (action) {
-        case sb_SyscallAction::Allow: { seccomp_action = SCMP_ACT_ALLOW; } break;
-        case sb_SyscallAction::Log: { seccomp_action = SCMP_ACT_LOG; } break;
-        case sb_SyscallAction::Block: { seccomp_action = SCMP_ACT_ERRNO(EPERM); } break;
-        case sb_SyscallAction::Trap: { seccomp_action = SCMP_ACT_TRAP; } break;
-        case sb_SyscallAction::Kill: { seccomp_action = seccomp_kill_action; } break;
-    }
-    RG_ASSERT(seccomp_action != UINT32_MAX);
-
-    return seccomp_action;
 }
 
 }

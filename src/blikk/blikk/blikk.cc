@@ -24,18 +24,24 @@ static bool ApplySandbox()
     sb.DropPrivileges();
 
 #ifdef __linux__
-    sb.InitSyscallFilter(sb_SyscallAction::Kill);
-    sb.FilterSyscalls(sb_SyscallAction::Allow, {
-        "exit", "exit_group",
-        "brk", "mmap/anon", "munmap",
-        "read", "readv",
-        "write", "writev",
-        "fstat", "ioctl/tty",
-        "rt_sigaction"
-    });
-    sb.FilterSyscalls(sb_SyscallAction::Block, {
-        "fsync", "sync", "syncfs",
-        "close"
+    sb.FilterSyscalls(sb_FilterAction::Kill, {
+        {"exit", sb_FilterAction::Allow},
+        {"exit_group", sb_FilterAction::Allow},
+        {"brk", sb_FilterAction::Allow},
+        {"mmap/anon", sb_FilterAction::Allow},
+        {"munmap", sb_FilterAction::Allow},
+        {"read", sb_FilterAction::Allow},
+        {"readv", sb_FilterAction::Allow},
+        {"write", sb_FilterAction::Allow},
+        {"writev", sb_FilterAction::Allow},
+        {"fstat", sb_FilterAction::Allow},
+        {"ioctl/tty", sb_FilterAction::Allow},
+        {"rt_sigaction", sb_FilterAction::Allow},
+
+        {"fsync", sb_FilterAction::Block},
+        {"sync", sb_FilterAction::Block},
+        {"syncfs", sb_FilterAction::Block},
+        {"close", sb_FilterAction::Block}
     });
 #endif
 

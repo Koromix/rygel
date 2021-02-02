@@ -8,12 +8,17 @@
 
 namespace RG {
 
-enum class sb_SyscallAction {
+enum class sb_FilterAction {
     Allow,
     Log,
     Block,
     Trap,
     Kill
+};
+
+struct sb_FilterItem {
+    const char *name;
+    sb_FilterAction action;
 };
 
 bool sb_IsSandboxSupported();
@@ -28,22 +33,20 @@ class sb_SandboxBuilder final {
         bool readonly;
     };
 
+    bool valid = true;
+
     bool unshare = false;
     HeapArray<BindMount> mounts;
-
     bool drop_caps = false;
-
-    void *seccomp_ctx = nullptr; // scmp_filter_ctx
-    uint32_t seccomp_kill_action;
-    HashSet<int> filtered_syscalls;
-    sb_SyscallAction default_action;
+    bool filter_syscalls = false;
+    sb_FilterAction default_action;
+    HeapArray<sb_FilterItem> filter_items;
 #endif
 
-    BlockAllocator alloc;
+    BlockAllocator str_alloc;
 
 public:
     sb_SandboxBuilder() {};
-    ~sb_SandboxBuilder();
 
     void DropPrivileges();
     void IsolateProcess();
@@ -51,14 +54,13 @@ public:
 
 #ifdef __linux__
     void MountPath(const char *src, const char *dest, bool readonly);
-    bool InitSyscallFilter(sb_SyscallAction default_action);
-    bool FilterSyscalls(sb_SyscallAction action, Span<const char *const> names);
+    void FilterSyscalls(sb_FilterAction default_action, Span<const sb_FilterItem> items = {});
+    void FilterSyscalls(Span<const sb_FilterItem> items);
 #endif
 
+    // If this fails, just exit; the process is probably in a half-sandboxed
+    // irrecoverable state.
     bool Apply();
-
-private:
-    uint32_t TranslateAction(sb_SyscallAction action) const;
 };
 
 }
