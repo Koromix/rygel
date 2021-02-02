@@ -64,8 +64,8 @@ function ApplicationBuilder(app) {
                 self.page(key, title);
             }
 
-            if (!form_ref.pages.size)
-                throw new Error(`Form '${key}' must contain at least one page`);
+            if (!form_ref.pages.size && !form_ref.children.size)
+                throw new Error(`Form '${key}' must contain at least one page or child form`);
 
             if (prev_form != null)
                 prev_form.children.set(key, form_ref);

@@ -139,14 +139,12 @@ function InstanceController() {
                                 ${util.map(form.pages.values(), page =>
                                     html`<button @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`)}
                                 ${util.map(form.children.values(), child_form =>
-                                    html`<button ?disabled=${!form_meta.children.has(form.key)}
-                                                 @click=${ui.wrapAction(e => self.go(e, child_form.url))}>${child_form.title}</button>`)}
+                                    html`<button @click=${ui.wrapAction(e => self.go(e, child_form.url))}>${child_form.title}</button>`)}
                             </div>
                         </div>
                     `;
                 } else {
-                    return html`<button ?disabled=${!form_meta.version}
-                                        @click=${ui.wrapAction(e => self.go(e, form.url))}>${form.title}</button>`;
+                    return html`<button @click=${ui.wrapAction(e => self.go(e, form.url))}>${form.title}</button>`;
                 }
             })}
             <div style="flex: 1; min-width: 15px;"></div>
@@ -476,7 +474,7 @@ function InstanceController() {
                     record = {
                         ulid: meta.ulid,
                         hid: meta.hid,
-                        parent: meta.parent,
+                        parent: null,
                         form: page.form.key,
                         fragments: []
                     };
@@ -1265,19 +1263,49 @@ function InstanceController() {
 
                         if (new_meta.form !== form)
                             throw new Error('Saut impossible en raison d\'un changement de schéma');
-                    } else if (i === path.down.length - 1) {
-                        // Make a new record, only if we have reached end of path
-                        prev_meta = new_meta;
-                        new_meta = null;
                     } else {
-                        throw new Error('Saut impossible car un enregistrement intermédiaire est manquant');
+                        // Save fake intermediate records if needed
+                        if (!new_meta.version) {
+                            let key = `${profile.userid}:${new_meta.ulid}`;
+
+                            let obj = {
+                                fkey: `${profile.userid}/${new_meta.form.key}`,
+                                pkey: null,
+                                enc: null
+                            };
+                            let record = {
+                                ulid: new_meta.ulid,
+                                hid: new_meta.hid,
+                                parent: null,
+                                form: new_meta.form.key,
+                                fragments: [{
+                                    type: 'fake',
+                                    user: profile.username,
+                                    mtime: new Date
+                                }]
+                            };
+
+                            if (new_meta.parent != null) {
+                                obj.pkey = `${profile.userid}:${new_meta.parent.ulid}`;
+                                record.parent = {
+                                    form: new_meta.parent.form.key,
+                                    ulid: new_meta.parent.ulid,
+                                    version: new_meta.parent.version
+                                };
+                            }
+
+                            obj.enc = await goupile.encryptWithPassport(record);
+                            await db.saveWithKey('rec_records', key, obj);
+                        }
+
+                        prev_meta = new_meta;
+                        new_meta = createRecord(form, prev_meta);
                     }
                 }
 
                 if (new_meta != null) {
                     new_route.ulid = new_meta.ulid;
                     new_route.version = new_meta.version;
-
                     new_state = new FormState(new_meta.values);
                     new_state.changeHandler = handleStateChange;
                 }
@@ -1289,36 +1317,11 @@ function InstanceController() {
 
         // Create new record if needed
         if (new_route.ulid == null || new_meta == null) {
-            new_route.ulid = util.makeULID();
-            new_route.version = 0;
+            new_meta = createRecord(new_route.form, null);
 
-            new_meta = {
-                form: new_route.form,
-                ulid: new_route.ulid,
-                hid: null,
-                version: 0,
-                parent: null,
-                children: new Map,
-                mtime: null,
-                fragments: [],
-                status: new Set
-            };
-
-            if (new_meta.form.parents.length) {
-                if (prev_meta == null) {
-                    throw new Error('Impossible de créer cet enregistrement sans parent');
-                } else if (prev_meta.form !== new_meta.form.parents[0]) {
-                    throw new Error('Le formulaire parent ne correspond pas au type attendu');
-                }
-
-                new_meta.parent = {
-                    form: prev_meta.form.key,
-                    ulid: prev_meta.ulid,
-                    version: prev_meta.version
-                };
-            }
-
-            new_state = new FormState;
+            new_route.ulid = new_meta.ulid;
+            new_route.version = new_meta.version;
+            new_state = new FormState(new_meta.values);
             new_state.changeHandler = handleStateChange;
         }
 
@@ -1383,6 +1386,34 @@ function InstanceController() {
         // Highlight might need to change (conditions, etc.)
         if (ui.isPanelEnabled('editor'))
             syncFormHighlight(false);
+    }
+
+    function createRecord(form, parent_meta) {
+        let meta = {
+            form: form,
+            ulid: util.makeULID(),
+            hid: null,
+            version: 0,
+            parent: null,
+            children: new Map,
+            mtime: null,
+            fragments: [],
+            status: new Set,
+            values: {}
+        };
+
+        if (form.parents.length) {
+            if (parent_meta == null)
+                throw new Error('Impossible de créer cet enregistrement sans parent');
+
+            meta.parent = {
+                form: parent_meta.form.key,
+                ulid: parent_meta.ulid,
+                version: parent_meta.version
+            };
+        }
+
+        return meta;
     }
 
     async function loadRecord(ulid, version) {
@@ -1544,6 +1575,8 @@ function InstanceController() {
                         let fragments = record.fragments;
 
                         if (fragments[fragments.length - 1].type == 'delete')
+                            continue;
+                        if (fragments.length === 1 && fragments[0].type === 'fake')
                             continue;
 
                         let children = new Map;
