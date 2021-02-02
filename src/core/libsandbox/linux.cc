@@ -452,15 +452,10 @@ bool sb_SandboxBuilder::Apply()
         }
 
         // Check support for KILL_PROCESS action
-        uint32_t kill_code;
-        {
-            uint32_t action = SCMP_ACT_KILL_PROCESS;
-            if (!syscall(__NR_seccomp, 2, 0, &action)) { // SECCOMP_GET_ACTION_AVAIL
-                kill_code = SCMP_ACT_KILL_PROCESS;
-            } else {
-                LogDebug("Seccomp action KILL_PROCESS is not available; falling back to KILL_THREAD");
-                kill_code = SCMP_ACT_KILL_THREAD;
-            }
+        uint32_t kill_code = SCMP_ACT_KILL_PROCESS;
+        if (syscall(__NR_seccomp, 2, 0, &kill_code) < 0) { // SECCOMP_GET_ACTION_AVAIL
+            LogDebug("Seccomp action KILL_PROCESS is not available; falling back to KILL_THREAD");
+            kill_code = SCMP_ACT_KILL_THREAD;
         }
 
         const auto translate_action = [&](sb_FilterAction action) {
