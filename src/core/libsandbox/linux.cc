@@ -251,7 +251,9 @@ bool sb_SandboxBuilder::Apply()
 
     if (unshare) {
         // We support two namespace methods: rootless, or CAP_SYS_ADMIN (root).
-        // First, decide between the two.
+        // First, decide between the two. Rootless is simpler but it requires a relatively
+        // recent kernel, and may be disabled (Debian). If we have CAP_SYS_ADMIN, or if we
+        // can acquire it, use it instead.
         bool rootless = geteuid();
         if (rootless) {
             cap_user_header hdr = {_LINUX_CAPABILITY_VERSION_3, 0};
@@ -262,7 +264,17 @@ bool sb_SandboxBuilder::Apply()
                 return false;
             }
 
-            rootless &= !(data[0].effective & (1u << 21)); // Check for CAP_SYS_ADMIN
+            if (data[0].effective & (1u << 21)) { // CAP_SYS_ADMIN
+                rootless = false;
+            } else if (data[0].permitted & (1u << 21)) {
+                data[0].effective |= 1u << 21;
+
+                if (syscall(__NR_capset, &hdr, data) >= 0) {
+                    rootless = false;
+                } else {
+                    LogDebug("Failed to enable CAP_SYS_ADMIN (despite it being permitted): %1", strerror(errno));
+                }
+            }
         }
 
         // Setup user namespace
