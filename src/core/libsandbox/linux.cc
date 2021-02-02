@@ -207,7 +207,7 @@ bool sb_SandboxBuilder::Apply()
         if (!MakeDirectory("/tmp/sandbox", false))
             return false;
         if (mount("tmpfs", "/tmp/sandbox", "tmpfs", 0, "size=4k") < 0 && errno != EBUSY) {
-            LogError("Failed to mount tmpfs on '/tmp/sandbox': %2", strerror(errno));
+            LogError("Failed to mount tmpfs on '/tmp/sandbox': %1", strerror(errno));
             return false;
         }
         if (mount(nullptr, "/tmp/sandbox", nullptr, MS_PRIVATE, nullptr) < 0) {
