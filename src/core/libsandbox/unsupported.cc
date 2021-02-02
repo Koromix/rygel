@@ -29,7 +29,7 @@ void sb_SandboxBuilder::RevealPath(const char *, bool)
     RG_ASSERT(false);
 }
 
-void sb_SandboxBuilder::DropCapabilities()
+void sb_SandboxBuilder::DropPrivileges()
 {
     RG_ASSERT(false);
 }

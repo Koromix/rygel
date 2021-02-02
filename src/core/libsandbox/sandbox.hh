@@ -45,7 +45,7 @@ public:
     sb_SandboxBuilder() {};
     ~sb_SandboxBuilder();
 
-    void DropCapabilities();
+    void DropPrivileges();
     void IsolateProcess();
     void RevealPath(const char *path, bool readonly);
 

@@ -21,7 +21,7 @@ static bool ApplySandbox()
     sb_SandboxBuilder sb;
 
     sb.IsolateProcess();
-    sb.DropCapabilities();
+    sb.DropPrivileges();
 
 #ifdef __linux__
     sb.InitSyscallFilter(sb_SyscallAction::Kill);

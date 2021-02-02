@@ -49,7 +49,7 @@ sb_SandboxBuilder::~sb_SandboxBuilder()
     }
 }
 
-void sb_SandboxBuilder::DropCapabilities()
+void sb_SandboxBuilder::DropPrivileges()
 {
     drop_caps = true;
 }
