@@ -192,7 +192,7 @@ static bool WriteUidGidMap(pid_t pid, uid_t uid, gid_t gid)
     }
     RG_DEFER { close(gid_fd); };
 
-    // More random crap Linux wants us to do, or writing GID map fails in rootless mode
+    // More random crap Linux wants us to do, or writing GID map fails in unprivileged mode
     {
         char buf[512];
         Fmt(buf, "/proc/%1/setgroups", pid);
@@ -250,12 +250,12 @@ bool sb_SandboxBuilder::Apply()
     }
 
     if (unshare) {
-        // We support two namespace methods: rootless, or CAP_SYS_ADMIN (root).
-        // First, decide between the two. Rootless is simpler but it requires a relatively
-        // recent kernel, and may be disabled (Debian). If we have CAP_SYS_ADMIN, or if we
-        // can acquire it, use it instead.
-        bool rootless = geteuid();
-        if (rootless) {
+        // We support two namespacing code paths: unprivileged, or CAP_SYS_ADMIN (root).
+        // First, decide between the two. Unprivileged is simpler but it requires a
+        // relatively recent kernel, and may be disabled (Debian). If we have CAP_SYS_ADMIN,
+        // or if we can acquire it, use it instead.
+        bool privileged = !geteuid();
+        if (!privileged) {
             cap_user_header hdr = {_LINUX_CAPABILITY_VERSION_3, 0};
             cap_user_data data[2];
 
@@ -265,12 +265,12 @@ bool sb_SandboxBuilder::Apply()
             }
 
             if (data[0].effective & (1u << 21)) { // CAP_SYS_ADMIN
-                rootless = false;
+                privileged = true;
             } else if (data[0].permitted & (1u << 21)) {
                 data[0].effective |= 1u << 21;
 
                 if (syscall(__NR_capset, &hdr, data) >= 0) {
-                    rootless = false;
+                    privileged = true;
                 } else {
                     LogDebug("Failed to enable CAP_SYS_ADMIN (despite it being permitted): %1", strerror(errno));
                 }
@@ -278,15 +278,8 @@ bool sb_SandboxBuilder::Apply()
         }
 
         // Setup user namespace
-        if (rootless) {
-            LogDebug("Trying rootless sandbox method");
-
-            if (!InitNamespaces())
-                return false;
-            if (!WriteUidGidMap(getpid(), uid, gid))
-                return false;
-        } else {
-            // In the non-rootless case, we need to fork a child process, which keeps root privileges
+        if (privileged) {
+            // In the privileged path, we need to fork a child process, which keeps root privileges
             // and writes the UID and GID map of the namespaced parent process, because I can't find
             // any way to do it simply otherwise (EPERM). The child process exits immediately
             // once this is done.
@@ -359,6 +352,13 @@ bool sb_SandboxBuilder::Apply()
                 bool success = WriteUidGidMap(getppid(), uid, gid);
                 _exit(!success);
             }
+        } else {
+            LogDebug("Trying unprivileged sandbox method");
+
+            if (!InitNamespaces())
+                return false;
+            if (!WriteUidGidMap(getpid(), uid, gid))
+                return false;
         }
 
         // Set up FS namespace
