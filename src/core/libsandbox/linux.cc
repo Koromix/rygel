@@ -10,11 +10,14 @@
 #include <fcntl.h>
 #include <sched.h>
 #include <seccomp.h>
+#include <sys/eventfd.h>
 #include <sys/mount.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/prctl.h>
 #include <sys/syscall.h>
+#include <sys/wait.h>
+#include <signal.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -149,6 +152,68 @@ void sb_SandboxBuilder::DropCapabilities()
     drop_caps = true;
 }
 
+static bool WriteUidGidMap(pid_t pid, uid_t uid, gid_t gid)
+{
+    int uid_fd;
+    {
+        char buf[512];
+        Fmt(buf, "/proc/%1/uid_map", pid);
+
+        uid_fd = open(buf, O_CLOEXEC | O_WRONLY);
+        if (uid_fd < 0) {
+            LogError("Failed to open '%1' for writing: %2", buf, strerror(errno));
+            return false;
+        }
+    }
+    RG_DEFER { close(uid_fd); };
+
+    int gid_fd;
+    {
+        char buf[512];
+        Fmt(buf, "/proc/%1/gid_map", pid);
+
+        gid_fd = open(buf, O_CLOEXEC | O_WRONLY);
+        if (gid_fd < 0) {
+            LogError("Failed to open '%1' for writing: %2", buf, strerror(errno));
+            return false;
+        }
+    }
+    RG_DEFER { close(gid_fd); };
+
+    // More random crap Linux wants us to do, or writing GID map fails in rootless mode
+    {
+        char buf[512];
+        Fmt(buf, "/proc/%1/setgroups", pid);
+
+        if (!WriteFile("deny", buf))
+            return false;
+    }
+
+    // Write UID map
+    {
+        LocalArray<char, 512> buf;
+
+        buf.len = Fmt(buf.data, "%1 %1 1\n", uid).len;
+        if (RG_POSIX_RESTART_EINTR(write(uid_fd, buf.data, buf.len), < 0) < 0) {
+            LogError("Failed to write UID map: %1", strerror(errno));
+            return false;
+        }
+    }
+
+    // Write GID map
+    {
+        LocalArray<char, 512> buf;
+
+        buf.len = Fmt(buf.data, "%1 %1 1\n", gid).len;
+        if (RG_POSIX_RESTART_EINTR(write(gid_fd, buf.data, buf.len), < 0) < 0) {
+            LogError("Failed to write GID map: %1", strerror(errno));
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool sb_SandboxBuilder::Apply()
 {
     uid_t uid = getuid();
@@ -159,46 +224,107 @@ bool sb_SandboxBuilder::Apply()
         return false;
     }
 
-    // Start namespacing
-    if (unshare_flags && unshare(unshare_flags) < 0) {
-        LogError("Failed to create namespace: %1", strerror(errno));
-        return false;
+    // We support two namespace methods: rootless, or CAP_SYS_ADMIN (root).
+    // First, decide between the two.
+    bool rootless = geteuid();
+    if (rootless) {
+        cap_user_header hdr = {_LINUX_CAPABILITY_VERSION_3, 0};
+        cap_user_data data[2];
+
+        if (syscall(__NR_capget, &hdr, data) < 0) {
+            LogError("Failed to read process capabilities: %1", strerror(errno));
+            return false;
+        }
+
+        rootless &= !(data[0].effective & (1u << 21)); // Check for CAP_SYS_ADMIN
     }
 
-    // Set up user namespace
-    if (unshare_flags & CLONE_NEWUSER) {
-        int uid_fd = open("/proc/self/uid_map", O_CLOEXEC | O_WRONLY);
-        if (uid_fd < 0) {
-            LogError("Failed to open '/proc/self/uid_map' for writing: %1", strerror(errno));
-            return false;
-        }
-        RG_DEFER { close(uid_fd); };
+    // Setup user namespace
+    if (rootless) {
+        LogDebug("Trying rootless sandbox method");
 
-        int gid_fd = open("/proc/self/gid_map", O_CLOEXEC | O_WRONLY);
-        if (gid_fd < 0) {
-            LogError("Failed to open '/proc/self/gid_map' for writing: %1", strerror(errno));
-            return false;
-        }
-        RG_DEFER { close(gid_fd); };
-
-        LocalArray<char, 512> buf;
-
-        // Write UID map
-        buf.len = Fmt(buf.data, "%1 %1 1\n", uid).len;
-        if (write(uid_fd, buf.data, buf.len) < 0) {
-            LogError("Failed to write UID map: %1", strerror(errno));
+        if (unshare_flags && unshare(unshare_flags) < 0) {
+            LogError("Failed to create namespace: %1", strerror(errno));
             return false;
         }
 
-        // More random crap Linux wants us to do, or writing GID map will fail
-        if (!WriteFile("deny", "/proc/self/setgroups"))
+        if ((unshare_flags & CLONE_NEWUSER) && !WriteUidGidMap(getpid(), uid, gid))
             return false;
+    } else {
+        // In the non-rootless case, we need to fork a child process, which keeps root privileges
+        // and writes the UID and GID map of the namespaced parent process, because I can't find
+        // any way to do it simply otherwise (EPERM). The child process exits immediately
+        // once this is done.
+        LogDebug("Trying CAP_SYS_ADMIN (root) sandbox method");
 
-        // Write GID map
-        buf.len = Fmt(buf.data, "%1 %1 1\n", gid).len;
-        if (write(gid_fd, buf.data, buf.len) < 0) {
-            LogError("Failed to write GID map: %1", strerror(errno));
+        // We use this dummy event to wait in the child process until the parent
+        // process has called unshare() successfully.
+        int efd = eventfd(0, EFD_CLOEXEC);
+        if (efd < 0) {
+            LogError("Failed to create eventfd: %1", strerror(errno));
             return false;
+        }
+        RG_DEFER { close(efd); };
+
+        pid_t child_pid = fork();
+        if (child_pid < 0) {
+            LogError("Failed to fork: %1", strerror(errno));
+            return false;
+        }
+
+        if (child_pid) {
+            RG_DEFER_N(kill_guard) {
+                kill(child_pid, SIGKILL);
+                waitpid(child_pid, nullptr, 0);
+            };
+
+            // This allows the sandbox helper to write to our /proc files even when
+            // running as non-root in the CAP_SYS_ADMIN sandbox path.
+            prctl(PR_SET_DUMPABLE, 1, 0, 0, 0);
+
+            int64_t dummy = 1;
+            if (unshare_flags && unshare(unshare_flags) < 0) {
+                LogError("Failed to create namespace: %1", strerror(errno));
+                return false;
+            }
+            if (RG_POSIX_RESTART_EINTR(write(efd, &dummy, RG_SIZE(dummy)), < 0) < 0) {
+                LogError("Failed to write to eventfd: %1", strerror(errno));
+                return false;
+            }
+
+            // Good to go! After a successful write to eventfd, the child WILL exit
+            // so we can just wait for that.
+            kill_guard.Disable();
+
+            int wstatus;
+            if (waitpid(child_pid, &wstatus, 0) < 0) {
+                LogError("Failed to wait for sandbox helper: %1", strerror(errno));
+                return false;
+            }
+            if (!WIFEXITED(wstatus) || WEXITSTATUS(wstatus) != 0) {
+                LogDebug("Something went wrong in the sandbox helper");
+                return false;
+            }
+
+            // Set non-root container UID and GID
+            if (setresuid(uid, uid, uid) < 0 || setresgid(gid, gid, gid) < 0) {
+                LogError("Cannot change UID or GID: %1", strerror(errno));
+                return false;
+            }
+
+            if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) < 0) {
+                LogError("Failed to clear dumpable proc attribute: %1", strerror(errno));
+                return false;
+            }
+        } else {
+            int64_t dummy;
+            if (RG_POSIX_RESTART_EINTR(read(efd, &dummy, RG_SIZE(dummy)), < 0) < 0) {
+                LogError("Failed to read eventfd: %1", strerror(errno));
+                _exit(1);
+            }
+
+            bool success = WriteUidGidMap(getppid(), uid, gid);
+            _exit(!success);
         }
     }
 
@@ -344,7 +470,7 @@ bool sb_SandboxBuilder::Apply()
         memset(data, 0, RG_SIZE(data));
 
         if (syscall(__NR_capset, &hdr, data) < 0) {
-            LogError("Failed top drop capabilities: %1", strerror(errno));
+            LogError("Failed to drop capabilities: %1", strerror(errno));
             return false;
         }
     }
