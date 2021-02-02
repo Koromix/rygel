@@ -1,4 +1,5 @@
 /bin/
+/build/felix/tmp/
 /tmp/
 /felix
 /felix.exe
