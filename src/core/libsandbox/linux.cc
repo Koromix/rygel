@@ -465,6 +465,12 @@ bool sb_SandboxBuilder::Apply()
             }
         }
 
+        // This is recent (Linux 4.3), so ignore EINVAL
+        if (prctl(PR_CAP_AMBIENT, PR_CAP_AMBIENT_CLEAR_ALL, 0, 0, 0) < 0 && errno != EINVAL) {
+            LogError("Failed to clear ambient capability set: %1", strerror(errno));
+            return false;
+        }
+
         cap_user_header hdr = {_LINUX_CAPABILITY_VERSION_3, 0};
         cap_user_data data[2];
         memset(data, 0, RG_SIZE(data));
