@@ -6,6 +6,7 @@
 #include "error.hh"
 #include "lexer.hh"
 #include "lexer_xid.hh"
+#include "../../../vendor/fast_float/include/fast_float/fast_float.h"
 
 namespace RG {
 
@@ -273,7 +274,6 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                 }
 
                 if (fp) {
-                    next++;
                     TokenizeFloat();
                 } else {
                     if (RG_UNLIKELY(overflow)) {
@@ -558,40 +558,20 @@ unsigned int bk_Lexer::ConvertHexaDigit(Size pos)
     }
 }
 
-// Expects offset to point to the start of the literal, and next to point just behind the dot
+// Expects offset to point to the start of the literal
 void bk_Lexer::TokenizeFloat()
 {
-    LocalArray<char, 256> buf;
-    buf.Append(MakeSpan(code.ptr + offset, next - offset));
-    while (next < code.len) {
-        if (IsAsciiDigit(code[next]) || code[next] == 'e' || code[next] == 'E') {
-            if (RG_UNLIKELY(buf.len >= RG_SIZE(buf.data) - 2)) {
-                MarkError(offset, "Number literal is too long (max = %1 characters)", RG_SIZE(buf.data) - 1);
-                return;
-            }
+    double d;
 
-            buf.Append(code[next]);
-        } else if (code[next] == '.') {
-            MarkError(next, "Number literals cannot contain multiple '.' characters");
-            return;
-        } else {
-            break;
-        }
-
-        next++;
+    fast_float::from_chars_result ret = fast_float::from_chars(code.ptr + offset, code.end(), d);
+    if (RG_UNLIKELY(ret.ec != std::errc())) {
+        MarkError(offset, "Malformed float number");
+        return;
     }
-    buf.Append(0);
+    next = ret.ptr - code.ptr;
 
-    errno = 0;
-
-    // XXX: We need to ditch libc here eventually, and use something fast and well defined across
-    // platforms. Or maybe std::from_chars()? Not sure it solves the cross-platform issue...
-    // And my first try went wrong with MinGW-w64 (gcc 10.1.0), with a vomit of template errors :/
-    char *end = nullptr;
-    double d = strtod(buf.data, &end);
-
-    if (RG_UNLIKELY(errno == ERANGE)) {
-        MarkError(offset, "Float literal exceeds supported range");
+    if (RG_UNLIKELY(next < code.len && IsAsciiAlpha(code[next]))) {
+        MarkError(offset, "Malformed float number");
         return;
     }
 
