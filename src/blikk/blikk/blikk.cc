@@ -25,7 +25,7 @@ static bool ApplySandbox()
     sb.InitSyscallFilter(sb_SyscallAction::Kill);
     sb.FilterSyscalls(sb_SyscallAction::Allow, {
         "exit", "exit_group",
-        "brk", "mmap",
+        "brk", "mmap/anon", "munmap",
         "read", "readv",
         "write", "writev",
         "fstat", "ioctl/tty",

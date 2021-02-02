@@ -117,6 +117,14 @@ bool sb_SandboxBuilder::FilterSyscalls(sb_SyscallAction action, Span<const char 
                 ret = seccomp_rule_add(seccomp_ctx, TranslateAction(action), syscall, 1,
                                        SCMP_A1_32(SCMP_CMP_MASKED_EQ, 0xFFFFFF00ul, 0x5400u));
 #endif
+            } else if (TestStr(name, "mmap/anon")) {
+                int syscall = seccomp_syscall_resolve_name("mmap");
+                RG_ASSERT(syscall != __NR_SCMP_ERROR);
+
+                // Only allow MAP_PRIVATE | MAP_ANONYMOUS, and enforce fd = -1 argument
+                ret = seccomp_rule_add(seccomp_ctx, TranslateAction(action), syscall, 3,
+                                       SCMP_A0(SCMP_CMP_EQ, 0), SCMP_A3(SCMP_CMP_EQ, 0x22),
+                                       SCMP_A4(SCMP_CMP_EQ, -1));
             } else {
                 int syscall = seccomp_syscall_resolve_name(name);
 
