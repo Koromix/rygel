@@ -421,7 +421,7 @@ function InstanceController() {
 
     function goNewRecord(e) {
         if (form_chain.length > 1) {
-            let url = route.form.parents[0].url + '/new';
+            let url = route.form.parents[route.form.parents.length - 1].url + '/new';
             return self.go(e, url);
         } else {
             let url = route.page.url + '/new';
