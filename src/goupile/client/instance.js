@@ -1238,10 +1238,9 @@ function InstanceController() {
                                  new_route.version !== new_meta.version))
             new_meta = null;
         if (new_meta == null && new_route.ulid != null) {
-            let [meta, values] = await loadRecord(new_route.ulid, new_route.version);
+            new_meta = await loadRecord(new_route.ulid, new_route.version);
 
-            new_meta = meta;
-            new_state = new FormState(values);
+            new_state = new FormState(new_meta.values);
             new_state.changeHandler = handleStateChange;
         }
 
@@ -1250,10 +1249,8 @@ function InstanceController() {
             let path = computePath(new_meta.form, new_route.form);
 
             if (path != null) {
-                let values;
-
                 for (let form of path.up) {
-                    [new_meta, values] = await loadRecord(new_meta.parent.ulid, null);
+                    new_meta = await loadRecord(new_meta.parent.ulid, null);
 
                     if (new_meta.form !== form)
                         throw new Error('Saut impossible en raison d\'un changement de schéma');
@@ -1264,7 +1261,7 @@ function InstanceController() {
                     let child = new_meta.children.get(form.key);
 
                     if (child != null) {
-                        [new_meta, values] = await loadRecord(child.ulid, child.version);
+                        new_meta = await loadRecord(child.ulid, child.version);
 
                         if (new_meta.form !== form)
                             throw new Error('Saut impossible en raison d\'un changement de schéma');
@@ -1281,7 +1278,7 @@ function InstanceController() {
                     new_route.ulid = new_meta.ulid;
                     new_route.version = new_meta.version;
 
-                    new_state = new FormState(values);
+                    new_state = new FormState(new_meta.values);
                     new_state.changeHandler = handleStateChange;
                 }
             } else {
@@ -1331,9 +1328,12 @@ function InstanceController() {
 
             let meta = new_meta;
             while (meta.parent != null) {
-                let [parent, ] = await loadRecord(meta.parent.ulid);
-                new_chain.push(parent);
-                meta = parent;
+                let parent_meta = await loadRecord(meta.parent.ulid);
+
+                new_chain.push(parent_meta);
+                meta.parent = parent_meta;
+
+                meta = parent_meta;
             }
 
             new_chain.reverse();
@@ -1442,12 +1442,13 @@ function InstanceController() {
             children: children,
             mtime: fragments[version - 1].mtime,
             fragments: fragments,
-            status: status
+            status: status,
+            values: values
         };
         if (meta.form == null)
             throw new Error(`Le formulaire '${record.form}' n'existe pas ou plus`);
 
-        return [meta, values];
+        return meta;
     }
 
     // Assumes from != to
