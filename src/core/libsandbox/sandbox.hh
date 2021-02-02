@@ -28,15 +28,15 @@ class sb_SandboxBuilder final {
         bool readonly;
     };
 
-    int unshare_flags = 0;
+    bool unshare = false;
     HeapArray<BindMount> mounts;
+
+    bool drop_caps = false;
 
     void *seccomp_ctx = nullptr; // scmp_filter_ctx
     uint32_t seccomp_kill_action;
     HashSet<int> filtered_syscalls;
     sb_SyscallAction default_action;
-
-    bool drop_caps = false;
 #endif
 
     BlockAllocator alloc;
@@ -45,13 +45,15 @@ public:
     sb_SandboxBuilder() {};
     ~sb_SandboxBuilder();
 
+    void DropCapabilities();
     void IsolateProcess();
-    void MountPath(const char *src, const char *dest, bool readonly);
+    void RevealPath(const char *path, bool readonly);
 
+#ifdef __linux__
+    void MountPath(const char *src, const char *dest, bool readonly);
     bool InitSyscallFilter(sb_SyscallAction default_action);
     bool FilterSyscalls(sb_SyscallAction action, Span<const char *const> names);
-
-    void DropCapabilities();
+#endif
 
     bool Apply();
 

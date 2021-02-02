@@ -24,21 +24,9 @@ void sb_SandboxBuilder::IsolateProcess()
     RG_ASSERT(false);
 }
 
-void sb_SandboxBuilder::MountPath(const char *, const char *, bool)
+void sb_SandboxBuilder::RevealPath(const char *, bool)
 {
     RG_ASSERT(false);
-}
-
-bool sb_SandboxBuilder::InitSyscallFilter(sb_SyscallAction)
-{
-    RG_ASSERT(false);
-    return false;
-}
-
-bool sb_SandboxBuilder::FilterSyscalls(sb_SyscallAction, Span<const char *const>)
-{
-    RG_ASSERT(false);
-    return false;
 }
 
 void sb_SandboxBuilder::DropCapabilities()

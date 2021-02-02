@@ -49,15 +49,24 @@ sb_SandboxBuilder::~sb_SandboxBuilder()
     }
 }
 
+void sb_SandboxBuilder::DropCapabilities()
+{
+    drop_caps = true;
+}
+
 void sb_SandboxBuilder::IsolateProcess()
 {
-    unshare_flags |= CLONE_NEWNS | CLONE_NEWUSER | CLONE_NEWIPC | CLONE_NEWUTS |
-                     CLONE_NEWNET | CLONE_NEWPID | CLONE_NEWCGROUP;
+    unshare = true;
+}
+
+void sb_SandboxBuilder::RevealPath(const char *path, bool readonly)
+{
+    MountPath(path, path, readonly);
 }
 
 void sb_SandboxBuilder::MountPath(const char *src, const char *dest, bool readonly)
 {
-    RG_ASSERT(unshare_flags & CLONE_NEWNS);
+    RG_ASSERT(unshare);
     RG_ASSERT(src[0] == '/');
     RG_ASSERT(dest[0] == '/');
 
@@ -155,11 +164,6 @@ bool sb_SandboxBuilder::FilterSyscalls(sb_SyscallAction action, Span<const char 
     return true;
 }
 
-void sb_SandboxBuilder::DropCapabilities()
-{
-    drop_caps = true;
-}
-
 static bool WriteUidGidMap(pid_t pid, uid_t uid, gid_t gid)
 {
     int uid_fd;
@@ -222,6 +226,19 @@ static bool WriteUidGidMap(pid_t pid, uid_t uid, gid_t gid)
     return true;
 }
 
+static bool InitNamespaces()
+{
+    uint32_t unshare_flags = CLONE_NEWNS | CLONE_NEWUSER | CLONE_NEWIPC | CLONE_NEWUTS |
+                             CLONE_NEWNET | CLONE_NEWPID | CLONE_NEWCGROUP;
+
+    if (unshare(unshare_flags) < 0) {
+        LogError("Failed to create namespace: %1", strerror(errno));
+        return false;
+    }
+
+    return true;
+}
+
 bool sb_SandboxBuilder::Apply()
 {
     uid_t uid = getuid();
@@ -232,231 +249,228 @@ bool sb_SandboxBuilder::Apply()
         return false;
     }
 
-    // We support two namespace methods: rootless, or CAP_SYS_ADMIN (root).
-    // First, decide between the two.
-    bool rootless = geteuid();
-    if (rootless) {
-        cap_user_header hdr = {_LINUX_CAPABILITY_VERSION_3, 0};
-        cap_user_data data[2];
+    if (unshare) {
+        // We support two namespace methods: rootless, or CAP_SYS_ADMIN (root).
+        // First, decide between the two.
+        bool rootless = geteuid();
+        if (rootless) {
+            cap_user_header hdr = {_LINUX_CAPABILITY_VERSION_3, 0};
+            cap_user_data data[2];
 
-        if (syscall(__NR_capget, &hdr, data) < 0) {
-            LogError("Failed to read process capabilities: %1", strerror(errno));
-            return false;
+            if (syscall(__NR_capget, &hdr, data) < 0) {
+                LogError("Failed to read process capabilities: %1", strerror(errno));
+                return false;
+            }
+
+            rootless &= !(data[0].effective & (1u << 21)); // Check for CAP_SYS_ADMIN
         }
 
-        rootless &= !(data[0].effective & (1u << 21)); // Check for CAP_SYS_ADMIN
-    }
+        // Setup user namespace
+        if (rootless) {
+            LogDebug("Trying rootless sandbox method");
 
-    // Setup user namespace
-    if (rootless) {
-        LogDebug("Trying rootless sandbox method");
-
-        if (unshare_flags && unshare(unshare_flags) < 0) {
-            LogError("Failed to create namespace: %1", strerror(errno));
-            return false;
-        }
-
-        if ((unshare_flags & CLONE_NEWUSER) && !WriteUidGidMap(getpid(), uid, gid))
-            return false;
-    } else {
-        // In the non-rootless case, we need to fork a child process, which keeps root privileges
-        // and writes the UID and GID map of the namespaced parent process, because I can't find
-        // any way to do it simply otherwise (EPERM). The child process exits immediately
-        // once this is done.
-        LogDebug("Trying CAP_SYS_ADMIN (root) sandbox method");
-
-        // We use this dummy event to wait in the child process until the parent
-        // process has called unshare() successfully.
-        int efd = eventfd(0, EFD_CLOEXEC);
-        if (efd < 0) {
-            LogError("Failed to create eventfd: %1", strerror(errno));
-            return false;
-        }
-        RG_DEFER { close(efd); };
-
-        pid_t child_pid = fork();
-        if (child_pid < 0) {
-            LogError("Failed to fork: %1", strerror(errno));
-            return false;
-        }
-
-        if (child_pid) {
-            RG_DEFER_N(kill_guard) {
-                kill(child_pid, SIGKILL);
-                waitpid(child_pid, nullptr, 0);
-            };
-
-            // This allows the sandbox helper to write to our /proc files even when
-            // running as non-root in the CAP_SYS_ADMIN sandbox path.
-            prctl(PR_SET_DUMPABLE, 1, 0, 0, 0);
-
-            int64_t dummy = 1;
-            if (unshare_flags && unshare(unshare_flags) < 0) {
-                LogError("Failed to create namespace: %1", strerror(errno));
+            if (!InitNamespaces())
                 return false;
-            }
-            if (RG_POSIX_RESTART_EINTR(write(efd, &dummy, RG_SIZE(dummy)), < 0) < 0) {
-                LogError("Failed to write to eventfd: %1", strerror(errno));
+            if (!WriteUidGidMap(getpid(), uid, gid))
                 return false;
-            }
-
-            // Good to go! After a successful write to eventfd, the child WILL exit
-            // so we can just wait for that.
-            kill_guard.Disable();
-
-            int wstatus;
-            if (waitpid(child_pid, &wstatus, 0) < 0) {
-                LogError("Failed to wait for sandbox helper: %1", strerror(errno));
-                return false;
-            }
-            if (!WIFEXITED(wstatus) || WEXITSTATUS(wstatus) != 0) {
-                LogDebug("Something went wrong in the sandbox helper");
-                return false;
-            }
-
-            // Set non-root container UID and GID
-            if (setresuid(uid, uid, uid) < 0 || setresgid(gid, gid, gid) < 0) {
-                LogError("Cannot change UID or GID: %1", strerror(errno));
-                return false;
-            }
-
-            if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) < 0) {
-                LogError("Failed to clear dumpable proc attribute: %1", strerror(errno));
-                return false;
-            }
         } else {
-            int64_t dummy;
-            if (RG_POSIX_RESTART_EINTR(read(efd, &dummy, RG_SIZE(dummy)), < 0) < 0) {
-                LogError("Failed to read eventfd: %1", strerror(errno));
-                _exit(1);
+            // In the non-rootless case, we need to fork a child process, which keeps root privileges
+            // and writes the UID and GID map of the namespaced parent process, because I can't find
+            // any way to do it simply otherwise (EPERM). The child process exits immediately
+            // once this is done.
+            LogDebug("Trying CAP_SYS_ADMIN (root) sandbox method");
+
+            // We use this dummy event to wait in the child process until the parent
+            // process has called unshare() successfully.
+            int efd = eventfd(0, EFD_CLOEXEC);
+            if (efd < 0) {
+                LogError("Failed to create eventfd: %1", strerror(errno));
+                return false;
+            }
+            RG_DEFER { close(efd); };
+
+            pid_t child_pid = fork();
+            if (child_pid < 0) {
+                LogError("Failed to fork: %1", strerror(errno));
+                return false;
             }
 
-            bool success = WriteUidGidMap(getppid(), uid, gid);
-            _exit(!success);
-        }
-    }
+            if (child_pid) {
+                RG_DEFER_N(kill_guard) {
+                    kill(child_pid, SIGKILL);
+                    waitpid(child_pid, nullptr, 0);
+                };
 
-    // Set up FS namespace
-    if (unshare_flags & CLONE_NEWNS) {
-        if (!MakeDirectory("/tmp/sandbox", false))
-            return false;
-        if (mount("tmpfs", "/tmp/sandbox", "tmpfs", 0, "size=4k") < 0 && errno != EBUSY) {
-            LogError("Failed to mount tmpfs on '/tmp/sandbox': %1", strerror(errno));
-            return false;
-        }
-        if (mount(nullptr, "/tmp/sandbox", nullptr, MS_PRIVATE, nullptr) < 0) {
-            LogError("Failed to set MS_PRIVATE on '/tmp/sandbox': %1", strerror(errno));
-            return false;
-        }
+                // This allows the sandbox helper to write to our /proc files even when
+                // running as non-root in the CAP_SYS_ADMIN sandbox path.
+                prctl(PR_SET_DUMPABLE, 1, 0, 0, 0);
 
-        // Create root FS with tmpfs
-        const char *fs_root = CreateTemporaryDirectory("/tmp/sandbox", "", &alloc);
-        if (!fs_root)
-            return false;
-        if (mount("tmpfs", fs_root, "tmpfs", 0, "size=4k") < 0) {
-            LogError("Failed to mount tmpfs on '%1': %2", fs_root, strerror(errno));
-            return false;
-        }
-        if (mount(nullptr, fs_root, nullptr, MS_PRIVATE, nullptr) < 0) {
-            LogError("Failed to set MS_PRIVATE on '%1': %2", fs_root, strerror(errno));
-            return false;
-        }
-        LogDebug("Sandbox FS root: '%1'", fs_root);
-
-        // Mount requested paths
-        for (const BindMount &bind: mounts) {
-            const char *dest = Fmt(&alloc, "%1%2", fs_root, bind.dest).ptr;
-            int flags = MS_BIND | MS_REC | (bind.readonly ? MS_RDONLY : 0);
-
-            // Ensure destination exists
-            {
-                FileInfo src_info;
-                if (!StatFile(bind.src, &src_info))
+                int64_t dummy = 1;
+                if (!InitNamespaces())
                     return false;
+                if (RG_POSIX_RESTART_EINTR(write(efd, &dummy, RG_SIZE(dummy)), < 0) < 0) {
+                    LogError("Failed to write to eventfd: %1", strerror(errno));
+                    return false;
+                }
 
-                if (src_info.type == FileType::Directory) {
-                    if (!MakeDirectoryRec(dest))
-                        return false;
-                } else {
-                    if (!EnsureDirectoryExists(dest))
+                // Good to go! After a successful write to eventfd, the child WILL exit
+                // so we can just wait for that.
+                kill_guard.Disable();
+
+                int wstatus;
+                if (waitpid(child_pid, &wstatus, 0) < 0) {
+                    LogError("Failed to wait for sandbox helper: %1", strerror(errno));
+                    return false;
+                }
+                if (!WIFEXITED(wstatus) || WEXITSTATUS(wstatus) != 0) {
+                    LogDebug("Something went wrong in the sandbox helper");
+                    return false;
+                }
+
+                // Set non-root container UID and GID
+                if (setresuid(uid, uid, uid) < 0 || setresgid(gid, gid, gid) < 0) {
+                    LogError("Cannot change UID or GID: %1", strerror(errno));
+                    return false;
+                }
+
+                if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) < 0) {
+                    LogError("Failed to clear dumpable proc attribute: %1", strerror(errno));
+                    return false;
+                }
+            } else {
+                int64_t dummy;
+                if (RG_POSIX_RESTART_EINTR(read(efd, &dummy, RG_SIZE(dummy)), < 0) < 0) {
+                    LogError("Failed to read eventfd: %1", strerror(errno));
+                    _exit(1);
+                }
+
+                bool success = WriteUidGidMap(getppid(), uid, gid);
+                _exit(!success);
+            }
+        }
+
+        // Set up FS namespace
+        {
+            if (!MakeDirectory("/tmp/sandbox", false))
+                return false;
+            if (mount("tmpfs", "/tmp/sandbox", "tmpfs", 0, "size=4k") < 0 && errno != EBUSY) {
+                LogError("Failed to mount tmpfs on '/tmp/sandbox': %1", strerror(errno));
+                return false;
+            }
+            if (mount(nullptr, "/tmp/sandbox", nullptr, MS_PRIVATE, nullptr) < 0) {
+                LogError("Failed to set MS_PRIVATE on '/tmp/sandbox': %1", strerror(errno));
+                return false;
+            }
+
+            // Create root FS with tmpfs
+            const char *fs_root = CreateTemporaryDirectory("/tmp/sandbox", "", &alloc);
+            if (!fs_root)
+                return false;
+            if (mount("tmpfs", fs_root, "tmpfs", 0, "size=4k") < 0) {
+                LogError("Failed to mount tmpfs on '%1': %2", fs_root, strerror(errno));
+                return false;
+            }
+            if (mount(nullptr, fs_root, nullptr, MS_PRIVATE, nullptr) < 0) {
+                LogError("Failed to set MS_PRIVATE on '%1': %2", fs_root, strerror(errno));
+                return false;
+            }
+            LogDebug("Sandbox FS root: '%1'", fs_root);
+
+            // Mount requested paths
+            for (const BindMount &bind: mounts) {
+                const char *dest = Fmt(&alloc, "%1%2", fs_root, bind.dest).ptr;
+                int flags = MS_BIND | MS_REC | (bind.readonly ? MS_RDONLY : 0);
+
+                // Ensure destination exists
+                {
+                    FileInfo src_info;
+                    if (!StatFile(bind.src, &src_info))
                         return false;
 
-                    FILE *fp = OpenFile(dest, (int)OpenFileFlag::Write);
-                    if (!fp)
-                        return false;
-                    fclose(fp);
+                    if (src_info.type == FileType::Directory) {
+                        if (!MakeDirectoryRec(dest))
+                            return false;
+                    } else {
+                        if (!EnsureDirectoryExists(dest))
+                            return false;
+
+                        FILE *fp = OpenFile(dest, (int)OpenFileFlag::Write);
+                        if (!fp)
+                            return false;
+                        fclose(fp);
+                    }
+                }
+
+                if (mount(bind.src, dest, nullptr, flags, nullptr) < 0) {
+                    LogError("Failed to mount '%1' to '%2': %3", bind.src, dest, strerror(errno));
+                    return false;
                 }
             }
 
-            if (mount(bind.src, dest, nullptr, flags, nullptr) < 0) {
-                LogError("Failed to mount '%1' to '%2': %3", bind.src, dest, strerror(errno));
-                return false;
-            }
-        }
-
-        // Remount root FS as readonly
-        if (mount(nullptr, fs_root, nullptr, MS_REMOUNT, "size=1M,mode=0700,ro") < 0) {
-            LogError("Failed to set sandbox root to readonly");
-            return false;
-        }
-
-        // Do the silly pivot_root dance
-        {
-            int old_root_fd = open("/", O_DIRECTORY | O_PATH);
-            if (old_root_fd < 0) {
-                LogError("Failed to open directory '/': %1", strerror(errno));
-                return false;
-            }
-            RG_DEFER { close(old_root_fd); };
-
-            int new_root_fd = open(fs_root, O_DIRECTORY | O_PATH);
-            if (new_root_fd < 0) {
-                LogError("Failed to open directory '%1': %2", fs_root, strerror(errno));
-                return false;
-            }
-            RG_DEFER { close(new_root_fd); };
-
-            if (fchdir(new_root_fd) < 0) {
-                LogError("Failed to change current directory to '%1': %2", fs_root, strerror(errno));
-                return false;
-            }
-            if (syscall(__NR_pivot_root, ".", ".") < 0) {
-                LogError("Failed to pivot root mount point: %1", strerror(errno));
-                return false;
-            }
-            if (fchdir(old_root_fd) < 0) {
-                LogError("Failed to change current directory to old '/': %1", strerror(errno));
+            // Remount root FS as readonly
+            if (mount(nullptr, fs_root, nullptr, MS_REMOUNT, "size=1M,mode=0700,ro") < 0) {
+                LogError("Failed to set sandbox root to readonly");
                 return false;
             }
 
-            if (mount(nullptr, ".", nullptr, MS_REC | MS_PRIVATE, nullptr) < 0) {
-                LogError("Failed to set MS_PRIVATE on ", fs_root, strerror(errno));
-                return false;
-            }
+            // Do the silly pivot_root dance
+            {
+                int old_root_fd = open("/", O_DIRECTORY | O_PATH);
+                if (old_root_fd < 0) {
+                    LogError("Failed to open directory '/': %1", strerror(errno));
+                    return false;
+                }
+                RG_DEFER { close(old_root_fd); };
 
-            // I don't know why there's a loop below but I've seen it done.
-            // But at least this is true to the real Unix and Linux philosophy: silly nonsensical API
-            // and complete lack of taste and foresight.
-            if (umount2(".", MNT_DETACH) < 0) {
-                LogError("Failed to unmount old root mount point: %1", strerror(errno));
-                return false;
-            }
-            for (;;) {
+                int new_root_fd = open(fs_root, O_DIRECTORY | O_PATH);
+                if (new_root_fd < 0) {
+                    LogError("Failed to open directory '%1': %2", fs_root, strerror(errno));
+                    return false;
+                }
+                RG_DEFER { close(new_root_fd); };
+
+                if (fchdir(new_root_fd) < 0) {
+                    LogError("Failed to change current directory to '%1': %2", fs_root, strerror(errno));
+                    return false;
+                }
+                if (syscall(__NR_pivot_root, ".", ".") < 0) {
+                    LogError("Failed to pivot root mount point: %1", strerror(errno));
+                    return false;
+                }
+                if (fchdir(old_root_fd) < 0) {
+                    LogError("Failed to change current directory to old '/': %1", strerror(errno));
+                    return false;
+                }
+
+                if (mount(nullptr, ".", nullptr, MS_REC | MS_PRIVATE, nullptr) < 0) {
+                    LogError("Failed to set MS_PRIVATE on ", fs_root, strerror(errno));
+                    return false;
+                }
+
+                // I don't know why there's a loop below but I've seen it done.
+                // But at least this is true to the real Unix and Linux philosophy: silly nonsensical API
+                // and complete lack of taste and foresight.
                 if (umount2(".", MNT_DETACH) < 0) {
-                    if (errno == EINVAL) {
-                        break;
-                    } else {
-                        LogError("Failed to unmount old root mount point: %1", strerror(errno));
-                        return false;
+                    LogError("Failed to unmount old root mount point: %1", strerror(errno));
+                    return false;
+                }
+                for (;;) {
+                    if (umount2(".", MNT_DETACH) < 0) {
+                        if (errno == EINVAL) {
+                            break;
+                        } else {
+                            LogError("Failed to unmount old root mount point: %1", strerror(errno));
+                            return false;
+                        }
                     }
                 }
             }
-        }
 
-        // Set current working directory
-        if (chdir("/") < 0) {
-            LogError("Failed to change current directory to new '/': %1", strerror(errno));
-            return false;
+            // Set current working directory
+            if (chdir("/") < 0) {
+                LogError("Failed to change current directory to new '/': %1", strerror(errno));
+                return false;
+            }
         }
     }
 

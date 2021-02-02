@@ -22,6 +22,8 @@ static bool ApplySandbox()
 
     sb.IsolateProcess();
     sb.DropCapabilities();
+
+#ifdef __linux__
     sb.InitSyscallFilter(sb_SyscallAction::Kill);
     sb.FilterSyscalls(sb_SyscallAction::Allow, {
         "exit", "exit_group",
@@ -35,6 +37,7 @@ static bool ApplySandbox()
         "fsync", "sync", "syncfs",
         "close"
     });
+#endif
 
     return sb.Apply();
 }
