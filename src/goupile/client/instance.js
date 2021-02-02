@@ -124,8 +124,7 @@ function InstanceController() {
                         </div>
                     `;
                 } else {
-                    return html`<button ?disabled=${!enabled}
-                                        @click=${ui.wrapAction(e => self.go(e, form.url))}>${form.title}</button>`;
+                    return html`<button @click=${ui.wrapAction(e => self.go(e, form.url))}>${form.title}</button>`;
                 }
             })}
             ${util.map(route.form.pages.values(), page =>
