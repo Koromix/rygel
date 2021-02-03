@@ -49,7 +49,7 @@ form.section("Conditions", () => {
     form.binary("hyperchol", "Hypercholestérolémie")
     form.sameLine(); form.binary("hypertension", "Hypertension artérielle")
     form.sameLine(); form.binary("diabete", "Diabète", {
-        help: "La fonction form.sameLine() permet d'afficher le champ sur la même ligne."
+        help: "form.sameLine(); affiche le champ sur la même ligne."
     })
 })
 
