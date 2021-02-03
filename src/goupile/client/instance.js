@@ -1103,7 +1103,7 @@ function InstanceController() {
     }
 
     async function deploy(actions) { // XXX: reentrancy
-        let progress = log.progress('Déploiement en cours');
+        let progress = log.progress('Publication en cours');
 
         try {
             if (actions.some(action => action.type == 'conflict'))
@@ -1149,7 +1149,7 @@ function InstanceController() {
                 await Promise.all(p);
             }
 
-            progress.success('Déploiement effectué');
+            progress.success('Publication effectuée');
         } catch (err) {
             progress.close();
             throw err;
