@@ -381,6 +381,7 @@ USE_ARES = @USE_ARES@
 USE_BEARSSL = @USE_BEARSSL@
 USE_GNUTLS = @USE_GNUTLS@
 USE_GNUTLS_NETTLE = @USE_GNUTLS_NETTLE@
+USE_HYPER = @USE_HYPER@
 USE_LIBRTMP = @USE_LIBRTMP@
 USE_LIBSSH = @USE_LIBSSH@
 USE_LIBSSH2 = @USE_LIBSSH2@
@@ -503,6 +504,7 @@ EXTRA_DIST = \
  HTTP-COOKIES.md                                \
  HTTP2.md                                       \
  HTTP3.md                                       \
+ HYPER.md                                       \
  INSTALL                                        \
  INSTALL.cmake                                  \
  INSTALL.md                                     \
@@ -522,6 +524,7 @@ EXTRA_DIST = \
  THANKS                                         \
  TODO                                           \
  TheArtOfHttpScripting.md                       \
+ URL-SYNTAX.md                                  \
  VERSIONS.md
 
 MAN2HTML = roffit $< >$@

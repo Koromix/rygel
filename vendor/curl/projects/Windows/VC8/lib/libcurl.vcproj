@@ -3637,6 +3637,10 @@
 			>
 			</File>
 			<File
+				RelativePath="..\..\..\..\lib\c-hyper.c"
+			>
+			</File>
+			<File
 				RelativePath="..\..\..\..\lib\conncache.c"
 			>
 			</File>
@@ -3826,6 +3830,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\lib\http2.c"
+			>
+			</File>
+			<File
+				RelativePath="..\..\..\..\lib\http_aws_sigv4.c"
 			>
 			</File>
 			<File
@@ -4105,6 +4113,10 @@
 			>
 			</File>
 			<File
+				RelativePath="..\..\..\..\lib\c-hyper.h"
+			>
+			</File>
+			<File
 				RelativePath="..\..\..\..\lib\config-win32.h"
 			>
 			</File>
@@ -4318,6 +4330,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\lib\http2.h"
+			>
+			</File>
+			<File
+				RelativePath="..\..\..\..\lib\http_aws_sigv4.h"
 			>
 			</File>
 			<File

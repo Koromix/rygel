@@ -5,7 +5,7 @@
 .\" *                            | (__| |_| |  _ <| |___
 .\" *                             \___|\___/|_| \_\_____|
 .\" *
-.\" * Copyright (C) 1998 - 2020, Daniel Stenberg, <daniel@haxx.se>, et al.
+.\" * Copyright (C) 1998 - 2021, Daniel Stenberg, <daniel@haxx.se>, et al.
 .\" *
 .\" * This software is licensed as described in the file COPYING, which
 .\" * you should have received as part of this distribution. The terms
@@ -19,7 +19,7 @@
 .\" * KIND, either express or implied.
 .\" *
 .\" **************************************************************************
-.TH libcurl-symbols 3 "Dec  9, 2020" "libcurl 7.41.0" "libcurl symbols"
+.TH libcurl-symbols 3 "Feb  3, 2021" "libcurl 7.41.0" "libcurl symbols"
 .SH NAME
 libcurl-symbols \- libcurl symbol version information
 .SH "libcurl symbols"
@@ -70,6 +70,8 @@ Introduced in 7.10.6
 Introduced in 7.22.0
 .IP CURLAUTH_ONLY
 Introduced in 7.21.3
+.IP CURLAUTH_AWS_SIGV4
+Introduced in 7.75.0
 .IP CURLCLOSEPOLICY_CALLBACK
 Introduced in 7.7
 .IP CURLCLOSEPOLICY_LEAST_RECENTLY_USED
@@ -1435,6 +1437,8 @@ Introduced in 7.19.1
 Introduced in 7.1
 .IP CURLOPT_USE_SSL
 Introduced in 7.17.0
+.IP CURLOPT_AWS_SIGV4
+Introduced in 7.75.0
 .IP CURLOPT_VERBOSE
 Introduced in 7.1
 .IP CURLOPT_WILDCARDMATCH
@@ -1501,6 +1505,8 @@ Introduced in 7.19.4
 Introduced in 7.19.4
 .IP CURLPROTO_GOPHER
 Introduced in 7.21.2
+.IP CURLPROTO_GOPHERS
+Introduced in 7.75.0
 .IP CURLPROTO_HTTP
 Introduced in 7.19.4
 .IP CURLPROTO_HTTPS
@@ -1836,6 +1842,8 @@ Introduced in 7.57.0
 Introduced in 7.10
 .IP CURLVERSION_FOURTH
 Introduced in 7.16.1
+.IP CURLVERSION_NINTH
+Introduced in 7.75.0
 .IP CURLVERSION_NOW
 Introduced in 7.10
 .IP CURLVERSION_SECOND

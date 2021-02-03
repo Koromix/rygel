@@ -40,6 +40,7 @@ DPAGES =					\
   cookie-jar.d					\
   cookie.d					\
   create-dirs.d					\
+  create-file-mode.d                            \
   crlf.d crlfile.d				\
   curves.d					\
   data-ascii.d					\
@@ -235,6 +236,7 @@ DPAGES =					\
   url.d use-ascii.d				\
   user-agent.d					\
   user.d verbose.d				\
+  aws-sigv4.d                                   \
   version.d					\
   write-out.d					\
   xattr.d

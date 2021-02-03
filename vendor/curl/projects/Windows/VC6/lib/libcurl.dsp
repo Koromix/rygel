@@ -750,6 +750,10 @@ SOURCE=..\..\..\..\lib\base64.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\..\..\lib\c-hyper.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\..\..\lib\conncache.c
 # End Source File
 # Begin Source File
@@ -939,6 +943,10 @@ SOURCE=..\..\..\..\lib\hsts.c
 # Begin Source File
 
 SOURCE=..\..\..\..\lib\http2.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\..\lib\http_aws_sigv4.c
 # End Source File
 # Begin Source File
 
@@ -1346,6 +1354,10 @@ SOURCE=..\..\..\..\lib\asyn.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\..\..\lib\c-hyper.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\..\..\lib\config-win32.h
 # End Source File
 # Begin Source File
@@ -1559,6 +1571,10 @@ SOURCE=..\..\..\..\lib\hsts.h
 # Begin Source File
 
 SOURCE=..\..\..\..\lib\http2.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\..\lib\http_aws_sigv4.h
 # End Source File
 # Begin Source File
 

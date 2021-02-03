@@ -20,7 +20,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH curl_easy_setopt 3 "November 09, 2020" "libcurl 7.74.0" "libcurl Manual"
+.TH curl_easy_setopt 3 "July 03, 2020" "libcurl 7.75.0" "libcurl Manual"
 
 .SH NAME
 curl_easy_setopt \- set options for a curl easy handle
@@ -424,6 +424,8 @@ RTSP Transport: header. See \fICURLOPT_RTSP_TRANSPORT(3)\fP
 Client CSEQ number. See \fICURLOPT_RTSP_CLIENT_CSEQ(3)\fP
 .IP CURLOPT_RTSP_SERVER_CSEQ
 CSEQ number for RTSP Server->Client request. See \fICURLOPT_RTSP_SERVER_CSEQ(3)\fP
+.IP CURLOPT_AWS_SIGV4
+AWS HTTP V4 Signature. See \fICURLOPT_AWS_SIGV4(3)\fP
 .SH PROTOCOL OPTIONS
 .IP CURLOPT_TRANSFERTEXT
 Use text transfer. See \fICURLOPT_TRANSFERTEXT(3)\fP

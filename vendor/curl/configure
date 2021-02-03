@@ -11,7 +11,7 @@
 # This configure script is free software; the Free Software Foundation
 # gives unlimited permission to copy, distribute and modify it.
 #
-# Copyright (c) 1998 - 2020 Daniel Stenberg, <daniel@haxx.se>
+# Copyright (c) 1998 - 2021 Daniel Stenberg, <daniel@haxx.se>
 # This configure script may be copied, distributed and modified under the
 # terms of the curl license; see COPYING for more details
 
@@ -905,6 +905,7 @@ NROFF
 PERL
 FISH_FUNCTIONS_DIR
 ZSH_FUNCTIONS_DIR
+USE_HYPER
 USE_QUICHE
 USE_NGHTTP3
 USE_NGTCP2_CRYPTO_GNUTLS
@@ -1205,6 +1206,7 @@ with_nghttp2
 with_ngtcp2
 with_nghttp3
 with_quiche
+with_hyper
 with_zsh_functions_dir
 with_fish_functions_dir
 enable_threaded_resolver
@@ -2115,6 +2117,8 @@ Optional Packages:
   --without-nghttp3       Disable nghttp3 usage
   --with-quiche=PATH      Enable quiche usage
   --without-quiche        Disable quiche usage
+  --with-hyper=PATH       Enable hyper usage
+  --without-hyper         Disable hyper usage
   --with-zsh-functions-dir=PATH
                           Install zsh completions to PATH
   --without-zsh-functions-dir
@@ -2209,7 +2213,7 @@ Copyright (C) 2012 Free Software Foundation, Inc.
 This configure script is free software; the Free Software Foundation
 gives unlimited permission to copy, distribute and modify it.
 
-Copyright (c) 1998 - 2020 Daniel Stenberg, <daniel@haxx.se>
+Copyright (c) 1998 - 2021 Daniel Stenberg, <daniel@haxx.se>
 This configure script may be copied, distributed and modified under the
 terms of the curl license; see COPYING for more details
 _ACEOF
@@ -5900,7 +5904,9 @@ curl_verbose_msg="enabled (--disable-verbose)"
     curl_psl_msg="no      (--with-libpsl)"
  curl_altsvc_msg="enabled";
     ssl_backends=
-
+     curl_h1_msg="enabled (--with-hyper)"
+     curl_h2_msg="no      (--with-nghttp2)"
+     curl_h3_msg="no      (--with-ngtcp2, --with-quiche)"
 
 enable_altsvc="yes"
 
@@ -10539,11 +10545,11 @@ $as_echo "$lt_cv_ld_force_load" >&6; }
       # to the OS version, if on x86, and 10.4, the deployment
       # target defaults to 10.4. Don't you love it?
       case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+	10.0,*86*-darwin8*|10.0,*-darwin[912]*)
 	  _lt_dar_allow_undefined='$wl-undefined ${wl}dynamic_lookup' ;;
 	10.[012][,.]*)
 	  _lt_dar_allow_undefined='$wl-flat_namespace $wl-undefined ${wl}suppress' ;;
-	10.*)
+	10.*|11.*)
 	  _lt_dar_allow_undefined='$wl-undefined ${wl}dynamic_lookup' ;;
       esac
     ;;
@@ -18140,6 +18146,26 @@ $as_echo "$as_me: WARNING: compiler options rejected: $tmp_options" >&2;}
     tmp_CFLAGS="$tmp_CFLAGS $ac_var_added_warnings"
   squeeze tmp_CFLAGS
 
+
+    ac_var_added_warnings=""
+  for warning in extra-semi-stmt; do
+
+  ac_var_match_word="no"
+  for word1 in $CFLAGS; do
+    for word2 in -Wno-$warning -W$warning; do
+      if test "$word1" = "$word2"; then
+        ac_var_match_word="yes"
+      fi
+    done
+  done
+
+    if test "$ac_var_match_word" = "no"; then
+      ac_var_added_warnings="$ac_var_added_warnings -W$warning"
+    fi
+  done
+    tmp_CFLAGS="$tmp_CFLAGS $ac_var_added_warnings"
+  squeeze tmp_CFLAGS
+
           fi
         fi
         ;;
@@ -20080,6 +20106,7 @@ $as_echo "#define CURL_DISABLE_RTSP 1" >>confdefs.h
 
 $as_echo "#define CURL_DISABLE_ALTSVC 1" >>confdefs.h
 
+       curl_h1_msg="no      (--enable-http, --with-hyper)"
        curl_altsvc_msg="no";
        enable_altsvc="no"
        ;;
@@ -29054,7 +29081,6 @@ case "$OPT_H2" in
     ;;
 esac
 
-curl_h2_msg="no      (--with-nghttp2)"
 if test X"$want_h2" != Xno; then
     CLEANLDFLAGS="$LDFLAGS"
   CLEANCPPFLAGS="$CPPFLAGS"
@@ -29296,7 +29322,6 @@ fi
 
 
 OPT_TCP2="yes"
-curl_h3_msg="no      (--with-ngtcp2, --with-quiche)"
 
 if test "x$disable_http" = "xyes"; then
   # without HTTP, ngtcp2 is no use
@@ -30607,6 +30632,283 @@ fi
     fi
   fi
 fi
+
+
+OPT_HYPER="yes"
+
+if test "x$disable_http" = "xyes"; then
+  # without HTTP, hyper is of no use
+  OPT_HYPER="no"
+fi
+
+
+# Check whether --with-hyper was given.
+if test "${with_hyper+set}" = set; then :
+  withval=$with_hyper; OPT_HYPER=$withval
+fi
+
+case "$OPT_HYPER" in
+  no)
+        want_hyper="no"
+    ;;
+  yes)
+        want_hyper="default"
+    want_hyper_path=""
+    ;;
+  *)
+        want_hyper="yes"
+    want_hyper_path="$withval"
+    ;;
+esac
+
+if test X"$want_hyper" != Xno; then
+    CLEANLDFLAGS="$LDFLAGS"
+  CLEANCPPFLAGS="$CPPFLAGS"
+  CLEANLIBS="$LIBS"
+
+
+    if test -n "$PKG_CONFIG"; then
+      PKGCONFIG="$PKG_CONFIG"
+    else
+      if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
+set dummy ${ac_tool_prefix}pkg-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_PKGCONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $PKGCONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PKGCONFIG="$PKGCONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+as_dummy="$PATH:/usr/bin:/usr/local/bin"
+for as_dir in $as_dummy
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_PKGCONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+PKGCONFIG=$ac_cv_path_PKGCONFIG
+if test -n "$PKGCONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PKGCONFIG" >&5
+$as_echo "$PKGCONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_path_PKGCONFIG"; then
+  ac_pt_PKGCONFIG=$PKGCONFIG
+  # Extract the first word of "pkg-config", so it can be a program name with args.
+set dummy pkg-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_ac_pt_PKGCONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ac_pt_PKGCONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_PKGCONFIG="$ac_pt_PKGCONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+as_dummy="$PATH:/usr/bin:/usr/local/bin"
+for as_dir in $as_dummy
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_PKGCONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_PKGCONFIG=$ac_cv_path_ac_pt_PKGCONFIG
+if test -n "$ac_pt_PKGCONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_PKGCONFIG" >&5
+$as_echo "$ac_pt_PKGCONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_pt_PKGCONFIG" = x; then
+    PKGCONFIG="no"
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    PKGCONFIG=$ac_pt_PKGCONFIG
+  fi
+else
+  PKGCONFIG="$ac_cv_path_PKGCONFIG"
+fi
+
+    fi
+
+    if test "x$PKGCONFIG" != "xno"; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for hyper options with pkg-config" >&5
+$as_echo_n "checking for hyper options with pkg-config... " >&6; }
+            itexists=`
+    if test -n "$want_hyper_path"; then
+      PKG_CONFIG_LIBDIR="$want_hyper_path"
+      export PKG_CONFIG_LIBDIR
+    fi
+         $PKGCONFIG --exists hyper >/dev/null 2>&1 && echo 1`
+
+      if test -z "$itexists"; then
+                        PKGCONFIG="no"
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+      else
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      fi
+    fi
+
+
+  if test "$PKGCONFIG" != "no" ; then
+    LIB_HYPER=`
+    if test -n "$want_hyper_path"; then
+      PKG_CONFIG_LIBDIR="$want_hyper_path"
+      export PKG_CONFIG_LIBDIR
+    fi
+
+      $PKGCONFIG --libs-only-l hyper`
+    CPP_HYPER=`
+    if test -n "$want_hyper_path"; then
+      PKG_CONFIG_LIBDIR="$want_hyper_path"
+      export PKG_CONFIG_LIBDIR
+    fi
+       $PKGCONFIG --cflags-only-I hyper`
+    LD_HYPER=`
+    if test -n "$want_hyper_path"; then
+      PKG_CONFIG_LIBDIR="$want_hyper_path"
+      export PKG_CONFIG_LIBDIR
+    fi
+
+      $PKGCONFIG --libs-only-L hyper`
+  else
+        LIB_HYPER="-lhyper"
+    if test X"$want_hyper" != Xdefault; then
+      CPP_HYPER=-I"$want_hyper_path/capi/include"
+      LD_HYPER="-L$want_hyper_path/target/debug"
+    fi
+  fi
+  if test -n "$LIB_HYPER"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: -l is $LIB_HYPER" >&5
+$as_echo "$as_me: -l is $LIB_HYPER" >&6;}
+    { $as_echo "$as_me:${as_lineno-$LINENO}: -I is $CPP_HYPER" >&5
+$as_echo "$as_me: -I is $CPP_HYPER" >&6;}
+    { $as_echo "$as_me:${as_lineno-$LINENO}: -L is $LD_HYPER" >&5
+$as_echo "$as_me: -L is $LD_HYPER" >&6;}
+
+    LDFLAGS="$LDFLAGS $LD_HYPER"
+    CPPFLAGS="$CPPFLAGS $CPP_HYPER"
+    LIBS="$LIB_HYPER $LIBS"
+
+    if test "x$cross_compiling" != "xyes"; then
+      DIR_HYPER=`echo $LD_HYPER | $SED -e 's/^-L//'`
+    fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for hyper_io_new in -lhyper" >&5
+$as_echo_n "checking for hyper_io_new in -lhyper... " >&6; }
+if ${ac_cv_lib_hyper_hyper_io_new+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lhyper  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+#ifdef __cplusplus
+extern "C"
+#endif
+char hyper_io_new ();
+int main (void)
+{
+return hyper_io_new ();
+ ;
+ return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_hyper_hyper_io_new=yes
+else
+  ac_cv_lib_hyper_hyper_io_new=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_hyper_hyper_io_new" >&5
+$as_echo "$ac_cv_lib_hyper_hyper_io_new" >&6; }
+if test "x$ac_cv_lib_hyper_hyper_io_new" = xyes; then :
+
+       for ac_header in hyper.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "hyper.h" "ac_cv_header_hyper_h" "$ac_includes_default"
+if test "x$ac_cv_header_hyper_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_HYPER_H 1
+_ACEOF
+ experimental="$experimental Hyper"
+          { $as_echo "$as_me:${as_lineno-$LINENO}: Hyper support is experimental" >&5
+$as_echo "$as_me: Hyper support is experimental" >&6;}
+          curl_h1_msg="enabled (Hyper)"
+          curl_h2_msg=$curl_h1_msg
+          HYPER_ENABLED=1
+
+$as_echo "#define USE_HYPER 1" >>confdefs.h
+
+          USE_HYPER=1
+
+          CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$DIR_HYPER"
+          export CURL_LIBRARY_PATH
+          { $as_echo "$as_me:${as_lineno-$LINENO}: Added $DIR_HYPER to CURL_LIBRARY_PATH" >&5
+$as_echo "$as_me: Added $DIR_HYPER to CURL_LIBRARY_PATH" >&6;}
+fi
+
+done
+
+
+else
+          LDFLAGS=$CLEANLDFLAGS
+        CPPFLAGS=$CLEANCPPFLAGS
+        LIBS=$CLEANLIBS
+
+fi
+
+  fi
+fi
+
 
 
 OPT_ZSH_FPATH=default
@@ -44823,7 +45125,7 @@ if test "x$USE_TLS_SRP" = "x1"; then
   SUPPORT_FEATURES="$SUPPORT_FEATURES TLS-SRP"
 fi
 
-if test "x$USE_NGHTTP2" = "x1"; then
+if test "x$USE_NGHTTP2" = "x1" -o "x$USE_HYPER" = "x1"; then
   SUPPORT_FEATURES="$SUPPORT_FEATURES HTTP2"
 fi
 
@@ -44884,6 +45186,9 @@ if test "x$CURL_DISABLE_TFTP" != "x1"; then
 fi
 if test "x$CURL_DISABLE_GOPHER" != "x1"; then
   SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS GOPHER"
+  if test "x$SSL_ENABLED" = "x1"; then
+    SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS GOPHERS"
+  fi
 fi
 if test "x$CURL_DISABLE_MQTT" != "x1"; then
   SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS MQTT"
@@ -47826,6 +48131,7 @@ done
   Metalink:         ${curl_mtlnk_msg}
   PSL:              ${curl_psl_msg}
   Alt-svc:          ${curl_altsvc_msg}
+  HTTP1:            ${curl_h1_msg}
   HTTP2:            ${curl_h2_msg}
   HTTP3:            ${curl_h3_msg}
   ECH:              ${curl_ech_msg}
@@ -47870,6 +48176,7 @@ $as_echo "$as_me: Configured to build curl/libcurl:
   Metalink:         ${curl_mtlnk_msg}
   PSL:              ${curl_psl_msg}
   Alt-svc:          ${curl_altsvc_msg}
+  HTTP1:            ${curl_h1_msg}
   HTTP2:            ${curl_h2_msg}
   HTTP3:            ${curl_h3_msg}
   ECH:              ${curl_ech_msg}

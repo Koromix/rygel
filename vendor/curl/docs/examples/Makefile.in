@@ -1132,6 +1132,7 @@ USE_ARES = @USE_ARES@
 USE_BEARSSL = @USE_BEARSSL@
 USE_GNUTLS = @USE_GNUTLS@
 USE_GNUTLS_NETTLE = @USE_GNUTLS_NETTLE@
+USE_HYPER = @USE_HYPER@
 USE_LIBRTMP = @USE_LIBRTMP@
 USE_LIBSSH = @USE_LIBSSH@
 USE_LIBSSH2 = @USE_LIBSSH2@
@@ -1212,7 +1213,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = foreign nostdinc
 EXTRA_DIST = README.md Makefile.example Makefile.inc Makefile.m32 \
-  Makefile.netware makefile.dj $(COMPLICATED_EXAMPLES)
+  Makefile.netware makefile.dj $(COMPLICATED_EXAMPLES) .checksrc
 
 
 # Specify our include paths here, and do it relative to $(top_srcdir) and

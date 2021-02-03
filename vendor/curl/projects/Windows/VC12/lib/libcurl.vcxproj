@@ -2384,6 +2384,7 @@
     <ClCompile Include="..\..\..\..\lib\asyn-ares.c" />
     <ClCompile Include="..\..\..\..\lib\asyn-thread.c" />
     <ClCompile Include="..\..\..\..\lib\base64.c" />
+    <ClCompile Include="..\..\..\..\lib\c-hyper.c" />
     <ClCompile Include="..\..\..\..\lib\conncache.c" />
     <ClCompile Include="..\..\..\..\lib\connect.c" />
     <ClCompile Include="..\..\..\..\lib\content_encoding.c" />
@@ -2432,6 +2433,7 @@
     <ClCompile Include="..\..\..\..\lib\hostsyn.c" />
     <ClCompile Include="..\..\..\..\lib\hsts.c" />
     <ClCompile Include="..\..\..\..\lib\http2.c" />
+    <ClCompile Include="..\..\..\..\lib\http_aws_sigv4.c" />
     <ClCompile Include="..\..\..\..\lib\http.c" />
     <ClCompile Include="..\..\..\..\lib\http_chunks.c" />
     <ClCompile Include="..\..\..\..\lib\http_digest.c" />
@@ -2534,6 +2536,7 @@
     <ClInclude Include="..\..\..\..\lib\amigaos.h" />
     <ClInclude Include="..\..\..\..\lib\arpa_telnet.h" />
     <ClInclude Include="..\..\..\..\lib\asyn.h" />
+    <ClInclude Include="..\..\..\..\lib\c-hyper.h" />
     <ClInclude Include="..\..\..\..\lib\config-win32.h" />
     <ClInclude Include="..\..\..\..\lib\conncache.h" />
     <ClInclude Include="..\..\..\..\lib\connect.h" />
@@ -2588,6 +2591,7 @@
     <ClInclude Include="..\..\..\..\lib\hostip.h" />
     <ClInclude Include="..\..\..\..\lib\hsts.h" />
     <ClInclude Include="..\..\..\..\lib\http2.h" />
+    <ClInclude Include="..\..\..\..\lib\http_aws_sigv4.h" />
     <ClInclude Include="..\..\..\..\lib\http_chunks.h" />
     <ClInclude Include="..\..\..\..\lib\http_digest.h" />
     <ClInclude Include="..\..\..\..\lib\http.h" />

@@ -314,6 +314,7 @@ USE_ARES = @USE_ARES@
 USE_BEARSSL = @USE_BEARSSL@
 USE_GNUTLS = @USE_GNUTLS@
 USE_GNUTLS_NETTLE = @USE_GNUTLS_NETTLE@
+USE_HYPER = @USE_HYPER@
 USE_LIBRTMP = @USE_LIBRTMP@
 USE_LIBSSH = @USE_LIBSSH@
 USE_LIBSSH2 = @USE_LIBSSH2@
@@ -413,6 +414,7 @@ DPAGES = \
   cookie-jar.d					\
   cookie.d					\
   create-dirs.d					\
+  create-file-mode.d                            \
   crlf.d crlfile.d				\
   curves.d					\
   data-ascii.d					\
@@ -608,6 +610,7 @@ DPAGES = \
   url.d use-ascii.d				\
   user-agent.d					\
   user.d verbose.d				\
+  aws-sigv4.d                                   \
   version.d					\
   write-out.d					\
   xattr.d
