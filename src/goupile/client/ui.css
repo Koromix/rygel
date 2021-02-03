@@ -36,11 +36,12 @@ a {
 button {
     padding: 0.3em 10px;
     background: white;
-    border: 1px solid #ced3d8;
+    border: 1px solid #dfdfdf;
     color: black;
     font-family: inherit;
     font-size: 1em;
     cursor: pointer;
+    border-radius: var(--widget_rounding);
 }
 button:not(:disabled) { cursor: pointer; }
 button:disabled {
@@ -78,6 +79,7 @@ button:not(.active):not(:disabled):hover {
     border: 0;
     color: inherit;
     text-decoration: none;
+    border-radius: 0;
 }
 .ui_toolbar button:not(.active):hover { background-color: inherit; }
 .ui_toolbar > button:not(.active):hover { filter: brightness(124%); }
@@ -212,6 +214,7 @@ html.small .ui_toolbar button.icon {
     width: 100%;
     border-collapse: collapse;
     border: 1px solid #dfdfdf;
+    border-radius: var(--widget_rounding);
 }
 .ui_table thead th { background: #f8f8f8; }
 .ui_table tbody tr:nth-child(2n + 1) { background: #f8f8f8; }
@@ -219,6 +222,7 @@ html.small .ui_toolbar button.icon {
 .ui_table th, .ui_table td {
     padding: 3px 6px;
     border: 1px solid #dfdfdf;
+    border-radius: var(--widget_rounding);
     text-align: center;
     overflow: hidden;
     text-overflow: ellipsis;

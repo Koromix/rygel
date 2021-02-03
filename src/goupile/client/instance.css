@@ -7,6 +7,9 @@
 html.instance {
     --menu_color: #24579d;
     --page_color: #ef6000;
+
+    --block_rounding: 0px;
+    --widget_rounding: 0px;
 }
 
 #ins_page {
@@ -20,6 +23,7 @@ html.instance {
 }
 #ins_form {
     background: #f8f8f8;
+    border-radius: var(--block_rounding);
     padding: 1em;
 }
 

@@ -15,6 +15,7 @@
     padding: 14px;
     background: rgba(136, 136, 136, 0.06);
     border: 0;
+    border-radius: var(--block_rounding);
 }
 .fm_legend {
     box-sizing: border-box;
@@ -22,6 +23,7 @@
     margin: -14px 0 10px -14px;
     padding: 0.2em 0.5em;
     background: var(--page_color);
+    border-radius: var(--block_rounding) var(--block_rounding) 0 0;
     font-size: 1.1em;
     color: white;
     cursor: pointer;
@@ -157,10 +159,11 @@ html:not(.small) .fm_widget.compact .fm_error {
 
 .fm_input {
     max-width: 100%;
-    padding: 3px 4px;
+    padding: 3px calc(4px + var(--widget_rounding) / 4);
     background: white;
     border: 1px solid #ccc;
     border-width: 0.5px;
+    border-radius: var(--widget_rounding);
 }
 .fm_select {
     /* This width: 100% is combined with an outer div set to max-width: 100% so that
@@ -169,6 +172,7 @@ html:not(.small) .fm_widget.compact .fm_error {
     padding: 3px 22px 3px 4px;
     border: 1px solid #ccc;
     border-width: 0.5px;
+    border-radius: var(--widget_rounding);
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
@@ -192,8 +196,11 @@ html:not(.small) .fm_widget.compact .fm_error {
     background: white;
     border: 1px solid #ccc;
     border-width: 0.5px;
+    border-radius: 0;
     color: black;
 }
+.fm_enum > button:first-child { border-radius: var(--widget_rounding) 0 0 var(--widget_rounding); }
+.fm_enum > button:last-child { border-radius: 0 var(--widget_rounding) var(--widget_rounding) 0; }
 .fm_enum > button::before, .fm_enum > button::after {
     display: inline-block;
     width: 8px;
