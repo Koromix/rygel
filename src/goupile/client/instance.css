@@ -6,7 +6,7 @@
 
 html.instance {
     --menu_color: #24579d;
-    --page_color: #ef6000;
+    --page_color: #ea6624;
 
     --block_rounding: 0px;
     --widget_rounding: 0px;
@@ -56,7 +56,7 @@ html.instance {
     padding-right: 8px;
     font-size: 0.9em;
     font-weight: bold;
-    color: #ef6000;
+    color: var(--page_color);
     content: '✓\FE0E';
 }
 
