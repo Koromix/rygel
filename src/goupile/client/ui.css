@@ -90,7 +90,7 @@ button:not(.active):not(:disabled):hover {
     padding-left: 36px;
     background-image: url('icons.png');
     background-repeat: no-repeat;
-    background-size: 22px 550px;
+    background-size: 22px 594px;
     background-position-x: 6px;
 }
 
@@ -110,6 +110,13 @@ html.small .ui_toolbar button.icon {
     height: 100%;
     margin: 0;
     background-color: inherit;
+}
+.ui_toolbar > .drop > button:not(.icon) {
+    padding-right: 20px;
+    background-image: url('icons.png');
+    background-repeat: no-repeat;
+    background-size: 22px 594px;
+    background-position: right calc(-582px + 1.2em);
 }
 .ui_toolbar > .drop.disabled {
     background-color: #bbb;
