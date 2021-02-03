@@ -2445,6 +2445,18 @@ FILE *OpenFile(const char *filename, unsigned int flags)
 
 bool FileIsVt100(FILE *fp)
 {
+    static bool nocolor_init = false;
+    static bool nocolor = false;
+
+    if (!nocolor_init) {
+        const char *term = getenv("TERM");
+
+        nocolor |= term && TestStr(term, "dumb");
+        nocolor |= !!getenv("NO_COLOR");
+    }
+    if (nocolor)
+        return false;
+
     static RG_THREAD_LOCAL FILE *cache_fp;
     static RG_THREAD_LOCAL bool cache_vt100;
 
