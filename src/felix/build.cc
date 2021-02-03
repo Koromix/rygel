@@ -705,6 +705,9 @@ static Size ExtractShowIncludes(Span<char> buf, Allocator *alloc, HeapArray<cons
 
 bool Builder::RunNode(Async *async, Node *node, bool verbose)
 {
+    if (interrupted)
+        return false;
+
     const Command &cmd = node->cmd;
 
     WorkerState *worker = &workers[Async::GetWorkerIdx()];
