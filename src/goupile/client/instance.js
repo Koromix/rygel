@@ -113,7 +113,7 @@ function InstanceController() {
                 return renderFormMenuDrop(form);
             })}
             ${renderFormMenuDrop(route.form)}
-            ${route.form.pages.size + route.form.children.size > 1 ?
+            ${route.form.menu.length > 1 ?
                 html`<button class="active" @click=${ui.wrapAction(e => self.go(e, route.page.url))}>${route.page.title}</button>` : ''}
             <div style="flex: 1; min-width: 15px;"></div>
 
@@ -127,19 +127,24 @@ function InstanceController() {
     }
 
     function renderFormMenuDrop(form) {
-        if (form.pages.size + form.children.size > 1) {
+        if (form.menu.length > 1) {
             return html`
                 <div class="drop">
                     <button>${form.title}</button>
                     <div>
-                        ${util.map(form.pages.values(), page =>
-                            html`<button ?disabled=${!isPageEnabled(page, form_chain[0])}
-                                         class=${page === route.page ? 'active' : ''}
-                                         @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`)}
-                        ${util.map(form.children.values(), child_form =>
-                            html`<button ?disabled=${!isFormEnabled(child_form, form_chain[0])}
-                                         class=${child_form === route.form || route.form.parents.some(parent => child_form === parent) ? 'active' : ''}
-                                         @click=${ui.wrapAction(e => self.go(e, child_form.url))}>${child_form.title}</button>`)}
+                        ${util.map(form.menu, item => {
+                            if (item.type === 'page') {
+                                let page = item.page;
+                                return html`<button ?disabled=${!isPageEnabled(page, form_chain[0])}
+                                                    class=${page === route.page ? 'active' : ''}
+                                                    @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`;
+                            } else if (item.type === 'form') {
+                                let form = item.form;
+                                return html`<button ?disabled=${!isFormEnabled(form, form_chain[0])}
+                                                    class=${form === route.form || route.form.parents.some(parent => form === parent) ? 'active' : ''}
+                                                    @click=${ui.wrapAction(e => self.go(e, form.url))}>${form.title}</button>`;
+                            }
+                        })}
                     </div>
                 </div>
             `;

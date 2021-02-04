@@ -15,6 +15,7 @@ function FormInfo(key, title) {
     // this.children = [];
     this.pages = new Map;
     this.children = new Map;
+    this.menu = [];
     this.url = null;
 }
 
@@ -68,8 +69,16 @@ function ApplicationBuilder(app) {
             if (!form_ref.pages.size && !form_ref.children.size)
                 throw new Error(`Form '${key}' must contain at least one page or child form`);
 
-            if (prev_form != null)
+            if (prev_form != null) {
+                let item = {
+                    title: title,
+                    type: 'form',
+                    form: form_ref
+                };
+                prev_form.menu.push(item);
+
                 prev_form.children.set(key, form_ref);
+            }
             app.forms.set(key, form_ref);
         } finally {
             options_stack = prev_options;
@@ -98,6 +107,13 @@ function ApplicationBuilder(app) {
 
         if (page.form.url == null)
             page.form.url = page.url;
+
+        let item = {
+            title: title,
+            type: 'page',
+            page: page
+        };
+        page.form.menu.push(item);
 
         page.form.pages.set(key, page);
         app.pages.set(key, page);
