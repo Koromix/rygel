@@ -34,6 +34,7 @@ function InstanceController() {
     let data_form;
     let data_rows;
 
+    let head_length = Number.MAX_SAFE_INTEGER;
     let develop = false;
     let error_entries = {};
 
@@ -79,6 +80,19 @@ function InstanceController() {
                 new_app.home = new_app.pages.values().next().value;
                 app = util.deepFreeze(new_app);
             }
+        }
+
+        if (app.head != null) {
+            let template = document.createElement('template');
+            render(app.head, template);
+
+            // Clear previous changes
+            for (let i = document.head.children.length - 1; i >= head_length; i--)
+                document.head.removeChild(document.head.children[i]);
+            head_length = document.head.children.length;
+
+            for (let child of template.children)
+                document.head.appendChild(child);
         }
     }
 

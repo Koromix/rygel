@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 function ApplicationInfo() {
+    this.head = null;
     this.forms = new Map;
     this.pages = new Map;
     this.home = null;
@@ -43,6 +44,10 @@ function ApplicationBuilder(app) {
             throw new Error('Too many popOptions() operations');
 
         options_stack.pop();
+    };
+
+    this.head = function(head) {
+        app.head = head;
     };
 
     this.form = function(key, title, func = null, options = {}) {
