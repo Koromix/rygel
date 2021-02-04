@@ -438,7 +438,7 @@ function InstanceController() {
             let url = route.form.parents[route.form.parents.length - 1].url + '/new';
             return self.go(e, url);
         } else {
-            let url = route.page.url + '/new';
+            let url = route.form.url + '/new';
             return self.go(e, url);
         }
     }
