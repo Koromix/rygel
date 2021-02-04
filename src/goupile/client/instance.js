@@ -1365,6 +1365,7 @@ function InstanceController() {
         form_chain = new_chain;
         form_state = new_state;
 
+        document.title = `${route.page.title} — ${ENV.title}`;
         await self.run(push_history);
     };
     this.go = util.serializeAsync(this.go);
