@@ -10,7 +10,7 @@ const goupile = new function() {
     let self = this;
 
     let session_rnd;
-    let passport;
+    let local_key;
 
     let controller;
     let current_url;
@@ -200,7 +200,7 @@ const goupile = new function() {
                 if (response.ok) {
                     profile = await response.json();
                     session_rnd = util.getCookie('session_rnd');
-                    passport = (profile.passport != null) ? base64ToBytes(profile.passport) : null;
+                    local_key = (profile.local_key != null) ? base64ToBytes(profile.local_key) : null;
 
                     // Save for offline login
                     if (ENV.cache_offline) {
@@ -236,8 +236,12 @@ const goupile = new function() {
 
                 try {
                     profile = await decryptSecretBox(enc.profile, key);
+                    if (profile.passport != null) {
+                        profile.local_key = profile.passport;
+                        delete profile.passport;
+                    }
                     session_rnd = util.getCookie('session_rnd');
-                    passport = (profile.passport != null) ? base64ToBytes(profile.passport) : null;
+                    local_key = (profile.local_key != null) ? base64ToBytes(profile.local_key) : null;
 
                     progress.success('Connexion réussie (hors ligne)');
                 } catch (err) {
@@ -288,7 +292,7 @@ const goupile = new function() {
             if (response.ok) {
                 profile = {};
                 session_rnd = undefined;
-                passport = undefined;
+                local_key = undefined;
 
                 util.setCookie('session_rnd', 'LOGIN', ENV.base_url);
 
@@ -322,7 +326,7 @@ const goupile = new function() {
 
                 profile = await response.json();
                 session_rnd = util.getCookie('session_rnd');
-                passport = (profile.passport != null) ? base64ToBytes(profile.passport) : null;
+                local_key = (profile.local_key != null) ? base64ToBytes(profile.local_key) : null;
             } catch (err) {
                 if (!ENV.cache_offline)
                     throw err;
@@ -346,28 +350,28 @@ const goupile = new function() {
         current_url = url;
     };
 
-    this.encryptWithPassport = function(obj) {
-        if (passport == null)
-            throw new Error('Cannot encrypt without passport');
+    this.encryptLocal = function(obj) {
+        if (local_key == null)
+            throw new Error('Cannot encrypt without local key');
 
-        return encryptSecretBox(obj, passport);
+        return encryptSecretBox(obj, local_key);
     };
 
-    this.decryptWithPassport = function(enc) {
-        if (passport == null)
-            throw new Error('Cannot decrypt without passport');
+    this.decryptLocal = function(enc) {
+        if (local_key == null)
+            throw new Error('Cannot decrypt without local key');
 
-        return decryptSecretBox(enc, passport);
+        return decryptSecretBox(enc, local_key);
     };
 
     this.encryptBackup = function(obj) {
         if (ENV.backup_key == null)
             throw new Error('This instance is not configured for offline backups');
-        if (passport == null)
-            throw new Error('Cannot encrypt without passport');
+        if (local_key == null)
+            throw new Error('Cannot encrypt backup without local key');
 
         let backup_key = base64ToBytes(ENV.backup_key);
-        return encryptBox(obj, backup_key, passport);
+        return encryptBox(obj, backup_key, local_key);
     }
 
     async function encryptSecretBox(obj, key) {

@@ -8,7 +8,7 @@
 
 namespace RG {
 
-const int DomainVersion = 6;
+const int DomainVersion = 7;
 const int MaxInstancesPerDomain = 4096;
 
 bool DomainConfig::Validate() const
@@ -497,9 +497,17 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 6: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE dom_users RENAME COLUMN passport TO local_key;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 6);
+            RG_STATIC_ASSERT(DomainVersion == 7);
         }
 
         int64_t time = GetUnixTime();

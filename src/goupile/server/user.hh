@@ -47,7 +47,7 @@ public:
     const char *username;
     int64_t admin_until;
     bool demo;
-    char passport[64];
+    char local_key[64];
 
     bool IsAdmin() const { return admin_until && admin_until > GetMonotonicTime(); }
     const Token *GetToken(const InstanceHolder *instance) const;

@@ -448,16 +448,16 @@ Options:
         if (!HashPassword(password, hash))
             return 1;
 
-        // Create passport key
-        char passport[64];
+        // Create local key
+        char local_key[64];
         {
             uint8_t buf[32];
             randombytes_buf(&buf, RG_SIZE(buf));
-            sodium_bin2base64(passport, RG_SIZE(passport), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+            sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
         }
 
-        if (!domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash, admin, passport)
-                              VALUES (1, ?1, ?2, 1, ?3))", username, hash, passport))
+        if (!domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash, admin, local_key)
+                              VALUES (1, ?1, ?2, 1, ?3))", username, hash, local_key))
             return 1;
     }
 
@@ -877,12 +877,12 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
         if (!HashPassword(password, hash))
             return;
 
-        // Create passport key
-        char passport[64];
+        // Create local key
+        char local_key[64];
         {
             uint8_t buf[32];
             randombytes_buf(&buf, RG_SIZE(buf));
-            sodium_bin2base64(passport, RG_SIZE(passport), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+            sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
         }
 
         gp_domain.db.Transaction([&]() {
@@ -911,9 +911,9 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
                 return false;
 
             // Create user
-            if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, admin, passport)
+            if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, admin, local_key)
                                      VALUES (?1, ?2, ?3, ?4))",
-                                  username, hash, 0 + admin, passport))
+                                  username, hash, 0 + admin, local_key))
                 return false;
 
             io->AttachText(200, "Done!");
@@ -966,7 +966,7 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
 
         gp_domain.db.Transaction([&]() {
             sq_Statement stmt;
-            if (!gp_domain.db.Prepare("SELECT username, passport FROM dom_users WHERE userid = ?1", &stmt))
+            if (!gp_domain.db.Prepare("SELECT username, local_key FROM dom_users WHERE userid = ?1", &stmt))
                 return false;
             sqlite3_bind_int64(stmt, 1, userid);
 
@@ -979,14 +979,14 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
             }
 
             const char *username = (const char *)sqlite3_column_text(stmt, 0);
-            const char *passport = (const char *)sqlite3_column_text(stmt, 1);
+            const char *local_key = (const char *)sqlite3_column_text(stmt, 1);
             int64_t time = GetUnixTime();
 
             // Log action
             if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
                                      VALUES (?1, ?2, ?3, ?4, ?5 || ':' || ?6))",
                                   time, request.client_addr, "delete_user", session->username,
-                                  username, passport))
+                                  username, local_key))
                 return false;
 
             if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE userid = ?1", userid))

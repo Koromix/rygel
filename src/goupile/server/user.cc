@@ -82,14 +82,14 @@ static void WriteProfileJson(const Session *session, const Token *token, json_Wr
             out_json->EndObject();
         }
 
-        out_json->Key("passport"); out_json->String(session->passport);
+        out_json->Key("local_key"); out_json->String(session->local_key);
     }
 
     out_json->EndObject();
 }
 
 static RetainPtr<Session> CreateUserSession(const http_RequestInfo &request, http_IO *io,
-                                            int64_t userid, const char *username, const char *passport)
+                                            int64_t userid, const char *username, const char *local_key)
 {
     Size username_len = strlen(username);
     Size len = RG_SIZE(Session) + username_len + 1;
@@ -104,9 +104,9 @@ static RetainPtr<Session> CreateUserSession(const http_RequestInfo &request, htt
     session->userid = userid;
     session->username = (char *)session + RG_SIZE(Session);
     CopyString(username, MakeSpan((char *)session->username, username_len + 1));
-    if (!CopyString(passport, session->passport)) {
+    if (!CopyString(local_key, session->local_key)) {
         // Should never happen, but let's be careful
-        LogError("User passport is too big");
+        LogError("User local key is too big");
         return {};
     }
 
@@ -119,11 +119,11 @@ static RetainPtr<Session> CreateDemoSession(const http_RequestInfo &request, htt
 {
     static std::once_flag once;
     static int64_t demo_userid = -1;
-    static char demo_passport[RG_SIZE(Session::passport)];
+    static char demo_local_key[RG_SIZE(Session::local_key)];
 
     std::call_once(once, []() {
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare("SELECT userid, passport FROM dom_users WHERE username = ?1", &stmt))
+        if (!gp_domain.db.Prepare("SELECT userid, local_key FROM dom_users WHERE username = ?1", &stmt))
             return;
         sqlite3_bind_text(stmt, 1, gp_domain.config.demo_user, -1, SQLITE_STATIC);
 
@@ -135,16 +135,16 @@ static RetainPtr<Session> CreateDemoSession(const http_RequestInfo &request, htt
         }
 
         int64_t userid = sqlite3_column_int64(stmt, 0);
-        const char *passport = (const char *)sqlite3_column_text(stmt, 1);
+        const char *local_key = (const char *)sqlite3_column_text(stmt, 1);
 
         // Should never happen, but let's be careful
-        if (RG_UNLIKELY(strlen(passport) >= RG_SIZE(demo_passport))) {
-            LogError("Demo user passport is too big");
+        if (RG_UNLIKELY(strlen(local_key) >= RG_SIZE(demo_local_key))) {
+            LogError("Demo user local key is too big");
             return;
         }
 
         demo_userid = userid;
-        CopyString(passport, demo_passport);
+        CopyString(local_key, demo_local_key);
     });
     if (RG_UNLIKELY(demo_userid < 0))
         return {};
@@ -153,7 +153,7 @@ static RetainPtr<Session> CreateDemoSession(const http_RequestInfo &request, htt
     io->ResetResponse();
 
     RetainPtr<Session>session = CreateUserSession(request, io, demo_userid,
-                                                  gp_domain.config.demo_user, demo_passport);
+                                                  gp_domain.config.demo_user, demo_local_key);
     session->demo = true;
 
     return session;
@@ -197,7 +197,7 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
 
         sq_Statement stmt;
         if (instance) {
-            if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.admin, u.passport FROM dom_users u
+            if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.admin, u.local_key FROM dom_users u
                                          INNER JOIN dom_permissions p ON (p.userid = u.userid)
                                          WHERE u.username = ?1 AND
                                                p.instance = ?2 AND p.permissions > 0)", &stmt))
@@ -205,7 +205,7 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
             sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
         } else {
-            if (!gp_domain.db.Prepare(R"(SELECT userid, password_hash, admin, passport FROM dom_users
+            if (!gp_domain.db.Prepare(R"(SELECT userid, password_hash, admin, local_key FROM dom_users
                                          WHERE username = ?1 AND admin = 1)", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
@@ -215,7 +215,7 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
             int64_t userid = sqlite3_column_int64(stmt, 0);
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
             bool admin = (sqlite3_column_int(stmt, 2) == 1);
-            const char *passport = (const char *)sqlite3_column_text(stmt, 3);
+            const char *local_key = (const char *)sqlite3_column_text(stmt, 3);
 
             if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
                 int64_t time = GetUnixTime();
@@ -225,7 +225,7 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
                                       time, request.client_addr, "login", username))
                     return;
 
-                RetainPtr<Session> session = CreateUserSession(request, io, userid, username, passport);
+                RetainPtr<Session> session = CreateUserSession(request, io, userid, username, local_key);
 
                 if (RG_LIKELY(session)) {
                     if (admin && !instance) {

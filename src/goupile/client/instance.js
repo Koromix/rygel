@@ -476,7 +476,7 @@ function InstanceController() {
 
                 let record;
                 if (obj != null) {
-                    record = await goupile.decryptWithPassport(obj.enc);
+                    record = await goupile.decryptLocal(obj.enc);
                     if (meta.hid != null)
                         record.hid = meta.hid;
                 } else {
@@ -507,7 +507,7 @@ function InstanceController() {
                     throw new Error('Cannot overwrite old record fragment');
                 record.fragments.push(fragment);
 
-                obj.enc = await goupile.encryptWithPassport(record);
+                obj.enc = await goupile.encryptLocal(record);
                 await t.saveWithKey('rec_records', key, obj);
 
                 if (record.parent != null) {
@@ -553,12 +553,12 @@ function InstanceController() {
                     if (obj == null)
                         throw new Error('Cet enregistrement est introuvable');
 
-                    let record = await goupile.decryptWithPassport(obj.enc);
+                    let record = await goupile.decryptLocal(obj.enc);
 
                     // Mark as deleted with special fragment
                     record.fragments.push(fragment);
 
-                    obj.enc = await goupile.encryptWithPassport(record);
+                    obj.enc = await goupile.encryptLocal(record);
                     await t.saveWithKey('rec_records', key, obj);
 
                     if (record.parent != null) {
@@ -592,7 +592,7 @@ function InstanceController() {
         while (parent != null) {
             let parent_key = `${profile.userid}:${parent.ulid}`;
             let parent_obj = await t.load('rec_records', parent_key);
-            let parent_record = await goupile.decryptWithPassport(parent_obj.enc);
+            let parent_record = await goupile.decryptLocal(parent_obj.enc);
 
             let parent_fragment = {
                 type: type,
@@ -602,7 +602,7 @@ function InstanceController() {
             };
             parent_record.fragments.push(parent_fragment);
 
-            parent_obj.enc = await goupile.encryptWithPassport(parent_record);
+            parent_obj.enc = await goupile.encryptLocal(parent_record);
             await t.saveWithKey('rec_records', parent_key, parent_obj);
 
             type = 'save_child';
@@ -1308,7 +1308,7 @@ function InstanceController() {
                                 };
                             }
 
-                            obj.enc = await goupile.encryptWithPassport(record);
+                            obj.enc = await goupile.encryptLocal(record);
                             await db.saveWithKey('rec_records', key, obj);
                         }
 
@@ -1441,7 +1441,7 @@ function InstanceController() {
         if (obj == null)
             throw new Error('L\'enregistrement demandé n\'existe pas');
 
-        let record = await goupile.decryptWithPassport(obj.enc);
+        let record = await goupile.decryptLocal(obj.enc);
         let fragments = record.fragments;
 
         // Deleted record
@@ -1589,7 +1589,7 @@ function InstanceController() {
                 data_rows = [];
                 for (let obj of objects) {
                     try {
-                        let record = await goupile.decryptWithPassport(obj.enc);
+                        let record = await goupile.decryptLocal(obj.enc);
                         let fragments = record.fragments;
 
                         if (fragments[fragments.length - 1].type == 'delete')
@@ -1685,7 +1685,7 @@ function InstanceController() {
             let records = [];
             for (let obj of objects) {
                 try {
-                    let record = await goupile.decryptWithPassport(obj.enc);
+                    let record = await goupile.decryptLocal(obj.enc);
                     records.push(record);
                 } catch (err) {
                     console.log(err);
