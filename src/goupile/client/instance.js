@@ -133,17 +133,37 @@ function InstanceController() {
                     <button>${form.title}</button>
                     <div>
                         ${util.map(form.pages.values(), page =>
-                            html`<button class=${page === route.page ? 'active' : ''}
+                            html`<button ?disabled=${!isPageEnabled(page, form_chain[0])}
+                                         class=${page === route.page ? 'active' : ''}
                                          @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`)}
                         ${util.map(form.children.values(), child_form =>
-                            html`<button class=${child_form === route.form || route.form.parents.some(parent => child_form === parent) ? 'active' : ''}
+                            html`<button ?disabled=${!isFormEnabled(child_form, form_chain[0])}
+                                         class=${child_form === route.form || route.form.parents.some(parent => child_form === parent) ? 'active' : ''}
                                          @click=${ui.wrapAction(e => self.go(e, child_form.url))}>${child_form.title}</button>`)}
                     </div>
                 </div>
             `;
         } else {
-            return html`<button class=${form === route.form || route.form.parents.some(parent => form === parent) ? 'active' : ''}
+            return html`<button ?disabled=${!isFormEnabled(form, form_chain[0])}
+                                class=${form === route.form || route.form.parents.some(parent => form === parent) ? 'active' : ''}
                                 @click=${ui.wrapAction(e => self.go(e, form.url))}>${form.title}</button>`;
+        }
+    }
+
+    function isFormEnabled(form, meta0) {
+        for (let page of form.pages.values()) {
+            if (isPageEnabled(page, meta0))
+                return true;
+        }
+
+        return false;
+    }
+
+    function isPageEnabled(page, meta0) {
+        if (typeof page.enabled === 'function') {
+            return page.enabled(meta0);
+        } else {
+            return page.enabled;
         }
     }
 
@@ -1330,6 +1350,9 @@ function InstanceController() {
 
             new_chain.reverse();
         }
+
+        if (!isPageEnabled(new_route.page, new_chain[0]))
+            throw new Error('Cette page n\'est pas accessible pour le moment');
 
         // Confirm dangerous actions (at risk of data loss)
         if (form_state != null && form_state.hasChanged() && new_meta !== form_meta) {

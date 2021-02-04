@@ -22,6 +22,7 @@ function PageInfo(key, title) {
     this.key = key;
     this.title = title;
     this.form = null;
+    this.enabled = true;
     this.url = null;
     this.filename = null;
 }
@@ -90,6 +91,8 @@ function ApplicationBuilder(app) {
         } else {
             page.form = new FormInfo(key, title);
         }
+        if (options.enabled != null)
+            page.enabled = options.enabled;
         page.url = `${ENV.base_url}main/${key}`;
         page.filename = (options.filename != null) ? options.filename : `pages/${key}.js`;
 
