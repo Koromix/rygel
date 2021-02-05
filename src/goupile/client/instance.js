@@ -169,23 +169,6 @@ function InstanceController() {
         }
     }
 
-    function isFormEnabled(form, meta0) {
-        for (let page of form.pages.values()) {
-            if (isPageEnabled(page, meta0))
-                return true;
-        }
-
-        return false;
-    }
-
-    function isPageEnabled(page, meta0) {
-        if (typeof page.enabled === 'function') {
-            return page.enabled(meta0);
-        } else {
-            return page.enabled;
-        }
-    }
-
     async function togglePanel(e, key) {
         let enable = !ui.isPanelEnabled(key);
         ui.setPanelState(key, enable);
@@ -1550,6 +1533,23 @@ function InstanceController() {
             return path;
         } else {
             return null;
+        }
+    }
+
+    function isFormEnabled(form, meta0) {
+        for (let page of form.pages.values()) {
+            if (isPageEnabled(page, meta0))
+                return true;
+        }
+
+        return false;
+    }
+
+    function isPageEnabled(page, meta0) {
+        if (typeof page.enabled === 'function') {
+            return page.enabled(meta0);
+        } else {
+            return page.enabled;
         }
     }
 
