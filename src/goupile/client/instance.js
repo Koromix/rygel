@@ -18,8 +18,7 @@ function InstanceController() {
     let page_code;
     let page_div = document.createElement('div');
 
-    let form_meta;
-    let form_chain;
+    let form_record;
     let form_state;
 
     let editor_el;
@@ -149,12 +148,12 @@ function InstanceController() {
                         ${util.map(form.menu, item => {
                             if (item.type === 'page') {
                                 let page = item.page;
-                                return html`<button ?disabled=${!isPageEnabled(page, form_chain[0])}
+                                return html`<button ?disabled=${!isPageEnabled(page, form_record)}
                                                     class=${page === route.page ? 'active' : ''}
                                                     @click=${ui.wrapAction(e => self.go(e, page.url))}>${page.title}</button>`;
                             } else if (item.type === 'form') {
                                 let form = item.form;
-                                return html`<button ?disabled=${!isFormEnabled(form, form_chain[0])}
+                                return html`<button ?disabled=${!isFormEnabled(form, form_record)}
                                                     class=${form === route.form || route.form.parents.some(parent => form === parent) ? 'active' : ''}
                                                     @click=${ui.wrapAction(e => self.go(e, form.url))}>${form.title}</button>`;
                             }
@@ -163,7 +162,7 @@ function InstanceController() {
                 </div>
             `;
         } else {
-            return html`<button ?disabled=${!isFormEnabled(form, form_chain[0])}
+            return html`<button ?disabled=${!isFormEnabled(form, form_record)}
                                 class=${form === route.form || route.form.parents.some(parent => form === parent) ? 'active' : ''}
                                 @click=${ui.wrapAction(e => self.go(e, form.url))}>${form.title}</button>`;
         }
@@ -246,7 +245,7 @@ function InstanceController() {
 
                     <tbody>
                         ${data_rows.map(row => {
-                            let active = form_chain.some(meta => meta.ulid === row.ulid);
+                            let active = (form_record.root.ulid === row.ulid);
 
                             return html`
                                 <tr class=${active ? 'active' : ''}>
@@ -300,7 +299,7 @@ function InstanceController() {
     }
 
     function renderPage() {
-        let readonly = (route.version < form_meta.fragments.length);
+        let readonly = (route.version < form_record.fragments.length);
 
         let model = new FormModel;
         let builder = new FormBuilder(form_state, model, readonly);
@@ -308,7 +307,7 @@ function InstanceController() {
         try {
             builder.pushOptions({});
 
-            let meta = util.assignDeep({}, form_meta);
+            let meta = Object.assign({}, form_record);
             runUserCode('Formulaire', page_code, {
                 form: builder,
                 values: form_state.values,
@@ -319,7 +318,7 @@ function InstanceController() {
                     go: (url) => self.go(null, url)
                 }
             });
-            form_meta.hid = meta.hid;
+            form_record.hid = meta.hid;
 
             builder.popOptions({});
 
@@ -350,16 +349,16 @@ function InstanceController() {
                 <div id="ins_page">
                     <div class="ui_quick">
                         ${model.variables.length ? html`
-                            ${!form_chain[0].version ? 'Nouvel enregistrement' : ''}
-                            ${form_chain[0].version > 0 && form_chain[0].hid != null ? `Enregistrement : ${form_chain[0].hid}` : ''}
-                            ${form_chain[0].version > 0 && form_chain[0].hid == null ? 'Enregistrement local' : ''}
+                            ${!form_record.root.version ? 'Nouvel enregistrement' : ''}
+                            ${form_record.root.version > 0 && form_record.root.hid != null ? `Enregistrement : ${form_record.root.hid}` : ''}
+                            ${form_record.root.version > 0 && form_record.root.hid == null ? 'Enregistrement local' : ''}
                         `  : ''}
                         (<a @click=${e => window.print()}>imprimer</a>)
                         <div style="flex: 1;"></div>
                         ${route.version > 0 ? html`
-                            ${route.version < form_meta.fragments.length ?
-                                html`<span style="color: red;">Ancienne version du ${form_meta.mtime.toLocaleString()}</span>` : ''}
-                            ${route.version === form_meta.fragments.length ? html`<span>Version actuelle</span>` : ''}
+                            ${route.version < form_record.fragments.length ?
+                                html`<span style="color: red;">Ancienne version du ${form_record.mtime.toLocaleString()}</span>` : ''}
+                            ${route.version === form_record.fragments.length ? html`<span>Version actuelle</span>` : ''}
                             &nbsp;(<a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>historique</a>)
                         ` : ''}
                     </div>
@@ -409,9 +408,9 @@ function InstanceController() {
             d.output(html`
                 <table class="ui_table">
                     <tbody>
-                        ${util.mapRange(0, form_meta.fragments.length, idx => {
-                            let version = form_meta.fragments.length - idx;
-                            let fragment = form_meta.fragments[version - 1];
+                        ${util.mapRange(0, form_record.fragments.length, idx => {
+                            let version = form_record.fragments.length - idx;
+                            let fragment = form_record.fragments[version - 1];
 
                             let page = app.pages.get(fragment.page) || route.page;
                             let url = page.url + `/${ulid}@${version}`;
@@ -431,7 +430,7 @@ function InstanceController() {
     }
 
     function goNewRecord(e) {
-        if (form_chain.length > 1) {
+        if (route.form.parents.length) {
             let url = route.form.parents[route.form.parents.length - 1].url + '/new';
             return self.go(e, url);
         } else {
@@ -450,7 +449,7 @@ function InstanceController() {
             enablePersistence();
 
             let page = route.page;
-            let meta = form_meta;
+            let record = form_record;
             let values = Object.assign({}, form_state.values);
 
             // Can't store undefined in IndexedDB...
@@ -459,7 +458,7 @@ function InstanceController() {
                     values[key] = null;
             }
 
-            let key = `${profile.userid}:${meta.ulid}`;
+            let key = `${profile.userid}:${record.ulid}`;
             let fragment = {
                 type: 'save',
                 user: profile.username,
@@ -471,49 +470,49 @@ function InstanceController() {
             await db.transaction('rw', ['rec_records'], async t => {
                 let obj = await t.load('rec_records', key);
 
-                let record;
+                let entry;
                 if (obj != null) {
-                    record = await goupile.decryptLocal(obj.enc);
-                    if (meta.hid != null)
-                        record.hid = meta.hid;
+                    entry = await goupile.decryptLocal(obj.enc);
+                    if (record.hid != null)
+                        entry.hid = record.hid;
                 } else {
                     obj = {
                         fkey: `${profile.userid}/${page.form.key}`,
                         pkey: null,
                         enc: null
                     };
-                    record = {
-                        ulid: meta.ulid,
-                        hid: meta.hid,
+                    entry = {
+                        ulid: record.ulid,
+                        hid: record.hid,
                         parent: null,
                         form: page.form.key,
                         fragments: []
                     };
 
-                    if (meta.parent != null) {
-                        obj.pkey = `${profile.userid}:${meta.parent.ulid}`;
-                        record.parent = {
-                            form: meta.parent.form.key,
-                            ulid: meta.parent.ulid,
-                            version: meta.parent.version
+                    if (record.parent != null) {
+                        obj.pkey = `${profile.userid}:${record.parent.ulid}`;
+                        entry.parent = {
+                            form: record.parent.form.key,
+                            ulid: record.parent.ulid,
+                            version: record.parent.version
                         };
                     }
                 }
 
-                if (meta.version !== record.fragments.length)
+                if (record.version !== entry.fragments.length)
                     throw new Error('Cannot overwrite old record fragment');
-                record.fragments.push(fragment);
+                entry.fragments.push(fragment);
 
-                obj.enc = await goupile.encryptLocal(record);
+                obj.enc = await goupile.encryptLocal(entry);
                 await t.saveWithKey('rec_records', key, obj);
 
-                if (record.parent != null) {
+                if (entry.parent != null) {
                     let child = {
-                        form: record.form,
-                        ulid: record.ulid,
-                        version: record.fragments.length
+                        form: entry.form,
+                        ulid: entry.ulid,
+                        version: entry.fragments.length
                     };
-                    await updateRecordParents(t, record.parent, child, 'save_child', fragment.mtime);
+                    await updateRecordParents(t, entry.parent, child, 'save_child', fragment.mtime);
                 }
             });
 
@@ -521,7 +520,7 @@ function InstanceController() {
 
             // XXX: Trigger reload in a better way...
             route.version = null;
-            form_meta = null;
+            form_record = null;
             form_state = null;
             data_rows = null;
 
@@ -550,28 +549,28 @@ function InstanceController() {
                     if (obj == null)
                         throw new Error('Cet enregistrement est introuvable');
 
-                    let record = await goupile.decryptLocal(obj.enc);
+                    let entry = await goupile.decryptLocal(obj.enc);
 
                     // Mark as deleted with special fragment
-                    record.fragments.push(fragment);
+                    entry.fragments.push(fragment);
 
-                    obj.enc = await goupile.encryptLocal(record);
+                    obj.enc = await goupile.encryptLocal(entry);
                     await t.saveWithKey('rec_records', key, obj);
 
-                    if (record.parent != null) {
+                    if (entry.parent != null) {
                         let child = {
-                            form: record.form,
-                            ulid: record.ulid,
-                            version: record.fragments.length
+                            form: entry.form,
+                            ulid: entry.ulid,
+                            version: entry.fragments.length
                         };
-                        await updateRecordParents(t, record.parent, child, 'delete_child', fragment.mtime);
+                        await updateRecordParents(t, entry.parent, child, 'delete_child', fragment.mtime);
                     }
                 });
 
                 progress.success('Suppression effectuée');
 
                 data_rows = null;
-                if (form_chain.some(meta => meta.ulid === ulid)) {
+                if (ulid === form_record.root.ulid) {
                     form_state = null;
                     goNewRecord(null);
                 } else {
@@ -1179,9 +1178,8 @@ function InstanceController() {
         }
 
         let new_route = Object.assign({}, route);
-        let new_meta = form_meta;
-        let prev_meta = form_meta;
-        let new_chain = form_chain;
+        let new_record = form_record;
+        let prev_record = form_record;
         let new_state = form_state;
 
         // Fix up URL
@@ -1243,52 +1241,52 @@ function InstanceController() {
         }
 
         // Load record if needed
-        if (new_meta != null && (new_route.ulid !== new_meta.ulid ||
-                                 new_route.version !== new_meta.version))
-            new_meta = null;
-        if (new_meta == null && new_route.ulid != null) {
-            new_meta = await loadRecord(new_route.ulid, new_route.version);
+        if (new_record != null && (new_route.ulid !== new_record.ulid ||
+                                   new_route.version !== new_record.version))
+            new_record = null;
+        if (new_record == null && new_route.ulid != null) {
+            new_record = await loadRecord(new_route.ulid, new_route.version);
 
-            new_state = new FormState(new_meta.values);
+            new_state = new FormState(new_record.values);
             new_state.changeHandler = handleStateChange;
         }
 
         // Go to parent or child automatically
-        if (new_meta != null && new_meta.form !== new_route.form) {
-            let path = computePath(new_meta.form, new_route.form);
+        if (new_record != null && new_record.form !== new_route.form) {
+            let path = computePath(new_record.form, new_route.form);
 
             if (path != null) {
                 for (let form of path.up) {
-                    new_meta = await loadRecord(new_meta.parent.ulid, null);
+                    new_record = await loadRecord(new_record.parent.ulid, null);
 
-                    if (new_meta.form !== form)
+                    if (new_record.form !== form)
                         throw new Error('Saut impossible en raison d\'un changement de schéma');
                 }
 
                 for (let i = 0; i < path.down.length; i++) {
                     let form = path.down[i];
-                    let child = new_meta.children.get(form.key);
+                    let child = new_record.children.get(form.key);
 
                     if (child != null) {
-                        new_meta = await loadRecord(child.ulid, child.version);
+                        new_record = await loadRecord(child.ulid, child.version);
 
-                        if (new_meta.form !== form)
+                        if (new_record.form !== form)
                             throw new Error('Saut impossible en raison d\'un changement de schéma');
                     } else {
                         // Save fake intermediate records if needed
-                        if (!new_meta.version) {
-                            let key = `${profile.userid}:${new_meta.ulid}`;
+                        if (!new_record.version) {
+                            let key = `${profile.userid}:${new_record.ulid}`;
 
                             let obj = {
-                                fkey: `${profile.userid}/${new_meta.form.key}`,
+                                fkey: `${profile.userid}/${new_record.form.key}`,
                                 pkey: null,
                                 enc: null
                             };
-                            let record = {
-                                ulid: new_meta.ulid,
-                                hid: new_meta.hid,
+                            let entry = {
+                                ulid: new_record.ulid,
+                                hid: new_record.hid,
                                 parent: null,
-                                form: new_meta.form.key,
+                                form: new_record.form.key,
                                 fragments: [{
                                     type: 'fake',
                                     user: profile.username,
@@ -1296,68 +1294,73 @@ function InstanceController() {
                                 }]
                             };
 
-                            if (new_meta.parent != null) {
-                                obj.pkey = `${profile.userid}:${new_meta.parent.ulid}`;
-                                record.parent = {
-                                    form: new_meta.parent.form.key,
-                                    ulid: new_meta.parent.ulid,
-                                    version: new_meta.parent.version
+                            if (new_record.parent != null) {
+                                obj.pkey = `${profile.userid}:${new_record.parent.ulid}`;
+                                entry.parent = {
+                                    form: new_record.parent.form.key,
+                                    ulid: new_record.parent.ulid,
+                                    version: new_record.parent.version
                                 };
                             }
 
-                            obj.enc = await goupile.encryptLocal(record);
+                            obj.enc = await goupile.encryptLocal(entry);
                             await db.saveWithKey('rec_records', key, obj);
                         }
 
-                        prev_meta = new_meta;
-                        new_meta = createRecord(form, prev_meta);
+                        prev_record = new_record;
+                        new_record = createRecord(form, prev_record);
                     }
                 }
 
-                if (new_meta != null) {
-                    new_route.ulid = new_meta.ulid;
-                    new_route.version = new_meta.version;
-                    new_state = new FormState(new_meta.values);
+                if (new_record != null) {
+                    new_route.ulid = new_record.ulid;
+                    new_route.version = new_record.version;
+                    new_state = new FormState(new_record.values);
                     new_state.changeHandler = handleStateChange;
                 }
             } else {
                 new_route.ulid = null;
-                new_meta = null;
+                new_record = null;
             }
         }
 
         // Create new record if needed
-        if (new_route.ulid == null || new_meta == null) {
-            new_meta = createRecord(new_route.form, null);
+        if (new_route.ulid == null || new_record == null) {
+            new_record = createRecord(new_route.form, null);
 
-            new_route.ulid = new_meta.ulid;
-            new_route.version = new_meta.version;
-            new_state = new FormState(new_meta.values);
+            new_route.ulid = new_record.ulid;
+            new_route.version = new_record.version;
+            new_state = new FormState(new_record.values);
             new_state.changeHandler = handleStateChange;
         }
 
         // Load record parents
-        if (new_chain == null || new_chain[new_chain.length - 1] !== new_meta) {
-            new_chain = [new_meta];
+        if (new_record.root == null) {
+            let map = {};
 
-            let meta = new_meta;
-            while (meta.parent != null) {
-                let parent_meta = await loadRecord(meta.parent.ulid);
+            new_record.map = map;
+            map[new_record.form.key] = new_record;
 
-                new_chain.push(parent_meta);
-                meta.parent = parent_meta;
+            let record = new_record;
+            while (record.parent != null) {
+                let parent_record = await loadRecord(record.parent.ulid);
 
-                meta = parent_meta;
+                parent_record.map = map;
+                map[parent_record.form.key] = parent_record;
+                record.parent = parent_record;
+
+                record = parent_record;
             }
 
-            new_chain.reverse();
+            for (let key in new_record.map)
+                new_record.map[key].root = record;
         }
 
-        if (!isPageEnabled(new_route.page, new_chain[0]))
+        if (!isPageEnabled(new_route.page, new_record))
             throw new Error('Cette page n\'est pas accessible pour le moment');
 
         // Confirm dangerous actions (at risk of data loss)
-        if (form_state != null && form_state.hasChanged() && new_meta !== form_meta) {
+        if (form_state != null && form_state.hasChanged() && new_record !== form_record) {
             try {
                 // XXX: Improve message if going to child form
                 await ui.runConfirm(e, "Si vous continuez, vous perdrez les modifications en cours. Voulez-vous continuer ?",
@@ -1370,7 +1373,7 @@ function InstanceController() {
         }
 
         // Help the user fill new forms
-        if (form_meta != null && new_meta.ulid !== form_meta.ulid) {
+        if (form_record != null && new_record.ulid !== form_record.ulid) {
             setTimeout(() => {
                 let el = document.querySelector('#ins_page');
                 if (el != null)
@@ -1378,16 +1381,15 @@ function InstanceController() {
             });
 
             ui.setPanelState('page', true, false);
-        } else if (form_meta == null && (new_meta.version > 0 ||
-                                         new_meta.parent != null)) {
+        } else if (form_record == null && (new_record.version > 0 ||
+                                           new_record.parent != null)) {
             ui.setPanelState('page', true, false);
         }
 
         // Commit!
         route = new_route;
-        route.version = new_meta.version;
-        form_meta = new_meta;
-        form_chain = new_chain;
+        route.version = new_record.version;
+        form_record = new_record;
         form_state = new_state;
 
         document.title = `${route.page.title} — ${ENV.title}`;
@@ -1403,32 +1405,35 @@ function InstanceController() {
             syncFormHighlight(false);
     }
 
-    function createRecord(form, parent_meta) {
-        let meta = {
+    function createRecord(form, parent_record) {
+        let record = {
             form: form,
             ulid: util.makeULID(),
             hid: null,
             version: 0,
-            parent: null,
-            children: new Map,
             mtime: null,
             fragments: [],
             status: new Set,
-            values: {}
+            values: {},
+
+            parent: null,
+            children: new Map,
+            root: null, // Will be set later
+            map: null // Will be set later
         };
 
         if (form.parents.length) {
-            if (parent_meta == null)
+            if (parent_record == null)
                 throw new Error('Impossible de créer cet enregistrement sans parent');
 
-            meta.parent = {
-                form: parent_meta.form.key,
-                ulid: parent_meta.ulid,
-                version: parent_meta.version
+            record.parent = {
+                form: parent_record.form.key,
+                ulid: parent_record.ulid,
+                version: parent_record.version
             };
         }
 
-        return meta;
+        return record;
     }
 
     async function loadRecord(ulid, version) {
@@ -1438,8 +1443,8 @@ function InstanceController() {
         if (obj == null)
             throw new Error('L\'enregistrement demandé n\'existe pas');
 
-        let record = await goupile.decryptLocal(obj.enc);
-        let fragments = record.fragments;
+        let entry = await goupile.decryptLocal(obj.enc);
+        let fragments = entry.fragments;
 
         // Deleted record
         if (fragments[fragments.length - 1].type === 'delete')
@@ -1479,22 +1484,25 @@ function InstanceController() {
             delete fragment.values;
         }
 
-        let meta = {
-            form: app.forms.get(record.form),
+        let record = {
+            form: app.forms.get(entry.form),
             ulid: ulid,
-            hid: record.hid,
+            hid: entry.hid,
             version: version,
-            parent: record.parent,
-            children: children,
             mtime: fragments[version - 1].mtime,
             fragments: fragments,
             status: status,
-            values: values
-        };
-        if (meta.form == null)
-            throw new Error(`Le formulaire '${record.form}' n'existe pas ou plus`);
+            values: values,
 
-        return meta;
+            parent: entry.parent,
+            children: children,
+            root: null, // Will be set later
+            map: null // Will be set later
+        };
+        if (record.form == null)
+            throw new Error(`Le formulaire '${entry.form}' n'existe pas ou plus`);
+
+        return record;
     }
 
     // Assumes from != to
@@ -1536,18 +1544,18 @@ function InstanceController() {
         }
     }
 
-    function isFormEnabled(form, meta0) {
+    function isFormEnabled(form, record) {
         for (let page of form.pages.values()) {
-            if (isPageEnabled(page, meta0))
+            if (isPageEnabled(page, record))
                 return true;
         }
 
         return false;
     }
 
-    function isPageEnabled(page, meta0) {
+    function isPageEnabled(page, record) {
         if (typeof page.enabled === 'function') {
-            return page.enabled(meta0);
+            return page.enabled(record);
         } else {
             return page.enabled;
         }
@@ -1567,10 +1575,10 @@ function InstanceController() {
             let url = route.page.url;
             if (route.version > 0) {
                 url += `/${route.ulid}`;
-                if (route.version < form_meta.fragments.length)
+                if (route.version < form_record.fragments.length)
                     url += `@${route.version}`;
-            } else if (form_meta.parent != null) {
-                url += `/${form_meta.parent.ulid}`;
+            } else if (form_record.parent != null) {
+                url += `/${form_record.parent.ulid}`;
             }
             goupile.syncHistory(url, push_history);
         }
@@ -1585,8 +1593,8 @@ function InstanceController() {
 
         // Load rows for data panel
         if (ui.isPanelEnabled('data')) {
-            if (data_form !== form_chain[0].form) {
-                data_form = form_chain[0].form;
+            if (data_form !== form_record.root.form) {
+                data_form = form_record.root.form;
                 data_rows = null;
             }
 
@@ -1596,15 +1604,15 @@ function InstanceController() {
                     let range = IDBKeyRange.only(`${profile.userid}/${data_form.key}`);
                     objects = await db.loadAll('rec_records/form', range);
                 } else {
-                    let range = IDBKeyRange.only(`${profile.userid}:${form_meta.parent.ulid}`);
+                    let range = IDBKeyRange.only(`${profile.userid}:${form_record.parent.ulid}`);
                     objects = await db.loadAll('rec_records/parent', range);
                 }
 
                 data_rows = [];
                 for (let obj of objects) {
                     try {
-                        let record = await goupile.decryptLocal(obj.enc);
-                        let fragments = record.fragments;
+                        let entry = await goupile.decryptLocal(obj.enc);
+                        let fragments = entry.fragments;
 
                         if (fragments[fragments.length - 1].type == 'delete')
                             continue;
@@ -1628,8 +1636,8 @@ function InstanceController() {
                         }
 
                         let row = {
-                            ulid: record.ulid,
-                            hid: record.hid,
+                            ulid: entry.ulid,
+                            hid: entry.hid,
                             children: children,
                             status: status
                         };
@@ -1696,17 +1704,17 @@ function InstanceController() {
             let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
             let objects = await db.loadAll('rec_records', range);
 
-            let records = [];
+            let entries = [];
             for (let obj of objects) {
                 try {
-                    let record = await goupile.decryptLocal(obj.enc);
-                    records.push(record);
+                    let entry = await goupile.decryptLocal(obj.enc);
+                    entries.push(entry);
                 } catch (err) {
                     console.log(err);
                 }
             }
 
-            let enc = await goupile.encryptBackup(records);
+            let enc = await goupile.encryptBackup(entries);
             let json = JSON.stringify(enc);
 
             if (dest === 'server') {
