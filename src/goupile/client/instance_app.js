@@ -38,6 +38,19 @@ function ApplicationBuilder(app) {
     this.pushOptions = function(options = {}) {
         options = expandOptions(options);
         options_stack.push(options);
+
+        if (typeof options.enabled === 'function') {
+            if (form_ref == null)
+                throw new Error('Enable callback cannot be used outside form definition');
+
+            let form_key = form_ref.key;
+            let enable_func = options.enabled;
+
+            options.enabled = meta => {
+                meta = meta.map[form_key];
+                return enable_func(meta);
+            };
+        }
     };
     this.popOptions = function() {
         if (options_stack.length < 2)
