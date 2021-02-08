@@ -1177,11 +1177,6 @@ function InstanceController() {
                 await backupClientData('server');
         }
 
-        let new_route = Object.assign({}, route);
-        let new_record = form_record;
-        let prev_record = form_record;
-        let new_state = form_state;
-
         // Fix up URL
         if (!url.endsWith('/'))
             url += '/';
@@ -1192,6 +1187,10 @@ function InstanceController() {
         // Goodbye!
         if (!url.pathname.startsWith(`${ENV.base_url}main/`))
             window.location.href = url.href;
+
+        let new_route = Object.assign({}, route);
+        let new_record = form_record;
+        let new_state = form_state;
 
         // Parse new URL
         {
@@ -1253,71 +1252,13 @@ function InstanceController() {
 
         // Go to parent or child automatically
         if (new_record != null && new_record.form !== new_route.form) {
-            let path = computePath(new_record.form, new_route.form);
+            new_record = await moveToAppropriateRecord(new_record, new_route.form);
 
-            if (path != null) {
-                for (let form of path.up) {
-                    new_record = await loadRecord(new_record.parent.ulid, null);
-
-                    if (new_record.form !== form)
-                        throw new Error('Saut impossible en raison d\'un changement de schéma');
-                }
-
-                for (let i = 0; i < path.down.length; i++) {
-                    let form = path.down[i];
-                    let child = new_record.children.get(form.key);
-
-                    if (child != null) {
-                        new_record = await loadRecord(child.ulid, child.version);
-
-                        if (new_record.form !== form)
-                            throw new Error('Saut impossible en raison d\'un changement de schéma');
-                    } else {
-                        // Save fake intermediate records if needed
-                        if (!new_record.version) {
-                            let key = `${profile.userid}:${new_record.ulid}`;
-
-                            let obj = {
-                                fkey: `${profile.userid}/${new_record.form.key}`,
-                                pfkey: null,
-                                enc: null
-                            };
-                            let entry = {
-                                ulid: new_record.ulid,
-                                hid: new_record.hid,
-                                parent: null,
-                                form: new_record.form.key,
-                                fragments: [{
-                                    type: 'fake',
-                                    user: profile.username,
-                                    mtime: new Date
-                                }]
-                            };
-
-                            if (new_record.parent != null) {
-                                obj.pfkey = `${profile.userid}:${new_record.parent.ulid}/${new_record.form.key}`;
-                                entry.parent = {
-                                    form: new_record.parent.form.key,
-                                    ulid: new_record.parent.ulid,
-                                    version: new_record.parent.version
-                                };
-                            }
-
-                            obj.enc = await goupile.encryptLocal(entry);
-                            await db.saveWithKey('rec_records', key, obj);
-                        }
-
-                        prev_record = new_record;
-                        new_record = createRecord(form, prev_record);
-                    }
-                }
-
-                if (new_record != null) {
-                    new_route.ulid = new_record.ulid;
-                    new_route.version = new_record.version;
-                    new_state = new FormState(new_record.values);
-                    new_state.changeHandler = handleStateChange;
-                }
+            if (new_record != null) {
+                new_route.ulid = new_record.ulid;
+                new_route.version = new_record.version;
+                new_state = new FormState(new_record.values);
+                new_state.changeHandler = handleStateChange;
             } else {
                 new_route.ulid = null;
                 new_record = null;
@@ -1503,6 +1444,71 @@ function InstanceController() {
             throw new Error(`Le formulaire '${entry.form}' n'existe pas ou plus`);
 
         return record;
+    }
+
+    async function moveToAppropriateRecord(record, target_form) {
+        let path = computePath(record.form, target_form);
+
+        if (path != null) {
+            for (let form of path.up) {
+                record = await loadRecord(record.parent.ulid, null);
+
+                if (record.form !== form)
+                    throw new Error('Saut impossible en raison d\'un changement de schéma');
+            }
+
+            for (let i = 0; i < path.down.length; i++) {
+                let form = path.down[i];
+                let child = record.children.get(form.key);
+
+                if (child != null) {
+                    record = await loadRecord(child.ulid, child.version);
+
+                    if (record.form !== form)
+                        throw new Error('Saut impossible en raison d\'un changement de schéma');
+                } else {
+                    // Save fake intermediate records if needed
+                    if (!record.version) {
+                        let key = `${profile.userid}:${record.ulid}`;
+
+                        let obj = {
+                            fkey: `${profile.userid}/${record.form.key}`,
+                            pfkey: null,
+                            enc: null
+                        };
+                        let entry = {
+                            ulid: record.ulid,
+                            hid: record.hid,
+                            parent: null,
+                            form: record.form.key,
+                            fragments: [{
+                                type: 'fake',
+                                user: profile.username,
+                                mtime: new Date
+                            }]
+                        };
+
+                        if (record.parent != null) {
+                            obj.pfkey = `${profile.userid}:${record.parent.ulid}/${record.form.key}`;
+                            entry.parent = {
+                                form: record.parent.form.key,
+                                ulid: record.parent.ulid,
+                                version: record.parent.version
+                            };
+                        }
+
+                        obj.enc = await goupile.encryptLocal(entry);
+                        await db.saveWithKey('rec_records', key, obj);
+                    }
+
+                    record = createRecord(form, record);
+                }
+            }
+
+            return record;
+        } else {
+            return null;
+        }
     }
 
     // Assumes from != to
