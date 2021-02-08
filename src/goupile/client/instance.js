@@ -477,20 +477,20 @@ function InstanceController() {
                         entry.hid = record.hid;
                 } else {
                     obj = {
-                        fkey: `${profile.userid}/${page.form.key}`,
-                        pkey: null,
+                        fkey: `${profile.userid}/${record.form.key}`,
+                        pfkey: null,
                         enc: null
                     };
                     entry = {
                         ulid: record.ulid,
                         hid: record.hid,
                         parent: null,
-                        form: page.form.key,
+                        form: record.form.key,
                         fragments: []
                     };
 
                     if (record.parent != null) {
-                        obj.pkey = `${profile.userid}:${record.parent.ulid}`;
+                        obj.pfkey = `${profile.userid}:${record.parent.ulid}/${record.form.key}`;
                         entry.parent = {
                             form: record.parent.form.key,
                             ulid: record.parent.ulid,
@@ -1279,7 +1279,7 @@ function InstanceController() {
 
                             let obj = {
                                 fkey: `${profile.userid}/${new_record.form.key}`,
-                                pkey: null,
+                                pfkey: null,
                                 enc: null
                             };
                             let entry = {
@@ -1295,7 +1295,7 @@ function InstanceController() {
                             };
 
                             if (new_record.parent != null) {
-                                obj.pkey = `${profile.userid}:${new_record.parent.ulid}`;
+                                obj.pfkey = `${profile.userid}:${new_record.parent.ulid}/${new_record.form.key}`;
                                 entry.parent = {
                                     form: new_record.parent.form.key,
                                     ulid: new_record.parent.ulid,
