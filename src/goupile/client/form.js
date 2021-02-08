@@ -301,10 +301,7 @@ function FormBuilder(state, model, readonly = false) {
         let thumb_value = (value != null) ? value : ((options.max + options.min) / 2);
         let fix_value = (value != null) ? util.clamp(value, options.min, options.max)
                                         : ((options.min + options.max) / 2);
-
-        // WebKit and Blink don't have anything like ::-moz-range-progress...
-        // We use a gradient background set from a CSS property. Yuck.
-        let webkit_progress = (value != null) ? ((fix_value - options.min) / range) : 0;
+        let progress = (value != null) ? ((fix_value - options.min) / range) : 0;
 
         let tick_func;
         if (options.ticks != null && options.ticks !== false) {
@@ -335,7 +332,7 @@ function FormBuilder(state, model, readonly = false) {
                 <div>
                     ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                     <div style="flex: 1;">
-                        <input id=${id} type="range" style=${`--webkit_progress: ${webkit_progress * 100}%`}
+                        <input id=${id} type="range" style=${`--progress: ${1 + progress * 98}%`}
                                min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
                                .value=${thumb_value} data-value=${thumb_value}
                                placeholder=${options.placeholder || ''}
