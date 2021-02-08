@@ -373,7 +373,6 @@ html:not(.small) .fm_widget.compact .fm_error {
 .fm_slider {
     display: inline-block;
     width: 24em;
-    height: 3.2em;
 }
 .fm_slider > span {
     display: block;
@@ -385,7 +384,7 @@ html:not(.small) .fm_widget.compact .fm_error {
 .fm_slider input {
     flex: 1;
     width: 100%;
-    margin: 0.43em 0 2px 2px;
+    margin: 0.43em 0 0 0;
     -webkit-appearance: none;
     background: none;
 }
@@ -437,6 +436,11 @@ html:not(.small) .fm_widget.compact .fm_error {
     border-radius: 50%;
     color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
+}
+.fm_slider .ticks { display: flex; }
+.fm_slider .ticks > span {
+    text-align: center;
+    height: 50px;
 }
 
 .fm_slider.missing > span { visibility: hidden; }

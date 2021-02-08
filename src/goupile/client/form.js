@@ -306,6 +306,25 @@ function FormBuilder(state, model, readonly = false) {
         // We use a gradient background set from a CSS property. Yuck.
         let webkit_progress = (value != null) ? ((fix_value - options.min) / range) : 0;
 
+        let tick_func;
+        if (options.ticks != null && options.ticks !== false) {
+            if (options.ticks === true) {
+                tick_func = value => true;
+            } else if (typeof options.ticks === 'function') {
+                tick_func = options.ticks;
+            } else if (typeof options.ticks === 'object' ||
+                       Array.isArray(options.ticks)) {
+                tick_func = value => {
+                    let tick = options.ticks[value];
+                    return (tick != null) ? tick : true;
+                }
+            } else {
+                throw new Error('Option \'ticks\' must be a boolean, a function, an object or an array');
+            }
+        } else {
+            tick_func = value => false;
+        }
+
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
@@ -315,14 +334,29 @@ function FormBuilder(state, model, readonly = false) {
                       @click=${e => handleSliderClick(e, key, value, options.min, options.max)}>${value != null ? value.toFixed(options.decimals) : '?'}</span>
                 <div>
                     ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
-                    <input id=${id} type="range" style=${`--webkit_progress: ${webkit_progress * 100}%`}
-                           min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
-                           .value=${thumb_value} data-value=${thumb_value}
-                           placeholder=${options.placeholder || ''}
-                           ?disabled=${options.disabled}
-                           @click=${e => { e.target.value = fix_value; handleSliderChange(e, key); }}
-                           @dblclick=${e => handleSliderClick(e, key, value, options.min, options.max)}
-                           @input=${e => handleSliderChange(e, key)}/>
+                    <div style="flex: 1;">
+                        <input id=${id} type="range" style=${`--webkit_progress: ${webkit_progress * 100}%`}
+                               min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
+                               .value=${thumb_value} data-value=${thumb_value}
+                               placeholder=${options.placeholder || ''}
+                               ?disabled=${options.disabled}
+                               @click=${e => { e.target.value = fix_value; handleSliderChange(e, key); }}
+                               @dblclick=${e => handleSliderClick(e, key, value, options.min, options.max)}
+                               @input=${e => handleSliderChange(e, key)}/>
+                        <div class="ticks" style=${'margin-left: calc(-' + (50 / (range + 1)) + '% + 0.8em); ' +
+                                                   'margin-right: calc(-' + (50 / (range + 1)) + '% + 0.8em); '}>
+                            ${util.mapRange(options.min, options.max + 1, value => {
+                                let tick = tick_func(value);
+
+                                return html`
+                                    <span style=${'width: calc(100% / ' + (range + 1) + ');'}>
+                                        ${tick !== false ? html`<span style="font-size: 0.4em;">|</span>` : ''}
+                                        ${tick && tick !== true ? html`<br/>${tick}` : ''}
+                                    </span>
+                                `;
+                            })}
+                        </div>
+                    </div>
                     ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
                 </div>
             </div>
