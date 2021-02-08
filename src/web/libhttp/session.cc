@@ -11,6 +11,7 @@ namespace RG {
 static const int64_t PruneDelay = 60 * 60000;
 static const int64_t MaxSessionDelay = 1440 * 60000;
 static const int64_t MaxKeyDelay = 15 * 60000;
+static const int64_t MaxLockDelay = 120 * 60000;
 static const int64_t RegenerateDelay = 5 * 60000;
 
 void http_SessionManager::Open2(const http_RequestInfo &request, http_IO *io, RetainPtr<RetainObject> udata)
@@ -24,6 +25,7 @@ void http_SessionManager::Open2(const http_RequestInfo &request, http_IO *io, Re
 
     session->login_time = now;
     session->register_time = now;
+    session->lock_time = now;
     session->udata = udata;
 }
 
@@ -96,7 +98,8 @@ RetainObject *http_SessionManager::Find2(const http_RequestInfo &request, http_I
     std::shared_lock<std::shared_mutex> lock_shr(mutex);
 
     bool mismatch = false;
-    Session *session = FindSession(request, &mismatch);
+    bool locked = false;
+    Session *session = FindSession(request, &mismatch, &locked);
 
     if (session) {
         RetainObject *udata = session->udata.GetRaw();
@@ -105,6 +108,7 @@ RetainObject *http_SessionManager::Find2(const http_RequestInfo &request, http_I
         // Regenerate session if needed
         if (now - session->register_time >= RegenerateDelay) {
             int64_t login_time = session->login_time;
+            int64_t lock_time = session->lock_time;
 
             lock_shr.unlock();
 
@@ -113,14 +117,19 @@ RetainObject *http_SessionManager::Find2(const http_RequestInfo &request, http_I
             if (session) {
                 session->login_time = login_time;
                 session->register_time = now;
+                session->lock_time = locked ? lock_time : now;
                 session->udata = udata;
             } else {
                 DeleteSessionCookies(request, io);
             }
         }
 
-        udata->Ref();
-        return udata;
+        if (!locked) {
+            udata->Ref();
+            return udata;
+        } else {
+            return nullptr;
+        }
     } else if (mismatch) {
         DeleteSessionCookies(request, io);
         return nullptr;
@@ -130,16 +139,17 @@ RetainObject *http_SessionManager::Find2(const http_RequestInfo &request, http_I
 }
 
 http_SessionManager::Session *
-    http_SessionManager::FindSession(const http_RequestInfo &request, bool *out_mismatch)
+    http_SessionManager::FindSession(const http_RequestInfo &request,
+                                     bool *out_mismatch, bool *out_locked)
 {
     int64_t now = GetMonotonicTime();
 
     const char *session_key = request.GetCookieValue("session_key");
     const char *session_rnd = request.GetCookieValue("session_rnd");
     const char *user_agent = request.GetHeaderValue("User-Agent");
-    if (!session_key || !session_rnd || !user_agent) {
+    if (!session_key || !user_agent) {
         if (out_mismatch) {
-            *out_mismatch = session_key || session_rnd;
+            *out_mismatch = session_key;
         }
         return nullptr;
     }
@@ -150,12 +160,13 @@ http_SessionManager::Session *
     // used IPv6, or vice versa.
     Session *session = sessions.Find(session_key);
     if (!session ||
-            !TestStr(session->session_rnd, session_rnd) ||
+            (session_rnd && !TestStr(session->session_rnd, session_rnd)) ||
 #ifdef NDEBUG
             strncmp(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1) != 0 ||
 #endif
             now - session->login_time >= MaxSessionDelay ||
-            now - session->register_time >= MaxKeyDelay) {
+            now - session->register_time >= MaxKeyDelay ||
+            now - session->lock_time >= MaxLockDelay) {
         if (out_mismatch) {
             *out_mismatch = true;
         }
@@ -164,6 +175,9 @@ http_SessionManager::Session *
 
     if (out_mismatch) {
         *out_mismatch = false;
+    }
+    if (out_locked) {
+        *out_locked = !session_rnd;
     }
     return session;
 }

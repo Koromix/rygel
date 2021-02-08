@@ -19,6 +19,7 @@ class http_SessionManager {
 
         int64_t login_time;
         int64_t register_time;
+        int64_t lock_time;
 
         RetainPtr<RetainObject> udata;
 
@@ -55,7 +56,8 @@ private:
     Session *CreateSession(const http_RequestInfo &request, http_IO *io);
 
     RetainObject *Find2(const http_RequestInfo &request, http_IO *io);
-    Session *FindSession(const http_RequestInfo &request, bool *out_mismatch = nullptr);
+    Session *FindSession(const http_RequestInfo &request,
+                         bool *out_mismatch = nullptr, bool *out_locked = nullptr);
 
     void DeleteSessionCookies(const http_RequestInfo &request, http_IO *io);
 
