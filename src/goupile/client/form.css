@@ -372,7 +372,7 @@ html:not(.small) .fm_widget.compact .fm_error {
 
 .fm_slider {
     display: inline-block;
-    width: 18em;
+    width: 24em;
     height: 3.2em;
 }
 .fm_slider > span {
