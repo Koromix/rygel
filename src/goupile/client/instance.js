@@ -100,25 +100,27 @@ function InstanceController() {
 
         ui.setMenu(renderMenu);
         ui.createPanel('editor', 0, false, renderEditor);
-        ui.createPanel('data', 0, true, renderData);
-        ui.createPanel('page', 1, false, renderPage);
+        ui.createPanel('data', 0, !goupile.isLocked(), renderData);
+        ui.createPanel('page', 1, goupile.isLocked(), renderPage);
     };
 
     function renderMenu() {
         return html`
-            <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
-                    @click=${e => self.go(e, ENV.base_url)}>${ENV.title}</button>
-            ${goupile.hasPermission('develop') ? html`
-                <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
-                        style="background-position-y: calc(-230px + 1.2em);"
-                        @click=${ui.wrapAction(e => togglePanel(e, 'editor'))}>Code</button>
+            ${!goupile.isLocked() ? html`
+                <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
+                        @click=${e => self.go(e, ENV.base_url)}>${ENV.title}</button>
+                ${goupile.hasPermission('develop') ? html`
+                    <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
+                            style="background-position-y: calc(-230px + 1.2em);"
+                            @click=${ui.wrapAction(e => togglePanel(e, 'editor'))}>Code</button>
+                ` : ''}
+                <button class=${'icon' + (ui.isPanelEnabled('data') ? ' active' : '')}
+                        style="background-position-y: calc(-274px + 1.2em);"
+                        @click=${ui.wrapAction(e => togglePanel(e, 'data'))}>Suivi</button>
+                <button class=${'icon' + (ui.isPanelEnabled('page') ? ' active' : '')}
+                        style="background-position-y: calc(-318px + 1.2em);"
+                        @click=${ui.wrapAction(e => togglePanel(e, 'page'))}>Formulaire</button>
             ` : ''}
-            <button class=${'icon' + (ui.isPanelEnabled('data') ? ' active' : '')}
-                    style="background-position-y: calc(-274px + 1.2em);"
-                    @click=${ui.wrapAction(e => togglePanel(e, 'data'))}>Suivi</button>
-            <button class=${'icon' + (ui.isPanelEnabled('page') ? ' active' : '')}
-                    style="background-position-y: calc(-318px + 1.2em);"
-                    @click=${ui.wrapAction(e => togglePanel(e, 'page'))}>Formulaire</button>
 
             <div style="flex: 1; min-width: 15px;"></div>
             ${util.mapRange(0, route.form.parents.length, idx => {
@@ -130,12 +132,14 @@ function InstanceController() {
                 html`<button class="active" @click=${ui.wrapAction(e => self.go(e, route.page.url))}>${route.page.title}</button>` : ''}
             <div style="flex: 1; min-width: 15px;"></div>
 
-            <div class="drop right">
-                <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
-                <div>
-                    <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
+            ${!goupile.isLocked() ? html`
+                <div class="drop right">
+                    <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
+                    <div>
+                        <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
+                    </div>
                 </div>
-            </div>
+            ` : ''}
         `;
     }
 
@@ -257,11 +261,9 @@ function InstanceController() {
                                         let url = page.url + `/${row.ulid}`;
 
                                         if (row.status.has(page.key)) {
-                                            return html`<td class="saved"><a href=${url}
-                                                                             @click=${e => ui.setPanelState('page', true, false)}>Enregistré</a></td>`;
+                                            return html`<td class="saved"><a href=${url}>Enregistré</a></td>`;
                                         } else {
-                                            return html`<td class="missing"><a href=${url}
-                                                                               @click=${e => ui.setPanelState('page', true, false)}>Non rempli</a></td>`;
+                                            return html`<td class="missing"><a href=${url}>Non rempli</a></td>`;
                                         }
                                     })}
                                     ${util.map(data_form.children.values(), child_form => {
@@ -271,7 +273,7 @@ function InstanceController() {
 
                                             return html`
                                                 <td class="saved">
-                                                    <a href=${url} @click=${e => ui.setPanelState('page', true, false)}>Enregistré</a>
+                                                    <a href=${url}>Enregistré</a>
                                                 </td>
                                             `;
                                         } else {
@@ -279,7 +281,7 @@ function InstanceController() {
 
                                             return html`
                                                 <td class="missing">
-                                                    <a href=${url} @click=${e => ui.setPanelState('page', true, false)}>Non rempli</a>
+                                                    <a href=${url}>Non rempli</a>
                                                 </td>
                                             `;
                                         }
@@ -315,7 +317,9 @@ function InstanceController() {
                 nav: {
                     form: route.form,
                     page: route.page,
-                    go: (url) => self.go(null, url)
+                    go: (url) => self.go(null, url),
+
+                    isLocked: goupile.isLocked
                 }
             });
             form_record.hid = meta.hid;
@@ -446,8 +450,6 @@ function InstanceController() {
         let progress = log.progress('Enregistrement en cours');
 
         try {
-            enablePersistence();
-
             let page = route.page;
             let record = form_record;
             let values = Object.assign({}, form_state.values);
@@ -517,6 +519,7 @@ function InstanceController() {
             });
 
             progress.success('Enregistrement effectué');
+            enablePersistence();
 
             // XXX: Trigger reload in a better way...
             route.version = null;
@@ -1321,10 +1324,10 @@ function InstanceController() {
                     el.parentNode.scrollTop = 0;
             });
 
-            ui.setPanelState('page', true, false);
+            ui.setPanelState('page', true);
         } else if (form_record == null && (new_record.version > 0 ||
                                            new_record.parent != null)) {
-            ui.setPanelState('page', true, false);
+            ui.setPanelState('page', true);
         }
 
         // Commit!

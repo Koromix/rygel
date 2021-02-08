@@ -84,6 +84,13 @@ const goupile = new function() {
                     return 'Si vous confirmez vouloir quitter la page, les modifications en cours seront perdues !';
             };
         }
+
+        window.addEventListener('storage', e => {
+            if (e.key === ENV.base_url + 'lock' && !!e.newValue !== !!e.oldValue) {
+                window.onbeforeunload = null;
+                document.location.reload();
+            }
+        });
     }
 
     async function registerSW() {
@@ -219,6 +226,8 @@ const goupile = new function() {
                         });
                     }
 
+                    await deleteSessionValue('lock');
+
                     progress.success('Connexion réussie');
                 } else {
                     if (response.status === 403)
@@ -245,6 +254,8 @@ const goupile = new function() {
                     }
                     session_rnd = util.getCookie('session_rnd');
                     local_key = (profile.local_key != null) ? base64ToBytes(profile.local_key) : null;
+
+                    await deleteSessionValue('lock');
 
                     progress.success('Connexion réussie (hors ligne)');
                 } catch (err) {
@@ -297,7 +308,8 @@ const goupile = new function() {
                 session_rnd = undefined;
                 local_key = undefined;
 
-                util.setCookie('session_rnd', 'LOGIN', ENV.base_url);
+                util.setCookie('session_rnd', 'LOGIN', '/');
+                await deleteSessionValue('lock');
 
                 // Clear state and start from fresh as a precaution
                 window.onbeforeunload = null;
@@ -312,32 +324,109 @@ const goupile = new function() {
         }
     }
 
-    // XXX: Exponential backoff
-    this.syncProfile = async function() {
-        let new_rnd = util.getCookie('session_rnd');
+    this.lock = async function(password, ctx = {}) {
+        if (!self.isAuthorized() || self.isLocked())
+            throw new Error('Cannot lock unauthorized session');
+        if (typeof ctx !== 'object' || ctx == null)
+            throw new Error('Invalid type for lock context');
 
-        // Hack to force login screen to show up once when DemoUser setting is in use,
-        // this cookie value is set in logout() just before page refresh.
-        if (new_rnd === 'LOGIN') {
-            util.deleteCookie('session_rnd', ENV.base_url);
+        let salt = nacl.randomBytes(24);
+        let key = await deriveKey(password, salt);
+        let enc = await encryptSecretBox(session_rnd, key);
+
+        let obj = {
+            userid: profile.userid,
+            salt: bytesToBase64(salt),
+            errors: 0,
+            session_rnd: enc,
+            ctx: ctx
+        };
+
+        await storeSessionValue('lock', obj);
+
+        window.onbeforeunload = null;
+        document.location.reload();
+    };
+
+    this.unlock = async function(password) {
+        let obj = await loadSessionValue('lock');
+        if (obj == null)
+            throw new Error('Session is not locked');
+
+        let key = await deriveKey(password, base64ToBytes(obj.salt));
+
+        try {
+            session_rnd = await decryptSecretBox(obj.session_rnd, key);
+
+            util.setCookie('session_rnd', session_rnd, '/');
+            await deleteSessionValue('lock');
+        } catch (err) {
+            obj.errors = (obj.errors || 0) + 1;
+
+            if (obj.errors >= 3) {
+                log.error('Déverrouillage refusé, blocage de sécurité imminent');
+                await deleteSessionValue('lock');
+
+                setTimeout(() => {
+                    window.onbeforeunload = null;
+                    document.location.reload();
+                }, 3000);
+            } else {
+                log.error('Déverrouillage refusé');
+                await storeSessionValue('lock', obj);
+            }
+
             return;
         }
 
-        if (new_rnd !== session_rnd) {
-            try {
-                let response = await net.fetch(`${ENV.base_url}api/session/profile`);
+        util.setCookie('session_rnd', session_rnd, '/');
+        await deleteSessionValue('lock');
 
-                profile = await response.json();
-                session_rnd = util.getCookie('session_rnd');
-                local_key = (profile.local_key != null) ? base64ToBytes(profile.local_key) : null;
-            } catch (err) {
-                if (!ENV.cache_offline)
-                    throw err;
+        window.onbeforeunload = null;
+        document.location.reload();
+    };
+
+    // XXX: Exponential backoff
+    this.syncProfile = async function() {
+        let lock = await loadSessionValue('lock');
+
+        if (lock != null) {
+            util.deleteCookie('session_rnd', '/');
+            session_rnd = null;
+            local_key = null;
+
+            profile = {
+                userid: lock.userid,
+                permissions: ['edit'],
+                lock: lock.ctx
+            };
+        } else {
+            let new_rnd = util.getCookie('session_rnd');
+
+            // Hack to force login screen to show up once when DemoUser setting is in use,
+            // this cookie value is set in logout() just before page refresh.
+            if (new_rnd === 'LOGIN') {
+                util.deleteCookie('session_rnd', ENV.base_url);
+                return;
+            }
+
+            if (new_rnd !== session_rnd) {
+                try {
+                    let response = await net.fetch(`${ENV.base_url}api/session/profile`);
+
+                    profile = await response.json();
+                    session_rnd = util.getCookie('session_rnd');
+                    local_key = (profile.local_key != null) ? base64ToBytes(profile.local_key) : null;
+                } catch (err) {
+                    if (!ENV.cache_offline)
+                        throw err;
+                }
             }
         }
     };
 
-    this.isAuthorized = function() { return !!profile.username; };
+    this.isAuthorized = function() { return !!profile.userid; };
+    this.isLocked = function() { return !!profile.lock; };
     this.hasPermission = function(perm) {
         return profile.permissions != null &&
                profile.permissions[perm];
@@ -419,5 +508,27 @@ const goupile = new function() {
             box: bytesToBase64(box)
         };
         return enc;
+    }
+
+    async function loadSessionValue(key) {
+        key = ENV.base_url + key;
+
+        let json = localStorage.getItem(key);
+        if (json == null)
+            return null;
+
+        return JSON.parse(json);
+    }
+
+    async function storeSessionValue(key, obj) {
+        key = ENV.base_url + key;
+        obj = JSON.stringify(obj);
+
+        localStorage.setItem(key, obj);
+    }
+
+    async function deleteSessionValue(key) {
+        key = ENV.base_url + key;
+        localStorage.removeItem(key);
     }
 };

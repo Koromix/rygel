@@ -70,6 +70,7 @@ button:not(.active):not(:disabled):hover {
     color: white;
     z-index: 9999;
 }
+.ui_toolbar.locked { filter: saturate(0%); }
 
 .ui_toolbar button {
     display: block;

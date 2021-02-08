@@ -72,7 +72,8 @@ const ui = new function() {
 
         // Render main screen
         render(html`
-            ${menu_render != null ? html`<nav class="ui_toolbar" style="z-index: 999999;">${menu_render()}</nav>` : ''}
+            ${menu_render != null ? html`<nav class=${goupile.isLocked() ? 'ui_toolbar locked' : 'ui_toolbar'}
+                                              style="z-index: 999999;">${menu_render()}</nav>` : ''}
 
             <main id="ui_panels">
                 ${util.map(panels.values(), panel => panel.active ? panel.render() : '')}
