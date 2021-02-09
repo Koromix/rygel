@@ -257,33 +257,37 @@ function InstanceController() {
                                         <a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a>
                                     </td>
                                     <td class=${row.hid == null ? 'missing' : ''}>${row.hid != null ? row.hid : 'NA'}</td>
-                                    ${util.map(data_form.pages.values(), page => {
-                                        let url = page.url + `/${row.ulid}`;
+                                    ${data_form.menu.map(item => {
+                                        if (item.type === 'page') {
+                                            let page = item.page;
+                                            let url = page.url + `/${row.ulid}`;
 
-                                        if (row.status.has(page.key)) {
-                                            return html`<td class="saved"><a href=${url}>Enregistré</a></td>`;
-                                        } else {
-                                            return html`<td class="missing"><a href=${url}>Non rempli</a></td>`;
-                                        }
-                                    })}
-                                    ${util.map(data_form.children.values(), child_form => {
-                                        if (row.status.has(child_form.key)) {
-                                            let child = row.children.get(child_form.key);
-                                            let url = child_form.url + `/${child.ulid}`;
+                                            if (row.status.has(page.key)) {
+                                                return html`<td class="saved"><a href=${url}>Enregistré</a></td>`;
+                                            } else {
+                                                return html`<td class="missing"><a href=${url}>Non rempli</a></td>`;
+                                            }
+                                        } else if (item.type === 'form') {
+                                            let form = item.form;
 
-                                            return html`
-                                                <td class="saved">
-                                                    <a href=${url}>Enregistré</a>
-                                                </td>
-                                            `;
-                                        } else {
-                                            let url = child_form.url + `/${row.ulid}`;
+                                            if (row.status.has(form.key)) {
+                                                let child = row.children.get(form.key);
+                                                let url = form.url + `/${child.ulid}`;
 
-                                            return html`
-                                                <td class="missing">
-                                                    <a href=${url}>Non rempli</a>
-                                                </td>
-                                            `;
+                                                return html`
+                                                    <td class="saved">
+                                                        <a href=${url}>Enregistré</a>
+                                                    </td>
+                                                `;
+                                            } else {
+                                                let url = form.url + `/${row.ulid}`;
+
+                                                return html`
+                                                    <td class="missing">
+                                                        <a href=${url}>Non rempli</a>
+                                                    </td>
+                                                `;
+                                            }
                                         }
                                     })}
                                 </tr>
