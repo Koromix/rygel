@@ -1406,7 +1406,7 @@ function InstanceController() {
         return record;
     }
 
-    async function decryptRecord(obj, version, load_values = true) {
+    async function decryptRecord(obj, version, allow_fake = true, load_values = true) {
         let entry = await goupile.decryptLocal(obj.enc);
         let fragments = entry.fragments;
 
@@ -1448,6 +1448,10 @@ function InstanceController() {
             delete fragment.child;
             delete fragment.values;
         }
+
+        // Could be a fake record
+        if (!allow_fake && !status.size)
+            throw new Error('Skipping fake record');
 
         let children = {};
         for (let child of children_map.values()) {
@@ -1665,9 +1669,7 @@ function InstanceController() {
 
         for (let obj of objects) {
             try {
-                let record = await decryptRecord(obj, null, false);
-                if (record.fragments.length === 1 && record.fragments[0].type === 'fake')
-                    continue;
+                let record = await decryptRecord(obj, null, false, false);
                 records.push(record);
             } catch (err) {
                 console.log(err);
