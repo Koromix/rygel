@@ -210,7 +210,6 @@ const goupile = new function() {
                     if (ENV.cache_offline) {
                         let salt = nacl.randomBytes(24);
                         let key = await deriveKey(password, salt);
-
                         let enc = await encryptSecretBox(profile, key);
 
                         await db.saveWithKey('usr_profiles', username, {
@@ -232,14 +231,14 @@ const goupile = new function() {
                 // Instantaneous login feels weird
                 await util.waitFor(800);
 
-                let enc = await db.load('usr_profiles', username);
-                if (enc == null)
+                let obj = await db.load('usr_profiles', username);
+                if (obj == null)
                     throw new Error('Profil hors ligne inconnu');
 
-                let key = await deriveKey(password, base64ToBytes(enc.salt));
+                let key = await deriveKey(password, base64ToBytes(obj.salt));
 
                 try {
-                    profile = await decryptSecretBox(enc.profile, key);
+                    profile = await decryptSecretBox(obj.profile, key);
                     if (profile.passport != null) {
                         profile.local_key = profile.passport;
                         delete profile.passport;
@@ -249,12 +248,12 @@ const goupile = new function() {
 
                     progress.success('Connexion réussie (hors ligne)');
                 } catch (err) {
-                    enc.errors = (enc.errors || 0) + 1;
+                    obj.errors = (obj.errors || 0) + 1;
 
-                    if (enc.errors >= 3) {
+                    if (obj.errors >= 3) {
                         await db.delete('usr_profiles', username);
                     } else {
-                        await db.saveWithKey('usr_profiles', username, enc);
+                        await db.saveWithKey('usr_profiles', username, obj);
                     }
 
                     throw new Error('Mot de passe hors ligne non reconnu');
