@@ -274,7 +274,7 @@ function InstanceController() {
                         let form = item.form;
 
                         if (row.status.has(form.key)) {
-                            let child = row.children.get(form.key);
+                            let child = row.children[form.key][0];
                             let url = form.url + `/${child.ulid}`;
 
                             return html`<td class="saved"><a href=${url}>${item.title}</a></td>`;
@@ -1376,7 +1376,7 @@ function InstanceController() {
             values: {},
 
             parent: null,
-            children: new Map,
+            children: {},
             root: null, // Will be set later
             map: null // Will be set later
         };
@@ -1421,7 +1421,7 @@ function InstanceController() {
         }
 
         let values = {};
-        let children = new Map;
+        let children_map = new Map;
         let status = new Set;
         for (let i = 0; i < version; i++) {
             let fragment = fragments[i];
@@ -1433,11 +1433,11 @@ function InstanceController() {
                     status.add(fragment.page);
                 } break;
                 case 'save_child': {
-                    children.set(fragment.child.form, fragment.child);
+                    children_map.set(fragment.child.ulid, fragment.child);
                     status.add(fragment.child.form);
                 } break;
                 case 'delete_child': {
-                    children.delete(fragment.child.form);
+                    children_map.delete(fragment.child.ulid);
                     status.delete(fragment.child.form);
                 } break;
             }
@@ -1447,6 +1447,16 @@ function InstanceController() {
 
             delete fragment.child;
             delete fragment.values;
+        }
+
+        let children = {};
+        for (let child of children_map.values()) {
+            let array = children[child.form];
+            if (array == null) {
+                array = [];
+                children[child.form] = array;
+            }
+            array.push(child);
         }
 
         let record = {
@@ -1485,9 +1495,9 @@ function InstanceController() {
 
             for (let i = 0; i < path.down.length; i++) {
                 let form = path.down[i];
-                let child = record.children.get(form.key);
 
-                if (child != null) {
+                if (record.status.has(form.key)) {
+                    let child = record.children[form.key][0];
                     record = await loadRecord(child.ulid, child.version);
 
                     if (record.form !== form)
