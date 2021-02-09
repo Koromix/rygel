@@ -1729,7 +1729,7 @@ function InstanceController() {
             if (dest === 'server') {
                 let response = await fetch(`${ENV.base_url}api/files/backup`, {
                     method: 'POST',
-                    body: JSON.stringify(enc)
+                    body: json
                 });
 
                 if (response.ok) {
