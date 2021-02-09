@@ -93,18 +93,26 @@
 
                 document.body.classList.add('gp_loading');
                 window.addEventListener('load', function(e) {
-                    let p = goupile.start();
+                    if (typeof goupile !== 'undefined') {
+                        let p = goupile.start();
 
-                    p.catch(function(err) {
+                        p.catch(function(err) {
+                            document.querySelector('#ui_main').innerHTML =
+                                '<div class="ui_wip">' +
+                                    '<b>Une erreur est survenue pendant le chargement</b>\n' +
+                                    err.message +
+                                '</div>';
+                        });
+                        p.finally(function() {
+                            document.body.classList.remove('gp_loading');
+                        });
+                    } else {
                         document.querySelector('#ui_main').innerHTML =
                             '<div class="ui_wip">' +
-                                '<b>Une erreur est survenue pendant le chargement</b>\n' +
-                                err.message +
+                                '<b>Échec de chargement du code javascript</b>\n' +
                             '</div>';
-                    });
-                    p.finally(function() {
                         document.body.classList.remove('gp_loading');
-                    });
+                    }
                 });
             } catch (err) {
                 document.querySelector('#ui_main').innerHTML =
