@@ -650,7 +650,6 @@ function InstanceController() {
             editor_el.setAttribute('style', 'flex: 1;');
             editor_ace = ace.edit(editor_el);
 
-            editor_ace.setTheme('ace/theme/merbivore_soft');
             editor_ace.setShowPrintMargin(false);
             editor_ace.setFontSize(13);
             editor_ace.setBehavioursEnabled(false);
@@ -693,6 +692,12 @@ function InstanceController() {
             ignore_editor_change = false;
 
             buffer.reload = false;
+        }
+
+        if (editor_filename.startsWith('pages/')) {
+            editor_ace.setTheme('ace/theme/merbivore_soft');
+        } else {
+            editor_ace.setTheme('ace/theme/monokai');
         }
 
         editor_ace.setSession(buffer.session);
