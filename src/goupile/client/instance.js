@@ -562,7 +562,10 @@ function InstanceController() {
                     // Mark as deleted with special fragment
                     entry.fragments.push(fragment);
 
+                    obj.fkey = null;
+                    obj.pfkey = null;
                     obj.enc = await goupile.encryptLocal(entry);
+
                     await t.saveWithKey('rec_records', key, obj);
                 });
 
