@@ -217,8 +217,6 @@ function InstanceController() {
     }
 
     function renderData() {
-        let columns = data_form.pages.size + data_form.children.size;
-
         return html`
             <div class="padded">
                 <div class="ui_quick">
@@ -232,68 +230,16 @@ function InstanceController() {
                 </div>
 
                 <table class="ui_table" id="ins_data">
-                    <colgroup>
-                        <col style="width: 2em;"/>
-                        <col style="width: 160px;"/>
-                        ${util.mapRange(0, columns, () => html`<col/>`)}
-                    </colgroup>
-
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th></th>
-                            ${util.map(data_form.pages.values(), page => html`<th>${page.title}</th>`)}
-                            ${util.map(data_form.children.values(), child_form => html`<th>${child_form.title}</th>`)}
-                        </tr>
-                    </thead>
+                    ${data_rows.length ? html`
+                        <colgroup>
+                            <col style="width: 2em;"/>
+                            <col style="width: 140px;"/>
+                        </colgroup>
+                    ` : ''}
 
                     <tbody>
-                        ${data_rows.map(row => {
-                            let active = (form_record.root.ulid === row.ulid);
-
-                            return html`
-                                <tr class=${active ? 'active' : ''}>
-                                    <td>
-                                        <a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a>
-                                    </td>
-                                    <td class=${row.hid == null ? 'missing' : ''}>${row.hid != null ? row.hid : 'NA'}</td>
-                                    ${data_form.menu.map(item => {
-                                        if (item.type === 'page') {
-                                            let page = item.page;
-                                            let url = page.url + `/${row.ulid}`;
-
-                                            if (row.status.has(page.key)) {
-                                                return html`<td class="saved"><a href=${url}>Enregistré</a></td>`;
-                                            } else {
-                                                return html`<td class="missing"><a href=${url}>Non rempli</a></td>`;
-                                            }
-                                        } else if (item.type === 'form') {
-                                            let form = item.form;
-
-                                            if (row.status.has(form.key)) {
-                                                let child = row.children.get(form.key);
-                                                let url = form.url + `/${child.ulid}`;
-
-                                                return html`
-                                                    <td class="saved">
-                                                        <a href=${url}>Enregistré</a>
-                                                    </td>
-                                                `;
-                                            } else {
-                                                let url = form.url + `/${row.ulid}`;
-
-                                                return html`
-                                                    <td class="missing">
-                                                        <a href=${url}>Non rempli</a>
-                                                    </td>
-                                                `;
-                                            }
-                                        }
-                                    })}
-                                </tr>
-                            `;
-                        })}
-                        ${!data_rows.length ? html`<tr><td colspan=${2 + columns}>Aucune ligne à afficher</td></tr>` : ''}
+                        ${data_rows.map(row => renderDataRow(row, true))}
+                        ${!data_rows.length ? html`<tr><td>Aucune ligne à afficher</td></tr>` : ''}
                     </tbody>
                 </table>
 
@@ -301,6 +247,66 @@ function InstanceController() {
                     <button @click=${ui.wrapAction(goNewRecord)}>Créer un nouvel enregistrement</button>
                 </div>
             </div>
+        `;
+    }
+
+    function renderDataRow(row, hid) {
+        let active = (form_record.root.ulid === row.ulid);
+        let recurse = (active && route.form !== row.form); // ? form_record.map[route.form.key] : null;
+
+        return html`
+            <tr class=${active ? 'active' : ''}>
+                <td>
+                    <a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a>
+                </td>
+                ${hid ? html`<td class=${row.hid == null ? 'missing' : ''}>${row.hid != null ? row.hid : 'NA'}</td>` : ''}
+                ${row.form.menu.map(item => {
+                    if (item.type === 'page') {
+                        let page = item.page;
+                        let url = page.url + `/${row.ulid}`;
+
+                        if (row.status.has(page.key)) {
+                            return html`<td class="saved"><a href=${url}>${item.title}</a></td>`;
+                        } else {
+                            return html`<td class="missing"><a href=${url}>${item.title}</a></td>`;
+                        }
+                    } else if (item.type === 'form') {
+                        let form = item.form;
+
+                        if (row.status.has(form.key)) {
+                            let child = row.children.get(form.key);
+                            let url = form.url + `/${child.ulid}`;
+
+                            return html`<td class="saved"><a href=${url}>${item.title}</a></td>`;
+                        } else {
+                            let url = form.url + `/${row.ulid}`;
+
+                            return html`<td class="missing"><a href=${url}>${item.title}</a></td>`;
+                        }
+                    }
+                })}
+            </tr>
+            ${recurse ? util.mapRange(0, route.form.parents.length, idx => {
+                let form = idx < route.form.parents.length - 1 ? route.form.parents[route.form.parents.length - idx - 2] : route.form;
+                let record = form_record.map[form.key];
+
+                return html`
+                    <tr class="active">
+                        <th></th>
+                        <td colspan=${1 + row.form.menu.length}>
+                            <table class="ui_table">
+                                <colgroup>
+                                    <col style="width: 2em;"/>
+                                </colgroup>
+
+                                <tbody>
+                                    ${renderDataRow(record, false)}
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                `;
+            }) : ''}
         `;
     }
 
@@ -1391,6 +1397,11 @@ function InstanceController() {
         if (obj == null)
             throw new Error('L\'enregistrement demandé n\'existe pas');
 
+        let record = await decryptRecord(obj, version);
+        return record;
+    }
+
+    async function decryptRecord(obj, version, load_values = true) {
         let entry = await goupile.decryptLocal(obj.enc);
         let fragments = entry.fragments;
 
@@ -1412,7 +1423,8 @@ function InstanceController() {
 
             switch (fragment.type) {
                 case 'save': {
-                    Object.assign(values, fragment.values);
+                    if (load_values)
+                        Object.assign(values, fragment.values);
                     status.add(fragment.page);
                 } break;
                 case 'save_child': {
@@ -1434,7 +1446,7 @@ function InstanceController() {
 
         let record = {
             form: app.forms.get(entry.form),
-            ulid: ulid,
+            ulid: entry.ulid,
             hid: entry.hid,
             version: version,
             mtime: fragments[version - 1].mtime,
@@ -1449,6 +1461,8 @@ function InstanceController() {
         };
         if (record.form == null)
             throw new Error(`Le formulaire '${entry.form}' n'existe pas ou plus`);
+        if (!load_values)
+            delete record.values;
 
         return record;
     }
@@ -1612,53 +1626,8 @@ function InstanceController() {
             }
 
             if (data_rows == null) {
-                let objects;
-                if (!data_form.parents.length) {
-                    let range = IDBKeyRange.only(`${profile.userid}/${data_form.key}`);
-                    objects = await db.loadAll('rec_records/form', range);
-                } else {
-                    let range = IDBKeyRange.only(`${profile.userid}:${form_record.parent.ulid}`);
-                    objects = await db.loadAll('rec_records/parent', range);
-                }
-
                 data_rows = [];
-                for (let obj of objects) {
-                    try {
-                        let entry = await goupile.decryptLocal(obj.enc);
-                        let fragments = entry.fragments;
-
-                        if (fragments[fragments.length - 1].type == 'delete')
-                            continue;
-                        if (fragments.length === 1 && fragments[0].type === 'fake')
-                            continue;
-
-                        let children = new Map;
-                        let status = new Set;
-                        for (let fragment of fragments) {
-                            switch (fragment.type) {
-                                case 'save': { status.add(fragment.page); } break;
-                                case 'save_child': {
-                                    children.set(fragment.child.form, fragment.child);
-                                    status.add(fragment.child.form);
-                                } break;
-                                case 'delete_child': {
-                                    children.delete(fragment.child.form);
-                                    status.delete(fragment.child.form);
-                                } break;
-                            }
-                        }
-
-                        let row = {
-                            ulid: entry.ulid,
-                            hid: entry.hid,
-                            children: children,
-                            status: status
-                        };
-                        data_rows.push(row);
-                    } catch (err) {
-                        console.log(err);
-                    }
-                }
+                await loadDataRecords(data_form, null, data_rows);
             }
         }
 
@@ -1668,6 +1637,28 @@ function InstanceController() {
         ui.render();
     };
     this.run = util.serializeAsync(this.run);
+
+    async function loadDataRecords(form, parent, records) {
+        let objects;
+        if (parent == null) {
+            let range = IDBKeyRange.only(`${profile.userid}/${form.key}`);
+            objects = await db.loadAll('rec_records/form', range);
+        } else {
+            let range = IDBKeyRange.only(`${profile.userid}:${parent.ulid}/${form.key}`);
+            objects = await db.loadAll('rec_records/parent', range);
+        }
+
+        for (let obj of objects) {
+            try {
+                let record = await decryptRecord(obj, null, false);
+                if (record.fragments.length === 1 && record.fragments[0].type === 'fake')
+                    continue;
+                records.push(record);
+            } catch (err) {
+                console.log(err);
+            }
+        }
+    }
 
     async function fetchCode(filename) {
         // Anything in the editor?
