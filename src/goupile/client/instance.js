@@ -492,8 +492,10 @@ function InstanceController() {
                         entry.hid = record.hid;
                 } else {
                     obj = {
-                        fkey: `${profile.userid}/${record.form.key}`,
-                        pfkey: null,
+                        keys: {
+                            form: `${profile.userid}/${record.form.key}`,
+                            parent: null
+                        },
                         enc: null
                     };
                     entry = {
@@ -505,7 +507,7 @@ function InstanceController() {
                     };
 
                     if (record.parent != null) {
-                        obj.pfkey = `${profile.userid}:${record.parent.ulid}/${record.form.key}`;
+                        obj.keys.parent = `${profile.userid}:${record.parent.ulid}/${record.form.key}`;
                         entry.parent = {
                             form: record.parent.form.key,
                             ulid: record.parent.ulid,
@@ -561,8 +563,7 @@ function InstanceController() {
                     // Mark as deleted with special fragment
                     entry.fragments.push(fragment);
 
-                    obj.fkey = null;
-                    obj.pfkey = null;
+                    obj.keys = {};
                     obj.enc = await goupile.encryptLocal(entry);
 
                     await t.saveWithKey('rec_records', key, obj);
@@ -1498,8 +1499,10 @@ function InstanceController() {
                         let key = `${profile.userid}:${record.ulid}`;
 
                         let obj = {
-                            fkey: `${profile.userid}/${record.form.key}`,
-                            pfkey: null,
+                            keys: {
+                                form: `${profile.userid}/${record.form.key}`,
+                                parent: null
+                            },
                             enc: null
                         };
                         let entry = {
@@ -1515,7 +1518,7 @@ function InstanceController() {
                         };
 
                         if (record.parent != null) {
-                            obj.pfkey = `${profile.userid}:${record.parent.ulid}/${record.form.key}`;
+                            obj.keys.parent = `${profile.userid}:${record.parent.ulid}/${record.form.key}`;
                             entry.parent = {
                                 form: record.parent.form.key,
                                 ulid: record.parent.ulid,
