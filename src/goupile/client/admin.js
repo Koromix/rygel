@@ -53,9 +53,9 @@ function AdminController() {
         return html`
             <div class="padded" style="background: #f8f8f8;">
                 <div class="ui_quick">
-                    Projets
+                    <a @click=${ui.wrapAction(runCreateInstanceDialog)}>Créer un projet</a>
                     <div style="flex: 1;"></div>
-                    <a @click=${ui.wrapAction(e => { instances = null; return self.run(); })}>Rafraichir</a>
+                    Projets (<a @click=${ui.wrapAction(e => { instances = null; return self.run(); })}>rafraichir</a>)
                 </div>
 
                 <table class="ui_table">
@@ -76,10 +76,6 @@ function AdminController() {
                         `)}
                     </tbody>
                 </table>
-
-                <div class="ui_actions">
-                    <button @click=${ui.wrapAction(runCreateInstanceDialog)}>Créer un projet</button>
-                </div>
             </div>
         `;
     }
@@ -88,9 +84,9 @@ function AdminController() {
         return html`
             <div class="padded" style="flex-grow: 1.5;">
                 <div class="ui_quick">
-                    Utilisateurs
+                    <a @click=${ui.wrapAction(runCreateUserDialog)}>Créer un utilisateur</a>
                     <div style="flex: 1;"></div>
-                    <a @click=${ui.wrapAction(e => { users = null; return self.run(); })}>Rafraichir</a>
+                    Utilisateurs (<a @click=${ui.wrapAction(e => { users = null; return self.run(); })}>rafraichir</a>)
                 </div>
 
                 <table class="ui_table">
@@ -125,10 +121,6 @@ function AdminController() {
                         })}
                     </tbody>
                 </table>
-
-                <div class="ui_actions">
-                    <button @click=${ui.wrapAction(runCreateUserDialog)}>Créer un utilisateur</button>
-                <div>
             </div>
         `;
     }

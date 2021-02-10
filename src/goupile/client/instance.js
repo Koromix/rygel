@@ -220,20 +220,22 @@ function InstanceController() {
         return html`
             <div class="padded">
                 <div class="ui_quick">
-                    ${data_rows.length || 'Aucune'} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
+                    <a @click=${ui.wrapAction(goNewRecord)}>Créer</a>
                     <div style="flex: 1;"></div>
                     ${ENV.backup_key != null ? html`
                         <a @click=${ui.wrapAction(e => backupClientData('file'))}>Faire une sauvegarde chiffrée</a>
                         <div style="flex: 1;"></div>
                     ` : ''}
-                    <a @click=${ui.wrapAction(e => { data_rows = null; return self.run(); })}>Rafraichir</a>
+                    ${data_rows.length || 'Aucune'} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
+                        (<a @click=${ui.wrapAction(e => { data_rows = null; return self.run(); })}>rafraichir</a>)
                 </div>
 
-                <table class="ui_table" id="ins_data">
+                <table class="ui_table fixed" id="ins_data">
                     ${data_rows.length ? html`
                         <colgroup>
-                            <col style="width: 2em;"/>
                             <col style="width: 140px;"/>
+                            ${util.mapRange(0, data_form.menu.length, () => html`<col/>`)}
+                            <col style="width: 2em;"/>
                         </colgroup>
                     ` : ''}
 
@@ -242,23 +244,15 @@ function InstanceController() {
                         ${!data_rows.length ? html`<tr><td>Aucune ligne à afficher</td></tr>` : ''}
                     </tbody>
                 </table>
-
-                <div class="ui_actions">
-                    <button @click=${ui.wrapAction(goNewRecord)}>Créer un nouvel enregistrement</button>
-                </div>
             </div>
         `;
     }
 
     function renderDataRow(row, hid) {
-        let active = (form_record.root.ulid === row.ulid);
-        let recurse = (active && route.form !== row.form); // ? form_record.map[route.form.key] : null;
+        let active = form_record.chain.some(record => record.ulid === row.ulid);
 
         return html`
             <tr class=${active ? 'active' : ''}>
-                <td>
-                    <a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a>
-                </td>
                 ${hid ? html`<td class=${row.hid == null ? 'missing' : ''}>${row.hid != null ? row.hid : 'NA'}</td>` : ''}
                 ${row.form.menu.map(item => {
                     if (item.type === 'page') {
@@ -266,9 +260,9 @@ function InstanceController() {
                         let url = page.url + `/${row.ulid}`;
 
                         if (row.status.has(page.key)) {
-                            return html`<td class="saved"><a href=${url}>${item.title}</a></td>`;
+                            return html`<td class=${active && page === route.page ? 'saved active' : 'saved'}><a href=${url}>${item.title}</a></td>`;
                         } else {
-                            return html`<td class="missing"><a href=${url}>${item.title}</a></td>`;
+                            return html`<td class=${active && page === route.page ? 'missing active' : 'missing'}><a href=${url}>${item.title}</a></td>`;
                         }
                     } else if (item.type === 'form') {
                         let form = item.form;
@@ -277,35 +271,43 @@ function InstanceController() {
                             let child = row.children[form.key][0];
                             let url = form.url + `/${child.ulid}`;
 
-                            return html`<td class="saved"><a href=${url}>${item.title}</a></td>`;
+                            return html`<td class=${active && form === route.form ? 'saved active' : 'saved'}><a href=${url}>${item.title}</a></td>`;
                         } else {
                             let url = form.url + `/${row.ulid}`;
 
-                            return html`<td class="missing"><a href=${url}>${item.title}</a></td>`;
+                            return html`<td class=${active && form === route.form ? 'missing active' : 'missing'}><a href=${url}>${item.title}</a></td>`;
                         }
                     }
                 })}
+                <td>
+                    <a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a>
+                </td>
             </tr>
-            ${recurse ? util.mapRange(1, route.form.chain.length, idx => {
+            ${active && hid ? util.mapRange(1, route.form.chain.length, idx => {
                 let form = route.form.chain[idx];
                 let record = form_record.map[form.key];
 
-                return html`
-                    <tr class="active">
-                        <th></th>
-                        <td colspan=${1 + row.form.menu.length}>
-                            <table class="ui_table">
-                                <colgroup>
-                                    <col style="width: 2em;"/>
-                                </colgroup>
+                if (form !== route.form || form.menu.length > 1) {
+                    return html`
+                        <tr>
+                            <th></th>
+                            <td colspan=${1 + row.form.menu.length} style="padding: 0; border: 0;">
+                                <table class="ui_table fixed">
+                                    <colgroup>
+                                        ${util.mapRange(0, form.menu.length, () => html`<col/>`)}
+                                        <col style="width: 2em;"/>
+                                    </colgroup>
 
-                                <tbody>
-                                    ${renderDataRow(record, false)}
-                                </tbody>
-                            </table>
-                        </td>
-                    </tr>
-                `;
+                                    <tbody>
+                                        ${renderDataRow(record, false)}
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    return '';
+                }
             }) : ''}
         `;
     }
@@ -363,9 +365,9 @@ function InstanceController() {
                 <div id="ins_page">
                     <div class="ui_quick">
                         ${model.variables.length ? html`
-                            ${!form_record.root.version ? 'Nouvel enregistrement' : ''}
-                            ${form_record.root.version > 0 && form_record.root.hid != null ? `Enregistrement : ${form_record.root.hid}` : ''}
-                            ${form_record.root.version > 0 && form_record.root.hid == null ? 'Enregistrement local' : ''}
+                            ${!form_record.chain[0].version ? 'Nouvel enregistrement' : ''}
+                            ${form_record.chain[0].version > 0 && form_record.chain[0].hid != null ? `Enregistrement : ${form_record.chain[0].hid}` : ''}
+                            ${form_record.chain[0].version > 0 && form_record.chain[0].hid == null ? 'Enregistrement local' : ''}
                         `  : ''}
                         (<a @click=${e => window.print()}>imprimer</a>)
                         <div style="flex: 1;"></div>
@@ -578,7 +580,7 @@ function InstanceController() {
                 progress.success('Suppression effectuée');
 
                 data_rows = null;
-                if (ulid === form_record.root.ulid) {
+                if (ulid === form_record.chain[0].ulid) {
                     form_state = null;
                     goNewRecord(null);
                 } else {
@@ -1289,25 +1291,29 @@ function InstanceController() {
         }
 
         // Load record parents
-        if (new_record.root == null) {
+        if (new_record.chain == null) {
+            let chain = [];
             let map = {};
 
+            new_record.chain = chain;
             new_record.map = map;
+            chain.push(new_record);
             map[new_record.form.key] = new_record;
 
             let record = new_record;
             while (record.parent != null) {
                 let parent_record = await loadRecord(record.parent.ulid);
 
+                parent_record.chain = chain;
                 parent_record.map = map;
+                chain.push(parent_record);
                 map[parent_record.form.key] = parent_record;
                 record.parent = parent_record;
 
                 record = parent_record;
             }
 
-            for (let key in new_record.map)
-                new_record.map[key].root = record;
+            chain.reverse();
         }
 
         if (!isPageEnabled(new_route.page, new_record))
@@ -1373,7 +1379,7 @@ function InstanceController() {
 
             parent: null,
             children: {},
-            root: null, // Will be set later
+            chain: null, // Will be set later
             map: null // Will be set later
         };
 
@@ -1471,7 +1477,7 @@ function InstanceController() {
 
             parent: entry.parent,
             children: children,
-            root: null, // Will be set later
+            chain: null, // Will be set later
             map: null // Will be set later
         };
         if (record.form == null)
@@ -1633,8 +1639,8 @@ function InstanceController() {
 
         // Load rows for data panel
         if (ui.isPanelEnabled('data')) {
-            if (data_form !== form_record.root.form) {
-                data_form = form_record.root.form;
+            if (data_form !== form_record.chain[0].form) {
+                data_form = form_record.chain[0].form;
                 data_rows = null;
             }
 

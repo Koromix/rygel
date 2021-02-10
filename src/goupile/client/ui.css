@@ -212,7 +212,7 @@ html.small .ui_toolbar button.icon {
 
 .ui_quick {
     display: flex;
-    margin: 2px 0;
+    margin: 2px 0 4px 0;
     font-size: 0.9em;
     color: #777;
 }
@@ -221,9 +221,9 @@ html.small .ui_toolbar button.icon {
 .ui_table {
     width: 100%;
     border-collapse: collapse;
-    border: 1px solid #dfdfdf;
     border-radius: var(--widget_rounding);
 }
+.ui_table.fixed { table-layout: fixed; }
 .ui_table thead th { background: #f8f8f8; }
 .ui_table tbody tr:nth-child(2n + 1) { background: #f8f8f8; }
 .ui_table tbody tr:nth-child(2n) { background: white; }
@@ -239,14 +239,20 @@ html.small .ui_toolbar button.icon {
 .ui_table th { border: 0; }
 .ui_table td.missing {
     font-style: italic;
-    color: #cbcbcb;
+    color: #777;
 }
 .ui_table a { text-decoration: none; }
 .ui_table tbody tr.active {
-    background: #777;
+    background: #eee !important;
+}
+.ui_table tbody td.active {
+    background: #888;
     color: white;
 }
-.ui_table tbody tr.active a { color: inherit; }
+.ui_table tbody tr.active a, .ui_table tbody td.active a { color: inherit; }
+.ui_table .ui_table td {
+    border-top: 0;
+}
 
 /* -------------------- Actions -------------------- */
 
