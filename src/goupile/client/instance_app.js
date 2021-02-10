@@ -66,10 +66,10 @@ function ApplicationBuilder(app) {
                 form_ref.chain.push(...prev_form.chain);
             form_ref.chain.push(form_ref);
 
-            if (func != null) {
+            if (typeof func === 'function') {
                 func(self);
             } else {
-                self.page(key, title);
+                self.page(key, func || title);
             }
 
             if (!form_ref.menu.length)
