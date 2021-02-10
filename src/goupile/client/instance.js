@@ -514,15 +514,6 @@ function InstanceController() {
 
                 obj.enc = await goupile.encryptLocal(entry);
                 await t.saveWithKey('rec_records', key, obj);
-
-                if (entry.parent != null) {
-                    let child = {
-                        form: entry.form,
-                        ulid: entry.ulid,
-                        version: entry.fragments.length
-                    };
-                    await updateRecordParents(t, entry.parent, child, 'save_child', fragment.mtime);
-                }
             });
 
             progress.success('Enregistrement effectué');
@@ -566,15 +557,6 @@ function InstanceController() {
 
                     obj.enc = await goupile.encryptLocal(entry);
                     await t.saveWithKey('rec_records', key, obj);
-
-                    if (entry.parent != null) {
-                        let child = {
-                            form: entry.form,
-                            ulid: entry.ulid,
-                            version: entry.fragments.length
-                        };
-                        await updateRecordParents(t, entry.parent, child, 'delete_child', fragment.mtime);
-                    }
                 });
 
                 progress.success('Suppression effectuée');
@@ -591,35 +573,6 @@ function InstanceController() {
                 throw err;
             }
         })
-    }
-
-    // Call in transaction!
-    async function updateRecordParents(t, parent, child, type, mtime) {
-        while (parent != null) {
-            let parent_key = `${profile.userid}:${parent.ulid}`;
-            let parent_obj = await t.load('rec_records', parent_key);
-            let parent_record = await goupile.decryptLocal(parent_obj.enc);
-
-            let parent_fragment = {
-                type: type,
-                user: profile.username,
-                mtime: mtime,
-                child: child
-            };
-            parent_record.fragments.push(parent_fragment);
-
-            parent_obj.enc = await goupile.encryptLocal(parent_record);
-            await t.saveWithKey('rec_records', parent_key, parent_obj);
-
-            type = 'save_child';
-
-            child = {
-                form: parent_record.form,
-                ulid: parent_record.ulid,
-                version: parent_record.fragments.length
-            };
-            parent = parent_record.parent;
-        }
     }
 
     function enablePersistence() {
@@ -1423,25 +1376,14 @@ function InstanceController() {
         }
 
         let values = {};
-        let children_map = new Map;
         let status = new Set;
         for (let i = 0; i < version; i++) {
             let fragment = fragments[i];
 
-            switch (fragment.type) {
-                case 'save': {
-                    if (load_values)
-                        Object.assign(values, fragment.values);
-                    status.add(fragment.page);
-                } break;
-                case 'save_child': {
-                    children_map.set(fragment.child.ulid, fragment.child);
-                    status.add(fragment.child.form);
-                } break;
-                case 'delete_child': {
-                    children_map.delete(fragment.child.ulid);
-                    status.delete(fragment.child.form);
-                } break;
+            if (fragment.type === 'save') {
+                if (load_values)
+                    Object.assign(values, fragment.values);
+                status.add(fragment.page);
             }
         }
         for (let fragment of fragments) {
@@ -1455,14 +1397,27 @@ function InstanceController() {
         if (!allow_fake && !status.size)
             throw new Error('Skipping fake record');
 
-        let children = {};
-        for (let child of children_map.values()) {
-            let array = children[child.form];
-            if (array == null) {
-                array = [];
-                children[child.form] = array;
+        let children_map = {};
+        {
+            let range = IDBKeyRange.bound(profile.userid + ':' + entry.ulid + '/',
+                                          profile.userid + ':' + entry.ulid + '`', false, true);
+            let keys = await db.list('rec_records/parent', range);
+
+            for (let key of keys) {
+                let child = {
+                    form: key.index.substr(key.index.indexOf('/') + 1),
+                    ulid: key.primary.substr(key.primary.indexOf(':') + 1)
+                };
+
+                let array = children_map[child.form];
+                if (array == null) {
+                    array = [];
+                    children_map[child.form] = array;
+                }
+
+                array.push(child);
+                status.add(child.form);
             }
-            array.push(child);
         }
 
         let record = {
@@ -1476,7 +1431,7 @@ function InstanceController() {
             values: values,
 
             parent: entry.parent,
-            children: children,
+            children: children_map,
             chain: null, // Will be set later
             map: null // Will be set later
         };
@@ -1504,7 +1459,7 @@ function InstanceController() {
 
                 if (record.status.has(form.key)) {
                     let child = record.children[form.key][0];
-                    record = await loadRecord(child.ulid, child.version);
+                    record = await loadRecord(child.ulid);
 
                     if (record.form !== form)
                         throw new Error('Saut impossible en raison d\'un changement de schéma');
