@@ -279,7 +279,7 @@ html.small .ui_toolbar button.icon {
 #ui_log {
     position: fixed;
     left: calc(50% - 180px);
-    top: 20px;
+    bottom: 70px;
     width: 360px;
     z-index: 9999999;
     user-select: none;
