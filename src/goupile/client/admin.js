@@ -196,13 +196,7 @@ function AdminController() {
                 d.tab('Modifier', () => {
                     let title = d.text('*title', 'Nom de l\'application', {value: instance.config.title});
                     let use_offline = d.boolean('*use_offline', 'Utilisation hors-ligne', {value: instance.config.use_offline});
-                    let sync_mode = d.enum('*sync_mode', 'Mode de synchronisation', [
-                        ['offline', 'Hors ligne'],
-                        ['online', 'En ligne'],
-                        ['mirror', 'Mode miroir']
-                    ], {value: instance.config.sync_mode});
-                    let backup_key = (sync_mode.value == 'offline') ?
-                                     d.text('backup_key', 'Clé d\'archivage', {value: instance.config.backup_key}) : {};
+                    let backup_key = d.text('backup_key', 'Clé d\'archivage', {value: instance.config.backup_key});
                     if (backup_key.value != null) {
                         try {
                             let key = base64ToBytes(backup_key.value);
@@ -218,9 +212,7 @@ function AdminController() {
                         query.set('key', instance.key);
                         query.set('title', title.value);
                         query.set('use_offline', use_offline.value);
-                        query.set('sync_mode', sync_mode.value);
-                        if (sync_mode.value === 'offline')
-                            query.set('backup_key', backup_key.value || '');
+                        query.set('backup_key', backup_key.value || '');
 
                         let response = await net.fetch('/admin/api/instances/configure', {
                             method: 'POST',

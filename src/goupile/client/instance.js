@@ -228,10 +228,9 @@ function InstanceController() {
                 <div class="ui_quick">
                     <a @click=${ui.wrapAction(goNewRecord)}>Créer</a>
                     <div style="flex: 1;"></div>
-                    ${ENV.backup_key != null ? html`
-                        <a @click=${ui.wrapAction(e => backupClientData('file'))}>Faire une sauvegarde chiffrée</a>
-                        <div style="flex: 1;"></div>
-                    ` : ''}
+                    <a @click=${ui.wrapAction(syncData)}>Synchroniser les données</a>
+                    ${ENV.backup_key != null ? html`<a @click=${ui.wrapAction(e => backupClientData('file'))}>Faire une sauvegarde chiffrée</a>` : ''}
+                    <div style="flex: 1;"></div>
                     ${data_rows.length || 'Aucune'} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
                         (<a @click=${ui.wrapAction(e => { data_rows = null; return self.run(); })}>rafraichir</a>)
                 </div>
@@ -490,11 +489,14 @@ function InstanceController() {
                     entry = await goupile.decryptLocal(obj.enc);
                     if (record.hid != null)
                         entry.hid = record.hid;
+                    obj.keys.sync = profile.userid;
                 } else {
                     obj = {
                         keys: {
                             form: `${profile.userid}/${record.form.key}`,
-                            parent: null
+                            parent: null,
+                            anchor: null,
+                            sync: profile.userid
                         },
                         enc: null
                     };
@@ -509,7 +511,6 @@ function InstanceController() {
                     if (record.parent != null) {
                         obj.keys.parent = `${profile.userid}:${record.parent.ulid}/${record.form.key}`;
                         entry.parent = {
-                            form: record.parent.form.key,
                             ulid: record.parent.ulid,
                             version: record.parent.version
                         };
@@ -563,7 +564,9 @@ function InstanceController() {
                     // Mark as deleted with special fragment
                     entry.fragments.push(fragment);
 
-                    obj.keys = {};
+                    obj.keys.parent = null;
+                    obj.keys.form = null;
+                    obj.keys.sync = profile.userid;
                     obj.enc = await goupile.encryptLocal(entry);
 
                     await t.saveWithKey('rec_records', key, obj);
@@ -1151,6 +1154,8 @@ function InstanceController() {
         if (!goupile.isAuthorized()) {
             await goupile.runLogin();
 
+            if (net.isOnline())
+                await syncData();
             if (net.isOnline() && ENV.backup_key != null)
                 await backupClientData('server');
         }
@@ -1391,13 +1396,9 @@ function InstanceController() {
         return record;
     }
 
-    async function decryptRecord(obj, version, allow_fake = true, load_values = true) {
+    async function decryptRecord(obj, version, allow_fake = true, load_values = true, allow_deleted = false) {
         let entry = await goupile.decryptLocal(obj.enc);
         let fragments = entry.fragments;
-
-        // Deleted record
-        if (fragments[fragments.length - 1].type === 'delete')
-            throw new Error('L\'enregistrement demandé est supprimé');
 
         if (version == null) {
             version = fragments.length;
@@ -1418,12 +1419,12 @@ function InstanceController() {
         }
         for (let fragment of fragments) {
             fragment.mtime = new Date(fragment.mtime);
-
-            delete fragment.child;
-            delete fragment.values;
+            if (!load_values)
+                delete fragment.values;
         }
 
-        // Could be a fake record
+        if (!allow_deleted && fragments[fragments.length - 1].type === 'delete')
+            throw new Error('L\'enregistrement demandé est supprimé');
         if (!allow_fake && !status.size)
             throw new Error('Skipping fake record');
 
@@ -1501,7 +1502,9 @@ function InstanceController() {
                         let obj = {
                             keys: {
                                 form: `${profile.userid}/${record.form.key}`,
-                                parent: null
+                                parent: null,
+                                anchor: null,
+                                sync: null
                             },
                             enc: null
                         };
@@ -1520,7 +1523,6 @@ function InstanceController() {
                         if (record.parent != null) {
                             obj.keys.parent = `${profile.userid}:${record.parent.ulid}/${record.form.key}`;
                             entry.parent = {
-                                form: record.parent.form.key,
                                 ulid: record.parent.ulid,
                                 version: record.parent.version
                             };
@@ -1753,6 +1755,130 @@ function InstanceController() {
                 util.saveBlob(blob, filename);
             } else {
                 throw new Error(`Invalid backup destination '${dest}'`);
+            }
+        } catch (err) {
+            progress.close();
+            throw err;
+        }
+    }
+
+    async function syncData() {
+        let progress = log.progress('Synchronisation en cours');
+
+        try {
+            let changes = new Set;
+
+            // Upload new fragments
+            {
+                let objects = await db.loadAll('rec_records/sync', IDBKeyRange.only(profile.userid));
+
+                let uploads = [];
+                for (let obj of objects) {
+                    try {
+                        let record = await decryptRecord(obj, null, false, true, true);
+
+                        let upload = {
+                            form: record.form.key,
+                            ulid: record.ulid,
+                            hid: record.hid,
+                            parent: record.parent,
+                            zoned: record.form.zoned, // XXX: Record information on save,
+                            fragments: record.fragments.map((fragment, idx) => ({
+                                version: idx + 1,
+                                type: fragment.type,
+                                mtime: fragment.mtime.toISOString(),
+                                page: fragment.page,
+                                json: JSON.stringify(fragment.values)
+                            }))
+                        };
+                        uploads.push(upload);
+                    } catch (err) {
+                        console.log(err);
+                    }
+                }
+
+                if (uploads.length) {
+                    let url = `${ENV.base_url}api/records/save`;
+                    let response = await net.fetch(url, {
+                        method: 'POST',
+                        body: JSON.stringify(uploads)
+                    });
+
+                    if (!response.ok) {
+                        let err = (await response.text()).trim();
+                        throw new Error(err);
+                    }
+                }
+            }
+
+            // Download new fragments
+            {
+                let range = IDBKeyRange.bound(profile.userid + '@', profile.userid + '`', false, true);
+                let [, anchor] = await db.limits('rec_records/anchor', range);
+
+                if (anchor != null) {
+                    anchor = anchor.toString();
+                    anchor = anchor.substr(anchor.indexOf('@') + 1);
+                } else {
+                    anchor = 0;
+                }
+
+                let url = util.pasteURL(`${ENV.base_url}api/records/load`, {
+                    anchor: anchor
+                });
+                let downloads = await net.fetchJson(url);
+
+                for (let download of downloads) {
+                    let key = `${profile.userid}:${download.ulid}`;
+                    let anchor = download.fragments[download.fragments.length - 1].anchor;
+
+                    let obj = {
+                        keys: {
+                            form: `${profile.userid}/${download.form}`,
+                            parent: (download.parent != null) ? `${profile.userid}:${download.parent.ulid}/${download.form}` : null,
+                            anchor: `${profile.userid}@${anchor + 1}`,
+                            sync: null
+                        },
+                        enc: null
+                    };
+
+                    let entry = {
+                        ulid: download.ulid,
+                        hid: download.hid,
+                        form: download.form,
+                        parent: download.parent,
+                        fragments: download.fragments.map(fragment => ({
+                            anchor: fragment.anchor,
+                            type: fragment.type,
+                            user: fragment.username,
+                            mtime: new Date(fragment.mtime),
+                            page: fragment.page,
+                            values: fragment.values
+                        }))
+                    };
+
+                    obj.enc = await goupile.encryptLocal(entry);
+                    await db.saveWithKey('rec_records', key, obj);
+
+                    changes.add(download.ulid);
+                }
+            }
+
+            if (changes.size) {
+                progress.success('Synchronisation terminée');
+                enablePersistence();
+
+                // XXX: What about current record being edited?
+                if (form_record != null && form_record.chain.some(record => changes.has(record.ulid))) {
+                    route.version = null;
+                    form_record = null;
+                    form_state = null;
+                }
+                data_rows = null;
+
+                self.go(null, window.location.href);
+            } else {
+                progress.close();
             }
         } catch (err) {
             progress.close();

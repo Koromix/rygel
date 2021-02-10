@@ -8,7 +8,6 @@
 #include "files.hh"
 #include "goupile.hh"
 #include "instance.hh"
-#include "js.hh"
 #include "records.hh"
 #include "user.hh"
 #include "../../web/libhttp/libhttp.hh"
@@ -299,14 +298,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleFileDelete(instance, request, io);
         } else if (TestStr(instance_path, "/api/files/backup") && request.method == http_RequestMethod::Post) {
              HandleFileBackup(instance, request, io);
-        /*} else if (TestStr(instance_path, "/api/records/load") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(instance_path, "/api/records/load") && request.method == http_RequestMethod::Get) {
             HandleRecordLoad(instance, request, io);
-        } else if (TestStr(instance_path, "/api/records/columns") && request.method == http_RequestMethod::Get) {
-            HandleRecordColumns(instance, request, io);
-        } else if (TestStr(instance_path, "/api/records/sync") && request.method == http_RequestMethod::Post) {
-            HandleRecordSync(instance, request, io);
-        } else if (TestStr(instance_path, "/api/records/recompute") && request.method == http_RequestMethod::Post) {
-            HandleRecordRecompute(instance, request, io); */
+        } else if (TestStr(instance_path, "/api/records/save") && request.method == http_RequestMethod::Post) {
+            HandleRecordSave(instance, request, io);
         } else {
             io->AttachError(404);
         }
@@ -380,8 +375,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
         return 1;
     if (!gp_domain.Sync())
         return 1;
-    LogInfo("Init JS");
-    InitJS();
 
     // Parse arguments
     {

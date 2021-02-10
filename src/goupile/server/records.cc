@@ -5,7 +5,6 @@
 #include "../../core/libcc/libcc.hh"
 #include "goupile.hh"
 #include "instance.hh"
-#include "js.hh"
 #include "user.hh"
 #include "../../core/libwrap/json.hh"
 
@@ -17,11 +16,23 @@ static void ExportRecord(sq_Statement *stmt, json_Writer *json)
 
     json->StartObject();
 
-    json->Key("table"); json->String((const char *)sqlite3_column_text(*stmt, 1));
-    json->Key("id"); json->String((const char *)sqlite3_column_text(*stmt, 2));
-    json->Key("sequence"); json->Int(sqlite3_column_int(*stmt, 3));
+    json->Key("ulid"); json->String((const char *)sqlite3_column_text(*stmt, 1));
+    if (sqlite3_column_type(*stmt, 2) != SQLITE_NULL) {
+        json->Key("hid"); json->String((const char *)sqlite3_column_text(*stmt, 2));
+    } else {
+        json->Key("hid"); json->Null();
+    }
+    json->Key("form"); json->String((const char *)sqlite3_column_text(*stmt, 3));
     if (sqlite3_column_type(*stmt, 4) != SQLITE_NULL) {
-        json->Key("zone"); json->String((const char *)sqlite3_column_text(*stmt, 4));
+        json->Key("parent"); json->StartObject();
+        json->Key("ulid"); json->String((const char *)sqlite3_column_text(*stmt, 4));
+        json->Key("version"); json->Int64(sqlite3_column_int64(*stmt, 5));
+        json->EndObject();
+    } else {
+        json->Key("parent"); json->Null();
+    }
+    if (sqlite3_column_type(*stmt, 6) != SQLITE_NULL) {
+        json->Key("zone"); json->String((const char *)sqlite3_column_text(*stmt, 6));
     } else {
         json->Key("zone"); json->Null();
     }
@@ -30,19 +41,17 @@ static void ExportRecord(sq_Statement *stmt, json_Writer *json)
     do {
         json->StartObject();
 
-        json->Key("mtime"); json->String((const char *)sqlite3_column_text(*stmt, 5));
-        json->Key("username"); json->String((const char *)sqlite3_column_text(*stmt, 6));
-        json->Key("version"); json->Int64(sqlite3_column_int64(*stmt, 7));
-        if (sqlite3_column_type(*stmt, 8) != SQLITE_NULL) {
-            json->Key("page"); json->String((const char *)sqlite3_column_text(*stmt, 8));
-            json->Key("complete"); json->Bool(sqlite3_column_int(*stmt, 9));
-            json->Key("values"); json->Raw((const char *)sqlite3_column_text(*stmt, 10));
-        } else {
-            json->Key("page"); json->Null();
-            json->Key("complete"); json->Bool(false);
-            json->Key("values"); json->Raw("{}");
+        const char *type = (const char *)sqlite3_column_text(*stmt, 9);
+
+        json->Key("anchor"); json->Int64(sqlite3_column_int64(*stmt, 7));
+        json->Key("version"); json->Int64(sqlite3_column_int64(*stmt, 8));
+        json->Key("type"); json->String(type);
+        json->Key("username"); json->String((const char *)sqlite3_column_text(*stmt, 10));
+        json->Key("mtime"); json->String((const char *)sqlite3_column_text(*stmt, 11));
+        if (TestStr(type, "save")) {
+            json->Key("page"); json->String((const char *)sqlite3_column_text(*stmt, 12));
+            json->Key("values"); json->Raw((const char *)sqlite3_column_text(*stmt, 13));
         }
-        json->Key("anchor"); json->Int64(sqlite3_column_int64(*stmt, 11));
 
         json->EndObject();
     } while (stmt->Next() && sqlite3_column_int64(*stmt, 0) == rowid);
@@ -56,13 +65,13 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const Token *token = session ? session->GetToken(instance) : nullptr;
     if (!token) {
-        LogError("User is not allowed to view data");
+        LogError("User is not allowed to load data");
         io->AttachError(403);
         return;
     }
 
-    const char *table = request.GetQueryValue("table");
-    const char *id = request.GetQueryValue("id");
+    const char *form = request.GetQueryValue("form");
+    const char *ulid = request.GetQueryValue("ulid");
     int64_t anchor = -1;
     {
         const char *anchor_str = request.GetQueryValue("anchor");
@@ -76,21 +85,21 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
     {
         LocalArray<char, 1024> sql;
 
-        sql.len += Fmt(sql.TakeAvailable(), R"(SELECT r.rowid, r.store, r.id, r.sequence, r.zone, f.mtime, f.username,
-                                                      f.version, f.page, f.complete, f.json, f.anchor FROM rec_entries r
-                                               INNER JOIN rec_fragments f ON (f.store = r.store AND f.id = r.id)
+        sql.len += Fmt(sql.TakeAvailable(), R"(SELECT r.rowid, r.ulid, r.hid, r.form, r.parent_ulid, r.parent_version, r.zone,
+                                                      f.anchor, f.version, f.type, f.username, f.mtime, f.page, f.json FROM rec_entries r
+                                               INNER JOIN rec_fragments f ON (f.ulid = r.ulid)
                                                WHERE 1 = 1)").len;
         if (token->zone) {
             sql.len += Fmt(sql.TakeAvailable(), " AND (r.zone IS NULL OR r.zone == ?1)").len;
         }
-        if (table) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND r.store = ?2").len;
+        if (form) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND r.form = ?2").len;
         }
-        if (id) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND r.id = ?3").len;
+        if (ulid) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND r.ulid = ?3").len;
         }
         if (anchor) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND f.anchor >= ?4").len;
+            sql.len += Fmt(sql.TakeAvailable(), " AND r.anchor >= ?4").len;
         }
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY r.rowid, f.anchor").len;
 
@@ -100,11 +109,11 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
         if (token->zone) {
             sqlite3_bind_text(stmt, 1, token->zone, -1, SQLITE_STATIC);
         }
-        if (table) {
-            sqlite3_bind_text(stmt, 2, table, -1, SQLITE_STATIC);
+        if (form) {
+            sqlite3_bind_text(stmt, 2, form, -1, SQLITE_STATIC);
         }
-        if (id) {
-            sqlite3_bind_text(stmt, 3, id, -1, SQLITE_STATIC);
+        if (ulid) {
+            sqlite3_bind_text(stmt, 3, ulid, -1, SQLITE_STATIC);
         }
         if (anchor) {
             sqlite3_bind_int64(stmt, 4, anchor);
@@ -127,72 +136,28 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
     json.Finish(io);
 }
 
-void HandleRecordColumns(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
-{
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
-    if (!session) {
-        LogError("User is not allowed to view data");
-        io->AttachError(403);
-        return;
-    }
+struct SaveRecord {
+    struct Fragment {
+        int64_t version = -1;
+        const char *type = nullptr;
+        const char *mtime = nullptr;
+        const char *page = nullptr;
+        Span<const char> json = {};
+    };
 
-    const char *table = request.GetQueryValue("table");
-    int64_t anchor = -1;
-    {
-        const char *anchor_str = request.GetQueryValue("anchor");
-        if (anchor_str && !ParseInt(anchor_str, &anchor)) {
-            io->AttachError(422);
-            return;
-        }
-    }
+    const char *ulid = nullptr;
+    const char *hid = nullptr;
+    const char *form = nullptr;
+    struct {
+        const char *ulid = nullptr;
+        int64_t version = -1;
+    } parent;
+    bool zoned = true;
+    HeapArray<Fragment> fragments;
+    int64_t version;
+};
 
-    sq_Statement stmt;
-    if (table) {
-        if (!instance->db.Prepare(R"(SELECT store, page, variable, type, prop, before, after FROM rec_columns
-                                     WHERE store = ?1 AND anchor >= ?2)", &stmt))
-            return;
-        sqlite3_bind_text(stmt, 1, table, -1, SQLITE_STATIC);
-        sqlite3_bind_int64(stmt, 2, anchor);
-    } else {
-        if (!instance->db.Prepare(R"(SELECT store, page, variable, type, prop, before, after FROM rec_columns
-                                     WHERE anchor >= ?1)", &stmt))
-            return;
-        sqlite3_bind_int64(stmt, 1, anchor);
-    }
-
-    // Export data
-    http_JsonPageBuilder json(request.compression_type);
-
-    json.StartArray();
-    while (stmt.Next()) {
-        json.StartObject();
-        json.Key("table"); json.String((const char *)sqlite3_column_text(stmt, 0));
-        json.Key("page"); json.String((const char *)sqlite3_column_text(stmt, 1));
-        json.Key("variable"); json.String((const char *)sqlite3_column_text(stmt, 2));
-        json.Key("type"); json.String((const char *)sqlite3_column_text(stmt, 3));
-        if (sqlite3_column_type(stmt, 4) != SQLITE_NULL) {
-            json.Key("prop"); json.Raw((const char *)sqlite3_column_text(stmt, 4));
-        }
-        if (sqlite3_column_type(stmt, 5) != SQLITE_NULL) {
-            json.Key("before"); json.String((const char *)sqlite3_column_text(stmt, 5));
-        } else {
-            json.Key("before"); json.Null();
-        }
-        if (sqlite3_column_type(stmt, 6) != SQLITE_NULL) {
-            json.Key("after"); json.String((const char *)sqlite3_column_text(stmt, 6));
-        } else {
-            json.Key("after"); json.Null();
-        }
-        json.EndObject();
-    }
-    if (!stmt.IsValid())
-        return;
-    json.EndArray();
-
-    json.Finish(io);
-}
-
-void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const Token *token = session ? session->GetToken(instance) : nullptr;
@@ -205,300 +170,199 @@ void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request,
     }
 
     io->RunAsync([=]() {
-        // Find appropriate port
-        ScriptPort *port = LockScriptPort();
-        RG_DEFER { port->Unlock(); };
+        HeapArray<SaveRecord> records;
 
-        port->Setup(instance, session->username, token->zone);
-
-        // Parse request body (JSON)
-        HeapArray<ScriptRecord> handles;
+        // Parse records from JSON
         {
             StreamReader st;
             if (!io->OpenForRead(Megabytes(2), &st))
                 return;
+            json_Parser parser(&st, &io->allocator);
 
-            if (!port->ParseFragments(&st, &handles)) {
-                io->AttachError(422);
-                return;
+            parser.ParseArray();
+            while (parser.InArray()) {
+                SaveRecord *record = records.AppendDefault();
+
+                parser.ParseObject();
+                while (parser.InObject()) {
+                    const char *key = "";
+                    parser.ParseKey(&key);
+
+                    if (TestStr(key, "form")) {
+                        parser.ParseString(&record->form);
+                    } else if (TestStr(key, "ulid")) {
+                        parser.ParseString(&record->ulid);
+                    } else if (TestStr(key, "hid")) {
+                        if (parser.PeekToken() == json_TokenType::Null) {
+                            parser.ParseNull();
+                            record->hid = nullptr;
+                        } else {
+                            parser.ParseString(&record->hid);
+                        }
+                    } else if (TestStr(key, "parent")) {
+                        if (parser.PeekToken() == json_TokenType::Null) {
+                            parser.ParseNull();
+                            record->parent.ulid = nullptr;
+                            record->parent.version = -1;
+                        } else {
+                            parser.ParseObject();
+                            while (parser.InObject()) {
+                                const char *key = "";
+                                parser.ParseKey(&key);
+
+                                if (TestStr(key, "ulid")) {
+                                    parser.ParseString(&record->parent.ulid);
+                                } else if (TestStr(key, "version")) {
+                                    parser.ParseInt(&record->parent.version);
+                                } else if (parser.IsValid()) {
+                                    LogError("Unknown key '%1' in parent object", key);
+                                    return;
+                                }
+                            }
+
+                            if (RG_UNLIKELY(!record->parent.ulid || record->parent.version <= 0)) {
+                                LogError("xxxx");
+                                return;
+                            }
+                        }
+                    } else if (TestStr(key, "zoned")) {
+                        parser.ParseBool(&record->zoned);
+                    } else if (TestStr(key, "fragments")) {
+                        parser.ParseArray();
+                        while (parser.InArray()) {
+                            SaveRecord::Fragment *fragment = record->fragments.AppendDefault();
+
+                            parser.ParseObject();
+                            while (parser.InObject()) {
+                                const char *key = "";
+                                parser.ParseKey(&key);
+
+                                if (TestStr(key, "version")) {
+                                    parser.ParseInt(&fragment->version);
+                                } else if (TestStr(key, "type")) {
+                                    parser.ParseString(&fragment->type);
+                                } else if (TestStr(key, "mtime")) {
+                                    parser.ParseString(&fragment->mtime);
+                                } else if (TestStr(key, "page")) {
+                                    if (parser.PeekToken() == json_TokenType::Null) {
+                                        parser.ParseNull();
+                                        fragment->page = nullptr;
+                                    } else {
+                                        parser.ParseString(&fragment->page);
+                                    }
+                                } else if (TestStr(key, "json")) {
+                                    parser.ParseString(&fragment->json);
+                                } else if (parser.IsValid()) {
+                                    LogError("Unknown key '%1' in fragment object", key);
+                                    return;
+                                }
+                            }
+
+                            if (RG_UNLIKELY(fragment->version <= 0 || !fragment->type || !fragment->mtime)) {
+                                LogError("A");
+                                return;
+                            }
+                            if (RG_UNLIKELY(!TestStr(fragment->type, "save") && !TestStr(fragment->type, "delete"))) {
+                                LogError("B");
+                                return;
+                            }
+                            if (TestStr(fragment->type, "save") && (!fragment->page || !fragment->json.IsValid())) {
+                                LogError("C");
+                                return;
+                            }
+                        }
+                    } else if (parser.IsValid()) {
+                        LogError("Unknown key '%1' in record object", key);
+                        return;
+                    }
+                }
+
+                if (RG_UNLIKELY(!record->form || !record->ulid)) {
+                    LogError("C");
+                    return;
+                }
+                if (RG_UNLIKELY(!record->fragments.len)) {
+                    LogError("D");
+                    return;
+                }
+
+                // XXX: CHECK ORDERING
+                record->version = record->fragments[record->fragments.len - 1].version;
             }
+            if (!parser.IsValid())
+                return;
         }
 
-        bool incomplete = false;
-
-        for (const ScriptRecord &handle: handles) {
-            // Get existing record data
-            sq_Statement stmt;
-            int version;
-            Span<const char> json;
-            {
-                if (!instance->db.Prepare(R"(SELECT zone, version, json FROM rec_entries
-                                             WHERE store = ?1 AND id = ?2)", &stmt))
-                    return;
-                sqlite3_bind_text(stmt, 1, handle.table, -1, SQLITE_STATIC);
-                sqlite3_bind_text(stmt, 2, handle.id, -1, SQLITE_STATIC);
-
-                if (stmt.Next()) {
-                    if (token->zone && sqlite3_column_type(stmt, 0) != SQLITE_NULL) {
-                        const char *zone = (const char *)sqlite3_column_text(stmt, 0);
-                        if (!TestStr(token->zone, zone)) {
-                            LogError("Zone mismatch for %1", handle.id);
-                            incomplete = true;
-                            continue;
-                        }
-                    }
-
-                    version = sqlite3_column_int(stmt, 1);
-                    json.ptr = (const char *)sqlite3_column_text(stmt, 2);
-                    json.len = (Size)sqlite3_column_bytes(stmt, 2);
-                } else if (stmt.IsValid()) {
-                    version = -1;
-                    json = "{}";
-                } else {
-                    return;
-                }
-            }
-
-            // Run JS validation
-            HeapArray<ScriptFragment> fragments;
-            if (!port->RunRecord(json, handle, &fragments, &json)) {
-                incomplete = true;
-                continue;
-            }
-
-            for (const ScriptFragment &frag: fragments) {
-                if (frag.complete && !token->HasPermission(UserPermission::Validate)) {
-                    LogError("User is not allowed to validate records");
-                    incomplete = true;
-                    continue;
-                }
-            }
-
-            bool success = instance->db.Transaction([&]() {
-                // Get sequence number
-                int sequence;
+        // Save to database
+        bool success = instance->db.Transaction([&]() {
+            for (const SaveRecord &record: records) {
+                // Retrieve record version
+                int version;
                 {
                     sq_Statement stmt;
-                    if (!instance->db.Prepare(R"(SELECT sequence FROM rec_sequences
-                                                 WHERE store = ?1)", &stmt))
+                    if (!instance->db.Prepare(R"(SELECT version, zone FROM rec_entries
+                                                 WHERE ulid = ?1)", &stmt))
                         return false;
-                    sqlite3_bind_text(stmt, 1, handle.table, -1, SQLITE_STATIC);
+                    sqlite3_bind_text(stmt, 1, record.ulid, -1, SQLITE_STATIC);
 
                     if (stmt.Next()) {
-                        sequence = sqlite3_column_int(stmt, 0);
+                        /*if (token->zone && sqlite3_column_type(stmt, 0) != SQLITE_NULL) {
+                            const char *zone = (const char *)sqlite3_column_text(stmt, 0);
+                            if (!TestStr(token->zone, zone)) {
+                                LogError("Zone mismatch for %1", handle.id);
+                                incomplete = true;
+                                continue;
+                            }
+                        }*/
+
+                        version = sqlite3_column_int(stmt, 0);
                     } else if (stmt.IsValid()) {
-                        sequence = 1;
+                        version = -1;
                     } else {
                         return false;
                     }
                 }
 
-                // Insert new entry
-                if (!instance->db.Run(R"(INSERT INTO rec_entries (store, id, zone, sequence, version, json)
-                                         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-                                         ON CONFLICT DO NOTHING)",
-                                      handle.table, handle.id, handle.zone ? sq_Binding(handle.zone) : sq_Binding(),
-                                      sequence, fragments[fragments.len - 1].version, json))
-                    return false;
+                // Nothing new, skip!
+                if (record.version <= version)
+                    continue;
 
-                // Update sequence number of existing entry depending on result
-                if (sqlite3_changes(instance->db)) {
-                    if (!instance->db.Run(R"(INSERT INTO rec_sequences (store, sequence)
-                                             VALUES (?1, ?2)
-                                             ON CONFLICT(store)
-                                                 DO UPDATE SET sequence = excluded.sequence)",
-                                          handle.table, sequence + 1))
-                        return false;
-                } else {
-                    if (!instance->db.Run(R"(UPDATE rec_entries SET version = ?1, json = ?2
-                                             WHERE store = ?3 AND id = ?4)",
-                                        fragments[fragments.len - 1].version, json, handle.table, handle.id))
-                        return false;
-                }
+                // Save record fragments
+                for (Size i = 0; i < record.fragments.len; i++) {
+                    const SaveRecord::Fragment &fragment = record.fragments[i];
 
-                // Save record fragments (and variables)
-                for (Size i = 0; i < fragments.len; i++) {
-                    const ScriptFragment &frag = fragments[i];
-
-                    // XXX: Silently skipping already stored fragments for now
-                    if (frag.version <= version) {
-                        LogError("Ignored conflicting fragment %1 for %2", frag.version, handle.id);
-                        incomplete = true;
+                    if (fragment.version <= version) {
+                        LogError("Ignored conflicting fragment %1 for '%2'", fragment.version, record.ulid);
                         continue;
                     }
 
-                    int64_t anchor;
-                    if (!instance->db.Run(R"(INSERT INTO rec_fragments (store, id, version, page,
-                                                                        username, mtime, complete, json)
+                    if (!instance->db.Run(R"(INSERT INTO rec_fragments (ulid, version, type, userid, username,
+                                                                        mtime, page, json)
                                              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8))",
-                                          handle.table, handle.id, frag.version,
-                                          frag.page ? sq_Binding(frag.page) : sq_Binding(), session->username,
-                                          frag.mtime, 0 + frag.complete, frag.json))
+                                          record.ulid, fragment.version, fragment.type, session->userid, session->username,
+                                          fragment.mtime, fragment.page, fragment.json))
                         return false;
-                    anchor = sqlite3_last_insert_rowid(instance->db);
-
-                    sq_Statement stmt;
-                    if (!instance->db.Prepare(R"(INSERT INTO rec_columns (key, store, page, variable,
-                                                                          type, prop, before, after, anchor)
-                                                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
-                                                 ON CONFLICT(key)
-                                                     DO UPDATE SET before = excluded.before,
-                                                                   after = excluded.after,
-                                                                   anchor = excluded.anchor)", &stmt))
-                        return false;
-                    sqlite3_bind_text(stmt, 2, handle.table, -1, SQLITE_STATIC);
-                    sqlite3_bind_int64(stmt, 9, anchor);
-
-                    for (Size j = 0; j < frag.columns.len; j++) {
-                        const ScriptFragment::Column &col = frag.columns[j];
-                        const char *before = j ? frag.columns[j - 1].key : nullptr;
-                        const char *after = (j + 1 < frag.columns.len) ? frag.columns[j + 1].key : nullptr;
-
-                        stmt.Reset();
-                        sqlite3_bind_text(stmt, 1, col.key, -1, SQLITE_STATIC);
-                        sqlite3_bind_text(stmt, 3, frag.page, -1, SQLITE_STATIC);
-                        sqlite3_bind_text(stmt, 4, col.variable, -1, SQLITE_STATIC);
-                        sqlite3_bind_text(stmt, 5, col.type, -1, SQLITE_STATIC);
-                        if (col.prop) {
-                            sqlite3_bind_text(stmt, 6, col.prop, -1, SQLITE_STATIC);
-                        } else {
-                            sqlite3_bind_null(stmt, 6);
-                        }
-                        sqlite3_bind_text(stmt, 7, before, -1, SQLITE_STATIC);
-                        sqlite3_bind_text(stmt, 8, after, -1, SQLITE_STATIC);
-
-                        if (!stmt.Run())
-                            return false;
-                    }
                 }
 
-                return true;
-            });
+                int64_t anchor = sqlite3_last_insert_rowid(instance->db);
 
-            if (!success)
-                return;
-        }
-
-        if (incomplete) {
-            io->AttachText(409, "Done (with errors)!");
-        } else {
-            io->AttachText(200, "Done!");
-        }
-    });
-}
-
-// XXX: Update columns after recomputation
-void HandleRecordRecompute(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
-{
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
-    const Token *token = session ? session->GetToken(instance) : nullptr;
-    if (!token || !token->HasPermission(UserPermission::Recompute)) {
-        LogError("User is not allowed to recompute records");
-        io->AttachError(403);
-        return;
-    }
-
-    io->RunAsync([=]() {
-        // Read POST values
-        const char *table;
-        const char *page;
-        {
-            HashMap<const char *, const char *> values;
-            if (!io->ReadPostValues(&io->allocator, &values)) {
-                io->AttachError(422);
-                return;
+                // Insert or update record entry
+                if (!instance->db.Run(R"(INSERT INTO rec_entries (ulid, hid, form, parent_ulid, parent_version, version, zone, anchor)
+                                         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                                         ON CONFLICT (ulid)
+                                             DO UPDATE SET hid = excluded.hid,
+                                                           version = excluded.version,
+                                                           zone = excluded.zone,
+                                                           anchor = excluded.anchor)",
+                                      record.ulid, record.hid, record.form,
+                                      record.parent.ulid, record.parent.version >= 0 ? sq_Binding(record.parent.version) : sq_Binding(),
+                                      record.version, record.zoned ? nullptr : nullptr, anchor))
+                    return false;
             }
 
-            // XXX: Check that page actually exists
-            table = values.FindValue("table", nullptr);
-            page = values.FindValue("page", nullptr);
-            if (!table || !page) {
-                LogError("Missing 'table' or 'page' parameter");
-                io->AttachError(422);
-                return;
-            }
-        }
-
-        // Find appropriate port
-        ScriptPort *port = LockScriptPort();
-        RG_DEFER { port->Unlock(); };
-
-        int64_t anchor;
-        {
-            sq_Statement stmt;
-            if (!instance->db.Prepare("SELECT seq FROM sqlite_sequence WHERE name = 'rec_fragments'", &stmt))
-                return;
-
-            if (stmt.Next()) {
-                anchor = sqlite3_column_int64(stmt, 0);
-            } else if (stmt.IsValid()) {
-                anchor = -1;
-            } else {
-                return;
-            }
-        }
-
-        sq_Statement stmt;
-        {
-            LocalArray<char, 1024> sql;
-
-            sql.len += Fmt(sql.TakeAvailable(), R"(SELECT r.id, r.json, r.version, f.username,
-                                                          f.complete, r.zone FROM rec_entries r
-                                                   INNER JOIN rec_fragments f ON (f.store = r.store AND f.id = r.id AND
-                                                                                  f.version = r.version)
-                                                   WHERE r.store = ?1 AND f.anchor <= ?2 AND f.page IS NOT NULL AND
-                                                         r.id IN (SELECT id FROM rec_fragments WHERE store = ?1 AND page = ?3))").len;
-            if (token->zone) {
-                sql.len += Fmt(sql.TakeAvailable(), " AND (r.zone IS NULL OR r.zone == ?4)").len;
-            }
-
-            if (!instance->db.Prepare(sql.data, &stmt))
-                return;
-
-            sqlite3_bind_text(stmt, 1, table, -1, SQLITE_STATIC);
-            sqlite3_bind_int64(stmt, 2, anchor);
-            sqlite3_bind_text(stmt, 3, page, -1, SQLITE_STATIC);
-            if (token->zone) {
-               sqlite3_bind_text(stmt, 4, token->zone, -1, SQLITE_STATIC);
-            }
-        }
-
-        while (stmt.Next()) {
-            bool success = instance->db.Transaction([&]() {
-                Size i = 0;
-                do {
-                    const char *id = (const char *)sqlite3_column_text(stmt, 0);
-                    Span<const char> json = MakeSpan((const char *)sqlite3_column_blob(stmt, 1),
-                                                     sqlite3_column_bytes(stmt, 1));
-                    int version = sqlite3_column_int(stmt, 2);
-                    const char *username = (const char *)sqlite3_column_text(stmt, 3);
-                    bool complete = sqlite3_column_int(stmt, 4);
-                    const char *zone = (const char *)sqlite3_column_text(stmt, 5);
-
-                    port->Setup(instance, username, zone);
-
-                    ScriptFragment fragment;
-                    if (!port->Recompute(table, json, page, &fragment, &json))
-                        return false;
-
-                    if (!instance->db.Run(R"(INSERT INTO rec_fragments (store, id, version, page,
-                                                                        username, mtime, complete, json)
-                                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8))",
-                                          table, id, version + 1, page, session->username, fragment.mtime,
-                                          complete, fragment.json))
-                        return false;
-                    if (!instance->db.Run(R"(UPDATE rec_entries SET version = ?1, json = ?2
-                                             WHERE store = ?3 AND id = ?4)",
-                                          version + 1, json, table, id))
-                        return false;
-                } while (++i < 20 && stmt.Next());
-
-                return true;
-            });
-            if (!success)
-                return;
-        }
-        if (!stmt.IsValid())
+            return true;
+        });
+        if (!success)
             return;
 
         io->AttachText(200, "Done!");

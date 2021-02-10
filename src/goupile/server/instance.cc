@@ -11,7 +11,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 25;
+const int InstanceVersion = 26;
 
 static std::atomic_int64_t next_unique;
 
@@ -64,11 +64,6 @@ bool InstanceHolder::Open(const char *key, const char *filename)
                     valid &= ParseBool(value, &config.use_offline);
                 } else if (TestStr(key, "MaxFileSize")) {
                     valid &= ParseInt(value, &config.max_file_size);
-                } else if (TestStr(key, "SyncMode")) {
-                    if (!OptionToEnum(SyncModeNames, value, &config.sync_mode)) {
-                        LogError("Unknown sync mode '%1'", value);
-                        valid = false;
-                    }
                 } else if (TestStr(key, "BackupKey")) {
                     config.backup_key = DuplicateString(value, &str_alloc).ptr;
                 } else {
@@ -100,10 +95,6 @@ bool InstanceHolder::Validate()
     if (config.max_file_size <= 0) {
         LogError("Maximum file size must be >= 0");
         valid = false;
-    }
-    if (config.backup_key && config.sync_mode != SyncMode::Offline) {
-        LogError("Ignoring non-NULL BackupKey in this sync mode");
-        config.backup_key = nullptr;
     }
 
     return valid;
@@ -485,7 +476,7 @@ bool MigrateInstance(sq_Database *db)
                     success &= db->Run(sql, "Application.ClientKey", nullptr);
                     success &= db->Run(sql, "Application.UseOffline", 0 + fake2.use_offline);
                     success &= db->Run(sql, "Application.MaxFileSize", fake2.max_file_size);
-                    success &= db->Run(sql, "Application.SyncMode", SyncModeNames[(int)fake2.sync_mode]);
+                    success &= db->Run(sql, "Application.SyncMode", "Offline");
                     success &= db->Run(sql, "Application.DemoUser", fake1.demo_user);
                     success &= db->Run(sql, "HTTP.SocketType", SocketTypeNames[(int)fake1.http.sock_type]);
                     success &= db->Run(sql, "HTTP.Port", fake1.http.port);
@@ -792,9 +783,50 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 25: {
+                bool success = db->RunMany(R"(
+                    DELETE FROM fs_settings WHERE key = 'SyncMode';
+
+                    DROP TABLE rec_columns;
+                    DROP TABLE rec_entries;
+                    DROP TABLE rec_fragments;
+                    DROP TABLE rec_sequences;
+
+                    CREATE TABLE rec_entries (
+                        ulid TEXT NOT NULL,
+                        hid TEXT,
+                        form TEXT NOT NULL,
+                        parent_ulid TEXT,
+                        parent_version INTEGER,
+                        version INTEGER NOT NULL,
+                        zone TEXT,
+                        anchor INTEGER NOT NULL
+                    );
+                    CREATE INDEX rec_entries_fz ON rec_entries (form, zone);
+                    CREATE UNIQUE INDEX rec_entries_u ON rec_entries (ulid);
+                    CREATE UNIQUE INDEX rec_entries_uz ON rec_entries (ulid, zone);
+
+                    CREATE TABLE rec_fragments (
+                        anchor INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ulid TEXT NOT NULL REFERENCES rec_entries (ulid) DEFERRABLE INITIALLY DEFERRED,
+                        version INTEGER NOT NULL,
+                        type TEXT NOT NULL,
+                        userid INTEGER NOT NULL,
+                        username TEXT NOT NULL,
+                        mtime TEXT NOT NULL,
+                        page TEXT,
+                        json BLOB
+                    );
+
+                    CREATE UNIQUE INDEX rec_fragments_uv ON rec_fragments (ulid, version);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 25);
+            RG_STATIC_ASSERT(InstanceVersion == 26);
         }
 
         int64_t time = GetUnixTime();

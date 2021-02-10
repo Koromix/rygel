@@ -144,7 +144,7 @@ const goupile = new function() {
     async function initDB() {
         let db_name = `goupile:${ENV.base_url}`;
 
-        db = await indexeddb.open(db_name, 7, (db, old_version) => {
+        db = await indexeddb.open(db_name, 8, (db, old_version) => {
             switch (old_version) {
                 case null: {
                     db.createStore('usr_profiles');
@@ -170,6 +170,10 @@ const goupile = new function() {
                     db.deleteIndex('rec_records', 'parent');
                     db.createIndex('rec_records', 'form', 'keys.form', {unique: false});
                     db.createIndex('rec_records', 'parent', 'keys.parent', {unique: false});
+                } // fallthrough
+                case 7: {
+                    db.createIndex('rec_records', 'anchor', 'keys.anchor', {unique: false});
+                    db.createIndex('rec_records', 'sync', 'keys.sync', {unique: false});
                 } // fallthrough
             }
         });

@@ -726,16 +726,6 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
                 valid &= ParseBool(buf, &config.use_offline);
             }
 
-            if (const char *str = values.FindValue("sync_mode", nullptr); str) {
-                char buf[32];
-                ConvertFromJsonName(str, buf);
-
-                if (!OptionToEnum(SyncModeNames, buf, &config.sync_mode)) {
-                    LogError("Unknown sync mode '%1'", str);
-                    valid = false;
-                }
-            }
-
             config.backup_key = values.FindValue("backup_key", config.backup_key);
             if (config.backup_key && !config.backup_key[0])
                 config.backup_key = nullptr;
@@ -761,7 +751,6 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
 
             success &= instance->db.Run(sql, "Title", config.title);
             success &= instance->db.Run(sql, "UseOffline", 0 + config.use_offline);
-            success &= instance->db.Run(sql, "SyncMode", SyncModeNames[(int)config.sync_mode]);
             success &= instance->db.Run(sql, "BackupKey", config.backup_key);
 
             return success;
@@ -798,7 +787,6 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
     json.StartArray();
     while (stmt.Next()) {
         const char *key = (const char *)sqlite3_column_text(stmt, 0);
-        char buf[512];
 
         InstanceHolder *instance = gp_domain.Ref(key);
         if (!instance)
@@ -811,8 +799,6 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
         json.Key("config"); json.StartObject();
             json.Key("title"); json.String(instance->config.title);
             json.Key("use_offline"); json.Bool(instance->config.use_offline);
-            ConvertToJsonName(SyncModeNames[(int)instance->config.sync_mode], buf);
-            json.Key("sync_mode"); json.String(buf);
             if (instance->config.backup_key) {
                 json.Key("backup_key"); json.String(instance->config.backup_key);
             }

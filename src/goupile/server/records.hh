@@ -9,13 +9,9 @@
 
 namespace RG {
 
-class InstaneData;
-
-void InitRecords();
+class InstanceHolder;
 
 void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleRecordColumns(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleRecordSync(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleRecordRecompute(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
 }
