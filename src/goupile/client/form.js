@@ -30,8 +30,6 @@ function FormModel() {
     this.widgets = [];
     this.widgets0 = [];
     this.actions = [];
-
-    this.values = {};
     this.variables = [];
 
     this.errors = 0;
@@ -1120,6 +1118,52 @@ function FormBuilder(state, model, readonly = false) {
         self.restart();
     }
 
+    this.repeat = function(key, func, options = {}) {
+        options = expandOptions(options);
+        key = decodeKey(key, options);
+
+        let path = [...key.path, key.name];
+        let values = walkPath(state.values, path);
+
+        let len;
+        for (let i = 0;; i++) {
+            if (!values.hasOwnProperty(i)) {
+                len = i;
+                break;
+            }
+
+            let widgets = [];
+            captureWidgets(widgets, 'block', () => {
+                self.pushOptions({
+                    path: [...path, i]
+                })
+                func(values[i], i, () => handleRepeatRemove(values, i));
+            });
+            widgets_ref.push(...widgets);
+        }
+
+        self.output(html`<a style="display: block; text-align: right;"
+                            @click=${e => handleRepeatAdd(values, len)}>Ajouter</a>`);
+    };
+
+    function handleRepeatAdd(values, len) {
+        values[len] = {};
+        self.restart();
+    }
+
+    function handleRepeatRemove(values, idx) {
+        for (;;) {
+            values[idx] = values[idx + 1];
+            if (!values.hasOwnProperty(idx + 1)) {
+                delete values[idx];
+                break;
+            }
+            idx++;
+        }
+
+        self.restart();
+    }
+
     this.columns = function(func, options) {
         options = expandOptions(options);
 
@@ -1233,26 +1277,55 @@ instead of:
     };
 
     function decodeKey(key, options) {
-        if (typeof key === 'string') {
-            for (;;) {
-                if (key[0] === '*') {
-                    options.mandatory = true;
-                } else {
-                    break;
-                }
+        // Normalize key
+        if (!Array.isArray(key))
+            key = [key];
+        if (Array.isArray(options.path)) {
+            key = [...options.path, ...key];
+        } else if (options.path != null) {
+            key = [options.path, ...key];
+        }
+        if (!key.length)
+            throw new Error('Empty keys are not allowed');
 
-                key = key.substr(1);
+        // Decode option shortcuts
+        let name = key[key.length - 1];
+        for (;;) {
+            if (name[0] === '*') {
+                options.mandatory = true;
+            } else {
+                break;
+            }
+            name = name.substr(1);
+            key[key.length - 1] = name;
+        }
+
+        // Check key parts
+        for (let i = 0; i < key.length; i++) {
+            let part = key[i];
+
+            if (typeof part === 'number') {
+                if (part < 0 || !Number.isInteger(part))
+                    throw new Error('Number keys must be positive integers');
+
+                key[i] = part.toString();
+            } else if (typeof part === 'string') {
+                if (part === '')
+                    throw new Error('Empty keys are not allowed');
+                if (!part.match(/^[a-zA-Z0-9_]*$/))
+                    throw new Error('Allowed key characters: a-z, 0-9 and _');
+                if (part.startsWith('__'))
+                    throw new Error('Keys must not start with \'__\'');
+            } else {
+                throw new Error('foobar');
             }
         }
 
-        if (!key)
-            throw new Error('Empty keys are not allowed');
-        if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
-            throw new Error('Allowed key characters: a-z, _ and 0-9 (not as first character)');
-        if (key.startsWith('__'))
-            throw new Error('Keys must not start with \'__\'');
-
-        return key;
+        return {
+            path: key.slice(0, key.length - 1),
+            name: name,
+            toString: () => key.join('.'),
+        };
     }
 
     function expandOptions(options) {
@@ -1388,8 +1461,6 @@ instead of:
         model.variables.push(intf);
         variables_map[key] = intf;
 
-        model.values[key] = value;
-
         return intf;
     }
 
@@ -1425,8 +1496,10 @@ instead of:
     }
 
     function readValue(key, options, func) {
+        let values = walkPath(state.values, key.path);
+
         if (state.changed_variables.has(key.toString())) {
-            let value = state.values[key];
+            let value = values[key.name];
 
             value = func(value);
             if (value == null)
@@ -1434,7 +1507,7 @@ instead of:
 
             return value;
         } else {
-            let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
+            let value = values.hasOwnProperty(key.name) ? values[key.name] : options.value;
 
             if (value == null)
                 value = undefined;
@@ -1442,25 +1515,21 @@ instead of:
             if (value == null)
                 value = undefined;
 
-            state.cached_values[key] = value;
-            state.values[key] = value;
+            state.cached_values[key.toString()] = value;
+            values[key.name] = value;
 
             return value;
         }
     }
 
-    function isModifiable(key) {
-        let intf = variables_map[key];
-        return !intf.options.disabled && !intf.options.readonly;
-    }
-
     function updateValue(key, value, refresh = true) {
-        if (value === state.values[key])
+        let values = walkPath(state.values, key.path);
+        if (value === values[key.name])
             return;
-        state.values[key] = value;
+        values[key.name] = value;
 
         state.take_delayed.delete(key.toString());
-        if (value !== state.cached_values[key]) {
+        if (value !== state.cached_values[key.toString()]) {
             state.changed_variables.add(key.toString());
         } else {
             state.changed_variables.delete(key.toString());
@@ -1469,5 +1538,20 @@ instead of:
 
         if (refresh)
             self.restart();
+    }
+
+    function walkPath(values, path) {
+        for (let key of path) {
+            if (!values.hasOwnProperty(key))
+                values[key] = {};
+            values = values[key];
+        }
+
+        return values;
+    }
+
+    function isModifiable(key) {
+        let intf = variables_map[key];
+        return !intf.options.disabled && !intf.options.readonly;
     }
 }
