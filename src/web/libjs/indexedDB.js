@@ -162,7 +162,7 @@ const indexeddb = new function() {
             return executeQuery('readonly', store, (t, resolve, reject) => {
                 let obj = openStoreOrIndex(t, store, index);
 
-                if (obj.getAllKeys) {
+                if (obj.getAllKeys && !index) {
                     let req = obj.getAllKeys(range);
 
                     req.onsuccess = e => resolve(e.target.result);
@@ -174,7 +174,15 @@ const indexeddb = new function() {
                     cur.onsuccess = e => {
                         let cursor = e.target.result;
                         if (cursor) {
-                            keys.push(cursor.key);
+                            if (index) {
+                                let key = {
+                                    primary: cursor.primaryKey,
+                                    index: cursor.key
+                                };
+                                keys.push(key);
+                            } else {
+                                keys.push(cursor.key);
+                            }
                             cursor.continue();
                         } else {
                             resolve(keys);
