@@ -20,6 +20,7 @@ function InstanceController() {
 
     let form_record;
     let form_state;
+    let form_dictionaries;
 
     let editor_el;
     let editor_ace;
@@ -337,7 +338,8 @@ function InstanceController() {
                     go: (url) => self.go(null, url),
 
                     isLocked: goupile.isLocked
-                }
+                },
+                dict: form_dictionaries
             });
             form_record.hid = meta.hid;
 
@@ -1305,11 +1307,31 @@ function InstanceController() {
             ui.setPanelState('page', true);
         }
 
+        // Dictionaries
+        let new_dictionaries = {}
+        for (let dict of new_route.page.dictionaries) {
+            let range = IDBKeyRange.only(`${profile.userid}/${dict}`);
+            objects = await db.loadAll('rec_records/form', range);
+
+            let records = [];
+            for (let obj of objects) {
+                try {
+                    let record = await decryptRecord(obj, null, false, true);
+                    records.push(record);
+                } catch (err) {
+                    console.log(err);
+                }
+            }
+
+            new_dictionaries[dict] = records.map(record => record.values);
+        }
+
         // Commit!
         route = new_route;
         route.version = new_record.version;
         form_record = new_record;
         form_state = new_state;
+        form_dictionaries = new_dictionaries;
 
         document.title = `${route.page.title} — ${ENV.title}`;
         await self.run(push_history);
