@@ -922,7 +922,6 @@ function FormBuilder(state, model, readonly = false) {
         fillVariableInfo(intf, key, value);
         addWidget(intf);
 
-        readValue(key, {}, value => value);
         updateValue(key, value, false);
 
         return intf;
@@ -1529,15 +1528,17 @@ instead of:
         values[key.name] = value;
 
         state.take_delayed.delete(key.toString());
-        if (value !== state.cached_values[key.toString()]) {
-            state.changed_variables.add(key.toString());
-        } else {
-            state.changed_variables.delete(key.toString());
-        }
-        state.updated_variables.add(key.toString());
 
-        if (refresh)
+        if (refresh) {
+            if (value !== state.cached_values[key.toString()]) {
+                state.changed_variables.add(key.toString());
+            } else {
+                state.changed_variables.delete(key.toString());
+            }
+            state.updated_variables.add(key.toString());
+
             self.restart();
+        }
     }
 
     function walkPath(values, path) {
