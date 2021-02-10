@@ -123,8 +123,8 @@ function InstanceController() {
             ` : ''}
 
             <div style="flex: 1; min-width: 15px;"></div>
-            ${util.mapRange(0, route.form.parents.length, idx => {
-                let form = route.form.parents[route.form.parents.length - idx - 1];
+            ${util.mapRange(0, route.form.chain.length - 1, idx => {
+                let form = route.form.chain[idx];
                 return renderFormMenuDrop(form);
             })}
             ${renderFormMenuDrop(route.form)}
@@ -158,7 +158,7 @@ function InstanceController() {
                             } else if (item.type === 'form') {
                                 let form = item.form;
                                 return html`<button ?disabled=${!isFormEnabled(form, form_record)}
-                                                    class=${form === route.form || route.form.parents.some(parent => form === parent) ? 'active' : ''}
+                                                    class=${route.form.chain.some(parent => form === parent) ? 'active' : ''}
                                                     @click=${ui.wrapAction(e => self.go(e, form.url))}>${form.title}</button>`;
                             }
                         })}
@@ -167,7 +167,7 @@ function InstanceController() {
             `;
         } else {
             return html`<button ?disabled=${!isFormEnabled(form, form_record)}
-                                class=${form === route.form || route.form.parents.some(parent => form === parent) ? 'active' : ''}
+                                class=${route.form.chain.some(parent => form === parent) ? 'active' : ''}
                                 @click=${ui.wrapAction(e => self.go(e, form.url))}>${form.title}</button>`;
         }
     }
@@ -286,8 +286,8 @@ function InstanceController() {
                     }
                 })}
             </tr>
-            ${recurse ? util.mapRange(0, route.form.parents.length, idx => {
-                let form = idx < route.form.parents.length - 1 ? route.form.parents[route.form.parents.length - idx - 2] : route.form;
+            ${recurse ? util.mapRange(1, route.form.chain.length, idx => {
+                let form = route.form.chain[idx];
                 let record = form_record.map[form.key];
 
                 return html`
@@ -444,13 +444,8 @@ function InstanceController() {
     }
 
     function goNewRecord(e) {
-        if (route.form.parents.length) {
-            let url = route.form.parents[route.form.parents.length - 1].url + '/new';
-            return self.go(e, url);
-        } else {
-            let url = route.form.url + '/new';
-            return self.go(e, url);
-        }
+        let url = route.form.chain[0].url + '/new';
+        return self.go(e, url);
     }
 
     async function saveRecord() {
@@ -1381,7 +1376,7 @@ function InstanceController() {
             map: null // Will be set later
         };
 
-        if (form.parents.length) {
+        if (form.chain.length > 1) {
             if (parent_record == null)
                 throw new Error('Impossible de créer cet enregistrement sans parent');
 
@@ -1554,35 +1549,33 @@ function InstanceController() {
     // Assumes from != to
     function computePath(from, to) {
         let prefix_len = 0;
-        while (prefix_len < from.parents.length && prefix_len < to.parents.length) {
-            let parent1 = from.parents[from.parents.length - prefix_len - 1];
-            let parent2 = to.parents[to.parents.length - prefix_len - 1];
+        while (prefix_len < from.chain.length && prefix_len < to.chain.length) {
+            let parent1 = from.chain[prefix_len];
+            let parent2 = to.chain[prefix_len];
 
             if (parent1 !== parent2)
                 break;
 
             prefix_len++;
         }
+        prefix_len--;
 
-        let up = from.parents.length - prefix_len - 1;
-        let down = to.parents.length - prefix_len - 1;
-
-        if (from.parents[up] === to) {
+        if (from.chain[prefix_len] === to) {
             let path = {
-                up: [...from.parents.slice(0, up), to],
+                up: from.chain.slice(prefix_len, from.chain.length - 1).reverse(),
                 down: []
             };
             return path;
-        } else if (to.parents[down] === from) {
+        } else if (to.chain[prefix_len] === from) {
             let path = {
                 up: [],
-                down: [...to.parents.slice(0, down).reverse(), to]
+                down: to.chain.slice(prefix_len + 1)
             };
             return path;
-        } else if (prefix_len) {
+        } else if (prefix_len >= 0) {
             let path = {
-                up: from.parents.slice(0, up + 2),
-                down: [...to.parents.slice(0, down - 1).reverse(), to]
+                up: from.chain.slice(prefix_len, from.chain.length - 1).reverse(),
+                down: to.chain.slice(prefix_len + 1)
             };
             return path;
         } else {

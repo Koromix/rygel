@@ -12,7 +12,7 @@ function ApplicationInfo() {
 function FormInfo(key, title) {
     this.key = key;
     this.title = title;
-    this.parents = [];
+    this.chain = [];
     this.pages = new Map;
     this.forms = new Map;
     this.menu = [];
@@ -62,7 +62,8 @@ function ApplicationBuilder(app) {
 
             form_ref = new FormInfo(key, title);
             if (prev_form != null)
-                form_ref.parents = [prev_form, ...prev_form.parents];
+                form_ref.chain.push(...prev_form.chain);
+            form_ref.chain.push(form_ref);
 
             if (func != null) {
                 func(self);
