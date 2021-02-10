@@ -1326,13 +1326,14 @@ function InstanceController() {
             }
         }
 
-        // Help the user fill new forms
-        if (form_record != null && new_record.ulid !== form_record.ulid) {
+        // Help the user fill new or selected forms and pages
+        if (form_record != null && (new_record.ulid !== form_record.ulid ||
+                                    new_route.page !== route.page)) {
             setTimeout(() => {
                 let el = document.querySelector('#ins_page');
                 if (el != null)
                     el.parentNode.scrollTop = 0;
-            });
+            }, 0);
 
             ui.setPanelState('page', true);
         } else if (form_record == null && (new_record.version > 0 ||
