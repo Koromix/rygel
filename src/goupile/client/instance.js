@@ -233,7 +233,7 @@ function InstanceController() {
                 <table class="ui_table fixed" id="ins_data">
                     ${data_rows.length ? html`
                         <colgroup>
-                            <col style="width: 140px;"/>
+                            <col style="width: 160px;"/>
                             ${util.mapRange(0, data_form.menu.length, () => html`<col/>`)}
                             <col style="width: 2em;"/>
                         </colgroup>
