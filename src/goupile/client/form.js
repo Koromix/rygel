@@ -5,34 +5,8 @@
 function FormState(values = {}) {
     let self = this;
 
-    // Interoperate
-    this.decodeKey = key => {
-        if (!key)
-            throw new Error('Empty keys are not allowed');
-        if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
-            throw new Error('Allowed key characters: a-z, _ and 0-9 (not as first character)');
-        if (key.startsWith('__'))
-            throw new Error('Keys must not start with \'__\'');
-
-        return key;
-    };
-    this.setValue = (key, value) => {};
-    this.getValue = (key, default_value) => {
-        if (values.hasOwnProperty(key)) {
-            let value = values[key];
-            if (value == null)
-                value = undefined;
-            return value;
-        } else {
-            return default_value;
-        }
-    };
     this.changeHandler = model => {};
 
-    // Stored values
-    this.values = Object.assign({}, values);
-
-    // Internal state
     this.unique_id = FormState.next_unique_id++;
     this.sections_state = {};
     this.tabs_state = {};
@@ -41,6 +15,7 @@ function FormState(values = {}) {
     this.invalid_numbers = new Set;
     this.take_delayed = new Set;
 
+    this.values = Object.assign({}, values);
     this.cached_values = {};
     this.changed_variables = new Set;
     this.updated_variables = new Set;
@@ -1270,7 +1245,14 @@ instead of:
             }
         }
 
-        return state.decodeKey(key);
+        if (!key)
+            throw new Error('Empty keys are not allowed');
+        if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
+            throw new Error('Allowed key characters: a-z, _ and 0-9 (not as first character)');
+        if (key.startsWith('__'))
+            throw new Error('Keys must not start with \'__\'');
+
+        return key;
     }
 
     function expandOptions(options) {
@@ -1452,8 +1434,10 @@ instead of:
 
             return value;
         } else {
-            let value = state.getValue(key, options.value);
+            let value = state.values.hasOwnProperty(key) ? state.values[key] : options.value;
 
+            if (value == null)
+                value = undefined;
             value = func(value);
             if (value == null)
                 value = undefined;
@@ -1483,7 +1467,6 @@ instead of:
         }
         state.updated_variables.add(key.toString());
 
-        state.setValue(key, value);
         if (refresh)
             self.restart();
     }
