@@ -8,7 +8,7 @@
 
 namespace RG {
 
-const int DomainVersion = 7;
+const int DomainVersion = 8;
 const int MaxInstancesPerDomain = 4096;
 
 bool DomainConfig::Validate() const
@@ -505,9 +505,17 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 7: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE dom_instances ADD COLUMN master TEXT REFERENCES dom_instances (instance);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 7);
+            RG_STATIC_ASSERT(DomainVersion == 8);
         }
 
         int64_t time = GetUnixTime();
