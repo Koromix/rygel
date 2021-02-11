@@ -230,7 +230,6 @@ html.small .ui_toolbar button.icon {
 .ui_table th, .ui_table td {
     padding: 3px 6px;
     border: 1px solid #dfdfdf;
-    border-radius: var(--widget_rounding);
     text-align: center;
     overflow: hidden;
     text-overflow: ellipsis;
