@@ -575,7 +575,7 @@ function InstanceController() {
                 progress.success('Suppression effectuée');
 
                 data_rows = null;
-                if (ulid === form_record.chain[0].ulid) {
+                if (form_record.chain.some(record => record.ulid === ulid)) {
                     form_state = null;
                     goNewRecord(null);
                 } else {
