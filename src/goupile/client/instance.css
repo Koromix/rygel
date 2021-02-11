@@ -27,6 +27,11 @@ html.instance {
     padding: 1em;
 }
 
+html.small #ins_form {
+    background: none;
+    padding-top: 0;
+}
+
 /* -------------------- Misc -------------------- */
 
 #ins_notice {

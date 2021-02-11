@@ -43,8 +43,12 @@
 .fm_section.error > .fm_legend::before { display: none; }
 
 html.small .fm_section {
-    margin-left: -16px;
-    margin-right: -16px;
+    margin-left: -14px;
+    margin-right: -14px;
+}
+html.small .fm_section .fm_section {
+    margin-left: 0;
+    margin-right: 0;
 }
 
 .fm_section.tabs {
@@ -81,6 +85,7 @@ html.small .fm_section {
 
 html:not(.small) .fm_columns { display: flex; }
 html:not(.small) .fm_columns > div + div { padding-left: 12px; }
+html.small .fm_columns > div + div { padding-top: 8px; }
 
 /* -------------------- Widgets -------------------- */
 
