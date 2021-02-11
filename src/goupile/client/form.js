@@ -8,7 +8,6 @@ function FormState(values = {}) {
     this.changeHandler = model => {};
 
     this.unique_id = FormState.next_unique_id++;
-    this.sections_state = {};
     this.tabs_state = {};
     this.file_lists = new Map;
     this.click_events = new Set;
@@ -65,7 +64,6 @@ function FormBuilder(state, model, readonly = false) {
 
     let variables_map = {};
     let options_stack = [{
-        deploy: true,
         untoggle: true
     }];
     let widgets_ref = model.widgets0;
@@ -963,20 +961,11 @@ function FormBuilder(state, model, readonly = false) {
     this.section = function(label, func, options = {}) {
         options = expandOptions(options);
 
-        let deploy = state.sections_state[label];
-        if (deploy == null) {
-            deploy = options.deploy;
-            state.sections_state[label] = deploy;
-        }
-
         let widgets = [];
         let render = intf => html`
             <fieldset class="fm_container fm_section">
-                ${label ? html`<div class="fm_legend" @click=${e => handleSectionClick(e, label)}>${label}</div>` : ''}
-                ${deploy ?
-                    widgets.map(intf => intf.render()) :
-                    html`<a class="fm_deploy"
-                            @click=${e => handleSectionClick(e, label)}>(ouvrir la section)</a>`}
+                ${label ? html`<div class="fm_legend">${label}</div>` : ''}
+                ${widgets.map(intf => intf.render())}
             </fieldset>
         `;
 

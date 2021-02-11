@@ -26,18 +26,10 @@
     border-radius: var(--block_rounding) var(--block_rounding) 0 0;
     font-size: 1.1em;
     color: white;
-    cursor: pointer;
 }
 .fm_legend::before {
     padding-right: 0.5em;
     content: '#';
-}
-.fm_deploy {
-    width: 100%;
-    display: block;
-    text-align: center;
-    font-size: 0.9em;
-    text-decoration: none;
 }
 
 .fm_section.error {

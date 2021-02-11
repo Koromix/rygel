@@ -228,11 +228,12 @@ function InstanceController() {
                 <div class="ui_quick">
                     <a @click=${ui.wrapAction(goNewRecord)}>Créer</a>
                     <div style="flex: 1;"></div>
-                    <a @click=${ui.wrapAction(syncData)}>Synchroniser les données</a>
-                    ${ENV.backup_key != null ? html`<a @click=${ui.wrapAction(e => backupClientData('file'))}>Faire une sauvegarde chiffrée</a>` : ''}
-                    <div style="flex: 1;"></div>
+                    ${ENV.backup_key != null ? html`
+                        <a @click=${ui.wrapAction(e => backupClientData('file'))}>Faire une sauvegarde chiffrée</a>
+                        <div style="flex: 1;"></div>
+                    ` : ''}
                     ${data_rows.length || 'Aucune'} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
-                        (<a @click=${ui.wrapAction(e => { data_rows = null; return self.run(); })}>rafraichir</a>)
+                        (<a @click=${ui.wrapAction(syncData)}>synchroniser</a>)
                 </div>
 
                 <table class="ui_table fixed" id="ins_data">
