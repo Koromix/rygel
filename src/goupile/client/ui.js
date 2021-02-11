@@ -31,10 +31,12 @@ const ui = new function() {
     }
 
     function adaptToViewport(keep_panel = null) {
-        let min_width = 580;
+        let medium_treshold = 900;
+        let small_treshold = 580;
 
-        let small = window.innerWidth < min_width;
-        let max_panels = util.clamp(Math.floor(window.innerWidth / min_width), 1, 2);
+        let medium = window.innerWidth < medium_treshold;
+        let small = window.innerWidth < small_treshold;
+        let max_panels = util.clamp(Math.floor(window.innerWidth / small_treshold), 1, 2);
 
         while (active_panels > max_panels) {
             let disable_priority = Number.MAX_SAFE_INTEGER;
@@ -51,6 +53,7 @@ const ui = new function() {
             active_panels--;
         }
 
+        document.documentElement.classList.toggle('medium', medium);
         document.documentElement.classList.toggle('small', small);
     }
 
@@ -121,7 +124,7 @@ const ui = new function() {
     this.runDialog = function(e, func) {
         if (e != null) {
             e.stopPropagation();
-            if (window.matchMedia('(pointer: coarse)').matches)
+            if (document.documentElement.classList.contains('small'))
                 e = null;
         }
 
