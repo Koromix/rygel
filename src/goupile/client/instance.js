@@ -1837,7 +1837,7 @@ function InstanceController() {
                         keys: {
                             form: `${profile.userid}/${download.form}`,
                             parent: (download.parent != null) ? `${profile.userid}:${download.parent.ulid}/${download.form}` : null,
-                            anchor: `${profile.userid}@${anchor + 1}`,
+                            anchor: `${profile.userid}@${(anchor + 1).toString().padStart(16, '0')}`,
                             sync: null
                         },
                         enc: null
