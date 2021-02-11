@@ -1110,28 +1110,42 @@ function FormBuilder(state, model, readonly = false) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
+        if (!func) {
+            throw new Error(`This call does not contain a function.
+
+Make sure you did not use this syntax by accident:
+    page.repeat("var"), () => { /* Do stuff here */ };
+instead of:
+    page.repeat("var", () => { /* Do stuff here */ });`);
+        }
+
         let path = [...key.path, key.name];
         let values = walkPath(state.values, path);
 
-        let len;
+        let widgets = [];
+        let render = intf => widgets.map(intf => intf.render());
+
+        let intf = makeWidget('repeat', undefined, render, options);
+        Object.assign(intf, {
+            length: null,
+            add: () => handleRepeatAdd(values, intf.length),
+            remove: idx => handleRepeatRemove(values, idx)
+        });
+        addWidget(intf);
+
         for (let i = 0;; i++) {
             if (!values.hasOwnProperty(i)) {
-                len = i;
+                intf.length = i;
                 break;
             }
 
-            let widgets = [];
-            captureWidgets(widgets, 'block', () => {
-                self.pushOptions({
-                    path: [...path, i]
-                })
-                func(values[i], i, () => handleRepeatRemove(values, i));
+            captureWidgets(widgets, 'block', () => func(values[i], i, () => intf.remove(i)), {
+                path: [...path, i]
             });
             widgets_ref.push(...widgets);
         }
 
-        self.output(html`<a style="display: block; text-align: right;"
-                            @click=${e => handleRepeatAdd(values, len)}>Ajouter</a>`);
+        return intf;
     };
 
     function handleRepeatAdd(values, len) {
