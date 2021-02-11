@@ -372,10 +372,9 @@ function InstanceController() {
                     <div class="ui_quick">
                         ${model.variables.length ? html`
                             ${!form_record.chain[0].version ? 'Nouvel enregistrement' : ''}
-                            ${form_record.chain[0].version > 0 && form_record.chain[0].hid != null ? `Enregistrement : ${form_record.chain[0].hid}` : ''}
-                            ${form_record.chain[0].version > 0 && form_record.chain[0].hid == null ? 'Enregistrement local' : ''}
+                            ${form_record.chain[0].version > 0 && form_record.chain[0].hid != null ? `${form_record.chain[0].hid}` : ''}
+                            ${form_record.chain[0].version > 0 && form_record.chain[0].hid == null ? 'Enregistrement existant' : ''}
                         `  : ''}
-                        (<a @click=${e => window.print()}>imprimer</a>)
                         <div style="flex: 1;"></div>
                         ${route.version > 0 ? html`
                             ${route.version < form_record.fragments.length ?
