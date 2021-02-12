@@ -55,6 +55,7 @@ public:
 
     bool IsSynced() const { return synced; }
     bool Sync();
+    bool Checkpoint();
 
     Size CountInstances() const
     {

@@ -114,6 +114,11 @@ void InstanceHolder::Close()
     str_alloc.ReleaseAll();
 }
 
+bool InstanceHolder::Checkpoint()
+{
+    return db.Checkpoint();
+}
+
 bool MigrateInstance(sq_Database *db)
 {
     BlockAllocator temp_alloc;

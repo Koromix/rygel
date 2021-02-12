@@ -38,8 +38,9 @@ public:
 
     bool Open(const char *key, const char *filename);
     bool Validate();
-
     void Close();
+
+    bool Checkpoint();
 
     void Reload() { reload = true; }
     void Unref() { refcount--; }

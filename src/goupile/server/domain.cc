@@ -270,6 +270,20 @@ bool DomainHolder::Sync()
     return synced;
 }
 
+bool DomainHolder::Checkpoint()
+{
+    std::shared_lock<std::shared_mutex> lock_shr(mutex);
+
+    bool success = true;
+
+    success &= db.Checkpoint();
+    for (InstanceHolder *instance: instances) {
+        success &= instance->Checkpoint();
+    }
+
+    return success;
+}
+
 InstanceHolder *DomainHolder::Ref(Span<const char> key, bool *out_reload)
 {
     std::shared_lock<std::shared_mutex> lock_shr(mutex);

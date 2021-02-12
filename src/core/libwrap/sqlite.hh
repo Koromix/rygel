@@ -123,6 +123,8 @@ public:
 
     bool RunMany(const char *sql);
 
+    bool Checkpoint();
+
     operator sqlite3 *() { return db; }
 
 private:

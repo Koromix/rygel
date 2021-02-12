@@ -179,6 +179,20 @@ bool sq_Database::RunMany(const char *sql)
     return true;
 }
 
+bool sq_Database::Checkpoint()
+{
+    bool nested = LockExclusive();
+    RG_ASSERT(!nested);
+    RG_DEFER { UnlockExclusive(); };
+
+    if (sqlite3_wal_checkpoint_v2(db, nullptr, SQLITE_CHECKPOINT_FULL, nullptr, nullptr) != SQLITE_OK) {
+        LogError("SQLite checkpoint failed: %1", sqlite3_errmsg(db));
+        return false;
+    }
+
+    return true;
+}
+
 bool sq_Database::LockExclusive()
 {
     std::unique_lock<std::mutex> lock(mutex);

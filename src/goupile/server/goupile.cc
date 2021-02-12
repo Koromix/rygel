@@ -420,18 +420,19 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
         return 1;
 #endif
 
-    for (;;) {
-        int timeout = gp_domain.IsSynced() ? -1 : 30000;
+    bool run = true;
+    while (run) {
+        if (WaitForInterrupt(120 * 1000) == WaitForResult::Interrupt)
+            run = false;
 
-        // Respond to SIGUSR1
-        if (WaitForInterrupt(timeout) == WaitForResult::Interrupt)
-            break;
-
+        LogDebug("Checkpointing databases");
+        gp_domain.Checkpoint();
         gp_domain.Sync();
 
 #ifdef __GLIBC__
         // Actually release memory to the OS, because for some reason glibc doesn't want to
         // do this automatically even after 98% of the resident memory pool has been freed.
+        LogDebug("Release memory (glibc)");
         malloc_trim(0);
 #endif
     }
