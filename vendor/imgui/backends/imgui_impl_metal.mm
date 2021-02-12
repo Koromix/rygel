@@ -11,6 +11,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-01-25: Metal: Fixed texture storage mode when building on Mac Catalyst.
 //  2019-05-29: Metal: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
 //  2019-04-30: Metal: Added support for special ImDrawCallback_ResetRenderState callback to reset render state.
 //  2019-02-11: Metal: Projecting clipping rectangles correctly using draw_data->FramebufferScale to allow multi-viewports for retina display.
@@ -113,7 +114,7 @@ bool ImGui_ImplMetal_CreateFontsTexture(id<MTLDevice> device)
     [g_sharedMetalContext makeFontTextureWithDevice:device];
 
     ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->TexID = (__bridge void *)g_sharedMetalContext.fontTexture; // ImTextureID == void*
+    io.Fonts->SetTexID((__bridge void *)g_sharedMetalContext.fontTexture); // ImTextureID == void*
 
     return (g_sharedMetalContext.fontTexture != nil);
 }
@@ -122,7 +123,7 @@ void ImGui_ImplMetal_DestroyFontsTexture()
 {
     ImGuiIO& io = ImGui::GetIO();
     g_sharedMetalContext.fontTexture = nil;
-    io.Fonts->TexID = nullptr;
+    io.Fonts->SetTexID(nullptr);
 }
 
 bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device)
@@ -238,7 +239,7 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
                                                                                                 height:(NSUInteger)height
                                                                                              mipmapped:NO];
     textureDescriptor.usage = MTLTextureUsageShaderRead;
-#if TARGET_OS_OSX
+#if TARGET_OS_OSX || TARGET_OS_MACCATALYST
     textureDescriptor.storageMode = MTLStorageModeManaged;
 #else
     textureDescriptor.storageMode = MTLStorageModeShared;
