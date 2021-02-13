@@ -175,7 +175,7 @@ const util = new function() {
     };
 
     // Why the f*ck is there still no good cookie API?
-    this.getCookie = function(key) {
+    this.getCookie = function(key, default_value = undefined) {
         let cookies = document.cookie;
         let offset = 0;
 
@@ -201,7 +201,7 @@ const util = new function() {
                 offset++;
         }
 
-        return null;
+        return default_value;
     };
 
     this.setCookie = function(name, value, path, seconds = null) {

@@ -25,7 +25,7 @@ const Token *Session::GetToken(const InstanceHolder *instance) const
         if (!token) {
             do {
                 sq_Statement stmt;
-                if (!gp_domain.db.Prepare(R"(SELECT zone, permissions FROM dom_permissions
+                if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
                                              WHERE userid = ?1 AND instance = ?2)", &stmt))
                     break;
                 sqlite3_bind_int64(stmt, 1, userid);
@@ -33,13 +33,11 @@ const Token *Session::GetToken(const InstanceHolder *instance) const
                 if (!stmt.Next())
                     break;
 
-                uint32_t permissions = sqlite3_column_int(stmt, 1);
-                const char *zone = (const char *)sqlite3_column_text(stmt, 0);
+                uint32_t permissions = sqlite3_column_int(stmt, 0);
 
                 std::lock_guard<std::shared_mutex> lock_excl(tokens_lock);
 
                 token = tokens_map.SetDefault(instance->unique);
-                token->zone = zone ? DuplicateString(zone, &tokens_alloc).ptr : nullptr;
                 token->permissions = permissions;
             } while (false);
 
@@ -67,11 +65,6 @@ static void WriteProfileJson(const Session *session, const Token *token, json_Wr
         out_json->Key("demo"); out_json->Bool(session->demo);
 
         if (token) {
-            if (token->zone) {
-                out_json->Key("zone"); out_json->String(token->zone);
-            } else {
-                out_json->Key("zone"); out_json->Null();
-            }
             out_json->Key("permissions"); out_json->StartObject();
             for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
                 char js_name[64];
@@ -110,53 +103,7 @@ static RetainPtr<Session> CreateUserSession(const http_RequestInfo &request, htt
         return {};
     }
 
-    sessions.Open(request, io, ptr);
-
     return ptr;
-}
-
-static RetainPtr<Session> CreateDemoSession(const http_RequestInfo &request, http_IO *io)
-{
-    static std::once_flag once;
-    static int64_t demo_userid = -1;
-    static char demo_local_key[RG_SIZE(Session::local_key)];
-
-    std::call_once(once, []() {
-        sq_Statement stmt;
-        if (!gp_domain.db.Prepare("SELECT userid, local_key FROM dom_users WHERE username = ?1", &stmt))
-            return;
-        sqlite3_bind_text(stmt, 1, gp_domain.config.demo_user, -1, SQLITE_STATIC);
-
-        if (!stmt.Next()) {
-            if (stmt.IsValid()) {
-                LogError("Demo user '%1' does not exist", gp_domain.config.demo_user);
-            }
-            return;
-        }
-
-        int64_t userid = sqlite3_column_int64(stmt, 0);
-        const char *local_key = (const char *)sqlite3_column_text(stmt, 1);
-
-        // Should never happen, but let's be careful
-        if (RG_UNLIKELY(strlen(local_key) >= RG_SIZE(demo_local_key))) {
-            LogError("Demo user local key is too big");
-            return;
-        }
-
-        demo_userid = userid;
-        CopyString(local_key, demo_local_key);
-    });
-    if (RG_UNLIKELY(demo_userid < 0))
-        return {};
-
-    // Make sure there is no session related Set-Cookie header left
-    io->ResetResponse();
-
-    RetainPtr<Session>session = CreateUserSession(request, io, demo_userid,
-                                                  gp_domain.config.demo_user, demo_local_key);
-    session->demo = true;
-
-    return session;
 }
 
 RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http_IO *io)
@@ -164,7 +111,31 @@ RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http
     RetainPtr<Session> session = sessions.Find<Session>(request, io);
 
     if (gp_domain.config.demo_user && !session) {
-        session = CreateDemoSession(request, io);
+        static RetainPtr<Session> demo_session = [&]() {
+            sq_Statement stmt;
+            if (!gp_domain.db.Prepare("SELECT userid, local_key FROM dom_users WHERE username = ?1", &stmt))
+                return RetainPtr<Session>(nullptr);
+            sqlite3_bind_text(stmt, 1, gp_domain.config.demo_user, -1, SQLITE_STATIC);
+
+            if (!stmt.Next()) {
+                if (stmt.IsValid()) {
+                    LogError("Demo user '%1' does not exist", gp_domain.config.demo_user);
+                }
+                return RetainPtr<Session>(nullptr);
+            }
+
+            int64_t userid = sqlite3_column_int64(stmt, 0);
+            const char *local_key = (const char *)sqlite3_column_text(stmt, 1);
+            RetainPtr<Session> session = CreateUserSession(request, io, userid, gp_domain.config.demo_user, local_key);
+
+            if (RG_LIKELY(session)) {
+                session->demo = true;
+            }
+
+            return session;
+        }();
+
+        session = demo_session;
     }
 
     return session;
@@ -233,6 +204,8 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
                         session->admin_until = GetMonotonicTime() + 1200 * 1000;
                     }
 
+                    sessions.Open(request, io, session);
+
                     const Token *token = session->GetToken(instance);
 
                     http_JsonPageBuilder json(request.compression_type);
@@ -258,12 +231,7 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
 void HandleUserLogout(InstanceHolder *, const http_RequestInfo &request, http_IO *io)
 {
     sessions.Close(request, io);
-
-    if (gp_domain.config.demo_user) {
-        CreateDemoSession(request, io);
-    }
-
-    io->AttachText(200, "");
+    io->AttachText(200, "Done!");
 }
 
 void HandleUserProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)

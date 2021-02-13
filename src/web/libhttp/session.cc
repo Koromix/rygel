@@ -39,29 +39,22 @@ http_SessionManager::Session *
         return nullptr;
     }
 
+    Session *session = sessions.AppendDefault();
+
     // Register session with unique key
-    Session *session;
     for (;;) {
-        char session_key[129];
+        RG_STATIC_ASSERT(RG_SIZE(Session::session_key) == 65);
+
         {
-            RG_STATIC_ASSERT(RG_SIZE(session_key) == RG_SIZE(Session::session_key));
-
-            uint64_t buf[8];
+            uint64_t buf[4];
             randombytes_buf(buf, RG_SIZE(buf));
-            Fmt(session_key, "%1%2%3%4%5%6%7%8",
+            Fmt(session->session_key, "%1%2%3%4",
                 FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16),
-                FmtHex(buf[2]).Pad0(-16), FmtHex(buf[3]).Pad0(-16),
-                FmtHex(buf[4]).Pad0(-16), FmtHex(buf[5]).Pad0(-16),
-                FmtHex(buf[6]).Pad0(-16), FmtHex(buf[7]).Pad0(-16));
+                FmtHex(buf[2]).Pad0(-16), FmtHex(buf[3]).Pad0(-16));
         }
 
-        std::pair<Session *, bool> ret = sessions.TrySetDefault(session_key);
-
-        if (RG_LIKELY(ret.second)) {
-            session = ret.first;
-            CopyString(session_key, session->session_key);
+        if (RG_LIKELY(sessions_map.TrySet(session).second))
             break;
-        }
     }
 
     // Create public randomized key (for use in session-specific URLs)
@@ -87,7 +80,13 @@ void http_SessionManager::Close(const http_RequestInfo &request, http_IO *io)
 {
     std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
-    sessions.Remove(FindSession(request));
+    // We don't care about those but for performance reasons FindSession()
+    // always writes those.
+    bool mismatch;
+    bool locked;
+    Session **ptr = FindSession(request, &mismatch, &locked);
+
+    sessions_map.Remove(ptr);
     DeleteSessionCookies(request, io);
 }
 
@@ -99,9 +98,10 @@ RetainObject *http_SessionManager::Find2(const http_RequestInfo &request, http_I
 
     bool mismatch = false;
     bool locked = false;
-    Session *session = FindSession(request, &mismatch, &locked);
+    Session **ptr = FindSession(request, &mismatch, &locked);
 
-    if (session) {
+    if (ptr) {
+        Session *session = *ptr;
         RetainObject *udata = session->udata.GetRaw();
         int64_t now = GetMonotonicTime();
 
@@ -138,9 +138,8 @@ RetainObject *http_SessionManager::Find2(const http_RequestInfo &request, http_I
     }
 }
 
-http_SessionManager::Session *
-    http_SessionManager::FindSession(const http_RequestInfo &request,
-                                     bool *out_mismatch, bool *out_locked)
+http_SessionManager::Session **
+    http_SessionManager::FindSession(const http_RequestInfo &request, bool *out_mismatch, bool *out_locked)
 {
     int64_t now = GetMonotonicTime();
 
@@ -148,9 +147,13 @@ http_SessionManager::Session *
     const char *session_rnd = request.GetCookieValue("session_rnd");
     const char *user_agent = request.GetHeaderValue("User-Agent");
     if (!session_key || !user_agent) {
-        if (out_mismatch) {
-            *out_mismatch = session_key;
-        }
+        *out_mismatch = session_key;
+        return nullptr;
+    }
+
+    Session **ptr = sessions_map.Find(session_key);
+    if (!ptr) {
+        *out_mismatch = true;
         return nullptr;
     }
 
@@ -158,28 +161,22 @@ http_SessionManager::Session *
     // connectivity and with dual-stack browsers. For example, on occasion, I would get
     // disconnected during localhost tests because login used IPv4 and a subsequent request
     // used IPv6, or vice versa.
-    Session *session = sessions.Find(session_key);
-    if (!session ||
+    Session *session = *ptr;
+    if (now - session->login_time >= MaxSessionDelay ||
+            now - session->register_time >= MaxKeyDelay ||
+            now - session->lock_time >= MaxLockDelay ||
             (session_rnd && !TestStr(session->session_rnd, session_rnd)) ||
 #ifdef NDEBUG
             strncmp(session->user_agent, user_agent, RG_SIZE(session->user_agent) - 1) != 0 ||
 #endif
-            now - session->login_time >= MaxSessionDelay ||
-            now - session->register_time >= MaxKeyDelay ||
-            now - session->lock_time >= MaxLockDelay) {
-        if (out_mismatch) {
-            *out_mismatch = true;
-        }
+            (session_rnd && !TestStr(session->session_rnd, session_rnd))) {
+        *out_mismatch = true;
         return nullptr;
     }
 
-    if (out_mismatch) {
-        *out_mismatch = false;
-    }
-    if (out_locked) {
-        *out_locked = !session_rnd;
-    }
-    return session;
+    *out_mismatch = false;
+    *out_locked = !session_rnd;
+    return ptr;
 }
 
 void http_SessionManager::DeleteSessionCookies(const http_RequestInfo &request, http_IO *io)
@@ -190,25 +187,31 @@ void http_SessionManager::DeleteSessionCookies(const http_RequestInfo &request, 
 
 void http_SessionManager::PruneStaleSessions()
 {
-    int64_t now = GetMonotonicTime();
-
+    static std::atomic_int64_t last_pruning {0};
     static std::mutex last_pruning_mutex;
-    static int64_t last_pruning = 0;
-    {
+
+    // Time to prune?
+    int64_t now = GetMonotonicTime();
+    if (now - last_pruning.load(std::memory_order_acquire) >= PruneDelay) {
         std::lock_guard<std::mutex> lock(last_pruning_mutex);
-        if (now - last_pruning < PruneDelay)
+        if (now - last_pruning.load(std::memory_order_relaxed) < PruneDelay)
             return;
-        last_pruning = now;
+        last_pruning.store(now, std::memory_order_release);
     }
 
     std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
-    for (auto it = sessions.begin(); it != sessions.end(); it++) {
-        const Session &session = *it;
-        if (now - session.register_time >= MaxKeyDelay) {
-            it.Remove();
-        }
+    Size expired = 0;
+    for (const Session &session: sessions) {
+        if (now - session.register_time < MaxKeyDelay)
+            break;
+
+        sessions_map.Remove(session.session_key);
+        expired++;
     }
+
+    sessions.RemoveFirst(expired);
+    sessions_map.Trim();
 }
 
 }

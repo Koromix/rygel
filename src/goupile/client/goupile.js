@@ -318,7 +318,7 @@ const goupile = new function() {
                 session_rnd = undefined;
                 local_key = undefined;
 
-                util.setCookie('session_rnd', 'LOGIN', '/');
+                util.setCookie('session_rnd', 'LOGIN', ENV.base_url);
                 await deleteSessionValue('lock');
 
                 // Clear state and start from fresh as a precaution
@@ -401,22 +401,26 @@ const goupile = new function() {
         let lock = await loadSessionValue('lock');
 
         if (lock != null) {
-            util.deleteCookie('session_rnd', '/');
             session_rnd = null;
             local_key = null;
 
+            util.deleteCookie('session_rnd', ENV.base_url);
+
             profile = {
                 userid: lock.userid,
-                permissions: ['edit'],
+                permissions: {
+                    'edit': true
+                },
                 lock: lock.ctx
             };
         } else {
-            let new_rnd = util.getCookie('session_rnd');
+            let new_rnd = util.getCookie('session_rnd', null);
 
             // Hack to force login screen to show up once when DemoUser setting is in use,
             // this cookie value is set in logout() just before page refresh.
             if (new_rnd === 'LOGIN') {
                 util.deleteCookie('session_rnd', ENV.base_url);
+                session_rnd = null;
                 return;
             }
 

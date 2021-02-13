@@ -13,7 +13,7 @@ class http_SessionManager {
     RG_DELETE_COPY(http_SessionManager)
 
     struct Session {
-        char session_key[129];
+        char session_key[65];
         char session_rnd[33];
         char user_agent[134];
 
@@ -29,7 +29,8 @@ class http_SessionManager {
     const char *cookie_path = "/";
 
     std::shared_mutex mutex;
-    HashTable<const char *, Session> sessions;
+    BucketArray<Session> sessions;
+    HashTable<const char *, Session *> sessions_map;
 
 public:
     http_SessionManager() = default;
@@ -56,8 +57,7 @@ private:
     Session *CreateSession(const http_RequestInfo &request, http_IO *io);
 
     RetainObject *Find2(const http_RequestInfo &request, http_IO *io);
-    Session *FindSession(const http_RequestInfo &request,
-                         bool *out_mismatch = nullptr, bool *out_locked = nullptr);
+    Session **FindSession(const http_RequestInfo &request, bool *out_mismatch, bool *out_locked);
 
     void DeleteSessionCookies(const http_RequestInfo &request, http_IO *io);
 

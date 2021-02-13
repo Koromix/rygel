@@ -31,16 +31,13 @@ static const char *const UserPermissionNames[] = {
 };
 
 struct Token {
-    const char *zone;
     uint32_t permissions;
-
     bool HasPermission(UserPermission perm) const { return permissions & (int)perm; };
 };
 
 class Session: public RetainObject {
     mutable std::shared_mutex tokens_lock;
     mutable HashMap<int64_t, Token> tokens_map;
-    mutable BlockAllocator tokens_alloc;
 
 public:
     int64_t userid;
