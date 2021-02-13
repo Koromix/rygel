@@ -11,7 +11,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 26;
+const int InstanceVersion = 27;
 
 static std::atomic_int64_t next_unique;
 
@@ -829,9 +829,52 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 26: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX rec_entries_fz;
+                    DROP INDEX rec_entries_u;
+                    DROP INDEX rec_entries_uz;
+                    DROP INDEX rec_fragments_uv;
+
+                    ALTER TABLE rec_entries RENAME TO rec_entries_BAK;
+                    ALTER TABLE rec_fragments RENAME TO rec_fragments_BAK;
+
+                    CREATE TABLE rec_entries (
+                        ulid TEXT NOT NULL,
+                        hid TEXT,
+                        form TEXT NOT NULL,
+                        anchor INTEGER NOT NULL,
+                        parent_ulid TEXT,
+                        parent_version INTEGER
+                    );
+                    CREATE INDEX rec_entries_f ON rec_entries (form);
+                    CREATE UNIQUE INDEX rec_entries_u ON rec_entries (ulid);
+
+                    CREATE TABLE rec_fragments (
+                        anchor INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ulid TEXT NOT NULL REFERENCES rec_entries (ulid) DEFERRABLE INITIALLY DEFERRED,
+                        version INTEGER NOT NULL,
+                        type TEXT NOT NULL,
+                        userid INTEGER NOT NULL,
+                        username TEXT NOT NULL,
+                        mtime TEXT NOT NULL,
+                        page TEXT,
+                        json BLOB
+                    );
+                    CREATE UNIQUE INDEX rec_fragments_uv ON rec_fragments (ulid, version);
+
+                    INSERT INTO rec_entries (ulid, hid, form, parent_ulid, parent_version, anchor)
+                        SELECT ulid, hid, form, parent_ulid, parent_version, anchor FROM rec_entries_BAK;
+                    INSERT INTO rec_fragments (anchor, ulid, type, userid, username, mtime, page, json)
+                        SELECT anchor, ulid, type, userid, username, mtime, page, json FROM rec_fragments_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 26);
+            RG_STATIC_ASSERT(InstanceVersion == 27);
         }
 
         int64_t time = GetUnixTime();

@@ -1782,9 +1782,7 @@ function InstanceController() {
                             ulid: record.ulid,
                             hid: record.hid,
                             parent: record.parent,
-                            zoned: record.form.zoned, // XXX: Record information on save,
                             fragments: record.fragments.map((fragment, idx) => ({
-                                version: idx + 1,
                                 type: fragment.type,
                                 mtime: fragment.mtime.toISOString(),
                                 page: fragment.page,
