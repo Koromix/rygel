@@ -233,7 +233,7 @@ function InstanceController() {
                         <div style="flex: 1;"></div>
                     ` : ''}
                     ${data_rows.length || 'Aucune'} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
-                        (<a @click=${ui.wrapAction(syncData)}>synchroniser</a>)
+                    ${ENV.sync_mode === 'mirror' ? html` (<a @click=${ui.wrapAction(syncData)}>synchroniser</a>)` : ''}
                 </div>
 
                 <table class="ui_table fixed" id="ins_data">
@@ -1154,7 +1154,7 @@ function InstanceController() {
         if (!goupile.isAuthorized()) {
             await goupile.runLogin();
 
-            if (net.isOnline())
+            if (net.isOnline() && ENV.sync_mode === 'mirror')
                 await syncData();
             if (net.isOnline() && ENV.backup_key != null)
                 await backupClientData('server');

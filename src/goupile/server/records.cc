@@ -57,6 +57,12 @@ static void ExportRecord(sq_Statement *stmt, json_Writer *json)
 
 void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
+    if (instance->config.sync_mode == SyncMode::Offline) {
+        LogError("Records API is disabled in Offline mode");
+        io->AttachError(403);
+        return;
+    }
+
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const Token *token = session ? session->GetToken(instance) : nullptr;
     if (!token) {
@@ -145,6 +151,12 @@ struct SaveRecord {
 
 void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
+    if (instance->config.sync_mode == SyncMode::Offline) {
+        LogError("Records API is disabled in Offline mode");
+        io->AttachError(403);
+        return;
+    }
+
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const Token *token = session ? session->GetToken(instance) : nullptr;
 
