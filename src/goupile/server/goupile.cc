@@ -422,21 +422,33 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
         return 1;
 #endif
 
-    bool run = true;
-    while (run) {
-        if (WaitForInterrupt(120 * 1000) == WaitForResult::Interrupt)
-            run = false;
+    // Run periodic tasks until exit
+    {
+        int timeout = 120 * 1000;
+        bool run = true;
 
-        LogDebug("Checkpointing databases");
-        gp_domain.Checkpoint();
-        gp_domain.Sync();
+        // Randomize the delay a bit to reduce situations where all goupile
+        // services perform cleanups at the same time and cause a load spike.
+        timeout += (randombytes_random() & 0x7F) * 500;
+        LogDebug("Periodic cleanup timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
+
+        while (run) {
+            if (WaitForInterrupt(timeout) == WaitForResult::Interrupt)
+                run = false;
+
+            // React to new and deleted instances
+            gp_domain.Sync();
+
+            LogDebug("Checkpointing databases");
+            gp_domain.Checkpoint();
 
 #ifdef __GLIBC__
-        // Actually release memory to the OS, because for some reason glibc doesn't want to
-        // do this automatically even after 98% of the resident memory pool has been freed.
-        LogDebug("Release memory (glibc)");
-        malloc_trim(0);
+            // Actually release memory to the OS, because for some reason glibc doesn't want to
+            // do this automatically even after 98% of the resident memory pool has been freed.
+            LogDebug("Release memory (glibc)");
+            malloc_trim(0);
 #endif
+        }
     }
 
     daemon.Stop();
