@@ -12,6 +12,17 @@ namespace RG {
 
 extern const int InstanceVersion;
 
+enum SyncMode {
+    Offline,
+    Online,
+    Mirror
+};
+static const char *const SyncModeNames[] = {
+    "Offline",
+    "Online",
+    "Mirror"
+};
+
 class InstanceHolder {
     // Managed by DomainHolder
     std::atomic_int refcount {0};
@@ -28,6 +39,7 @@ public:
     struct {
         const char *title = nullptr;
         bool use_offline = false;
+        SyncMode sync_mode = SyncMode::Offline;
         int max_file_size = (int)Megabytes(8);
         const char *backup_key = nullptr;
     } config;

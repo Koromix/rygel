@@ -255,6 +255,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         if (instance->config.use_offline) {
                             json.Key("cache_key"); json.String(Fmt(buf, "%1_%2", etag, instance->unique).ptr);
                         }
+                        ConvertToJsonName(SyncModeNames[(int)instance->config.sync_mode], buf);
+                        json.Key("sync_mode"); json.String(buf);
                         if (instance->config.backup_key) {
                             json.Key("backup_key"); json.String(instance->config.backup_key);
                         }
