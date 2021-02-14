@@ -226,7 +226,7 @@ function InstanceController() {
         return html`
             <div class="padded">
                 <div class="ui_quick">
-                    <a @click=${ui.wrapAction(goNewRecord)}>Créer</a>
+                    <a @click=${ui.wrapAction(goNewRecord)}>Créer un enregistrement</a>
                     <div style="flex: 1;"></div>
                     ${ENV.backup_key != null ? html`
                         <a @click=${ui.wrapAction(e => backupClientData('file'))}>Faire une sauvegarde chiffrée</a>
