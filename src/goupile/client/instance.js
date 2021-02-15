@@ -277,11 +277,11 @@ function InstanceController() {
                             let child = row.children[form.key][0];
                             let url = form.url + `/${child.ulid}`;
 
-                            return html`<td class=${active && form === route.form ? 'saved active' : 'saved'}><a href=${url}>${item.title}</a></td>`;
+                            return html`<td class=${active && route.form.chain.includes(form) ? 'saved active' : 'saved'}><a href=${url}>${item.title}</a></td>`;
                         } else {
                             let url = form.url + `/${row.ulid}`;
 
-                            return html`<td class=${active && form === route.form ? 'missing active' : 'missing'}><a href=${url}>${item.title}</a></td>`;
+                            return html`<td class=${active && route.form.chain.includes(form) ? 'missing active' : 'missing'}><a href=${url}>${item.title}</a></td>`;
                         }
                     }
                 })}
