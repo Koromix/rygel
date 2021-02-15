@@ -127,14 +127,16 @@ bool Builder::AddTarget(const TargetInfo &target)
 
         // Build object file
         {
+            uint32_t features = build.features | target.features;
+
             Command cmd = {};
             if (module) {
                 build.compiler->MakeObjectCommand(src_filename, SourceType::C, CompileMode::Debug,
-                                                  false, nullptr, {"EXPORT"}, {}, 0, build.env,
+                                                  false, nullptr, {"EXPORT"}, {}, features, build.env,
                                                   obj_filename, &str_alloc, &cmd);
             } else {
                 build.compiler->MakeObjectCommand(src_filename, SourceType::C, CompileMode::Debug,
-                                                  false, nullptr, {}, {}, 0, build.env,
+                                                  false, nullptr, {}, {}, features, build.env,
                                                   obj_filename,  &str_alloc, &cmd);
             }
 
@@ -184,13 +186,14 @@ bool Builder::AddTarget(const TargetInfo &target)
     if (target.type == TargetType::Executable) {
         const char *src_filename = Fmt(&str_alloc, "%1%/cache%/%2.c", build.output_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
+        uint32_t features = build.features | target.features;
 
         if (!UpdateVersionSource(target.name, build.version_str, build.fake, src_filename))
             return false;
 
         Command cmd = {};
         build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
-                                          false, nullptr, {}, {}, 0, build.env,
+                                          false, nullptr, {}, {}, features, build.env,
                                           obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, "Build %1 version file", target.name).ptr;

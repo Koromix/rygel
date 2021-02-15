@@ -60,12 +60,17 @@ bool Compiler::Test() const
 class ClangCompiler final: public Compiler {
 public:
 #if defined(_WIN32)
-    ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::ASan) {}
+    ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::Strip |
+                                                              (int)CompileFeature::Static |
+                                                              (int)CompileFeature::ASan) {}
 #elif defined( __linux__)
-    ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::ASan |
+    ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::Strip |
+                                                              (int)CompileFeature::Static |
+                                                              (int)CompileFeature::ASan |
                                                               (int)CompileFeature::TSan) {}
 #else
-    ClangCompiler(const char *name) : Compiler(name, "clang", 0) {}
+    ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::Strip |
+                                                              (int)CompileFeature::Static) {}
 #endif
 
 #ifdef _WIN32
@@ -124,8 +129,8 @@ public:
 
         // Build options
         switch (compile_mode) {
-            case CompileMode::Debug: { Fmt(&buf, " -O0 -g -ftrapv"); } break;
-            case CompileMode::DebugFast: { Fmt(&buf, " -Og -g -ftrapv -fno-omit-frame-pointer"); } break;
+            case CompileMode::Debug: { Fmt(&buf, " -O0 -ftrapv"); } break;
+            case CompileMode::DebugFast: { Fmt(&buf, " -Og -ftrapv -fno-omit-frame-pointer"); } break;
             case CompileMode::Fast: { Fmt(&buf, " -O2 -DNDEBUG"); } break;
             case CompileMode::LTO: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
         }
@@ -136,7 +141,7 @@ public:
         Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
                   " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
                   " -DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE"
-                  " -D_MT -Xclang --dependent-lib=libcmt -Xclang --dependent-lib=oldnames"
+                  " -D_MT -Xclang --dependent-lib=oldnames"
                   " -Wno-unknown-warning-option -Wno-unknown-pragmas -Wno-deprecated-declarations");
 
         if (src_type == SourceType::CXX) {
@@ -153,6 +158,11 @@ public:
 #endif
 
         // Features
+        if (!(features & (int)CompileFeature::Strip)) {
+            Fmt(&buf, " -g");
+        }
+        Fmt(&buf, (features & (int)CompileFeature::Static) ? " -Xclang --dependent-lib=libcmt"
+                                                           : " -Xclang --dependent-lib=msvcrt");
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
         }
@@ -210,9 +220,9 @@ public:
         // Build mode
         switch (compile_mode) {
             case CompileMode::Debug:
-            case CompileMode::DebugFast: { Fmt(&buf, " -g"); } break;
+            case CompileMode::DebugFast: {} break;
 #ifdef _WIN32
-            case CompileMode::Fast: { Fmt(&buf, "%1", link_type == LinkType::Executable ? " -static" : ""); } break;
+            case CompileMode::Fast: { Fmt(&buf, " %1", link_type == LinkType::Executable ? " -static" : ""); } break;
             case CompileMode::LTO: { Fmt(&buf, " -flto%1", link_type == LinkType::Executable ? " -static" : ""); } break;
 #else
             case CompileMode::Fast: {} break;
@@ -241,6 +251,12 @@ public:
 #endif
 
         // Features
+        if (!(features & (int)CompileFeature::Strip)) {
+            Fmt(&buf, " -g");
+        }
+        if (features & (int)CompileFeature::Static) {
+            Fmt(&buf, " -static");
+        }
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
         }
@@ -263,10 +279,13 @@ public:
 class GnuCompiler final: public Compiler {
 public:
 #if defined( __linux__)
-    GnuCompiler(const char *name) : Compiler(name, "gcc", (int)CompileFeature::ASan |
+    GnuCompiler(const char *name) : Compiler(name, "gcc", (int)CompileFeature::Strip |
+                                                          (int)CompileFeature::Static |
+                                                          (int)CompileFeature::ASan |
                                                           (int)CompileFeature::TSan) {}
 #else
-    GnuCompiler(const char *name) : Compiler(name, "gcc", 0) {}
+    GnuCompiler(const char *name) : Compiler(name, "gcc", (int)CompileFeature::Strip |
+                                                          (int)CompileFeature::Static) {}
 #endif
 
 #ifdef _WIN32
@@ -325,8 +344,8 @@ public:
 
         // Build options
         switch (compile_mode) {
-            case CompileMode::Debug: { Fmt(&buf, " -O0 -g -fsanitize=signed-integer-overflow -fsanitize-undefined-trap-on-error"); } break;
-            case CompileMode::DebugFast: { Fmt(&buf, " -Og -g -fsanitize=signed-integer-overflow -fsanitize-undefined-trap-on-error"
+            case CompileMode::Debug: { Fmt(&buf, " -O0 -fsanitize=signed-integer-overflow -fsanitize-undefined-trap-on-error"); } break;
+            case CompileMode::DebugFast: { Fmt(&buf, " -Og -fsanitize=signed-integer-overflow -fsanitize-undefined-trap-on-error"
                                                      " -fno-omit-frame-pointer"); } break;
             case CompileMode::Fast: { Fmt(&buf, " -O2 -DNDEBUG"); } break;
             case CompileMode::LTO: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
@@ -359,6 +378,9 @@ public:
 #endif
 
         // Features
+        if (!(features & (int)CompileFeature::Strip)) {
+            Fmt(&buf, " -g");
+        }
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
         }
@@ -416,7 +438,7 @@ public:
         // Build mode
         switch (compile_mode) {
             case CompileMode::Debug:
-            case CompileMode::DebugFast: { Fmt(&buf, " -g"); } break;
+            case CompileMode::DebugFast: {} break;
 #ifdef _WIN32
             case CompileMode::Fast: { Fmt(&buf, " -s%1", link_type == LinkType::Executable ? " -static" : ""); } break;
             case CompileMode::LTO: { Fmt(&buf, " -flto -s%1", link_type == LinkType::Executable ? " -static" : ""); } break;
@@ -450,6 +472,10 @@ public:
 #endif
 
         // Features
+        Fmt(&buf, (features & (int)CompileFeature::Strip) ? " -s" : " -g");
+        if (features & (int)CompileFeature::Static) {
+            Fmt(&buf, " -static");
+        }
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
         }
@@ -472,7 +498,8 @@ public:
 #ifdef _WIN32
 class MsCompiler final: public Compiler {
 public:
-    MsCompiler(const char *name) : Compiler(name, "cl", 0) {}
+    MsCompiler(const char *name) : Compiler(name, "cl", (int)CompileFeature::Strip |
+                                                        (int)CompileFeature::Static) {}
 
     const char *GetObjectExtension() const override { return ".obj"; }
     const char *GetExecutableExtension() const override { return ".exe"; }
@@ -529,10 +556,10 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        Fmt(&buf, " /MT /EHsc %1", warnings ? "/W3 /wd4200" : "/w");
+        Fmt(&buf, " /EHsc %1", warnings ? "/W3 /wd4200" : "/w");
         switch (compile_mode) {
-            case CompileMode::Debug: { Fmt(&buf, " /Od /Z7"); } break;
-            case CompileMode::DebugFast: { Fmt(&buf, " /O2 /Z7"); } break;
+            case CompileMode::Debug: { Fmt(&buf, " /Od"); } break;
+            case CompileMode::DebugFast: { Fmt(&buf, " /O2"); } break;
             case CompileMode::Fast: { Fmt(&buf, " /O2 /DNDEBUG"); } break;
             case CompileMode::LTO: { Fmt(&buf, " /O2 /GL /DNDEBUG"); } break;
         }
@@ -541,6 +568,12 @@ public:
         Fmt(&buf, " /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE"
                   " /D_LARGEFILE_SOURCE /D_LARGEFILE64_SOURCE /D_FILE_OFFSET_BITS=64"
                   " /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_DEPRECATE");
+
+        // Features
+        if (!(features & (int)CompileFeature::Strip)) {
+            Fmt(&buf, " /Z7");
+        }
+        Fmt(&buf, (features & (int)CompileFeature::Static) ? " /MT" : " /MD");
 
         // Sources and definitions
         Fmt(&buf, " /DFELIX /c /utf-8 \"%1\"", src_filename);
@@ -588,10 +621,10 @@ public:
 
         // Build mode
         switch (compile_mode) {
-            case CompileMode::Debug: { Fmt(&buf, " /DEBUG:FULL"); } break;
-            case CompileMode::DebugFast: { Fmt(&buf, " /DEBUG:FULL"); } break;
-            case CompileMode::Fast: { Fmt(&buf, " /DEBUG:NONE"); } break;
-            case CompileMode::LTO: { Fmt(&buf, " /LTCG /DEBUG:NONE"); } break;
+            case CompileMode::Debug:
+            case CompileMode::DebugFast:
+            case CompileMode::Fast: {} break;
+            case CompileMode::LTO: { Fmt(&buf, " /LTCG"); } break;
         }
 
         // Objects and libraries
@@ -601,6 +634,9 @@ public:
         for (const char *lib: libraries) {
             Fmt(&buf, " %1.lib", lib);
         }
+
+        // Features
+        Fmt(&buf, (features & (int)CompileFeature::Strip) ? " /DEBUG:NONE" : " /DEBUG:FULL");
 
         if (env_flags) {
             AddEnvironmentFlags("LDFLAGS", &buf);
@@ -615,7 +651,8 @@ public:
 
 class EmsdkCompiler final: public Compiler {
 public:
-    EmsdkCompiler(const char *name) : Compiler(name, "emcc", 0) {}
+    EmsdkCompiler(const char *name) : Compiler(name, "emcc", (int)CompileFeature::Strip |
+                                                             (int)CompileFeature::Static) {}
 
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetExecutableExtension() const override { return ".js"; }
@@ -673,8 +710,8 @@ public:
 
         // Build options
         switch (compile_mode) {
-            case CompileMode::Debug: { Fmt(&buf, " -O0 -g -ftrapv"); } break;
-            case CompileMode::DebugFast: { Fmt(&buf, " -Og -g -ftrapv"); } break;
+            case CompileMode::Debug: { Fmt(&buf, " -O0 -ftrapv"); } break;
+            case CompileMode::DebugFast: { Fmt(&buf, " -Og -ftrapv"); } break;
             case CompileMode::Fast: { Fmt(&buf, " -O2 -DNDEBUG"); } break;
             case CompileMode::LTO: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
         }
@@ -682,6 +719,11 @@ public:
 
         // Platform flags
         Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64");
+
+        // Features
+        if (!(features & (int)CompileFeature::Strip)) {
+            Fmt(&buf, " -g");
+        }
 
         // Sources and definitions
         Fmt(&buf, " -DFELIX -c \"%1\"", src_filename);
@@ -738,7 +780,7 @@ public:
         // Build mode
         switch (compile_mode) {
             case CompileMode::Debug:
-            case CompileMode::DebugFast: { Fmt(&buf, " -g"); } break;
+            case CompileMode::DebugFast: {} break;
             case CompileMode::Fast: { Fmt(&buf, " -s"); } break;
             case CompileMode::LTO: { Fmt(&buf, " -flto -s"); } break;
         }
@@ -750,9 +792,10 @@ public:
         for (const char *lib: libraries) {
             Fmt(&buf, " -l%1", lib);
         }
-
-        // Platform flags and libraries
         Fmt(&buf, " -lnodefs.js");
+
+        // Features
+        Fmt(&buf, (features & (int)CompileFeature::Strip) ? " -s" : " -g");
 
         if (env_flags) {
             AddEnvironmentFlags("LDFLAGS", &buf);

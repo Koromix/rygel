@@ -14,7 +14,7 @@ if NOT ERRORLEVEL 1 (
         mkdir tmp
         cl /nologo /std:c++latest /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /c %SRC% /Fotmp\
         link /nologo tmp\*.obj /out:tmp\felix.exe
-        tmp\felix.exe -m Fast -O tmp\fast felix
+        tmp\felix.exe -m Fast -f Static -O tmp\fast felix
         move tmp\fast\felix.exe %BIN%
 
         echo Cleaning up...
@@ -32,7 +32,7 @@ if NOT ERRORLEVEL 1 (
         mkdir tmp
         clang-cl /nologo /std:c++latest /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /c %SRC% /Fotmp\
         lld-link /nologo tmp\*.obj /out:tmp\felix.exe
-        tmp\felix.exe -m Fast -O tmp\fast felix
+        tmp\felix.exe -m Fast -f Static -O tmp\fast felix
         move tmp\fast\felix.exe %BIN%
 
         echo Cleaning up...
@@ -50,7 +50,7 @@ if NOT ERRORLEVEL 1 (
     echo Bootstrapping felix with GCC...
     mkdir tmp
     g++ -std=gnu++2a -O0 -DNDEBUG -DNOMINMAX  -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE %SRC% -w -otmp\felix.exe
-    tmp\felix.exe -m Fast -O tmp\fast felix
+    tmp\felix.exe -m Fast -f Static -O tmp\fast felix
     move tmp\fast\felix.exe %BIN%
 
     echo Cleaning up...
