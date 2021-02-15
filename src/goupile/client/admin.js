@@ -115,7 +115,7 @@ function AdminController() {
                                         </td>
                                     ` : ''}
                                     <td><a role="button" tabindex="0"
-                                           @click=${ui.wrapAction(e => runDeleteUserDialog(e, user))}>Supprimer</a></td>
+                                           @click=${ui.wrapAction(e => runEditUserDialog(e, user))}>Modifier</a></td>
                                 </tr>
                             `;
                         })}
@@ -343,27 +343,76 @@ function AdminController() {
         });
     }
 
-    function runDeleteUserDialog(e, user) {
-        return ui.runConfirm(e, `Voulez-vous supprimer l'utilisateur '${user.username}' ?`,
-                                'Supprimer', async () => {
-            let query = new URLSearchParams;
-            query.set('userid', user.userid);
+    function runEditUserDialog(e, user) {
+        return ui.runDialog(e, (d, resolve, reject) => {
+            d.pushOptions({untoggle: false});
 
-            let response = await net.fetch('/admin/api/users/delete', {
-                method: 'POST',
-                body: query
+            d.tabs('actions', () => {
+                d.tab('Modifier', () => {
+                    let username = d.text('username', 'Nom d\'utilisateur', {value: user.username});
+
+                    let password = d.password('password', 'Mot de passe', {
+                        help: "Laissez vide pour ne pas modifier"
+                    });
+                    let password2 = d.password('password2', 'Confirmation');
+                    if (password.value != null && password2.value != null && password.value !== password2.value)
+                        password2.error('Les mots de passe sont différents');
+
+                    let admin = d.boolean('*admin', 'Administrateur', {value: user.admin});
+
+                    d.action('Modifier', {disabled: !d.isValid()}, async () => {
+                        let query = new URLSearchParams;
+                        query.set('userid', user.userid);
+                        if (username.value != null)
+                            query.set('username', username.value);
+                        if (password.value != null)
+                            query.set('password', password.value);
+                        query.set('admin', admin.value ? 1 : 0);
+
+                        let response = await net.fetch('/admin/api/users/edit', {
+                            method: 'POST',
+                            body: query
+                        });
+
+                        if (response.ok) {
+                            resolve();
+                            log.success(`Utilisateur '${username.value}' modifié`);
+
+                            users = null;
+
+                            self.run();
+                        } else {
+                            let err = (await response.text()).trim();
+                            reject(new Error(err));
+                        }
+                    });
+                });
+
+                d.tab('Supprimer', () => {
+                    d.output(`Voulez-vous vraiment supprimer l'utilisateur '${user.username}' ?`);
+
+                    d.action('Supprimer', {}, async () => {
+                        let query = new URLSearchParams;
+                        query.set('userid', user.userid);
+
+                        let response = await net.fetch('/admin/api/users/delete', {
+                            method: 'POST',
+                            body: query
+                        });
+
+                        if (response.ok) {
+                            log.success(`Utilisateur '${user.username}' supprimé`);
+
+                            users = null;
+
+                            self.run();
+                        } else {
+                            let err = (await response.text()).trim();
+                            throw new Error(err);
+                        }
+                    });
+                });
             });
-
-            if (response.ok) {
-                log.success(`Utilisateur '${user.username}' supprimé`);
-
-                users = null;
-
-                self.run();
-            } else {
-                let err = (await response.text()).trim();
-                throw new Error(err);
-            }
         });
     }
 };

@@ -201,6 +201,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleInstanceList(request, io);
         } else if (TestStr(instance_path, "/api/users/create") && request.method == http_RequestMethod::Post) {
             HandleUserCreate(request, io);
+        } else if (TestStr(instance_path, "/api/users/edit") && request.method == http_RequestMethod::Post) {
+            HandleUserEdit(request, io);
         } else if (TestStr(instance_path, "/api/users/delete") && request.method == http_RequestMethod::Post) {
             HandleUserDelete(request, io);
         } else if (TestStr(instance_path, "/api/users/assign") && request.method == http_RequestMethod::Post) {

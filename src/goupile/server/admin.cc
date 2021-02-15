@@ -925,6 +925,110 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
     });
 }
 
+void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    if (!session || !session->IsAdmin()) {
+        LogError("Non-admin users are not allowed to edit users");
+        io->AttachError(403);
+        return;
+    }
+
+    io->RunAsync([=]() {
+        HashMap<const char *, const char *> values;
+        if (!io->ReadPostValues(&io->allocator, &values)) {
+            io->AttachError(422);
+            return;
+        }
+
+        // Read POST values
+        int64_t userid;
+        const char *username;
+        const char *password;
+        bool admin, set_admin = false;
+        {
+            bool valid = true;
+
+            // User ID
+            if (const char *str = values.FindValue("userid", nullptr); str) {
+                valid &= ParseInt(str, &userid);
+            } else {
+                LogError("Missing 'userid' parameter");
+                valid = false;
+            }
+
+            username = values.FindValue("username", nullptr);
+            password = values.FindValue("password", nullptr);
+            if (username && !CheckUserName(username)) {
+                valid = false;
+            }
+            if (password && !password[0]) {
+                LogError("Empty password is not allowed");
+                valid = false;
+            }
+
+            if (const char *str = values.FindValue("admin", nullptr); str) {
+                valid &= ParseBool(str, &admin);
+                set_admin = true;
+            }
+
+            if (!valid) {
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        // Safety check
+        if (userid == session->userid && set_admin && admin != !!session->admin_until) {
+            LogError("You cannot change your admin privileges");
+            io->AttachError(403);
+            return;
+        }
+
+        // Hash password
+        char hash[crypto_pwhash_STRBYTES];
+        if (password && !HashPassword(password, hash))
+            return;
+
+        gp_domain.db.Transaction([&]() {
+            // Check for existing user
+            {
+                sq_Statement stmt;
+                if (!gp_domain.db.Prepare("SELECT rowid FROM dom_users WHERE userid = ?1", &stmt))
+                    return false;
+                sqlite3_bind_int64(stmt, 1, userid);
+
+                if (!stmt.Next()) {
+                    if (stmt.IsValid()) {
+                        LogError("User ID '%1' does not exist", userid);
+                        io->AttachError(404);
+                    }
+                    return false;
+                }
+            }
+
+            // Log action
+            int64_t time = GetUnixTime();
+            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                                     VALUES (?1, ?2, ?3, ?4, ?5))",
+                                  time, request.client_addr, "edit_user", session->username,
+                                  username))
+                return false;
+
+            // Edit user
+            if (username && !gp_domain.db.Run("UPDATE dom_users SET username = ?2 WHERE userid = ?1", userid, username))
+                return false;
+            if (password && !gp_domain.db.Run("UPDATE dom_users SET password_hash = ?2 WHERE userid = ?1", userid, hash))
+                return false;
+            if (set_admin && !gp_domain.db.Run("UPDATE dom_users SET admin = ?2 WHERE userid = ?1", userid, 0 + admin))
+                return false;
+
+            io->AttachText(200, "Done!");
+            return true;
+        });
+    });
+}
+
 void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
