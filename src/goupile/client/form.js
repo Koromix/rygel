@@ -272,7 +272,7 @@ function FormBuilder(state, model, readonly = false) {
         let thumb_value = (value != null) ? value : ((options.max + options.min) / 2);
         let fix_value = (value != null) ? util.clamp(value, options.min, options.max)
                                         : ((options.min + options.max) / 2);
-        let progress = (value != null) ? ((fix_value - options.min) / range) : 0;
+        let progress = (value != null) ? ((fix_value - options.min) / range) : -1;
 
         let tick_func;
         if (options.ticks != null && options.ticks !== false) {
