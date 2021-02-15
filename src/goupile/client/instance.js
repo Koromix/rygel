@@ -295,8 +295,8 @@ function InstanceController() {
 
                 if (form !== route.form || form.menu.length > 1) {
                     return html`
-                        <tr>
-                            <td colspan=${2 + row.form.menu.length} style="padding: 0 0 0 1em; border: 0;">
+                        <tr style="background: none !important;">
+                            <td colspan=${2 + row.form.menu.length} style="padding: 12px; border: 0; background: none !important;">
                                 <table class="ui_table fixed">
                                     <colgroup>
                                         ${util.mapRange(0, form.menu.length, () => html`<col/>`)}
