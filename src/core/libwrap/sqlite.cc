@@ -93,6 +93,12 @@ bool sq_Database::Open(const char *filename, unsigned int flags)
     return true;
 }
 
+bool sq_Database::SetSynchronousFull(bool enable)
+{
+    const char *sql = enable ? "PRAGMA synchronous = FULL" : "PRAGMA synchronous = NORMAL";
+    return Run(sql);
+}
+
 bool sq_Database::Close()
 {
     if (sqlite3_close(db) != SQLITE_OK)

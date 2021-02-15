@@ -107,6 +107,8 @@ public:
     bool Open(const char *filename, unsigned int flags);
     bool Close();
 
+    bool SetSynchronousFull(bool enable);
+
     bool GetUserVersion(int *out_version);
     bool SetUserVersion(int version);
 

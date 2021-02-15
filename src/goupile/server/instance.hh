@@ -48,7 +48,7 @@ public:
 
     ~InstanceHolder() { Close(); }
 
-    bool Open(const char *key, const char *filename);
+    bool Open(const char *key, const char *filename, bool sync_full);
     bool Validate();
     void Close();
 

@@ -20,6 +20,8 @@ struct DomainConfig {
     const char *temp_directory = nullptr;
     const char *backup_directory = nullptr;
 
+    bool sync_full = false;
+
     const char *demo_user = nullptr;
 
     // XXX: Restore http_Config designated initializers when MSVC ICE is fixed

@@ -30,6 +30,9 @@ R"([Resources]
 # TempDirectory = tmp
 # BackupDirectory = backup
 
+[SQLite]
+# SynchronousFull = Off
+
 [Session]
 # DemoUser =
 

@@ -15,7 +15,7 @@ const int InstanceVersion = 28;
 
 static std::atomic_int64_t next_unique;
 
-bool InstanceHolder::Open(const char *key, const char *filename)
+bool InstanceHolder::Open(const char *key, const char *filename, bool sync_full)
 {
     RG_DEFER_N(err_guard) { Close(); };
     Close();
@@ -28,6 +28,8 @@ bool InstanceHolder::Open(const char *key, const char *filename)
 
     // Open database
     if (!db.Open(filename, SQLITE_OPEN_READWRITE))
+        return false;
+    if (!db.SetSynchronousFull(sync_full))
         return false;
 
     // Check schema version

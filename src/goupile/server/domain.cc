@@ -61,6 +61,15 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         valid = false;
                     }
                 } while (ini.NextInSection(&prop));
+            } else if (prop.section == "SQLite") {
+                do {
+                    if (prop.key == "SynchronousFull") {
+                        valid &= ParseBool(prop.value, &config.sync_full);
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
             } else if (prop.section == "Session") {
                 do {
                     if (prop.key == "DemoUser") {
@@ -143,6 +152,8 @@ bool DomainHolder::Open(const char *filename)
     if (!LoadConfig(filename, &config))
         return false;
     if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))
+        return false;
+    if (!db.SetSynchronousFull(config.sync_full))
         return false;
 
     // Check schema version
@@ -232,7 +243,7 @@ bool DomainHolder::Sync()
                 const char *filename = config.GetInstanceFileName(key, &temp_alloc);
                 instance = new InstanceHolder();
 
-                if (instance->Open(key, filename)) {
+                if (instance->Open(key, filename, config.sync_full)) {
                     new_instances.Append(instance);
                     new_map.Set(instance);
                 } else {

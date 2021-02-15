@@ -433,14 +433,17 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
         LogDebug("Periodic cleanup timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
 
         while (run) {
-            if (WaitForInterrupt(timeout) == WaitForResult::Interrupt)
+            int iter_timeout = (gp_domain.config.sync_full && gp_domain.IsSynced()) ? -1 : timeout;
+            if (WaitForInterrupt(iter_timeout) == WaitForResult::Interrupt)
                 run = false;
 
             // React to new and deleted instances
             gp_domain.Sync();
 
-            LogDebug("Checkpointing databases");
-            gp_domain.Checkpoint();
+            if (!gp_domain.config.sync_full) {
+                LogDebug("Checkpointing databases");
+                gp_domain.Checkpoint();
+            }
 
 #ifdef __GLIBC__
             // Actually release memory to the OS, because for some reason glibc doesn't want to
