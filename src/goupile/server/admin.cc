@@ -974,7 +974,7 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
             sqlite3_bind_int64(stmt, 1, userid);
 
             if (!stmt.Next()) {
-                if (!stmt.IsValid()) {
+                if (stmt.IsValid()) {
                     LogError("User ID '%1' does not exist", userid);
                     io->AttachError(404);
                 }
