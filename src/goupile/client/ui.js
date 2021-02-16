@@ -170,7 +170,7 @@ const ui = new function() {
                         dialog.reject(null);
                 });
             }
-            dialog.el.style.zIndex = 999999;
+            dialog.el.style.zIndex = 9999999;
 
             // Show it!
             document.querySelector('#ui_root').appendChild(dialog.el);
