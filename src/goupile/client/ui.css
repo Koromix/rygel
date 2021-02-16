@@ -334,6 +334,11 @@ html.medium .ui_toolbar button.icon {
 
 /* -------------------- Utility -------------------- */
 
+.ui_busy {
+    cursor: wait !important;
+    opacity: 0.5 !important;
+}
+
 .ui_tag {
     display: inline-block;
     padding: 0px 4px;

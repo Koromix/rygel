@@ -305,33 +305,25 @@ const ui = new function() {
         return async e => {
             let target = e.target;
 
-            if (target.disabled != null) {
-                try {
-                    target.disabled = true;
-                    await func(e);
-                } catch (err) {
-                    if (err != null) {
-                        log.error(err);
-                        throw err;
-                    }
-                } finally {
-                    target.disabled = false;
-                }
-            } else {
-                if (target.classList.contains('disabled'))
-                    return;
+            if (target.disabled || target.classList.contains('disabled') ||
+                                   target.classList.contains('ui_busy'))
+                return;
 
-                try {
-                    target.classList.add('disabled');
-                    await func(e);
-                } catch (err) {
-                    if (err != null) {
-                        log.error(err);
-                        throw err;
-                    }
-                } finally {
-                    target.classList.remove('disabled');
+            try {
+                target.classList.add('ui_busy');
+                if (target.disabled != null)
+                    target.disabled = true;
+
+                await func(e);
+            } catch (err) {
+                if (err != null) {
+                    log.error(err);
+                    throw err;
                 }
+            } finally {
+                target.classList.remove('ui_busy');
+                if (target.disabled != null)
+                    target.disabled = false;
             }
         };
     };
