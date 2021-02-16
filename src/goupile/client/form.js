@@ -309,8 +309,6 @@ function FormBuilder(state, model, readonly = false) {
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class=${'fm_slider' + (value == null ? ' missing' : '') + (options.readonly ? ' readonly' : '')}
                  style=${makeInputStyle(options)}>
-                <span style=${options.untoggle ? ' cursor: pointer;': ''}
-                      @click=${e => handleSliderClick(e, key, value, options.min, options.max)}>${value != null ? value.toFixed(options.decimals) : '?'}</span>
                 <div>
                     ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                     <div style="flex: 1;">
@@ -318,7 +316,7 @@ function FormBuilder(state, model, readonly = false) {
                                min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
                                .value=${thumb_value} data-value=${thumb_value}
                                placeholder=${options.placeholder || ''}
-                               ?disabled=${options.disabled}
+                               ?disabled=${options.disabled} title=${value != null ? value.toFixed(options.decimals) : ''}
                                @click=${e => { e.target.value = fix_value; handleSliderChange(e, key); }}
                                @dblclick=${e => handleSliderClick(e, key, value, options.min, options.max)}
                                @input=${e => handleSliderChange(e, key)}/>
