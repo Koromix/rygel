@@ -183,6 +183,7 @@ html.medium .ui_toolbar button.icon {
     top: 0;
     width: 100vw;
     height: 100vh;
+    box-sizing: border-box;
     justify-content: center;
     align-items: center;
     background: rgba(255, 255, 255, 0.96);
@@ -190,17 +191,24 @@ html.medium .ui_toolbar button.icon {
 .ui_modal.active { display: flex; }
 .ui_modal > form {
     display: block;
-    position: absolute;
     min-width: 260px;
     max-width: 90%;
+    max-height: calc(100% - 20px);
+    box-sizing: border-box;
+    overflow-y: auto;
     padding: 16px;
     background: #f8f8f8;
+    border: 1px solid #e6e6e6;
+    box-shadow: 2px 2px rgba(136, 136, 136, 0.12);
 }
 
 .ui_popup {
     display: none;
     position: fixed;
     box-sizing: border-box;
+    max-height: calc(100% - 20px);
+    box-sizing: border-box;
+    overflow-y: auto;
     padding: 8px;
     background: #f8f8f8;
     border: 1px solid #e6e6e6;
