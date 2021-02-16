@@ -254,13 +254,13 @@ function InstanceController() {
         `;
     }
 
-    function renderDataRow(row, hid) {
+    function renderDataRow(row, root) {
         let active = form_record.chain.some(record => record.ulid === row.ulid);
         let focused = form_record.ulid === row.ulid;
 
         return html`
             <tr class=${focused ? 'active' : ''}>
-                ${hid ? html`<td class=${row.hid == null ? 'missing' : ''}>${row.hid != null ? row.hid : 'NA'}</td>` : ''}
+                ${root ? html`<td class=${row.hid == null ? 'missing' : ''}>${row.hid != null ? row.hid : 'NA'}</td>` : ''}
                 ${row.form.menu.map(item => {
                     if (item.type === 'page') {
                         let page = item.page;
@@ -286,35 +286,38 @@ function InstanceController() {
                         }
                     }
                 })}
-                <td>
-                    <a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a>
-                </td>
+                <th>
+                    ${row.version > 0 && row.form.multi ? html`<a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a>` : ''}
+                </th>
             </tr>
-            ${active && hid ? util.mapRange(1, route.form.chain.length, idx => {
-                let form = route.form.chain[idx];
-                let record = form_record.map[form.key];
 
-                if (form !== route.form || form.menu.length > 1) {
-                    return html`
-                        <tr style="background: none !important;">
-                            <td colspan=${2 + row.form.menu.length} style="padding: 12px; border: 0; background: none !important;">
-                                <table class="ui_table fixed">
-                                    <colgroup>
-                                        ${util.mapRange(0, form.menu.length, () => html`<col/>`)}
-                                        <col style="width: 2em;"/>
-                                    </colgroup>
+            ${active && root && route.form.chain.length > 1 ? html`
+                <tr style="background: none !important;">
+                    <td colspan=${2 + row.form.menu.length} style="padding: 26px 12px; border: 0; background: none !important;">
+                        ${util.mapRange(1, route.form.chain.length, idx => {
+                            let form = route.form.chain[idx];
+                            let record = form_record.map[form.key];
 
-                                    <tbody>
-                                        ${renderDataRow(record, false)}
-                                    </tbody>
-                                </table>
-                            </td>
-                        </tr>
-                    `;
-                } else {
-                    return '';
-                }
-            }) : ''}
+                            if (form !== route.form || form.menu.length > 1) {
+                                return html`
+                                    <table class="ui_table fixed" style="border-bottom: none; border-top: none;">
+                                        <colgroup>
+                                            ${util.mapRange(0, form.menu.length, () => html`<col/>`)}
+                                            <col style="width: 2em;"/>
+                                        </colgroup>
+
+                                        <tbody>
+                                            ${renderDataRow(record, false)}
+                                        </tbody>
+                                    </table>
+                                `;
+                            } else {
+                                return '';
+                            }
+                        })}
+                    </td>
+                </tr>
+            ` : ''}
         `;
     }
 
@@ -1634,10 +1637,8 @@ function InstanceController() {
                 data_rows = null;
             }
 
-            if (data_rows == null) {
-                data_rows = [];
-                await loadDataRecords(data_form, null, data_rows);
-            }
+            if (data_rows == null)
+                data_rows = await loadDataRecords(data_form, null, data_rows);
         }
 
         // Fetch page code (for page panel)
@@ -1647,7 +1648,7 @@ function InstanceController() {
     };
     this.run = util.serializeAsync(this.run);
 
-    async function loadDataRecords(form, parent, records) {
+    async function loadDataRecords(form, parent) {
         let objects;
         if (parent == null) {
             let range = IDBKeyRange.only(`${profile.userid}/${form.key}`);
@@ -1657,6 +1658,7 @@ function InstanceController() {
             objects = await db.loadAll('rec_records/parent', range);
         }
 
+        let records = [];
         for (let obj of objects) {
             try {
                 let record = await decryptRecord(obj, null, false, false);
@@ -1665,6 +1667,8 @@ function InstanceController() {
                 console.log(err);
             }
         }
+
+        return records;
     }
 
     async function fetchCode(filename) {

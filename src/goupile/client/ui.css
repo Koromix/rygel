@@ -231,29 +231,29 @@ html.medium .ui_toolbar button.icon {
 }
 .ui_table.fixed { table-layout: fixed; }
 .ui_table thead th { background: #f8f8f8; }
-.ui_table tbody tr:nth-child(2n + 1) { background: #f8f8f8; }
-.ui_table tbody tr:nth-child(2n) { background: white; }
+.ui_table tbody tr:nth-child(2n + 1) > td { background: #f8f8f8; }
+.ui_table tbody tr:nth-child(2n) > td { background: white; }
 .ui_table th, .ui_table td {
     padding: 3px 6px;
-    border: 1px solid #dfdfdf;
     text-align: center;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.ui_table th { border: 0; }
+.ui_table td { border: 1px solid #dfdfdf; }
 .ui_table a { text-decoration: none; }
-.ui_table tbody tr.active {
+.ui_table tbody tr.active > td {
     background: #999;
     color: white;
 }
-.ui_table tbody td.active {
+.ui_table tbody tr td.active {
     background: #999;
     color: white;
     font-weight: bold;
 }
 .ui_table tbody tr.active > td.active { background: #777; }
-.ui_table tbody tr.active a, .ui_table tbody td.active a { color: inherit; }
+.ui_table tbody tr.active td a, .ui_table tbody td.active a { color: inherit; }
+.ui_table .ui_table:not(:first-child) td { border-top: 0; }
 
 /* -------------------- Actions -------------------- */
 
