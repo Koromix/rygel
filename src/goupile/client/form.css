@@ -368,6 +368,7 @@ html:not(.small) .fm_widget.compact .fm_error {
 /* -------------------- Slider -------------------- */
 
 .fm_slider {
+    position: relative;
     display: inline-block;
     width: 24em;
 }
@@ -427,6 +428,7 @@ html:not(.small) .fm_widget.compact .fm_error {
     color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
 }
+
 .fm_slider .fm_prefix { margin-right: 10px; }
 .fm_slider .fm_suffix { margin-left: 10px; }
 .fm_slider .ticks {
@@ -440,5 +442,20 @@ html:not(.small) .fm_widget.compact .fm_error {
 }
 
 .fm_slider.missing > span { visibility: hidden; }
-.fm_slider.missing input::-webkit-slider-thumb { background: #ccc; }
-.fm_slider.missing input::-moz-range-thumb { background: #ccc; }
+.fm_slider.missing input::-webkit-slider-thumb { visibility: hidden; }
+.fm_slider.missing input::-moz-range-thumb { visibility: hidden; }
+.fm_slider.missing::after {
+    content: ' ';
+    position: absolute;
+    display: block;
+    left: calc(50% - 0.8em);
+    top: 0.3em;
+    width: 1.6em;
+    height: 1.6em;
+    z-index: 12;
+    background: #ccc;
+    border: none;
+    border-radius: 50%;
+    color-adjust: exact !important;
+    pointer-events: none;
+}

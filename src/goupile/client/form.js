@@ -273,10 +273,9 @@ function FormBuilder(state, model, readonly = false) {
             return value;
         });
 
-        let thumb_value = (value != null) ? value : ((options.max + options.min) / 2);
         let fix_value = (value != null) ? util.clamp(value, options.min, options.max)
                                         : ((options.min + options.max) / 2);
-        let progress = (value != null) ? ((fix_value - options.min) / range) : -1;
+        let fake_progress = (value != null) ? ((fix_value - options.min) / range) : -1;
 
         let ticks = [];
         if (options.ticks != null && options.ticks !== false) {
@@ -312,9 +311,9 @@ function FormBuilder(state, model, readonly = false) {
                 <div>
                     ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                     <div style="flex: 1;">
-                        <input id=${id} type="range" style=${`--progress: ${1 + progress * 98}%`}
+                        <input id=${id} type="range" style=${`--progress: ${1 + fake_progress * 98}%`}
                                min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
-                               .value=${thumb_value} data-value=${thumb_value}
+                               .value=${value} data-value=${value}
                                placeholder=${options.placeholder || ''}
                                ?disabled=${options.disabled} title=${value != null ? value.toFixed(options.decimals) : ''}
                                @click=${e => { e.target.value = fix_value; handleSliderChange(e, key); }}
