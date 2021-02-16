@@ -529,12 +529,12 @@ function InstanceController() {
             enablePersistence();
 
             // XXX: Trigger reload in a better way...
+            let url = route.page.url + `/${record.ulid}`;
             route.version = null;
             form_record = null;
             form_state = null;
             data_rows = null;
-
-            self.go(null, window.location.href);
+            self.go(null, url);
         } catch (err) {
             progress.close();
             throw err;
