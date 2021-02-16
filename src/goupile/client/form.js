@@ -16,6 +16,7 @@ function FormState(values = {}) {
 
     this.values = Object.assign({}, values);
     this.cached_values = {};
+    this.default_variables = new Set;
     this.changed_variables = new Set;
     this.updated_variables = new Set;
 
@@ -1502,18 +1503,18 @@ instead of:
     }
 
     function readValue(key, options, func) {
-        let values = walkPath(state.values, key.path);
+        let ptr = walkPath(state.values, key.path);
 
         if (state.changed_variables.has(key.toString())) {
-            let value = values[key.name];
+            let value = ptr[key.name];
 
             value = func(value);
             if (value == null)
                 value = undefined;
 
             return value;
-        } else {
-            let value = values.hasOwnProperty(key.name) ? values[key.name] : options.value;
+        } else if (state.default_variables.has(key.toString())) {
+            let value = options.value;
 
             if (value == null)
                 value = undefined;
@@ -1522,17 +1523,36 @@ instead of:
                 value = undefined;
 
             state.cached_values[key.toString()] = value;
-            values[key.name] = value;
+            ptr[key.name] = value;
+
+            return value;
+        } else {
+            let value;
+            if (ptr.hasOwnProperty(key.name)) {
+                value = ptr[key.name];
+            } else {
+                value = options.value;
+                state.default_variables.add(key.toString());
+            }
+
+            if (value == null)
+                value = undefined;
+            value = func(value);
+            if (value == null)
+                value = undefined;
+
+            state.cached_values[key.toString()] = value;
+            ptr[key.name] = value;
 
             return value;
         }
     }
 
     function updateValue(key, value, refresh = true) {
-        let values = walkPath(state.values, key.path);
-        if (value === values[key.name])
+        let ptr = walkPath(state.values, key.path);
+        if (value === ptr[key.name])
             return;
-        values[key.name] = value;
+        ptr[key.name] = value;
 
         state.take_delayed.delete(key.toString());
 
