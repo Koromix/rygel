@@ -254,7 +254,11 @@ function FormBuilder(state, model, readonly = false) {
         // Default options
         options.decimals = options.decimals || 0;
         options.min = options.min || 0;
+        if (typeof options.min !== 'number')
+            throw new Error('La valeur minimale (min) doit être un nombre; utilisez l\'option prefix pour du texte');
         options.max = (options.max != null) ? options.max : 10;
+        if (typeof options.max !== 'number')
+            throw new Error('La valeur maximale (max) doit être un nombre; utilisez l\'option suffix pour du texte');
         options.prefix = (options.prefix != null) ? options.prefix : options.min;
         options.suffix = (options.suffix != null) ? options.suffix : options.max;
 
@@ -274,23 +278,30 @@ function FormBuilder(state, model, readonly = false) {
                                         : ((options.min + options.max) / 2);
         let progress = (value != null) ? ((fix_value - options.min) / range) : -1;
 
-        let tick_func;
+        let ticks = [];
         if (options.ticks != null && options.ticks !== false) {
             if (options.ticks === true) {
-                tick_func = value => true;
-            } else if (typeof options.ticks === 'function') {
-                tick_func = options.ticks;
-            } else if (typeof options.ticks === 'object' ||
-                       Array.isArray(options.ticks)) {
-                tick_func = value => {
-                    let tick = options.ticks[value];
-                    return (tick != null) ? tick : true;
+                ticks = Array().fill('|');
+            } else if (typeof options.ticks === 'object') {
+                for (let key in options.ticks) {
+                    let value = parseFloat(key);
+                    if (Number.isNaN(value))
+                        throw new Error('XXXX');
+
+                    let tick = [value, options.ticks[key]];
+                    ticks.push(tick);
                 }
             } else {
-                throw new Error('Option \'ticks\' must be a boolean, a function, an object or an array');
+                try {
+                    if (typeof options.ticks === 'function') {
+                        ticks = Array.from(options.ticks());
+                    } else {
+                        ticks = Array.from(options.ticks);
+                    }
+                } catch (err) {
+                    throw new Error('Option \'ticks\' must be a boolean, an object or array-like');
+                }
             }
-        } else {
-            tick_func = value => false;
         }
 
         let id = makeID(key);
@@ -313,15 +324,9 @@ function FormBuilder(state, model, readonly = false) {
                                @input=${e => handleSliderChange(e, key)}/>
                         <div class="ticks" style=${'margin-left: calc(-' + (50 / (range + 1)) + '% + 0.8em); ' +
                                                    'margin-right: calc(-' + (50 / (range + 1)) + '% + 0.8em); '}>
-                            ${util.mapRange(options.min, options.max + 1, value => {
-                                let tick = tick_func(value);
-
-                                return html`
-                                    <span style=${'width: calc(100% / ' + (range + 1) + ');'}>
-                                        ${tick !== false ? html`<span style="font-size: 0.4em;">|</span>` : ''}
-                                        ${tick && tick !== true ? html`<br/>${tick}` : ''}
-                                    </span>
-                                `;
+                            ${ticks.map(tick => {
+                                let left = 100 * (tick[0] - options.min) / (range + 1);
+                                return html`<span style=${'left: ' + left + '%; width: calc(100% / ' + (range + 1) + ');'}>${tick[1]}</span>`;
                             })}
                         </div>
                     </div>

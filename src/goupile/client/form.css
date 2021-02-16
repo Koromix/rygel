@@ -385,8 +385,6 @@ html:not(.small) .fm_widget.compact .fm_error {
     -webkit-appearance: none;
     background: none;
 }
-.fm_slider .fm_prefix { margin-right: 8px; }
-.fm_slider .fm_suffix { margin-left: 8px; }
 .fm_slider input::-webkit-slider-runnable-track {
     width: 100%;
     height: 8px;
@@ -429,10 +427,16 @@ html:not(.small) .fm_widget.compact .fm_error {
     color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
 }
-.fm_slider .ticks { display: flex; }
-.fm_slider .ticks > span {
-    text-align: center;
+.fm_slider .fm_prefix { margin-right: 10px; }
+.fm_slider .fm_suffix { margin-left: 10px; }
+.fm_slider .ticks {
+    position: relative;
     height: 50px;
+}
+.fm_slider .ticks > span {
+    position: absolute;
+    text-align: center;
+    font-size: 0.85em;
 }
 
 .fm_slider.missing > span { visibility: hidden; }
