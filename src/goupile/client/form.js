@@ -322,13 +322,15 @@ function FormBuilder(state, model, readonly = false) {
                                @click=${e => { e.target.value = fix_value; handleSliderChange(e, key); }}
                                @dblclick=${e => handleSliderClick(e, key, value, options.min, options.max)}
                                @input=${e => handleSliderChange(e, key)}/>
-                        <div class="ticks" style=${'margin-left: calc(-' + (50 / (range + 1)) + '% + 0.8em); ' +
-                                                   'margin-right: calc(-' + (50 / (range + 1)) + '% + 0.8em); '}>
-                            ${ticks.map(tick => {
-                                let left = 100 * (tick[0] - options.min) / (range + 1);
-                                return html`<span style=${'left: ' + left + '%; width: calc(100% / ' + (range + 1) + ');'}>${tick[1]}</span>`;
-                            })}
-                        </div>
+                        ${ticks.length ? html`
+                            <div class="ticks" style=${'margin-left: calc(-' + (50 / (range + 1)) + '% + 0.8em); ' +
+                                                       'margin-right: calc(-' + (50 / (range + 1)) + '% + 0.8em); '}>
+                                ${ticks.map(tick => {
+                                    let left = 100 * (tick[0] - options.min) / (range + 1);
+                                    return html`<span style=${'left: ' + left + '%; width: calc(100% / ' + (range + 1) + ');'}>${tick[1]}</span>`;
+                                })}
+                            </div>
+                        ` : ''}
                     </div>
                     ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
                 </div>

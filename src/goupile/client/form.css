@@ -431,7 +431,7 @@ html:not(.small) .fm_widget.compact .fm_error {
 .fm_slider .fm_suffix { margin-left: 10px; }
 .fm_slider .ticks {
     position: relative;
-    height: 50px;
+    height: 2em;
 }
 .fm_slider .ticks > span {
     position: absolute;
