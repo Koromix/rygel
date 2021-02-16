@@ -30,9 +30,11 @@ function AdminController() {
     function renderMenu() {
         return html`
             <button class="icon" style="background-position-y: calc(-538px + 1.2em);">Admin</button>
-            <button class=${ui.isPanelEnabled('instances') ? 'active' : ''}
+            <button class=${'icon' + (ui.isPanelEnabled('instances') ? ' active' : '')}
+                    style="background-position-y: calc(-362px + 1.2em);"
                     @click=${ui.wrapAction(e => togglePanel(e, 'instances'))}>Projets</button>
-            <button class=${ui.isPanelEnabled('users') ? 'active' : ''}
+            <button class=${'icon' + (ui.isPanelEnabled('users') ? ' active' : '')}
+                    style="background-position-y: calc(-406px + 1.2em);"
                     @click=${ui.wrapAction(e => togglePanel(e, 'users'))}>Utilisateurs</button>
             <div style="flex: 1;"></div>
             <div class="drop right">
