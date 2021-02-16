@@ -57,11 +57,10 @@ html.small #ins_form {
     #ins_notice:hover { filter: opacity(20%); }
 }
 
-#ins_data td.saved::before {
+#ins_data td.saved a::before {
     padding-right: 8px;
     font-size: 0.9em;
     font-weight: bold;
-    color: var(--page_color);
     content: '✓\FE0E';
 }
 

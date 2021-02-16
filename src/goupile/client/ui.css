@@ -235,18 +235,17 @@ html.medium .ui_toolbar button.icon {
     white-space: nowrap;
 }
 .ui_table th { border: 0; }
-.ui_table td.missing {
-    font-style: italic;
-    color: #777;
-}
 .ui_table a { text-decoration: none; }
 .ui_table tbody tr.active {
-    background: #eee !important;
-}
-.ui_table tbody td.active {
-    background: #888;
+    background: #999;
     color: white;
 }
+.ui_table tbody td.active {
+    background: #999;
+    color: white;
+    font-weight: bold;
+}
+.ui_table tbody tr.active > td.active { background: #777; }
 .ui_table tbody tr.active a, .ui_table tbody td.active a { color: inherit; }
 
 /* -------------------- Actions -------------------- */

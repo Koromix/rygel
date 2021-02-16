@@ -256,9 +256,10 @@ function InstanceController() {
 
     function renderDataRow(row, hid) {
         let active = form_record.chain.some(record => record.ulid === row.ulid);
+        let focused = form_record.ulid === row.ulid;
 
         return html`
-            <tr class=${active ? 'active' : ''}>
+            <tr class=${focused ? 'active' : ''}>
                 ${hid ? html`<td class=${row.hid == null ? 'missing' : ''}>${row.hid != null ? row.hid : 'NA'}</td>` : ''}
                 ${row.form.menu.map(item => {
                     if (item.type === 'page') {
