@@ -74,7 +74,6 @@ function FormBuilder(state, model, readonly = false) {
 
     let tabs_keys = new Set;
     let tabs_ref;
-    let selected_tab;
 
     let restart = false;
 
@@ -1028,8 +1027,8 @@ function FormBuilder(state, model, readonly = false) {
             <div class="fm_container fm_section tabs">
                 <div class="fm_tabs">
                     ${tabs.map((tab, idx) =>
-                        html`<button type="button" class=${idx === tab_idx ? 'active' : ''}
-                                     ?disabled=${tab.disable}
+                        html`<button type="button" class=${!tab.disabled && idx === tab_idx ? 'active' : ''}
+                                     ?disabled=${tab.disabled}
                                      @click=${e => handleTabClick(e, key, idx)}>${tab.label}</button>`)}
                 </div>
 
@@ -1043,28 +1042,52 @@ function FormBuilder(state, model, readonly = false) {
         // Capture tabs and widgets
         {
             let prev_tabs = tabs_ref;
-            let prev_select = selected_tab;
 
-            tabs_ref = tabs;
-            selected_tab = (state.tabs_state.hasOwnProperty(key) ? state.tabs_state[key] : options.tab) || 0;
-            captureWidgets(widgets, 'tabs', func);
+            try {
+                tabs_ref = tabs;
 
-            // form.tab() can change selected_tab
-            if (typeof selected_tab === 'string') {
-                tab_idx = tabs.findIndex(tab => tab.label === selected_tab);
-            } else {
-                tab_idx = selected_tab;
+                captureWidgets(widgets, 'tabs', func);
+
+                // Adjust current tab
+                {
+                    let tab_state = state.tabs_state[key];
+                    if (tab_state != null) {
+                        tab_idx = tabs.findIndex(tab => tab.label === tab_state.label);
+                        if (tab_idx < 0)
+                            tab_idx = tab_state.idx;
+                    } else if (typeof options.tab === 'string') {
+                        tab_idx = tabs.findIndex(tab => tab.label === options.tab);
+                    } else {
+                        tab_idx = options.tab;
+                    }
+                    if (tabs[tab_idx] == null || tabs[tab_idx].disabled)
+                        tab_idx = tabs.findIndex(tab => !tab.disabled);
+                    if (tab_idx < 0)
+                        tab_idx = tabs.length - 1;
+
+                    if (tab_idx >= 0) {
+                        tab_state = {
+                            idx: tab_idx,
+                            label: tabs[tab_idx].label
+                        };
+                        state.tabs_state[key] = tab_state;
+                    }
+                }
+
+                for (let i = 0; i < tabs.length; i++)
+                    tabs[i].active = (i === tab_idx);
+            } finally {
+                tabs_ref = prev_tabs;
             }
-            if (!tabs[tab_idx] || tabs[tab_idx].disable)
-                tab_idx = tabs.findIndex(tab => !tab.disable);
-            state.tabs_state[key] = tab_idx;
-
-            selected_tab = prev_select;
-            tabs_ref = prev_tabs;
         }
 
         return intf;
     };
+
+    function handleTabClick(e, key, label) {
+        state.tabs_state[key] = label;
+        self.restart();
+    }
 
     this.tab = function(label, func, options = {}) {
         options = expandOptions(options);
@@ -1076,40 +1099,21 @@ function FormBuilder(state, model, readonly = false) {
         if (tabs_ref.find(tab => tab.label === label))
             throw new Error(`Tab label '${label}' is already used`);
 
-        let active;
-        if (selected_tab === tabs_ref.length || selected_tab === label) {
-            if (!options.disabled) {
-                active = true;
-            } else {
-                selected_tab = tabs_ref.length + 1;
-                active = false;
-            }
-        } else {
-            active = false;
-        }
-
         let tab = {
             label: label,
-            disable: options.disabled
+            disabled: options.disabled,
+            active: false
         };
         tabs_ref.push(tab);
 
-        // We don't want to show actions created inside inactive tabs
-        let prev_actions_len = model.actions.length;
+        let widgets = captureWidgets([], 'tab', func);
+        let render = intf => tab.active ? widgets.map(intf => intf.render()) : '';
 
-        let widgets = captureWidgets([], 'tab', () => func(active));
-        if (active) {
-            widgets_ref.push(...widgets);
-        } else {
-            model.actions.length = prev_actions_len;
-        }
-        model.widgets.push(...widgets);
+        let intf = makeWidget('tab', null, render, options);
+        addWidget(intf);
+
+        return intf;
     };
-
-    function handleTabClick(e, key, label) {
-        state.tabs_state[key] = label;
-        self.restart();
-    }
 
     this.repeat = function(key, func, options = {}) {
         options = expandOptions(options);
