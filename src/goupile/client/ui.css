@@ -280,7 +280,7 @@ html.medium .ui_toolbar button.icon {
 #ui_log {
     position: fixed;
     left: calc(50% - 180px);
-    top: 20px;
+    top: calc(2.5em + 10px);
     width: 360px;
     z-index: 9999999;
     user-select: none;
