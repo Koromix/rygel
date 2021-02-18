@@ -330,6 +330,9 @@ function InstanceController() {
         let builder = new FormBuilder(form_state, model, readonly);
 
         try {
+            // Don't mess with the editor when render accidently triggers a scroll event!
+            ignore_page_scroll = true;
+
             builder.pushOptions({});
 
             let meta = Object.assign({}, form_record);
@@ -370,6 +373,8 @@ function InstanceController() {
             if (!page_div.children.length)
                 render('Impossible de générer la page à cause d\'une erreur', page_div);
             page_div.classList.add('disabled');
+
+            ignore_page_scroll = false;
         }
 
         return html`
