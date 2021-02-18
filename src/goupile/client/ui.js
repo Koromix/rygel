@@ -31,12 +31,12 @@ const ui = new function() {
     }
 
     function adaptToViewport(keep_panel = null) {
-        let medium_treshold = 900;
-        let small_treshold = 580;
+        let small_treshold = 900;
+        let mobile_treshold = 580;
 
-        let medium = window.innerWidth < medium_treshold;
         let small = window.innerWidth < small_treshold;
-        let max_panels = util.clamp(Math.floor(window.innerWidth / small_treshold), 1, 2);
+        let mobile = window.innerWidth < mobile_treshold;
+        let max_panels = util.clamp(Math.floor(window.innerWidth / mobile_treshold), 1, 2);
 
         while (active_panels > max_panels) {
             let disable_priority = Number.MAX_SAFE_INTEGER;
@@ -53,8 +53,8 @@ const ui = new function() {
             active_panels--;
         }
 
-        document.documentElement.classList.toggle('medium', medium);
         document.documentElement.classList.toggle('small', small);
+        document.documentElement.classList.toggle('mobile', mobile);
     }
 
     this.render = function() {

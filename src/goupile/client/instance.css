@@ -15,23 +15,92 @@ html.instance {
 
 #ins_page {
     box-sizing: border-box;
+    margin: 0;
+    padding-top: 6px;
     width: 100%;
-    max-width: 980px;
-    margin: 0 auto;
     border: 12px solid white;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: center;
 }
 #ins_form {
-    background: #f8f8f8;
-    border-radius: var(--block_rounding);
-    padding: 1em;
+    width: 100%;
+    max-width: 980px;
 }
 
-html.small #ins_form {
-    background: none;
-    padding-top: 0;
+html.mobile #ins_page {
+    border-left: none;
+    border-right: none;
 }
+
+/* -------------------- Left menu -------------------- */
+
+#ins_menu {
+    display: none;
+    position: sticky;
+    top: 20px;
+    box-sizing: border-box;
+    width: 200px;
+    padding-right: 12px;
+}
+#ins_menu h1 {
+    font-size: 1.1em;
+    margin: 0;
+    font-variant: small-caps;
+    color: var(--page_color);
+}
+#ins_menu * + h1 { margin-top: 6px; }
+#ins_menu ul {
+    margin: 0;
+    padding: 0;
+}
+#ins_menu li {
+    list-style: none;
+    display: flex;
+    margin-top: 1px;
+}
+#ins_menu li::before {
+    content: '–';
+    color: #ccc;
+}
+#ins_menu li > * { padding: 0 5px; }
+#ins_menu ul a {
+    display: flex;
+    flex: 1;
+    margin-left: 3px;
+    padding: 1px 5px;
+    text-decoration: none;
+    color: black;
+    border-radius: var(--widget_rounding);
+}
+#ins_menu ul a.active, #ins_menu ul a:hover {
+    background: var(--page_color);
+    color: white;
+}
+#ins_menu hr {
+    margin: 10px;
+    border: 0;
+    border-top: 1px solid #dfdfdf;
+}
+
+#ins_actions {
+    display: none;
+    position: sticky;
+    box-sizing: border-box;
+    top: 200px;
+    width: 180px;
+    padding-left: 12px;
+}
+#ins_actions > hr {
+    margin: 10px;
+    border: 0;
+    border-top: 1px solid #dfdfdf;
+}
+#ins_actions > button { width: 100%; }
+
+
+html:not(.small) #ui_panels > div:only-child #ins_menu { display: block; }
+html:not(.small) #ui_panels > div:only-child #ins_actions { display: block; }
 
 /* -------------------- Misc -------------------- */
 

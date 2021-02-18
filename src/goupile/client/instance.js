@@ -124,11 +124,7 @@ function InstanceController() {
             ` : ''}
 
             <div style="flex: 1; min-width: 15px;"></div>
-            ${util.mapRange(0, route.form.chain.length - 1, idx => {
-                let form = route.form.chain[idx];
-                return renderFormMenuDrop(form);
-            })}
-            ${renderFormMenuDrop(route.form)}
+            ${route.form.chain.map(form => renderFormDrop(form))}
             ${route.form.menu.length > 1 ?
                 html`<button class="active" @click=${ui.wrapAction(e => self.go(e, route.page.url))}>${route.page.title}</button>` : ''}
             <div style="flex: 1; min-width: 15px;"></div>
@@ -144,7 +140,7 @@ function InstanceController() {
         `;
     }
 
-    function renderFormMenuDrop(form) {
+    function renderFormDrop(form) {
         let meta = form_record.map[form.key];
 
         if (form.menu.length > 1) {
@@ -374,24 +370,31 @@ function InstanceController() {
         return html`
             <div class="print" @scroll=${syncEditorScroll}}>
                 <div id="ins_page">
-                    <div class="ui_quick">
-                        ${model.variables.length ? html`
+                    <div id="ins_menu">
+                        ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormMenu(route.form.chain[idx]))}
+                        ${route.form.chain.length === 1 || route.form.menu.length > 1 ? renderFormMenu(route.form) : ''}
+
+                        <hr/>
+                        <div style="color: #777; font-size: 0.9em;">
                             ${!form_record.chain[0].version ? 'Nouvel enregistrement' : ''}
-                            ${form_record.chain[0].version > 0 && form_record.chain[0].hid != null ? `${form_record.chain[0].hid}` : ''}
-                            ${form_record.chain[0].version > 0 && form_record.chain[0].hid == null ? 'Enregistrement existant' : ''}
-                        `  : ''}
-                        <div style="flex: 1;"></div>
-                        ${route.version > 0 ? html`
-                            ${route.version < form_record.fragments.length ?
-                                html`<span style="color: red;">Ancienne version du ${form_record.mtime.toLocaleString()}</span>` : ''}
-                            ${route.version === form_record.fragments.length ? html`<span>Version actuelle</span>` : ''}
-                            &nbsp;(<a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>historique</a>)
-                        ` : ''}
+                            ${form_record.chain[0].version > 0 && form_record.chain[0].hid != null ? `# ${form_record.chain[0].hid}` : ''}
+                            ${form_record.chain[0].version > 0 && form_record.chain[0].hid == null ? 'Enregistrement existant' : ''}<br/>
+
+                            ${route.version > 0 ? html`
+                                    ${route.version < form_record.fragments.length ?
+                                        html`<span style="color: red;">Version : ${form_record.mtime.toLocaleString()}</span><br/>` : ''}
+                                    <a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>Historique</a>
+                            ` : ''}
+                        </div>
                     </div>
 
                     <form id="ins_form" @submit=${e => e.preventDefault()}>
                         ${page_div}
                     </form>
+
+                    <div id="ins_actions">
+                        ${model.renderActions()}
+                    </div>
                 </div>
 
                 ${develop ? html`
@@ -402,6 +405,51 @@ function InstanceController() {
                     </div>
                 ` : ''}
             </div>
+        `;
+    }
+
+    function renderFormMenu(form) {
+        let meta = form_record.map[form.key];
+
+        return html`
+            <h1>${form.title}</h1>
+            <ul>
+                ${util.map(form.menu, item => {
+                    if (item.type === 'page') {
+                        let page = item.page;
+
+                        let cls = '';
+                        if (!isPageEnabled(page, form_record)) {
+                            cls = 'disabled';
+                        } else if (page === route.page) {
+                            cls = 'active';
+                        }
+
+                        return html`
+                            <li><a class=${cls} href=${contextualizeURL(page.url, form_record)}>
+                                <div style="flex: 1;">${page.title}</div>
+                                ${meta && meta.status.has(page.key) ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
+                            </a></li>
+                        `;
+                    } else if (item.type === 'form') {
+                        let form = item.form;
+
+                        let cls = '';
+                        if (!isFormEnabled(form, form_record)) {
+                            cls = 'disabled';
+                        } else if (route.form.chain.some(parent => form === parent)) {
+                            cls = 'active';
+                        }
+
+                        return html`
+                            <li><a class=${cls} href=${contextualizeURL(form.url, form_record)} style="display: flex;">
+                                    <div style="flex: 1;">${form.title}</div>
+                                    ${meta && meta.status.has(form.key) ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
+                            </a></li>
+                        `;
+                    }
+                })}
+            </ul>
         `;
     }
 
@@ -1315,9 +1363,11 @@ function InstanceController() {
             }, 0);
 
             ui.setPanelState('page', true);
+            ui.setPanelState('data', false);
         } else if (form_record == null && (new_record.version > 0 ||
                                            new_record.parent != null)) {
             ui.setPanelState('page', true);
+            ui.setPanelState('data', false);
         }
 
         // Dictionaries
@@ -1608,14 +1658,7 @@ function InstanceController() {
 
         // Update browser URL
         {
-            let url = route.page.url;
-            if (route.version > 0) {
-                url += `/${route.ulid}`;
-                if (route.version < form_record.fragments.length)
-                    url += `@${route.version}`;
-            } else if (form_record.parent != null) {
-                url += `/${form_record.parent.ulid}`;
-            }
+            let url = contextualizeURL(route.page.url, form_record);
             goupile.syncHistory(url, push_history);
         }
 
@@ -1644,6 +1687,18 @@ function InstanceController() {
         ui.render();
     };
     this.run = util.serializeAsync(this.run);
+
+    function contextualizeURL(url, record) {
+        if (record.version > 0) {
+            url += `/${record.ulid}`;
+            if (record.version < record.fragments.length)
+                url += `@${record.version}`;
+        } else if (record.parent != null) {
+            url += `/${record.parent.ulid}`;
+        }
+
+        return url;
+    }
 
     async function loadDataRecords(form, parent) {
         let objects;

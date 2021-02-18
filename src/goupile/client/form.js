@@ -1406,15 +1406,17 @@ instead of:
             errors: [],
 
             render: () => {
-                intf.render = () => '';
-
                 if (!intf.options.hidden) {
                     return func(intf);
                 } else {
                     return '';
                 }
             },
-            toHTML: () => intf.render()
+            toHTML: () => {
+                let render = intf.render;
+                intf.render = () => '';
+                return render();
+            }
         };
 
         return intf;
