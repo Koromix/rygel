@@ -231,27 +231,22 @@ html.small .ui_toolbar button.icon {
 }
 .ui_table.fixed { table-layout: fixed; }
 .ui_table thead th { background: #f8f8f8; }
-.ui_table tbody tr:nth-child(2n + 1) > td { background: #f8f8f8; }
-.ui_table tbody tr:nth-child(2n) > td { background: white; }
+.ui_table tbody tr:nth-child(2n) > td { background: #f8f8f8; }
+.ui_table tbody tr:nth-child(2n + 1) > td { background: white; }
 .ui_table th, .ui_table td {
     padding: 3px 6px;
     text-align: center;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    border: 1px solid #dfdfdf;
 }
 .ui_table td { border: 1px solid #dfdfdf; }
 .ui_table a { text-decoration: none; }
-.ui_table tbody tr.active > td {
-    background: #999;
+.ui_table tbody tr.active > td, .ui_table tbody tr td.active {
+    background: var(--anchor_color);
     color: white;
 }
-.ui_table tbody tr td.active {
-    background: #999;
-    color: white;
-    font-weight: bold;
-}
-.ui_table tbody tr.active > td.active { background: #777; }
 .ui_table tbody tr.active td a, .ui_table tbody td.active a { color: inherit; }
 .ui_table .ui_table:not(:first-child) td { border-top: 0; }
 

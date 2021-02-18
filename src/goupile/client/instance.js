@@ -241,6 +241,13 @@ function InstanceController() {
                         </colgroup>
                     ` : ''}
 
+                    <thead>
+                        <tr>
+                            <th>Identifiant</th>
+                            ${data_form.menu.map(item => html`<th>${item.title}</th>`)}
+                        </tr>
+                    </thead>
+
                     <tbody>
                         ${data_rows.map(row => renderDataRow(row, true))}
                         ${!data_rows.length ? html`<tr><td>Aucune ligne à afficher</td></tr>` : ''}
@@ -255,8 +262,9 @@ function InstanceController() {
         let focused = form_record.ulid === row.ulid;
 
         return html`
-            <tr class=${focused ? 'active' : ''}>
-                ${root ? html`<td class=${row.hid == null ? 'missing' : ''}>${row.hid != null ? row.hid : 'NA'}</td>` : ''}
+            <tr>
+                ${root ? html`<td class=${(row.hid == null ? 'missing' : '') +
+                                          (active ? ' active' : '')}>${row.hid != null ? row.hid : 'NA'}</td>` : ''}
                 ${row.form.menu.map(item => {
                     if (item.type === 'page') {
                         let page = item.page;
@@ -282,10 +290,8 @@ function InstanceController() {
                         }
                     }
                 })}
-                <th>
-                    ${row.version > 0 && (root || row.form.multi) ?
-                        html`<a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a>` : ''}
-                </th>
+                ${row.version > 0 && (root || row.form.multi) ?
+                    html`<th><a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a></th>` : ''}
             </tr>
 
             ${active && root && route.form.chain.length > 1 ? html`
@@ -300,7 +306,6 @@ function InstanceController() {
                                     <table class="ui_table fixed" style="border-bottom: none; border-top: none;">
                                         <colgroup>
                                             ${util.mapRange(0, form.menu.length, () => html`<col/>`)}
-                                            <col style="width: 2em;"/>
                                         </colgroup>
 
                                         <tbody>
