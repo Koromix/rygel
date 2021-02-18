@@ -81,6 +81,9 @@ button:not(.active):not(:disabled):hover {
     color: inherit;
     text-decoration: none;
     border-radius: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .ui_toolbar button:not(.active):hover { background-color: inherit; }
 .ui_toolbar > button:not(.active):hover { filter: brightness(124%); }
