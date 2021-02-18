@@ -145,7 +145,7 @@ html:not(.small) #ui_panels > div:only-child #ins_actions { display: block; }
 .ins_deploy td.actions { text-align: center; }
 .ins_deploy td.actions > a { padding: 0 6px 0 6px; }
 .ins_deploy td.actions > a.active {
-    background: var(--page_color);
+    background: var(--anchor_color);
     border-radius: 50%;
     color: white;
     pointer-events: none;

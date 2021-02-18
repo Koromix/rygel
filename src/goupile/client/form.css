@@ -33,10 +33,7 @@
     content: '#';
 }
 
-.fm_section.error {
-    background: #f9e3e3;
-    border: 1px solid #fc2727;
-}
+.fm_section.error { background: #ffeeee; }
 .fm_section.error > .fm_legend {
     background: #db0a0a;
     color: white;
@@ -93,8 +90,8 @@ html.mobile .fm_columns > div + div { padding-top: 8px; }
     color: red;
 }
 .fm_widget.error {
-    background: #f9e3e3;
-    outline: 3px solid #f9e3e3;
+    background: #ffe9e9;
+    outline: 3px solid #ffe9e9;
     color: red;
 }
 .fm_widget.error::before {
