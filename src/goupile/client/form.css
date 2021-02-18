@@ -72,8 +72,8 @@
     color: white;
 }
 
-html:not(.small) .fm_columns { display: flex; }
-html:not(.small) .fm_columns > div + div { padding-left: 12px; }
+html:not(.mobile) .fm_columns { display: flex; }
+html:not(.mobile) .fm_columns > div + div { padding-left: 12px; }
 html.mobile .fm_columns > div + div { padding-top: 8px; }
 
 /* -------------------- Widgets -------------------- */
