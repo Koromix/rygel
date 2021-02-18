@@ -118,7 +118,7 @@ const ui = new function() {
 
     this.runScreen = function(func) {
         render('', document.querySelector('#ui_main'));
-        return runDialog(null, 'modal', false, func);
+        return runDialog(null, 'screen', false, func);
     };
 
     this.runDialog = function(e, func) {

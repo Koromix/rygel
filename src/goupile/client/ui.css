@@ -176,7 +176,7 @@ html.small .ui_toolbar button.icon {
 
 /* -------------------- Dialogs and popups -------------------- */
 
-.ui_modal {
+.ui_screen, .ui_modal {
     display: none;
     position: fixed;
     left: 0;
@@ -188,8 +188,8 @@ html.small .ui_toolbar button.icon {
     align-items: center;
     background: rgba(255, 255, 255, 0.96);
 }
-.ui_modal.active { display: flex; }
-.ui_modal > form {
+.ui_screen.active, .ui_modal.active { display: flex; }
+.ui_screen > form, .ui_modal > form {
     display: block;
     min-width: 260px;
     max-width: 90%;
@@ -198,8 +198,8 @@ html.small .ui_toolbar button.icon {
     overflow-y: auto;
     padding: 16px;
     background: #f8f8f8;
-    border: 1px solid #e6e6e6;
 }
+.ui_modal > form { border: 1px solid #e6e6e6; }
 
 .ui_popup {
     display: none;
