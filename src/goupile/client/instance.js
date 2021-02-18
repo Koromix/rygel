@@ -1428,9 +1428,9 @@ function InstanceController() {
                 delete fragment.values;
         }
 
-        if (!allow_deleted && fragments[fragments.length - 1].type === 'delete')
+        if (!allow_deleted && fragments.length && fragments[fragments.length - 1].type === 'delete')
             throw new Error('L\'enregistrement demandé est supprimé');
-        if (!allow_fake && !status.size)
+        if (!allow_fake && !fragments.length)
             throw new Error('Skipping fake record');
 
         let children_map = {};
@@ -1461,7 +1461,7 @@ function InstanceController() {
             ulid: entry.ulid,
             hid: entry.hid,
             version: version,
-            mtime: fragments[version - 1].mtime,
+            mtime: fragments.length ? fragments[version - 1].mtime : null,
             fragments: fragments,
             status: status,
             values: values,
@@ -1518,11 +1518,7 @@ function InstanceController() {
                             hid: record.hid,
                             parent: null,
                             form: record.form.key,
-                            fragments: [{
-                                type: 'fake',
-                                user: profile.username,
-                                mtime: new Date
-                            }]
+                            fragments: []
                         };
 
                         if (record.parent != null) {
