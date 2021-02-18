@@ -83,6 +83,17 @@ html.mobile #ins_page {
     border-top: 1px solid #dfdfdf;
 }
 
+#ins_id { font-size: 1.1em; }
+#ins_id.hid::before {
+    content: '#';
+    padding-right: 4px;
+    color: #ccc;
+}
+#ins_trail {
+    color: #777;
+    font-size: 0.9em;
+}
+
 #ins_actions {
     display: none;
     position: sticky;

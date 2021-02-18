@@ -380,11 +380,10 @@ function InstanceController() {
                         ${route.form.chain.length === 1 || route.form.menu.length > 1 ? renderFormMenu(route.form) : ''}
 
                         <hr/>
-                        <div style="color: #777; font-size: 0.9em;">
-                            ${!form_record.chain[0].version ? 'Nouvel enregistrement' : ''}
-                            ${form_record.chain[0].version > 0 && form_record.chain[0].hid != null ? `# ${form_record.chain[0].hid}` : ''}
-                            ${form_record.chain[0].version > 0 && form_record.chain[0].hid == null ? 'Enregistrement existant' : ''}<br/>
-
+                        ${!form_record.chain[0].version ? html`<div id="ins_id"Nouvel enregistrement</div>` : ''}
+                        ${form_record.chain[0].version > 0 && form_record.chain[0].hid != null ? html`<div id="ins_id" class="hid">${form_record.chain[0].hid}</div>` : ''}
+                        ${form_record.chain[0].version > 0 && form_record.chain[0].hid == null ? html`<div id="ins_id">Enregistrement existant</div>` : ''}
+                        <div id="ins_trail">
                             ${route.version > 0 ? html`
                                     ${route.version < form_record.fragments.length ?
                                         html`<span style="color: red;">Version : ${form_record.mtime.toLocaleString()}</span><br/>` : ''}
