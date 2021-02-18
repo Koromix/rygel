@@ -63,6 +63,7 @@ html.small #ins_form {
     font-weight: bold;
     content: '✓\FE0E';
 }
+#ins_data td.missing { font-style: italic; }
 
 .ins_highlight {
     outline: 2px dotted #24579d;
