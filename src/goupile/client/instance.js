@@ -250,7 +250,7 @@ function InstanceController() {
 
                     <tbody>
                         ${data_rows.map(row => renderDataRow(row, true))}
-                        ${!data_rows.length ? html`<tr><td>Aucune ligne à afficher</td></tr>` : ''}
+                        ${!data_rows.length ? html`<tr><td colspan=${1 + data_form.menu.length}>Aucune ligne à afficher</td></tr>` : ''}
                     </tbody>
                 </table>
             </div>
