@@ -1084,8 +1084,12 @@ function FormBuilder(state, model, readonly = false) {
         return intf;
     };
 
-    function handleTabClick(e, key, label) {
-        state.tabs_state[key] = label;
+    function handleTabClick(e, key, idx) {
+        let tab_state = {
+            idx: idx
+        };
+        state.tabs_state[key] = tab_state;
+
         self.restart();
     }
 
