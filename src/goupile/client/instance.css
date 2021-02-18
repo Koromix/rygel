@@ -6,7 +6,8 @@
 
 html.instance {
     --menu_color: #24579d;
-    --page_color: #ea6624;
+    --page_color: #487765;
+    --anchor_color: #ea6624;
 
     --block_rounding: 0px;
     --widget_rounding: 0px;

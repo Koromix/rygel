@@ -23,7 +23,7 @@ body {
 /* -------------------- Base elements -------------------- */
 
 a {
-    color: var(--page_color);
+    color: var(--anchor_color);
     text-decoration: underline;
 }
 
