@@ -287,7 +287,8 @@ function InstanceController() {
                     }
                 })}
                 <th>
-                    ${row.version > 0 && row.form.multi ? html`<a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a>` : ''}
+                    ${row.version > 0 && (root || row.form.multi) ?
+                        html`<a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a>` : ''}
                 </th>
             </tr>
 
