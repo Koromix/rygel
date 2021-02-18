@@ -78,7 +78,7 @@ html.mobile #ins_page {
     color: white;
 }
 #ins_menu hr {
-    margin: 10px;
+    margin: 10px 0;
     border: 0;
     border-top: 1px solid #dfdfdf;
 }
