@@ -52,8 +52,8 @@ button:disabled {
 }
 button::-moz-focus-inner { border: 0; }
 button:not(.active):not(:disabled):hover {
-    background-color: var(--page_color);
-    border-color: var(--page_color);
+    background-color: var(--anchor_color);
+    border-color: var(--anchor_color);
     color: white;
 }
 

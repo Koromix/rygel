@@ -47,7 +47,7 @@ html.mobile #ins_page {
     font-size: 1.1em;
     margin: 0;
     font-variant: small-caps;
-    color: var(--page_color);
+    color: var(--anchor_color);
 }
 #ins_menu * + h1 { margin-top: 6px; }
 #ins_menu ul {
@@ -74,7 +74,7 @@ html.mobile #ins_page {
     border-radius: var(--widget_rounding);
 }
 #ins_menu ul a.active, #ins_menu ul a:hover {
-    background: var(--page_color);
+    background: var(--anchor_color);
     color: white;
 }
 #ins_menu hr {
