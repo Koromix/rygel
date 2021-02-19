@@ -1347,7 +1347,7 @@ function InstanceController() {
         }
 
         if (!isPageEnabled(new_route.page, new_record))
-            throw new Error('Cette page n\'est pas accessible pour le moment');
+            throw new Error('Cette page n\'est pas activée pour cet enregistrement');
 
         // Confirm dangerous actions (at risk of data loss)
         if (form_state != null && form_state.hasChanged() && new_record !== form_record) {
