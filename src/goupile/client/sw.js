@@ -54,11 +54,9 @@ self.addEventListener('fetch', e => {
                 if (response.ok) {
                     let cache = await caches.open(ENV.cache_key);
 
-                    if (e.request.method === 'PUT') {
+                    await cache.delete(url.pathname);
+                    if (e.request.method === 'PUT')
                         await cache.add(url.pathname);
-                    } else {
-                        await cache.delete(url.pathname);
-                    }
                 }
 
                 return response;
