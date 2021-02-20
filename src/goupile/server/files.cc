@@ -23,10 +23,12 @@ namespace RG {
 
 void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
+    InstanceHolder *master = instance->master;
+
     sq_Statement stmt;
-    if (!instance->db.Prepare(R"(SELECT filename, size, sha256 FROM fs_files
-                                 WHERE active = 1
-                                 ORDER BY filename)", &stmt))
+    if (!master->db.Prepare(R"(SELECT filename, size, sha256 FROM fs_files
+                               WHERE active = 1
+                               ORDER BY filename)", &stmt))
         return;
 
     http_JsonPageBuilder json(request.compression_type);
@@ -49,6 +51,8 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
 // Returns true when request has been handled (file exists or an error has occured)
 bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
+    InstanceHolder *master = instance->master;
+
     const char *url = request.url + instance->key.len + 1;
     const char *client_etag = request.GetHeaderValue("If-None-Match");
     const char *client_sha256 = request.GetQueryValue("sha256");
@@ -65,8 +69,8 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
     const char *filename = url + 7;
 
     sq_Statement stmt;
-    if (!instance->db.Prepare(R"(SELECT rowid, compression, sha256 FROM fs_files
-                                 WHERE active = 1 AND filename = ?1)", &stmt))
+    if (!master->db.Prepare(R"(SELECT rowid, compression, sha256 FROM fs_files
+                               WHERE active = 1 AND filename = ?1)", &stmt))
         return true;
     sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
 
@@ -99,8 +103,8 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
     sqlite3_blob *blob;
     Size blob_len;
-    if (sqlite3_blob_open(instance->db, "main", "fs_files", "blob", rowid, 0, &blob) != SQLITE_OK) {
-        LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
+    if (sqlite3_blob_open(master->db, "main", "fs_files", "blob", rowid, 0, &blob) != SQLITE_OK) {
+        LogError("SQLite Error: %1", sqlite3_errmsg(master->db));
         return true;
     }
     blob_len = sqlite3_blob_bytes(blob);
@@ -122,7 +126,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
             LocalArray<char, 65536> buf;
             if (sqlite3_blob_read(blob, buf.data, (int)blob_len, 0) != SQLITE_OK) {
-                LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
+                LogError("SQLite Error: %1", sqlite3_errmsg(master->db));
                 return;
             }
             buf.len = blob_len;
@@ -141,7 +145,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
                 Size copy_len = std::min(blob_len - offset, buf.len);
 
                 if (sqlite3_blob_read(blob, buf.ptr, (int)copy_len, (int)offset) != SQLITE_OK) {
-                    LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
+                    LogError("SQLite Error: %1", sqlite3_errmsg(master->db));
                     return (Size)-1;
                 }
 
@@ -171,7 +175,12 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
     const char *url = request.url + instance->key.len + 1;
     const char *client_sha256 = request.GetQueryValue("sha256");
 
-    // Security checks
+    // Safety checks
+    if (instance->master != instance) {
+        LogError("Cannot change files on slave instance");
+        io->AttachError(403);
+        return;
+    }
     if (!StartsWith(url, "/files/")) {
         LogError("Cannot write to file outside '/files/'");
         io->AttachError(403);
@@ -324,7 +333,12 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
     const char *url = request.url + instance->key.len + 1;
     const char *client_sha256 = request.GetQueryValue("sha256");
 
-    // Security checks
+    // Safety checks
+    if (instance->master != instance) {
+        LogError("Cannot change files on slave instance");
+        io->AttachError(403);
+        return;
+    }
     if (!StartsWith(url, "/files/")) {
         LogError("Cannot delete files outside '/files/'");
         io->AttachError(403);

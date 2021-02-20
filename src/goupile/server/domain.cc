@@ -17,7 +17,7 @@
 
 namespace RG {
 
-const int DomainVersion = 9;
+const int DomainVersion = 10;
 const int MaxInstancesPerDomain = 4096;
 
 bool DomainConfig::Validate() const
@@ -221,15 +221,21 @@ bool DomainHolder::Sync()
     // Start new instances (if any)
     {
         sq_Statement stmt;
-        if (!db.Prepare("SELECT instance FROM dom_instances ORDER BY instance", &stmt))
+        if (!db.Prepare(R"(WITH RECURSIVE rec (instance, master) AS (
+                               SELECT instance, master FROM dom_instances WHERE master IS NULL
+                               UNION ALL
+                               SELECT i.instance, i.master FROM dom_instances i, rec WHERE i.master = rec.instance
+                           )
+                           SELECT instance, master FROM rec)", &stmt))
             return false;
 
         bool warned = false;
 
         while (stmt.Next()) {
             const char *key = (const char *)sqlite3_column_text(stmt, 0);
-            key = DuplicateString(key, &temp_alloc).ptr;
+            const char *master_key = (const char *)sqlite3_column_text(stmt, 1);
 
+            key = DuplicateString(key, &temp_alloc).ptr;
             InstanceHolder *instance = instances_map.FindValue(key, nullptr);
 
             // Should we reload this (happens when configuration changes)?
@@ -248,11 +254,26 @@ bool DomainHolder::Sync()
             if (instance) {
                 new_instances.Append(instance);
                 new_map.Set(instance);
+
+                instance->slaves = 0;
             } else if (new_instances.len < MaxInstancesPerDomain) {
+                InstanceHolder *master;
+                if (master_key) {
+                    master = new_map.FindValue(master_key, nullptr);
+                    if (!master) {
+                        LogError("Cannot open instance '%1' because master instance is not available", key);
+                        continue;
+                    }
+
+                    master->slaves++;
+                } else {
+                    master = nullptr;
+                }
+
                 const char *filename = config.GetInstanceFileName(key, &temp_alloc);
                 instance = new InstanceHolder();
 
-                if (instance->Open(key, filename, config.sync_full)) {
+                if (instance->Open(key, filename, master, config.sync_full)) {
                     new_instances.Append(instance);
                     new_map.Set(instance);
                 } else {
@@ -582,9 +603,41 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 9: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE dom_instances RENAME TO dom_instances_BAK;
+                    ALTER TABLE dom_permissions RENAME TO dom_permissions_BAK;
+                    DROP INDEX dom_instances_i;
+                    DROP INDEX dom_permissions_ui;
+
+                    CREATE TABLE dom_instances (
+                        instance TEXT NOT NULL,
+                        master TEXT REFERENCES dom_instances (instance) ON DELETE CASCADE
+                    );
+                    CREATE UNIQUE INDEX dom_instances_i ON dom_instances (instance);
+
+                    CREATE TABLE dom_permissions (
+                        userid INTEGER NOT NULL REFERENCES dom_users (userid) ON DELETE CASCADE,
+                        instance TEXT NOT NULL REFERENCES dom_instances (instance) ON DELETE CASCADE,
+                        permissions INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX dom_permissions_ui ON dom_permissions (userid, instance);
+
+                    INSERT INTO dom_instances (instance, master)
+                        SELECT instance, master FROM dom_instances_BAK;
+                    INSERT INTO dom_permissions (userid, instance, permissions)
+                        SELECT userid, instance, permissions FROM dom_permissions_BAK;
+
+                    DROP TABLE dom_permissions_BAK;
+                    DROP TABLE dom_instances_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 9);
+            RG_STATIC_ASSERT(DomainVersion == 10);
         }
 
         int64_t time = GetUnixTime();

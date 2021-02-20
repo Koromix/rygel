@@ -262,6 +262,17 @@ html.small .ui_toolbar button.icon {
 .ui_table tbody tr.active td a, .ui_table tbody td.active a { color: inherit; }
 .ui_table .ui_table:not(:first-child) td { border-top: 0; }
 
+.ui_table td.child::before {
+    content: ' ';
+    display: inline-block;
+    width: 12px;
+    height: 10px;
+    vertical-align: top;
+    margin-top: 2px;
+    border-left: 1px dotted #ccc;
+    border-bottom: 1px dotted #ccc;
+}
+
 /* -------------------- Actions -------------------- */
 
 .ui_actions {

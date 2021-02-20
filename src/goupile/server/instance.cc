@@ -24,7 +24,7 @@ const int InstanceVersion = 28;
 
 static std::atomic_int64_t next_unique;
 
-bool InstanceHolder::Open(const char *key, const char *filename, bool sync_full)
+bool InstanceHolder::Open(const char *key, const char *filename, InstanceHolder *master, bool sync_full)
 {
     RG_DEFER_N(err_guard) { Close(); };
     Close();
@@ -34,6 +34,7 @@ bool InstanceHolder::Open(const char *key, const char *filename, bool sync_full)
 
     this->key = DuplicateString(key, &str_alloc);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
+    this->master = master ? master : this;
 
     // Open database
     if (!db.Open(filename, SQLITE_OPEN_READWRITE))
@@ -128,6 +129,7 @@ void InstanceHolder::Close()
 
     key = {};
     filename = nullptr;
+    master = nullptr;
     unique = -1;
     db.Close();
     config = {};

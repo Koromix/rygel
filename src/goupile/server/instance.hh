@@ -44,6 +44,10 @@ public:
     Span<const char> key = {};
     const char *filename = nullptr;
     sq_Database db;
+    InstanceHolder *master = nullptr;
+
+    // Directly managed by DomainHolder
+    Size slaves = 0;
 
     struct {
         const char *title = nullptr;
@@ -57,7 +61,7 @@ public:
 
     ~InstanceHolder() { Close(); }
 
-    bool Open(const char *key, const char *filename, bool sync_full);
+    bool Open(const char *key, const char *filename, InstanceHolder *master, bool sync_full);
     bool Validate();
     void Close();
 

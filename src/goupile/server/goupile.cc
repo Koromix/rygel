@@ -449,8 +449,10 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
                 run = false;
 
             // React to new and deleted instances
+            LogDebug("Syncing instances");
             gp_domain.Sync();
 
+            // Make sure data loss (if it happens) is very limited in time
             if (!gp_domain.config.sync_full) {
                 LogDebug("Checkpointing databases");
                 gp_domain.Checkpoint();

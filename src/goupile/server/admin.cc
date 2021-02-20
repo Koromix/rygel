@@ -151,14 +151,12 @@ static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
 }
 
 static bool CreateInstance(DomainHolder *domain, const char *instance_key,
-                           const char *title, int64_t default_userid, bool demo,
-                           bool *out_conflict = nullptr)
+                           const char *title, int64_t default_userid, const char *master,
+                           bool demo, int *out_error)
 {
     BlockAllocator temp_alloc;
 
-    if (out_conflict) {
-        *out_conflict = false;
-    }
+    *out_error = 500;
 
     // Check for existing instance
     {
@@ -169,9 +167,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
 
         if (stmt.Next()) {
             LogError("Instance '%1' already exists", instance_key);
-            if (out_conflict) {
-                *out_conflict = true;
-            }
+            *out_error = 409;
             return false;
         } else if (!stmt.IsValid()) {
             return false;
@@ -181,9 +177,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
     const char *database_filename = domain->config.GetInstanceFileName(instance_key, &temp_alloc);
     if (TestFile(database_filename)) {
         LogError("Database '%1' already exists (old deleted instance?)", database_filename);
-        if (out_conflict) {
-            *out_conflict = true;
-        }
+        *out_error = 409;
         return false;
     }
     RG_DEFER_N(db_guard) { UnlinkFile(database_filename); };
@@ -286,7 +280,31 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
     bool success = domain->db.Transaction([&]() {
         uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
 
-        if (!domain->db.Run("INSERT INTO dom_instances (instance) VALUES (?1)", instance_key))
+        // Make sure master (if any) is not a slave
+        if (master) {
+            sq_Statement stmt;
+            if (!domain->db.Prepare("SELECT master FROM dom_instances WHERE instance = ?1", &stmt))
+                return false;
+            sqlite3_bind_text(stmt, 1, master, -1, SQLITE_STATIC);
+
+            if (!stmt.Next()) {
+                if (stmt.IsValid()) {
+                    LogError("Master instance '%1' does not exist", master);
+                    *out_error = 404;
+                }
+                return false;
+            }
+
+            const char *master2 = (const char*)sqlite3_column_text(stmt, 0);
+            if (master2) {
+                LogError("Master instance '%1' must not be a slave", master);
+                *out_error = 409;
+                return false;
+            }
+        }
+
+        if (!domain->db.Run(R"(INSERT INTO dom_instances (instance, master)
+                               VALUES (?1, ?2))", instance_key, master))
             return false;
         if (!domain->db.Run(R"(INSERT INTO dom_permissions (userid, instance, permissions)
                                VALUES (?1, ?2, ?3))",
@@ -474,8 +492,11 @@ Options:
     }
 
     // Create default instance
-    if (demo && !CreateInstance(&domain, "demo", "DEMO", 1, true))
-        return 1;
+    {
+        int dummy;
+        if (demo && !CreateInstance(&domain, "demo", "DEMO", 1, nullptr, true, &dummy))
+            return 1;
+    }
 
     if (!domain.db.Close())
         return 1;
@@ -579,6 +600,7 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
         // Read POST values
         const char *instance_key;
         const char *title;
+        const char *master;
         bool demo;
         {
             bool valid = true;
@@ -597,6 +619,7 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
                 valid = false;
             }
 
+            master = values.FindValue("master", nullptr);
             valid &= ParseBool(values.FindValue("demo", "1"), &demo);
 
             if (!valid) {
@@ -614,11 +637,9 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
                                   instance_key))
                 return false;
 
-            bool conflict;
-            if (!CreateInstance(&gp_domain, instance_key, title, session->userid, demo, &conflict)) {
-                if (conflict) {
-                    io->AttachError(409);
-                }
+            int error;
+            if (!CreateInstance(&gp_domain, instance_key, title, session->userid, master, demo, &error)) {
+                io->AttachError(error);
                 return false;
             }
 
@@ -660,16 +681,14 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
             // Log action
             int64_t time = GetUnixTime();
             if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                     VALUES (?1, ?2, ?3, ?4, ?5))",
+                                     VALUES (?1, ?2, ?3, ?4, ?5 || ?6))",
                                   time, request.client_addr, "delete_instance", session->username,
                                   instance_key))
                 return false;
 
-            if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE instance = ?1", instance_key))
-                return false;
+            // Do it!
             if (!gp_domain.db.Run("DELETE FROM dom_instances WHERE instance = ?1", instance_key))
                 return false;
-
             if (!sqlite3_changes(gp_domain.db)) {
                 LogError("Instance '%1' does not exist", instance_key);
                 io->AttachError(404);
@@ -716,6 +735,13 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
             return;
         }
         RG_DEFER_N(ref_guard) { instance->Unref(); };
+
+        // Safety checks
+        if (instance->master != instance) {
+            LogError("Cannot configure slave instance");
+            io->AttachError(403);
+            return;
+        }
 
         // Parse new configuration values
         decltype(InstanceHolder::config) config = instance->config;
@@ -801,7 +827,13 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!gp_domain.db.Prepare("SELECT instance FROM dom_instances ORDER BY instance", &stmt))
+    if (!gp_domain.db.Prepare(R"(WITH RECURSIVE rec (instance, master) AS (
+                                     SELECT instance, master FROM dom_instances WHERE master IS NULL
+                                     UNION ALL
+                                     SELECT i.instance, i.master FROM dom_instances i, rec WHERE i.master = rec.instance
+                                     ORDER BY 2 DESC, 1
+                                 )
+                                 SELECT instance, master FROM rec)", &stmt))
         return;
 
     // Export data
@@ -820,6 +852,11 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
         json.StartObject();
 
         json.Key("key"); json.String(instance->key.ptr);
+        if (instance->master != instance) {
+            json.Key("master"); json.String(instance->master->key.ptr);
+        } else if (instance->slaves) {
+            json.Key("slaves"); json.Int64(instance->slaves);
+        }
         json.Key("config"); json.StartObject();
             json.Key("title"); json.String(instance->config.title);
             json.Key("use_offline"); json.Bool(instance->config.use_offline);
@@ -1105,8 +1142,6 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
                                   username, local_key))
                 return false;
 
-            if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE userid = ?1", userid))
-                return false;
             if (!gp_domain.db.Run("DELETE FROM dom_users WHERE userid = ?1", userid))
                 return false;
 
@@ -1160,7 +1195,6 @@ void HandleUserAssign(const http_RequestInfo &request, http_IO *io)
         // Read POST values
         int64_t userid;
         const char *instance;
-        const char *zone;
         uint32_t permissions;
         {
             bool valid = true;
@@ -1173,13 +1207,8 @@ void HandleUserAssign(const http_RequestInfo &request, http_IO *io)
             }
 
             instance = values.FindValue("instance", nullptr);
-            zone = values.FindValue("zone", nullptr);
             if (!instance) {
                 LogError("Missing 'instance' parameter");
-                valid = false;
-            }
-            if (zone && !zone[0]) {
-                LogError("Empty zone value is not allowed");
                 valid = false;
             }
 
@@ -1235,18 +1264,18 @@ void HandleUserAssign(const http_RequestInfo &request, http_IO *io)
             // Log action
             int64_t time = GetUnixTime();
             if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                     VALUES (?1, ?2, ?3, ?4, ?5 || '+' || ?6 || ':' || ?7 || '@' || ?8))",
+                                     VALUES (?1, ?2, ?3, ?4, ?5 || '+' || ?6 || ':' || ?7))",
                                   time, request.client_addr, "assign_user", session->username,
-                                  instance, username, permissions, zone))
+                                  instance, username, permissions))
                 return false;
 
             // Adjust permissions
             if (permissions) {
-                if (!gp_domain.db.Run(R"(INSERT INTO dom_permissions (instance, userid, permissions, zone)
-                                         VALUES (?1, ?2, ?3, ?4)
+                if (!gp_domain.db.Run(R"(INSERT INTO dom_permissions (instance, userid, permissions)
+                                         VALUES (?1, ?2, ?3)
                                          ON CONFLICT(instance, userid)
                                              DO UPDATE SET permissions = excluded.permissions)",
-                                      instance, userid, permissions, zone))
+                                      instance, userid, permissions))
                     return false;
             } else {
                 if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE instance = ?1 AND userid = ?2",
