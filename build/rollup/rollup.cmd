@@ -1,9 +1,18 @@
 @echo off
 setlocal
 
-REM This Source Code Form is subject to the terms of the Mozilla Public
-REM License, v. 2.0. If a copy of the MPL was not distributed with this
-REM file, You can obtain one at http://mozilla.org/MPL/2.0/.
+REM This program is free software: you can redistribute it and/or modify
+REM it under the terms of the GNU Affero General Public License as published by
+REM the Free Software Foundation, either version 3 of the License, or
+REM (at your option) any later version.
+REM
+REM This program is distributed in the hope that it will be useful,
+REM but WITHOUT ANY WARRANTY; without even the implied warranty of
+REM MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+REM GNU Affero General Public License for more details.
+REM
+REM You should have received a copy of the GNU Affero General Public License
+REM along with this program. If not, see https://www.gnu.org/licenses/.
 
 cd "%~dp0"
 REM npm install --silent --no-audit --no-optional --no-bin-links

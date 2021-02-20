@@ -6,6 +6,6 @@ Version: 0.0.0.9000
 Author: Niels Martignene
 Maintainer: Niels Martignene <niels.martignene@protonmail.com>
 Description: Timeline visualization package
-License: MPL-2.0
+License: AGPL-3
 Imports: Rcpp (>= 0.12.13)
 LinkingTo: Rcpp
