@@ -309,7 +309,7 @@ html.small .ui_toolbar button.icon {
     #ui_log > div:hover { filter: opacity(40%); }
 }
 #ui_log > div.error { background: #db0a0a; }
-#ui_log > div.success { background: #406356; }
+#ui_log > div.success { background: #2d8261; }
 
 .ui_log_close {
     float: right;
