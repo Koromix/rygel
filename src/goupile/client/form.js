@@ -1083,8 +1083,14 @@ function FormBuilder(state, model, readonly = false) {
                     }
                 }
 
-                for (let i = 0; i < tabs.length; i++)
-                    tabs[i].active = (i === tab_idx);
+                for (let i = 0; i < tabs.length; i++) {
+                    if (i === tab_idx) {
+                        let tab = tabs[i];
+
+                        tab.active = true;
+                        model.actions.push(...tab.actions);
+                    }
+                }
             } finally {
                 tabs_ref = prev_tabs;
             }
@@ -1115,12 +1121,19 @@ function FormBuilder(state, model, readonly = false) {
         let tab = {
             label: label,
             disabled: options.disabled,
-            active: false
+            active: false,
+            actions: null
         };
         tabs_ref.push(tab);
 
+        // We don't want to show actions created inside inactive tabs
+        let prev_actions_len = model.actions.length;
+
         let widgets = captureWidgets([], 'tab', func);
         let render = intf => tab.active ? widgets.map(intf => intf.render()) : '';
+
+        tab.actions = model.actions.slice(prev_actions_len);
+        model.actions.length = prev_actions_len;
 
         let intf = makeWidget('tab', null, render, options);
         addWidget(intf);
