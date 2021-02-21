@@ -160,23 +160,7 @@ function ApplicationBuilder(app) {
     }
 
     function expandOptions(options) {
-        let expand_enabled = (typeof options.enabled === 'function');
-
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
-
-        if (expand_enabled) {
-            if (form_ref == null)
-                throw new Error('Enable callback cannot be used outside form definition');
-
-            let form_key = form_ref.key;
-            let enable_func = options.enabled;
-
-            options.enabled = meta => {
-                meta = meta.map[form_key];
-                return enable_func(meta);
-            };
-        }
-
         return options;
     }
 }
