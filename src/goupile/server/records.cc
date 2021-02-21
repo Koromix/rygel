@@ -32,33 +32,38 @@ static void ExportRecord(sq_Statement *stmt, json_Writer *json)
         json->Key("hid"); json->Null();
     }
     json->Key("form"); json->String((const char *)sqlite3_column_text(*stmt, 3));
-    if (sqlite3_column_type(*stmt, 4) != SQLITE_NULL) {
+    json->Key("anchor"); json->Int64(sqlite3_column_int64(*stmt, 4));
+    if (sqlite3_column_type(*stmt, 5) != SQLITE_NULL) {
         json->Key("parent"); json->StartObject();
-        json->Key("ulid"); json->String((const char *)sqlite3_column_text(*stmt, 4));
-        json->Key("version"); json->Int64(sqlite3_column_int64(*stmt, 5));
+        json->Key("ulid"); json->String((const char *)sqlite3_column_text(*stmt, 5));
+        json->Key("version"); json->Int64(sqlite3_column_int64(*stmt, 6));
         json->EndObject();
     } else {
         json->Key("parent"); json->Null();
     }
 
     json->Key("fragments"); json->StartArray();
-    do {
-        json->StartObject();
+    if (sqlite3_column_type(*stmt, 7) != SQLITE_NULL) {
+        do {
+            json->StartObject();
 
-        const char *type = (const char *)sqlite3_column_text(*stmt, 8);
+            const char *type = (const char *)sqlite3_column_text(*stmt, 9);
 
-        json->Key("anchor"); json->Int64(sqlite3_column_int64(*stmt, 6));
-        json->Key("version"); json->Int64(sqlite3_column_int64(*stmt, 7));
-        json->Key("type"); json->String(type);
-        json->Key("username"); json->String((const char *)sqlite3_column_text(*stmt, 9));
-        json->Key("mtime"); json->String((const char *)sqlite3_column_text(*stmt, 10));
-        if (TestStr(type, "save")) {
-            json->Key("page"); json->String((const char *)sqlite3_column_text(*stmt, 11));
-            json->Key("values"); json->Raw((const char *)sqlite3_column_text(*stmt, 12));
-        }
+            json->Key("anchor"); json->Int64(sqlite3_column_int64(*stmt, 7));
+            json->Key("version"); json->Int64(sqlite3_column_int64(*stmt, 8));
+            json->Key("type"); json->String(type);
+            json->Key("username"); json->String((const char *)sqlite3_column_text(*stmt, 10));
+            json->Key("mtime"); json->String((const char *)sqlite3_column_text(*stmt, 11));
+            if (TestStr(type, "save")) {
+                json->Key("page"); json->String((const char *)sqlite3_column_text(*stmt, 12));
+                json->Key("values"); json->Raw((const char *)sqlite3_column_text(*stmt, 13));
+            }
 
-        json->EndObject();
-    } while (stmt->Next() && sqlite3_column_int64(*stmt, 0) == rowid);
+            json->EndObject();
+        } while (stmt->Next() && sqlite3_column_int64(*stmt, 0) == rowid);
+    } else {
+        stmt->Next();
+    }
     json->EndArray();
 
     json->EndObject();
@@ -95,9 +100,9 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
     {
         LocalArray<char, 1024> sql;
 
-        sql.len += Fmt(sql.TakeAvailable(), R"(SELECT r.rowid, r.ulid, r.hid, r.form, r.parent_ulid, r.parent_version,
+        sql.len += Fmt(sql.TakeAvailable(), R"(SELECT r.rowid, r.ulid, r.hid, r.form, r.anchor, r.parent_ulid, r.parent_version,
                                                       f.anchor, f.version, f.type, f.username, f.mtime, f.page, f.json FROM rec_entries r
-                                               INNER JOIN rec_fragments f ON (f.ulid = r.ulid)
+                                               LEFT JOIN rec_fragments f ON (f.ulid = r.ulid)
                                                WHERE 1 = 1)").len;
         if (form) {
             sql.len += Fmt(sql.TakeAvailable(), " AND r.form = ?2").len;
@@ -228,7 +233,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                                 }
                             }
 
-                            if (RG_UNLIKELY(!record->parent.ulid || record->parent.version <= 0)) {
+                            if (RG_UNLIKELY(!record->parent.ulid || record->parent.version < 0)) {
                                 LogError("Missing or invalid parent ULID or version");
                                 io->AttachError(422);
                                 return;
@@ -292,11 +297,6 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     io->AttachError(422);
                     return;
                 }
-                if (RG_UNLIKELY(!record->fragments.len)) {
-                    LogError("Missing fragments in record object");
-                    io->AttachError(422);
-                    return;
-                }
             }
             if (!parser.IsValid()) {
                 io->AttachError(422);
@@ -310,29 +310,46 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                 bool updated = false;
 
                 // Save record fragments
-                for (Size i = 0; i < record.fragments.len; i++) {
-                    const SaveRecord::Fragment &fragment = record.fragments[i];
+                int64_t anchor;
+                if (record.fragments.len) {
+                    for (Size i = 0; i < record.fragments.len; i++) {
+                        const SaveRecord::Fragment &fragment = record.fragments[i];
 
-                    if (!instance->db.Run(R"(INSERT INTO rec_fragments (ulid, version, type, userid, username,
-                                                                        mtime, page, json)
-                                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
-                                             ON CONFLICT DO NOTHING)",
-                                          record.ulid, i + 1, fragment.type, session->userid, session->username,
-                                          fragment.mtime, fragment.page, fragment.json))
+                        if (!instance->db.Run(R"(INSERT INTO rec_fragments (ulid, version, type, userid, username,
+                                                                            mtime, page, json)
+                                                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                                                 ON CONFLICT DO NOTHING)",
+                                              record.ulid, i + 1, fragment.type, session->userid, session->username,
+                                              fragment.mtime, fragment.page, fragment.json))
+                            return false;
+
+                        if (sqlite3_changes(instance->db)) {
+                            updated = true;
+                        } else {
+                            LogError("Ignored conflicting fragment %1 for '%2'", i + 1, record.ulid);
+                            continue;
+                        }
+                    }
+
+                    anchor = sqlite3_last_insert_rowid(instance->db);
+                } else {
+                    sq_Statement stmt;
+                    if (!instance->db.Prepare("SELECT seq FROM sqlite_sequence WHERE name = 'rec_fragments'", &stmt))
                         return false;
 
-                    if (sqlite3_changes(instance->db)) {
-                        updated = true;
+                    if (stmt.Next()) {
+                        anchor = sqlite3_column_int64(stmt, 0) + 1;
+                    } else if (stmt.IsValid()) {
+                        anchor = 1;
                     } else {
-                        LogError("Ignored conflicting fragment %1 for '%2'", i + 1, record.ulid);
-                        continue;
+                        return false;
                     }
+
+                    updated = true;
                 }
 
                 // Insert or update record entry (if needed)
                 if (RG_LIKELY(updated)) {
-                    int64_t anchor = sqlite3_last_insert_rowid(instance->db);
-
                     if (!instance->db.Run(R"(INSERT INTO rec_entries (ulid, hid, form,
                                                                       parent_ulid, parent_version, anchor)
                                              VALUES (?1, ?2, ?3, ?4, ?5, ?6)

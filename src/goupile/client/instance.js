@@ -555,8 +555,12 @@ function InstanceController() {
             await db.transaction('rw', ['rec_records'], async t => {
                 let obj = await t.load('rec_records', key);
 
+                // Update previous record of write new?
+                let update = (obj != null) && (obj.keys.parent == null ||
+                                               !obj.keys.parent.endsWith('!fake'));
+
                 let entry;
-                if (obj != null) {
+                if (update) {
                     entry = await goupile.decryptLocal(obj.enc);
                     if (record.hid != null)
                         entry.hid = record.hid;
@@ -594,6 +598,9 @@ function InstanceController() {
 
                 obj.enc = await goupile.encryptLocal(entry);
                 await t.saveWithKey('rec_records', key, obj);
+
+                if (entry.parent != null)
+                    await unfakeParents(t, entry.parent.ulid);
             });
 
             progress.success('Enregistrement effectué');
@@ -609,6 +616,24 @@ function InstanceController() {
         } catch (err) {
             progress.close();
             throw err;
+        }
+    }
+
+    // Call in save transaction!
+    async function unfakeParents(t, ulid) {
+        for (;;) {
+            let key = `${profile.userid}:${ulid}`;
+            let obj = await t.load('rec_records', key);
+
+            if (obj.keys.parent == null || !obj.keys.parent.endsWith('!fake'))
+                break;
+            obj.keys.parent = obj.keys.parent.substr(0, obj.keys.parent.length - 5);
+            obj.keys.sync = profile.userid;
+
+            await t.saveWithKey('rec_records', key, obj);
+
+            ulid = obj.keys.parent.substring(obj.keys.parent.indexOf(':') + 1,
+                                             obj.keys.parent.indexOf('/'));
         }
     }
 
@@ -1514,6 +1539,10 @@ function InstanceController() {
                     ulid: key.primary.substr(key.primary.indexOf(':') + 1)
                 };
 
+                let fake = child.form.endsWith('!fake');
+                if (fake)
+                    child.form = child.form.substr(0, child.form.length - 5);
+
                 let array = children_map[child.form];
                 if (array == null) {
                     array = [];
@@ -1521,7 +1550,8 @@ function InstanceController() {
                 }
 
                 array.push(child);
-                status.add(child.form);
+                if (!fake)
+                    status.add(child.form);
             }
         }
 
@@ -1562,7 +1592,7 @@ function InstanceController() {
             for (let i = 0; i < path.down.length; i++) {
                 let form = path.down[i];
 
-                if (record.status.has(form.key)) {
+                if (record.children[form.key] != null) {
                     let child = record.children[form.key][0];
                     record = await loadRecord(child.ulid);
 
@@ -1591,7 +1621,7 @@ function InstanceController() {
                         };
 
                         if (record.parent != null) {
-                            obj.keys.parent = `${profile.userid}:${record.parent.ulid}/${record.form.key}`;
+                            obj.keys.parent = `${profile.userid}:${record.parent.ulid}/${record.form.key}!fake`;
                             entry.parent = {
                                 ulid: record.parent.ulid,
                                 version: record.parent.version
@@ -1863,7 +1893,7 @@ function InstanceController() {
                 let uploads = [];
                 for (let obj of objects) {
                     try {
-                        let record = await decryptRecord(obj, null, false, true, true);
+                        let record = await decryptRecord(obj, null, true, true, true);
 
                         let upload = {
                             form: record.form.key,
@@ -1916,13 +1946,12 @@ function InstanceController() {
 
                 for (let download of downloads) {
                     let key = `${profile.userid}:${download.ulid}`;
-                    let anchor = download.fragments[download.fragments.length - 1].anchor;
 
                     let obj = {
                         keys: {
                             form: `${profile.userid}/${download.form}`,
                             parent: (download.parent != null) ? `${profile.userid}:${download.parent.ulid}/${download.form}` : null,
-                            anchor: `${profile.userid}@${(anchor + 1).toString().padStart(16, '0')}`,
+                            anchor: `${profile.userid}@${(download.anchor + 1).toString().padStart(16, '0')}`,
                             sync: null
                         },
                         enc: null
