@@ -88,6 +88,13 @@ function ApplicationBuilder(app) {
             if (!form_ref.menu.length)
                 throw new Error(`Form '${key}' must contain at least one page or child form`);
 
+            // Determine URL
+            if (form_ref.pages.size) {
+                form_ref.url = form_ref.pages.values().next().value.url;
+            } else {
+                form_ref.url = form_ref.forms.values().next().value.url;
+            }
+
             if (prev_form != null) {
                 let item = {
                     title: title,
@@ -133,9 +140,6 @@ function ApplicationBuilder(app) {
             page.dictionaries = options.dictionaries;
         page.url = `${ENV.base_url}main/${key}`;
         page.filename = (options.filename != null) ? options.filename : `pages/${key}.js`;
-
-        if (page.form.url == null)
-            page.form.url = page.url;
 
         let item = {
             title: title,
