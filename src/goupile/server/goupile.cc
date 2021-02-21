@@ -175,6 +175,14 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         json.StartObject();
                         json.Key("base_url"); json.String("/admin/");
                         json.Key("title"); json.String("Goupile Admin");
+                        json.Key("permissions"); json.StartArray();
+                        for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
+                            char name[512];
+
+                            ConvertToJsonName(UserPermissionNames[i], name);
+                            json.String(name);
+                        }
+                        json.EndArray();
                         json.EndObject();
                     } else if (TestStr(key, "HEAD_TAGS")) {
                         // Nothing to add

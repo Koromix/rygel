@@ -362,17 +362,13 @@ function AdminController() {
         return ui.runDialog(e, (d, resolve, reject) => {
             d.calc('instance', 'Projet', instance);
             d.sameLine(); d.calc('username', 'Utilisateur', user.username);
-
-            let permissions = d.textArea('permissions', 'Permissions', {
-                rows: 7, cols: 16,
-                value: prev_permissions.join('\n')
-            });
+            let permissions = d.multiCheck('permissions', 'Permissions', ENV.permissions, {value: prev_permissions});
 
             d.action('Modifier', {disabled: !d.isValid()}, async () => {
                 let query = new URLSearchParams;
                 query.set('instance', instance);
                 query.set('userid', user.userid);
-                query.set('permissions', permissions.value ? permissions.value.split('\n').join(',') : '');
+                query.set('permissions', permissions.value != null ? permissions.value.join(',') : '');
 
                 let response = await net.fetch('/admin/api/users/assign', {
                     method: 'POST',
