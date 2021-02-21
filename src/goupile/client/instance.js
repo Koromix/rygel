@@ -1355,6 +1355,7 @@ function InstanceController() {
             chain.reverse();
         }
 
+        // XXX: Fix navigation to a form when the first page is disabled
         if (!isPageEnabled(new_route.page, new_record))
             throw new Error('Cette page n\'est pas activée pour cet enregistrement');
 
