@@ -168,7 +168,7 @@ function AdminController() {
     function toggleSelectedInstance(e, key) {
         if (key !== selected_instance) {
             selected_instance = key;
-            ui.setPanelState('users', true, false);
+            ui.setPanelState('users', true);
         } else {
             selected_instance = null;
         }

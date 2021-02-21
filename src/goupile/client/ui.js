@@ -58,7 +58,7 @@ const ui = new function() {
                 }
             }
 
-            disable_panel.active = null;
+            disable_panel.active = false;
             active_panels--;
         }
 
