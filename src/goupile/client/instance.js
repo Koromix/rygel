@@ -1630,6 +1630,8 @@ function InstanceController() {
                             };
                         }
 
+                        // XXX: This could be racy, for example if a record with the same key was saved between
+                        // the filling of children_map and getting there. Rare, but we want to avoid that!
                         obj.enc = await goupile.encryptLocal(entry);
                         await db.saveWithKey('rec_records', key, obj);
                     }
