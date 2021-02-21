@@ -1653,13 +1653,25 @@ function InstanceController() {
             if (isPageEnabled(page, record))
                 return true;
         }
+        for (let child of form.forms.values()) {
+            if (isFormEnabled(child, record))
+                return true;
+        }
 
         return false;
     }
 
     function isPageEnabled(page, record) {
         if (typeof page.enabled === 'function') {
-            return page.enabled(record);
+            try {
+                return page.enabled(record);
+            } catch (err) {
+                let line = util.parseEvalErrorLine(err);
+                let msg = `Erreur\n${line != null ? `Ligne ${line} : ` : ''}${err.message}`;
+                log.error(msg);
+
+                return false;
+            }
         } else {
             return page.enabled;
         }
