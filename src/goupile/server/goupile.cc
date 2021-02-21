@@ -171,16 +171,15 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         writer->Write("/admin/");
                     } else if (TestStr(key, "ENV_JSON")) {
                         json_Writer json(writer);
+                        char buf[128];
 
                         json.StartObject();
                         json.Key("base_url"); json.String("/admin/");
                         json.Key("title"); json.String("Goupile Admin");
                         json.Key("permissions"); json.StartArray();
                         for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
-                            char name[512];
-
-                            ConvertToJsonName(UserPermissionNames[i], name);
-                            json.String(name);
+                            Span<const char> str = ConvertToJsonName(UserPermissionNames[i], buf);
+                            json.String(str.ptr, (size_t)str.len);
                         }
                         json.EndArray();
                         json.EndObject();
@@ -274,8 +273,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         if (instance->config.use_offline) {
                             json.Key("cache_key"); json.String(Fmt(buf, "%1_%2", etag, instance->unique).ptr);
                         }
-                        ConvertToJsonName(SyncModeNames[(int)instance->config.sync_mode], buf);
-                        json.Key("sync_mode"); json.String(buf);
+                        {
+                            Span<const char> str = ConvertToJsonName(SyncModeNames[(int)instance->config.sync_mode], buf);
+                            json.Key("sync_mode"); json.String(str.ptr, (size_t)str.len);
+                        }
                         if (instance->config.backup_key) {
                             json.Key("backup_key"); json.String(instance->config.backup_key);
                         }

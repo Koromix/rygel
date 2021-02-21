@@ -365,7 +365,7 @@ bool json_Writer::Raw(Span<const char> str)
     return true;
 }
 
-Size ConvertToJsonName(Span<const char> name, Span<char> out_buf)
+Span<const char> ConvertToJsonName(Span<const char> name, Span<char> out_buf)
 {
     RG_ASSERT(out_buf.len >= 2);
 
@@ -385,14 +385,14 @@ Size ConvertToJsonName(Span<const char> name, Span<char> out_buf)
         }
         out_buf[j] = 0;
 
-        return j;
+        return MakeSpan(out_buf.ptr, j);
     } else {
         out_buf[0] = 0;
-        return 0;
+        return MakeSpan(out_buf.ptr, 0);
     }
 }
 
-Size ConvertFromJsonName(Span<const char> name, Span<char> out_buf)
+Span<const char> ConvertFromJsonName(Span<const char> name, Span<char> out_buf)
 {
     RG_ASSERT(out_buf.len >= 2);
 
@@ -411,10 +411,10 @@ Size ConvertFromJsonName(Span<const char> name, Span<char> out_buf)
         }
         out_buf[j] = 0;
 
-        return j;
+        return MakeSpan(out_buf.ptr, j);
     } else {
         out_buf[0] = 0;
-        return 0;
+        return MakeSpan(out_buf.ptr, 0);
     }
 }
 

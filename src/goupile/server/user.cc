@@ -65,6 +65,8 @@ const Token *Session::GetToken(const InstanceHolder *instance) const
 
 static void WriteProfileJson(const Session *session, const Token *token, json_Writer *out_json)
 {
+    char buf[128];
+
     out_json->StartObject();
 
     if (session) {
@@ -76,10 +78,8 @@ static void WriteProfileJson(const Session *session, const Token *token, json_Wr
         if (token) {
             out_json->Key("permissions"); out_json->StartObject();
             for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
-                char js_name[64];
-                ConvertToJsonName(UserPermissionNames[i], js_name);
-
-                out_json->Key(js_name); out_json->Bool(token->permissions & (1 << i));
+                Span<const char> key = ConvertToJsonName(UserPermissionNames[i], buf);
+                out_json->Key(key.ptr, (size_t)key.len); out_json->Bool(token->permissions & (1 << i));
             }
             out_json->EndObject();
         }

@@ -230,7 +230,7 @@ public:
 };
 
 // This is to be used only with small static strings (e.g. enum strings)
-Size ConvertToJsonName(Span<const char> name, Span<char> out_buf);
-Size ConvertFromJsonName(Span<const char> name, Span<char> out_buf);
+Span<const char> ConvertToJsonName(Span<const char> name, Span<char> out_buf);
+Span<const char> ConvertFromJsonName(Span<const char> name, Span<char> out_buf);
 
 }

@@ -747,6 +747,7 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
         decltype(InstanceHolder::config) config = instance->config;
         {
             bool valid = true;
+            char buf[128];
 
             if (const char *str = values.FindValue("title", nullptr); str) {
                 config.title = str;
@@ -758,17 +759,13 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
             }
 
             if (const char *str = values.FindValue("use_offline", nullptr); str) {
-                char buf[32];
-                ConvertFromJsonName(str, buf);
-
-                valid &= ParseBool(buf, &config.use_offline);
+                Span<const char> str2 = ConvertFromJsonName(str, buf);
+                valid &= ParseBool(str2, &config.use_offline);
             }
 
             if (const char *str = values.FindValue("sync_mode", nullptr); str) {
-                char buf[32];
-                ConvertFromJsonName(str, buf);
-
-                if (!OptionToEnum(SyncModeNames, buf, &config.sync_mode)) {
+                Span<const char> str2 = ConvertFromJsonName(str, buf);
+                if (!OptionToEnum(SyncModeNames, str2, &config.sync_mode)) {
                     LogError("Unknown sync mode '%1'", str);
                     valid = false;
                 }
@@ -842,7 +839,7 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
     json.StartArray();
     while (stmt.Next()) {
         const char *key = (const char *)sqlite3_column_text(stmt, 0);
-        char buf[512];
+        char buf[128];
 
         InstanceHolder *instance = gp_domain.Ref(key);
         if (!instance)
@@ -860,8 +857,10 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
         json.Key("config"); json.StartObject();
             json.Key("title"); json.String(instance->config.title);
             json.Key("use_offline"); json.Bool(instance->config.use_offline);
-            ConvertToJsonName(SyncModeNames[(int)instance->config.sync_mode], buf);
-            json.Key("sync_mode"); json.String(buf);
+            {
+                Span<const char> str = ConvertToJsonName(SyncModeNames[(int)instance->config.sync_mode], buf);
+                json.Key("sync_mode"); json.String(str.ptr, (size_t)str.len);
+            }
             if (instance->config.backup_key) {
                 json.Key("backup_key"); json.String(instance->config.backup_key);
             }
@@ -1159,11 +1158,12 @@ static bool ParsePermissionList(Span<const char> remain, uint32_t *out_permissio
         Span<const char> js_perm = TrimStr(SplitStr(remain, ',', &remain), " ");
 
         if (js_perm.len) {
-            char perm_str[256];
-            ConvertFromJsonName(js_perm, perm_str);
+            char buf[128];
+
+            js_perm = ConvertFromJsonName(js_perm, buf);
 
             UserPermission perm;
-            if (!OptionToEnum(UserPermissionNames, perm_str, &perm)) {
+            if (!OptionToEnum(UserPermissionNames, ConvertFromJsonName(js_perm, buf), &perm)) {
                 LogError("Unknown permission '%1'", js_perm);
                 return false;
             }
@@ -1309,6 +1309,8 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
 
     json.StartArray();
     if (stmt.Next()) {
+        char buf[128];
+
         do {
             int64_t rowid = sqlite3_column_int64(stmt, 0);
 
@@ -1326,10 +1328,8 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
                     json.Key(instance); json.StartArray();
                     for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
                         if (permissions & (1 << i)) {
-                            char js_name[64];
-                            ConvertToJsonName(UserPermissionNames[i], js_name);
-
-                            json.String(js_name);
+                            Span<const char> str = ConvertToJsonName(UserPermissionNames[i], buf);
+                            json.String(str.ptr, (size_t)str.len);
                         }
                     }
                     json.EndArray();

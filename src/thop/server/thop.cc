@@ -71,7 +71,7 @@ static BlockAllocator routes_alloc;
 static void ProduceSettings(const http_RequestInfo &request, const User *user, http_IO *io)
 {
     http_JsonPageBuilder json(request.compression_type);
-    char buf[32];
+    char buf[128];
 
     json.StartObject();
 
@@ -83,10 +83,8 @@ static void ProduceSettings(const http_RequestInfo &request, const User *user, h
     {
         unsigned int permissions = user ? user->permissions : 0;
         for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
-            char js_name[64];
-            ConvertToJsonName(UserPermissionNames[i], js_name);
-
-            json.Key(js_name); json.Bool(permissions & (1 << i));
+            Span<const char> key = ConvertToJsonName(UserPermissionNames[i], buf);
+            json.Key(key.ptr, (size_t)key.len); json.Bool(permissions & (1 << i));
         }
     }
     json.EndObject();
