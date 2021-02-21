@@ -1462,6 +1462,7 @@ function InstanceController() {
             mtime: null,
             fragments: [],
             status: new Set,
+            saved: false,
             values: {},
 
             parent: null,
@@ -1563,6 +1564,7 @@ function InstanceController() {
             mtime: fragments.length ? fragments[version - 1].mtime : null,
             fragments: fragments,
             status: status,
+            saved: true,
             values: values,
 
             parent: entry.parent,
@@ -1600,7 +1602,7 @@ function InstanceController() {
                         throw new Error('Saut impossible en raison d\'un changement de schéma');
                 } else {
                     // Save fake intermediate records if needed
-                    if (!record.version) {
+                    if (!record.saved) {
                         let key = `${profile.userid}:${record.ulid}`;
 
                         let obj = {
