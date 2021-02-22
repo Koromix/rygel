@@ -1174,10 +1174,9 @@ instead of:
                 break;
             }
 
-            captureWidgets(widgets, 'block', () => func(values[i], i, () => intf.remove(i)), {
+            captureWidgets(widgets, 'repeat', () => func(values[i], i, () => intf.remove(i)), {
                 path: [...path, i]
             });
-            widgets_ref.push(...widgets);
         }
 
         return intf;
