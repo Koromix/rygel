@@ -17,7 +17,7 @@
 
 namespace RG {
 
-const int DomainVersion = 11;
+const int DomainVersion = 12;
 const int MaxInstancesPerDomain = 4096;
 
 bool DomainConfig::Validate() const
@@ -225,8 +225,10 @@ bool DomainHolder::Sync()
                                SELECT instance, master FROM dom_instances WHERE master IS NULL
                                UNION ALL
                                SELECT i.instance, i.master FROM dom_instances i, rec WHERE i.master = rec.instance
+                               ORDER BY 2 DESC, 1
                            )
-                           SELECT instance, master FROM rec)", &stmt))
+                           SELECT r.instance, r.master,
+                                  (SELECT COUNT(*) FROM rec r2 WHERE r2.master = r.instance) AS slaves FROM rec r)", &stmt))
             return false;
 
         bool warned = false;
@@ -234,6 +236,7 @@ bool DomainHolder::Sync()
         while (stmt.Next()) {
             const char *key = (const char *)sqlite3_column_text(stmt, 0);
             const char *master_key = (const char *)sqlite3_column_text(stmt, 1);
+            int slaves = sqlite3_column_int(stmt, 2);
 
             key = DuplicateString(key, &temp_alloc).ptr;
             InstanceHolder *instance = instances_map.FindValue(key, nullptr);
@@ -256,11 +259,6 @@ bool DomainHolder::Sync()
             if (instance) {
                 new_instances.Append(instance);
                 new_map.Set(instance);
-
-                instance->slaves = 0;
-                if (instance->master != instance) {
-                    instance->master->slaves++;
-                }
             } else if (new_instances.len < MaxInstancesPerDomain) {
                 InstanceHolder *master;
                 if (master_key) {
@@ -269,8 +267,6 @@ bool DomainHolder::Sync()
                         LogError("Cannot open instance '%1' because master instance is not available", key);
                         continue;
                     }
-
-                    master->slaves++;
                 } else {
                     master = nullptr;
                 }
@@ -289,6 +285,8 @@ bool DomainHolder::Sync()
                 LogError("Too many instances on this domain, maximum = %1", MaxInstancesPerDomain);
                 warned = true;
             }
+
+            instance->slaves.store(slaves, std::memory_order_relaxed);
         }
         synced &= stmt.IsValid();
     }
@@ -680,9 +678,17 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 11: {
+                bool success = db->RunMany(R"(
+                    CREATE INDEX dom_instances_m ON dom_instances (master);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 11);
+            RG_STATIC_ASSERT(DomainVersion == 12);
         }
 
         int64_t time = GetUnixTime();

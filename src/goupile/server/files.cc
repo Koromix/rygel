@@ -164,6 +164,8 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
 void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
+    InstanceHolder *master = instance->master;
+
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const Token *token = session ? session->GetToken(instance) : nullptr;
     if (!token || !token->HasPermission(UserPermission::Deploy)) {
@@ -176,11 +178,6 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
     const char *client_sha256 = request.GetQueryValue("sha256");
 
     // Safety checks
-    if (instance->master != instance) {
-        LogError("Cannot change files on slave instance");
-        io->AttachError(403);
-        return;
-    }
     if (!StartsWith(url, "/files/")) {
         LogError("Cannot write to file outside '/files/'");
         io->AttachError(403);
@@ -212,7 +209,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
         {
             StreamWriter writer(fp, "<temp>", CompressionType::Gzip);
             StreamReader reader;
-            if (!io->OpenForRead(instance->config.max_file_size, &reader))
+            if (!io->OpenForRead(master->config.max_file_size, &reader))
                 return;
 
             crypto_hash_sha256_state state;
@@ -239,7 +236,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
         }
 
         // Copy and commit to database
-        instance->db.Transaction([&]() {
+        master->db.Transaction([&]() {
             Size file_len = ftell(fp);
             if (fseek(fp, 0, SEEK_SET) < 0) {
                 LogError("fseek('<temp>') failed: %1", strerror(errno));
@@ -248,8 +245,8 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
             if (client_sha256) {
                 sq_Statement stmt;
-                if (!instance->db.Prepare(R"(SELECT sha256 FROM fs_files
-                                             WHERE active = 1 AND filename = ?1)", &stmt))
+                if (!master->db.Prepare(R"(SELECT sha256 FROM fs_files
+                                           WHERE active = 1 AND filename = ?1)", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
 
@@ -274,18 +271,18 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
             int64_t mtime = GetUnixTime();
 
-            if (!instance->db.Run(R"(UPDATE fs_files SET active = 0
-                                     WHERE active = 1 AND filename = ?1)", filename))
+            if (!master->db.Run(R"(UPDATE fs_files SET active = 0
+                                   WHERE active = 1 AND filename = ?1)", filename))
                 return false;
-            if (!instance->db.Run(R"(INSERT INTO fs_files (active, filename, mtime, blob, compression, sha256, size)
-                                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
+            if (!master->db.Run(R"(INSERT INTO fs_files (active, filename, mtime, blob, compression, sha256, size)
+                                   VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
                                   1, filename, mtime, sq_Binding::Zeroblob(file_len), "Gzip", sha256, total_len))
                 return false;
 
-            int64_t rowid = sqlite3_last_insert_rowid(instance->db);
+            int64_t rowid = sqlite3_last_insert_rowid(master->db);
 
             sqlite3_blob *blob;
-            if (sqlite3_blob_open(instance->db, "main", "fs_files", "blob", rowid, 1, &blob) != SQLITE_OK)
+            if (sqlite3_blob_open(master->db, "main", "fs_files", "blob", rowid, 1, &blob) != SQLITE_OK)
                 return false;
             RG_DEFER { sqlite3_blob_close(blob); };
 
@@ -303,7 +300,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
                     return false;
                 }
                 if (sqlite3_blob_write(blob, buf.data, (int)buf.len, (int)read_len) != SQLITE_OK) {
-                    LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
+                    LogError("SQLite Error: %1", sqlite3_errmsg(master->db));
                     return false;
                 }
 
@@ -322,6 +319,8 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
 void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
+    InstanceHolder *master = instance->master;
+
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const Token *token = session ? session->GetToken(instance) : nullptr;
     if (!token || !token->HasPermission(UserPermission::Deploy)) {
@@ -334,11 +333,6 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
     const char *client_sha256 = request.GetQueryValue("sha256");
 
     // Safety checks
-    if (instance->master != instance) {
-        LogError("Cannot change files on slave instance");
-        io->AttachError(403);
-        return;
-    }
     if (!StartsWith(url, "/files/")) {
         LogError("Cannot delete files outside '/files/'");
         io->AttachError(403);
@@ -347,12 +341,12 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
 
     const char *filename = url + 7;
 
-    instance->db.Transaction([&]() {
+    master->db.Transaction([&]() {
         if (client_sha256) {
             sq_Statement stmt;
-            if (!instance->db.Prepare(R"(SELECT active, sha256 FROM fs_files
-                                         WHERE filename = ?1
-                                         ORDER BY active DESC)", &stmt))
+            if (!master->db.Prepare(R"(SELECT active, sha256 FROM fs_files
+                                       WHERE filename = ?1
+                                       ORDER BY active DESC)", &stmt))
                 return false;
             sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
 
@@ -375,11 +369,11 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
             }
         }
 
-        if (!instance->db.Run(R"(UPDATE fs_files SET active = 0
-                                 WHERE active = 1 AND filename = ?1)", filename))
+        if (!master->db.Run(R"(UPDATE fs_files SET active = 0
+                               WHERE active = 1 AND filename = ?1)", filename))
             return false;
 
-        if (sqlite3_changes(instance->db)) {
+        if (sqlite3_changes(master->db)) {
             io->AttachText(200, "Done!");
         } else {
             io->AttachError(404);

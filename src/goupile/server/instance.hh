@@ -37,6 +37,7 @@ class InstanceHolder {
     std::atomic_int refcount {0};
     bool unload = false;
     std::atomic_bool reload {false};
+    std::atomic_int slaves {0};
 
 public:
     int64_t unique = -1;
@@ -45,9 +46,6 @@ public:
     const char *filename = nullptr;
     sq_Database db;
     InstanceHolder *master = nullptr;
-
-    // Directly managed by DomainHolder
-    Size slaves = 0;
 
     struct {
         const char *title = nullptr;
@@ -69,6 +67,8 @@ public:
 
     void Reload() { reload = true; }
     void Unref();
+
+    int GetSlaveCount() const { return slaves.load(std::memory_order_relaxed); }
 
     RG_HASHTABLE_HANDLER(InstanceHolder, key);
 

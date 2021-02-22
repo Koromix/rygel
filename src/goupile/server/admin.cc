@@ -840,8 +840,8 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
         json.Key("key"); json.String(instance->key.ptr);
         if (instance->master != instance) {
             json.Key("master"); json.String(instance->master->key.ptr);
-        } else if (instance->slaves) {
-            json.Key("slaves"); json.Int64(instance->slaves);
+        } else {
+            json.Key("slaves"); json.Int64(instance->GetSlaveCount());
         }
         json.Key("config"); json.StartObject();
             json.Key("title"); json.String(instance->config.title);

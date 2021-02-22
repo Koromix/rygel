@@ -151,11 +151,10 @@ RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http
 }
 
 // XXX: This is a quick and dirty way to redirect the user but we need to do better
-static bool RedirectToSlave(InstanceHolder *instance, const Session *session,
-                            const Token *token, http_IO *io)
+static bool RedirectToSlave(InstanceHolder *instance, const Session *session, http_IO *io)
 {
     // Try to redirect user to a slave instance he is allowed to access (if any)
-    if (token && !token->HasPermission(UserPermission::Deploy) && instance && instance->slaves) {
+    if (session && instance && instance->GetSlaveCount()) {
         sq_Statement stmt;
         if (!gp_domain.db.Prepare(R"(SELECT i.instance FROM dom_instances i
                                      INNER JOIN dom_permissions p ON (p.instance = i.instance)
@@ -248,7 +247,7 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
 
                     const Token *token = session->GetToken(instance);
 
-                    if (RedirectToSlave(instance, session.GetRaw(), token, io))
+                    if (RedirectToSlave(instance, session.GetRaw(), io))
                         return;
 
                     http_JsonPageBuilder json(request.compression_type);
@@ -282,7 +281,7 @@ void HandleUserProfile(InstanceHolder *instance, const http_RequestInfo &request
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const Token *token = session ? session->GetToken(instance) : nullptr;
 
-    if (RedirectToSlave(instance, session.GetRaw(), token, io))
+    if (RedirectToSlave(instance, session.GetRaw(), io))
         return;
 
     http_JsonPageBuilder json(request.compression_type);

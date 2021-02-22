@@ -88,7 +88,8 @@ function AdminController() {
                                 </td>
                                 <td>${instance.master == null ?
                                         html`<a role="button" tabindex="0" @click=${ui.wrapAction(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a>` : ''}</td>
-                                <td><a role="button" tabindex="0" @click=${e => toggleSelectedInstance(e, instance.key)}>Droits</a></td>
+                                <td>${!instance.slaves ?
+                                    html`<a role="button" tabindex="0" @click=${e => toggleSelectedInstance(e, instance.key)}>Droits</a>` : ''}</td>
                                 <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runEditInstanceDialog(e, instance))}>Modifier</a></td>
                             </tr>
                         `)}

@@ -229,7 +229,7 @@ const goupile = new function() {
 
                 if (response.redirected) {
                     window.location.href = response.url;
-                    return;
+                    await util.waitFor(100000);
                 }
 
                 if (response.ok) {
@@ -444,7 +444,7 @@ const goupile = new function() {
 
                     if (response.redirected) {
                         window.location.href = response.url;
-                        return;
+                        await util.waitFor(100000);
                     }
 
                     profile = await response.json();
