@@ -227,6 +227,11 @@ const goupile = new function() {
                     body: query
                 });
 
+                if (response.redirected) {
+                    window.location.href = response.url;
+                    return;
+                }
+
                 if (response.ok) {
                     profile = await response.json();
                     session_rnd = util.getCookie('session_rnd');
@@ -436,6 +441,11 @@ const goupile = new function() {
             if (new_rnd !== session_rnd) {
                 try {
                     let response = await net.fetch(`${ENV.base_url}api/session/profile`);
+
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                        return;
+                    }
 
                     profile = await response.json();
                     session_rnd = util.getCookie('session_rnd');

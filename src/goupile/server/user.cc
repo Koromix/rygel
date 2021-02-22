@@ -150,6 +150,37 @@ RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http
     return session;
 }
 
+// XXX: This is a quick and dirty way to redirect the user but we need to do better
+static bool RedirectToSlave(InstanceHolder *instance, const Session *session,
+                            const Token *token, http_IO *io)
+{
+    // Try to redirect user to a slave instance he is allowed to access (if any)
+    if (token && !token->HasPermission(UserPermission::Deploy) && instance && instance->slaves) {
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare(R"(SELECT i.instance FROM dom_instances i
+                                     INNER JOIN dom_permissions p ON (p.instance = i.instance)
+                                     WHERE p.userid = ?1 AND i.master = ?2
+                                     ORDER BY i.instance)", &stmt))
+            return false;
+        sqlite3_bind_int64(stmt, 1, session->userid);
+        sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
+
+        if (stmt.Next()) {
+            const char *key = (const char *)sqlite3_column_text(stmt, 0);
+
+            char redirect[512];
+            Fmt(redirect, "/%1/", key);
+
+            io->AddHeader("Location", redirect);
+            io->AttachNothing(302);
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     io->RunAsync([=]() {
@@ -217,6 +248,9 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
 
                     const Token *token = session->GetToken(instance);
 
+                    if (RedirectToSlave(instance, session.GetRaw(), token, io))
+                        return;
+
                     http_JsonPageBuilder json(request.compression_type);
                     WriteProfileJson(session.GetRaw(), token, &json);
                     json.Finish(io);
@@ -247,6 +281,9 @@ void HandleUserProfile(InstanceHolder *instance, const http_RequestInfo &request
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const Token *token = session ? session->GetToken(instance) : nullptr;
+
+    if (RedirectToSlave(instance, session.GetRaw(), token, io))
+        return;
 
     http_JsonPageBuilder json(request.compression_type);
     WriteProfileJson(session.GetRaw(), token, &json);

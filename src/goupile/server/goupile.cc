@@ -282,7 +282,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         }
                         json.EndObject();
                     } else if (TestStr(key, "HEAD_TAGS")) {
-                        if (instance->config.use_offline) {
+                        if (instance->config.use_offline && !instance->slaves) {
                             Print(writer, "<link rel=\"manifest\" href=\"/%1/manifest.json\"/>", instance->key);
                         }
                     } else {

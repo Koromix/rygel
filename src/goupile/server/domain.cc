@@ -258,6 +258,9 @@ bool DomainHolder::Sync()
                 new_map.Set(instance);
 
                 instance->slaves = 0;
+                if (instance->master != instance) {
+                    instance->master->slaves++;
+                }
             } else if (new_instances.len < MaxInstancesPerDomain) {
                 InstanceHolder *master;
                 if (master_key) {
