@@ -77,7 +77,7 @@ html.mobile #ins_page {
     display: flex;
     flex: 1;
     margin-left: 3px;
-    padding: 1px 5px;
+    padding: 1px calc(5px + var(--widget_rounding) / 4);
     text-decoration: none;
     color: black;
     border-radius: var(--widget_rounding);
