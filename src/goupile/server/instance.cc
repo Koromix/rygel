@@ -32,9 +32,11 @@ bool InstanceHolder::Open(const char *key, const char *filename, InstanceHolder 
     unique = next_unique++;
     LogDebug("Open instance '%1' (%2)", key, unique);
 
+    master = master ? master : this;
+    this->master = master;
+
     this->key = DuplicateString(key, &str_alloc);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
-    this->master = master ? master : this;
 
     // Open database
     if (!db.Open(filename, SQLITE_OPEN_READWRITE))
@@ -60,7 +62,7 @@ bool InstanceHolder::Open(const char *key, const char *filename, InstanceHolder 
     // Load configuration
     {
         sq_Statement stmt;
-        if (!db.Prepare("SELECT key, value FROM fs_settings", &stmt))
+        if (!master->db.Prepare("SELECT key, value FROM fs_settings", &stmt))
             return false;
 
         bool valid = true;
@@ -86,6 +88,32 @@ bool InstanceHolder::Open(const char *key, const char *filename, InstanceHolder 
                 } else {
                     LogError("Unknown setting '%1'", key);
                     valid = false;
+                }
+            }
+        }
+        if (!stmt.IsValid() || !valid)
+            return false;
+    }
+
+    // Get slave-specific settings (if needed)
+    if (master != this) {
+        sq_Statement stmt;
+        if (!db.Prepare("SELECT key, value FROM fs_settings", &stmt))
+            return false;
+
+        bool valid = true;
+
+        while (stmt.Next()) {
+            const char *key = (const char *)sqlite3_column_text(stmt, 0);
+            const char *value = (const char *)sqlite3_column_text(stmt, 1);
+
+            if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
+                if (TestStr(key, "Title")) {
+                    if (config.title) {
+                        config.title = Fmt(&str_alloc, "%1 (%2)", config.title, value).ptr;
+                    } else {
+                        config.title = DuplicateString(value, &str_alloc).ptr;
+                    }
                 }
             }
         }
@@ -139,6 +167,14 @@ void InstanceHolder::Close()
 bool InstanceHolder::Checkpoint()
 {
     return db.Checkpoint();
+}
+
+void InstanceHolder::Unref()
+{
+    refcount--;
+    if (master != this) {
+        master->refcount--;
+    }
 }
 
 bool MigrateInstance(sq_Database *db)

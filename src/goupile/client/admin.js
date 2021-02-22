@@ -82,14 +82,13 @@ function AdminController() {
                         ${instances.map(instance => html`
                             <tr class=${instance.key === selected_instance ? 'active' : ''}>
                                 <td style="text-align: left;" class=${instance.master != null ? 'child' : ''}>
-                                    ${instance.master != null ? html`<span style="color: #ccc;">${instance.master} /</span>` : ''}
-                                    ${instance.key}
+                                    ${instance.master != null ? html`<span style="color: #ccc;">${instance.master}@</span>${instance.key.replace(/^.*@/, '')}` : ''}
+                                    ${instance.master == null ? instance.key : ''}
                                     (<a href=${'/' + instance.key} target="_blank">accès</a>)
                                 </td>
                                 <td>${instance.master == null ?
                                         html`<a role="button" tabindex="0" @click=${ui.wrapAction(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a>` : ''}</td>
-                                <td>${!instance.slaves ?
-                                        html`<a role="button" tabindex="0" @click=${e => toggleSelectedInstance(e, instance.key)}>Droits</a>` : ''}</td>
+                                <td><a role="button" tabindex="0" @click=${e => toggleSelectedInstance(e, instance.key)}>Droits</a></td>
                                 <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runEditInstanceDialog(e, instance))}>Modifier</a></td>
                             </tr>
                         `)}
@@ -296,10 +295,11 @@ function AdminController() {
             let name = d.text('name', 'Nom', {value: key.value});
 
             d.action('Créer', {disabled: !d.isValid()}, async () => {
+                let full_key = master + '@' + key.value;
+
                 let query = new URLSearchParams;
-                query.set('key', key.value);
+                query.set('key', full_key);
                 query.set('title', name.value);
-                query.set('master', master);
 
                 let response = await net.fetch('/admin/api/instances/create', {
                     method: 'POST',
@@ -308,7 +308,7 @@ function AdminController() {
 
                 if (response.ok) {
                     resolve();
-                    log.success(`Sous-projet '${master}/${key.value}' créé`);
+                    log.success(`Sous-projet '${full_key}' créé`);
 
                     instances = null;
 

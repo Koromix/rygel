@@ -68,7 +68,7 @@ public:
     bool Checkpoint();
 
     void Reload() { reload = true; }
-    void Unref() { refcount--; }
+    void Unref();
 
     RG_HASHTABLE_HANDLER(InstanceHolder, key);
 

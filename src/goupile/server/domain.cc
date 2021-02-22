@@ -17,7 +17,7 @@
 
 namespace RG {
 
-const int DomainVersion = 10;
+const int DomainVersion = 11;
 const int MaxInstancesPerDomain = 4096;
 
 bool DomainConfig::Validate() const
@@ -239,7 +239,9 @@ bool DomainHolder::Sync()
             InstanceHolder *instance = instances_map.FindValue(key, nullptr);
 
             // Should we reload this (happens when configuration changes)?
-            if (instance && instance->reload) {
+            if (instance && (instance->reload || instance->master->reload)) {
+                instance->reload = true;
+
                 if (!instance->refcount) {
                     instances_map.Remove(key);
                     instance->unload = true;
@@ -343,7 +345,11 @@ InstanceHolder *DomainHolder::Ref(Span<const char> key, bool *out_reload)
         return nullptr;
     }
 
+    if (instance->master != instance) {
+        instance->master->refcount++;
+    }
     instance->refcount++;
+
     return instance;
 }
 
@@ -635,9 +641,45 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 10: {
+                // This migration is incomplete and does not rename slave instance database files
+
+                bool success = db->RunMany(R"(
+                    ALTER TABLE dom_instances RENAME TO dom_instances_BAK;
+                    ALTER TABLE dom_permissions RENAME TO dom_permissions_BAK;
+                    DROP INDEX dom_instances_i;
+                    DROP INDEX dom_permissions_ui;
+
+                    CREATE TABLE dom_instances (
+                        instance TEXT NOT NULL,
+                        master TEXT GENERATED ALWAYS AS (iif(instr(instance, '@') > 0, substr(instance, 1, instr(instance, '@') - 1), NULL)) STORED
+                                    REFERENCES dom_instances (instance) ON DELETE CASCADE
+                    );
+                    CREATE UNIQUE INDEX dom_instances_i ON dom_instances (instance);
+
+                    CREATE TABLE dom_permissions (
+                        userid INTEGER NOT NULL REFERENCES dom_users (userid) ON DELETE CASCADE,
+                        instance TEXT NOT NULL REFERENCES dom_instances (instance) ON DELETE CASCADE,
+                        permissions INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX dom_permissions_ui ON dom_permissions (userid, instance);
+
+                    INSERT INTO dom_instances (instance)
+                        SELECT iif(master IS NULL, instance, master || '@' || instance) FROM dom_instances_BAK ORDER BY master ASC NULLS FIRST;
+                    INSERT INTO dom_permissions (userid, instance, permissions)
+                        SELECT p.userid, iif(i.master IS NULL, i.instance, i.master || '@' || i.instance), p.permissions FROM dom_permissions_BAK p
+                        LEFT JOIN dom_instances_BAK i ON (i.instance = p.instance);
+
+                    DROP TABLE dom_permissions_BAK;
+                    DROP TABLE dom_instances_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 10);
+            RG_STATIC_ASSERT(DomainVersion == 11);
         }
 
         int64_t time = GetUnixTime();

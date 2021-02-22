@@ -57,6 +57,14 @@ static bool CheckInstanceKey(Span<const char> key)
 {
     const auto test_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '_'; };
 
+    // Skip master prefix
+    {
+        Span<const char> master = SplitStr(key, '@', &key);
+        if (key.ptr == master.end()) {
+            key = master;
+        }
+    }
+
     if (!key.len) {
         LogError("Instance key cannot be empty");
         return false;
@@ -151,8 +159,7 @@ static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
 }
 
 static bool CreateInstance(DomainHolder *domain, const char *instance_key,
-                           const char *title, int64_t default_userid, const char *master,
-                           bool demo, int *out_error)
+                           const char *title, int64_t default_userid, bool demo, int *out_error)
 {
     BlockAllocator temp_alloc;
 
@@ -278,34 +285,18 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
         return false;
 
     bool success = domain->db.Transaction([&]() {
-        uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
+        if (!domain->db.Run(R"(INSERT INTO dom_instances (instance) VALUES (?1))", instance_key)) {
+            // Master does not exist
+            if (sqlite3_errcode(domain->db) == SQLITE_CONSTRAINT) {
+                Span<const char> master = SplitStr(instance_key, '@');
 
-        // Make sure master (if any) is not a slave
-        if (master) {
-            sq_Statement stmt;
-            if (!domain->db.Prepare("SELECT master FROM dom_instances WHERE instance = ?1", &stmt))
-                return false;
-            sqlite3_bind_text(stmt, 1, master, -1, SQLITE_STATIC);
-
-            if (!stmt.Next()) {
-                if (stmt.IsValid()) {
-                    LogError("Master instance '%1' does not exist", master);
-                    *out_error = 404;
-                }
-                return false;
+                LogError("Master instance '%1' does not exist", master);
+                *out_error = 404;
             }
-
-            const char *master2 = (const char*)sqlite3_column_text(stmt, 0);
-            if (master2) {
-                LogError("Master instance '%1' must not be a slave", master);
-                *out_error = 409;
-                return false;
-            }
+            return false;
         }
 
-        if (!domain->db.Run(R"(INSERT INTO dom_instances (instance, master)
-                               VALUES (?1, ?2))", instance_key, master))
-            return false;
+        uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
         if (!domain->db.Run(R"(INSERT INTO dom_permissions (userid, instance, permissions)
                                VALUES (?1, ?2, ?3))",
                             default_userid, instance_key, permissions))
@@ -494,7 +485,7 @@ Options:
     // Create default instance
     {
         int dummy;
-        if (demo && !CreateInstance(&domain, "demo", "DEMO", 1, nullptr, true, &dummy))
+        if (demo && !CreateInstance(&domain, "demo", "DEMO", 1, true, &dummy))
             return 1;
     }
 
@@ -600,7 +591,6 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
         // Read POST values
         const char *instance_key;
         const char *title;
-        const char *master;
         bool demo;
         {
             bool valid = true;
@@ -619,7 +609,6 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
                 valid = false;
             }
 
-            master = values.FindValue("master", nullptr);
             valid &= ParseBool(values.FindValue("demo", "1"), &demo);
 
             if (!valid) {
@@ -638,7 +627,7 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
                 return false;
 
             int error;
-            if (!CreateInstance(&gp_domain, instance_key, title, session->userid, master, demo, &error)) {
+            if (!CreateInstance(&gp_domain, instance_key, title, session->userid, demo, &error)) {
                 io->AttachError(error);
                 return false;
             }
