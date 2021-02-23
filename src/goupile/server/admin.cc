@@ -87,7 +87,7 @@ static bool CheckInstanceKey(Span<const char> key)
 
 static bool CheckUserName(Span<const char> username)
 {
-    const auto test_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '_' || c == '.'; };
+    const auto test_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '_' || c == '.' || c == '-'; };
 
     if (!username.len) {
         LogError("Username cannot be empty");
@@ -98,7 +98,7 @@ static bool CheckUserName(Span<const char> username)
         return false;
     }
     if (!std::all_of(username.begin(), username.end(), test_char)) {
-        LogError("Username must only contain lowercase alphanumeric, '_' or '.' characters");
+        LogError("Username must only contain lowercase alphanumeric, '_', '.' or '-' characters");
         return false;
     }
 
