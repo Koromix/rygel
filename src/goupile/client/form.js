@@ -965,7 +965,7 @@ function FormBuilder(state, model, readonly = false) {
         let intf = makeWidget('block', '', render, options);
         addWidget(intf);
 
-        captureWidgets(widgets, 'block', func);
+        captureWidgets(widgets, 'block', func, options);
 
         return intf;
     };
@@ -985,7 +985,7 @@ function FormBuilder(state, model, readonly = false) {
         let intf = makeWidget('section', label, render, options);
         addWidget(intf);
 
-        captureWidgets(widgets, 'section', func);
+        captureWidgets(widgets, 'section', func, options);
 
         return intf;
     };
@@ -1055,7 +1055,7 @@ function FormBuilder(state, model, readonly = false) {
             try {
                 tabs_ref = tabs;
 
-                captureWidgets(widgets, 'tabs', func);
+                captureWidgets(widgets, 'tabs', func, options);
 
                 // Adjust current tab
                 {
@@ -1129,7 +1129,7 @@ function FormBuilder(state, model, readonly = false) {
         // We don't want to show actions created inside inactive tabs
         let prev_actions_len = model.actions.length;
 
-        let widgets = captureWidgets([], 'tab', func);
+        let widgets = captureWidgets([], 'tab', func, options);
         let render = intf => tab.active ? widgets.map(intf => intf.render()) : '';
 
         tab.actions = model.actions.slice(prev_actions_len);
@@ -1174,9 +1174,8 @@ instead of:
                 break;
             }
 
-            captureWidgets(widgets, 'repeat', () => func(values[i], i, () => intf.remove(i)), {
-                path: [...path, i]
-            });
+            options.path = [...path, i];
+            captureWidgets(widgets, 'repeat', () => func(values[i], i, () => intf.remove(i)), options);
         }
 
         return intf;
@@ -1217,7 +1216,8 @@ instead of:
         let intf = makeWidget('columns', undefined, render, options);
         addWidget(intf);
 
-        captureWidgets(widgets, 'columns', func, {compact: false});
+        options.compact = false;
+        captureWidgets(widgets, 'columns', func, options);
 
         return intf;
     };
