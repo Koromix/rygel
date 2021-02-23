@@ -3,6 +3,7 @@
   changed_when: no
   register: whoami
   become: no
+  check_mode: no
 
 - name: Install packages
   package:
@@ -75,7 +76,7 @@
       file:
         path: '{{goupile_root_path}}/repo/felix'
         state: absent
-  when: 'build_felix.rc != 0'
+  when: 'not ansible_check_mode and build_felix.rc != 0'
   become: no
 
 - name: Build Goupile
