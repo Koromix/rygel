@@ -94,6 +94,7 @@ const goupile = new function() {
             };
         }
 
+        // Try to force all tabs to reload when instance is locked or unlocked
         window.addEventListener('storage', e => {
             if (e.key === ENV.base_url + 'lock' && !!e.newValue !== !!e.oldValue) {
                 window.onbeforeunload = null;
@@ -348,11 +349,16 @@ const goupile = new function() {
         }
     }
 
-    this.lock = async function(password, ctx = {}) {
+    this.lock = async function(e, password, ctx = null) {
         if (!self.isAuthorized() || self.isLocked())
             throw new Error('Cannot lock unauthorized session');
-        if (typeof ctx !== 'object' || ctx == null)
-            throw new Error('Invalid type for lock context');
+        if (typeof ctx == undefined)
+            throw new Error('Lock context must not be undefined');
+
+        if (controller.hasUnsavedData()) {
+            await ui.runConfirm(e, "Si vous continuez, vous perdrez les modifications en cours. Voulez-vous continuer ?",
+                                   "Continuer", () => {});
+        }
 
         let salt = nacl.randomBytes(24);
         let key = await deriveKey(password, salt);
@@ -372,7 +378,12 @@ const goupile = new function() {
         document.location.reload();
     };
 
-    this.unlock = async function(password) {
+    this.unlock = async function(e, password) {
+        if (controller.hasUnsavedData()) {
+            await ui.runConfirm(e, "Si vous continuez, vous perdrez les modifications en cours. Voulez-vous continuer ?",
+                                   "Continuer", () => {});
+        }
+
         let obj = await loadSessionValue('lock');
         if (obj == null)
             throw new Error('Session is not locked');
@@ -459,7 +470,7 @@ const goupile = new function() {
     };
 
     this.isAuthorized = function() { return !!profile.userid; };
-    this.isLocked = function() { return !!profile.lock; };
+    this.isLocked = function() { return profile.lock !== undefined; };
     this.hasPermission = function(perm) {
         return profile.permissions != null &&
                profile.permissions[perm];

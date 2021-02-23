@@ -146,7 +146,17 @@ function InstanceController() {
                     </div>
                 </div>
             ` : ''}
+            ${goupile.isLocked() ? html`
+                <button @click=${ui.wrapAction(runUnlockDialog)}>Déverrouiller</button>
+            ` : ''}
         `;
+    }
+
+    function runUnlockDialog(e) {
+        return ui.runDialog(e, (d, resolve, reject) => {
+            let pin = d.pin('*pin', 'Code de déverrouillage');
+            d.action('Déverrouiller', {disabled: !d.isValid()}, e => goupile.unlock(e, pin.value));
+        });
     }
 
     function renderFormDrop(form) {
