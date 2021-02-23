@@ -209,8 +209,10 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
         if (instance) {
             if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.admin, u.local_key FROM dom_users u
                                          INNER JOIN dom_permissions p ON (p.userid = u.userid)
+                                         INNER JOIN dom_instances i ON (i.instance = p.instance)
                                          WHERE u.username = ?1 AND
-                                               p.instance = ?2 AND p.permissions > 0)", &stmt))
+                                               (i.instance = ?2 OR i.master = ?2) AND
+                                               p.permissions > 0)", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
             sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
