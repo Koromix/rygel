@@ -201,6 +201,54 @@ function FormBuilder(state, model, readonly = false) {
         updateValue(key, e.target.value || undefined);
     }
 
+    this.pin = function(key, label, options = {}) {
+        options = expandOptions(options);
+        key = decodeKey(key, options);
+
+        let value = readValue(key, options, value => (value != null) ? String(value) : undefined);
+
+        let id = makeID(key);
+        let render = intf => renderWrappedWidget(intf, html`
+            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
+            <input id=${id} type="text" class="fm_input" style=${makeInputStyle(options)}
+                   inputmode="none" .value=${value || ''}
+                   placeholder=${options.placeholder || ''}
+                   ?disabled=${options.disabled} ?readonly=${options.readonly}
+                   @input=${e => handleTextInput(e, key)} />
+            ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
+            ${!options.readonly ? html`
+                <div class="fm_pin">
+                    ${[7, 8, 9, 4, 5, 6, 1, 2, 3].map(i =>
+                        html`<button type="button" ?disabled=${options.disabled}
+                                     @click=${e => handlePinButton(e, key, value)}>${i}</button>`)}
+                    <button type="button" ?disabled=${options.disabled} style="visibility: hidden;">?</button>
+                    <button type="button" ?disabled=${options.disabled}
+                            @click=${e => handlePinButton(e, key, value)}>0</button>
+                    <button type="button" class="clear" ?disabled=${options.disabled}
+                            @click=${e => handlePinClear(e, key)}>C</button>
+                </div>
+            `: ''}
+        `);
+
+        let intf = makeWidget('pin', label, render, options);
+        fillVariableInfo(intf, key, value);
+        addWidget(intf);
+
+        if (value && !value.match(/^[0-9]*$/))
+            intf.error('Le code doit comporter uniquement des chiffres');
+
+        return intf;
+    };
+
+    function handlePinButton(e, key, value) {
+        updateValue(key, (value || '') + e.target.textContent);
+    }
+
+    function handlePinClear(e, key) {
+        updateValue(key, undefined);
+    }
+
     this.number = function(key, label, options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);

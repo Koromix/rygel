@@ -180,6 +180,23 @@ html:not(.small) .fm_widget.compact .fm_error {
     white-space: nowrap;
 }
 
+.fm_pin {
+    width: 9em;
+    margin: 8px auto;
+    text-align: center;
+    display: table;
+}
+.fm_pin > button {
+    display: table-cell;
+    width: 2.7em;
+    height: 2.7em;
+    margin: 1px;
+}
+.fm_pin > button.clear {
+    font-weight: bold;
+    color: #ef6000;
+}
+
 .fm_enum {
     display: inline-block;
     padding-left: 1px;
