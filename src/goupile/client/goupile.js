@@ -474,6 +474,8 @@ const goupile = new function() {
                 } catch (err) {
                     if (!ENV.cache_offline)
                         throw err;
+
+                    session_rnd = util.getCookie('session_rnd');
                 }
             }
         }
