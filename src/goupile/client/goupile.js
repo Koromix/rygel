@@ -372,11 +372,15 @@ const goupile = new function() {
 
         let lock = {
             userid: profile.userid,
+            username: profile.username,
             salt: bytesToBase64(salt),
             errors: 0,
+            keys: {},
             session_rnd: enc,
             ctx: ctx
         };
+        for (let key in profile_keys)
+            lock.keys[key] = bytesToBase64(profile_keys[key]);
 
         await storeSessionValue('lock', lock);
         util.deleteCookie('session_rnd', '/');
@@ -449,6 +453,7 @@ const goupile = new function() {
 
                 profile = {
                     userid: lock.userid,
+                    username: lock.username,
                     permissions: {
                         'edit': true
                     },
@@ -457,6 +462,8 @@ const goupile = new function() {
                 session_rnd = null;
 
                 profile_keys = {};
+                for (let key in lock.keys)
+                    profile_keys[key] = base64ToBytes(lock.keys[key]);
             }
         }
 
