@@ -1423,19 +1423,11 @@ function InstanceController() {
         if (goupile.isLocked() && !new_record.chain.some(record => record.ulid === profile.lock))
             throw new Error('Mode de navigation restreint');
         if (!isPageEnabled(new_route.page, new_record)) {
-            let success = false;
-            for (let page of new_route.form.pages.values()) {
-                if (isPageEnabled(page, new_record)) {
-                    new_route.page = page;
-
-                    success = true;
-                    break;
-                }
-            }
-
             // XXX: In some contexts an immediate fail (throw) would be better here
-            if (!success)
+            new_route.page = findEnabledPage(new_route.form, new_record);
+            if (new_route.page == null)
                 throw new Error('Cette page n\'est pas activée pour cet enregistrement');
+            new_route.form = new_route.page.form;
         }
 
         // Confirm dangerous actions (at risk of data loss)
@@ -1736,6 +1728,21 @@ function InstanceController() {
         } else {
             return null;
         }
+    }
+
+    function findEnabledPage(form, record) {
+        for (let item of form.menu) {
+            if (item.type === 'page') {
+                if (isPageEnabled(item.page, record))
+                    return item.page;
+            } else if (item.type === 'form') {
+                let page = findEnabledPage(item.form, record);
+                if (page != null)
+                    return page;
+            }
+        }
+
+        return null;
     }
 
     function isFormEnabled(form, record) {
