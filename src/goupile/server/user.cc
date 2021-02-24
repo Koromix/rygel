@@ -81,10 +81,10 @@ static void WriteProfileJson(const Session *session, const Token *token, const h
                 json.Key(key.ptr, (size_t)key.len); json.Bool(token->permissions & (1 << i));
             }
             json.EndObject();
+            json.Key("keys"); json.StartObject();
+                json.Key("local"); json.String(session->local_key);
+            json.EndObject();
         }
-        json.Key("keys"); json.StartObject();
-            json.Key("local"); json.String(session->local_key);
-        json.EndObject();
     }
     json.EndObject();
 
