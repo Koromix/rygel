@@ -170,26 +170,35 @@ function InstanceController() {
                         ${util.map(form.menu, item => {
                             if (item.type === 'page') {
                                 let page = item.page;
-                                return html`<button ?disabled=${!isPageEnabled(page, form_record)}
-                                                    class=${page === route.page ? 'active' : ''}
-                                                    @click=${ui.wrapAction(e => self.go(e, page.url))}>${meta && meta.status.has(page.key) ? '✓\uFE0E' : ''}
-                                                                                                       ${page.title}</button>`;
+                                return html`
+                                    <button ?disabled=${!isPageEnabled(page, form_record)}
+                                            class=${page === route.page ? 'active' : ''}
+                                            @click=${ui.wrapAction(e => self.go(e, page.url))}>
+                                        ${meta && meta.status.has(page.key) ? '✓\uFE0E' : ''}
+                                        ${page.title}
+                                   </button>`;
                             } else if (item.type === 'form') {
                                 let form = item.form;
-                                return html`<button ?disabled=${!isFormEnabled(form, form_record)}
-                                                    class=${route.form.chain.some(parent => form === parent) ? 'active' : ''}
-                                                    @click=${ui.wrapAction(e => self.go(e, form.url))}>${meta && meta.status.has(form.key) ? '✓\uFE0E ' : ''}
-                                                                                                       ${form.title}</button>`;
+                                return html`
+                                    <button ?disabled=${!isFormEnabled(form, form_record)}
+                                            class=${route.form.chain.some(parent => form === parent) ? 'active' : ''}
+                                            @click=${ui.wrapAction(e => self.go(e, form.url))}>
+                                        ${meta && meta.status.has(form.key) ? '✓\uFE0E ' : ''}
+                                        ${form.title}
+                                   </button>`;
                             }
                         })}
                     </div>
                 </div>
             `;
         } else {
-            return html`<button ?disabled=${!isFormEnabled(form, form_record)}
-                                class=${route.form.chain.some(parent => form === parent) ? 'active' : ''}
-                                @click=${ui.wrapAction(e => self.go(e, form.url))}>${meta && meta.status.has(form.key) ? '✓\uFE0E ' : ''}
-                                                                                   ${form.title}</button>`;
+            return html`
+                <button ?disabled=${!isFormEnabled(form, form_record)}
+                        class=${route.form.chain.some(parent => form === parent) ? 'active' : ''}
+                        @click=${ui.wrapAction(e => self.go(e, form.url))}>
+                    ${meta && meta.status.has(form.key) ? '✓\uFE0E ' : ''}
+                    ${form.title}
+                </button>`;
         }
     }
 
