@@ -122,6 +122,8 @@ function ApplicationBuilder(app) {
         checkKey(key);
         if (app.pages.has(key))
             throw new Error(`Page key '${key}' is already used`);
+        if (form_ref == null)
+            throw new Error('Cannot make page without enclosing form');
 
         options = expandOptions(options);
 

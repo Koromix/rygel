@@ -88,7 +88,7 @@ function InstanceController() {
                 let builder = new ApplicationBuilder(new_app);
 
                 // For simplicity, a lot of code assumes at least one page exists
-                builder.page("default", "Page par défaut");
+                builder.form("default", "Défaut", "Page par défaut");
 
                 new_app.home = new_app.pages.values().next().value;
                 app = util.deepFreeze(new_app);
