@@ -370,7 +370,7 @@ const goupile = new function() {
         let key = await deriveKey(password, salt);
         let enc = await encryptSecretBox(session_rnd, key);
 
-        let obj = {
+        let lock = {
             userid: profile.userid,
             salt: bytesToBase64(salt),
             errors: 0,
@@ -378,7 +378,8 @@ const goupile = new function() {
             ctx: ctx
         };
 
-        await storeSessionValue('lock', obj);
+        await storeSessionValue('lock', lock);
+        util.deleteCookie('session_rnd', '/');
 
         window.onbeforeunload = null;
         document.location.reload();
@@ -429,54 +430,57 @@ const goupile = new function() {
 
     // XXX: Exponential backoff
     this.syncProfile = async function() {
-        let lock = await loadSessionValue('lock');
+        let new_rnd = util.getCookie('session_rnd', null);
 
-        if (lock != null) {
+        // Hack to force login screen to show up once when DemoUser setting is in use,
+        // this cookie value is set in logout() just before page refresh.
+        if (new_rnd === 'LOGIN') {
+            util.deleteCookie('session_rnd', '/');
             session_rnd = null;
-            profile_keys = {};
+            return;
+        }
 
-            util.deleteCookie('session_rnd', ENV.base_url);
+        // Deal with lock, if any
+        if (new_rnd == null) {
+            let lock = await loadSessionValue('lock');
 
-            profile = {
-                userid: lock.userid,
-                permissions: {
-                    'edit': true
-                },
-                lock: lock.ctx
-            };
-        } else {
-            let new_rnd = util.getCookie('session_rnd', null);
+            if (lock != null) {
+                util.deleteCookie('session_rnd', '/');
 
-            // Hack to force login screen to show up once when DemoUser setting is in use,
-            // this cookie value is set in logout() just before page refresh.
-            if (new_rnd === 'LOGIN') {
-                util.deleteCookie('session_rnd', ENV.base_url);
+                profile = {
+                    userid: lock.userid,
+                    permissions: {
+                        'edit': true
+                    },
+                    lock: lock.ctx
+                };
                 session_rnd = null;
-                return;
+
+                profile_keys = {};
             }
+        }
 
-            if (new_rnd !== session_rnd) {
-                try {
-                    let response = await net.fetch(`${ENV.base_url}api/session/profile`);
+        if (new_rnd !== session_rnd) {
+            try {
+                let response = await net.fetch(`${ENV.base_url}api/session/profile`);
 
-                    if (response.redirected) {
-                        window.location.href = response.url;
-                        await util.waitFor(100000);
-                    }
-
-                    profile = await response.json();
-                    session_rnd = util.getCookie('session_rnd');
-
-                    profile_keys = {};
-                    for (let key in profile.keys)
-                        profile_keys[key] = base64ToBytes(profile.keys[key]);
-                    delete profile.keys;
-                } catch (err) {
-                    if (!ENV.cache_offline)
-                        throw err;
-
-                    session_rnd = util.getCookie('session_rnd');
+                if (response.redirected) {
+                    window.location.href = response.url;
+                    await util.waitFor(100000);
                 }
+
+                profile = await response.json();
+                session_rnd = util.getCookie('session_rnd');
+
+                profile_keys = {};
+                for (let key in profile.keys)
+                    profile_keys[key] = base64ToBytes(profile.keys[key]);
+                delete profile.keys;
+            } catch (err) {
+                if (!ENV.cache_offline)
+                    throw err;
+
+                session_rnd = util.getCookie('session_rnd');
             }
         }
     };
