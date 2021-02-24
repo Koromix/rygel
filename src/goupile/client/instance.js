@@ -1368,66 +1368,80 @@ function InstanceController() {
             new_state.changeHandler = handleStateChange;
         }
 
-        // Go to parent or child automatically
-        if (new_record != null && new_record.form !== new_route.form) {
-            new_record = await moveToAppropriateRecord(new_record, new_route.form);
+        // Match requested page, record type, available page, etc.
+        // We may need to restart in some cases, hence the fake loop to do it with continue.
+        for (;;) {
+            // Go to parent or child automatically
+            if (new_record != null && new_record.form !== new_route.form) {
+                new_record = await moveToAppropriateRecord(new_record, new_route.form);
 
-            if (new_record != null) {
+                if (new_record != null) {
+                    new_route.ulid = new_record.ulid;
+                    new_route.version = new_record.version;
+                    new_state = new FormState(new_record.values);
+                    new_state.changeHandler = handleStateChange;
+                } else {
+                    new_route.ulid = null;
+                    new_record = null;
+                }
+            }
+
+            // Create new record if needed
+            if (new_route.ulid == null || new_record == null) {
+                new_record = createRecord(new_route.form, null);
+
                 new_route.ulid = new_record.ulid;
                 new_route.version = new_record.version;
                 new_state = new FormState(new_record.values);
                 new_state.changeHandler = handleStateChange;
-            } else {
-                new_route.ulid = null;
-                new_record = null;
-            }
-        }
-
-        // Create new record if needed
-        if (new_route.ulid == null || new_record == null) {
-            new_record = createRecord(new_route.form, null);
-
-            new_route.ulid = new_record.ulid;
-            new_route.version = new_record.version;
-            new_state = new FormState(new_record.values);
-            new_state.changeHandler = handleStateChange;
-        }
-
-        // Load record parents
-        if (new_record.chain == null) {
-            let chain = [];
-            let map = {};
-
-            new_record.chain = chain;
-            new_record.map = map;
-            chain.push(new_record);
-            map[new_record.form.key] = new_record;
-
-            let record = new_record;
-            while (record.parent != null) {
-                let parent_record = await loadRecord(record.parent.ulid);
-
-                parent_record.chain = chain;
-                parent_record.map = map;
-                chain.push(parent_record);
-                map[parent_record.form.key] = parent_record;
-                record.parent = parent_record;
-
-                record = parent_record;
             }
 
-            chain.reverse();
-        }
+            // Load record parents
+            if (new_record.chain == null) {
+                let chain = [];
+                let map = {};
 
-        // Safety checks
-        if (goupile.isLocked() && !new_record.chain.some(record => record.ulid === profile.lock))
-            throw new Error('Mode de navigation restreint');
-        if (!isPageEnabled(new_route.page, new_record)) {
-            // XXX: In some contexts an immediate fail (throw) would be better here
-            new_route.page = findEnabledPage(new_route.form, new_record);
-            if (new_route.page == null)
-                throw new Error('Cette page n\'est pas activée pour cet enregistrement');
-            new_route.form = new_route.page.form;
+                new_record.chain = chain;
+                new_record.map = map;
+                chain.push(new_record);
+                map[new_record.form.key] = new_record;
+
+                let record = new_record;
+                while (record.parent != null) {
+                    let parent_record = await loadRecord(record.parent.ulid);
+
+                    parent_record.chain = chain;
+                    parent_record.map = map;
+                    chain.push(parent_record);
+                    map[parent_record.form.key] = parent_record;
+                    record.parent = parent_record;
+
+                    record = parent_record;
+                }
+
+                chain.reverse();
+            }
+
+            // Safety checks
+            if (goupile.isLocked() && !new_record.chain.some(record => record.ulid === profile.lock))
+                throw new Error('Enregistrement non autorisé en mode de navigation restreint');
+            if (!isPageEnabled(new_route.page, new_record)) {
+                if (goupile.isLocked()) {
+                    // XXX: In some contexts an immediate fail (throw) would be better here
+                    new_route.page = findEnabledPage(new_route.form, new_record);
+                    if (new_route.page == null)
+                        throw new Error('Cette page n\'est pas activée pour cet enregistrement');
+
+                    if (new_route.page.form !== new_route.form) {
+                        new_route.form = new_route.page.form;
+                        continue;
+                    }
+                } else {
+                    throw new Error('Cette page n\'est pas activée pour cet enregistrement');
+                }
+            }
+
+            break;
         }
 
         // Confirm dangerous actions (at risk of data loss)
