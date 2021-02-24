@@ -144,7 +144,7 @@ function InstanceController() {
                 <div class="drop right">
                     <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
                     <div>
-                        ${app.lockable ? html`<button @click=${ui.wrapAction(e => runLockDialog(e, form_record.ulid))}>Verrouiller</button>` : ''}
+                        ${app.lockable ? html`<button @click=${ui.wrapAction(e => runLockDialog(e, form_record.chain[0].ulid))}>Verrouiller</button>` : ''}
                         <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
                     </div>
                 </div>
