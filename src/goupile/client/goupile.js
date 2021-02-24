@@ -339,7 +339,7 @@ const goupile = new function() {
                 session_rnd = undefined;
                 profile_keys = {};
 
-                util.setCookie('session_rnd', 'LOGIN', ENV.base_url);
+                util.setCookie('session_rnd', 'LOGIN', '/');
                 await deleteSessionValue('lock');
 
                 // Clear state and start from fresh as a precaution
