@@ -197,6 +197,7 @@ function AdminController() {
                     log.success(`Projet '${key.value}' créé`);
 
                     instances = null;
+                    users = null;
 
                     self.run();
                 } else {
