@@ -148,7 +148,7 @@ function InstanceController() {
                 <div class="drop right">
                     <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
                     <div>
-                        ${app.lockable ? html`<button @click=${ui.wrapAction(e => runLockDialog(e, form_record.chain[0].ulid))}>Verrouiller</button>` : ''}
+                        ${app.lockable ? html`<button @click=${ui.wrapAction(e => runLockDialog(e, form_record.chain[0]))}>Verrouiller</button>` : ''}
                         <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
                     </div>
                 </div>
@@ -157,14 +157,17 @@ function InstanceController() {
         `;
     }
 
-    function runLockDialog(e, ulid) {
+    function runLockDialog(e, record) {
+        if (!record.saved)
+            throw new Error('Vous devez valider cet enregistrement avant de verrouiller');
+
         return ui.runDialog(e, (d, resolve, reject) => {
             let pin = d.pin('*pin', 'Code de déverrouillage');
             if (pin.value != null && pin.value.length < 4)
                 pin.error('Ce code est trop court', true);
 
             d.action('Verrouiller', {disabled: !d.isValid()},
-                     e => goupile.lock(e, pin.value, ulid));
+                     e => goupile.lock(e, pin.value, record.ulid));
         });
     }
 
