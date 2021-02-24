@@ -269,11 +269,11 @@ function InstanceController() {
                     <a @click=${ui.wrapAction(goNewRecord)}>Créer un enregistrement</a>
                     <div style="flex: 1;"></div>
                     ${ENV.backup_key != null ? html`
-                        <a @click=${ui.wrapAction(e => backupClientData('file'))}>Faire une sauvegarde chiffrée</a>
+                        <a @click=${ui.wrapAction(e => backupRecords('file'))}>Faire une sauvegarde chiffrée</a>
                         <div style="flex: 1;"></div>
                     ` : ''}
                     ${data_rows.length || 'Aucune'} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
-                    ${ENV.sync_mode === 'mirror' ? html` (<a @click=${ui.wrapAction(syncData)}>synchroniser</a>)` : ''}
+                    ${ENV.sync_mode === 'mirror' ? html` (<a @click=${ui.wrapAction(syncRecords)}>synchroniser</a>)` : ''}
                 </div>
 
                 <table class="ui_table fixed" id="ins_data">
@@ -1288,9 +1288,9 @@ function InstanceController() {
             await goupile.runLoginScreen();
 
             if (net.isOnline() && ENV.sync_mode === 'mirror')
-                await syncData();
+                await syncRecords();
             if (net.isOnline() && ENV.backup_key != null)
-                await backupClientData('server');
+                await backupRecords('server');
         }
 
         // Fix up URL
@@ -1896,7 +1896,7 @@ function InstanceController() {
         }
     }
 
-    async function backupClientData(dest) {
+    async function backupRecords(dest) {
         let progress = log.progress('Archivage sécurisé des données');
 
         try {
@@ -1951,7 +1951,7 @@ function InstanceController() {
         }
     }
 
-    async function syncData() {
+    async function syncRecords() {
         let progress = log.progress('Synchronisation en cours');
 
         try {
