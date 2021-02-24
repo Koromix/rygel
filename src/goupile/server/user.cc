@@ -84,7 +84,9 @@ static void WriteProfileJson(const Session *session, const Token *token, json_Wr
             out_json->EndObject();
         }
 
-        out_json->Key("local_key"); out_json->String(session->local_key);
+        out_json->Key("keys"); out_json->StartObject();
+        out_json->Key("local"); out_json->String(session->local_key);
+        out_json->EndObject();
     }
 
     out_json->EndObject();
