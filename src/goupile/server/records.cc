@@ -326,7 +326,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                         if (sqlite3_changes(instance->db)) {
                             updated = true;
                         } else {
-                            LogError("Ignored conflicting fragment %1 for '%2'", i + 1, record.ulid);
+                            LogDebug("Ignored conflicting fragment %1 for '%2'", i + 1, record.ulid);
                             continue;
                         }
                     }
