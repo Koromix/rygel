@@ -189,13 +189,30 @@ const goupile = new function() {
         });
     }
 
-    this.runLogin = function() {
+    this.runLoginScreen = function() {
         return ui.runScreen((d, resolve, reject) => {
             d.output(html`
                 <img id="gp_logo" src=${ENV.base_url + 'favicon.png'} alt="" />
                 <br/>
             `);
 
+            let username = d.text('*username', 'Nom d\'utilisateur');
+            let password = d.password('*password', 'Mot de passe');
+
+            d.action('Se connecter', {disabled: !d.isValid()}, async () => {
+                try {
+                    await self.login(username.value, password.value);
+                    resolve(username.value);
+                } catch (err) {
+                    // Never reject because we want to keep the screen open
+                    log.error(err);
+                }
+            });
+        });
+    };
+
+    this.runLoginDialog = function(e) {
+        return ui.runDialog(e, (d, resolve, reject) => {
             let username = d.text('*username', 'Nom d\'utilisateur');
             let password = d.password('*password', 'Mot de passe');
 
@@ -387,6 +404,7 @@ const goupile = new function() {
 
         window.onbeforeunload = null;
         document.location.reload();
+        await util.waitFor(2000);
     };
 
     this.unlock = async function(e, password) {
@@ -395,21 +413,21 @@ const goupile = new function() {
                                    "Continuer", () => {});
         }
 
-        let obj = await loadSessionValue('lock');
-        if (obj == null)
+        let lock = await loadSessionValue('lock');
+        if (lock == null)
             throw new Error('Session is not locked');
 
-        let key = await deriveKey(password, base64ToBytes(obj.salt));
+        let key = await deriveKey(password, base64ToBytes(lock.salt));
 
         try {
-            session_rnd = await decryptSecretBox(obj.session_rnd, key);
+            session_rnd = await decryptSecretBox(lock.session_rnd, key);
 
             util.setCookie('session_rnd', session_rnd, '/');
             await deleteSessionValue('lock');
         } catch (err) {
-            obj.errors = (obj.errors || 0) + 1;
+            lock.errors = (lock.errors || 0) + 1;
 
-            if (obj.errors >= 3) {
+            if (lock.errors >= 3) {
                 log.error('Déverrouillage refusé, blocage de sécurité imminent');
                 await deleteSessionValue('lock');
 
@@ -419,7 +437,7 @@ const goupile = new function() {
                 }, 3000);
             } else {
                 log.error('Déverrouillage refusé');
-                await storeSessionValue('lock', obj);
+                await storeSessionValue('lock', lock);
             }
 
             return;
@@ -430,6 +448,7 @@ const goupile = new function() {
 
         window.onbeforeunload = null;
         document.location.reload();
+        await util.waitFor(2000);
     };
 
     // XXX: Exponential backoff

@@ -131,6 +131,8 @@ function InstanceController() {
                         style="background-position-y: calc(-318px + 1.2em);"
                         @click=${ui.wrapAction(e => togglePanel(e, 'page'))}>Formulaire</button>
             ` : ''}
+            ${goupile.isLocked() ? html`<button class="icon" style="background-position-y: calc(-186px + 1.2em)"
+                                                @click=${ui.wrapAction(runUnlockDialog)}>Déverrouiller</button>` : ''}
 
             <div style="flex: 1; min-width: 15px;"></div>
             ${route.form.chain.map(form => renderFormDrop(form))}
@@ -142,14 +144,24 @@ function InstanceController() {
                 <div class="drop right">
                     <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
                     <div>
+                        ${app.lockable ? html`<button @click=${ui.wrapAction(e => runLockDialog(e, form_record.ulid))}>Verrouiller</button>` : ''}
                         <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
                     </div>
                 </div>
             ` : ''}
-            ${goupile.isLocked() ? html`
-                <button @click=${ui.wrapAction(runUnlockDialog)}>Déverrouiller</button>
-            ` : ''}
+            ${goupile.isLocked() ? html`<button @click=${ui.wrapAction(e => goupile.runLoginDialog().then(self.run))}>Se connecter</button>` : ''}
         `;
+    }
+
+    function runLockDialog(e, ulid) {
+        return ui.runDialog(e, (d, resolve, reject) => {
+            let pin = d.pin('*pin', 'Code de déverrouillage');
+            if (pin.value != null && pin.value.length < 4)
+                pin.error('Ce code est trop court', true);
+
+            d.action('Verrouiller', {disabled: !d.isValid()},
+                     e => goupile.lock(e, pin.value, ulid));
+        });
     }
 
     function runUnlockDialog(e) {
@@ -1269,7 +1281,7 @@ function InstanceController() {
     this.go = async function(e = null, url = null, push_history = true) {
         await goupile.syncProfile();
         if (!goupile.isAuthorized()) {
-            await goupile.runLogin();
+            await goupile.runLoginScreen();
 
             if (net.isOnline() && ENV.sync_mode === 'mirror')
                 await syncData();
@@ -1316,6 +1328,8 @@ function InstanceController() {
             // Popping history
             if (!ulid && !push_history)
                 ulid = 'new';
+            if (!ulid && goupile.isLocked())
+                ulid = profile.lock;
 
             // Deal with ULID
             if (ulid && ulid !== new_route.ulid) {
@@ -1401,9 +1415,24 @@ function InstanceController() {
             chain.reverse();
         }
 
-        // XXX: Fix navigation to a form when the first page is disabled
-        if (!isPageEnabled(new_route.page, new_record))
-            throw new Error('Cette page n\'est pas activée pour cet enregistrement');
+        // Safety checks
+        if (goupile.isLocked() && !new_record.chain.some(record => record.ulid === profile.lock))
+            throw new Error('Mode de navigation restreint');
+        if (!isPageEnabled(new_route.page, new_record)) {
+            let success = false;
+            for (let page of new_route.form.pages.values()) {
+                if (isPageEnabled(page, new_record)) {
+                    new_route.page = page;
+
+                    success = true;
+                    break;
+                }
+            }
+
+            // XXX: In some contexts an immediate fail (throw) would be better here
+            if (!success)
+                throw new Error('Cette page n\'est pas activée pour cet enregistrement');
+        }
 
         // Confirm dangerous actions (at risk of data loss)
         if (form_state != null && form_state.hasChanged() && new_record !== form_record) {
@@ -1437,21 +1466,23 @@ function InstanceController() {
 
         // Dictionaries
         let new_dictionaries = {}
-        for (let dict of new_route.page.dictionaries) {
-            let range = IDBKeyRange.only(`${profile.userid}/${dict}`);
-            objects = await db.loadAll('rec_records/form', range);
+        if (new_route.page.options.dictionaries != null) {
+            for (let dict of new_route.page.options.dictionaries) {
+                let range = IDBKeyRange.only(`${profile.userid}/${dict}`);
+                objects = await db.loadAll('rec_records/form', range);
 
-            let records = [];
-            for (let obj of objects) {
-                try {
-                    let record = await decryptRecord(obj, null, false, true);
-                    records.push(record);
-                } catch (err) {
-                    console.log(err);
+                let records = [];
+                for (let obj of objects) {
+                    try {
+                        let record = await decryptRecord(obj, null, false, true);
+                        records.push(record);
+                    } catch (err) {
+                        console.log(err);
+                    }
                 }
-            }
 
-            new_dictionaries[dict] = records.map(record => record.values);
+                new_dictionaries[dict] = records.map(record => record.values);
+            }
         }
 
         // Commit!
@@ -1718,6 +1749,9 @@ function InstanceController() {
     }
 
     function isPageEnabled(page, record) {
+        if (goupile.isLocked() && !page.options.lockable)
+            return false;
+
         if (typeof page.enabled === 'function') {
             try {
                 return page.enabled(record);
@@ -1728,8 +1762,10 @@ function InstanceController() {
 
                 return false;
             }
-        } else {
+        } else if (page.enabled != null) {
             return page.enabled;
+        } else {
+            return true;
         }
     }
 

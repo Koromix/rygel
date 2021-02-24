@@ -16,6 +16,7 @@ function ApplicationInfo() {
     this.forms = new Map;
     this.pages = new Map;
     this.home = null;
+    this.lockable = false;
 }
 
 function FormInfo(key, title) {
@@ -26,7 +27,6 @@ function FormInfo(key, title) {
     this.forms = new Map;
     this.menu = [];
     this.multi = false;
-    this.zoned = true;
     this.url = null;
 }
 
@@ -35,7 +35,7 @@ function PageInfo(key, title) {
     this.title = title;
     this.form = null;
     this.enabled = true;
-    this.dictionaries = [];
+    this.options = {};
     this.url = null;
     this.filename = null;
 }
@@ -82,8 +82,6 @@ function ApplicationBuilder(app) {
             } else {
                 self.page(key, func || title);
             }
-            if (options.zoned != null)
-                form_ref.zoned = options.zoned;
 
             if (!form_ref.menu.length)
                 throw new Error(`Form '${key}' must contain at least one page or child form`);
@@ -134,10 +132,9 @@ function ApplicationBuilder(app) {
         } else {
             page.form = new FormInfo(key, title);
         }
-        if (options.enabled != null)
-            page.enabled = options.enabled;
-        if (options.dictionaries != null)
-            page.dictionaries = options.dictionaries;
+        page.options = options;
+        if (options.lockable)
+            app.lockable = true;
         page.url = `${ENV.base_url}main/${key}`;
         page.filename = (options.filename != null) ? options.filename : `pages/${key}.js`;
 
