@@ -54,8 +54,12 @@ function InstanceController() {
         self.go(null, window.location.href).catch(err => {
             log.error(err);
 
-            // Fall back to home page
-            self.go(null, ENV.base_url);
+            // Now try home page... If that fails too, show login screen.
+            // This will solve some situations such as overly restrictive locks.
+            self.go(null, ENV.base_url).catch(async err => {
+                await goupile.runLoginScreen();
+                document.location.reload();
+            });
         });
     };
 
