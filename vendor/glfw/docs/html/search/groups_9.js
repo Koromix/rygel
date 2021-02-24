@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['vulkan_20reference_774',['Vulkan reference',['../group__vulkan.html',1,'']]]
+  ['vulkan_20support_20reference_774',['Vulkan support reference',['../group__vulkan.html',1,'']]]
 ];
