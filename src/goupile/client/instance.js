@@ -1287,7 +1287,7 @@ function InstanceController() {
 
     this.go = async function(e, url = null, push_history = true) {
         await goupile.syncProfile();
-        if (!goupile.isAuthorized()) {
+        if (!goupile.isLoggedIn() || profile.permissions == null) {
             await goupile.runLoginScreen();
 
             if (net.isOnline() && ENV.sync_mode === 'mirror')
@@ -1888,7 +1888,7 @@ function InstanceController() {
         }
 
         // Try locally saved files
-        if (goupile.isAuthorized()) {
+        {
             let key = `${profile.userid}:${filename}`;
             let file = await db.load('fs_files', key);
 

@@ -63,37 +63,35 @@ const Token *Session::GetToken(const InstanceHolder *instance) const
     }
 }
 
-static void WriteProfileJson(const Session *session, const Token *token, json_Writer *out_json)
+static void WriteProfileJson(const Session *session, const Token *token, const http_RequestInfo &request, http_IO *io)
 {
+    http_JsonPageBuilder json(request.compression_type);
     char buf[128];
 
-    out_json->StartObject();
-
+    json.StartObject();
     if (session) {
-        out_json->Key("userid"); out_json->Int64(session->userid);
-        out_json->Key("username"); out_json->String(session->username);
-        out_json->Key("admin"); out_json->Bool(session->IsAdmin());
-        out_json->Key("demo"); out_json->Bool(session->demo);
-
+        json.Key("userid"); json.Int64(session->userid);
+        json.Key("username"); json.String(session->username);
+        json.Key("admin"); json.Bool(session->IsAdmin());
+        json.Key("demo"); json.Bool(session->demo);
         if (token) {
-            out_json->Key("permissions"); out_json->StartObject();
+            json.Key("permissions"); json.StartObject();
             for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
                 Span<const char> key = ConvertToJsonName(UserPermissionNames[i], buf);
-                out_json->Key(key.ptr, (size_t)key.len); out_json->Bool(token->permissions & (1 << i));
+                json.Key(key.ptr, (size_t)key.len); json.Bool(token->permissions & (1 << i));
             }
-            out_json->EndObject();
+            json.EndObject();
         }
-
-        out_json->Key("keys"); out_json->StartObject();
-        out_json->Key("local"); out_json->String(session->local_key);
-        out_json->EndObject();
+        json.Key("keys"); json.StartObject();
+            json.Key("local"); json.String(session->local_key);
+        json.EndObject();
     }
+    json.EndObject();
 
-    out_json->EndObject();
+    json.Finish(io);
 }
 
-static RetainPtr<Session> CreateUserSession(const http_RequestInfo &request, http_IO *io,
-                                            int64_t userid, const char *username, const char *local_key)
+static RetainPtr<Session> CreateUserSession(int64_t userid, const char *username, const char *local_key)
 {
     Size username_len = strlen(username);
     Size len = RG_SIZE(Session) + username_len + 1;
@@ -137,7 +135,7 @@ RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http
 
             int64_t userid = sqlite3_column_int64(stmt, 0);
             const char *local_key = (const char *)sqlite3_column_text(stmt, 1);
-            RetainPtr<Session> session = CreateUserSession(request, io, userid, gp_domain.config.demo_user, local_key);
+            RetainPtr<Session> session = CreateUserSession(userid, gp_domain.config.demo_user, local_key);
 
             if (RG_LIKELY(session)) {
                 session->demo = true;
@@ -153,18 +151,18 @@ RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http
 }
 
 // XXX: This is a quick and dirty way to redirect the user but we need to do better
-static bool RedirectToSlave(InstanceHolder *instance, const Session *session, http_IO *io)
+static bool RedirectToSlave(InstanceHolder &instance, const Session &session, http_IO *io)
 {
     // Try to redirect user to a slave instance he is allowed to access (if any)
-    if (session && instance && instance->GetSlaveCount()) {
+    if (instance.GetSlaveCount()) {
         sq_Statement stmt;
         if (!gp_domain.db.Prepare(R"(SELECT i.instance FROM dom_instances i
                                      INNER JOIN dom_permissions p ON (p.instance = i.instance)
                                      WHERE p.userid = ?1 AND i.master = ?2
                                      ORDER BY i.instance)", &stmt))
             return false;
-        sqlite3_bind_int64(stmt, 1, session->userid);
-        sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
+        sqlite3_bind_int64(stmt, 1, session.userid);
+        sqlite3_bind_text(stmt, 2, instance.key.ptr, (int)instance.key.len, SQLITE_STATIC);
 
         if (stmt.Next()) {
             const char *key = (const char *)sqlite3_column_text(stmt, 0);
@@ -239,7 +237,7 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
                                       time, request.client_addr, "login", username))
                     return;
 
-                RetainPtr<Session> session = CreateUserSession(request, io, userid, username, local_key);
+                RetainPtr<Session> session = CreateUserSession(userid, username, local_key);
 
                 if (RG_LIKELY(session)) {
                     if (admin && !instance) {
@@ -249,14 +247,11 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
 
                     sessions.Open(request, io, session);
 
-                    const Token *token = session->GetToken(instance);
-
-                    if (RedirectToSlave(instance, session.GetRaw(), io))
+                    if (instance && RedirectToSlave(*instance, *session.GetRaw(), io))
                         return;
 
-                    http_JsonPageBuilder json(request.compression_type);
-                    WriteProfileJson(session.GetRaw(), token, &json);
-                    json.Finish(io);
+                    const Token *token = session->GetToken(instance);
+                    WriteProfileJson(session.GetRaw(), token, request, io);
                 }
 
                 return;
@@ -283,14 +278,16 @@ void HandleUserLogout(InstanceHolder *, const http_RequestInfo &request, http_IO
 void HandleUserProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    const Token *token = session ? session->GetToken(instance) : nullptr;
 
-    if (RedirectToSlave(instance, session.GetRaw(), io))
-        return;
+    if (instance && session) {
+        if (RedirectToSlave(*instance, *session.GetRaw(), io))
+            return;
 
-    http_JsonPageBuilder json(request.compression_type);
-    WriteProfileJson(session.GetRaw(), token, &json);
-    json.Finish(io);
+        const Token *token = session->GetToken(instance);
+        WriteProfileJson(session.GetRaw(), token, request, io);
+    } else {
+        WriteProfileJson(session.GetRaw(), nullptr, request, io);
+    }
 }
 
 }

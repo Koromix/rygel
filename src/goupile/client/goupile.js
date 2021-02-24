@@ -374,7 +374,7 @@ const goupile = new function() {
     }
 
     this.lock = async function(e, password, ctx = null) {
-        if (!self.isAuthorized() || self.isLocked())
+        if (!self.isLoggedIn() || self.isLocked())
             throw new Error('Cannot lock unauthorized session');
         if (typeof ctx == undefined)
             throw new Error('Lock context must not be undefined');
@@ -514,7 +514,7 @@ const goupile = new function() {
                                "Continuer", () => {});
     };
 
-    this.isAuthorized = function() { return !!profile.userid; };
+    this.isLoggedIn = function() { return !!profile.userid; };
     this.isLocked = function() { return profile.lock !== undefined; };
     this.hasPermission = function(perm) {
         return profile.permissions != null &&
