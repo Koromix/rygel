@@ -75,7 +75,7 @@ const ui = new function() {
                 it.render();
 
                 // No need to refresh anything underneath
-                if (it.type === 'modal')
+                if (it.type === 'screen')
                     return;
 
                 it = it.next;
