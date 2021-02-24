@@ -201,7 +201,7 @@ const goupile = new function() {
 
             d.action('Se connecter', {disabled: !d.isValid()}, async () => {
                 try {
-                    await self.login(username.value, password.value);
+                    await self.login(null, username.value, password.value);
                     resolve(username.value);
                 } catch (err) {
                     // Never reject because we want to keep the screen open
@@ -216,10 +216,14 @@ const goupile = new function() {
             let username = d.text('*username', 'Nom d\'utilisateur');
             let password = d.password('*password', 'Mot de passe');
 
-            d.action('Se connecter', {disabled: !d.isValid()}, async () => {
+            d.action('Se connecter', {disabled: !d.isValid()}, async e => {
                 try {
-                    await self.login(username.value, password.value);
-                    resolve(username.value);
+                    await self.confirmDangerousAction(e);
+                    await self.login(e, username.value, password.value);
+
+                    // Clear state and start from fresh as a precaution
+                    window.onbeforeunload = null;
+                    document.location.reload();
                 } catch (err) {
                     // Never reject because we want to keep the screen open
                     log.error(err);
@@ -228,7 +232,7 @@ const goupile = new function() {
         });
     };
 
-    this.login = function(username, password) {
+    this.login = function(e, username, password) {
         let progress = log.progress('Connexion en cours');
         return login(username, password, progress, true);
     };
@@ -341,10 +345,7 @@ const goupile = new function() {
     }
 
     this.logout = async function(e) {
-        if (controller.hasUnsavedData()) {
-            await ui.runConfirm(e, "Si vous continuez, vous perdrez les modifications en cours. Voulez-vous continuer ?",
-                                   "Continuer", () => {});
-        }
+        await self.confirmDangerousAction(e);
 
         let progress = log.progress('Déconnexion en cours');
 
@@ -378,10 +379,7 @@ const goupile = new function() {
         if (typeof ctx == undefined)
             throw new Error('Lock context must not be undefined');
 
-        if (controller.hasUnsavedData()) {
-            await ui.runConfirm(e, "Si vous continuez, vous perdrez les modifications en cours. Voulez-vous continuer ?",
-                                   "Continuer", () => {});
-        }
+        await self.confirmDangerousAction(e);
 
         let salt = nacl.randomBytes(24);
         let key = await deriveKey(password, salt);
@@ -408,10 +406,7 @@ const goupile = new function() {
     };
 
     this.unlock = async function(e, password) {
-        if (controller.hasUnsavedData()) {
-            await ui.runConfirm(e, "Si vous continuez, vous perdrez les modifications en cours. Voulez-vous continuer ?",
-                                   "Continuer", () => {});
-        }
+        await self.confirmDangerousAction(e);
 
         let lock = await loadSessionValue('lock');
         if (lock == null)
@@ -509,6 +504,14 @@ const goupile = new function() {
                 session_rnd = util.getCookie('session_rnd');
             }
         }
+    };
+
+    this.confirmDangerousAction = async function(e) {
+        if (!controller.hasUnsavedData())
+            return;
+
+        await ui.runConfirm(e, "Si vous continuez, vous perdrez les modifications en cours. Voulez-vous continuer ?",
+                               "Continuer", () => {});
     };
 
     this.isAuthorized = function() { return !!profile.userid; };

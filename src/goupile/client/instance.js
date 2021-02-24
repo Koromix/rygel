@@ -149,7 +149,7 @@ function InstanceController() {
                     </div>
                 </div>
             ` : ''}
-            ${goupile.isLocked() ? html`<button @click=${ui.wrapAction(e => goupile.runLoginDialog().then(self.run))}>Se connecter</button>` : ''}
+            ${goupile.isLocked() ? html`<button @click=${ui.wrapAction(goupile.runLoginDialog)}>Se connecter</button>` : ''}
         `;
     }
 
@@ -1278,7 +1278,7 @@ function InstanceController() {
         }
     };
 
-    this.go = async function(e = null, url = null, push_history = true) {
+    this.go = async function(e, url = null, push_history = true) {
         await goupile.syncProfile();
         if (!goupile.isAuthorized()) {
             await goupile.runLoginScreen();
@@ -1438,8 +1438,7 @@ function InstanceController() {
         if (form_state != null && form_state.hasChanged() && new_record !== form_record) {
             try {
                 // XXX: Improve message if going to child form
-                await ui.runConfirm(e, "Si vous continuez, vous perdrez les modifications en cours. Voulez-vous continuer ?",
-                                       "Continuer", () => {});
+                await goupile.confirmDangerousAction(e);
             } catch (err) {
                 // If we're popping state, this will fuck up navigation history but we can't
                 // refuse popstate events. History mess is better than data loss.
