@@ -1989,8 +1989,8 @@ function InstanceController() {
         }
     }
 
-    async function syncRecords(show_progress = true) {
-        let progress = show_progress ? log.progress('Synchronisation en cours') : null;
+    async function syncRecords(standalone = true) {
+        let progress = standalone ? log.progress('Synchronisation en cours') : null;
 
         try {
             let changes = new Set;
@@ -2088,12 +2088,11 @@ function InstanceController() {
                 }
             }
 
-            if (changes.size) {
-                if (show_progress)
-                    progress.success('Synchronisation terminée');
+            if (changes.size && standalone) {
+                progress.success('Synchronisation terminée');
 
                 // XXX: What about current record being edited?
-                if (form_record != null && form_record.chain.some(record => changes.has(record.ulid))) {
+                if (!self.hasUnsavedData()) {
                     route.version = null;
                     form_record = null;
                     form_state = null;
@@ -2102,11 +2101,11 @@ function InstanceController() {
 
                 self.go(null, window.location.href);
             } else {
-                if (show_progress)
+                if (standalone)
                     progress.close();
             }
         } catch (err) {
-            if (show_progress)
+            if (standalone)
                 progress.close();
             throw err;
         }
