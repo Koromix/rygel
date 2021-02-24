@@ -276,7 +276,7 @@ function InstanceController() {
                         <div style="flex: 1;"></div>
                     ` : ''}
                     ${data_rows.length || 'Aucune'} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
-                    ${ENV.sync_mode === 'mirror' ? html` (<a @click=${ui.wrapAction(syncRecords)}>synchroniser</a>)` : ''}
+                    ${ENV.sync_mode === 'mirror' ? html` (<a @click=${ui.wrapAction(e => syncRecords())}>synchroniser</a>)` : ''}
                 </div>
 
                 <table class="ui_table fixed" id="ins_data">
@@ -643,8 +643,19 @@ function InstanceController() {
                     await unfakeParents(t, entry.parent.ulid);
             });
 
-            progress.success('Enregistrement effectué');
-            enablePersistence();
+            if (net.isOnline() && ENV.sync_mode === 'mirror') {
+                try {
+                    await syncRecords(false);
+                    progress.success('Enregistrement effectué');
+                } catch (err) {
+                    progress.info('Enregistrement effectué (non synchronisé)');
+                    console.log(err);
+                    enablePersistence();
+                }
+            } else {
+                progress.success('Enregistrement local effectué');
+                enablePersistence();
+            }
 
             // XXX: Trigger reload in a better way...
             let url = route.page.url + `/${record.ulid}`;
@@ -708,7 +719,17 @@ function InstanceController() {
                     await t.saveWithKey('rec_records', key, obj);
                 });
 
-                progress.success('Suppression effectuée');
+                if (net.isOnline() && ENV.sync_mode === 'mirror') {
+                    try {
+                        await syncRecords(false);
+                        progress.success('Suppression effectuée');
+                    } catch (err) {
+                        progress.info('Suppression effectuée (non synchronisée)');
+                        console.log(err);
+                    }
+                } else {
+                    progress.success('Suppression locale effectuée');
+                }
 
                 data_rows = null;
                 if (form_record.chain.some(record => record.ulid === ulid)) {
@@ -1968,8 +1989,8 @@ function InstanceController() {
         }
     }
 
-    async function syncRecords() {
-        let progress = log.progress('Synchronisation en cours');
+    async function syncRecords(show_progress = true) {
+        let progress = show_progress ? log.progress('Synchronisation en cours') : null;
 
         try {
             let changes = new Set;
@@ -2068,8 +2089,8 @@ function InstanceController() {
             }
 
             if (changes.size) {
-                progress.success('Synchronisation terminée');
-                enablePersistence();
+                if (show_progress)
+                    progress.success('Synchronisation terminée');
 
                 // XXX: What about current record being edited?
                 if (form_record != null && form_record.chain.some(record => changes.has(record.ulid))) {
@@ -2081,10 +2102,12 @@ function InstanceController() {
 
                 self.go(null, window.location.href);
             } else {
-                progress.close();
+                if (show_progress)
+                    progress.close();
             }
         } catch (err) {
-            progress.close();
+            if (show_progress)
+                progress.close();
             throw err;
         }
     }
