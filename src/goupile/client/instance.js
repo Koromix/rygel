@@ -382,8 +382,10 @@ function InstanceController() {
                     if (builder.triggerErrors())
                         return saveRecord();
                 });
-                builder.action('-');
-                builder.action('Nouveau', {}, goNewRecord);
+                if (!goupile.isLocked()) {
+                    builder.action('-');
+                    builder.action('Nouveau', {}, goNewRecord);
+                }
             }
 
             render(model.render(), page_div);
@@ -403,17 +405,17 @@ function InstanceController() {
                         ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormMenu(route.form.chain[idx]))}
                         ${route.form.chain.length === 1 || route.form.menu.length > 1 ? renderFormMenu(route.form) : ''}
 
-                        <hr/>
-                        ${!form_record.chain[0].version ? html`<div id="ins_trail">Nouvel enregistrement</div>` : ''}
-                        ${form_record.chain[0].version > 0 && form_record.chain[0].hid != null ? html`<div id="ins_id" class="hid">${form_record.chain[0].hid}</div>` : ''}
-                        ${form_record.chain[0].version > 0 && form_record.chain[0].hid == null ? html`<div id="ins_trail">Enregistrement existant</div>` : ''}
-                        <div id="ins_trail">
-                            ${route.version > 0 ? html`
-                                    ${route.version < form_record.fragments.length ?
-                                        html`<span style="color: red;">Version : ${form_record.mtime.toLocaleString()}</span><br/>` : ''}
-                                    <a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>Historique</a>
+                        ${!goupile.isLocked() ? html`
+                            <hr/>
+                            ${!form_record.chain[0].version ? html`<div id="ins_trail">Nouvel enregistrement</div>` : ''}
+                            ${form_record.chain[0].version > 0 && form_record.chain[0].hid != null ? html`<div id="ins_id" class="hid">${form_record.chain[0].hid}</div>` : ''}
+                            ${form_record.chain[0].version > 0 && form_record.chain[0].hid == null ? html`<div id="ins_trail">Enregistrement existant</div>` : ''}
+                            ${route.version > 0 ? html`<div id="ins_trail">
+                                ${route.version < form_record.fragments.length ?
+                                    html`<span style="color: red;">Version : ${form_record.mtime.toLocaleString()}</span><br/>` : ''}
+                                <a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>Historique</a>
+                            </div>` : ''}
                             ` : ''}
-                        </div>
                     </div>
 
                     <form id="ins_form" @submit=${e => e.preventDefault()}>
