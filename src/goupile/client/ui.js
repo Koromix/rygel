@@ -172,7 +172,7 @@ const ui = new function() {
             dialogs.prev = dialog;
 
             // Modal or popup?
-            dialog.el.className = `ui_${type}`;
+            dialog.el.className = `ui_dialog ${type}`;
             if (closeable) {
                 dialog.el.addEventListener('keydown', e => {
                     if (e.keyCode == 27)
@@ -196,10 +196,10 @@ const ui = new function() {
                     let target = e.target.parentNode;
 
                     for (;;) {
-                        if (target === it.el) {
-                            break;
-                        } else if (target == null) {
+                        if (target == null || target.classList == null) {
                             it.reject(null);
+                            break;
+                        } else if (target.classList.contains('ui_dialog') && target.classList.contains('popup')) {
                             break;
                         }
                         target = target.parentNode;
