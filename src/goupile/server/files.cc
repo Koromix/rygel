@@ -92,6 +92,14 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
         return true;
     }
 
+    // Mime type
+    {
+        const char *mime_type = http_GetMimeType(GetPathExtension(filename), nullptr);
+        if (mime_type) {
+            io->AddHeader("Content-Type", mime_type);
+        }
+    }
+
     CompressionType compression_type;
     {
         const char *name = (const char *)sqlite3_column_text(stmt, 1);

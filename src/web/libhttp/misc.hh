@@ -19,7 +19,8 @@
 
 namespace RG {
 
-const char *http_GetMimeType(Span<const char> extension);
+const char *http_GetMimeType(Span<const char> extension,
+                             const char *default_type = "application/octet-stream");
 
 uint32_t http_ParseAcceptableEncodings(Span<const char> encodings);
 

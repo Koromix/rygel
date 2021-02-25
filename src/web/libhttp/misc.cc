@@ -16,7 +16,7 @@
 
 namespace RG {
 
-const char *http_GetMimeType(Span<const char> extension)
+const char *http_GetMimeType(Span<const char> extension, const char *default_type)
 {
     if (extension == ".txt") {
         return "text/plain";
@@ -46,7 +46,7 @@ const char *http_GetMimeType(Span<const char> extension)
         return "application/octet-stream";
     } else {
         LogError("Unknown MIME type for extension '%1'", extension);
-        return "application/octet-stream";
+        return default_type;
     }
 }
 
