@@ -42,10 +42,9 @@ const goupile = new function() {
     };
 
     function initPing() {
-        net.idleHandler = () => {
-            if (net.isOnline())
-                net.fetch(`${ENV.base_url}api/session/ping`);
-        };
+        setInterval(() => {
+            net.fetch(`${ENV.base_url}api/session/ping`);
+        }, 600 * 1000);
     }
 
     function initNavigation() {

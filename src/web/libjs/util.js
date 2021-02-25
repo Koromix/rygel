@@ -579,20 +579,9 @@ const net = new function() {
     let idle_timer;
     let online = true;
 
-    this.idleHandler = null;
     this.changeHandler = online => {};
 
     this.fetch = async function(request, init) {
-        if (self.idleHandler != null) {
-            if (idle_timer != null)
-                clearTimeout(idle_timer);
-
-            idle_timer = setTimeout(() => {
-                idle_timer = null;
-                self.idleHandler();
-            }, 600 * 1000);
-        }
-
         try {
             if (init == null)
                 init = {};
