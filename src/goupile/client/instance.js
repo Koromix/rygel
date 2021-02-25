@@ -1451,7 +1451,6 @@ function InstanceController() {
                 throw new Error('Enregistrement non autorisé en mode de navigation restreint');
             if (!isPageEnabled(new_route.page, new_record)) {
                 if (goupile.isLocked()) {
-                    // XXX: In some contexts an immediate fail (throw) would be better here
                     new_route.page = findEnabledPage(new_route.form, new_record);
                     if (new_route.page == null)
                         throw new Error('Cette page n\'est pas activée pour cet enregistrement');
