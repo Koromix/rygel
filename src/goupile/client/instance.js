@@ -2064,7 +2064,7 @@ function InstanceController() {
                 progress.success('Synchronisation terminée');
 
                 // XXX: What about current record being edited?
-                if (!self.hasUnsavedData()) {
+                if (!self.hasUnsavedData() && form_record != null && form_record.saved) {
                     route.version = null;
                     form_record = null;
                     form_state = null;
