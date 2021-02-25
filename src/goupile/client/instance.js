@@ -370,6 +370,11 @@ function InstanceController() {
         `;
     }
 
+    function runDeleteRecordDialog(e, ulid) {
+        return ui.runConfirm(e, 'Voulez-vous vraiment supprimer cet enregistrement ?',
+                             'Supprimer', () => deleteRecord(ulid));
+    }
+
     function renderPage() {
         let readonly = (route.version < form_record.fragments.length);
 
@@ -688,61 +693,59 @@ function InstanceController() {
         }
     }
 
-    function runDeleteRecordDialog(e, ulid) {
-        return ui.runConfirm(e, 'Voulez-vous vraiment supprimer cet enregistrement ?', 'Supprimer', async () => {
-            let progress = log.progress('Suppression en cours');
+    async function deleteRecord(ulid) {
+        let progress = log.progress('Suppression en cours');
 
-            try {
-                let key = `${profile.userid}:${ulid}`;
-                let fragment = {
-                    type: 'delete',
-                    user: profile.username,
-                    mtime: new Date
-                };
+        try {
+            let key = `${profile.userid}:${ulid}`;
+            let fragment = {
+                type: 'delete',
+                user: profile.username,
+                mtime: new Date
+            };
 
-                // XXX: Delete children (cascade)?
-                await db.transaction('rw', ['rec_records'], async t => {
-                    let obj = await t.load('rec_records', key);
-                    if (obj == null)
-                        throw new Error('Cet enregistrement est introuvable');
+            // XXX: Delete children (cascade)?
+            await db.transaction('rw', ['rec_records'], async t => {
+                let obj = await t.load('rec_records', key);
+                if (obj == null)
+                    throw new Error('Cet enregistrement est introuvable');
 
-                    let entry = await goupile.decryptLocal(obj.enc);
+                let entry = await goupile.decryptLocal(obj.enc);
 
-                    // Mark as deleted with special fragment
-                    entry.fragments.push(fragment);
+                // Mark as deleted with special fragment
+                entry.fragments.push(fragment);
 
-                    obj.keys.parent = null;
-                    obj.keys.form = null;
-                    obj.keys.sync = profile.userid;
-                    obj.enc = await goupile.encryptLocal(entry);
+                obj.keys.parent = null;
+                obj.keys.form = null;
+                obj.keys.sync = profile.userid;
+                obj.enc = await goupile.encryptLocal(entry);
 
-                    await t.saveWithKey('rec_records', key, obj);
-                });
+                await t.saveWithKey('rec_records', key, obj);
+            });
 
-                if (net.isOnline() && ENV.sync_mode === 'mirror') {
-                    try {
-                        await syncRecords(false);
-                        progress.success('Suppression effectuée');
-                    } catch (err) {
-                        progress.info('Suppression effectuée (non synchronisée)');
-                        console.log(err);
-                    }
-                } else {
-                    progress.success('Suppression locale effectuée');
+            if (net.isOnline() && ENV.sync_mode === 'mirror') {
+                try {
+                    await syncRecords(false);
+                    progress.success('Suppression effectuée');
+                } catch (err) {
+                    progress.info('Suppression effectuée (non synchronisée)');
+                    console.log(err);
                 }
-
-                data_rows = null;
-                if (form_record.chain.some(record => record.ulid === ulid)) {
-                    form_state = null;
-                    goNewRecord(null);
-                } else {
-                    self.run();
-                }
-            } catch (err) {
-                progress.close();
-                throw err;
+            } else {
+                progress.success('Suppression locale effectuée');
             }
-        })
+
+            data_rows = null;
+            if (form_record.chain.some(record => record.ulid === ulid)) {
+                form_state = null;
+                goNewRecord(null);
+            } else {
+                self.run();
+            }
+        } catch (err) {
+            progress.close();
+            throw err;
+        }
     }
 
     function enablePersistence() {
