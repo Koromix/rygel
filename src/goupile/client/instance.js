@@ -1772,9 +1772,9 @@ function InstanceController() {
         if (goupile.isLocked() && !page.options.lockable)
             return false;
 
-        if (typeof page.enabled === 'function') {
+        if (typeof page.options.enabled === 'function') {
             try {
-                return page.enabled(record);
+                return page.options.enabled(record);
             } catch (err) {
                 let line = util.parseEvalErrorLine(err);
                 let msg = `Erreur\n${line != null ? `Ligne ${line} : ` : ''}${err.message}`;
@@ -1782,8 +1782,8 @@ function InstanceController() {
 
                 return false;
             }
-        } else if (page.enabled != null) {
-            return page.enabled;
+        } else if (page.options.enabled != null) {
+            return page.options.enabled;
         } else {
             return true;
         }
