@@ -25,82 +25,42 @@ const goupile = new function() {
     let current_url;
 
     this.start = async function() {
-        ui.init();
-
-        await registerSW();
-        await initDB();
-        initPing();
-        initNavigation();
-        await goupile.syncProfile();
-
         if (ENV.base_url === '/admin/') {
             controller = new AdminController;
+            document.documentElement.className = 'admin';
         } else {
             controller = new InstanceController;
+            document.documentElement.className = 'instance';
         }
-        await controller.start();
+
+        ui.init();
+        await registerSW();
+        await initDB();
+        initNavigation();
+        initTasks();
+
+        await syncProfile();
+        if (profile.permissions == null) {
+            await runLoginScreen();
+        } else {
+            await initAfterAuthorization();
+        }
     };
 
-    function initPing() {
-        setInterval(() => {
-            net.fetch(`${ENV.base_url}api/session/ping`);
-        }, 600 * 1000);
-    }
+    async function initAfterAuthorization() {
+        await controller.init();
+        await runTasks();
 
-    function initNavigation() {
-        window.addEventListener('popstate', e => controller.go(null, window.location.href, false));
+        controller.go(null, window.location.href).catch(err => {
+            log.error(err);
 
-        util.interceptLocalAnchors((e, href) => {
-            let func = ui.wrapAction(e => controller.go(e, href));
-            func(e);
-
-            e.preventDefault();
+            // Now try home page... If that fails too, show login screen.
+            // This will solve some situations such as overly restrictive locks.
+            controller.go(null, ENV.base_url).catch(async err => {
+                runLoginScreen();
+            });
         });
-
-        // Copied that crap from a random corner of the internet
-        let electron = (typeof process !== 'undefined' && typeof process.versions === 'object' &&
-                        !!process.versions.electron);
-        if (electron) {
-            let protect = true;
-
-            window.onbeforeunload = e => {
-                if (protect && controller.hasUnsavedData()) {
-                    e.returnValue = "NO!";
-
-                    let remote = require('electron').remote;
-                    let dialog = remote.dialog;
-
-                    let win = remote.getCurrentWindow();
-                    let p = dialog.showMessageBox(win, {
-                        type: 'warning',
-                        buttons: ['Quitter', 'Annuler'],
-                        title: 'Données non enregistrées',
-                        message: 'Si vous continuer vous allez perdre les modifications non enregistrées, voulez-vous continuer ?'
-                    });
-
-                    p.then(r => {
-                        if (r.response === 0) {
-                            protect = false;
-                            win.close();
-                        }
-                    });
-                }
-            };
-        } else {
-            window.onbeforeunload = e => {
-                if (controller.hasUnsavedData())
-                    return 'Si vous confirmez vouloir quitter la page, les modifications en cours seront perdues !';
-            };
-        }
-
-        // Try to force all tabs to reload when instance is locked or unlocked
-        window.addEventListener('storage', e => {
-            if (e.key === ENV.base_url + 'lock' && !!e.newValue !== !!e.oldValue) {
-                window.onbeforeunload = null;
-                document.location.reload();
-            }
-        });
-    }
+    };
 
     async function registerSW() {
         try {
@@ -188,7 +148,68 @@ const goupile = new function() {
         });
     }
 
-    this.runLoginScreen = function() {
+    async function syncProfile() {
+        let new_rnd = util.getCookie('session_rnd', null);
+
+        // Hack to force login screen to show up once when DemoUser setting is in use,
+        // this cookie value is set in logout() just before page refresh.
+        if (new_rnd === 'LOGIN') {
+            util.deleteCookie('session_rnd', '/');
+            session_rnd = null;
+            return;
+        }
+
+        // Deal with lock, if any
+        if (new_rnd == null) {
+            let lock = await loadSessionValue('lock');
+
+            if (lock != null) {
+                util.deleteCookie('session_rnd', '/');
+
+                profile = {
+                    userid: lock.userid,
+                    username: lock.username,
+                    permissions: {
+                        'edit': true
+                    },
+                    lock: lock.ctx
+                };
+                session_rnd = null;
+
+                profile_keys = {};
+                for (let key in lock.keys)
+                    profile_keys[key] = base64ToBytes(lock.keys[key]);
+            }
+        }
+
+        if (new_rnd !== session_rnd) {
+            try {
+                let response = await net.fetch(`${ENV.base_url}api/session/profile`);
+
+                if (response.redirected) {
+                    window.location.href = response.url;
+                    await util.waitFor(100000);
+                }
+
+                profile = await response.json();
+                session_rnd = util.getCookie('session_rnd');
+
+                profile_keys = {};
+                for (let key in profile.keys)
+                    profile_keys[key] = base64ToBytes(profile.keys[key]);
+                delete profile.keys;
+            } catch (err) {
+                if (!ENV.cache_offline)
+                    throw err;
+
+                session_rnd = util.getCookie('session_rnd');
+            }
+        }
+    }
+
+    function runLoginScreen() {
+        document.body.classList.remove('gp_loading');
+
         return ui.runScreen((d, resolve, reject) => {
             d.output(html`
                 <img id="gp_logo" src=${ENV.base_url + 'favicon.png'} alt="" />
@@ -200,15 +221,85 @@ const goupile = new function() {
 
             d.action('Se connecter', {disabled: !d.isValid()}, async () => {
                 try {
-                    await self.login(null, username.value, password.value);
-                    resolve(username.value);
+                    await login(null, username.value, password.value, false);
+                    resolve();
                 } catch (err) {
                     // Never reject because we want to keep the screen open
                     log.error(err);
                 }
             });
         });
-    };
+    }
+
+    function initNavigation() {
+        window.addEventListener('popstate', e => controller.go(null, window.location.href, false));
+
+        util.interceptLocalAnchors((e, href) => {
+            let func = ui.wrapAction(e => controller.go(e, href));
+            func(e);
+
+            e.preventDefault();
+        });
+
+        // Copied that crap from a random corner of the internet
+        let electron = (typeof process !== 'undefined' && typeof process.versions === 'object' &&
+                        !!process.versions.electron);
+        if (electron) {
+            let protect = true;
+
+            window.onbeforeunload = e => {
+                if (protect && controller.hasUnsavedData()) {
+                    e.returnValue = "NO!";
+
+                    let remote = require('electron').remote;
+                    let dialog = remote.dialog;
+
+                    let win = remote.getCurrentWindow();
+                    let p = dialog.showMessageBox(win, {
+                        type: 'warning',
+                        buttons: ['Quitter', 'Annuler'],
+                        title: 'Données non enregistrées',
+                        message: 'Si vous continuer vous allez perdre les modifications non enregistrées, voulez-vous continuer ?'
+                    });
+
+                    p.then(r => {
+                        if (r.response === 0) {
+                            protect = false;
+                            win.close();
+                        }
+                    });
+                }
+            };
+        } else {
+            window.onbeforeunload = e => {
+                if (controller.hasUnsavedData())
+                    return 'Si vous confirmez vouloir quitter la page, les modifications en cours seront perdues !';
+            };
+        }
+
+        // Try to force all tabs to reload when instance is locked or unlocked
+        window.addEventListener('storage', e => {
+            if (e.key === ENV.base_url + 'lock' && !!e.newValue !== !!e.oldValue) {
+                window.onbeforeunload = null;
+                document.location.reload();
+            }
+        });
+    }
+
+    function initTasks() {
+        setInterval(async () => {
+            await net.fetch(`${ENV.base_url}api/session/ping`);
+            runTasks();
+        }, 300 * 1000);
+    }
+
+    async function runTasks() {
+        let online = net.isOnline() &&
+                     profile.userid != null &&
+                     util.getCookie('session_rnd') != null;
+
+        await controller.runTasks(online);
+    }
 
     this.runLoginDialog = function(e) {
         return ui.runDialog(e, (d, resolve, reject) => {
@@ -217,26 +308,29 @@ const goupile = new function() {
 
             d.action('Se connecter', {disabled: !d.isValid()}, async e => {
                 try {
-                    await self.confirmDangerousAction(e);
-                    await self.login(e, username.value, password.value);
-
-                    // Clear state and start from fresh as a precaution
-                    window.onbeforeunload = null;
-                    document.location.reload();
+                    await login(e, username.value, password.value, true);
                 } catch (err) {
-                    // Never reject because we want to keep the screen open
-                    log.error(err);
+                    reject(err);
                 }
             });
         });
     };
 
-    this.login = function(e, username, password) {
+    async function login(e, username, password, reload) {
+        await self.confirmDangerousAction(e);
+
         let progress = log.progress('Connexion en cours');
-        return login(username, password, progress, true);
+        await tryLogin(username, password, progress, true);
+
+        if (reload) {
+            window.onbeforeunload = null;
+            document.location.reload();
+        } else {
+            await initAfterAuthorization();
+        }
     };
 
-    async function login(username, password, progress, retry) {
+    async function tryLogin(username, password, progress, retry) {
         try {
             if (net.isOnline() || !ENV.cache_offline) {
                 let query = new URLSearchParams;
@@ -323,7 +417,7 @@ const goupile = new function() {
             }
         } catch (err) {
             if ((err instanceof NetworkError) && retry) {
-                return login(username, password, progress, false);
+                return tryLogin(username, password, progress, false);
             } else {
                 progress.close();
                 throw err;
@@ -372,8 +466,25 @@ const goupile = new function() {
         }
     }
 
+    this.runLockDialog = function(e, ctx) {
+        return ui.runDialog(e, (d, resolve, reject) => {
+            let pin = d.pin('*pin', 'Code de déverrouillage');
+            if (pin.value != null && pin.value.length < 4)
+                pin.error('Ce code est trop court', true);
+
+            d.action('Verrouiller', {disabled: !d.isValid()}, e => goupile.lock(e, pin.value, ctx));
+        });
+    };
+
+    this.runUnlockDialog = function(e) {
+        return ui.runDialog(e, (d, resolve, reject) => {
+            let pin = d.pin('*pin', 'Code de déverrouillage');
+            d.action('Déverrouiller', {disabled: !d.isValid()}, e => goupile.unlock(e, pin.value));
+        });
+    };
+
     this.lock = async function(e, password, ctx = null) {
-        if (!self.isLoggedIn() || self.isLocked())
+        if (self.isLocked())
             throw new Error('Cannot lock unauthorized session');
         if (typeof ctx == undefined)
             throw new Error('Lock context must not be undefined');
@@ -445,75 +556,16 @@ const goupile = new function() {
         await util.waitFor(2000);
     };
 
-    // XXX: Exponential backoff
-    this.syncProfile = async function() {
-        let new_rnd = util.getCookie('session_rnd', null);
-
-        // Hack to force login screen to show up once when DemoUser setting is in use,
-        // this cookie value is set in logout() just before page refresh.
-        if (new_rnd === 'LOGIN') {
-            util.deleteCookie('session_rnd', '/');
-            session_rnd = null;
+    this.confirmDangerousAction = function(e) {
+        if (controller == null)
             return;
-        }
-
-        // Deal with lock, if any
-        if (new_rnd == null) {
-            let lock = await loadSessionValue('lock');
-
-            if (lock != null) {
-                util.deleteCookie('session_rnd', '/');
-
-                profile = {
-                    userid: lock.userid,
-                    username: lock.username,
-                    permissions: {
-                        'edit': true
-                    },
-                    lock: lock.ctx
-                };
-                session_rnd = null;
-
-                profile_keys = {};
-                for (let key in lock.keys)
-                    profile_keys[key] = base64ToBytes(lock.keys[key]);
-            }
-        }
-
-        if (new_rnd !== session_rnd) {
-            try {
-                let response = await net.fetch(`${ENV.base_url}api/session/profile`);
-
-                if (response.redirected) {
-                    window.location.href = response.url;
-                    await util.waitFor(100000);
-                }
-
-                profile = await response.json();
-                session_rnd = util.getCookie('session_rnd');
-
-                profile_keys = {};
-                for (let key in profile.keys)
-                    profile_keys[key] = base64ToBytes(profile.keys[key]);
-                delete profile.keys;
-            } catch (err) {
-                if (!ENV.cache_offline)
-                    throw err;
-
-                session_rnd = util.getCookie('session_rnd');
-            }
-        }
-    };
-
-    this.confirmDangerousAction = async function(e) {
         if (!controller.hasUnsavedData())
             return;
 
-        await ui.runConfirm(e, "Si vous continuez, vous perdrez les modifications en cours. Voulez-vous continuer ?",
-                               "Continuer", () => {});
+        return ui.runConfirm(e, "Si vous continuez, vous perdrez les modifications en cours. Voulez-vous continuer ?",
+                             "Continuer", () => {});
     };
 
-    this.isLoggedIn = function() { return !!profile.userid; };
     this.isLocked = function() { return profile.lock !== undefined; };
     this.hasPermission = function(perm) {
         return profile.permissions != null &&

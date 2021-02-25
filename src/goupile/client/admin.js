@@ -19,22 +19,19 @@ function AdminController() {
 
     let selected_instance;
 
-    this.start = async function() {
-        initUI();
-        self.go(null, window.location.href);
-    };
+    this.init = async function() {
+        ui.setMenu(renderMenu);
+        ui.createPanel('instances', 1, true, renderInstances);
+        ui.createPanel('users', 0, true, renderUsers);
+    }
 
     this.hasUnsavedData = function() {
         return false;
     };
 
-    function initUI() {
-        document.documentElement.className = 'admin';
-
-        ui.setMenu(renderMenu);
-        ui.createPanel('instances', 1, true, renderInstances);
-        ui.createPanel('users', 0, true, renderUsers);
-    }
+    this.runTasks = function(online) {
+        // Nothing to do
+    };
 
     function renderMenu() {
         return html`
@@ -145,10 +142,6 @@ function AdminController() {
     }
 
     this.go = async function(e = null, url = null, push_history = true) {
-        await goupile.syncProfile();
-        if (!goupile.isLoggedIn() || !profile.admin)
-            await goupile.runLoginScreen();
-
         await self.run(push_history);
     };
     this.go = util.serializeAsync(this.go);

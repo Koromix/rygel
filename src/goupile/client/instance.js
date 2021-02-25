@@ -47,24 +47,9 @@ function InstanceController() {
     let develop = false;
     let error_entries = {};
 
-    this.start = async function() {
+    this.init = async function() {
         initUI();
         await initApp();
-
-        self.go(null, window.location.href).catch(err => {
-            log.error(err);
-
-            // Now try home page... If that fails too, show login screen.
-            // This will solve some situations such as overly restrictive locks.
-            self.go(null, ENV.base_url).catch(async err => {
-                await goupile.runLoginScreen();
-                document.location.reload();
-            });
-        });
-    };
-
-    this.hasUnsavedData = function() {
-        return form_state != null && form_state.hasChanged();
     };
 
     async function initApp() {
@@ -110,12 +95,21 @@ function InstanceController() {
     }
 
     function initUI() {
-        document.documentElement.className = 'instance';
-
         ui.setMenu(renderMenu);
         ui.createPanel('editor', 0, false, renderEditor);
         ui.createPanel('data', 0, !goupile.isLocked(), renderData);
         ui.createPanel('page', 1, goupile.isLocked(), renderPage);
+    };
+
+    this.hasUnsavedData = function() {
+        return form_state != null && form_state.hasChanged();
+    };
+
+    this.runTasks = async function(online) {
+        if (online && ENV.sync_mode === 'mirror')
+            await syncRecords();
+        if (online && ENV.backup_key != null)
+            await backupRecords('server');
     };
 
     function renderMenu() {
@@ -136,7 +130,7 @@ function InstanceController() {
                         @click=${ui.wrapAction(e => togglePanel(e, 'page'))}>Formulaire</button>
             ` : ''}
             ${goupile.isLocked() ? html`<button class="icon" style="background-position-y: calc(-186px + 1.2em)"
-                                                @click=${ui.wrapAction(runUnlockDialog)}>Déverrouiller</button>` : ''}
+                                                @click=${ui.wrapAction(goupile.runUnlockDialog)}>Déverrouiller</button>` : ''}
 
             <div style="flex: 1; min-width: 15px;"></div>
             ${route.form.chain.map(form => renderFormDrop(form))}
@@ -161,22 +155,8 @@ function InstanceController() {
         if (!record.saved)
             throw new Error('Vous devez valider cet enregistrement avant de verrouiller');
 
-        return ui.runDialog(e, (d, resolve, reject) => {
-            let pin = d.pin('*pin', 'Code de déverrouillage');
-            if (pin.value != null && pin.value.length < 4)
-                pin.error('Ce code est trop court', true);
-
-            d.action('Verrouiller', {disabled: !d.isValid()},
-                     e => goupile.lock(e, pin.value, record.ulid));
-        });
-    }
-
-    function runUnlockDialog(e) {
-        return ui.runDialog(e, (d, resolve, reject) => {
-            let pin = d.pin('*pin', 'Code de déverrouillage');
-            d.action('Déverrouiller', {disabled: !d.isValid()}, e => goupile.unlock(e, pin.value));
-        });
-    }
+        return goupile.runLockDialog(e, record.ulid);
+    };
 
     function renderFormDrop(form) {
         let meta = form_record.map[form.key];
@@ -1310,16 +1290,6 @@ function InstanceController() {
     };
 
     this.go = async function(e, url = null, push_history = true) {
-        await goupile.syncProfile();
-        if (!goupile.isLoggedIn() || profile.permissions == null) {
-            await goupile.runLoginScreen();
-
-            if (net.isOnline() && ENV.sync_mode === 'mirror')
-                await syncRecords();
-            if (net.isOnline() && ENV.backup_key != null)
-                await backupRecords('server');
-        }
-
         // Fix up URL
         if (!url.endsWith('/'))
             url += '/';
