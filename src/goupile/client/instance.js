@@ -1957,7 +1957,7 @@ function InstanceController() {
             let json = JSON.stringify(enc);
 
             if (dest === 'server') {
-                let response = await fetch(`${ENV.base_url}api/files/backup`, {
+                let response = await net.fetch(`${ENV.base_url}api/files/backup`, {
                     method: 'POST',
                     body: json
                 });
