@@ -227,7 +227,7 @@ constexpr Size Kilobytes(Size len) { return len * 1000; }
 template <typename T, unsigned N>
 char (&ComputeArraySize(T const (&)[N]))[N];
 #define RG_LEN(Array) RG_SIZE(RG::ComputeArraySize(Array))
-#define RG_OFFSET_OF(Type, Member) ((Size)&(((Type *)nullptr)->Member))
+#define RG_OFFSET_OF(Type, Member) __builtin_offsetof(Type, Member)
 
 static inline constexpr uint16_t ReverseBytes(uint16_t u)
 {
