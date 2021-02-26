@@ -292,6 +292,9 @@ public:
         if (features & (int)CompileFeature::TSan) {
             Fmt(&buf, " -fsanitize=thread");
         }
+        if (features & (int)CompileFeature::UBSan) {
+            Fmt(&buf, " -fsanitize=undefined");
+        }
 
         if (env_flags) {
             AddEnvironmentFlags("LDFLAGS", &buf);
@@ -523,6 +526,9 @@ public:
         }
         if (features & (int)CompileFeature::TSan) {
             Fmt(&buf, " -fsanitize=thread");
+        }
+        if (features & (int)CompileFeature::UBSan) {
+            Fmt(&buf, " -fsanitize=undefined");
         }
 #ifdef _WIN32
         if (!(features & (int)CompileFeature::Unsafe)) {
