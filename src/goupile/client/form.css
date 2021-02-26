@@ -384,18 +384,14 @@ html:not(.small) .fm_widget.compact .fm_error {
 
 .fm_slider {
     position: relative;
-    display: inline-block;
+    display: flex;
     width: 24em;
-}
-.fm_slider > span {
-    display: block;
-    margin-bottom: 4px;
-    font-size: 0.9em;
-    text-align: center;
+    height: 3em;
+    align-items: start;
 }
 .fm_slider > div {
-    display: flex;
-    align-items: start;
+    position: relative;
+    flex: 1;
 }
 .fm_slider input {
     flex: 1;
@@ -456,25 +452,37 @@ html:not(.small) .fm_widget.compact .fm_error {
     margin-left: 10px;
     padding-top: 3px;
 }
-.fm_slider .ticks {
-    position: relative;
-    height: 1.8em;
-    padding-top: 6px;
-}
-.fm_slider .ticks > span {
+.fm_slider .legend {
     position: absolute;
-    text-align: center;
+    left: calc(0.8em + 1px);
+    right: calc(0.8em - 1px);
+    top: 0px;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+.fm_slider .tick {
+    position: absolute;
+    top: 11px;
+    height: 14px;
+    border-left: 2px solid #ccc;
+    z-index: -1;
+}
+.fm_slider .label {
+    position: absolute;
+    top: 2.1em;
     font-size: 0.85em;
+    text-align: center;
 }
 
-.fm_slider.missing > span { visibility: hidden; }
 .fm_slider.missing input::-webkit-slider-thumb { visibility: hidden; }
 .fm_slider.missing input::-moz-range-thumb { visibility: hidden; }
 .fm_slider.missing > div::after {
     content: ' ';
     position: absolute;
     display: block;
-    left: calc(50% - 0.8em);
+    left: calc(50% - 0.8em + 2px);
     top: 1px;
     width: 1.6em;
     height: 1.6em;
@@ -483,4 +491,5 @@ html:not(.small) .fm_widget.compact .fm_error {
     border-radius: 50%;
     color-adjust: exact !important;
     pointer-events: none;
+    z-index: 200;
 }

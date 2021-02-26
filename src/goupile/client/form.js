@@ -337,14 +337,16 @@ function FormBuilder(state, model, readonly = false) {
         let ticks = [];
         if (options.ticks != null && options.ticks !== false) {
             if (options.ticks === true) {
-                ticks = Array().fill('|');
+                ticks = Array.from(util.mapRange(options.min, options.max + 1, i => i));
             } else if (typeof options.ticks === 'object') {
                 for (let key in options.ticks) {
-                    let value = parseFloat(key);
-                    if (Number.isNaN(value))
-                        throw new Error('XXXX');
+                    let pos = parseFloat(key);
+                    if (Number.isNaN(pos))
+                        throw new Error('La position du tiret doit être une valeur numérique');
 
-                    let tick = [value, options.ticks[key]];
+                    let value = options.ticks[key];
+                    let tick = Array.isArray(value) ? [pos, ...value] : [pos, value];
+
                     ticks.push(tick);
                 }
             } else {
@@ -360,34 +362,47 @@ function FormBuilder(state, model, readonly = false) {
             }
         }
 
+        // Yeah, the generated HTML is not very pretty, it is the result of trial-and-error
+        // with seemingly random px and em offsets. If you want to do better, be my guest :)
+
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class=${'fm_slider' + (value == null ? ' missing' : '') + (options.readonly ? ' readonly' : '')}
                  style=${makeInputStyle(options)}>
+                ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                 <div>
-                    ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
-                    <div style="flex: 1;">
-                        <input id=${id} type="range" style=${`--progress: ${1 + fake_progress * 98}%`}
-                               min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
-                               .value=${value} data-value=${value}
-                               placeholder=${options.placeholder || ''}
-                               ?disabled=${options.disabled} title=${value != null ? value.toFixed(options.decimals) : ''}
-                               @click=${e => { e.target.value = fix_value; handleSliderChange(e, key); }}
-                               @dblclick=${e => handleSliderClick(e, key, value, options.min, options.max)}
-                               @input=${e => handleSliderChange(e, key)}/>
-                        ${ticks.length ? html`
-                            <div class="ticks" style=${'margin-left: calc(-' + (50 / (range + 1)) + '% + 0.8em); ' +
-                                                       'margin-right: calc(-' + (50 / (range + 1)) + '% + 0.8em); '}>
-                                ${ticks.map(tick => {
-                                    let left = 100 * (tick[0] - options.min) / (range + 1);
-                                    return html`<span style=${'left: ' + left + '%; width: calc(100% / ' + (range + 1) + ');'}>${tick[1]}</span>`;
-                                })}
-                            </div>
-                        ` : ''}
-                    </div>
-                    ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
+                    <input id=${id} type="range" style=${`--progress: ${1 + fake_progress * 98}%; z-index: 999;`}
+                           min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
+                           .value=${value} data-value=${value}
+                           placeholder=${options.placeholder || ''}
+                           ?disabled=${options.disabled} title=${value != null ? value.toFixed(options.decimals) : ''}
+                           @click=${e => { e.target.value = fix_value; handleSliderChange(e, key); }}
+                           @dblclick=${e => handleSliderClick(e, key, value, options.min, options.max)}
+                           @input=${e => handleSliderChange(e, key)}/>
+                    ${ticks.length ? html`
+                        <div class="legend">
+                            ${ticks.map(tick => {
+                                if (Array.isArray(tick) && tick.length >= 3 && !tick[2])
+                                    return;
+
+                                let pos = Array.isArray(tick) ? tick[0] : tick;
+                                let left = `calc(${100 * (pos - options.min) / range}% + 1px)`;
+
+                                return html`<span class="tick" style=${'left: ' + left + ';'}></span>`;
+                            })}
+                            ${ticks.map(tick => {
+                                let pos = Array.isArray(tick) ? tick[0] : tick;
+                                let left = `calc(${100 * (pos - options.min - 0.5) / range}%)`;
+                                let width = `calc(100% / ${range} + 1px)`;
+                                let label = Array.isArray(tick) ? tick[1] : tick;
+
+                                return html`<span class="label" style=${'left: ' + left + '; width: ' + width + ';'}>${label}</span>`;
+                            })}
+                        </div>
+                    ` : ''}
                 </div>
+                ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
             </div>
         `);
 
