@@ -72,14 +72,14 @@ public:
     ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::Strip |
                                                               (int)CompileFeature::Static |
                                                               (int)CompileFeature::ASan |
-                                                              (int)CompileFeature::USan |
+                                                              (int)CompileFeature::UBSan |
                                                               (int)CompileFeature::Unsafe) {}
 #elif defined( __linux__)
     ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::Strip |
                                                               (int)CompileFeature::Static |
                                                               (int)CompileFeature::ASan |
                                                               (int)CompileFeature::TSan |
-                                                              (int)CompileFeature::USan |
+                                                              (int)CompileFeature::UBSan |
                                                               (int)CompileFeature::Unsafe) {}
 #else
     ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::Strip |
@@ -186,7 +186,7 @@ public:
         if (features & (int)CompileFeature::TSan) {
             Fmt(&buf, " -fsanitize=thread");
         }
-        if (features & (int)CompileFeature::USan) {
+        if (features & (int)CompileFeature::UBSan) {
             Fmt(&buf, " -fsanitize=undefined");
         }
         if (!(features & (int)CompileFeature::Unsafe)) {
@@ -312,7 +312,7 @@ public:
                                                           (int)CompileFeature::Static |
                                                           (int)CompileFeature::ASan |
                                                           (int)CompileFeature::TSan |
-                                                          (int)CompileFeature::USan |
+                                                          (int)CompileFeature::UBSan |
                                                           (int)CompileFeature::Unsafe) {}
 #else
     GnuCompiler(const char *name) : Compiler(name, "gcc", (int)CompileFeature::Strip |
@@ -420,7 +420,7 @@ public:
         if (features & (int)CompileFeature::TSan) {
             Fmt(&buf, " -fsanitize=thread");
         }
-        if (features & (int)CompileFeature::USan) {
+        if (features & (int)CompileFeature::UBSan) {
             Fmt(&buf, " -fsanitize=undefined");
         }
         if (!(features & (int)CompileFeature::Unsafe)) {
