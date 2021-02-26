@@ -35,13 +35,15 @@ enum class CompileFeature {
     Static = 1 << 1,
     ASan = 1 << 2,
     TSan = 1 << 3,
-    Unsafe = 1 << 4
+    USan = 1 << 4,
+    Unsafe = 1 << 5
 };
 static const char *const CompileFeatureNames[] = {
     "Strip",
     "Static",
     "ASan",
     "TSan",
+    "USan",
     "Unsafe"
 };
 
