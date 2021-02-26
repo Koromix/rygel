@@ -254,7 +254,7 @@ public:
 #elif defined(__APPLE__)
         Fmt(&buf, " -ldl -pthread");
 #else
-        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now");
+        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now,-z,noexecstack");
     #if defined(__arm__) || defined(__thumb__)
         Fmt(&buf, " -latomic");
     #endif
@@ -473,7 +473,7 @@ public:
 #elif defined(__APPLE__)
         Fmt(&buf, " -ldl -pthread");
 #else
-        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now");
+        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now,-z,noexecstack");
         if (link_type == LinkType::Executable) {
             Fmt(&buf, " -pie");
         }
