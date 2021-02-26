@@ -190,7 +190,7 @@ public:
             Fmt(&buf, " -fsanitize=undefined");
         }
         if (!(features & (int)CompileFeature::Unsafe)) {
-            Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4 -fcf-protection=full");
+            Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4");
 // #ifndef _WIN32
 //             Fmt(&buf, " -fstack-clash-protection");
 // #endif
