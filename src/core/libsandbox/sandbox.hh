@@ -42,8 +42,6 @@ class sb_SandboxBuilder final {
         bool readonly;
     };
 
-    bool valid = true;
-
     bool unshare = false;
     HeapArray<BindMount> mounts;
     bool drop_caps = false;
