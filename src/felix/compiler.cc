@@ -295,6 +295,9 @@ public:
         if (features & (int)CompileFeature::UBSan) {
             Fmt(&buf, " -fsanitize=undefined");
         }
+        if (!(features & (int)CompileFeature::Unsafe) && compile_mode == CompileMode::LTO) {
+            Fmt(&buf, " -fsanitize=cfi");
+        }
 
         if (env_flags) {
             AddEnvironmentFlags("LDFLAGS", &buf);
