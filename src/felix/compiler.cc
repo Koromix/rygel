@@ -71,15 +71,18 @@ public:
 #if defined(_WIN32)
     ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::Strip |
                                                               (int)CompileFeature::Static |
-                                                              (int)CompileFeature::ASan) {}
+                                                              (int)CompileFeature::ASan |
+                                                              (int)CompileFeature::Unsafe) {}
 #elif defined( __linux__)
     ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::Strip |
                                                               (int)CompileFeature::Static |
                                                               (int)CompileFeature::ASan |
-                                                              (int)CompileFeature::TSan) {}
+                                                              (int)CompileFeature::TSan |
+                                                              (int)CompileFeature::Unsafe) {}
 #else
     ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::Strip |
-                                                              (int)CompileFeature::Static) {}
+                                                              (int)CompileFeature::Static |
+                                                              (int)CompileFeature::Unsafe) {}
 #endif
 
 #ifdef _WIN32
@@ -143,6 +146,7 @@ public:
             case CompileMode::Fast: { Fmt(&buf, " -O2 -DNDEBUG"); } break;
             case CompileMode::LTO: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
         }
+        Fmt(&buf, " -fvisibility=hidden");
         Fmt(&buf, warnings ? " -Wall" : " -Wno-everything");
 
         // Platform flags
@@ -160,8 +164,7 @@ public:
         Fmt(&buf, " -pthread -fPIC");
 #else
         Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
-                  " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4"
-                  " -fstack-clash-protection");
+                  " -pthread -fPIC");
         if (compile_mode == CompileMode::Fast || compile_mode == CompileMode::LTO) {
             Fmt(&buf, " -D_FORTIFY_SOURCE=2");
         }
@@ -178,6 +181,15 @@ public:
         }
         if (features & (int)CompileFeature::TSan) {
             Fmt(&buf, " -fsanitize=thread");
+        }
+        if (!(features & (int)CompileFeature::Unsafe)) {
+            Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4 -fcf-protection=full");
+// #ifndef _WIN32
+//             Fmt(&buf, " -fstack-clash-protection");
+// #endif
+            if (compile_mode == CompileMode::LTO) {
+                Fmt(&buf, " -fsanitize=cfi");
+            }
         }
 
         // Sources and definitions
@@ -236,7 +248,7 @@ public:
             case CompileMode::LTO: { Fmt(&buf, " -flto%1", link_type == LinkType::Executable ? " -static" : ""); } break;
 #else
             case CompileMode::Fast: {} break;
-            case CompileMode::LTO: { Fmt(&buf, " -flto"); } break;
+            case CompileMode::LTO: { Fmt(&buf, " -flto -Wl,-O1"); } break;
 #endif
         }
 
@@ -292,10 +304,12 @@ public:
     GnuCompiler(const char *name) : Compiler(name, "gcc", (int)CompileFeature::Strip |
                                                           (int)CompileFeature::Static |
                                                           (int)CompileFeature::ASan |
-                                                          (int)CompileFeature::TSan) {}
+                                                          (int)CompileFeature::TSan |
+                                                          (int)CompileFeature::Unsafe) {}
 #else
     GnuCompiler(const char *name) : Compiler(name, "gcc", (int)CompileFeature::Strip |
-                                                          (int)CompileFeature::Static) {}
+                                                          (int)CompileFeature::Static |
+                                                          (int)CompileFeature::Unsafe) {}
 #endif
 
 #ifdef _WIN32
@@ -368,6 +382,7 @@ public:
         } else {
             Fmt(&buf, " -w");
         }
+        Fmt(&buf, " -fvisibility=hidden");
 
         // Platform flags
 #if defined(_WIN32)
@@ -378,8 +393,7 @@ public:
         Fmt(&buf, " -pthread -fPIC");
 #else
         Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
-                  " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4 "
-                  " -fstack-clash-protection");
+                  " -pthread -fPIC");
         if (compile_mode == CompileMode::Fast || compile_mode == CompileMode::LTO) {
             Fmt(&buf, " -D_FORTIFY_SOURCE=2");
         }
@@ -397,6 +411,12 @@ public:
         }
         if (features & (int)CompileFeature::TSan) {
             Fmt(&buf, " -fsanitize=thread");
+        }
+        if (!(features & (int)CompileFeature::Unsafe)) {
+            Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4 -fcf-protection=full");
+#ifndef _WIN32
+            Fmt(&buf, " -fstack-clash-protection");
+#endif
         }
 
         // Sources and definitions
@@ -452,10 +472,10 @@ public:
             case CompileMode::DebugFast: {} break;
 #ifdef _WIN32
             case CompileMode::Fast: { Fmt(&buf, " -s%1", link_type == LinkType::Executable ? " -static" : ""); } break;
-            case CompileMode::LTO: { Fmt(&buf, " -flto -s%1", link_type == LinkType::Executable ? " -static" : ""); } break;
+            case CompileMode::LTO: { Fmt(&buf, " -flto -Wl,-O1 -s%1", link_type == LinkType::Executable ? " -static" : ""); } break;
 #else
             case CompileMode::Fast: { Fmt(&buf, " -s"); } break;
-            case CompileMode::LTO: { Fmt(&buf, " -flto -s"); } break;
+            case CompileMode::LTO: { Fmt(&buf, " -flto -Wl,-O1 -s"); } break;
 #endif
         }
 
@@ -493,6 +513,11 @@ public:
         if (features & (int)CompileFeature::TSan) {
             Fmt(&buf, " -fsanitize=thread");
         }
+#ifdef _WIN32
+        if (!(features & (int)CompileFeature::Unsafe)) {
+            Fmt(&buf, " -lssp");
+        }
+#endif
 
         if (env_flags) {
             AddEnvironmentFlags("LDFLAGS", &buf);
@@ -510,7 +535,8 @@ public:
 class MsCompiler final: public Compiler {
 public:
     MsCompiler(const char *name) : Compiler(name, "cl", (int)CompileFeature::Strip |
-                                                        (int)CompileFeature::Static) {}
+                                                        (int)CompileFeature::Static |
+                                                        (int)CompileFeature::Unsafe) {}
 
     const char *GetObjectExtension() const override { return ".obj"; }
     const char *GetExecutableExtension() const override { return ".exe"; }
@@ -582,9 +608,12 @@ public:
 
         // Features
         if (!(features & (int)CompileFeature::Strip)) {
-            Fmt(&buf, " /Z7");
+            Fmt(&buf, " /Z7 /Zo");
         }
         Fmt(&buf, (features & (int)CompileFeature::Static) ? " /MT" : " /MD");
+        if (!(features & (int)CompileFeature::Unsafe)) {
+            Fmt(&buf, " /GS /guard:cf /guard:ehcont");
+        }
 
         // Sources and definitions
         Fmt(&buf, " /DFELIX /c /utf-8 \"%1\"", src_filename);
@@ -648,6 +677,7 @@ public:
 
         // Features
         Fmt(&buf, (features & (int)CompileFeature::Strip) ? " /DEBUG:NONE" : " /DEBUG:FULL");
+        Fmt(&buf, " /DYNAMICBASE%1 /HIGHENTROPYVA%1", (features & (int)CompileFeature::Unsafe) ? ":NO" : "");
 
         if (env_flags) {
             AddEnvironmentFlags("LDFLAGS", &buf);
@@ -727,6 +757,7 @@ public:
             case CompileMode::LTO: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
         }
         Fmt(&buf, warnings ? " -Wall" : " -w");
+        Fmt(&buf, " -fvisibility=hidden");
 
         // Platform flags
         Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64");
