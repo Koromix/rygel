@@ -176,8 +176,10 @@ public:
         if (!(features & (int)CompileFeature::Strip)) {
             Fmt(&buf, " -g");
         }
+#ifdef _WIN32
         Fmt(&buf, (features & (int)CompileFeature::Static) ? " -Xclang --dependent-lib=libcmt"
                                                            : " -Xclang --dependent-lib=msvcrt");
+#endif
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
         }
