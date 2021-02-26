@@ -160,7 +160,8 @@ public:
         Fmt(&buf, " -pthread -fPIC");
 #else
         Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
-                  " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
+                  " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4"
+                  " -fstack-clash-protection");
         if (compile_mode == CompileMode::Fast || compile_mode == CompileMode::LTO) {
             Fmt(&buf, " -D_FORTIFY_SOURCE=2");
         }
@@ -377,7 +378,8 @@ public:
         Fmt(&buf, " -pthread -fPIC");
 #else
         Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
-                  " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4");
+                  " -pthread -fPIC -fstack-protector-strong --param ssp-buffer-size=4 "
+                  " -fstack-clash-protection");
         if (compile_mode == CompileMode::Fast || compile_mode == CompileMode::LTO) {
             Fmt(&buf, " -D_FORTIFY_SOURCE=2");
         }
