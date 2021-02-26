@@ -510,7 +510,7 @@ bool sb_SandboxBuilder::Apply()
                     // Only allow MAP_PRIVATE | MAP_ANONYMOUS, and enforce fd = -1 argument
                     ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 3,
                                            SCMP_A0(SCMP_CMP_EQ, 0), SCMP_A3(SCMP_CMP_EQ, 0x22),
-                                           SCMP_A4(SCMP_CMP_EQ, -1));
+                                           SCMP_A4(SCMP_CMP_EQ, (scmp_datum_t)-1));
                 } else {
                     int syscall = seccomp_syscall_resolve_name(item.name);
 
