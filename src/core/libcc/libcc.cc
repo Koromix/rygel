@@ -288,13 +288,13 @@ void BlockAllocatorBase::Resize(void **ptr, Size old_size, Size new_size, unsign
         } else {
             void *new_ptr = Allocate(new_size, flags & ~(int)Allocator::Flag::Zero);
             if (new_size > old_size) {
-                memcpy(new_ptr, *ptr, old_size);
+                memcpy_safe(new_ptr, *ptr, old_size);
 
                 if (flags & (int)Allocator::Flag::Zero) {
                     memset(ptr + old_size, 0, new_size - old_size);
                 }
             } else {
-                memcpy(new_ptr, *ptr, new_size);
+                memcpy_safe(new_ptr, *ptr, new_size);
             }
 
             *ptr = new_ptr;
@@ -618,7 +618,7 @@ bool CopyString(const char *str, Span<char> buf)
 Span<char> DuplicateString(Span<const char> str, Allocator *alloc)
 {
     char *new_str = (char *)Allocator::Allocate(alloc, str.len + 1);
-    memcpy(new_str, str.ptr, (size_t)str.len);
+    memcpy_safe(new_str, str.ptr, (size_t)str.len);
     new_str[str.len] = 0;
     return MakeSpan(new_str, str.len);
 }
@@ -677,7 +677,7 @@ static Span<char> FormatUnsignedToDecimal(uint64_t value, char out_buf[32])
             pair_idx = (int)((value % 100) * 2);
             value /= 100;
             offset -= 2;
-            memcpy(out_buf + offset, DigitPairs + pair_idx, 2);
+            memcpy_safe(out_buf + offset, DigitPairs + pair_idx, 2);
         } while (value);
         offset += (pair_idx < 20);
     }
@@ -771,14 +771,14 @@ static Span<char> PrettifyFloat(Span<char> buf, int K, int min_prec, int max_pre
     } else if (KK > 0) {
         // 1234e-2 -> 12.34
 
-        memmove(buf.ptr + KK + 1, buf.ptr + KK, (size_t)(buf.len - KK));
+        memmove_safe(buf.ptr + KK + 1, buf.ptr + KK, (size_t)(buf.len - KK));
         buf.ptr[KK] = '.';
         buf.len++;
     } else {
         // 1234e-6 -> 0.001234
 
         int offset = 2 - KK;
-        memmove(buf.ptr + offset, buf.ptr, (size_t)buf.len);
+        memmove_safe(buf.ptr + offset, buf.ptr, (size_t)buf.len);
         memset(buf.ptr, '0', (size_t)offset);
         buf.ptr[1] = '.';
         buf.len += offset;
@@ -795,7 +795,7 @@ static Span<char> ExponentiateFloat(Span<char> buf, int K, int min_prec, int max
     int exponent = (int)buf.len + K - 1;
 
     if (buf.len > 1) {
-        memmove(buf.ptr + 2, buf.ptr + 1, (size_t)(buf.len - 1));
+        memmove_safe(buf.ptr + 2, buf.ptr + 1, (size_t)(buf.len - 1));
         buf.ptr[1] = '.';
         buf.ptr[buf.len + 1] = 'e';
         buf.len += 2;
@@ -816,11 +816,11 @@ static Span<char> ExponentiateFloat(Span<char> buf, int K, int min_prec, int max
         exponent %= 100;
 
         int pair_idx = (int)(exponent * 2);
-        memcpy(buf.end(), DigitPairs + pair_idx, 2);
+        memcpy_safe(buf.end(), DigitPairs + pair_idx, 2);
         buf.len += 2;
     } else if (exponent >= 10) {
         int pair_idx = (int)(exponent * 2);
-        memcpy(buf.end(), DigitPairs + pair_idx, 2);
+        memcpy_safe(buf.end(), DigitPairs + pair_idx, 2);
         buf.len += 2;
     } else {
         buf.ptr[buf.len++] = (char)('0' + exponent);
@@ -1326,7 +1326,7 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Span<char> out_buf)
     DoFormat(fmt, args, FormatBufferWithVt100(), [&](Span<const char> frag) {
         Size copy_len = std::min(frag.len, available_len);
 
-        memcpy(out_buf.end() - available_len, frag.ptr, (size_t)copy_len);
+        memcpy_safe(out_buf.end() - available_len, frag.ptr, (size_t)copy_len);
         available_len -= copy_len;
     });
 
@@ -1343,7 +1343,7 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, HeapArray<char> *out
     out_buf->Grow(RG_FMT_STRING_BASE_CAPACITY);
     DoFormat(fmt, args, FormatBufferWithVt100(), [&](Span<const char> frag) {
         out_buf->Grow(frag.len + 1);
-        memcpy(out_buf->end(), frag.ptr, (size_t)frag.len);
+        memcpy_safe(out_buf->end(), frag.ptr, (size_t)frag.len);
         out_buf->len += frag.len;
     });
     out_buf->ptr[out_buf->len] = 0;
@@ -1369,7 +1369,7 @@ void PrintFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *st)
         if (frag.len >= RG_LEN(buf.data)) {
             st->Write(frag);
         } else {
-            memcpy(buf.data + buf.len, frag.ptr, (size_t)frag.len);
+            memcpy_safe(buf.data + buf.len, frag.ptr, (size_t)frag.len);
             buf.len += frag.len;
         }
     });
@@ -1397,7 +1397,7 @@ void PrintFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
         if (frag.len >= RG_LEN(buf.data)) {
             WriteStdComplete(frag, fp);
         } else {
-            memcpy(buf.data + buf.len, frag.ptr, (size_t)frag.len);
+            memcpy_safe(buf.data + buf.len, frag.ptr, (size_t)frag.len);
             buf.len += frag.len;
         }
     });
@@ -1783,7 +1783,7 @@ static bool SyncFileDirectory(const char *filename)
         LogError("Failed to sync directory '%1': path too long", directory);
         return false;
     }
-    memcpy(directory0, directory.ptr, directory.len);
+    memcpy_safe(directory0, directory.ptr, directory.len);
     directory0[directory.len] = 0;
 
     int dirfd = RG_POSIX_RESTART_EINTR(open(directory0, O_RDONLY | O_CLOEXEC), < 0);
@@ -2077,7 +2077,7 @@ bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_p
 
         for (Span<const char> ext: extensions) {
             if (RG_LIKELY(ext.len < buf.Available() - 1)) {
-                memcpy(buf.end(), ext.ptr, ext.len + 1);
+                memcpy_safe(buf.end(), ext.ptr, ext.len + 1);
 
                 if (TestFile(buf.data)) {
                     if (out_path) {
@@ -2249,7 +2249,7 @@ const char *GetApplicationDirectory()
         const char *executable_path = GetApplicationExecutable();
         Size dir_len = (Size)strlen(executable_path);
         while (dir_len && !IsPathSeparator(executable_path[--dir_len]));
-        memcpy(executable_dir, executable_path, (size_t)dir_len);
+        memcpy_safe(executable_dir, executable_path, (size_t)dir_len);
         executable_dir[dir_len] = 0;
     }
 
@@ -2685,7 +2685,7 @@ bool MakeDirectoryRec(Span<const char> directory)
         LogError("Path '%1' is too large", directory);
         return false;
     }
-    memcpy(buf, directory.ptr, directory.len);
+    memcpy_safe(buf, directory.ptr, directory.len);
     buf[directory.len] = 0;
 
     // Simple case: directory already exists or only last level was missing
@@ -4113,7 +4113,7 @@ Size StreamReader::Inflate(Size max_len, void *out_buf)
         }
 
         // Put back remaining data in the buffer
-        memcpy(ctx->in, header + header_offset, (size_t)(header_len - header_offset));
+        memcpy_safe(ctx->in, header + header_offset, (size_t)(header_len - header_offset));
         ctx->in_ptr = ctx->in;
         ctx->in_len = header_len - header_offset;
 
@@ -4125,14 +4125,14 @@ Size StreamReader::Inflate(Size max_len, void *out_buf)
         Size read_len = 0;
         for (;;) {
             if (max_len < ctx->out_len) {
-                memcpy(out_buf, ctx->out_ptr, (size_t)max_len);
+                memcpy_safe(out_buf, ctx->out_ptr, (size_t)max_len);
                 read_len += max_len;
                 ctx->out_ptr += max_len;
                 ctx->out_len -= max_len;
 
                 return read_len;
             } else {
-                memcpy(out_buf, ctx->out_ptr, (size_t)ctx->out_len);
+                memcpy_safe(out_buf, ctx->out_ptr, (size_t)ctx->out_len);
                 read_len += ctx->out_len;
                 out_buf = (uint8_t *)out_buf + ctx->out_len;
                 max_len -= ctx->out_len;
@@ -4179,7 +4179,7 @@ Size StreamReader::Inflate(Size max_len, void *out_buf)
                         RG_STATIC_ASSERT(RG_SIZE(footer) == 8);
 
                         if (ctx->in_len < RG_SIZE(footer)) {
-                            memcpy(footer, ctx->in_ptr, (size_t)ctx->in_len);
+                            memcpy_safe(footer, ctx->in_ptr, (size_t)ctx->in_len);
 
                             Size missing_len = RG_SIZE(footer) - ctx->in_len;
                             if (ReadRaw(missing_len, footer + ctx->in_len) < missing_len) {
@@ -4190,7 +4190,7 @@ Size StreamReader::Inflate(Size max_len, void *out_buf)
                                 }
                             }
                         } else {
-                            memcpy(footer, ctx->in_ptr, RG_SIZE(footer));
+                            memcpy_safe(footer, ctx->in_ptr, RG_SIZE(footer));
                         }
                         footer[0] = LittleEndian(footer[0]);
                         footer[1] = LittleEndian(footer[1]);
@@ -4234,7 +4234,7 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
             if (read_len > max_len) {
                 read_len = max_len;
             }
-            memcpy(out_buf, source.u.memory.buf.ptr + source.u.memory.pos, (size_t)read_len);
+            memcpy_safe(out_buf, source.u.memory.buf.ptr + source.u.memory.pos, (size_t)read_len);
             source.u.memory.pos += read_len;
             source.eof |= (source.u.memory.pos >= source.u.memory.buf.len);
         } break;
@@ -4297,7 +4297,7 @@ bool LineReader::Next(Span<char> *out_line)
         }
 
         buf.len = view.ptr - line.ptr;
-        memmove(buf.ptr, line.ptr, (size_t)buf.len);
+        memmove_safe(buf.ptr, line.ptr, (size_t)buf.len);
     }
 }
 
@@ -4508,7 +4508,7 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
             if (ctx->buf.len) {
                 Size copy_len = std::min(buf.len, ctx->buf.Available());
 
-                memcpy(ctx->buf.end(), buf.ptr, copy_len);
+                memcpy_safe(ctx->buf.end(), buf.ptr, copy_len);
                 ctx->buf.len += copy_len;
                 buf.ptr += copy_len;
                 buf.len -= copy_len;
@@ -4523,7 +4523,7 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
                     if (!Deflate(buf))
                         return false;
                 } else {
-                    memcpy(ctx->buf.data, buf.ptr, buf.len);
+                    memcpy_safe(ctx->buf.data, buf.ptr, buf.len);
                     ctx->buf.len = buf.len;
                 }
             }
@@ -4652,7 +4652,7 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
         case DestinationType::Memory: {
             // dest.u.memory->Append(buf) would work but it's probably slower
             dest.u.memory->Grow(buf.len);
-            memcpy(dest.u.memory->ptr + dest.u.memory->len, buf.ptr, (size_t)buf.len);
+            memcpy_safe(dest.u.memory->ptr + dest.u.memory->len, buf.ptr, (size_t)buf.len);
             dest.u.memory->len += buf.len;
 
             return true;
@@ -4886,7 +4886,7 @@ bool ReloadAssets()
 
         asset_copy.name = DuplicateString(asset.name, &assets_alloc).ptr;
         uint8_t *data_ptr = (uint8_t *)Allocator::Allocate(&assets_alloc, asset.data.len);
-        memcpy(data_ptr, asset.data.ptr, (size_t)asset.data.len);
+        memcpy_safe(data_ptr, asset.data.ptr, (size_t)asset.data.len);
         asset_copy.data = {data_ptr, asset.data.len};
         asset_copy.compression_type = asset.compression_type;
         asset_copy.source_map = DuplicateString(asset.source_map, &assets_alloc).ptr;
@@ -5056,7 +5056,7 @@ const char *OptionParser::Next()
             if (len > RG_SIZE(buf) - 1) {
                 len = RG_SIZE(buf) - 1;
             }
-            memcpy(buf, opt, (size_t)len);
+            memcpy_safe(buf, opt, (size_t)len);
             buf[len] = 0;
             current_option = buf;
             current_value = needle + 1;
@@ -5478,8 +5478,8 @@ bool ConsolePrompter::Read()
                 }
 
                 str.Grow(frag.len);
-                memmove(str.ptr + str_offset + frag.len, str.ptr + str_offset, (size_t)(str.len - str_offset));
-                memcpy(str.ptr + str_offset, frag.data, (size_t)frag.len);
+                memmove_safe(str.ptr + str_offset + frag.len, str.ptr + str_offset, (size_t)(str.len - str_offset));
+                memcpy_safe(str.ptr + str_offset, frag.data, (size_t)frag.len);
                 str.len += frag.len;
                 str_offset += frag.len;
 
@@ -5587,7 +5587,7 @@ void ConsolePrompter::Delete(Size start, Size end)
     RG_ASSERT(start >= 0);
     RG_ASSERT(end >= start && end <= str.len);
 
-    memmove(str.ptr + start, str.ptr + end, str.len - end);
+    memmove_safe(str.ptr + start, str.ptr + end, str.len - end);
     str.len -= end - start;
 
     if (str_offset > end) {

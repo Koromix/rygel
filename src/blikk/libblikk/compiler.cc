@@ -369,7 +369,7 @@ void bk_Parser::AddFunction(const char *prototype, std::function<bk_NativeFuncti
         func->name = InternString(ptr);
 
         ptr[offset] = '(';
-        memcpy(buf.ptr + offset, "func ", 5);
+        memcpy_safe(buf.ptr + offset, "func ", 5);
         signature = InternString(buf.ptr + offset);
 
         ptr += offset;

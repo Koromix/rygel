@@ -402,6 +402,22 @@ static inline constexpr int64_t ReverseBytes(int64_t i)
     #error No implementation of CountLeadingZeros(), CountTrailingZeros() and PopCount() for this compiler / toolchain
 #endif
 
+// Calling memcpy and memmove with a NULL source pointer is undefined behavior
+static inline void *memcpy_safe(void *dest, const void *src, size_t len)
+{
+    if (len) {
+        memcpy(dest, src, len);
+    }
+    return dest;
+}
+static inline void *memmove_safe(void *dest, const void *src, size_t len)
+{
+    if (len) {
+        memmove(dest, src, len);
+    }
+    return dest;
+}
+
 template <typename T, typename = typename std::enable_if<std::is_enum<T>::value, T>>
 typename std::underlying_type<T>::type MaskEnum(T value)
 {
@@ -1138,7 +1154,7 @@ public:
     HeapArray &operator=(HeapArray &&other)
     {
         Clear();
-        memmove(this, &other, RG_SIZE(other));
+        memmove_safe(this, &other, RG_SIZE(other));
         memset(&other, 0, RG_SIZE(other));
         return *this;
     }
@@ -1152,7 +1168,7 @@ public:
                 ptr[i] = other.ptr[i];
             }
         } else {
-            memcpy(ptr, other.ptr, (size_t)(other.len * RG_SIZE(*ptr)));
+            memcpy_safe(ptr, other.ptr, (size_t)(other.len * RG_SIZE(*ptr)));
         }
         len = other.len;
         return *this;
@@ -1439,7 +1455,7 @@ public:
     BucketArray &operator=(BucketArray &&other)
     {
         ClearBucketsAndValues();
-        memmove(this, &other, RG_SIZE(other));
+        memmove_safe(this, &other, RG_SIZE(other));
         memset(&other, 0, RG_SIZE(other));
         return *this;
     }
@@ -1566,8 +1582,8 @@ public:
             for (Size i = 0; i < end_bucket_idx; i++) {
                 DeleteBucket(buckets[i]);
             }
-            memmove(&buckets[0], &buckets[end_bucket_idx],
-                    (size_t)((buckets.len - end_bucket_idx) * RG_SIZE(Bucket *)));
+            memmove_safe(&buckets[0], &buckets[end_bucket_idx],
+                         (size_t)((buckets.len - end_bucket_idx) * RG_SIZE(Bucket *)));
             buckets.RemoveLast(end_bucket_idx);
         }
 
@@ -1873,7 +1889,7 @@ public:
     HashTable &operator=(HashTable &&other)
     {
         Clear();
-        memmove(this, &other, RG_SIZE(other));
+        memmove_safe(this, &other, RG_SIZE(other));
         memset(&other, 0, RG_SIZE(other));
         return *this;
     }
@@ -1993,7 +2009,7 @@ public:
                 Size real_idx = KeyToIndex(Handler::GetKey(data[idx]));
 
                 if (TestNewSlot(real_idx, empty_idx)) {
-                    memmove(&data[empty_idx], &data[idx], RG_SIZE(*data));
+                    memmove_safe(&data[empty_idx], &data[idx], RG_SIZE(*data));
                     empty_idx = idx;
                 }
 
@@ -2107,7 +2123,7 @@ private:
                         new_idx = (new_idx + 1) & (capacity - 1);
                     }
                     MarkUsed(new_idx);
-                    memmove(&data[new_idx], &old_data[i], RG_SIZE(*data));
+                    memmove_safe(&data[new_idx], &old_data[i], RG_SIZE(*data));
                 }
             }
         } else {
