@@ -1,15 +1,10 @@
-- name: Install packages
-  package:
-    update_cache: yes
-    pkg:
-      - nginx
-      - git
-      - gcc
-      - g++
-      - python3-jinja2
-      - runc
-    state: latest
-  become: yes
+- name: Install Debian packages
+  include: debian.yml
+  when: 'ansible_os_family == "Debian"'
+
+- name: Install distribution packages
+  include: generic.yml
+  when: 'ansible_os_family != "Debian"'
 
 - name: Create Goupile user
   user:

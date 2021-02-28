@@ -1,0 +1,11 @@
+- name: Install packages
+  package:
+    update_cache: yes
+    pkg:
+      - nginx
+      - git
+      - clang
+      - python3-jinja2
+      - runc
+    state: latest
+  become: yes
