@@ -78,16 +78,12 @@ struct Command {
 class Compiler {
     RG_DELETE_COPY(Compiler)
 
-    mutable bool test_init = false;
-    mutable bool test;
-
 public:
     const char *name;
     const char *binary;
 
-    Compiler(const char *name, const char *binary) : name(name), binary(binary) {}
+    virtual ~Compiler() {}
 
-    bool Test() const;
     virtual bool CheckFeatures(CompileMode compile_mode, uint32_t features) const = 0;
 
     virtual const char *GetObjectExtension() const = 0;
@@ -114,9 +110,26 @@ public:
                                  Allocator *alloc, Command *out_cmd) const = 0;
 
 protected:
+    Compiler(const char *name, const char *binary) : name(name), binary(binary) {}
+
     void LogUnsupportedFeatures(uint32_t unsupported) const;
 };
 
-extern const Span<const Compiler *const> Compilers;
+class CompilerInfo {
+    std::unique_ptr<const Compiler> (*create)(const char *name, const char *binary);
+
+public:
+    const char *name = nullptr;
+    const char *binary;
+
+    CompilerInfo() {}
+    CompilerInfo(const char *name, const char *binary,
+                 std::unique_ptr<const Compiler> (*create)(const char *, const char *))
+        : create(create), name(name), binary(binary) {}
+
+    std::unique_ptr<const Compiler> Create() const { return create(name, binary); };
+};
+
+extern const Span<const CompilerInfo> Compilers;
 
 }

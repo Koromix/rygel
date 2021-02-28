@@ -109,6 +109,16 @@ static const char *BuildGitVersionString(Allocator *alloc)
     return output.TrimAndLeak().ptr;
 }
 
+static const CompilerInfo *FindDefaultCompiler()
+{
+    for (const CompilerInfo &info: Compilers) {
+        if (FindExecutableInPath(info.binary))
+            return &info;
+    }
+
+    return nullptr;
+}
+
 int RunBuild(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -116,6 +126,7 @@ int RunBuild(Span<const char *> arguments)
     // Options
     HeapArray<const char *> selectors;
     const char *config_filename = nullptr;
+    CompilerInfo compiler_info = {};
     BuildSettings build = {};
     int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_WORKERS + 1);
     bool quiet = false;
@@ -124,10 +135,9 @@ int RunBuild(Span<const char *> arguments)
     Span<const char *> run_arguments = {};
     bool run_here = false;
 
-    // Find default compiler
-    build.compiler = FindIf(Compilers, [](const Compiler *compiler) { return compiler->Test(); });
-
     const auto print_usage = [=](FILE *fp) {
+        const CompilerInfo *default_compiler = FindDefaultCompiler();
+
         PrintLn(fp,
 R"(Usage: %!..+%1 build [options] [target...]
        %1 build [options] --run target [arguments...]%!0
@@ -159,16 +169,17 @@ Options:
                                  %!D..(all remaining arguments are passed as-is)%!0
         %!..+--run_here <target>%!0      Same thing, but run from current directory
 
-Supported compilers:)", FelixTarget, build.compiler ? build.compiler->name : "?",
+Supported compilers:)", FelixTarget, default_compiler ? default_compiler->name : "?",
                         CompileModeNames[(int)build.compile_mode], jobs);
 
-        for (const Compiler *compiler: Compilers) {
-            PrintLn(fp, "    %!..+%1%!0 %2%!D..%3%!0",
-                    FmtArg(compiler->name).Pad(28), compiler->binary,
-                    compiler->Test() ? "" : " [not available in PATH]");
+        for (const CompilerInfo &info: Compilers) {
+            PrintLn(fp, "    %!..+%1%!0 %2", FmtArg(info.name).Pad(28), info.binary);
         }
 
         PrintLn(fp, R"(
+Use %!..+--compiler=<compiler>:<binary>%!0 to specify a custom compiler binary, for example
+you can use: %!..+felix --compiler=Clang:clang-11%!0.
+
 Supported compilation modes: %!..+%1%!0
 Supported compiler features: %!..+%2%!0)", FmtSpan(CompileModeNames),
                                            FmtSpan(CompileFeatureNames));
@@ -201,12 +212,20 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             } else if (opt.Test("-O", "--output", OptionType::Value)) {
                 build.output_directory = opt.current_value;
             } else if (opt.Test("-c", "--compiler", OptionType::Value)) {
-                build.compiler =
-                    FindIf(Compilers, [&](const Compiler *compiler) { return TestStr(compiler->name, opt.current_value); });
+                Span<const char> binary;
+                Span<const char> name = SplitStr(opt.current_value, ':', &binary);
 
-                if (!build.compiler) {
-                    LogError("Unknown compiler '%1'", opt.current_value);
+                const CompilerInfo *info =
+                    FindIfPtr(Compilers, [&](const CompilerInfo &info) { return TestStr(info.name, name); });
+
+                if (!info) {
+                    LogError("Unknown compiler '%1'", name);
                     return 1;
+                }
+
+                compiler_info = *info;
+                if (binary.ptr > name.end()) {
+                    compiler_info.binary = binary.ptr;
                 }
             } else if (opt.Test("-m", "--mode", OptionType::Value)) {
                 if (!OptionToEnum(CompileModeNames, opt.current_value, &build.compile_mode)) {
@@ -277,16 +296,25 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         });
     }
 
-    // Check compiler
-    if (!build.compiler) {
-        LogError("Could not find any supported compiler in PATH");
-        return 1;
-    } else if (!build.compiler->Test()) {
-        LogError("Cannot find %1 compiler in PATH [%2]", build.compiler->name, build.compiler->binary);
-        return 1;
+    // Find supported compiler (if none was specified)
+    if (!compiler_info.name) {
+        const CompilerInfo *default_compiler = FindDefaultCompiler();
+
+        if (default_compiler) {
+            compiler_info = *default_compiler;
+        } else {
+            LogError("Could not find any supported compiler in PATH");
+            return 1;
+        }
     }
-    if (!build.compiler->CheckFeatures(build.compile_mode, build.features))
+
+    // Initialize and check compiler
+    std::unique_ptr<const Compiler> compiler = compiler_info.Create();
+    if (!compiler)
         return 1;
+    if (!compiler->CheckFeatures(build.compile_mode, build.features))
+        return 1;
+    build.compiler = compiler.get();
 
     // Root directory
     const char *start_directory = DuplicateString(GetWorkingDirectory(), &temp_alloc).ptr;

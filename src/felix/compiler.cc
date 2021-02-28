@@ -16,6 +16,21 @@
 
 namespace RG {
 
+static bool SplitPrefixSuffix(const char *binary, const char *needle,
+                              Span<const char> *out_prefix, Span<const char> *out_suffix)
+{
+    const char *ptr = strstr(binary, needle);
+    if (!ptr) {
+        LogError("Compiler binary path must contain '%1'", needle);
+        return false;
+    }
+
+    *out_prefix = MakeSpan(binary, ptr - binary);
+    *out_suffix = ptr + strlen(needle);
+
+    return true;
+}
+
 static void AddEnvironmentFlags(Span<const char *const> names, HeapArray<char> *out_buf)
 {
     for (const char *name: names) {
@@ -56,16 +71,6 @@ static void MakePackCommand(Span<const char *const> pack_filenames, CompileMode 
     out_cmd->cmd_line = buf.TrimAndLeak(1);
 }
 
-bool Compiler::Test() const
-{
-    if (!test_init) {
-        test = FindExecutableInPath(binary);
-        test_init = true;
-    }
-
-    return test;
-}
-
 void Compiler::LogUnsupportedFeatures(uint32_t unsupported) const
 {
     LocalArray<const char *, RG_LEN(CompileFeatureNames)> list;
@@ -79,21 +84,48 @@ void Compiler::LogUnsupportedFeatures(uint32_t unsupported) const
 }
 
 class ClangCompiler final: public Compiler {
-    mutable int major_version = -1;
+    const char *cc;
+    const char *cxx;
+
+    int major_version;
+
+    BlockAllocator str_alloc;
 
 public:
-    ClangCompiler(const char *name) : Compiler(name, "clang") {}
+    ClangCompiler(const char *name, const char *binary) : Compiler(name, binary) {}
 
-    bool CheckFeatures(CompileMode compile_mode, uint32_t features) const override
+    static std::unique_ptr<const Compiler> Create(const char *name, const char *binary)
     {
-        if (major_version < 0) {
+        std::unique_ptr<ClangCompiler> compiler = std::make_unique<ClangCompiler>(name, binary);
+
+        if (!FindExecutableInPath(binary)) {
+            LogError("Cannot find '%1' in PATH", binary);
+            return nullptr;
+        }
+
+        // Find executables
+        {
+            Span<const char> prefix;
+            Span<const char> suffix;
+            if (!SplitPrefixSuffix(binary, "clang", &prefix, &suffix))
+                return nullptr;
+
+            compiler->cc = DuplicateString(binary, &compiler->str_alloc).ptr;
+            compiler->cxx = Fmt(&compiler->str_alloc, "%1clang++%2", prefix, suffix).ptr;
+        }
+
+        // Determine Clang version
+        {
+            char cmd[1024];
+            Fmt(cmd, "%1 --version", compiler->cc);
+
             HeapArray<char> output;
             int exit_code;
-            if (!ExecuteCommandLine("clang --version", {}, Kilobytes(1), &output, &exit_code))
-                return false;
+            if (!ExecuteCommandLine(cmd, {}, Kilobytes(1), &output, &exit_code))
+                return nullptr;
             if (exit_code) {
-                LogError("Command 'clang --version' failed (exit code: %1)", exit_code);
-                return false;
+                LogError("Command '%1 failed (exit code: %2)", cmd, exit_code);
+                return nullptr;
             }
 
             Span<const char> remain = output;
@@ -101,13 +133,13 @@ public:
                 Span<const char> token = SplitStr(remain, ' ', &remain);
 
                 if (token == "version") {
-                    if (!ParseInt(remain, &major_version, 0, &remain)) {
-                        LogError("Unexpected version format returned by 'clang --version'");
-                        return false;
+                    if (!ParseInt(remain, &compiler->major_version, 0, &remain)) {
+                        LogError("Unexpected version format returned by '%1'", cmd);
+                        return nullptr;
                     }
                     if (!remain.len || remain[0] != '.') {
-                        LogError("Unexpected version format returned by 'clang --version'");
-                        return false;
+                        LogError("Unexpected version format returned by '%1'", cmd);
+                        return nullptr;
                     }
 
                     break;
@@ -115,6 +147,11 @@ public:
             }
         }
 
+        return compiler;
+    }
+
+    bool CheckFeatures(CompileMode compile_mode, uint32_t features) const override
+    {
         uint32_t supported = 0;
 
         supported |= (int)CompileFeature::NoDebug;
@@ -186,8 +223,8 @@ public:
 
         // Compiler
         switch (src_type) {
-            case SourceType::C: { Fmt(&buf, "clang -std=gnu11"); } break;
-            case SourceType::CXX: { Fmt(&buf, "clang++ -std=gnu++2a"); } break;
+            case SourceType::C: { Fmt(&buf, "%1 -std=gnu11", cc); } break;
+            case SourceType::CXX: { Fmt(&buf, "%1 -std=gnu++2a", cxx); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -302,8 +339,8 @@ public:
 
         // Linker
         switch (link_type) {
-            case LinkType::Executable: { Fmt(&buf, "clang++"); } break;
-            case LinkType::SharedLibrary: { Fmt(&buf, "clang++ -shared"); } break;
+            case LinkType::Executable: { Fmt(&buf, "%1", cxx); } break;
+            case LinkType::SharedLibrary: { Fmt(&buf, "%1 -shared", cxx); } break;
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
@@ -375,8 +412,36 @@ public:
 };
 
 class GnuCompiler final: public Compiler {
+    const char *cc;
+    const char *cxx;
+
+    BlockAllocator str_alloc;
+
 public:
-    GnuCompiler(const char *name) : Compiler(name, "gcc") {}
+    GnuCompiler(const char *name, const char *binary) : Compiler(name, binary) {}
+
+    static std::unique_ptr<const Compiler> Create(const char *name, const char *binary)
+    {
+        std::unique_ptr<GnuCompiler> compiler = std::make_unique<GnuCompiler>(name, binary);
+
+        if (!FindExecutableInPath(binary)) {
+            LogError("Cannot find '%1' in PATH", binary);
+            return nullptr;
+        }
+
+        // Find executables
+        {
+            Span<const char> prefix;
+            Span<const char> suffix;
+            if (!SplitPrefixSuffix(binary, "gcc", &prefix, &suffix))
+                return nullptr;
+
+            compiler->cc = DuplicateString(binary, &compiler->str_alloc).ptr;
+            compiler->cxx = Fmt(&compiler->str_alloc, "%1g++%2", prefix, suffix).ptr;
+        }
+
+        return compiler;
+    }
 
     bool CheckFeatures(CompileMode compile_mode, uint32_t features) const override
     {
@@ -445,8 +510,8 @@ public:
 
         // Compiler
         switch (src_type) {
-            case SourceType::C: { Fmt(&buf, "gcc -std=gnu11"); } break;
-            case SourceType::CXX: { Fmt(&buf, "g++ -std=gnu++2a"); } break;
+            case SourceType::C: { Fmt(&buf, "%1 -std=gnu11", cc); } break;
+            case SourceType::CXX: { Fmt(&buf, "%1 -std=gnu++2a", cxx); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -556,8 +621,8 @@ public:
 
         // Linker
         switch (link_type) {
-            case LinkType::Executable: { Fmt(&buf, "g++"); } break;
-            case LinkType::SharedLibrary: { Fmt(&buf, "g++ -shared"); } break;
+            case LinkType::Executable: { Fmt(&buf, "%1", cxx); } break;
+            case LinkType::SharedLibrary: { Fmt(&buf, "%1 -shared", cxx); } break;
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
@@ -632,8 +697,36 @@ public:
 
 #ifdef _WIN32
 class MsCompiler final: public Compiler {
+    const char *cl;
+    const char *link;
+
+    BlockAllocator str_alloc;
+
 public:
-    MsCompiler(const char *name) : Compiler(name, "cl") {}
+    MsCompiler(const char *name, const char *binary) : Compiler(name, binary) {}
+
+    static std::unique_ptr<const Compiler> Create(const char *name, const char *binary)
+    {
+        std::unique_ptr<MsCompiler> compiler = std::make_unique<MsCompiler>(name, binary);
+
+        if (!FindExecutableInPath(binary)) {
+            LogError("Cannot find '%1' in PATH", binary);
+            return nullptr;
+        }
+
+        // Find executables
+        {
+            Span<const char> prefix;
+            Span<const char> suffix;
+            if (!SplitPrefixSuffix(binary, "cl", &prefix, &suffix))
+                return nullptr;
+
+            compiler->cl = DuplicateString(binary, &compiler->str_alloc).ptr;
+            compiler->link = Fmt(&compiler->str_alloc, "%1link%2", prefix, suffix).ptr;
+        }
+
+        return compiler;
+    }
 
     bool CheckFeatures(CompileMode compile_mode, uint32_t features) const override
     {
@@ -696,8 +789,8 @@ public:
 
         // Compiler
         switch (src_type) {
-            case SourceType::C: { Fmt(&buf, "cl /nologo"); } break;
-            case SourceType::CXX: { Fmt(&buf, "cl /nologo /std:c++latest"); } break;
+            case SourceType::C: { Fmt(&buf, "%1 /nologo", cl); } break;
+            case SourceType::CXX: { Fmt(&buf, "%1 /nologo /std:c++latest", cl); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " \"/Fo%1\"", dest_filename);
@@ -771,8 +864,8 @@ public:
 
         // Linker
         switch (link_type) {
-            case LinkType::Executable: { Fmt(&buf, "link /nologo"); } break;
-            case LinkType::SharedLibrary: { Fmt(&buf, "link /nologo /DLL"); } break;
+            case LinkType::Executable: { Fmt(&buf, "%1 /nologo", link); } break;
+            case LinkType::SharedLibrary: { Fmt(&buf, "%1 /nologo /DLL", link); } break;
         }
         Fmt(&buf, " \"/OUT:%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
@@ -812,8 +905,31 @@ public:
 #endif
 
 class EmsdkCompiler final: public Compiler {
+    const char *cc;
+    const char *cxx;
+
+    BlockAllocator str_alloc;
+
 public:
-    EmsdkCompiler(const char *name) : Compiler(name, "emcc") {}
+    EmsdkCompiler(const char *name, const char *binary) : Compiler(name, binary) {}
+
+    static std::unique_ptr<const Compiler> Create(const char *name, const char *binary)
+    {
+        std::unique_ptr<EmsdkCompiler> compiler = std::make_unique<EmsdkCompiler>(name, binary);
+
+        // Find executables
+        {
+            Span<const char> prefix;
+            Span<const char> suffix;
+            if (!SplitPrefixSuffix(binary, "emcc", &prefix, &suffix))
+                return nullptr;
+
+            compiler->cc = DuplicateString(binary, &compiler->str_alloc).ptr;
+            compiler->cxx = Fmt(&compiler->str_alloc, "%1em++%2", prefix, suffix).ptr;
+        }
+
+        return compiler;
+    }
 
     bool CheckFeatures(CompileMode compile_mode, uint32_t features) const override
     {
@@ -867,11 +983,11 @@ public:
         // Compiler
         switch (src_type) {
 #ifdef _WIN32
-            case SourceType::C: { Fmt(&buf, "emcc.bat -std=gnu11"); } break;
-            case SourceType::CXX: { Fmt(&buf, "em++.bat -std=gnu++2a"); } break;
+            case SourceType::C: { Fmt(&buf, "%1.bat -std=gnu11", cc); } break;
+            case SourceType::CXX: { Fmt(&buf, "%1.bat -std=gnu++2a", cxx); } break;
 #else
-            case SourceType::C: { Fmt(&buf, "emcc -std=gnu11"); } break;
-            case SourceType::CXX: { Fmt(&buf, "em++ -std=gnu++2a"); } break;
+            case SourceType::C: { Fmt(&buf, "%1 -std=gnu11", cc); } break;
+            case SourceType::CXX: { Fmt(&buf, "%1 -std=gnu++2a", cxx); } break;
 #endif
         }
         if (dest_filename) {
@@ -945,11 +1061,11 @@ public:
         // Linker
         switch (link_type) {
 #ifdef _WIN32
-            case LinkType::Executable: { Fmt(&buf, "emcc.bat"); } break;
-            case LinkType::SharedLibrary: { Fmt(&buf, "emcc.bat -shared"); } break;
+            case LinkType::Executable: { Fmt(&buf, "%1", cc); } break;
+            case LinkType::SharedLibrary: { Fmt(&buf, "%1 -shared", cc); } break;
 #else
-            case LinkType::Executable: { Fmt(&buf, "emcc"); } break;
-            case LinkType::SharedLibrary: { Fmt(&buf, "emcc -shared"); } break;
+            case LinkType::Executable: { Fmt(&buf, "%1", cc); } break;
+            case LinkType::SharedLibrary: { Fmt(&buf, "%1 -shared", cc); } break;
 #endif
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -987,29 +1103,22 @@ public:
     }
 };
 
-static ClangCompiler ClangCompiler("Clang");
-static GnuCompiler GnuCompiler("GCC");
-#ifdef _WIN32
-static MsCompiler MsCompiler("MSVC");
-#endif
-static EmsdkCompiler EmsdkCompiler("EmSDK");
-
-static const Compiler *const CompilerTable[] = {
+static const CompilerInfo CompilerTable[] = {
 #if defined(_WIN32)
-    &MsCompiler,
-    &ClangCompiler,
-    &GnuCompiler,
-    &EmsdkCompiler
+    {"MSVC", "cl", &MsCompiler::Create},
+    {"Clang", "clang", &ClangCompiler::Create},
+    {"GCC", "gcc", &GnuCompiler::Create},
+    {"EmSDK", "emcc", &EmsdkCompiler::Create}
 #elif defined(__APPLE__)
-    &ClangCompiler,
-    &GnuCompiler,
-    &EmsdkCompiler
+    {"Clang", "clang", &ClangCompiler::Create},
+    {"GCC", "gcc", &GnuCompiler::Create},
+    {"EmSDK", "emcc", &EmsdkCompiler::Create}
 #else
-    &GnuCompiler,
-    &ClangCompiler,
-    &EmsdkCompiler
+    {"GCC", "gcc", &GnuCompiler::Create},
+    {"Clang", "clang", &ClangCompiler::Create},
+    {"EmSDK", "emcc", &EmsdkCompiler::Create}
 #endif
 };
-const Span<const Compiler *const> Compilers = CompilerTable;
+const Span<const CompilerInfo> Compilers = CompilerTable;
 
 }
