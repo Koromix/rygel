@@ -68,24 +68,15 @@ bool Compiler::Test() const
 
 class ClangCompiler final: public Compiler {
 public:
-#if defined(_WIN32)
     ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::Strip |
                                                               (int)CompileFeature::Static |
                                                               (int)CompileFeature::ASan |
-                                                              (int)CompileFeature::UBSan |
-                                                              (int)CompileFeature::Unsafe) {}
-#elif defined( __linux__)
-    ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::Strip |
-                                                              (int)CompileFeature::Static |
-                                                              (int)CompileFeature::ASan |
+#ifndef _WIN32
                                                               (int)CompileFeature::TSan |
-                                                              (int)CompileFeature::UBSan |
-                                                              (int)CompileFeature::Unsafe) {}
-#else
-    ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::Strip |
-                                                              (int)CompileFeature::Static |
-                                                              (int)CompileFeature::Unsafe) {}
 #endif
+                                                              (int)CompileFeature::UBSan |
+                                                              (int)CompileFeature::ProtectStack |
+                                                              (int)CompileFeature::CFI) {}
 
 #ifdef _WIN32
     const char *GetObjectExtension() const override { return ".obj"; }
@@ -189,13 +180,17 @@ public:
         if (features & (int)CompileFeature::UBSan) {
             Fmt(&buf, " -fsanitize=undefined");
         }
-        if (!(features & (int)CompileFeature::Unsafe)) {
+        if (features & (int)CompileFeature::ProtectStack) {
             Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4");
 // #ifndef _WIN32
 //             Fmt(&buf, " -fstack-clash-protection");
 // #endif
+        }
+        if (features & (int)CompileFeature::CFI) {
             if (compile_mode == CompileMode::LTO) {
                 Fmt(&buf, " -fsanitize=cfi");
+            } else {
+                LogError("Clang CFI requires LTO compilation; CFI disabled");
             }
         }
 
@@ -295,7 +290,7 @@ public:
         if (features & (int)CompileFeature::UBSan) {
             Fmt(&buf, " -fsanitize=undefined");
         }
-        if (!(features & (int)CompileFeature::Unsafe) && compile_mode == CompileMode::LTO) {
+        if ((features & (int)CompileFeature::CFI) && compile_mode == CompileMode::LTO) {
             Fmt(&buf, " -fsanitize=cfi");
         }
 
@@ -313,18 +308,14 @@ public:
 
 class GnuCompiler final: public Compiler {
 public:
-#if defined( __linux__)
     GnuCompiler(const char *name) : Compiler(name, "gcc", (int)CompileFeature::Strip |
                                                           (int)CompileFeature::Static |
+#ifndef _WIN32
                                                           (int)CompileFeature::ASan |
                                                           (int)CompileFeature::TSan |
                                                           (int)CompileFeature::UBSan |
-                                                          (int)CompileFeature::Unsafe) {}
-#else
-    GnuCompiler(const char *name) : Compiler(name, "gcc", (int)CompileFeature::Strip |
-                                                          (int)CompileFeature::Static |
-                                                          (int)CompileFeature::Unsafe) {}
 #endif
+                                                          (int)CompileFeature::ProtectStack) {}
 
 #ifdef _WIN32
     const char *GetObjectExtension() const override { return ".o"; }
@@ -429,8 +420,8 @@ public:
         if (features & (int)CompileFeature::UBSan) {
             Fmt(&buf, " -fsanitize=undefined");
         }
-        if (!(features & (int)CompileFeature::Unsafe)) {
-            Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4 -fcf-protection=full");
+        if (features & (int)CompileFeature::ProtectStack) {
+            Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4");
 #ifndef _WIN32
             Fmt(&buf, " -fstack-clash-protection");
 #endif
@@ -534,7 +525,7 @@ public:
             Fmt(&buf, " -fsanitize=undefined");
         }
 #ifdef _WIN32
-        if (!(features & (int)CompileFeature::Unsafe)) {
+        if (features & (int)CompileFeature::ProtectStack) {
             Fmt(&buf, " -lssp");
         }
 #endif
@@ -556,7 +547,8 @@ class MsCompiler final: public Compiler {
 public:
     MsCompiler(const char *name) : Compiler(name, "cl", (int)CompileFeature::Strip |
                                                         (int)CompileFeature::Static |
-                                                        (int)CompileFeature::Unsafe) {}
+                                                        (int)CompileFeature::ProtectStack |
+                                                        (int)CompileFeature::CFI) {}
 
     const char *GetObjectExtension() const override { return ".obj"; }
     const char *GetExecutableExtension() const override { return ".exe"; }
@@ -631,8 +623,11 @@ public:
             Fmt(&buf, " /Z7 /Zo");
         }
         Fmt(&buf, (features & (int)CompileFeature::Static) ? " /MT" : " /MD");
-        if (!(features & (int)CompileFeature::Unsafe)) {
-            Fmt(&buf, " /GS /guard:cf /guard:ehcont");
+        if (features & (int)CompileFeature::ProtectStack) {
+            Fmt(&buf, " /GS");
+        }
+        if (features & (int)CompileFeature::CFI) {
+            Fmt(&buf, " /guard:cf /guard:ehcont");
         }
 
         // Sources and definitions
@@ -686,6 +681,7 @@ public:
             case CompileMode::Fast: {} break;
             case CompileMode::LTO: { Fmt(&buf, " /LTCG"); } break;
         }
+        Fmt(&buf, " /DYNAMICBASE /HIGHENTROPYVA");
 
         // Objects and libraries
         for (const char *obj_filename: obj_filenames) {
@@ -697,7 +693,9 @@ public:
 
         // Features
         Fmt(&buf, (features & (int)CompileFeature::Strip) ? " /DEBUG:NONE" : " /DEBUG:FULL");
-        Fmt(&buf, " /DYNAMICBASE%1 /HIGHENTROPYVA%1", (features & (int)CompileFeature::Unsafe) ? ":NO" : "");
+        if (features & (int)CompileFeature::CFI) {
+            Fmt(&buf, " /guard:cf /guard:ehcont");
+        }
 
         if (env_flags) {
             AddEnvironmentFlags("LDFLAGS", &buf);

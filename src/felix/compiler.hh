@@ -36,7 +36,8 @@ enum class CompileFeature {
     ASan = 1 << 2,
     TSan = 1 << 3,
     UBSan = 1 << 4,
-    Unsafe = 1 << 5
+    ProtectStack = 1 << 5,
+    CFI = 1 << 6
 };
 static const char *const CompileFeatureNames[] = {
     "Strip",
@@ -44,7 +45,8 @@ static const char *const CompileFeatureNames[] = {
     "ASan",
     "TSan",
     "UBSan",
-    "Unsafe"
+    "ProtectStack",
+    "CFI"
 };
 
 enum class SourceType {
