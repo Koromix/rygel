@@ -79,11 +79,42 @@ void Compiler::LogUnsupportedFeatures(uint32_t unsupported) const
 }
 
 class ClangCompiler final: public Compiler {
+    mutable int major_version = -1;
+
 public:
     ClangCompiler(const char *name) : Compiler(name, "clang") {}
 
     bool CheckFeatures(CompileMode compile_mode, uint32_t features) const override
     {
+        if (major_version < 0) {
+            HeapArray<char> output;
+            int exit_code;
+            if (!ExecuteCommandLine("clang --version", {}, Kilobytes(1), &output, &exit_code))
+                return false;
+            if (exit_code) {
+                LogError("Command 'clang --version' failed (exit code: %1)", exit_code);
+                return false;
+            }
+
+            Span<const char> remain = output;
+            while (remain.len) {
+                Span<const char> token = SplitStr(remain, ' ', &remain);
+
+                if (token == "version") {
+                    if (!ParseInt(remain, &major_version, 0, &remain)) {
+                        LogError("Unexpected version format returned by 'clang --version'");
+                        return false;
+                    }
+                    if (!remain.len || remain[0] != '.') {
+                        LogError("Unexpected version format returned by 'clang --version'");
+                        return false;
+                    }
+
+                    break;
+                }
+            }
+        }
+
         uint32_t supported = 0;
 
         supported |= (int)CompileFeature::NoDebug;
@@ -148,6 +179,7 @@ public:
                            Span<const char *const> include_directories, uint32_t features, bool env_flags,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
+        RG_ASSERT(major_version >= 0);
         RG_ASSERT(alloc);
 
         HeapArray<char> buf(alloc);
@@ -218,9 +250,11 @@ public:
         }
         if (features & (int)CompileFeature::ProtectStack) {
             Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4");
-// #ifndef _WIN32
-//             Fmt(&buf, " -fstack-clash-protection");
-// #endif
+#ifdef __linux__
+            if (major_version >= 11) {
+                Fmt(&buf, " -fstack-clash-protection");
+            }
+#endif
         }
         if (features & (int)CompileFeature::CFI) {
             RG_ASSERT(compile_mode == CompileMode::LTO);
