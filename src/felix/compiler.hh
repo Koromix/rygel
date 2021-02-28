@@ -31,7 +31,7 @@ static const char *const CompileModeNames[] = {
 };
 
 enum class CompileFeature {
-    Strip = 1 << 0,
+    NoDebug = 1 << 0,
     Static = 1 << 1,
     ASan = 1 << 2,
     TSan = 1 << 3,
@@ -40,7 +40,7 @@ enum class CompileFeature {
     CFI = 1 << 6
 };
 static const char *const CompileFeatureNames[] = {
-    "Strip",
+    "NoDebug",
     "Static",
     "ASan",
     "TSan",

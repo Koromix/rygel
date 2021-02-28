@@ -86,7 +86,7 @@ public:
     {
         uint32_t supported = 0;
 
-        supported |= (int)CompileFeature::Strip;
+        supported |= (int)CompileFeature::NoDebug;
         supported |= (int)CompileFeature::Static;
         supported |= (int)CompileFeature::ASan;
 #ifndef _WIN32
@@ -196,7 +196,7 @@ public:
 #endif
 
         // Features
-        if (!(features & (int)CompileFeature::Strip)) {
+        if (!(features & (int)CompileFeature::NoDebug)) {
             Fmt(&buf, " -g");
         }
 #ifdef _WIN32
@@ -304,7 +304,7 @@ public:
 #endif
 
         // Features
-        if (!(features & (int)CompileFeature::Strip)) {
+        if (!(features & (int)CompileFeature::NoDebug)) {
             Fmt(&buf, " -g");
         }
         if (features & (int)CompileFeature::Static) {
@@ -344,7 +344,7 @@ public:
     {
         uint32_t supported = 0;
 
-        supported |= (int)CompileFeature::Strip;
+        supported |= (int)CompileFeature::NoDebug;
         supported |= (int)CompileFeature::Static;
 #ifndef _WIN32
         supported |= (int)CompileFeature::ASan;
@@ -453,7 +453,7 @@ public:
 #endif
 
         // Features
-        if (!(features & (int)CompileFeature::Strip)) {
+        if (!(features & (int)CompileFeature::NoDebug)) {
             Fmt(&buf, " -g");
         }
         if (features & (int)CompileFeature::ASan) {
@@ -556,7 +556,7 @@ public:
 #endif
 
         // Features
-        Fmt(&buf, (features & (int)CompileFeature::Strip) ? " -s" : " -g");
+        Fmt(&buf, (features & (int)CompileFeature::NoDebug) ? " -s" : " -g");
         if (features & (int)CompileFeature::Static) {
             Fmt(&buf, " -static");
         }
@@ -596,7 +596,7 @@ public:
     {
         uint32_t supported = 0;
 
-        supported |= (int)CompileFeature::Strip;
+        supported |= (int)CompileFeature::NoDebug;
         supported |= (int)CompileFeature::Static;
         supported |= (int)CompileFeature::ProtectStack;
         supported |= (int)CompileFeature::CFI;
@@ -679,7 +679,7 @@ public:
                   " /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_DEPRECATE");
 
         // Features
-        if (!(features & (int)CompileFeature::Strip)) {
+        if (!(features & (int)CompileFeature::NoDebug)) {
             Fmt(&buf, " /Z7 /Zo");
         }
         Fmt(&buf, (features & (int)CompileFeature::Static) ? " /MT" : " /MD");
@@ -752,7 +752,7 @@ public:
         }
 
         // Features
-        Fmt(&buf, (features & (int)CompileFeature::Strip) ? " /DEBUG:NONE" : " /DEBUG:FULL");
+        Fmt(&buf, (features & (int)CompileFeature::NoDebug) ? " /DEBUG:NONE" : " /DEBUG:FULL");
         if (features & (int)CompileFeature::CFI) {
             Fmt(&buf, " /guard:cf /guard:ehcont");
         }
@@ -776,7 +776,7 @@ public:
     {
         uint32_t supported = 0;
 
-        supported |= (int)CompileFeature::Strip;
+        supported |= (int)CompileFeature::NoDebug;
         supported |= (int)CompileFeature::Static;
 
         uint32_t unsupported = features & ~supported;
@@ -856,7 +856,7 @@ public:
         Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64");
 
         // Features
-        if (!(features & (int)CompileFeature::Strip)) {
+        if (!(features & (int)CompileFeature::NoDebug)) {
             Fmt(&buf, " -g");
         }
 
@@ -930,7 +930,7 @@ public:
         Fmt(&buf, " -lnodefs.js");
 
         // Features
-        Fmt(&buf, (features & (int)CompileFeature::Strip) ? " -s" : " -g");
+        Fmt(&buf, (features & (int)CompileFeature::NoDebug) ? " -s" : " -g");
 
         if (env_flags) {
             AddEnvironmentFlags("LDFLAGS", &buf);
