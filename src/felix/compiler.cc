@@ -102,6 +102,10 @@ public:
             return false;
         }
 
+        if ((features & (int)CompileFeature::ASan) && (features & (int)CompileFeature::TSan)) {
+            LogError("Cannot use ASan and TSan at the same time");
+            return false;
+        }
         if (compile_mode != CompileMode::LTO && (features & (int)CompileFeature::CFI)) {
             LogError("Clang CFI feature requires LTO compilation");
             return false;
@@ -356,6 +360,11 @@ public:
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
             LogUnsupportedFeatures(unsupported);
+            return false;
+        }
+
+        if ((features & (int)CompileFeature::ASan) && (features & (int)CompileFeature::TSan)) {
+            LogError("Cannot use ASan and TSan at the same time");
             return false;
         }
 
