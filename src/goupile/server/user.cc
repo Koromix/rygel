@@ -20,7 +20,7 @@
 
 namespace RG {
 
-static http_SessionManager sessions;
+static http_SessionManager<Session> sessions;
 
 const Token *Session::GetToken(const InstanceHolder *instance) const
 {
@@ -117,7 +117,7 @@ static RetainPtr<Session> CreateUserSession(int64_t userid, const char *username
 
 RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<Session> session = sessions.Find<Session>(request, io);
+    RetainPtr<Session> session = sessions.Find(request, io);
 
     if (gp_domain.config.demo_user && !session) {
         static RetainPtr<Session> demo_session = [&]() {

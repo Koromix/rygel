@@ -762,7 +762,7 @@ public:
         RG_ASSERT(!p->delete_func || (void *)delete_func == (void *)p->delete_func);
 
         p->Ref();
-        p->delete_func = (void (*)(void *))delete_func;
+        p->delete_func = (void *)delete_func;
     }
     RetainPtr(T *p, bool ref = true)
         : p(p)
@@ -778,8 +778,9 @@ public:
 
     ~RetainPtr()
     {
-        if (p) {
-            p->Unref();
+        if (p && !p->Unref()) {
+            void (*delete_func)(T *) = (void (*)(T *))p->delete_func;
+            delete_func(p);
         }
     }
 
@@ -792,8 +793,9 @@ public:
     }
     RetainPtr &operator=(const RetainPtr &other)
     {
-        if (p) {
-            p->Unref();
+        if (p && !p->Unref()) {
+            void (*delete_func)(T *) = (void (*)(T *))p->delete_func;
+            delete_func(p);
         }
 
         p = other.p;
@@ -823,19 +825,16 @@ public:
 };
 
 class RetainObject {
-    mutable void (*delete_func)(void *) = nullptr;
+    mutable void *delete_func = nullptr;
     mutable std::atomic_int refcount {0};
 
 public:
     void Ref() const { refcount++; }
-    void Unref() const
+    bool Unref() const
     {
         int new_count = --refcount;
         RG_ASSERT(new_count >= 0);
-
-        if (!new_count) {
-            delete_func((void *)this);
-        }
+        return new_count;
     }
 
     template<class T> friend class RetainPtr;

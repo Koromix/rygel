@@ -20,7 +20,7 @@
 
 namespace RG {
 
-static http_SessionManager sessions;
+static http_SessionManager<const User> sessions;
 
 class UserSetBuilder {
     RG_DELETE_COPY(UserSetBuilder)
@@ -318,7 +318,7 @@ bool InitUsers(const char *profile_directory)
 
 const User *CheckSessionUser(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const User> udata = sessions.Find<const User>(request, io);
+    RetainPtr<const User> udata = sessions.Find(request, io);
     return udata ? udata.GetRaw() : nullptr;
 }
 
