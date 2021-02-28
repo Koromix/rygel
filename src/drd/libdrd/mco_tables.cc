@@ -481,8 +481,8 @@ static bool ParseExclusionTable(const uint8_t *file_data, const mco_TableInfo &t
         mco_ExclusionInfo *excl = out_exclusions->AppendDefault();
         memcpy_safe(excl->raw, file_data + table.sections[4].raw_offset +
                                            i * table.sections[4].value_len, (size_t)table.sections[4].value_len);
-        memset(excl->raw + table.sections[4].value_len, 0,
-               (size_t)(RG_SIZE(excl->raw) - table.sections[4].value_len));
+        memset_safe(excl->raw + table.sections[4].value_len, 0,
+                    (size_t)(RG_SIZE(excl->raw) - table.sections[4].value_len));
     }
 
     out_exclusions_guard.Disable();

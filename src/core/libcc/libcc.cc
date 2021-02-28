@@ -105,7 +105,7 @@ protected:
             abort();
         }
         if (flags & (int)Allocator::Flag::Zero) {
-            memset(ptr, 0, (size_t)size);
+            memset_safe(ptr, 0, (size_t)size);
         }
         return ptr;
     }
@@ -123,7 +123,7 @@ protected:
                 abort();
             }
             if ((flags & (int)Allocator::Flag::Zero) && new_size > old_size) {
-                memset((uint8_t *)new_ptr + old_size, 0, (size_t)(new_size - old_size));
+                memset_safe((uint8_t *)new_ptr + old_size, 0, (size_t)(new_size - old_size));
             }
             *ptr = new_ptr;
         }
@@ -250,7 +250,7 @@ void *BlockAllocatorBase::Allocate(Size size, unsigned int flags)
         current_bucket->used += aligned_size;
 
         if (flags & (int)Allocator::Flag::Zero) {
-            memset(ptr, 0, size);
+            memset_safe(ptr, 0, size);
         }
 
         last_alloc = ptr;
@@ -280,7 +280,7 @@ void BlockAllocatorBase::Resize(void **ptr, Size old_size, Size new_size, unsign
             current_bucket->used += aligned_delta;
 
             if ((flags & (int)Allocator::Flag::Zero) && new_size > old_size) {
-                memset(ptr + old_size, 0, new_size - old_size);
+                memset_safe(ptr + old_size, 0, new_size - old_size);
             }
         } else if (AllocateSeparately(aligned_old_size)) {
             LinkedAllocator *alloc = GetAllocator();
@@ -291,7 +291,7 @@ void BlockAllocatorBase::Resize(void **ptr, Size old_size, Size new_size, unsign
                 memcpy_safe(new_ptr, *ptr, old_size);
 
                 if (flags & (int)Allocator::Flag::Zero) {
-                    memset(ptr + old_size, 0, new_size - old_size);
+                    memset_safe(ptr + old_size, 0, new_size - old_size);
                 }
             } else {
                 memcpy_safe(new_ptr, *ptr, new_size);
@@ -720,7 +720,7 @@ static Size FakeFloatPrecision(Span<char> buf, int K, int min_prec, int max_prec
 
     if (-K < min_prec) {
         int delta = min_prec + K;
-        memset(buf.end(), '0', delta);
+        memset_safe(buf.end(), '0', delta);
 
         *out_K -= delta;
         return buf.len + delta;
@@ -747,7 +747,7 @@ static Size FakeFloatPrecision(Span<char> buf, int K, int min_prec, int max_prec
             return truncate;
         } else {
             buf[0] = '0' + (-K == buf.len + 1 && buf[0] >= '5');
-            memset(buf.ptr + 1, '0', min_prec - 1);
+            memset_safe(buf.ptr + 1, '0', min_prec - 1);
             *out_K = -min_prec;
             return min_prec;
         }
@@ -766,7 +766,7 @@ static Span<char> PrettifyFloat(Span<char> buf, int K, int min_prec, int max_pre
     if (K >= 0) {
         // 1234e7 -> 12340000000
 
-        memset(buf.end(), '0', (size_t)K);
+        memset_safe(buf.end(), '0', (size_t)K);
         buf.len += K;
     } else if (KK > 0) {
         // 1234e-2 -> 12.34
@@ -779,7 +779,7 @@ static Span<char> PrettifyFloat(Span<char> buf, int K, int min_prec, int max_pre
 
         int offset = 2 - KK;
         memmove_safe(buf.ptr + offset, buf.ptr, (size_t)buf.len);
-        memset(buf.ptr, '0', (size_t)offset);
+        memset_safe(buf.ptr, '0', (size_t)offset);
         buf.ptr[1] = '.';
         buf.len += offset;
     }
@@ -843,7 +843,7 @@ Span<const char> FormatFloatingPoint(T value, int min_prec, int max_prec, char o
 
         if (min_prec) {
             buf.ptr[1] = '.';
-            memset(buf.ptr + 2, '0', min_prec);
+            memset_safe(buf.ptr + 2, '0', min_prec);
             buf.len = 2 + min_prec;
         } else {
             buf.len = 1;

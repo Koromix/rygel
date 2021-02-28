@@ -402,7 +402,8 @@ static inline constexpr int64_t ReverseBytes(int64_t i)
     #error No implementation of CountLeadingZeros(), CountTrailingZeros() and PopCount() for this compiler / toolchain
 #endif
 
-// Calling memcpy and memmove with a NULL source pointer is undefined behavior
+// Calling memcpy (and friends) with a NULL source pointer is undefined behavior
+// even if length is 0. This is dumb, work around this.
 static inline void *memcpy_safe(void *dest, const void *src, size_t len)
 {
     if (len) {
@@ -414,6 +415,13 @@ static inline void *memmove_safe(void *dest, const void *src, size_t len)
 {
     if (len) {
         memmove(dest, src, len);
+    }
+    return dest;
+}
+static inline void *memset_safe(void *dest, int c, size_t len)
+{
+    if (len) {
+        memset(dest, c, len);
     }
     return dest;
 }
@@ -1155,7 +1163,7 @@ public:
     {
         Clear();
         memmove_safe(this, &other, RG_SIZE(other));
-        memset(&other, 0, RG_SIZE(other));
+        memset_safe(&other, 0, RG_SIZE(other));
         return *this;
     }
     HeapArray(const HeapArray &other) { *this = other; }
@@ -1273,7 +1281,7 @@ public:
                 len++;
             }
         } else {
-            memset(first, 0, count * RG_SIZE(T));
+            memset_safe(first, 0, count * RG_SIZE(T));
             len += count;
         }
         return first;
@@ -1456,7 +1464,7 @@ public:
     {
         ClearBucketsAndValues();
         memmove_safe(this, &other, RG_SIZE(other));
-        memset(&other, 0, RG_SIZE(other));
+        memset_safe(&other, 0, RG_SIZE(other));
         return *this;
     }
 
@@ -1687,7 +1695,7 @@ public:
 
     void Clear()
     {
-        memset(data, 0, RG_SIZE(data));
+        memset_safe(data, 0, RG_SIZE(data));
     }
 
     Iterator<Bitset> begin() { return Iterator<Bitset>(this, 0); }
@@ -1890,7 +1898,7 @@ public:
     {
         Clear();
         memmove_safe(this, &other, RG_SIZE(other));
-        memset(&other, 0, RG_SIZE(other));
+        memset_safe(&other, 0, RG_SIZE(other));
         return *this;
     }
     HashTable(const HashTable &other) { *this = other; }
@@ -1927,7 +1935,8 @@ public:
 
         count = 0;
         if (used) {
-            memset(used, 0, (size_t)(capacity + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t));
+            size_t len = (size_t)(capacity + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t);
+            memset_safe(used, 0, len);
         }
     }
 

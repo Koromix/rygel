@@ -443,7 +443,7 @@ bool sb_SandboxBuilder::Apply()
 
         cap_user_header hdr = {_LINUX_CAPABILITY_VERSION_3, 0};
         cap_user_data data[2];
-        memset(data, 0, RG_SIZE(data));
+        memset_safe(data, 0, RG_SIZE(data));
 
         if (syscall(__NR_capset, &hdr, data) < 0) {
             LogError("Failed to drop capabilities: %1", strerror(errno));
