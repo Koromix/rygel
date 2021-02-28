@@ -140,11 +140,11 @@ bool Builder::AddTarget(const TargetInfo &target)
 
             Command cmd = {};
             if (module) {
-                build.compiler->MakeObjectCommand(src_filename, SourceType::C, CompileMode::Debug,
+                build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
                                                   false, nullptr, {"EXPORT"}, {}, features, build.env,
                                                   obj_filename, &str_alloc, &cmd);
             } else {
-                build.compiler->MakeObjectCommand(src_filename, SourceType::C, CompileMode::Debug,
+                build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
                                                   false, nullptr, {}, {}, features, build.env,
                                                   obj_filename,  &str_alloc, &cmd);
             }
