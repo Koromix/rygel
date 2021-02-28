@@ -66,17 +66,49 @@ bool Compiler::Test() const
     return test;
 }
 
+void Compiler::LogUnsupportedFeatures(uint32_t unsupported) const
+{
+    LocalArray<const char *, RG_LEN(CompileFeatureNames)> list;
+    for (int i = 0; i < RG_LEN(CompileFeatureNames); i++) {
+        if (unsupported & (1u << i)) {
+            list.Append(CompileFeatureNames[i]);
+        }
+    }
+
+    LogError("Some features are not supported by %1: %2", name, FmtSpan((Span<const char *>)list));
+}
+
 class ClangCompiler final: public Compiler {
 public:
-    ClangCompiler(const char *name) : Compiler(name, "clang", (int)CompileFeature::Strip |
-                                                              (int)CompileFeature::Static |
-                                                              (int)CompileFeature::ASan |
+    ClangCompiler(const char *name) : Compiler(name, "clang") {}
+
+    bool CheckFeatures(CompileMode compile_mode, uint32_t features) const override
+    {
+        uint32_t supported = 0;
+
+        supported |= (int)CompileFeature::Strip;
+        supported |= (int)CompileFeature::Static;
+        supported |= (int)CompileFeature::ASan;
 #ifndef _WIN32
-                                                              (int)CompileFeature::TSan |
+        supported |= (int)CompileFeature::TSan;
 #endif
-                                                              (int)CompileFeature::UBSan |
-                                                              (int)CompileFeature::ProtectStack |
-                                                              (int)CompileFeature::CFI) {}
+        supported |= (int)CompileFeature::UBSan;
+        supported |= (int)CompileFeature::ProtectStack;
+        supported |= (int)CompileFeature::CFI; // LTO only
+
+        uint32_t unsupported = features & ~supported;
+        if (unsupported) {
+            LogUnsupportedFeatures(unsupported);
+            return false;
+        }
+
+        if (compile_mode != CompileMode::LTO && (features & (int)CompileFeature::CFI)) {
+            LogError("Clang CFI feature requires LTO compilation");
+            return false;
+        }
+
+        return true;
+    }
 
 #ifdef _WIN32
     const char *GetObjectExtension() const override { return ".obj"; }
@@ -187,11 +219,8 @@ public:
 // #endif
         }
         if (features & (int)CompileFeature::CFI) {
-            if (compile_mode == CompileMode::LTO) {
-                Fmt(&buf, " -fsanitize=cfi");
-            } else {
-                LogError("Clang CFI requires LTO compilation; CFI disabled");
-            }
+            RG_ASSERT(compile_mode == CompileMode::LTO);
+            Fmt(&buf, " -fsanitize=cfi");
         }
 
         // Sources and definitions
@@ -290,7 +319,8 @@ public:
         if (features & (int)CompileFeature::UBSan) {
             Fmt(&buf, " -fsanitize=undefined");
         }
-        if ((features & (int)CompileFeature::CFI) && compile_mode == CompileMode::LTO) {
+        if (features & (int)CompileFeature::CFI) {
+            RG_ASSERT(compile_mode == CompileMode::LTO);
             Fmt(&buf, " -fsanitize=cfi");
         }
 
@@ -308,14 +338,29 @@ public:
 
 class GnuCompiler final: public Compiler {
 public:
-    GnuCompiler(const char *name) : Compiler(name, "gcc", (int)CompileFeature::Strip |
-                                                          (int)CompileFeature::Static |
+    GnuCompiler(const char *name) : Compiler(name, "gcc") {}
+
+    bool CheckFeatures(CompileMode compile_mode, uint32_t features) const override
+    {
+        uint32_t supported = 0;
+
+        supported |= (int)CompileFeature::Strip;
+        supported |= (int)CompileFeature::Static;
 #ifndef _WIN32
-                                                          (int)CompileFeature::ASan |
-                                                          (int)CompileFeature::TSan |
-                                                          (int)CompileFeature::UBSan |
+        supported |= (int)CompileFeature::ASan;
+        supported |= (int)CompileFeature::TSan;
+        supported |= (int)CompileFeature::UBSan;
 #endif
-                                                          (int)CompileFeature::ProtectStack) {}
+        supported |= (int)CompileFeature::ProtectStack;
+
+        uint32_t unsupported = features & ~supported;
+        if (unsupported) {
+            LogUnsupportedFeatures(unsupported);
+            return false;
+        }
+
+        return true;
+    }
 
 #ifdef _WIN32
     const char *GetObjectExtension() const override { return ".o"; }
@@ -545,10 +590,25 @@ public:
 #ifdef _WIN32
 class MsCompiler final: public Compiler {
 public:
-    MsCompiler(const char *name) : Compiler(name, "cl", (int)CompileFeature::Strip |
-                                                        (int)CompileFeature::Static |
-                                                        (int)CompileFeature::ProtectStack |
-                                                        (int)CompileFeature::CFI) {}
+    MsCompiler(const char *name) : Compiler(name, "cl") {}
+
+    bool CheckFeatures(CompileMode compile_mode, uint32_t features) const override
+    {
+        uint32_t supported = 0;
+
+        supported |= (int)CompileFeature::Strip;
+        supported |= (int)CompileFeature::Static;
+        supported |= (int)CompileFeature::ProtectStack;
+        supported |= (int)CompileFeature::CFI;
+
+        uint32_t unsupported = features & ~supported;
+        if (unsupported) {
+            LogUnsupportedFeatures(unsupported);
+            return false;
+        }
+
+        return true;
+    }
 
     const char *GetObjectExtension() const override { return ".obj"; }
     const char *GetExecutableExtension() const override { return ".exe"; }
@@ -710,8 +770,23 @@ public:
 
 class EmsdkCompiler final: public Compiler {
 public:
-    EmsdkCompiler(const char *name) : Compiler(name, "emcc", (int)CompileFeature::Strip |
-                                                             (int)CompileFeature::Static) {}
+    EmsdkCompiler(const char *name) : Compiler(name, "emcc") {}
+
+    bool CheckFeatures(CompileMode compile_mode, uint32_t features) const override
+    {
+        uint32_t supported = 0;
+
+        supported |= (int)CompileFeature::Strip;
+        supported |= (int)CompileFeature::Static;
+
+        uint32_t unsupported = features & ~supported;
+        if (unsupported) {
+            LogUnsupportedFeatures(unsupported);
+            return false;
+        }
+
+        return true;
+    }
 
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetExecutableExtension() const override { return ".js"; }

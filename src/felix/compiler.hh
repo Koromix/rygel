@@ -84,12 +84,11 @@ class Compiler {
 public:
     const char *name;
     const char *binary;
-    uint32_t supported_features;
 
-    Compiler(const char *name, const char *binary, uint32_t supported_features)
-        : name(name), binary(binary), supported_features(supported_features) {}
+    Compiler(const char *name, const char *binary) : name(name), binary(binary) {}
 
     bool Test() const;
+    virtual bool CheckFeatures(CompileMode compile_mode, uint32_t features) const = 0;
 
     virtual const char *GetObjectExtension() const = 0;
     virtual const char *GetExecutableExtension() const = 0;
@@ -113,6 +112,9 @@ public:
                                  Span<const char *const> libraries, LinkType link_type,
                                  uint32_t features, bool env_flags, const char *dest_filename,
                                  Allocator *alloc, Command *out_cmd) const = 0;
+
+protected:
+    void LogUnsupportedFeatures(uint32_t unsupported) const;
 };
 
 extern const Span<const Compiler *const> Compilers;

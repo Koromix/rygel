@@ -285,22 +285,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         LogError("Cannot find %1 compiler in PATH [%2]", build.compiler->name, build.compiler->binary);
         return 1;
     }
-
-    // Check compiler features
-    if (build.features & ~build.compiler->supported_features) {
-        uint32_t missing = build.features & ~build.compiler->supported_features;
-
-        LocalArray<const char *, RG_LEN(CompileFeatureNames)> list;
-        for (int i = 0; i < RG_LEN(CompileFeatureNames); i++) {
-            if (missing & (1u << i)) {
-                list.Append(CompileFeatureNames[i]);
-            }
-        }
-
-        LogError("Some features are not supported by %1: %2",
-                 build.compiler->name, FmtSpan((Span<const char *>)list));
+    if (!build.compiler->CheckFeatures(build.compile_mode, build.features))
         return 1;
-    }
 
     // Root directory
     const char *start_directory = DuplicateString(GetWorkingDirectory(), &temp_alloc).ptr;
