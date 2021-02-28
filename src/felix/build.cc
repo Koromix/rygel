@@ -136,7 +136,7 @@ bool Builder::AddTarget(const TargetInfo &target)
 
         // Build object file
         {
-            uint32_t features = build.features | target.features;
+            uint32_t features = target.CombineFeatures(build.features);
 
             Command cmd = {};
             if (module) {
@@ -195,7 +195,7 @@ bool Builder::AddTarget(const TargetInfo &target)
     if (target.type == TargetType::Executable) {
         const char *src_filename = Fmt(&str_alloc, "%1%/cache%/%2.c", build.output_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
-        uint32_t features = build.features | target.features;
+        uint32_t features = target.CombineFeatures(build.features);
 
         if (!UpdateVersionSource(target.name, build.version_str, build.fake, src_filename))
             return false;
@@ -215,7 +215,7 @@ bool Builder::AddTarget(const TargetInfo &target)
     if (target.type == TargetType::Executable) {
         const char *target_filename = Fmt(&str_alloc, "%1%/%2%3", build.output_directory,
                                           target.name, build.compiler->GetExecutableExtension()).ptr;
-        uint32_t features = build.features | target.features;
+        uint32_t features = target.CombineFeatures(build.features);
 
         Command cmd = {};
         build.compiler->MakeLinkCommand(obj_filenames, build.compile_mode, target.libraries,
@@ -255,7 +255,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
             if (!pch_filename) {
                 pch_filename = BuildObjectPath(pch->filename, build.output_directory, pch_ext, &str_alloc);
                 bool warnings = (pch->target->type != TargetType::ExternalLibrary);
-                uint32_t features = build.features | pch->target->features;
+                uint32_t features = pch->target->CombineFeatures(build.features);
 
                 Command cmd = {};
                 build.compiler->MakePchCommand(pch_filename, pch->type, build.compile_mode, warnings,
@@ -278,7 +278,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
         obj_filename = BuildObjectPath(src.filename, build.output_directory,
                                        build.compiler->GetObjectExtension(), &str_alloc);
         bool warnings = (src.target->type != TargetType::ExternalLibrary);
-        uint32_t features = build.features | src.target->features;
+        uint32_t features = src.target->CombineFeatures(build.features);
 
         Command cmd = {};
         build.compiler->MakeObjectCommand(src.filename, src.type, build.compile_mode, warnings,

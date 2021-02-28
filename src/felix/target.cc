@@ -39,7 +39,9 @@ struct TargetConfig {
     HeapArray<const char *> export_definitions;
     HeapArray<const char *> include_directories;
     HeapArray<const char *> libraries;
-    uint32_t features;
+
+    uint32_t enable_features;
+    uint32_t disable_features;
 
     FileSet pack_file_set;
     const char *pack_options;
@@ -285,10 +287,22 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         while (prop.value.len) {
                             Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
 
+                            bool enable;
+                            if (part.len && part[0] == '-') {
+                                part = part.Take(1, part.len - 1);
+                                enable = false;
+                            } else {
+                                enable = true;
+                            }
+
                             if (part.len) {
                                 CompileFeature feature;
                                 if (OptionToEnum(CompileFeatureNames, part, &feature)) {
-                                    target_config.features |= 1u << (int)feature;
+                                    if (enable) {
+                                        target_config.enable_features |= 1u << (int)feature;
+                                    } else {
+                                        target_config.disable_features |= 1u << (int)feature;
+                                    }
                                 } else {
                                     LogError("Unknown target feature '%1'", part);
                                     valid = false;
@@ -383,7 +397,8 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     std::swap(target->export_definitions, target_config->export_definitions);
     std::swap(target->include_directories, target_config->include_directories);
     std::swap(target->libraries, target_config->libraries);
-    target->features = target_config->features;
+    target->enable_features = target_config->enable_features;
+    target->disable_features = target_config->disable_features;
     target->pack_options = target_config->pack_options;
 
     // Resolve imported targets

@@ -49,7 +49,9 @@ struct TargetInfo {
     HeapArray<const char *> export_definitions;
     HeapArray<const char *> include_directories;
     HeapArray<const char *> libraries;
-    uint32_t features;
+
+    uint32_t enable_features;
+    uint32_t disable_features;
 
     const SourceFileInfo *c_pch_src;
     const SourceFileInfo *cxx_pch_src;
@@ -57,6 +59,14 @@ struct TargetInfo {
 
     HeapArray<const char *> pack_filenames;
     const char *pack_options;
+
+    uint32_t CombineFeatures(uint32_t defaults) const
+    {
+        defaults |= enable_features;
+        defaults &= ~disable_features;
+
+        return defaults;
+    }
 
     RG_HASHTABLE_HANDLER(TargetInfo, name);
 };
