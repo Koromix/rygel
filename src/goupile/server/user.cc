@@ -63,7 +63,8 @@ const Token *Session::GetToken(const InstanceHolder *instance) const
     }
 }
 
-static void WriteProfileJson(const Session *session, const Token *token, const http_RequestInfo &request, http_IO *io)
+static void WriteProfileJson(const Session *session, const InstanceHolder *instance,
+                             const http_RequestInfo &request, http_IO *io)
 {
     http_JsonPageBuilder json(request.compression_type);
     char buf[128];
@@ -74,16 +75,21 @@ static void WriteProfileJson(const Session *session, const Token *token, const h
         json.Key("username"); json.String(session->username);
         json.Key("admin"); json.Bool(session->IsAdmin());
         json.Key("demo"); json.Bool(session->demo);
-        if (token) {
-            json.Key("permissions"); json.StartObject();
-            for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
-                Span<const char> key = ConvertToJsonName(UserPermissionNames[i], buf);
-                json.Key(key.ptr, (size_t)key.len); json.Bool(token->permissions & (1 << i));
+        if (instance) {
+            const Token *token = session->GetToken(instance);
+
+            if (token) {
+                json.Key("permissions"); json.StartObject();
+                for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
+                    Span<const char> key = ConvertToJsonName(UserPermissionNames[i], buf);
+                    json.Key(key.ptr, (size_t)key.len); json.Bool(token->permissions & (1 << i));
+                }
+                json.EndObject();
+                json.Key("keys"); json.StartObject();
+                    json.Key("shared"); json.String(instance->config.shared_key);
+                    json.Key("local"); json.String(session->local_key);
+                json.EndObject();
             }
-            json.EndObject();
-            json.Key("keys"); json.StartObject();
-                json.Key("local"); json.String(session->local_key);
-            json.EndObject();
         }
     }
     json.EndObject();
@@ -250,8 +256,7 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
                     if (instance && RedirectToSlave(*instance, *session.GetRaw(), io))
                         return;
 
-                    const Token *token = session->GetToken(instance);
-                    WriteProfileJson(session.GetRaw(), token, request, io);
+                    WriteProfileJson(session.GetRaw(), instance, request, io);
                 }
 
                 return;
@@ -283,8 +288,7 @@ void HandleUserProfile(InstanceHolder *instance, const http_RequestInfo &request
         if (RedirectToSlave(*instance, *session.GetRaw(), io))
             return;
 
-        const Token *token = session->GetToken(instance);
-        WriteProfileJson(session.GetRaw(), token, request, io);
+        WriteProfileJson(session.GetRaw(), instance, request, io);
     } else {
         WriteProfileJson(session.GetRaw(), nullptr, request, io);
     }
