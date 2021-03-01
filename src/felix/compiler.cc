@@ -371,8 +371,14 @@ public:
         Fmt(&buf, " -fuse-ld=lld --rtlib=compiler-rt");
 #elif defined(__APPLE__)
         Fmt(&buf, " -ldl -pthread");
+        if (link_type == LinkType::Executable) {
+            Fmt(&buf, " -pie");
+        }
 #else
         Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code");
+        if (link_type == LinkType::Executable) {
+            Fmt(&buf, " -pie");
+        }
     #if defined(__arm__) || defined(__thumb__)
         Fmt(&buf, " -latomic");
     #endif
@@ -653,6 +659,9 @@ public:
         Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat -Wl,--high-entropy-va");
 #elif defined(__APPLE__)
         Fmt(&buf, " -ldl -pthread");
+        if (link_type == LinkType::Executable) {
+            Fmt(&buf, " -pie");
+        }
 #else
         Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code");
         if (link_type == LinkType::Executable) {
