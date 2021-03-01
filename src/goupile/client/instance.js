@@ -2016,6 +2016,7 @@ function InstanceController() {
                 if (anchor != null) {
                     anchor = anchor.toString();
                     anchor = anchor.substr(anchor.indexOf('@') + 1);
+                    anchor = parseInt(anchor, 10);
                 } else {
                     anchor = 0;
                 }
