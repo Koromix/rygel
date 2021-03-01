@@ -85,10 +85,17 @@ static void WriteProfileJson(const Session *session, const InstanceHolder *insta
                     json.Key(key.ptr, (size_t)key.len); json.Bool(token->permissions & (1 << i));
                 }
                 json.EndObject();
-                json.Key("keys"); json.StartObject();
-                    json.Key("shared"); json.String(instance->config.shared_key);
-                    json.Key("local"); json.String(session->local_key);
-                json.EndObject();
+
+                json.Key("keys"); json.StartArray();
+                    json.StartArray();
+                        json.Int64(session->userid);
+                        json.String(session->local_key);
+                    json.EndArray();
+                    json.StartArray();
+                        json.String("shared");
+                        json.String(instance->config.shared_key);
+                    json.EndArray();
+                json.EndArray();
             }
         }
     }

@@ -19,7 +19,7 @@ const goupile = new function() {
     let self = this;
 
     let session_rnd;
-    let profile_keys = {};
+    let profile_keys = new Map;
 
     let controller;
     let current_url;
@@ -175,10 +175,7 @@ const goupile = new function() {
                     lock: lock.ctx
                 };
                 session_rnd = null;
-
-                profile_keys = {};
-                for (let key in lock.keys)
-                    profile_keys[key] = base64ToBytes(lock.keys[key]);
+                profile_keys = new Map(lock.keys.map(it => [it[0], base64ToBytes(it[1])]));
             }
         }
 
@@ -188,11 +185,12 @@ const goupile = new function() {
 
                 profile = await response.json();
                 session_rnd = util.getCookie('session_rnd');
-
-                profile_keys = {};
-                for (let key in profile.keys)
-                    profile_keys[key] = base64ToBytes(profile.keys[key]);
-                delete profile.keys;
+                if (profile.keys != null) {
+                    profile_keys = new Map(profile.keys.map(it => [it[0], base64ToBytes(it[1])]));
+                    profile.keys = profile.keys.map(key => key[0]);
+                } else {
+                    profile_keys = new Map;
+                }
             } catch (err) {
                 if (!ENV.cache_offline)
                     throw err;
@@ -355,11 +353,12 @@ const goupile = new function() {
 
                     profile = new_profile;
                     session_rnd = util.getCookie('session_rnd');
-
-                    profile_keys = {};
-                    for (let key in profile.keys)
-                        profile_keys[key] = base64ToBytes(profile.keys[key]);
-                    delete profile.keys;
+                    if (profile.keys != null) {
+                        profile_keys = new Map(profile.keys.map(it => [it[0], base64ToBytes(it[1])]));
+                        profile.keys = profile.keys.map(key => key[0]);
+                    } else {
+                        profile_keys = new Map;
+                    }
 
                     await deleteSessionValue('lock');
 
@@ -384,11 +383,12 @@ const goupile = new function() {
                 try {
                     profile = await decryptSecretBox(obj.profile, key);
                     session_rnd = util.getCookie('session_rnd');
-
-                    profile_keys = {};
-                    for (let key in profile.keys)
-                        profile_keys[key] = base64ToBytes(profile.keys[key]);
-                    delete profile.keys;
+                    if (profile.keys != null) {
+                        profile_keys = new Map(profile.keys.map(it => [it[0], base64ToBytes(it[1])]));
+                        profile.keys = profile.keys.map(key => key[0]);
+                    } else {
+                        profile_keys = new Map;
+                    }
 
                     await deleteSessionValue('lock');
 
@@ -438,7 +438,7 @@ const goupile = new function() {
             if (response.ok) {
                 profile = {};
                 session_rnd = undefined;
-                profile_keys = {};
+                profile_keys = new Map;
 
                 util.setCookie('session_rnd', 'LOGIN', '/');
                 await deleteSessionValue('lock');
@@ -490,12 +490,12 @@ const goupile = new function() {
             username: profile.username,
             salt: bytesToBase64(salt),
             errors: 0,
-            keys: {},
+            keys: Array.from(profile_keys.items()),
             session_rnd: enc,
             ctx: ctx
         };
-        for (let key in profile_keys)
-            lock.keys[key] = bytesToBase64(profile_keys[key]);
+        for (let key of lock.keys)
+            key[1] = bytesToBase64(key[1]);
 
         await storeSessionValue('lock', lock);
         util.deleteCookie('session_rnd', '/');
@@ -572,28 +572,32 @@ const goupile = new function() {
         current_url = url;
     };
 
-    this.encryptLocal = function(obj) {
-        if (profile_keys.local == null)
-            throw new Error('Cannot encrypt without local key');
+    this.encryptSymmetric = function(obj, type) {
+        let key = profile_keys.get(type);
+        if (key == null)
+            throw new Error(`Cannot encrypt without '${type}' key`);
 
-        return encryptSecretBox(obj, profile_keys.local);
+        return encryptSecretBox(obj, key);
     };
 
-    this.decryptLocal = function(enc) {
-        if (profile_keys.local == null)
-            throw new Error('Cannot decrypt without local key');
+    this.decryptSymmetric = function(enc, type) {
+        let key = profile_keys.get(type);
+        if (key == null)
+            throw new Error(`Cannot decrypt without '${type}' key`);
 
-        return decryptSecretBox(enc, profile_keys.local);
+        return decryptSecretBox(enc, key);
     };
 
     this.encryptBackup = function(obj) {
         if (ENV.backup_key == null)
             throw new Error('This instance is not configured for offline backups');
-        if (profile_keys.local == null)
+
+        let key = profile_keys.get(profile.userid);
+        if (key == null)
             throw new Error('Cannot encrypt backup without local key');
 
         let backup_key = base64ToBytes(ENV.backup_key);
-        return encryptBox(obj, backup_key, profile_keys.local);
+        return encryptBox(obj, backup_key, key);
     }
 
     async function encryptSecretBox(obj, key) {

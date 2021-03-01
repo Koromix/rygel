@@ -568,7 +568,6 @@ function InstanceController() {
                     values[key] = null;
             }
 
-            let key = `${profile.userid}:${record.ulid}`;
             let fragment = {
                 type: 'save',
                 user: profile.username,
@@ -578,7 +577,15 @@ function InstanceController() {
             };
 
             await db.transaction('rw', ['rec_records'], async t => {
-                let obj = await t.load('rec_records', key);
+                let namespace;
+                let obj;
+                for (namespace of profile.keys) {
+                    let key = namespace + `:${record.ulid}`;
+                    obj = await t.load('rec_records', key);
+
+                    if (obj != null)
+                        break;
+                }
 
                 // Update previous record of write new?
                 let update = (obj != null) && (obj.keys.parent == null ||
@@ -586,7 +593,7 @@ function InstanceController() {
 
                 let entry;
                 if (update) {
-                    entry = await goupile.decryptLocal(obj.enc);
+                    entry = await goupile.decryptSymmetric(obj.enc, namespace);
                     if (record.hid != null)
                         entry.hid = record.hid;
                     obj.keys.sync = profile.userid;
@@ -621,7 +628,9 @@ function InstanceController() {
                     throw new Error('Cannot overwrite old record fragment');
                 entry.fragments.push(fragment);
 
-                obj.enc = await goupile.encryptLocal(entry);
+                obj.enc = await goupile.encryptSymmetric(entry, profile.userid);
+
+                let key = profile.userid + `:${record.ulid}`;
                 await t.saveWithKey('rec_records', key, obj);
 
                 if (entry.parent != null)
@@ -661,8 +670,11 @@ function InstanceController() {
             let key = `${profile.userid}:${ulid}`;
             let obj = await t.load('rec_records', key);
 
+            if (obj == null) // Fake parents can only be in user namespace
+                break;
             if (obj.keys.parent == null || !obj.keys.parent.endsWith('!fake'))
                 break;
+
             obj.keys.parent = obj.keys.parent.substr(0, obj.keys.parent.length - 5);
             obj.keys.sync = profile.userid;
 
@@ -677,7 +689,6 @@ function InstanceController() {
         let progress = log.progress('Suppression en cours');
 
         try {
-            let key = `${profile.userid}:${ulid}`;
             let fragment = {
                 type: 'delete',
                 user: profile.username,
@@ -686,11 +697,19 @@ function InstanceController() {
 
             // XXX: Delete children (cascade)?
             await db.transaction('rw', ['rec_records'], async t => {
-                let obj = await t.load('rec_records', key);
+                let namespace;
+                let obj;
+                for (namespace of profile.keys) {
+                    let key = namespace + `:${record.ulid}`;
+                    obj = await t.load('rec_records', key);
+
+                    if (obj != null)
+                        break;
+                }
                 if (obj == null)
                     throw new Error('Cet enregistrement est introuvable');
 
-                let entry = await goupile.decryptLocal(obj.enc);
+                let entry = await goupile.decryptSymmetric(obj.enc, namespace);
 
                 // Mark as deleted with special fragment
                 entry.fragments.push(fragment);
@@ -698,8 +717,9 @@ function InstanceController() {
                 obj.keys.parent = null;
                 obj.keys.form = null;
                 obj.keys.sync = profile.userid;
-                obj.enc = await goupile.encryptLocal(entry);
+                obj.enc = await goupile.encryptSymmetric(entry, profile.userid);
 
+                let key = profile.userid + `:${ulid}`;
                 await t.saveWithKey('rec_records', key, obj);
             });
 
@@ -1473,16 +1493,25 @@ function InstanceController() {
         let new_dictionaries = {}
         if (new_route.page.options.dictionaries != null) {
             for (let dict of new_route.page.options.dictionaries) {
-                let range = IDBKeyRange.only(`${profile.userid}/${dict}`);
-                objects = await db.loadAll('rec_records/form', range);
-
                 let records = [];
-                for (let obj of objects) {
-                    try {
-                        let record = await decryptRecord(obj, null, false, true);
-                        records.push(record);
-                    } catch (err) {
-                        console.log(err);
+                let ulids = new Set;
+
+                for (let namespace of profile.keys) {
+                    let range = IDBKeyRange.only(namespace + `/${dict}`);
+                    let objects = await db.loadAll('rec_records/form', range);
+
+                    for (let obj of objects) {
+                        try {
+                            let record = await decryptRecord(namespace, obj, null, false, true);
+
+                            if (!ulids.has(record.ulid))
+                                continue;
+                            ulids.add(record.ulid);
+
+                            records.push(record);
+                        } catch (err) {
+                            console.log(err);
+                        }
                     }
                 }
 
@@ -1543,18 +1572,22 @@ function InstanceController() {
     }
 
     async function loadRecord(ulid, version) {
-        let key = `${profile.userid}:${ulid}`;
-        let obj = await db.load('rec_records', key);
+        for (let namespace of profile.keys) {
+            let key = namespace + `:${ulid}`;
+            let obj = await db.load('rec_records', key);
 
-        if (obj == null)
-            throw new Error('L\'enregistrement demandé n\'existe pas');
+            if (obj != null) {
+                let record = await decryptRecord(namespace,obj, version);
+                return record;
+            }
+        }
 
-        let record = await decryptRecord(obj, version);
-        return record;
+        throw new Error('L\'enregistrement demandé n\'existe pas');
+
     }
 
-    async function decryptRecord(obj, version, allow_fake = true, load_values = true, allow_deleted = false) {
-        let entry = await goupile.decryptLocal(obj.enc);
+    async function decryptRecord(namespace, obj, version, allow_fake = true, load_values = true, allow_deleted = false) {
+        let entry = await goupile.decryptSymmetric(obj.enc, namespace);
         let fragments = entry.fragments;
 
         if (version == null) {
@@ -1587,29 +1620,37 @@ function InstanceController() {
 
         let children_map = {};
         {
-            let range = IDBKeyRange.bound(profile.userid + ':' + entry.ulid + '/',
-                                          profile.userid + ':' + entry.ulid + '`', false, true);
-            let keys = await db.list('rec_records/parent', range);
+            let ulids = new Set;
 
-            for (let key of keys) {
-                let child = {
-                    form: key.index.substr(key.index.indexOf('/') + 1),
-                    ulid: key.primary.substr(key.primary.indexOf(':') + 1)
-                };
+            for (let namespace of profile.keys) {
+                let range = IDBKeyRange.bound(namespace + `:${entry.ulid}/`,
+                                              namespace + `:${entry.ulid}\``, false, true);
+                let keys = await db.list('rec_records/parent', range);
 
-                let fake = child.form.endsWith('!fake');
-                if (fake)
-                    child.form = child.form.substr(0, child.form.length - 5);
+                for (let key of keys) {
+                    let child = {
+                        form: key.index.substr(key.index.indexOf('/') + 1),
+                        ulid: key.primary.substr(key.primary.indexOf(':') + 1)
+                    };
 
-                let array = children_map[child.form];
-                if (array == null) {
-                    array = [];
-                    children_map[child.form] = array;
+                    if (ulids.has(child.ulid))
+                        continue;
+                    ulids.add(child.ulid);
+
+                    let fake = child.form.endsWith('!fake');
+                    if (fake)
+                        child.form = child.form.substr(0, child.form.length - 5);
+
+                    let array = children_map[child.form];
+                    if (array == null) {
+                        array = [];
+                        children_map[child.form] = array;
+                    }
+
+                    array.push(child);
+                    if (!fake)
+                        status.add(child.form);
                 }
-
-                array.push(child);
-                if (!fake)
-                    status.add(child.form);
             }
         }
 
@@ -1689,7 +1730,7 @@ function InstanceController() {
 
                         // XXX: This could be racy, for example if a record with the same key was saved between
                         // the filling of children_map and getting there. Rare, but we want to avoid that!
-                        obj.enc = await goupile.encryptLocal(entry);
+                        obj.enc = await goupile.encryptSymmetric(entry, profile.userid);
                         await db.saveWithKey('rec_records', key, obj);
                     }
 
@@ -1843,22 +1884,31 @@ function InstanceController() {
     }
 
     async function loadDataRecords(form, parent) {
-        let objects;
-        if (parent == null) {
-            let range = IDBKeyRange.only(`${profile.userid}/${form.key}`);
-            objects = await db.loadAll('rec_records/form', range);
-        } else {
-            let range = IDBKeyRange.only(`${profile.userid}:${parent.ulid}/${form.key}`);
-            objects = await db.loadAll('rec_records/parent', range);
-        }
-
         let records = [];
-        for (let obj of objects) {
-            try {
-                let record = await decryptRecord(obj, null, false, false);
-                records.push(record);
-            } catch (err) {
-                console.log(err);
+        let ulids = new Set;
+
+        for (let namespace of profile.keys) {
+            let objects;
+            if (parent == null) {
+                let range = IDBKeyRange.only(namespace + `/${form.key}`);
+                objects = await db.loadAll('rec_records/form', range);
+            } else {
+                let range = IDBKeyRange.only(namespace + `:${parent.ulid}/${form.key}`);
+                objects = await db.loadAll('rec_records/parent', range);
+            }
+
+            for (let obj of objects) {
+                try {
+                    let record = await decryptRecord(namespace, obj, null, false, false);
+
+                    if (ulids.has(record.ulid))
+                        continue;
+                    ulids.add(record.ulid);
+
+                    records.push(record);
+                } catch (err) {
+                    console.log(err);
+                }
             }
         }
 
@@ -1910,16 +1960,18 @@ function InstanceController() {
         let progress = log.progress('Archivage sécurisé des données');
 
         try {
-            let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
-            let objects = await db.loadAll('rec_records', range);
-
             let entries = [];
-            for (let obj of objects) {
-                try {
-                    let entry = await goupile.decryptLocal(obj.enc);
-                    entries.push(entry);
-                } catch (err) {
-                    console.log(err);
+            {
+                let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
+                let objects = await db.loadAll('rec_records', range);
+
+                for (let obj of objects) {
+                    try {
+                        let entry = await goupile.decryptSymmetric(obj.enc, profile.userid);
+                        entries.push(entry);
+                    } catch (err) {
+                        console.log(err);
+                    }
                 }
             }
 
@@ -1969,12 +2021,13 @@ function InstanceController() {
 
             // Upload new fragments
             {
-                let objects = await db.loadAll('rec_records/sync', IDBKeyRange.only(profile.userid));
+                let range = IDBKeyRange.only(profile.userid);
+                let objects = await db.loadAll('rec_records/sync', range);
 
                 let uploads = [];
                 for (let obj of objects) {
                     try {
-                        let record = await decryptRecord(obj, null, true, true, true);
+                        let record = await decryptRecord(profile.userid, obj, null, true, true, true);
 
                         let upload = {
                             form: record.form.key,
@@ -2010,7 +2063,7 @@ function InstanceController() {
 
             // Download new fragments
             {
-                let range = IDBKeyRange.bound(profile.userid + '@', profile.userid + '`', false, true);
+                let range = IDBKeyRange.bound('shared@', 'shared`', false, true);
                 let [, anchor] = await db.limits('rec_records/anchor', range);
 
                 if (anchor != null) {
@@ -2027,13 +2080,11 @@ function InstanceController() {
                 let downloads = await net.fetchJson(url);
 
                 for (let download of downloads) {
-                    let key = `${profile.userid}:${download.ulid}`;
-
                     let obj = {
                         keys: {
-                            form: `${profile.userid}/${download.form}`,
+                            form: `shared/${download.form}`,
                             parent: (download.parent != null) ? `${profile.userid}:${download.parent.ulid}/${download.form}` : null,
-                            anchor: `${profile.userid}@${(download.anchor + 1).toString().padStart(16, '0')}`,
+                            anchor: `shared@${(download.anchor + 1).toString().padStart(16, '0')}`,
                             sync: null
                         },
                         enc: null
@@ -2054,8 +2105,13 @@ function InstanceController() {
                         }))
                     };
 
-                    obj.enc = await goupile.encryptLocal(entry);
-                    await db.saveWithKey('rec_records', key, obj);
+                    obj.enc = await goupile.encryptSymmetric(entry, 'shared');
+                    await db.transaction('rw', ['rec_records'], async t => {
+                        let key = `shared:${download.ulid}`;
+                        await t.saveWithKey('rec_records', `shared:${download.ulid}`, obj);
+
+                        await t.delete('rec_records', `${profile.userid}:${download.ulid}`);
+                    });
 
                     changes.add(download.ulid);
                 }
