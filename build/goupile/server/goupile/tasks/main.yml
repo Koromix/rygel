@@ -43,7 +43,7 @@
 
 - name: Update Felix build system
   command:
-    cmd: '{{goupile_root_path}}/repo/bin/felix -O {{goupile_root_path}}/repo/bin {{goupile_build_options}} felix'
+    cmd: '{{goupile_root_path}}/repo/bin/felix -O {{goupile_root_path}}/repo/bin -cClang:clang-11 {{goupile_build_options}} felix'
     chdir: '{{goupile_root_path}}/repo'
   ignore_errors: yes
   register: build_felix
@@ -58,7 +58,7 @@
         chdir: '{{goupile_root_path}}/repo'
     - name: Update Felix build system
       command:
-        cmd: '{{goupile_root_path}}/repo/felix -O {{goupile_root_path}}/repo/bin {{goupile_build_options}} felix'
+        cmd: '{{goupile_root_path}}/repo/felix -O {{goupile_root_path}}/repo/bin -cClang:clang-11 {{goupile_build_options}} felix'
         chdir: '{{goupile_root_path}}/repo'
     - name: Delete bootstrapped Felix
       file:
@@ -69,7 +69,7 @@
 
 - name: Build Goupile
   command:
-    cmd: '{{goupile_root_path}}/repo/bin/felix -O {{goupile_root_path}}/repo/bin {{goupile_build_options}} goupile felix'
+    cmd: '{{goupile_root_path}}/repo/bin/felix -O {{goupile_root_path}}/repo/bin -cClang:clang-11 {{goupile_build_options}} goupile felix'
     chdir: '{{goupile_root_path}}/repo'
   register: build_goupile
   changed_when: 'build_goupile.stderr_lines[-1] != "Nothing to do!" and build_goupile.stderr_lines[-2] != "Nothing to do!"'
