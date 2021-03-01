@@ -25,7 +25,7 @@ const goupile = new function() {
     let current_url;
 
     this.start = async function() {
-        if (ENV.base_url === '/admin/') {
+        if (ENV.urls.base === '/admin/') {
             controller = new AdminController;
             document.documentElement.className = 'admin';
         } else {
@@ -56,7 +56,7 @@ const goupile = new function() {
 
             // Now try home page... If that fails too, show login screen.
             // This will solve some situations such as overly restrictive locks.
-            controller.go(null, ENV.base_url).catch(async err => {
+            controller.go(null, ENV.urls.base).catch(async err => {
                 runLoginScreen();
             });
         });
@@ -66,7 +66,7 @@ const goupile = new function() {
         try {
             if (navigator.serviceWorker != null) {
                 if (ENV.cache_offline) {
-                    let registration = await navigator.serviceWorker.register(`${ENV.base_url}sw.pk.js`);
+                    let registration = await navigator.serviceWorker.register(`${ENV.urls.base}sw.pk.js`);
                     let progress = new log.Entry;
 
                     if (registration.waiting) {
@@ -111,7 +111,7 @@ const goupile = new function() {
     }
 
     async function initDB() {
-        let db_name = `goupile:${ENV.base_url}`;
+        let db_name = `goupile:${ENV.urls.instance}`;
 
         db = await indexeddb.open(db_name, 8, (db, old_version) => {
             switch (old_version) {
@@ -184,12 +184,7 @@ const goupile = new function() {
 
         if (new_rnd !== session_rnd) {
             try {
-                let response = await net.fetch(`${ENV.base_url}api/session/profile`);
-
-                if (response.redirected) {
-                    window.location.href = response.url;
-                    await util.waitFor(100000);
-                }
+                let response = await net.fetch(`${ENV.urls.instance}api/session/profile`);
 
                 profile = await response.json();
                 session_rnd = util.getCookie('session_rnd');
@@ -212,7 +207,7 @@ const goupile = new function() {
 
         return ui.runScreen((d, resolve, reject) => {
             d.output(html`
-                <img id="gp_logo" src=${ENV.base_url + 'favicon.png'} alt="" />
+                <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
                 <br/>
             `);
 
@@ -279,7 +274,7 @@ const goupile = new function() {
 
         // Try to force all tabs to reload when instance is locked or unlocked
         window.addEventListener('storage', e => {
-            if (e.key === ENV.base_url + 'lock' && !!e.newValue !== !!e.oldValue) {
+            if (e.key === ENV.urls.instance + 'lock' && !!e.newValue !== !!e.oldValue) {
                 window.onbeforeunload = null;
                 document.location.reload();
             }
@@ -288,7 +283,7 @@ const goupile = new function() {
 
     function initTasks() {
         setInterval(async () => {
-            await net.fetch(`${ENV.base_url}api/session/ping`);
+            await net.fetch(`${ENV.urls.instance}api/session/ping`);
             runTasks();
         }, 300 * 1000);
     }
@@ -337,15 +332,10 @@ const goupile = new function() {
                 query.set('username', username.toLowerCase());
                 query.set('password', password);
 
-                let response = await net.fetch(`${ENV.base_url}api/session/login`, {
+                let response = await net.fetch(`${ENV.urls.instance}api/session/login`, {
                     method: 'POST',
                     body: query
                 });
-
-                if (response.redirected) {
-                    window.location.href = response.url;
-                    await util.waitFor(100000);
-                }
 
                 if (response.ok) {
                     let new_profile = await response.json();
@@ -443,7 +433,7 @@ const goupile = new function() {
         let progress = log.progress('Déconnexion en cours');
 
         try {
-            let response = await net.fetch(`${ENV.base_url}api/session/logout`, {method: 'POST'})
+            let response = await net.fetch(`${ENV.urls.instance}api/session/logout`, {method: 'POST'})
 
             if (response.ok) {
                 profile = {};
@@ -651,7 +641,7 @@ const goupile = new function() {
     }
 
     async function loadSessionValue(key) {
-        key = ENV.base_url + key;
+        key = ENV.urls.instance + key;
 
         let json = localStorage.getItem(key);
         if (json == null)
@@ -661,14 +651,14 @@ const goupile = new function() {
     }
 
     async function storeSessionValue(key, obj) {
-        key = ENV.base_url + key;
+        key = ENV.urls.instance + key;
         obj = JSON.stringify(obj);
 
         localStorage.setItem(key, obj);
     }
 
     async function deleteSessionValue(key) {
-        key = ENV.base_url + key;
+        key = ENV.urls.instance + key;
         localStorage.removeItem(key);
     }
 };

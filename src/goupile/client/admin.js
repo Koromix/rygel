@@ -79,7 +79,7 @@ function AdminController() {
                         ${instances.map(instance => html`
                             <tr class=${instance.key === selected_instance ? 'active' : ''}>
                                 <td style="text-align: left;" class=${instance.master != null ? 'child' : ''}>
-                                    ${instance.master != null ? html`<span style="color: #ccc;">${instance.master}@</span>${instance.key.replace(/^.*@/, '')}` : ''}
+                                    ${instance.master != null ? html`<span style="color: #ccc;">${instance.master} / </span>${instance.key.replace(/^.*\//, '')}` : ''}
                                     ${instance.master == null ? instance.key : ''}
                                     (<a href=${'/' + instance.key} target="_blank">accès</a>)
                                 </td>
@@ -290,7 +290,7 @@ function AdminController() {
             let name = d.text('name', 'Nom', {value: key.value});
 
             d.action('Créer', {disabled: !d.isValid()}, async () => {
-                let full_key = master + '@' + key.value;
+                let full_key = master + '/' + key.value;
 
                 let query = new URLSearchParams;
                 query.set('key', full_key);

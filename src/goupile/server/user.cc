@@ -156,36 +156,6 @@ RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http
     return session;
 }
 
-// XXX: This is a quick and dirty way to redirect the user but we need to do better
-static bool RedirectToSlave(InstanceHolder &instance, const Session &session, http_IO *io)
-{
-    // Try to redirect user to a slave instance he is allowed to access (if any)
-    if (instance.GetSlaveCount()) {
-        sq_Statement stmt;
-        if (!gp_domain.db.Prepare(R"(SELECT i.instance FROM dom_instances i
-                                     INNER JOIN dom_permissions p ON (p.instance = i.instance)
-                                     WHERE p.userid = ?1 AND i.master = ?2
-                                     ORDER BY i.instance)", &stmt))
-            return false;
-        sqlite3_bind_int64(stmt, 1, session.userid);
-        sqlite3_bind_text(stmt, 2, instance.key.ptr, (int)instance.key.len, SQLITE_STATIC);
-
-        if (stmt.Next()) {
-            const char *key = (const char *)sqlite3_column_text(stmt, 0);
-
-            char redirect[512];
-            Fmt(redirect, "/%1/", key);
-
-            io->AddHeader("Location", redirect);
-            io->AttachNothing(302);
-
-            return true;
-        }
-    }
-
-    return false;
-}
-
 void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     io->RunAsync([=]() {
@@ -252,10 +222,6 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
                     }
 
                     sessions.Open(request, io, session);
-
-                    if (instance && RedirectToSlave(*instance, *session.GetRaw(), io))
-                        return;
-
                     WriteProfileJson(session.GetRaw(), instance, request, io);
                 }
 
@@ -283,15 +249,7 @@ void HandleUserLogout(InstanceHolder *, const http_RequestInfo &request, http_IO
 void HandleUserProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-
-    if (instance && session) {
-        if (RedirectToSlave(*instance, *session.GetRaw(), io))
-            return;
-
-        WriteProfileJson(session.GetRaw(), instance, request, io);
-    } else {
-        WriteProfileJson(session.GetRaw(), nullptr, request, io);
-    }
+    WriteProfileJson(session.GetRaw(), instance, request, io);
 }
 
 }

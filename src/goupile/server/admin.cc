@@ -58,10 +58,15 @@ static bool CheckInstanceKey(Span<const char> key)
     const auto test_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '_'; };
 
     // Skip master prefix
+    bool slave;
     {
-        Span<const char> master = SplitStr(key, '@', &key);
-        if (key.ptr == master.end()) {
+        Span<const char> master = SplitStr(key, '/', &key);
+
+        if (key.ptr > master.end()) {
+            slave = true;
+        } else {
             key = master;
+            slave = false;
         }
     }
 
@@ -77,9 +82,18 @@ static bool CheckInstanceKey(Span<const char> key)
         LogError("Instance key must only contain lowercase alphanumeric or '_' characters");
         return false;
     }
-    if (key == "admin") {
-        LogError("The following instance keys are not allowed: admin");
-        return false;
+
+    // Reserved names
+    if (slave) {
+        if (key == "main" || key == "static" || key == "files") {
+            LogError("The following slave keys are not allowed: main, static, files");
+            return false;
+        }
+    } else {
+        if (key == "admin") {
+            LogError("The following instance keys are not allowed: admin");
+            return false;
+        }
     }
 
     return true;
@@ -288,7 +302,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
         if (!domain->db.Run(R"(INSERT INTO dom_instances (instance) VALUES (?1))", instance_key)) {
             // Master does not exist
             if (sqlite3_errcode(domain->db) == SQLITE_CONSTRAINT) {
-                Span<const char> master = SplitStr(instance_key, '@');
+                Span<const char> master = SplitStr(instance_key, '/');
 
                 LogError("Master instance '%1' does not exist", master);
                 *out_error = 404;

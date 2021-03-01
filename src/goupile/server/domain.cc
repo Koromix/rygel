@@ -17,7 +17,7 @@
 
 namespace RG {
 
-const int DomainVersion = 12;
+const int DomainVersion = 13;
 const int MaxInstancesPerDomain = 4096;
 
 bool DomainConfig::Validate() const
@@ -37,8 +37,17 @@ const char *DomainConfig::GetInstanceFileName(const char *key, Allocator *alloc)
 {
     RG_ASSERT(instances_directory);
 
-    const char *filename = Fmt(alloc, "%1%/%2.db", instances_directory, key).ptr;
-    return filename;
+    HeapArray<char> buf(alloc);
+
+    Fmt(&buf, "%1%/", instances_directory);
+    for (Size i = 0; key[i]; i++) {
+        char c = key[i];
+        buf.Append(c != '/' ? c : '@');
+    }
+    buf.Append(".db");
+    buf.Append(0);
+
+    return buf.Leak().ptr;
 }
 
 bool LoadConfig(StreamReader *st, DomainConfig *out_config)
@@ -686,9 +695,44 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 12: {
+                // This migration is incomplete and does not rename slave instance database files
+
+                bool success = db->RunMany(R"(
+                    ALTER TABLE dom_instances RENAME TO dom_instances_BAK;
+                    ALTER TABLE dom_permissions RENAME TO dom_permissions_BAK;
+                    DROP INDEX dom_instances_i;
+                    DROP INDEX dom_permissions_ui;
+
+                    CREATE TABLE dom_instances (
+                        instance TEXT NOT NULL,
+                        master TEXT GENERATED ALWAYS AS (iif(instr(instance, '/') > 0, substr(instance, 1, instr(instance, '/') - 1), NULL)) STORED
+                                    REFERENCES dom_instances (instance) ON DELETE CASCADE
+                    );
+                    CREATE UNIQUE INDEX dom_instances_i ON dom_instances (instance);
+
+                    CREATE TABLE dom_permissions (
+                        userid INTEGER NOT NULL REFERENCES dom_users (userid) ON DELETE CASCADE,
+                        instance TEXT NOT NULL REFERENCES dom_instances (instance) ON DELETE CASCADE,
+                        permissions INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX dom_permissions_ui ON dom_permissions (userid, instance);
+
+                    INSERT INTO dom_instances (instance)
+                        SELECT replace(instance, '@', '/') FROM dom_instances_BAK ORDER BY master ASC NULLS FIRST;
+                    INSERT INTO dom_permissions (userid, instance, permissions)
+                        SELECT userid, replace(instance, '@', '/'), permissions FROM dom_permissions_BAK;
+
+                    DROP TABLE dom_permissions_BAK;
+                    DROP TABLE dom_instances_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 12);
+            RG_STATIC_ASSERT(DomainVersion == 13);
         }
 
         int64_t time = GetUnixTime();

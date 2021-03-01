@@ -116,7 +116,7 @@ function InstanceController() {
         return html`
             ${!goupile.isLocked() ? html`
                 <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
-                        @click=${e => self.go(e, ENV.base_url)}>${ENV.title}</button>
+                        @click=${e => self.go(e, ENV.urls.instance)}>${ENV.title}</button>
                 ${goupile.hasPermission('develop') ? html`
                     <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
                             style="background-position-y: calc(-230px + 1.2em);"
@@ -747,7 +747,7 @@ function InstanceController() {
     async function syncEditor() {
         if (editor_el == null) {
             if (typeof ace === 'undefined')
-                await net.loadScript(`${ENV.base_url}static/ace.js`);
+                await net.loadScript(`${ENV.urls.base}static/ace.js`);
 
             editor_el = document.createElement('div');
             editor_el.setAttribute('style', 'flex: 1;');
@@ -1115,7 +1115,7 @@ function InstanceController() {
         let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
         let [local_files, remote_files] = await Promise.all([
             db.loadAll('fs_files', range),
-            net.fetchJson(`${ENV.base_url}api/files/list`)
+            net.fetchJson(`${ENV.urls.base}api/files/list`)
         ]);
 
         let local_map = util.arrayToObject(local_files, file => file.filename);
@@ -1244,7 +1244,7 @@ function InstanceController() {
                 let p = actions.slice(i, i + 10).map(async action => {
                     switch (action.type) {
                         case 'push': {
-                            let url = util.pasteURL(`${ENV.base_url}files/${action.filename}`, {sha256: action.remote_sha256 || ''});
+                            let url = util.pasteURL(`${ENV.urls.base}files/${action.filename}`, {sha256: action.remote_sha256 || ''});
 
                             if (action.local_sha256 != null) {
                                 let key = `${profile.userid}:${action.filename}`;
@@ -1294,11 +1294,11 @@ function InstanceController() {
         if (!url.endsWith('/'))
             url += '/';
         url = new URL(url, window.location.href);
-        if (url.pathname === ENV.base_url)
+        if (url.pathname === ENV.urls.instance)
             url = new URL(app.home.url, window.location.href);
 
         // Goodbye!
-        if (!url.pathname.startsWith(`${ENV.base_url}main/`))
+        if (!url.pathname.startsWith(`${ENV.urls.instance}main/`))
             window.location.href = url.href;
 
         let new_route = Object.assign({}, route);
@@ -1307,7 +1307,7 @@ function InstanceController() {
 
         // Parse new URL
         {
-            let path = url.pathname.substr(ENV.base_url.length + 5);
+            let path = url.pathname.substr(ENV.urls.instance.length + 5);
             let [key, what] = path.split('/').map(str => str.trim());
 
             // Support shorthand URLs: /main/<ULID>(@<VERSION>)
@@ -1894,7 +1894,7 @@ function InstanceController() {
 
         // The server is our last hope
         {
-            let response = await net.fetch(`${ENV.base_url}files/${filename}`);
+            let response = await net.fetch(`${ENV.urls.base}files/${filename}`);
 
             if (response.ok) {
                 let code = await response.text();
@@ -1927,7 +1927,7 @@ function InstanceController() {
             let json = JSON.stringify(enc);
 
             if (dest === 'server') {
-                let response = await net.fetch(`${ENV.base_url}api/files/backup`, {
+                let response = await net.fetch(`${ENV.urls.instance}api/session/backup`, {
                     method: 'POST',
                     body: json
                 });
@@ -1950,7 +1950,7 @@ function InstanceController() {
                 console.log('Archive sécurisée créée');
                 progress.close();
 
-                let filename = `${ENV.base_url.replace(/\//g, '')}_${profile.username}_${dates.today()}.backup`;
+                let filename = `${ENV.urls.instance.replace(/\//g, '')}_${profile.username}_${dates.today()}.backup`;
                 util.saveBlob(blob, filename);
             } else {
                 throw new Error(`Invalid backup destination '${dest}'`);
@@ -1995,7 +1995,7 @@ function InstanceController() {
                 }
 
                 if (uploads.length) {
-                    let url = `${ENV.base_url}api/records/save`;
+                    let url = `${ENV.urls.instance}api/records/save`;
                     let response = await net.fetch(url, {
                         method: 'POST',
                         body: JSON.stringify(uploads)
@@ -2021,7 +2021,7 @@ function InstanceController() {
                     anchor = 0;
                 }
 
-                let url = util.pasteURL(`${ENV.base_url}api/records/load`, {
+                let url = util.pasteURL(`${ENV.urls.instance}api/records/load`, {
                     anchor: anchor
                 });
                 let downloads = await net.fetchJson(url);

@@ -137,7 +137,7 @@ function ApplicationBuilder(app) {
         page.options = options;
         if (options.lockable)
             app.lockable = true;
-        page.url = `${ENV.base_url}main/${key}`;
+        page.url = `${ENV.urls.instance}main/${key}`;
         page.filename = (options.filename != null) ? options.filename : `pages/${key}.js`;
 
         let item = {

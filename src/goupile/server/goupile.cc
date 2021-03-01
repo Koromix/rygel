@@ -130,35 +130,16 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     // Send these headers whenever possible
     io->AddHeader("Referrer-Policy", "no-referrer");
 
-    // Separate base URL and path
-    Span<const char> instance_key;
-    const char *instance_path;
-    {
-        Size offset = SplitStr(request.url + 1, '/').len + 1;
-
-        if (request.url[offset] != '/') {
-            if (offset == 1) {
-                io->AttachError(404);
-            } else {
-                const char *redirect = Fmt(&io->allocator, "%1/", request.url).ptr;
-                io->AddHeader("Location", redirect);
-                io->AttachNothing(301);
-            }
-            return;
-        }
-
-        instance_key = MakeSpan(request.url + 1, offset - 1);
-        instance_path = request.url + offset;
-    }
-
     // If new base URLs are added besides "/admin", RunCreateInstance() must be modified
     // to forbid the instance key.
-    if (instance_key == "admin") {
+    if (TestStr(request.url, "/admin") || StartsWith(request.url, "/admin/")) {
+        const char *admin_url = request.url + 6;
+
         // Try static assets
         {
-            const AssetInfo *asset = assets_map.FindValue(instance_path, nullptr);
+            const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
 
-            if (TestStr(instance_path, "/")) {
+            if (TestStr(admin_url, "/")) {
                 RG_ASSERT(asset);
 
                 AssetInfo copy = *asset;
@@ -174,7 +155,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         char buf[128];
 
                         json.StartObject();
-                        json.Key("base_url"); json.String("/admin/");
+                        json.Key("urls"); json.StartObject();
+                            json.Key("base"); json.String("/admin/");
+                            json.Key("instance"); json.Null();
+                        json.EndObject();
                         json.Key("title"); json.String("Goupile Admin");
                         json.Key("permissions"); json.StartArray();
                         for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
@@ -199,43 +183,80 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         }
 
         // And now, API endpoints
-        if (TestStr(instance_path, "/api/session/ping") && request.method == http_RequestMethod::Get) {
+        if (TestStr(admin_url, "/api/session/ping") && request.method == http_RequestMethod::Get) {
             HandlePing(request, io);
-        } else if (TestStr(instance_path, "/api/session/profile") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(admin_url, "/api/session/profile") && request.method == http_RequestMethod::Get) {
             HandleUserProfile(nullptr, request, io);
-        } else if (TestStr(instance_path, "/api/session/login") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(admin_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
             HandleUserLogin(nullptr, request, io);
-        } else if (TestStr(instance_path, "/api/session/logout") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(admin_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
             HandleUserLogout(nullptr, request, io);
-        } else if (TestStr(instance_path, "/api/instances/create") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(admin_url, "/api/instances/create") && request.method == http_RequestMethod::Post) {
             HandleInstanceCreate(request, io);
-        } else if (TestStr(instance_path, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(admin_url, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
             HandleInstanceDelete(request, io);
-        } else if (TestStr(instance_path, "/api/instances/configure") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(admin_url, "/api/instances/configure") && request.method == http_RequestMethod::Post) {
             HandleInstanceConfigure(request, io);
-        } else if (TestStr(instance_path, "/api/instances/list") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(admin_url, "/api/instances/list") && request.method == http_RequestMethod::Get) {
             HandleInstanceList(request, io);
-        } else if (TestStr(instance_path, "/api/users/create") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(admin_url, "/api/users/create") && request.method == http_RequestMethod::Post) {
             HandleUserCreate(request, io);
-        } else if (TestStr(instance_path, "/api/users/edit") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(admin_url, "/api/users/edit") && request.method == http_RequestMethod::Post) {
             HandleUserEdit(request, io);
-        } else if (TestStr(instance_path, "/api/users/delete") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(admin_url, "/api/users/delete") && request.method == http_RequestMethod::Post) {
             HandleUserDelete(request, io);
-        } else if (TestStr(instance_path, "/api/users/assign") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(admin_url, "/api/users/assign") && request.method == http_RequestMethod::Post) {
             HandleUserAssign(request, io);
-        } else if (TestStr(instance_path, "/api/users/list") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(admin_url, "/api/users/list") && request.method == http_RequestMethod::Get) {
             HandleUserList(request, io);
         } else {
             io->AttachError(404);
         }
-    } else {
-        bool reload;
-        InstanceHolder *instance = gp_domain.Ref(instance_key, &reload);
+    } else if (!TestStr(request.url, "/")) {
+        InstanceHolder *instance = nullptr;
+        const char *instance_url = request.url;
+
+        // Find relevant instance
+        for (int i = 0; i < 2 && instance_url[0]; i++) {
+            Size offset = SplitStr(instance_url + 1, '/').len + 1;
+
+            const char *new_url = instance_url + offset;
+            Span<const char> new_key = MakeSpan(request.url + 1, new_url - request.url - 1);
+
+            bool reload;
+            InstanceHolder *ref = gp_domain.Ref(new_key, &reload);
+
+            if (ref) {
+                instance_url = new_url;
+
+                if (instance) {
+                    instance->Unref();
+                }
+                instance = ref;
+
+                // No need to look further
+                if (!instance->GetSlaveCount())
+                    break;
+            } else if (RG_UNLIKELY(reload)) {
+                io->AttachError(503);
+                return;
+            } else {
+                break;
+            }
+        }
         if (!instance) {
-            io->AttachError(reload ? 503 : 404);
+            io->AttachError(404);
             return;
         }
         io->AddFinalizer([=]() { instance->Unref(); });
+
+        // Enforce trailing slash on base URLs
+        if (!instance_url[0]) {
+            const char *redirect = Fmt(&io->allocator, "%1/", request.url).ptr;
+            io->AddHeader("Location", redirect);
+            io->AttachNothing(301);
+            return;
+        }
 
         // Try application files
         if (request.method == http_RequestMethod::Get && HandleFileGet(instance, request, io))
@@ -243,14 +264,14 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
         // Try static assets
         if (request.method == http_RequestMethod::Get) {
-            if (StartsWith(instance_path, "/main/")) {
-                instance_path = "/";
+            if (StartsWith(instance_url, "/main/")) {
+                instance_url = "/";
             }
 
-            const AssetInfo *asset = assets_map.FindValue(instance_path, nullptr);
+            const AssetInfo *asset = assets_map.FindValue(instance_url, nullptr);
 
-            if (TestStr(instance_path, "/") || TestStr(instance_path, "/sw.pk.js") ||
-                                               TestStr(instance_path, "/manifest.json")) {
+            if (TestStr(instance_url, "/") || TestStr(instance_url, "/sw.pk.js") ||
+                                              TestStr(instance_url, "/manifest.json")) {
                 RG_ASSERT(asset);
 
                 // XXX: Use some kind of dynamic cache to avoid doing this all the time
@@ -261,13 +282,16 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                     } else if (TestStr(key, "TITLE")) {
                         writer->Write(instance->config.title);
                     } else if (TestStr(key, "BASE_URL")) {
-                        Print(writer, "/%1/", instance->key);
+                        Print(writer, "/%1/", instance->master->key);
                     } else if (TestStr(key, "ENV_JSON")) {
                         json_Writer json(writer);
                         char buf[512];
 
                         json.StartObject();
-                        json.Key("base_url"); json.String(Fmt(buf, "/%1/", instance->key).ptr);
+                        json.Key("urls"); json.StartObject();
+                            json.Key("base"); json.String(Fmt(buf, "/%1/", instance->master->key).ptr);
+                            json.Key("instance"); json.Null();
+                        json.EndObject();
                         json.Key("title"); json.String(instance->config.title);
                         json.Key("cache_offline"); json.Bool(instance->config.use_offline);
                         if (instance->config.use_offline) {
@@ -282,8 +306,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         }
                         json.EndObject();
                     } else if (TestStr(key, "HEAD_TAGS")) {
-                        if (instance->config.use_offline && !instance->GetSlaveCount()) {
-                            Print(writer, "<link rel=\"manifest\" href=\"/%1/manifest.json\"/>", instance->key);
+                        if (instance->config.use_offline) {
+                            Print(writer, "<link rel=\"manifest\" href=\"/%1/manifest.json\"/>", instance->master->key);
                         }
                     } else {
                         Print(writer, "{%1}", key);
@@ -302,31 +326,33 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         }
 
         // And now, API endpoints
-        if (TestStr(instance_path, "/api/session/ping") && request.method == http_RequestMethod::Get) {
+        if (TestStr(instance_url, "/api/session/ping") && request.method == http_RequestMethod::Get) {
             HandlePing(request, io);
-        } else if (TestStr(instance_path, "/api/session/profile") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(instance_url, "/api/session/profile") && request.method == http_RequestMethod::Get) {
             HandleUserProfile(instance, request, io);
-        } else if (TestStr(instance_path, "/api/session/login") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
             HandleUserLogin(instance, request, io);
-        } else if (TestStr(instance_path, "/api/session/logout") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
             HandleUserLogout(instance, request, io);
-        } else if (TestStr(instance_path, "/api/files/static") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(instance_url, "/api/files/static") && request.method == http_RequestMethod::Get) {
              HandleFileStatic(instance, request, io);
-        } else if (TestStr(instance_path, "/api/files/list") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(instance_url, "/api/files/list") && request.method == http_RequestMethod::Get) {
              HandleFileList(instance, request, io);
-        } else if (StartsWith(instance_path, "/files/") && request.method == http_RequestMethod::Put) {
+        } else if (StartsWith(instance_url, "/files/") && request.method == http_RequestMethod::Put) {
             HandleFilePut(instance, request, io);
-        } else if (StartsWith(instance_path, "/files/") && request.method == http_RequestMethod::Delete) {
+        } else if (StartsWith(instance_url, "/files/") && request.method == http_RequestMethod::Delete) {
             HandleFileDelete(instance, request, io);
-        } else if (TestStr(instance_path, "/api/files/backup") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_url, "/api/files/backup") && request.method == http_RequestMethod::Post) {
              HandleFileBackup(instance, request, io);
-        } else if (TestStr(instance_path, "/api/records/load") && request.method == http_RequestMethod::Get) {
+        } else if (TestStr(instance_url, "/api/records/load") && request.method == http_RequestMethod::Get) {
             HandleRecordLoad(instance, request, io);
-        } else if (TestStr(instance_path, "/api/records/save") && request.method == http_RequestMethod::Post) {
+        } else if (TestStr(instance_url, "/api/records/save") && request.method == http_RequestMethod::Post) {
             HandleRecordSave(instance, request, io);
         } else {
             io->AttachError(404);
         }
+    } else {
+        io->AttachError(404);
     }
 }
 
