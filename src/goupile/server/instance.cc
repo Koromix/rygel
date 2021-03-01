@@ -20,7 +20,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 29;
+const int InstanceVersion = 30;
 
 static std::atomic_int64_t next_unique;
 
@@ -83,6 +83,8 @@ bool InstanceHolder::Open(const char *key, const char *filename, InstanceHolder 
                     }
                 } else if (TestStr(key, "MaxFileSize")) {
                     valid &= ParseInt(value, &config.max_file_size);
+                } else if (TestStr(key, "SharedKey")) {
+                    config.shared_key = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(key, "BackupKey")) {
                     config.backup_key = DuplicateString(value, &str_alloc).ptr;
                 } else {
@@ -139,6 +141,10 @@ bool InstanceHolder::Validate()
     }
     if (config.max_file_size <= 0) {
         LogError("Maximum file size must be >= 0");
+        valid = false;
+    }
+    if (!config.shared_key) {
+        LogError("Missing SharedKey setting");
         valid = false;
     }
     if (config.backup_key && config.sync_mode != SyncMode::Offline) {
@@ -946,9 +952,21 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 29: {
+                char shared_key[64];
+                {
+                    uint8_t buf[32];
+                    randombytes_buf(&buf, RG_SIZE(buf));
+                    sodium_bin2base64(shared_key, RG_SIZE(shared_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+                }
+
+                if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('SharedKey', ?1);", shared_key))
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 29);
+            RG_STATIC_ASSERT(InstanceVersion == 30);
         }
 
         int64_t time = GetUnixTime();
