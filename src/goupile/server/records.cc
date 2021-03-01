@@ -78,7 +78,7 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
     }
 
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    const Token *token = session ? session->GetToken(instance) : nullptr;
+    const InstanceToken *token = session ? session->GetToken(instance) : nullptr;
     if (!token) {
         LogError("User is not allowed to load data");
         io->AttachError(403);
@@ -172,7 +172,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
     }
 
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    const Token *token = session ? session->GetToken(instance) : nullptr;
+    const InstanceToken *token = session ? session->GetToken(instance) : nullptr;
 
     // XXX: Check new/edit permissions correctly
     if (!token || !token->HasPermission(UserPermission::Edit)) {

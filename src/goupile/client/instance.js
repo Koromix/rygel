@@ -14,6 +14,7 @@
 function InstanceController() {
     let self = this;
 
+    let db;
     let app;
 
     let route = {
@@ -49,8 +50,49 @@ function InstanceController() {
 
     this.init = async function() {
         initUI();
+        await openInstanceDB();
         await initApp();
     };
+
+    async function openInstanceDB() {
+        let db_name = `goupile:${ENV.urls.instance}`;
+        db = await indexeddb.open(db_name, 9, (db, old_version) => {
+            switch (old_version) {
+                case null: {
+                    db.createStore('usr_profiles');
+                } // fallthrough
+                case 1: {
+                    db.createStore('fs_files');
+                } // fallthrough
+                case 2: {
+                    db.createStore('rec_records');
+                } // fallthrough
+                case 3: {
+                    db.createIndex('rec_records', 'form', 'fkey', {unique: false});
+                } // fallthrough
+                case 4: {
+                    db.createIndex('rec_records', 'parent', 'pkey', {unique: false});
+                } // fallthrough
+                case 5: {
+                    db.deleteIndex('rec_records', 'parent');
+                    db.createIndex('rec_records', 'parent', 'pfkey', {unique: false});
+                } // fallthrough
+                case 6: {
+                    db.deleteIndex('rec_records', 'form');
+                    db.deleteIndex('rec_records', 'parent');
+                    db.createIndex('rec_records', 'form', 'keys.form', {unique: false});
+                    db.createIndex('rec_records', 'parent', 'keys.parent', {unique: false});
+                } // fallthrough
+                case 7: {
+                    db.createIndex('rec_records', 'anchor', 'keys.anchor', {unique: false});
+                    db.createIndex('rec_records', 'sync', 'keys.sync', {unique: false});
+                } // fallthrough
+                case 8: {
+                    db.deleteStore('usr_profiles');
+                } // fallthrough
+            }
+        });
+    }
 
     async function initApp() {
         let code = await fetchCode('main.js');

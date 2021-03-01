@@ -175,7 +175,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
     InstanceHolder *master = instance->master;
 
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    const Token *token = session ? session->GetToken(instance) : nullptr;
+    const InstanceToken *token = session ? session->GetToken(instance) : nullptr;
     if (!token || !token->HasPermission(UserPermission::Deploy)) {
         LogError("User is not allowed to deploy changes");
         io->AttachError(403);
@@ -330,7 +330,7 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
     InstanceHolder *master = instance->master;
 
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    const Token *token = session ? session->GetToken(instance) : nullptr;
+    const InstanceToken *token = session ? session->GetToken(instance) : nullptr;
     if (!token || !token->HasPermission(UserPermission::Deploy)) {
         LogError("User is not allowed to deploy changes");
         io->AttachError(403);
@@ -393,7 +393,7 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
 void HandleFileBackup(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    const Token *token = session ? session->GetToken(instance) : nullptr;
+    const InstanceToken *token = session ? session->GetToken(instance) : nullptr;
     if (!token) {
         LogError("User is not allowed to upload client backups");
         io->AttachError(403);

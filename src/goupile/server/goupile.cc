@@ -157,7 +157,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         json.StartObject();
                         json.Key("urls"); json.StartObject();
                             json.Key("base"); json.String("/admin/");
-                            json.Key("instance"); json.Null();
+                            json.Key("instance"); json.String("/admin/");
                         json.EndObject();
                         json.Key("title"); json.String("Goupile Admin");
                         json.Key("permissions"); json.StartArray();
@@ -277,37 +277,39 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 // XXX: Use some kind of dynamic cache to avoid doing this all the time
                 AssetInfo copy = *asset;
                 copy.data = PatchAsset(copy, &io->allocator, [&](const char *key, StreamWriter *writer) {
+                    const InstanceHolder *master = instance->master;
+
                     if (TestStr(key, "VERSION")) {
                         writer->Write(FelixVersion);
                     } else if (TestStr(key, "TITLE")) {
-                        writer->Write(instance->config.title);
+                        writer->Write(master->config.title);
                     } else if (TestStr(key, "BASE_URL")) {
-                        Print(writer, "/%1/", instance->master->key);
+                        Print(writer, "/%1/", master->key);
                     } else if (TestStr(key, "ENV_JSON")) {
                         json_Writer json(writer);
                         char buf[512];
 
                         json.StartObject();
                         json.Key("urls"); json.StartObject();
-                            json.Key("base"); json.String(Fmt(buf, "/%1/", instance->master->key).ptr);
-                            json.Key("instance"); json.Null();
+                            json.Key("base"); json.String(Fmt(buf, "/%1/", master->key).ptr);
+                            json.Key("instance"); json.String(Fmt(buf, "/%1/", master->key).ptr);
                         json.EndObject();
-                        json.Key("title"); json.String(instance->config.title);
-                        json.Key("cache_offline"); json.Bool(instance->config.use_offline);
-                        if (instance->config.use_offline) {
-                            json.Key("cache_key"); json.String(Fmt(buf, "%1_%2", etag, instance->unique).ptr);
+                        json.Key("title"); json.String(master->config.title);
+                        json.Key("cache_offline"); json.Bool(master->config.use_offline);
+                        if (master->config.use_offline) {
+                            json.Key("cache_key"); json.String(Fmt(buf, "%1_%2", etag, master->unique).ptr);
                         }
                         {
-                            Span<const char> str = ConvertToJsonName(SyncModeNames[(int)instance->config.sync_mode], buf);
+                            Span<const char> str = ConvertToJsonName(SyncModeNames[(int)master->config.sync_mode], buf);
                             json.Key("sync_mode"); json.String(str.ptr, (size_t)str.len);
                         }
-                        if (instance->config.backup_key) {
-                            json.Key("backup_key"); json.String(instance->config.backup_key);
+                        if (master->config.backup_key) {
+                            json.Key("backup_key"); json.String(master->config.backup_key);
                         }
                         json.EndObject();
                     } else if (TestStr(key, "HEAD_TAGS")) {
-                        if (instance->config.use_offline) {
-                            Print(writer, "<link rel=\"manifest\" href=\"/%1/manifest.json\"/>", instance->master->key);
+                        if (master->config.use_offline) {
+                            Print(writer, "<link rel=\"manifest\" href=\"/%1/manifest.json\"/>", master->key);
                         }
                     } else {
                         Print(writer, "{%1}", key);

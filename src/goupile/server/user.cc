@@ -22,16 +22,59 @@ namespace RG {
 
 static http_SessionManager<Session> sessions;
 
-const Token *Session::GetToken(const InstanceHolder *instance) const
+const InstanceToken *Session::GetToken(const InstanceHolder *instance) const
 {
     if (instance) {
-        Token *token;
+        InstanceToken *token;
         {
             std::shared_lock<std::shared_mutex> lock_shr(tokens_lock);
             token = tokens_map.Find(instance->unique);
         }
 
         if (!token) {
+            InstanceHolder *redirect = nullptr;
+            RG_DEFER {
+                if (redirect) {
+                    redirect->Unref();
+                }
+            };
+
+            // Redirect user to appropiate slave instance
+            if (instance->GetSlaveCount()) {
+                do {
+                    sq_Statement stmt;
+                    if (!gp_domain.db.Prepare(R"(SELECT i.instance FROM dom_instances i
+                                                 INNER JOIN dom_permissions p ON (p.instance = i.instance)
+                                                 WHERE p.userid = ?1 AND i.master = ?2
+                                                 ORDER BY i.instance)", &stmt))
+                        break;
+                    sqlite3_bind_int64(stmt, 1, userid);
+                    sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
+                    if (!stmt.Next())
+                        break;
+
+                    const char *redirect_key = (const char *)sqlite3_column_text(stmt, 0);
+
+                    redirect = gp_domain.Ref(redirect_key);
+                    if (!redirect)
+                        break;
+
+                    std::lock_guard<std::shared_mutex> lock_excl(tokens_lock);
+
+                    token = tokens_map.SetDefault(instance->unique);
+                    token->title = DuplicateString(redirect->config.title, &tokens_alloc).ptr;
+                    token->url = Fmt(&tokens_alloc, "/%1/", redirect->key).ptr;
+                    token->permissions = 0;
+                } while (false);
+
+                if (!redirect)
+                    return nullptr;
+
+                instance = redirect;
+                token = nullptr;
+            }
+
+            // Actually get the token we want
             do {
                 sq_Statement stmt;
                 if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
@@ -47,17 +90,19 @@ const Token *Session::GetToken(const InstanceHolder *instance) const
                 std::lock_guard<std::shared_mutex> lock_excl(tokens_lock);
 
                 token = tokens_map.SetDefault(instance->unique);
+                token->title = DuplicateString(instance->config.title, &tokens_alloc).ptr;
+                token->url = Fmt(&tokens_alloc, "/%1/", instance->key).ptr;
                 token->permissions = permissions;
             } while (false);
 
-            // User is not assigned to this instance, cache this information
+            // User is not assigned to this project, cache this information
             if (!token) {
                 std::lock_guard<std::shared_mutex> lock_excl(tokens_lock);
                 token = tokens_map.SetDefault(instance->unique);
             }
         }
 
-        return token->permissions ? token : nullptr;
+        return token->title ? token : nullptr;
     } else {
         return nullptr;
     }
@@ -73,18 +118,12 @@ static void WriteProfileJson(const Session *session, const InstanceHolder *insta
     if (session) {
         json.Key("userid"); json.Int64(session->userid);
         json.Key("username"); json.String(session->username);
-        json.Key("admin"); json.Bool(session->IsAdmin());
-        json.Key("demo"); json.Bool(session->demo);
+
         if (instance) {
-            const Token *token = session->GetToken(instance);
+            const InstanceToken *token = session->GetToken(instance);
 
             if (token) {
-                json.Key("permissions"); json.StartObject();
-                for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
-                    Span<const char> key = ConvertToJsonName(UserPermissionNames[i], buf);
-                    json.Key(key.ptr, (size_t)key.len); json.Bool(token->permissions & (1 << i));
-                }
-                json.EndObject();
+                json.Key("authorized"); json.Bool(true);
 
                 json.Key("keys"); json.StartArray();
                     json.StartArray();
@@ -96,7 +135,23 @@ static void WriteProfileJson(const Session *session, const InstanceHolder *insta
                         json.String(instance->config.shared_key);
                     json.EndArray();
                 json.EndArray();
+
+                json.Key("instance"); json.StartObject();
+                    json.Key("title"); json.String(token->title);
+                    json.Key("url"); json.String(token->url);
+                json.EndObject();
+
+                json.Key("permissions"); json.StartObject();
+                for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
+                    Span<const char> key = ConvertToJsonName(UserPermissionNames[i], buf);
+                    json.Key(key.ptr, (size_t)key.len); json.Bool(token->permissions & (1 << i));
+                }
+                json.EndObject();
+            } else {
+                json.Key("authorized"); json.Bool(false);
             }
+        } else {
+            json.Key("authorized"); json.Bool(session->IsAdmin());
         }
     }
     json.EndObject();

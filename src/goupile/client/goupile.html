@@ -102,20 +102,6 @@
                 document.body.classList.add('gp_loading');
                 window.addEventListener('load', function(e) {
                     if (typeof goupile !== 'undefined') {
-                        // Detect instance URL
-                        {
-                            let url = new URL(window.location.href);
-                            let remain = url.pathname.substr(ENV.urls.base.length);
-                            let m = remain.match(/^([a-z0-9_]+)\//);
-
-                            if (m && m[1] !== 'main') {
-                                ENV.urls.instance = `${ENV.urls.base}${m[1]}/`;
-                            } else {
-                                ENV.urls.instance = ENV.urls.base;
-                            }
-                        }
-
-                        // Run!
                         let p = goupile.start();
 
                         p.catch(function(err) {

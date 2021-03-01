@@ -33,8 +33,9 @@ static const char *const SyncModeNames[] = {
 };
 
 class InstanceHolder {
+    mutable std::atomic_int refcount {0};
+
     // Managed by DomainHolder
-    std::atomic_int refcount {0};
     bool unload = false;
     std::atomic_bool reload {false};
     std::atomic_int slaves {0};
@@ -66,8 +67,8 @@ public:
 
     bool Checkpoint();
 
-    void Reload() { reload = true; }
-    void Unref();
+    void Reload() { master->reload = true; }
+    void Unref() const;
 
     int GetSlaveCount() const { return slaves.load(std::memory_order_relaxed); }
 

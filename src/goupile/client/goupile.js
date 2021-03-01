@@ -13,7 +13,6 @@
 
 // Global variables
 let profile = {};
-let db;
 
 const goupile = new function() {
     let self = this;
@@ -29,29 +28,47 @@ const goupile = new function() {
             controller = new AdminController;
             document.documentElement.className = 'admin';
         } else {
+            // Detect base URLs
+            {
+                let url = new URL(window.location.href);
+                let parts = url.pathname.split('/', 3);
+
+                if (parts[2] && parts[2] !== 'main')
+                    ENV.urls.instance += `${parts[2]}/`;
+            }
+
             controller = new InstanceController;
             document.documentElement.className = 'instance';
         }
 
         ui.init();
         await registerSW();
-        await initDB();
         initNavigation();
         initTasks();
 
         await syncProfile();
-        if (profile.permissions == null) {
-            await runLoginScreen();
-        } else {
+        if (profile.authorized) {
             await initAfterAuthorization();
+        } else {
+            await runLoginScreen();
         }
     };
 
     async function initAfterAuthorization() {
+        let url = new URL(window.location.href);
+
+        if (profile.instance != null) {
+            ENV.title = profile.instance.title;
+            ENV.urls.instance = profile.instance.url;
+
+            if (!url.pathname.startsWith(ENV.urls.instance))
+                url = new URL(ENV.urls.instance, window.location.href);
+        }
+
         await controller.init();
         await runTasks();
 
-        controller.go(null, window.location.href).catch(err => {
+        controller.go(null, url.pathname).catch(err => {
             log.error(err);
 
             // Now try home page... If that fails too, show login screen.
@@ -110,44 +127,6 @@ const goupile = new function() {
         }
     }
 
-    async function initDB() {
-        let db_name = `goupile:${ENV.urls.instance}`;
-
-        db = await indexeddb.open(db_name, 8, (db, old_version) => {
-            switch (old_version) {
-                case null: {
-                    db.createStore('usr_profiles');
-                } // fallthrough
-                case 1: {
-                    db.createStore('fs_files');
-                } // fallthrough
-                case 2: {
-                    db.createStore('rec_records');
-                } // fallthrough
-                case 3: {
-                    db.createIndex('rec_records', 'form', 'fkey', {unique: false});
-                } // fallthrough
-                case 4: {
-                    db.createIndex('rec_records', 'parent', 'pkey', {unique: false});
-                } // fallthrough
-                case 5: {
-                    db.deleteIndex('rec_records', 'parent');
-                    db.createIndex('rec_records', 'parent', 'pfkey', {unique: false});
-                } // fallthrough
-                case 6: {
-                    db.deleteIndex('rec_records', 'form');
-                    db.deleteIndex('rec_records', 'parent');
-                    db.createIndex('rec_records', 'form', 'keys.form', {unique: false});
-                    db.createIndex('rec_records', 'parent', 'keys.parent', {unique: false});
-                } // fallthrough
-                case 7: {
-                    db.createIndex('rec_records', 'anchor', 'keys.anchor', {unique: false});
-                    db.createIndex('rec_records', 'sync', 'keys.sync', {unique: false});
-                } // fallthrough
-            }
-        });
-    }
-
     async function syncProfile() {
         let new_rnd = util.getCookie('session_rnd', null);
 
@@ -166,31 +145,24 @@ const goupile = new function() {
             if (lock != null) {
                 util.deleteCookie('session_rnd', '/');
 
-                profile = {
+                let new_profile = {
                     userid: lock.userid,
                     username: lock.username,
                     permissions: {
                         'edit': true
                     },
+                    keys: lock.keys,
                     lock: lock.ctx
                 };
-                session_rnd = null;
-                profile_keys = new Map(lock.keys.map(it => [it[0], base64ToBytes(it[1])]));
+                updateProfile(new_profile);
             }
         }
 
         if (new_rnd !== session_rnd) {
             try {
                 let response = await net.fetch(`${ENV.urls.instance}api/session/profile`);
-
-                profile = await response.json();
-                session_rnd = util.getCookie('session_rnd');
-                if (profile.keys != null) {
-                    profile_keys = new Map(profile.keys.map(it => [it[0], base64ToBytes(it[1])]));
-                    profile.keys = profile.keys.map(key => key[0]);
-                } else {
-                    profile_keys = new Map;
-                }
+                let new_profile = await response.json();
+                updateProfile(new_profile);
             } catch (err) {
                 if (!ENV.cache_offline)
                     throw err;
@@ -340,6 +312,8 @@ const goupile = new function() {
 
                     // Save for offline login
                     if (ENV.cache_offline) {
+                        let db = await openProfileDB();
+
                         let salt = nacl.randomBytes(24);
                         let key = await deriveKey(password, salt);
                         let enc = await encryptSecretBox(new_profile, key);
@@ -351,26 +325,22 @@ const goupile = new function() {
                         });
                     }
 
-                    profile = new_profile;
-                    session_rnd = util.getCookie('session_rnd');
-                    if (profile.keys != null) {
-                        profile_keys = new Map(profile.keys.map(it => [it[0], base64ToBytes(it[1])]));
-                        profile.keys = profile.keys.map(key => key[0]);
-                    } else {
-                        profile_keys = new Map;
-                    }
-
+                    updateProfile(new_profile);
                     await deleteSessionValue('lock');
 
                     progress.success('Connexion réussie');
                 } else {
-                    if (response.status === 403)
+                    if (response.status === 403) {
+                        let db = await openProfileDB();
                         await db.delete('usr_profiles', username);
+                    }
 
                     let err = (await response.text()).trim();
                     throw new Error(err);
                 }
             } else if (ENV.cache_offline) {
+                let db = await openProfileDB();
+
                 // Instantaneous login feels weird
                 await util.waitFor(800);
 
@@ -381,15 +351,9 @@ const goupile = new function() {
                 let key = await deriveKey(password, base64ToBytes(obj.salt));
 
                 try {
-                    profile = await decryptSecretBox(obj.profile, key);
-                    session_rnd = util.getCookie('session_rnd');
-                    if (profile.keys != null) {
-                        profile_keys = new Map(profile.keys.map(it => [it[0], base64ToBytes(it[1])]));
-                        profile.keys = profile.keys.map(key => key[0]);
-                    } else {
-                        profile_keys = new Map;
-                    }
+                    let new_profile = await decryptSecretBox(obj.profile, key);
 
+                    updateProfile(new_profile);
                     await deleteSessionValue('lock');
 
                     progress.success('Connexion réussie (hors ligne)');
@@ -415,6 +379,19 @@ const goupile = new function() {
         }
     }
 
+    async function openProfileDB() {
+        let db_name = `goupile+${ENV.urls.base}`;
+        let db = await indexeddb.open(db_name, 1, (db, old_version) => {
+            switch (old_version) {
+                case null: {
+                    db.createStore('usr_profiles');
+                } // fallthrough
+            }
+        });
+
+        return db;
+    }
+
     function deriveKey(password, salt) {
         return new Promise((resolve, reject) => {
             scrypt(password, salt, {
@@ -427,6 +404,20 @@ const goupile = new function() {
         });
     }
 
+    function updateProfile(new_profile) {
+        profile = new_profile;
+
+        // Keep keys local to "hide" (as much as JS allows..) them
+        if (profile.keys != null) {
+            profile_keys = new Map(profile.keys.map(it => [it[0], base64ToBytes(it[1])]));
+            profile.keys = profile.keys.map(key => key[0]);
+        } else {
+            profile_keys = new Map;
+        }
+
+        session_rnd = util.getCookie('session_rnd');
+    }
+
     this.logout = async function(e) {
         await self.confirmDangerousAction(e);
 
@@ -436,12 +427,11 @@ const goupile = new function() {
             let response = await net.fetch(`${ENV.urls.instance}api/session/logout`, {method: 'POST'})
 
             if (response.ok) {
-                profile = {};
-                session_rnd = undefined;
-                profile_keys = new Map;
-
-                util.setCookie('session_rnd', 'LOGIN', '/');
+                updateProfile({});
                 await deleteSessionValue('lock');
+
+                // Force login after reload
+                util.setCookie('session_rnd', 'LOGIN', '/');
 
                 // Clear state and start from fresh as a precaution
                 window.onbeforeunload = null;

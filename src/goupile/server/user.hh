@@ -39,14 +39,18 @@ static const char *const UserPermissionNames[] = {
     "Recompute"
 };
 
-struct Token {
+struct InstanceToken {
+    const char *title;
+    const char *url;
     uint32_t permissions;
+
     bool HasPermission(UserPermission perm) const { return permissions & (int)perm; };
 };
 
 class Session: public RetainObject {
     mutable std::shared_mutex tokens_lock;
-    mutable HashMap<int64_t, Token> tokens_map;
+    mutable HashMap<int64_t, InstanceToken> tokens_map;
+    mutable BlockAllocator tokens_alloc;
 
 public:
     int64_t userid;
@@ -56,7 +60,7 @@ public:
     char local_key[64];
 
     bool IsAdmin() const { return admin_until && admin_until > GetMonotonicTime(); }
-    const Token *GetToken(const InstanceHolder *instance) const;
+    const InstanceToken *GetToken(const InstanceHolder *instance) const;
 };
 
 RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http_IO *io);
