@@ -336,6 +336,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleUserLogin(instance, request, io);
         } else if (TestStr(instance_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
             HandleUserLogout(instance, request, io);
+        } else if (TestStr(instance_url, "/api/session/backup") && request.method == http_RequestMethod::Post) {
+             HandleUserBackup(instance, request, io);
         } else if (TestStr(instance_url, "/api/files/static") && request.method == http_RequestMethod::Get) {
              HandleFileStatic(instance, request, io);
         } else if (TestStr(instance_url, "/api/files/list") && request.method == http_RequestMethod::Get) {
@@ -344,8 +346,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleFilePut(instance, request, io);
         } else if (StartsWith(instance_url, "/files/") && request.method == http_RequestMethod::Delete) {
             HandleFileDelete(instance, request, io);
-        } else if (TestStr(instance_url, "/api/files/backup") && request.method == http_RequestMethod::Post) {
-             HandleFileBackup(instance, request, io);
         } else if (TestStr(instance_url, "/api/records/load") && request.method == http_RequestMethod::Get) {
             HandleRecordLoad(instance, request, io);
         } else if (TestStr(instance_url, "/api/records/save") && request.method == http_RequestMethod::Post) {

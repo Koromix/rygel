@@ -32,12 +32,26 @@ const InstanceToken *Session::GetToken(const InstanceHolder *instance) const
         }
 
         if (!token) {
-            InstanceHolder *redirect = nullptr;
-            RG_DEFER {
-                if (redirect) {
-                    redirect->Unref();
-                }
-            };
+            std::lock_guard<std::shared_mutex> lock_excl(tokens_lock);
+
+            // Actually get the token we want
+            do {
+                sq_Statement stmt;
+                if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
+                                             WHERE userid = ?1 AND instance = ?2)", &stmt))
+                    break;
+                sqlite3_bind_int64(stmt, 1, userid);
+                sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
+                if (!stmt.Next())
+                    break;
+
+                uint32_t permissions = sqlite3_column_int(stmt, 0);
+
+                token = tokens_map.SetDefault(instance->unique);
+                token->permissions = permissions;
+                token->title = DuplicateString(instance->config.title, &tokens_alloc).ptr;
+                token->url = Fmt(&tokens_alloc, "/%1/", instance->key).ptr;
+            } while (false);
 
             // Redirect user to appropiate slave instance
             if (instance->GetSlaveCount()) {
@@ -55,49 +69,23 @@ const InstanceToken *Session::GetToken(const InstanceHolder *instance) const
 
                     const char *redirect_key = (const char *)sqlite3_column_text(stmt, 0);
 
-                    redirect = gp_domain.Ref(redirect_key);
+                    InstanceHolder *redirect = gp_domain.Ref(redirect_key);
                     if (!redirect)
                         break;
+                    RG_DEFER { redirect->Unref(); };
 
-                    std::lock_guard<std::shared_mutex> lock_excl(tokens_lock);
+                    if (!token) {
+                        token = tokens_map.SetDefault(instance->unique);
+                        token->permissions = 0;
+                    }
 
-                    token = tokens_map.SetDefault(instance->unique);
                     token->title = DuplicateString(redirect->config.title, &tokens_alloc).ptr;
                     token->url = Fmt(&tokens_alloc, "/%1/", redirect->key).ptr;
-                    token->permissions = 0;
                 } while (false);
-
-                if (!redirect)
-                    return nullptr;
-
-                instance = redirect;
-                token = nullptr;
             }
-
-            // Actually get the token we want
-            do {
-                sq_Statement stmt;
-                if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
-                                             WHERE userid = ?1 AND instance = ?2)", &stmt))
-                    break;
-                sqlite3_bind_int64(stmt, 1, userid);
-                sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
-                if (!stmt.Next())
-                    break;
-
-                uint32_t permissions = sqlite3_column_int(stmt, 0);
-
-                std::lock_guard<std::shared_mutex> lock_excl(tokens_lock);
-
-                token = tokens_map.SetDefault(instance->unique);
-                token->title = DuplicateString(instance->config.title, &tokens_alloc).ptr;
-                token->url = Fmt(&tokens_alloc, "/%1/", instance->key).ptr;
-                token->permissions = permissions;
-            } while (false);
 
             // User is not assigned to this project, cache this information
             if (!token) {
-                std::lock_guard<std::shared_mutex> lock_excl(tokens_lock);
                 token = tokens_map.SetDefault(instance->unique);
             }
         }
@@ -312,6 +300,80 @@ void HandleUserProfile(InstanceHolder *instance, const http_RequestInfo &request
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     WriteProfileJson(session.GetRaw(), instance, request, io);
+}
+
+void HandleUserBackup(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    const InstanceToken *token = session ? session->GetToken(instance) : nullptr;
+    if (!token) {
+        LogError("User is not allowed to upload client backups");
+        io->AttachError(403);
+        return;
+    }
+
+    if (!instance->config.backup_key) {
+        LogError("This instance does not accept client backups");
+        io->AttachError(403);
+        return;
+    }
+
+    int64_t time = GetUnixTime() / 10000 * 10000;
+    const char *filename = Fmt(&io->allocator, "%1%/%2_offline_%3@%4.gz",
+                               gp_domain.config.backup_directory, instance->key, session->username, time).ptr;
+
+    if (TestFile(filename)) {
+        LogError("A recent backup already exists for this user");
+        io->AttachError(409);
+        return;
+    }
+
+    io->RunAsync([=]() {
+        // Create temporary file
+        FILE *fp = nullptr;
+        const char *tmp_filename = CreateTemporaryFile(gp_domain.config.temp_directory, "", ".tmp",
+                                                       &io->allocator, &fp);
+        if (!tmp_filename)
+            return;
+        RG_DEFER {
+            if (fp) {
+                fclose(fp);
+            }
+            UnlinkFile(tmp_filename);
+        };
+
+        // Read and compress request body
+        Size total_len = 0;
+        {
+            StreamWriter writer(fp, "<temp>", CompressionType::Gzip);
+            StreamReader reader;
+            if (!io->OpenForRead(instance->config.max_file_size, &reader))
+                return;
+
+            while (!reader.IsEOF()) {
+                LocalArray<uint8_t, 16384> buf;
+                buf.len = reader.Read(buf.data);
+                if (buf.len < 0)
+                    return;
+                total_len += buf.len;
+
+                if (!writer.Write(buf))
+                    return;
+            }
+            if (!writer.Close())
+                return;
+
+            fclose(fp);
+            fp = nullptr;
+        }
+
+        // Move to final destination
+        if (!RenameFile(tmp_filename, filename, false))
+            return;
+
+        io->AttachText(200, "Done!");
+        return;
+    });
 }
 
 }

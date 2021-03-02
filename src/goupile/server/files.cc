@@ -23,12 +23,16 @@ namespace RG {
 
 void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    InstanceHolder *master = instance->master;
+    if (instance != instance->master) {
+        LogError("Cannot list files through slave instance");
+        io->AttachError(403);
+        return;
+    }
 
     sq_Statement stmt;
-    if (!master->db.Prepare(R"(SELECT filename, size, sha256 FROM fs_files
-                               WHERE active = 1
-                               ORDER BY filename)", &stmt))
+    if (!instance->db.Prepare(R"(SELECT filename, size, sha256 FROM fs_files
+                                 WHERE active = 1
+                                 ORDER BY filename)", &stmt))
         return;
 
     http_JsonPageBuilder json(request.compression_type);
@@ -51,8 +55,6 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
 // Returns true when request has been handled (file exists or an error has occured)
 bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    InstanceHolder *master = instance->master;
-
     const char *url = request.url + instance->key.len + 1;
     const char *client_etag = request.GetHeaderValue("If-None-Match");
     const char *client_sha256 = request.GetQueryValue("sha256");
@@ -63,14 +65,21 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
     } else if (TestStr(url, "/manifest.json")) {
         url = "/files/manifest.json";
     }
+
+    // Safety checks
     if (!StartsWith(url, "/files/"))
         return false;
+    if (instance != instance->master) {
+        LogError("Cannot get files through slave instance");
+        io->AttachError(403);
+        return true;
+    }
 
     const char *filename = url + 7;
 
     sq_Statement stmt;
-    if (!master->db.Prepare(R"(SELECT rowid, compression, sha256 FROM fs_files
-                               WHERE active = 1 AND filename = ?1)", &stmt))
+    if (!instance->db.Prepare(R"(SELECT rowid, compression, sha256 FROM fs_files
+                                 WHERE active = 1 AND filename = ?1)", &stmt))
         return true;
     sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
 
@@ -111,8 +120,8 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
     sqlite3_blob *blob;
     Size blob_len;
-    if (sqlite3_blob_open(master->db, "main", "fs_files", "blob", rowid, 0, &blob) != SQLITE_OK) {
-        LogError("SQLite Error: %1", sqlite3_errmsg(master->db));
+    if (sqlite3_blob_open(instance->db, "main", "fs_files", "blob", rowid, 0, &blob) != SQLITE_OK) {
+        LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
         return true;
     }
     blob_len = sqlite3_blob_bytes(blob);
@@ -134,7 +143,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
             LocalArray<char, 65536> buf;
             if (sqlite3_blob_read(blob, buf.data, (int)blob_len, 0) != SQLITE_OK) {
-                LogError("SQLite Error: %1", sqlite3_errmsg(master->db));
+                LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
                 return;
             }
             buf.len = blob_len;
@@ -153,7 +162,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
                 Size copy_len = std::min(blob_len - offset, buf.len);
 
                 if (sqlite3_blob_read(blob, buf.ptr, (int)copy_len, (int)offset) != SQLITE_OK) {
-                    LogError("SQLite Error: %1", sqlite3_errmsg(master->db));
+                    LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
                     return (Size)-1;
                 }
 
@@ -172,8 +181,6 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
 void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    InstanceHolder *master = instance->master;
-
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const InstanceToken *token = session ? session->GetToken(instance) : nullptr;
     if (!token || !token->HasPermission(UserPermission::Deploy)) {
@@ -193,6 +200,11 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
     }
     if (PathContainsDotDot(url)) {
         LogError("Path must not contain any '..' component");
+        io->AttachError(403);
+        return;
+    }
+    if (instance != instance->master) {
+        LogError("Cannot save files through slave instance");
         io->AttachError(403);
         return;
     }
@@ -217,7 +229,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
         {
             StreamWriter writer(fp, "<temp>", CompressionType::Gzip);
             StreamReader reader;
-            if (!io->OpenForRead(master->config.max_file_size, &reader))
+            if (!io->OpenForRead(instance->config.max_file_size, &reader))
                 return;
 
             crypto_hash_sha256_state state;
@@ -244,7 +256,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
         }
 
         // Copy and commit to database
-        master->db.Transaction([&]() {
+        instance->db.Transaction([&]() {
             Size file_len = ftell(fp);
             if (fseek(fp, 0, SEEK_SET) < 0) {
                 LogError("fseek('<temp>') failed: %1", strerror(errno));
@@ -253,8 +265,8 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
             if (client_sha256) {
                 sq_Statement stmt;
-                if (!master->db.Prepare(R"(SELECT sha256 FROM fs_files
-                                           WHERE active = 1 AND filename = ?1)", &stmt))
+                if (!instance->db.Prepare(R"(SELECT sha256 FROM fs_files
+                                             WHERE active = 1 AND filename = ?1)", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
 
@@ -279,18 +291,18 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
             int64_t mtime = GetUnixTime();
 
-            if (!master->db.Run(R"(UPDATE fs_files SET active = 0
-                                   WHERE active = 1 AND filename = ?1)", filename))
+            if (!instance->db.Run(R"(UPDATE fs_files SET active = 0
+                                     WHERE active = 1 AND filename = ?1)", filename))
                 return false;
-            if (!master->db.Run(R"(INSERT INTO fs_files (active, filename, mtime, blob, compression, sha256, size)
-                                   VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
+            if (!instance->db.Run(R"(INSERT INTO fs_files (active, filename, mtime, blob, compression, sha256, size)
+                                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
                                   1, filename, mtime, sq_Binding::Zeroblob(file_len), "Gzip", sha256, total_len))
                 return false;
 
-            int64_t rowid = sqlite3_last_insert_rowid(master->db);
+            int64_t rowid = sqlite3_last_insert_rowid(instance->db);
 
             sqlite3_blob *blob;
-            if (sqlite3_blob_open(master->db, "main", "fs_files", "blob", rowid, 1, &blob) != SQLITE_OK)
+            if (sqlite3_blob_open(instance->db, "main", "fs_files", "blob", rowid, 1, &blob) != SQLITE_OK)
                 return false;
             RG_DEFER { sqlite3_blob_close(blob); };
 
@@ -308,7 +320,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
                     return false;
                 }
                 if (sqlite3_blob_write(blob, buf.data, (int)buf.len, (int)read_len) != SQLITE_OK) {
-                    LogError("SQLite Error: %1", sqlite3_errmsg(master->db));
+                    LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
                     return false;
                 }
 
@@ -327,8 +339,6 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
 void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    InstanceHolder *master = instance->master;
-
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const InstanceToken *token = session ? session->GetToken(instance) : nullptr;
     if (!token || !token->HasPermission(UserPermission::Deploy)) {
@@ -346,15 +356,20 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
         io->AttachError(403);
         return;
     }
+    if (instance != instance->master) {
+        LogError("Cannot delete files through slave instance");
+        io->AttachError(403);
+        return;
+    }
 
     const char *filename = url + 7;
 
-    master->db.Transaction([&]() {
+    instance->db.Transaction([&]() {
         if (client_sha256) {
             sq_Statement stmt;
-            if (!master->db.Prepare(R"(SELECT active, sha256 FROM fs_files
-                                       WHERE filename = ?1
-                                       ORDER BY active DESC)", &stmt))
+            if (!instance->db.Prepare(R"(SELECT active, sha256 FROM fs_files
+                                         WHERE filename = ?1
+                                         ORDER BY active DESC)", &stmt))
                 return false;
             sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
 
@@ -377,90 +392,16 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
             }
         }
 
-        if (!master->db.Run(R"(UPDATE fs_files SET active = 0
-                               WHERE active = 1 AND filename = ?1)", filename))
+        if (!instance->db.Run(R"(UPDATE fs_files SET active = 0
+                                 WHERE active = 1 AND filename = ?1)", filename))
             return false;
 
-        if (sqlite3_changes(master->db)) {
+        if (sqlite3_changes(instance->db)) {
             io->AttachText(200, "Done!");
         } else {
             io->AttachError(404);
         }
         return true;
-    });
-}
-
-void HandleFileBackup(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
-{
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
-    const InstanceToken *token = session ? session->GetToken(instance) : nullptr;
-    if (!token) {
-        LogError("User is not allowed to upload client backups");
-        io->AttachError(403);
-        return;
-    }
-
-    if (!instance->config.backup_key) {
-        LogError("This instance does not accept client backups");
-        io->AttachError(403);
-        return;
-    }
-
-    int64_t time = GetUnixTime() / 10000 * 10000;
-    const char *filename = Fmt(&io->allocator, "%1%/%2_offline_%3@%4.gz",
-                               gp_domain.config.backup_directory, instance->key, session->username, time).ptr;
-
-    if (TestFile(filename)) {
-        LogError("A recent backup already exists for this user");
-        io->AttachError(409);
-        return;
-    }
-
-    io->RunAsync([=]() {
-        // Create temporary file
-        FILE *fp = nullptr;
-        const char *tmp_filename = CreateTemporaryFile(gp_domain.config.temp_directory, "", ".tmp",
-                                                       &io->allocator, &fp);
-        if (!tmp_filename)
-            return;
-        RG_DEFER {
-            if (fp) {
-                fclose(fp);
-            }
-            UnlinkFile(tmp_filename);
-        };
-
-        // Read and compress request body
-        Size total_len = 0;
-        {
-            StreamWriter writer(fp, "<temp>", CompressionType::Gzip);
-            StreamReader reader;
-            if (!io->OpenForRead(instance->config.max_file_size, &reader))
-                return;
-
-            while (!reader.IsEOF()) {
-                LocalArray<uint8_t, 16384> buf;
-                buf.len = reader.Read(buf.data);
-                if (buf.len < 0)
-                    return;
-                total_len += buf.len;
-
-                if (!writer.Write(buf))
-                    return;
-            }
-            if (!writer.Close())
-                return;
-
-            fclose(fp);
-            fp = nullptr;
-        }
-
-        // Move to final destination
-        if (!RenameFile(tmp_filename, filename, false))
-            return;
-
-        io->AttachText(200, "Done!");
-        return;
     });
 }
 

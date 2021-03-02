@@ -71,16 +71,22 @@ static void ExportRecord(sq_Statement *stmt, json_Writer *json)
 
 void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    const InstanceToken *token = session ? session->GetToken(instance) : nullptr;
+    if (!token) {
+        LogError("User is not allowed to load data");
+        io->AttachError(403);
+        return;
+    }
+
+    // More safety checks
     if (instance->config.sync_mode == SyncMode::Offline) {
         LogError("Records API is disabled in Offline mode");
         io->AttachError(403);
         return;
     }
-
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
-    const InstanceToken *token = session ? session->GetToken(instance) : nullptr;
-    if (!token) {
-        LogError("User is not allowed to load data");
+    if (instance->GetSlaveCount()) {
+        LogError("Cannot load data through master instance");
         io->AttachError(403);
         return;
     }
@@ -165,18 +171,24 @@ struct SaveRecord {
 
 void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    if (instance->config.sync_mode == SyncMode::Offline) {
-        LogError("Records API is disabled in Offline mode");
-        io->AttachError(403);
-        return;
-    }
-
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     const InstanceToken *token = session ? session->GetToken(instance) : nullptr;
 
     // XXX: Check new/edit permissions correctly
     if (!token || !token->HasPermission(UserPermission::Edit)) {
         LogError("User is not allowed to save data");
+        io->AttachError(403);
+        return;
+    }
+
+    // More safety checks
+    if (instance->config.sync_mode == SyncMode::Offline) {
+        LogError("Records API is disabled in Offline mode");
+        io->AttachError(403);
+        return;
+    }
+    if (instance->GetSlaveCount()) {
+        LogError("Cannot load data through master instance");
         io->AttachError(403);
         return;
     }

@@ -40,9 +40,9 @@ static const char *const UserPermissionNames[] = {
 };
 
 struct InstanceToken {
+    uint32_t permissions;
     const char *title;
     const char *url;
-    uint32_t permissions;
 
     bool HasPermission(UserPermission perm) const { return permissions & (int)perm; };
 };
@@ -68,5 +68,7 @@ RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http
 void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleUserLogout(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleUserProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+
+void HandleUserBackup(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
 }
