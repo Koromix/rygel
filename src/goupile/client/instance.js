@@ -746,7 +746,7 @@ function InstanceController() {
                 let namespace;
                 let obj;
                 for (namespace of profile.keys) {
-                    let key = namespace + `:${record.ulid}`;
+                    let key = namespace + `:${ulid}`;
                     obj = await t.load('rec_records', key);
 
                     if (obj != null)
