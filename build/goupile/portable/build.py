@@ -82,6 +82,27 @@ if __name__ == "__main__":
                     ico.sequence.append(it)
         ico.save(filename = build_directory + '/build/icon.ico')
 
+    # Customize installation path
+    with open(build_directory + '/build/installer.nsh', 'w') as f:
+        nsh = f'''
+            !macro preInit
+                SetRegView 32
+                WriteRegExpandStr HKLM "${{INSTALL_REGISTRY_KEY}}" InstallLocation "C:\\GoupilePortable\\{manifest["name"]}\\app"
+                WriteRegExpandStr HKCU "${{INSTALL_REGISTRY_KEY}}" InstallLocation "C:\\GoupilePortable\\{manifest["name"]}\\app"
+            !macroend
+
+            !macro customInstall
+                CreateShortCut "$DESKTOP\\{manifest["name"]}.lnk" "$INSTDIR\\{manifest["name"]}.exe" --user-data-dir="C:\\GoupilePortable\\{manifest["name"]}\\profiles"
+                CreateShortCut "$STARTMENU\\{manifest["name"]}.lnk" "$INSTDIR\\{manifest["name"]}.exe" --user-data-dir="C:\\GoupilePortable\\{manifest["name"]}\\profiles"
+            !macroend
+
+            !macro customUnInstall
+                Delete "$DESKTOP\\{manifest["name"]}.lnk"
+                Delete "$STARTMENU\\{manifest["name"]}.lnk"
+            !macroend
+        '''
+        f.write(nsh)
+
     # Run electron-builder
     subprocess.run('npm install', shell = True, cwd = build_directory)
     subprocess.run('npm run dist', shell = True, cwd = build_directory)

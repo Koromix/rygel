@@ -19,7 +19,10 @@
         },
         "nsis": {
             "artifactName": "${name}.exe",
-            "uninstallDisplayName": "${name}"
+            "uninstallDisplayName": "${name}",
+            "createDesktopShortcut": false,
+            "createStartMenuShortcut": false,
+            "runAfterFinish": false
         },
         "publish": [
             {
