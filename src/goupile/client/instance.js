@@ -638,14 +638,13 @@ function InstanceController() {
                     entry = await goupile.decryptSymmetric(obj.enc, namespace);
                     if (record.hid != null)
                         entry.hid = record.hid;
-                    obj.keys.sync = profile.userid;
                 } else {
                     obj = {
                         keys: {
-                            form: `${profile.userid}/${record.form.key}`,
+                            form: null,
                             parent: null,
                             anchor: null,
-                            sync: profile.userid
+                            sync: null
                         },
                         enc: null
                     };
@@ -658,13 +657,18 @@ function InstanceController() {
                     };
 
                     if (record.parent != null) {
-                        obj.keys.parent = `${profile.userid}:${record.parent.ulid}/${record.form.key}`;
                         entry.parent = {
                             ulid: record.parent.ulid,
                             version: record.parent.version
                         };
                     }
                 }
+
+                // Always rewrite keys to fix potential namespace changes
+                obj.keys.form = `${profile.userid}/${record.form.key}`;
+                if (record.parent != null)
+                    obj.keys.parent = `${profile.userid}:${record.parent.ulid}/${record.form.key}`;
+                obj.keys.sync = profile.userid;
 
                 if (record.version !== entry.fragments.length)
                     throw new Error('Cannot overwrite old record fragment');
@@ -2125,7 +2129,7 @@ function InstanceController() {
                     let obj = {
                         keys: {
                             form: `shared/${download.form}`,
-                            parent: (download.parent != null) ? `${profile.userid}:${download.parent.ulid}/${download.form}` : null,
+                            parent: (download.parent != null) ? `shared:${download.parent.ulid}/${download.form}` : null,
                             anchor: `shared@${(download.anchor + 1).toString().padStart(16, '0')}`,
                             sync: null
                         },
