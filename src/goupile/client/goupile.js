@@ -353,6 +353,12 @@ const goupile = new function() {
                 try {
                     let new_profile = await decryptSecretBox(obj.profile, key);
 
+                    // Reset errors after successful offline login
+                    if (obj.errors) {
+                        obj.errors = 0;
+                        await db.saveWithKey('usr_profiles', username, obj);
+                    }
+
                     updateProfile(new_profile);
                     await deleteSessionValue('lock');
 
