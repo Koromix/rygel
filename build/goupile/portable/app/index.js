@@ -5,21 +5,37 @@ const path = require('path');
 const { app, BrowserWindow } = require('electron');
 const { autoUpdater } = require('electron-updater');
 
-app.on('ready', async () => {
-    if (isPackaged())
-        autoUpdater.checkForUpdatesAndNotify();
+let lock = app.requestSingleInstanceLock();
 
-    let win = new BrowserWindow({
-        width: 1600,
-        height: 900,
-        webPreferences: {
-            nodeIntegration: true
+if (lock) {
+    let win = null;
+
+    app.on('ready', async () => {
+        if (isPackaged())
+            autoUpdater.checkForUpdatesAndNotify();
+
+        win = new BrowserWindow({
+            width: 1600,
+            height: 900,
+            webPreferences: {
+                nodeIntegration: true
+            }
+        });
+        //if (isPackaged())
+            //win.setMenu(null);
+        win.loadURL(settings.homepage);
+    });
+
+    app.on('second-instance', (e, cmdline, cwd) => {
+        if (win) {
+            if (win.isMinimized())
+                win.restore();
+            win.focus();
         }
     });
-    //if (isPackaged())
-        //win.setMenu(null);
-    win.loadURL(settings.homepage);
-});
+} else {
+    app.quit()
+}
 
 function isPackaged() {
     let isPackaged = false;
