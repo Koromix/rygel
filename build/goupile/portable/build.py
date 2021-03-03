@@ -86,16 +86,18 @@ if __name__ == "__main__":
 
     # Customize installation path
     with open(build_directory + '/build/installer.nsh', 'w') as f:
+        root_dir = f'$LOCALAPPDATA\\GoupilePortable\\{manifest["name"]}'
+
         nsh = f'''
             !macro preInit
                 SetRegView 32
-                WriteRegExpandStr HKLM "${{INSTALL_REGISTRY_KEY}}" InstallLocation "C:\\GoupilePortable\\{manifest["name"]}\\app"
-                WriteRegExpandStr HKCU "${{INSTALL_REGISTRY_KEY}}" InstallLocation "C:\\GoupilePortable\\{manifest["name"]}\\app"
+                WriteRegExpandStr HKLM "${{INSTALL_REGISTRY_KEY}}" InstallLocation "{root_dir}\\app"
+                WriteRegExpandStr HKCU "${{INSTALL_REGISTRY_KEY}}" InstallLocation "{root_dir}\\app"
             !macroend
 
             !macro customInstall
-                CreateShortCut "$DESKTOP\\{shortcut_name}.lnk" "$INSTDIR\\{manifest["name"]}.exe" --user-data-dir="C:\\GoupilePortable\\{manifest["name"]}\\profiles"
-                CreateShortCut "$STARTMENU\\{shortcut_name}.lnk" "$INSTDIR\\{manifest["name"]}.exe" --user-data-dir="C:\\GoupilePortable\\{manifest["name"]}\\profiles"
+                CreateShortCut "$DESKTOP\\{shortcut_name}.lnk" "{root_dir}\\app\\{manifest["name"]}.exe" --user-data-dir="{root_dir}\\profiles"
+                CreateShortCut "$STARTMENU\\{shortcut_name}.lnk" "{root_dir}\\app\\{manifest["name"]}.exe" --user-data-dir="{root_dir}\\profiles"
             !macroend
 
             !macro customUnInstall
