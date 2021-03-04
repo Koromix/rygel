@@ -366,13 +366,13 @@ const goupile = new function() {
                 } catch (err) {
                     obj.errors = (obj.errors || 0) + 1;
 
-                    if (obj.errors >= 3) {
+                    if (obj.errors >= 5) {
                         await db.delete('usr_profiles', username);
+                        throw new Error('Mot de passe non reconnu, connexion hors ligne désactivée');
                     } else {
                         await db.saveWithKey('usr_profiles', username, obj);
+                        throw new Error('Mot de passe non reconnu');
                     }
-
-                    throw new Error('Mot de passe hors ligne non reconnu');
                 }
             }
         } catch (err) {
@@ -518,7 +518,7 @@ const goupile = new function() {
         } catch (err) {
             lock.errors = (lock.errors || 0) + 1;
 
-            if (lock.errors >= 3) {
+            if (lock.errors >= 5) {
                 log.error('Déverrouillage refusé, blocage de sécurité imminent');
                 await deleteSessionValue('lock');
 
