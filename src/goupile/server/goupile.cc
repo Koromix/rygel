@@ -132,8 +132,16 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
     // If new base URLs are added besides "/admin", RunCreateInstance() must be modified
     // to forbid the instance key.
-    if (TestStr(request.url, "/admin") || StartsWith(request.url, "/admin/")) {
+    if (StartsWith(request.url, "/admin/") || TestStr(request.url, "/admin")) {
         const char *admin_url = request.url + 6;
+
+        // Missing trailing slash, redirect
+        if (!admin_url[0]) {
+            const char *redirect = Fmt(&io->allocator, "%1/", request.url).ptr;
+            io->AddHeader("Location", redirect);
+            io->AttachNothing(301);
+            return;
+        }
 
         // Try static assets
         {
@@ -212,7 +220,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         } else {
             io->AttachError(404);
         }
-    } else if (!TestStr(request.url, "/")) {
+    } else if (request.url[1]) {
         InstanceHolder *instance = nullptr;
         const char *instance_url = request.url;
 
