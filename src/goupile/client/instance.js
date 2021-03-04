@@ -2166,15 +2166,17 @@ function InstanceController() {
             if (changes.size && standalone) {
                 progress.success('Synchronisation terminée');
 
-                // XXX: What about current record being edited?
-                if (!self.hasUnsavedData() && form_record != null && form_record.saved) {
-                    route.version = null;
-                    form_record = null;
-                    form_state = null;
-                }
-                data_rows = null;
+                if (form_record != null) {
+                    // XXX: What about current record being edited?
+                    if (!self.hasUnsavedData() && form_record.saved) {
+                        route.version = null;
+                        form_record = null;
+                        form_state = null;
+                    }
+                    data_rows = null;
 
-                self.go(null, window.location.href);
+                    self.go(null, window.location.href);
+                }
             } else {
                 if (standalone)
                     progress.close();
