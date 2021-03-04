@@ -1368,12 +1368,13 @@ instead of:
         self.restart();
     }
 
-    this.restart = function() {
+    this.refresh = function() {
         if (!restart) {
             setTimeout(() => state.changeHandler(model), 0);
             restart = true;
         }
     };
+    this.restart = this.refresh;
 
     function decodeKey(key, options) {
         // Normalize key
