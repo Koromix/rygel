@@ -48,9 +48,9 @@ self.addEventListener('fetch', e => {
             let path = url.pathname.substr(ENV.urls.base.length - 1);
 
             if (path.match(/^\/(?:[a-z0-9_]+\/)?$/) || path.match(/^\/(?:[a-z0-9_]+\/)?main\//)) {
-                return await caches.match(ENV.urls.base);
+                return await caches.match(ENV.urls.base) || await net.fetch(e.request);
             } else {
-                return await caches.match(e.request) || await net.fetch(e.request);;
+                return await caches.match(e.request) || await net.fetch(e.request);
             }
         }
 
