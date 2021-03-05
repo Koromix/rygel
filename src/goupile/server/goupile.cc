@@ -34,6 +34,7 @@ namespace RG {
 DomainHolder gp_domain;
 
 static HashMap<const char *, const AssetInfo *> assets_map;
+static const AssetInfo *assets_root;
 static HeapArray<const char *> assets_for_cache;
 static LinkedAllocator assets_alloc;
 static char etag[17];
@@ -48,6 +49,8 @@ static void InitAssets()
         if (TestStr(asset.name, "src/goupile/client/goupile.html")) {
             assets_map.Set("/", &asset);
             assets_for_cache.Append("/");
+        } else if (TestStr(asset.name, "src/goupile/client/root.html")) {
+            assets_root = &asset;
         } else if (TestStr(asset.name, "src/goupile/client/sw.pk.js")) {
             assets_map.Set("/sw.pk.js", &asset);
         } else if (TestStr(asset.name, "src/goupile/client/manifest.json")) {
@@ -133,7 +136,18 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
     // If new base URLs are added besides "/admin", RunCreateInstance() must be modified
     // to forbid the instance key.
-    if (StartsWith(request.url, "/admin/") || TestStr(request.url, "/admin")) {
+    if (TestStr(request.url, "/")) {
+        AssetInfo copy = *assets_root;
+        copy.data = PatchAsset(copy, &io->allocator, [&](const char *key, StreamWriter *writer) {
+            if (TestStr(key, "VERSION")) {
+                writer->Write(FelixVersion);
+            } else {
+                Print(writer, "{%1}", key);
+            }
+        });
+
+        AttachStatic(copy, etag, request, io);
+    } else if (StartsWith(request.url, "/admin/") || TestStr(request.url, "/admin")) {
         const char *admin_url = request.url + 6;
 
         // Missing trailing slash, redirect
@@ -221,7 +235,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         } else {
             io->AttachError(404);
         }
-    } else if (request.url[1]) {
+    } else {
         InstanceHolder *instance = nullptr;
         const char *instance_url = request.url;
 
@@ -362,8 +376,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         } else {
             io->AttachError(404);
         }
-    } else {
-        io->AttachError(404);
     }
 }
 
