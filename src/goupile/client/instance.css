@@ -37,10 +37,7 @@ html.instance {
     max-width: 980px;
 }
 
-html.mobile #ins_page {
-    border-left: none;
-    border-right: none;
-}
+html.mobile #ins_page { padding-top: 0; }
 
 /* -------------------- Left menu -------------------- */
 
