@@ -561,7 +561,7 @@ function InstanceController() {
     }
 
     function runTrailDialog(e, ulid) {
-        return ui.runDialog(e, null, (d, resolve, reject) => {
+        return ui.runDialog(e, 'Historique', (d, resolve, reject) => {
             if (ulid !== route.ulid)
                 reject();
 
@@ -1103,7 +1103,7 @@ function InstanceController() {
         let actions = await computeDeployActions();
         let modifications = actions.reduce((acc, action) => acc + (action.type !== 'noop'), 0);
 
-        return ui.runDialog(e, null, (d, resolve, reject) => {
+        return ui.runDialog(e, 'Publication', (d, resolve, reject) => {
             d.output(html`
                 <div class="ui_quick">
                     ${modifications || 'Aucune'} ${modifications.length > 1 ? 'modifications' : 'modification'} à effectuer
@@ -1256,7 +1256,7 @@ function InstanceController() {
     }
 
     function runAddFileDialog(e) {
-        return ui.runDialog(e, null, (d, resolve, reject) => {
+        return ui.runDialog(e, 'Ajout de fichier', (d, resolve, reject) => {
             let file = d.file('*file', 'Fichier :');
             let filename = d.text('*filename', 'Chemin :', {value: file.value ? file.value.name : null});
 

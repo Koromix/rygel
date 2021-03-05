@@ -470,7 +470,7 @@ const goupile = new function() {
     }
 
     this.runLockDialog = function(e, ctx) {
-        return ui.runDialog(e, null, (d, resolve, reject) => {
+        return ui.runDialog(e, 'Verrouillage', (d, resolve, reject) => {
             let pin = d.pin('*pin', 'Code de déverrouillage');
             if (pin.value != null && pin.value.length < 4)
                 pin.error('Ce code est trop court', true);
@@ -480,7 +480,7 @@ const goupile = new function() {
     };
 
     this.runUnlockDialog = function(e) {
-        return ui.runDialog(e, null, (d, resolve, reject) => {
+        return ui.runDialog(e, 'Déverrouillage', (d, resolve, reject) => {
             let pin = d.pin('*pin', 'Code de déverrouillage');
             d.action('Déverrouiller', {disabled: !d.isValid()}, e => goupile.unlock(e, pin.value));
         });
@@ -560,7 +560,7 @@ const goupile = new function() {
     };
 
     this.confirmIdentity = function(e) {
-        return ui.runDialog(e, "Confirmation d'identité", (d, resolve, reject) => {
+        return ui.runDialog(e, 'Confirmation d\'identité', (d, resolve, reject) => {
             d.calc('username', 'Nom d\'utilisateur', profile.username);
             let password = d.password('*password', 'Mot de passe');
 
