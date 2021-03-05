@@ -112,8 +112,7 @@ html.small .ui_toolbar button.icon {
     max-width: 3em;
     padding: 0 !important;
     text-indent: 200px;
-    white-space: nowrap;
-    overflow: hidden;
+    text-overflow: clip;
     background-position-x: center;
 }
 
