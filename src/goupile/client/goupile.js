@@ -19,6 +19,7 @@ const goupile = new function() {
 
     let session_rnd;
     let profile_keys = new Map;
+    let online = true;
 
     let controller;
     let current_url;
@@ -44,13 +45,12 @@ const goupile = new function() {
         ui.init();
         await registerSW();
         initNavigation();
-        initTasks();
-
         await syncProfile();
+
         if (profile.authorized) {
             await initAfterAuthorization();
         } else {
-            await runLoginScreen();
+            await self.runLoginScreen();
         }
     };
 
@@ -66,7 +66,7 @@ const goupile = new function() {
         }
 
         await controller.init();
-        await runTasks();
+        await initTasks();
 
         controller.go(null, url.pathname).catch(err => {
             log.error(err);
@@ -74,7 +74,7 @@ const goupile = new function() {
             // Now try home page... If that fails too, show login screen.
             // This will solve some situations such as overly restrictive locks.
             controller.go(null, ENV.urls.base).catch(async err => {
-                runLoginScreen();
+                self.runLoginScreen();
             });
         });
     };
@@ -148,6 +148,7 @@ const goupile = new function() {
                 let new_profile = {
                     userid: lock.userid,
                     username: lock.username,
+                    authorized: true,
                     permissions: {
                         'edit': true
                     },
@@ -155,6 +156,8 @@ const goupile = new function() {
                     lock: lock.ctx
                 };
                 updateProfile(new_profile);
+
+                return;
             }
         }
 
@@ -172,29 +175,44 @@ const goupile = new function() {
         }
     }
 
-    function runLoginScreen() {
-        document.body.classList.remove('gp_loading');
+    self.runLoginScreen = async function(e) {
+        if (profile.userid == null) {
+            document.body.classList.remove('gp_loading');
 
-        return ui.runScreen((d, resolve, reject) => {
-            d.output(html`
-                <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
-                <br/>
-            `);
+            return ui.runScreen((d, resolve, reject) => {
+                d.output(html`
+                    <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
+                    <br/>
+                `);
 
-            let username = d.text('*username', 'Nom d\'utilisateur');
-            let password = d.password('*password', 'Mot de passe');
+                let username = d.text('*username', 'Nom d\'utilisateur');
+                let password = d.password('*password', 'Mot de passe');
 
-            d.action('Se connecter', {disabled: !d.isValid()}, async () => {
-                try {
-                    await login(null, username.value, password.value, false);
-                    resolve();
-                } catch (err) {
-                    // Never reject because we want to keep the screen open
-                    log.error(err);
-                }
+                d.action('Se connecter', {disabled: !d.isValid()}, async () => {
+                    try {
+                        let progress = log.progress('Connexion en cours');
+
+                        await tryLogin(username.value, password.value, progress, true);
+                        await initAfterAuthorization();
+
+                        resolve();
+                    } catch (err) {
+                        // Never reject because we want to keep the screen open
+                        log.error(err);
+                        d.refresh();
+                    }
+                });
             });
-        });
-    }
+        } else {
+            await self.confirmDangerousAction(e);
+
+            // Force login after reload
+            util.setCookie('session_rnd', 'LOGIN', '/');
+
+            window.onbeforeunload = null;
+            document.location.reload();
+        }
+    };
 
     function initNavigation() {
         window.addEventListener('popstate', e => controller.go(null, window.location.href, false));
@@ -251,48 +269,44 @@ const goupile = new function() {
         });
     }
 
-    function initTasks() {
+    async function initTasks() {
         setInterval(async () => {
-            await net.fetch(`${ENV.urls.instance}api/session/ping`);
-            runTasks();
-        }, 300 * 1000);
+            await pingServer();
+            controller.runTasks(self.isOnline());
+        }, 120 * 1000);
+
+        net.testHandler = pingServer;
+        net.changeHandler = async online => {
+            controller.runTasks(self.isOnline());
+            controller.go();
+        };
+        net.retryHandler = async code => {
+            if (code === 401) {
+                try {
+                    await self.confirmIdentity();
+                    return true;
+                } catch (err) {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        };
+
+        await controller.runTasks(self.isOnline());
     }
 
-    async function runTasks() {
-        let online = net.isOnline() &&
-                     profile.userid != null &&
-                     util.getCookie('session_rnd') != null;
-
-        await controller.runTasks(online);
+    async function pingServer() {
+        try {
+            let response = await net.fetch(`${ENV.urls.instance}api/session/ping`);
+            net.setOnline(response.ok);
+        } catch (err) {
+            // Automatically set to offline
+        }
     }
 
     this.runLoginDialog = function(e) {
-        return ui.runDialog(e, (d, resolve, reject) => {
-            let username = d.text('*username', 'Nom d\'utilisateur');
-            let password = d.password('*password', 'Mot de passe');
-
-            d.action('Se connecter', {disabled: !d.isValid()}, async e => {
-                try {
-                    await login(e, username.value, password.value, true);
-                } catch (err) {
-                    reject(err);
-                }
-            });
-        });
-    };
-
-    async function login(e, username, password, reload) {
-        await self.confirmDangerousAction(e);
-
-        let progress = log.progress('Connexion en cours');
-        await tryLogin(username, password, progress, true);
-
-        if (reload) {
-            window.onbeforeunload = null;
-            document.location.reload();
-        } else {
-            await initAfterAuthorization();
-        }
+        throw new Error('XXX');
     };
 
     async function tryLogin(username, password, progress, retry) {
@@ -328,7 +342,8 @@ const goupile = new function() {
                     updateProfile(new_profile);
                     await deleteSessionValue('lock');
 
-                    progress.success('Connexion réussie');
+                    if (progress != null)
+                        progress.success('Connexion réussie');
                 } else {
                     if (response.status === 403) {
                         let db = await openProfileDB();
@@ -362,7 +377,8 @@ const goupile = new function() {
                     updateProfile(new_profile);
                     await deleteSessionValue('lock');
 
-                    progress.success('Connexion réussie (hors ligne)');
+                    if (progress != null)
+                        progress.success('Connexion réussie (hors ligne)');
                 } catch (err) {
                     obj.errors = (obj.errors || 0) + 1;
 
@@ -379,7 +395,8 @@ const goupile = new function() {
             if ((err instanceof NetworkError) && retry) {
                 return tryLogin(username, password, progress, false);
             } else {
-                progress.close();
+                if (progress != null)
+                    progress.close();
                 throw err;
             }
         }
@@ -453,7 +470,7 @@ const goupile = new function() {
     }
 
     this.runLockDialog = function(e, ctx) {
-        return ui.runDialog(e, (d, resolve, reject) => {
+        return ui.runDialog(e, null, (d, resolve, reject) => {
             let pin = d.pin('*pin', 'Code de déverrouillage');
             if (pin.value != null && pin.value.length < 4)
                 pin.error('Ce code est trop court', true);
@@ -463,7 +480,7 @@ const goupile = new function() {
     };
 
     this.runUnlockDialog = function(e) {
-        return ui.runDialog(e, (d, resolve, reject) => {
+        return ui.runDialog(e, null, (d, resolve, reject) => {
             let pin = d.pin('*pin', 'Code de déverrouillage');
             d.action('Déverrouiller', {disabled: !d.isValid()}, e => goupile.unlock(e, pin.value));
         });
@@ -486,7 +503,7 @@ const goupile = new function() {
             username: profile.username,
             salt: bytesToBase64(salt),
             errors: 0,
-            keys: Array.from(profile_keys.items()),
+            keys: Array.from(profile_keys.entries()),
             session_rnd: enc,
             ctx: ctx
         };
@@ -542,6 +559,18 @@ const goupile = new function() {
         await util.waitFor(2000);
     };
 
+    this.confirmIdentity = function(e) {
+        return ui.runDialog(e, "Confirmation d'identité", (d, resolve, reject) => {
+            d.calc('username', 'Nom d\'utilisateur', profile.username);
+            let password = d.password('*password', 'Mot de passe');
+
+            d.action('Confirmer', {disabled: !d.isValid()}, async e => {
+                await tryLogin(profile.username, password.value, null, true);
+                resolve();
+            });
+        });
+    };
+
     this.confirmDangerousAction = function(e) {
         if (controller == null)
             return;
@@ -549,9 +578,15 @@ const goupile = new function() {
             return;
 
         return ui.runConfirm(e, "Si vous continuez, vous perdrez les modifications en cours. Voulez-vous continuer ?",
-                             "Continuer", () => {});
+                                "Continuer", () => {});
     };
 
+    this.isOnline = function() {
+        let online = net.isOnline() &&
+                     profile.userid != null &&
+                     util.getCookie('session_rnd') != null;
+        return online;
+    };
     this.isLocked = function() { return profile.lock !== undefined; };
     this.hasPermission = function(perm) {
         return profile.permissions != null &&
@@ -641,7 +676,7 @@ const goupile = new function() {
     }
 
     async function loadSessionValue(key) {
-        key = ENV.urls.instance + key;
+        key = ENV.urls.base + key;
 
         let json = localStorage.getItem(key);
         if (json == null)
@@ -651,14 +686,14 @@ const goupile = new function() {
     }
 
     async function storeSessionValue(key, obj) {
-        key = ENV.urls.instance + key;
+        key = ENV.urls.base + key;
         obj = JSON.stringify(obj);
 
         localStorage.setItem(key, obj);
     }
 
     async function deleteSessionValue(key) {
-        key = ENV.urls.instance + key;
+        key = ENV.urls.base + key;
         localStorage.removeItem(key);
     }
 };

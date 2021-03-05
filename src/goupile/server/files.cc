@@ -182,17 +182,21 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    const InstanceToken *token = session ? session->GetToken(instance) : nullptr;
-    if (!token || !token->HasPermission(UserPermission::Deploy)) {
-        LogError("User is not allowed to deploy changes");
-        io->AttachError(403);
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
         return;
     }
 
     const char *url = request.url + instance->key.len + 1;
     const char *client_sha256 = request.GetQueryValue("sha256");
 
-    // Safety checks
+    const InstanceToken *token = session->GetToken(instance);
+    if (!token || !token->HasPermission(UserPermission::Deploy)) {
+        LogError("User is not allowed to deploy changes");
+        io->AttachError(403);
+        return;
+    }
     if (!StartsWith(url, "/files/")) {
         LogError("Cannot write to file outside '/files/'");
         io->AttachError(403);
@@ -340,17 +344,21 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    const InstanceToken *token = session ? session->GetToken(instance) : nullptr;
-    if (!token || !token->HasPermission(UserPermission::Deploy)) {
-        LogError("User is not allowed to deploy changes");
-        io->AttachError(403);
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
         return;
     }
 
     const char *url = request.url + instance->key.len + 1;
     const char *client_sha256 = request.GetQueryValue("sha256");
 
-    // Safety checks
+    const InstanceToken *token = session->GetToken(instance);
+    if (!token || !token->HasPermission(UserPermission::Deploy)) {
+        LogError("User is not allowed to deploy changes");
+        io->AttachError(403);
+        return;
+    }
     if (!StartsWith(url, "/files/")) {
         LogError("Cannot delete files outside '/files/'");
         io->AttachError(403);

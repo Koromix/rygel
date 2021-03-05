@@ -576,29 +576,49 @@ NetworkError.prototype.name = 'NetworkError';
 const net = new function() {
     let self = this;
 
-    let idle_timer;
+    let init = false;
     let online = true;
 
+    this.testHandler = () => {};
     this.changeHandler = online => {};
+    this.retryHandler = code => false;
 
-    this.fetch = async function(request, init) {
+    this.fetch = async function(request, options) {
+        if (!init) {
+            if (typeof window !== 'undefined') {
+                window.addEventListener('online', () => self.testHandler());
+                window.addEventListener('offline', () => self.testHandler());
+            }
+
+            init = true;
+        }
+
         try {
-            if (init == null)
-                init = {};
-            if (init.credentials == null)
-                init.credentials = 'same-origin';
+            if (options == null)
+                options = {};
+            if (options.credentials == null)
+                options.credentials = 'same-origin';
 
-            let response = await fetch(request, init);
+            for (;;) {
+                let response = await fetch(request, options);
 
-            return response;
+                if (!response.ok) {
+                    let retry = await self.retryHandler(response.status);
+                    if (retry)
+                        continue;
+                }
+
+                self.setOnline(true);
+                return response;
+            }
         } catch (err) {
             self.setOnline(false);
             throw new NetworkError;
         }
     };
 
-    this.fetchJson = async function(request, init) {
-        let response = await self.fetch(request, init);
+    this.fetchJson = async function(request, options) {
+        let response = await self.fetch(request, options);
 
         if (!response.ok) {
             let err = (await response.text()).trim();
@@ -614,7 +634,10 @@ const net = new function() {
             script.type = 'text/javascript';
             script.src = url;
 
-            script.onload = e => resolve(script);
+            script.onload = e => {
+                self.setOnline(true);
+                resolve(script);
+            };
             script.onerror = e => {
                 self.setOnline(false);
                 reject(new Error(`Failed to load '${url}' script`));

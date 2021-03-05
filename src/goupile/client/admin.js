@@ -44,7 +44,7 @@ function AdminController() {
                     @click=${ui.wrapAction(e => togglePanel(e, 'users'))}>Utilisateurs</button>
             <div style="flex: 1;"></div>
             <div class="drop right">
-                <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
+                <button class="icon" style="background-position-y: calc(-450px + 1.2em)">${profile.username}</button>
                 <div>
                     <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
                 </div>
@@ -168,7 +168,7 @@ function AdminController() {
     }
 
     function runCreateInstanceDialog(e) {
-        return ui.runDialog(e, (d, resolve, reject) => {
+        return ui.runDialog(e, null, (d, resolve, reject) => {
             let key = d.text('*key', 'Clé du projet');
             let name = d.text('name', 'Nom', {value: key.value});
             let demo = d.boolean('demo', 'Ajouter les pages par défaut', {value: true, untoggle: false});
@@ -201,7 +201,7 @@ function AdminController() {
     }
 
     function runEditInstanceDialog(e, instance) {
-        return ui.runDialog(e, (d, resolve, reject) => {
+        return ui.runDialog(e, null, (d, resolve, reject) => {
             d.pushOptions({untoggle: false});
 
             d.tabs('actions', () => {
@@ -283,7 +283,7 @@ function AdminController() {
     }
 
     function runSplitInstanceDialog(e, master) {
-        return ui.runDialog(e, (d, resolve, reject) => {
+        return ui.runDialog(e, null, (d, resolve, reject) => {
             d.calc('instance', 'Projet', master);
             let key = d.text('*key', 'Clé du sous-projet');
             let name = d.text('name', 'Nom', {value: key.value});
@@ -316,7 +316,7 @@ function AdminController() {
     }
 
     function runCreateUserDialog(e) {
-        return ui.runDialog(e, (d, resolve, reject) => {
+        return ui.runDialog(e, null, (d, resolve, reject) => {
             let username = d.text('*username', 'Nom d\'utilisateur');
 
             let password = d.password('*password', 'Mot de passe');
@@ -353,7 +353,7 @@ function AdminController() {
     }
 
     function runAssignUserDialog(e, instance, user, prev_permissions) {
-        return ui.runDialog(e, (d, resolve, reject) => {
+        return ui.runDialog(e, null, (d, resolve, reject) => {
             d.calc('instance', 'Projet', instance);
             d.sameLine(); d.calc('username', 'Utilisateur', user.username);
             let permissions = d.multiCheck('permissions', 'Permissions', ENV.permissions, {value: prev_permissions});
@@ -385,7 +385,7 @@ function AdminController() {
     }
 
     function runEditUserDialog(e, user) {
-        return ui.runDialog(e, (d, resolve, reject) => {
+        return ui.runDialog(e, null, (d, resolve, reject) => {
             d.pushOptions({untoggle: false});
 
             d.tabs('actions', () => {

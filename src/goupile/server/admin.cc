@@ -583,12 +583,16 @@ Options:
 void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    if (!session || !session->IsAdmin()) {
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to create instances");
         io->AttachError(403);
         return;
     }
-
     if (gp_domain.CountInstances() >= MaxInstancesPerDomain) {
         LogError("This domain has too many instances");
         io->AttachError(403);
@@ -659,7 +663,12 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
 void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    if (!session || !session->IsAdmin()) {
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to delete instances");
         io->AttachError(403);
         return;
@@ -711,7 +720,12 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
 void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    if (!session || !session->IsAdmin()) {
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to configure instances");
         io->AttachError(403);
         return;
@@ -820,7 +834,12 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
 void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    if (!session || !session->IsAdmin()) {
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to list instances");
         io->AttachError(403);
         return;
@@ -881,7 +900,12 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
 void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    if (!session || !session->IsAdmin()) {
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to create users");
         io->AttachError(403);
         return;
@@ -976,7 +1000,12 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
 void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    if (!session || !session->IsAdmin()) {
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to edit users");
         io->AttachError(403);
         return;
@@ -1080,7 +1109,12 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
 void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    if (!session || !session->IsAdmin()) {
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to delete users");
         io->AttachError(403);
         return;
@@ -1182,7 +1216,12 @@ static bool ParsePermissionList(Span<const char> remain, uint32_t *out_permissio
 void HandleUserAssign(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    if (!session || !session->IsAdmin()) {
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to delete users");
         io->AttachError(403);
         return;
@@ -1295,7 +1334,12 @@ void HandleUserAssign(const http_RequestInfo &request, http_IO *io)
 void HandleUserList(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    if (!session || !session->IsAdmin()) {
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to list users");
         io->AttachError(403);
         return;

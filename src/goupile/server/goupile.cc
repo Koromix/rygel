@@ -96,6 +96,7 @@ static void HandlePing(const http_RequestInfo &request, http_IO *io)
     // Do this to renew session and clear invalid session cookies
     GetCheckedSession(request, io);
 
+    io->AddHeader("Cache-Control", "no-store");
     io->AttachText(200, "Pong!");
 }
 

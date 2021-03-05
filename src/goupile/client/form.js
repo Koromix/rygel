@@ -442,7 +442,7 @@ function FormBuilder(state, model, readonly = false) {
         if (!isModifiable(key))
             return;
 
-        return ui.runDialog(e, (d, resolve, reject) => {
+        return ui.runDialog(e, null, (d, resolve, reject) => {
             let number = d.number('number', 'Valeur :', {min: min, max: max, value: value});
 
             d.action('Modifier', {disabled: !d.isValid()}, () => {

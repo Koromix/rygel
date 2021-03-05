@@ -127,25 +127,26 @@ const ui = new function() {
 
     this.runScreen = function(func) {
         render('', document.querySelector('#ui_main'));
-        return runDialog(null, 'screen', false, func);
+        return runDialog(null, null, 'screen', false, func);
     };
 
-    this.runDialog = function(e, func) {
+    this.runDialog = function(e, title, func) {
         if (e != null) {
             e.stopPropagation();
             if (document.documentElement.classList.contains('small'))
                 e = null;
         }
 
-        return runDialog(e, e ? 'popup' : 'modal', true, func);
+        return runDialog(e, e ? null : title, e ? 'popup' : 'modal', true, func);
     };
 
-    function runDialog(e, type, closeable, func) {
+    function runDialog(e, title, type, closeable, func) {
         return new Promise((resolve, reject) => {
             let dialog = {
                 prev: dialogs.prev,
                 next: dialogs,
 
+                title: title,
                 type: type,
                 el: document.createElement('div'),
                 state: new FormState,
@@ -229,9 +230,12 @@ const ui = new function() {
             builder.action('Annuler', {}, () => dialog.reject(null));
 
         render(html`
-            <form @submit=${e => e.preventDefault()}>
-                ${model.render()}
-            </form>
+            <div>
+                ${dialog.title ? html`<div class="ui_legend">${dialog.title}</div>` : ''}
+                <form @submit=${e => e.preventDefault()}>
+                    ${model.render()}
+                </form>
+            </div>
         `, dialog.el);
 
         // We need to know popup width and height
@@ -296,12 +300,12 @@ const ui = new function() {
     }
 
     this.runConfirm = function(e, msg, action, func) {
-        return self.runDialog(e, (d, resolve, reject) => {
+        return self.runDialog(e, null, (d, resolve, reject) => {
             d.output(msg);
 
-            d.action(action, {disabled: !d.isValid()}, async () => {
+            d.action(action, {disabled: !d.isValid()}, async e => {
                 try {
-                    await func();
+                    await func(e);
                     resolve();
                 } catch (err) {
                     reject(err);
@@ -374,15 +378,18 @@ const ui = new function() {
         render(log_entries.map((entry, idx) => {
             let msg = (entry.msg instanceof Error) ? entry.msg.message : entry.msg;
 
+            if (typeof msg === 'string')
+                msg = msg.split('\n').map(line => [line, html`<br/>`]);
+
             if (entry.type === 'progress') {
                 return html`<div class="progress">
                     <div class="ui_log_spin"></div>
-                    ${msg.split('\n').map(line => [line, html`<br/>`])}
+                    ${msg}
                 </div>`;
             } else {
                 return html`<div class=${entry.type} @click=${e => entry.close()}>
                     <button class="ui_log_close">X</button>
-                    ${msg.split('\n').map(line => [line, html`<br/>`])}
+                    ${msg}
                 </div>`;
             }
         }), log_el);

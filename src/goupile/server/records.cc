@@ -72,14 +72,18 @@ static void ExportRecord(sq_Statement *stmt, json_Writer *json)
 void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    const InstanceToken *token = session ? session->GetToken(instance) : nullptr;
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+
+    const InstanceToken *token = session->GetToken(instance);
     if (!token) {
         LogError("User is not allowed to load data");
         io->AttachError(403);
         return;
     }
-
-    // More safety checks
     if (instance->config.sync_mode == SyncMode::Offline) {
         LogError("Records API is disabled in Offline mode");
         io->AttachError(403);
@@ -172,16 +176,19 @@ struct SaveRecord {
 void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    const InstanceToken *token = session ? session->GetToken(instance) : nullptr;
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
 
     // XXX: Check new/edit permissions correctly
+    const InstanceToken *token = session->GetToken(instance);
     if (!token || !token->HasPermission(UserPermission::Edit)) {
         LogError("User is not allowed to save data");
         io->AttachError(403);
         return;
     }
-
-    // More safety checks
     if (instance->config.sync_mode == SyncMode::Offline) {
         LogError("Records API is disabled in Offline mode");
         io->AttachError(403);

@@ -182,14 +182,15 @@ function InstanceController() {
 
             ${!goupile.isLocked() ? html`
                 <div class="drop right">
-                    <button class="icon" style="background-position-y: calc(-494px + 1.2em)">${profile.username}</button>
+                    <button class="icon"
+                            style=${'background-position-y: calc(-' + (goupile.isOnline() ? 450 : 494) + 'px + 1.2em);'}>${profile.username}</button>
                     <div>
                         ${app.lockable ? html`<button @click=${ui.wrapAction(e => runLockDialog(e, form_record.chain[0]))}>Verrouiller</button>` : ''}
                         <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
                     </div>
                 </div>
             ` : ''}
-            ${goupile.isLocked() ? html`<button @click=${ui.wrapAction(goupile.runLoginDialog)}>Se connecter</button>` : ''}
+            ${goupile.isLocked() ? html`<button @click=${ui.wrapAction(goupile.runLoginScreen)}>Se connecter</button>` : ''}
         `;
     }
 
@@ -394,7 +395,7 @@ function InstanceController() {
 
     function runDeleteRecordDialog(e, ulid) {
         return ui.runConfirm(e, 'Voulez-vous vraiment supprimer cet enregistrement ?',
-                             'Supprimer', () => deleteRecord(ulid));
+                                'Supprimer', () => deleteRecord(ulid));
     }
 
     function renderPage() {
@@ -560,7 +561,7 @@ function InstanceController() {
     }
 
     function runTrailDialog(e, ulid) {
-        return ui.runDialog(e, (d, resolve, reject) => {
+        return ui.runDialog(e, null, (d, resolve, reject) => {
             if (ulid !== route.ulid)
                 reject();
 
@@ -683,7 +684,7 @@ function InstanceController() {
                     await unfakeParents(t, entry.parent.ulid);
             });
 
-            if (net.isOnline() && ENV.sync_mode === 'mirror') {
+            if (net.isOnline() && ENV.sync_mode === 'mirror' && !goupile.isLocked()) {
                 try {
                     await syncRecords(false);
                     progress.success('Enregistrement effectué');
@@ -769,7 +770,7 @@ function InstanceController() {
                 await t.saveWithKey('rec_records', key, obj);
             });
 
-            if (net.isOnline() && ENV.sync_mode === 'mirror') {
+            if (net.isOnline() && ENV.sync_mode === 'mirror' && !goupile.isLocked()) {
                 try {
                     await syncRecords(false);
                     progress.success('Suppression effectuée');
@@ -1102,7 +1103,7 @@ function InstanceController() {
         let actions = await computeDeployActions();
         let modifications = actions.reduce((acc, action) => acc + (action.type !== 'noop'), 0);
 
-        return ui.runDialog(e, (d, resolve, reject) => {
+        return ui.runDialog(e, null, (d, resolve, reject) => {
             d.output(html`
                 <div class="ui_quick">
                     ${modifications || 'Aucune'} ${modifications.length > 1 ? 'modifications' : 'modification'} à effectuer
@@ -1255,7 +1256,7 @@ function InstanceController() {
     }
 
     function runAddFileDialog(e) {
-        return ui.runDialog(e, (d, resolve, reject) => {
+        return ui.runDialog(e, null, (d, resolve, reject) => {
             let file = d.file('*file', 'Fichier :');
             let filename = d.text('*filename', 'Chemin :', {value: file.value ? file.value.name : null});
 
@@ -1356,23 +1357,23 @@ function InstanceController() {
     };
 
     this.go = async function(e, url = null, push_history = true) {
-        // Fix up URL
-        if (!url.endsWith('/'))
-            url += '/';
-        url = new URL(url, window.location.href);
-        if (url.pathname === ENV.urls.instance)
-            url = new URL(app.home.url, window.location.href);
-
-        // Goodbye!
-        if (!url.pathname.startsWith(`${ENV.urls.instance}main/`))
-            window.location.href = url.href;
-
         let new_route = Object.assign({}, route);
         let new_record = form_record;
         let new_state = form_state;
+        let new_code;
 
         // Parse new URL
-        {
+        if (url != null) {
+            if (!url.endsWith('/'))
+                url += '/';
+            url = new URL(url, window.location.href);
+            if (url.pathname === ENV.urls.instance)
+                url = new URL(app.home.url, window.location.href);
+
+            // Goodbye!
+            if (!url.pathname.startsWith(`${ENV.urls.instance}main/`))
+                window.location.href = url.href;
+
             let path = url.pathname.substr(ENV.urls.instance.length + 5);
             let [key, what] = path.split('/').map(str => str.trim());
 
@@ -1535,6 +1536,9 @@ function InstanceController() {
             ui.setPanelState('data', false);
         }
 
+        // Fetch page code (for page panel)
+        new_code = await fetchCode(new_route.page.filename);
+
         // Dictionaries
         let new_dictionaries = {}
         if (new_route.page.options.dictionaries != null) {
@@ -1571,6 +1575,7 @@ function InstanceController() {
         form_record = new_record;
         form_state = new_state;
         form_dictionaries = new_dictionaries;
+        page_code = new_code;
 
         document.title = `${route.page.title} — ${ENV.title}`;
         await self.run(push_history);
@@ -1909,9 +1914,6 @@ function InstanceController() {
             if (data_rows == null)
                 data_rows = await loadDataRecords(data_form, null, data_rows);
         }
-
-        // Fetch page code (for page panel)
-        page_code = await fetchCode(route.page.filename);
 
         ui.render();
     };

@@ -305,13 +305,18 @@ void HandleUserProfile(InstanceHolder *instance, const http_RequestInfo &request
 void HandleUserBackup(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
-    const InstanceToken *token = session ? session->GetToken(instance) : nullptr;
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+
+    const InstanceToken *token = session->GetToken(instance);
     if (!token) {
         LogError("User is not allowed to upload client backups");
         io->AttachError(403);
         return;
     }
-
     if (!instance->config.backup_key) {
         LogError("This instance does not accept client backups");
         io->AttachError(403);
