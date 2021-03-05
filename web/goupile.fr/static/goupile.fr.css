@@ -40,12 +40,12 @@ h1 {
 * + h1 {
     margin-top: 1em;
     padding-top: 0.6em;
-    border-top: 2px solid #181818;
+    border-top: 2px solid #191f22;
 }
 h2 {
     display: table;
     padding: 2px 6px 2px 30px;
-    background: #181818;
+    background: #191f22;
     font-size: 1.2em;
     font-weight: normal;
     color: white;
@@ -76,7 +76,7 @@ td {
     top: 0;
     width: 100%;
     height: 2.5em;
-    background: #181818;
+    background: #191f22;
     z-index: 99;
     align-items: center;
     justify-content: center;
@@ -153,43 +153,22 @@ main {
     position: relative;
     left: 50%;
     right: 0;
-    width: 1282px;
-    height: 722px;
+    width:  130%;
     max-width: 90vw;
     transform: translate(-50%, 0);
     margin-top: 50px;
 }
 .slideshow > img {
     position: absolute;
-    left: 1px;
-    top: 35px;
-    height: 100%;
+    top: 0;
+    margin: 0 auto;
+    max-width: 100%;
+    object-fit: contain;
+    object-position: center top;
     cursor: pointer;
     transition: opacity 0.2s ease-in-out;
     opacity: 0;
     pointer-events: none;
-}
-.slideshow::after {
-    position: absolute;
-    top: 12px;
-    right: 19px;
-    width: 102px;
-    height: 10px;
-    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMwAAAAUCAYAAADBT9KwAAAAtElEQVRoge3bwQqAIBREUf//I9+XCLVqGaTJmxm4B9wGiRdBawy0mnNeJ4f6fdxV1VVVv+fp1HOwiGB6EUy4UwudYNbsLnhCESMYDYIJRTBaXwMgFBMEo0UwYQjGw1sQhGKGYDxsB8MxZy+C8fIE8nlnIZheBONlORj0IhgvBGOOYLwQjDmC8cApWQiC8UAwIQhGi4vLMASjRTBhCEaDjy9DEYwGwYTiorgXP5CFI5hep4O5AfjM9qYEkebNAAAAAElFTkSuQmCC');
-    background-size: 102px 10px;
-    background-repeat: no-repeat;
-    pointer-events: none;
-    content: ' ';
-}
-.slideshow > img:first-of-type {
-    position: relative;
-    left: 0;
-    top: 0;
-    opacity: 1;
-    border: 1px solid #181818;
-    border-top-width: 35px;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
-    pointer-events: auto;
 }
 .slideshow > img.active {
     opacity: 1;
@@ -205,7 +184,7 @@ main {
     box-sizing: border-box;
     margin: 0 auto;
     padding: 10px;
-    background: #181818;
+    background: #191f22;
     box-shadow: 2px 2px rgba(24, 24, 24, 0.8);
     opacity: 0.96;
     font-size: 0.9em;
@@ -291,7 +270,11 @@ main {
     #menu { display: none; }
     main { padding: 1em; }
 
-    .legend { bottom: -6%; }
+    .slideshow { margin-top: 20px; }
+    .legend {
+        top: 150px;
+        font-size: 0.7em;
+    }
 
     .screenshot {
         float: none !important;
