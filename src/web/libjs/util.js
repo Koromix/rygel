@@ -576,23 +576,12 @@ NetworkError.prototype.name = 'NetworkError';
 const net = new function() {
     let self = this;
 
-    let init = false;
     let online = true;
 
-    this.testHandler = () => {};
     this.changeHandler = online => {};
     this.retryHandler = code => false;
 
     this.fetch = async function(request, options) {
-        if (!init) {
-            if (typeof window !== 'undefined') {
-                window.addEventListener('online', () => self.testHandler());
-                window.addEventListener('offline', () => self.testHandler());
-            }
-
-            init = true;
-        }
-
         try {
             if (options == null)
                 options = {};
@@ -603,7 +592,7 @@ const net = new function() {
                 let response = await fetch(request, options);
 
                 if (!response.ok) {
-                    let retry = await self.retryHandler(response.status);
+                    let retry = await self.retryHandler(response);
                     if (retry)
                         continue;
                 }

@@ -153,6 +153,7 @@ function InstanceController() {
         if (online && ENV.backup_key != null)
             await backupRecords('server');
     };
+    this.runTasks = util.serializeAsync(this.runTasks);
 
     function renderMenu() {
         return html`

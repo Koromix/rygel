@@ -270,18 +270,27 @@ const goupile = new function() {
     }
 
     async function initTasks() {
+        if (controller.runTasks == null)
+            return;
+
         setInterval(async () => {
             await pingServer();
-            controller.runTasks(self.isOnline());
+            runTasks();
         }, 120 * 1000);
 
-        net.testHandler = pingServer;
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && !net.isOnline())
+                pingServer();
+        });
+        window.addEventListener('online', pingServer);
+        window.addEventListener('offline', pingServer);
         net.changeHandler = async online => {
-            controller.runTasks(self.isOnline());
+            await runTasks();
             controller.go();
         };
-        net.retryHandler = async code => {
-            if (code === 401) {
+
+        net.retryHandler = async response => {
+            if (response.status === 401) {
                 try {
                     await self.confirmIdentity();
                     return true;
@@ -293,7 +302,12 @@ const goupile = new function() {
             }
         };
 
-        await controller.runTasks(self.isOnline());
+        await runTasks();
+    }
+
+    async function runTasks() {
+        let online = self.isOnline();
+        await controller.runTasks(online);
     }
 
     async function pingServer() {

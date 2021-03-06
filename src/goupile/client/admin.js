@@ -29,10 +29,6 @@ function AdminController() {
         return false;
     };
 
-    this.runTasks = function(online) {
-        // Nothing to do
-    };
-
     function renderMenu() {
         return html`
             <button class="icon" style="background-position-y: calc(-538px + 1.2em);">Admin</button>
