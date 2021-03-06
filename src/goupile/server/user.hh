@@ -56,7 +56,6 @@ public:
     int64_t userid;
     const char *username;
     int64_t admin_until;
-    bool demo;
     char local_key[45];
 
     bool IsAdmin() const { return admin_until && admin_until > GetMonotonicTime(); }

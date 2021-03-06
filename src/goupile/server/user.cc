@@ -193,10 +193,6 @@ RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http
             const char *local_key = (const char *)sqlite3_column_text(stmt, 1);
             RetainPtr<Session> session = CreateUserSession(userid, gp_domain.config.demo_user, local_key);
 
-            if (RG_LIKELY(session)) {
-                session->demo = true;
-            }
-
             return session;
         }();
 
