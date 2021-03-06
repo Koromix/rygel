@@ -582,10 +582,16 @@ const goupile = new function() {
     };
 
     this.isOnline = function() {
-        let online = net.isOnline() &&
-                     profile.userid != null &&
-                     util.getCookie('session_rnd') != null;
-        return online;
+        if (!net.isOnline())
+            return false;
+        if (profile.userid == null)
+            return false;
+        if (self.isLocked())
+            return false;
+        if (util.getCookie('session_rnd') == null)
+            return false;
+
+        return true;
     };
     this.isLocked = function() { return profile.lock !== undefined; };
     this.hasPermission = function(perm) {
