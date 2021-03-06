@@ -184,7 +184,7 @@ function InstanceController() {
             ${!goupile.isLocked() ? html`
                 <div class="drop right">
                     <button class="icon"
-                            style=${'background-position-y: calc(-' + (goupile.isOnline() ? 450 : 494) + 'px + 1.2em);'}>${profile.username}</button>
+                            style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}>${profile.username}</button>
                     <div>
                         ${app.lockable ? html`<button @click=${ui.wrapAction(e => runLockDialog(e, form_record.chain[0]))}>Verrouiller</button>` : ''}
                         <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
@@ -773,7 +773,7 @@ function InstanceController() {
                 await t.saveWithKey('rec_records', key, obj);
             });
 
-            if (net.isOnline() && ENV.sync_mode === 'mirror' && !goupile.isLocked()) {
+            if (ENV.sync_mode === 'mirror' && net.isOnline() && !goupile.isLocked()) {
                 try {
                     await syncRecords(false);
                     progress.success('Suppression effectuée');

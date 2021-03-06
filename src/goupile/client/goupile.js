@@ -279,7 +279,7 @@ const goupile = new function() {
         }, 120 * 1000);
 
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible' && !net.isOnline())
+            if (document.visibilityState === 'visible')
                 pingServer();
         });
         window.addEventListener('online', pingServer);
@@ -306,8 +306,12 @@ const goupile = new function() {
     }
 
     async function runTasks() {
-        let online = self.isOnline();
-        await controller.runTasks(online);
+        try {
+            let online = net.isOnline() && !self.isLocked();
+            await controller.runTasks(online);
+        } catch (err) {
+            console.log(err);
+        }
     }
 
     async function pingServer() {
@@ -595,23 +599,15 @@ const goupile = new function() {
                                 "Continuer", () => {});
     };
 
-    this.isOnline = function() {
-        if (!net.isOnline())
-            return false;
-        if (profile.userid == null)
-            return false;
-        if (self.isLocked())
-            return false;
-        if (util.getCookie('session_rnd') == null)
-            return false;
-
-        return true;
-    };
     this.isLocked = function() { return profile.lock !== undefined; };
     this.hasPermission = function(perm) {
         return profile.permissions != null &&
                profile.permissions[perm];
-    }
+    };
+    this.isLoggedOnline = function() {
+        return net.isOnline() &&
+               session_rnd != null;
+    };
 
     this.syncHistory = function(url, push = true) {
         if (push && current_url != null && url !== current_url) {
