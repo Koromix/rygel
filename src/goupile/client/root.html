@@ -22,7 +22,11 @@
         <link rel="stylesheet" href="/admin/static/goupile.pk.css" async/>
 
         <style>
-            html { height: 100%; }
+            html {
+                height: 100%;
+                --anchor_color: #ea6624;
+            }
+
             body {
                 height: 100%;
                 margin: 0;
@@ -33,23 +37,31 @@
                 flex-direction: column;
             }
 
-            img {
+            #ro_admin {
+                position: absolute;
+                right: 6px;
+                top: 6px;
+            }
+
+            #ro_icon {
                 width: 256px;
                 height: 256px;
                 max-height: 60%;
                 object-fit: contain;
             }
 
-            a {
+            #ro_web {
                 margin-top: 0.8em;
-                font-size: 1.6em;
+                font-size: 2em;
                 text-decoration: none;
+                color: inherit;
             }
         </style>
     </head>
 
     <body>
-        <img src="/admin/favicon.png" alt="Goupile {VERSION}" title="Goupile {VERSION}" />
-        <a href="https://goupile.fr/">goupile.fr</a>
+        <a id="ro_admin" href="/admin/" style="">Administration</a>
+        <img id="ro_icon" src="/admin/favicon.png" alt="Goupile {VERSION}" title="Goupile {VERSION}" />
+        <a id="ro_web" href="https://goupile.fr/">goupile.fr</a>
     </body>
 </html>
