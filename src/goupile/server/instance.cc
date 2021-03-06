@@ -955,7 +955,7 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 29: {
-                char shared_key[64];
+                char shared_key[45];
                 {
                     uint8_t buf[32];
                     randombytes_buf(&buf, RG_SIZE(buf));

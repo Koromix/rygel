@@ -484,7 +484,7 @@ Options:
             return 1;
 
         // Create local key
-        char local_key[64];
+        char local_key[45];
         {
             uint8_t buf[32];
             randombytes_buf(&buf, RG_SIZE(buf));
@@ -953,7 +953,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
             return;
 
         // Create local key
-        char local_key[64];
+        char local_key[45];
         {
             uint8_t buf[32];
             randombytes_buf(&buf, RG_SIZE(buf));

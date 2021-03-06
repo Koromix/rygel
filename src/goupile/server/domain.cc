@@ -519,7 +519,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     int64_t rowid = sqlite3_column_int64(stmt, 0);
 
                     // Create passport key
-                    char passport[64];
+                    char passport[45];
                     {
                         uint8_t buf[32];
                         randombytes_buf(&buf, RG_SIZE(buf));
