@@ -684,13 +684,15 @@ function InstanceController() {
                     await unfakeParents(t, entry.parent.ulid);
             });
 
-            if (net.isOnline() && ENV.sync_mode === 'mirror' && !goupile.isLocked()) {
+            if (ENV.sync_mode === 'mirror') {
                 try {
+                    if (!net.isOnline() || goupile.isLocked())
+                        throw new Error('Cannot save online');
+
                     await syncRecords(false);
                     progress.success('Enregistrement effectué');
                 } catch (err) {
-                    progress.info('Enregistrement effectué (non synchronisé)');
-                    console.log(err);
+                    progress.info('Enregistrement local effectué');
                     enablePersistence();
                 }
             } else {
