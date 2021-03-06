@@ -199,10 +199,7 @@ html.small .ui_toolbar button.icon {
     align-items: center;
 }
 .ui_dialog.screen { background: white; }
-.ui_dialog.modal {
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(8px);
-}
+.ui_dialog.modal { background: rgba(255, 255, 255, 0.9); }
 .ui_dialog.screen.active, .ui_dialog.modal.active { display: flex; }
 .ui_dialog.screen > div, .ui_dialog.modal > div {
     display: block;
