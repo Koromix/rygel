@@ -158,8 +158,8 @@ function AdminController() {
 
             let style;
             switch (block.type) {
-                case 'admin': { style = 'background: #2e7ab4;'; } break;
-                case 'data': { style = 'background: #732faf;'; } break;
+                case 'admin': { style = 'background: #b518bf;'; } break;
+                case 'data': { style = 'background: #258264;'; } break;
             }
 
             return html`<span class="ui_tag" style=${style}>${str}</span>`;
