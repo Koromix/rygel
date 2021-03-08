@@ -51,7 +51,7 @@ function AdminController() {
 
     function togglePanel(e, key) {
         ui.setPanelState(key, !ui.isPanelEnabled(key));
-        return self.run();
+        return self.go();
     }
 
     function renderInstances() {
@@ -60,7 +60,7 @@ function AdminController() {
                 <div class="ui_quick">
                     <a @click=${ui.wrapAction(runCreateInstanceDialog)}>Créer un projet</a>
                     <div style="flex: 1;"></div>
-                    Projets (<a @click=${ui.wrapAction(e => { instances = null; return self.run(); })}>rafraichir</a>)
+                    Projets (<a @click=${ui.wrapAction(e => { instances = null; return self.go(); })}>rafraichir</a>)
                 </div>
 
                 <table class="ui_table" style="table-layout: fixed;">
@@ -82,7 +82,7 @@ function AdminController() {
                                 </td>
                                 <td>${instance.master == null ?
                                         html`<a role="button" tabindex="0" @click=${ui.wrapAction(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a>` : ''}</td>
-                                <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => toggleSelectedInstance(e, instance))}>Droits</a></td>
+                                <td><a role="button" tabindex="0" href=${makeURL(instance.key)}>Droits</a></td>
                                 <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runEditInstanceDialog(e, instance))}>Modifier</a></td>
                             </tr>
                         `)}
@@ -92,13 +92,21 @@ function AdminController() {
         `;
     }
 
+    function makeURL(instance) {
+        let url = util.pasteURL('/admin/', {
+            select: instance
+        });
+
+        return url;
+    }
+
     function renderUsers() {
         return html`
             <div class="padded" style="flex-grow: 1.5;">
                 <div class="ui_quick">
                     <a @click=${ui.wrapAction(runCreateUserDialog)}>Créer un utilisateur</a>
                     <div style="flex: 1;"></div>
-                    Utilisateurs (<a @click=${ui.wrapAction(e => { users = null; selected_permissions = null; return self.run(); })}>rafraichir</a>)
+                    Utilisateurs (<a @click=${ui.wrapAction(e => { users = null; selected_permissions = null; return self.go(); })}>rafraichir</a>)
                 </div>
 
                 <table class="ui_table" style="table-layout: fixed;">
@@ -165,12 +173,7 @@ function AdminController() {
         }
     }
 
-    this.go = async function(e = null, url = null, push_history = true) {
-        await self.run(push_history);
-    };
-    this.go = util.serializeAsync(this.go);
-
-    this.run = async function(push_history = false) {
+    this.go = async function(e, url = null, push_history = true) {
         let new_instances = instances;
         let new_users = users;
         let new_selected = selected_instance;
@@ -180,6 +183,18 @@ function AdminController() {
             new_instances = await net.fetchJson('/admin/api/instances/list');
         if (new_users == null)
             new_users = await net.fetchJson('/admin/api/users/list');
+
+        if (url != null) {
+            url = new URL(url, window.location.href);
+
+            if (url.searchParams.has('select')) {
+                let select = url.searchParams.get('select');
+                new_selected = new_instances.find(instance => instance.key === select);
+
+                if (new_selected == null)
+                    throw new Error(`Cannot select instance '${select}' (does not exist)`);
+            }
+        }
 
         if (new_selected != null)
             new_selected = new_instances.find(instance => instance.key === new_selected.key);
@@ -203,20 +218,15 @@ function AdminController() {
         selected_instance = new_selected;
         selected_permissions = new_permissions;
 
-        ui.render();
-    };
-    this.run = util.serializeAsync(this.run);
-
-    function toggleSelectedInstance(e, instance) {
-        if (instance !== selected_instance) {
-            selected_instance = instance;
-            ui.setPanelState('users', true);
-        } else {
-            selected_instance = null;
+        // Update browser URL
+        {
+            let url = makeURL(selected_instance != null ? selected_instance.key : null);
+            goupile.syncHistory(url, push_history);
         }
 
-        return self.run();
-    }
+        ui.render();
+    };
+    this.go = util.serializeAsync(this.go);
 
     function runCreateInstanceDialog(e) {
         return ui.runDialog(e, 'Création d\'une instance', (d, resolve, reject) => {
@@ -242,7 +252,7 @@ function AdminController() {
                     instances = null;
                     selected_permissions = null;
 
-                    self.run();
+                    self.go();
                 } else {
                     let err = (await response.text()).trim();
                     reject(new Error(err));
@@ -296,7 +306,7 @@ function AdminController() {
 
                             instances = null;
 
-                            self.run();
+                            self.go();
                         } else {
                             let err = (await response.text()).trim();
                             reject(new Error(err));
@@ -322,7 +332,7 @@ function AdminController() {
 
                             instances = null;
 
-                            self.run();
+                            self.go();
                         } else {
                             let err = (await response.text()).trim();
                             reject(new Error(err));
@@ -358,7 +368,7 @@ function AdminController() {
                     instances = null;
                     selected_permissions = null;
 
-                    self.run();
+                    self.go();
                 } else {
                     let err = (await response.text()).trim();
                     reject(new Error(err));
@@ -396,7 +406,7 @@ function AdminController() {
                     users = null;
                     selected_permissions = null;
 
-                    self.run();
+                    self.go();
                 } else {
                     let err = (await response.text()).trim();
                     reject(new Error(err));
@@ -446,7 +456,7 @@ function AdminController() {
 
                     selected_permissions = null;
 
-                    self.run();
+                    self.go();
                 } else {
                     let err = (await response.text()).trim();
                     reject(new Error(err));
@@ -497,7 +507,7 @@ function AdminController() {
 
                             users = null;
 
-                            self.run();
+                            self.go();
                         } else {
                             let err = (await response.text()).trim();
                             reject(new Error(err));
@@ -522,7 +532,7 @@ function AdminController() {
 
                             users = null;
 
-                            self.run();
+                            self.go();
                         } else {
                             let err = (await response.text()).trim();
                             throw new Error(err);

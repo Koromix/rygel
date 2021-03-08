@@ -68,7 +68,7 @@ const goupile = new function() {
         await controller.init();
         await initTasks();
 
-        controller.go(null, url.pathname).catch(err => {
+        controller.go(null, url.href).catch(err => {
             log.error(err);
 
             // Now try home page... If that fails too, show login screen.
