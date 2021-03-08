@@ -18,6 +18,7 @@ function AdminController() {
     let users;
 
     let selected_instance;
+    let selected_permissions;
 
     this.init = async function() {
         ui.setMenu(renderMenu);
@@ -81,7 +82,7 @@ function AdminController() {
                                 </td>
                                 <td>${instance.master == null ?
                                         html`<a role="button" tabindex="0" @click=${ui.wrapAction(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a>` : ''}</td>
-                                <td><a role="button" tabindex="0" @click=${e => toggleSelectedInstance(e, instance)}>Droits</a></td>
+                                <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => toggleSelectedInstance(e, instance))}>Droits</a></td>
                                 <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runEditInstanceDialog(e, instance))}>Modifier</a></td>
                             </tr>
                         `)}
@@ -97,7 +98,7 @@ function AdminController() {
                 <div class="ui_quick">
                     <a @click=${ui.wrapAction(runCreateUserDialog)}>Créer un utilisateur</a>
                     <div style="flex: 1;"></div>
-                    Utilisateurs (<a @click=${ui.wrapAction(e => { users = null; return self.run(); })}>rafraichir</a>)
+                    Utilisateurs (<a @click=${ui.wrapAction(e => { users = null; selected_permissions = null; return self.run(); })}>rafraichir</a>)
                 </div>
 
                 <table class="ui_table" style="table-layout: fixed;">
@@ -120,7 +121,7 @@ function AdminController() {
                         ${users.map(user => {
                             let permissions;
                             if (selected_instance != null) {
-                                permissions = user.instances[selected_instance.key] || [];
+                                permissions = selected_permissions.permissions[user.userid] || [];
                             } else {
                                 permissions = [];
                             }
@@ -167,13 +168,37 @@ function AdminController() {
     this.go = util.serializeAsync(this.go);
 
     this.run = async function(push_history = false) {
-        if (instances == null)
-            instances = await net.fetchJson('/admin/api/instances/list');
-        if (users == null)
-            users = await net.fetchJson('/admin/api/users/list');
+        let new_instances = instances;
+        let new_users = users;
+        let new_selected = selected_instance;
+        let new_permissions = selected_permissions;
 
-        if (selected_instance != null)
-            selected_instance = instances.find(instance => instance.key === selected_instance.key);
+        if (new_instances == null)
+            new_instances = await net.fetchJson('/admin/api/instances/list');
+        if (new_users == null)
+            new_users = await net.fetchJson('/admin/api/users/list');
+
+        if (new_selected != null)
+            new_selected = new_instances.find(instance => instance.key === new_selected.key);
+        if (new_selected != null) {
+            if (new_permissions == null || new_permissions.key != new_selected.key) {
+                let url = util.pasteURL('/admin/api/instances/permissions', {key: new_selected.key});
+                let permissions = await net.fetchJson(url);
+
+                new_permissions = {
+                    key: new_selected.key,
+                    permissions: permissions
+                };
+            }
+        } else {
+            new_permissions = null;
+        }
+
+        // Commit
+        instances = new_instances;
+        users = new_users;
+        selected_instance = new_selected;
+        selected_permissions = new_permissions;
 
         ui.render();
     };
@@ -186,6 +211,7 @@ function AdminController() {
         } else {
             selected_instance = null;
         }
+
         return self.run();
     }
 
@@ -211,7 +237,7 @@ function AdminController() {
                     log.success(`Projet '${key.value}' créé`);
 
                     instances = null;
-                    users = null;
+                    selected_permissions = null;
 
                     self.run();
                 } else {
@@ -327,7 +353,7 @@ function AdminController() {
                     log.success(`Sous-projet '${full_key}' créé`);
 
                     instances = null;
-                    users = null;
+                    selected_permissions = null;
 
                     self.run();
                 } else {
@@ -365,6 +391,7 @@ function AdminController() {
                     log.success(`Utilisateur '${username.value}' créé`);
 
                     users = null;
+                    selected_permissions = null;
 
                     self.run();
                 } else {
@@ -405,7 +432,7 @@ function AdminController() {
                 query.set('userid', user.userid);
                 query.set('permissions', permissions.join(','));
 
-                let response = await net.fetch('/admin/api/users/assign', {
+                let response = await net.fetch('/admin/api/instances/assign', {
                     method: 'POST',
                     body: query
                 });
@@ -414,7 +441,7 @@ function AdminController() {
                     resolve();
                     log.success(`Droits de '${user.username}' sur le projet '${instance.key}' ${permissions.length ? 'modifiés' : 'supprimés'}`);
 
-                    users = null;
+                    selected_permissions = null;
 
                     self.run();
                 } else {

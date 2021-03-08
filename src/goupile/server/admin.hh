@@ -25,11 +25,12 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io);
 void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io);
 void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io);
 void HandleInstanceList(const http_RequestInfo &request, http_IO *io);
+void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io);
+void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io);
 
 void HandleUserCreate(const http_RequestInfo &request, http_IO *io);
 void HandleUserEdit(const http_RequestInfo &request, http_IO *io);
 void HandleUserDelete(const http_RequestInfo &request, http_IO *io);
-void HandleUserAssign(const http_RequestInfo &request, http_IO *io);
 void HandleUserList(const http_RequestInfo &request, http_IO *io);
 
 }

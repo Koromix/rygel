@@ -222,14 +222,16 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleInstanceConfigure(request, io);
         } else if (TestStr(admin_url, "/api/instances/list") && request.method == http_RequestMethod::Get) {
             HandleInstanceList(request, io);
+        } else if (TestStr(admin_url, "/api/instances/assign") && request.method == http_RequestMethod::Post) {
+            HandleInstanceAssign(request, io);
+        } else if (TestStr(admin_url, "/api/instances/permissions") && request.method == http_RequestMethod::Get) {
+            HandleInstancePermissions(request, io);
         } else if (TestStr(admin_url, "/api/users/create") && request.method == http_RequestMethod::Post) {
             HandleUserCreate(request, io);
         } else if (TestStr(admin_url, "/api/users/edit") && request.method == http_RequestMethod::Post) {
             HandleUserEdit(request, io);
         } else if (TestStr(admin_url, "/api/users/delete") && request.method == http_RequestMethod::Post) {
             HandleUserDelete(request, io);
-        } else if (TestStr(admin_url, "/api/users/assign") && request.method == http_RequestMethod::Post) {
-            HandleUserAssign(request, io);
         } else if (TestStr(admin_url, "/api/users/list") && request.method == http_RequestMethod::Get) {
             HandleUserList(request, io);
         } else {
