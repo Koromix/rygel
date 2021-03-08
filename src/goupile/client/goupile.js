@@ -270,25 +270,6 @@ const goupile = new function() {
     }
 
     async function initTasks() {
-        if (controller.runTasks == null)
-            return;
-
-        setInterval(async () => {
-            await pingServer();
-            runTasks();
-        }, 120 * 1000);
-
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible')
-                pingServer();
-        });
-        window.addEventListener('online', pingServer);
-        window.addEventListener('offline', pingServer);
-        net.changeHandler = async online => {
-            await runTasks();
-            controller.go();
-        };
-
         net.retryHandler = async response => {
             if (response.status === 401) {
                 try {
@@ -302,7 +283,25 @@ const goupile = new function() {
             }
         };
 
-        await runTasks();
+        if (controller.runTasks != null) {
+            setInterval(async () => {
+                await pingServer();
+                runTasks();
+            }, 120 * 1000);
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible')
+                    pingServer();
+            });
+            window.addEventListener('online', pingServer);
+            window.addEventListener('offline', pingServer);
+            net.changeHandler = async online => {
+                await runTasks();
+                controller.go();
+            };
+
+            await runTasks();
+        }
     }
 
     async function runTasks() {
