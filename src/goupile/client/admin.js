@@ -384,7 +384,7 @@ function AdminController() {
                     value: value,
                     disabled: instance.master != null
                 });
-            });
+            }, {color: '#b518bf'});
             d.sameLine(true); d.section("Enregistrements", () => {
                 let props = ENV.permissions.filter(perm => perm.startsWith('data_')).map(makePermissionProp);
                 let value = !instance.slaves ? prev_permissions.filter(perm => perm.startsWith('data_')) : null;
@@ -393,7 +393,7 @@ function AdminController() {
                     value: value,
                     disabled: instance.slaves > 0
                 });
-            });
+            }, {color: '#258264'});
 
             // Now regroup permissions
             let permissions = [...d.value("admin_permissions", []), ...d.value("data_permissions", [])];
