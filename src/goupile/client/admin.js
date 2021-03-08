@@ -128,7 +128,10 @@ function AdminController() {
 
                             return html`
                                 <tr>
-                                    <td style="text-align: left;">${user.username}</td>
+                                    <td style="text-align: left;">
+                                        ${user.username}
+                                        ${user.admin ? html`<span style="color: red;" title="Administrateur">♛\uFE0F</span>` : ''}
+                                    </td>
                                     <td><a role="button" tabindex="0"
                                            @click=${ui.wrapAction(e => runEditUserDialog(e, user))}>Modifier</a></td>
                                     ${selected_instance != null ? html`
