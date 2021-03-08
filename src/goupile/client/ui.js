@@ -36,7 +36,7 @@ const ui = new function() {
         });
         adaptToViewport();
 
-        document.addEventListener('click', handleDocumentClick);
+        document.addEventListener('click', closeOldDialogs);
     }
 
     function adaptToViewport(keep_panel = null) {
@@ -141,6 +141,9 @@ const ui = new function() {
     };
 
     function runDialog(e, title, type, closeable, func) {
+        if (e != null)
+            closeOldDialogs(e);
+
         return new Promise((resolve, reject) => {
             let dialog = {
                 prev: dialogs.prev,
@@ -188,7 +191,7 @@ const ui = new function() {
         });
     };
 
-    function handleDocumentClick(e) {
+    function closeOldDialogs(e) {
         let it = dialogs.next;
 
         while (it !== dialogs) {
