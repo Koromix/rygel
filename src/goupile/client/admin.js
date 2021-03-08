@@ -62,7 +62,7 @@ function AdminController() {
                     Projets (<a @click=${ui.wrapAction(e => { instances = null; return self.run(); })}>rafraichir</a>)
                 </div>
 
-                <table class="ui_table">
+                <table class="ui_table" style="table-layout: fixed;">
                     <colgroup>
                         <col/>
                         <col style="width: 100px;"/>
@@ -100,32 +100,38 @@ function AdminController() {
                     Utilisateurs (<a @click=${ui.wrapAction(e => { users = null; return self.run(); })}>rafraichir</a>)
                 </div>
 
-                <table class="ui_table">
+                <table class="ui_table" style="table-layout: fixed;">
                     <colgroup>
-                        ${selected_instance != null ? html`<col style="width: 100px;"/>` : ''}
-                        <col/>
-                        <col style="width: 100px;"/>
+                        ${selected_instance == null ? html`
+                            <col/>
+                            <col style="width: 100px;"/>
+                        ` : ''}
+                        ${selected_instance != null ? html`
+                            <col style="width: 100px;"/>
+                            <col style="width: 100px;"/>
+                            <col/>
+                            <col/>
+                            <col style="width: 100px;"/>
+                        ` : ''}
                     </colgroup>
 
                     <tbody>
-                        ${!users.length ? html`<tr><td colspan="3">Aucun utilisateur</td></tr>` : ''}
+                        ${!users.length ? html`<tr><td colspan=${selected_instance != null ? 5 : 2}>Aucun utilisateur</td></tr>` : ''}
                         ${users.map(user => {
                             let permissions = user.instances[selected_instance] || [];
 
                             return html`
                                 <tr>
                                     <td style="text-align: left;">${user.username}</td>
-                                    ${selected_instance != null ? html`
-                                        <td>
-                                            ${makePermissionTags(permissions).map(tag => html`${tag} `)}
-                                            &nbsp;&nbsp;&nbsp;
-                                            <a role="button" tabindex="0"
-                                               @click=${ui.wrapAction(e => runAssignUserDialog(e, selected_instance, user,
-                                                                                                  permissions))}>Assigner</a>
-                                        </td>
-                                    ` : ''}
                                     <td><a role="button" tabindex="0"
                                            @click=${ui.wrapAction(e => runEditUserDialog(e, user))}>Modifier</a></td>
+                                    ${selected_instance != null ? html`
+                                        <td>${makePermissionTag(permissions, 'admin_', '#b518bf')}</td>
+                                        <td>${makePermissionTag(permissions, 'data_', '#258264')}</td>
+                                        <td><a role="button" tabindex="0"
+                                               @click=${ui.wrapAction(e => runAssignUserDialog(e, selected_instance, user,
+                                                                                                  permissions))}>Assigner</a></td>
+                                    ` : ''}
                                 </tr>
                             `;
                         })}
@@ -135,37 +141,15 @@ function AdminController() {
         `;
     }
 
-    function makePermissionTags(permissions) {
-        let blocks = [];
+    function makePermissionTag(permissions, prefix, background) {
+        permissions = permissions.filter(perm => perm.startsWith(prefix));
 
-        for (let i = 0, block = null; i < permissions.length; i++) {
-            let perm = permissions[i];
-            let [type, name] = perm.split('_');
-
-            if (block != null && type === block.type) {
-                block.chars += name[0].toUpperCase();
-            } else {
-                block = {
-                    type: type,
-                    chars: name[0].toUpperCase()
-                };
-                blocks.push(block);
-            }
+        if (permissions.length) {
+            let names = permissions.map(perm => util.capitalize(perm.substr(prefix.length)));
+            return html`<span class="ui_tag" style=${'background: ' + background + ';'}>${names.join('|')}</span>`;
+        } else {
+            return '';
         }
-
-        let tags = blocks.map(block => {
-            let str = `${block.type[0].toUpperCase()}-${block.chars}`;
-
-            let style;
-            switch (block.type) {
-                case 'admin': { style = 'background: #b518bf;'; } break;
-                case 'data': { style = 'background: #258264;'; } break;
-            }
-
-            return html`<span class="ui_tag" style=${style}>${str}</span>`;
-        });
-
-        return tags;
     }
 
     this.go = async function(e = null, url = null, push_history = true) {
@@ -312,7 +296,7 @@ function AdminController() {
 
     function runSplitInstanceDialog(e, master) {
         return ui.runDialog(e, `Division de ${master}`, (d, resolve, reject) => {
-            d.calc('instance', 'Projet', master);
+            d.calc('instance', 'Instance', master);
             let key = d.text('*key', 'Clé du sous-projet');
             let name = d.text('name', 'Nom', {value: key.value});
 
