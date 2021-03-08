@@ -73,7 +73,7 @@ function AdminController() {
                     <tbody>
                         ${!instances.length ? html`<tr><td colspan="4">Aucun projet</td></tr>` : ''}
                         ${instances.map(instance => html`
-                            <tr class=${instance.key === selected_instance ? 'active' : ''}>
+                            <tr class=${instance === selected_instance ? 'active' : ''}>
                                 <td style="text-align: left;" class=${instance.master != null ? 'child' : ''}>
                                     ${instance.master != null ? html`<span style="color: #ccc;">${instance.master} / </span>${instance.key.replace(/^.*\//, '')}` : ''}
                                     ${instance.master == null ? instance.key : ''}
@@ -81,7 +81,7 @@ function AdminController() {
                                 </td>
                                 <td>${instance.master == null ?
                                         html`<a role="button" tabindex="0" @click=${ui.wrapAction(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a>` : ''}</td>
-                                <td><a role="button" tabindex="0" @click=${e => toggleSelectedInstance(e, instance.key)}>Droits</a></td>
+                                <td><a role="button" tabindex="0" @click=${e => toggleSelectedInstance(e, instance)}>Droits</a></td>
                                 <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runEditInstanceDialog(e, instance))}>Modifier</a></td>
                             </tr>
                         `)}
@@ -118,7 +118,12 @@ function AdminController() {
                     <tbody>
                         ${!users.length ? html`<tr><td colspan=${selected_instance != null ? 5 : 2}>Aucun utilisateur</td></tr>` : ''}
                         ${users.map(user => {
-                            let permissions = user.instances[selected_instance] || [];
+                            let permissions;
+                            if (selected_instance != null) {
+                                permissions = user.instances[selected_instance.key] || [];
+                            } else {
+                                permissions = [];
+                            }
 
                             return html`
                                 <tr>
@@ -126,8 +131,12 @@ function AdminController() {
                                     <td><a role="button" tabindex="0"
                                            @click=${ui.wrapAction(e => runEditUserDialog(e, user))}>Modifier</a></td>
                                     ${selected_instance != null ? html`
-                                        <td>${makePermissionTag(permissions, 'admin_', '#b518bf')}</td>
-                                        <td>${makePermissionTag(permissions, 'data_', '#258264')}</td>
+                                        <td class=${selected_instance.master != null ? 'missing' : ''}>
+                                            ${selected_instance.master == null ? makePermissionsTag(permissions, 'admin_', '#b518bf') : 'Ø'}
+                                        </td>
+                                        <td class=${selected_instance.slaves > 0 ? 'missing' : ''}>
+                                            ${!selected_instance.slaves ? makePermissionsTag(permissions, 'data_', '#258264') : 'Ø'}
+                                        </td>
                                         <td><a role="button" tabindex="0"
                                                @click=${ui.wrapAction(e => runAssignUserDialog(e, selected_instance, user,
                                                                                                   permissions))}>Assigner</a></td>
@@ -141,7 +150,7 @@ function AdminController() {
         `;
     }
 
-    function makePermissionTag(permissions, prefix, background) {
+    function makePermissionsTag(permissions, prefix, background) {
         permissions = permissions.filter(perm => perm.startsWith(prefix));
 
         if (permissions.length) {
@@ -162,16 +171,17 @@ function AdminController() {
             instances = await net.fetchJson('/admin/api/instances/list');
         if (users == null)
             users = await net.fetchJson('/admin/api/users/list');
-        if (!instances.find(instance => instance.key === selected_instance))
-            selected_instance = null;
+
+        if (selected_instance != null)
+            selected_instance = instances.find(instance => instance.key === selected_instance.key);
 
         ui.render();
     };
     this.run = util.serializeAsync(this.run);
 
-    function toggleSelectedInstance(e, key) {
-        if (key !== selected_instance) {
-            selected_instance = key;
+    function toggleSelectedInstance(e, instance) {
+        if (instance !== selected_instance) {
+            selected_instance = instance;
             ui.setPanelState('users', true);
         } else {
             selected_instance = null;
@@ -296,7 +306,7 @@ function AdminController() {
 
     function runSplitInstanceDialog(e, master) {
         return ui.runDialog(e, `Division de ${master}`, (d, resolve, reject) => {
-            d.calc('instance', 'Instance', master);
+            d.calc('instance', 'Projet', master);
             let key = d.text('*key', 'Clé du sous-projet');
             let name = d.text('name', 'Nom', {value: key.value});
 
@@ -365,26 +375,32 @@ function AdminController() {
     }
 
     function runAssignUserDialog(e, instance, user, prev_permissions) {
-        return ui.runDialog(e, `Droits de ${user.username}`, (d, resolve, reject) => {
-            d.calc('instance', 'Projet', instance);
-            d.sameLine(true); d.calc('username', 'Utilisateur', user.username);
+        return ui.runDialog(e, `Droits de ${user.username} sur ${instance.key}`, (d, resolve, reject) => {
+            d.section("Développement", () => {
+                let props = ENV.permissions.filter(perm => perm.startsWith('admin_')).map(makePermissionProp);
+                let value = (instance.master == null) ? prev_permissions.filter(perm => perm.startsWith('admin_')) : null;
 
-            let admin_permissions = d.multiCheck('admin_permissions', 'Administration',
-                                                 ENV.permissions.filter(perm => perm.startsWith('admin_')).map(makePermissionProp), {
-                value: prev_permissions.filter(perm => perm.startsWith('admin_'))
+                d.multiCheck('admin_permissions', '', props, {
+                    value: value,
+                    disabled: instance.master != null
+                });
             });
-            d.sameLine(true);
-            let data_permissions = d.multiCheck('data_permissions', 'Enregistrements',
-                                                ENV.permissions.filter(perm => perm.startsWith('data_')).map(makePermissionProp), {
-                value: prev_permissions.filter(perm => perm.startsWith('data_'))
+            d.sameLine(true); d.section("Enregistrements", () => {
+                let props = ENV.permissions.filter(perm => perm.startsWith('data_')).map(makePermissionProp);
+                let value = !instance.slaves ? prev_permissions.filter(perm => perm.startsWith('data_')) : null;
+
+                d.multiCheck('data_permissions', '', props, {
+                    value: value,
+                    disabled: instance.slaves > 0
+                });
             });
 
             // Now regroup permissions
-            let permissions = [...(admin_permissions.value || []), ...(data_permissions.value || [])];
+            let permissions = [...d.value("admin_permissions", []), ...d.value("data_permissions", [])];
 
             d.action('Modifier', {disabled: !d.isValid()}, async () => {
                 let query = new URLSearchParams;
-                query.set('instance', instance);
+                query.set('instance', instance.key);
                 query.set('userid', user.userid);
                 query.set('permissions', permissions.join(','));
 
@@ -395,7 +411,7 @@ function AdminController() {
 
                 if (response.ok) {
                     resolve();
-                    log.success(`Droits de '${user.username}' sur le projet '${instance}' ${permissions.length ? 'modifiés' : 'supprimés'}`);
+                    log.success(`Droits de '${user.username}' sur le projet '${instance.key}' ${permissions.length ? 'modifiés' : 'supprimés'}`);
 
                     users = null;
 
