@@ -192,7 +192,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
     const char *client_sha256 = request.GetQueryValue("sha256");
 
     const InstanceToken *token = session->GetToken(instance);
-    if (!token || !token->HasPermission(UserPermission::Deploy)) {
+    if (!token || !token->HasPermission(UserPermission::AdminPublish)) {
         LogError("User is not allowed to deploy changes");
         io->AttachError(403);
         return;
@@ -354,7 +354,7 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
     const char *client_sha256 = request.GetQueryValue("sha256");
 
     const InstanceToken *token = session->GetToken(instance);
-    if (!token || !token->HasPermission(UserPermission::Deploy)) {
+    if (!token || !token->HasPermission(UserPermission::AdminPublish)) {
         LogError("User is not allowed to deploy changes");
         io->AttachError(403);
         return;

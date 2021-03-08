@@ -117,8 +117,7 @@ function AdminController() {
                                     <td style="text-align: left;">${user.username}</td>
                                     ${selected_instance != null ? html`
                                         <td>
-                                            ${permissions.map(perm =>
-                                                html`<span class="ui_tag" style="background: #777;">${perm}</span> `)}
+                                            ${makePermissionTags(permissions).map(tag => html`${tag} `)}
                                             &nbsp;&nbsp;&nbsp;
                                             <a role="button" tabindex="0"
                                                @click=${ui.wrapAction(e => runAssignUserDialog(e, selected_instance, user,
@@ -134,6 +133,39 @@ function AdminController() {
                 </table>
             </div>
         `;
+    }
+
+    function makePermissionTags(permissions) {
+        let blocks = [];
+
+        for (let i = 0, block = null; i < permissions.length; i++) {
+            let perm = permissions[i];
+            let [type, name] = perm.split('_');
+
+            if (block != null && type === block.type) {
+                block.chars += name[0].toUpperCase();
+            } else {
+                block = {
+                    type: type,
+                    chars: name[0].toUpperCase()
+                };
+                blocks.push(block);
+            }
+        }
+
+        let tags = blocks.map(block => {
+            let str = `${block.type[0].toUpperCase()}-${block.chars}`;
+
+            let style;
+            switch (block.type) {
+                case 'admin': { style = 'background: #2e7ab4;'; } break;
+                case 'data': { style = 'background: #732faf;'; } break;
+            }
+
+            return html`<span class="ui_tag" style=${style}>${str}</span>`;
+        });
+
+        return tags;
     }
 
     this.go = async function(e = null, url = null, push_history = true) {
@@ -351,14 +383,26 @@ function AdminController() {
     function runAssignUserDialog(e, instance, user, prev_permissions) {
         return ui.runDialog(e, `Droits de ${user.username}`, (d, resolve, reject) => {
             d.calc('instance', 'Projet', instance);
-            d.sameLine(); d.calc('username', 'Utilisateur', user.username);
-            let permissions = d.multiCheck('permissions', 'Permissions', ENV.permissions, {value: prev_permissions});
+            d.sameLine(true); d.calc('username', 'Utilisateur', user.username);
+
+            let admin_permissions = d.multiCheck('admin_permissions', 'Administration',
+                                                 ENV.permissions.filter(perm => perm.startsWith('admin_')).map(makePermissionProp), {
+                value: prev_permissions.filter(perm => perm.startsWith('admin_'))
+            });
+            d.sameLine(true);
+            let data_permissions = d.multiCheck('data_permissions', 'Enregistrements',
+                                                ENV.permissions.filter(perm => perm.startsWith('data_')).map(makePermissionProp), {
+                value: prev_permissions.filter(perm => perm.startsWith('data_'))
+            });
+
+            // Now regroup permissions
+            let permissions = [...(admin_permissions.value || []), ...(data_permissions.value || [])];
 
             d.action('Modifier', {disabled: !d.isValid()}, async () => {
                 let query = new URLSearchParams;
                 query.set('instance', instance);
                 query.set('userid', user.userid);
-                query.set('permissions', permissions.value != null ? permissions.value.join(',') : '');
+                query.set('permissions', permissions.join(','));
 
                 let response = await net.fetch('/admin/api/users/assign', {
                     method: 'POST',
@@ -367,7 +411,7 @@ function AdminController() {
 
                 if (response.ok) {
                     resolve();
-                    log.success(`Droits de '${user.username}' sur le projet '${instance}' ${permissions.value ? 'modifiés' : 'supprimés'}`);
+                    log.success(`Droits de '${user.username}' sur le projet '${instance}' ${permissions.length ? 'modifiés' : 'supprimés'}`);
 
                     users = null;
 
@@ -378,6 +422,11 @@ function AdminController() {
                 }
             });
         });
+    }
+
+    function makePermissionProp(perm) {
+        let name = perm.substr(perm.indexOf('_') + 1);
+        return [perm, util.capitalize(name)];
     }
 
     function runEditUserDialog(e, user) {

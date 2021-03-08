@@ -17,7 +17,7 @@
 
 namespace RG {
 
-const int DomainVersion = 13;
+const int DomainVersion = 14;
 const int MaxInstancesPerDomain = 4096;
 
 bool DomainConfig::Validate() const
@@ -698,8 +698,6 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
             } [[fallthrough]];
 
             case 12: {
-                // This migration is incomplete and does not rename slave instance database files
-
                 bool success = db->RunMany(R"(
                     ALTER TABLE dom_instances RENAME TO dom_instances_BAK;
                     ALTER TABLE dom_permissions RENAME TO dom_permissions_BAK;
@@ -730,9 +728,25 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 13: {
+                bool success = db->RunMany(R"(
+                    UPDATE dom_permissions SET permissions = iif(permissions & 1, 1, 0) |
+                                                             iif(permissions & 8, 2, 0) |
+                                                             iif(permissions & 1, 4, 0) |
+                                                             iif(permissions & 1, 8, 0) |
+                                                             iif(permissions & 4, 16, 0) |
+                                                             iif(permissions & 2, 32, 0) |
+                                                             iif(permissions & 4, 64, 0) |
+                                                             iif(permissions & 32, 128, 0) |
+                                                             iif(permissions & 64, 256, 0);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 13);
+            RG_STATIC_ASSERT(DomainVersion == 14);
         }
 
         int64_t time = GetUnixTime();

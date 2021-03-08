@@ -472,6 +472,14 @@ const util = new function() {
             return p;
         };
     };
+
+    this.capitalize = function(str) {
+        if (str.length > 1) {
+            return str[0].toUpperCase() + str.substr(1);
+        } else {
+            return str.toUpperCase();
+        }
+    }
 };
 
 // ------------------------------------------------------------------------

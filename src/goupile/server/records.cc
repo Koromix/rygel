@@ -184,7 +184,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
 
     // XXX: Check new/edit permissions correctly
     const InstanceToken *token = session->GetToken(instance);
-    if (!token || !token->HasPermission(UserPermission::Edit)) {
+    if (!token || !token->HasPermission(UserPermission::DataModify)) {
         LogError("User is not allowed to save data");
         io->AttachError(403);
         return;

@@ -21,22 +21,26 @@ namespace RG {
 class InstanceHolder;
 
 enum class UserPermission {
-    Develop = 1 << 0,
-    New = 1 << 1,
-    Edit = 1 << 2,
-    Deploy = 1 << 3,
-    Validate = 1 << 4,
-    Export = 1 << 5,
-    Recompute = 1 << 6
+    AdminDevelop = 1 << 0,
+    AdminPublish = 1 << 1,
+    AdminConfigure = 1 << 2,
+    AdminAssign = 1 << 3,
+    DataRead = 1 << 4,
+    DataCreate = 1 << 5,
+    DataModify = 1 << 6,
+    DataExport = 1 << 7,
+    DataBatch = 1 << 8
 };
 static const char *const UserPermissionNames[] = {
-    "Develop",
-    "New",
-    "Edit",
-    "Deploy",
-    "Validate",
-    "Export",
-    "Recompute"
+    "AdminDevelop",
+    "AdminPublish",
+    "AdminConfigure",
+    "AdminAssign",
+    "DataRead",
+    "DataCreate",
+    "DataModify",
+    "DataExport",
+    "DataBatch"
 };
 
 struct InstanceToken {
