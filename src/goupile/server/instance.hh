@@ -68,6 +68,7 @@ public:
     bool Checkpoint();
 
     void Reload() { master->reload = true; }
+    void Ref() const;
     void Unref() const;
 
     int GetSlaveCount() const { return slaves.load(std::memory_order_relaxed); }

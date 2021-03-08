@@ -845,29 +845,15 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
-    sq_Statement stmt;
-    if (!gp_domain.db.Prepare(R"(WITH RECURSIVE rec (instance, master) AS (
-                                     SELECT instance, master FROM dom_instances WHERE master IS NULL
-                                     UNION ALL
-                                     SELECT i.instance, i.master FROM dom_instances i, rec WHERE i.master = rec.instance
-                                     ORDER BY 2 DESC, 1
-                                 )
-                                 SELECT instance, master FROM rec)", &stmt))
-        return;
+    Span<InstanceHolder *> instances = gp_domain.LockInstances();
+    RG_DEFER { gp_domain.UnlockInstances(); };
 
     // Export data
     http_JsonPageBuilder json(request.compression_type);
+    char buf[128];
 
     json.StartArray();
-    while (stmt.Next()) {
-        const char *key = (const char *)sqlite3_column_text(stmt, 0);
-        char buf[128];
-
-        InstanceHolder *instance = gp_domain.Ref(key);
-        if (!instance)
-            continue;
-        RG_DEFER { instance->Unref(); };
-
+    for (InstanceHolder *instance: instances) {
         json.StartObject();
 
         json.Key("key"); json.String(instance->key.ptr);
@@ -890,8 +876,6 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
 
         json.EndObject();
     }
-    if (!stmt.IsValid())
-        return;
     json.EndArray();
 
     json.Finish(io);

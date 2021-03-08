@@ -175,6 +175,14 @@ bool InstanceHolder::Checkpoint()
     return db.Checkpoint();
 }
 
+void InstanceHolder::Ref() const
+{
+    if (master != this) {
+        master->refcount++;
+    }
+    refcount++;
+}
+
 void InstanceHolder::Unref() const
 {
     refcount--;

@@ -68,11 +68,9 @@ public:
     bool Sync();
     bool Checkpoint();
 
-    Size CountInstances() const
-    {
-        std::shared_lock<std::shared_mutex> lock_shr(mutex);
-        return instances_map.count;
-    }
+    Span<InstanceHolder *> LockInstances();
+    void UnlockInstances();
+    Size CountInstances() const;
 
     InstanceHolder *Ref(Span<const char> key, bool *out_reload = nullptr);
 };

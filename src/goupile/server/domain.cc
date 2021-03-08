@@ -337,6 +337,23 @@ bool DomainHolder::Checkpoint()
     return success;
 }
 
+Span<InstanceHolder *> DomainHolder::LockInstances()
+{
+    mutex.lock_shared();
+    return instances;
+}
+
+void DomainHolder::UnlockInstances()
+{
+    mutex.unlock_shared();
+}
+
+Size DomainHolder::CountInstances() const
+{
+    std::shared_lock<std::shared_mutex> lock_shr(mutex);
+    return instances.len;
+}
+
 InstanceHolder *DomainHolder::Ref(Span<const char> key, bool *out_reload)
 {
     std::shared_lock<std::shared_mutex> lock_shr(mutex);
@@ -355,11 +372,7 @@ InstanceHolder *DomainHolder::Ref(Span<const char> key, bool *out_reload)
         return nullptr;
     }
 
-    if (instance->master != instance) {
-        instance->master->refcount++;
-    }
-    instance->refcount++;
-
+    instance->Ref();
     return instance;
 }
 
