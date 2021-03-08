@@ -137,7 +137,7 @@ const ui = new function() {
                 e = null;
         }
 
-        return runDialog(e, e ? null : title, e ? 'popup' : 'modal', true, func);
+        return runDialog(e, title, e ? 'popup' : 'modal', true, func);
     };
 
     function runDialog(e, title, type, closeable, func) {
