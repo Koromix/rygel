@@ -270,6 +270,7 @@ html.small .ui_toolbar button.icon {
 }
 .ui_table tbody tr.active td a, .ui_table tbody td.active a { color: inherit; }
 .ui_table .ui_table:not(:first-child) td { border-top: 0; }
+.ui_table td.missing { color: #777; }
 
 .ui_table td.child::before {
     content: ' ';
