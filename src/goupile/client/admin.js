@@ -133,10 +133,10 @@ function AdminController() {
                                            @click=${ui.wrapAction(e => runEditUserDialog(e, user))}>Modifier</a></td>
                                     ${selected_instance != null ? html`
                                         <td class=${selected_instance.master != null ? 'missing' : ''}>
-                                            ${selected_instance.master == null ? makePermissionsTag(permissions, 'admin_', '#b518bf') : 'Ø'}
+                                            ${selected_instance.master == null ? makePermissionsTag(permissions, 'admin_', '#b518bf') : 'Non applicable'}
                                         </td>
                                         <td class=${selected_instance.slaves > 0 ? 'missing' : ''}>
-                                            ${!selected_instance.slaves ? makePermissionsTag(permissions, 'data_', '#258264') : 'Ø'}
+                                            ${!selected_instance.slaves ? makePermissionsTag(permissions, 'data_', '#258264') : 'Non applicable'}
                                         </td>
                                         <td><a role="button" tabindex="0"
                                                @click=${ui.wrapAction(e => runAssignUserDialog(e, selected_instance, user,
