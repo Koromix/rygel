@@ -1040,7 +1040,7 @@ function FormBuilder(state, model, readonly = false) {
         let widgets = [];
         let render = intf => html`
             <fieldset class="fm_container fm_section">
-                ${label ? html`<div class="fm_legend">${label}</div>` : ''}
+                ${label ? html`<div class="fm_legend" style=${makeLegendStyle(options)}>${label}</div>` : ''}
                 ${widgets.map(intf => intf.render())}
             </fieldset>
         `;
@@ -1063,7 +1063,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let render = intf => html`
             <fieldset class="fm_container fm_section error">
-                <div class="fm_legend">${label || 'Liste des erreurs'}</div>
+                <div class="fm_legend" style=${makeLegendStyle(options)}>${label || 'Liste des erreurs'}</div>
                 ${!self.hasErrors() ? 'Aucune erreur' : ''}
                 ${model.widgets.map(intf => {
                     if (intf.errors.length) {
@@ -1464,7 +1464,21 @@ instead of:
     }
 
     function makeInputStyle(options) {
-        return options.wide ? 'width: 100%;' : '';
+        let style = '';
+
+        if (options.wide)
+            style += 'width: 100%;';
+
+        return style;
+    }
+
+    function makeLegendStyle(options) {
+        let style = '';
+
+        if (options.color != null)
+            style += `background-color: ${options.color};`;
+
+        return style;
     }
 
     function makeWidget(type, label, func, options = {}) {
