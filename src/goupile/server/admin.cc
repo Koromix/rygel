@@ -19,13 +19,18 @@
 #include "user.hh"
 #include "../../core/libwrap/json.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
+#include "../../../vendor/miniz/miniz.h"
 
+#include <time.h>
 #ifdef _WIN32
+    #include <io.h>
+
     typedef unsigned int uid_t;
     typedef unsigned int gid_t;
 #else
     #include <sys/types.h>
     #include <sys/stat.h>
+    #include <fcntl.h>
     #include <pwd.h>
     #include <unistd.h>
 #endif
@@ -1076,6 +1081,328 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
     json.EndObject();
 
     json.Finish(io);
+}
+
+void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
+        LogError("Non-admin users are not allowed to create archives");
+        io->AttachError(403);
+        return;
+    }
+
+    io->RunAsync([=]() {
+        Span<InstanceHolder *> instances = gp_domain.LockInstances();
+        RG_DEFER { gp_domain.UnlockInstances(); };
+
+        // Clean up after backup (or error)
+        HeapArray<const char *> backup_directories;
+        HeapArray<const char *> backup_filenames;
+        RG_DEFER {
+            for (const char *filename: backup_filenames) {
+                UnlinkFile(filename);
+            }
+            for (Size i = backup_directories.len - 1; i >= 0; i--) {
+                const char *directory = backup_directories[i];
+                UnlinkDirectory(directory);
+            }
+        };
+
+        // Create temporary directories
+        const char *temp_directory = CreateTemporaryDirectory(gp_domain.config.temp_directory, "", &io->allocator);
+        if (!temp_directory)
+            return;
+        backup_directories.Append(temp_directory);
+
+        // Backup domain database
+        {
+            const char *filename = Fmt(&io->allocator, "%1%/goupile.db", temp_directory).ptr;
+            backup_filenames.Append(filename);
+
+            sq_Database db;
+            if (!db.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+                return;
+
+            sqlite3_backup *backup = sqlite3_backup_init(db, "main", gp_domain.db, "main");
+            if (!backup)
+                return;
+            RG_DEFER { sqlite3_backup_finish(backup); };
+
+            for (;;) {
+                int ret = sqlite3_backup_step(backup, 8);
+
+                if (ret == SQLITE_DONE) {
+                    break;
+                } else if (ret == SQLITE_OK || ret == SQLITE_BUSY || ret == SQLITE_LOCKED) {
+                    WaitDelay(100);
+                } else {
+                    LogError("SQLite Error: %1", sqlite3_errstr(ret));
+                    return;
+                }
+            }
+        }
+
+        // Backup instance databases
+        for (InstanceHolder *instance: instances) {
+            const char *basename = SplitStrReverseAny(instance->filename, RG_PATH_SEPARATORS).ptr;
+            const char *filename = Fmt(&io->allocator, "%1%/instance_%2", temp_directory, basename).ptr;
+            backup_filenames.Append(filename);
+
+            sq_Database db;
+            if (!db.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+                return;
+
+            sqlite3_backup *backup = sqlite3_backup_init(db, "main", instance->db, "main");
+            if (!backup)
+                return;
+            RG_DEFER { sqlite3_backup_finish(backup); };
+
+            for (;;) {
+                int ret = sqlite3_backup_step(backup, 8);
+
+                if (ret == SQLITE_DONE) {
+                    break;
+                } else if (ret == SQLITE_OK || ret == SQLITE_BUSY || ret == SQLITE_LOCKED) {
+                    WaitDelay(100);
+                } else {
+                    LogError("SQLite Error: %1", sqlite3_errstr(ret));
+                    return;
+                }
+            }
+        }
+
+        // Backup filename
+        const char *zip_filename;
+        {
+            time_t mtime = (time_t)(GetUnixTime() / 1000);
+
+#ifdef _WIN32
+            struct tm mtime_tm;
+            {
+                errno_t err = _gmtime64_s(&mtime_tm, &mtime);
+                if (err) {
+                    LogError("Failed to format current time: %1", strerror(err));
+                    return;
+                }
+            }
+#else
+            struct tm mtime_tm;
+            if (!gmtime_r(&mtime, &mtime_tm)) {
+                LogError("Failed to format current time: %1", strerror(errno));
+                return;
+            }
+#endif
+
+            char mtime_str[128];
+            if (!strftime(mtime_str, RG_SIZE(mtime_str), "%Y%m%dT%H%M%S%z", &mtime_tm)) {
+                LogError("Failed to format current time: strftime failed");
+                return;
+            }
+
+            zip_filename = Fmt(&io->allocator, "%1%/%2.zip", gp_domain.config.backup_directory, mtime_str).ptr;
+        }
+
+        // Init ZIP compression
+        mz_zip_archive zip;
+        mz_zip_zero_struct(&zip);
+        if (!mz_zip_writer_init_file(&zip, zip_filename, 0)) {
+            LogError("Failed to create ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
+            return;
+        }
+        RG_DEFER { mz_zip_writer_end(&zip); };
+
+        // Add instances databases to ZIP archive
+        for (const char *filename: backup_filenames) {
+            const char *basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
+
+            if (!mz_zip_writer_add_file(&zip, basename, filename, nullptr, 0, MZ_DEFAULT_COMPRESSION)) {
+                if (zip.m_last_error != MZ_ZIP_WRITE_CALLBACK_FAILED) {
+                    LogError("Failed to compress '%1': %2", basename, mz_zip_get_error_string(zip.m_last_error));
+                }
+                return;
+            }
+        }
+
+        // Finalize ZIP file
+        if (!mz_zip_writer_finalize_archive(&zip)) {
+            LogError("Failed to finalize ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
+            return;
+        }
+
+        io->AttachText(200, "Done!");
+    });
+}
+
+void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
+        LogError("Non-admin users are not allowed to list archives");
+        io->AttachError(403);
+        return;
+    }
+
+    io->RunAsync([=]() {
+        HashMap<const char *, const char *> values;
+        if (!io->ReadPostValues(&io->allocator, &values)) {
+            io->AttachError(422);
+            return;
+        }
+
+        // Read POST values
+        const char *basename = values.FindValue("filename", nullptr);
+        if (!basename) {
+            LogError("Missing 'filename' paramreter");
+            io->AttachError(422);
+            return;
+        }
+
+        // Safety checks
+        if (PathIsAbsolute(basename)) {
+            LogError("Path must not be absolute");
+            io->AttachError(403);
+            return;
+        }
+        if (PathContainsDotDot(basename)) {
+            LogError("Path must not contain any '..' component");
+            io->AttachError(403);
+            return;
+        }
+
+        const char *filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.backup_directory, basename).ptr;
+
+        if (!TestFile(filename, FileType::File)) {
+            io->AttachError(404);
+            return;
+        }
+        if (!UnlinkFile(filename))
+            return;
+
+        io->AttachText(200, "Done!");
+    });
+}
+
+void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
+        LogError("Non-admin users are not allowed to list archives");
+        io->AttachError(403);
+        return;
+    }
+
+    // Export data
+    http_JsonPageBuilder json(request.compression_type);
+    HeapArray<char> buf;
+
+    json.StartArray();
+    EnumStatus status = EnumerateDirectory(gp_domain.config.backup_directory, nullptr, -1,
+                                           [&](const char *basename, FileType) {
+        buf.RemoveFrom(0);
+
+        const char *filename = Fmt(&buf, "%1%/%2", gp_domain.config.backup_directory, basename).ptr;
+
+        FileInfo file_info;
+        if (!StatFile(filename, &file_info))
+            return false;
+
+        json.StartObject();
+        json.Key("filename"); json.String(basename);
+        json.Key("size"); json.Int64(file_info.size);
+        json.EndObject();
+
+        return true;
+    });
+    if (status != EnumStatus::Done)
+        return;
+    json.EndArray();
+
+    json.Finish(io);
+}
+
+void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
+        LogError("Non-admin users are not allowed to download archives");
+        io->AttachError(403);
+        return;
+    }
+
+    const char *basename = request.GetQueryValue("filename");
+    if (!basename) {
+        LogError("Missing 'filename' paramreter");
+        io->AttachError(422);
+        return;
+    }
+
+    // Safety checks
+    if (PathIsAbsolute(basename)) {
+        LogError("Path must not be absolute");
+        io->AttachError(403);
+        return;
+    }
+    if (PathContainsDotDot(basename)) {
+        LogError("Path must not contain any '..' component");
+        io->AttachError(403);
+        return;
+    }
+
+    const char *filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.backup_directory, basename).ptr;
+
+    FileInfo file_info;
+    if (!StatFile(filename, &file_info)) {
+        LogError("Cannot find archive '%1'", basename);
+        io->AttachError(404);
+        return;
+    }
+    if (file_info.type != FileType::File) {
+        LogError("Path does not point to a file");
+        io->AttachError(403);
+        return;
+    }
+
+    int fd = OpenDescriptor(filename, (int)OpenFileFlag::Read);
+    if (fd < 0)
+        return;
+#ifdef _WIN32
+    RG_DEFER_N(fd_guard) { _close(fd); };
+#else
+    RG_DEFER_N(fd_guard) { close(fd); };
+#endif
+
+    MHD_Response *response = MHD_create_response_from_fd((uint64_t)file_info.size, fd);
+    if (!response)
+        return;
+    fd_guard.Disable();
+    io->AttachResponse(200, response);
+
+    // Ask browser to download
+    {
+        const char *disposition = Fmt(&io->allocator, "attachment; filename=\"%1\"", basename).ptr;
+        io->AddHeader("Content-Disposition", disposition);
+    }
 }
 
 void HandleUserCreate(const http_RequestInfo &request, http_IO *io)

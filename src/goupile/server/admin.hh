@@ -28,6 +28,11 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io);
 void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io);
 void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io);
 
+void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io);
+void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io);
+void HandleArchiveList(const http_RequestInfo &request, http_IO *io);
+void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io);
+
 void HandleUserCreate(const http_RequestInfo &request, http_IO *io);
 void HandleUserEdit(const http_RequestInfo &request, http_IO *io);
 void HandleUserDelete(const http_RequestInfo &request, http_IO *io);

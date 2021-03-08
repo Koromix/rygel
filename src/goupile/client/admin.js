@@ -16,6 +16,7 @@ function AdminController() {
 
     let instances;
     let users;
+    let backups;
 
     let selected_instance;
     let selected_permissions;
@@ -24,6 +25,7 @@ function AdminController() {
         ui.setMenu(renderMenu);
         ui.createPanel('instances', 1, true, renderInstances);
         ui.createPanel('users', 0, true, renderUsers);
+        ui.createPanel('backups', 0, false, renderBackups);
     }
 
     this.hasUnsavedData = function() {
@@ -40,6 +42,9 @@ function AdminController() {
             <button class=${'icon' + (ui.isPanelEnabled('users') ? ' active' : '')}
                     style="background-position-y: calc(-406px + 1.2em);"
                     @click=${ui.wrapAction(e => togglePanel(e, 'users'))}>Utilisateurs</button>
+            <button class=${'icon' + (ui.isPanelEnabled('backups') ? ' active' : '')}
+                    style="background-position-y: calc(-142px + 1.2em);"
+                    @click=${ui.wrapAction(e => togglePanel(e, 'backups'))}>Sauvegardes</button>
             <div style="flex: 1;"></div>
             <div class="drop right">
                 <button class="icon" style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}>${profile.username}</button>
@@ -84,7 +89,7 @@ function AdminController() {
                                 <td>${instance.master == null ?
                                         html`<a role="button" tabindex="0" @click=${ui.wrapAction(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a>` : ''}</td>
                                 <td><a role="button" tabindex="0" href=${makeURL(instance.key)}>Droits</a></td>
-                                <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runEditInstanceDialog(e, instance))}>Modifier</a></td>
+                                <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runEditInstanceDialog(e, instance))}>Configurer</a></td>
                             </tr>
                         `)}
                     </tbody>
@@ -174,16 +179,100 @@ function AdminController() {
         }
     }
 
+    function renderBackups() {
+        return html`
+            <div class="padded">
+                <div class="ui_quick">
+                    <a @click=${ui.wrapAction(createBackup)}>Faire une sauvegarde</a>
+                    <div style="flex: 1;"></div>
+                    Sauvegardes (<a @click=${ui.wrapAction(e => { backups = null; return self.go(); })}>rafraichir</a>)
+                </div>
+
+                <table class="ui_table" style="table-layout: fixed;">
+                    <colgroup>
+                        <col/>
+                        <col style="width: 100px;"/>
+                        <col style="width: 100px;"/>
+                    </colgroup>
+
+                    <tbody>
+                        ${!backups.length ? html`<tr><td colspan="3">Aucune sauvegarde</td></tr>` : ''}
+                        ${backups.map(bak => html`
+                            <tr>
+                                <td style="text-align: left;"><a href=${util.pasteURL('/admin/api/archives/download', {filename: bak.filename})}
+                                                                 download>${bak.filename}</a></td>
+                                <td>${util.formatDiskSize(bak.size)}</td>
+                                <td><a @click=${ui.wrapAction(e => runDeleteBackupDialog(e, bak.filename))}>Supprimer</a></td>
+                            </tr>
+                        `)}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    async function createBackup() {
+        let progress = log.progress('Sauvegarde en cours');
+
+        try {
+            let response = await net.fetch('/admin/api/archives/create', {method: 'POST'});
+
+            if (response.ok) {
+                progress.success('Sauvegarde complétée');
+
+                backups = null;
+
+                self.go();
+            } else {
+                let err = (await response.text()).trim();
+                throw new Error(err);
+            }
+        } catch (err) {
+            progress.close();
+            throw err;
+        }
+
+    }
+
+    function runDeleteBackupDialog(e, filename) {
+        return ui.runConfirm(e, `Voulez-vous vraiment supprimer l'archive '${filename}' ?`,
+                                'Supprimer', async () => {
+            let query = new URLSearchParams;
+            query.set('filename', filename);
+
+            let response = await net.fetch('/admin/api/archives/delete', {
+                method: 'POST',
+                body: query
+            });
+
+            if (response.ok) {
+                log.success(`Sauvegarde '${filename}' supprimée`);
+
+                backups = null;
+
+                self.go();
+            } else {
+                let err = (await response.text()).trim();
+                throw new Error(err);
+            }
+        });
+    }
+
     this.go = async function(e, url = null, push_history = true) {
         let new_instances = instances;
         let new_users = users;
+        let new_backups = backups;
         let new_selected = selected_instance;
         let new_permissions = selected_permissions;
 
         if (new_instances == null)
             new_instances = await net.fetchJson('/admin/api/instances/list');
-        if (new_users == null)
+        if (ui.isPanelEnabled('users') && new_users == null)
             new_users = await net.fetchJson('/admin/api/users/list');
+        if (ui.isPanelEnabled('backups') && new_backups == null) {
+            new_backups = await net.fetchJson('/admin/api/archives/list');
+            new_backups.sort((bak1, bak2) => util.compareValues(bak1.filename, bak2.filename));
+        }
 
         if (url != null) {
             url = new URL(url, window.location.href);
@@ -218,6 +307,7 @@ function AdminController() {
         // Commit
         instances = new_instances;
         users = new_users;
+        backups = new_backups;
         selected_instance = new_selected;
         selected_permissions = new_permissions;
 

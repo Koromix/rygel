@@ -227,6 +227,14 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleInstanceAssign(request, io);
         } else if (TestStr(admin_url, "/api/instances/permissions") && request.method == http_RequestMethod::Get) {
             HandleInstancePermissions(request, io);
+        } else if (TestStr(admin_url, "/api/archives/create") && request.method == http_RequestMethod::Post) {
+            HandleArchiveCreate(request, io);
+        } else if (TestStr(admin_url, "/api/archives/delete") && request.method == http_RequestMethod::Post) {
+            HandleArchiveDelete(request, io);
+        } else if (TestStr(admin_url, "/api/archives/list") && request.method == http_RequestMethod::Get) {
+            HandleArchiveList(request, io);
+        } else if (TestStr(admin_url, "/api/archives/download") && request.method == http_RequestMethod::Get) {
+            HandleArchiveDownload(request, io);
         } else if (TestStr(admin_url, "/api/users/create") && request.method == http_RequestMethod::Post) {
             HandleUserCreate(request, io);
         } else if (TestStr(admin_url, "/api/users/edit") && request.method == http_RequestMethod::Post) {
