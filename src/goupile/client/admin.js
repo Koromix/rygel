@@ -327,6 +327,7 @@ function AdminController() {
                     log.success(`Sous-projet '${full_key}' créé`);
 
                     instances = null;
+                    users = null;
 
                     self.run();
                 } else {
