@@ -3662,6 +3662,7 @@ enum class OpenFileFlag {
     Exclusive = 1 << 3
 };
 
+int OpenDescriptor(const char *filename, unsigned int flags);
 FILE *OpenFile(const char *filename, unsigned int flags);
 bool FileIsVt100(FILE *fp);
 

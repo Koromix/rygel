@@ -2398,40 +2398,23 @@ bool PathContainsDotDot(const char *path)
 
 #ifdef _WIN32
 
-FILE *OpenFile(const char *filename, unsigned int flags)
+int OpenDescriptor(const char *filename, unsigned int flags)
 {
     wchar_t filename_w[4096];
     if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
-        return nullptr;
+        return -1;
 
     int oflags = -1;
-    char mode[16];
     switch (flags & ((int)OpenFileFlag::Read |
                      (int)OpenFileFlag::Write |
                      (int)OpenFileFlag::Append)) {
-        case (int)OpenFileFlag::Read: {
-            oflags = _O_RDONLY | _O_BINARY | _O_NOINHERIT;
-            CopyString("rbc", mode);
-        } break;
-        case (int)OpenFileFlag::Write: {
-            oflags = _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT;
-            CopyString("wbc", mode);
-        } break;
-        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: {
-            oflags = _O_RDWR | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT;
-            CopyString("w+bc", mode);
-        } break;
-        case (int)OpenFileFlag::Append: {
-            oflags = _O_WRONLY | _O_CREAT | _O_APPEND | _O_BINARY | _O_NOINHERIT;
-            CopyString("abc", mode);
-        } break;
+        case (int)OpenFileFlag::Read: { oflags = _O_RDONLY | _O_BINARY | _O_NOINHERIT; } break;
+        case (int)OpenFileFlag::Write: { oflags = _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT; } break;
+        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: { oflags = _O_RDWR | _O_CREAT | _O_TRUNC |
+                                                                            _O_BINARY | _O_NOINHERIT; } break;
+        case (int)OpenFileFlag::Append: { oflags = _O_WRONLY | _O_CREAT | _O_APPEND | _O_BINARY | _O_NOINHERIT; } break;
     }
     RG_ASSERT(oflags >= 0);
-
-#if !defined(__GNUC__) || defined(__clang__)
-    // The N modifier does not work in MinGW builds (because of old msvcrt?)
-    strcat(mode, "N");
-#endif
 
     if (flags & (int)OpenFileFlag::Exclusive) {
         oflags |= (int)_O_EXCL;
@@ -2440,8 +2423,33 @@ FILE *OpenFile(const char *filename, unsigned int flags)
     int fd = _wopen(filename_w, oflags, _S_IREAD | _S_IWRITE);
     if (fd < 0) {
         LogError("Cannot open '%1': %2", filename, strerror(errno));
-        return nullptr;
+        return -1;
     }
+
+    return fd;
+}
+
+FILE *OpenFile(const char *filename, unsigned int flags)
+{
+    char mode[16] = {};
+    switch (flags & ((int)OpenFileFlag::Read |
+                     (int)OpenFileFlag::Write |
+                     (int)OpenFileFlag::Append)) {
+        case (int)OpenFileFlag::Read: { CopyString("rbc", mode); } break;
+        case (int)OpenFileFlag::Write: { CopyString("wbc", mode); } break;
+        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: { CopyString("w+bc", mode); } break;
+        case (int)OpenFileFlag::Append: { CopyString("abc", mode); } break;
+    }
+    RG_ASSERT(mode[0]);
+
+#if !defined(__GNUC__) || defined(__clang__)
+    // The N modifier does not work in MinGW builds (because of old msvcrt?)
+    strcat(mode, "N");
+#endif
+
+    int fd = OpenDescriptor(filename, flags);
+    if (fd < 0)
+        return nullptr;
 
     FILE *fp = _fdopen(fd, mode);
     if (!fp) {
@@ -2608,29 +2616,16 @@ bool UnlinkFile(const char *filename, bool error_if_missing)
 
 #else
 
-FILE *OpenFile(const char *filename, unsigned int flags)
+int OpenDescriptor(const char *filename, unsigned int flags)
 {
     int oflags = -1;
-    const char *mode = nullptr;
     switch (flags & ((int)OpenFileFlag::Read |
                      (int)OpenFileFlag::Write |
                      (int)OpenFileFlag::Append)) {
-        case (int)OpenFileFlag::Read: {
-            oflags = O_RDONLY | O_CLOEXEC;
-            mode = "rbe";
-        } break;
-        case (int)OpenFileFlag::Write: {
-            oflags = O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC;
-            mode = "wbe";
-        } break;
-        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: {
-            oflags = O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC;
-            mode = "w+be";
-        } break;
-        case (int)OpenFileFlag::Append: {
-            oflags = O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC;
-            mode = "abe";
-        } break;
+        case (int)OpenFileFlag::Read: { oflags = O_RDONLY | O_CLOEXEC; } break;
+        case (int)OpenFileFlag::Write: { oflags = O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC; } break;
+        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: { oflags = O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC; } break;
+        case (int)OpenFileFlag::Append: { oflags = O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC; } break;
     }
     RG_ASSERT(oflags >= 0);
 
@@ -2641,8 +2636,28 @@ FILE *OpenFile(const char *filename, unsigned int flags)
     int fd = RG_POSIX_RESTART_EINTR(open(filename, oflags, 0644), < 0);
     if (fd < 0) {
         LogError("Cannot open '%1': %2", filename, strerror(errno));
-        return nullptr;
+        return -1;
     }
+
+    return fd;
+}
+
+FILE *OpenFile(const char *filename, unsigned int flags)
+{
+    const char *mode = nullptr;
+    switch (flags & ((int)OpenFileFlag::Read |
+                     (int)OpenFileFlag::Write |
+                     (int)OpenFileFlag::Append)) {
+        case (int)OpenFileFlag::Read: { mode = "rbe"; } break;
+        case (int)OpenFileFlag::Write: { mode = "wbe"; } break;
+        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: { mode = "w+be"; } break;
+        case (int)OpenFileFlag::Append: { mode = "abe"; } break;
+    }
+    RG_ASSERT(mode);
+
+    int fd = OpenDescriptor(filename, flags);
+    if (fd < 0)
+        return nullptr;
 
     FILE *fp = fdopen(fd, mode);
     if (!fp) {
