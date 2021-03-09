@@ -743,6 +743,7 @@ public:
 
         supported |= (int)CompileFeature::NoDebug;
         supported |= (int)CompileFeature::Static;
+        supported |= (int)CompileFeature::ASan;
         supported |= (int)CompileFeature::ProtectStack;
         supported |= (int)CompileFeature::CFI;
 
@@ -828,6 +829,9 @@ public:
             Fmt(&buf, " /Z7 /Zo");
         }
         Fmt(&buf, (features & (int)CompileFeature::Static) ? " /MT" : " /MD");
+        if (features & (int)CompileFeature::ASan) {
+            Fmt(&buf, " /fsanitize=address");
+        }
         if (features & (int)CompileFeature::ProtectStack) {
             Fmt(&buf, " /GS");
         }
@@ -898,6 +902,9 @@ public:
 
         // Features
         Fmt(&buf, (features & (int)CompileFeature::NoDebug) ? " /DEBUG:NONE" : " /DEBUG:FULL");
+        if (features & (int)CompileFeature::ASan) {
+            Fmt(&buf, " /fsanitize=address");
+        }
         if (features & (int)CompileFeature::CFI) {
             Fmt(&buf, " /guard:cf /guard:ehcont");
         }
