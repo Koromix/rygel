@@ -72,6 +72,4 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
 void HandleUserLogout(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleUserProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
-void HandleUserBackup(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-
 }

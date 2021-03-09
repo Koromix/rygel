@@ -150,8 +150,6 @@ function InstanceController() {
     this.runTasks = async function(online) {
         if (online && ENV.sync_mode === 'mirror')
             await syncRecords();
-        if (online && ENV.backup_key != null)
-            await backupRecords('server');
     };
     this.runTasks = util.serializeAsync(this.runTasks);
 
@@ -296,7 +294,7 @@ function InstanceController() {
                     <a @click=${ui.wrapAction(goNewRecord)}>Créer un enregistrement</a>
                     <div style="flex: 1;"></div>
                     ${ENV.backup_key != null ? html`
-                        <a @click=${ui.wrapAction(e => backupRecords('file'))}>Faire une sauvegarde chiffrée</a>
+                        <a @click=${ui.wrapAction(backupRecords)}>Faire une sauvegarde chiffrée</a>
                         <div style="flex: 1;"></div>
                     ` : ''}
                     ${data_rows.length || 'Aucune'} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
@@ -2007,7 +2005,7 @@ function InstanceController() {
         }
     }
 
-    async function backupRecords(dest) {
+    async function backupRecords() {
         let progress = log.progress('Archivage sécurisé des données');
 
         try {
@@ -2028,36 +2026,13 @@ function InstanceController() {
 
             let enc = await goupile.encryptBackup(entries);
             let json = JSON.stringify(enc);
+            let blob = new Blob([json], {type: 'application/octet-stream'});
 
-            if (dest === 'server') {
-                let response = await net.fetch(`${ENV.urls.instance}api/session/backup`, {
-                    method: 'POST',
-                    body: json
-                });
+            let filename = `${ENV.urls.instance.replace(/\//g, '')}_${profile.username}_${dates.today()}.backup`;
+            util.saveBlob(blob, filename);
 
-                if (response.ok) {
-                    console.log('Archive sécurisée envoyée');
-                    progress.close();
-                } else if (response.status === 409) {
-                    console.log('Archivage ignoré (archive récente)');
-                    progress.close();
-                } else {
-                    let err = (await response.text()).trim();
-                    throw new Error(err);
-                }
-            } else if (dest === 'file') {
-                let blob = new Blob([json], {
-                    type: 'application/octet-stream'
-                });
-
-                console.log('Archive sécurisée créée');
-                progress.close();
-
-                let filename = `${ENV.urls.instance.replace(/\//g, '')}_${profile.username}_${dates.today()}.backup`;
-                util.saveBlob(blob, filename);
-            } else {
-                throw new Error(`Invalid backup destination '${dest}'`);
-            }
+            console.log('Archive sécurisée créée');
+            progress.close();
         } catch (err) {
             progress.close();
             throw err;

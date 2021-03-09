@@ -361,8 +361,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleUserLogin(instance, request, io);
         } else if (TestStr(instance_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
             HandleUserLogout(instance, request, io);
-        } else if (TestStr(instance_url, "/api/session/backup") && request.method == http_RequestMethod::Post) {
-             HandleUserBackup(instance, request, io);
         } else if (TestStr(instance_url, "/api/files/static") && request.method == http_RequestMethod::Get) {
              HandleFileStatic(instance, request, io);
         } else if (TestStr(instance_url, "/api/files/list") && request.method == http_RequestMethod::Get) {
