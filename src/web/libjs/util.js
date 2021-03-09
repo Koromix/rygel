@@ -405,7 +405,7 @@ const util = new function() {
 
                 if (target == null)
                     return;
-                if (target.getAttribute('download'))
+                if (target.getAttribute('download') != null)
                     return;
                 if (target.getAttribute('target') == '_blank')
                     return;
