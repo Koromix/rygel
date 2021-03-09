@@ -42,7 +42,7 @@ function AdminController() {
                     @click=${ui.wrapAction(e => togglePanel(e, 'users'))}>Utilisateurs</button>
             <div style="flex: 1;"></div>
             <div class="drop right">
-                <button class="icon" style="background-position-y: calc(-450px + 1.2em)">${profile.username}</button>
+                <button class="icon" style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}>${profile.username}</button>
                 <div>
                     <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
                 </div>
