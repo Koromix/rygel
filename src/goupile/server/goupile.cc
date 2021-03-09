@@ -133,6 +133,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
     // Send these headers whenever possible
     io->AddHeader("Referrer-Policy", "no-referrer");
+    io->AddHeader("X-Robots-Tag", "noindex");
 
     // If new base URLs are added besides "/admin", RunCreateInstance() must be modified
     // to forbid the instance key.
