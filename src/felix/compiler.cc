@@ -71,7 +71,7 @@ static void MakePackCommand(Span<const char *const> pack_filenames, CompileMode 
     out_cmd->cmd_line = buf.TrimAndLeak(1);
 }
 
-void Compiler::LogUnsupportedFeatures(uint32_t unsupported) const
+static void LogUnsupportedFeatures(const char *name, uint32_t unsupported)
 {
     LocalArray<const char *, RG_LEN(CompileFeatureNames)> list;
     for (int i = 0; i < RG_LEN(CompileFeatureNames); i++) {
@@ -166,7 +166,7 @@ public:
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
-            LogUnsupportedFeatures(unsupported);
+            LogUnsupportedFeatures(name, unsupported);
             return false;
         }
 
@@ -464,7 +464,7 @@ public:
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
-            LogUnsupportedFeatures(unsupported);
+            LogUnsupportedFeatures(name, unsupported);
             return false;
         }
 
@@ -749,7 +749,7 @@ public:
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
-            LogUnsupportedFeatures(unsupported);
+            LogUnsupportedFeatures(name, unsupported);
             return false;
         }
 
@@ -956,7 +956,7 @@ public:
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
-            LogUnsupportedFeatures(unsupported);
+            LogUnsupportedFeatures(name, unsupported);
             return false;
         }
 

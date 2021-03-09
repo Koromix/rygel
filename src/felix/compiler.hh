@@ -111,8 +111,6 @@ public:
 
 protected:
     Compiler(const char *name, const char *binary) : name(name), binary(binary) {}
-
-    void LogUnsupportedFeatures(uint32_t unsupported) const;
 };
 
 class CompilerInfo {
