@@ -32,7 +32,8 @@ function AdminController() {
 
     function renderMenu() {
         return html`
-            <button class="icon" style="background-position-y: calc(-538px + 1.2em);">Admin</button>
+            <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
+                    @click=${e => self.go(e, '/admin/')}>Admin</button>
             <button class=${'icon' + (ui.isPanelEnabled('instances') ? ' active' : '')}
                     style="background-position-y: calc(-362px + 1.2em);"
                     @click=${ui.wrapAction(e => togglePanel(e, 'instances'))}>Projets</button>
@@ -193,6 +194,8 @@ function AdminController() {
 
                 if (new_selected == null)
                     throw new Error(`Cannot select instance '${select}' (does not exist)`);
+            } else {
+                new_selected = null;
             }
         }
 
