@@ -885,11 +885,15 @@ function InstanceController() {
             return;
 
         let buffer = editor_buffers.get(filename);
+        let code = buffer.session.doc.getValue();
+
+        if (filename === route.page.filename)
+            page_code = code;
 
         // Should never fail, but who knows..
         if (buffer != null) {
             let key = `${profile.userid}:${filename}`;
-            let blob = new Blob([buffer.session.doc.getValue()]);
+            let blob = new Blob([code]);
             let sha256 = await computeSha256(blob);
 
             await db.saveWithKey('fs_files', key, {
