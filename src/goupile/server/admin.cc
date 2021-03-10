@@ -594,10 +594,16 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        LogError("Non-admin users are not allowed to create instances");
-        io->AttachError(403);
+        if (session->admin_until) {
+            LogError("Admin user needs to confirm identity");
+            io->AttachError(401);
+        } else {
+            LogError("Non-admin users are not allowed to create instances");
+            io->AttachError(403);
+        }
         return;
     }
+
     if (gp_domain.CountInstances() >= MaxInstancesPerDomain) {
         LogError("This domain has too many instances");
         io->AttachError(403);
@@ -674,8 +680,13 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        LogError("Non-admin users are not allowed to delete instances");
-        io->AttachError(403);
+        if (session->admin_until) {
+            LogError("Admin user needs to confirm identity");
+            io->AttachError(401);
+        } else {
+            LogError("Non-admin users are not allowed to delete instances");
+            io->AttachError(403);
+        }
         return;
     }
 
@@ -731,8 +742,13 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        LogError("Non-admin users are not allowed to configure instances");
-        io->AttachError(403);
+        if (session->admin_until) {
+            LogError("Admin user needs to confirm identity");
+            io->AttachError(401);
+        } else {
+            LogError("Non-admin users are not allowed to configure instances");
+            io->AttachError(403);
+        }
         return;
     }
 
@@ -845,8 +861,13 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        LogError("Non-admin users are not allowed to list instances");
-        io->AttachError(403);
+        if (session->admin_until) {
+            LogError("Admin user needs to confirm identity");
+            io->AttachError(401);
+        } else {
+            LogError("Non-admin users are not allowed to list instances");
+            io->AttachError(403);
+        }
         return;
     }
 
@@ -921,8 +942,13 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        LogError("Non-admin users are not allowed to delete users");
-        io->AttachError(403);
+        if (session->admin_until) {
+            LogError("Admin user needs to confirm identity");
+            io->AttachError(401);
+        } else {
+            LogError("Non-admin users are not allowed to delete users");
+            io->AttachError(403);
+        }
         return;
     }
 
@@ -1039,8 +1065,13 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        LogError("Non-admin users are not allowed to list users");
-        io->AttachError(403);
+        if (session->admin_until) {
+            LogError("Admin user needs to confirm identity");
+            io->AttachError(401);
+        } else {
+            LogError("Non-admin users are not allowed to list users");
+            io->AttachError(403);
+        }
         return;
     }
 
@@ -1122,8 +1153,13 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        LogError("Non-admin users are not allowed to create archives");
-        io->AttachError(403);
+        if (session->admin_until) {
+            LogError("Admin user needs to confirm identity");
+            io->AttachError(401);
+        } else {
+            LogError("Non-admin users are not allowed to create archives");
+            io->AttachError(403);
+        }
         return;
     }
 
@@ -1251,8 +1287,13 @@ void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        LogError("Non-admin users are not allowed to list archives");
-        io->AttachError(403);
+        if (session->admin_until) {
+            LogError("Admin user needs to confirm identity");
+            io->AttachError(401);
+        } else {
+            LogError("Non-admin users are not allowed to list archives");
+            io->AttachError(403);
+        }
         return;
     }
 
@@ -1305,8 +1346,13 @@ void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        LogError("Non-admin users are not allowed to list archives");
-        io->AttachError(403);
+        if (session->admin_until) {
+            LogError("Admin user needs to confirm identity");
+            io->AttachError(401);
+        } else {
+            LogError("Non-admin users are not allowed to list archives");
+            io->AttachError(403);
+        }
         return;
     }
 
@@ -1348,8 +1394,13 @@ void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        LogError("Non-admin users are not allowed to download archives");
-        io->AttachError(403);
+        if (session->admin_until) {
+            LogError("Admin user needs to confirm identity");
+            io->AttachError(401);
+        } else {
+            LogError("Non-admin users are not allowed to download archives");
+            io->AttachError(403);
+        }
         return;
     }
 
@@ -1417,8 +1468,13 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        LogError("Non-admin users are not allowed to create users");
-        io->AttachError(403);
+        if (session->admin_until) {
+            LogError("Admin user needs to confirm identity");
+            io->AttachError(401);
+        } else {
+            LogError("Non-admin users are not allowed to create users");
+            io->AttachError(403);
+        }
         return;
     }
 
@@ -1517,8 +1573,13 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        LogError("Non-admin users are not allowed to edit users");
-        io->AttachError(403);
+        if (session->admin_until) {
+            LogError("Admin user needs to confirm identity");
+            io->AttachError(401);
+        } else {
+            LogError("Non-admin users are not allowed to edit users");
+            io->AttachError(403);
+        }
         return;
     }
 
@@ -1626,8 +1687,13 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        LogError("Non-admin users are not allowed to delete users");
-        io->AttachError(403);
+        if (session->admin_until) {
+            LogError("Admin user needs to confirm identity");
+            io->AttachError(401);
+        } else {
+            LogError("Non-admin users are not allowed to delete users");
+            io->AttachError(403);
+        }
         return;
     }
 
@@ -1707,8 +1773,13 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
         return;
     }
     if (!session->IsAdmin()) {
-        LogError("Non-admin users are not allowed to list users");
-        io->AttachError(403);
+        if (session->admin_until) {
+            LogError("Admin user needs to confirm identity");
+            io->AttachError(401);
+        } else {
+            LogError("Non-admin users are not allowed to list users");
+            io->AttachError(403);
+        }
         return;
     }
 
