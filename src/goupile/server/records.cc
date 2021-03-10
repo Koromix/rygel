@@ -224,11 +224,19 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     } else if (TestStr(key, "ulid")) {
                         parser.ParseString(&record->ulid);
                     } else if (TestStr(key, "hid")) {
-                        if (parser.PeekToken() == json_TokenType::Null) {
-                            parser.ParseNull();
-                            record->hid = nullptr;
-                        } else {
-                            parser.ParseString(&record->hid);
+                        switch (parser.PeekToken()) {
+                            case json_TokenType::Null: {
+                                parser.ParseNull();
+                                record->hid = nullptr;
+                            } break;
+                            case json_TokenType::Integer: {
+                                int64_t value;
+                                parser.ParseInt(&value);
+                                record->hid = Fmt(&io->allocator, "%1", value).ptr;
+                            } break;
+                            default: {
+                                parser.ParseString(&record->hid);
+                            } break;
                         }
                     } else if (TestStr(key, "parent")) {
                         if (parser.PeekToken() == json_TokenType::Null) {
