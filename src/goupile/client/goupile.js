@@ -544,12 +544,20 @@ const goupile = new function() {
 
         let key = await deriveKey(password, base64ToBytes(lock.salt));
 
+        // Instantaneous unlock feels weird
+        let progress = log.progress('Déverrouillage en cours');
+        await util.waitFor(800);
+
         try {
             session_rnd = await decryptSecretBox(lock.session_rnd, key);
 
             util.setCookie('session_rnd', session_rnd, '/');
             await deleteSessionValue('lock');
+
+            progress.success('Déverrouillage effectué');
         } catch (err) {
+            progress.close();
+
             lock.errors = (lock.errors || 0) + 1;
 
             if (lock.errors >= 5) {
