@@ -1083,6 +1083,33 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
     json.Finish(io);
 }
 
+static bool BackupDatabase(sq_Database *src, const char *filename)
+{
+    sq_Database db;
+    if (!db.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+        return false;
+
+    sqlite3_backup *backup = sqlite3_backup_init(db, "main", *src, "main");
+    if (!backup)
+        return false;
+    RG_DEFER { sqlite3_backup_finish(backup); };
+
+restart:
+    int ret = sqlite3_backup_step(backup, -1);
+
+    if (ret != SQLITE_DONE) {
+        if (ret == SQLITE_OK || ret == SQLITE_BUSY || ret == SQLITE_LOCKED) {
+            WaitDelay(100);
+            goto restart;
+        } else {
+            LogError("SQLite Error: %1", sqlite3_errstr(ret));
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
@@ -1125,27 +1152,8 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
             const char *filename = Fmt(&io->allocator, "%1%/goupile.db", temp_directory).ptr;
             backup_filenames.Append(filename);
 
-            sq_Database db;
-            if (!db.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+            if (!BackupDatabase(&gp_domain.db, filename))
                 return;
-
-            sqlite3_backup *backup = sqlite3_backup_init(db, "main", gp_domain.db, "main");
-            if (!backup)
-                return;
-            RG_DEFER { sqlite3_backup_finish(backup); };
-
-            for (;;) {
-                int ret = sqlite3_backup_step(backup, 8);
-
-                if (ret == SQLITE_DONE) {
-                    break;
-                } else if (ret == SQLITE_OK || ret == SQLITE_BUSY || ret == SQLITE_LOCKED) {
-                    WaitDelay(100);
-                } else {
-                    LogError("SQLite Error: %1", sqlite3_errstr(ret));
-                    return;
-                }
-            }
         }
 
         // Backup instance databases
@@ -1154,27 +1162,8 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
             const char *filename = Fmt(&io->allocator, "%1%/instance_%2", temp_directory, basename).ptr;
             backup_filenames.Append(filename);
 
-            sq_Database db;
-            if (!db.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+            if (!BackupDatabase(&instance->db, filename))
                 return;
-
-            sqlite3_backup *backup = sqlite3_backup_init(db, "main", instance->db, "main");
-            if (!backup)
-                return;
-            RG_DEFER { sqlite3_backup_finish(backup); };
-
-            for (;;) {
-                int ret = sqlite3_backup_step(backup, 8);
-
-                if (ret == SQLITE_DONE) {
-                    break;
-                } else if (ret == SQLITE_OK || ret == SQLITE_BUSY || ret == SQLITE_LOCKED) {
-                    WaitDelay(100);
-                } else {
-                    LogError("SQLite Error: %1", sqlite3_errstr(ret));
-                    return;
-                }
-            }
         }
 
         // Backup filename
