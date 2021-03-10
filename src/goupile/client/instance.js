@@ -375,6 +375,7 @@ function InstanceController() {
                                     <table class="ui_table fixed" style="border-bottom: none; border-top: none;">
                                         <colgroup>
                                             ${util.mapRange(0, form.menu.length, () => html`<col/>`)}
+                                            ${form.multi ? html`<col style="width: 2em;"/>` : ''}
                                         </colgroup>
 
                                         <tbody>
