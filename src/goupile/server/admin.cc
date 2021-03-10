@@ -1291,7 +1291,7 @@ void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io)
             LogError("Admin user needs to confirm identity");
             io->AttachError(401);
         } else {
-            LogError("Non-admin users are not allowed to list archives");
+            LogError("Non-admin users are not allowed to delete archives");
             io->AttachError(403);
         }
         return;
