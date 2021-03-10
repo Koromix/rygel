@@ -322,7 +322,7 @@ function AdminController() {
     this.go = util.serializeAsync(this.go);
 
     function runCreateInstanceDialog(e) {
-        return ui.runDialog(e, 'Création d\'une instance', (d, resolve, reject) => {
+        return ui.runDialog(e, 'Création d\'un projet', (d, resolve, reject) => {
             let key = d.text('*key', 'Clé du projet');
             let name = d.text('name', 'Nom', {value: key.value});
             let demo = d.boolean('demo', 'Ajouter les pages par défaut', {value: true, untoggle: false});
