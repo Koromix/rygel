@@ -220,7 +220,7 @@ bool MigrateInstance(sq_Database *db)
     }
 
     LogInfo("Migrate instance '%1': %2 to %3",
-            SplitStrReverseAny(filename, RG_PATH_SEPARATORS), version + 1, InstanceVersion);
+            SplitStrReverseAny(filename, RG_PATH_SEPARATORS), version, InstanceVersion);
 
     bool success = db->Transaction([&]() {
         switch (version) {
@@ -939,8 +939,8 @@ bool MigrateInstance(sq_Database *db)
 
                     INSERT INTO rec_entries (ulid, hid, form, parent_ulid, parent_version, anchor)
                         SELECT ulid, hid, form, parent_ulid, parent_version, anchor FROM rec_entries_BAK;
-                    INSERT INTO rec_fragments (anchor, ulid, type, userid, username, mtime, page, json)
-                        SELECT anchor, ulid, type, userid, username, mtime, page, json FROM rec_fragments_BAK;
+                    INSERT INTO rec_fragments (anchor, ulid, version, type, userid, username, mtime, page, json)
+                        SELECT anchor, ulid, version, type, userid, username, mtime, page, json FROM rec_fragments_BAK;
                 )");
                 if (!success)
                     return false;
