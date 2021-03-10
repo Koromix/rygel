@@ -110,10 +110,14 @@ bool sq_Database::SetSynchronousFull(bool enable)
 
 bool sq_Database::Close()
 {
-    if (sqlite3_close(db) != SQLITE_OK)
-        return false;
-    db = nullptr;
+    int ret = sqlite3_close(db);
 
+    if (ret != SQLITE_OK) {
+        LogError("Failed to close SQLite database: %1", sqlite3_errstr(ret));
+        return false;
+    }
+
+    db = nullptr; 
     return true;
 }
 
