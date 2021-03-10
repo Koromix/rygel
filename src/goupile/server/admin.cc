@@ -1107,7 +1107,10 @@ restart:
         }
     }
 
-    return true;
+    sqlite3_backup_finish(backup);
+    backup = nullptr;
+
+    return db.Close();
 }
 
 void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
@@ -1128,43 +1131,36 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
         Span<InstanceHolder *> instances = gp_domain.LockInstances();
         RG_DEFER { gp_domain.UnlockInstances(); };
 
+        struct BackupEntry {
+            sq_Database *db;
+            const char *basename;
+            const char *filename;
+        };
+
+        const char *temp_directory = nullptr;
+        const char *instances_directory = nullptr;
+        HeapArray<BackupEntry> entries;
+
         // Clean up after backup (or error)
-        HeapArray<const char *> backup_directories;
-        HeapArray<const char *> backup_filenames;
         RG_DEFER {
-            for (const char *filename: backup_filenames) {
-                UnlinkFile(filename);
+            for (const BackupEntry &entry: entries) {
+                UnlinkFile(entry.filename);
             }
-            for (Size i = backup_directories.len - 1; i >= 0; i--) {
-                const char *directory = backup_directories[i];
-                UnlinkDirectory(directory);
+            if (instances_directory) {
+                UnlinkDirectory(instances_directory);
+            }
+            if (temp_directory) {
+                UnlinkDirectory(temp_directory);
             }
         };
 
         // Create temporary directories
-        const char *temp_directory = CreateTemporaryDirectory(gp_domain.config.temp_directory, "", &io->allocator);
+        temp_directory = CreateTemporaryDirectory(gp_domain.config.temp_directory, "", &io->allocator);
         if (!temp_directory)
             return;
-        backup_directories.Append(temp_directory);
-
-        // Backup domain database
-        {
-            const char *filename = Fmt(&io->allocator, "%1%/goupile.db", temp_directory).ptr;
-            backup_filenames.Append(filename);
-
-            if (!BackupDatabase(&gp_domain.db, filename))
-                return;
-        }
-
-        // Backup instance databases
-        for (InstanceHolder *instance: instances) {
-            const char *basename = SplitStrReverseAny(instance->filename, RG_PATH_SEPARATORS).ptr;
-            const char *filename = Fmt(&io->allocator, "%1%/instance_%2", temp_directory, basename).ptr;
-            backup_filenames.Append(filename);
-
-            if (!BackupDatabase(&instance->db, filename))
-                return;
-        }
+        instances_directory = Fmt(&io->allocator, "%1%/instances", temp_directory).ptr;
+        if (!MakeDirectory(instances_directory))
+            return;
 
         // Backup filename
         const char *zip_filename;
@@ -1197,6 +1193,26 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
             zip_filename = Fmt(&io->allocator, "%1%/%2.zip", gp_domain.config.backup_directory, mtime_str).ptr;
         }
 
+        // Generate backup entries
+        entries.Append({&gp_domain.db, "goupile.db"});
+        for (InstanceHolder *instance: instances) {
+            const char *basename = SplitStrReverseAny(instance->filename, RG_PATH_SEPARATORS).ptr;
+            basename = Fmt(&io->allocator, "instances%/%1", basename).ptr;
+
+            entries.Append({&instance->db, basename});
+        }
+        for (BackupEntry &entry: entries) {
+            entry.filename = Fmt(&io->allocator, "%1%/%2", temp_directory, entry.basename).ptr;
+        }
+
+        // Backup databases
+        Async async;
+        for (const BackupEntry &entry: entries) {
+            async.Run([&, entry]() { return BackupDatabase(entry.db, entry.filename); });
+        }
+        if (!async.Sync())
+            return;
+
         // Init ZIP compression
         mz_zip_archive zip;
         mz_zip_zero_struct(&zip);
@@ -1206,13 +1222,11 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
         }
         RG_DEFER { mz_zip_writer_end(&zip); };
 
-        // Add instances databases to ZIP archive
-        for (const char *filename: backup_filenames) {
-            const char *basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
-
-            if (!mz_zip_writer_add_file(&zip, basename, filename, nullptr, 0, MZ_DEFAULT_COMPRESSION)) {
+        // Add databases to ZIP archive
+        for (const BackupEntry &entry: entries) {
+            if (!mz_zip_writer_add_file(&zip, entry.basename, entry.filename, nullptr, 0, 3)) {
                 if (zip.m_last_error != MZ_ZIP_WRITE_CALLBACK_FAILED) {
-                    LogError("Failed to compress '%1': %2", basename, mz_zip_get_error_string(zip.m_last_error));
+                    LogError("Failed to compress '%1': %2", entry.basename, mz_zip_get_error_string(zip.m_last_error));
                 }
                 return;
             }
