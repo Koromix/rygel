@@ -548,7 +548,7 @@ Date &Date::operator--()
 static int64_t FileTimeToUnixTime(FILETIME ft)
 {
     int64_t time = ((int64_t)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
-    return time / 10000000 - 11644473600ll;
+    return time / 10000 - 11644473600000ll;
 }
 #endif
 
