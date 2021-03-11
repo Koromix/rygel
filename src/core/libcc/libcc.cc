@@ -2460,6 +2460,18 @@ FILE *OpenFile(const char *filename, unsigned int flags)
     return fp;
 }
 
+bool FlushFile(FILE *fp, const char *filename)
+{
+    RG_ASSERT(filename);
+
+    if (fflush(fp) != 0) {
+        LogError("Failed to sync '%1': %2", filename, strerror(errno));
+        return false;
+    }
+
+    return true;
+}
+
 bool FileIsVt100(FILE *fp)
 {
     static bool nocolor_init = false;
@@ -2666,6 +2678,23 @@ FILE *OpenFile(const char *filename, unsigned int flags)
     }
 
     return fp;
+}
+
+bool FlushFile(FILE *fp, const char *filename)
+{
+    RG_ASSERT(filename);
+
+#ifdef __APPLE__
+    if ((fflush(fp) != 0 || fsync(fileno(fp)) < 0) &&
+            errno != EINVAL && errno != ENOTSUP) {
+#else
+    if ((fflush(fp) != 0 || fsync(fileno(fp)) < 0) && errno != EINVAL) {
+#endif
+        LogError("Failed to sync '%1': %2", filename, strerror(errno));
+        return false;
+    }
+
+    return true;
 }
 
 bool FileIsVt100(FILE *fp)
@@ -4482,17 +4511,8 @@ bool StreamWriter::Close()
             case DestinationType::Memory: {} break;
 
             case DestinationType::File: {
-#if defined(_WIN32)
-                if (fflush(dest.u.file.fp) != 0) {
-#elif defined(__APPLE__)
-                if ((fflush(dest.u.file.fp) != 0 || fsync(fileno(dest.u.file.fp)) < 0) &&
-                        errno != EINVAL && errno != ENOTSUP) {
-#else
-                if ((fflush(dest.u.file.fp) != 0 || fsync(fileno(dest.u.file.fp)) < 0) && errno != EINVAL) {
-#endif
-                    LogError("Failed to finalize writing to '%1': %2", filename, strerror(errno));
+                if (!FlushFile(dest.u.file.fp, filename))
                     return false;
-                }
             } break;
 
             case DestinationType::Function: {

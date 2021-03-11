@@ -3664,6 +3664,8 @@ enum class OpenFileFlag {
 
 int OpenDescriptor(const char *filename, unsigned int flags);
 FILE *OpenFile(const char *filename, unsigned int flags);
+bool FlushFile(FILE *fp, const char *filename);
+
 bool FileIsVt100(FILE *fp);
 
 const char *CreateTemporaryFile(const char *directory, const char *prefix, const char *extension,
