@@ -30,6 +30,7 @@ function InstanceController() {
 
     let form_record;
     let form_state;
+    let form_values;
     let form_dictionaries = {};
 
     let editor_el;
@@ -514,7 +515,21 @@ function InstanceController() {
 
                     isLocked: goupile.isLocked
                 },
-                dict: form_dictionaries
+                data: {
+                    dict: form_dictionaries,
+                    store: (idx, values) => {
+                        let form = route.form.chain[route.form.chain.length - idx - 1];
+                        if (form == null)
+                            throw new Error(`Parent ${idx} does not exist`);
+
+                        let ptr = form_values[form.key];
+                        if (ptr == null) {
+                            ptr = {};
+                            form_values[form.key] = ptr;
+                        }
+                        Object.assign(ptr, values);
+                    }
+                }
             });
             form_record.hid = meta.hid;
 
@@ -654,9 +669,6 @@ function InstanceController() {
 
     function runTrailDialog(e, ulid) {
         return ui.runDialog(e, 'Historique', (d, resolve, reject) => {
-            if (ulid !== route.ulid)
-                reject();
-
             d.output(html`
                 <table class="ui_table">
                     <tbody>
@@ -665,7 +677,7 @@ function InstanceController() {
                             let fragment = form_record.fragments[version - 1];
 
                             let page = app.pages.get(fragment.page) || route.page;
-                            let url = page.url + `/${ulid}@${version}`;
+                            let url = page.url + `/${route.ulid}@${version}`;
 
                             return html`
                                 <tr class=${version === route.version ? 'active' : ''}>
@@ -693,87 +705,99 @@ function InstanceController() {
         let progress = log.progress('Enregistrement en cours');
 
         try {
-            let page = route.page;
+            let url = route.page.url + `/${form_record.ulid}`;
+
+            let page_key = route.page.key;
             let record = form_record;
             let values = Object.assign({}, form_state.values);
 
-            // Can't store undefined in IndexedDB...
-            for (let key in values) {
-                if (values[key] === undefined)
-                    values[key] = null;
-            }
-
-            let fragment = {
-                type: 'save',
-                user: profile.username,
-                mtime: new Date,
-                page: page.key,
-                values: values
-            };
-
             await db.transaction('rw', ['rec_records'], async t => {
-                let namespace;
-                let obj;
-                for (namespace of profile.keys) {
-                    let key = namespace + `:${record.ulid}`;
-                    obj = await t.load('rec_records', key);
-
-                    if (obj != null)
-                        break;
-                }
-
-                // Update previous record of write new?
-                let update = (obj != null) && (obj.keys.parent == null ||
-                                               !obj.keys.parent.endsWith('!fake'));
-
-                let entry;
-                if (update) {
-                    entry = await goupile.decryptSymmetric(obj.enc, namespace);
-                    if (record.hid != null)
-                        entry.hid = record.hid;
-                } else {
-                    obj = {
-                        keys: {
-                            form: null,
-                            parent: null,
-                            anchor: null,
-                            sync: null
-                        },
-                        enc: null
-                    };
-                    entry = {
-                        ulid: record.ulid,
-                        hid: record.hid,
-                        parent: null,
-                        form: record.form.key,
-                        fragments: []
-                    };
-
-                    if (record.parent != null) {
-                        entry.parent = {
-                            ulid: record.parent.ulid,
-                            version: record.parent.version
-                        };
+                do {
+                    // Can't store undefined in IndexedDB...
+                    for (let key in values) {
+                        if (values[key] === undefined)
+                            values[key] = null;
                     }
-                }
 
-                // Always rewrite keys to fix potential namespace changes
-                obj.keys.form = `${profile.userid}/${record.form.key}`;
-                if (record.parent != null)
-                    obj.keys.parent = `${profile.userid}:${record.parent.ulid}/${record.form.key}`;
-                obj.keys.sync = profile.userid;
+                    let fragment = {
+                        type: 'save',
+                        user: profile.username,
+                        mtime: new Date,
+                        page: page_key,
+                        values: values
+                    };
 
-                if (record.version !== entry.fragments.length)
-                    throw new Error('Cannot overwrite old record fragment');
-                entry.fragments.push(fragment);
+                    let namespace;
+                    let obj;
+                    for (namespace of profile.keys) {
+                        let key = namespace + `:${record.ulid}`;
+                        obj = await t.load('rec_records', key);
 
-                obj.enc = await goupile.encryptSymmetric(entry, profile.userid);
+                        if (obj != null)
+                            break;
+                    }
 
-                let key = profile.userid + `:${record.ulid}`;
-                await t.saveWithKey('rec_records', key, obj);
+                    // Update previous record of write new?
+                    let update = (obj != null) && (obj.keys.parent == null ||
+                                                   !obj.keys.parent.endsWith('!fake'));
 
-                if (entry.parent != null)
-                    await unfakeParents(t, entry.parent.ulid);
+                    let entry;
+                    if (update) {
+                        entry = await goupile.decryptSymmetric(obj.enc, namespace);
+                        if (record.hid != null)
+                            entry.hid = record.hid;
+                    } else {
+                        obj = {
+                            keys: {
+                                form: null,
+                                parent: null,
+                                anchor: null,
+                                sync: null
+                            },
+                            enc: null
+                        };
+                        entry = {
+                            ulid: record.ulid,
+                            hid: record.hid,
+                            parent: null,
+                            form: record.form.key,
+                            fragments: []
+                        };
+
+                        if (record.parent != null) {
+                            entry.parent = {
+                                ulid: record.parent.ulid,
+                                version: record.parent.version
+                            };
+                        }
+                    }
+
+                    // Always rewrite keys to fix potential namespace changes
+                    obj.keys.form = `${profile.userid}/${record.form.key}`;
+                    if (record.parent != null)
+                        obj.keys.parent = `${profile.userid}:${record.parent.ulid}/${record.form.key}`;
+                    obj.keys.sync = profile.userid;
+
+                    if (record.version !== entry.fragments.length)
+                        throw new Error('Cannot overwrite old record fragment');
+                    entry.fragments.push(fragment);
+
+                    obj.enc = await goupile.encryptSymmetric(entry, profile.userid);
+
+                    let key = profile.userid + `:${record.ulid}`;
+                    await t.saveWithKey('rec_records', key, obj);
+
+                    if (entry.parent != null)
+                        await unfakeParents(t, entry.parent.ulid);
+
+                    do {
+                        page_key = record.form.key;
+                        record = record.parent;
+                        if (record == null)
+                            break;
+                        values = form_values[record.form.key];
+                    } while (values == null);
+                } while (record != null);
             });
 
             if (ENV.sync_mode === 'mirror') {
@@ -793,7 +817,6 @@ function InstanceController() {
             }
 
             // XXX: Trigger reload in a better way...
-            let url = route.page.url + `/${record.ulid}`;
             route.version = null;
             form_record = null;
             form_state.clearChanges();
@@ -1458,6 +1481,7 @@ function InstanceController() {
         let new_route = Object.assign({}, route);
         let new_record = form_record;
         let new_state = form_state;
+        let new_values = form_values;
         let new_code;
 
         // Parse new URL
@@ -1545,6 +1569,7 @@ function InstanceController() {
                 if (new_record != null) {
                     new_route.ulid = new_record.ulid;
                     new_route.version = new_record.version;
+
                     new_state = null;
                 } else {
                     new_route.ulid = null;
@@ -1615,6 +1640,9 @@ function InstanceController() {
 
             if (form_state != null && new_route.page === route.page)
                 new_state.state_tabs = form_state.state_tabs;
+
+            new_values = {};
+            new_values[new_route.form.key] = new_state.values;
         }
 
         // Confirm dangerous actions (at risk of data loss)
@@ -1693,6 +1721,7 @@ function InstanceController() {
         route.version = new_record.version;
         form_record = new_record;
         form_state = new_state;
+        form_values = new_values;
         form_dictionaries = new_dictionaries;
         page_code = new_code;
 
