@@ -3669,7 +3669,7 @@ bool FlushFile(FILE *fp, const char *filename);
 bool FileIsVt100(FILE *fp);
 
 const char *CreateTemporaryFile(const char *directory, const char *prefix, const char *extension,
-                                Allocator *alloc, FILE **out_fp);
+                                Allocator *alloc, FILE **out_fp = nullptr);
 const char *CreateTemporaryDirectory(const char *directory, const char *prefix, Allocator *alloc);
 
 bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
