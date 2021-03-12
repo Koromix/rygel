@@ -42,6 +42,8 @@ static const char *const UserPermissionNames[] = {
     "DataExport",
     "DataBatch"
 };
+static const uint32_t UserPermissionMasterMask = 0b000001111u;
+static const uint32_t UserPermissionSlaveMask =  0b111110000u;
 
 struct InstanceToken {
     uint32_t permissions;

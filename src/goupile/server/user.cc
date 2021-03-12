@@ -45,7 +45,24 @@ const InstanceToken *Session::GetToken(const InstanceHolder *instance) const
                 if (!stmt.Next())
                     break;
 
-                uint32_t permissions = sqlite3_column_int(stmt, 0);
+                uint32_t permissions = (uint32_t)sqlite3_column_int(stmt, 0);
+
+                if (instance->master != instance) {
+                    InstanceHolder *master = instance->master;
+
+                    sq_Statement stmt;
+                    if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
+                                                 WHERE userid = ?1 AND instance = ?2)", &stmt))
+                        break;
+                    sqlite3_bind_int64(stmt, 1, userid);
+                    sqlite3_bind_text(stmt, 2, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
+
+                    permissions &= UserPermissionSlaveMask;
+                    if (stmt.Next()) {
+                        uint32_t master_permissions = (uint32_t)sqlite3_column_int(stmt, 0);
+                        permissions |= master_permissions & UserPermissionMasterMask;
+                    }
+                }
 
                 token = tokens_map.SetDefault(instance->unique);
                 token->permissions = permissions;
@@ -55,6 +72,13 @@ const InstanceToken *Session::GetToken(const InstanceHolder *instance) const
 
             // Redirect user to appropiate slave instance
             if (instance->GetSlaveCount()) {
+                if (token) {
+                    token->permissions &= UserPermissionMasterMask;
+                } else {
+                    token = tokens_map.SetDefault(instance->unique);
+                    token->permissions = 0;
+                }
+
                 do {
                     sq_Statement stmt;
                     if (!gp_domain.db.Prepare(R"(SELECT i.instance FROM dom_instances i
@@ -74,11 +98,6 @@ const InstanceToken *Session::GetToken(const InstanceHolder *instance) const
                         break;
                     RG_DEFER { redirect->Unref(); };
 
-                    if (!token) {
-                        token = tokens_map.SetDefault(instance->unique);
-                        token->permissions = 0;
-                    }
-
                     token->title = DuplicateString(redirect->config.title, &tokens_alloc).ptr;
                     token->url = Fmt(&tokens_alloc, "/%1/", redirect->key).ptr;
                 } while (false);
@@ -87,6 +106,7 @@ const InstanceToken *Session::GetToken(const InstanceHolder *instance) const
             // User is not assigned to this project, cache this information
             if (!token) {
                 token = tokens_map.SetDefault(instance->unique);
+                token->permissions = 0;
             }
         }
 

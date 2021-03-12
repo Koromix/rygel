@@ -207,11 +207,6 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
         io->AttachError(403);
         return;
     }
-    if (instance != instance->master) {
-        LogError("Cannot save files through slave instance");
-        io->AttachError(403);
-        return;
-    }
 
     const char *filename = url + 7;
 
@@ -361,11 +356,6 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
     }
     if (!StartsWith(url, "/files/")) {
         LogError("Cannot delete files outside '/files/'");
-        io->AttachError(403);
-        return;
-    }
-    if (instance != instance->master) {
-        LogError("Cannot delete files through slave instance");
         io->AttachError(403);
         return;
     }

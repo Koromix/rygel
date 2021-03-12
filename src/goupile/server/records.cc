@@ -89,11 +89,6 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
         io->AttachError(403);
         return;
     }
-    if (instance->GetSlaveCount()) {
-        LogError("Cannot load data through master instance");
-        io->AttachError(403);
-        return;
-    }
 
     const char *form = request.GetQueryValue("form");
     const char *ulid = request.GetQueryValue("ulid");
@@ -191,11 +186,6 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
     }
     if (instance->config.sync_mode == SyncMode::Offline) {
         LogError("Records API is disabled in Offline mode");
-        io->AttachError(403);
-        return;
-    }
-    if (instance->GetSlaveCount()) {
-        LogError("Cannot load data through master instance");
         io->AttachError(403);
         return;
     }
