@@ -282,9 +282,15 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
                 RetainPtr<Session> session = CreateUserSession(userid, username, local_key);
 
                 if (RG_LIKELY(session)) {
-                    if (admin && !instance) {
-                        // Require regular relogin (every 20 minutes) to access admin panel
-                        session->admin_until = GetMonotonicTime() + 1200 * 1000;
+                    if (admin) {
+                        if (!instance) {
+                            // Require regular relogin (every 20 minutes) to access admin panel
+                            session->admin_until = GetMonotonicTime() + 1200 * 1000;
+                        } else {
+                            // Mark session as elevatable (can become admin) so the user gets
+                            // identity confirmation prompts when he tries to make admin requests.
+                            session->admin_until = -1;
+                        }
                     }
 
                     sessions.Open(request, io, session);
