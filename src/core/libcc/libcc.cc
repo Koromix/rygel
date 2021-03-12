@@ -2276,12 +2276,12 @@ Span<const char> GetPathExtension(Span<const char> filename, CompressionType *ou
 
     Span<const char> extension = {};
     const auto consume_next_extension = [&]() {
-        extension = SplitStrReverse(filename, '.', &filename);
-        if (extension.ptr > filename.ptr) {
-            extension.ptr--;
-            extension.len++;
+        Span<const char> part = SplitStrReverse(filename, '.', &filename);
+
+        if (part.ptr > filename.ptr) {
+            extension = MakeSpan(part.ptr - 1, part.len + 1);
         } else {
-            extension = {};
+            extension = MakeSpan(part.end(), 0);
         }
     };
 
