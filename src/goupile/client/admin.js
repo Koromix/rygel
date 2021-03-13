@@ -25,7 +25,8 @@ function AdminController() {
         ui.setMenu(renderMenu);
         ui.createPanel('instances', 1, true, renderInstances);
         ui.createPanel('users', 0, true, renderUsers);
-        ui.createPanel('backups', 0, false, renderBackups);
+        if (ENV.enable_backups)
+            ui.createPanel('backups', 0, false, renderBackups);
     }
 
     this.hasUnsavedData = function() {
@@ -43,7 +44,7 @@ function AdminController() {
                     style="background-position-y: calc(-406px + 1.2em);"
                     @click=${ui.wrapAction(e => togglePanel(e, 'users'))}>Utilisateurs</button>
             <button class=${'icon' + (ui.isPanelEnabled('backups') ? ' active' : '')}
-                    style="background-position-y: calc(-142px + 1.2em);"
+                    style="background-position-y: calc(-142px + 1.2em);" ?disabled=${!ENV.enable_backups}
                     @click=${ui.wrapAction(e => togglePanel(e, 'backups'))}>Sauvegardes</button>
             <div style="flex: 1;"></div>
             <div class="drop right">

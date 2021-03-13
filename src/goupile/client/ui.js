@@ -110,7 +110,7 @@ const ui = new function() {
 
     this.isPanelEnabled = function(key) {
         let panel = panels.get(key);
-        return panel.active;
+        return panel != null && panel.active;
     };
 
     this.setPanelState = function(key, active) {

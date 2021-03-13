@@ -190,6 +190,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                             json.String(str.ptr, (size_t)str.len);
                         }
                         json.EndArray();
+                        json.Key("enable_backups"); json.Bool(gp_domain.config.enable_backups);
                         json.EndObject();
                     } else if (TestStr(key, "HEAD_TAGS")) {
                         // Nothing to add
@@ -405,6 +406,7 @@ Options:
 Other commands:
     %!..+init%!0                         Create new domain
     %!..+migrate%!0                      Migrate existing domain
+    %!..+decrypt%!0                      Decrypt domain archive
 
 For help about those commands, type: %!..+%1 <command> --help%!0)",
                 FelixTarget, config_filename, gp_domain.config.http.port);
@@ -568,6 +570,9 @@ int Main(int argc, char **argv)
             arguments = MakeSpan((const char **)argv + 2, argc - 2);
         } else if (TestStr(cmd, "migrate")) {
             cmd_func = RunMigrate;
+            arguments = MakeSpan((const char **)argv + 2, argc - 2);
+        } else if (TestStr(cmd, "decrypt")) {
+            cmd_func = RunDecrypt;
             arguments = MakeSpan((const char **)argv + 2, argc - 2);
         } else if (TestStr(cmd, "serve")) {
             cmd_func = RunServe;

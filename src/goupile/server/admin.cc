@@ -38,13 +38,14 @@
 namespace RG {
 
 static const char *DefaultConfig =
-R"([Resources]
+R"([Paths]
 # DatabaseFile = goupile.db
 # InstanceDirectory = instances
 # TempDirectory = tmp
 # BackupDirectory = backup
 
-[SQLite]
+[Data]
+BackupKey = %1
 # SynchronousFull = Off
 
 [Session]
@@ -57,6 +58,17 @@ R"([Resources]
 # AsyncThreads =
 # TrustXRealIP = Off
 )";
+
+#pragma pack(push, 1)
+struct ArchiveIntro {
+    char signature[15];
+    int8_t version;
+    uint8_t eskey[crypto_secretstream_xchacha20poly1305_KEYBYTES + crypto_box_SEALBYTES];
+    uint8_t header[crypto_secretstream_xchacha20poly1305_HEADERBYTES];
+};
+#pragma pack(pop)
+#define ARCHIVE_VERSION 1
+#define ARCHIVE_SIGNATURE "GOUPILE_BACKUP"
 
 static bool CheckInstanceKey(Span<const char> key)
 {
@@ -440,13 +452,30 @@ Options:
     }
     LogInfo();
 
+    // Create backup key pair
+    char backup_key[45];
+    char decrypt_key[45];
+    {
+        RG_STATIC_ASSERT(crypto_box_PUBLICKEYBYTES == 32);
+        RG_STATIC_ASSERT(crypto_box_SECRETKEYBYTES == 32);
+
+        uint8_t pk[crypto_box_PUBLICKEYBYTES];
+        uint8_t sk[crypto_box_SECRETKEYBYTES];
+        crypto_box_keypair(pk, sk);
+
+        sodium_bin2base64(backup_key, RG_SIZE(backup_key), pk, RG_SIZE(pk), sodium_base64_VARIANT_ORIGINAL);
+        sodium_bin2base64(decrypt_key, RG_SIZE(decrypt_key), sk, RG_SIZE(sk), sodium_base64_VARIANT_ORIGINAL);
+    }
+
     // Create domain
     DomainHolder domain;
     {
         const char *filename = Fmt(&temp_alloc, "%1%/goupile.ini", root_directory).ptr;
         files.Append(filename);
 
-        if (!WriteFile(DefaultConfig, filename))
+        StreamWriter writer(filename);
+        Print(&writer, DefaultConfig, backup_key);
+        if (!writer.Close())
             return 1;
 
         if (!LoadConfig(filename, &domain.config))
@@ -511,6 +540,12 @@ Options:
     if (!domain.db.Close())
         return 1;
 
+    LogInfo();
+    LogInfo("Backup decryption key: %!..+%1%!0", decrypt_key);
+    LogInfo();
+    LogInfo("You need this key to restore Goupile backups, %!..+you must not lose it!%!0");
+    LogInfo("There is no way to get it back, without it the backups are lost.");
+
     root_guard.Disable();
     return 0;
 }
@@ -523,7 +558,7 @@ int RunMigrate(Span<const char *> arguments)
     const char *config_filename = "goupile.ini";
 
     const auto print_usage = [&](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 migrate <instance_file> ...%!0
+        PrintLn(fp, R"(Usage: %!..+%1 migrate [options]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -581,6 +616,155 @@ Options:
 
     if (!db.Close())
         return 1;
+
+    return 0;
+}
+
+int RunDecrypt(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    const char *archive_filename = nullptr;
+    const char *output_filename = nullptr;
+    const char *decrypt_key = nullptr;
+
+    const auto print_usage = [&](FILE *fp) {
+        PrintLn(fp, R"(Usage: %!..+%1 decrypt <archive_file>%!0
+
+Options:
+    %!..+-O, --output_file <file>%!0      Set output file
+    %!..+-k, --key <key>%!0               Set decryption key)", FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
+                output_filename = opt.current_value;
+            } else if (opt.Test("-k", "--key", OptionType::Value)) {
+                decrypt_key = opt.current_value;
+            } else {
+                LogError("Cannot handle option '%1'", opt.current_option);
+                return 1;
+            }
+        }
+
+        archive_filename = opt.ConsumeNonOption();
+        if (!archive_filename) {
+            LogError("No archive filename provided");
+            return 1;
+        }
+    }
+
+    if (!output_filename) {
+        Span<const char> extension = GetPathExtension(archive_filename);
+        Span<const char> name = MakeSpan(archive_filename, extension.ptr - archive_filename);
+
+        output_filename = Fmt(&temp_alloc, "%1.zip", name).ptr;
+    }
+
+    StreamReader reader(archive_filename);
+    if (!reader.IsValid())
+        return 1;
+
+    StreamWriter writer(output_filename, false);
+    if (!writer.IsValid())
+        return 1;
+    RG_DEFER_N(output_guard) { UnlinkFile(output_filename); };
+
+    if (!decrypt_key) {
+        decrypt_key = Prompt("Decryption key: ", "*", &temp_alloc);
+        if (!decrypt_key)
+            return 1;
+    }
+
+    // Derive asymmetric keys
+    uint8_t askey[crypto_box_SECRETKEYBYTES];
+    uint8_t apkey[crypto_box_PUBLICKEYBYTES];
+    {
+        RG_STATIC_ASSERT(crypto_scalarmult_SCALARBYTES == crypto_box_SECRETKEYBYTES);
+        RG_STATIC_ASSERT(crypto_scalarmult_BYTES == crypto_box_PUBLICKEYBYTES);
+
+        size_t key_len;
+        int ret = sodium_base642bin(askey, RG_SIZE(askey),
+                                    decrypt_key, strlen(decrypt_key), nullptr, &key_len,
+                                    nullptr, sodium_base64_VARIANT_ORIGINAL);
+        if (ret || key_len != 32) {
+            LogError("Malformed decryption key");
+            return 1;
+        }
+
+        crypto_scalarmult_base(apkey, askey);
+    }
+
+    // Check signature and initialize symmetric decryption
+    uint8_t skey[crypto_secretstream_xchacha20poly1305_KEYBYTES];
+    crypto_secretstream_xchacha20poly1305_state state;
+    {
+        ArchiveIntro intro;
+        if (reader.Read(RG_SIZE(intro), &intro) != RG_SIZE(intro)) {
+            if (reader.IsValid()) {
+                LogError("Truncated archive");
+            }
+            return 1;
+        }
+
+        if (strncmp(intro.signature, ARCHIVE_SIGNATURE, RG_SIZE(intro.signature)) != 0) {
+            LogError("Unexpected archive signature");
+            return 1;
+        }
+        if (intro.version != ARCHIVE_VERSION) {
+            LogError("Unexpected archive version %1 (expected %2)", intro.version, ARCHIVE_VERSION);
+            return 1;
+        }
+
+        if (crypto_box_seal_open(skey, intro.eskey, RG_SIZE(intro.eskey), apkey, askey) != 0) {
+            LogError("Failed to unseal archive (wrong key?)");
+            return 1;
+        }
+        if (crypto_secretstream_xchacha20poly1305_init_pull(&state, intro.header, skey) != 0) {
+            LogError("Failed to initialize symmetric decryption (corrupt archive?)");
+            return 1;
+        }
+    }
+
+    for (;;) {
+        LocalArray<uint8_t, 4096> cypher;
+        cypher.len = reader.Read(cypher.data);
+        if (cypher.len < 0)
+            return 1;
+
+        uint8_t buf[4096];
+        unsigned long long buf_len = 5;
+        uint8_t tag;
+        if (crypto_secretstream_xchacha20poly1305_pull(&state, buf, &buf_len, &tag,
+                                                       cypher.data, cypher.len, nullptr, 0) != 0) {
+            LogError("Failed during symmetric decryption (corrupt archive?)");
+            return 1;
+        }
+
+        if (!writer.Write(buf, (Size)buf_len))
+            return 1;
+
+        if (reader.IsEOF()) {
+            if (tag != crypto_secretstream_xchacha20poly1305_TAG_FINAL) {
+                LogError("Truncated archive");
+                return 1;
+            }
+            break;
+        }
+    }
+    if (!writer.Close())
+        return 1;
+
+    LogInfo("Decrypted archive: %!..+%1%!0", output_filename);
+    output_guard.Disable();
 
     return 0;
 }
@@ -1162,6 +1346,11 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
         }
         return;
     }
+    if (!gp_domain.config.enable_backups) {
+        LogError("Public domain backup key is not configured");
+        io->AttachError(403);
+        return;
+    }
 
     io->RunAsync([=]() {
         Span<InstanceHolder *> instances = gp_domain.LockInstances();
@@ -1200,7 +1389,7 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
         if (!async.Sync())
             return;
 
-        // Write ZIP to temporary file (to avoid listing and download of temporary files)
+        // Write archive to temporary file (to avoid listing and download of temporary files)
         FILE *fp;
         const char *tmp_filename = CreateTemporaryFile(gp_domain.config.backup_directory, "", ".tmp",
                                                        &io->allocator, &fp);
@@ -1213,10 +1402,72 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
             UnlinkFile(tmp_filename);
         };
 
-        // Init ZIP compression
+        // Closure context for miniz write callback
+        struct BackupContext {
+            StreamWriter writer;
+            crypto_secretstream_xchacha20poly1305_state state;
+            LocalArray<uint8_t, 4096 - crypto_secretstream_xchacha20poly1305_ABYTES> buf;
+        };
+        BackupContext ctx = {};
+
+        bool success = ctx.writer.Open(fp, tmp_filename);
+        RG_ASSERT(success);
+
+        // Write archive intro
+        {
+            ArchiveIntro intro = {};
+
+            CopyString(ARCHIVE_SIGNATURE, intro.signature);
+            intro.version = ARCHIVE_VERSION;
+
+            uint8_t skey[crypto_secretstream_xchacha20poly1305_KEYBYTES];
+            crypto_secretstream_xchacha20poly1305_keygen(skey);
+            if (crypto_secretstream_xchacha20poly1305_init_push(&ctx.state, intro.header, skey) != 0) {
+                LogError("Failed to initialize symmetric encryption");
+                return;
+            }
+            if (crypto_box_seal(intro.eskey, skey, RG_SIZE(skey), gp_domain.config.backup_key) != 0) {
+                LogError("Failed to seal symmetric key");
+                return;
+            }
+
+            if (!ctx.writer.Write(&intro, RG_SIZE(intro)))
+                return;
+        }
+
+        // Init ZIP compressor
         mz_zip_archive zip;
         mz_zip_zero_struct(&zip);
-        if (!mz_zip_writer_init_cfile(&zip, fp, 0)) {
+        zip.m_pWrite = [](void *udata, mz_uint64, const void *buf, size_t len) {
+            BackupContext *ctx = (BackupContext *)udata;
+            size_t copy = len;
+
+            while (len) {
+                size_t copy_len = std::min(len, (size_t)ctx->buf.Available());
+                memcpy(ctx->buf.end(), buf, copy_len);
+                ctx->buf.len += (Size)copy_len;
+
+                if (!ctx->buf.Available()) {
+                    uint8_t cypher[4096];
+                    unsigned long long cypher_len;
+                    if (crypto_secretstream_xchacha20poly1305_push(&ctx->state, cypher, &cypher_len,
+                                                                   ctx->buf.data, ctx->buf.len, nullptr, 0, 0) != 0) {
+                        LogError("Failed during symmetric encryption");
+                        return (size_t)-1;
+                    }
+                    if (!ctx->writer.Write(cypher, (Size)cypher_len))
+                        return (size_t)-1;
+                    ctx->buf.len = 0;
+                }
+
+                buf = (const void *)((const uint8_t *)buf + copy_len);
+                len -= copy_len;
+            }
+
+            return copy;
+        };
+        zip.m_pIO_opaque = &ctx;
+        if (!mz_zip_writer_init(&zip, 0)) {
             LogError("Failed to create ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
             return;
         }
@@ -1232,12 +1483,28 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
             }
         }
 
-        // Finalize ZIP file
-        if (!mz_zip_writer_finalize_archive(&zip)) {
-            LogError("Failed to finalize ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
-            return;
-        }
-        if (!FlushFile(fp, tmp_filename))
+        // Finalize ZIP and encryption
+        {
+            if (!mz_zip_writer_finalize_archive(&zip)) {
+                if (zip.m_last_error != MZ_ZIP_WRITE_CALLBACK_FAILED) {
+                    LogError("Failed to finalize ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
+                }
+                return;
+            }
+
+            uint8_t cypher[4096];
+            unsigned long long cypher_len;
+            if (crypto_secretstream_xchacha20poly1305_push(&ctx.state, cypher, &cypher_len, ctx.buf.data, ctx.buf.len, nullptr, 0,
+                                                           crypto_secretstream_xchacha20poly1305_TAG_FINAL) != 0) {
+                LogError("Failed during symmetric encryption");
+                return;
+            }
+            if (!ctx.writer.Write(cypher, (Size)cypher_len))
+                return;
+         }
+
+        // Flush buffers
+        if (!ctx.writer.Close())
             return;
         fclose(fp);
         fp = nullptr;
@@ -1270,13 +1537,13 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
             }
 
             HeapArray<char> buf(&io->allocator);
-            Size offset = Fmt(&buf, "%1%/%2.zip", gp_domain.config.backup_directory, mtime_str).len - 4;
+            Size offset = Fmt(&buf, "%1%/%2.goupilebackup", gp_domain.config.backup_directory, mtime_str).len - 14;
 
             if (!RenameFile(tmp_filename, buf.ptr, false)) {
                 int i = 2;
                 for (;;) {
                     buf.RemoveFrom(offset);
-                    Fmt(&buf, "_%1.zip", i);
+                    Fmt(&buf, "_%1.goupilebackup", i);
 
                     if (RenameFile(tmp_filename, buf.ptr, false))
                         break;
@@ -1378,7 +1645,7 @@ void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
     HeapArray<char> buf;
 
     json.StartArray();
-    EnumStatus status = EnumerateDirectory(gp_domain.config.backup_directory, "*.zip", -1,
+    EnumStatus status = EnumerateDirectory(gp_domain.config.backup_directory, "*.goupilebackup", -1,
                                            [&](const char *basename, FileType) {
         buf.RemoveFrom(0);
 
