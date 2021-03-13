@@ -430,7 +430,7 @@ void Builder::SaveCache()
         UnlinkFile(cache_filename);
     };
 
-    StreamWriter st(cache_filename, CompressionType::Gzip);
+    StreamWriter st(cache_filename, true, CompressionType::Gzip);
     if (!st.IsValid())
         return;
 

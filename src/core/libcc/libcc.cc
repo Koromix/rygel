@@ -1808,7 +1808,7 @@ bool RenameFile(const char *src_filename, const char *dest_filename, bool overwr
         fd = open(dest_filename, O_CREAT | O_EXCL, 0644);
         if (fd < 0) {
             if (errno == EEXIST) {
-                LogError("Refusing to overwrite '%1'", dest_filename);
+                LogError("File '%1' already exists", dest_filename);
             } else {
                 LogError("Failed to rename '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
             }
@@ -2422,7 +2422,11 @@ int OpenDescriptor(const char *filename, unsigned int flags)
 
     int fd = _wopen(filename_w, oflags, _S_IREAD | _S_IWRITE);
     if (fd < 0) {
-        LogError("Cannot open '%1': %2", filename, strerror(errno));
+        if (errno == EEXIST) {
+            LogError("File '%1' already exists", filename);
+        } else {
+            LogError("Cannot open '%1': %2", filename, strerror(errno));
+        }
         return -1;
     }
 
@@ -2647,7 +2651,11 @@ int OpenDescriptor(const char *filename, unsigned int flags)
 
     int fd = RG_POSIX_RESTART_EINTR(open(filename, oflags, 0644), < 0);
     if (fd < 0) {
-        LogError("Cannot open '%1': %2", filename, strerror(errno));
+        if (errno == EEXIST) {
+            LogError("File '%1' already exists", filename);
+        } else {
+            LogError("Cannot open '%1': %2", filename, strerror(errno));
+        }
         return -1;
     }
 
@@ -4416,7 +4424,7 @@ bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compress
     return true;
 }
 
-bool StreamWriter::Open(const char *filename, CompressionType compression_type)
+bool StreamWriter::Open(const char *filename, bool overwrite, CompressionType compression_type)
 {
     RG_ASSERT(!this->filename);
 
@@ -4428,8 +4436,11 @@ bool StreamWriter::Open(const char *filename, CompressionType compression_type)
     RG_ASSERT(filename);
     this->filename = filename;
 
+    unsigned int flags = (int)OpenFileFlag::Write;
+    flags |= overwrite ? 0 : (int)OpenFileFlag::Exclusive;
+
     dest.type = DestinationType::File;
-    dest.u.file.fp = OpenFile(filename, (int)OpenFileFlag::Write);
+    dest.u.file.fp = OpenFile(filename, flags);
     if (!dest.u.file.fp)
         return false;
     dest.u.file.owned = true;

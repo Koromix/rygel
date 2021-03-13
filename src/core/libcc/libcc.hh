@@ -2757,9 +2757,9 @@ public:
     StreamWriter(FILE *fp, const char *filename,
                  CompressionType compression_type = CompressionType::None)
         : StreamWriter() { Open(fp, filename, compression_type); }
-    StreamWriter(const char *filename,
+    StreamWriter(const char *filename, bool overwrite = true,
                  CompressionType compression_type = CompressionType::None)
-        : StreamWriter() { Open(filename, compression_type); }
+        : StreamWriter() { Open(filename, overwrite, compression_type); }
     StreamWriter(const std::function<bool(Span<const uint8_t>)> &func, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
         : StreamWriter() { Open(func, filename, compression_type); }
@@ -2769,7 +2769,8 @@ public:
               CompressionType compression_type = CompressionType::None);
     bool Open(FILE *fp, const char *filename,
               CompressionType compression_type = CompressionType::None);
-    bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
+    bool Open(const char *filename, bool overwrite = true,
+              CompressionType compression_type = CompressionType::None);
     bool Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
     bool Close();
@@ -2793,17 +2794,17 @@ private:
     bool WriteRaw(Span<const uint8_t> buf);
 };
 
-static inline bool WriteFile(Span<const uint8_t> buf, const char *filename,
+static inline bool WriteFile(Span<const uint8_t> buf, const char *filename, bool overwrite = true,
                              CompressionType compression_type = CompressionType::None)
 {
-    StreamWriter st(filename, compression_type);
+    StreamWriter st(filename, overwrite, compression_type);
     st.Write(buf);
     return st.Close();
 }
-static inline bool WriteFile(Span<const char> buf, const char *filename,
+static inline bool WriteFile(Span<const char> buf, const char *filename, bool overwrite = true,
                              CompressionType compression_type = CompressionType::None)
 {
-    StreamWriter st(filename, compression_type);
+    StreamWriter st(filename, overwrite, compression_type);
     st.Write(buf);
     return st.Close();
 }
