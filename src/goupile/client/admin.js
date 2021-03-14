@@ -309,6 +309,9 @@ function AdminController() {
                     permissions: permissions
                 };
             }
+
+            if (selected_instance == null || new_selected.key !== selected_instance.key)
+                ui.setPanelState('users', true);
         } else {
             new_permissions = null;
         }
