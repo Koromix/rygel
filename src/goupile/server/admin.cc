@@ -668,19 +668,24 @@ Options:
 
         output_filename = Fmt(&temp_alloc, "%1.zip", name).ptr;
     }
-
-    StreamReader reader(archive_filename);
-    StreamWriter writer(output_filename, (int)StreamWriterFlag::Exclusive);
-    if (!reader.IsValid())
+    if (TestFile(output_filename)) {
+        LogError("File '%1' already exists", output_filename);
         return 1;
-    if (!writer.IsValid())
-        return 1;
+    }
 
     if (!decrypt_key) {
         decrypt_key = Prompt("Decryption key: ", "*", &temp_alloc);
         if (!decrypt_key)
             return 1;
     }
+
+    StreamReader reader(archive_filename);
+    StreamWriter writer(output_filename, (int)StreamWriterFlag::Atomic |
+                                         (int)StreamWriterFlag::Exclusive);
+    if (!reader.IsValid())
+        return 1;
+    if (!writer.IsValid())
+        return 1;
 
     // Derive asymmetric keys
     uint8_t askey[crypto_box_SECRETKEYBYTES];
