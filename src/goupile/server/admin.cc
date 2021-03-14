@@ -1496,7 +1496,7 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
 
         // Add databases to ZIP archive
         for (const BackupEntry &entry: entries) {
-            if (!mz_zip_writer_add_file(&zip, entry.basename, entry.filename, nullptr, 0, 3)) {
+            if (!mz_zip_writer_add_file(&zip, entry.basename, entry.filename, nullptr, 0, MZ_BEST_SPEED)) {
                 if (zip.m_last_error != MZ_ZIP_WRITE_CALLBACK_FAILED) {
                     LogError("Failed to compress '%1': %2", entry.basename, mz_zip_get_error_string(zip.m_last_error));
                 }
