@@ -16,19 +16,27 @@ function FormState(values = {}) {
 
     this.changeHandler = model => {};
 
+    // Mostly internal state
     this.unique_id = FormState.next_unique_id++;
-    this.tabs_state = {};
     this.file_lists = new Map;
     this.click_events = new Set;
     this.invalid_numbers = new Set;
     this.take_delayed = new Set;
 
+    // Tabs and sections
+    this.state_tabs = {};
+
+    // Handling of values and changes
     this.values = Object.assign({}, values);
     this.cached_values = {};
     this.default_variables = new Set;
     this.changed_variables = new Set;
     this.updated_variables = new Set;
 
+    this.clearChanges = function() {
+        self.changed_variables.clear();
+        self.updated_variables.clear();
+    };
     this.hasChanged = function() { return !!self.changed_variables.size; };
 }
 FormState.next_unique_id = 0;
@@ -1123,7 +1131,7 @@ function FormBuilder(state, model, readonly = false) {
 
                 // Adjust current tab
                 {
-                    let tab_state = state.tabs_state[key];
+                    let tab_state = state.state_tabs[key];
                     if (tab_state != null) {
                         tab_idx = tabs.findIndex(tab => tab.label === tab_state.label);
                         if (tab_idx < 0)
@@ -1143,7 +1151,7 @@ function FormBuilder(state, model, readonly = false) {
                             idx: tab_idx,
                             label: tabs[tab_idx].label
                         };
-                        state.tabs_state[key] = tab_state;
+                        state.state_tabs[key] = tab_state;
                     }
                 }
 
@@ -1167,7 +1175,7 @@ function FormBuilder(state, model, readonly = false) {
         let tab_state = {
             idx: idx
         };
-        state.tabs_state[key] = tab_state;
+        state.state_tabs[key] = tab_state;
 
         self.restart();
     }

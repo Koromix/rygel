@@ -704,7 +704,7 @@ function InstanceController() {
             let url = route.page.url + `/${record.ulid}`;
             route.version = null;
             form_record = null;
-            form_state = null;
+            form_state.clearChanges();
             data_rows = null;
             self.go(null, url);
         } catch (err) {
@@ -786,7 +786,7 @@ function InstanceController() {
 
             data_rows = null;
             if (form_record.chain.some(record => record.ulid === ulid)) {
-                form_state = null;
+                form_state.clearChanges();
                 goNewRecord(null);
             } else {
                 self.run();
@@ -1433,9 +1433,7 @@ function InstanceController() {
             new_record = null;
         if (new_record == null && new_route.ulid != null) {
             new_record = await loadRecord(new_route.ulid, new_route.version);
-
-            new_state = new FormState(new_record.values);
-            new_state.changeHandler = handleStateChange;
+            new_state = null;
         }
 
         // Match requested page, record type, available page, etc.
@@ -1448,8 +1446,7 @@ function InstanceController() {
                 if (new_record != null) {
                     new_route.ulid = new_record.ulid;
                     new_route.version = new_record.version;
-                    new_state = new FormState(new_record.values);
-                    new_state.changeHandler = handleStateChange;
+                    new_state = null;
                 } else {
                     new_route.ulid = null;
                     new_record = null;
@@ -1459,11 +1456,10 @@ function InstanceController() {
             // Create new record if needed
             if (new_route.ulid == null || new_record == null) {
                 new_record = createRecord(new_route.form, null);
+                new_state = null;
 
                 new_route.ulid = new_record.ulid;
                 new_route.version = new_record.version;
-                new_state = new FormState(new_record.values);
-                new_state.changeHandler = handleStateChange;
             }
 
             // Load record parents
@@ -1511,6 +1507,15 @@ function InstanceController() {
             }
 
             break;
+        }
+
+        // Sync form state with other changes
+        if (new_state == null) {
+            new_state = new FormState(new_record.values);
+            new_state.changeHandler = handleStateChange;
+
+            if (form_state != null && new_route.page === route.page)
+                new_state.state_tabs = form_state.state_tabs;
         }
 
         // Confirm dangerous actions (at risk of data loss)
@@ -2169,7 +2174,7 @@ function InstanceController() {
                     if (!self.hasUnsavedData() && form_record.saved) {
                         route.version = null;
                         form_record = null;
-                        form_state = null;
+                        form_state.clearChanges();
                     }
                     data_rows = null;
 
