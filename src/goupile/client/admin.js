@@ -114,7 +114,7 @@ function AdminController() {
                     <a @click=${ui.wrapAction(runCreateUserDialog)}>Créer un utilisateur</a>
                     <div style="flex: 1;"></div>
                     ${selected_instance != null ? html`
-                        Droits sur ${selected_instance.key}
+                        Droits sur ${selected_instance.key} (<a href="/admin/">déselectionner</a>)
                         <div style="flex: 1;"></div>
                     ` : ''}
                     Utilisateurs (<a @click=${ui.wrapAction(e => { users = null; selected_permissions = null; return self.go(); })}>rafraichir</a>)
