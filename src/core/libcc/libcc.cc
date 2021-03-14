@@ -3842,7 +3842,7 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
         error = true;
     };
 
-    this->filename = filename ? filename : "<memory>";
+    this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<memory>";
 
     source.type = SourceType::Memory;
     source.u.memory.buf = buf;
@@ -3866,7 +3866,7 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
 
     RG_ASSERT(fp);
     RG_ASSERT(filename);
-    this->filename = filename;
+    this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     source.type = SourceType::File;
     source.u.file.fp = fp;
@@ -3889,7 +3889,7 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
     };
 
     RG_ASSERT(filename);
-    this->filename = filename;
+    this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     source.type = SourceType::File;
     source.u.file.fp = OpenFile(filename, (int)OpenFileFlag::Read);
@@ -3914,7 +3914,7 @@ bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const ch
         error = true;
     };
 
-    this->filename = filename ? filename : "<closure>";
+    this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<closure>";
 
     source.type = SourceType::Function;
     new (&source.u.func) std::function<Size(Span<uint8_t>)>(func);
@@ -4106,6 +4106,8 @@ void StreamReader::ReleaseResources()
         } break;
     }
     source.type = SourceType::Memory;
+
+    str_alloc.ReleaseAll();
 }
 
 Size StreamReader::Inflate(Size max_len, void *out_buf)

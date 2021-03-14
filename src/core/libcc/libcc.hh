@@ -2577,7 +2577,6 @@ class StreamReader {
         Function
     };
 
-    // NOTE: Should we use DuplicateString() for this? Same question in StreamWriter.
     const char *filename;
 
     struct {
@@ -2612,6 +2611,8 @@ class StreamReader {
     Size raw_read;
     bool eof;
     bool error = false;
+
+    BlockAllocator str_alloc;
 
 public:
     StreamReader() { Close(); }
