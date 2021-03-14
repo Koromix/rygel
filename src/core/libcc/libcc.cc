@@ -4388,7 +4388,7 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
         error = true;
     };
 
-    this->filename = filename ? filename : "<memory>";
+    this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<memory>";
 
     dest.type = DestinationType::Memory;
     dest.u.memory = mem;
@@ -4412,11 +4412,13 @@ bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compress
 
     RG_ASSERT(fp);
     RG_ASSERT(filename);
-    this->filename = filename;
+    this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     dest.type = DestinationType::File;
     dest.u.file.fp = fp;
     dest.u.file.owned = false;
+    dest.u.file.tmp_filename = nullptr;
+    dest.u.file.tmp_exclusive = false;
     dest.vt100 = FileIsVt100(fp);
 
     if (!InitCompressor(compression_type))
@@ -4426,7 +4428,7 @@ bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compress
     return true;
 }
 
-bool StreamWriter::Open(const char *filename, bool overwrite, CompressionType compression_type)
+bool StreamWriter::Open(const char *filename, unsigned int flags, CompressionType compression_type)
 {
     RG_ASSERT(!this->filename);
 
@@ -4436,15 +4438,38 @@ bool StreamWriter::Open(const char *filename, bool overwrite, CompressionType co
     };
 
     RG_ASSERT(filename);
-    this->filename = filename;
-
-    unsigned int flags = (int)OpenFileFlag::Write;
-    flags |= overwrite ? 0 : (int)OpenFileFlag::Exclusive;
+    this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     dest.type = DestinationType::File;
-    dest.u.file.fp = OpenFile(filename, flags);
-    if (!dest.u.file.fp)
-        return false;
+    if (flags & (int)StreamWriterFlag::Atomic) {
+        const char *directory = DuplicateString(GetPathDirectory(filename), &str_alloc).ptr;
+
+        if (flags & (int)StreamWriterFlag::Exclusive) {
+            FILE *fp = OpenFile(filename, (int)OpenFileFlag::Write |
+                                          (int)OpenFileFlag::Exclusive);
+            if (!fp)
+                return false;
+            fclose(fp);
+
+            dest.u.file.tmp_exclusive = true;
+        } else {
+            dest.u.file.tmp_exclusive = false;
+        }
+
+        dest.u.file.tmp_filename = CreateTemporaryFile(directory, "", ".tmp", &str_alloc, &dest.u.file.fp);
+        if (!dest.u.file.tmp_filename)
+            return false;
+    } else {
+        unsigned int open_flags = (int)OpenFileFlag::Write;
+        open_flags |= (flags & (int)StreamWriterFlag::Exclusive) ? (int)OpenFileFlag::Exclusive : 0;
+
+        dest.u.file.fp = OpenFile(filename, open_flags);
+        if (!dest.u.file.fp)
+            return false;
+
+        dest.u.file.tmp_filename = nullptr;
+        dest.u.file.tmp_exclusive = false;
+    }
     dest.u.file.owned = true;
     dest.vt100 = FileIsVt100(dest.u.file.fp);
 
@@ -4465,7 +4490,7 @@ bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, co
         error = true;
     };
 
-    this->filename = filename ? filename : "<closure>";
+    this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<closure>";
 
     dest.type = DestinationType::Function;
     new (&dest.u.func) std::function<bool(Span<const uint8_t>)>(func);
@@ -4519,20 +4544,35 @@ bool StreamWriter::Close()
 #endif
             } break;
         }
+    }
 
-        switch (dest.type) {
-            case DestinationType::Memory: {} break;
+    switch (dest.type) {
+        case DestinationType::Memory: {} break;
 
-            case DestinationType::File: {
-                if (!FlushFile(dest.u.file.fp, filename))
-                    return false;
-            } break;
+        case DestinationType::File: {
+            if (IsValid() && !FlushFile(dest.u.file.fp, filename))
+                return false;
 
-            case DestinationType::Function: {
-                if (!dest.u.func({}))
-                    return false;
-            } break;
-        }
+            if (dest.u.file.tmp_filename) {
+                if (IsValid()) {
+                    fclose(dest.u.file.fp);
+
+                    if (RenameFile(dest.u.file.tmp_filename, filename, true)) {
+                        dest.u.file.tmp_filename = nullptr;
+                        dest.u.file.tmp_exclusive = false;
+                    } else {
+                        error = true;
+                    }
+                } else {
+                    error = true;
+                }
+            }
+        } break;
+
+        case DestinationType::Function: {
+            if (IsValid() && !dest.u.func({}))
+                return false;
+        } break;
     }
 
     return IsValid();
@@ -4659,8 +4699,18 @@ void StreamWriter::ReleaseResources()
                 fclose(dest.u.file.fp);
             }
 
+            // Try to clean up, though we can't do much if that fails (except log error)
+            if (dest.u.file.tmp_filename) {
+                UnlinkFile(dest.u.file.tmp_filename);
+            }
+            if (dest.u.file.tmp_exclusive && filename) {
+                UnlinkFile(filename);
+            }
+
             dest.u.file.fp = nullptr;
             dest.u.file.owned = false;
+            dest.u.file.tmp_filename = nullptr;
+            dest.u.file.tmp_exclusive = false;
         } break;
 
         case DestinationType::Function: {
@@ -4668,6 +4718,8 @@ void StreamWriter::ReleaseResources()
         } break;
     }
     dest.type = DestinationType::Memory;
+
+    str_alloc.ReleaseAll();
 }
 
 #ifdef MZ_VERSION

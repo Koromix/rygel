@@ -85,7 +85,7 @@ bool mco_StaySet::SavePack(StreamWriter *st) const
     return st->Close();
 }
 
-bool mco_StaySet::SavePack(const char *filename, bool overwrite) const
+bool mco_StaySet::SavePack(const char *filename) const
 {
     CompressionType compression_type;
     Span<const char> extension = GetPathExtension(filename, &compression_type);
@@ -94,7 +94,7 @@ bool mco_StaySet::SavePack(const char *filename, bool overwrite) const
         LogError("Unknown packing extension '%1', prefer '.dmpak'", extension);
     }
 
-    StreamWriter st(filename, overwrite, compression_type);
+    StreamWriter st(filename, 0, compression_type);
     return SavePack(&st);
 }
 

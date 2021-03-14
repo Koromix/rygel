@@ -2712,6 +2712,11 @@ public:
     void PushLogFilter();
 };
 
+enum class StreamWriterFlag {
+    Exclusive = 1 << 0,
+    Atomic = 1 << 1
+};
+
 class StreamWriter {
     RG_DELETE_COPY(StreamWriter)
 
@@ -2730,6 +2735,10 @@ class StreamWriter {
             struct {
                 FILE *fp;
                 bool owned;
+
+                // Atomic write mode
+                const char *tmp_filename;
+                bool tmp_exclusive;
             } file;
             std::function<bool(Span<const uint8_t>)> func;
 
@@ -2750,6 +2759,8 @@ class StreamWriter {
 
     bool error = false;
 
+    BlockAllocator str_alloc;
+
 public:
     StreamWriter() { Close(); }
     StreamWriter(HeapArray<uint8_t> *mem, const char *filename = nullptr,
@@ -2758,9 +2769,9 @@ public:
     StreamWriter(FILE *fp, const char *filename,
                  CompressionType compression_type = CompressionType::None)
         : StreamWriter() { Open(fp, filename, compression_type); }
-    StreamWriter(const char *filename, bool overwrite = true,
+    StreamWriter(const char *filename, unsigned int flags = 0,
                  CompressionType compression_type = CompressionType::None)
-        : StreamWriter() { Open(filename, overwrite, compression_type); }
+        : StreamWriter() { Open(filename, flags, compression_type); }
     StreamWriter(const std::function<bool(Span<const uint8_t>)> &func, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
         : StreamWriter() { Open(func, filename, compression_type); }
@@ -2770,7 +2781,7 @@ public:
               CompressionType compression_type = CompressionType::None);
     bool Open(FILE *fp, const char *filename,
               CompressionType compression_type = CompressionType::None);
-    bool Open(const char *filename, bool overwrite = true,
+    bool Open(const char *filename, unsigned int flags = 0,
               CompressionType compression_type = CompressionType::None);
     bool Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
@@ -2795,17 +2806,17 @@ private:
     bool WriteRaw(Span<const uint8_t> buf);
 };
 
-static inline bool WriteFile(Span<const uint8_t> buf, const char *filename, bool overwrite = true,
+static inline bool WriteFile(Span<const uint8_t> buf, const char *filename, unsigned int flags = 0,
                              CompressionType compression_type = CompressionType::None)
 {
-    StreamWriter st(filename, overwrite, compression_type);
+    StreamWriter st(filename, flags, compression_type);
     st.Write(buf);
     return st.Close();
 }
-static inline bool WriteFile(Span<const char> buf, const char *filename, bool overwrite = true,
+static inline bool WriteFile(Span<const char> buf, const char *filename, unsigned int flags = 0,
                              CompressionType compression_type = CompressionType::None)
 {
-    StreamWriter st(filename, overwrite, compression_type);
+    StreamWriter st(filename, flags, compression_type);
     st.Write(buf);
     return st.Close();
 }

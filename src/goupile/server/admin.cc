@@ -670,13 +670,11 @@ Options:
     }
 
     StreamReader reader(archive_filename);
+    StreamWriter writer(output_filename, (int)StreamWriterFlag::Exclusive);
     if (!reader.IsValid())
         return 1;
-
-    StreamWriter writer(output_filename, false);
     if (!writer.IsValid())
         return 1;
-    RG_DEFER_N(output_guard) { UnlinkFile(output_filename); };
 
     if (!decrypt_key) {
         decrypt_key = Prompt("Decryption key: ", "*", &temp_alloc);
@@ -764,8 +762,6 @@ Options:
         return 1;
 
     LogInfo("Decrypted archive: %!..+%1%!0", output_filename);
-    output_guard.Disable();
-
     return 0;
 }
 
@@ -1389,18 +1385,37 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
         if (!async.Sync())
             return;
 
-        // Write archive to temporary file (to avoid listing and download of temporary files)
-        FILE *fp;
-        const char *tmp_filename = CreateTemporaryFile(gp_domain.config.backup_directory, "", ".tmp",
-                                                       &io->allocator, &fp);
-        if (!tmp_filename)
-            return;
-        RG_DEFER_N(tmp_guard) {
-            if (fp) {
-                fclose(fp);
+        // Make archive filename
+        const char *archive_filename;
+        {
+            time_t mtime = (time_t)(GetUnixTime() / 1000);
+
+#ifdef _WIN32
+            struct tm mtime_tm;
+            {
+                errno_t err = _gmtime64_s(&mtime_tm, &mtime);
+                if (err) {
+                    LogError("Failed to format current time: %1", strerror(err));
+                    return;
+                }
             }
-            UnlinkFile(tmp_filename);
-        };
+#else
+            struct tm mtime_tm;
+            if (!gmtime_r(&mtime, &mtime_tm)) {
+                LogError("Failed to format current time: %1", strerror(errno));
+                return;
+            }
+#endif
+
+            char mtime_str[128];
+            if (!strftime(mtime_str, RG_SIZE(mtime_str), "%Y%m%dT%H%M%S%z", &mtime_tm)) {
+                LogError("Failed to format current time: strftime failed");
+                return;
+            }
+
+            archive_filename = Fmt(&io->allocator, "%1%/%2.goupilebackup",
+                                   gp_domain.config.backup_directory, mtime_str).ptr;
+        }
 
         // Closure context for miniz write callback
         struct BackupContext {
@@ -1410,8 +1425,14 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
         };
         BackupContext ctx = {};
 
-        bool success = ctx.writer.Open(fp, tmp_filename);
-        RG_ASSERT(success);
+        // Open archive
+        if (!ctx.writer.Open(archive_filename, (int)StreamWriterFlag::Exclusive |
+                                               (int)StreamWriterFlag::Atomic)) {
+            if (errno == EEXIST) {
+                io->AttachError(409, "Archive already exists");
+            }
+            return;
+        }
 
         // Write archive intro
         {
@@ -1483,15 +1504,16 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
             }
         }
 
-        // Finalize ZIP and encryption
-        {
-            if (!mz_zip_writer_finalize_archive(&zip)) {
-                if (zip.m_last_error != MZ_ZIP_WRITE_CALLBACK_FAILED) {
-                    LogError("Failed to finalize ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
-                }
-                return;
+        // Finalize ZIP
+        if (!mz_zip_writer_finalize_archive(&zip)) {
+            if (zip.m_last_error != MZ_ZIP_WRITE_CALLBACK_FAILED) {
+                LogError("Failed to finalize ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
             }
+            return;
+        }
 
+        // Finalize encryption
+        {
             uint8_t cypher[4096];
             unsigned long long cypher_len;
             if (crypto_secretstream_xchacha20poly1305_push(&ctx.state, cypher, &cypher_len, ctx.buf.data, ctx.buf.len, nullptr, 0,
@@ -1499,65 +1521,15 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
                 LogError("Failed during symmetric encryption");
                 return;
             }
+
             if (!ctx.writer.Write(cypher, (Size)cypher_len))
                 return;
          }
 
-        // Flush buffers
+        // Flush buffers and rename atomically
         if (!ctx.writer.Close())
             return;
-        fclose(fp);
-        fp = nullptr;
 
-        // Atomically rename to final position
-        {
-            time_t mtime = (time_t)(GetUnixTime() / 1000);
-
-#ifdef _WIN32
-            struct tm mtime_tm;
-            {
-                errno_t err = _gmtime64_s(&mtime_tm, &mtime);
-                if (err) {
-                    LogError("Failed to format current time: %1", strerror(err));
-                    return;
-                }
-            }
-#else
-            struct tm mtime_tm;
-            if (!gmtime_r(&mtime, &mtime_tm)) {
-                LogError("Failed to format current time: %1", strerror(errno));
-                return;
-            }
-#endif
-
-            char mtime_str[128];
-            if (!strftime(mtime_str, RG_SIZE(mtime_str), "%Y%m%dT%H%M%S%z", &mtime_tm)) {
-                LogError("Failed to format current time: strftime failed");
-                return;
-            }
-
-            HeapArray<char> buf(&io->allocator);
-            Size offset = Fmt(&buf, "%1%/%2.goupilebackup", gp_domain.config.backup_directory, mtime_str).len - 14;
-
-            if (!RenameFile(tmp_filename, buf.ptr, false)) {
-                int i = 2;
-                for (;;) {
-                    buf.RemoveFrom(offset);
-                    Fmt(&buf, "_%1.goupilebackup", i);
-
-                    if (RenameFile(tmp_filename, buf.ptr, false))
-                        break;
-
-                    if (++i >= 4) {
-                        LogError("Excessive number of simultaneous backups");
-                        io->AttachError(429);
-                        return;
-                    }
-                }
-            }
-        }
-
-        tmp_guard.Disable();
         io->AttachText(200, "Done!");
     });
 }

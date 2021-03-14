@@ -165,7 +165,7 @@ struct mco_StaySet {
     LinkedAllocator array_alloc;
 
     bool SavePack(StreamWriter *st) const;
-    bool SavePack(const char *filename, bool overwrite = true) const;
+    bool SavePack(const char *filename) const;
 };
 
 class mco_StaySetBuilder {
