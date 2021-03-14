@@ -8,6 +8,8 @@ static const char *psa_strerror(psa_status_t status)
     case PSA_ERROR_BUFFER_TOO_SMALL: return "PSA_ERROR_BUFFER_TOO_SMALL";
     case PSA_ERROR_COMMUNICATION_FAILURE: return "PSA_ERROR_COMMUNICATION_FAILURE";
     case PSA_ERROR_CORRUPTION_DETECTED: return "PSA_ERROR_CORRUPTION_DETECTED";
+    case PSA_ERROR_DATA_CORRUPT: return "PSA_ERROR_DATA_CORRUPT";
+    case PSA_ERROR_DATA_INVALID: return "PSA_ERROR_DATA_INVALID";
     case PSA_ERROR_DOES_NOT_EXIST: return "PSA_ERROR_DOES_NOT_EXIST";
     case PSA_ERROR_GENERIC_ERROR: return "PSA_ERROR_GENERIC_ERROR";
     case PSA_ERROR_HARDWARE_FAILURE: return "PSA_ERROR_HARDWARE_FAILURE";
@@ -148,19 +150,27 @@ static int psa_snprint_algorithm(char *buffer, size_t buffer_size,
     unsigned long length_modifier = NO_LENGTH_MODIFIER;
     if (PSA_ALG_IS_MAC(alg)) {
         core_alg = PSA_ALG_TRUNCATED_MAC(alg, 0);
-        if (core_alg != alg) {
+        if (alg & PSA_ALG_MAC_AT_LEAST_THIS_LENGTH_FLAG) {
+            append(&buffer, buffer_size, &required_size,
+                   "PSA_ALG_AT_LEAST_THIS_LENGTH_MAC(", 33);
+            length_modifier = PSA_MAC_TRUNCATED_LENGTH(alg);
+        } else if (core_alg != alg) {
             append(&buffer, buffer_size, &required_size,
                    "PSA_ALG_TRUNCATED_MAC(", 22);
             length_modifier = PSA_MAC_TRUNCATED_LENGTH(alg);
         }
     } else if (PSA_ALG_IS_AEAD(alg)) {
-        core_alg = PSA_ALG_AEAD_WITH_DEFAULT_TAG_LENGTH(alg);
+        core_alg = PSA_ALG_AEAD_WITH_DEFAULT_LENGTH_TAG(alg);
         if (core_alg == 0) {
             /* For unknown AEAD algorithms, there is no "default tag length". */
             core_alg = alg;
+        } else if (alg & PSA_ALG_AEAD_AT_LEAST_THIS_LENGTH_FLAG) {
+            append(&buffer, buffer_size, &required_size,
+                   "PSA_ALG_AEAD_WITH_AT_LEAST_THIS_LENGTH_TAG(", 43);
+            length_modifier = PSA_AEAD_TAG_LENGTH(alg);
         } else if (core_alg != alg) {
             append(&buffer, buffer_size, &required_size,
-                   "PSA_ALG_AEAD_WITH_TAG_LENGTH(", 29);
+                   "PSA_ALG_AEAD_WITH_SHORTENED_TAG(", 32);
             length_modifier = PSA_AEAD_TAG_LENGTH(alg);
         }
     } else if (PSA_ALG_IS_KEY_AGREEMENT(alg) &&

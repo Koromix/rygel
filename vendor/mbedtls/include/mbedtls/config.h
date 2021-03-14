@@ -484,6 +484,11 @@
  * is still present and it is used for group structures not supported by the
  * alternative.
  *
+ * The original implementation can in addition be removed by setting the
+ * MBEDTLS_ECP_NO_FALLBACK option, in which case any function for which the
+ * corresponding MBEDTLS_ECP__FUNCTION_NAME__ALT macro is defined will not be
+ * able to fallback to curves not supported by the alternative implementation.
+ *
  * Any of these options become available by defining MBEDTLS_ECP_INTERNAL_ALT
  * and implementing the following functions:
  *      unsigned char mbedtls_internal_ecp_grp_capable(
@@ -497,21 +502,28 @@
  * called before and after each point operation and provide an opportunity to
  * implement optimized set up and tear down instructions.
  *
- * Example: In case you uncomment MBEDTLS_ECP_INTERNAL_ALT and
- * MBEDTLS_ECP_DOUBLE_JAC_ALT, mbed TLS will still provide the ecp_double_jac
- * function, but will use your mbedtls_internal_ecp_double_jac if the group is
- * supported (your mbedtls_internal_ecp_grp_capable function returns 1 when
- * receives it as an argument). If the group is not supported then the original
- * implementation is used. The other functions and the definition of
- * mbedtls_ecp_group and mbedtls_ecp_point will not change, so your
- * implementation of mbedtls_internal_ecp_double_jac and
- * mbedtls_internal_ecp_grp_capable must be compatible with this definition.
+ * Example: In case you set MBEDTLS_ECP_INTERNAL_ALT and
+ * MBEDTLS_ECP_DOUBLE_JAC_ALT, mbed TLS will still provide the ecp_double_jac()
+ * function, but will use your mbedtls_internal_ecp_double_jac() if the group
+ * for the operation is supported by your implementation (i.e. your
+ * mbedtls_internal_ecp_grp_capable() function returns 1 for this group). If the
+ * group is not supported by your implementation, then the original mbed TLS
+ * implementation of ecp_double_jac() is used instead, unless this fallback
+ * behaviour is disabled by setting MBEDTLS_ECP_NO_FALLBACK (in which case
+ * ecp_double_jac() will return MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE).
+ *
+ * The function prototypes and the definition of mbedtls_ecp_group and
+ * mbedtls_ecp_point will not change based on MBEDTLS_ECP_INTERNAL_ALT, so your
+ * implementation of mbedtls_internal_ecp__function_name__ must be compatible
+ * with their definitions.
  *
  * Uncomment a macro to enable alternate implementation of the corresponding
  * function.
  */
 /* Required for all the functions in this section */
 //#define MBEDTLS_ECP_INTERNAL_ALT
+/* Turn off software fallback for curves not supported in hardware */
+//#define MBEDTLS_ECP_NO_FALLBACK
 /* Support for Weierstrass curves with Jacobi representation */
 //#define MBEDTLS_ECP_RANDOMIZE_JAC_ALT
 //#define MBEDTLS_ECP_ADD_MIXED_ALT
@@ -1326,6 +1338,22 @@
  */
 #define MBEDTLS_PKCS1_V21
 
+/** \def MBEDTLS_PSA_CRYPTO_CLIENT
+ *
+ * Enable support for PSA crypto client.
+ *
+ * \note This option allows to include the code necessary for a PSA
+ *       crypto client when the PSA crypto implementation is not included in
+ *       the library (MBEDTLS_PSA_CRYPTO_C disabled). The code included is the
+ *       code to set and get PSA key attributes.
+ *       The development of PSA drivers partially relying on the library to
+ *       fulfill the hardware gaps is another possible usage of this option.
+ *
+ * \warning This interface is experimental and may change or be removed
+ * without notice.
+ */
+//#define MBEDTLS_PSA_CRYPTO_CLIENT
+
 /** \def MBEDTLS_PSA_CRYPTO_DRIVERS
  *
  * Enable support for the experimental PSA crypto driver interface.
@@ -1336,6 +1364,44 @@
  * without notice.
  */
 //#define MBEDTLS_PSA_CRYPTO_DRIVERS
+
+/** \def MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG
+ *
+ * Make the PSA Crypto module use an external random generator provided
+ * by a driver, instead of Mbed TLS's entropy and DRBG modules.
+ *
+ * \note This random generator must deliver random numbers with cryptographic
+ *       quality and high performance. It must supply unpredictable numbers
+ *       with a uniform distribution. The implementation of this function
+ *       is responsible for ensuring that the random generator is seeded
+ *       with sufficient entropy. If you have a hardware TRNG which is slow
+ *       or delivers non-uniform output, declare it as an entropy source
+ *       with mbedtls_entropy_add_source() instead of enabling this option.
+ *
+ * If you enable this option, you must configure the type
+ * ::mbedtls_psa_external_random_context_t in psa/crypto_platform.h
+ * and define a function called mbedtls_psa_external_get_random()
+ * with the following prototype:
+ * ```
+ * psa_status_t mbedtls_psa_external_get_random(
+ *     mbedtls_psa_external_random_context_t *context,
+ *     uint8_t *output, size_t output_size, size_t *output_length);
+ * );
+ * ```
+ * The \c context value is initialized to 0 before the first call.
+ * The function must fill the \c output buffer with \p output_size bytes
+ * of random data and set \c *output_length to \p output_size.
+ *
+ * Requires: MBEDTLS_PSA_CRYPTO_C
+ *
+ * \warning If you enable this option, code that uses the PSA cryptography
+ *          interface will not use any of the entropy sources set up for
+ *          the entropy module, nor the NV seed that MBEDTLS_ENTROPY_NV_SEED
+ *          enables.
+ *
+ * \note This option is experimental and may be removed without notice.
+ */
+//#define MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG
 
 /**
  * \def MBEDTLS_PSA_CRYPTO_SPM
@@ -1941,7 +2007,10 @@
 /**
  * \def MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
  *
- * Enable modifying the maximum I/O buffer size.
+ * When this option is enabled, the SSL buffer will be resized automatically
+ * based on the negotiated maximum fragment length in each direction.
+ *
+ * Requires: MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
  */
 //#define MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH
 
@@ -3115,7 +3184,9 @@
  *
  * Module:  library/psa_crypto.c
  *
- * Requires: MBEDTLS_CTR_DRBG_C, MBEDTLS_ENTROPY_C
+ * Requires: either MBEDTLS_CTR_DRBG_C and MBEDTLS_ENTROPY_C,
+ *           or MBEDTLS_HMAC_DRBG_C and MBEDTLS_ENTROPY_C,
+ *           or MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG.
  *
  */
 #define MBEDTLS_PSA_CRYPTO_C
@@ -3602,6 +3673,30 @@
  * \param cond  The expression that should evaluate to true, but doesn't.
  */
 //#define MBEDTLS_PARAM_FAILED( cond )               assert( cond )
+
+/* PSA options */
+/**
+ * Use HMAC_DRBG with the specified hash algorithm for HMAC_DRBG for the
+ * PSA crypto subsystem.
+ *
+ * If this option is unset:
+ * - If CTR_DRBG is available, the PSA subsystem uses it rather than HMAC_DRBG.
+ * - Otherwise, the PSA subsystem uses HMAC_DRBG with either
+ *   #MBEDTLS_MD_SHA512 or #MBEDTLS_MD_SHA256 based on availability and
+ *   on unspecified heuristics.
+ */
+//#define MBEDTLS_PSA_HMAC_DRBG_MD_TYPE MBEDTLS_MD_SHA256
+
+/** \def MBEDTLS_PSA_KEY_SLOT_COUNT
+ * Restrict the PSA library to supporting a maximum amount of simultaneously
+ * loaded keys. A loaded key is a key stored by the PSA Crypto core as a
+ * volatile key, or a persistent key which is loaded temporarily by the
+ * library as part of a crypto operation in flight.
+ *
+ * If this option is unset, the library will fall back to a default value of
+ * 32 keys.
+ */
+//#define MBEDTLS_PSA_KEY_SLOT_COUNT 32
 
 /* SSL Cache options */
 //#define MBEDTLS_SSL_CACHE_DEFAULT_TIMEOUT       86400 /**< 1 day  */

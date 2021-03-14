@@ -45,7 +45,7 @@
 
 typedef struct
 {
-    psa_key_slot_t key_slots[PSA_KEY_SLOT_COUNT];
+    psa_key_slot_t key_slots[MBEDTLS_PSA_KEY_SLOT_COUNT];
     unsigned key_slots_initialized : 1;
 } psa_global_data_t;
 
@@ -128,13 +128,13 @@ static psa_status_t psa_get_and_lock_key_slot_in_memory(
         if( status != PSA_SUCCESS )
             return( status );
 
-        for( slot_idx = 0; slot_idx < PSA_KEY_SLOT_COUNT; slot_idx++ )
+        for( slot_idx = 0; slot_idx < MBEDTLS_PSA_KEY_SLOT_COUNT; slot_idx++ )
         {
             slot = &global_data.key_slots[ slot_idx ];
             if( mbedtls_svc_key_id_equal( key, slot->attr.id ) )
                 break;
         }
-        status = ( slot_idx < PSA_KEY_SLOT_COUNT ) ?
+        status = ( slot_idx < MBEDTLS_PSA_KEY_SLOT_COUNT ) ?
                  PSA_SUCCESS : PSA_ERROR_DOES_NOT_EXIST;
     }
 
@@ -161,7 +161,7 @@ void psa_wipe_all_key_slots( void )
 {
     size_t slot_idx;
 
-    for( slot_idx = 0; slot_idx < PSA_KEY_SLOT_COUNT; slot_idx++ )
+    for( slot_idx = 0; slot_idx < MBEDTLS_PSA_KEY_SLOT_COUNT; slot_idx++ )
     {
         psa_key_slot_t *slot = &global_data.key_slots[ slot_idx ];
         slot->lock_count = 1;
@@ -184,7 +184,7 @@ psa_status_t psa_get_empty_key_slot( psa_key_id_t *volatile_key_id,
     }
 
     selected_slot = unlocked_persistent_key_slot = NULL;
-    for( slot_idx = 0; slot_idx < PSA_KEY_SLOT_COUNT; slot_idx++ )
+    for( slot_idx = 0; slot_idx < MBEDTLS_PSA_KEY_SLOT_COUNT; slot_idx++ )
     {
         psa_key_slot_t *slot = &global_data.key_slots[ slot_idx ];
         if( ! psa_is_key_slot_occupied( slot ) )
@@ -248,25 +248,27 @@ static psa_status_t psa_load_persistent_key_into_slot( psa_key_slot_t *slot )
         goto exit;
 
 #if defined(MBEDTLS_PSA_CRYPTO_SE_C)
-    if( psa_key_lifetime_is_external( slot->attr.lifetime ) )
+    /* Special handling is required for loading keys associated with a
+     * dynamically registered SE interface. */
+    const psa_drv_se_t *drv;
+    psa_drv_se_context_t *drv_context;
+    if( psa_get_se_driver( slot->attr.lifetime, &drv, &drv_context ) )
     {
         psa_se_key_data_storage_t *data;
+
         if( key_data_length != sizeof( *data ) )
         {
-            status = PSA_ERROR_STORAGE_FAILURE;
+            status = PSA_ERROR_DATA_INVALID;
             goto exit;
         }
         data = (psa_se_key_data_storage_t *) key_data;
-        memcpy( &slot->data.se.slot_number, &data->slot_number,
-                sizeof( slot->data.se.slot_number ) );
+        status = psa_copy_key_material_into_slot(
+                     slot, data->slot_number, sizeof( data->slot_number ) );
+        goto exit;
     }
-    else
 #endif /* MBEDTLS_PSA_CRYPTO_SE_C */
-    {
-        status = psa_copy_key_material_into_slot( slot, key_data, key_data_length );
-        if( status != PSA_SUCCESS )
-            goto exit;
-    }
+
+    status = psa_copy_key_material_into_slot( slot, key_data, key_data_length );
 
 exit:
     psa_free_persistent_key_data( key_data, key_data_length );
@@ -343,19 +345,26 @@ psa_status_t psa_validate_key_location( psa_key_lifetime_t lifetime,
     if ( psa_key_lifetime_is_external( lifetime ) )
     {
 #if defined(MBEDTLS_PSA_CRYPTO_SE_C)
+        /* Check whether a driver is registered against this lifetime */
         psa_se_drv_table_entry_t *driver = psa_get_se_driver_entry( lifetime );
-        if( driver == NULL )
-            return( PSA_ERROR_INVALID_ARGUMENT );
-        else
+        if( driver != NULL )
         {
             if (p_drv != NULL)
                 *p_drv = driver;
             return( PSA_SUCCESS );
         }
-#else
+#else /* MBEDTLS_PSA_CRYPTO_SE_C */
         (void) p_drv;
-        return( PSA_ERROR_INVALID_ARGUMENT );
 #endif /* MBEDTLS_PSA_CRYPTO_SE_C */
+
+#if defined(MBEDTLS_PSA_CRYPTO_DRIVERS)
+        /* Key location for external keys gets checked by the wrapper */
+        return( PSA_SUCCESS );
+#else /* MBEDTLS_PSA_CRYPTO_DRIVERS */
+        /* No support for external lifetimes at all, or dynamic interface
+         * did not find driver for requested lifetime. */
+        return( PSA_ERROR_INVALID_ARGUMENT );
+#endif /* MBEDTLS_PSA_CRYPTO_DRIVERS */
     }
     else
         /* Local/internal keys are always valid */
@@ -444,7 +453,7 @@ void mbedtls_psa_get_stats( mbedtls_psa_stats_t *stats )
 
     memset( stats, 0, sizeof( *stats ) );
 
-    for( slot_idx = 0; slot_idx < PSA_KEY_SLOT_COUNT; slot_idx++ )
+    for( slot_idx = 0; slot_idx < MBEDTLS_PSA_KEY_SLOT_COUNT; slot_idx++ )
     {
         const psa_key_slot_t *slot = &global_data.key_slots[ slot_idx ];
         if( psa_is_key_slot_locked( slot ) )

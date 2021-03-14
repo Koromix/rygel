@@ -270,6 +270,46 @@
  */
 #define PSA_ERROR_INVALID_HANDLE        ((psa_status_t)-136)
 
+/** Stored data has been corrupted.
+ *
+ * This error indicates that some persistent storage has suffered corruption.
+ * It does not indicate the following situations, which have specific error
+ * codes:
+ *
+ * - A corruption of volatile memory - use #PSA_ERROR_CORRUPTION_DETECTED.
+ * - A communication error between the cryptoprocessor and its external
+ *   storage - use #PSA_ERROR_COMMUNICATION_FAILURE.
+ * - When the storage is in a valid state but is full - use
+ *   #PSA_ERROR_INSUFFICIENT_STORAGE.
+ * - When the storage fails for other reasons - use
+ *   #PSA_ERROR_STORAGE_FAILURE.
+ * - When the stored data is not valid - use #PSA_ERROR_DATA_INVALID.
+ *
+ * \note A storage corruption does not indicate that any data that was
+ * previously read is invalid. However this previously read data might no
+ * longer be readable from storage.
+ *
+ * When a storage failure occurs, it is no longer possible to ensure the
+ * global integrity of the keystore.
+ */
+#define PSA_ERROR_DATA_CORRUPT          ((psa_status_t)-152)
+
+/** Data read from storage is not valid for the implementation.
+ *
+ * This error indicates that some data read from storage does not have a valid
+ * format. It does not indicate the following situations, which have specific
+ * error codes:
+ *
+ * - When the storage or stored data is corrupted - use #PSA_ERROR_DATA_CORRUPT
+ * - When the storage fails for other reasons - use #PSA_ERROR_STORAGE_FAILURE
+ * - An invalid argument to the API - use #PSA_ERROR_INVALID_ARGUMENT
+ *
+ * This error is typically a result of either storage corruption on a
+ * cleartext storage backend, or an attempt to read data that was
+ * written by an incompatible version of the library.
+ */
+#define PSA_ERROR_DATA_INVALID          ((psa_status_t)-153)
+
 /**@}*/
 
 /** \defgroup crypto_types Key and algorithm types
@@ -363,7 +403,7 @@
  * used for.
  *
  * HMAC keys should generally have the same size as the underlying hash.
- * This size can be calculated with #PSA_HASH_SIZE(\c alg) where
+ * This size can be calculated with #PSA_HASH_LENGTH(\c alg) where
  * \c alg is the HMAC algorithm or the underlying hash algorithm. */
 #define PSA_KEY_TYPE_HMAC                           ((psa_key_type_t)0x1100)
 
@@ -594,9 +634,9 @@
  *
  * \warning This macro may evaluate its argument multiple times.
  */
-#define PSA_BLOCK_CIPHER_BLOCK_SIZE(type)            \
+#define PSA_BLOCK_CIPHER_BLOCK_LENGTH(type)                                     \
     (((type) & PSA_KEY_TYPE_CATEGORY_MASK) == PSA_KEY_TYPE_CATEGORY_SYMMETRIC ? \
-     1u << PSA_GET_KEY_TYPE_BLOCK_SIZE_EXPONENT(type) :                 \
+     1u << PSA_GET_KEY_TYPE_BLOCK_SIZE_EXPONENT(type) :                         \
      0u)
 
 /** Vendor-defined algorithm flag.
@@ -826,6 +866,14 @@
 #define PSA_ALG_MAC_TRUNCATION_MASK             ((psa_algorithm_t)0x003f0000)
 #define PSA_MAC_TRUNCATION_OFFSET 16
 
+/* In the encoding of a MAC algorithm, the bit corresponding to
+ * #PSA_ALG_MAC_AT_LEAST_THIS_LENGTH_FLAG encodes the fact that the algorithm
+ * is a wildcard algorithm. A key with such wildcard algorithm as permitted
+ * algorithm policy can be used with any algorithm corresponding to the
+ * same base class and having a (potentially truncated) MAC length greater or
+ * equal than the one encoded in #PSA_ALG_MAC_TRUNCATION_MASK. */
+#define PSA_ALG_MAC_AT_LEAST_THIS_LENGTH_FLAG   ((psa_algorithm_t)0x00008000)
+
 /** Macro to build a truncated MAC algorithm.
  *
  * A truncated MAC algorithm is identical to the corresponding MAC
@@ -859,8 +907,9 @@
  *                      MAC algorithm or if \p mac_length is too small or
  *                      too large for the specified MAC algorithm.
  */
-#define PSA_ALG_TRUNCATED_MAC(mac_alg, mac_length)                      \
-    (((mac_alg) & ~PSA_ALG_MAC_TRUNCATION_MASK) |                       \
+#define PSA_ALG_TRUNCATED_MAC(mac_alg, mac_length)              \
+    (((mac_alg) & ~(PSA_ALG_MAC_TRUNCATION_MASK |               \
+                    PSA_ALG_MAC_AT_LEAST_THIS_LENGTH_FLAG)) |   \
      ((mac_length) << PSA_MAC_TRUNCATION_OFFSET & PSA_ALG_MAC_TRUNCATION_MASK))
 
 /** Macro to build the base MAC algorithm corresponding to a truncated
@@ -875,8 +924,9 @@
  * \return              Unspecified if \p alg is not a supported
  *                      MAC algorithm.
  */
-#define PSA_ALG_FULL_LENGTH_MAC(mac_alg)        \
-    ((mac_alg) & ~PSA_ALG_MAC_TRUNCATION_MASK)
+#define PSA_ALG_FULL_LENGTH_MAC(mac_alg)                        \
+    ((mac_alg) & ~(PSA_ALG_MAC_TRUNCATION_MASK |                \
+                   PSA_ALG_MAC_AT_LEAST_THIS_LENGTH_FLAG))
 
 /** Length to which a MAC algorithm is truncated.
  *
@@ -891,6 +941,34 @@
  */
 #define PSA_MAC_TRUNCATED_LENGTH(mac_alg)                               \
     (((mac_alg) & PSA_ALG_MAC_TRUNCATION_MASK) >> PSA_MAC_TRUNCATION_OFFSET)
+
+/** Macro to build a MAC minimum-MAC-length wildcard algorithm.
+ *
+ * A minimum-MAC-length MAC wildcard algorithm permits all MAC algorithms
+ * sharing the same base algorithm, and where the (potentially truncated) MAC
+ * length of the specific algorithm is equal to or larger then the wildcard
+ * algorithm's minimum MAC length.
+ *
+ * \note    When setting the minimum required MAC length to less than the
+ *          smallest MAC length allowed by the base algorithm, this effectively
+ *          becomes an 'any-MAC-length-allowed' policy for that base algorithm.
+ *
+ * \param mac_alg         A MAC algorithm identifier (value of type
+ *                        #psa_algorithm_t such that #PSA_ALG_IS_MAC(\p mac_alg)
+ *                        is true).
+ * \param min_mac_length  Desired minimum length of the message authentication
+ *                        code in bytes. This must be at most the untruncated
+ *                        length of the MAC and must be at least 1.
+ *
+ * \return                The corresponding MAC wildcard algorithm with the
+ *                        specified minimum length.
+ * \return                Unspecified if \p mac_alg is not a supported MAC
+ *                        algorithm or if \p min_mac_length is less than 1 or
+ *                        too large for the specified MAC algorithm.
+ */
+#define PSA_ALG_AT_LEAST_THIS_LENGTH_MAC(mac_alg, min_mac_length)   \
+    ( PSA_ALG_TRUNCATED_MAC(mac_alg, min_mac_length) |              \
+      PSA_ALG_MAC_AT_LEAST_THIS_LENGTH_FLAG )
 
 #define PSA_ALG_CIPHER_MAC_BASE                 ((psa_algorithm_t)0x03c00000)
 /** The CBC-MAC construction over a block cipher
@@ -1052,6 +1130,14 @@
 #define PSA_ALG_AEAD_TAG_LENGTH_MASK            ((psa_algorithm_t)0x003f0000)
 #define PSA_AEAD_TAG_LENGTH_OFFSET 16
 
+/* In the encoding of an AEAD algorithm, the bit corresponding to
+ * #PSA_ALG_AEAD_AT_LEAST_THIS_LENGTH_FLAG encodes the fact that the algorithm
+ * is a wildcard algorithm. A key with such wildcard algorithm as permitted
+ * algorithm policy can be used with any algorithm corresponding to the
+ * same base class and having a tag length greater than or equal to the one
+ * encoded in #PSA_ALG_AEAD_TAG_LENGTH_MASK. */
+#define PSA_ALG_AEAD_AT_LEAST_THIS_LENGTH_FLAG  ((psa_algorithm_t)0x00008000)
+
 /** Macro to build a shortened AEAD algorithm.
  *
  * A shortened AEAD algorithm is similar to the corresponding AEAD
@@ -1070,10 +1156,26 @@
  *                      AEAD algorithm or if \p tag_length is not valid
  *                      for the specified AEAD algorithm.
  */
-#define PSA_ALG_AEAD_WITH_TAG_LENGTH(aead_alg, tag_length)              \
-    (((aead_alg) & ~PSA_ALG_AEAD_TAG_LENGTH_MASK) |                     \
+#define PSA_ALG_AEAD_WITH_SHORTENED_TAG(aead_alg, tag_length)           \
+    (((aead_alg) & ~(PSA_ALG_AEAD_TAG_LENGTH_MASK |                     \
+                     PSA_ALG_AEAD_AT_LEAST_THIS_LENGTH_FLAG)) |         \
      ((tag_length) << PSA_AEAD_TAG_LENGTH_OFFSET &                      \
       PSA_ALG_AEAD_TAG_LENGTH_MASK))
+
+/** Retrieve the tag length of a specified AEAD algorithm
+ *
+ * \param aead_alg      An AEAD algorithm identifier (value of type
+ *                      #psa_algorithm_t such that #PSA_ALG_IS_AEAD(\p alg)
+ *                      is true).
+ *
+ * \return              The tag length specified by the input algorithm.
+ * \return              Unspecified if \p alg is not a supported
+ *                      AEAD algorithm or if \p tag_length is not valid
+ *                      for the specified AEAD algorithm.
+ */
+#define PSA_ALG_AEAD_GET_TAG_LENGTH(aead_alg)                           \
+    (((aead_alg) & PSA_ALG_AEAD_TAG_LENGTH_MASK) >>                     \
+      PSA_AEAD_TAG_LENGTH_OFFSET )
 
 /** Calculate the corresponding AEAD algorithm with the default tag length.
  *
@@ -1083,16 +1185,44 @@
  * \return              The corresponding AEAD algorithm with the default
  *                      tag length for that algorithm.
  */
-#define PSA_ALG_AEAD_WITH_DEFAULT_TAG_LENGTH(aead_alg)                   \
+#define PSA_ALG_AEAD_WITH_DEFAULT_LENGTH_TAG(aead_alg)                   \
     (                                                                    \
-        PSA_ALG_AEAD_WITH_DEFAULT_TAG_LENGTH_CASE(aead_alg, PSA_ALG_CCM) \
-        PSA_ALG_AEAD_WITH_DEFAULT_TAG_LENGTH_CASE(aead_alg, PSA_ALG_GCM) \
-        PSA_ALG_AEAD_WITH_DEFAULT_TAG_LENGTH_CASE(aead_alg, PSA_ALG_CHACHA20_POLY1305) \
+        PSA_ALG_AEAD_WITH_DEFAULT_LENGTH_TAG_CASE(aead_alg, PSA_ALG_CCM) \
+        PSA_ALG_AEAD_WITH_DEFAULT_LENGTH_TAG_CASE(aead_alg, PSA_ALG_GCM) \
+        PSA_ALG_AEAD_WITH_DEFAULT_LENGTH_TAG_CASE(aead_alg, PSA_ALG_CHACHA20_POLY1305) \
         0)
-#define PSA_ALG_AEAD_WITH_DEFAULT_TAG_LENGTH_CASE(aead_alg, ref)         \
-    PSA_ALG_AEAD_WITH_TAG_LENGTH(aead_alg, 0) ==                         \
-    PSA_ALG_AEAD_WITH_TAG_LENGTH(ref, 0) ?                               \
+#define PSA_ALG_AEAD_WITH_DEFAULT_LENGTH_TAG_CASE(aead_alg, ref)         \
+    PSA_ALG_AEAD_WITH_SHORTENED_TAG(aead_alg, 0) ==                      \
+    PSA_ALG_AEAD_WITH_SHORTENED_TAG(ref, 0) ?                            \
     ref :
+
+/** Macro to build an AEAD minimum-tag-length wildcard algorithm.
+ *
+ * A minimum-tag-length AEAD wildcard algorithm permits all AEAD algorithms
+ * sharing the same base algorithm, and where the tag length of the specific
+ * algorithm is equal to or larger then the minimum tag length specified by the
+ * wildcard algorithm.
+ *
+ * \note    When setting the minimum required tag length to less than the
+ *          smallest tag length allowed by the base algorithm, this effectively
+ *          becomes an 'any-tag-length-allowed' policy for that base algorithm.
+ *
+ * \param aead_alg        An AEAD algorithm identifier (value of type
+ *                        #psa_algorithm_t such that
+ *                        #PSA_ALG_IS_AEAD(\p aead_alg) is true).
+ * \param min_tag_length  Desired minimum length of the authentication tag in
+ *                        bytes. This must be at least 1 and at most the largest
+ *                        allowed tag length of the algorithm.
+ *
+ * \return                The corresponding AEAD wildcard algorithm with the
+ *                        specified minimum length.
+ * \return                Unspecified if \p aead_alg is not a supported
+ *                        AEAD algorithm or if \p min_tag_length is less than 1
+ *                        or too large for the specified AEAD algorithm.
+ */
+#define PSA_ALG_AEAD_WITH_AT_LEAST_THIS_LENGTH_TAG(aead_alg, min_tag_length) \
+    ( PSA_ALG_AEAD_WITH_SHORTENED_TAG(aead_alg, min_tag_length) |            \
+      PSA_ALG_AEAD_AT_LEAST_THIS_LENGTH_FLAG )
 
 #define PSA_ALG_RSA_PKCS1V15_SIGN_BASE          ((psa_algorithm_t)0x06000200)
 /** RSA PKCS#1 v1.5 signature with hashing.
@@ -1540,9 +1670,13 @@
  * \return This macro may return either 0 or 1 if \c alg is not a supported
  *         algorithm identifier.
  */
-#define PSA_ALG_IS_WILDCARD(alg)                        \
-    (PSA_ALG_IS_HASH_AND_SIGN(alg) ?                    \
-     PSA_ALG_SIGN_GET_HASH(alg) == PSA_ALG_ANY_HASH :   \
+#define PSA_ALG_IS_WILDCARD(alg)                            \
+    (PSA_ALG_IS_HASH_AND_SIGN(alg) ?                        \
+     PSA_ALG_SIGN_GET_HASH(alg) == PSA_ALG_ANY_HASH :       \
+     PSA_ALG_IS_MAC(alg) ?                                  \
+     (alg & PSA_ALG_MAC_AT_LEAST_THIS_LENGTH_FLAG) != 0 :   \
+     PSA_ALG_IS_AEAD(alg) ?                                 \
+     (alg & PSA_ALG_AEAD_AT_LEAST_THIS_LENGTH_FLAG) != 0 :  \
      (alg) == PSA_ALG_ANY_HASH)
 
 /**@}*/
@@ -1568,13 +1702,12 @@
  *
  * A persistent key remains in storage until it is explicitly destroyed or
  * until the corresponding storage area is wiped. This specification does
- * not define any mechanism to wipe a storage area, but implementations may
+ * not define any mechanism to wipe a storage area, but integrations may
  * provide their own mechanism (for example to perform a factory reset,
  * to prepare for device refurbishment, or to uninstall an application).
  *
  * This lifetime value is the default storage area for the calling
- * application. Implementations may offer other storage areas designated
- * by other lifetime values as implementation-specific extensions.
+ * application. Integrations of Mbed TLS may support other persistent lifetimes.
  * See ::psa_key_lifetime_t for more information.
  */
 #define PSA_KEY_LIFETIME_PERSISTENT             ((psa_key_lifetime_t)0x00000001)

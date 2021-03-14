@@ -252,6 +252,10 @@
 #error "MBEDTLS_ECP_NORMALIZE_MXZ_ALT defined, but not all prerequisites"
 #endif
 
+#if defined(MBEDTLS_ECP_NO_FALLBACK) && !defined(MBEDTLS_ECP_INTERNAL_ALT)
+#error "MBEDTLS_ECP_NO_FALLBACK defined, but no alternative implementation enabled"
+#endif
+
 #if defined(MBEDTLS_HAVEGE_C) && !defined(MBEDTLS_TIMING_C)
 #error "MBEDTLS_HAVEGE_C defined, but not all prerequisites"
 #endif
@@ -572,10 +576,11 @@
 #error "MBEDTLS_PLATFORM_NV_SEED_WRITE_MACRO and MBEDTLS_PLATFORM_STD_NV_SEED_WRITE cannot be defined simultaneously"
 #endif
 
-#if defined(MBEDTLS_PSA_CRYPTO_C) &&            \
-    !( defined(MBEDTLS_CTR_DRBG_C) &&           \
-       defined(MBEDTLS_ENTROPY_C) )
-#error "MBEDTLS_PSA_CRYPTO_C defined, but not all prerequisites"
+#if defined(MBEDTLS_PSA_CRYPTO_C) &&                                    \
+    !( ( ( defined(MBEDTLS_CTR_DRBG_C) || defined(MBEDTLS_HMAC_DRBG_C) ) && \
+         defined(MBEDTLS_ENTROPY_C) ) ||                                \
+       defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG) )
+#error "MBEDTLS_PSA_CRYPTO_C defined, but not all prerequisites (missing RNG)"
 #endif
 
 #if defined(MBEDTLS_PSA_CRYPTO_SPM) && !defined(MBEDTLS_PSA_CRYPTO_C)
@@ -602,6 +607,11 @@
 #if defined(MBEDTLS_PSA_INJECT_ENTROPY) &&              \
     !defined(MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES)
 #error "MBEDTLS_PSA_INJECT_ENTROPY is not compatible with actual entropy sources"
+#endif
+
+#if defined(MBEDTLS_PSA_INJECT_ENTROPY) &&              \
+    defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG)
+#error "MBEDTLS_PSA_INJECT_ENTROPY is not compatible with MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG"
 #endif
 
 #if defined(MBEDTLS_PSA_ITS_FILE_C) && \
@@ -878,6 +888,10 @@
 
 #if defined(MBEDTLS_SSL_DTLS_SRTP) && ( !defined(MBEDTLS_SSL_PROTO_DTLS) )
 #error "MBEDTLS_SSL_DTLS_SRTP defined, but not all prerequisites"
+#endif
+
+#if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH) && ( !defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH) )
+#error "MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH defined, but not all prerequisites"
 #endif
 
 /*
