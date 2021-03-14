@@ -1627,10 +1627,13 @@ void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
         if (!StatFile(filename, &file_info))
             return false;
 
-        json.StartObject();
-        json.Key("filename"); json.String(basename);
-        json.Key("size"); json.Int64(file_info.size);
-        json.EndObject();
+        // Don't list backups currently in creation
+        if (file_info.size) {
+            json.StartObject();
+            json.Key("filename"); json.String(basename);
+            json.Key("size"); json.Int64(file_info.size);
+            json.EndObject();
+        }
 
         return true;
     });
