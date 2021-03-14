@@ -1752,12 +1752,14 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
         // Read POST values
         const char *username;
         const char *password;
+        const char *email;
         bool admin;
         {
             bool valid = true;
 
             username = values.FindValue("username", nullptr);
             password = values.FindValue("password", nullptr);
+            email = values.FindValue("email", nullptr);
             if (!username || !password) {
                 LogError("Missing 'username' or 'password' parameter");
                 valid = false;
@@ -1767,6 +1769,10 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
             }
             if (password && !password[0]) {
                 LogError("Empty password is not allowed");
+                valid = false;
+            }
+            if (email && !strchr(email, '@')) {
+                LogError("Invalid email address format");
                 valid = false;
             }
 
@@ -1817,9 +1823,9 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
                 return false;
 
             // Create user
-            if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, admin, local_key)
-                                     VALUES (?1, ?2, ?3, ?4))",
-                                  username, hash, 0 + admin, local_key))
+            if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, email, admin, local_key)
+                                     VALUES (?1, ?2, ?3, ?4, ?5))",
+                                  username, hash, email, 0 + admin, local_key))
                 return false;
 
             io->AttachText(200, "Done!");
@@ -1858,6 +1864,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
         int64_t userid;
         const char *username;
         const char *password;
+        const char *email;
         bool admin, set_admin = false;
         {
             bool valid = true;
@@ -1872,11 +1879,16 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
 
             username = values.FindValue("username", nullptr);
             password = values.FindValue("password", nullptr);
+            email = values.FindValue("email", nullptr);
             if (username && !CheckUserName(username)) {
                 valid = false;
             }
             if (password && !password[0]) {
                 LogError("Empty password is not allowed");
+                valid = false;
+            }
+            if (email && !strchr(email, '@')) {
+                LogError("Invalid email address format");
                 valid = false;
             }
 
@@ -1932,6 +1944,8 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
             if (username && !gp_domain.db.Run("UPDATE dom_users SET username = ?2 WHERE userid = ?1", userid, username))
                 return false;
             if (password && !gp_domain.db.Run("UPDATE dom_users SET password_hash = ?2 WHERE userid = ?1", userid, hash))
+                return false;
+            if (email && !gp_domain.db.Run("UPDATE dom_users SET email = ?2 WHERE userid = ?1", userid, email))
                 return false;
             if (set_admin && !gp_domain.db.Run("UPDATE dom_users SET admin = ?2 WHERE userid = ?1", userid, 0 + admin))
                 return false;
@@ -2048,7 +2062,8 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!gp_domain.db.Prepare("SELECT userid, username, admin FROM dom_users ORDER BY username", &stmt))
+    if (!gp_domain.db.Prepare(R"(SELECT userid, username, email, admin FROM dom_users
+                                 ORDER BY username)", &stmt))
         return;
 
     // Export data
@@ -2059,7 +2074,12 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
         json.StartObject();
         json.Key("userid"); json.Int64(sqlite3_column_int64(stmt, 0));
         json.Key("username"); json.String((const char *)sqlite3_column_text(stmt, 1));
-        json.Key("admin"); json.Bool(sqlite3_column_int(stmt, 2));
+        if (sqlite3_column_type(stmt, 2) != SQLITE_NULL) {
+            json.Key("email"); json.String((const char *)sqlite3_column_text(stmt, 2));
+        } else {
+            json.Key("email"); json.Null();
+        }
+        json.Key("admin"); json.Bool(sqlite3_column_int(stmt, 3));
         json.EndObject();
     }
     if (!stmt.IsValid())

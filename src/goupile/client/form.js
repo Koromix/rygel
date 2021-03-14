@@ -181,6 +181,7 @@ function FormBuilder(state, model, readonly = false) {
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type="password" class="fm_input" style=${makeInputStyle(options)}
+                   placeholder=${options.placeholder || ''}
                    .value=${value || ''}
                    ?disabled=${options.disabled} ?readonly=${options.readonly}
                    @input=${e => handleTextInput(e, key)} />

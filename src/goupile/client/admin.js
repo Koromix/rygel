@@ -123,6 +123,7 @@ function AdminController() {
                 <table class="ui_table" style="table-layout: fixed;">
                     <colgroup>
                         ${selected_instance == null ? html`
+                            <col style="width: 100px;"/>
                             <col/>
                             <col style="width: 100px;"/>
                         ` : ''}
@@ -136,7 +137,7 @@ function AdminController() {
                     </colgroup>
 
                     <tbody>
-                        ${!users.length ? html`<tr><td colspan=${selected_instance != null ? 5 : 2}>Aucun utilisateur</td></tr>` : ''}
+                        ${!users.length ? html`<tr><td colspan=${selected_instance != null ? 5 : 3}>Aucun utilisateur</td></tr>` : ''}
                         ${users.map(user => {
                             let permissions;
                             if (selected_instance != null) {
@@ -151,6 +152,9 @@ function AdminController() {
                                         ${user.username}
                                         ${user.admin ? html`<span style="color: red;" title="Administrateur">♛\uFE0F</span>` : ''}
                                     </td>
+                                    ${selected_instance == null && user.email != null ?
+                                        html`<td style="text-align: left;"><a href=${'mailto:' + user.email}>${user.email}</a></td>` : ''}
+                                    ${selected_instance == null && user.email == null ? html`<td></td>` : ''}
                                     <td><a role="button" tabindex="0"
                                            @click=${ui.wrapAction(e => runEditUserDialog(e, user))}>Modifier</a></td>
                                     ${selected_instance != null ? html`
@@ -480,16 +484,23 @@ function AdminController() {
             let username = d.text('*username', 'Nom d\'utilisateur');
 
             let password = d.password('*password', 'Mot de passe');
-            let password2 = d.password('*password2', 'Confirmation');
+            let password2 = d.password('password2', null, {
+                placeholder: 'Confirmation'
+            });
             if (password.value != null && password2.value != null && password.value !== password2.value)
                 password2.error('Les mots de passe sont différents');
 
+            let email = d.text('email', 'Courriel');
+            if (email.value != null && !email.value.includes('@'))
+                email.error('Format non valide');
             let admin = d.boolean('*admin', 'Administrateur', {value: false, untoggle: false});
 
             d.action('Créer', {disabled: !d.isValid()}, async () => {
                 let query = new URLSearchParams;
                 query.set('username', username.value);
                 query.set('password', password.value);
+                if (email.value != null)
+                    query.set('email', email.value);
                 query.set('admin', admin.value ? 1 : 0);
 
                 let response = await net.fetch('/admin/api/users/create', {
@@ -576,12 +587,17 @@ function AdminController() {
                 d.tab('Modifier', () => {
                     let username = d.text('username', 'Nom d\'utilisateur', {value: user.username});
 
-                    let password = d.password('password', 'Mot de passe', {
-                        help: "Laissez vide pour ne pas modifier"
+                    let password = d.password('password', 'Mot de passe');
+                    let password2 = d.password('password2', null, {
+                        placeholder: 'Confirmation',
+                        help: 'Laissez vide pour ne pas modifier'
                     });
-                    let password2 = d.password('password2', 'Confirmation');
                     if (password.value != null && password2.value != null && password.value !== password2.value)
                         password2.error('Les mots de passe sont différents');
+
+                    let email = d.text('email', 'Courriel', {value: user.email});
+                    if (email.value != null && !email.value.includes('@'))
+                        email.error('Format non valide');
 
                     let admin = d.boolean('*admin', 'Administrateur', {value: user.admin});
 
@@ -592,6 +608,8 @@ function AdminController() {
                             query.set('username', username.value);
                         if (password.value != null)
                             query.set('password', password.value);
+                        if (email.value != null)
+                            query.set('email', email.value);
                         query.set('admin', admin.value ? 1 : 0);
 
                         let response = await net.fetch('/admin/api/users/edit', {
