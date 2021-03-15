@@ -14,7 +14,7 @@
 #include "../../core/libcc/libcc.hh"
 #include "goupile.hh"
 #include "instance.hh"
-#include "user.hh"
+#include "session.hh"
 #include "../../core/libwrap/json.hh"
 
 namespace RG {

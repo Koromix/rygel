@@ -18,7 +18,7 @@
 #include "goupile.hh"
 #include "instance.hh"
 #include "records.hh"
-#include "user.hh"
+#include "session.hh"
 #include "../../web/libhttp/libhttp.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 #ifndef _WIN32
@@ -211,11 +211,11 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         if (TestStr(admin_url, "/api/session/ping") && request.method == http_RequestMethod::Get) {
             HandlePing(request, io);
         } else if (TestStr(admin_url, "/api/session/profile") && request.method == http_RequestMethod::Get) {
-            HandleUserProfile(nullptr, request, io);
+            HandleSessionProfile(nullptr, request, io);
         } else if (TestStr(admin_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
-            HandleUserLogin(nullptr, request, io);
+            HandleSessionLogin(nullptr, request, io);
         } else if (TestStr(admin_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
-            HandleUserLogout(nullptr, request, io);
+            HandleSessionLogout(nullptr, request, io);
         } else if (TestStr(admin_url, "/api/instances/create") && request.method == http_RequestMethod::Post) {
             HandleInstanceCreate(request, io);
         } else if (TestStr(admin_url, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
@@ -366,11 +366,11 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         if (TestStr(instance_url, "/api/session/ping") && request.method == http_RequestMethod::Get) {
             HandlePing(request, io);
         } else if (TestStr(instance_url, "/api/session/profile") && request.method == http_RequestMethod::Get) {
-            HandleUserProfile(instance, request, io);
+            HandleSessionProfile(instance, request, io);
         } else if (TestStr(instance_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
-            HandleUserLogin(instance, request, io);
+            HandleSessionLogin(instance, request, io);
         } else if (TestStr(instance_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
-            HandleUserLogout(instance, request, io);
+            HandleSessionLogout(instance, request, io);
         } else if (TestStr(instance_url, "/api/files/static") && request.method == http_RequestMethod::Get) {
              HandleFileStatic(instance, request, io);
         } else if (TestStr(instance_url, "/api/files/list") && request.method == http_RequestMethod::Get) {

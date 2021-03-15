@@ -70,8 +70,8 @@ public:
 
 RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http_IO *io);
 
-void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleUserLogout(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleUserProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleSessionLogout(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
 }

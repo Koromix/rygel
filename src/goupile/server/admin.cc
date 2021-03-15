@@ -16,7 +16,7 @@
 #include "domain.hh"
 #include "goupile.hh"
 #include "instance.hh"
-#include "user.hh"
+#include "session.hh"
 #include "../../core/libwrap/json.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 #include "../../../vendor/miniz/miniz.h"

@@ -15,7 +15,7 @@
 #include "domain.hh"
 #include "goupile.hh"
 #include "instance.hh"
-#include "user.hh"
+#include "session.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
@@ -222,7 +222,7 @@ RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http
     return session;
 }
 
-void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     io->RunAsync([=]() {
         // Read POST values
@@ -312,13 +312,13 @@ void HandleUserLogin(InstanceHolder *instance, const http_RequestInfo &request, 
     });
 }
 
-void HandleUserLogout(InstanceHolder *, const http_RequestInfo &request, http_IO *io)
+void HandleSessionLogout(InstanceHolder *, const http_RequestInfo &request, http_IO *io)
 {
     sessions.Close(request, io);
     io->AttachText(200, "Done!");
 }
 
-void HandleUserProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
     WriteProfileJson(session.GetRaw(), instance, request, io);
