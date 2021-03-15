@@ -490,7 +490,7 @@ void http_IO::AddCachingHeaders(int max_age, const char *etag)
     if (max_age || etag) {
         char buf[128];
 
-        AddHeader("Cache-Control", max_age ? Fmt(buf, "max-age=%1", max_age).ptr : "no-cache");
+        AddHeader("Cache-Control", max_age ? Fmt(buf, "max-age=%1", max_age).ptr : "no-store");
         if (etag) {
             AddHeader("ETag", etag);
         }
