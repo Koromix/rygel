@@ -156,8 +156,19 @@ function InstanceController() {
     function renderMenu() {
         return html`
             ${!goupile.isLocked() ? html`
-                <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
-                        @click=${e => self.go(e, ENV.urls.instance)}>${ENV.title}</button>
+                ${ENV.instances == null ?
+                    html`<button class="icon" style="background-position-y: calc(-538px + 1.2em);"
+                                 @click=${e => self.go(e, ENV.urls.instance)}>${ENV.title}</button>` : ''}
+                ${ENV.instances != null ? html`
+                    <div class="drop">
+                        <button class="icon" style="background-position-y: calc(-538px + 1.2em);">${ENV.title}</button>
+                        <div>
+                            ${ENV.instances.map(instance =>
+                                html`<button class=${instance.url === ENV.urls.instance ? 'active' : ''}
+                                             @click=${e => self.go(e, instance.url)}>${instance.title}</button>`)}
+                        </div>
+                    </div>
+                ` : ''}
                 ${goupile.hasPermission('admin_develop') ? html`
                     <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
                             style="background-position-y: calc(-230px + 1.2em);"
@@ -1377,8 +1388,15 @@ function InstanceController() {
                 url = new URL(app.home.url, window.location.href);
 
             // Goodbye!
-            if (!url.pathname.startsWith(`${ENV.urls.instance}main/`))
+            if (!url.pathname.startsWith(`${ENV.urls.instance}main/`)) {
+                if (self.hasUnsavedData())
+                    await goupile.confirmDangerousAction(e);
+
+                window.onbeforeunload = null;
                 window.location.href = url.href;
+
+                return;
+            }
 
             let path = url.pathname.substr(ENV.urls.instance.length + 5);
             let [key, what] = path.split('/').map(str => str.trim());
@@ -1519,7 +1537,7 @@ function InstanceController() {
         }
 
         // Confirm dangerous actions (at risk of data loss)
-        if (form_state != null && form_state.hasChanged() && new_record !== form_record) {
+        if (self.hasUnsavedData() && new_record !== form_record) {
             try {
                 // XXX: Improve message if going to child form
                 await goupile.confirmDangerousAction(e);

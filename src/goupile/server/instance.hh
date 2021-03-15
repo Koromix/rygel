@@ -33,20 +33,25 @@ static const char *const SyncModeNames[] = {
 };
 
 class InstanceHolder {
-    mutable std::atomic_int refcount {0};
-
     // Managed by DomainHolder
-    bool unload = false;
+
+    mutable std::atomic_int refcount {0};
     std::atomic_bool reload {false};
-    std::atomic_int slaves {0};
+    bool unload = false;
 
 public:
-    int64_t unique = -1;
+    struct SlaveInfo {
+        const char *key;
+        const char *title;
+    };
 
+    int64_t unique = -1;
     Span<const char> key = {};
     const char *filename = nullptr;
     sq_Database db;
+
     InstanceHolder *master = nullptr;
+    HeapArray<SlaveInfo> slaves;
 
     struct {
         const char *title = nullptr;
@@ -61,17 +66,16 @@ public:
 
     ~InstanceHolder() { Close(); }
 
-    bool Open(const char *key, const char *filename, InstanceHolder *master, bool sync_full);
+    bool Open(int64_t uniquen, const char *key, const char *filename,
+              InstanceHolder *master, bool sync_full);
     bool Validate();
     void Close();
 
     bool Checkpoint();
 
     void Reload() { master->reload = true; }
-    void Ref() const;
-    void Unref() const;
-
-    int GetSlaveCount() const { return slaves.load(std::memory_order_relaxed); }
+    void Ref() const { master->refcount++; }
+    void Unref() const { master->refcount--; }
 
     RG_HASHTABLE_HANDLER(InstanceHolder, key);
 

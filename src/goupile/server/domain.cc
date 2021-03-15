@@ -20,6 +20,9 @@ namespace RG {
 const int DomainVersion = 15;
 const int MaxInstancesPerDomain = 4096;
 
+// Process-wide unique instance identifier 
+static std::atomic_int64_t next_unique = 0;
+
 bool DomainConfig::Validate() const
 {
     bool valid = true;
@@ -241,6 +244,9 @@ bool DomainHolder::Sync()
 
     HeapArray<InstanceHolder *> new_instances;
     HashTable<Span<const char>, InstanceHolder *> new_map;
+    int64_t prev_unique = next_unique;
+    bool waited = false;
+
     synced = true;
 
     // Start new instances (if any)
@@ -252,8 +258,7 @@ bool DomainHolder::Sync()
                                SELECT i.instance, i.master FROM dom_instances i, rec WHERE i.master = rec.instance
                                ORDER BY 2 DESC, 1
                            )
-                           SELECT r.instance, r.master,
-                                  (SELECT COUNT(*) FROM rec r2 WHERE r2.master = r.instance) AS slaves FROM rec r)", &stmt))
+                           SELECT r.instance, r.master FROM rec r)", &stmt))
             return false;
 
         bool warned = false;
@@ -261,16 +266,20 @@ bool DomainHolder::Sync()
         while (stmt.Next()) {
             const char *key = (const char *)sqlite3_column_text(stmt, 0);
             const char *master_key = (const char *)sqlite3_column_text(stmt, 1);
-            int slaves = sqlite3_column_int(stmt, 2);
 
             key = DuplicateString(key, &temp_alloc).ptr;
             InstanceHolder *instance = instances_map.FindValue(key, nullptr);
 
             // Should we reload this (happens when configuration changes)?
-            if (instance && (instance->reload || instance->master->reload)) {
+            if (instance && instance->master->reload) {
                 instance->reload = true;
 
-                if (!instance->refcount) {
+                if (instance->master->refcount && !waited) {
+                    WaitDelay(1000);
+                    waited = true;
+                }
+
+                if (!instance->master->refcount) {
                     instances_map.Remove(key);
                     instance->unload = true;
 
@@ -288,9 +297,22 @@ bool DomainHolder::Sync()
                 InstanceHolder *master;
                 if (master_key) {
                     master = new_map.FindValue(master_key, nullptr);
+
                     if (!master) {
                         LogError("Cannot open instance '%1' because master instance is not available", key);
                         continue;
+                    } else if (master->refcount) {
+                        if (!waited) {
+                            WaitDelay(1000);
+                            waited = true;
+                        }
+
+                        if (master->refcount) {
+                            // We will try again later
+                            master->reload = true;
+                            synced = false;
+                            continue;
+                        }
                     }
                 } else {
                     master = nullptr;
@@ -299,9 +321,25 @@ bool DomainHolder::Sync()
                 const char *filename = config.GetInstanceFileName(key, &temp_alloc);
                 instance = new InstanceHolder();
 
-                if (instance->Open(key, filename, master, config.sync_full)) {
+                if (instance->Open(next_unique, key, filename, master, config.sync_full)) {
+                    next_unique++;
+
                     new_instances.Append(instance);
                     new_map.Set(instance);
+
+                    if (master) {
+                        InstanceHolder::SlaveInfo slave = {};
+                        slave.key = instance->key.ptr;
+                        slave.title = instance->config.title;
+                        master->slaves.Append(slave);
+
+                        if (master->unique < prev_unique) {
+                            std::sort(master->slaves.begin(), master->slaves.end(),
+                                      [](const InstanceHolder::SlaveInfo &slave1, const InstanceHolder::SlaveInfo &slave2) {
+                                return CmpStr(slave1.key, slave2.key) < 0;
+                            });
+                        }
+                    }
                 } else {
                     delete instance;
                     synced = false;
@@ -310,21 +348,26 @@ bool DomainHolder::Sync()
                 LogError("Too many instances on this domain, maximum = %1", MaxInstancesPerDomain);
                 warned = true;
             }
-
-            instance->slaves.store(slaves, std::memory_order_relaxed);
         }
         synced &= stmt.IsValid();
     }
 
     // Drop removed instances (if any)
-    for (InstanceHolder *instance: instances) {
+    for (Size i = instances.len - 1; i >= 0; i--) {
+        InstanceHolder *instance = instances[i];
+
         if (!instance->unload && !new_map.Find(instance->key)) {
             instances_map.Remove(instance->key);
             instance->unload = true;
         }
 
         if (instance->unload) {
-            if (!instance->refcount) {
+            if (instance->master->refcount && !waited) {
+                WaitDelay(1000);
+                waited = true;
+            }
+
+            if (!instance->master->refcount) {
                 delete instance;
             } else {
                 // We will try again later
@@ -333,6 +376,7 @@ bool DomainHolder::Sync()
         }
     }
 
+    // Commit changes
     std::swap(instances, new_instances);
     std::swap(instances_map, new_map);
 

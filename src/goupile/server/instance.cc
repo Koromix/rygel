@@ -22,21 +22,19 @@ namespace RG {
 // If you change InstanceVersion, don't forget to update the migration switch!
 const int InstanceVersion = 30;
 
-static std::atomic_int64_t next_unique;
-
-bool InstanceHolder::Open(const char *key, const char *filename, InstanceHolder *master, bool sync_full)
+bool InstanceHolder::Open(int64_t unique, const char *key, const char *filename, InstanceHolder *master, bool sync_full)
 {
     RG_DEFER_N(err_guard) { Close(); };
     Close();
 
-    unique = next_unique++;
     LogDebug("Open instance '%1' (%2)", key, unique);
+
+    this->unique = unique;
+    this->key = DuplicateString(key, &str_alloc);
+    this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     master = master ? master : this;
     this->master = master;
-
-    this->key = DuplicateString(key, &str_alloc);
-    this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     // Open database
     if (!db.Open(filename, SQLITE_OPEN_READWRITE))
@@ -173,22 +171,6 @@ void InstanceHolder::Close()
 bool InstanceHolder::Checkpoint()
 {
     return db.Checkpoint();
-}
-
-void InstanceHolder::Ref() const
-{
-    if (master != this) {
-        master->refcount++;
-    }
-    refcount++;
-}
-
-void InstanceHolder::Unref() const
-{
-    refcount--;
-    if (master != this) {
-        master->refcount--;
-    }
 }
 
 bool MigrateInstance(sq_Database *db)

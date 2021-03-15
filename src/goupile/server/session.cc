@@ -71,7 +71,7 @@ const InstanceToken *Session::GetToken(const InstanceHolder *instance) const
             } while (false);
 
             // Redirect user to appropiate slave instance
-            if (instance->GetSlaveCount()) {
+            if (instance->slaves.len) {
                 if (token) {
                     token->permissions &= UserPermissionMasterMask;
                 } else {

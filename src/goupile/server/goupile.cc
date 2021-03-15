@@ -270,7 +270,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 instance = ref;
 
                 // No need to look further
-                if (!instance->GetSlaveCount())
+                if (!instance->slaves.len)
                     break;
             } else if (RG_UNLIKELY(reload)) {
                 io->AttachError(503);
@@ -340,6 +340,16 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         }
                         if (master->config.backup_key) {
                             json.Key("backup_key"); json.String(master->config.backup_key);
+                        }
+                        if (instance != master) {
+                            json.Key("instances"); json.StartArray();
+                            for (const InstanceHolder::SlaveInfo &slave: master->slaves) {
+                                json.StartObject();
+                                json.Key("title"); json.String(slave.title);
+                                json.Key("url"); json.String(Fmt(buf, "/%1/", slave.key).ptr);
+                                json.EndObject();
+                            }
+                            json.EndArray();
                         }
                         json.EndObject();
                     } else if (TestStr(key, "HEAD_TAGS")) {

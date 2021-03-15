@@ -23,7 +23,7 @@ namespace RG {
 
 void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    if (instance != instance->master) {
+    if (instance->master != instance) {
         LogError("Cannot list files through slave instance");
         io->AttachError(403);
         return;
@@ -69,7 +69,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
     // Safety checks
     if (!StartsWith(url, "/files/"))
         return false;
-    if (instance != instance->master) {
+    if (instance->master != instance) {
         LogError("Cannot get files through slave instance");
         io->AttachError(403);
         return true;
