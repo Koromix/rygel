@@ -1235,6 +1235,8 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
                     return false;
             }
 
+            InvalidateUserTokens(userid);
+
             io->AttachText(200, "Done!");
             return true;
         });

@@ -66,7 +66,11 @@ public:
 
     bool IsAdmin() const { return admin_until && admin_until > GetMonotonicTime(); }
     const InstanceToken *GetToken(const InstanceHolder *instance) const;
+
+    void InvalidateTokens();
 };
+
+void InvalidateUserTokens(int64_t userid);
 
 RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http_IO *io);
 

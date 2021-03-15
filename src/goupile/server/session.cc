@@ -116,6 +116,23 @@ const InstanceToken *Session::GetToken(const InstanceHolder *instance) const
     }
 }
 
+void Session::InvalidateTokens()
+{
+    std::lock_guard<std::shared_mutex> lock_excl(tokens_lock);
+
+    tokens_map.Clear();
+    tokens_alloc.ReleaseAll();
+}
+
+void InvalidateUserTokens(int64_t userid)
+{
+    sessions.ApplyAll([&](Session *session) {
+        if (session->userid == userid) {
+            session->InvalidateTokens();
+        }
+    });
+}
+
 static void WriteProfileJson(const Session *session, const InstanceHolder *instance,
                              const http_RequestInfo &request, http_IO *io)
 {

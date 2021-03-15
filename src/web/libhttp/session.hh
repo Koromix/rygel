@@ -130,6 +130,15 @@ public:
         }
     }
 
+    void ApplyAll(FunctionRef<void(T *udata)> func)
+    {
+        std::lock_guard<std::shared_mutex> lock_excl(mutex);
+
+        for (const SessionHandle &handle: sessions) {
+            func(handle.udata.GetRaw());
+        }
+    }
+
 private:
     SessionHandle *CreateHandle(const http_RequestInfo &request, http_IO *io)
     {
