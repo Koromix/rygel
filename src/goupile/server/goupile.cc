@@ -317,7 +317,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                     if (TestStr(key, "VERSION")) {
                         writer->Write(FelixVersion);
                     } else if (TestStr(key, "TITLE")) {
-                        writer->Write(master->config.title);
+                        writer->Write(master->title);
                     } else if (TestStr(key, "BASE_URL")) {
                         Print(writer, "/%1/", master->key);
                     } else if (TestStr(key, "ENV_JSON")) {
@@ -329,7 +329,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                             json.Key("base"); json.String(Fmt(buf, "/%1/", master->key).ptr);
                             json.Key("instance"); json.String(Fmt(buf, "/%1/", master->key).ptr);
                         json.EndObject();
-                        json.Key("title"); json.String(master->config.title);
+                        json.Key("title"); json.String(master->title);
                         json.Key("cache_offline"); json.Bool(master->config.use_offline);
                         if (master->config.use_offline) {
                             json.Key("cache_key"); json.String(Fmt(buf, "%1_%2", etag, master->unique).ptr);

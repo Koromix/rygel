@@ -71,7 +71,9 @@ bool InstanceHolder::Open(int64_t unique, const char *key, const char *filename,
 
             if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
                 if (TestStr(key, "Title")) {
-                    config.title = DuplicateString(value, &str_alloc).ptr;
+                    if (master == this) {
+                        config.title = DuplicateString(value, &str_alloc).ptr;
+                    }
                 } else if (TestStr(key, "UseOffline")) {
                     valid &= ParseBool(value, &config.use_offline);
                 } else if (TestStr(key, "SyncMode")) {
@@ -109,16 +111,16 @@ bool InstanceHolder::Open(int64_t unique, const char *key, const char *filename,
 
             if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
                 if (TestStr(key, "Title")) {
-                    if (config.title) {
-                        config.title = Fmt(&str_alloc, "%1 (%2)", config.title, value).ptr;
-                    } else {
-                        config.title = DuplicateString(value, &str_alloc).ptr;
-                    }
+                    config.title = DuplicateString(value, &str_alloc).ptr;
                 }
             }
         }
         if (!stmt.IsValid() || !valid)
             return false;
+
+        title = Fmt(&str_alloc, "%1 (%2)", master->title, config.title).ptr;
+    } else {
+        title = config.title;
     }
 
     // Check configuration
@@ -135,7 +137,8 @@ bool InstanceHolder::Validate()
 
     // Settings
     if (!config.title) {
-        config.title = key.ptr;
+        LogError("Missing instance title");
+        valid = false;
     }
     if (config.max_file_size <= 0) {
         LogError("Maximum file size must be >= 0");
@@ -159,11 +162,13 @@ void InstanceHolder::Close()
         LogDebug("Close instance '%1' (%2)", key, unique);
     }
 
+    unique = -1;
     key = {};
     filename = nullptr;
-    master = nullptr;
-    unique = -1;
+    title = nullptr;
     db.Close();
+    master = nullptr;
+    slaves.Clear();
     config = {};
     str_alloc.ReleaseAll();
 }

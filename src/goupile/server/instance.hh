@@ -49,6 +49,7 @@ public:
     Span<const char> key = {};
     const char *filename = nullptr;
     sq_Database db;
+    const char *title = nullptr;
 
     InstanceHolder *master = nullptr;
     HeapArray<SlaveInfo> slaves;

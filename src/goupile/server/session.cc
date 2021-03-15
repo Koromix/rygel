@@ -66,7 +66,7 @@ const InstanceToken *Session::GetToken(const InstanceHolder *instance) const
 
                 token = tokens_map.SetDefault(instance->unique);
                 token->permissions = permissions;
-                token->title = DuplicateString(instance->config.title, &tokens_alloc).ptr;
+                token->title = DuplicateString(instance->title, &tokens_alloc).ptr;
                 token->url = Fmt(&tokens_alloc, "/%1/", instance->key).ptr;
             } while (false);
 
@@ -98,7 +98,7 @@ const InstanceToken *Session::GetToken(const InstanceHolder *instance) const
                         break;
                     RG_DEFER { redirect->Unref(); };
 
-                    token->title = DuplicateString(redirect->config.title, &tokens_alloc).ptr;
+                    token->title = DuplicateString(redirect->title, &tokens_alloc).ptr;
                     token->url = Fmt(&tokens_alloc, "/%1/", redirect->key).ptr;
                 } while (false);
             }

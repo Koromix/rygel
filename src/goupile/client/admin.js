@@ -372,55 +372,82 @@ function AdminController() {
 
             d.tabs('actions', () => {
                 d.tab('Modifier', () => {
-                    let title = d.text('*title', 'Nom de l\'application', {value: instance.config.title});
-                    let use_offline = d.boolean('*use_offline', 'Utilisation hors-ligne', {value: instance.config.use_offline});
-                    let sync_mode = d.enum('*sync_mode', 'Mode de synchronisation', [
-                        ['offline', 'Hors ligne'],
-                        ['online', 'En ligne'],
-                        ['mirror', 'Mode miroir']
-                    ], {value: instance.config.sync_mode});
-                    let backup_key = (sync_mode.value == 'offline') ?
-                                     d.text('backup_key', 'Clé d\'archivage', {value: instance.config.backup_key}) : {};
-                    if (backup_key.value != null) {
-                        try {
-                            let key = base64ToBytes(backup_key.value);
-                            if (key.length !== 32)
-                                throw new Error('Key length must be 32 bytes');
-                        } catch (err) {
-                            backup_key.error('Clé non valide');
+                    if (instance.master == null) {
+                        let title = d.text('*title', 'Nom', {value: instance.config.title});
+                        let use_offline = d.boolean('*use_offline', 'Utilisation hors-ligne', {value: instance.config.use_offline});
+                        let sync_mode = d.enum('*sync_mode', 'Mode de synchronisation', [
+                            ['offline', 'Hors ligne'],
+                            ['online', 'En ligne'],
+                            ['mirror', 'Mode miroir']
+                        ], {value: instance.config.sync_mode});
+                        let backup_key = (sync_mode.value == 'offline') ?
+                                         d.text('backup_key', 'Clé d\'archivage', {value: instance.config.backup_key}) : {};
+                        if (backup_key.value != null) {
+                            try {
+                                let key = base64ToBytes(backup_key.value);
+                                if (key.length !== 32)
+                                    throw new Error('Key length must be 32 bytes');
+                            } catch (err) {
+                                backup_key.error('Clé non valide');
+                            }
                         }
-                    }
 
-                    d.action('Modifier', {disabled: !d.isValid()}, async () => {
-                        let query = new URLSearchParams();
-                        query.set('key', instance.key);
-                        query.set('title', title.value);
-                        query.set('use_offline', use_offline.value);
-                        query.set('sync_mode', sync_mode.value);
-                        if (sync_mode.value === 'offline')
-                            query.set('backup_key', backup_key.value || '');
+                        d.action('Modifier', {disabled: !d.isValid()}, async () => {
+                            let query = new URLSearchParams();
+                            query.set('key', instance.key);
+                            query.set('title', title.value);
+                            query.set('use_offline', use_offline.value);
+                            query.set('sync_mode', sync_mode.value);
+                            if (sync_mode.value === 'offline')
+                                query.set('backup_key', backup_key.value || '');
 
-                        let response = await net.fetch('/admin/api/instances/configure', {
-                            method: 'POST',
-                            body: query
+                            let response = await net.fetch('/admin/api/instances/configure', {
+                                method: 'POST',
+                                body: query
+                            });
+
+                            if (response.ok) {
+                                resolve();
+                                log.success(`Instance '${instance.key}' modifiée`);
+
+                                instances = null;
+
+                                self.go();
+                            } else {
+                                let err = (await response.text()).trim();
+                                reject(new Error(err));
+                            }
                         });
+                    } else {
+                        let title = d.text('*title', 'Nom', {value: instance.config.title});
 
-                        if (response.ok) {
-                            resolve();
-                            log.success(`Projet '${instance.key}' modifié`);
+                        d.action('Modifier', {disabled: !d.isValid()}, async () => {
+                            let query = new URLSearchParams();
+                            query.set('key', instance.key);
+                            query.set('title', title.value);
 
-                            instances = null;
+                            let response = await net.fetch('/admin/api/instances/configure', {
+                                method: 'POST',
+                                body: query
+                            });
 
-                            self.go();
-                        } else {
-                            let err = (await response.text()).trim();
-                            reject(new Error(err));
-                        }
-                    });
-                }, {disabled: instance.master != null});
+                            if (response.ok) {
+                                resolve();
+                                log.success(`Instance '${instance.key}' modifiée`);
+
+                                instances = null;
+
+                                self.go();
+                            } else {
+                                let err = (await response.text()).trim();
+                                reject(new Error(err));
+                            }
+                        });
+                    }
+                });
 
                 d.tab('Supprimer', () => {
-                    d.output(`Voulez-vous vraiment supprimer le projet '${instance.key}' ?`);
+                    d.output(`Voulez-vous vraiment supprimer le l'instance '${instance.key}' ?`);
 
                     d.action('Supprimer', {}, async () => {
                         let query = new URLSearchParams;
@@ -433,7 +460,7 @@ function AdminController() {
 
                         if (response.ok) {
                             resolve();
-                            log.success(`Projet '${instance.key}' supprimé`);
+                            log.success(`Instane '${instance.key}' supprimée`);
 
                             instances = null;
 
