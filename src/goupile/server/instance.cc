@@ -20,7 +20,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 30;
+const int InstanceVersion = 31;
 
 bool InstanceHolder::Open(int64_t unique, const char *key, const char *filename, InstanceHolder *master, bool sync_full)
 {
@@ -959,9 +959,18 @@ bool MigrateInstance(sq_Database *db)
 
                 if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('SharedKey', ?1);", shared_key))
                     return false;
+            } [[fallthrough]];
+
+            case 30: {
+                bool success = db->RunMany(R"(
+                    DROP TABLE IF EXISTS rec_fragments_BAK;
+                    DROP TABLE IF EXISTS rec_entries_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 30);
+            RG_STATIC_ASSERT(InstanceVersion == 31);
         }
 
         int64_t time = GetUnixTime();
