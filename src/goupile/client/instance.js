@@ -1943,7 +1943,6 @@ function InstanceController() {
             if (data_rows == null) {
                 data_rows = await loadDataRecords(data_form, null);
                 data_rows.sort((meta1, meta2) => {
-                    console.log(meta1, meta2);
                     if (meta1.hid != null && meta2.hid != null) {
                         return util.compareValues(meta1.hid, meta2.hid);
                     } else if (meta1.hid != null) {
