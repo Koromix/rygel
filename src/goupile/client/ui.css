@@ -243,6 +243,14 @@ html.small .ui_toolbar button.icon {
     margin: 2px 0 4px 0;
     font-size: 0.9em;
     color: #777;
+    align-items: flex-end;
+}
+.ui_quick input {
+    padding: 3px 4px;
+    background: white;
+    border: 1px solid #ccc;
+    border-width: 0.5px;
+    font-size: 0.9em;
 }
 
 .ui_table {

@@ -43,6 +43,7 @@ function InstanceController() {
 
     let data_form;
     let data_rows;
+    let data_filter;
 
     let head_length = Number.MAX_SAFE_INTEGER;
     let develop = false;
@@ -299,21 +300,30 @@ function InstanceController() {
     }
 
     function renderData() {
+        let visible_rows = data_rows;
+        if (data_filter != null) {
+            let func = makeFilterFunction(data_filter);
+            visible_rows = visible_rows.filter(meta => func(meta.hid));
+        }
+
         return html`
             <div class="padded">
                 <div class="ui_quick">
+                    <input type="text" placeholder="Filtrer..." .value=${data_filter || ''}
+                           @input=${e => { data_filter = e.target.value || null; self.run(); }} />
+                    <div style="flex: 1;"></div>
                     <a @click=${ui.wrapAction(goNewRecord)}>Créer un enregistrement</a>
                     <div style="flex: 1;"></div>
                     ${ENV.backup_key != null ? html`
                         <a @click=${ui.wrapAction(backupRecords)}>Faire une sauvegarde chiffrée</a>
                         <div style="flex: 1;"></div>
                     ` : ''}
-                    ${data_rows.length || 'Aucune'} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
+                    ${visible_rows.length} ${visible_rows.length < data_rows.length ? `/ ${data_rows.length} ` : ''}${data_rows.length > 1 ? 'lignes' : 'ligne'}
                     ${ENV.sync_mode === 'mirror' ? html` (<a @click=${ui.wrapAction(e => syncRecords())}>synchroniser</a>)` : ''}
                 </div>
 
                 <table class="ui_table fixed" id="ins_data">
-                    ${data_rows.length ? html`
+                    ${visible_rows.length ? html`
                         <colgroup>
                             <col/>
                             ${util.mapRange(0, data_form.menu.length, () => html`<col/>`)}
@@ -329,12 +339,83 @@ function InstanceController() {
                     </thead>
 
                     <tbody>
-                        ${data_rows.map(row => renderDataRow(row, true))}
-                        ${!data_rows.length ? html`<tr><td colspan=${1 + data_form.menu.length}>Aucune ligne à afficher</td></tr>` : ''}
+                        ${visible_rows.map(row => renderDataRow(row, true))}
+                        ${!visible_rows.length ? html`<tr><td colspan=${1 + data_form.menu.length}>Aucune ligne à afficher</td></tr>` : ''}
                     </tbody>
                 </table>
             </div>
         `;
+    }
+
+    function makeFilterFunction(filter) {
+        let re = '';
+        for (let i = 0; i < filter.length; i++) {
+            let c = filter[i].toLowerCase();
+
+            switch (c) {
+                case 'e':
+                case 'ê':
+                case 'é':
+                case 'è': { re += '[eèéê]'; } break;
+                case 'a':
+                case 'à':
+                case 'â': { re += '[aàâ]'; } break;
+                case 'i':
+                case 'ï': { re += '[iï]'; } break;
+                case 'u':
+                case 'ù': { re += '[uù]'; } break;
+                case 'ô': { re += '[ôo]'; } break;
+                case 'o': {
+                    if (filter[i + 1] === 'e') {
+                        re += '(oe|œ)';
+                        i++;
+                    } else {
+                        re += '[ôo]';
+                    }
+                } break;
+                case 'œ': { re += '(oe|œ)'; } break;
+                case '—':
+                case '–':
+                case '-': { re += '[—–\\-]'; } break;
+
+                // Escape special regex characters
+                case '/':
+                case '+':
+                case '*':
+                case '?':
+                case '<':
+                case '>':
+                case '&':
+                case '|':
+                case '\\':
+                case '^':
+                case '$':
+                case '(':
+                case ')':
+                case '{':
+                case '}':
+                case '[':
+                case ']': { re += `\\${c}`; } break;
+
+                // Special case '.' for CIM-10 codes
+                case '.': { re += `\\.?`; } break;
+
+                default: { re += c; } break;
+            }
+        }
+        re = new RegExp(re, 'i');
+
+        let func = value => {
+            if (value != null) {
+                if (typeof value !== 'string')
+                    value = value.toLocaleString();
+                return value.match(re);
+            } else {
+                return false;
+            }
+        };
+
+        return func;
     }
 
     function renderDataRow(row, root) {
