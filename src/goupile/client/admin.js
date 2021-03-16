@@ -123,12 +123,12 @@ function AdminController() {
                 <table class="ui_table" style="table-layout: fixed;">
                     <colgroup>
                         ${selected_instance == null ? html`
-                            <col style="width: 100px;"/>
+                            <col style="width: 160px;"/>
                             <col/>
                             <col style="width: 100px;"/>
                         ` : ''}
                         ${selected_instance != null ? html`
-                            <col style="width: 100px;"/>
+                            <col style="width: 160px;"/>
                             <col style="width: 100px;"/>
                             <col/>
                             <col/>
@@ -148,9 +148,9 @@ function AdminController() {
 
                             return html`
                                 <tr>
-                                    <td style="text-align: left;">
+                                    <td style=${'text-align: left;' + (user.admin ? ' color: #db0a0a;' : '')}>
                                         ${user.username}
-                                        ${user.admin ? html`<span style="color: red;" title="Administrateur">♛\uFE0F</span>` : ''}
+                                        ${user.admin ? html`<span title="Administrateur">♛\uFE0F</span>` : ''}
                                     </td>
                                     ${selected_instance == null && user.email != null ?
                                         html`<td style="text-align: left;"><a href=${'mailto:' + user.email}>${user.email}</a></td>` : ''}
