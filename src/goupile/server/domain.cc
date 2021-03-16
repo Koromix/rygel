@@ -228,7 +228,8 @@ void DomainHolder::Close()
     // at this point, but take if for consistency.
     std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
-    for (InstanceHolder *instance: instances) {
+    for (Size i = instances.len - 1; i >= 0; i--) {
+        InstanceHolder *instance = instances[i];
         delete instance;
     }
     instances.Clear();
