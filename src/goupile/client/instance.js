@@ -1557,12 +1557,16 @@ function InstanceController() {
                     el.parentNode.scrollTop = 0;
             }, 0);
 
-            ui.setPanelState('page', true);
-            ui.setPanelState('data', false);
+            if (!ui.isPanelEnabled('page')) {
+                ui.setPanelState('page', true);
+                ui.setPanelState('data', false);
+            }
         } else if (form_record == null && (new_record.version > 0 ||
                                            new_record.parent != null)) {
-            ui.setPanelState('page', true);
-            ui.setPanelState('data', false);
+            if (!ui.isPanelEnabled('page')) {
+                ui.setPanelState('page', true);
+                ui.setPanelState('data', false);
+            }
         }
 
         // Fetch page code (for page panel)
