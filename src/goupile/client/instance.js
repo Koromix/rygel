@@ -30,7 +30,7 @@ function InstanceController() {
 
     let form_record;
     let form_state;
-    let form_dictionaries;
+    let form_dictionaries = {};
 
     let editor_el;
     let editor_ace;
@@ -1569,32 +1569,37 @@ function InstanceController() {
         new_code = await fetchCode(new_route.page.filename);
 
         // Dictionaries
-        let new_dictionaries = {}
+        let new_dictionaries = {};
         if (new_route.page.options.dictionaries != null) {
             for (let dict of new_route.page.options.dictionaries) {
-                let records = [];
-                let ulids = new Set;
+                let records = form_dictionaries[dict];
 
-                for (let namespace of profile.keys) {
-                    let range = IDBKeyRange.only(namespace + `/${dict}`);
-                    let objects = await db.loadAll('rec_records/form', range);
+                if (records == null) {
+                    records = [];
 
-                    for (let obj of objects) {
-                        try {
-                            let record = await decryptRecord(namespace, obj, null, false, true);
+                    let ulids = new Set;
 
-                            if (!ulids.has(record.ulid))
-                                continue;
-                            ulids.add(record.ulid);
+                    for (let namespace of profile.keys) {
+                        let range = IDBKeyRange.only(namespace + `/${dict}`);
+                        let objects = await db.loadAll('rec_records/form', range);
 
-                            records.push(record);
-                        } catch (err) {
-                            console.log(err);
+                        for (let obj of objects) {
+                            try {
+                                let record = await decryptRecord(namespace, obj, null, false, true);
+
+                                if (ulids.has(record.ulid))
+                                    continue;
+                                ulids.add(record.ulid);
+
+                                records.push(record);
+                            } catch (err) {
+                                console.log(err);
+                            }
                         }
                     }
                 }
 
-                new_dictionaries[dict] = records.map(record => record.values);
+                new_dictionaries[dict] = records;
             }
         }
 
