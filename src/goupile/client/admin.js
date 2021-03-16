@@ -460,7 +460,7 @@ function AdminController() {
 
                         if (response.ok) {
                             resolve();
-                            log.success(`Instane '${instance.key}' supprimée`);
+                            log.success(`Instance '${instance.key}' supprimée`);
 
                             instances = null;
 
@@ -674,6 +674,7 @@ function AdminController() {
                         });
 
                         if (response.ok) {
+                            resolve();
                             log.success(`Utilisateur '${user.username}' supprimé`);
 
                             users = null;
