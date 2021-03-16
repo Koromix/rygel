@@ -4459,6 +4459,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags, CompressionTyp
         dest.u.file.tmp_filename = CreateTemporaryFile(directory, "", ".tmp", &str_alloc, &dest.u.file.fp);
         if (!dest.u.file.tmp_filename)
             return false;
+        dest.u.file.owned = true;
     } else {
         unsigned int open_flags = (int)OpenFileFlag::Write;
         open_flags |= (flags & (int)StreamWriterFlag::Exclusive) ? (int)OpenFileFlag::Exclusive : 0;
@@ -4466,11 +4467,11 @@ bool StreamWriter::Open(const char *filename, unsigned int flags, CompressionTyp
         dest.u.file.fp = OpenFile(filename, open_flags);
         if (!dest.u.file.fp)
             return false;
+        dest.u.file.owned = true;
 
         dest.u.file.tmp_filename = nullptr;
         dest.u.file.tmp_exclusive = false;
     }
-    dest.u.file.owned = true;
     dest.vt100 = FileIsVt100(dest.u.file.fp);
 
     if (!InitCompressor(compression_type))
@@ -4556,6 +4557,7 @@ bool StreamWriter::Close()
             if (dest.u.file.tmp_filename) {
                 if (IsValid()) {
                     fclose(dest.u.file.fp);
+                    dest.u.file.owned = false;
 
                     if (RenameFile(dest.u.file.tmp_filename, filename, true)) {
                         dest.u.file.tmp_filename = nullptr;
