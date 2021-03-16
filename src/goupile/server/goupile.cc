@@ -341,7 +341,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         if (master->config.backup_key) {
                             json.Key("backup_key"); json.String(master->config.backup_key);
                         }
-                        if (instance != master) {
+                        if (instance != master || instance->slaves.len) {
                             json.Key("instances"); json.StartArray();
                             for (const InstanceHolder::SlaveInfo &slave: master->slaves) {
                                 json.StartObject();
