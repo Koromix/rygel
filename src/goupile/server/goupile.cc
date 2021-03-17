@@ -258,26 +258,19 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             const char *new_url = instance_url + offset;
             Span<const char> new_key = MakeSpan(request.url + 1, new_url - request.url - 1);
 
-            bool reload;
-            InstanceHolder *ref = gp_domain.Ref(new_key, &reload);
-
-            if (ref) {
-                instance_url = new_url;
-
-                if (instance) {
-                    instance->Unref();
-                }
-                instance = ref;
-
-                // No need to look further
-                if (!instance->slaves.len)
-                    break;
-            } else if (RG_UNLIKELY(reload)) {
-                io->AttachError(503);
-                return;
-            } else {
+            InstanceHolder *ref = gp_domain.Ref(new_key);
+            if (!ref)
                 break;
+
+            if (instance) {
+                instance->Unref();
             }
+            instance = ref;
+            instance_url = new_url;
+
+            // No need to look further
+            if (!instance->slaves.len)
+                break;
         }
         if (!instance) {
             io->AttachError(404);
@@ -343,10 +336,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         }
                         if (instance != master || instance->slaves.len) {
                             json.Key("instances"); json.StartArray();
-                            for (const InstanceHolder::SlaveInfo &slave: master->slaves) {
+                            for (const InstanceHolder *slave: master->slaves) {
                                 json.StartObject();
-                                json.Key("title"); json.String(slave.title);
-                                json.Key("url"); json.String(Fmt(buf, "/%1/", slave.key).ptr);
+                                json.Key("title"); json.String(slave->title);
+                                json.Key("url"); json.String(Fmt(buf, "/%1/", slave->key).ptr);
                                 json.EndObject();
                             }
                             json.EndArray();
@@ -523,7 +516,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
         LogDebug("Periodic cleanup timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
 
         while (run) {
-            int iter_timeout = (gp_domain.config.sync_full && gp_domain.IsSynced()) ? -1 : timeout;
+            int iter_timeout = gp_domain.config.sync_full ? -1 : timeout;
             if (WaitForInterrupt(iter_timeout) == WaitForResult::Interrupt)
                 run = false;
 

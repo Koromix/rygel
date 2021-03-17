@@ -22,24 +22,26 @@ namespace RG {
 // If you change InstanceVersion, don't forget to update the migration switch!
 const int InstanceVersion = 31;
 
-bool InstanceHolder::Open(int64_t unique, const char *key, const char *filename, InstanceHolder *master, bool sync_full)
+// Process-wide unique instance identifier 
+static std::atomic_int64_t next_unique = 0;
+
+bool InstanceHolder::Open(InstanceHolder *master, const char *key, const char *filename)
 {
-    RG_DEFER_N(err_guard) { Close(); };
-    Close();
+    this->unique = next_unique++;
 
-    LogDebug("Open instance '%1' (%2)", key, unique);
+    if (master) {
+        LogDebug("Open instance '%1' [%2] / master = %3", key, unique, master->key);
+    } else {
+        LogDebug("Open instance '%1' [%2]", key, unique);
+        master = this;
+    }
 
-    this->unique = unique;
+    this->master = master;
     this->key = DuplicateString(key, &str_alloc);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
-    master = master ? master : this;
-    this->master = master;
-
     // Open database
     if (!db.Open(filename, SQLITE_OPEN_READWRITE))
-        return false;
-    if (!db.SetSynchronousFull(sync_full))
         return false;
 
     // Check schema version
@@ -124,53 +126,38 @@ bool InstanceHolder::Open(int64_t unique, const char *key, const char *filename,
     }
 
     // Check configuration
-    if (!Validate())
-        return false;
+    {
+        bool valid = true;
 
-    err_guard.Disable();
+        if (!config.title) {
+            LogError("Missing instance title");
+            valid = false;
+        }
+        if (config.max_file_size <= 0) {
+            LogError("Maximum file size must be >= 0");
+            valid = false;
+        }
+        if (!config.shared_key) {
+            LogError("Missing SharedKey setting");
+            valid = false;
+        }
+        if (config.backup_key && config.sync_mode != SyncMode::Offline) {
+            LogError("Ignoring non-NULL BackupKey in this sync mode");
+            config.backup_key = nullptr;
+        }
+
+        if (!valid)
+            return false;
+    }
+
     return true;
 }
 
-bool InstanceHolder::Validate()
-{
-    bool valid = true;
-
-    // Settings
-    if (!config.title) {
-        LogError("Missing instance title");
-        valid = false;
-    }
-    if (config.max_file_size <= 0) {
-        LogError("Maximum file size must be >= 0");
-        valid = false;
-    }
-    if (!config.shared_key) {
-        LogError("Missing SharedKey setting");
-        valid = false;
-    }
-    if (config.backup_key && config.sync_mode != SyncMode::Offline) {
-        LogError("Ignoring non-NULL BackupKey in this sync mode");
-        config.backup_key = nullptr;
-    }
-
-    return valid;
-}
-
-void InstanceHolder::Close()
+InstanceHolder::~InstanceHolder()
 {
     if (filename) {
         LogDebug("Close instance '%1' (%2)", key, unique);
     }
-
-    unique = -1;
-    key = {};
-    filename = nullptr;
-    title = nullptr;
-    db.Close();
-    master = nullptr;
-    slaves.Clear();
-    config = {};
-    str_alloc.ReleaseAll();
 }
 
 bool InstanceHolder::Checkpoint()

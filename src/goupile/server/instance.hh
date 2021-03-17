@@ -33,18 +33,12 @@ static const char *const SyncModeNames[] = {
 };
 
 class InstanceHolder {
-    // Managed by DomainHolder
-
     mutable std::atomic_int refcount {0};
-    std::atomic_bool reload {false};
-    bool unload = false;
+
+    // Strictly managed by DomainHolder
+    int64_t generation;
 
 public:
-    struct SlaveInfo {
-        const char *key;
-        const char *title;
-    };
-
     int64_t unique = -1;
     Span<const char> key = {};
     const char *filename = nullptr;
@@ -52,7 +46,7 @@ public:
     const char *title = nullptr;
 
     InstanceHolder *master = nullptr;
-    HeapArray<SlaveInfo> slaves;
+    HeapArray<InstanceHolder *> slaves;
 
     struct {
         const char *title = nullptr;
@@ -65,20 +59,19 @@ public:
 
     BlockAllocator str_alloc;
 
-    ~InstanceHolder() { Close(); }
+    RG_HASHTABLE_HANDLER(InstanceHolder, key);
 
-    bool Open(int64_t uniquen, const char *key, const char *filename,
-              InstanceHolder *master, bool sync_full);
-    bool Validate();
-    void Close();
+    ~InstanceHolder();
 
     bool Checkpoint();
 
-    void Reload() { master->reload = true; }
     void Ref() const { master->refcount++; }
     void Unref() const { master->refcount--; }
 
-    RG_HASHTABLE_HANDLER(InstanceHolder, key);
+private:
+    InstanceHolder() {};
+
+    bool Open(InstanceHolder *master, const char *key, const char *filename);
 
     friend class DomainHolder;
 };

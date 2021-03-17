@@ -17,11 +17,8 @@
 
 namespace RG {
 
-const int DomainVersion = 15;
+const int DomainVersion = 16;
 const int MaxInstancesPerDomain = 4096;
-
-// Process-wide unique instance identifier 
-static std::atomic_int64_t next_unique = 0;
 
 bool DomainConfig::Validate() const
 {
@@ -241,147 +238,195 @@ bool DomainHolder::Sync()
 {
     BlockAllocator temp_alloc;
 
-    std::lock_guard<std::shared_mutex> lock_excl(mutex);
+    struct StartInfo {
+        const char *instance_key;
+        const char *master_key;
+        int64_t generation;
+        InstanceHolder *prev_instance;
+    };
 
     HeapArray<InstanceHolder *> new_instances;
     HashTable<Span<const char>, InstanceHolder *> new_map;
-    int64_t prev_unique = next_unique;
-    bool waited = false;
-
-    synced = true;
-
-    // Start new instances (if any)
+    HeapArray<StartInfo> registry_start;
+    HeapArray<InstanceHolder *> registry_unload;
     {
+        std::shared_lock<std::shared_mutex> lock_shr(mutex);
+        Size offset = 0;
+
         sq_Statement stmt;
-        if (!db.Prepare(R"(WITH RECURSIVE rec (instance, master) AS (
-                               SELECT instance, master FROM dom_instances WHERE master IS NULL
+        if (!db.Prepare(R"(WITH RECURSIVE rec (instance, master, generation) AS (
+                               SELECT instance, master, generation FROM dom_instances WHERE master IS NULL
                                UNION ALL
-                               SELECT i.instance, i.master FROM dom_instances i, rec WHERE i.master = rec.instance
+                               SELECT i.instance, i.master, i.generation FROM dom_instances i, rec WHERE i.master = rec.instance
                                ORDER BY 2 DESC, 1
                            )
-                           SELECT r.instance, r.master FROM rec r)", &stmt))
+                           SELECT instance, master, generation FROM rec)", &stmt))
             return false;
 
-        bool warned = false;
-
         while (stmt.Next()) {
-            const char *key = (const char *)sqlite3_column_text(stmt, 0);
+            Span<const char> instance_key = (const char *)sqlite3_column_text(stmt, 0);
             const char *master_key = (const char *)sqlite3_column_text(stmt, 1);
+            int64_t generation = sqlite3_column_int64(stmt, 2);
 
-            key = DuplicateString(key, &temp_alloc).ptr;
-            InstanceHolder *instance = instances_map.FindValue(key, nullptr);
+            for (;;) {
+                InstanceHolder *instance = (offset < instances.len) ? instances[offset] : nullptr;
+                int cmp = instance ? CmpStr(instance->key, instance_key) : 1;
 
-            // Should we reload this (happens when configuration changes)?
-            if (instance && instance->master->reload) {
-                instance->reload = true;
+                if (cmp < 0) {
+                    registry_unload.Append(instance);
+                    offset++;
+                } else if (!cmp) {
+                    if (instance->generation == generation) {
+                        new_instances.Append(instance);
+                        new_map.Set(instance);
+                    } else {
+                        StartInfo start = {};
 
-                if (instance->master->refcount && !waited) {
-                    WaitDelay(1000);
-                    waited = true;
-                }
+                        start.instance_key = DuplicateString(instance_key, &temp_alloc).ptr;
+                        start.master_key = master_key ? DuplicateString(master_key, &temp_alloc).ptr : nullptr;
+                        start.generation = generation;
+                        start.prev_instance = instance;
 
-                if (!instance->master->refcount) {
-                    instances_map.Remove(key);
-                    instance->unload = true;
-
-                    instance = nullptr;
-                } else {
-                    // We will try again later
-                    synced = false;
-                }
-            }
-
-            if (instance) {
-                new_instances.Append(instance);
-                new_map.Set(instance);
-            } else if (new_instances.len < MaxInstancesPerDomain) {
-                InstanceHolder *master;
-                if (master_key) {
-                    master = new_map.FindValue(master_key, nullptr);
-
-                    if (!master) {
-                        LogError("Cannot open instance '%1' because master instance is not available", key);
-                        continue;
-                    } else if (master->refcount) {
-                        if (!waited) {
-                            WaitDelay(1000);
-                            waited = true;
-                        }
-
-                        if (master->refcount) {
-                            // We will try again later
-                            master->reload = true;
-                            synced = false;
-                            continue;
-                        }
+                        registry_start.Append(start);
                     }
+
+                    offset++;
+                    break;
                 } else {
-                    master = nullptr;
+                    StartInfo start = {};
+
+                    start.instance_key = DuplicateString(instance_key, &temp_alloc).ptr;
+                    start.master_key = master_key ? DuplicateString(master_key, &temp_alloc).ptr : nullptr;
+                    start.generation = generation;
+
+                    registry_start.Append(start);
+
+                    break;
                 }
-
-                const char *filename = config.GetInstanceFileName(key, &temp_alloc);
-                instance = new InstanceHolder();
-
-                if (instance->Open(next_unique, key, filename, master, config.sync_full)) {
-                    next_unique++;
-
-                    new_instances.Append(instance);
-                    new_map.Set(instance);
-
-                    if (master) {
-                        InstanceHolder::SlaveInfo slave = {};
-                        slave.key = instance->key.ptr;
-                        slave.title = instance->config.title;
-                        master->slaves.Append(slave);
-
-                        if (master->unique < prev_unique) {
-                            std::sort(master->slaves.begin(), master->slaves.end(),
-                                      [](const InstanceHolder::SlaveInfo &slave1, const InstanceHolder::SlaveInfo &slave2) {
-                                return CmpStr(slave1.key, slave2.key) < 0;
-                            });
-                        }
-                    }
-                } else {
-                    delete instance;
-                    synced = false;
-                }
-            } else if (!warned) {
-                LogError("Too many instances on this domain, maximum = %1", MaxInstancesPerDomain);
-                warned = true;
             }
         }
-        synced &= stmt.IsValid();
+        if (!stmt.IsValid())
+            return false;
+
+        while (offset < instances.len) {
+            InstanceHolder *instance = instances[offset];
+            registry_unload.Append(instance);
+            offset++;
+        }
     }
 
-    // Drop removed instances (if any)
-    for (Size i = instances.len - 1; i >= 0; i--) {
-        InstanceHolder *instance = instances[i];
+    // Most calls should follow this path
+    if (!registry_start.len && !registry_unload.len)
+        return true;
 
-        if (!instance->unload && !new_map.Find(instance->key)) {
-            instances_map.Remove(instance->key);
-            instance->unload = true;
+    std::unique_lock<std::shared_mutex> lock_excl(mutex);
+
+    // Drop removed instances (if any)
+    for (Size i = registry_unload.len - 1; i >= 0; i--) {
+        InstanceHolder *instance = registry_unload[i];
+
+        while (instance->master->refcount) {
+            WaitDelay(100);
         }
 
-        if (instance->unload) {
-            if (instance->master->refcount && !waited) {
-                WaitDelay(1000);
-                waited = true;
+        if (instance->master != instance) {
+            InstanceHolder *master = instance->master;
+
+            Size remove_idx = std::find(master->slaves.begin(), master->slaves.end(), instance) - master->slaves.ptr;
+            RG_ASSERT(remove_idx < master->slaves.len);
+
+            memmove(master->slaves.ptr + remove_idx, master->slaves.ptr + remove_idx + 1,
+                    (master->slaves.len - remove_idx - 1) * RG_SIZE(*master->slaves.ptr));
+            master->slaves.len--;
+        }
+
+        delete instance;
+    }
+
+    // Start new instances
+    for (const StartInfo &start: registry_start) {
+        InstanceHolder *master;
+        if (start.master_key) {
+            master = new_map.FindValue(start.master_key, nullptr);
+
+            if (!master) {
+                LogError("Cannot open instance '%1' because master is not available", start.instance_key);
+                continue;
+            }
+        } else {
+            master = nullptr;
+        }
+
+        const char *filename = config.GetInstanceFileName(start.instance_key, &temp_alloc);
+        InstanceHolder *instance = new InstanceHolder();
+        RG_DEFER_N(instance_guard) { delete instance; };
+
+        if (!instance->Open(master, start.instance_key, filename))
+            continue;
+        if (!instance->db.SetSynchronousFull(config.sync_full))
+            continue;
+        instance->generation = start.generation;
+        instance_guard.Disable();
+
+        new_instances.Append(instance);
+        new_map.Set(instance);
+
+        if (start.prev_instance) {
+            InstanceHolder *prev_instance = start.prev_instance;
+            RG_ASSERT(prev_instance->key == instance->key);
+
+            while (prev_instance->refcount) {
+                WaitDelay(100);
             }
 
-            if (!instance->master->refcount) {
-                delete instance;
+            // Fix pointers to previous instance
+            if (prev_instance->master != prev_instance) {
+                for (Size i = 0; i < prev_instance->master->slaves.len; i++) {
+                    InstanceHolder *slave = prev_instance->master->slaves[i];
+
+                    if (slave == prev_instance) {
+                        prev_instance->master->slaves[i] = instance;
+                        break;
+                    }
+                }
+            }
+            for (InstanceHolder *slave: prev_instance->slaves) {
+                slave->master = instance;
+                instance->slaves.Append(slave);
+            }
+
+            delete prev_instance;
+        } else if (master) {
+            while (master->refcount) {
+                WaitDelay(100);
+            }
+
+            if (!instances_map.Find(master->key)) {
+                // Fast path for new masters
+                master->slaves.Append(instance);
             } else {
-                // We will try again later
-                synced = false;
+                Size insert_idx = std::find_if(master->slaves.begin(), master->slaves.end(),
+                                               [&](InstanceHolder *slave) { return CmpStr(slave->key, instance->key) > 0; }) - master->slaves.ptr;
+
+                // Add instance to parent list
+                master->slaves.Grow(1);
+                memmove(master->slaves.ptr + insert_idx + 1, master->slaves.ptr + insert_idx,
+                        (master->slaves.len - insert_idx) * RG_SIZE(*master->slaves.ptr));
+                master->slaves.ptr[insert_idx] = instance;
+                master->slaves.len++;
             }
         }
     }
 
     // Commit changes
+    std::sort(new_instances.begin(), new_instances.end(),
+              [](InstanceHolder *instance1, InstanceHolder *instance2) {
+        return CmpStr(instance1->key, instance2->key) < 0;
+    });
     std::swap(instances, new_instances);
     std::swap(instances_map, new_map);
 
-    return synced;
+    return true;
 }
 
 bool DomainHolder::Checkpoint()
@@ -415,26 +460,18 @@ Size DomainHolder::CountInstances() const
     return instances.len;
 }
 
-InstanceHolder *DomainHolder::Ref(Span<const char> key, bool *out_reload)
+InstanceHolder *DomainHolder::Ref(Span<const char> key)
 {
     std::shared_lock<std::shared_mutex> lock_shr(mutex);
 
     InstanceHolder *instance = instances_map.FindValue(key, nullptr);
 
-    if (!instance) {
-        if (out_reload) {
-            *out_reload = false;
-        }
-        return nullptr;
-    } else if (instance->reload.load(std::memory_order_relaxed)) {
-        if (out_reload) {
-            *out_reload = true;
-        }
+    if (instance) {
+        instance->Ref();
+        return instance;
+    } else {
         return nullptr;
     }
-
-    instance->Ref();
-    return instance;
 }
 
 bool MigrateDomain(sq_Database *db, const char *instances_directory)
@@ -826,9 +863,43 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 15: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE dom_instances RENAME TO dom_instances_BAK;
+                    ALTER TABLE dom_permissions RENAME TO dom_permissions_BAK;
+                    DROP INDEX dom_instances_i;
+                    DROP INDEX dom_permissions_ui;
+
+                    CREATE TABLE dom_instances (
+                        instance TEXT NOT NULL,
+                        master TEXT GENERATED ALWAYS AS (iif(instr(instance, '/') > 0, substr(instance, 1, instr(instance, '/') - 1), NULL)) STORED
+                                    REFERENCES dom_instances (instance) ON DELETE CASCADE,
+                        generation INTEGER NOT NULL DEFAULT 0
+                    );
+                    CREATE UNIQUE INDEX dom_instances_i ON dom_instances (instance);
+
+                    CREATE TABLE dom_permissions (
+                        userid INTEGER NOT NULL REFERENCES dom_users (userid) ON DELETE CASCADE,
+                        instance TEXT NOT NULL REFERENCES dom_instances (instance) ON DELETE CASCADE,
+                        permissions INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX dom_permissions_ui ON dom_permissions (userid, instance);
+
+                    INSERT INTO dom_instances (instance)
+                        SELECT instance FROM dom_instances_BAK ORDER BY master ASC NULLS FIRST;
+                    INSERT INTO dom_permissions (userid, instance, permissions)
+                        SELECT userid, instance, permissions FROM dom_permissions_BAK;
+
+                    DROP TABLE dom_permissions_BAK;
+                    DROP TABLE dom_instances_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 15);
+            RG_STATIC_ASSERT(DomainVersion == 16);
         }
 
         int64_t time = GetUnixTime();

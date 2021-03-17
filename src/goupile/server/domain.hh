@@ -51,8 +51,6 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config);
 bool LoadConfig(const char *filename, DomainConfig *out_config);
 
 class DomainHolder {
-    bool synced = true;
-
     mutable std::shared_mutex mutex;
     HeapArray<InstanceHolder *> instances;
     HashTable<Span<const char>, InstanceHolder *> instances_map;
@@ -66,7 +64,6 @@ public:
     bool Open(const char *filename);
     void Close();
 
-    bool IsSynced() const { return synced; }
     bool Sync();
     bool Checkpoint();
 
@@ -74,7 +71,7 @@ public:
     void UnlockInstances();
     Size CountInstances() const;
 
-    InstanceHolder *Ref(Span<const char> key, bool *out_reload = nullptr);
+    InstanceHolder *Ref(Span<const char> key);
 };
 
 bool MigrateDomain(sq_Database *db, const char *instances_directory);

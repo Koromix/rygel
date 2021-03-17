@@ -1019,14 +1019,19 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
                 success &= instance->db.Run(sql, "SyncMode", SyncModeNames[(int)config.sync_mode]);
                 success &= instance->db.Run(sql, "BackupKey", config.backup_key);
             }
+            if (!success)
+                return false;
 
-            return success;
+            if (!gp_domain.db.Run(R"(UPDATE dom_instances SET generation = generation + 1
+                                     WHERE instance = ?1)", instance->key))
+                return false;
+
+            return true;
         });
         if (!success)
             return;
 
         // Reload when you can
-        instance->Reload();
         instance->Unref();
         ref_guard.Disable();
 
