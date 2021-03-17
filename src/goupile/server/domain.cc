@@ -233,7 +233,6 @@ void DomainHolder::Close()
     instances_map.Clear();
 }
 
-// Can be called multiple times, from main thread only
 bool DomainHolder::Sync()
 {
     BlockAllocator temp_alloc;

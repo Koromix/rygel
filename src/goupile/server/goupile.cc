@@ -507,22 +507,33 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
 
     // Run periodic tasks until exit
     {
-        int timeout = 120 * 1000;
         bool run = true;
+        int timeout;
 
-        // Randomize the delay a bit to reduce situations where all goupile
-        // services perform cleanups at the same time and cause a load spike.
-        timeout += (randombytes_random() & 0x7F) * 500;
-        LogDebug("Periodic cleanup timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
+#ifdef __GLIBC__
+        if (true) {
+#else
+        if (!gp_domain.config.sync_full) {
+#endif
+            // Randomize the delay a bit to reduce situations where all goupile
+            // services perform cleanups at the same time and cause a load spike.
+            timeout = 120 * 1000;
+            timeout += (randombytes_random() & 0x7F) * 500;
+
+            LogDebug("Periodic cleanup timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
+        } else {
+            timeout = -1;
+        }
 
         while (run) {
-            int iter_timeout = gp_domain.config.sync_full ? -1 : timeout;
-            if (WaitForInterrupt(iter_timeout) == WaitForResult::Interrupt)
-                run = false;
+            WaitForResult ret = WaitForInterrupt(timeout);
 
-            // React to new and deleted instances
-            LogDebug("Syncing instances");
-            gp_domain.Sync();
+            if (ret == WaitForResult::Interrupt) {
+                run = false;
+            } else if (ret == WaitForResult::Message) {
+                LogDebug("Syncing instances");
+                gp_domain.Sync();
+            }
 
             // Make sure data loss (if it happens) is very limited in time
             if (!gp_domain.config.sync_full) {

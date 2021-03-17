@@ -852,7 +852,9 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
         if (!success)
             return;
 
-        SignalWaitFor();
+        if (!gp_domain.Sync())
+            return;
+
         io->AttachText(200, "Done!");
     });
 }
@@ -915,7 +917,9 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
         if (!success)
             return;
 
-        SignalWaitFor();
+        if (!gp_domain.Sync())
+            return;
+
         io->AttachText(200, "Done!");
     });
 }
@@ -1031,11 +1035,13 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
         if (!success)
             return;
 
-        // Reload when you can
+        // Avoid deadlock
         instance->Unref();
         ref_guard.Disable();
 
-        SignalWaitFor();
+        if (!gp_domain.Sync())
+            return;
+
         io->AttachText(200, "Done!");
     });
 }
