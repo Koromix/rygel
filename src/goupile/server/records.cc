@@ -72,6 +72,7 @@ static void ExportRecord(sq_Statement *stmt, json_Writer *json)
 void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
+
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
@@ -171,6 +172,7 @@ struct SaveRecord {
 void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
+
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
