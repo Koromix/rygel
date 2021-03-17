@@ -133,11 +133,10 @@ bool Builder::AddTarget(const TargetInfo &target)
 
         bool module = (build.compile_mode == CompileMode::Debug ||
                        build.compile_mode == CompileMode::DebugFast);
+        uint32_t features = target.CombineFeatures(build.features);
 
         // Build object file
         {
-            uint32_t features = target.CombineFeatures(build.features);
-
             Command cmd = {};
             if (module) {
                 build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
@@ -160,7 +159,7 @@ bool Builder::AddTarget(const TargetInfo &target)
 
             Command cmd = {};
             build.compiler->MakeLinkCommand(obj_filename, CompileMode::Debug, {},
-                                            LinkType::SharedLibrary, 0, build.env,
+                                            LinkType::SharedLibrary, features, build.env,
                                             module_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Link %1",
