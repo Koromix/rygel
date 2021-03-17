@@ -22,12 +22,9 @@ namespace RG {
 // If you change InstanceVersion, don't forget to update the migration switch!
 const int InstanceVersion = 31;
 
-// Process-wide unique instance identifier 
-static std::atomic_int64_t next_unique = 0;
-
-bool InstanceHolder::Open(InstanceHolder *master, const char *key, const char *filename)
+bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, const char *filename)
 {
-    this->unique = next_unique++;
+    this->unique = unique;
 
     if (master) {
         LogDebug("Open instance '%1' @%2 (master: %3)", key, unique, master->key);

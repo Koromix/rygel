@@ -20,6 +20,9 @@ namespace RG {
 const int DomainVersion = 16;
 const int MaxInstancesPerDomain = 4096;
 
+// Process-wide unique instance identifier 
+static std::atomic_int64_t next_unique = 0;
+
 bool DomainConfig::Validate() const
 {
     bool valid = true;
@@ -244,6 +247,8 @@ bool DomainHolder::Sync()
         InstanceHolder *prev_instance;
     };
 
+    int64_t prev_unique = next_unique;
+
     HeapArray<InstanceHolder *> new_instances;
     HashTable<Span<const char>, InstanceHolder *> new_map;
     HeapArray<StartInfo> registry_start;
@@ -337,6 +342,10 @@ bool DomainHolder::Sync()
             memmove(master->slaves.ptr + remove_idx, master->slaves.ptr + remove_idx + 1,
                     (master->slaves.len - remove_idx - 1) * RG_SIZE(*master->slaves.ptr));
             master->slaves.len--;
+
+            if (master->unique < prev_unique) {
+                master->unique = next_unique++;
+            }
         }
 
         delete instance;
@@ -360,7 +369,7 @@ bool DomainHolder::Sync()
         InstanceHolder *instance = new InstanceHolder();
         RG_DEFER_N(instance_guard) { delete instance; };
 
-        if (!instance->Open(master, start.instance_key, filename))
+        if (!instance->Open(next_unique++, master, start.instance_key, filename))
             continue;
         if (!instance->db.SetSynchronousFull(config.sync_full))
             continue;
@@ -400,7 +409,7 @@ bool DomainHolder::Sync()
                 WaitDelay(100);
             }
 
-            if (!instances_map.Find(master->key)) {
+            if (master->unique >= prev_unique) {
                 // Fast path for new masters
                 master->slaves.Append(instance);
             } else {
@@ -413,6 +422,8 @@ bool DomainHolder::Sync()
                         (master->slaves.len - insert_idx) * RG_SIZE(*master->slaves.ptr));
                 master->slaves.ptr[insert_idx] = instance;
                 master->slaves.len++;
+
+                master->unique = next_unique++;
             }
         }
     }
