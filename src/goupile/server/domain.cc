@@ -497,7 +497,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
         return true;
     }
 
-    LogInfo("Migrating domain: %1 to %2", version + 1, DomainVersion);
+    LogInfo("Migrate domain database: %1 to %2", version, DomainVersion);
 
     bool success = db->Transaction([&]() {
         switch (version) {

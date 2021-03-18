@@ -190,7 +190,7 @@ bool MigrateInstance(sq_Database *db)
         return true;
     }
 
-    LogInfo("Migrate instance '%1': %2 to %3",
+    LogInfo("Migrate instance database '%1': %2 to %3",
             SplitStrReverseAny(filename, RG_PATH_SEPARATORS), version, InstanceVersion);
 
     bool success = db->Transaction([&]() {
