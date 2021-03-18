@@ -30,9 +30,9 @@ bool InstanceHolder::Open(InstanceHolder *master, const char *key, const char *f
     this->unique = next_unique++;
 
     if (master) {
-        LogDebug("Open instance '%1' [%2] / master = %3", key, unique, master->key);
+        LogDebug("Open instance '%1' @%2 (master: %3)", key, unique, master->key);
     } else {
-        LogDebug("Open instance '%1' [%2]", key, unique);
+        LogDebug("Open instance '%1' @%2", key, unique);
         master = this;
     }
 
@@ -156,7 +156,7 @@ bool InstanceHolder::Open(InstanceHolder *master, const char *key, const char *f
 InstanceHolder::~InstanceHolder()
 {
     if (filename) {
-        LogDebug("Close instance '%1' (%2)", key, unique);
+        LogDebug("Close instance '%1' @%2", key, unique);
     }
 }
 
