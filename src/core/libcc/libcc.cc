@@ -1512,10 +1512,14 @@ void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg)
     static std::mutex mutex;
     std::lock_guard<std::mutex> lock(mutex);
 
-    switch (level)  {
-        case LogLevel::Debug:
-        case LogLevel::Info: { PrintLn(stderr, "%!D..%1%2%!0%3", ctx ? ctx : "", ctx ? ": " : "", msg); } break;
-        case LogLevel::Error: { PrintLn(stderr, "%!R..%1%2%!0%3", ctx ? ctx : "", ctx ? ": " : "", msg); } break;
+    if (ctx) {
+        switch (level)  {
+            case LogLevel::Debug:
+            case LogLevel::Info: { PrintLn(stderr, "%!D..[%1]%!0 %2", ctx, msg); } break;
+            case LogLevel::Error: { PrintLn(stderr, "%!R..[%1]%!0 %2", ctx, msg); } break;
+        }
+    } else {
+        PrintLn(stderr, "%1", msg);
     }
 
     fflush(stderr);
