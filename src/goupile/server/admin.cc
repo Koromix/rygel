@@ -1704,6 +1704,11 @@ void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io)
         io->AttachError(403);
         return;
     }
+    if (GetPathExtension(basename) != ".goupilebackup") {
+        LogError("Path must end with '.goupilebackup' extension");
+        io->AttachError(403);
+        return;
+    }
 
     const char *filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.backup_directory, basename).ptr;
 
