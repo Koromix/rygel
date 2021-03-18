@@ -36,7 +36,7 @@ a {
     text-decoration: underline;
 }
 
-*:focus {
+*:focus, *:focus + label {
     outline: 2px dotted #777;
     outline-offset: 1px;
     z-index: 99999;
