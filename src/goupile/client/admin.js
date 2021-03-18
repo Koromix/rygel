@@ -447,7 +447,7 @@ function AdminController() {
                 });
 
                 d.tab('Supprimer', () => {
-                    d.output(`Voulez-vous vraiment supprimer le l'instance '${instance.key}' ?`);
+                    d.output(`Voulez-vous vraiment supprimer l'instance '${instance.key}' ?`);
 
                     d.action('Supprimer', {}, async () => {
                         let query = new URLSearchParams;
