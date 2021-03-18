@@ -409,7 +409,7 @@ Options:
 Other commands:
     %!..+init%!0                         Create new domain
     %!..+migrate%!0                      Migrate existing domain
-    %!..+decrypt%!0                      Decrypt domain archive
+    %!..+unreal%!0                       Unseal domain archive
 
 For help about those commands, type: %!..+%1 <command> --help%!0)",
                 FelixTarget, config_filename, gp_domain.config.http.port);
@@ -585,8 +585,8 @@ int Main(int argc, char **argv)
         } else if (TestStr(cmd, "migrate")) {
             cmd_func = RunMigrate;
             arguments = MakeSpan((const char **)argv + 2, argc - 2);
-        } else if (TestStr(cmd, "decrypt")) {
-            cmd_func = RunDecrypt;
+        } else if (TestStr(cmd, "unseal")) {
+            cmd_func = RunUnseal;
             arguments = MakeSpan((const char **)argv + 2, argc - 2);
         } else if (TestStr(cmd, "serve")) {
             cmd_func = RunServe;
