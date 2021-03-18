@@ -37,7 +37,7 @@ a {
 }
 
 *:focus {
-    outline: 2px dotted #999;
+    outline: 2px dotted #777;
     outline-offset: 1px;
     z-index: 99999;
 }
