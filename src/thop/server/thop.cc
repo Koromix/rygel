@@ -549,10 +549,9 @@ Options:
 #endif
 
     WaitForInterrupt();
+    LogInfo("Exit requested");
 
-    // Make sure the "Exit" message comes after the daemon has effectively stopped
     daemon.Stop();
-    LogInfo("Exit");
 
     return 0;
 }

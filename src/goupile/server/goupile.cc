@@ -529,6 +529,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             WaitForResult ret = WaitForInterrupt(timeout);
 
             if (ret == WaitForResult::Interrupt) {
+                LogInfo("Exit requested");
                 run = false;
             } else if (ret == WaitForResult::Message) {
                 LogDebug("Syncing instances");
@@ -551,7 +552,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     }
 
     daemon.Stop();
-    LogInfo("Exit");
 
     return 0;
 }
