@@ -405,7 +405,7 @@ function AdminController() {
 
                             if (response.ok) {
                                 resolve();
-                                log.success(`Instance '${instance.key}' modifiée`);
+                                log.success(`Projet '${instance.key}' modifié`);
 
                                 instances = null;
 
@@ -430,7 +430,7 @@ function AdminController() {
 
                             if (response.ok) {
                                 resolve();
-                                log.success(`Instance '${instance.key}' modifiée`);
+                                log.success(`Projet '${instance.key}' modifié`);
 
                                 instances = null;
 
@@ -444,7 +444,7 @@ function AdminController() {
                 });
 
                 d.tab('Supprimer', () => {
-                    d.output(`Voulez-vous vraiment supprimer l'instance '${instance.key}' ?`);
+                    d.output(`Voulez-vous vraiment supprimer le projet '${instance.key}' ?`);
 
                     d.action('Supprimer', {}, async () => {
                         let query = new URLSearchParams;
@@ -457,7 +457,7 @@ function AdminController() {
 
                         if (response.ok) {
                             resolve();
-                            log.success(`Instance '${instance.key}' supprimée`);
+                            log.success(`Projet '${instance.key}' supprimé`);
 
                             instances = null;
                             backups = null;
