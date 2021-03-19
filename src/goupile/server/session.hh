@@ -25,20 +25,24 @@ enum class UserPermission {
     AdminPublish = 1 << 1,
     AdminConfigure = 1 << 2,
     AdminAssign = 1 << 3,
-    DataRead = 1 << 4,
-    DataCreate = 1 << 5,
-    DataModify = 1 << 6,
-    DataExport = 1 << 7,
-    DataBatch = 1 << 8
+    DataList = 1 << 4,
+    DataRead = 1 << 5,
+    DataCreate = 1 << 6,
+    DataModify = 1 << 7,
+    DataDelete = 1 << 8,
+    DataExport = 1 << 9,
+    DataBatch = 1 << 10
 };
 static const char *const UserPermissionNames[] = {
     "AdminDevelop",
     "AdminPublish",
     "AdminConfigure",
     "AdminAssign",
+    "DataList",
     "DataRead",
     "DataCreate",
     "DataModify",
+    "DataDelete",
     "DataExport",
     "DataBatch"
 };

@@ -131,13 +131,12 @@ function AdminController() {
                             <col style="width: 160px;"/>
                             <col style="width: 100px;"/>
                             <col/>
-                            <col/>
                             <col style="width: 100px;"/>
                         ` : ''}
                     </colgroup>
 
                     <tbody>
-                        ${!users.length ? html`<tr><td colspan=${selected_instance != null ? 5 : 3}>Aucun utilisateur</td></tr>` : ''}
+                        ${!users.length ? html`<tr><td colspan=${selected_instance != null ? 4 : 3}>Aucun utilisateur</td></tr>` : ''}
                         ${users.map(user => {
                             let permissions;
                             if (selected_instance != null) {
@@ -158,11 +157,10 @@ function AdminController() {
                                     <td><a role="button" tabindex="0"
                                            @click=${ui.wrapAction(e => runEditUserDialog(e, user))}>Modifier</a></td>
                                     ${selected_instance != null ? html`
-                                        <td class=${selected_instance.master != null ? 'missing' : ''}>
-                                            ${selected_instance.master == null ? makePermissionsTag(permissions, 'admin_', '#b518bf') : 'Non applicable'}
-                                        </td>
-                                        <td class=${selected_instance.slaves > 0 ? 'missing' : ''}>
-                                            ${!selected_instance.slaves ? makePermissionsTag(permissions, 'data_', '#258264') : 'Non applicable'}
+                                        <td class=${selected_instance.master != null ? 'missing' : ''}
+                                            style="white-space: normal;">
+                                            ${selected_instance.master == null ? makePermissionsTag(permissions, 'admin_', '#b518bf') : ''}
+                                            ${!selected_instance.slaves ? makePermissionsTag(permissions, 'data_', '#258264') : ''}
                                         </td>
                                         <td><a role="button" tabindex="0"
                                                @click=${ui.wrapAction(e => runAssignUserDialog(e, selected_instance, user,
