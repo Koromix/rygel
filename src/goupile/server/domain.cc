@@ -17,7 +17,7 @@
 
 namespace RG {
 
-const int DomainVersion = 17;
+const int DomainVersion = 18;
 const int MaxInstancesPerDomain = 4096;
 
 // Process-wide unique instance identifier 
@@ -28,12 +28,13 @@ bool DomainConfig::Validate() const
     bool valid = true;
 
     valid &= http.Validate();
+    if (!enable_backups) {
+        LogError("Domain backup key is not set");
+        valid = false;
+    }
     if (max_age < 0) {
         LogError("HTTP MaxAge must be >= 0");
         valid = false;
-    }
-    if (!enable_backups) {
-        LogError("Domain backup key is not set, backups are disabled");
     }
 
     return valid;
@@ -925,9 +926,43 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 17: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE dom_instances RENAME TO dom_instances_BAK;
+                    ALTER TABLE dom_permissions RENAME TO dom_permissions_BAK;
+                    DROP INDEX dom_instances_i;
+                    DROP INDEX dom_permissions_ui;
+
+                    CREATE TABLE dom_instances (
+                        instance TEXT NOT NULL,
+                        master TEXT GENERATED ALWAYS AS (iif(instr(instance, '/') > 0, substr(instance, 1, instr(instance, '/') - 1), NULL)) STORED
+                                    REFERENCES dom_instances (instance),
+                        generation INTEGER NOT NULL DEFAULT 0
+                    );
+                    CREATE UNIQUE INDEX dom_instances_i ON dom_instances (instance);
+
+                    CREATE TABLE dom_permissions (
+                        userid INTEGER NOT NULL REFERENCES dom_users (userid) ON DELETE CASCADE,
+                        instance TEXT NOT NULL REFERENCES dom_instances (instance) ON DELETE CASCADE,
+                        permissions INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX dom_permissions_ui ON dom_permissions (userid, instance);
+
+                    INSERT INTO dom_instances (instance, generation)
+                        SELECT instance, generation FROM dom_instances_BAK ORDER BY master ASC NULLS FIRST;
+                    INSERT INTO dom_permissions (userid, instance, permissions)
+                        SELECT userid, instance, permissions FROM dom_permissions_BAK;
+
+                    DROP TABLE dom_permissions_BAK;
+                    DROP TABLE dom_instances_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 17);
+            RG_STATIC_ASSERT(DomainVersion == 18);
         }
 
         int64_t time = GetUnixTime();

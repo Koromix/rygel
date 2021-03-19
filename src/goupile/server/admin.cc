@@ -859,6 +859,237 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
     });
 }
 
+static bool BackupDatabase(sq_Database *src, const char *filename)
+{
+    sq_Database db;
+    if (!db.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+        return false;
+
+    sqlite3_backup *backup = sqlite3_backup_init(db, "main", *src, "main");
+    if (!backup)
+        return false;
+    RG_DEFER { sqlite3_backup_finish(backup); };
+
+restart:
+    int ret = sqlite3_backup_step(backup, -1);
+
+    if (ret != SQLITE_DONE) {
+        if (ret == SQLITE_OK || ret == SQLITE_BUSY || ret == SQLITE_LOCKED) {
+            WaitDelay(100);
+            goto restart;
+        } else {
+            LogError("SQLite Error: %1", sqlite3_errstr(ret));
+            return false;
+        }
+    }
+
+    sqlite3_backup_finish(backup);
+    backup = nullptr;
+
+    return db.Close();
+}
+
+static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = nullptr)
+{
+    BlockAllocator temp_alloc;
+
+    Span<InstanceHolder *> instances = gp_domain.LockInstances();
+    RG_DEFER { gp_domain.UnlockInstances(); };
+
+    if (out_conflict) {
+        *out_conflict = false;
+    }
+
+    struct BackupEntry {
+        sq_Database *db;
+        const char *basename;
+        const char *filename;
+    };
+
+    HeapArray<BackupEntry> entries;
+    RG_DEFER {
+        for (const BackupEntry &entry: entries) {
+            UnlinkFile(entry.filename);
+        }
+    };
+
+    // Make archive filename
+    const char *archive_filename;
+    {
+        time_t mtime = (time_t)(GetUnixTime() / 1000);
+
+#ifdef _WIN32
+        struct tm mtime_tm;
+        {
+            errno_t err = _gmtime64_s(&mtime_tm, &mtime);
+            if (err) {
+                LogError("Failed to format current time: %1", strerror(err));
+                return false;
+            }
+        }
+#else
+        struct tm mtime_tm;
+        if (!gmtime_r(&mtime, &mtime_tm)) {
+            LogError("Failed to format current time: %1", strerror(errno));
+            return false;
+        }
+#endif
+
+        char mtime_str[128];
+        if (!strftime(mtime_str, RG_SIZE(mtime_str), "%Y%m%dT%H%M%S%z", &mtime_tm)) {
+            LogError("Failed to format current time: strftime failed");
+            return false;
+        }
+
+        if (filter) {
+            archive_filename = Fmt(&temp_alloc, "%1%/%2_%3.goupilebackup",
+                                   gp_domain.config.backup_directory, mtime_str, filter->key).ptr;
+        } else {
+            archive_filename = Fmt(&temp_alloc, "%1%/%2.goupilebackup",
+                                   gp_domain.config.backup_directory, mtime_str).ptr;
+        }
+    }
+
+    // Open archive
+    StreamWriter writer;
+    if (!writer.Open(archive_filename, (int)StreamWriterFlag::Exclusive |
+                                       (int)StreamWriterFlag::Atomic)) {
+        if (out_conflict && errno == EEXIST) {
+            *out_conflict = true;
+        }
+        return false;
+    }
+
+    // Generate backup entries
+    entries.Append({&gp_domain.db, "goupile.db"});
+    for (InstanceHolder *instance: instances) {
+        if (filter == nullptr || instance == filter || instance->master == filter) {
+            const char *basename = SplitStrReverseAny(instance->filename, RG_PATH_SEPARATORS).ptr;
+            basename = Fmt(&temp_alloc, "instances%/%1", basename).ptr;
+
+            entries.Append({&instance->db, basename});
+        }
+    }
+    for (BackupEntry &entry: entries) {
+        entry.filename = CreateTemporaryFile(gp_domain.config.temp_directory, "", nullptr, &temp_alloc);
+    }
+
+    // Backup databases
+    Async async;
+    for (const BackupEntry &entry: entries) {
+        async.Run([&, entry]() { return BackupDatabase(entry.db, entry.filename); });
+    }
+    if (!async.Sync())
+        return false;
+
+    // Closure context for miniz write callback
+    struct BackupContext {
+        StreamWriter *writer;
+        crypto_secretstream_xchacha20poly1305_state state;
+        LocalArray<uint8_t, 4096 - crypto_secretstream_xchacha20poly1305_ABYTES> buf;
+    };
+    BackupContext ctx = {};
+    ctx.writer = &writer;
+
+    // Write archive intro
+    {
+        ArchiveIntro intro = {};
+
+        CopyString(ARCHIVE_SIGNATURE, intro.signature);
+        intro.version = ARCHIVE_VERSION;
+
+        uint8_t skey[crypto_secretstream_xchacha20poly1305_KEYBYTES];
+        crypto_secretstream_xchacha20poly1305_keygen(skey);
+        if (crypto_secretstream_xchacha20poly1305_init_push(&ctx.state, intro.header, skey) != 0) {
+            LogError("Failed to initialize symmetric encryption");
+            return false;
+        }
+        if (crypto_box_seal(intro.eskey, skey, RG_SIZE(skey), gp_domain.config.backup_key) != 0) {
+            LogError("Failed to seal symmetric key");
+            return false;
+        }
+
+        if (!writer.Write(&intro, RG_SIZE(intro)))
+            return false;
+    }
+
+    // Init ZIP compressor
+    mz_zip_archive zip;
+    mz_zip_zero_struct(&zip);
+    zip.m_pWrite = [](void *udata, mz_uint64, const void *buf, size_t len) {
+        BackupContext *ctx = (BackupContext *)udata;
+        size_t copy = len;
+
+        while (len) {
+            size_t copy_len = std::min(len, (size_t)ctx->buf.Available());
+            memcpy(ctx->buf.end(), buf, copy_len);
+            ctx->buf.len += (Size)copy_len;
+
+            if (!ctx->buf.Available()) {
+                uint8_t cypher[4096];
+                unsigned long long cypher_len;
+                if (crypto_secretstream_xchacha20poly1305_push(&ctx->state, cypher, &cypher_len,
+                                                               ctx->buf.data, ctx->buf.len, nullptr, 0, 0) != 0) {
+                    LogError("Failed during symmetric encryption");
+                    return (size_t)-1;
+                }
+                if (!ctx->writer->Write(cypher, (Size)cypher_len))
+                    return (size_t)-1;
+                ctx->buf.len = 0;
+            }
+
+            buf = (const void *)((const uint8_t *)buf + copy_len);
+            len -= copy_len;
+        }
+
+        return copy;
+    };
+    zip.m_pIO_opaque = &ctx;
+    if (!mz_zip_writer_init(&zip, 0)) {
+        LogError("Failed to create ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
+        return false;
+    }
+    RG_DEFER { mz_zip_writer_end(&zip); };
+
+    // Add databases to ZIP archive
+    for (const BackupEntry &entry: entries) {
+        if (!mz_zip_writer_add_file(&zip, entry.basename, entry.filename, nullptr, 0, MZ_BEST_SPEED)) {
+            if (zip.m_last_error != MZ_ZIP_WRITE_CALLBACK_FAILED) {
+                LogError("Failed to compress '%1': %2", entry.basename, mz_zip_get_error_string(zip.m_last_error));
+            }
+            return false;
+        }
+    }
+
+    // Finalize ZIP
+    if (!mz_zip_writer_finalize_archive(&zip)) {
+        if (zip.m_last_error != MZ_ZIP_WRITE_CALLBACK_FAILED) {
+            LogError("Failed to finalize ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
+        }
+        return false;
+    }
+
+    // Finalize encryption
+    {
+        uint8_t cypher[4096];
+        unsigned long long cypher_len;
+        if (crypto_secretstream_xchacha20poly1305_push(&ctx.state, cypher, &cypher_len, ctx.buf.data, ctx.buf.len, nullptr, 0,
+                                                       crypto_secretstream_xchacha20poly1305_TAG_FINAL) != 0) {
+            LogError("Failed during symmetric encryption");
+            return false;
+        }
+
+        if (!writer.Write(cypher, (Size)cypher_len))
+            return false;
+     }
+
+    // Flush buffers and rename atomically
+    if (!writer.Close())
+        return false;
+
+    return true;
+}
+
 void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
@@ -886,7 +1117,6 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        // Read POST values
         const char *instance_key = values.FindValue("key", nullptr);
         if (!instance_key) {
             LogError("Missing 'key' parameter");
@@ -894,33 +1124,79 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
+        InstanceHolder *instance = gp_domain.Ref(instance_key);
+        if (!instance) {
+            LogError("Instance '%1' does not exist", instance_key);
+            io->AttachError(404);
+            return;
+        }
+        RG_DEFER_N(ref_guard) { instance->Unref(); };
+
+        bool conflict;
+        if (!BackupInstances(instance, &conflict)) {
+            if (conflict) {
+                io->AttachError(409, "Archive already exists");
+            }
+            return;
+        }
+
         bool success = gp_domain.db.Transaction([&]() {
-            // Log action
             int64_t time = GetUnixTime();
+
+            for (Size i = instance->slaves.len - 1; i >= 0; i--) {
+                InstanceHolder *slave = instance->slaves[i];
+
+                if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                                         VALUES (?1, ?2, ?3, ?4, ?5))",
+                                      time, request.client_addr, "delete_instance", session->username,
+                                      slave->key))
+                    return false;
+                if (!gp_domain.db.Run("DELETE FROM dom_instances WHERE instance = ?1", slave->key))
+                    return false;
+            }
+
             if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                     VALUES (?1, ?2, ?3, ?4, ?5 || ?6))",
+                                     VALUES (?1, ?2, ?3, ?4, ?5))",
                                   time, request.client_addr, "delete_instance", session->username,
                                   instance_key))
                 return false;
-
-            // Do it!
             if (!gp_domain.db.Run("DELETE FROM dom_instances WHERE instance = ?1", instance_key))
                 return false;
-            if (!sqlite3_changes(gp_domain.db)) {
-                LogError("Instance '%1' does not exist", instance_key);
-                io->AttachError(404);
-                return false;
-            }
 
             return true;
         });
         if (!success)
             return;
 
+        // Copy filenames to avoid use-after-free
+        HeapArray<const char *> unlink_filenames;
+        {
+            for (const InstanceHolder *slave: instance->slaves) {
+                const char *filename = DuplicateString(slave->filename, &io->allocator).ptr;
+                unlink_filenames.Append(filename);
+            }
+
+            const char *filename = DuplicateString(instance->filename, &io->allocator).ptr;
+            unlink_filenames.Append(filename);
+        }
+
+        instance->Unref();
+        ref_guard.Disable();
         if (!gp_domain.Sync())
             return;
 
-        io->AttachText(200, "Done!");
+        bool complete = true;
+        for (const char *filename: unlink_filenames) {
+            // Not much we can do if this fails to succeed anyway; the backup is okay and the
+            // instance is deleted. We're mostly successful and we can't go back.
+            complete &= UnlinkFile(filename);
+        }
+
+        if (complete) {
+            io->AttachText(200, "Done!");
+        } else {
+            io->AttachText(202, "Done, but with leftover databases");
+        }
     });
 }
 
@@ -1313,36 +1589,6 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
     json.Finish(io);
 }
 
-static bool BackupDatabase(sq_Database *src, const char *filename)
-{
-    sq_Database db;
-    if (!db.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
-        return false;
-
-    sqlite3_backup *backup = sqlite3_backup_init(db, "main", *src, "main");
-    if (!backup)
-        return false;
-    RG_DEFER { sqlite3_backup_finish(backup); };
-
-restart:
-    int ret = sqlite3_backup_step(backup, -1);
-
-    if (ret != SQLITE_DONE) {
-        if (ret == SQLITE_OK || ret == SQLITE_BUSY || ret == SQLITE_LOCKED) {
-            WaitDelay(100);
-            goto restart;
-        } else {
-            LogError("SQLite Error: %1", sqlite3_errstr(ret));
-            return false;
-        }
-    }
-
-    sqlite3_backup_finish(backup);
-    backup = nullptr;
-
-    return db.Close();
-}
-
 void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
@@ -1369,186 +1615,13 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
     }
 
     io->RunAsync([=]() {
-        Span<InstanceHolder *> instances = gp_domain.LockInstances();
-        RG_DEFER { gp_domain.UnlockInstances(); };
-
-        struct BackupEntry {
-            sq_Database *db;
-            const char *basename;
-            const char *filename;
-        };
-
-        HeapArray<BackupEntry> entries;
-        RG_DEFER {
-            for (const BackupEntry &entry: entries) {
-                UnlinkFile(entry.filename);
-            }
-        };
-
-        // Generate backup entries
-        entries.Append({&gp_domain.db, "goupile.db"});
-        for (InstanceHolder *instance: instances) {
-            const char *basename = SplitStrReverseAny(instance->filename, RG_PATH_SEPARATORS).ptr;
-            basename = Fmt(&io->allocator, "instances%/%1", basename).ptr;
-
-            entries.Append({&instance->db, basename});
-        }
-        for (BackupEntry &entry: entries) {
-            entry.filename = CreateTemporaryFile(gp_domain.config.temp_directory, "", nullptr, &io->allocator);
-        }
-
-        // Backup databases
-        Async async;
-        for (const BackupEntry &entry: entries) {
-            async.Run([&, entry]() { return BackupDatabase(entry.db, entry.filename); });
-        }
-        if (!async.Sync())
-            return;
-
-        // Make archive filename
-        const char *archive_filename;
-        {
-            time_t mtime = (time_t)(GetUnixTime() / 1000);
-
-#ifdef _WIN32
-            struct tm mtime_tm;
-            {
-                errno_t err = _gmtime64_s(&mtime_tm, &mtime);
-                if (err) {
-                    LogError("Failed to format current time: %1", strerror(err));
-                    return;
-                }
-            }
-#else
-            struct tm mtime_tm;
-            if (!gmtime_r(&mtime, &mtime_tm)) {
-                LogError("Failed to format current time: %1", strerror(errno));
-                return;
-            }
-#endif
-
-            char mtime_str[128];
-            if (!strftime(mtime_str, RG_SIZE(mtime_str), "%Y%m%dT%H%M%S%z", &mtime_tm)) {
-                LogError("Failed to format current time: strftime failed");
-                return;
-            }
-
-            archive_filename = Fmt(&io->allocator, "%1%/%2.goupilebackup",
-                                   gp_domain.config.backup_directory, mtime_str).ptr;
-        }
-
-        // Closure context for miniz write callback
-        struct BackupContext {
-            StreamWriter writer;
-            crypto_secretstream_xchacha20poly1305_state state;
-            LocalArray<uint8_t, 4096 - crypto_secretstream_xchacha20poly1305_ABYTES> buf;
-        };
-        BackupContext ctx = {};
-
-        // Open archive
-        if (!ctx.writer.Open(archive_filename, (int)StreamWriterFlag::Exclusive |
-                                               (int)StreamWriterFlag::Atomic)) {
-            if (errno == EEXIST) {
+        bool conflict;
+        if (!BackupInstances(nullptr, &conflict)) {
+            if (conflict) {
                 io->AttachError(409, "Archive already exists");
             }
             return;
         }
-
-        // Write archive intro
-        {
-            ArchiveIntro intro = {};
-
-            CopyString(ARCHIVE_SIGNATURE, intro.signature);
-            intro.version = ARCHIVE_VERSION;
-
-            uint8_t skey[crypto_secretstream_xchacha20poly1305_KEYBYTES];
-            crypto_secretstream_xchacha20poly1305_keygen(skey);
-            if (crypto_secretstream_xchacha20poly1305_init_push(&ctx.state, intro.header, skey) != 0) {
-                LogError("Failed to initialize symmetric encryption");
-                return;
-            }
-            if (crypto_box_seal(intro.eskey, skey, RG_SIZE(skey), gp_domain.config.backup_key) != 0) {
-                LogError("Failed to seal symmetric key");
-                return;
-            }
-
-            if (!ctx.writer.Write(&intro, RG_SIZE(intro)))
-                return;
-        }
-
-        // Init ZIP compressor
-        mz_zip_archive zip;
-        mz_zip_zero_struct(&zip);
-        zip.m_pWrite = [](void *udata, mz_uint64, const void *buf, size_t len) {
-            BackupContext *ctx = (BackupContext *)udata;
-            size_t copy = len;
-
-            while (len) {
-                size_t copy_len = std::min(len, (size_t)ctx->buf.Available());
-                memcpy(ctx->buf.end(), buf, copy_len);
-                ctx->buf.len += (Size)copy_len;
-
-                if (!ctx->buf.Available()) {
-                    uint8_t cypher[4096];
-                    unsigned long long cypher_len;
-                    if (crypto_secretstream_xchacha20poly1305_push(&ctx->state, cypher, &cypher_len,
-                                                                   ctx->buf.data, ctx->buf.len, nullptr, 0, 0) != 0) {
-                        LogError("Failed during symmetric encryption");
-                        return (size_t)-1;
-                    }
-                    if (!ctx->writer.Write(cypher, (Size)cypher_len))
-                        return (size_t)-1;
-                    ctx->buf.len = 0;
-                }
-
-                buf = (const void *)((const uint8_t *)buf + copy_len);
-                len -= copy_len;
-            }
-
-            return copy;
-        };
-        zip.m_pIO_opaque = &ctx;
-        if (!mz_zip_writer_init(&zip, 0)) {
-            LogError("Failed to create ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
-            return;
-        }
-        RG_DEFER { mz_zip_writer_end(&zip); };
-
-        // Add databases to ZIP archive
-        for (const BackupEntry &entry: entries) {
-            if (!mz_zip_writer_add_file(&zip, entry.basename, entry.filename, nullptr, 0, MZ_BEST_SPEED)) {
-                if (zip.m_last_error != MZ_ZIP_WRITE_CALLBACK_FAILED) {
-                    LogError("Failed to compress '%1': %2", entry.basename, mz_zip_get_error_string(zip.m_last_error));
-                }
-                return;
-            }
-        }
-
-        // Finalize ZIP
-        if (!mz_zip_writer_finalize_archive(&zip)) {
-            if (zip.m_last_error != MZ_ZIP_WRITE_CALLBACK_FAILED) {
-                LogError("Failed to finalize ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
-            }
-            return;
-        }
-
-        // Finalize encryption
-        {
-            uint8_t cypher[4096];
-            unsigned long long cypher_len;
-            if (crypto_secretstream_xchacha20poly1305_push(&ctx.state, cypher, &cypher_len, ctx.buf.data, ctx.buf.len, nullptr, 0,
-                                                           crypto_secretstream_xchacha20poly1305_TAG_FINAL) != 0) {
-                LogError("Failed during symmetric encryption");
-                return;
-            }
-
-            if (!ctx.writer.Write(cypher, (Size)cypher_len))
-                return;
-         }
-
-        // Flush buffers and rename atomically
-        if (!ctx.writer.Close())
-            return;
 
         io->AttachText(200, "Done!");
     });
