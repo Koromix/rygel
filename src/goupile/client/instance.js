@@ -636,8 +636,8 @@ function InstanceController() {
 
                         return html`
                             <li><a class=${cls} href=${contextualizeURL(form.url, form_record)} style="display: flex;">
-                                    <div style="flex: 1;">${form.title}</div>
-                                    ${meta && meta.status.has(form.key) ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
+                                <div style="flex: 1;">${form.title}</div>
+                                ${meta && meta.status.has(form.key) ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
                             </a></li>
                         `;
                     }
