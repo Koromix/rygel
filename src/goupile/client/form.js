@@ -342,6 +342,8 @@ function FormBuilder(state, model, readonly = false) {
         let fix_value = (value != null) ? util.clamp(value, options.min, options.max)
                                         : ((options.min + options.max) / 2);
         let fake_progress = (value != null) ? ((fix_value - options.min) / range) : -1;
+        if (options.floating)
+            fake_progress = -1;
 
         let ticks = [];
         if (options.ticks != null && options.ticks !== false) {
