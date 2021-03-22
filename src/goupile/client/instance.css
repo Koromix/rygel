@@ -115,7 +115,6 @@ html.mobile #ins_page { padding-top: 0; }
 }
 #ins_actions > button { width: 100%; }
 
-
 html:not(.small) #ui_panels > div:only-child #ins_menu { display: block; }
 html:not(.small) #ui_panels > div:only-child #ins_actions { display: block; }
 
@@ -187,4 +186,12 @@ html:not(.small) #ui_panels > div:only-child #ins_actions { display: block; }
 .ins_deploy span.conflict {
     font-style: normal;
     color: red;
+}
+
+/* -------------------- Print -------------------- */
+
+@media print {
+    #ins_menu { display: none !important; }
+    #ins_actions { display: none !important; }
+    #ins_notice { display: none !important; }
 }

@@ -36,6 +36,8 @@
     border-radius: var(--block_rounding) var(--block_rounding) 0 0;
     font-size: 1.1em;
     color: white;
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
 }
 .fm_legend::before {
     padding-right: 0.5em;
