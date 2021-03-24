@@ -711,7 +711,7 @@ Size http_IO::Read(Span<uint8_t> out_buf)
     }
 
     if (RG_UNLIKELY(read_max >= 0 && read_len > read_max - read_total)) {
-        LogError("HTTP body is too big (max = %1)", FmtMemSize(read_len));
+        LogError("HTTP body is too big (max = %1)", FmtDiskSize(read_max));
         AttachError(413);
         return -1;
     }
