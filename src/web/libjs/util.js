@@ -367,7 +367,7 @@ const util = new function() {
         a.click();
         document.body.removeChild(a);
 
-        if(URL.revokeObjectURL)
+        if (URL.revokeObjectURL)
             setTimeout(() => URL.revokeObjectURL(url), 60000);
     };
 
