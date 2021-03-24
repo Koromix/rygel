@@ -303,7 +303,9 @@ const ui = new function() {
     }
 
     this.runConfirm = function(e, msg, action, func) {
-        return self.runDialog(e, null, (d, resolve, reject) => {
+        let title = action + ' (confirmation)';
+
+        return self.runDialog(e, title, (d, resolve, reject) => {
             d.output(msg);
 
             d.action(action, {disabled: !d.isValid()}, async e => {
