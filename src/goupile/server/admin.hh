@@ -33,6 +33,8 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io);
 void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io);
 void HandleArchiveList(const http_RequestInfo &request, http_IO *io);
 void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io);
+void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io);
+void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io);
 
 void HandleUserCreate(const http_RequestInfo &request, http_IO *io);
 void HandleUserEdit(const http_RequestInfo &request, http_IO *io);

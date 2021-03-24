@@ -245,6 +245,7 @@ html.small .ui_toolbar button.icon {
     color: #777;
     align-items: flex-end;
 }
+.ui_table + .ui_quick { margin-top: 4px; }
 .ui_quick input {
     padding: 3px 4px;
     background: white;

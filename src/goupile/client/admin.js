@@ -199,20 +199,27 @@ function AdminController() {
                         <col/>
                         <col style="width: 100px;"/>
                         <col style="width: 100px;"/>
+                        <col style="width: 100px;"/>
                     </colgroup>
 
                     <tbody>
-                        ${!backups.length ? html`<tr><td colspan="3">Aucune sauvegarde</td></tr>` : ''}
+                        ${!backups.length ? html`<tr><td colspan="4">Aucune sauvegarde</td></tr>` : ''}
                         ${backups.map(bak => html`
                             <tr>
                                 <td style="text-align: left;"><a href=${util.pasteURL('/admin/api/archives/download', {filename: bak.filename})}
                                                                  download>${bak.filename}</a></td>
                                 <td>${util.formatDiskSize(bak.size)}</td>
+                                <td><a @click=${ui.wrapAction(e => runRestoreBackupDialog(e, bak.filename))}>Restaurer</a></td>
                                 <td><a @click=${ui.wrapAction(e => runDeleteBackupDialog(e, bak.filename))}>Supprimer</a></td>
                             </tr>
                         `)}
                     </tbody>
                 </table>
+
+                <div class="ui_quick">
+                    <div style="flex: 1;"></div>
+                    <a @click=${ui.wrapAction(runUploadBackupDialog)}>Uploader une archive</a>
+                </div>
             </div>
         `;
     }
@@ -237,7 +244,76 @@ function AdminController() {
             progress.close();
             throw err;
         }
+    }
 
+    async function runUploadBackupDialog(e) {
+        return ui.runDialog(e, 'Envoi d\'archive', (d, resolve, reject) => {
+            let archive = d.file('*archive', 'Archive');
+
+            d.action('Envoyer', {disabled: !d.isValid()}, async () => {
+                let progress = log.progress('Envoi en cours');
+
+                try {
+                    let response = await net.fetch('/admin/api/archives/upload', {
+                        method: 'PUT',
+                        body: archive.value
+                    });
+
+                    if (response.ok) {
+                        resolve();
+                        progress.success('Envoi complété');
+
+                        backups = null;
+
+                        self.go();
+                    } else {
+                        let err = (await response.text()).trim();
+                        throw new Error(err);
+                    }
+                } catch (err) {
+                    progress.close();
+                    reject(err);
+                }
+            });
+        });
+    }
+
+    async function runRestoreBackupDialog(e, filename) {
+        return ui.runDialog(e, `Restauration de '${filename}'`, (d, resolve, reject) => {
+            let key = d.password('*key', 'Clé de restauration');
+
+            d.action('Restaurer', {disabled: !d.isValid()}, async () => {
+                let progress = log.progress('Restauration en cours');
+
+                try {
+                    let query = new URLSearchParams;
+                    query.set('filename', filename);
+                    query.set('key', key.value);
+
+                    let response = await net.fetch('/admin/api/archives/restore', {
+                        method: 'POST',
+                        body: query
+                    });
+
+                    if (response.ok) {
+                        resolve();
+                        progress.success(`Sauvegarde '${filename}' restaurée`);
+
+                        instances = null;
+                        users = null;
+                        backups = null;
+
+                        self.go();
+                    } else {
+                        let err = (await response.text()).trim();
+                        throw new Error(err);
+                    }
+                } catch (err) {
+                    progress.close();
+                    reject(err);
+                }
+            });
+        });
     }
 
     function runDeleteBackupDialog(e, filename) {

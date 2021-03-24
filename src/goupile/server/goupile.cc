@@ -236,6 +236,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleArchiveList(request, io);
         } else if (TestStr(admin_url, "/api/archives/download") && request.method == http_RequestMethod::Get) {
             HandleArchiveDownload(request, io);
+        } else if (TestStr(admin_url, "/api/archives/upload") && request.method == http_RequestMethod::Put) {
+            HandleArchiveUpload(request, io);
+        } else if (TestStr(admin_url, "/api/archives/restore") && request.method == http_RequestMethod::Post) {
+            HandleArchiveRestore(request, io);
         } else if (TestStr(admin_url, "/api/users/create") && request.method == http_RequestMethod::Post) {
             HandleUserCreate(request, io);
         } else if (TestStr(admin_url, "/api/users/edit") && request.method == http_RequestMethod::Post) {
@@ -541,6 +545,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
                 LogDebug("Checkpointing databases");
                 gp_domain.Checkpoint();
             }
+
+            // XXX: Regularly prune leftover files in tmp directory
+            // Safe to delete = fiels already seen last prune, or everything when pruning at startup
 
 #ifdef __GLIBC__
             // Actually release memory to the OS, because for some reason glibc doesn't want to

@@ -1819,6 +1819,238 @@ void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io)
     }
 }
 
+void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
+        if (session->admin_until) {
+            LogError("Admin user needs to confirm identity");
+            io->AttachError(401);
+        } else {
+            LogError("Non-admin users are not allowed to upload archives");
+            io->AttachError(403);
+        }
+        return;
+    }
+
+    io->RunAsync([=]() {
+        int64_t time = GetUnixTime();
+        const char *filename = Fmt(&io->allocator, "%1%/upload_%2@%3.goupilebackup",
+                                   gp_domain.config.backup_directory, session->username, time).ptr;
+
+        StreamWriter writer;
+        if (!writer.Open(filename, (int)StreamWriterFlag::Exclusive |
+                                   (int)StreamWriterFlag::Atomic)) {
+            if (errno == EEXIST) {
+                LogError("An archive already exists with this name");
+                io->AttachError(409);
+            }
+            return;
+        }
+
+        StreamReader reader;
+        if (!io->OpenForRead(Megabytes(128), &reader))
+            return;
+
+        // Read and store
+        while (!reader.IsEOF()) {
+            LocalArray<uint8_t, 16384> buf;
+            buf.len = reader.Read(buf.data);
+            if (buf.len < 0)
+                return;
+
+            if (!writer.Write(buf))
+                return;
+        }
+
+        if (!writer.Close())
+            return;
+
+        io->AttachText(200, "Done!");
+    });
+}
+
+void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<const Session> session = GetCheckedSession(request, io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
+        if (session->admin_until) {
+            LogError("Admin user needs to confirm identity");
+            io->AttachError(401);
+        } else {
+            LogError("Non-admin users are not allowed to upload archives");
+            io->AttachError(403);
+        }
+        return;
+    }
+
+    io->RunAsync([=]() {
+        HashMap<const char *, const char *> values;
+        if (!io->ReadPostValues(&io->allocator, &values)) {
+            io->AttachError(422);
+            return;
+        }
+
+        const char *basename = values.FindValue("filename", nullptr);
+        if (!basename) {
+            LogError("Missing 'filename' paramreter");
+            io->AttachError(422);
+            return;
+        }
+
+        const char *decrypt_key = values.FindValue("key", nullptr);
+        if (!decrypt_key) {
+            LogError("Missing 'key' parameter");
+            io->AttachError(422);
+            return;
+        }
+
+        // Safety checks
+        if (PathIsAbsolute(basename)) {
+            LogError("Path must not be absolute");
+            io->AttachError(403);
+            return;
+        }
+        if (PathContainsDotDot(basename)) {
+            LogError("Path must not contain any '..' component");
+            io->AttachError(403);
+            return;
+        }
+        if (GetPathExtension(basename) != ".goupilebackup") {
+            LogError("Path must end with '.goupilebackup' extension");
+            io->AttachError(403);
+            return;
+        }
+
+        const char *filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.backup_directory, basename).ptr;
+
+        // Create temporary file
+        FILE *fp = nullptr;
+        const char *tmp_filename = CreateTemporaryFile(gp_domain.config.temp_directory, "", ".tmp",
+                                                       &io->allocator, &fp);
+        if (!tmp_filename)
+            return;
+        RG_DEFER {
+            fclose(fp);
+            UnlinkFile(tmp_filename);
+        };
+
+        StreamReader reader(filename);
+        StreamWriter writer(fp, tmp_filename);
+        if (!reader.IsValid()) {
+            if (errno == ENOENT) {
+                LogError("Archive '%1' does not exist", basename);
+                io->AttachError(404);
+            }
+            return;
+        }
+        if (!writer.IsValid())
+            return;
+
+        // Derive asymmetric keys
+        uint8_t askey[crypto_box_SECRETKEYBYTES];
+        uint8_t apkey[crypto_box_PUBLICKEYBYTES];
+        {
+            RG_STATIC_ASSERT(crypto_scalarmult_SCALARBYTES == crypto_box_SECRETKEYBYTES);
+            RG_STATIC_ASSERT(crypto_scalarmult_BYTES == crypto_box_PUBLICKEYBYTES);
+
+            size_t key_len;
+            int ret = sodium_base642bin(askey, RG_SIZE(askey),
+                                        decrypt_key, strlen(decrypt_key), nullptr, &key_len,
+                                        nullptr, sodium_base64_VARIANT_ORIGINAL);
+            if (ret || key_len != 32) {
+                LogError("Malformed decryption key");
+                io->AttachError(422);
+                return;
+            }
+
+            crypto_scalarmult_base(apkey, askey);
+        }
+
+        // Check signature and initialize symmetric decryption
+        uint8_t skey[crypto_secretstream_xchacha20poly1305_KEYBYTES];
+        crypto_secretstream_xchacha20poly1305_state state;
+        {
+            ArchiveIntro intro;
+            if (reader.Read(RG_SIZE(intro), &intro) != RG_SIZE(intro)) {
+                if (reader.IsValid()) {
+                    LogError("Truncated archive");
+                    io->AttachError(422);
+                }
+                return;
+            }
+
+            if (strncmp(intro.signature, ARCHIVE_SIGNATURE, RG_SIZE(intro.signature)) != 0) {
+                LogError("Unexpected archive signature");
+                io->AttachError(422);
+                return;
+            }
+            if (intro.version != ARCHIVE_VERSION) {
+                LogError("Unexpected archive version %1 (expected %2)", intro.version, ARCHIVE_VERSION);
+                io->AttachError(422);
+                return;
+            }
+
+            if (crypto_box_seal_open(skey, intro.eskey, RG_SIZE(intro.eskey), apkey, askey) != 0) {
+                LogError("Failed to unseal archive (wrong key?)");
+                io->AttachError(403);
+                return;
+            }
+            if (crypto_secretstream_xchacha20poly1305_init_pull(&state, intro.header, skey) != 0) {
+                LogError("Failed to initialize symmetric decryption (corrupt archive?)");
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        for (;;) {
+            LocalArray<uint8_t, 4096> cypher;
+            cypher.len = reader.Read(cypher.data);
+            if (cypher.len < 0)
+                return;
+
+            uint8_t buf[4096];
+            unsigned long long buf_len = 5;
+            uint8_t tag;
+            if (crypto_secretstream_xchacha20poly1305_pull(&state, buf, &buf_len, &tag,
+                                                           cypher.data, cypher.len, nullptr, 0) != 0) {
+                LogError("Failed during symmetric decryption (corrupt archive?)");
+                io->AttachError(422);
+                return;
+            }
+
+            if (!writer.Write(buf, (Size)buf_len))
+                return;
+
+            if (reader.IsEOF()) {
+                if (tag != crypto_secretstream_xchacha20poly1305_TAG_FINAL) {
+                    LogError("Truncated archive");
+                    io->AttachError(422);
+                    return;
+                }
+                break;
+            }
+        }
+        if (!writer.Close())
+            return;
+
+        // XXX: Finish archive restoration
+        io->AttachError(501);
+    });
+}
+
 void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const Session> session = GetCheckedSession(request, io);
