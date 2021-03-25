@@ -534,6 +534,10 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
 
             if (ret == WaitForResult::Interrupt) {
                 LogInfo("Exit requested");
+
+                LogDebug("Stop HTTP server");
+                daemon.Stop();
+
                 run = false;
             } else if (ret == WaitForResult::Message) {
                 LogDebug("Syncing instances");
@@ -542,7 +546,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
 
             // Make sure data loss (if it happens) is very limited in time
             if (!gp_domain.config.sync_full) {
-                LogDebug("Checkpointing databases");
+                LogDebug("Checkpoint databases");
                 gp_domain.Checkpoint();
             }
 
@@ -557,8 +561,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
 #endif
         }
     }
-
-    daemon.Stop();
 
     return 0;
 }
