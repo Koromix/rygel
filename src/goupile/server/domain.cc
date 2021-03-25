@@ -354,6 +354,11 @@ bool DomainHolder::Sync()
 
     // Start new instances
     for (const StartInfo &start: registry_start) {
+        if (new_instances.len >= MaxInstancesPerDomain) {
+            LogError("Too many instances on this domain");
+            continue;
+        }
+
         InstanceHolder *master;
         if (start.master_key) {
             master = new_map.FindValue(start.master_key, nullptr);
