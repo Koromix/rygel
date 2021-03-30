@@ -107,14 +107,15 @@
                     if (typeof goupile !== 'undefined') {
                         let p = goupile.start();
 
+                        p.then(function() {
+                            document.body.classList.remove('gp_loading');
+                        })
                         p.catch(function(err) {
                             document.querySelector('#ui_main').innerHTML =
                                 '<div class="ui_wip">' +
                                     '<b>Une erreur est survenue pendant le chargement</b>\n' +
                                     err.message +
                                 '</div>';
-                        });
-                        p.finally(function() {
                             document.body.classList.remove('gp_loading');
                         });
                     } else {
