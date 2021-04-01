@@ -143,6 +143,8 @@ html.small .ui_toolbar button.icon {
 .ui_toolbar > .drop > div {
     display: none;
     position: absolute;
+    max-height: calc(100vh - 6em);
+    overflow: auto;
     min-width: 220px;
     background-color: inherit;
     z-index: 9999;
@@ -150,6 +152,7 @@ html.small .ui_toolbar button.icon {
 .ui_toolbar > .drop.right > div { right: 0; }
 .ui_toolbar > .drop > div button {
     height: 2.4em;
+    min-height: 2.4em;
     text-align: left;
 }
 .ui_toolbar > .drop > div hr {
