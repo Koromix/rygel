@@ -114,6 +114,7 @@ html.mobile #ins_page { padding-top: 0; }
     border-top: 1px solid #dfdfdf;
 }
 #ins_actions > button { width: 100%; }
+#ins_actions > * + button { margin-top: 6px; }
 
 html:not(.small) #ui_panels > div:only-child #ins_menu { display: block; }
 html:not(.small) #ui_panels > div:only-child #ins_actions { display: block; }

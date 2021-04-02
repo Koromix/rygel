@@ -545,10 +545,8 @@ function InstanceController() {
                     if (builder.triggerErrors())
                         return saveRecord();
                 });
-                if (!goupile.isLocked()) {
-                    builder.action('-');
+                if (!goupile.isLocked())
                     builder.action('Nouveau', {}, goNewRecord);
-                }
             }
 
             render(model.render(), page_div);
@@ -567,6 +565,14 @@ function InstanceController() {
                     <div id="ins_menu">
                         ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormMenu(route.form.chain[idx]))}
                         ${route.form.chain.length === 1 || route.form.menu.length > 1 ? renderFormMenu(route.form) : ''}
+                    </div>
+
+                    <form id="ins_form" autocomplete="off" @submit=${e => e.preventDefault()}>
+                        ${page_div}
+                    </form>
+
+                    <div id="ins_actions">
+                        ${model.renderActions()}
 
                         ${!goupile.isLocked() ? html`
                             <hr/>
@@ -579,14 +585,6 @@ function InstanceController() {
                                 <a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>Historique</a>
                             </div>` : ''}
                             ` : ''}
-                    </div>
-
-                    <form id="ins_form" autocomplete="off" @submit=${e => e.preventDefault()}>
-                        ${page_div}
-                    </form>
-
-                    <div id="ins_actions">
-                        ${model.renderActions()}
                     </div>
                 </div>
 
