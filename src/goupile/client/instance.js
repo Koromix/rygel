@@ -581,7 +581,7 @@ function InstanceController() {
                             ` : ''}
                     </div>
 
-                    <form id="ins_form" @submit=${e => e.preventDefault()}>
+                    <form id="ins_form" autocomplete="off" @submit=${e => e.preventDefault()}>
                         ${page_div}
                     </form>
 
