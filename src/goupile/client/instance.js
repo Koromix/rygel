@@ -575,7 +575,7 @@ function InstanceController() {
                         ${model.renderActions()}
 
                         ${!goupile.isLocked() ? html`
-                            <hr/>
+                            ${model.actions.length ? html`<hr/>` : ''}
                             ${!form_record.chain[0].version ? html`<div id="ins_trail">Nouvel enregistrement</div>` : ''}
                             ${form_record.chain[0].version > 0 && form_record.chain[0].hid != null ? html`<div id="ins_id" class="hid">${form_record.chain[0].hid}</div>` : ''}
                             ${form_record.chain[0].version > 0 && form_record.chain[0].hid == null ? html`<div id="ins_trail">Enregistrement existant</div>` : ''}
