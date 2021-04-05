@@ -1614,17 +1614,13 @@ function InstanceController() {
             if (goupile.isLocked() && !new_record.chain.some(record => record.ulid === profile.lock))
                 throw new Error('Enregistrement non autorisé en mode de navigation restreint');
             if (!isPageEnabled(new_route.page, new_record)) {
-                if (goupile.isLocked()) {
-                    new_route.page = findEnabledPage(new_route.form, new_record);
-                    if (new_route.page == null)
-                        throw new Error('Cette page n\'est pas activée pour cet enregistrement');
-
-                    if (new_route.page.form !== new_route.form) {
-                        new_route.form = new_route.page.form;
-                        continue;
-                    }
-                } else {
+                new_route.page = findEnabledPage(new_route.form, new_record);
+                if (new_route.page == null)
                     throw new Error('Cette page n\'est pas activée pour cet enregistrement');
+
+                if (new_route.page.form !== new_route.form) {
+                    new_route.form = new_route.page.form;
+                    continue;
                 }
             }
 
@@ -1978,16 +1974,21 @@ function InstanceController() {
         }
     }
 
-    function findEnabledPage(form, record) {
+    function findEnabledPage(form, record, parents = true) {
         for (let item of form.menu) {
             if (item.type === 'page') {
                 if (isPageEnabled(item.page, record))
                     return item.page;
             } else if (item.type === 'form') {
-                let page = findEnabledPage(item.form, record);
+                let page = findEnabledPage(item.form, record, false);
                 if (page != null)
                     return page;
             }
+        }
+
+        if (parents && form.chain.length >= 2) {
+            let parent = form.chain[form.chain.length - 2];
+            return findEnabledPage(parent, record);
         }
 
         return null;
