@@ -659,10 +659,11 @@ const goupile = new function() {
         crypto.getRandomValues(nonce);
 
         let json = JSON.stringify(obj);
-        let message = base64ToBytes(window.btoa(json));
+        let message = (new TextEncoder()).encode(json);
         let box = nacl.secretbox(message, nonce, key);
 
         let enc = {
+            format: 2,
             nonce: bytesToBase64(nonce),
             box: bytesToBase64(box)
         };
@@ -677,7 +678,12 @@ const goupile = new function() {
         if (message == null)
             throw new Error('Failed to decrypt message: wrong key?');
 
-        let json = window.atob(bytesToBase64(message));
+        let json;
+        if (enc.format >= 2) {
+            json = (new TextDecoder()).decode(message);
+        } else {
+            json = window.atob(bytesToBase64(message));
+        }
         let obj = JSON.parse(json);
 
         return obj;
@@ -688,10 +694,11 @@ const goupile = new function() {
         crypto.getRandomValues(nonce);
 
         let json = JSON.stringify(obj);
-        let message = base64ToBytes(window.btoa(json));
+        let message = (new TextEncoder()).encode(json);
         let box = nacl.box(message, nonce, public_key, secret_key);
 
         let enc = {
+            format: 2,
             nonce: bytesToBase64(nonce),
             box: bytesToBase64(box)
         };
