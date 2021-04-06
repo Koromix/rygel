@@ -568,20 +568,26 @@ function InstanceController() {
                             ${!form_record.chain[0].version ? html`<div id="ins_trail">Nouvel enregistrement</div>` : ''}
                             ${form_record.chain[0].version > 0 && form_record.chain[0].hid != null ? html`<div id="ins_id" class="hid">${form_record.chain[0].hid}</div>` : ''}
                             ${form_record.chain[0].version > 0 && form_record.chain[0].hid == null ? html`<div id="ins_trail">Enregistrement existant</div>` : ''}
-                            ${route.version > 0 ? html`<div id="ins_trail">
-                                ${route.version < form_record.fragments.length ?
-                                    html`<span style="color: red;">Version : ${form_record.mtime.toLocaleString()}</span><br/>` : ''}
-                                <a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>(modifications)</a>
-                            </div>` : ''}
+                            ${route.version < form_record.fragments.length ?
+                                html`<div id="ins_trail"><span style="color: red;">Version : ${form_record.mtime.toLocaleString()}</span></div>` : ''}
 
-                            ${route.form.multi ? html`
+                            ${route.form.multi && form_record.siblings.length ? html`
                                 <hr/>
                                 ${util.mapRange(0, form_record.siblings.length, idx => {
                                     let sibling = form_record.siblings[form_record.siblings.length - idx - 1];
                                     let url = route.page.url + `/${sibling.ulid}`;
 
-                                    return html`<a href=${url}>${sibling.ctime.toLocaleString()}</a><br/>`;
+                                    if (sibling.ulid === form_record.ulid) {
+                                        return html`${sibling.ctime.toLocaleString()}<br/>`;
+                                    } else {
+                                        return html`<a href=${url} class="active">${sibling.ctime.toLocaleString()}</a><br/>`;
+                                    }
                                 })}
+                            ` : ''}
+
+                            ${route.version > 0 ? html`
+                                <hr/>
+                                <a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>(modifications)</a>
                             ` : ''}
                         ` : ''}
                     </div>
