@@ -486,6 +486,7 @@ function InstanceController() {
                 form: builder,
                 values: form_state.values,
                 meta: meta,
+                app: app,
                 nav: {
                     form: route.form,
                     page: route.page,
