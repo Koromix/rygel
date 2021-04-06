@@ -340,7 +340,42 @@ function InstanceController() {
                     </thead>
 
                     <tbody>
-                        ${visible_rows.map(row => renderDataRow(row, true))}
+                        ${visible_rows.map(row => {
+                            let active = form_record.chain.some(record => record.ulid === row.ulid);
+
+                            return html`
+                                <tr>
+                                    <td class=${(row.hid == null ? 'missing' : '') +
+                                                (active ? ' active' : '')}>${row.hid != null ? row.hid : 'NA'}</td>
+                                    ${row.form.menu.map(item => {
+                                        if (item.type === 'page') {
+                                            let page = item.page;
+                                            let url = page.url + `/${row.ulid}`;
+
+                                            if (row.status.has(page.key)) {
+                                                return html`<td class=${active && page === route.page ? 'saved active' : 'saved'}><a href=${url}>${item.title}</a></td>`;
+                                            } else {
+                                                return html`<td class=${active && page === route.page ? 'missing active' : 'missing'}><a href=${url}>${item.title}</a></td>`;
+                                            }
+                                        } else if (item.type === 'form') {
+                                            let form = item.form;
+
+                                            if (row.status.has(form.key)) {
+                                                let child = row.children[form.key][0];
+                                                let url = form.url + `/${child.ulid}`;
+
+                                                return html`<td class=${active && route.form.chain.includes(form) ? 'saved active' : 'saved'}><a href=${url}>${item.title}</a></td>`;
+                                            } else {
+                                                let url = form.url + `/${row.ulid}`;
+
+                                                return html`<td class=${active && route.form.chain.includes(form) ? 'missing active' : 'missing'}><a href=${url}>${item.title}</a></td>`;
+                                            }
+                                        }
+                                    })}
+                                    ${row.version > 0 ? html`<th><a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a></th>` : ''}
+                                </tr>
+                            `;
+                        })}
                         ${!visible_rows.length ? html`<tr><td colspan=${1 + data_form.menu.length}>Aucune ligne à afficher</td></tr>` : ''}
                     </tbody>
                 </table>
@@ -417,73 +452,6 @@ function InstanceController() {
         };
 
         return func;
-    }
-
-    function renderDataRow(row, root) {
-        let active = form_record.chain.some(record => record.ulid === row.ulid);
-        let focused = form_record.ulid === row.ulid;
-
-        return html`
-            <tr>
-                ${root ? html`<td class=${(row.hid == null ? 'missing' : '') +
-                                          (active ? ' active' : '')}>${row.hid != null ? row.hid : 'NA'}</td>` : ''}
-                ${row.form.menu.map(item => {
-                    if (item.type === 'page') {
-                        let page = item.page;
-                        let url = page.url + `/${row.ulid}`;
-
-                        if (row.status.has(page.key)) {
-                            return html`<td class=${active && page === route.page ? 'saved active' : 'saved'}><a href=${url}>${item.title}</a></td>`;
-                        } else {
-                            return html`<td class=${active && page === route.page ? 'missing active' : 'missing'}><a href=${url}>${item.title}</a></td>`;
-                        }
-                    } else if (item.type === 'form') {
-                        let form = item.form;
-
-                        if (row.status.has(form.key)) {
-                            let child = row.children[form.key][0];
-                            let url = form.url + `/${child.ulid}`;
-
-                            return html`<td class=${active && route.form.chain.includes(form) ? 'saved active' : 'saved'}><a href=${url}>${item.title}</a></td>`;
-                        } else {
-                            let url = form.url + `/${row.ulid}`;
-
-                            return html`<td class=${active && route.form.chain.includes(form) ? 'missing active' : 'missing'}><a href=${url}>${item.title}</a></td>`;
-                        }
-                    }
-                })}
-                ${row.version > 0 && (root || row.form.multi) ?
-                    html`<th><a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a></th>` : ''}
-            </tr>
-
-            ${active && root && route.form.chain.length > 1 ? html`
-                <tr style="background: none !important;">
-                    <td colspan=${2 + row.form.menu.length} style="padding: 26px 12px; border: 0; background: none !important;">
-                        ${util.mapRange(1, route.form.chain.length, idx => {
-                            let form = route.form.chain[idx];
-                            let record = form_record.map[form.key];
-
-                            if (form !== route.form || form.menu.length > 1) {
-                                return html`
-                                    <table class="ui_table fixed" style="border-bottom: none; border-top: none;">
-                                        <colgroup>
-                                            ${util.mapRange(0, form.menu.length, () => html`<col/>`)}
-                                            ${form.multi ? html`<col style="width: 2em;"/>` : ''}
-                                        </colgroup>
-
-                                        <tbody>
-                                            ${renderDataRow(record, false)}
-                                        </tbody>
-                                    </table>
-                                `;
-                            } else {
-                                return '';
-                            }
-                        })}
-                    </td>
-                </tr>
-            ` : ''}
-        `;
     }
 
     function runDeleteRecordDialog(e, ulid) {
