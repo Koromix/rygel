@@ -224,8 +224,13 @@ function InstanceController() {
                         ${util.map(form.menu, item => {
                             if (item.type === 'page') {
                                 let page = item.page;
+
+                                let enabled = isPageEnabled(page, form_record);
+                                if (!enabled && (form.chain.length > 1 || goupile.isLocked()))
+                                    return '';
+
                                 return html`
-                                    <button ?disabled=${!isPageEnabled(page, form_record)}
+                                    <button ?disabled=${!enabled}
                                             class=${page === route.page ? 'active' : ''}
                                             @click=${ui.wrapAction(e => self.go(e, page.url))}>
                                         ${meta && meta.status.has(page.key) ? '✓\uFE0E' : ''}
@@ -233,8 +238,13 @@ function InstanceController() {
                                    </button>`;
                             } else if (item.type === 'form') {
                                 let form = item.form;
+
+                                let enabled = isFormEnabled(form, form_record);
+                                if (!enabled && (form.chain.length > 1 || goupile.isLocked()))
+                                    return '';
+
                                 return html`
-                                    <button ?disabled=${!isFormEnabled(form, form_record)}
+                                    <button ?disabled=${!enabled}
                                             class=${route.form.chain.some(parent => form === parent) ? 'active' : ''}
                                             @click=${ui.wrapAction(e => self.go(e, form.url))}>
                                         ${meta && meta.status.has(form.key) ? '✓\uFE0E ' : ''}
@@ -587,6 +597,9 @@ function InstanceController() {
 
                         let cls = '';
                         if (!isPageEnabled(page, form_record)) {
+                            if (form.chain.length > 1 || goupile.isLocked())
+                                return '';
+
                             cls = 'disabled';
                         } else if (page === route.page) {
                             cls = 'active';
@@ -603,6 +616,9 @@ function InstanceController() {
 
                         let cls = '';
                         if (!isFormEnabled(form, form_record)) {
+                            if (form.chain.length > 1 || goupile.isLocked())
+                                return '';
+
                             cls = 'disabled';
                         } else if (route.form.chain.some(parent => form === parent)) {
                             cls = 'active';
