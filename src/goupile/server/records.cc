@@ -198,7 +198,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
         // Parse records from JSON
         {
             StreamReader st;
-            if (!io->OpenForRead(Megabytes(2), &st))
+            if (!io->OpenForRead(Megabytes(64), &st))
                 return;
             json_Parser parser(&st, &io->allocator);
 
