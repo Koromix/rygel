@@ -513,6 +513,14 @@ function InstanceController() {
                     page: route.page,
                     go: (url) => self.go(null, url),
 
+                    delete: (e, ulid, confirm = true) => {
+                        if (confirm) {
+                            runDeleteRecordDialog(e, ulid);
+                        } else {
+                            deleteRecord(ulid);
+                        }
+                    },
+
                     isLocked: goupile.isLocked
                 },
                 data: {
@@ -925,7 +933,7 @@ function InstanceController() {
                 form_state.clearChanges();
                 goNewRecord(null);
             } else {
-                self.run();
+                self.go();
             }
         } catch (err) {
             progress.close();
