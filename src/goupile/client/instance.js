@@ -1774,7 +1774,33 @@ function InstanceController() {
                     let record = await moveToAppropriateRecord(new_record, form, false);
 
                     if (record != null) {
-                        new_record.map[key] = [record];
+                        if (form.multi) {
+                            let array = [];
+                            new_record.map[key] = array;
+
+                            let ulids = new Set;
+
+                            for (let namespace of profile.keys) {
+                                let range = IDBKeyRange.only(namespace + `:${record.parent.ulid}/${form.key}`);
+                                let objects = await db.loadAll('rec_records/parent', range);
+
+                                for (let obj of objects) {
+                                    try {
+                                        let sibling = await decryptRecord(namespace, obj, null, false);
+
+                                        if (ulids.has(sibling.ulid))
+                                            continue;
+                                        ulids.add(sibling.ulid);
+
+                                        array.push(sibling);
+                                    } catch (err) {
+                                        console.log(err);
+                                    }
+                                }
+                            }
+                        } else {
+                            new_record.map[key] = record;
+                        }
                     } else {
                         new_record.map[key] = null;
                     }
@@ -1964,8 +1990,9 @@ function InstanceController() {
 
             for (let i = 0; i < path.down.length; i++) {
                 let form = path.down[i];
+                let follow = !form.multi || !create_new;
 
-                if (!form.multi && record.children[form.key] != null) {
+                if (follow && record.children[form.key] != null) {
                     let children = record.children[form.key];
                     let child = children[children.length - 1];
 
