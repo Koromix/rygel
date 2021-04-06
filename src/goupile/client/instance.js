@@ -103,7 +103,7 @@ function InstanceController() {
             let new_app = new ApplicationInfo;
             let builder = new ApplicationBuilder(new_app);
 
-            runUserCode('Application', code, {
+            await runCodeAsync('Application', code, {
                 app: builder
             });
             if (!new_app.pages.size)
@@ -504,7 +504,7 @@ function InstanceController() {
             builder.pushOptions({});
 
             let meta = Object.assign({}, form_record);
-            runUserCode('Formulaire', page_code, {
+            runCodeSync('Formulaire', page_code, {
                 form: builder,
                 values: form_state.values,
                 meta: meta,
@@ -644,7 +644,30 @@ function InstanceController() {
         `;
     }
 
-    function runUserCode(title, code, arguments) {
+    async function runCodeAsync(title, code, arguments) {
+        let entry = error_entries[title];
+        if (entry == null) {
+            entry = new log.Entry;
+            error_entries[title] = entry;
+        }
+
+        try {
+            let AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+
+            let func = new AsyncFunction(...Object.keys(arguments), code);
+            await func(...Object.values(arguments));
+
+            entry.close();
+        } catch (err) {
+            let line = util.parseEvalErrorLine(err);
+            let msg = `Erreur sur ${title}\n${line != null ? `Ligne ${line} : ` : ''}${err.message}`;
+
+            entry.error(msg, -1);
+            throw new Error(msg);
+        }
+    }
+
+    function runCodeSync(title, code, arguments) {
         let entry = error_entries[title];
         if (entry == null) {
             entry = new log.Entry;
