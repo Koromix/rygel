@@ -1593,7 +1593,7 @@ function InstanceController() {
         for (;;) {
             // Go to parent or child automatically
             if (new_record != null && new_record.form !== new_route.form) {
-                new_record = await moveToAppropriateRecord(new_record, new_route.form);
+                new_record = await moveToAppropriateRecord(new_record, new_route.form, true);
 
                 if (new_record != null) {
                     new_route.ulid = new_record.ulid;
@@ -1738,6 +1738,26 @@ function InstanceController() {
                 }
 
                 new_dictionaries[dict] = records;
+            }
+        }
+
+        // Load children if requested
+        if (new_route.page.options.load != null) {
+            for (let key of new_route.page.options.load) {
+                let form = app.forms.get(key);
+
+                try {
+                    let record = await moveToAppropriateRecord(new_record, form, false);
+
+                    if (record != null) {
+                        new_record.map[key] = [record];
+                    } else {
+                        new_record.map[key] = null;
+                    }
+                } catch (err) {
+                    new_record.map[key] = null;
+                    console.log(err);
+                }
             }
         }
 
@@ -1902,7 +1922,7 @@ function InstanceController() {
         return record;
     }
 
-    async function moveToAppropriateRecord(record, target_form) {
+    async function moveToAppropriateRecord(record, target_form, create_new) {
         let path = computePath(record.form, target_form);
 
         if (path != null) {
@@ -1922,7 +1942,7 @@ function InstanceController() {
 
                     if (record.form !== form)
                         throw new Error('Saut impossible en raison d\'un changement de schéma');
-                } else {
+                } else if (create_new) {
                     // Save fake intermediate records if needed
                     if (!record.saved) {
                         let key = `${profile.userid}:${record.ulid}`;
@@ -1959,6 +1979,8 @@ function InstanceController() {
                     }
 
                     record = createRecord(form, record);
+                } else {
+                    return null;
                 }
             }
 
