@@ -2295,6 +2295,11 @@ function InstanceController() {
                         enc: null
                     };
 
+                    if (download.fragments.length && download.fragments[download.fragments.length - 1].type == 'delete') {
+                        obj.keys.form = null;
+                        obj.keys.parent = null;
+                    }
+
                     let entry = {
                         ulid: download.ulid,
                         hid: download.hid,
