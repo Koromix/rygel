@@ -323,7 +323,7 @@ function InstanceController() {
                     <input type="text" placeholder="Filtrer..." .value=${data_filter || ''}
                            @input=${e => { data_filter = e.target.value || null; self.run(); }} />
                     <div style="flex: 1;"></div>
-                    <a @click=${ui.wrapAction(goNewRecord)}>Créer un enregistrement</a>
+                    <a @click=${ui.wrapAction(goNewRoot)}>Créer un enregistrement</a>
                     <div style="flex: 1;"></div>
                     ${ENV.backup_key != null ? html`
                         <a @click=${ui.wrapAction(backupRecords)}>Faire une sauvegarde chiffrée</a>
@@ -531,8 +531,10 @@ function InstanceController() {
                     if (builder.triggerErrors())
                         return saveRecord();
                 });
-                if (!goupile.isLocked())
-                    builder.action('Nouveau', {}, goNewRecord);
+                if (!goupile.isLocked() && route.form.multi) {
+                    let url = contextualizeURL(route.form.url, form_record.parent);
+                    builder.action('Nouveau', {}, e => self.go(e, url));
+                }
             }
 
             render(model.render(), page_div);
@@ -562,6 +564,7 @@ function InstanceController() {
 
                         ${!goupile.isLocked() ? html`
                             ${model.actions.length ? html`<hr/>` : ''}
+
                             ${!form_record.chain[0].version ? html`<div id="ins_trail">Nouvel enregistrement</div>` : ''}
                             ${form_record.chain[0].version > 0 && form_record.chain[0].hid != null ? html`<div id="ins_id" class="hid">${form_record.chain[0].hid}</div>` : ''}
                             ${form_record.chain[0].version > 0 && form_record.chain[0].hid == null ? html`<div id="ins_trail">Enregistrement existant</div>` : ''}
@@ -570,7 +573,17 @@ function InstanceController() {
                                     html`<span style="color: red;">Version : ${form_record.mtime.toLocaleString()}</span><br/>` : ''}
                                 <a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>Historique</a>
                             </div>` : ''}
+
+                            ${route.form.multi ? html`
+                                <hr/>
+                                ${util.mapRange(0, form_record.siblings.length, idx => {
+                                    let sibling = form_record.siblings[form_record.siblings.length - idx - 1];
+                                    let url = route.page.url + `/${sibling.ulid}`;
+
+                                    return html`<a href=${url}>${sibling.ctime.toLocaleString()}</a><br/>`;
+                                })}
                             ` : ''}
+                        ` : ''}
                     </div>
                 </div>
 
@@ -706,7 +719,7 @@ function InstanceController() {
         });
     }
 
-    function goNewRecord(e) {
+    function goNewRoot(e) {
         let url = route.form.chain[0].url + '/new';
         return self.go(e, url);
     }
@@ -915,7 +928,7 @@ function InstanceController() {
             data_rows = null;
             if (form_record.chain.some(record => record.ulid === ulid)) {
                 form_state.clearChanges();
-                goNewRecord(null);
+                goNewRoot(null);
             } else {
                 self.go();
             }
@@ -1642,6 +1655,27 @@ function InstanceController() {
             break;
         }
 
+        // Siblings (formMulti)
+        if (new_route.form.multi && new_record.parent != null) {
+            let ulids = new Set;
+
+            for (let namespace of profile.keys) {
+                let range = IDBKeyRange.only(namespace + `:${new_record.parent.ulid}/${new_route.form.key}`);
+                let keys = await db.list('rec_records/parent', range);
+                let ulids = keys.map(key => key.primary.substr(key.primary.indexOf(':') + 1));
+
+                new_record.siblings = keys.map(key => {
+                    let ulid = key.primary.substr(key.primary.indexOf(':') + 1);
+
+                    let sibling = {
+                        ulid: ulid,
+                        ctime: new Date(util.decodeULIDTime(ulid))
+                    };
+                    return sibling;
+                });
+            }
+        }
+
         // Sync form state with other changes
         if (new_state == null) {
             new_state = new FormState(new_record.values);
@@ -1773,6 +1807,7 @@ function InstanceController() {
             ulid: util.makeULID(),
             hid: null,
             version: 0,
+            ctime: null,
             mtime: null,
             fragments: [],
             status: new Set,
@@ -1782,8 +1817,10 @@ function InstanceController() {
             parent: null,
             children: {},
             chain: null, // Will be set later
-            map: null // Will be set later
+            map: null, // Will be set later
+            siblings: null // Same, for multi-children only
         };
+        record.ctime = new Date(util.decodeULIDTime(record.ulid));
 
         if (form.chain.length > 1) {
             if (parent_record == null)
@@ -1887,6 +1924,7 @@ function InstanceController() {
             ulid: entry.ulid,
             hid: entry.hid,
             version: version,
+            ctime: new Date(util.decodeULIDTime(entry.ulid)),
             mtime: fragments.length ? fragments[version - 1].mtime : null,
             fragments: fragments,
             status: status,
@@ -1896,7 +1934,8 @@ function InstanceController() {
             parent: entry.parent,
             children: children_map,
             chain: null, // Will be set later
-            map: null // Will be set later
+            map: null, // Will be set later
+            siblings: null // Same, for multi-children only
         };
         if (record.form == null)
             throw new Error(`Le formulaire '${entry.form}' n'existe pas ou plus`);
@@ -1920,10 +1959,11 @@ function InstanceController() {
             for (let i = 0; i < path.down.length; i++) {
                 let form = path.down[i];
 
-                if (record.children[form.key] != null) {
-                    let child = record.children[form.key][0];
-                    record = await loadRecord(child.ulid);
+                if (!form.multi && record.children[form.key] != null) {
+                    let children = record.children[form.key];
+                    let child = children[children.length - 1];
 
+                    record = await loadRecord(child.ulid);
                     if (record.form !== form)
                         throw new Error('Saut impossible en raison d\'un changement de schéma');
                 } else if (create_new) {

@@ -113,6 +113,9 @@ function ApplicationBuilder(app) {
     };
 
     this.formMulti = function(key, title, func = null, options = {}) {
+        if (form_ref == null)
+            throw new Error('formMulti cannot be used for top-level forms');
+
         let form = self.form(key, title, func, options);
         form.multi = true;
         return form;
