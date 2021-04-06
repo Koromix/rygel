@@ -571,7 +571,7 @@ function InstanceController() {
                             ${route.version > 0 ? html`<div id="ins_trail">
                                 ${route.version < form_record.fragments.length ?
                                     html`<span style="color: red;">Version : ${form_record.mtime.toLocaleString()}</span><br/>` : ''}
-                                <a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>Historique</a>
+                                <a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>(modifications)</a>
                             </div>` : ''}
 
                             ${route.form.multi ? html`
