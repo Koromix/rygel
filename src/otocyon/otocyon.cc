@@ -163,7 +163,8 @@ static void Update()
         if (commands.fire) {
             Projectile pj = {};
 
-            pj.pos = ship.pos;
+            pj.pos.x = ship.pos.x + 20.0f * cosf(ship.angle);
+            pj.pos.y = ship.pos.y - 20.0f * sinf(ship.angle);
             pj.speed.x = 5.0f * cosf(ship.angle);
             pj.speed.y = -5.0f * sinf(ship.angle);
 
