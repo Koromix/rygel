@@ -112,22 +112,22 @@ static void Update()
 
         // Thrust
         if (commands.up || commands.down) {
-            float main_accel =  0.02f * commands.up +
-                               -0.012f * commands.down;
+            float main_accel =  0.01f * commands.up +
+                               -0.006f * commands.down;
 
             ship.speed.x += main_accel * cosf(ship.angle);
             ship.speed.y -= main_accel * sinf(ship.angle);
         }
         if (commands.left || commands.right) {
-            float side_accel = -0.012f * commands.left +
-                                0.012f * commands.right;
+            float side_accel = -0.006f * commands.left +
+                                0.006f * commands.right;
 
             ship.speed.x += side_accel * cosf(ship.angle - PI / 2.0f);
             ship.speed.y -= side_accel * sinf(ship.angle - PI / 2.0f);
         }
 
         // Gravity
-        ship.speed.y += 0.01f;
+        ship.speed.y += 0.005f;
 
         // Apply speed
         ship.pos = Vector2Add(ship.pos, ship.speed);
@@ -160,8 +160,8 @@ static void Update()
 
             pj.pos.x = ship.pos.x + 20.0f * cosf(ship.angle);
             pj.pos.y = ship.pos.y - 20.0f * sinf(ship.angle);
-            pj.speed.x = 5.0f * cosf(ship.angle);
-            pj.speed.y = -5.0f * sinf(ship.angle);
+            pj.speed.x = 2.5f * cosf(ship.angle);
+            pj.speed.y = -2.5f * sinf(ship.angle);
 
             projectiles.Append(pj);
         }
@@ -266,7 +266,7 @@ int Main(int argc, char **argv)
             double prev_time = time;
             time = GetTime();
 
-            updates += (time - prev_time) * 240.0;
+            updates += (time - prev_time) * 480.0;
         }
 
         frame_alloc.ReleaseAll();
