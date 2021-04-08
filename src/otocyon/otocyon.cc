@@ -209,8 +209,8 @@ static void Draw()
         rlPushMatrix();
         rlTranslatef(pj.pos.x, pj.pos.y, 0);
         rlRotatef(RadToDeg(angle) + 90.0f, 0, 0, 1);
-        DrawRectangleGradientH(-3, -10, 3, 20, extrem, middle);
-        DrawRectangleGradientH(0, -10, 3, 20, middle, extrem);
+        DrawRectangleGradientH(-3, -5, 3, 10, extrem, middle);
+        DrawRectangleGradientH(0, -5, 3, 10, middle, extrem);
         rlPopMatrix();
     }
 
