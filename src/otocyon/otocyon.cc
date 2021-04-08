@@ -175,16 +175,15 @@ static void Update()
     // Projectiles
     {
         Size end = 0;
-        for (Size i = 0; i < projectiles.len; i++, end++) {
+        for (Size i = 0; i < projectiles.len; i++) {
             Projectile &pj = projectiles[i];
-            projectiles[end] = pj;
 
-            if (pj.pos.x < 0.0f || pj.pos.x > screen.width || pj.pos.y < 0.0f || pj.pos.y > screen.height) {
-                end--;
+            if (pj.pos.x < 0.0f || pj.pos.x > screen.width || pj.pos.y < 0.0f || pj.pos.y > screen.height)
                 continue;
-            }
 
             pj.pos = Vector2Add(pj.pos, pj.speed);
+
+            projectiles[end++] = pj;
         }
         projectiles.RemoveFrom(end);
     }
