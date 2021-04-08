@@ -731,7 +731,7 @@ static Size FakeFloatPrecision(Span<char> buf, int K, int min_prec, int max_prec
 
             if (buf[truncate] >= '5') {
                 int i = truncate;
-                while (i > offset) {
+                while (i >= offset && i > 0) {
                     if (buf[i - 1] == '9') {
                         buf[--i] = '0';
                     } else {
@@ -747,9 +747,15 @@ static Size FakeFloatPrecision(Span<char> buf, int K, int min_prec, int max_prec
             return truncate;
         } else {
             buf[0] = '0' + (-K == buf.len + 1 && buf[0] >= '5');
-            memset_safe(buf.ptr + 1, '0', min_prec - 1);
-            *out_K = -min_prec;
-            return min_prec;
+
+            if (min_prec) {
+                memset_safe(buf.ptr + 1, '0', min_prec - 1);
+                *out_K = -min_prec;
+                return min_prec;
+            } else {
+                *out_K = 0;
+                return 1;
+            }
         }
     } else {
         return buf.len;
@@ -765,6 +771,10 @@ static Span<char> PrettifyFloat(Span<char> buf, int K, int min_prec, int max_pre
 
     if (K >= 0) {
         // 1234e7 -> 12340000000
+
+        if (!buf.len && !K) {
+            K = 1;
+        }
 
         memset_safe(buf.end(), '0', (size_t)K);
         buf.len += K;
@@ -831,7 +841,7 @@ static Span<char> ExponentiateFloat(Span<char> buf, int K, int min_prec, int max
 
 // NaN and Inf are handled by caller
 template <typename T>
-Span<const char> FormatFloatingPoint(T value, int min_prec, int max_prec, char out_buf[32])
+Span<const char> FormatFloatingPoint(T value, int min_prec, int max_prec, char out_buf[128])
 {
     auto v = jkj::dragonbox::to_decimal(value, jkj::dragonbox::policy::sign::ignore);
 

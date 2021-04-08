@@ -56,12 +56,19 @@ void TestFormatDouble()
     TEST_STR(Fmt(buf, "%1", 2.9802322387695312e-8), "2.9802322387695312e-8");
 
     // Fixed precision
+    TEST_STR(Fmt(buf, "%1", FmtDouble(12.243, 2, 2)), "12.24");
     TEST_STR(Fmt(buf, "%1", FmtDouble(0.1, 1, 1)), "0.1");
     TEST_STR(Fmt(buf, "%1", FmtDouble(0.8, 1, 1)), "0.8");
     TEST_STR(Fmt(buf, "%1", FmtDouble(0.01, 1, 1)), "0.0");
     TEST_STR(Fmt(buf, "%1", FmtDouble(0.08, 1, 1)), "0.1");
     TEST_STR(Fmt(buf, "%1", FmtDouble(0.001, 1, 1)), "0.0");
     TEST_STR(Fmt(buf, "%1", FmtDouble(0.008, 1, 1)), "0.0");
+    TEST_STR(Fmt(buf, "%1", FmtDouble(0.02, 0, 1)), "0");
+    TEST_STR(Fmt(buf, "%1", FmtDouble(0.2, 0, 0)), "0");
+    TEST_STR(Fmt(buf, "%1", FmtDouble(0.6, 0, 0)), "0");
+    TEST_STR(Fmt(buf, "%1", FmtDouble(1.6, 0, 0)), "2");
+    TEST_STR(Fmt(buf, "%1", FmtDouble(10.6, 0, 0)), "11");
+    TEST_STR(Fmt(buf, "%1", FmtDouble(10.2, 0, 0)), "10");
 }
 
 void TestMatchPathName()
