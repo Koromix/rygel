@@ -241,15 +241,16 @@ static void Draw()
 int Main(int argc, char **argv)
 {
     InitWindow(1280, 720, "Otocyon");
-    SetWindowState(FLAG_WINDOW_RESIZABLE);
     RG_DEFER { CloseWindow(); };
 
     if (!InitAssets())
         return 1;
     RG_DEFER { ReleaseAssets(); };
 
-    static float updates = 1.0f;
-    SetTargetFPS(60);
+    static double time = GetTime();
+    static double updates = 1.0;
+
+    SetWindowState(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
 
     while (!WindowShouldClose()) {
         screen.width = GetScreenWidth();
@@ -266,7 +267,14 @@ int Main(int argc, char **argv)
         Draw();
 
         EndDrawing();
-        updates += GetFrameTime() * 240.0f;
+
+        // Stabilize world time and physics
+        {
+            double prev_time = time;
+            time = GetTime();
+
+            updates += (time - prev_time) * 240.0;
+        }
 
         frame_alloc.ReleaseAll();
     }
