@@ -61,7 +61,7 @@ static bool InitAssets()
         const char *ext = GetPathExtension(asset.name).ptr;
 
         if (TestStr(ext, ".png") || TestStr(ext, ".jpg")) {
-            Image img = LoadImageFromMemory(ext + 1, asset.data.ptr, asset.data.len);
+            Image img = LoadImageFromMemory(ext + 1, asset.data.ptr, (int)asset.data.len);
             if (!img.data) {
                 LogError("Failed to load '%1'", asset.name);
                 return false;
