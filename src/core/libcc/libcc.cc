@@ -4419,10 +4419,8 @@ bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compress
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     dest.type = DestinationType::File;
+    memset(&dest.u.file, 0, RG_SIZE(dest.u.file));
     dest.u.file.fp = fp;
-    dest.u.file.owned = false;
-    dest.u.file.tmp_filename = nullptr;
-    dest.u.file.tmp_exclusive = false;
     dest.vt100 = FileIsVt100(fp);
 
     if (!InitCompressor(compression_type))
@@ -4445,6 +4443,8 @@ bool StreamWriter::Open(const char *filename, unsigned int flags, CompressionTyp
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     dest.type = DestinationType::File;
+    memset(&dest.u.file, 0, RG_SIZE(dest.u.file));
+
     if (flags & (int)StreamWriterFlag::Atomic) {
         const char *directory = DuplicateString(GetPathDirectory(filename), &str_alloc).ptr;
 
@@ -4456,8 +4456,6 @@ bool StreamWriter::Open(const char *filename, unsigned int flags, CompressionTyp
             fclose(fp);
 
             dest.u.file.tmp_exclusive = true;
-        } else {
-            dest.u.file.tmp_exclusive = false;
         }
 
         dest.u.file.tmp_filename = CreateTemporaryFile(directory, "", ".tmp", &str_alloc, &dest.u.file.fp);
@@ -4472,9 +4470,6 @@ bool StreamWriter::Open(const char *filename, unsigned int flags, CompressionTyp
         if (!dest.u.file.fp)
             return false;
         dest.u.file.owned = true;
-
-        dest.u.file.tmp_filename = nullptr;
-        dest.u.file.tmp_exclusive = false;
     }
     dest.vt100 = FileIsVt100(dest.u.file.fp);
 
