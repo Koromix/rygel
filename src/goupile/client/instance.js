@@ -1888,6 +1888,10 @@ function InstanceController() {
         let entry = await goupile.decryptSymmetric(obj.enc, namespace);
         let fragments = entry.fragments;
 
+        let form = app.forms.get(entry.form);
+        if (form == null)
+            throw new Error(`Le formulaire '${entry.form}' n'existe pas ou plus`);
+
         if (version == null) {
             version = fragments.length;
         } else if (version > fragments.length) {
@@ -1902,7 +1906,8 @@ function InstanceController() {
             if (fragment.type === 'save') {
                 if (load_values)
                     Object.assign(values, fragment.values);
-                status.add(fragment.page);
+                if (form.pages.get(fragment.page))
+                    status.add(fragment.page);
             }
         }
         for (let fragment of fragments) {
@@ -1953,7 +1958,7 @@ function InstanceController() {
         }
 
         let record = {
-            form: app.forms.get(entry.form),
+            form: form,
             ulid: entry.ulid,
             hid: entry.hid,
             version: version,
@@ -1970,8 +1975,6 @@ function InstanceController() {
             map: null, // Will be set later
             siblings: null // Same, for multi-children only
         };
-        if (record.form == null)
-            throw new Error(`Le formulaire '${entry.form}' n'existe pas ou plus`);
         if (!load_values)
             delete record.values;
 
