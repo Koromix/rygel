@@ -230,9 +230,12 @@ int Main(int argc, char **argv)
         screen.width = GetScreenWidth();
         screen.height = GetScreenHeight();
 
-        int updates = (int)round(GetFrameTime() * 240.0f);
+        static float updates = 0.0f;
+        updates += GetFrameTime() * 240.0f;
 
-        while (updates--) {
+        while (updates >= 1.0f) {
+            updates -= 1.0f;
+
             Input();
             Update();
         }
