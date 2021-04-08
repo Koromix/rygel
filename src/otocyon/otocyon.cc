@@ -19,7 +19,8 @@
 
 namespace RG {
 
-static HashMap<const char *, Texture> textures;
+static BucketArray<Texture> textures;
+static HashMap<const char *, Texture *> textures_map;
 
 static struct {
     int width;
@@ -47,8 +48,11 @@ struct Projectile {
 };
 static HeapArray<Projectile> projectiles;
 
+static void ReleaseAssets();
 static bool InitAssets()
 {
+    RG_DEFER_N(out_guard) { ReleaseAssets(); };
+
     Span<const AssetInfo> assets = GetPackedAssets();
 
     for (const AssetInfo &asset: assets) {
@@ -56,17 +60,35 @@ static bool InitAssets()
 
         if (TestStr(ext, ".png") || TestStr(ext, ".jpg")) {
             Image img = LoadImageFromMemory(ext + 1, asset.data.ptr, asset.data.len);
+            if (!img.data) {
+                LogError("Failed to load '%1'", asset.name);
+                return false;
+            }
+            RG_DEFER { UnloadImage(img); };
 
             Texture tex = LoadTextureFromImage(img);
+            if (tex.id <= 0) {
+                LogError("Failed to create texture for '%1'", asset.name);
+                return false;
+            }
             SetTextureFilter(tex, FILTER_BILINEAR);
 
-            textures.Set(asset.name, tex);
+            Texture *ptr = textures.Append(tex);
+            textures_map.Set(asset.name, ptr);
         } else {
             LogError("Ignoring unknown asset type for '%1'", asset.name);
         }
     }
 
+    out_guard.Disable();
     return true;
+}
+
+static void ReleaseAssets()
+{
+    for (Texture &tex: textures) {
+        UnloadTexture(tex);
+    }
 }
 
 static inline float RadToDeg(double angle)
@@ -171,7 +193,7 @@ static void Draw()
 
     // Draw background
     {
-        const Texture &tex = *textures.Find("backgrounds/lonely.jpg");
+        const Texture &tex = *textures_map.FindValue("backgrounds/lonely.jpg", nullptr);
         DrawTexturePro(tex, { 0.0f, 0.0f, (float)tex.width, (float)tex.height },
                             { 0.0f, 0.0f, (float)screen.width, (float)screen.height },
                             { 0.0f, 0.0f }, 0.0f, WHITE);
@@ -194,7 +216,7 @@ static void Draw()
 
     // Draw ship
     {
-        const Texture &tex = *textures.Find("sprites/ship.png");
+        const Texture &tex = *textures_map.FindValue("sprites/ship.png", nullptr);
         DrawTexturePro(tex, { 0.0f, 0.0f, (float)tex.width, (float)tex.height },
                             { ship.pos.x, ship.pos.y, (float)(tex.width / 2), (float)(tex.height / 2) },
                             { (float)tex.width / 4, (float)tex.height / 4 }, -RadToDeg(ship.angle), WHITE);
@@ -202,7 +224,7 @@ static void Draw()
 
     // HUD
     {
-        const Texture &tex = *textures.Find("sprites/health.png");
+        const Texture &tex = *textures_map.FindValue("sprites/health.png", nullptr);
         DrawTexturePro(tex, { 0.0f, 0.0f, (float)tex.width, (float)tex.height },
                             { (float)screen.width - tex.width / 2 - 10.0f, (float)screen.height - tex.height / 2 - 10.0f,
                               (float)(tex.width / 2), (float)(tex.height / 2) }, { 0.0f, 0.0f }, 0.0f, WHITE);
@@ -223,15 +245,14 @@ int Main(int argc, char **argv)
 
     if (!InitAssets())
         return 1;
+    RG_DEFER { ReleaseAssets(); };
 
+    static float updates = 1.0f;
     SetTargetFPS(60);
 
     while (!WindowShouldClose()) {
         screen.width = GetScreenWidth();
         screen.height = GetScreenHeight();
-
-        static float updates = 0.0f;
-        updates += GetFrameTime() * 240.0f;
 
         while (updates >= 1.0f) {
             updates -= 1.0f;
@@ -244,6 +265,7 @@ int Main(int argc, char **argv)
         Draw();
 
         EndDrawing();
+        updates += GetFrameTime() * 240.0f;
     }
 
     return 0;
