@@ -1434,7 +1434,7 @@ function InstanceController() {
                         blob: file.value
                     })
 
-                    let buffer = editor_buffers.get(file.filename);
+                    let buffer = editor_buffers.get(filename.value);
                     if (buffer != null)
                         buffer.reload = true;
 
