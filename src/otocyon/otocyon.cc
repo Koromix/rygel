@@ -267,6 +267,12 @@ int Main(int argc, char **argv)
             time = GetTime();
 
             updates += (time - prev_time) * 480.0;
+
+            // Don't try to catch up if a long pause happens, such as when the window gets moved
+            // or if the OS is busy.
+            if (updates > 100) {
+                updates = 0;
+            }
         }
 
         frame_alloc.ReleaseAll();
