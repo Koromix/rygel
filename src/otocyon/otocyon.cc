@@ -227,8 +227,12 @@ static void Draw()
 
     // Debug
     {
-        const char *text = Fmt(&frame_alloc, "Projectiles: %1", projectiles.len).ptr;
-        DrawText(text, 10, 10, 20, WHITE);
+        HeapArray<char> buf(&frame_alloc);
+
+        Fmt(&buf, "Speed: %1\n", FmtDouble(sqrtf(ship.speed.x * ship.speed.x + ship.speed.y * ship.speed.y) * 100, 0));
+        Fmt(&buf, "Projectiles: %1\n", projectiles.len);
+
+        DrawText(buf.ptr, 10, 10, 20, WHITE);
     }
 }
 
