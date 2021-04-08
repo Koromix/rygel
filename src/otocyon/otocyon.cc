@@ -239,7 +239,7 @@ static void Draw()
 
 int Main(int argc, char **argv)
 {
-    InitWindow(800, 600, "Otocyon");
+    InitWindow(1280, 720, "Otocyon");
     SetWindowState(FLAG_WINDOW_RESIZABLE);
     RG_DEFER { CloseWindow(); };
 
