@@ -941,13 +941,17 @@ static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = n
             return false;
         }
 
+        HeapArray<char> buf(&temp_alloc);
+        Fmt(&buf, "%1%/%2", gp_domain.config.backup_directory, mtime_str);
         if (filter) {
-            archive_filename = Fmt(&temp_alloc, "%1%/%2_%3.goupilebackup",
-                                   gp_domain.config.backup_directory, mtime_str, filter->key).ptr;
-        } else {
-            archive_filename = Fmt(&temp_alloc, "%1%/%2.goupilebackup",
-                                   gp_domain.config.backup_directory, mtime_str).ptr;
+            Span<const char> basename = SplitStrReverseAny(filter->filename, RG_PATH_SEPARATORS);
+            SplitStrReverse(basename, '.', &basename);
+
+            Fmt(&buf, "_%1", basename);
         }
+        Fmt(&buf, ".goupilebackup");
+
+        archive_filename = buf.Leak().ptr;
     }
 
     // Open archive
