@@ -15,7 +15,7 @@
 #include "../../vendor/raylib/src/raylib.h"
 #include "../../vendor/raylib/src/raymath.h"
 #include "../../vendor/raylib/src/rlgl.h"
-#include "math.h"
+#include "math.hh"
 
 namespace RG {
 
@@ -91,11 +91,6 @@ static void ReleaseAssets()
     for (Texture &tex: textures) {
         UnloadTexture(tex);
     }
-}
-
-static inline float RadToDeg(double angle)
-{
-    return (float)(angle * 180.0 / PI);
 }
 
 static void Input()
