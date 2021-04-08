@@ -255,16 +255,15 @@ int Main(int argc, char **argv)
         screen.width = GetScreenWidth();
         screen.height = GetScreenHeight();
 
+        Input();
+
         while (updates >= 1.0f) {
             updates -= 1.0f;
-
-            Input();
             Update();
         }
 
         BeginDrawing();
         Draw();
-
         EndDrawing();
 
         // Stabilize world time and physics
