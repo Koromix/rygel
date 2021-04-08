@@ -48,6 +48,8 @@ struct Projectile {
 };
 static HeapArray<Projectile> projectiles;
 
+static BlockAllocator frame_alloc(Megabytes(4));
+
 static void ReleaseAssets();
 static bool InitAssets()
 {
@@ -189,8 +191,6 @@ static void Update()
 
 static void Draw()
 {
-    BlockAllocator temp_alloc;
-
     // Draw background
     {
         const Texture &tex = *textures_map.FindValue("backgrounds/lonely.jpg", nullptr);
@@ -232,7 +232,7 @@ static void Draw()
 
     // Debug
     {
-        const char *text = Fmt(&temp_alloc, "Projectiles: %1", projectiles.len).ptr;
+        const char *text = Fmt(&frame_alloc, "Projectiles: %1", projectiles.len).ptr;
         DrawText(text, 10, 10, 20, WHITE);
     }
 }
@@ -266,6 +266,8 @@ int Main(int argc, char **argv)
 
         EndDrawing();
         updates += GetFrameTime() * 240.0f;
+
+        frame_alloc.ReleaseAll();
     }
 
     return 0;
