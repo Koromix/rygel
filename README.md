@@ -9,6 +9,7 @@
 | *goupile*  | Programmable electronic data capture application                           | Work in progress |
 | *heimdall* | Medical timeline visualization (proof-of-concept)                          | Proof-of-concept |
 | *mael*     | Mael robot code for 'Coupe de France de Robotique 2020' competition        | Work in progress |
+| *otocyon*  | Small spooky spaceship game made for fun                                   | Work in progress |
 | *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd          | Good             |
 | *web*      | Reusable utility functions and HTML/CSS/JS widgets                         | Good             |
 
