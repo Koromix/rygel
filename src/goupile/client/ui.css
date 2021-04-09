@@ -95,9 +95,9 @@ button:not(.active):not(:disabled):hover {
     white-space: nowrap;
 }
 .ui_toolbar button:not(.active):hover { background-color: inherit; }
-.ui_toolbar > button:not(.active):hover { filter: brightness(124%); }
-.ui_toolbar button.active { filter: brightness(134%); }
-.ui_toolbar button:disabled { filter: brightness(70%) !important; }
+.ui_toolbar > button:not(.active):hover { filter: brightness(110%); }
+.ui_toolbar button.active { filter: brightness(120%); }
+.ui_toolbar button:disabled { filter: brightness(80%) !important; }
 
 .ui_toolbar button.icon {
     padding-left: 36px;
