@@ -91,15 +91,17 @@ html.mobile #ins_page { padding-top: 0; }
     border-top: 1px solid #dfdfdf;
 }
 
-#ins_id { font-size: 1.1em; }
-#ins_id.hid::before {
+#ins_trail {
+    display: flex;
+    color: #777;
+    align-items: start;
+}
+#ins_trail > div { flex: 1; }
+#ins_trail > .hid { font-size: 1.1em; }
+#ins_trail > .hid::before {
     content: '#';
     padding-right: 4px;
     color: #ccc;
-}
-#ins_trail {
-    color: #777;
-    font-size: 0.9em;
 }
 
 #ins_actions {

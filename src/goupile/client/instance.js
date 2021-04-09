@@ -566,11 +566,14 @@ function InstanceController() {
                         ${!goupile.isLocked() ? html`
                             ${model.actions.length ? html`<hr/>` : ''}
 
-                            ${!form_record.chain[0].version ? html`<div id="ins_trail">Nouvel enregistrement</div>` : ''}
-                            ${form_record.chain[0].version > 0 && form_record.chain[0].hid != null ? html`<div id="ins_id" class="hid">${form_record.chain[0].hid}</div>` : ''}
-                            ${form_record.chain[0].version > 0 && form_record.chain[0].hid == null ? html`<div id="ins_trail">Enregistrement existant</div>` : ''}
+                            <div id="ins_trail">
+                                ${!form_record.chain[0].version ? html`<div>Nouvel enregistrement</div>` : ''}
+                                ${form_record.chain[0].version > 0 && form_record.chain[0].hid != null ? html`<div class="hid">${form_record.chain[0].hid}</div>` : ''}
+                                ${form_record.chain[0].version > 0 && form_record.chain[0].hid == null ? html`<div>Enregistrement existant</div>` : ''}
+                                <a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>Audit</a>
+                            </div>
                             ${route.version < form_record.fragments.length ?
-                                html`<div id="ins_trail"><span style="color: red;">Version : ${form_record.mtime.toLocaleString()}</span></div>` : ''}
+                                html`<span style="color: red;">Version : ${form_record.mtime.toLocaleString()}</span>` : ''}
 
                             ${route.form.multi && form_record.siblings.length ? html`
                                 <hr/>
@@ -584,11 +587,6 @@ function InstanceController() {
                                         return html`<a href=${url} class="active">${sibling.ctime.toLocaleString()}</a><br/>`;
                                     }
                                 })}
-                            ` : ''}
-
-                            ${route.version > 0 ? html`
-                                <hr/>
-                                <a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>(modifications)</a>
                             ` : ''}
                         ` : ''}
                     </div>
@@ -705,6 +703,7 @@ function InstanceController() {
             d.output(html`
                 <table class="ui_table">
                     <tbody>
+                        ${!form_record.fragments.length ? html`<tr><td>Aucune modification enregistrée</td></tr>` : ''}
                         ${util.mapRange(0, form_record.fragments.length, idx => {
                             let version = form_record.fragments.length - idx;
                             let fragment = form_record.fragments[version - 1];
