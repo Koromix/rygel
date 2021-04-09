@@ -69,7 +69,7 @@ function AdminController() {
                     Projets (<a @click=${ui.wrapAction(e => { instances = null; return self.go(); })}>rafraichir</a>)
                 </div>
 
-                <table class="ui_table" style="table-layout: fixed;">
+                <table class="ui_table fixed">
                     <colgroup>
                         <col/>
                         <col style="width: 100px;"/>
@@ -119,7 +119,7 @@ function AdminController() {
                     Utilisateurs (<a @click=${ui.wrapAction(e => { users = null; selected_permissions = null; return self.go(); })}>rafraichir</a>)
                 </div>
 
-                <table class="ui_table" style="table-layout: fixed;">
+                <table class="ui_table fixed">
                     <colgroup>
                         ${selected_instance == null ? html`
                             <col style="width: 160px;"/>
@@ -194,7 +194,7 @@ function AdminController() {
                     Sauvegardes (<a @click=${ui.wrapAction(e => { backups = null; return self.go(); })}>rafraichir</a>)
                 </div>
 
-                <table class="ui_table" style="table-layout: fixed;">
+                <table class="ui_table fixed">
                     <colgroup>
                         <col/>
                         <col style="width: 100px;"/>

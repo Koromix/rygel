@@ -1264,7 +1264,7 @@ function InstanceController() {
                     <a @click=${ui.wrapAction(e => { actions = null; return self.run(); })}>Rafraichir</a>
                 </div>
 
-                <table class="ui_table ins_deploy">
+                <table class="ui_table fixed ins_deploy">
                     <colgroup>
                         <col style="width: 2.4em;"/>
                         <col/>
