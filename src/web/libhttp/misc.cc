@@ -19,21 +19,9 @@ namespace RG {
 const char *http_GetMimeType(Span<const char> extension, const char *default_type)
 {
     static const HashMap<Span<const char>, const char *> mime_types = {
-        {".txt", "text/plain"},
-        {".html", "text/html"},
-        {".css", "text/css"},
-        {".ico", "image/vnd.microsoft.icon"},
-        {".jpg", "image/jpeg"},
-        {".jpeg", "image/jpeg"},
-        {".png", "image/png"},
-        {".webp", "image/webp"},
-        {".svg", "image/svg+xml"},
-        {".js", "application/javascript"},
-        {".json", "application/json"},
-        {".map", "application/json"},
-        {".woff", "font/woff"},
-        {".woff2", "font/woff2"},
-        {".manifest", "application/manifest+json"},
+        #define MIMETYPE(Extension, MimeType) { (Extension), (MimeType) },
+        #include "mimetypes.inc"
+
         {"", "application/octet-stream"}
     };
 
