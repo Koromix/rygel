@@ -380,8 +380,7 @@ const ui = new function() {
             document.body.appendChild(log_el);
         }
 
-        render(util.mapRange(0, log_entries.length, idx => {
-            let entry = log_entries[log_entries.length - idx - 1];
+        render(log_entries.map(entry => {
             let msg = (entry.msg instanceof Error) ? entry.msg.message : entry.msg;
 
             if (typeof msg === 'string')
