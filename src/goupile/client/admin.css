@@ -12,7 +12,10 @@
    along with this program. If not, see https://www.gnu.org/licenses/. */
 
 html.admin {
-    --menu_color: #fe7c3c;
+    --menu_color: #e3723b;
+    --menu_color_n1: #f2783e;
+    --menu_color_n2: #ff8244;
+    --menu_color_n3: #fc864b;
     --page_color: #1d82bc;
     --anchor_color: #1d82bc;
 

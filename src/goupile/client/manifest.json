@@ -12,5 +12,5 @@
     "display": "standalone",
     "scope": "{BASE_URL}",
     "background_color": "white",
-    "theme_color": "#24579d"
+    "theme_color": "black"
 }

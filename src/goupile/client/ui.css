@@ -60,7 +60,7 @@ button:disabled {
     cursor: not-allowed;
 }
 button::-moz-focus-inner { border: 0; }
-button:not(.active):not(:disabled):hover {
+button:not(:disabled):hover {
     background-color: var(--anchor_color);
     border-color: var(--anchor_color);
     color: white;
@@ -94,9 +94,9 @@ button:not(.active):not(:disabled):hover {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.ui_toolbar button:not(.active):hover { background-color: inherit; }
-.ui_toolbar > button:not(.active):hover { filter: brightness(110%); }
-.ui_toolbar button.active { filter: brightness(120%); }
+.ui_toolbar button.active { background-color: var(--menu_color_n2); }
+.ui_toolbar button:not(.active):hover { background-color: var(--menu_color_n1); }
+.ui_toolbar button.active:hover { background-color: var(--menu_color_n3); }
 .ui_toolbar button:disabled { filter: brightness(80%) !important; }
 
 .ui_toolbar button.icon {
@@ -133,7 +133,7 @@ html.small .ui_toolbar button.icon {
 .ui_toolbar > .drop.disabled {
     background-color: #bbb;
     border-color: #bbb;
-    filter: brightness(70%) !important;
+    filter: brightness(80%) !important;
 }
 .ui_toolbar > .drop.disabled > button:disabled {
     color: inherit;
@@ -161,12 +161,12 @@ html.small .ui_toolbar button.icon {
     border-top: 0.5px solid #376db9;
     height: 3px;
 }
-.ui_toolbar > .drop:hover { filter: brightness(124%); }
+.ui_toolbar > .drop:hover { background-color: var(--menu_color_n1); }
 .ui_toolbar > .drop:hover > div {
     display: flex;
     flex-direction: column;
 }
-.ui_toolbar > .drop > div button:not(.active):hover { filter: brightness(110%); }
+.ui_toolbar > .drop > div button:not(.active):hover { background-color: var(--menu_color_n2); }
 
 /* -------------------- Panels -------------------- */
 

@@ -11,16 +11,19 @@
    You should have received a copy of the GNU Affero General Public License
    along with this program. If not, see https://www.gnu.org/licenses/. */
 
-/* -------------------- Layout -------------------- */
-
 html.instance {
-    --menu_color: #116dbf;
+    --menu_color: black;
+    --menu_color_n1: #38383b;
+    --menu_color_n2: #4f4e52;
+    --menu_color_n3: #5f5e62;
     --page_color: #21936e;
     --anchor_color: #fe7c3c;
 
     --block_rounding: 0px;
     --widget_rounding: 0px;
 }
+
+/* -------------------- Layout -------------------- */
 
 #ins_page {
     box-sizing: border-box;
@@ -34,7 +37,7 @@ html.instance {
 }
 #ins_form {
     width: 100%;
-    max-width: 980px;
+    max-width: 1080px;
 }
 
 html.mobile #ins_page { padding-top: 0; }
@@ -46,16 +49,15 @@ html.mobile #ins_page { padding-top: 0; }
     position: sticky;
     top: 20px;
     box-sizing: border-box;
-    width: 200px;
+    width: 220px;
     padding-right: 12px;
 }
 #ins_menu h1 {
     font-size: 1.1em;
-    margin: 0;
-    font-variant: small-caps;
+    margin: 0 0 4px 0;
     color: var(--anchor_color);
 }
-#ins_menu * + h1 { margin-top: 6px; }
+#ins_menu * + h1 { margin-top: 8px; }
 #ins_menu ul {
     margin: 0;
     padding: 0;
@@ -105,7 +107,7 @@ html.mobile #ins_page { padding-top: 0; }
     position: sticky;
     box-sizing: border-box;
     top: 200px;
-    width: 180px;
+    width: 220px;
     padding-left: 12px;
 }
 #ins_actions > hr {
