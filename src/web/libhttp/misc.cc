@@ -18,36 +18,30 @@ namespace RG {
 
 const char *http_GetMimeType(Span<const char> extension, const char *default_type)
 {
-    if (extension == ".txt") {
-        return "text/plain";
-    } else if (extension == ".css") {
-        return "text/css";
-    } else if (extension == ".html") {
-        return "text/html";
-    } else if (extension == ".ico") {
-        return "image/vnd.microsoft.icon";
-    } else if (extension == ".js") {
-        return "application/javascript";
-    } else if (extension == ".json") {
-        return "application/json";
-    } else if (extension == ".png") {
-        return "image/png";
-    } else if (extension == ".svg") {
-        return "image/svg+xml";
-    } else if (extension == ".map") {
-        return "application/json";
-    } else if (extension == ".woff") {
-        return "font/woff";
-    } else if (extension == ".woff2") {
-        return "font/woff2";
-    } else if (extension == ".manifest") {
-        return "application/manifest+json";
-    } else if (extension == "") {
-        return "application/octet-stream";
-    } else {
+    static const HashMap<Span<const char>, const char *> mime_types = {
+        {".txt", "text/plain"},
+        {".html", "text/html"},
+        {".css", "text/css"},
+        {".ico", "image/vnd.microsoft.icon"},
+        {".png", "image/png"},
+        {".svg", "image/svg+xml"},
+        {".js", "application/javascript"},
+        {".json", "application/json"},
+        {".map", "application/json"},
+        {".woff", "font/woff"},
+        {".woff2", "font/woff2"},
+        {".manifest", "application/manifest+json"},
+        {"", "application/octet-stream"}
+    };
+
+    const char *mime_type = mime_types.FindValue(extension, nullptr);
+
+    if (!mime_type) {
         LogError("Unknown MIME type for extension '%1'", extension);
-        return default_type;
+        mime_type = default_type;
     }
+
+    return mime_type;
 }
 
 // Mostly compliant, respects 'q=0' weights but it does not care about ordering beyond that. The
