@@ -71,6 +71,10 @@ const mco_info = new function() {
                 args.ghs.duration = parseInt(params.duration, 10) || 200;
                 args.ghs.coeff = !!parseInt(params.coeff, 10) || false;
                 args.ghs.plot = !!parseInt(params.plot, 10) || false;
+                if (window.document.documentMode && args.ghs.plot) {
+                    log.error('Graphiques non disponibles sous Internet Explorer');
+                    args.ghs.plot = false;
+                }
                 args.ghs.raw = !!parseInt(params.raw, 10) || false;
             } break;
 
@@ -578,8 +582,9 @@ const mco_info = new function() {
                                 @change=${e => thop.go(self, {ghs: {duration: parseInt(e.target.value, 10)}})}/></label>
             <label>Coefficient <input type="checkbox" .checked=${route.ghs.coeff}
                                       @change=${e => thop.go(self, {ghs: {coeff: e.target.checked}})}/></label>
-            <label>Graphique <input type="checkbox" .checked=${route.ghs.plot}
-                                    @change=${e => thop.go(self, {ghs: {plot: e.target.checked}})}/></label>
+            ${!window.document.documentMode ?
+                html`<label>Graphique <input type="checkbox" .checked=${route.ghs.plot}
+                                             @change=${e => thop.go(self, {ghs: {plot: e.target.checked}})}/></label>` : ''}
             ${renderGhmRootSelector(mco, route.ghs.ghm_root)}
         `, document.querySelector('#th_options'));
 
@@ -628,7 +633,7 @@ const mco_info = new function() {
         // Render grid or plot
         if (route.ghs.plot) {
             if (typeof Chart === 'undefined')
-                await net.loadScript(`${ENV.base_url}static/chart.bundle.min.js`);
+                await net.loadScript(`${ENV.base_url}static/chart.min.js`);
 
             render(chart_canvas, document.querySelector('#th_view'));
             updatePriceChart(mco.ghm_roots.describe(route.ghs.ghm_root), columns,
@@ -791,7 +796,7 @@ const mco_info = new function() {
 
                     max_price = Math.max(max_price, info.price);
                 } else {
-                    dataset.data.push(null);
+                    dataset.data.push({});
                 }
             }
             datasets.push(dataset);
@@ -802,32 +807,33 @@ const mco_info = new function() {
 
         if (chart_obj) {
             chart_obj.data.datasets = datasets;
-            chart_obj.options.scales.yAxes[0].ticks.suggestedMax = max_price;
-            chart_obj.update({duration: 0});
+            chart_obj.options.scales.y.ticks.suggestedMax = max_price;
+            chart_obj.update();
         } else {
-            chart_obj = new Chart(chart_canvas.getContext('2d'), {
+            let ctx = chart_canvas.getContext('2d');
+
+            chart_obj = new Chart(ctx, {
                 type: 'line',
                 data: {
                     datasets: datasets
                 },
                 options: {
                     responsive: true,
-                    legend: {
-                        reverse: true,
-                        onClick: null
-                    },
-                    tooltips: {
-                        mode: 'index',
+                    interaction: {
                         intersect: false,
-                        callbacks: {
-                            title: (items, data) => format.duration(items[0].xLabel),
-                            label: (item, data) => `GHS ${data.datasets[item.datasetIndex].label} : ` +
-                                                   format.price(item.yLabel, true)
-                        }
+                        mode: 'index',
                     },
-                    hover: {
-                        mode: 'x',
-                        intersect: true
+                    plugins: {
+                        legend: {
+                            reverse: true,
+                            onClick: null
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: items => format.duration(items[0].label),
+                                label: item => `GHS ${item.dataset.label} : ${format.price(item.parsed.y, true)}`
+                            }
+                        }
                     },
                     elements: {
                         line: {
@@ -839,21 +845,21 @@ const mco_info = new function() {
                         }
                     },
                     scales: {
-                        xAxes: [{
+                        x: {
                             type: 'linear',
                             ticks: {
                                 stepSize: 10,
                                 callback: value => format.duration(value)
                             }
-                        }],
-                        yAxes: [{
+                        },
+                        y: {
                             type: 'linear',
                             ticks: {
                                 suggestedMin: 0.0,
                                 suggestedMax: max_price,
                                 callback: value => format.price(value)
                             }
-                        }]
+                        }
                     }
                 }
             });
