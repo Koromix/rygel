@@ -25,9 +25,14 @@ const ui = new function() {
     dialogs.prev = dialogs;
     dialogs.next = dialogs;
 
+    let log_el;
     let log_entries = [];
 
     this.init = function() {
+        log_el = document.createElement('div');
+        log_el.id = 'ui_log';
+        document.body.appendChild(log_el);
+
         log.pushHandler(notifyHandler);
 
         window.addEventListener('resize', () => {
@@ -67,6 +72,9 @@ const ui = new function() {
     }
 
     this.render = function() {
+        let render_main = true;
+        let log_zindex = 99999;
+
         // Run dialog functions
         {
             let it = dialogs.next;
@@ -74,23 +82,35 @@ const ui = new function() {
             while (it !== dialogs) {
                 it.render();
 
-                // No need to refresh anything underneath
-                if (it.type === 'screen')
-                    return;
+                if (it.type === 'screen' || it.type === 'modal')
+                    log_zindex = 999999999;
+                if (it.type === 'screen') {
+                    render_main = false;
+                    break;
+                }
 
                 it = it.next;
             }
         }
 
         // Render main screen
-        render(html`
-            ${menu_render != null ? html`<nav class=${goupile.isLocked() ? 'ui_toolbar locked' : 'ui_toolbar'}
-                                              style="z-index: 999999;">${menu_render()}</nav>` : ''}
+        if (render_main) {
+            render(html`
+                ${menu_render != null ? html`<nav class=${goupile.isLocked() ? 'ui_toolbar locked' : 'ui_toolbar'}
+                                                  style="z-index: 999999;">${menu_render()}</nav>` : ''}
 
-            <main id="ui_panels">
-                ${util.map(panels.values(), panel => panel.active ? panel.render() : '')}
-            </main>
-        `, document.querySelector('#ui_main'));
+                <main id="ui_panels">
+                    ${util.map(panels.values(), panel => panel.active ? panel.render() : '')}
+                </main>
+            `, document.querySelector('#ui_main'));
+        } else {
+            render('', document.querySelector('#ui_main'));
+        }
+
+        // Adjust log z-index. We need to do it dynamically because we want it to show
+        // above screen and modal dialogs (which show up above eveyerthing else), but
+        // below menu bar dropdown menus.
+        log_el.style.zIndex = log_zindex;
     };
 
     this.setMenu = function(func) {
@@ -183,7 +203,10 @@ const ui = new function() {
                         dialog.reject(null);
                 });
             }
+
             dialog.el.style.zIndex = 9999999;
+            if (type === 'modal' || type === 'screen')
+                log_el.style.zIndex = 999999999;
 
             // Show it!
             document.querySelector('#ui_root').appendChild(dialog.el);
@@ -373,13 +396,6 @@ const ui = new function() {
     };
 
     function renderLog() {
-        let log_el = document.querySelector('#ui_log');
-        if (!log_el) {
-            log_el = document.createElement('div');
-            log_el.id = 'ui_log';
-            document.body.appendChild(log_el);
-        }
-
         render(log_entries.map(entry => {
             let msg = (entry.msg instanceof Error) ? entry.msg.message : entry.msg;
 
