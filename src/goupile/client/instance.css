@@ -47,8 +47,8 @@ html.mobile #ins_page { padding-top: 0; }
 #ins_menu {
     display: none;
     position: sticky;
-    left: 0px;
-    top: 20px;
+    top: 18px;
+    align-self: flex-start;
     box-sizing: border-box;
     width: 240px;
     padding-right: 12px;
@@ -110,8 +110,9 @@ html.mobile #ins_page { padding-top: 0; }
 #ins_actions {
     display: none;
     position: sticky;
+    top: 18px;
+    align-self: flex-start;
     box-sizing: border-box;
-    top: 200px;
     width: 220px;
     padding-left: 12px;
 }
