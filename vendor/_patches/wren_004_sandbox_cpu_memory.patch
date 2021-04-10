@@ -1,8 +1,8 @@
 diff --git a/vendor/wren/src/include/wren.h b/vendor/wren/src/include/wren.h
-index 38957ccb..b4a7088c 100644
+index 6c6bec9b1..ea0175b0d 100644
 --- a/vendor/wren/src/include/wren.h
 +++ b/vendor/wren/src/include/wren.h
-@@ -241,9 +241,19 @@ typedef struct
+@@ -266,6 +266,17 @@ typedef struct
    // If zero, defaults to 50.
    int heapGrowthPercent;
  
@@ -19,15 +19,12 @@ index 38957ccb..b4a7088c 100644
 +
    // User-defined data associated with the VM.
    void* userData;
--
- } WrenConfiguration;
  
- typedef enum
 diff --git a/vendor/wren/src/vm/wren_vm.c b/vendor/wren/src/vm/wren_vm.c
-index 086c4b52..00eda8df 100644
+index be542cd3c..8d75d1581 100644
 --- a/vendor/wren/src/vm/wren_vm.c
 +++ b/vendor/wren/src/vm/wren_vm.c
-@@ -49,6 +49,8 @@ void wrenInitConfiguration(WrenConfiguration* config)
+@@ -53,6 +53,8 @@ void wrenInitConfiguration(WrenConfiguration* config)
    config->initialHeapSize = 1024 * 1024 * 10;
    config->minHeapSize = 1024 * 1024;
    config->heapGrowthPercent = 50;
@@ -36,16 +33,16 @@ index 086c4b52..00eda8df 100644
    config->userData = NULL;
  }
  
-@@ -64,6 +66,8 @@ WrenVM* wrenNewVM(WrenConfiguration* config)
+@@ -72,6 +74,8 @@ WrenVM* wrenNewVM(WrenConfiguration* config)
    if (config != NULL)
    {
      memcpy(&vm->config, config, sizeof(WrenConfiguration));
 +    vm->config.maxRunOps = 0;
 +    vm->config.maxHeapSize = 0;
-   }
-   else
-   {
-@@ -81,6 +85,13 @@ WrenVM* wrenNewVM(WrenConfiguration* config)
+ 
+     // We choose to set this after copying, 
+     // rather than modifying the user config pointer
+@@ -93,6 +97,13 @@ WrenVM* wrenNewVM(WrenConfiguration* config)
  
    vm->modules = wrenNewMap(vm);
    wrenInitializeCore(vm);
@@ -59,7 +56,7 @@ index 086c4b52..00eda8df 100644
    return vm;
  }
  
-@@ -216,13 +227,24 @@ void* wrenReallocate(WrenVM* vm, void* memory, size_t oldSize, size_t newSize)
+@@ -228,13 +239,24 @@ void* wrenReallocate(WrenVM* vm, void* memory, size_t oldSize, size_t newSize)
    // during the next GC.
    vm->bytesAllocated += newSize - oldSize;
  
@@ -76,19 +73,19 @@ index 086c4b52..00eda8df 100644
  #if WREN_DEBUG_GC_STRESS
 -  // Since collecting calls this function to free things, make sure we don't
 -  // recurse.
--  if (newSize > 0) wrenCollectGarbage(vm);
+-  if (newSize > 0 && vm->nextGC) wrenCollectGarbage(vm);
 +    // Since collecting calls this function to free things, make sure we don't
 +    // recurse.
-+    wrenCollectGarbage(vm);
++    if (vm->nextGC) wrenCollectGarbage(vm);
  #else
 -  if (newSize > 0 && vm->nextGC && vm->bytesAllocated > vm->nextGC) wrenCollectGarbage(vm);
 +    if (vm->nextGC && vm->bytesAllocated > vm->nextGC) wrenCollectGarbage(vm);
  #endif
 +  }
  
-   return vm->config.reallocateFn(memory, oldSize, newSize);
+   return vm->config.reallocateFn(memory, newSize, vm->config.userData);
  }
-@@ -792,6 +814,7 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
+@@ -839,6 +861,7 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
    register Value* stackStart;
    register uint8_t* ip;
    register ObjFn* fn;
@@ -96,11 +93,11 @@ index 086c4b52..00eda8df 100644
  
    // These macros are designed to only be invoked within this function.
    #define PUSH(value)  (*fiber->stackTop++ = value)
-@@ -829,6 +852,19 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
-       }                                                           \
-       while (false)
+@@ -878,6 +901,19 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
+         DISPATCH();                                                            \
+       } while (false)
  
-+#define CHECK_OPS_COUNT()                                                                 \
++  #define CHECK_OPS_COUNT()                                                               \
 +      do                                                                                  \
 +      {                                                                                   \
 +        if (ops_count && !--ops_count)                                                    \
@@ -115,20 +112,20 @@ index 086c4b52..00eda8df 100644
 +
    #if WREN_DEBUG_TRACE_INSTRUCTIONS
      // Prints the stack and instruction before each instruction is executed.
-     #define DEBUG_TRACE_INSTRUCTIONS()                            \
-@@ -857,6 +893,7 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
-       do                                                        \
-       {                                                         \
-         DEBUG_TRACE_INSTRUCTIONS();                             \
-+        CHECK_OPS_COUNT();                                      \
-         goto *dispatchTable[instruction = (Code)READ_BYTE()];   \
-       }                                                         \
-       while (false)
-@@ -866,6 +903,7 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
-   #define INTERPRET_LOOP                                        \
-       loop:                                                     \
-         DEBUG_TRACE_INSTRUCTIONS();                             \
-+        CHECK_OPS_COUNT();                                      \
+     #define DEBUG_TRACE_INSTRUCTIONS()                                         \
+@@ -905,6 +941,7 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
+       do                                                                       \
+       {                                                                        \
+         DEBUG_TRACE_INSTRUCTIONS();                                            \
++        CHECK_OPS_COUNT();                                                     \
+         goto *dispatchTable[instruction = (Code)READ_BYTE()];                  \
+       } while (false)
+ 
+@@ -913,6 +950,7 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
+   #define INTERPRET_LOOP                                                       \
+       loop:                                                                    \
+         DEBUG_TRACE_INSTRUCTIONS();                                            \
++        CHECK_OPS_COUNT();                                                     \
          switch (instruction = (Code)READ_BYTE())
  
    #define CASE_CODE(name)  case CODE_##name

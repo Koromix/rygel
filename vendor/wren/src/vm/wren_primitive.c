@@ -23,9 +23,7 @@ static uint32_t validateIndexValue(WrenVM* vm, uint32_t count, double value,
 bool validateFn(WrenVM* vm, Value arg, const char* argName)
 {
   if (IS_CLOSURE(arg)) return true;
-
-  vm->fiber->error = wrenStringFormat(vm, "$ must be a function.", argName);
-  return false;
+  RETURN_ERROR_FMT("$ must be a function.", argName);
 }
 
 bool validateNum(WrenVM* vm, Value arg, const char* argName)
@@ -49,11 +47,7 @@ bool validateInt(WrenVM* vm, Value arg, const char* argName)
 
 bool validateKey(WrenVM* vm, Value arg)
 {
-  if (IS_BOOL(arg) || IS_CLASS(arg) || IS_NULL(arg) ||
-      IS_NUM(arg) || IS_RANGE(arg) || IS_STRING(arg))
-  {
-    return true;
-  }
+  if (wrenMapIsValidKey(arg)) return true;
 
   RETURN_ERROR("Key must be a value type.");
 }

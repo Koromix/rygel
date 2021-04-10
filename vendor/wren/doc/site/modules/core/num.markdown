@@ -9,9 +9,23 @@ Attempts to parse `value` as a decimal literal and return it as an instance of
 
 It is a runtime error if `value` is not a string.
 
+### Num.**infinity**
+
+The value of &infin;.
+
+### Num.**nan**
+
+One value representing a NaN.
+
+Provides a default NaN number suitable for the vm internal values.
+
 ### Num.**pi**
 
 The value of &pi;.
+
+### Num.**tau**
+
+The value of &tau;. This is equivalent to ```2 * Num.pi```.
 
 ### Num.**largest**
 
@@ -20,6 +34,17 @@ The largest representable numeric value.
 ### Num.**smallest**
 
 The smallest positive representable numeric value.
+
+### Num.**maxSafeInteger**
+
+The largest integer that Wren can safely represent. It's a constant value of `9007199254740991`.
+
+ This is relevant because Wren uses double precision [floating-point format](https://en.wikipedia.org/wiki/IEEE_floating_point)
+ for numbers, which can only safely represent integers between <code>-(2<sup>53</sup> - 1)</code> and <code>2<sup>53</sup> - 1</code>.
+
+### Num.**minSafeInteger**
+
+The smallest integer Wren can safely represent. It's a constant value of `-9007199254740991`. 
 
 ## Methods
 
@@ -48,6 +73,10 @@ The arc tangent of the number.
 The arc tangent of the number when divided by `x`, using the signs of the two
 numbers to determine the quadrant of the result.
 
+### **cbrt**
+
+The cube root of the number.
+
 ### **ceil**
 
 Rounds the number up to the nearest integer.
@@ -68,6 +97,17 @@ Rounds the number down to the nearest integer.
 <pre class="snippet">
 System.print(1.5.floor)    //> 1
 System.print((-3.2).floor) //> -4
+</pre>
+
+### **fraction**
+
+The fractional part of a number i.e. the part after any decimal point.
+
+The returned value has the same sign as `this`.
+
+<pre class="snippet">
+System.print(1.5.fraction)    //> 0.5
+System.print((-3.2).fraction) //> -0.2
 </pre>
 
 ### **isInfinity**
@@ -96,7 +136,29 @@ Whether the number is [not a number](http://en.wikipedia.org/wiki/NaN). This is
 
 ### **log**
 
-The natural logarithm of the number.
+The natural logarithm of the number. Returns `nan` if the base is negative.
+
+### **log2**
+
+The binary (base-2) logarithm of the number. Returns `nan` if the base is negative.
+
+### **exp**
+
+The exponential `e` (Euler’s number) raised to the number. This: `eⁿ`. 
+
+### **min**(other)
+
+Returns the minimum value when comparing this number and `other`.
+
+### **max**(other)
+
+Returns the maximum value when comparing this number and `other`.
+
+### **clamp**(min, max)
+
+Clamps a number into the range of `min` and `max`. If this number is less than min, 
+`min` is returned. If bigger than `max`, `max` is returned. Otherwise, the number 
+itself is returned.
 
 ### **pow**(power)
 
@@ -127,6 +189,21 @@ The square root of the number. Returns `nan` if the number is negative.
 ### **tan**
 
 The tangent of the number.
+
+### **toString**
+
+The string representation of the number.
+
+### **truncate**
+
+Rounds the number to the nearest integer towards zero.
+
+It is therefore equivalent to `floor` if the number is non-negative or `ceil` if it is negative.
+
+<pre class="snippet">
+System.print(1.5.truncate)    //> 1
+System.print((-3.2).truncate) //> -3
+</pre>
 
 ### **-** operator
 
@@ -176,6 +253,24 @@ It is a runtime error if `other` is not a number.
 Performs bitwise or on the number. Both numbers are first converted to 32-bit
 unsigned values. The result is then a 32-bit unsigned number where each bit is
 `true` only where the corresponding bits of one or both inputs were `true`.
+
+It is a runtime error if `other` is not a number.
+
+### **^**(other) operator
+
+Performs bitwise exclusive or on the number. Both numbers are first converted to 32-bit unsigned values. The result is then a 32-bit unsigned number where each bit is `true` only where the corresponding bits of one (but not both) inputs were `true`. Each bit is therefore `false` if the corresponding bits of both inputs were either both `true` or both `false`.
+
+It is a runtime error if `other` is not a number.
+
+### **&lt;&lt;**(other) operator
+
+Performs a bitwise left shift on the number. Internally, both numbers are first converted to 32-bit unsigned values and C's left shift operator is then applied to them.
+
+It is a runtime error if `other` is not a number.
+
+### **&gt;&gt;**(other) operator
+
+Performs a bitwise right shift on the number. Internally, both numbers are first converted to 32-bit unsigned values and C's right shift operator is then applied to them.
 
 It is a runtime error if `other` is not a number.
 

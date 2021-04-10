@@ -8,7 +8,7 @@
 
 // The maximum number of temporary objects that can be made visible to the GC
 // at one time.
-#define WREN_MAX_TEMP_ROOTS 5
+#define WREN_MAX_TEMP_ROOTS 8
 
 typedef enum
 {
@@ -241,6 +241,11 @@ static inline ObjClass* wrenGetClassInline(WrenVM* vm, Value value)
 static inline bool wrenIsLocalName(const char* name)
 {
   return name[0] >= 'a' && name[0] <= 'z';
+}
+
+static inline bool wrenIsFalsyValue(Value value)
+{
+  return IS_FALSE(value) || IS_NULL(value);
 }
 
 #endif

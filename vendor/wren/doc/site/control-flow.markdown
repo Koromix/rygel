@@ -65,7 +65,7 @@ if (ready) {
 
 Unlike most other [operators][] in Wren which are just a special syntax for
 [method calls][], the `&&` and `||` operators are special. This is because they
-only conditionally evaluate right operand&mdash;they short-circuit.
+only conditionally evaluate the right operand&mdash;they short-circuit.
 
 [operators]: method-calls.html#operators
 [method calls]: method-calls.html
@@ -92,7 +92,7 @@ System.print(1 || 2)      //> 1
 
 Also known as the "ternary" operator since it takes three arguments, Wren has
 the little "if statement in the form of an expression" you know and love from C
-and its brethren.
+and similar languages.
 
 <pre class="snippet">
 System.print(1 != 2 ? "math is sane" : "math is not sane!")
@@ -175,6 +175,21 @@ for (i in [1, 2, 3, 4]) {
   System.print(i)           //> 1
   if (i == 3) break         //> 2
 }                           //> 3
+</pre>
+
+## Continue statements
+
+During the execution of a loop body, you might decide that you want to skip the 
+rest of this iteration and move on to the next one. You can use a `continue` 
+statement to do that. It's just the `continue` keyword all by itself. Execution
+will immediately jump to the beginning of the next loop iteration (and check the
+loop conditions).
+
+<pre class="snippet">
+for (i in [1, 2, 3, 4]) {
+  System.print(i)           //> 1
+  if (i == 2) continue      //> 3
+}                           //> 4
 </pre>
 
 ## Numeric ranges

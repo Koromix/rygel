@@ -7,6 +7,7 @@
 
 #include "wren_common.h"
 #include "wren_core.h"
+#include "wren_math.h"
 #include "wren_primitive.h"
 #include "wren_value.h"
 
@@ -47,6 +48,11 @@ DEF_PRIMITIVE(class_supertype)
 DEF_PRIMITIVE(class_toString)
 {
   RETURN_OBJ(AS_CLASS(args[0])->name);
+}
+
+DEF_PRIMITIVE(class_attributes)
+{
+  RETURN_VAL(AS_CLASS(args[0])->attributes);
 }
 
 DEF_PRIMITIVE(fiber_new)
@@ -191,6 +197,15 @@ DEF_PRIMITIVE(fiber_try)
   return false;
 }
 
+DEF_PRIMITIVE(fiber_try1)
+{
+  runFiber(vm, AS_FIBER(args[0]), args, true, true, "try");
+  
+  // If we're switching to a valid fiber to try, remember that we're trying it.
+  if (!wrenHasError(vm->fiber)) vm->fiber->state = FIBER_TRY;
+  return false;
+}
+
 DEF_PRIMITIVE(fiber_yield)
 {
   ObjFiber* current = vm->fiber;
@@ -248,23 +263,16 @@ DEF_PRIMITIVE(fn_arity)
 
 static void call_fn(WrenVM* vm, Value* args, int numArgs)
 {
-  // We only care about missing arguments, not extras.
-  if (AS_CLOSURE(args[0])->fn->arity > numArgs)
-  {
-    vm->fiber->error = CONST_STRING(vm, "Function expects more arguments.");
-    return;
-  }
-
   // +1 to include the function itself.
   wrenCallFunction(vm, vm->fiber, AS_CLOSURE(args[0]), numArgs + 1);
 }
 
-#define DEF_FN_CALL(numArgs) \
-    DEF_PRIMITIVE(fn_call##numArgs) \
-    { \
-      call_fn(vm, args, numArgs); \
-      return false; \
-    } \
+#define DEF_FN_CALL(numArgs)                                                   \
+    DEF_PRIMITIVE(fn_call##numArgs)                                            \
+    {                                                                          \
+      call_fn(vm, args, numArgs);                                              \
+      return false;                                                            \
+    }
 
 DEF_FN_CALL(0)
 DEF_FN_CALL(1)
@@ -389,6 +397,34 @@ DEF_PRIMITIVE(list_removeAt)
   if (index == UINT32_MAX) return false;
 
   RETURN_VAL(wrenListRemoveAt(vm, list, index));
+}
+
+DEF_PRIMITIVE(list_removeValue) {
+  ObjList* list = AS_LIST(args[0]);
+  int index = wrenListIndexOf(vm, list, args[1]);
+  if(index == -1) RETURN_NULL;
+  RETURN_VAL(wrenListRemoveAt(vm, list, index));
+}
+
+DEF_PRIMITIVE(list_indexOf)
+{
+  ObjList* list = AS_LIST(args[0]);
+  RETURN_NUM(wrenListIndexOf(vm, list, args[1]));
+}
+
+DEF_PRIMITIVE(list_swap)
+{
+  ObjList* list = AS_LIST(args[0]);
+  uint32_t indexA = validateIndex(vm, args[1], list->elements.count, "Index 0");
+  if (indexA == UINT32_MAX) return false;
+  uint32_t indexB = validateIndex(vm, args[2], list->elements.count, "Index 1");
+  if (indexB == UINT32_MAX) return false;
+
+  Value a = list->elements.data[indexA];
+  list->elements.data[indexA] = list->elements.data[indexB];
+  list->elements.data[indexB] = a;
+
+  RETURN_NULL;
 }
 
 DEF_PRIMITIVE(list_subscript)
@@ -594,17 +630,30 @@ DEF_PRIMITIVE(num_fromString)
   RETURN_NUM(number);
 }
 
-DEF_PRIMITIVE(num_pi)
-{
-  RETURN_NUM(3.14159265358979323846);
-}
+// Defines a primitive on Num that calls infix [op] and returns [type].
+#define DEF_NUM_CONSTANT(name, value)                                          \
+    DEF_PRIMITIVE(num_##name)                                                  \
+    {                                                                          \
+      RETURN_NUM(value);                                                       \
+    }
+
+DEF_NUM_CONSTANT(infinity, INFINITY)
+DEF_NUM_CONSTANT(nan,      WREN_DOUBLE_NAN)
+DEF_NUM_CONSTANT(pi,       3.14159265358979323846264338327950288)
+DEF_NUM_CONSTANT(tau,      6.28318530717958647692528676655900577)
+
+DEF_NUM_CONSTANT(largest,  DBL_MAX)
+DEF_NUM_CONSTANT(smallest, DBL_MIN)
+
+DEF_NUM_CONSTANT(maxSafeInteger, 9007199254740991.0)
+DEF_NUM_CONSTANT(minSafeInteger, -9007199254740991.0)
 
 // Defines a primitive on Num that calls infix [op] and returns [type].
-#define DEF_NUM_INFIX(name, op, type) \
-    DEF_PRIMITIVE(num_##name) \
-    { \
-      if (!validateNum(vm, args[1], "Right operand")) return false; \
-      RETURN_##type(AS_NUM(args[0]) op AS_NUM(args[1])); \
+#define DEF_NUM_INFIX(name, op, type)                                          \
+    DEF_PRIMITIVE(num_##name)                                                  \
+    {                                                                          \
+      if (!validateNum(vm, args[1], "Right operand")) return false;            \
+      RETURN_##type(AS_NUM(args[0]) op AS_NUM(args[1]));                       \
     }
 
 DEF_NUM_INFIX(minus,    -,  NUM)
@@ -617,13 +666,13 @@ DEF_NUM_INFIX(lte,      <=, BOOL)
 DEF_NUM_INFIX(gte,      >=, BOOL)
 
 // Defines a primitive on Num that call infix bitwise [op].
-#define DEF_NUM_BITWISE(name, op) \
-    DEF_PRIMITIVE(num_bitwise##name) \
-    { \
-      if (!validateNum(vm, args[1], "Right operand")) return false; \
-      uint32_t left = (uint32_t)AS_NUM(args[0]); \
-      uint32_t right = (uint32_t)AS_NUM(args[1]); \
-      RETURN_NUM(left op right); \
+#define DEF_NUM_BITWISE(name, op)                                              \
+    DEF_PRIMITIVE(num_bitwise##name)                                           \
+    {                                                                          \
+      if (!validateNum(vm, args[1], "Right operand")) return false;            \
+      uint32_t left = (uint32_t)AS_NUM(args[0]);                               \
+      uint32_t right = (uint32_t)AS_NUM(args[1]);                              \
+      RETURN_NUM(left op right);                                               \
     }
 
 DEF_NUM_BITWISE(And,        &)
@@ -633,16 +682,17 @@ DEF_NUM_BITWISE(LeftShift,  <<)
 DEF_NUM_BITWISE(RightShift, >>)
 
 // Defines a primitive method on Num that returns the result of [fn].
-#define DEF_NUM_FN(name, fn) \
-    DEF_PRIMITIVE(num_##name) \
-    { \
-      RETURN_NUM(fn(AS_NUM(args[0]))); \
+#define DEF_NUM_FN(name, fn)                                                   \
+    DEF_PRIMITIVE(num_##name)                                                  \
+    {                                                                          \
+      RETURN_NUM(fn(AS_NUM(args[0])));                                         \
     }
 
 DEF_NUM_FN(abs,     fabs)
 DEF_NUM_FN(acos,    acos)
 DEF_NUM_FN(asin,    asin)
 DEF_NUM_FN(atan,    atan)
+DEF_NUM_FN(cbrt,    cbrt)
 DEF_NUM_FN(ceil,    ceil)
 DEF_NUM_FN(cos,     cos)
 DEF_NUM_FN(floor,   floor)
@@ -652,6 +702,8 @@ DEF_NUM_FN(sin,     sin)
 DEF_NUM_FN(sqrt,    sqrt)
 DEF_NUM_FN(tan,     tan)
 DEF_NUM_FN(log,     log)
+DEF_NUM_FN(log2,    log2)
+DEF_NUM_FN(exp,     exp)
 
 DEF_PRIMITIVE(num_mod)
 {
@@ -697,18 +749,52 @@ DEF_PRIMITIVE(num_dotDotDot)
 
 DEF_PRIMITIVE(num_atan2)
 {
+  if (!validateNum(vm, args[1], "x value")) return false;
+
   RETURN_NUM(atan2(AS_NUM(args[0]), AS_NUM(args[1])));
+}
+
+DEF_PRIMITIVE(num_min)
+{
+  if (!validateNum(vm, args[1], "Other value")) return false;
+
+  double value = AS_NUM(args[0]);
+  double other = AS_NUM(args[1]);
+  RETURN_NUM(value <= other ? value : other);
+}
+
+DEF_PRIMITIVE(num_max)
+{
+  if (!validateNum(vm, args[1], "Other value")) return false;
+
+  double value = AS_NUM(args[0]);
+  double other = AS_NUM(args[1]);
+  RETURN_NUM(value > other ? value : other);
+}
+
+DEF_PRIMITIVE(num_clamp)
+{
+  if (!validateNum(vm, args[1], "Min value")) return false;
+  if (!validateNum(vm, args[2], "Max value")) return false;
+
+  double value = AS_NUM(args[0]);
+  double min = AS_NUM(args[1]);
+  double max = AS_NUM(args[2]);
+  double result = (value < min) ? min : ((value > max) ? max : value);
+  RETURN_NUM(result);
 }
 
 DEF_PRIMITIVE(num_pow)
 {
+  if (!validateNum(vm, args[1], "Power value")) return false;
+
   RETURN_NUM(pow(AS_NUM(args[0]), AS_NUM(args[1])));
 }
 
 DEF_PRIMITIVE(num_fraction)
 {
-  double dummy;
-  RETURN_NUM(modf(AS_NUM(args[0]) , &dummy));
+  double unused;
+  RETURN_NUM(modf(AS_NUM(args[0]) , &unused));
 }
 
 DEF_PRIMITIVE(num_isInfinity)
@@ -743,16 +829,6 @@ DEF_PRIMITIVE(num_sign)
   {
     RETURN_NUM(0);
   }
-}
-
-DEF_PRIMITIVE(num_largest)
-{
-  RETURN_NUM(DBL_MAX);
-}
-
-DEF_PRIMITIVE(num_smallest)
-{
-  RETURN_NUM(DBL_MIN);
 }
 
 DEF_PRIMITIVE(num_toString)
@@ -1181,6 +1257,7 @@ void wrenInitializeCore(WrenVM* vm)
   PRIMITIVE(vm->classClass, "name", class_name);
   PRIMITIVE(vm->classClass, "supertype", class_supertype);
   PRIMITIVE(vm->classClass, "toString", class_toString);
+  PRIMITIVE(vm->classClass, "attributes", class_attributes);
 
   // Finally, we can define Object's metaclass which is a subclass of Class.
   ObjClass* objectMetaclass = defineClass(vm, coreModule, "Object metaclass");
@@ -1240,28 +1317,31 @@ void wrenInitializeCore(WrenVM* vm)
   PRIMITIVE(vm->fiberClass, "transfer(_)", fiber_transfer1);
   PRIMITIVE(vm->fiberClass, "transferError(_)", fiber_transferError);
   PRIMITIVE(vm->fiberClass, "try()", fiber_try);
+  PRIMITIVE(vm->fiberClass, "try(_)", fiber_try1);
 
   vm->fnClass = AS_CLASS(wrenFindVariable(vm, coreModule, "Fn"));
   PRIMITIVE(vm->fnClass->obj.classObj, "new(_)", fn_new);
 
   PRIMITIVE(vm->fnClass, "arity", fn_arity);
-  PRIMITIVE(vm->fnClass, "call()", fn_call0);
-  PRIMITIVE(vm->fnClass, "call(_)", fn_call1);
-  PRIMITIVE(vm->fnClass, "call(_,_)", fn_call2);
-  PRIMITIVE(vm->fnClass, "call(_,_,_)", fn_call3);
-  PRIMITIVE(vm->fnClass, "call(_,_,_,_)", fn_call4);
-  PRIMITIVE(vm->fnClass, "call(_,_,_,_,_)", fn_call5);
-  PRIMITIVE(vm->fnClass, "call(_,_,_,_,_,_)", fn_call6);
-  PRIMITIVE(vm->fnClass, "call(_,_,_,_,_,_,_)", fn_call7);
-  PRIMITIVE(vm->fnClass, "call(_,_,_,_,_,_,_,_)", fn_call8);
-  PRIMITIVE(vm->fnClass, "call(_,_,_,_,_,_,_,_,_)", fn_call9);
-  PRIMITIVE(vm->fnClass, "call(_,_,_,_,_,_,_,_,_,_)", fn_call10);
-  PRIMITIVE(vm->fnClass, "call(_,_,_,_,_,_,_,_,_,_,_)", fn_call11);
-  PRIMITIVE(vm->fnClass, "call(_,_,_,_,_,_,_,_,_,_,_,_)", fn_call12);
-  PRIMITIVE(vm->fnClass, "call(_,_,_,_,_,_,_,_,_,_,_,_,_)", fn_call13);
-  PRIMITIVE(vm->fnClass, "call(_,_,_,_,_,_,_,_,_,_,_,_,_,_)", fn_call14);
-  PRIMITIVE(vm->fnClass, "call(_,_,_,_,_,_,_,_,_,_,_,_,_,_,_)", fn_call15);
-  PRIMITIVE(vm->fnClass, "call(_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_)", fn_call16);
+
+  FUNCTION_CALL(vm->fnClass, "call()", fn_call0);
+  FUNCTION_CALL(vm->fnClass, "call(_)", fn_call1);
+  FUNCTION_CALL(vm->fnClass, "call(_,_)", fn_call2);
+  FUNCTION_CALL(vm->fnClass, "call(_,_,_)", fn_call3);
+  FUNCTION_CALL(vm->fnClass, "call(_,_,_,_)", fn_call4);
+  FUNCTION_CALL(vm->fnClass, "call(_,_,_,_,_)", fn_call5);
+  FUNCTION_CALL(vm->fnClass, "call(_,_,_,_,_,_)", fn_call6);
+  FUNCTION_CALL(vm->fnClass, "call(_,_,_,_,_,_,_)", fn_call7);
+  FUNCTION_CALL(vm->fnClass, "call(_,_,_,_,_,_,_,_)", fn_call8);
+  FUNCTION_CALL(vm->fnClass, "call(_,_,_,_,_,_,_,_,_)", fn_call9);
+  FUNCTION_CALL(vm->fnClass, "call(_,_,_,_,_,_,_,_,_,_)", fn_call10);
+  FUNCTION_CALL(vm->fnClass, "call(_,_,_,_,_,_,_,_,_,_,_)", fn_call11);
+  FUNCTION_CALL(vm->fnClass, "call(_,_,_,_,_,_,_,_,_,_,_,_)", fn_call12);
+  FUNCTION_CALL(vm->fnClass, "call(_,_,_,_,_,_,_,_,_,_,_,_,_)", fn_call13);
+  FUNCTION_CALL(vm->fnClass, "call(_,_,_,_,_,_,_,_,_,_,_,_,_,_)", fn_call14);
+  FUNCTION_CALL(vm->fnClass, "call(_,_,_,_,_,_,_,_,_,_,_,_,_,_,_)", fn_call15);
+  FUNCTION_CALL(vm->fnClass, "call(_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_)", fn_call16);
+  
   PRIMITIVE(vm->fnClass, "toString", fn_toString);
 
   vm->nullClass = AS_CLASS(wrenFindVariable(vm, coreModule, "Null"));
@@ -1270,9 +1350,14 @@ void wrenInitializeCore(WrenVM* vm)
 
   vm->numClass = AS_CLASS(wrenFindVariable(vm, coreModule, "Num"));
   PRIMITIVE(vm->numClass->obj.classObj, "fromString(_)", num_fromString);
+  PRIMITIVE(vm->numClass->obj.classObj, "infinity", num_infinity);
+  PRIMITIVE(vm->numClass->obj.classObj, "nan", num_nan);
   PRIMITIVE(vm->numClass->obj.classObj, "pi", num_pi);
+  PRIMITIVE(vm->numClass->obj.classObj, "tau", num_tau);
   PRIMITIVE(vm->numClass->obj.classObj, "largest", num_largest);
   PRIMITIVE(vm->numClass->obj.classObj, "smallest", num_smallest);
+  PRIMITIVE(vm->numClass->obj.classObj, "maxSafeInteger", num_maxSafeInteger);
+  PRIMITIVE(vm->numClass->obj.classObj, "minSafeInteger", num_minSafeInteger);
   PRIMITIVE(vm->numClass, "-(_)", num_minus);
   PRIMITIVE(vm->numClass, "+(_)", num_plus);
   PRIMITIVE(vm->numClass, "*(_)", num_multiply);
@@ -1290,15 +1375,21 @@ void wrenInitializeCore(WrenVM* vm)
   PRIMITIVE(vm->numClass, "acos", num_acos);
   PRIMITIVE(vm->numClass, "asin", num_asin);
   PRIMITIVE(vm->numClass, "atan", num_atan);
+  PRIMITIVE(vm->numClass, "cbrt", num_cbrt);
   PRIMITIVE(vm->numClass, "ceil", num_ceil);
   PRIMITIVE(vm->numClass, "cos", num_cos);
   PRIMITIVE(vm->numClass, "floor", num_floor);
   PRIMITIVE(vm->numClass, "-", num_negate);
   PRIMITIVE(vm->numClass, "round", num_round);
+  PRIMITIVE(vm->numClass, "min(_)", num_min);
+  PRIMITIVE(vm->numClass, "max(_)", num_max);
+  PRIMITIVE(vm->numClass, "clamp(_,_)", num_clamp);
   PRIMITIVE(vm->numClass, "sin", num_sin);
   PRIMITIVE(vm->numClass, "sqrt", num_sqrt);
   PRIMITIVE(vm->numClass, "tan", num_tan);
   PRIMITIVE(vm->numClass, "log", num_log);
+  PRIMITIVE(vm->numClass, "log2", num_log2);
+  PRIMITIVE(vm->numClass, "exp", num_exp);
   PRIMITIVE(vm->numClass, "%(_)", num_mod);
   PRIMITIVE(vm->numClass, "~", num_bitwiseNot);
   PRIMITIVE(vm->numClass, "..(_)", num_dotDot);
@@ -1349,6 +1440,9 @@ void wrenInitializeCore(WrenVM* vm)
   PRIMITIVE(vm->listClass, "iterate(_)", list_iterate);
   PRIMITIVE(vm->listClass, "iteratorValue(_)", list_iteratorValue);
   PRIMITIVE(vm->listClass, "removeAt(_)", list_removeAt);
+  PRIMITIVE(vm->listClass, "remove(_)", list_removeValue);
+  PRIMITIVE(vm->listClass, "indexOf(_)", list_indexOf);
+  PRIMITIVE(vm->listClass, "swap(_,_)", list_swap);
 
   vm->mapClass = AS_CLASS(wrenFindVariable(vm, coreModule, "Map"));
   PRIMITIVE(vm->mapClass->obj.classObj, "new()", map_new);

@@ -10,7 +10,7 @@ import re
 from subprocess import Popen, PIPE
 import sys
 from threading import Timer
-
+import platform
 # Runs the tests.
 
 parser = ArgumentParser()
@@ -21,10 +21,18 @@ args = parser.parse_args(sys.argv[1:])
 
 config = args.suffix.lstrip('_d')
 is_debug = args.suffix.startswith('_d')
-config_dir = ("debug" if is_debug else "release") + config
 
 WREN_DIR = dirname(dirname(realpath(__file__)))
 WREN_APP = join(WREN_DIR, 'bin', 'wren_test' + args.suffix)
+
+WREN_APP_WITH_EXT = WREN_APP
+if platform.system() == "Windows":
+  WREN_APP_WITH_EXT += ".exe"
+
+if not isfile(WREN_APP_WITH_EXT):
+  print("The binary file 'wren_test' was not found, expected it to be at " + WREN_APP)
+  print("In order to run the tests, you need to build Wren first!")
+  sys.exit(1)
 
 # print("Wren Test Directory - " + WREN_DIR)
 # print("Wren Test App - " + WREN_APP)
@@ -44,7 +52,6 @@ failed = 0
 num_skipped = 0
 skipped = defaultdict(int)
 expectations = 0
-
 
 class Test:
   def __init__(self, path):
@@ -91,7 +98,7 @@ class Test:
         if match:
           self.compile_errors.add(line_num)
 
-          # If we expect a compile error, it should exit with EX_DATAERR.
+          # If we expect a compile error, it should exit with WREN_EX_DATAERR.
           self.exit_code = 65
           expectations += 1
 
@@ -99,7 +106,7 @@ class Test:
         if match:
           self.compile_errors.add(int(match.group(1)))
 
-          # If we expect a compile error, it should exit with EX_DATAERR.
+          # If we expect a compile error, it should exit with WREN_EX_DATAERR.
           self.exit_code = 65
           expectations += 1
 
@@ -107,7 +114,7 @@ class Test:
         if match:
           self.runtime_error_line = line_num
           self.runtime_error_message = match.group(2)
-          # If the runtime error isn't handled, it should exit with EX_SOFTWARE.
+          # If the runtime error isn't handled, it should exit with WREN_EX_SOFTWARE.
           if match.group(1) != "handled ":
             self.exit_code = 70
           expectations += 1

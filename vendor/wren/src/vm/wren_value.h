@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "wren_common.h"
+#include "wren_math.h"
 #include "wren_utils.h"
 
 // This defines the built-in types and their core representations in memory.
@@ -76,6 +77,7 @@
 #define IS_FOREIGN(value) (wrenIsObjType(value, OBJ_FOREIGN))   // ObjForeign
 #define IS_INSTANCE(value) (wrenIsObjType(value, OBJ_INSTANCE)) // ObjInstance
 #define IS_LIST(value) (wrenIsObjType(value, OBJ_LIST))         // ObjList
+#define IS_MAP(value) (wrenIsObjType(value, OBJ_MAP))           // ObjMap
 #define IS_RANGE(value) (wrenIsObjType(value, OBJ_RANGE))       // ObjRange
 #define IS_STRING(value) (wrenIsObjType(value, OBJ_STRING))     // ObjString
 
@@ -182,7 +184,7 @@ typedef struct sObjUpvalue
   // Pointer to the variable this upvalue is referencing.
   Value* value;
 
-  // If the upvalue is closed (i.e. the local variable it was pointing too has
+  // If the upvalue is closed (i.e. the local variable it was pointing to has
   // been popped off the stack) then the closed-over value will be hoisted out
   // of the stack into here. [value] will then be changed to point to this.
   Value closed;
@@ -194,7 +196,7 @@ typedef struct sObjUpvalue
 
 // The type of a primitive function.
 //
-// Primitives are similiar to foreign functions, but have more direct access to
+// Primitives are similar to foreign functions, but have more direct access to
 // VM internals. It is passed the arguments in [args]. If it returns a value,
 // it places it in `args[0]` and returns `true`. If it causes a runtime error
 // or modifies the running fiber, it returns `false`.
@@ -316,8 +318,8 @@ typedef struct sObjFiber
   Obj obj;
   
   // The stack of value slots. This is used for holding local variables and
-  // temporaries while the fiber is executing. It heap-allocated and grown as
-  // needed.
+  // temporaries while the fiber is executing. It is heap-allocated and grown
+  // as needed.
   Value* stack;
   
   // A pointer to one past the top-most value on the stack.
@@ -357,6 +359,9 @@ typedef enum
   // A primitive method implemented in C in the VM. Unlike foreign methods,
   // this can directly manipulate the fiber's stack.
   METHOD_PRIMITIVE,
+
+  // A primitive that handles .call on Fn.
+  METHOD_FUNCTION_CALL,
 
   // A externally-defined C method.
   METHOD_FOREIGN,
@@ -405,6 +410,9 @@ struct sObjClass
 
   // The name of the class.
   ObjString* name;
+  
+  // The ClassAttribute for the class, if any
+  Value attributes;
 };
 
 typedef struct
@@ -609,14 +617,6 @@ typedef struct
 
 #endif
 
-// A union to let us reinterpret a double as raw bits and back.
-typedef union
-{
-  uint64_t bits64;
-  uint32_t bits32[2];
-  double num;
-} DoubleBits;
-
 // Creates a new "raw" class. It has no metaclass or superclass whatsoever.
 // This is only used for bootstrapping the initial Object and Class classes,
 // which are a little special.
@@ -683,8 +683,16 @@ void wrenListInsert(WrenVM* vm, ObjList* list, Value value, uint32_t index);
 // Removes and returns the item at [index] from [list].
 Value wrenListRemoveAt(WrenVM* vm, ObjList* list, uint32_t index);
 
+// Searches for [value] in [list], returns the index or -1 if not found.
+int wrenListIndexOf(WrenVM* vm, ObjList* list, Value value);
+
 // Creates a new empty map.
 ObjMap* wrenNewMap(WrenVM* vm);
+
+// Validates that [arg] is a valid object for use as a map key. Returns true if
+// it is and returns false otherwise. Use validateKey usually, for a runtime error.
+// This separation exists to aid the API in surfacing errors to the developer as well.
+static inline bool wrenMapIsValidKey(Value arg);
 
 // Looks up [key] in [map]. If found, returns the value. Otherwise, returns
 // `UNDEFINED_VAL`.
@@ -850,9 +858,7 @@ static inline Value wrenObjectToValue(Obj* obj)
 static inline double wrenValueToNum(Value value)
 {
 #if WREN_NAN_TAGGING
-  DoubleBits data;
-  data.bits64 = value;
-  return data.num;
+  return wrenDoubleFromBits(value);
 #else
   return value.as.num;
 #endif
@@ -862,15 +868,23 @@ static inline double wrenValueToNum(Value value)
 static inline Value wrenNumToValue(double num)
 {
 #if WREN_NAN_TAGGING
-  DoubleBits data;
-  data.num = num;
-  return data.bits64;
+  return wrenDoubleToBits(num);
 #else
   Value value;
   value.type = VAL_NUM;
   value.as.num = num;
   return value;
 #endif
+}
+
+static inline bool wrenMapIsValidKey(Value arg)
+{
+  return IS_BOOL(arg)
+      || IS_CLASS(arg)
+      || IS_NULL(arg)
+      || IS_NUM(arg)
+      || IS_RANGE(arg)
+      || IS_STRING(arg);
 }
 
 #endif

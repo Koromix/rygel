@@ -320,7 +320,7 @@
     if (buffer == NULL)
     {
       fprintf(stderr, "Could not read file \"%s\".\n", path);
-      exit(74);
+      exit(WREN_EX_IOERR);
     }
 
     // Read the entire file.
@@ -328,7 +328,7 @@
     if (bytesRead < fileSize)
     {
       fprintf(stderr, "Could not read file \"%s\".\n", path);
-      exit(74);
+      exit(WREN_EX_IOERR);
     }
 
     // Terminate the string.
@@ -364,8 +364,22 @@
     }
   }
 
-  char* readModule(WrenVM* vm, const char* module) 
+  void readModuleComplete(WrenVM* vm, const char* module, WrenLoadModuleResult result)
   {
+    if (result.source) {
+      free((void*)result.source);
+      result.source = NULL;
+    }
+  }
+
+  WrenLoadModuleResult readModule(WrenVM* vm, const char* module) 
+  {
+    //source may or may not be null
+    WrenLoadModuleResult result = {0};
+
+    #ifdef WREN_TRY
+      return result;
+    #endif
 
     Path* filePath = pathNew(module);
 
@@ -375,8 +389,9 @@
     char* source = readFile(filePath->chars);
     pathFree(filePath);
 
-    //may or may not be null
-    return source;
+      result.source = source;
+      result.onComplete = readModuleComplete;
+    return result;
 
   }
 
@@ -421,7 +436,7 @@
     if (source == NULL)
     {
       fprintf(stderr, "Could not find file \"%s\".\n", path);
-      exit(66);
+      exit(WREN_EX_NOINPUT);
     }
 
     // If it looks like a relative path, make it explicitly relative so that we
@@ -441,6 +456,7 @@
     WrenInterpretResult result = wrenInterpret(vm, module->chars, source);
 
     pathFree(module);
+    free(source);
 
     return result;
   }
@@ -451,7 +467,7 @@
     if (argc < 2)
     {
       printf("This is a Wren test runner.\nUsage: wren_test [file]\n");
-      return 64; // EX_USAGE.
+      return WREN_EX_USAGE;
     }
 
     if (argc == 2 && strcmp(argv[1], "--version") == 0)

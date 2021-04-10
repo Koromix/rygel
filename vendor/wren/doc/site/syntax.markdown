@@ -43,7 +43,7 @@ One way to get a quick feel for a language's style is to see what words it
 reserves. Here's what Wren has:
 
 <pre class="snippet">
-break class construct else false for foreign if import
+as break class construct continue else false for foreign if import
 in is null return static super this true var while
 </pre>
 
@@ -149,7 +149,7 @@ put a newline in there:
 </pre>
 
 Using an initial newline after the `{` does feel a little weird or magical, but
-newlines are already significant in Wren, so it's not totally crazy. The nice
+newlines are already significant in Wren, so it's not totally unreasonable. The nice
 thing about this syntax as opposed to something like `=>` is that the *end* of
 the block has an explicit delimiter. That helps when chaining:
 

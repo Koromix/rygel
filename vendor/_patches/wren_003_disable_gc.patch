@@ -1,8 +1,8 @@
 diff --git a/vendor/wren/src/vm/wren_vm.c b/vendor/wren/src/vm/wren_vm.c
-index c9f6fee8..086c4b52 100644
+index 3d7dcc96b..be542cd3c 100644
 --- a/vendor/wren/src/vm/wren_vm.c
 +++ b/vendor/wren/src/vm/wren_vm.c
-@@ -182,8 +182,11 @@ void wrenCollectGarbage(WrenVM* vm)
+@@ -194,8 +194,11 @@ void wrenCollectGarbage(WrenVM* vm)
  
    // Calculate the next gc point, this is the current allocation plus
    // a configured percentage of the current allocation.
@@ -16,12 +16,15 @@ index c9f6fee8..086c4b52 100644
  
  #if WREN_DEBUG_TRACE_MEMORY || WREN_DEBUG_TRACE_GC
    double elapsed = ((double)clock() / CLOCKS_PER_SEC) - startTime;
-@@ -218,7 +221,7 @@ void* wrenReallocate(WrenVM* vm, void* memory, size_t oldSize, size_t newSize)
+@@ -228,9 +231,9 @@ void* wrenReallocate(WrenVM* vm, void* memory, size_t oldSize, size_t newSize)
+ #if WREN_DEBUG_GC_STRESS
+   // Since collecting calls this function to free things, make sure we don't
    // recurse.
-   if (newSize > 0) wrenCollectGarbage(vm);
+-  if (newSize > 0) wrenCollectGarbage(vm);
++  if (newSize > 0 && vm->nextGC) wrenCollectGarbage(vm);
  #else
 -  if (newSize > 0 && vm->bytesAllocated > vm->nextGC) wrenCollectGarbage(vm);
 +  if (newSize > 0 && vm->nextGC && vm->bytesAllocated > vm->nextGC) wrenCollectGarbage(vm);
  #endif
  
-   return vm->config.reallocateFn(memory, oldSize, newSize);
+   return vm->config.reallocateFn(memory, newSize, vm->config.userData);

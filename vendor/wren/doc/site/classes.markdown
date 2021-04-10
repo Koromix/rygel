@@ -267,7 +267,7 @@ inside a method works like this:
 
 So, in the above example, we hit case #2 and it prints "Francis". Distinguishing
 self sends from outer variables based on the *case* of the first letter in the
-name probably seems crazy but it works surprisingly well. Method names are
+name probably seems weird but it works surprisingly well. Method names are
 lowercase in Wren. Class names are capitalized.
 
 Most of the time, when you're in a method and want to access a name from outside
@@ -346,6 +346,20 @@ Like other methods, constructors can obviously have arguments, and can be
 overloaded by [arity](#signature). A constructor *must* be a named method with
 a (possibly empty) argument list. Operators, getters, and setters cannot be
 constructors.
+
+A constructor returns the instance of the class being created, even if you 
+don't explicitly use `return`. It is valid to use `return` inside of a 
+constructor, but it is an error to have an expression after the return.
+That rule applies to `return this` as well, return handles that implicitly inside
+a constructor, so just `return` is enough.
+
+<pre class="snippet">
+return          //> valid, returns 'this'
+
+return variable //> invalid
+return null     //> invalid
+return this     //> also invalid
+</pre>
 
 A constructor is actually a pair of methods. You get a method on the class:
 
@@ -618,6 +632,131 @@ class Derived is Base {
   construct new() {
     super("value") //> base got value
   }
+}
+</pre>
+
+
+## Attributes
+
+<small>**experimental stage**: subject to minor changes</small>
+
+A class and methods within a class can be tagged with 'meta attributes'.
+
+Like this:
+
+<pre class="snippet">
+#hidden = true
+class Example {}
+</pre>
+
+These attributes are metadata, they give you a way to annotate and store
+any additional information about a class, which you can optionally access at runtime.
+This information can also be used by external tools, to provide additional
+hints and information from code to the tool.
+
+<small>
+Since this feature has just been introduced, **take note**.
+
+**Currently** there are no attributes with a built-in meaning. 
+Attributes are user-defined metadata. This may not remain 
+true as some may become well defined through convention or potentially
+through use by Wren itself. 
+</small>
+
+Attributes are placed before a class or method definition,
+and use the `#` hash/pound symbol. 
+
+They can be 
+
+- a `#key` on it's own
+- a `#key = value`
+- a `#group(with, multiple = true, keys = "value")`
+
+An attribute _key_ can only be a `Name`. This is the same type of name 
+as a method name, a class name or variable name, an identifier that matches
+the Wren identifier rules. A name results in a String value at runtime.
+
+An attribute _value_ can be any of these literal values: `Name, String, Bool, Num`.
+Values cannot contain expressions, just a value, there is no compile time 
+evaluation.
+
+Groups can span multiple lines, methods have their own attributes, and duplicate
+keys are valid.
+
+<pre class="snippet">
+#key
+#key = value
+#group(
+  multiple,
+  lines = true,
+  lines = 0
+)
+class Example {
+  #test(skip = true, iterations = 32)
+  doStuff() {}
+}
+</pre>
+
+### Accessing attributes at runtime
+
+By default, attributes are compiled out and ignored.
+
+For an attribute to be visible at runtime, mark it for runtime
+access using an exclamation:
+
+<pre class="snippet">
+#doc = "not runtime data"
+#!runtimeAccess = true
+#!maxIterations = 16
+</pre>
+
+Attributes at runtime are stored on the class. You can access them via 
+`YourClass.attributes`. The `attributes` field on a class will 
+be null if a class has no attributes or if it's attributes aren't marked.
+
+If the class contains class or method attributes, it will be an object with
+two getters:
+
+- `YourClass.attributes.self` for the class attributes
+- `YourClass.attributes.methods` for the method attributes
+
+Attributes are stored by group in a regular Wren Map. 
+Keys that are not grouped, use `null` as the group key.
+
+Values are stored in a list, since duplicate keys are allowed, multiple
+values need to be stored. They're stored in order of definition.
+
+Method attributes are stored in a map by method signature, and each method
+has it's own attributes that match the above structure. The method signature
+is prefixed by `static` or `foreign static` as needed.
+
+Let's see what that looks like:
+
+<pre class="snippet">
+// Example.attributes.self = 
+// { 
+//   null: { "key":[null] }, 
+//   group: { "key":[value, 32, false] }
+// }
+
+#!key
+#ignored //compiled out
+#!group(key=value, key=32, key=false)
+class Example {
+  #!getter
+  getter {}
+
+  // { regular(_,_): { regular:[null] } }
+  #!regular
+  regular(arg0, arg1) {}
+
+  // { static other(): { isStatic:[true] } }
+  #!isStatic = true
+  static other()
+  
+  // { foreign static example(): { isForeignStatic:[32] } }
+  #!isForeignStatic=32
+  foreign static example()
 }
 </pre>
 

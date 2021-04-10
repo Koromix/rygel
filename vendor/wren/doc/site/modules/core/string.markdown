@@ -40,6 +40,15 @@ var hPosition = metalBand.indexOf("h")
 System.print(metalBand[hPosition]) //> h
 </pre>
 
+A string can also be indexed with a [Range](range.html), which will return a 
+new string as a substring of the original. 
+
+<pre class="snippet">
+var example = "hello wren"
+System.print(example[0...5])   //> hello
+System.print(example[-4..-1])  //> wren
+</pre>
+
 If you want to work with a string as a sequence numeric code points, call the
 `codePoints` getter. It returns a [Sequence](sequence.html) that decodes UTF-8
 and iterates over the code points, returning each as a number.
@@ -245,6 +254,12 @@ System.print("ᵔᴥᵔᴥᵔbearᵔᴥᴥᵔᵔ".trimStart("ᵔᴥ")) //> bear�
 Returns a new string that concatenates this string and `other`.
 
 It is a runtime error if `other` is not a string.
+
+### *****(count) operator
+
+Returns a new string that contains this string repeated `count` times.
+
+It is a runtime error if `count` is not a positive integer.
 
 ### **==**(other) operator
 

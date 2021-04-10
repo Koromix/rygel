@@ -1,24 +1,23 @@
 diff --git a/vendor/wren/src/include/wren.h b/vendor/wren/src/include/wren.h
-index 0528f6f3..38957ccb 100644
+index 7845911ce..16abd9b31 100644
 --- a/vendor/wren/src/include/wren.h
 +++ b/vendor/wren/src/include/wren.h
-@@ -476,6 +476,10 @@ void wrenInsertInList(WrenVM* vm, int listSlot, int index, int elementSlot);
- void wrenGetVariable(WrenVM* vm, const char* module, const char* name,
-                      int slot);
+@@ -538,6 +538,9 @@ WREN_API void wrenGetVariable(WrenVM* vm, const char* module, const char* name,
+ // use wrenHasModule to ensure that before calling.
+ WREN_API bool wrenHasVariable(WrenVM* vm, const char* module, const char* name);
  
-+// Returns true if the foreign instance in [slot] has the class
-+// in [class].
-+bool wrenForeignIsClass(WrenVM *vm, int slot, WrenHandle *classHandle);
++// Returns true if the foreign instance in [slot] has the class in [class].
++WREN_API bool wrenForeignIsClass(WrenVM *vm, int slot, WrenHandle *classHandle);
 +
- // Sets the current fiber to be aborted, and uses the value in [slot] as the
- // runtime error object.
- void wrenAbortFiber(WrenVM* vm, int slot);
+ // Returns true if [module] has been imported/resolved before, false if not.
+ WREN_API bool wrenHasModule(WrenVM* vm, const char* module);
+ 
 diff --git a/vendor/wren/src/vm/wren_vm.c b/vendor/wren/src/vm/wren_vm.c
-index 78e28ff6..03b24e55 100644
+index 254d0b037..c2c8e6a06 100644
 --- a/vendor/wren/src/vm/wren_vm.c
 +++ b/vendor/wren/src/vm/wren_vm.c
-@@ -1752,6 +1752,20 @@ void wrenGetVariable(WrenVM* vm, const char* module, const char* name,
-   setSlot(vm, slot, moduleObj->variables.data[variableSlot]);
+@@ -1976,6 +1976,20 @@ bool wrenHasModule(WrenVM* vm, const char* module)
+   return moduleObj != NULL;
  }
  
 +bool wrenForeignIsClass(WrenVM *vm, int slot, WrenHandle *classHandle)

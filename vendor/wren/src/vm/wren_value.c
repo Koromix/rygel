@@ -50,6 +50,7 @@ ObjClass* wrenNewSingleClass(WrenVM* vm, int numFields, ObjString* name)
   classObj->superclass = NULL;
   classObj->numFields = numFields;
   classObj->name = name;
+  classObj->attributes = NULL_VAL;
 
   wrenPushRoot(vm, (Obj*)classObj);
   wrenMethodBufferInit(&classObj->methods);
@@ -319,6 +320,19 @@ void wrenListInsert(WrenVM* vm, ObjList* list, Value value, uint32_t index)
   list->elements.data[index] = value;
 }
 
+int wrenListIndexOf(WrenVM* vm, ObjList* list, Value value)
+{
+  int count = list->elements.count;
+  for (int i = 0; i < count; i++)
+  {
+    Value item = list->elements.data[i];
+    if(wrenValuesEqual(item, value)) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 Value wrenListRemoveAt(WrenVM* vm, ObjList* list, uint32_t index)
 {
   Value removed = list->elements.data[index];
@@ -374,9 +388,7 @@ static inline uint32_t hashBits(uint64_t hash)
 static inline uint32_t hashNumber(double num)
 {
   // Hash the raw bits of the value.
-  DoubleBits bits;
-  bits.num = num;
-  return hashBits(bits.bits64);
+  return hashBits(wrenDoubleToBits(num));
 }
 
 // Generates a hash code for [object].
@@ -978,7 +990,8 @@ void wrenGrayObj(WrenVM* vm, Obj* obj)
     int newGrayCapacity = vm->grayCount * 2;
     vm->gray = (Obj**)vm->config.reallocateFn(vm->gray,
                                               vm->grayCapacity * sizeof(Obj*),
-                                              newGrayCapacity * sizeof(Obj*));
+                                              newGrayCapacity * sizeof(Obj*),
+                                              vm->config.userData);
     vm->grayCapacity = newGrayCapacity;
   }
 
@@ -1017,6 +1030,8 @@ static void blackenClass(WrenVM* vm, ObjClass* classObj)
   }
 
   wrenGrayObj(vm, (Obj*)classObj->name);
+
+  if(!IS_NULL(classObj->attributes)) wrenGrayObj(vm, AS_OBJ(classObj->attributes));
 
   // Keep track of how much memory is still in use.
   vm->bytesAllocated += sizeof(ObjClass);

@@ -179,6 +179,7 @@ class mco_WrenRunner {
     RG_DELETE_COPY(mco_WrenRunner)
 
     BlockAllocator vm_alloc { Kibibytes(256) };
+    bool first_error;
 
 public:
     WrenVM *vm;
@@ -211,9 +212,6 @@ public:
 private:
     void InitProxyArrays(Size count);
 };
-
-static RG_THREAD_LOCAL Allocator *thread_alloc;
-static RG_THREAD_LOCAL bool first_error;
 
 template <typename... Args>
 static void TriggerError(WrenVM *vm, Args... args)
@@ -1089,7 +1087,6 @@ static WrenForeignMethodFn BindForeignMethod(WrenVM *, const char *,
 bool mco_WrenRunner::Init(const char *expression, Size max_results)
 {
     vm_alloc.ReleaseAll();
-    thread_alloc = &vm_alloc;
 
     // Init Wren VM
     {
@@ -1098,10 +1095,12 @@ bool mco_WrenRunner::Init(const char *expression, Size max_results)
 
         // Use fast bump allocator and avoid GC as much as possible for
         // maximum performance. Release everything at once at the end!
-        config.reallocateFn = [](void *mem, size_t old_size, size_t new_size) {
+        config.reallocateFn = [](void *mem, size_t old_size, size_t new_size, void *udata) {
+            mco_WrenRunner *runner = (mco_WrenRunner *)udata;
+
             RG_ASSERT(old_size <= RG_SIZE_MAX && new_size <= RG_SIZE_MAX);
             if (new_size > old_size) {
-                Allocator::Resize(thread_alloc, &mem, (Size)old_size, (Size)new_size);
+                Allocator::Resize(&runner->vm_alloc, &mem, (Size)old_size, (Size)new_size);
             }
             return mem;
         };
@@ -1109,10 +1108,12 @@ bool mco_WrenRunner::Init(const char *expression, Size max_results)
         // Default issues stack-trace like errors, hack around it to show (when possible)
         // a single error message to the user.
         first_error = true;
-        config.errorFn = [](WrenVM *, WrenErrorType, const char *, int, const char *msg) {
-            if (first_error) {
+        config.errorFn = [](WrenVM *vm, WrenErrorType, const char *, int, const char *msg) {
+            mco_WrenRunner *runner = (mco_WrenRunner *)wrenGetUserData(vm);
+
+            if (runner->first_error) {
                 LogError("%1", msg);
-                first_error = false;
+                runner->first_error = false;
             }
         };
 
@@ -1178,8 +1179,6 @@ Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mo
                              HeapArray<const mco_Result *> *out_mono_results,
                              mco_StaySet *out_stay_set)
 {
-    thread_alloc = &vm_alloc;
-
     IndirectBlockAllocator new_other_diagnoses_alloc {&out_stay_set->array_alloc, 2048 * RG_SIZE(drd_DiagnosisCode)};
     IndirectBlockAllocator new_procedures_alloc {&out_stay_set->array_alloc, 2048 * RG_SIZE(mco_ProcedureRealisation)};
     HeapArray<drd_DiagnosisCode> new_other_diagnoses(&new_other_diagnoses_alloc);

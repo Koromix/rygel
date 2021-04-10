@@ -88,8 +88,7 @@ The basic process is simple:
     If there are no failures, you're good to go.
 
 2. **[Fork the repo][fork] so you can change it locally.** Please make your
-   changes in separate [feature branches][] to make things a little easier on
-   me.
+   changes in separate [feature branches][] to make things a little easier.
 
 3. **Change the code.** Please follow the style of the surrounding code. That
    basically means `camelCase` names, `{` on the next line, keep within 80
@@ -105,8 +104,7 @@ The basic process is simple:
 6. **Add your name and email to the [AUTHORS][] file if you haven't already.**
 
 7. **Send a [pull request][].** Pat yourself on the back for contributing to a
-   fun open source project! I'll take it from here and hopefully we'll get it
-   landed smoothly.
+   fun open source project! 
 
 ## Getting help
 
@@ -118,11 +116,11 @@ on the [discord community][discord] (or the [mailing list][list]). If you're a R
 [mit]: http://opensource.org/licenses/MIT
 [github]: https://github.com/wren-lang/
 [fork]: https://help.github.com/articles/fork-a-repo/
-[docs]: https://github.com/wren-lang/wren/tree/master/doc/site
+[docs]: https://github.com/wren-lang/wren/tree/main/doc/site
 [issue]: https://github.com/wren-lang/wren/issues
 [proposal]: https://github.com/wren-lang/wren/labels/proposal
 [feature branches]: https://www.atlassian.com/git/tutorials/comparing-workflows/centralized-workflow
-[authors]: https://github.com/wren-lang/wren/tree/master/AUTHORS
+[authors]: https://github.com/wren-lang/wren/tree/main/AUTHORS
 [pull request]: https://github.com/wren-lang/wren/pulls
 [list]: https://groups.google.com/forum/#!forum/wren-lang
 [subreddit]: https://www.reddit.com/r/wren_lang/

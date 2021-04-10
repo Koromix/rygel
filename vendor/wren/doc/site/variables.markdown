@@ -31,7 +31,7 @@ System.print(a) //! "a" doesn't exist anymore.
 </pre>
 
 Variables defined at the top level of a script are *top-level* and are visible
-to the [module](modules.html) system. All other variables are *local*.
+to the [module](modularity.html) system. All other variables are *local*.
 Declaring a variable in an inner scope with the same name as an outer one is
 called *shadowing* and is not an error (although it's not something you likely
 intend to do much).
@@ -54,7 +54,7 @@ var a = "again" //! "a" is already declared.
 
 ## Assignment
 
-After a variable has been declared, you can assign to it using `=`:
+After a variable has been declared, you can assign to it using `=`
 
 <pre class="snippet">
 var a = 123
