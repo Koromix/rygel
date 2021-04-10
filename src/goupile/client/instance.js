@@ -162,8 +162,9 @@ function InstanceController() {
                     html`<button class="icon" style="background-position-y: calc(-538px + 1.2em);"
                                  @click=${e => self.go(e, ENV.urls.instance)}>${ENV.title}</button>` : ''}
                 ${ENV.instances != null ? html`
-                    <div class="drop">
-                        <button class="icon" style="background-position-y: calc(-538px + 1.2em);">${ENV.title}</button>
+                    <div class="drop" @click=${ui.deployMenu}>
+                        <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
+                                @click=${ui.deployMenu}>${ENV.title}</button>
                         <div>
                             ${ENV.instances.map(instance =>
                                 html`<button class=${instance.url === ENV.urls.instance ? 'active' : ''}
@@ -193,7 +194,7 @@ function InstanceController() {
             <div style="flex: 1; min-width: 15px;"></div>
 
             ${!goupile.isLocked() ? html`
-                <div class="drop right">
+                <div class="drop right" @click=${ui.deployMenu}>
                     <button class="icon"
                             style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}>${profile.username}</button>
                     <div>
@@ -218,7 +219,7 @@ function InstanceController() {
 
         if (form.menu.length > 1) {
             return html`
-                <div class="drop">
+                <div class="drop" @click=${ui.deployMenu}>
                     <button>${form.title}</button>
                     <div>
                         ${util.map(form.menu, item => {

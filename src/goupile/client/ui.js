@@ -215,31 +215,42 @@ const ui = new function() {
     };
 
     function closeOldDialogs(e) {
-        let it = dialogs.next;
+        // Close dialogs
+        {
+            let it = dialogs.next;
 
-        while (it !== dialogs) {
-            if (it.closeable) {
-                if (it.type === 'popup') {
-                    let target = e.target.parentNode;
+            while (it !== dialogs) {
+                if (it.closeable) {
+                    if (it.type === 'popup') {
+                        let target = e.target.parentNode;
 
-                    for (;;) {
-                        if (target == null || target.classList == null) {
-                            it.reject(null);
-                            break;
-                        } else if (target.classList.contains('ui_dialog') && target.classList.contains('popup')) {
-                            break;
+                        for (;;) {
+                            if (target == null || target.classList == null) {
+                                it.reject(null);
+                                break;
+                            } else if (target.classList.contains('ui_dialog') && target.classList.contains('popup')) {
+                                break;
+                            }
+                            target = target.parentNode;
                         }
-                        target = target.parentNode;
+                    } else if (it.type === 'modal') {
+                        let target = e.target;
+
+                        if (target === it.el)
+                            it.reject(null);
                     }
-                } else if (it.type === 'modal') {
-                    let target = e.target;
-
-                    if (target === it.el)
-                        it.reject(null);
                 }
-            }
 
-            it = it.next;
+                it = it.next;
+            }
+        }
+
+        // Close dropdown menus
+        {
+            let els = document.querySelectorAll('.ui_toolbar > .drop.active');
+
+            for (let el of els)
+                el.classList.remove('active');
         }
     }
 
@@ -367,6 +378,19 @@ const ui = new function() {
                     target.disabled = false;
             }
         };
+    };
+
+    this.deployMenu = function(e) {
+        let el = util.findParent(e.target, el => el.classList.contains('drop'));
+
+        if (el.classList.contains('active')) {
+            if (!e.ctrlKey)
+                el.classList.remove('active');
+        } else {
+            el.classList.add('active');
+        }
+
+        e.stopPropagation();
     };
 
     function notifyHandler(action, entry) {

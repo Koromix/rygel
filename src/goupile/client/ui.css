@@ -124,12 +124,14 @@ html.small .ui_toolbar button.icon {
     margin: 0;
     background-color: inherit;
 }
-.ui_toolbar > .drop > button:not(.icon) {
-    padding-right: 20px;
+.ui_toolbar > .drop > button::after {
+    padding-left: 8px;
+    padding-right: 10px;
     background-image: url('icons.png');
     background-repeat: no-repeat;
     background-size: 22px 594px;
-    background-position: right calc(-582px + 1.2em);
+    background-position: 1px calc(-591px + 1.2em);
+    content: '';
 }
 .ui_toolbar > .drop.disabled {
     background-color: #bbb;
@@ -162,8 +164,8 @@ html.small .ui_toolbar button.icon {
     border-top: 0.5px solid #376db9;
     height: 3px;
 }
-.ui_toolbar > .drop:hover { background-color: var(--menu_color_n1); }
-.ui_toolbar > .drop:hover > div {
+.ui_toolbar > .drop.active { background-color: var(--menu_color_n1); }
+.ui_toolbar > .drop.active > div {
     display: flex;
     flex-direction: column;
 }
