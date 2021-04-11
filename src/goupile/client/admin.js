@@ -46,7 +46,7 @@ function AdminController() {
                     style="background-position-y: calc(-142px + 1.2em);"
                     @click=${ui.wrapAction(e => togglePanel(e, 'backups'))}>Sauvegardes</button>
             <div style="flex: 1;"></div>
-            <div class="drop right">
+            <div class="drop right" @click=${ui.deployMenu}>
                 <button class="icon" style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}>${profile.username}</button>
                 <div>
                     <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
