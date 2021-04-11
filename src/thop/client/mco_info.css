@@ -44,31 +44,32 @@
     background: #9b9a9a;
     text-align: right;
 }
+.pr_grid thead tr:nth-child(2) td { border-top: 1px solid #dfdfdf; }
 
 .pr_grid a { color: inherit; }
 
 .pr_grid .desc {
-    background: #ffc634;
+    background: #eeeeee;
     color: black;
 }
 .pr_grid .conditions {
-    background: #cb1717;
-    color: white;
-}
-.pr_grid .noex {
-    background: #6cc943;
+    background: #ffc634;
     color: black;
 }
 .pr_grid .exb {
-    background: #ff6600;
-    color: white;
+    background: #edf8e9;
+    color: black;
+}
+.pr_grid .noex {
+    background: #bae4b3;
+    color: black;
 }
 .pr_grid .exh {
-    background: #6b1b6a;
-    color: white;
+    background: #74c476;
+    color: black;
 }
 .pr_grid .age {
-    background: #99ffff;
+    background: #ffc634;
     color: black;
 }
 .pr_grid .diff { min-width: 72px; }

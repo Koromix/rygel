@@ -690,26 +690,28 @@ const mco_info = new function() {
                     <tr><th colspan=${columns.length} class="ghm_root">${ghm_root}</th></tr>
 
                     <tr><th>GHM</th>${util.mapRLE(columns, col => col.ghm,
-                        (ghm, _, colspan) => html`<td class="desc" colspan=${colspan}>${ghm}</td>`)}</tr>
+                        (ghm, _, colspan) => html`<td class="desc" colspan=${colspan}
+                                                      style=${'font-weight: bold; color: ' + modeToColor(ghm.substr(5, 1))}>${ghm}</td>`)}</tr>
                     <tr><th>Niveau</th>${util.mapRLE(columns, col => col.ghm.substr(5, 1),
-                        (mode, _, colspan) => html`<td class="desc" colspan=${colspan}>Niveau ${mode}</td>`)}</tr>
+                        (mode, _, colspan) => html`<td class="desc" colspan=${colspan}
+                                                       style=${'color: ' + modeToColor(mode)}>Niveau ${mode}</td>`)}</tr>
                     <tr><th>GHS</th>${columns.map((col, idx) =>
                         html`<td class="desc">${col.ghs}</td>`)}</tr>
                     <tr><th>Conditions</th>${columns.map((col, idx) =>
                         html`<td class="conditions">${conditions[idx].map(cond => html`${self.addSpecLinks(cond)}<br/>`)}</td>`)}</tr>
-                    <tr><th>Borne basse</th>${util.mapRLE(columns, col => col.exb_treshold,
-                        (treshold, _, colspan) => html`<td class="exb" colspan=${colspan}>${format.duration(treshold)}</td>`)}</tr>
-                    <tr><th>Borne haute</th>${util.mapRLE(columns, col => col.exh_treshold ? (col.exh_treshold - 1) : null,
-                        (treshold, _, colspan) => html`<td class="exh" colspan=${colspan}>${format.duration(treshold)}</td>`)}</tr>
                     <tr><th>Tarif €</th>${util.mapRLE(columns, col =>
                             applyGhsCoefficient(col.ghs_cents, !apply_coeff || col.ghs_coefficient),
                         (cents, _, colspan) => html`<td class="noex" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
+                    <tr><th>Borne basse</th>${util.mapRLE(columns, col => col.exb_treshold,
+                        (treshold, _, colspan) => html`<td class="exb" colspan=${colspan}>${format.duration(treshold)}</td>`)}</tr>
                     <tr><th>Forfait EXB €</th>${util.mapRLE(columns, col =>
                             applyGhsCoefficient(col.exb_once ? col.exb_cents : null, !apply_coeff || col.ghs_coefficient),
                         (cents, _, colspan) => html`<td class="exb" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
                     <tr><th>Tarif EXB €</th>${util.mapRLE(columns, col =>
                             applyGhsCoefficient(col.exb_once ? null : col.exb_cents, !apply_coeff || col.ghs_coefficient),
                         (cents, _, colspan) => html`<td class="exb" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
+                    <tr><th>Borne haute</th>${util.mapRLE(columns, col => col.exh_treshold ? (col.exh_treshold - 1) : null,
+                        (treshold, _, colspan) => html`<td class="exh" colspan=${colspan}>${format.duration(treshold)}</td>`)}</tr>
                     <tr><th>Tarif EXH €</th>${util.mapRLE(columns, col =>
                             applyGhsCoefficient(col.exh_cents, !apply_coeff || col.ghs_coefficient),
                         (cents, _, colspan) => html`<td class="exh" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
@@ -868,18 +870,18 @@ const mco_info = new function() {
 
     function modeToColor(mode) {
         switch (mode) {
-            case 'J': return '#1b9e77';
-            case 'T': return '#1b9e77';
-            case '1': return '#9a9a9a';
-            case '2': return '#0070c0';
-            case '3': return '#ff6600';
-            case '4': return '#ff0000';
-            case 'A': return '#9a9a9a';
-            case 'B': return '#0070c0';
-            case 'C': return '#ff6600';
-            case 'D': return '#ff0000';
+            case 'J': return '#9937aa';
+            case 'T': return '#9937aa';
+            case '1': return '#f2a10b';
+            case '2': return '#ff6600';
+            case '3': return '#ff0000';
+            case '4': return '#870101';
+            case 'A': return '#f2a10b';
+            case 'B': return '#ff6600';
+            case 'C': return '#ff0000';
+            case 'D': return '#870101';
             case 'E': return '#7f2704';
-            case 'Z': return '#9a9a9a';
+            case 'Z': return '#525252';
             default: return 'black';
         };
     }

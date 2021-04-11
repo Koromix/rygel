@@ -29,16 +29,17 @@ body {
     top: 0;
     box-sizing: border-box;
     min-height: 100%;
-    width: 180px;
+    width: 200px;
     z-index: 999;
-    background: #e9e9e9;
+    background: #262626;
+    color: #eeeeee;
 }
 
 main {
     display: block;
     box-sizing: border-box;
     max-width: 1000px;
-    margin-left: 180px;
+    margin-left: 200px;
     padding: 6px 12px 6px 12px;
 }
 
@@ -47,8 +48,6 @@ main {
         display: block;
         width: 100%;
         min-height: 0;
-        background: #262626;
-        color: white;
         overflow: hidden;
     }
 
@@ -122,22 +121,16 @@ button { cursor: pointer; }
     box-sizing: border-box;
     width: 100%;
     text-decoration: none;
-    color: black;
+    color: inherit;
 }
-#th_menu a.active {
-    background: #262626;
-    color: white;
-}
-#th_menu a:not(.category):not(.active):hover {
-    background: #dfdfdf !important;
-    color: black !important;
-}
+#th_menu a:not(.category):not(.active):hover { background: #38383b; }
+#th_menu a:not(.category).active:hover { background: #525155; }
+#th_menu a.active { background: #4a494d; }
 
 #th_version {
     padding: 0 2px 4px 2px;
     text-align: center;
     font-size: 0.8em;
-    color: #ff6600;
 }
 @media (pointer: coarse), (-ms-high-contrast: active), (-ms-high-contrast: none) {
     #th_version { display: none; }
@@ -158,12 +151,13 @@ button { cursor: pointer; }
         min-height: 38px;
         font-size: 1.3em;
     }
-    #th_menu a { color: white !important; }
     #th_menu:not(.active) {
         max-height: 38px;
         margin-left: -1.5em;
     }
     #th_menu:not(.active) a:not(.active) { display: none; }
+    #th_menu a.active { background: #262626; }
+    #th_menu a.active:not(.category):hover { background: #262626; }
 }
 
 /* -------------------- Main -------------------- */
@@ -177,7 +171,7 @@ button { cursor: pointer; }
     position: fixed;
     left: 0;
     top: 0;
-    width: 180px;
+    width: 200px;
     padding: 6px 2px;
     text-align: center;
     font-size: 0.8em;
@@ -210,7 +204,7 @@ button { cursor: pointer; }
         box-sizing: border-box;
         width: 100%;
         padding: 8px;
-        background: #eee;
+        background: #eeeeee;
         z-index: 999;
         font-size: 1.1em;
     }
