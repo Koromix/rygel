@@ -73,7 +73,6 @@ const ui = new function() {
 
     this.render = function() {
         let render_main = true;
-        let log_zindex = 99999;
 
         // Run dialog functions
         {
@@ -82,8 +81,6 @@ const ui = new function() {
             while (it !== dialogs) {
                 it.render();
 
-                if (it.type === 'screen' || it.type === 'modal')
-                    log_zindex = 999999999;
                 if (it.type === 'screen') {
                     render_main = false;
                     break;
@@ -110,7 +107,7 @@ const ui = new function() {
         // Adjust log z-index. We need to do it dynamically because we want it to show
         // above screen and modal dialogs (which show up above eveyerthing else), but
         // below menu bar dropdown menus.
-        log_el.style.zIndex = log_zindex;
+        log_el.style.zIndex = (dialogs.next != dialogs) ? 999999999 : 99999;
     };
 
     this.setMenu = function(func) {
