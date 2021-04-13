@@ -551,7 +551,6 @@ function InstanceController() {
                 <div id="ins_page">
                     <div id="ins_menu">
                         ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormMenu(route.form.chain[idx]))}
-                        ${route.form.chain.length === 1 || route.form.menu.length > 1 ? renderFormMenu(route.form) : ''}
 
                         ${route.form.multi ? html`
                             <h1>Fiches</h1>
@@ -564,6 +563,8 @@ function InstanceController() {
                                 <li><a href=${contextualizeURL(route.page.url, form_record.parent)} class=${!form_record.saved ? 'active' : ''}>Nouvelle fiche</a></li>
                             </ul>
                         ` : ''}
+
+                        ${route.form.chain.length === 1 || route.form.menu.length > 1 ? renderFormMenu(route.form) : ''}
                     </div>
 
                     <form id="ins_form" autocomplete="off" @submit=${e => e.preventDefault()}>
