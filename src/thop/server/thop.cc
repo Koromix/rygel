@@ -348,6 +348,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
     // Send these headers whenever possible
     io->AddHeader("Referrer-Policy", "no-referrer");
+    io->AddHeader("Cross-Origin-Opener-Policy", "same-origin");
+    io->AddHeader("X-Robots-Tag", "noindex");
 
     // Handle server-side cache validation (ETag)
     {
