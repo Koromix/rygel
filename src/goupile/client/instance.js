@@ -534,10 +534,6 @@ function InstanceController() {
                     if (builder.triggerErrors())
                         return saveRecord();
                 });
-                if (!goupile.isLocked() && route.form.multi) {
-                    let url = contextualizeURL(route.form.url, form_record.parent);
-                    builder.action('Nouveau', {}, e => self.go(e, url));
-                }
             }
 
             render(model.render(), page_div);
@@ -556,6 +552,18 @@ function InstanceController() {
                     <div id="ins_menu">
                         ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormMenu(route.form.chain[idx]))}
                         ${route.form.chain.length === 1 || route.form.menu.length > 1 ? renderFormMenu(route.form) : ''}
+
+                        ${route.form.multi ? html`
+                            <h1>Fiches</h1>
+                            <ul>
+                                ${form_record.siblings.map(sibling => {
+                                    let url = route.page.url + `/${sibling.ulid}`;
+                                    return html`<li><a style="flex: 1;" href=${url} class=${sibling.ulid === form_record.ulid ? 'active' : ''}>${sibling.ctime.toLocaleString()}</a>
+                                                    <a style="flex: 0;" @click=${ui.wrapAction(e => runDeleteRecordDialog(e, sibling.ulid))}>✕</a></li>`;
+                                })}
+                                <li><a href=${contextualizeURL(route.page.url, form_record.parent)} class=${!form_record.saved ? 'active' : ''}>Nouvelle fiche</a></li>
+                            </ul>
+                        ` : ''}
                     </div>
 
                     <form id="ins_form" autocomplete="off" @submit=${e => e.preventDefault()}>
@@ -576,20 +584,6 @@ function InstanceController() {
                             </div>
                             ${route.version < form_record.fragments.length ?
                                 html`<span style="color: red;">Version : ${form_record.mtime.toLocaleString()}</span>` : ''}
-
-                            ${route.form.multi && form_record.siblings.length ? html`
-                                <hr/>
-                                ${util.mapRange(0, form_record.siblings.length, idx => {
-                                    let sibling = form_record.siblings[form_record.siblings.length - idx - 1];
-                                    let url = route.page.url + `/${sibling.ulid}`;
-
-                                    if (sibling.ulid === form_record.ulid) {
-                                        return html`${sibling.ctime.toLocaleString()}<br/>`;
-                                    } else {
-                                        return html`<a href=${url} class="active">${sibling.ctime.toLocaleString()}</a><br/>`;
-                                    }
-                                })}
-                            ` : ''}
                         ` : ''}
                     </div>
                 </div>
@@ -1667,20 +1661,24 @@ function InstanceController() {
         if (new_route.form.multi && new_record.parent != null) {
             let ulids = new Set;
 
+            new_record.siblings = [];
             for (let namespace of profile.keys) {
                 let range = IDBKeyRange.only(namespace + `:${new_record.parent.ulid}/${new_route.form.key}`);
                 let keys = await db.list('rec_records/parent', range);
-                let ulids = keys.map(key => key.primary.substr(key.primary.indexOf(':') + 1));
 
-                new_record.siblings = keys.map(key => {
+                for (let key of keys) {
                     let ulid = key.primary.substr(key.primary.indexOf(':') + 1);
+
+                    if (ulids.has(ulid))
+                        continue;
+                    ulids.add(ulid);
 
                     let sibling = {
                         ulid: ulid,
                         ctime: new Date(util.decodeULIDTime(ulid))
                     };
-                    return sibling;
-                });
+                    new_record.siblings.push(sibling);
+                };
             }
         }
 
