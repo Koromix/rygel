@@ -493,6 +493,7 @@ function InstanceController() {
                     page: route.page,
                     go: (url) => self.go(null, url),
 
+                    save: saveRecord,
                     delete: (e, ulid, confirm = true) => {
                         if (confirm) {
                             runDeleteRecordDialog(e, ulid);
