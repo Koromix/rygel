@@ -384,6 +384,7 @@ const ui = new function() {
             if (!e.ctrlKey)
                 el.classList.remove('active');
         } else {
+            closeOldDialogs(e);
             el.classList.add('active');
         }
 
