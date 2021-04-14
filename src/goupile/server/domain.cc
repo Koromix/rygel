@@ -325,6 +325,7 @@ bool DomainHolder::Sync()
         return true;
 
     std::unique_lock<std::shared_mutex> lock_excl(mutex);
+    bool complete = true;
 
     // Drop removed instances (if any)
     for (Size i = registry_unload.len - 1; i >= 0; i--) {
@@ -356,6 +357,7 @@ bool DomainHolder::Sync()
     for (const StartInfo &start: registry_start) {
         if (new_instances.len >= MaxInstancesPerDomain) {
             LogError("Too many instances on this domain");
+            complete = false;
             continue;
         }
 
@@ -365,6 +367,7 @@ bool DomainHolder::Sync()
 
             if (!master) {
                 LogError("Cannot open instance '%1' because master is not available", start.instance_key);
+                complete = false;
                 continue;
             }
         } else {
@@ -375,10 +378,14 @@ bool DomainHolder::Sync()
         InstanceHolder *instance = new InstanceHolder();
         RG_DEFER_N(instance_guard) { delete instance; };
 
-        if (!instance->Open(next_unique++, master, start.instance_key, filename))
+        if (!instance->Open(next_unique++, master, start.instance_key, filename)) {
+            complete = false;
             continue;
-        if (!instance->db.SetSynchronousFull(config.sync_full))
+        }
+        if (!instance->db.SetSynchronousFull(config.sync_full)) {
+            complete = false;
             continue;
+        }
         instance->generation = start.generation;
         instance_guard.Disable();
 
@@ -442,7 +449,7 @@ bool DomainHolder::Sync()
     std::swap(instances, new_instances);
     std::swap(instances_map, new_map);
 
-    return true;
+    return complete;
 }
 
 bool DomainHolder::Checkpoint()
