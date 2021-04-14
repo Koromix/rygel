@@ -19,6 +19,7 @@ html.instance {
     --page_color: #21936e;
     --anchor_color: #fe7c3c;
     --anchor_color_n1: #ff9651;
+    --anchor_color_n2: #ea7135;
 
     --block_rounding: 0px;
     --widget_rounding: 0px;
@@ -59,7 +60,7 @@ html.mobile #ins_page { padding-top: 0; }
     font-size: 1.1em;
     margin: 0 0 6px 0;
     font-weight: bold;
-    color: var(--anchor_color);
+    color: var(--anchor_color_n2);
 }
 #ins_menu * + h1 { margin-top: 10px; }
 #ins_menu ul {
