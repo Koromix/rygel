@@ -117,30 +117,30 @@ static void Input()
     commands.fire = IsMouseButtonDown(0);
 }
 
-static float FixSmooth(float from, float to, float t1, float t2, float width) {
-    float delta = t2 - t1;
-
-    float a = abs(from - to) / (delta * width);
-    float b = t1 / delta;
-    float f = sqrtf(a - b) / 160.0f;
-
-    float value = (1 - f) * from + f * to;
-    return value;
+static float FixSmooth(float from, float to, float width, float delta) {
+    float f = abs(to - from) / (delta * width) + 0.02f;
+    return 4.0f * f * f;
 }
 
 static void Follow(Vector2 pos, float t1, float t2) {
-    t1 /= 2.0f;
-    t2 /= 2.0f;
+    float treshold = t1 / 2.0f;
+    float delta = (t2 - t1) / 2.0f;
 
-    if (camera.pos.x < pos.x - screen.width * t1) {
-        camera.pos.x = FixSmooth(camera.pos.x, pos.x, t1, t2, (float)screen.width);
-    } else if (camera.pos.x > pos.x + screen.width * t1) {
-        camera.pos.x = FixSmooth(camera.pos.x, pos.x, t1, t2, (float)screen.width);
+    float left_t1 = pos.x - screen.width * treshold;
+    float right_t1 = pos.x + screen.width * treshold;
+    float top_t1 = pos.y - screen.height * treshold;
+    float bottom_t1 = pos.y + screen.height * treshold;
+
+    if (camera.pos.x < left_t1) {
+        camera.pos.x += FixSmooth(camera.pos.x, left_t1, (float)screen.width, delta);
+    } else if (camera.pos.x > right_t1) {
+        camera.pos.x -= FixSmooth(camera.pos.x, right_t1, (float)screen.width, delta);
     }
-    if (camera.pos.y < pos.y - screen.height * t1) {
-        camera.pos.y = FixSmooth(camera.pos.y, pos.y, t1, t2, (float)screen.height);
-    } else if (camera.pos.y > pos.y + screen.height * t1) {
-        camera.pos.y = FixSmooth(camera.pos.y, pos.y, t1, t2, (float)screen.height);
+
+    if (camera.pos.y < top_t1) {
+        camera.pos.y += FixSmooth(camera.pos.y, top_t1, (float)screen.height, delta);
+    } else if (camera.pos.y > bottom_t1) {
+        camera.pos.y -= FixSmooth(camera.pos.y, bottom_t1, (float)screen.height, delta);
     }
 
     camera.pos.x = std::clamp(camera.pos.x, 0.0f, world.width);
@@ -149,7 +149,7 @@ static void Follow(Vector2 pos, float t1, float t2) {
 
 static void Update()
 {
-    Follow(ship.pos, 0.3f, 0.6f);
+    Follow(ship.pos, 0.3f, 0.9f);
 
     // Ship
     {
