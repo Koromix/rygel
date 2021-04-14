@@ -1290,7 +1290,7 @@ function InstanceController() {
                     <a @click=${ui.wrapAction(e => { actions = null; return self.run(); })}>Rafraichir</a>
                 </div>
 
-                <table class="ui_table fixed ins_deploy">
+                <table class="ui_table ins_deploy">
                     <colgroup>
                         <col style="width: 2.4em;"/>
                         <col/>
@@ -1313,7 +1313,7 @@ function InstanceController() {
                             if (action.type === 'push') {
                                 remote_cls += action.local_sha256 ? ' overwrite' : ' overwrite delete';
                             } else if (action.remote_sha256 == null) {
-                                remote_cls += ' none';
+                                remote_cls += ' virtual';
                             }
 
                             return html`

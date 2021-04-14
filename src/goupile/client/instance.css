@@ -190,8 +190,7 @@ html:not(.small) #ui_panels > div:only-child #ins_actions { display: block; }
     font-style: italic;
     text-decoration: line-through;
 }
-.ins_deploy td.path.virtual { opacity: 0.4; }
-.ins_deploy td.path.none { opacity: 0; }
+.ins_deploy td.path.virtual { color: #ccc; }
 
 .ins_deploy td.size {
     color: #999;
