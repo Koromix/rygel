@@ -583,11 +583,7 @@ function InstanceController() {
                     </form>
 
                     <div id="ins_actions">
-                        ${model.renderActions()}
-
                         ${!goupile.isLocked() ? html`
-                            ${model.actions.length ? html`<hr/>` : ''}
-
                             <div id="ins_trail">
                                 ${!form_record.chain[0].version ? html`<div>Nouvel enregistrement</div>` : ''}
                                 ${form_record.chain[0].version > 0 && form_record.chain[0].hid != null ? html`<div class="hid">${form_record.chain[0].hid}</div>` : ''}
@@ -596,7 +592,11 @@ function InstanceController() {
                             </div>
                             ${route.version < form_record.fragments.length ?
                                 html`<span style="color: red;">Version : ${form_record.mtime.toLocaleString()}</span>` : ''}
+
+                            ${model.actions.length ? html`<hr/>` : ''}
                         ` : ''}
+
+                        ${model.renderActions()}
                     </div>
                 </div>
 
