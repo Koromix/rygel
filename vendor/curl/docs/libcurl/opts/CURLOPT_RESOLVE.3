@@ -5,7 +5,7 @@
 .\" *                            | (__| |_| |  _ <| |___
 .\" *                             \___|\___/|_| \_\_____|
 .\" *
-.\" * Copyright (C) 1998 - 2020, Daniel Stenberg, <daniel@haxx.se>, et al.
+.\" * Copyright (C) 1998 - 2021, Daniel Stenberg, <daniel@haxx.se>, et al.
 .\" *
 .\" * This software is licensed as described in the file COPYING, which
 .\" * you should have received as part of this distribution. The terms
@@ -20,7 +20,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_RESOLVE 3 "December 10, 2020" "libcurl 7.75.0" "curl_easy_setopt options"
+.TH CURLOPT_RESOLVE 3 "February 25, 2021" "libcurl 7.76.1" "curl_easy_setopt options"
 
 .SH NAME
 CURLOPT_RESOLVE \- provide custom host name to IP address resolves
@@ -50,7 +50,7 @@ host+port pair so redirects and everything that operations against the
 HOST+PORT will instead use your provided ADDRESS.
 
 The optional leading "+" signifies whether the new entry should time-out or
-not. Entires added with "HOST:..." will never time-out whereas entries added
+not. Entries added with "HOST:..." will never time-out whereas entries added
 with "+HOST:..." will time-out just like ordinary DNS cache entries.
 
 If the DNS cache already has an entry for the given host+port pair, then

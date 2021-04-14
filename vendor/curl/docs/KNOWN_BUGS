@@ -12,6 +12,7 @@ check the changelog of the current development status, as one or more of these
 problems may have been fixed or changed somewhat since this was written!
 
  1. HTTP
+ 1.1 Excessive HTTP/2 packets with TCP_NODELAY
  1.2 Multiple methods in a single WWW-Authenticate: header
  1.3 STARTTRANSFER time is wrong for HTTP POSTs
  1.4 multipart formposts file name encoding
@@ -113,6 +114,7 @@ problems may have been fixed or changed somewhat since this was written!
  11.12 'no_proxy' string-matches IPv6 numerical addresses
  11.13 wakeup socket disconnect causes havoc
  11.14 Multi perform hangs waiting for threaded resolver
+ 11.15 CURLOPT_OPENSOCKETPAIRFUNCTION is missing
 
  12. LDAP
  12.1 OpenLDAP hangs after returning results
@@ -138,6 +140,7 @@ problems may have been fixed or changed somewhat since this was written!
  15.9 cert paths autodetected when cross-compiling
  15.10 libspsl is not supported
  15.11 ExternalProject_Add does not set CURL_CA_PATH
+ 15.12 cannot enable LDAPS on Windows
 
  16. Applications
  16.1 pulseUI VPN client
@@ -145,6 +148,16 @@ problems may have been fixed or changed somewhat since this was written!
 ==============================================================================
 
 1. HTTP
+
+1.1 Excessive HTTP/2 packets with TCP_NODELAY
+
+ Because of how curl sets TCP_NODELAY by default, HTTP/2 requests are issued
+ using more separate TCP packets than it would otherwise need to use. This
+ means spending more bytes than it has to. Just disabling TCP_NODELAY for
+ HTTP/2 is also not the correct fix because that then makes the outgoing
+ packets to get delayed.
+
+ See https://github.com/curl/curl/issues/6363
 
 1.2 Multiple methods in a single WWW-Authenticate: header
 
@@ -813,7 +826,17 @@ problems may have been fixed or changed somewhat since this was written!
 
 11.9 DoH doesn't inherit all transfer options
 
- https://github.com/curl/curl/issues/4578
+ Some options are not inherited because they are not relevant for the DoH SSL
+ connections, or inheriting the option may result in unexpected behavior. For
+ example the user's debug function callback is not inherited because it would
+ be unexpected for internal handles (ie DoH handles) to be passed to that
+ callback.
+
+ If an option is not inherited then it is not possible to set it separately for
+ DoH without a DoH-specific option. For example: CURLOPT_DOH_SSL_VERIFYHOST,
+ CURLOPT_DOH_SSL_VERIFYPEER and CURLOPT_DOH_SSL_VERIFYSTATUS.
+
+ See https://github.com/curl/curl/issues/6605
 
 11.10 Blocking socket operations in non-blocking API
 
@@ -854,6 +877,15 @@ problems may have been fixed or changed somewhat since this was written!
 
  See https://github.com/curl/curl/issues/2975 and
  https://github.com/curl/curl/issues/4852
+
+11.15 CURLOPT_OPENSOCKETPAIRFUNCTION is missing
+
+ When libcurl creates sockets with socketpair(), those are not "exposed" in
+ CURLOPT_OPENSOCKETFUNCTION and therefore might surprise and be unknown to
+ applications that expects and wants all sockets known beforehand. One way to
+ address this issue is to introduce a CURLOPT_OPENSOCKETPAIRFUNCTION callback.
+
+ https://github.com/curl/curl/issues/5747
 
 12. LDAP
 
@@ -973,6 +1005,10 @@ problems may have been fixed or changed somewhat since this was written!
  ExternalProject_Add is used to build curl as a dependency.
 
  See https://github.com/curl/curl/issues/6313
+
+15.12 cannot enable LDAPS on Windows
+
+ See https://github.com/curl/curl/issues/6284
 
 16. Applications
 
