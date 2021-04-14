@@ -188,9 +188,22 @@ function InstanceController() {
                                                 @click=${ui.wrapAction(goupile.runUnlockDialog)}>Déverrouiller</button>` : ''}
 
             <div style="flex: 1; min-width: 15px;"></div>
-            ${route.form.chain.map(form => renderFormDrop(form))}
-            ${route.form.menu.length > 1 ?
-                html`<button class="active" @click=${ui.wrapAction(e => self.go(e, route.page.url))}>${route.page.title}</button>` : ''}
+            ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormDrop(route.form.chain[idx]))}
+            ${route.form.multi ? html`
+                <div class="drop" @click=${ui.deployMenu}>
+                    <button>${route.form.multi}</button>
+                    <div>
+                        ${form_record.siblings.map(sibling => {
+                            let url = route.page.url + `/${sibling.ulid}`;
+                            return html`<button @click=${ui.wrapAction(e => self.go(e, url))}
+                                                class=${sibling.ulid === form_record.ulid ? 'active' : ''}>${sibling.ctime.toLocaleString()}</a>`;
+                        })}
+                        <button @click=${ui.wrapAction(e => self.go(e, contextualizeURL(route.page.url, form_record.parent)))}
+                                class=${!form_record.saved ? 'active' : ''}>Nouvelle fiche</button>
+                    </div>
+                </ul>
+            ` : ''}
+            ${route.form.chain.length === 1 || route.form.menu.length > 1 ? renderFormDrop(route.form) : ''}
             <div style="flex: 1; min-width: 15px;"></div>
 
             ${!goupile.isLocked() ? html`
@@ -249,7 +262,7 @@ function InstanceController() {
                                             class=${route.form.chain.some(parent => form === parent) ? 'active' : ''}
                                             @click=${ui.wrapAction(e => self.go(e, form.url))}>
                                         ${meta && meta.status.has(form.key) ? '✓\uFE0E ' : ''}
-                                        ${form.title}
+                                        ${form.multi || form.title}
                                    </button>`;
                             }
                         })}
@@ -262,7 +275,7 @@ function InstanceController() {
                         class=${route.form.chain.some(parent => form === parent) ? 'active' : ''}
                         @click=${ui.wrapAction(e => self.go(e, form.url))}>
                     ${meta && meta.status.has(form.key) ? '✓\uFE0E ' : ''}
-                    ${form.title}
+                    ${form.multi || form.title}
                 </button>`;
         }
     }
@@ -551,9 +564,8 @@ function InstanceController() {
                 <div id="ins_page">
                     <div id="ins_menu">
                         ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormMenu(route.form.chain[idx]))}
-
                         ${route.form.multi ? html`
-                            <h1>Fiches</h1>
+                            <h1>${route.form.multi}</h1>
                             <ul>
                                 ${form_record.siblings.map(sibling => {
                                     let url = route.page.url + `/${sibling.ulid}`;
@@ -563,7 +575,6 @@ function InstanceController() {
                                 <li><a href=${contextualizeURL(route.page.url, form_record.parent)} class=${!form_record.saved ? 'active' : ''}>Nouvelle fiche</a></li>
                             </ul>
                         ` : ''}
-
                         ${route.form.chain.length === 1 || route.form.menu.length > 1 ? renderFormMenu(route.form) : ''}
                     </div>
 
@@ -641,7 +652,7 @@ function InstanceController() {
 
                         return html`
                             <li><a class=${cls} href=${contextualizeURL(form.url, form_record)} style="display: flex;">
-                                <div style="flex: 1;">${form.title}</div>
+                                <div style="flex: 1;">${form.multi || form.title}</div>
                                 ${meta && meta.status.has(form.key) ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
                             </a></li>
                         `;

@@ -26,7 +26,7 @@ function FormInfo(key, title) {
     this.pages = new Map;
     this.forms = new Map;
     this.menu = [];
-    this.multi = false;
+    this.multi = null;
     this.url = null;
 }
 
@@ -112,12 +112,12 @@ function ApplicationBuilder(app) {
         }
     };
 
-    this.formMulti = function(key, title, func = null, options = {}) {
+    this.formMulti = function(key, multi, title, func = null, options = {}) {
         if (form_ref == null)
             throw new Error('formMulti cannot be used for top-level forms');
 
         let form = self.form(key, title, func, options);
-        form.multi = true;
+        form.multi = multi;
         return form;
     };
 
