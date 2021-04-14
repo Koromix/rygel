@@ -595,7 +595,7 @@ function InstanceController() {
                                 <a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>Audit</a>
                             </div>
                             ${route.version < form_record.fragments.length ?
-                                html`<span style="color: red;">Version : ${form_record.mtime.toLocaleString()}</span>` : ''}
+                                html`<span style="color: red;">Archive : ${form_record.mtime.toLocaleString()}</span>` : ''}
 
                             ${model.actions.length ? html`<hr/>` : ''}
                         ` : ''}
