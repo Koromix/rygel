@@ -141,9 +141,8 @@ td {
 #menu li li li a { padding-left: 2em; }
 
 main {
-    flex: 1;
     width: 100%;
-    background: #f6f6f6;
+    background: white;
     box-sizing: border-box;
     max-width: 970px;
     padding: 2em 1.5em 1.5em 1.5em;
@@ -162,6 +161,7 @@ main {
     position: absolute;
     top: 0;
     margin: 0 auto;
+    padding-bottom: 1em;
     max-width: 100%;
     object-fit: contain;
     object-position: center top;
@@ -169,6 +169,7 @@ main {
     transition: opacity 0.2s ease-in-out;
     opacity: 0;
     pointer-events: none;
+    background: white;
 }
 .slideshow > img.active {
     opacity: 1;
@@ -184,8 +185,8 @@ main {
     box-sizing: border-box;
     margin: 0 auto;
     padding: 10px;
-    background: #191f22;
-    box-shadow: 2px 2px rgba(24, 24, 24, 0.8);
+    background: #fe7c3c;
+    box-shadow: 2px 2px rgba(254, 124, 60, 0.8);
     opacity: 0.96;
     font-size: 0.9em;
     color: white;
