@@ -18,6 +18,7 @@ html.instance {
     --menu_color_n3: #525155;
     --page_color: #21936e;
     --anchor_color: #fe7c3c;
+    --anchor_color_n1: #ff9651;
 
     --block_rounding: 0px;
     --widget_rounding: 0px;
@@ -84,8 +85,12 @@ html.mobile #ins_page { padding-top: 0; }
     color: black;
     border-radius: var(--widget_rounding);
 }
-#ins_menu ul a.active, #ins_menu ul a:hover {
+#ins_menu ul a.active {
     background: var(--anchor_color);
+    color: white;
+}
+#ins_menu ul a:not(.active):hover {
+    background: var(--anchor_color_n1);
     color: white;
 }
 #ins_menu hr {
