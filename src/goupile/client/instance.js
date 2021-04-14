@@ -944,11 +944,25 @@ function InstanceController() {
             }
 
             data_rows = null;
-            if (form_record.chain.some(record => record.ulid === ulid)) {
-                form_state.clearChanges();
-                goNewRoot(null);
-            } else {
-                self.go();
+
+            // Redirect if needed
+            {
+                let idx = form_record.chain.findIndex(record => record.ulid === ulid);
+
+                if (idx >= 0) {
+                    form_state.clearChanges();
+
+                    if (idx > 0) {
+                        let record = form_record.chain[idx];
+                        let url = contextualizeURL(record.form.multi ? route.page.url : record.parent.form.url, record.parent);
+
+                        self.go(null, url);
+                    } else {
+                        goNewRoot(null);
+                    }
+                } else {
+                    self.go();
+                }
             }
         } catch (err) {
             progress.close();
