@@ -547,6 +547,11 @@ function InstanceController() {
                     if (builder.triggerErrors())
                         return saveRecord();
                 });
+
+                if (route.form.multi && form_record.saved) {
+                    builder.action('-');
+                    builder.action('Supprimer', {}, e => runDeleteRecordDialog(e, form_record.ulid));
+                }
             }
 
             render(model.render(), page_div);
@@ -569,8 +574,7 @@ function InstanceController() {
                             <ul>
                                 ${form_record.siblings.map(sibling => {
                                     let url = route.page.url + `/${sibling.ulid}`;
-                                    return html`<li><a style="flex: 1;" href=${url} class=${sibling.ulid === form_record.ulid ? 'active' : ''}>${sibling.ctime.toLocaleString()}</a>
-                                                    <a style="flex: 0;" @click=${ui.wrapAction(e => runDeleteRecordDialog(e, sibling.ulid))}>✕</a></li>`;
+                                    return html`<li><a href=${url} class=${sibling.ulid === form_record.ulid ? 'active' : ''}>${sibling.ctime.toLocaleString()}</a></li>`;
                                 })}
                                 <li><a href=${contextualizeURL(route.page.url, form_record.parent)} class=${!form_record.saved ? 'active' : ''}>Nouvelle fiche</a></li>
                             </ul>
