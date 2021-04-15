@@ -618,11 +618,13 @@ const net = new function() {
 
                 if (!response.ok) {
                     let retry = await self.retryHandler(response);
-                    if (retry)
+
+                    if (retry) {
+                        net.setOnline(true);
                         continue;
+                    }
                 }
 
-                self.setOnline(true);
                 return response;
             }
         } catch (err) {
