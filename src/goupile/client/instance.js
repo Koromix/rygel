@@ -159,10 +159,10 @@ function InstanceController() {
     function renderMenu() {
         return html`
             ${!goupile.isLocked() ? html`
-                ${ENV.instances == null ?
+                ${ENV.instances == null || !goupile.isLoggedOnline() ?
                     html`<button class="icon" style="background-position-y: calc(-538px + 1.2em);"
                                  @click=${e => self.go(e, ENV.urls.instance)}>${ENV.title}</button>` : ''}
-                ${ENV.instances != null ? html`
+                ${ENV.instances != null && goupile.isLoggedOnline() ? html`
                     <div class="drop" @click=${ui.deployMenu}>
                         <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
                                 @click=${ui.deployMenu}>${ENV.title}</button>
