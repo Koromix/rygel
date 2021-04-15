@@ -287,7 +287,7 @@ const goupile = new function() {
             setInterval(async () => {
                 await pingServer();
                 runTasks();
-            }, 120 * 1000);
+            }, 60 * 1000);
 
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible')
