@@ -215,7 +215,7 @@ const goupile = new function() {
     };
 
     function initNavigation() {
-        window.addEventListener('popstate', e => controller.go(null, window.location.href, false));
+        window.addEventListener('popstate', e => controller.go(null, window.location.href, { push_history: false }));
 
         util.interceptLocalAnchors((e, href) => {
             let func = ui.wrapAction(e => controller.go(e, href));
@@ -602,8 +602,10 @@ const goupile = new function() {
         if (!controller.hasUnsavedData())
             return;
 
-        return ui.runConfirm(e, "Si vous continuez, vous perdrez les modifications en cours. Voulez-vous continuer ?",
-                                "Continuer", () => {});
+        return ui.runConfirm(e, html`Si vous continuez, vous <span style="color: red; font-weight: bold;">PERDREZ les modifications en cours</span>.
+                                     Voulez-vous continuer ?<br/>
+                                     Si vous souhaitez les conserver, <b>annulez cette action</b> et cliquez sur le bouton d'enregistrement.`,
+                                "Abandonner les modifications", () => {});
     };
 
     this.isLocked = function() { return profile.lock !== undefined; };

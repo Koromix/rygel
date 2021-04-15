@@ -97,16 +97,13 @@ function FormBuilder(state, model, readonly = false) {
     this.hasChanged = function() { return state.hasChanged(); };
     this.isValid = function() { return model.isValid(); };
     this.hasErrors = function() { return model.hasErrors(); };
-    this.triggerErrors = function() {
-        if (self.isValid()) {
-            return true;
-        } else {
-            log.error('Corrigez les erreurs avant de valider');
 
+    this.triggerErrors = function() {
+        if (!self.isValid()) {
             state.take_delayed = new Set(model.variables.map(variable => variable.key.toString()));
             self.restart();
 
-            return false;
+            throw new Error('Corrigez les erreurs avant de continuer');
         }
     };
 

@@ -340,7 +340,9 @@ function AdminController() {
         });
     }
 
-    this.go = async function(e, url = null, push_history = true) {
+    this.go = async function(e, url = null, options = {}) {
+        options = Object.assign({ push_history: true }, options);
+
         let new_instances = instances;
         let new_users = users;
         let new_backups = backups;
@@ -399,7 +401,7 @@ function AdminController() {
         // Update browser URL
         {
             let url = makeURL(selected_instance != null ? selected_instance.key : null);
-            goupile.syncHistory(url, push_history);
+            goupile.syncHistory(url, options.push_history);
         }
 
         ui.render();

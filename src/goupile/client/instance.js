@@ -30,6 +30,7 @@ function InstanceController() {
 
     let form_record;
     let form_state;
+    let form_builder;
     let form_values;
     let form_dictionaries = {};
 
@@ -488,17 +489,17 @@ function InstanceController() {
         let readonly = (route.version < form_record.fragments.length);
 
         let model = new FormModel;
-        let builder = new FormBuilder(form_state, model, readonly);
+        form_builder = new FormBuilder(form_state, model, readonly);
 
         try {
             // Don't mess with the editor when render accidently triggers a scroll event!
             ignore_page_scroll = true;
 
-            builder.pushOptions({});
+            form_builder.pushOptions({});
 
             let meta = Object.assign({}, form_record);
             runCodeSync('Formulaire', page_code, {
-                form: builder,
+                form: form_builder,
                 values: form_state.values,
                 meta: meta,
                 app: app,
@@ -507,7 +508,7 @@ function InstanceController() {
                     page: route.page,
                     go: (url) => self.go(null, url),
 
-                    save: saveRecord,
+                    save: () => saveRecord(),
                     delete: (e, ulid, confirm = true) => {
                         if (confirm) {
                             runDeleteRecordDialog(e, ulid);
@@ -536,22 +537,36 @@ function InstanceController() {
             });
             form_record.hid = meta.hid;
 
-            builder.popOptions({});
+            form_builder.popOptions({});
 
             if (model.hasErrors())
-                builder.errorList();
+                form_builder.errorList();
 
             if (model.variables.length) {
                 let enable_save = !model.hasErrors() && form_state.hasChanged();
 
-                builder.action('Enregistrer', {disabled: !enable_save}, () => {
-                    if (builder.triggerErrors())
-                        return saveRecord();
+                form_builder.action('Enregistrer', {disabled: !enable_save}, () => {
+                    form_builder.triggerErrors();
+                    return saveRecord();
                 });
 
+                if (form_builder.hasErrors()) {
+                    form_builder.action('-');
+                    form_builder.action('Forcer l\'enregistrement', {}, async e => {
+                        await ui.runConfirm(e, html`Confirmez-vous l'enregistrement <b>malgré la présence d'erreurs</b> ?`,
+                                               "Enregistrer malgré tout", () => {});
+                        await saveRecord();
+                    });
+                    form_builder.action('Effacer les modifications', {}, async e => {
+                        await ui.runConfirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
+                                               "Effacer", () => {});
+                        await self.go(e, null, { reload: true });
+                    });
+                }
+
                 if (route.form.multi && form_record.saved) {
-                    builder.action('-');
-                    builder.action('Supprimer', {}, e => runDeleteRecordDialog(e, form_record.ulid));
+                    form_builder.action('-');
+                    form_builder.action('Supprimer', {}, e => runDeleteRecordDialog(e, form_record.ulid));
                 }
             }
 
@@ -743,7 +758,7 @@ function InstanceController() {
         return self.go(e, url);
     }
 
-    async function saveRecord() {
+    async function saveRecord(reload = true) {
         if (develop)
             throw new Error('Enregistrement refusé : formulaire non publié');
 
@@ -861,12 +876,9 @@ function InstanceController() {
                 enablePersistence();
             }
 
-            // XXX: Trigger reload in a better way...
-            route.version = null;
-            form_record = null;
-            form_state.clearChanges();
             data_rows = null;
-            self.go(null, url);
+            if (reload)
+                self.go(null, url, { reload: true });
         } catch (err) {
             progress.close();
             throw err;
@@ -1536,7 +1548,7 @@ function InstanceController() {
         }
     };
 
-    this.go = async function(e, url = null, push_history = true) {
+    this.go = async function(e, url = null, options = {}) {
         let new_route = Object.assign({}, route);
         let new_record = form_record;
         let new_state = form_state;
@@ -1582,7 +1594,7 @@ function InstanceController() {
             let [ulid, version] = what ? what.split('@') : [null, null];
 
             // Popping history
-            if (!ulid && !push_history)
+            if (!ulid && !options.push_history)
                 ulid = 'new';
             if (!ulid && goupile.isLocked())
                 ulid = profile.lock;
@@ -1609,18 +1621,24 @@ function InstanceController() {
             }
         }
 
-        // Load record if needed
-        if (new_record != null && (new_route.ulid !== new_record.ulid ||
-                                   new_route.version !== new_record.version))
-            new_record = null;
-        if (new_record == null && new_route.ulid != null) {
-            new_record = await loadRecord(new_route.ulid, new_route.version);
-            new_state = null;
-        }
-
         // Match requested page, record type, available page, etc.
         // We may need to restart in some cases, hence the fake loop to do it with continue.
         for (;;) {
+            // Load record if needed
+            if (new_record != null && options.reload) {
+                if (!new_record.saved && new_record.parent != null)
+                    new_route.ulid = new_record.parent.ulid;
+                new_route.version = null;
+                new_record = null;
+            }
+            if (new_record != null && (new_route.ulid !== new_record.ulid ||
+                                       new_route.version !== new_record.version))
+                new_record = null;
+            if (new_record == null && new_route.ulid != null) {
+                new_record = await loadRecord(new_route.ulid, new_route.version);
+                new_state = null;
+            }
+
             // Go to parent or child automatically
             if (new_record != null && new_record.form !== new_route.form) {
                 new_record = await moveToAppropriateRecord(new_record, new_route.form, true);
@@ -1671,6 +1689,31 @@ function InstanceController() {
                 chain.reverse();
             }
 
+            // Siblings (formMulti)
+            if (new_route.form.multi && new_record.parent != null) {
+                let ulids = new Set;
+
+                new_record.siblings = [];
+                for (let namespace of profile.keys) {
+                    let range = IDBKeyRange.only(namespace + `:${new_record.parent.ulid}/${new_route.form.key}`);
+                    let keys = await db.list('rec_records/parent', range);
+
+                    for (let key of keys) {
+                        let ulid = key.primary.substr(key.primary.indexOf(':') + 1);
+
+                        if (ulids.has(ulid))
+                            continue;
+                        ulids.add(ulid);
+
+                        let sibling = {
+                            ulid: ulid,
+                            ctime: new Date(util.decodeULIDTime(ulid))
+                        };
+                        new_record.siblings.push(sibling);
+                    };
+                }
+            }
+
             // Safety checks
             if (goupile.isLocked() && !new_record.chain.some(record => record.ulid === profile.lock))
                 throw new Error('Enregistrement non autorisé en mode de navigation restreint');
@@ -1685,32 +1728,29 @@ function InstanceController() {
                 }
             }
 
-            break;
-        }
+            // Confirm dangerous actions (at risk of data loss)
+            if (!options.reload && self.hasUnsavedData() && (new_record !== form_record ||
+                                                             new_route.page !== route.page)) {
+                try {
+                    await ui.runConfirm(e, html`Si vous continuez, vos <b>modifications seront enregistrées</b>. Voulez-vous enregistrer ?`,
+                                           "Enregistrer", async () => {
+                        form_builder.triggerErrors();
+                        await saveRecord(false);
+                    });
 
-        // Siblings (formMulti)
-        if (new_route.form.multi && new_record.parent != null) {
-            let ulids = new Set;
+                    options.reload = true;
+                    continue;
+                } catch (err) {
+                    if (err != null)
+                        log.error(err);
 
-            new_record.siblings = [];
-            for (let namespace of profile.keys) {
-                let range = IDBKeyRange.only(namespace + `:${new_record.parent.ulid}/${new_route.form.key}`);
-                let keys = await db.list('rec_records/parent', range);
-
-                for (let key of keys) {
-                    let ulid = key.primary.substr(key.primary.indexOf(':') + 1);
-
-                    if (ulids.has(ulid))
-                        continue;
-                    ulids.add(ulid);
-
-                    let sibling = {
-                        ulid: ulid,
-                        ctime: new Date(util.decodeULIDTime(ulid))
-                    };
-                    new_record.siblings.push(sibling);
-                };
+                    // If we're popping state, this will fuck up navigation history but we can't
+                    // refuse popstate events. History mess is better than data loss.
+                    return self.run();
+                }
             }
+
+            break;
         }
 
         // Sync form state with other changes
@@ -1723,18 +1763,6 @@ function InstanceController() {
 
             new_values = {};
             new_values[new_route.form.key] = new_state.values;
-        }
-
-        // Confirm dangerous actions (at risk of data loss)
-        if (self.hasUnsavedData() && new_record !== form_record) {
-            try {
-                // XXX: Improve message if going to child form
-                await goupile.confirmDangerousAction(e);
-            } catch (err) {
-                // If we're popping state, this will fuck up navigation history but we can't
-                // refuse popstate events. History mess is better than data loss.
-                return self.run();
-            }
         }
 
         // Help the user fill new or selected forms and pages
@@ -1846,13 +1874,21 @@ function InstanceController() {
         route = new_route;
         route.version = new_record.version;
         form_record = new_record;
+        if (new_state !== form_state)
+            form_builder = null;
         form_state = new_state;
         form_values = new_values;
         form_dictionaries = new_dictionaries;
         page_code = new_code;
 
+        // Update browser URL
+        {
+            let url = contextualizeURL(route.page.url, form_record);
+            goupile.syncHistory(url, options.push_history);
+        }
+
         document.title = `${route.page.title} — ${ENV.title}`;
-        await self.run(push_history);
+        await self.run();
     };
     this.go = util.serializeAsync(this.go);
 
@@ -2172,19 +2208,13 @@ function InstanceController() {
         }
     }
 
-    this.run = async function(push_history = false) {
+    this.run = async function() {
         // Is the user developing?
         {
             let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
             let count = await db.count('fs_files', range);
 
             develop = !!count;
-        }
-
-        // Update browser URL
-        {
-            let url = contextualizeURL(route.page.url, form_record);
-            goupile.syncHistory(url, push_history);
         }
 
         // Sync editor (if needed)
