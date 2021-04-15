@@ -192,7 +192,7 @@ const goupile = new function() {
                     try {
                         let progress = log.progress('Connexion en cours');
 
-                        await tryLogin(username.value, password.value, progress, true);
+                        await tryLogin(username.value, password.value, progress, net.isOnline());
                         await initAfterAuthorization();
 
                         resolve();
@@ -273,7 +273,7 @@ const goupile = new function() {
         net.retryHandler = async response => {
             if (response.status === 401) {
                 try {
-                    await self.confirmIdentity();
+                    await confirmIdentity();
                     return true;
                 } catch (err) {
                     return false;
@@ -322,13 +322,9 @@ const goupile = new function() {
         }
     }
 
-    this.runLoginDialog = function(e) {
-        throw new Error('XXX');
-    };
-
-    async function tryLogin(username, password, progress, retry) {
+    async function tryLogin(username, password, progress, online) {
         try {
-            if (net.isOnline() || !ENV.cache_offline) {
+            if (online || !ENV.cache_offline) {
                 let query = new URLSearchParams;
                 query.set('username', username.toLowerCase());
                 query.set('password', password);
@@ -409,7 +405,7 @@ const goupile = new function() {
                 }
             }
         } catch (err) {
-            if ((err instanceof NetworkError) && retry) {
+            if ((err instanceof NetworkError) && online && ENV.cache_offline) {
                 return tryLogin(username, password, progress, false);
             } else {
                 if (progress != null)
@@ -584,7 +580,7 @@ const goupile = new function() {
         await util.waitFor(2000);
     };
 
-    this.confirmIdentity = function(e) {
+    function confirmIdentity(e) {
         return ui.runDialog(e, 'Confirmation d\'identité', (d, resolve, reject) => {
             d.calc('username', 'Nom d\'utilisateur', profile.username);
             let password = d.password('*password', 'Mot de passe');
