@@ -1552,9 +1552,10 @@ function InstanceController() {
         options = Object.assign({ push_history: true }, options);
 
         let new_route = Object.assign({}, route);
-        let new_record = form_record;
-        let new_state = form_state;
-        let new_values = form_values;
+        let new_record;
+        let new_state;
+        let new_values;
+        let new_dictionaries;
         let new_code;
 
         // Parse new URL
@@ -1626,10 +1627,12 @@ function InstanceController() {
         // Match requested page, record type, available page, etc.
         // We may need to restart in some cases, hence the fake loop to do it with continue.
         for (;;) {
+            new_record = form_record;
+            new_state = form_state;
+            new_values = form_values;
+
             // Load record if needed
             if (new_record != null && options.reload) {
-                if (!new_record.saved && new_record.parent != null)
-                    new_route.ulid = new_record.parent.ulid;
                 new_route.version = null;
                 new_record = null;
             }
@@ -1644,25 +1647,13 @@ function InstanceController() {
             // Go to parent or child automatically
             if (new_record != null && new_record.form !== new_route.form) {
                 new_record = await moveToAppropriateRecord(new_record, new_route.form, true);
-
-                if (new_record != null) {
-                    new_route.ulid = new_record.ulid;
-                    new_route.version = new_record.version;
-
-                    new_state = null;
-                } else {
-                    new_route.ulid = null;
-                    new_record = null;
-                }
+                new_state = null;
             }
 
             // Create new record if needed
             if (new_route.ulid == null || new_record == null) {
                 new_record = createRecord(new_route.form, null);
                 new_state = null;
-
-                new_route.ulid = new_record.ulid;
-                new_route.version = new_record.version;
             }
 
             // Load record parents
@@ -1755,7 +1746,9 @@ function InstanceController() {
             break;
         }
 
-        // Sync form state with other changes
+        // Sync route and state with magic record navigation
+        new_route.ulid = new_record.ulid;
+        new_route.version = new_record.version;
         if (new_state == null) {
             new_state = new FormState(new_record.values);
             new_state.changeHandler = handleStateChange;
@@ -1792,7 +1785,7 @@ function InstanceController() {
         new_code = await fetchCode(new_route.page.filename);
 
         // Dictionaries
-        let new_dictionaries = {};
+        new_dictionaries = {};
         if (new_route.page.options.dictionaries != null) {
             for (let dict of new_route.page.options.dictionaries) {
                 let records = form_dictionaries[dict];
@@ -1874,7 +1867,6 @@ function InstanceController() {
 
         // Commit!
         route = new_route;
-        route.version = new_record.version;
         form_record = new_record;
         if (new_state !== form_state)
             form_builder = null;
