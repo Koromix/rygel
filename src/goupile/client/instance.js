@@ -1549,6 +1549,8 @@ function InstanceController() {
     };
 
     this.go = async function(e, url = null, options = {}) {
+        options = Object.assign({ push_history: true }, options);
+
         let new_route = Object.assign({}, route);
         let new_record = form_record;
         let new_state = form_state;
