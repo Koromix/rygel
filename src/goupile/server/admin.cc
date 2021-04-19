@@ -14,6 +14,7 @@
 #include "../../core/libcc/libcc.hh"
 #include "admin.hh"
 #include "domain.hh"
+#include "files.hh"
 #include "goupile.hh"
 #include "instance.hh"
 #include "session.hh"
@@ -269,12 +270,15 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
             if (StartsWith(asset.name, "src/goupile/demo/")) {
                 const char *filename = asset.name + 17;
 
+                CompressionType compression_type = ShouldCompressFile(filename) ? CompressionType::Gzip
+                                                                                : CompressionType::None;
+
                 HeapArray<uint8_t> gzip;
                 char sha256[65];
                 Size total_len = 0;
                 {
                     StreamReader reader(asset.data, "<asset>", asset.compression_type);
-                    StreamWriter writer(&gzip, "<gzip>", CompressionType::Gzip);
+                    StreamWriter writer(&gzip, "<gzip>", compression_type);
 
                     crypto_hash_sha256_state state;
                     crypto_hash_sha256_init(&state);
@@ -302,7 +306,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
                 sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
                 sqlite3_bind_int64(stmt, 2, mtime);
                 sqlite3_bind_blob64(stmt, 3, gzip.ptr, gzip.len, SQLITE_STATIC);
-                sqlite3_bind_text(stmt, 4, "Gzip", -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 4, CompressionTypeNames[(int)compression_type], -1, SQLITE_STATIC);
                 sqlite3_bind_text(stmt, 5, sha256, -1, SQLITE_STATIC);
                 sqlite3_bind_int64(stmt, 6, total_len);
 

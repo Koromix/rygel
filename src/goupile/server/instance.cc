@@ -13,6 +13,7 @@
 
 #include "../../core/libcc/libcc.hh"
 #include "domain.hh"
+#include "files.hh"
 #include "goupile.hh"
 #include "instance.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
@@ -20,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 31;
+const int InstanceVersion = 32;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, const char *filename)
 {
@@ -952,9 +953,118 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 31: {
+                sq_Statement stmt;
+                if (!db->Prepare("SELECT rowid, filename, size, compression FROM fs_files", &stmt))
+                    return false;
+
+                while (stmt.Next()) {
+                    int64_t rowid = sqlite3_column_int64(stmt, 0);
+                    const char *filename = (const char *)sqlite3_column_text(stmt, 1);
+                    Size total_len = (Size)sqlite3_column_int64(stmt, 2);
+
+                    CompressionType compression_type;
+                    {
+                        const char *name = (const char *)sqlite3_column_text(stmt, 3);
+                        if (!name || !OptionToEnum(CompressionTypeNames, name, &compression_type)) {
+                            LogError("Unknown compression type '%1'", name);
+                            return false;
+                        }
+                    }
+
+                    // Do we need to uncompress this entry? If not, skip!
+                    if (compression_type == CompressionType::None)
+                        continue;
+                    if (ShouldCompressFile(filename))
+                        continue;
+
+                    // Open source blob
+                    sqlite3_blob *src_blob;
+                    Size src_len;
+                    if (sqlite3_blob_open(*db, "main", "fs_files", "blob", rowid, 0, &src_blob) != SQLITE_OK) {
+                        LogError("SQLite Error: %1", sqlite3_errmsg(*db));
+                        return false;
+                    }
+                    src_len = (Size)sqlite3_blob_bytes(src_blob);
+                    RG_DEFER { sqlite3_blob_close(src_blob); };
+
+                    // Insert new entry
+                    sqlite3_blob *dest_blob;
+                    {
+                        if (!db->Run(R"(INSERT INTO fs_files
+                                        SELECT * FROM fs_files WHERE rowid = ?1)", rowid))
+                            return false;
+
+                        int64_t dest_rowid = sqlite3_last_insert_rowid(*db);
+
+                        if (!db->Run(R"(UPDATE fs_files SET compression = 'None', blob = ?2
+                                        WHERE rowid = ?1)", dest_rowid, sq_Binding::Zeroblob(total_len)))
+                            return false;
+                        if (sqlite3_blob_open(*db, "main", "fs_files", "blob", dest_rowid, 1, &dest_blob) != SQLITE_OK) {
+                            LogError("SQLite Error: %1", sqlite3_errmsg(*db));
+                            return false;
+                        }
+                    }
+                    RG_DEFER { sqlite3_blob_close(dest_blob); };
+
+                    // Init decompressor
+                    StreamReader reader;
+                    {
+                        Size offset = 0;
+
+                        reader.Open([&](Span<uint8_t> buf) {
+                            Size copy_len = std::min(src_len - offset, buf.len);
+
+                            if (sqlite3_blob_read(src_blob, buf.ptr, (int)copy_len, (int)offset) != SQLITE_OK) {
+                                LogError("SQLite Error: %1", sqlite3_errmsg(*db));
+                                return (Size)-1;
+                            }
+
+                            offset += copy_len;
+                            return copy_len;
+                        }, filename, compression_type);
+                        if (!reader.IsValid())
+                            return false;
+                    }
+
+                    // Uncompress!
+                    {
+                        Size read_len = 0;
+
+                        while (!reader.IsEOF()) {
+                            LocalArray<uint8_t, 16384> buf;
+                            buf.len = reader.Read(buf.data);
+                            if (buf.len < 0)
+                                return false;
+
+                            if (buf.len + read_len > total_len) {
+                                LogError("Total file size has changed (bigger)");
+                                return false;
+                            }
+                            if (sqlite3_blob_write(dest_blob, buf.data, (int)buf.len, (int)read_len) != SQLITE_OK) {
+                                LogError("SQLite Error: %1", sqlite3_errmsg(*db));
+                                return false;
+                            }
+
+                            read_len += buf.len;
+                        }
+                        if (read_len < total_len) {
+                            LogError("Total file size has changed (truncated)");
+                            return false;
+                        }
+                    }
+
+                    // Delete old entry
+                    if (!db->Run("DELETE FROM fs_files WHERE rowid = ?1", rowid))
+                        return false;
+                }
+                if (!stmt.IsValid())
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 31);
+            RG_STATIC_ASSERT(InstanceVersion == 32);
         }
 
         int64_t time = GetUnixTime();

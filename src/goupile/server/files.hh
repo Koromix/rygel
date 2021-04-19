@@ -25,4 +25,6 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
+bool ShouldCompressFile(const char *filename);
+
 }

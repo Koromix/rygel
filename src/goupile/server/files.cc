@@ -229,11 +229,14 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
             UnlinkFile(tmp_filename);
         };
 
+        CompressionType compression_type = ShouldCompressFile(filename) ? CompressionType::Gzip
+                                                                        : CompressionType::None;
+
         // Read and compress request body
         Size total_len = 0;
         char sha256[65];
         {
-            StreamWriter writer(fp, "<temp>", CompressionType::Gzip);
+            StreamWriter writer(fp, "<temp>", compression_type);
             StreamReader reader;
             if (!io->OpenForRead(instance->config.max_file_size, &reader))
                 return;
@@ -302,7 +305,8 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
                 return false;
             if (!instance->db.Run(R"(INSERT INTO fs_files (active, filename, mtime, blob, compression, sha256, size)
                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
-                                  1, filename, mtime, sq_Binding::Zeroblob(file_len), "Gzip", sha256, total_len))
+                                  1, filename, mtime, sq_Binding::Zeroblob(file_len),
+                                  CompressionTypeNames[(int)compression_type], sha256, total_len))
                 return false;
 
             int64_t rowid = sqlite3_last_insert_rowid(instance->db);
@@ -409,6 +413,37 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
         }
         return true;
     });
+}
+
+bool ShouldCompressFile(const char *filename)
+{
+    Span<const char> extension = GetPathExtension(filename);
+
+    if (extension == ".zip")
+        return false;
+    if (extension == ".rar")
+        return false;
+    if (extension == ".7z")
+        return false;
+    if (extension == ".gz" || extension == ".tgz")
+        return false;
+    if (extension == ".bz2" || extension == ".tbz2")
+        return false;
+    if (extension == ".xz" || extension == ".txz")
+        return false;
+    if (extension == ".zst" || extension == ".tzst")
+        return false;
+
+    const char *mime_type = http_GetMimeType(extension);
+
+    if (StartsWith(mime_type, "video/"))
+        return false;
+    if (StartsWith(mime_type, "audio/"))
+        return false;
+    if (StartsWith(mime_type, "image/"))
+        return false;
+
+    return true;
 }
 
 }
