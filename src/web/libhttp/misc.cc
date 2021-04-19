@@ -78,7 +78,21 @@ static void ReleaseDataCallback(void *ptr)
     Allocator::Release(nullptr, ptr, -1);
 }
 
-void http_JsonPageBuilder::Finish(http_IO *io)
+bool http_JsonPageBuilder::Init(http_IO *io)
+{
+    RG_ASSERT(!this->io);
+
+    CompressionType encoding;
+    if (!io->NegociateEncoding(CompressionType::Gzip, &encoding))
+        return false;
+    if (!st.Open(&buf, nullptr, encoding))
+        return false;
+
+    this->io = io;
+    return true;
+}
+
+void http_JsonPageBuilder::Finish()
 {
     CompressionType compression_type = st.GetCompressionType();
 

@@ -25,14 +25,16 @@ const char *http_GetMimeType(Span<const char> extension,
 uint32_t http_ParseAcceptableEncodings(Span<const char> encodings);
 
 class http_JsonPageBuilder: public json_Writer {
+    http_IO *io = nullptr;
+
     HeapArray<uint8_t> buf;
     StreamWriter st;
 
 public:
-    http_JsonPageBuilder(CompressionType compression_type) :
-        json_Writer(&st), st(&buf, nullptr, compression_type) {}
+    http_JsonPageBuilder(): json_Writer(&st) {}
 
-    void Finish(http_IO *io);
+    bool Init(http_IO *io);
+    void Finish();
 };
 
 }

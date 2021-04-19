@@ -136,7 +136,9 @@ void InvalidateUserTokens(int64_t userid)
 static void WriteProfileJson(const Session *session, const InstanceHolder *instance,
                              const http_RequestInfo &request, http_IO *io)
 {
-    http_JsonPageBuilder json(request.compression_type);
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
     char buf[128];
 
     json.StartObject();
@@ -181,7 +183,7 @@ static void WriteProfileJson(const Session *session, const InstanceHolder *insta
     }
     json.EndObject();
 
-    json.Finish(io);
+    json.Finish();
 }
 
 static RetainPtr<Session> CreateUserSession(int64_t userid, const char *username, const char *local_key)

@@ -493,7 +493,9 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
     }
 
     // Export data
-    http_JsonPageBuilder json(request.compression_type);
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
     char buf[32];
 
     json.StartObject();
@@ -551,7 +553,7 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
 
     json.EndObject();
 
-    json.Finish(io);
+    json.Finish();
 }
 
 void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_IO *io)
@@ -602,7 +604,9 @@ void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_I
     HeapArray<mco_Pricing> mono_pricings;
 
     // Export data
-    http_JsonPageBuilder json(request.compression_type);
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
 
     json.StartArray();
     bool success = provider.Run([&](Span<const mco_Result> results,
@@ -776,7 +780,7 @@ void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_I
     }
     json.EndArray();
 
-    json.Finish(io);
+    json.Finish();
 }
 
 }

@@ -136,7 +136,9 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
     }
 
     // Export data
-    http_JsonPageBuilder json(request.compression_type);
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
 
     json.StartArray();
     if (stmt.Next()) {
@@ -148,7 +150,7 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
         return;
     json.EndArray();
 
-    json.Finish(io);
+    json.Finish();
 }
 
 struct SaveRecord {

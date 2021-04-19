@@ -86,7 +86,9 @@ void ProduceMcoDiagnoses(const http_RequestInfo &request, const User *, http_IO 
         }
     }
 
-    http_JsonPageBuilder json(request.compression_type);
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
     char buf[512];
 
     json.StartArray();
@@ -117,7 +119,7 @@ void ProduceMcoDiagnoses(const http_RequestInfo &request, const User *, http_IO 
     json.EndArray();
 
     io->AddCachingHeaders(thop_config.max_age, thop_etag);
-    return json.Finish(io);
+    return json.Finish();
 }
 
 void ProduceMcoProcedures(const http_RequestInfo &request, const User *, http_IO *io)
@@ -139,7 +141,9 @@ void ProduceMcoProcedures(const http_RequestInfo &request, const User *, http_IO
         }
     }
 
-    http_JsonPageBuilder json(request.compression_type);
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
     char buf[512];
 
     json.StartArray();
@@ -165,7 +169,7 @@ void ProduceMcoProcedures(const http_RequestInfo &request, const User *, http_IO
     json.EndArray();
 
     io->AddCachingHeaders(thop_config.max_age, thop_etag);
-    return json.Finish(io);
+    return json.Finish();
 }
 
 void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *, http_IO *io)
@@ -178,7 +182,9 @@ void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *, http_IO *io
     const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
         *mco_cache_set.index_to_constraints.FindValue(index, nullptr);
 
-    http_JsonPageBuilder json(request.compression_type);
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
     char buf[512];
 
     json.StartArray();
@@ -289,7 +295,7 @@ void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *, http_IO *io
     json.EndArray();
 
     io->AddCachingHeaders(thop_config.max_age, thop_etag);
-    return json.Finish(io);
+    return json.Finish();
 }
 
 void ProduceMcoTree(const http_RequestInfo &request, const User *, http_IO *io)
@@ -301,7 +307,9 @@ void ProduceMcoTree(const http_RequestInfo &request, const User *, http_IO *io)
     const HeapArray<mco_ReadableGhmNode> *readable_nodes;
     readable_nodes = mco_cache_set.readable_nodes.Find(index);
 
-    http_JsonPageBuilder json(request.compression_type);
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
 
     json.StartArray();
     for (const mco_ReadableGhmNode &readable_node: *readable_nodes) {
@@ -325,7 +333,7 @@ void ProduceMcoTree(const http_RequestInfo &request, const User *, http_IO *io)
     json.EndArray();
 
     io->AddCachingHeaders(thop_config.max_age, thop_etag);
-    json.Finish(io);
+    json.Finish();
 }
 
 struct HighlightContext {
@@ -592,7 +600,9 @@ void ProduceMcoHighlight(const http_RequestInfo &request, const User *user, http
     HighlightNodes(ctx, 0, 0xF, &matches);
 
     // Output matches!
-    http_JsonPageBuilder json(request.compression_type);
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
 
     json.StartObject();
     for (const auto &it: matches.table) {
@@ -602,7 +612,7 @@ void ProduceMcoHighlight(const http_RequestInfo &request, const User *user, http
     json.EndObject();
 
     io->AddCachingHeaders(thop_config.max_age, thop_etag);
-    json.Finish(io);
+    json.Finish();
 }
 
 }

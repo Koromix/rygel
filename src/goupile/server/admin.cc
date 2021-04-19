@@ -1350,7 +1350,9 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
     RG_DEFER { gp_domain.UnlockInstances(); };
 
     // Export data
-    http_JsonPageBuilder json(request.compression_type);
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
     char buf[128];
 
     json.StartArray();
@@ -1379,7 +1381,7 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
     }
     json.EndArray();
 
-    json.Finish(io);
+    json.Finish();
 }
 
 static bool ParsePermissionList(Span<const char> remain, uint32_t *out_permissions)
@@ -1569,7 +1571,9 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
     sqlite3_bind_text(stmt, 1, instance_key, -1, SQLITE_STATIC);
 
     // Export data
-    http_JsonPageBuilder json(request.compression_type);
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
 
     json.StartObject();
     while (stmt.Next()) {
@@ -1590,7 +1594,7 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
         return;
     json.EndObject();
 
-    json.Finish(io);
+    json.Finish();
 }
 
 void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
@@ -1712,7 +1716,9 @@ void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
     }
 
     // Export data
-    http_JsonPageBuilder json(request.compression_type);
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
     HeapArray<char> buf;
 
     json.StartArray();
@@ -1740,7 +1746,7 @@ void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
         return;
     json.EndArray();
 
-    json.Finish(io);
+    json.Finish();
 }
 
 void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io)
@@ -2403,7 +2409,9 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
         return;
 
     // Export data
-    http_JsonPageBuilder json(request.compression_type);
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
 
     json.StartArray();
     while (stmt.Next()) {
@@ -2422,7 +2430,7 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
         return;
     json.EndArray();
 
-    json.Finish(io);
+    json.Finish();
 }
 
 }

@@ -35,7 +35,9 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
                                  ORDER BY filename)", &stmt))
         return;
 
-    http_JsonPageBuilder json(request.compression_type);
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
 
     json.StartArray();
     while (stmt.Next()) {
@@ -49,7 +51,7 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
         return;
     json.EndArray();
 
-    json.Finish(io);
+    json.Finish();
 }
 
 // Returns true when request has been handled (file exists or an error has occured)
@@ -109,14 +111,18 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
         }
     }
 
-    CompressionType compression_type;
+    CompressionType src_encoding;
     {
         const char *name = (const char *)sqlite3_column_text(stmt, 1);
-        if (!name || !OptionToEnum(CompressionTypeNames, name, &compression_type)) {
+        if (!name || !OptionToEnum(CompressionTypeNames, name, &src_encoding)) {
             LogError("Unknown compression type '%1'", name);
             return true;
         }
     }
+
+    CompressionType dest_encoding;
+    if (!io->NegociateEncoding(src_encoding, &dest_encoding))
+        return true;
 
     sqlite3_blob *blob;
     Size blob_len;
@@ -135,11 +141,11 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
     io->RunAsync([=]() {
         io->AddCachingHeaders(0, sha256);
 
-        if (request.compression_type == compression_type && blob_len <= 65536) {
+        if (dest_encoding == src_encoding && blob_len <= 65536) {
             StreamWriter writer;
             if (!io->OpenForWrite(200, CompressionType::None, &writer))
                 return;
-            io->AddEncodingHeader(compression_type);
+            io->AddEncodingHeader(dest_encoding);
 
             LocalArray<char, 65536> buf;
             if (sqlite3_blob_read(blob, buf.data, (int)blob_len, 0) != SQLITE_OK) {
@@ -153,9 +159,9 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
             writer.Close();
         } else {
             StreamWriter writer;
-            if (!io->OpenForWrite(200, request.compression_type, &writer))
+            if (!io->OpenForWrite(200, dest_encoding, &writer))
                 return;
-            io->AddEncodingHeader(request.compression_type);
+            io->AddEncodingHeader(dest_encoding);
 
             Size offset = 0;
             StreamReader reader([&](Span<uint8_t> buf) {
@@ -168,7 +174,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
                 offset += copy_len;
                 return copy_len;
-            }, filename, compression_type);
+            }, filename, src_encoding);
 
             // Not much we can do at this stage in case of error. Client will get truncated data.
             SpliceStream(&reader, -1, &writer);

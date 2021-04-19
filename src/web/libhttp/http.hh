@@ -94,7 +94,6 @@ struct http_RequestInfo {
     http_RequestMethod method;
     bool headers_only;
     const char *url;
-    CompressionType compression_type;
 
     char client_addr[65];
 
@@ -150,10 +149,12 @@ public:
     http_IO();
     ~http_IO();
 
+    bool NegociateEncoding(CompressionType preferred, CompressionType *out_encoding);
+
     void RunAsync(std::function<void()> func);
 
     void AddHeader(const char *key, const char *value);
-    void AddEncodingHeader(CompressionType compression_type);
+    void AddEncodingHeader(CompressionType encoding);
     void AddCookieHeader(const char *path, const char *name, const char *value,
                          bool http_only = false);
     void AddCachingHeaders(int max_age, const char *etag = nullptr);
@@ -170,7 +171,7 @@ public:
     // Blocking, do in async context
     bool OpenForRead(Size max_len, StreamReader *out_st);
     bool ReadPostValues(Allocator *alloc, HashMap<const char *, const char *> *out_values);
-    bool OpenForWrite(int code, CompressionType compression_type, StreamWriter *out_st);
+    bool OpenForWrite(int code, CompressionType encoding, StreamWriter *out_st);
 
     void AddFinalizer(const std::function<void()> &func);
 

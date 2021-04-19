@@ -70,7 +70,9 @@ static BlockAllocator routes_alloc;
 
 static void ProduceSettings(const http_RequestInfo &request, const User *user, http_IO *io)
 {
-    http_JsonPageBuilder json(request.compression_type);
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
     char buf[128];
 
     json.StartObject();
@@ -137,7 +139,7 @@ static void ProduceSettings(const http_RequestInfo &request, const User *user, h
     if (!user) {
         io->AddCachingHeaders(thop_config.max_age, thop_etag);
     }
-    json.Finish(io);
+    json.Finish();
 }
 
 static void ProduceStructures(const http_RequestInfo &request, const User *user, http_IO *io)
@@ -148,7 +150,9 @@ static void ProduceStructures(const http_RequestInfo &request, const User *user,
         return;
     }
 
-    http_JsonPageBuilder json(request.compression_type);
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
 
     json.StartArray();
     for (const Structure &structure: thop_structure_set.structures) {
@@ -177,7 +181,7 @@ static void ProduceStructures(const http_RequestInfo &request, const User *user,
     }
     json.EndArray();
 
-    json.Finish(io);
+    json.Finish();
 }
 
 static bool InitDictionarySet(Span<const char *const> table_directories)

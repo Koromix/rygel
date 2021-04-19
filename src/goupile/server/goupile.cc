@@ -105,7 +105,9 @@ static void HandlePing(const http_RequestInfo &request, http_IO *io)
 
 static void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    http_JsonPageBuilder json(request.compression_type);
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
 
     json.StartArray();
     for (const char *url: assets_for_cache) {
@@ -114,7 +116,7 @@ static void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &r
     }
     json.EndArray();
 
-    json.Finish(io);
+    json.Finish();
 }
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)

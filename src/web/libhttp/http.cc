@@ -204,24 +204,6 @@ static bool GetClientAddress(MHD_Connection *conn, bool use_xrealip, Span<char> 
     return true;
 }
 
-static bool NegociateContentEncoding(MHD_Connection *conn, CompressionType *out_compression_type,
-                                     http_IO *io)
-{
-    const char *accept_str = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "Accept-Encoding");
-    uint32_t acceptable_encodings = http_ParseAcceptableEncodings(accept_str);
-
-    if (acceptable_encodings & (1 << (int)CompressionType::Gzip)) {
-        *out_compression_type = CompressionType::Gzip;
-        return true;
-    } else if (acceptable_encodings) {
-        *out_compression_type = (CompressionType)CountTrailingZeros(acceptable_encodings);
-        return true;
-    } else {
-        io->AttachError(406);
-        return false;
-    }
-}
-
 MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url, const char *method,
                                       const char *, const char *upload_data, size_t *upload_data_size,
                                       void **con_cls)
@@ -266,9 +248,6 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
             io->AttachError(422);
             return MHD_queue_response(conn, (unsigned int)io->code, io->response);
         }
-
-        if (!NegociateContentEncoding(conn, &io->request.compression_type, io))
-            return MHD_queue_response(conn, (unsigned int)io->code, io->response);
     }
 
     // There may be some kind of async runner
@@ -439,6 +418,23 @@ http_IO::~http_IO()
     MHD_destroy_response(response);
 }
 
+bool http_IO::NegociateEncoding(CompressionType preferred, CompressionType *out_encoding)
+{
+    const char *accept_str = request.GetHeaderValue("Accept-Encoding");
+    uint32_t acceptable_encodings = http_ParseAcceptableEncodings(accept_str);
+
+    if (acceptable_encodings & (1 << (int)preferred)) {
+        *out_encoding = preferred;
+        return true;
+    } else if (acceptable_encodings) {
+        *out_encoding = (CompressionType)CountTrailingZeros(acceptable_encodings);
+        return true;
+    } else {
+        AttachError(406);
+        return false;
+    }
+}
+
 void http_IO::RunAsync(std::function<void()> func)
 {
     async_func = func;
@@ -449,9 +445,9 @@ void http_IO::AddHeader(const char *key, const char *value)
     MHD_add_response_header(response, key, value);
 }
 
-void http_IO::AddEncodingHeader(CompressionType compression_type)
+void http_IO::AddEncodingHeader(CompressionType encoding)
 {
-    switch (compression_type) {
+    switch (encoding) {
         case CompressionType::None: {} break;
         case CompressionType::Zlib: {
             AddHeader("Content-Encoding", "deflate");
@@ -528,23 +524,27 @@ void http_IO::AttachText(int code, Span<const char> str, const char *mime_type)
 }
 
 bool http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_type,
-                           CompressionType compression_type)
+                           CompressionType src_encoding)
 {
-    if (compression_type != request.compression_type) {
+    CompressionType dest_encoding;
+    if (!NegociateEncoding(src_encoding, &dest_encoding))
+        return false;
+
+    if (dest_encoding != src_encoding) {
         if (request.headers_only) {
             AttachNothing(code);
-            AddEncodingHeader(request.compression_type);
+            AddEncodingHeader(dest_encoding);
         } else {
             // XXX: This might cause problem if the caller tries to attach
             // another response instead after this call.
 
             RunAsync([=, this]() {
-                StreamReader reader(data, nullptr, compression_type);
+                StreamReader reader(data, nullptr, src_encoding);
 
                 StreamWriter writer;
-                if (!OpenForWrite(code, request.compression_type, &writer))
+                if (!OpenForWrite(code, dest_encoding, &writer))
                     return;
-                AddEncodingHeader(request.compression_type);
+                AddEncodingHeader(dest_encoding);
 
                 if (!SpliceStream(&reader, Megabytes(8), &writer))
                     return;
@@ -555,7 +555,7 @@ bool http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_
         MHD_Response *response =
             MHD_create_response_from_buffer((size_t)data.len, (void *)data.ptr, MHD_RESPMEM_PERSISTENT);
         AttachResponse(code, response);
-        AddEncodingHeader(request.compression_type);
+        AddEncodingHeader(dest_encoding);
     }
 
     if (mime_type) {
@@ -601,12 +601,12 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
     return success;
 }
 
-bool http_IO::OpenForWrite(int code, CompressionType compression_type, StreamWriter *out_st)
+bool http_IO::OpenForWrite(int code, CompressionType encoding, StreamWriter *out_st)
 {
     RG_ASSERT(state != State::Sync);
 
     write_code = code;
-    bool success = out_st->Open([this](Span<const uint8_t> buf) { return Write(buf); }, "<http>", compression_type);
+    bool success = out_st->Open([this](Span<const uint8_t> buf) { return Write(buf); }, "<http>", encoding);
 
     return success;
 }
