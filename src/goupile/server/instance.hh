@@ -53,7 +53,7 @@ public:
         const char *title = nullptr;
         bool use_offline = false;
         SyncMode sync_mode = SyncMode::Offline;
-        int max_file_size = (int)Megabytes(8);
+        int max_file_size = (int)Megabytes(16);
         const char *shared_key = nullptr;
         const char *backup_key = nullptr;
     } config;
