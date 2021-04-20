@@ -4791,13 +4791,13 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
         } break;
 
         case DestinationType::Function: {
-            // Empty writes are used to "close" the file
-            if (buf.len) {
-                bool ret = dest.u.func(buf);
+            // Empty writes are used to "close" the file.. don't!
+            if (!buf.len)
+                return true;
 
-                error |= !ret;
-                return ret;
-            }
+            bool ret = dest.u.func(buf);
+            error |= !ret;
+            return ret;
         } break;
     }
 
