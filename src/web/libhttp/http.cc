@@ -290,7 +290,7 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
         io->Resume();
 
         MHD_Response *new_response =
-            MHD_create_response_from_callback(MHD_SIZE_UNKNOWN, Kilobytes(16),
+            MHD_create_response_from_callback(io->write_len, Kilobytes(16),
                                               &http_Daemon::HandleWrite, io, nullptr);
         MHD_move_response_headers(io->response, new_response);
 
@@ -542,7 +542,7 @@ bool http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_
                 StreamReader reader(data, nullptr, src_encoding);
 
                 StreamWriter writer;
-                if (!OpenForWrite(code, dest_encoding, &writer))
+                if (!OpenForWrite(code, -1, dest_encoding, &writer))
                     return;
                 AddEncodingHeader(dest_encoding);
 
@@ -601,11 +601,12 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
     return success;
 }
 
-bool http_IO::OpenForWrite(int code, CompressionType encoding, StreamWriter *out_st)
+bool http_IO::OpenForWrite(int code, Size len, CompressionType encoding, StreamWriter *out_st)
 {
     RG_ASSERT(state != State::Sync);
 
     write_code = code;
+    write_len = (len >= 0) ? (uint64_t)len : MHD_SIZE_UNKNOWN;
     bool success = out_st->Open([this](Span<const uint8_t> buf) { return Write(buf); }, "<http>", encoding);
 
     return success;

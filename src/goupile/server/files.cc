@@ -159,7 +159,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
             writer.Close();
         } else {
             StreamWriter writer;
-            if (!io->OpenForWrite(200, dest_encoding, &writer))
+            if (!io->OpenForWrite(200, blob_len, dest_encoding, &writer))
                 return;
             io->AddEncodingHeader(dest_encoding);
 

@@ -136,6 +136,7 @@ class http_IO {
     bool read_eof = false;
 
     int write_code;
+    uint64_t write_len;
     std::condition_variable write_cv;
     HeapArray<uint8_t> write_buf;
     Size write_offset = 0;
@@ -171,7 +172,7 @@ public:
     // Blocking, do in async context
     bool OpenForRead(Size max_len, StreamReader *out_st);
     bool ReadPostValues(Allocator *alloc, HashMap<const char *, const char *> *out_values);
-    bool OpenForWrite(int code, CompressionType encoding, StreamWriter *out_st);
+    bool OpenForWrite(int code, Size len, CompressionType encoding, StreamWriter *out_st);
 
     void AddFinalizer(const std::function<void()> &func);
 
