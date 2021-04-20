@@ -286,7 +286,7 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
     }
 
     // Handle write or attached response (if any)
-    if (io->write_buf.len) {
+    if (io->write_buf.len || io->write_eof) {
         io->Resume();
 
         MHD_Response *new_response =
