@@ -54,6 +54,15 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
     json.Finish();
 }
 
+static void AddMimeTypeHeader(const char *filename, http_IO *io)
+{
+   const char *mime_type = http_GetMimeType(GetPathExtension(filename), nullptr);
+
+    if (mime_type) {
+        io->AddHeader("Content-Type", mime_type);
+    }
+}
+
 // Returns true when request has been handled (file exists or an error has occured)
 bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
@@ -103,14 +112,6 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
         return true;
     }
 
-    // Mime type
-    {
-        const char *mime_type = http_GetMimeType(GetPathExtension(filename), nullptr);
-        if (mime_type) {
-            io->AddHeader("Content-Type", mime_type);
-        }
-    }
-
     CompressionType src_encoding;
     {
         const char *name = (const char *)sqlite3_column_text(stmt, 1);
@@ -141,27 +142,127 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
     io->RunAsync([=]() {
         io->AddCachingHeaders(0, sha256);
 
+        // Fast path
         if (dest_encoding == src_encoding && blob_len <= 65536) {
-            StreamWriter writer;
-            if (!io->OpenForWrite(200, CompressionType::None, &writer))
-                return;
-            io->AddEncodingHeader(dest_encoding);
+            uint8_t *ptr = (uint8_t *)Allocator::Allocate(&io->allocator, blob_len);
+            io->AddFinalizer([=] { Allocator::Release(&io->allocator, ptr, blob_len); });
 
-            LocalArray<char, 65536> buf;
-            if (sqlite3_blob_read(blob, buf.data, (int)blob_len, 0) != SQLITE_OK) {
+            if (sqlite3_blob_read(blob, ptr, (int)blob_len, 0) != SQLITE_OK) {
                 LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
                 return;
             }
-            buf.len = blob_len;
 
-            // Not much we can do at this stage in case of error. Client will get truncated data.
-            writer.Write(buf);
-            writer.Close();
-        } else {
+            MHD_Response *response =
+                MHD_create_response_from_buffer((size_t)blob_len, (void *)ptr, MHD_RESPMEM_PERSISTENT);
+            io->AttachResponse(200, response);
+            io->AddEncodingHeader(dest_encoding);
+            AddMimeTypeHeader(filename, io);
+
+            return;
+        }
+
+        // Handle range requests
+        if (src_encoding == CompressionType::None && dest_encoding == src_encoding) {
+            HeapArray<http_ByteRange> ranges;
+            {
+                const char *str = request.GetHeaderValue("Range");
+
+                if (str && !http_ParseRange(str, blob_len, &ranges)) {
+                    io->AttachError(416);
+                    return;
+                }
+            }
+
+            if (ranges.len >= 2) {
+                static const char boundary[] = "||**boundary**||";
+
+                StreamWriter writer;
+                if (!io->OpenForWrite(206, -1, dest_encoding, &writer))
+                    return;
+                io->AddEncodingHeader(dest_encoding);
+
+                // Range header
+                {
+                    char buf[512];
+                    io->AddHeader("Content-Type", Fmt(buf, "multipart/byteranges; boundary=%1", boundary).ptr);
+                }
+
+                const char *mime_type = http_GetMimeType(GetPathExtension(filename), nullptr);
+
+                for (Size i = 0; i < ranges.len; i++) {
+                    const http_ByteRange &range = ranges[i];
+                    Size range_len = range.end - range.start;
+
+                    if (mime_type) {
+                        Print(&writer, "Content-Type: %1\r\n", mime_type);
+                    }
+                    Print(&writer, "Content-Range: bytes %1-%2/%3\r\n\r\n", range.start, range.end - 1, blob_len);
+
+                    Size offset = 0;
+                    while (offset < range_len) {
+                        uint8_t buf[16384];
+                        Size copy_len = std::min(range_len - offset, RG_SIZE(buf));
+
+                        if (sqlite3_blob_read(blob, buf, (int)copy_len, (int)(range.start + offset)) != SQLITE_OK) {
+                            LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
+                            return;
+                        }
+
+                        writer.Write(buf, copy_len);
+                        offset += copy_len;
+                    }
+
+                    Print(&writer, "\r\n--%1%2", boundary, i + 1 < ranges.len ? "\r\n" : "--");
+                }
+                writer.Close();
+
+                return;
+            } else if (ranges.len == 1) {
+                const http_ByteRange &range = ranges[0];
+                Size range_len = range.end - range.start;
+
+                StreamWriter writer;
+                if (!io->OpenForWrite(206, range_len, dest_encoding, &writer))
+                    return;
+                io->AddEncodingHeader(dest_encoding);
+                AddMimeTypeHeader(filename, io);
+
+                // Range header
+                {
+                    char buf[512];
+                    io->AddHeader("Content-Range", Fmt(buf, "bytes %1-%2/%3", range.start, range.end - 1, blob_len).ptr);
+                }
+
+                Size offset = 0;
+                while (offset < range_len) {
+                    uint8_t buf[16384];
+                    Size copy_len = std::min(range_len - offset, RG_SIZE(buf));
+
+                    if (sqlite3_blob_read(blob, buf, (int)copy_len, (int)(range.start + offset)) != SQLITE_OK) {
+                        LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
+                        return;
+                    }
+
+                    writer.Write(buf, copy_len);
+                    offset += copy_len;
+                }
+                writer.Close();
+
+                return;
+            } else {
+                io->AddHeader("Accept-Ranges", "bytes");
+
+                // Go on with default code path
+            }
+        }
+
+        // Default path
+        {
             StreamWriter writer;
             if (!io->OpenForWrite(200, blob_len, dest_encoding, &writer))
                 return;
             io->AddEncodingHeader(dest_encoding);
+            AddMimeTypeHeader(filename, io);
 
             Size offset = 0;
             StreamReader reader([&](Span<uint8_t> buf) {
