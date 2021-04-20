@@ -163,7 +163,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
         // Handle range requests
         if (src_encoding == CompressionType::None && dest_encoding == src_encoding) {
-            HeapArray<http_ByteRange> ranges;
+            LocalArray<http_ByteRange, 16> ranges;
             {
                 const char *str = request.GetHeaderValue("Range");
 

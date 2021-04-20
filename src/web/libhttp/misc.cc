@@ -73,7 +73,7 @@ uint32_t http_ParseAcceptableEncodings(Span<const char> encodings)
     return acceptable_encodings;
 }
 
-bool http_ParseRange(Span<const char> str, Size len, HeapArray<http_ByteRange> *out_ranges)
+bool http_ParseRange(Span<const char> str, Size len, LocalArray<http_ByteRange, 16> *out_ranges)
 {
     RG_DEFER_NC(out_guard, len = out_ranges->len) { out_ranges->RemoveFrom(len); };
 
@@ -84,6 +84,11 @@ bool http_ParseRange(Span<const char> str, Size len, HeapArray<http_ByteRange> *
     }
 
     do {
+        if (RG_UNLIKELY(!out_ranges->Available())) {
+            LogError("Excessive number of range fragments");
+            return false;
+        }
+
         Span<const char> part = TrimStr(SplitStr(str, ',', &str));
         if (!part.len) {
             LogError("Empty HTTP range fragment");
@@ -133,6 +138,29 @@ bool http_ParseRange(Span<const char> str, Size len, HeapArray<http_ByteRange> *
 
         out_ranges->Append(range);
     } while (str.len);
+
+    if (out_ranges->len >= 2) {
+        std::sort(out_ranges->begin(), out_ranges->end(),
+                  [](const http_ByteRange &range1, const http_ByteRange &range2) {
+            return range1.start < range2.start;
+        });
+
+        Size j = 1;
+        for (Size i = 1; i < out_ranges->len; i++) {
+            http_ByteRange &prev = (*out_ranges)[j - 1];
+            http_ByteRange &range = (*out_ranges)[i];
+
+            if (range.start < prev.end) {
+                LogError("Refusing to serve overlapping ranges");
+                return false;
+            } else if (range.start == prev.end) {
+                prev.end = range.end;
+            } else {
+                (*out_ranges)[j++] = range;
+            }
+        }
+        out_ranges->RemoveFrom(j);
+    }
 
     out_guard.Disable();
     return true;
