@@ -73,6 +73,71 @@ uint32_t http_ParseAcceptableEncodings(Span<const char> encodings)
     return acceptable_encodings;
 }
 
+bool http_ParseRange(Span<const char> str, Size len, HeapArray<http_ByteRange> *out_ranges)
+{
+    RG_DEFER_NC(out_guard, len = out_ranges->len) { out_ranges->RemoveFrom(len); };
+
+    Span<const char> unit = TrimStr(SplitStr(str, '=', &str));
+    if (unit != "bytes") {
+        LogError("HTTP range unit '%1' is not supported", unit);
+        return false;
+    }
+
+    do {
+        Span<const char> part = TrimStr(SplitStr(str, ',', &str));
+        if (!part.len) {
+            LogError("Empty HTTP range fragment");
+            return false;
+        }
+
+        Span<const char> end;
+        Span<const char> start = TrimStr(SplitStr(part, '-', &end));
+        end = TrimStr(end);
+
+        http_ByteRange range = {};
+
+        if (start.len) {
+            if (!ParseInt(start, &range.start))
+                return false;
+            if (range.start < 0 || range.start > len) {
+                LogError("Invalid HTTP range");
+                return false;
+            }
+
+            if (end.len) {
+                if (!ParseInt(end, &range.end))
+                    return false;
+                if (range.end < 0 || range.end >= len) {
+                    LogError("Invalid HTTP range");
+                    return false;
+                }
+                if (range.end < range.start) {
+                    LogError("Invalid HTTP range");
+                    return false;
+                }
+                range.end++;
+            } else {
+                range.end = len;
+            }
+        } else {
+            if (!ParseInt(end, &range.end))
+                return false;
+            if (range.end < 0 || range.end > len) {
+                LogError("Invalid HTTP range");
+                return false;
+            }
+
+            range.start = len - range.end;
+            range.end = len;
+        }
+
+        out_ranges->Append(range);
+    } while (str.len);
+
+    out_guard.Disable();
+    return true;
+}
+
 static void ReleaseDataCallback(void *ptr)
 {
     Allocator::Release(nullptr, ptr, -1);

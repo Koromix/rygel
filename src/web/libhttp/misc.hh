@@ -19,10 +19,16 @@
 
 namespace RG {
 
+struct http_ByteRange {
+    Size start;
+    Size end;
+};
+
 const char *http_GetMimeType(Span<const char> extension,
                              const char *default_type = "application/octet-stream");
 
 uint32_t http_ParseAcceptableEncodings(Span<const char> encodings);
+bool http_ParseRange(Span<const char> str, Size len, HeapArray<http_ByteRange> *out_ranges);
 
 class http_JsonPageBuilder: public json_Writer {
     http_IO *io = nullptr;
