@@ -3452,6 +3452,13 @@ template <typename T>
 bool ParseInt(Span<const char> str, T *out_value, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
               Span<const char> *out_remaining = nullptr)
 {
+    if (RG_UNLIKELY(!str.len)) {
+        if (flags & (int)ParseFlag::Log) {
+            LogError("Cannot convert empty string to integer");
+        }
+        return false;
+    }
+
     uint64_t value = 0;
 
     Size pos = 0;
