@@ -88,19 +88,19 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
     const char *filename = url + 7;
 
+    // Lookup file in database
     sq_Statement stmt;
     if (!instance->db.Prepare(R"(SELECT rowid, compression, sha256 FROM fs_files
                                  WHERE active = 1 AND filename = ?1)", &stmt))
         return true;
     sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
-
-    // File does not exist, or an error has occured
     if (!stmt.Next())
         return !stmt.IsValid();
 
     int64_t rowid = sqlite3_column_int64(stmt, 0);
     const char *sha256 = (const char *)sqlite3_column_text(stmt, 2);
 
+    // Handle cache headers
     if (client_etag && TestStr(client_etag, sha256)) {
         MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
         io->AttachResponse(304, response);
@@ -111,48 +111,49 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
         io->AttachError(409);
         return true;
     }
+    io->AddCachingHeaders(0, sha256);
 
+    // Negociate content encoding
     CompressionType src_encoding;
+    CompressionType dest_encoding;
     {
         const char *name = (const char *)sqlite3_column_text(stmt, 1);
         if (!name || !OptionToEnum(CompressionTypeNames, name, &src_encoding)) {
             LogError("Unknown compression type '%1'", name);
             return true;
         }
+
+        if (!io->NegociateEncoding(src_encoding, &dest_encoding))
+            return true;
     }
 
-    CompressionType dest_encoding;
-    if (!io->NegociateEncoding(src_encoding, &dest_encoding))
-        return true;
-
-    sqlite3_blob *blob;
-    Size blob_len;
-    if (sqlite3_blob_open(instance->db, "main", "fs_files", "blob", rowid, 0, &blob) != SQLITE_OK) {
+    // Open file blob
+    sqlite3_blob *src_blob;
+    Size src_len;
+    if (sqlite3_blob_open(instance->db, "main", "fs_files", "blob", rowid, 0, &src_blob) != SQLITE_OK) {
         LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
         return true;
     }
-    blob_len = sqlite3_blob_bytes(blob);
+    src_len = sqlite3_blob_bytes(src_blob);
 
     // SQLite data needs to remain valid until the end of connection
-    io->AddFinalizer([blob, stmt = stmt.Leak()]() {
-        sqlite3_blob_close(blob);
+    io->AddFinalizer([src_blob, stmt = stmt.Leak()]() {
+        sqlite3_blob_close(src_blob);
         sqlite3_finalize(stmt);
     });
 
-    io->AddCachingHeaders(0, sha256);
-
     // Fast path
-    if (dest_encoding == src_encoding && blob_len <= 65536) {
-        uint8_t *ptr = (uint8_t *)Allocator::Allocate(&io->allocator, blob_len);
-        io->AddFinalizer([=] { Allocator::Release(&io->allocator, ptr, blob_len); });
+    if (dest_encoding == src_encoding && src_len <= 65536) {
+        uint8_t *ptr = (uint8_t *)Allocator::Allocate(&io->allocator, src_len);
+        io->AddFinalizer([=] { Allocator::Release(&io->allocator, ptr, src_len); });
 
-        if (sqlite3_blob_read(blob, ptr, (int)blob_len, 0) != SQLITE_OK) {
+        if (sqlite3_blob_read(src_blob, ptr, (int)src_len, 0) != SQLITE_OK) {
             LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
             return true;
         }
 
         MHD_Response *response =
-            MHD_create_response_from_buffer((size_t)blob_len, (void *)ptr, MHD_RESPMEM_PERSISTENT);
+            MHD_create_response_from_buffer((size_t)src_len, (void *)ptr, MHD_RESPMEM_PERSISTENT);
         io->AttachResponse(200, response);
         io->AddEncodingHeader(dest_encoding);
         AddMimeTypeHeader(filename, io);
@@ -167,7 +168,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
             {
                 const char *str = request.GetHeaderValue("Range");
 
-                if (str && !http_ParseRange(str, blob_len, &ranges)) {
+                if (str && !http_ParseRange(str, src_len, &ranges)) {
                     io->AttachError(416);
                     return;
                 }
@@ -194,10 +195,10 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
                         if (mime_type) {
                             before = Fmt(&io->allocator, "Content-Type: %1\r\n"
                                                          "Content-Range: bytes %2-%3/%4\r\n\r\n",
-                                         mime_type, range.start, range.end - 1, blob_len);
+                                         mime_type, range.start, range.end - 1, src_len);
                         } else {
                             before = Fmt(&io->allocator, "Content-Range: bytes %1-%2/%3\r\n\r\n",
-                                         range.start, range.end - 1, blob_len);
+                                         range.start, range.end - 1, src_len);
                         }
 
                         Span<const char> after;
@@ -238,7 +239,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
                         uint8_t buf[16384];
                         Size copy_len = std::min(range_len - offset, RG_SIZE(buf));
 
-                        if (sqlite3_blob_read(blob, buf, (int)copy_len, (int)(range.start + offset)) != SQLITE_OK) {
+                        if (sqlite3_blob_read(src_blob, buf, (int)copy_len, (int)(range.start + offset)) != SQLITE_OK) {
                             LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
                             return;
                         }
@@ -265,7 +266,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
                 // Range header
                 {
                     char buf[512];
-                    io->AddHeader("Content-Range", Fmt(buf, "bytes %1-%2/%3", range.start, range.end - 1, blob_len).ptr);
+                    io->AddHeader("Content-Range", Fmt(buf, "bytes %1-%2/%3", range.start, range.end - 1, src_len).ptr);
                 }
 
                 Size offset = 0;
@@ -273,7 +274,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
                     uint8_t buf[16384];
                     Size copy_len = std::min(range_len - offset, RG_SIZE(buf));
 
-                    if (sqlite3_blob_read(blob, buf, (int)copy_len, (int)(range.start + offset)) != SQLITE_OK) {
+                    if (sqlite3_blob_read(src_blob, buf, (int)copy_len, (int)(range.start + offset)) != SQLITE_OK) {
                         LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
                         return;
                     }
@@ -291,19 +292,19 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
             }
         }
 
-        // Default path
+        // Default path, for big files and/or transcoding (Gzip to None, etc.)
         {
             StreamWriter writer;
-            if (!io->OpenForWrite(200, blob_len, dest_encoding, &writer))
+            if (!io->OpenForWrite(200, src_len, dest_encoding, &writer))
                 return;
             io->AddEncodingHeader(dest_encoding);
             AddMimeTypeHeader(filename, io);
 
             Size offset = 0;
             StreamReader reader([&](Span<uint8_t> buf) {
-                Size copy_len = std::min(blob_len - offset, buf.len);
+                Size copy_len = std::min(src_len - offset, buf.len);
 
-                if (sqlite3_blob_read(blob, buf.ptr, (int)copy_len, (int)offset) != SQLITE_OK) {
+                if (sqlite3_blob_read(src_blob, buf.ptr, (int)copy_len, (int)offset) != SQLITE_OK) {
                     LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
                     return (Size)-1;
                 }
