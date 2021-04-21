@@ -554,21 +554,31 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
 
 bool ShouldCompressFile(const char *filename)
 {
-    Span<const char> extension = GetPathExtension(filename);
+    char extension[8];
+    {
+        const char *ptr = GetPathExtension(filename).ptr;
 
-    if (extension == ".zip")
+        Size i = 0;
+        while (i < RG_SIZE(extension) - 1 && ptr[i]) {
+            extension[i] = LowerAscii(ptr[i]);
+            i++;
+        }
+        extension[i] = 0;
+    }
+
+    if (TestStr(extension, ".zip"))
         return false;
-    if (extension == ".rar")
+    if (TestStr(extension, ".rar"))
         return false;
-    if (extension == ".7z")
+    if (TestStr(extension, ".7z"))
         return false;
-    if (extension == ".gz" || extension == ".tgz")
+    if (TestStr(extension, ".gz") || TestStr(extension, ".tgz"))
         return false;
-    if (extension == ".bz2" || extension == ".tbz2")
+    if (TestStr(extension, ".bz2") || TestStr(extension, ".tbz2"))
         return false;
-    if (extension == ".xz" || extension == ".txz")
+    if (TestStr(extension, ".xz") || TestStr(extension, ".txz"))
         return false;
-    if (extension == ".zst" || extension == ".tzst")
+    if (TestStr(extension, ".zst") || TestStr(extension, ".tzst"))
         return false;
 
     const char *mime_type = http_GetMimeType(extension);
