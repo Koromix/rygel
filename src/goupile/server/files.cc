@@ -176,8 +176,43 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
             if (ranges.len >= 2) {
                 static const char boundary[] = "||**boundary**||";
 
+                // Boundary strings
+                LocalArray<Span<const char>, RG_LEN(ranges.data) * 2> boundaries;
+                Size total_len = 0;
+                {
+                    const char *mime_type = http_GetMimeType(GetPathExtension(filename), nullptr);
+
+                    for (Size i = 0; i < ranges.len; i++) {
+                        const http_ByteRange &range = ranges[i];
+
+                        Span<const char> before;
+                        if (mime_type) {
+                            before = Fmt(&io->allocator, "Content-Type: %1\r\n"
+                                                         "Content-Range: bytes %2-%3/%4\r\n\r\n",
+                                         mime_type, range.start, range.end - 1, blob_len);
+                        } else {
+                            before = Fmt(&io->allocator, "Content-Range: bytes %1-%2/%3\r\n\r\n",
+                                         range.start, range.end - 1, blob_len);
+                        }
+
+                        Span<const char> after;
+                        if (i < ranges.len - 1) {
+                            after = Fmt(&io->allocator, "\r\n--%1\r\n", boundary);
+                        } else {
+                            after = Fmt(&io->allocator, "\r\n--%1--\r\n", boundary);
+                        }
+
+                        boundaries.Append(before);
+                        boundaries.Append(after);
+
+                        total_len += before.len;
+                        total_len += range.end - range.start;
+                        total_len += after.len;
+                    }
+                }
+
                 StreamWriter writer;
-                if (!io->OpenForWrite(206, -1, dest_encoding, &writer))
+                if (!io->OpenForWrite(206, total_len, dest_encoding, &writer))
                     return;
                 io->AddEncodingHeader(dest_encoding);
 
@@ -187,16 +222,11 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
                     io->AddHeader("Content-Type", Fmt(buf, "multipart/byteranges; boundary=%1", boundary).ptr);
                 }
 
-                const char *mime_type = http_GetMimeType(GetPathExtension(filename), nullptr);
-
                 for (Size i = 0; i < ranges.len; i++) {
                     const http_ByteRange &range = ranges[i];
                     Size range_len = range.end - range.start;
 
-                    if (mime_type) {
-                        Print(&writer, "Content-Type: %1\r\n", mime_type);
-                    }
-                    Print(&writer, "Content-Range: bytes %1-%2/%3\r\n\r\n", range.start, range.end - 1, blob_len);
+                    writer.Write(boundaries[i * 2]);
 
                     Size offset = 0;
                     while (offset < range_len) {
@@ -212,7 +242,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
                         offset += copy_len;
                     }
 
-                    Print(&writer, "\r\n--%1%2", boundary, i + 1 < ranges.len ? "\r\n" : "--");
+                    writer.Write(boundaries[i * 2 + 1]);
                 }
                 writer.Close();
 
