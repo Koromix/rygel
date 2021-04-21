@@ -139,28 +139,28 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
         sqlite3_finalize(stmt);
     });
 
-    io->RunAsync([=]() {
-        io->AddCachingHeaders(0, sha256);
+    io->AddCachingHeaders(0, sha256);
 
-        // Fast path
-        if (dest_encoding == src_encoding && blob_len <= 65536) {
-            uint8_t *ptr = (uint8_t *)Allocator::Allocate(&io->allocator, blob_len);
-            io->AddFinalizer([=] { Allocator::Release(&io->allocator, ptr, blob_len); });
+    // Fast path
+    if (dest_encoding == src_encoding && blob_len <= 65536) {
+        uint8_t *ptr = (uint8_t *)Allocator::Allocate(&io->allocator, blob_len);
+        io->AddFinalizer([=] { Allocator::Release(&io->allocator, ptr, blob_len); });
 
-            if (sqlite3_blob_read(blob, ptr, (int)blob_len, 0) != SQLITE_OK) {
-                LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
-                return;
-            }
-
-            MHD_Response *response =
-                MHD_create_response_from_buffer((size_t)blob_len, (void *)ptr, MHD_RESPMEM_PERSISTENT);
-            io->AttachResponse(200, response);
-            io->AddEncodingHeader(dest_encoding);
-            AddMimeTypeHeader(filename, io);
-
-            return;
+        if (sqlite3_blob_read(blob, ptr, (int)blob_len, 0) != SQLITE_OK) {
+            LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
+            return true;
         }
 
+        MHD_Response *response =
+            MHD_create_response_from_buffer((size_t)blob_len, (void *)ptr, MHD_RESPMEM_PERSISTENT);
+        io->AttachResponse(200, response);
+        io->AddEncodingHeader(dest_encoding);
+        AddMimeTypeHeader(filename, io);
+
+        return true;
+    }
+
+    io->RunAsync([=]() {
         // Handle range requests
         if (src_encoding == CompressionType::None && dest_encoding == src_encoding) {
             LocalArray<http_ByteRange, 16> ranges;
