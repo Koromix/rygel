@@ -174,7 +174,12 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
             }
 
             if (ranges.len >= 2) {
-                static const char boundary[] = "||**boundary**||";
+                char boundary[17];
+                {
+                    uint64_t buf;
+                    randombytes_buf(&buf, RG_SIZE(buf));
+                    Fmt(boundary, "%1", FmtHex(buf).Pad0(-16));
+                }
 
                 // Boundary strings
                 LocalArray<Span<const char>, RG_LEN(ranges.data) * 2> boundaries;
