@@ -587,6 +587,11 @@ int Main(int argc, char **argv)
         }
     }
 
+    if (sodium_init() < 0) {
+        LogError("Failed to initialize libsodium");
+        return 1;
+    }
+
     int (*cmd_func)(Span<const char *> arguments);
     Span<const char *> arguments;
     if (argc >= 2) {
