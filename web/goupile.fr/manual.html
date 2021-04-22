@@ -57,14 +57,101 @@
         </nav>
 
         <main>
-            <h1 id="setup">Configuration globale</h1>
-            <h2 id="setup_main">Structure de l'application</h2>
-            <p>Le <b>panneau d'édition d'application</b> permet de définir l'architecture des tables,
-            les relations entre les tables, et l'organisation des pages ainsi que leur style global.</p>
-            <h2 id="setup_users">Profils et utilisateurs</h2>
-            <p>XXX</p>
+            <h1 id="setup">Administration</h1>
+            <h2 id="setup_projects">Projets et utilisateurs</h2>
+            <div class="screenshot right">
+                <img src="static/screenshots/admin.webp"/>
+                <p>Gérez vos projets et vos utilisateurs au sein du module d'administration.</p>
+            </div>
+            <p>Le panneau d'administration vous permet de créer des projets, des utilisateurs et de leur
+            affecter des droits par projet.</p>
+            <p>Par défaut, les panneaux <i>Projets</i> et <i>Utilisateurs</i> sont affichés côte à côte. Pour
+            activer ou désactiver un panneau, utilisez les boutons dédiés dans le menu tout en haut de la page.</p>
+            <p>Pour modifier les droits d'un utilisateur sur un projet spécifique, cliquez sur <i>Droits</i>
+            à droite du nom du projet. Ceci affichera la liste des droits dans le panneau utilisateurs. Il
+            existe deux ensembles de droits : les droits de développement (en vert), qui portent sur la
+            mise au point des formulaires, et les droits de saisie (en violet), qui portent sur l'accès
+            aux données (lecture, création, édition, suppression).</p>
+            <div style="clear: both; display: flex;">
+                <table style="margin: 1em;">
+                    <thead>
+                        <tr>
+                            <th>Droit</th>
+                            <th>Explication</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><em>Develop</em></td>
+                            <td>Modification des formulaires</td>
+                        </tr>
+                        <tr>
+                            <td><em>Publish</em></td>
+                            <td>Publication des formulaires modifiés</td>
+                        </tr>
+                        <tr>
+                            <td><em>Configure</em></td>
+                            <td>Configuration du projet et des centres (multi-centrique)</td>
+                        </tr>
+                        <tr>
+                            <td><em>Assign</em></td>
+                            <td>Modification des droits des utilisateurs sur le projet</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table style="margin: 1em;">
+                    <thead>
+                        <tr>
+                            <th>Droit</th>
+                            <th>Explication</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><em>Read</em></td>
+                            <td>Lecture des enregistrements</td>
+                        </tr>
+                        <tr>
+                            <td><em>Create</em></td>
+                            <td>Création d’un nouvel enregistrement</td>
+                        </tr>
+                        <tr>
+                            <td><em>Modify</em></td>
+                            <td>Modification d’un enregistrement existant</td>
+                        </tr>
+                        <tr>
+                            <td><em>Delete</em></td>
+                            <td>Suppression d’un enregistrement existant</td>
+                        </tr>
+                        <tr>
+                            <td><em>Export</em></td>
+                            <td>Export facile des données (CSV, XLSX, etc.)</td>
+                        </tr>
+                        <tr>
+                            <td><em>Batch</em></td>
+                            <td>Recalcul de toutes les variables calculées sur tous les enregistrements</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p>Par défaut, les projets sont mono-centriques. Pour transformer un projet mono-centrique en
+            projet multi-centrique, cliquez sur le bouton <i>Diviser</i> à droite du projet et nommez le
+            premier centre. Dans un projet multi-centrique les droits sont paramétrés, soit sur le projet
+            global (droits de développement en vert), soit sur chaque centre (droits sur les données en violet).</p>
+
+            <h2 id="setup_backups">Sauvegardes</h2>
+            Le panneau de sauvegardes vous permet de sauvegarder l'intégralité des projets (formulaires et données) en un
+            simple clic. Une fois la sauvegarde effectuée, vous pouvez télécharger le fichier créé (avec l'extension
+            <i>.goupilebackup</i>) et le stocker à l'abri par un moyen adéquat.
+            <p>Attention, pour pouvoir restaurer ce fichier, vous devez <b>conserver la clé de restauration</b> qui vous a été
+            communiquée lors de la création du domaine. Sans cette clé, la restauration est impossible et les données
+            sont perdues. Par ailleurs, <b>il nous est strictement impossible de récupérer cette clé</b> si vous la perdez.
 
             <h1 id="dev">Paramétrage des pages</h1>
+            <h2 id="dev_main">Structure de l'application</h2>
+            <p>Le <b>panneau d'édition d'application</b> permet de définir l'architecture des tables,
+            les relations entre les tables, et l'organisation des pages ainsi que leur style global.</p>
             <h2 id="dev_page">Éditeur de page</h2>
             <p>L'<b>éditeur de page</b> vous permet de construire le contenu du formulaire. Il s'agit d'un
             éditeur de code, mais vous n'avez pas besoin de connaissances de programmation pour réaliser
@@ -210,20 +297,29 @@
             message d'erreur sera affiché.</p>
 
             <p>Si cela se produit, <b>ne paniquez pas</b> ! La plupart des erreurs sont faciles à
-            corriger, la table ci-dessous peut vous aider.</p>
-            <p>XXX</p>
+            corriger. Si vous ne trouvez pas l'erreur, revenez en arrière à l'aide de Ctrl+Z.</p>
 
-            <h1 id="deploy">Déploiement du formulaire</h1>
-            <p>XXX</p>
+            <h1 id="publish">Publication du formulaire</h1>
+            <div class="screenshot left">
+                <img src="static/screenshots/publish.webp"/>
+                <p>Publiez votre formulaire simplement lorsqu'il est prêt.</p>
+            </div>
+            <p>une fois votre formulaire prêt, vous devez le publier pour le rendre accessible aux autres
+            utilisateurs. Après publication, les utilisateurs pourront saisir des données sur ces formulaires.</p>
+            <p>Pour ce faire, cliquez sur le bouton <b>Publier</b> en haut à droite du panneau d'édition de code.
+            Ceci affichera le panneau de publication (visible dans la capture à gauche).</p>
+            <p>Ce panneau récapitule les modifications apportées et les actions qu'engendrera la publication.
+            Dans la capture à droite, on voit qu'une page a été modifiée localement (nommée « <i>accueils</i> ») et sera
+            rendue publique après acceptation des modifications.</p>
 
             <h1 id="run">Utilisation en routine</h1>
             <p>Une fois le formulaire prêt, les panneaux de suivi et d'export vous permettent
             de suivre l'avancée de la saisie et d'exporter les données.</p>
 
             <h2 id="run_status">Suivi des données</h2>
-            <p>Le tableau de suivi affiche la liste des enregistrements avec leur statut (complété,
-            enregistré, non saisi). Depuis ce tableau de suivi, vous pouvez accéder directement à
-            un enregistrement spécifique pour le compléter ou vérifier les données saisies.</p>
+            <p>Le tableau de suivi affiche la liste des enregistrements avec leur statut (non saisi, enregistré,
+            complété). Depuis ce tableau de suivi, vous pouvez accéder directement à un enregistrement spécifique
+            pour le compléter ou vérifier les données saisies.</p>
 
             <h2 id="run_data">Export des données</h2>
             <div class="screenshot right">
