@@ -671,19 +671,23 @@ function FormBuilder(state, model, readonly = false) {
     }
 
     function handleEnumOrMultiKey(e) {
-        switch (e.keyCode) {
-            case 37: { // left
-                let prev = e.target.previousElementSibling;
-                if (prev)
-                    prev.focus();
-                e.preventDefault();
-            } break;
-            case 39: { // right
-                let next = e.target.nextElementSibling;
-                if (next)
-                    next.focus();
-                e.preventDefault();
-            } break;
+        if ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105)) {
+            let digit = e.keyCode - (e.keyCode >= 96 ? 96 : 48);
+            let el = e.target.parentNode.querySelector('button[data-value=\'' + digit + '\'], button[data-value=\'"' + digit + '"\']');
+
+            if (el != null)
+                el.click();
+            e.preventDefault();
+        } else if (e.keyCode === 37) { // left
+            let prev = e.target.previousElementSibling;
+            if (prev)
+                prev.focus();
+            e.preventDefault();
+        } else if (e.keyCode === 39) { // right
+            let next = e.target.nextElementSibling;
+            if (next)
+                next.focus();
+            e.preventDefault();
         }
     }
 
