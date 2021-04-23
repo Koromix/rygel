@@ -64,11 +64,11 @@
 #define MBEDTLS_DHM_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
+#include "config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
-#include "mbedtls/bignum.h"
+#include "bignum.h"
 
 /*
  * DHM Error codes

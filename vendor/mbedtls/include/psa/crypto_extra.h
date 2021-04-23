@@ -28,7 +28,7 @@
 #ifndef PSA_CRYPTO_EXTRA_H
 #define PSA_CRYPTO_EXTRA_H
 
-#include "mbedtls/platform_util.h"
+#include "../mbedtls/platform_util.h"
 
 #include "crypto_compat.h"
 

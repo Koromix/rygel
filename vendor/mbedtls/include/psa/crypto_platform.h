@@ -36,14 +36,14 @@
 /* Include the Mbed TLS configuration file, the way Mbed TLS does it
  * in each of its header files. */
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
+#include "../mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
 
 /* Translate between classic MBEDTLS_xxx feature symbols and PSA_xxx
  * feature symbols. */
-#include "mbedtls/config_psa.h"
+#include "../mbedtls/config_psa.h"
 
 /* PSA requires several types which C99 provides in stdint.h. */
 #include <stdint.h>

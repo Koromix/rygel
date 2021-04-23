@@ -60,22 +60,22 @@ extern "C" {
 /* Include the Mbed TLS configuration file, the way Mbed TLS does it
  * in each of its header files. */
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
+#include "../mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
 
-#include "mbedtls/cipher.h"
-#include "mbedtls/cmac.h"
-#include "mbedtls/gcm.h"
-#include "mbedtls/md.h"
-#include "mbedtls/md2.h"
-#include "mbedtls/md4.h"
-#include "mbedtls/md5.h"
-#include "mbedtls/ripemd160.h"
-#include "mbedtls/sha1.h"
-#include "mbedtls/sha256.h"
-#include "mbedtls/sha512.h"
+#include "../mbedtls/cipher.h"
+#include "../mbedtls/cmac.h"
+#include "../mbedtls/gcm.h"
+#include "../mbedtls/md.h"
+#include "../mbedtls/md2.h"
+#include "../mbedtls/md4.h"
+#include "../mbedtls/md5.h"
+#include "../mbedtls/ripemd160.h"
+#include "../mbedtls/sha1.h"
+#include "../mbedtls/sha256.h"
+#include "../mbedtls/sha512.h"
 
 typedef struct {
     /** Unique ID indicating which driver got assigned to do the

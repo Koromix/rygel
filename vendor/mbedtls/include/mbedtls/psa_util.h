@@ -27,7 +27,7 @@
 #define MBEDTLS_PSA_UTIL_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
+#include "config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
@@ -36,10 +36,10 @@
 
 #include "psa/crypto.h"
 
-#include "mbedtls/ecp.h"
-#include "mbedtls/md.h"
-#include "mbedtls/pk.h"
-#include "mbedtls/oid.h"
+#include "ecp.h"
+#include "md.h"
+#include "pk.h"
+#include "oid.h"
 
 #include <string.h>
 
@@ -489,11 +489,11 @@ int mbedtls_psa_get_random( void *p_rng,
 #else /* !defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG) */
 
 #if defined(MBEDTLS_CTR_DRBG_C)
-#include "mbedtls/ctr_drbg.h"
+#include "ctr_drbg.h"
 typedef mbedtls_ctr_drbg_context mbedtls_psa_drbg_context_t;
 static mbedtls_f_rng_t *const mbedtls_psa_get_random = mbedtls_ctr_drbg_random;
 #elif defined(MBEDTLS_HMAC_DRBG_C)
-#include "mbedtls/hmac_drbg.h"
+#include "hmac_drbg.h"
 typedef mbedtls_hmac_drbg_context mbedtls_psa_drbg_context_t;
 static mbedtls_f_rng_t *const mbedtls_psa_get_random = mbedtls_hmac_drbg_random;
 #endif
