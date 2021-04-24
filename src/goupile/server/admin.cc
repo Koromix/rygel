@@ -1620,11 +1620,6 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
         }
         return;
     }
-    if (!gp_domain.config.enable_backups) {
-        LogError("Public domain backup key is not configured");
-        io->AttachError(403);
-        return;
-    }
 
     io->RunAsync([=]() {
         bool conflict;

@@ -194,7 +194,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                             json.String(str.ptr, (size_t)str.len);
                         }
                         json.EndArray();
-                        json.Key("enable_backups"); json.Bool(gp_domain.config.enable_backups);
                         json.EndObject();
                     } else if (TestStr(key, "HEAD_TAGS")) {
                         // Nothing to add
