@@ -251,7 +251,7 @@ public:
 #if defined(_WIN32)
         Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
                   " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
-                  " -DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE"
+                  " -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE"
                   " -D_MT -Xclang --dependent-lib=oldnames"
                   " -Wno-unknown-warning-option -Wno-unknown-pragmas -Wno-deprecated-declarations");
 
@@ -552,7 +552,7 @@ public:
 #if defined(_WIN32)
         Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
                   " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
-                  " -D__USE_MINGW_ANSI_STDIO=1 -DNOMINMAX");
+                  " -D__USE_MINGW_ANSI_STDIO=1");
 #elif defined(__APPLE__)
         Fmt(&buf, " -pthread -fPIC");
 #else
@@ -822,7 +822,7 @@ public:
         // Platform flags
         Fmt(&buf, " /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE"
                   " /D_LARGEFILE_SOURCE /D_LARGEFILE64_SOURCE /D_FILE_OFFSET_BITS=64"
-                  " /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_DEPRECATE");
+                  " /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_DEPRECATE");
 
         // Features
         if (!(features & (int)CompileFeature::NoDebug)) {
