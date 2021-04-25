@@ -109,10 +109,10 @@ push_callback (void *cls, uint64_t pos, char *buf, size_t max)
 static void
 push_free_callback (void *cls)
 {
-  int *ok = cls;
+  int *ok_p = cls;
 
   // fprintf (stderr, "Cleanup callback called!\n");
-  *ok = 0;
+  *ok_p = 0;
 }
 
 

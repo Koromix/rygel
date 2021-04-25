@@ -89,23 +89,38 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 @ENABLE_HTTPS_TRUE@am__append_1 = https
-@HAVE_POSIX_THREADS_TRUE@am__append_2 = \
-@HAVE_POSIX_THREADS_TRUE@  perf_get_concurrent11 \
-@HAVE_POSIX_THREADS_TRUE@  test_quiesce \
-@HAVE_POSIX_THREADS_TRUE@  test_concurrent_stop
+@HEAVY_TESTS_TRUE@am__append_2 = \
+@HEAVY_TESTS_TRUE@  test_add_conn_cleanup \
+@HEAVY_TESTS_TRUE@  test_add_conn_cleanup_nolisten \
+@HEAVY_TESTS_TRUE@  $(EMPTY_ITEM)
 
-@HAVE_CURL_BINARY_TRUE@@HAVE_POSIX_THREADS_TRUE@am__append_3 = \
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__append_3 = \
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@  perf_get_concurrent11 \
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@  $(EMPTY_ITEM)
+
+@HAVE_POSIX_THREADS_TRUE@am__append_4 = \
+@HAVE_POSIX_THREADS_TRUE@  test_get_wait \
+@HAVE_POSIX_THREADS_TRUE@  test_get_wait11 \
+@HAVE_POSIX_THREADS_TRUE@  test_quiesce \
+@HAVE_POSIX_THREADS_TRUE@  $(EMPTY_ITEM)
+
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__append_5 = \
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@  test_concurrent_stop \
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@  $(EMPTY_ITEM)
+
+@HAVE_CURL_BINARY_TRUE@@HAVE_POSIX_THREADS_TRUE@am__append_6 = \
 @HAVE_CURL_BINARY_TRUE@@HAVE_POSIX_THREADS_TRUE@  test_quiesce_stream
 
-@ENABLE_DAUTH_TRUE@am__append_4 = \
-@ENABLE_DAUTH_TRUE@    test_digestauth \
-@ENABLE_DAUTH_TRUE@    test_digestauth_sha256 \
-@ENABLE_DAUTH_TRUE@    test_digestauth_with_arguments
+@ENABLE_DAUTH_TRUE@am__append_7 = \
+@ENABLE_DAUTH_TRUE@  test_digestauth \
+@ENABLE_DAUTH_TRUE@  test_digestauth_sha256 \
+@ENABLE_DAUTH_TRUE@  test_digestauth_with_arguments
 
-@HAVE_POSIX_THREADS_TRUE@am__append_5 = \
-@HAVE_POSIX_THREADS_TRUE@  perf_get_concurrent
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__append_8 = \
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@  perf_get_concurrent
 
 @HAVE_CURL_TRUE@check_PROGRAMS = test_get$(EXEEXT) \
+@HAVE_CURL_TRUE@	test_get_iovec$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_get_sendfile$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_delete$(EXEEXT) test_patch$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_put$(EXEEXT) test_add_conn$(EXEEXT) \
@@ -114,16 +129,21 @@ host_triplet = @host@
 @HAVE_CURL_TRUE@	test_process_arguments$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_parse_cookies$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_large_put$(EXEEXT) test_get11$(EXEEXT) \
+@HAVE_CURL_TRUE@	test_get_iovec11$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_get_sendfile11$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_patch11$(EXEEXT) test_put11$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_large_put11$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_large_put_inc11$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_get_chunked$(EXEEXT) \
 @HAVE_CURL_TRUE@	test_put_chunked$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_callback$(EXEEXT) perf_get$(EXEEXT) \
-@HAVE_CURL_TRUE@	$(am__EXEEXT_1) $(am__EXEEXT_2) \
-@HAVE_CURL_TRUE@	$(am__EXEEXT_8) $(am__EXEEXT_9)
-@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@am__append_6 = \
+@HAVE_CURL_TRUE@	test_callback$(EXEEXT) $(am__EXEEXT_1) \
+@HAVE_CURL_TRUE@	$(am__EXEEXT_2) $(am__EXEEXT_3) \
+@HAVE_CURL_TRUE@	$(am__EXEEXT_4) $(am__EXEEXT_13) \
+@HAVE_CURL_TRUE@	$(am__EXEEXT_14)
+@HAVE_CURL_TRUE@@HEAVY_TESTS_TRUE@am__append_9 = \
+@HAVE_CURL_TRUE@@HEAVY_TESTS_TRUE@  perf_get
+
+@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@am__append_10 = \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@  test_post \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@  test_postform \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@  test_post_loop \
@@ -131,11 +151,11 @@ host_triplet = @host@
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@  test_postform11 \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@  test_post_loop11
 
-@HAVE_CURL_BINARY_TRUE@@HAVE_CURL_TRUE@@HAVE_FORK_WAITPID_TRUE@am__append_7 = test_get_response_cleanup
-@HAVE_CURL_TRUE@@USE_POSIX_THREADS_TRUE@am__append_8 = \
+@HAVE_CURL_BINARY_TRUE@@HAVE_CURL_TRUE@@HAVE_FORK_WAITPID_TRUE@@HEAVY_TESTS_TRUE@am__append_11 = test_get_response_cleanup
+@HAVE_CURL_TRUE@@USE_POSIX_THREADS_TRUE@am__append_12 = \
 @HAVE_CURL_TRUE@@USE_POSIX_THREADS_TRUE@  $(THREAD_ONLY_TESTS)
 
-@HAVE_CURL_TRUE@@USE_W32_THREADS_TRUE@am__append_9 = \
+@HAVE_CURL_TRUE@@USE_W32_THREADS_TRUE@am__append_13 = \
 @HAVE_CURL_TRUE@@USE_W32_THREADS_TRUE@  $(THREAD_ONLY_TESTS)
 
 subdir = src/testcurl
@@ -149,13 +169,13 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ac_define_dir.m4 \
 	$(top_srcdir)/m4/ax_have_epoll.m4 \
 	$(top_srcdir)/m4/ax_pthread.m4 \
 	$(top_srcdir)/m4/ax_require_defined.m4 \
-	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/iconv.m4 \
-	$(top_srcdir)/m4/intlmacosx.m4 $(top_srcdir)/m4/lib-ld.m4 \
-	$(top_srcdir)/m4/lib-link.m4 $(top_srcdir)/m4/lib-prefix.m4 \
-	$(top_srcdir)/m4/libcurl.m4 $(top_srcdir)/m4/libgcrypt.m4 \
-	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
-	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
-	$(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/host-cpu-c-abi.m4 \
+	$(top_srcdir)/m4/iconv.m4 $(top_srcdir)/m4/intlmacosx.m4 \
+	$(top_srcdir)/m4/lib-ld.m4 $(top_srcdir)/m4/lib-link.m4 \
+	$(top_srcdir)/m4/lib-prefix.m4 $(top_srcdir)/m4/libcurl.m4 \
+	$(top_srcdir)/m4/libgcrypt.m4 $(top_srcdir)/m4/libtool.m4 \
+	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
+	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
 	$(top_srcdir)/m4/mhd_check_func.m4 \
 	$(top_srcdir)/m4/mhd_shutdown_socket_trigger.m4 \
 	$(top_srcdir)/m4/mhd_sys_extentions.m4 $(top_srcdir)/m4/nls.m4 \
@@ -170,32 +190,41 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/MHD_config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@am__EXEEXT_1 =  \
+am__EXEEXT_1 =
+@HAVE_CURL_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_2 = perf_get$(EXEEXT)
+@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@am__EXEEXT_3 =  \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_post$(EXEEXT) \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_postform$(EXEEXT) \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_post_loop$(EXEEXT) \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_post11$(EXEEXT) \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_postform11$(EXEEXT) \
 @HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_post_loop11$(EXEEXT)
-@HAVE_CURL_BINARY_TRUE@@HAVE_CURL_TRUE@@HAVE_FORK_WAITPID_TRUE@am__EXEEXT_2 = test_get_response_cleanup$(EXEEXT)
-@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_3 =  \
-@HAVE_POSIX_THREADS_TRUE@	perf_get_concurrent11$(EXEEXT) \
-@HAVE_POSIX_THREADS_TRUE@	test_quiesce$(EXEEXT) \
-@HAVE_POSIX_THREADS_TRUE@	test_concurrent_stop$(EXEEXT)
-@HAVE_CURL_BINARY_TRUE@@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_4 = test_quiesce_stream$(EXEEXT)
-@ENABLE_DAUTH_TRUE@am__EXEEXT_5 = test_digestauth$(EXEEXT) \
+@HAVE_CURL_BINARY_TRUE@@HAVE_CURL_TRUE@@HAVE_FORK_WAITPID_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_4 = test_get_response_cleanup$(EXEEXT)
+@HEAVY_TESTS_TRUE@am__EXEEXT_5 = test_add_conn_cleanup$(EXEEXT) \
+@HEAVY_TESTS_TRUE@	test_add_conn_cleanup_nolisten$(EXEEXT) \
+@HEAVY_TESTS_TRUE@	$(am__EXEEXT_1)
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_6 = perf_get_concurrent11$(EXEEXT) \
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@	$(am__EXEEXT_1)
+@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_7 = test_get_wait$(EXEEXT) \
+@HAVE_POSIX_THREADS_TRUE@	test_get_wait11$(EXEEXT) \
+@HAVE_POSIX_THREADS_TRUE@	test_quiesce$(EXEEXT) $(am__EXEEXT_1)
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_8 = test_concurrent_stop$(EXEEXT) \
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@	$(am__EXEEXT_1)
+@HAVE_CURL_BINARY_TRUE@@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_9 = test_quiesce_stream$(EXEEXT)
+@ENABLE_DAUTH_TRUE@am__EXEEXT_10 = test_digestauth$(EXEEXT) \
 @ENABLE_DAUTH_TRUE@	test_digestauth_sha256$(EXEEXT) \
 @ENABLE_DAUTH_TRUE@	test_digestauth_with_arguments$(EXEEXT)
-@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_6 = perf_get_concurrent$(EXEEXT)
-am__EXEEXT_7 = test_urlparse$(EXEEXT) test_long_header$(EXEEXT) \
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_11 = perf_get_concurrent$(EXEEXT)
+am__EXEEXT_12 = test_urlparse$(EXEEXT) test_long_header$(EXEEXT) \
 	test_long_header11$(EXEEXT) test_iplimit11$(EXEEXT) \
-	test_termination$(EXEEXT) test_add_conn_cleanup$(EXEEXT) \
-	test_add_conn_cleanup_nolisten$(EXEEXT) test_timeout$(EXEEXT) \
-	$(am__EXEEXT_3) $(am__EXEEXT_4) $(am__EXEEXT_5) \
-	$(am__EXEEXT_6)
-@HAVE_CURL_TRUE@@USE_POSIX_THREADS_TRUE@am__EXEEXT_8 =  \
-@HAVE_CURL_TRUE@@USE_POSIX_THREADS_TRUE@	$(am__EXEEXT_7)
-@HAVE_CURL_TRUE@@USE_W32_THREADS_TRUE@am__EXEEXT_9 = $(am__EXEEXT_7)
+	test_termination$(EXEEXT) $(am__EXEEXT_1) $(am__EXEEXT_5) \
+	test_timeout$(EXEEXT) $(am__EXEEXT_1) $(am__EXEEXT_6) \
+	$(am__EXEEXT_7) $(am__EXEEXT_8) $(am__EXEEXT_9) \
+	$(am__EXEEXT_10) $(am__EXEEXT_11)
+@HAVE_CURL_TRUE@@USE_POSIX_THREADS_TRUE@am__EXEEXT_13 =  \
+@HAVE_CURL_TRUE@@USE_POSIX_THREADS_TRUE@	$(am__EXEEXT_12)
+@HAVE_CURL_TRUE@@USE_W32_THREADS_TRUE@am__EXEEXT_14 =  \
+@HAVE_CURL_TRUE@@USE_W32_THREADS_TRUE@	$(am__EXEEXT_12)
 LIBRARIES = $(noinst_LIBRARIES)
 ARFLAGS = cru
 AM_V_AR = $(am__v_AR_@AM_V@)
@@ -315,6 +344,14 @@ am_test_get_chunked_OBJECTS = test_get_chunked.$(OBJEXT)
 test_get_chunked_OBJECTS = $(am_test_get_chunked_OBJECTS)
 test_get_chunked_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_get_iovec_OBJECTS = test_get_iovec.$(OBJEXT)
+test_get_iovec_OBJECTS = $(am_test_get_iovec_OBJECTS)
+test_get_iovec_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_get_iovec11_OBJECTS = test_get_iovec.$(OBJEXT)
+test_get_iovec11_OBJECTS = $(am_test_get_iovec11_OBJECTS)
+test_get_iovec11_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_get_response_cleanup_OBJECTS =  \
 	test_get_response_cleanup.$(OBJEXT)
 test_get_response_cleanup_OBJECTS =  \
@@ -329,6 +366,23 @@ am_test_get_sendfile11_OBJECTS = test_get_sendfile.$(OBJEXT)
 test_get_sendfile11_OBJECTS = $(am_test_get_sendfile11_OBJECTS)
 test_get_sendfile11_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_get_wait_OBJECTS = test_get_wait-test_get_wait.$(OBJEXT)
+test_get_wait_OBJECTS = $(am_test_get_wait_OBJECTS)
+test_get_wait_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la \
+	$(am__DEPENDENCIES_1)
+test_get_wait_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(test_get_wait_CFLAGS) \
+	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+am_test_get_wait11_OBJECTS = test_get_wait11-test_get_wait.$(OBJEXT)
+test_get_wait11_OBJECTS = $(am_test_get_wait11_OBJECTS)
+test_get_wait11_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la \
+	$(am__DEPENDENCIES_1)
+test_get_wait11_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(test_get_wait11_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
+	-o $@
 am_test_iplimit11_OBJECTS = test_iplimit.$(OBJEXT)
 test_iplimit11_OBJECTS = $(am_test_iplimit11_OBJECTS)
 test_iplimit11_DEPENDENCIES =  \
@@ -468,9 +522,13 @@ am__depfiles_remade = ./$(DEPDIR)/curl_version_check.Po \
 	./$(DEPDIR)/test_digestauth_sha256.Po \
 	./$(DEPDIR)/test_digestauth_with_arguments.Po \
 	./$(DEPDIR)/test_get.Po ./$(DEPDIR)/test_get_chunked.Po \
+	./$(DEPDIR)/test_get_iovec.Po \
 	./$(DEPDIR)/test_get_response_cleanup.Po \
-	./$(DEPDIR)/test_get_sendfile.Po ./$(DEPDIR)/test_iplimit.Po \
-	./$(DEPDIR)/test_large_put.Po ./$(DEPDIR)/test_long_header.Po \
+	./$(DEPDIR)/test_get_sendfile.Po \
+	./$(DEPDIR)/test_get_wait-test_get_wait.Po \
+	./$(DEPDIR)/test_get_wait11-test_get_wait.Po \
+	./$(DEPDIR)/test_iplimit.Po ./$(DEPDIR)/test_large_put.Po \
+	./$(DEPDIR)/test_long_header.Po \
 	./$(DEPDIR)/test_parse_cookies.Po ./$(DEPDIR)/test_patch.Po \
 	./$(DEPDIR)/test_post.Po ./$(DEPDIR)/test_post_loop.Po \
 	./$(DEPDIR)/test_postform.Po \
@@ -510,8 +568,10 @@ SOURCES = $(libcurl_version_check_a_SOURCES) $(perf_get_SOURCES) \
 	$(test_digestauth_SOURCES) $(test_digestauth_sha256_SOURCES) \
 	$(test_digestauth_with_arguments_SOURCES) $(test_get_SOURCES) \
 	$(test_get11_SOURCES) $(test_get_chunked_SOURCES) \
+	$(test_get_iovec_SOURCES) $(test_get_iovec11_SOURCES) \
 	$(test_get_response_cleanup_SOURCES) \
 	$(test_get_sendfile_SOURCES) $(test_get_sendfile11_SOURCES) \
+	$(test_get_wait_SOURCES) $(test_get_wait11_SOURCES) \
 	$(test_iplimit11_SOURCES) $(test_large_put_SOURCES) \
 	$(test_large_put11_SOURCES) $(test_large_put_inc11_SOURCES) \
 	$(test_long_header_SOURCES) $(test_long_header11_SOURCES) \
@@ -535,8 +595,10 @@ DIST_SOURCES = $(libcurl_version_check_a_SOURCES) $(perf_get_SOURCES) \
 	$(test_digestauth_SOURCES) $(test_digestauth_sha256_SOURCES) \
 	$(test_digestauth_with_arguments_SOURCES) $(test_get_SOURCES) \
 	$(test_get11_SOURCES) $(test_get_chunked_SOURCES) \
+	$(test_get_iovec_SOURCES) $(test_get_iovec11_SOURCES) \
 	$(test_get_response_cleanup_SOURCES) \
 	$(test_get_sendfile_SOURCES) $(test_get_sendfile11_SOURCES) \
+	$(test_get_wait_SOURCES) $(test_get_wait11_SOURCES) \
 	$(test_iplimit11_SOURCES) $(test_large_put_SOURCES) \
 	$(test_large_put11_SOURCES) $(test_large_put_inc11_SOURCES) \
 	$(test_long_header_SOURCES) $(test_long_header11_SOURCES) \
@@ -855,6 +917,8 @@ FGREP = @FGREP@
 GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
 GMSGFMT = @GMSGFMT@
 GMSGFMT_015 = @GMSGFMT_015@
+GNULIB_MDA_LFIND = @GNULIB_MDA_LFIND@
+GNULIB_MDA_LSEARCH = @GNULIB_MDA_LSEARCH@
 GNULIB_TSEARCH = @GNULIB_TSEARCH@
 GNUTLS_CFLAGS = @GNUTLS_CFLAGS@
 GNUTLS_CPPFLAGS = @GNUTLS_CPPFLAGS@
@@ -864,6 +928,7 @@ GREP = @GREP@
 HAVE_CURL_BINARY = @HAVE_CURL_BINARY@
 HAVE_MAKEINFO_BINARY = @HAVE_MAKEINFO_BINARY@
 HAVE_TSEARCH = @HAVE_TSEARCH@
+HAVE_TWALK = @HAVE_TWALK@
 HIDDEN_VISIBILITY_CFLAGS = @HIDDEN_VISIBILITY_CFLAGS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
@@ -909,8 +974,8 @@ MHD_TLS_LIB_LDFLAGS = @MHD_TLS_LIB_LDFLAGS@
 MHD_W32_DLL_SUFF = @MHD_W32_DLL_SUFF@
 MKDIR_P = @MKDIR_P@
 MSGFMT = @MSGFMT@
-MSGFMT_015 = @MSGFMT_015@
 MSGMERGE = @MSGMERGE@
+MSGMERGE_FOR_MSGFMT_OPTION = @MSGMERGE_FOR_MSGFMT_OPTION@
 MS_LIB_TOOL = @MS_LIB_TOOL@
 NM = @NM@
 NMEDIT = @NMEDIT@
@@ -1009,6 +1074,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 
 # This Makefile.am is in the public domain
+EMPTY_ITEM = 
 SUBDIRS = . $(am__append_1)
 @USE_COVERAGE_TRUE@AM_CFLAGS = -fprofile-arcs -ftest-coverage
 AM_CPPFLAGS = \
@@ -1019,9 +1085,10 @@ AM_CPPFLAGS = \
 $(LIBCURL_CPPFLAGS)
 
 THREAD_ONLY_TESTS = test_urlparse test_long_header test_long_header11 \
-	test_iplimit11 test_termination test_add_conn_cleanup \
-	test_add_conn_cleanup_nolisten test_timeout $(am__append_2) \
-	$(am__append_3) $(am__append_4) $(am__append_5)
+	test_iplimit11 test_termination $(EMPTY_ITEM) $(am__append_2) \
+	test_timeout $(EMPTY_ITEM) $(am__append_3) $(am__append_4) \
+	$(am__append_5) $(am__append_6) $(am__append_7) \
+	$(am__append_8)
 @HAVE_CURL_TRUE@TESTS = $(check_PROGRAMS)
 @HAVE_CURL_TRUE@noinst_LIBRARIES = libcurl_version_check.a
 libcurl_version_check_a_SOURCES = \
@@ -1122,12 +1189,41 @@ test_digestauth_with_arguments_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBGCRYPT_LIBS@ @LIBCURL@
 
+test_get_iovec_SOURCES = \
+  test_get_iovec.c mhd_has_in_name.h
+
+test_get_iovec_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  @LIBCURL@
+
 test_get_sendfile_SOURCES = \
   test_get_sendfile.c mhd_has_in_name.h
 
 test_get_sendfile_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
+
+test_get_wait_SOURCES = \
+  test_get_wait.c \
+  mhd_has_in_name.h
+
+test_get_wait_CFLAGS = \
+  $(PTHREAD_CFLAGS) $(AM_CFLAGS)
+
+test_get_wait_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  $(PTHREAD_LIBS) @LIBCURL@
+
+test_get_wait11_SOURCES = \
+  test_get_wait.c \
+  mhd_has_in_name.h
+
+test_get_wait11_CFLAGS = \
+  $(PTHREAD_CFLAGS) $(AM_CFLAGS)
+
+test_get_wait11_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  $(PTHREAD_LIBS) @LIBCURL@
 
 test_urlparse_SOURCES = \
   test_urlparse.c mhd_has_in_name.h
@@ -1270,6 +1366,13 @@ test_get11_SOURCES = \
   test_get.c
 
 test_get11_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  @LIBCURL@
+
+test_get_iovec11_SOURCES = \
+  test_get_iovec.c mhd_has_in_name.h
+
+test_get_iovec11_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 
@@ -1479,6 +1582,14 @@ test_get_chunked$(EXEEXT): $(test_get_chunked_OBJECTS) $(test_get_chunked_DEPEND
 	@rm -f test_get_chunked$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_get_chunked_OBJECTS) $(test_get_chunked_LDADD) $(LIBS)
 
+test_get_iovec$(EXEEXT): $(test_get_iovec_OBJECTS) $(test_get_iovec_DEPENDENCIES) $(EXTRA_test_get_iovec_DEPENDENCIES) 
+	@rm -f test_get_iovec$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_get_iovec_OBJECTS) $(test_get_iovec_LDADD) $(LIBS)
+
+test_get_iovec11$(EXEEXT): $(test_get_iovec11_OBJECTS) $(test_get_iovec11_DEPENDENCIES) $(EXTRA_test_get_iovec11_DEPENDENCIES) 
+	@rm -f test_get_iovec11$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_get_iovec11_OBJECTS) $(test_get_iovec11_LDADD) $(LIBS)
+
 test_get_response_cleanup$(EXEEXT): $(test_get_response_cleanup_OBJECTS) $(test_get_response_cleanup_DEPENDENCIES) $(EXTRA_test_get_response_cleanup_DEPENDENCIES) 
 	@rm -f test_get_response_cleanup$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_get_response_cleanup_OBJECTS) $(test_get_response_cleanup_LDADD) $(LIBS)
@@ -1490,6 +1601,14 @@ test_get_sendfile$(EXEEXT): $(test_get_sendfile_OBJECTS) $(test_get_sendfile_DEP
 test_get_sendfile11$(EXEEXT): $(test_get_sendfile11_OBJECTS) $(test_get_sendfile11_DEPENDENCIES) $(EXTRA_test_get_sendfile11_DEPENDENCIES) 
 	@rm -f test_get_sendfile11$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_get_sendfile11_OBJECTS) $(test_get_sendfile11_LDADD) $(LIBS)
+
+test_get_wait$(EXEEXT): $(test_get_wait_OBJECTS) $(test_get_wait_DEPENDENCIES) $(EXTRA_test_get_wait_DEPENDENCIES) 
+	@rm -f test_get_wait$(EXEEXT)
+	$(AM_V_CCLD)$(test_get_wait_LINK) $(test_get_wait_OBJECTS) $(test_get_wait_LDADD) $(LIBS)
+
+test_get_wait11$(EXEEXT): $(test_get_wait11_OBJECTS) $(test_get_wait11_DEPENDENCIES) $(EXTRA_test_get_wait11_DEPENDENCIES) 
+	@rm -f test_get_wait11$(EXEEXT)
+	$(AM_V_CCLD)$(test_get_wait11_LINK) $(test_get_wait11_OBJECTS) $(test_get_wait11_LDADD) $(LIBS)
 
 test_iplimit11$(EXEEXT): $(test_iplimit11_OBJECTS) $(test_iplimit11_DEPENDENCIES) $(EXTRA_test_iplimit11_DEPENDENCIES) 
 	@rm -f test_iplimit11$(EXEEXT)
@@ -1613,8 +1732,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_digestauth_with_arguments.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_get.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_get_chunked.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_get_iovec.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_get_response_cleanup.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_get_sendfile.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_get_wait-test_get_wait.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_get_wait11-test_get_wait.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_iplimit.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_large_put.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_long_header.Po@am__quote@ # am--include-marker
@@ -1760,6 +1882,34 @@ test_concurrent_stop-test_concurrent_stop.obj: test_concurrent_stop.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_concurrent_stop.c' object='test_concurrent_stop-test_concurrent_stop.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_concurrent_stop_CFLAGS) $(CFLAGS) -c -o test_concurrent_stop-test_concurrent_stop.obj `if test -f 'test_concurrent_stop.c'; then $(CYGPATH_W) 'test_concurrent_stop.c'; else $(CYGPATH_W) '$(srcdir)/test_concurrent_stop.c'; fi`
+
+test_get_wait-test_get_wait.o: test_get_wait.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_get_wait_CFLAGS) $(CFLAGS) -MT test_get_wait-test_get_wait.o -MD -MP -MF $(DEPDIR)/test_get_wait-test_get_wait.Tpo -c -o test_get_wait-test_get_wait.o `test -f 'test_get_wait.c' || echo '$(srcdir)/'`test_get_wait.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_get_wait-test_get_wait.Tpo $(DEPDIR)/test_get_wait-test_get_wait.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_get_wait.c' object='test_get_wait-test_get_wait.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_get_wait_CFLAGS) $(CFLAGS) -c -o test_get_wait-test_get_wait.o `test -f 'test_get_wait.c' || echo '$(srcdir)/'`test_get_wait.c
+
+test_get_wait-test_get_wait.obj: test_get_wait.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_get_wait_CFLAGS) $(CFLAGS) -MT test_get_wait-test_get_wait.obj -MD -MP -MF $(DEPDIR)/test_get_wait-test_get_wait.Tpo -c -o test_get_wait-test_get_wait.obj `if test -f 'test_get_wait.c'; then $(CYGPATH_W) 'test_get_wait.c'; else $(CYGPATH_W) '$(srcdir)/test_get_wait.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_get_wait-test_get_wait.Tpo $(DEPDIR)/test_get_wait-test_get_wait.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_get_wait.c' object='test_get_wait-test_get_wait.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_get_wait_CFLAGS) $(CFLAGS) -c -o test_get_wait-test_get_wait.obj `if test -f 'test_get_wait.c'; then $(CYGPATH_W) 'test_get_wait.c'; else $(CYGPATH_W) '$(srcdir)/test_get_wait.c'; fi`
+
+test_get_wait11-test_get_wait.o: test_get_wait.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_get_wait11_CFLAGS) $(CFLAGS) -MT test_get_wait11-test_get_wait.o -MD -MP -MF $(DEPDIR)/test_get_wait11-test_get_wait.Tpo -c -o test_get_wait11-test_get_wait.o `test -f 'test_get_wait.c' || echo '$(srcdir)/'`test_get_wait.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_get_wait11-test_get_wait.Tpo $(DEPDIR)/test_get_wait11-test_get_wait.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_get_wait.c' object='test_get_wait11-test_get_wait.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_get_wait11_CFLAGS) $(CFLAGS) -c -o test_get_wait11-test_get_wait.o `test -f 'test_get_wait.c' || echo '$(srcdir)/'`test_get_wait.c
+
+test_get_wait11-test_get_wait.obj: test_get_wait.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_get_wait11_CFLAGS) $(CFLAGS) -MT test_get_wait11-test_get_wait.obj -MD -MP -MF $(DEPDIR)/test_get_wait11-test_get_wait.Tpo -c -o test_get_wait11-test_get_wait.obj `if test -f 'test_get_wait.c'; then $(CYGPATH_W) 'test_get_wait.c'; else $(CYGPATH_W) '$(srcdir)/test_get_wait.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_get_wait11-test_get_wait.Tpo $(DEPDIR)/test_get_wait11-test_get_wait.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_get_wait.c' object='test_get_wait11-test_get_wait.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_get_wait11_CFLAGS) $(CFLAGS) -c -o test_get_wait11-test_get_wait.obj `if test -f 'test_get_wait.c'; then $(CYGPATH_W) 'test_get_wait.c'; else $(CYGPATH_W) '$(srcdir)/test_get_wait.c'; fi`
 
 test_quiesce-test_quiesce.o: test_quiesce.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_quiesce_CFLAGS) $(CFLAGS) -MT test_quiesce-test_quiesce.o -MD -MP -MF $(DEPDIR)/test_quiesce-test_quiesce.Tpo -c -o test_quiesce-test_quiesce.o `test -f 'test_quiesce.c' || echo '$(srcdir)/'`test_quiesce.c
@@ -2042,6 +2192,13 @@ test_get.log: test_get$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_get_iovec.log: test_get_iovec$(EXEEXT)
+	@p='test_get_iovec$(EXEEXT)'; \
+	b='test_get_iovec'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test_get_sendfile.log: test_get_sendfile$(EXEEXT)
 	@p='test_get_sendfile$(EXEEXT)'; \
 	b='test_get_sendfile'; \
@@ -2115,6 +2272,13 @@ test_large_put.log: test_large_put$(EXEEXT)
 test_get11.log: test_get11$(EXEEXT)
 	@p='test_get11$(EXEEXT)'; \
 	b='test_get11'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_get_iovec11.log: test_get_iovec11$(EXEEXT)
+	@p='test_get_iovec11$(EXEEXT)'; \
+	b='test_get_iovec11'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -2290,6 +2454,20 @@ test_timeout.log: test_timeout$(EXEEXT)
 perf_get_concurrent11.log: perf_get_concurrent11$(EXEEXT)
 	@p='perf_get_concurrent11$(EXEEXT)'; \
 	b='perf_get_concurrent11'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_get_wait.log: test_get_wait$(EXEEXT)
+	@p='test_get_wait$(EXEEXT)'; \
+	b='test_get_wait'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_get_wait11.log: test_get_wait11$(EXEEXT)
+	@p='test_get_wait11$(EXEEXT)'; \
+	b='test_get_wait11'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -2478,8 +2656,11 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/test_digestauth_with_arguments.Po
 	-rm -f ./$(DEPDIR)/test_get.Po
 	-rm -f ./$(DEPDIR)/test_get_chunked.Po
+	-rm -f ./$(DEPDIR)/test_get_iovec.Po
 	-rm -f ./$(DEPDIR)/test_get_response_cleanup.Po
 	-rm -f ./$(DEPDIR)/test_get_sendfile.Po
+	-rm -f ./$(DEPDIR)/test_get_wait-test_get_wait.Po
+	-rm -f ./$(DEPDIR)/test_get_wait11-test_get_wait.Po
 	-rm -f ./$(DEPDIR)/test_iplimit.Po
 	-rm -f ./$(DEPDIR)/test_large_put.Po
 	-rm -f ./$(DEPDIR)/test_long_header.Po
@@ -2558,8 +2739,11 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/test_digestauth_with_arguments.Po
 	-rm -f ./$(DEPDIR)/test_get.Po
 	-rm -f ./$(DEPDIR)/test_get_chunked.Po
+	-rm -f ./$(DEPDIR)/test_get_iovec.Po
 	-rm -f ./$(DEPDIR)/test_get_response_cleanup.Po
 	-rm -f ./$(DEPDIR)/test_get_sendfile.Po
+	-rm -f ./$(DEPDIR)/test_get_wait-test_get_wait.Po
+	-rm -f ./$(DEPDIR)/test_get_wait11-test_get_wait.Po
 	-rm -f ./$(DEPDIR)/test_iplimit.Po
 	-rm -f ./$(DEPDIR)/test_large_put.Po
 	-rm -f ./$(DEPDIR)/test_long_header.Po

@@ -616,7 +616,7 @@ MHD_daemon_run_from_select (struct MHD_Daemon *daemon,
 {
   if ( (MHD_TM_EXTERNAL_EVENT_LOOP != daemon->threading_mode) ||
        (MHD_ELS_POLL == daemon->event_loop_syscall) )
-    return MHD_SC_CONFIGURATION_MISSMATCH_FOR_RUN_SELECT;
+    return MHD_SC_CONFIGURATION_MISMATCH_FOR_RUN_SELECT;
   if (MHD_ELS_EPOLL == daemon->event_loop_syscall)
   {
 #ifdef EPOLL_SUPPORT

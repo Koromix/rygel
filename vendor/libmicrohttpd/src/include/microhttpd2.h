@@ -209,12 +209,12 @@ typedef SOCKET MHD_socket;
 #define _MHD_INSTRMACRO(a) #a
 #define _MHD_STRMACRO(a) _MHD_INSTRMACRO (a)
 /* deprecation message */
-#define _MHD_DEPR_MACRO(msg) __pragma (message (__FILE__ "(" _MHD_STRMACRO ( \
-                                                  __LINE__) "): warning: " msg))
+#define _MHD_DEPR_MACRO(msg) __pragma(message (__FILE__ "(" _MHD_STRMACRO ( \
+  __LINE__) "): warning: " msg))
 #define _MHD_DEPR_IN_MACRO(msg) _MHD_DEPR_MACRO (msg)
 #elif defined(__clang__) || defined (__GNUC_PATCHLEVEL__)
 /* clang or GCC since 3.0 */
-#define _MHD_GCC_PRAG(x) _Pragma (#x)
+#define _MHD_GCC_PRAG(x) _Pragma(#x)
 #if (defined(__clang__) && (__clang_major__ + 0 >= 5 ||     \
                             (! defined(__apple_build_version__) && \
   (__clang_major__ + 0  > 3 || (__clang_major__ + 0 == 3 && __clang_minor__ >= \
@@ -280,7 +280,8 @@ typedef SOCKET MHD_socket;
  * Macro to indicate that certain parameters must be
  * non-null.  Todo: port to non-gcc platforms.
  */
-#if defined(__CYGWIN__) || defined(_WIN32) || defined(MHD_W32LIB)
+#if defined(__CYGWIN__) || defined(_WIN32) || defined(MHD_W32LIB) || \
+  defined(__clang__) || ! defined(__GNUC__)
 #define MHD_NONNULL(...) /* empty */
 #else
 #define MHD_NONNULL(...) __THROW __nonnull ((__VA_ARGS__))

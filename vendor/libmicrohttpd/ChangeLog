@@ -1,3 +1,116 @@
+Sun 25 Apr 2021 14:00:00 MSK
+    Releasing GNU libmicrohttpd 0.9.73. -EG
+
+Sat 24 Apr 2021 23:00:00 MSK
+    Fixed build with Clang and Visual Studio.
+    MSVS project files updated.
+    Enabled bind port autodetection with MSVS builds. -EG
+
+Fri 23 Apr 2021 14:27:00 MSK
+    Fixed build without TLS lib.
+    Fixed build without system poll() function.
+    Fixed compiler warnings on 32-bit platforms.
+    Fixed various compiler warnings. -EG
+
+Thu 22 Apr 2021 12:32:00 MSK
+    Fixed some typos.
+    Force disable TCP_CORK, TCP_NOPUSH, and TCP_NODELAY before switching
+    connection to "upgraded" mode.
+    Improved portability of the test-suite for upgraded connections. -EG
+
+Tue 20 Apr 2021 17:11:00 MSK
+    Disabled NLS by default in configure. -EG
+
+Mon 19 Apr 2021 18:58:00 MSK
+    Fixed testzzuf/test_put_chanked to correctly use MHD.
+    Added internal error code for TLS errors.
+    Added all missing messages to the .pot file.
+    Detect more types of errors for receiving data and report
+    error description in the MHD log.
+    Added support for ALPN on TLS connections if supported by
+    used TLS library. -EG
+
+Sun 18 Apr 2021 20:47:00 MSK
+    Removed dead code.
+    Limited iov-backed responses size to SSIZE_MAX as limited by
+    system calls.
+    Report error message in MHD log for send errors. -EG
+
+Sat 17 Apr 2021 18:50:00 MSK
+    Unified upgrade test behavior for all platforms.
+    Some code simplification and unification.
+    Compiler warning (false positive) fixed. -EG
+
+Fri 16 Apr 2021 17:58:00 MSK
+    Used run-time value if IOV_MAX if available.
+    Fixed portability of error handling for sending functions.
+    Detect pipes/unix sockets on fly and do not use TCP/IP specific
+    functions with them.
+    Fixed support of UNIX sockets on non-Linux kernels. -EG
+
+Fri 16 Apr 2021 10:23:39 AM CEST
+    Detect if a socket is a UNIX domain socket and do not try to play
+    with TCP corking options in this case (avoids useless failed
+    syscalls). -CG
+
+Thu 15 Apr 2021 18:56:00 MSK
+    Fixed configure '--enable-sanitizer' parameter.
+    Stopped pushing of partial responses when limited by system maximum size
+    for sendmsg(). -EG
+
+Web 14 Apr 2021 22:20:00 MSK
+    Fixed: use sendmsg() in POSIX-compatible way, do not try to send more
+    than IOV_MAX elements per single call. -EG
+
+Sun 11 Apr 2021 15:44:00 MSK
+    Updated test TLS certificates to not expired modern versions, restored
+    HTTPS examples compatibility with modern browsers.
+    TCP_NODELAY is not pre-enabled for HTTPS connection as it actually
+    does not speed-up TLS handshakes on moders OSes. -EG
+
+Thu 01 Apr 2021 21:29:46 MSK
+    Fixed MD5 digest authorization broken when compiled without variable
+    length arrays support (notably with MSVC).
+    Fixed and muted compiler warning.
+    Deeper test with zzuf if configured with --enable-heavy-tests.
+    Removed run-check of assert() in configure to avoid core dumps. -EG
+
+Thu 01 Apr 2021 17:46:00 MSK
+    Added new function MHD_run_wait() useful for single-threaded applications
+    without other network activity.
+    Added tests for the new function. -EG
+
+Wed 17 Mar 2021 20:53:33 MSK
+    Re-factored startup log parameters processing. Warn user if wrong logger
+    could be used potentially.
+    Added headers doxy with information about minimal MHD version when
+    particular symbols were introduced.
+    Added new daemon option to indicate SIGPIPE handling by application for
+    daemons being run in application thread. -EG
+
+Wed 24 Feb 2021 19:23:00 MSK
+    SIGPIPE-related macro minor refactoring for readability.
+    Added new response iov function (and related framework), based on the patch
+    provided by Lawrence Sebald and Damon N. Earp from NASA. -EG
+
+Thu 04 Feb 2021 06:41:34 PM CET
+    Fix PostProcessor to always properly stop iteration when application callback
+    tells it to do so. -CG
+
+Sun 24 Jan 2021 21:30:00 MSK
+    Added '--enable-heavy-tests' configure parameter.
+    Minor configure.ac and Makefiles fixes. -EG
+
+Tue 19 Jan 2021 17:59:00 MSK
+    Fixed compatibility with autoconf. 2.70
+    Updated M4 macros. -EG
+
+Wed 06 Jan 2021 08:39:58 PM CET
+    Return timeout of zero also for connections awaiting cleanup. -CG
+
+Tue 29 Dec 2020 15:39:00 MSK
+    Improved speed of TLS handshake by pre-enabling TCP_NODELAY. -EG
+
 Mon 28 Dec 2020 21:36:00 MSK
     Releasing libmicrohttpd 0.9.72. -EG
 
@@ -26,7 +139,7 @@ Sun 01 Nov 2020 17:17:00 MSK
     Minor improvements of error reporting in MHD daemon.
     Fixed FTBFS with GnuTLS versions before 3.1.9
     Fixed test_add_conn for multi-CPU machines.
-    Fixed analyzer warnings. 
+    Fixed analyzer warnings.
     Fixed use-after-free and resources leaks for upgraded connections
     in TLS mode with thread-per-connection. -EG
 
@@ -1315,7 +1428,7 @@ Sun Oct 25 23:05:32 CET 2015
 
 Sun Oct 25 15:29:23 CET 2015
 	Fixing transient resource leak affecting long-lived
-	connections with many keep-alives and HTTP request
+	connections with a lot of keep-alive and HTTP request
 	pipelining under certain circumstances (which reduced
 	the receive window).
 	Fixed assertion failure triggered by a race in
@@ -1390,7 +1503,7 @@ Sat Jun 27 22:16:27 CEST 2015
 Fri Jun 26 23:17:20 CEST 2015
 	Fix (automatic) handling of HEAD requests with
 	MHD_create_response_from_callback() and HTTP/1.1
-	connection keep-alives. Thanks to Cristian Klein
+	connection keep-alive. Thanks to Cristian Klein
 	for reporting. -CG
 
 Tue Jun 09 18:30:17 CEST 2015
@@ -2632,7 +2745,7 @@ Thu Jan 28 20:35:48 CET 2010
 	aligned (fixes bus errors on Sparc). -CG
 
 Thu Dec 17 20:26:52 CET 2009
-	poll.h is not stricly required anymore. -ND
+	poll.h is not strictly required anymore. -ND
 
 Fri Dec  4 13:17:50 CET 2009
 	Adding MHD_OPTION_ARRAY. -CG

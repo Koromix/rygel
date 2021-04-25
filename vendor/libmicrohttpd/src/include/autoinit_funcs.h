@@ -64,12 +64,12 @@
 #define AUTOINIT_FUNCS_INCLUDED 1
 
 /**
-* Current version of the header.
+* Current version of the header in packed BCD form.
 * 0x01093001 = 1.9.30-1.
 */
-#define AUTOINIT_FUNCS_VERSION 0x01000100
+#define AUTOINIT_FUNCS_VERSION 0x01000200
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
 /* if possible - check for supported attribute */
 #ifdef __has_attribute
 #if ! __has_attribute (constructor) || ! __has_attribute (destructor)
@@ -80,7 +80,8 @@
 
 /* "_attribute__ ((constructor))" is supported by GCC, clang and
    Sun/Oracle compiler starting from version 12.1. */
-#if (defined(__GNUC__) && ! defined(_GNUC_ATTR_CONSTR_NOT_SUPPORTED)) || \
+#if ((defined(__GNUC__) || defined(__clang__)) && \
+  ! defined(_GNUC_ATTR_CONSTR_NOT_SUPPORTED)) || \
   (defined(__SUNPRO_C) && __SUNPRO_C + 0 >= 0x5100)
 
 #define GNUC_SET_INIT_AND_DEINIT(FI,FD) \

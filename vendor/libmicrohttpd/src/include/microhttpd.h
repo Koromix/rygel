@@ -87,12 +87,7 @@ extern "C"
 #endif
 #endif
 
-/* While we generally would like users to use a configure-driven
-   build process which detects which headers are present and
-   hence works on any platform, we use "standard" includes here
-   to build out-of-the-box for beginning users on common systems.
-
-   If generic headers don't work on your platform, include headers
+/* If generic headers don't work on your platform, include headers
    which define 'va_list', 'size_t', 'ssize_t', 'intptr_t',
    'uint16_t', 'uint32_t', 'uint64_t', 'off_t', 'struct sockaddr',
    'socklen_t', 'fd_set' and "#define MHD_PLATFORM_H" before
@@ -129,11 +124,13 @@ typedef intptr_t ssize_t;
 #endif
 
 /**
- * Current version of the library.
- * @note While it is a hexadecimal number, it is parsed as decimal number.
+ * Current version of the library in packed BCD form.
+ * @note Version number components are coded as Simple Binary-Coded Decimal
+ * (also called Natural BCD or BCD 8421). While they are hexadecimal numbers,
+ * they are parsed as decimal numbers.
  * Example: 0x01093001 = 1.9.30-1.
  */
-#define MHD_VERSION 0x00097200
+#define MHD_VERSION 0x00097300
 
 /**
  * Operational results from MHD calls.
@@ -222,12 +219,12 @@ typedef SOCKET MHD_socket;
 #define _MHD_INSTRMACRO(a) #a
 #define _MHD_STRMACRO(a) _MHD_INSTRMACRO (a)
 /* deprecation message */
-#define _MHD_DEPR_MACRO(msg) __pragma (message (__FILE__ "(" _MHD_STRMACRO ( \
-                                                  __LINE__) "): warning: " msg))
+#define _MHD_DEPR_MACRO(msg) __pragma(message (__FILE__ "(" _MHD_STRMACRO ( \
+  __LINE__) "): warning: " msg))
 #define _MHD_DEPR_IN_MACRO(msg) _MHD_DEPR_MACRO (msg)
 #elif defined(__clang__) || defined (__GNUC_PATCHLEVEL__)
 /* clang or GCC since 3.0 */
-#define _MHD_GCC_PRAG(x) _Pragma (#x)
+#define _MHD_GCC_PRAG(x) _Pragma(#x)
 #if (defined(__clang__) && (__clang_major__ + 0 >= 5 ||     \
                             (! defined(__apple_build_version__) && \
   (__clang_major__ + 0  > 3 || (__clang_major__ + 0 == 3 && __clang_minor__ >= \
@@ -1518,6 +1515,8 @@ enum MHD_OPTION
    * a function of type #MHD_LogCallback and the second a pointer
    * `void *` which will be passed as the first argument to the log
    * callback.
+   * Should be specified as the first option, otherwise some messages
+   * may be printed by standard MHD logger during daemon startup.
    *
    * Note that MHD will not generate any log messages
    * if it was compiled without the "--enable-messages"
@@ -1728,7 +1727,27 @@ enum MHD_OPTION
    * This argument must be followed by an "unsigned int", corresponding
    * to an `enum MHD_DisableSanityCheck`.
    */
-  MHD_OPTION_SERVER_INSANITY = 32
+  MHD_OPTION_SERVER_INSANITY = 32,
+
+  /**
+   * If followed by value '1' informs MHD that SIGPIPE is suppressed or
+   * handled by application. Allows MHD to use network functions that could
+   * generate SIGPIPE, like `sendfile()`.
+   * Valid only for daemons without #MHD_USE_INTERNAL_POLLING_THREAD as
+   * MHD automatically suppresses SIGPIPE for threads started by MHD.
+   * This option should be followed by an `int` argument.
+   * @note Available since #MHD_VERSION 0x00097205
+   */
+  MHD_OPTION_SIGPIPE_HANDLED_BY_APP = 33,
+
+  /**
+   * If followed by 'int' with value '1' disables usage of ALPN for TLS
+   * connections even if supported by TLS library.
+   * Valid only for daemons with #MHD_USE_TLS.
+   * This option should be followed by an `int` argument.
+   * @note Available since #MHD_VERSION 0x00097207
+   */
+  MHD_OPTION_TLS_NO_ALPN = 34
 };
 
 
@@ -1968,6 +1987,24 @@ union MHD_ConnectionInfo
    * the "socket_context" of the #MHD_NotifyConnectionCallback.
    */
   void *socket_context;
+};
+
+
+/**
+ * I/O vector type. Provided for use with #MHD_create_response_from_iovec().
+ * @note Available since #MHD_VERSION 0x00097204
+ */
+struct MHD_IoVec
+{
+  /**
+   * The pointer to the memory region for I/O.
+   */
+  const void *iov_base;
+
+  /**
+   * The size in bytes of the memory region for I/O.
+   */
+  size_t iov_len;
 };
 
 
@@ -2666,6 +2703,39 @@ MHD_run (struct MHD_Daemon *daemon);
 
 
 /**
+ * Run websever operation with possible blocking.
+ * This function do the following: waits for any network event not more than
+ * specified number of milliseconds, processes all incoming and outgoing
+ * data, processes new connections, processes any timed-out connection, and
+ * do other things required to run webserver.
+ * Once all connections are processed, function returns.
+ * This function is useful for quick and simple webserver implementation if
+ * application needs to run a single thread only and does not have any other
+ * network activity.
+ * @param daemon the daemon to run
+ * @param millisec the maximum time in milliseconds to wait for network and
+ *                 other events. Note: there is no guarantee that function
+ *                 blocks for specified amount of time. The real processing
+ *                 time can be shorter (if some data comes earlier) or
+ *                 longer (if data processing requires more time, especially
+ *                 in the user callbacks).
+ *                 If set to '0' then function does not block and processes
+ *                 only already available data (if any).
+ *                 If set to '-1' then function waits for events
+ *                 indefinitely (blocks until next network activity).
+ * @return #MHD_YES on success, #MHD_NO if this
+ *         daemon was not started with the right
+ *         options for this call or some serious
+ *         unrecoverable error occurs.
+ * @note Available since #MHD_VERSION 0x00097206
+ * @ingroup event
+ */
+_MHD_EXTERN enum MHD_Result
+MHD_run_wait (struct MHD_Daemon *daemon,
+              int32_t millisec);
+
+
+/**
  * Run webserver operations. This method should be called by clients
  * in combination with #MHD_get_fdset and #MHD_get_timeout() if the
  * client-controlled select method is used.
@@ -2725,6 +2795,7 @@ MHD_get_connection_values (struct MHD_Connection *connection,
  * @param iterator_cls extra argument to @a iterator
  * @return number of entries iterated over,
  *         -1 if connection is NULL.
+ * @note Available since #MHD_VERSION 0x00096400
  * @ingroup request
  */
 _MHD_EXTERN int
@@ -2790,6 +2861,7 @@ MHD_set_connection_value (struct MHD_Connection *connection,
  * @return #MHD_NO if the operation could not be
  *         performed due to insufficient memory;
  *         #MHD_YES on success
+ * @note Available since #MHD_VERSION 0x00096400
  * @ingroup request
  */
 _MHD_EXTERN enum MHD_Result
@@ -3115,6 +3187,7 @@ MHD_create_response_from_buffer (size_t size,
  * @param buffer size bytes containing the response's data portion
  * @param crfc function to call to free the @a buffer
  * @return NULL on error (i.e. invalid arguments, out of memory)
+ * @note Available since #MHD_VERSION 0x00096000
  * @ingroup response
  */
 _MHD_EXTERN struct MHD_Response *
@@ -3148,6 +3221,7 @@ MHD_create_response_from_fd (size_t size,
  *        data; will be closed when response is destroyed;
  *        fd should be in 'blocking' mode
  * @return NULL on error (i.e. invalid arguments, out of memory)
+ * @note Available since #MHD_VERSION 0x00097102
  * @ingroup response
  */
 _MHD_EXTERN struct MHD_Response *
@@ -3225,6 +3299,28 @@ _MHD_EXTERN struct MHD_Response *
 MHD_create_response_from_fd_at_offset64 (uint64_t size,
                                          int fd,
                                          uint64_t offset);
+
+
+/**
+ * Create a response object from an array of memory buffers.
+ * The response object can be extended with header information and then be used
+ * any number of times.
+ *
+ * @param iov the array for response data buffers, an internal copy of this
+ *        will be made
+ * @param iovcnt the number of elements in @a iov
+ * @param free_cb the callback to clean up any data associated with @a iov when
+ *        the response is destroyed.
+ * @param cls the argument passed to @a free_cb
+ * @return NULL on error (i.e. invalid arguments, out of memory)
+ * @note Available since #MHD_VERSION 0x00097204
+ * @ingroup response
+ */
+_MHD_EXTERN struct MHD_Response *
+MHD_create_response_from_iovec (const struct MHD_IoVec *iov,
+                                unsigned int iovcnt,
+                                MHD_ContentReaderFreeCallback free_cb,
+                                void *cls);
 
 
 /**
@@ -3521,7 +3617,8 @@ MHD_create_post_processor (struct MHD_Connection *connection,
  */
 _MHD_EXTERN enum MHD_Result
 MHD_post_process (struct MHD_PostProcessor *pp,
-                  const char *post_data, size_t post_data_len);
+                  const char *post_data,
+                  size_t post_data_len);
 
 
 /**
@@ -3565,7 +3662,7 @@ MHD_digest_auth_get_username (struct MHD_Connection *connection);
  * Free the memory given by @a ptr. Calls "free(ptr)".  This function
  * should be used to free the username returned by
  * #MHD_digest_auth_get_username().
- * @note Since v0.9.56
+ * @note Available since #MHD_VERSION 0x00095600
  *
  * @param ptr pointer to free.
  */
@@ -3609,6 +3706,7 @@ enum MHD_DigestAuthAlgorithm
  * @param algo digest algorithms allowed for verification
  * @return #MHD_YES if authenticated, #MHD_NO if not,
  *      #MHD_INVALID_NONCE if nonce is invalid
+ * @note Available since #MHD_VERSION 0x00096200
  * @ingroup authentication
  */
 _MHD_EXTERN int
@@ -3661,6 +3759,7 @@ MHD_digest_auth_check (struct MHD_Connection *connection,
  * @param algo digest algorithms allowed for verification
  * @return #MHD_YES if authenticated, #MHD_NO if not,
  *      #MHD_INVALID_NONCE if nonce is invalid
+ * @note Available since #MHD_VERSION 0x00096200
  * @ingroup authentication
  */
 _MHD_EXTERN int
@@ -3688,6 +3787,7 @@ MHD_digest_auth_check_digest2 (struct MHD_Connection *connection,
  *      invalid in seconds
  * @return #MHD_YES if authenticated, #MHD_NO if not,
  *      #MHD_INVALID_NONCE if nonce is invalid
+ * @note Available since #MHD_VERSION 0x00096000
  * @ingroup authentication
  * @deprecated use #MHD_digest_auth_check_digest2()
  */
@@ -3712,6 +3812,7 @@ MHD_digest_auth_check_digest (struct MHD_Connection *connection,
  *      'stale=true' to the authentication header
  * @param algo digest algorithm to use
  * @return #MHD_YES on success, #MHD_NO otherwise
+ * @note Available since #MHD_VERSION 0x00096200
  * @ingroup authentication
  */
 _MHD_EXTERN enum MHD_Result

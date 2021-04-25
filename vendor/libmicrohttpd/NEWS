@@ -1,2 +1,86 @@
+Sun 25 Apr 2021 14:00:00 MSK
+Released GNU libmicrohttpd 0.9.73
+
+    This release brings new features, improvements, and a few fixes.
+    The most important addition is the new function for vector-backed
+    responses, based on the patch contributed by NASA engineers.
+    Other changes include compatibility with autoconf 2.70+, improved
+    testsuite compatibility with CI systems, fixed and improved MSVC
+    builds, and implemention of ALPN support.
+
+    More detailed list of notable changes:
+
+    API changes:
+    + Added new function MHD_create_response_from_iovec(), based on the
+      patch provided by Lawrence Sebald and Damon N. Earp from NASA.
+    + Added MHD_OPTION_SIGPIPE_HANDLED_BY_APP daemon option.
+    + Added new function MHD_run_wait().
+    + Added MHD_OPTION_TLS_NO_ALPN to disable usage of ALPN even if
+      it is supported by TLS library.
+
+    New features:
+    + Added '--enable-heavy-tests' configure parameter (disabled by
+      default).
+    + Implemented support for ALPN.
+
+    Improvements and enhancements:
+    * Return timeout of zero also for connections awaiting cleanup.
+    * Compatibility with autoconf >=2.70, used new autoconf features.
+    * Warn user when custom logger option is not the first option.
+    * Added information to the header about minimal MHD version when
+      particular symbols were introduced.
+    * Updated test certificates to be compatible with modern browsers.
+    * Added on-fly detection of UNIX domain sockets and pipes, MHD does
+      not try to use TCP/IP-specific socket options on them.
+    * Report more detailed error description in the MHD log for send
+      and receive errors.
+    * Enabled bind port autodetection for MSVC builds.
+
+    Fixes:
+    # Fix PostProcessor to always properly stop iteration when
+      application callback tells it to do so.
+    # Fixed MD5 digest authorization broken when compiled without
+      variable length arrays support (notably with MSVC).
+    # Fixed detection of type of send errors on W32.
+
+    -- Evgeny Grin (Karlson2k)
+
+
+Mon 28 Dec 2020 21:36:00 MSK
+Released GNU libmicrohttpd 0.9.72
+
+    This release is mostly a bugfix release, with greatly improved
+    compatibility with various OSes/kernels, including FreeBSD, Windows,
+    OpenBSD, NetBSD, Darwin (macOS), Solaris. Performance is improved,
+    especially with HTTPS connections and stay-alive HTTP connections.
+
+    Notable changes since version 0.9.71:
+
+    API changes:
+    + New function MHD_create_response_from_pipe()
+
+    Improvements and enhancements:
+    * Fully rewritten code for buffering/pushing from kernel network buffers
+      for compatibility with various OSes. Reduced number of additional
+      sys-calls, network is better utilized, responses are delivered faster.
+    * Restored optimal sendfile() usage on FreeBSD.
+    * MHD now takes care about SIGPIPE handling by blocking it in internal
+      threads and avoiding functions (like sendfile()) that could generate
+      SIGPIPE when blocking of this signal is not possible.
+
+    Fixes:
+    # Fixed crash in PostProcessor.
+    # Fixed several resources leaks in corner cases.
+    # Improved thread sync, thread safety and fixed one use-after-free under
+      special conditions during stopping of daemon.
+    # Updated HTTP status codes, header names and methods from the
+      registries.
+    # Fixed functioning without listen socket and with internal threads.
+    # Fixed streaming of chunked responses for both HTTP and HTTPS.
+    # Various compatibility fixes.
+
+    -- Evgeny Grin (Karlson2k)
+
+
 Tue Jan  9 20:52:48 MST 2007
 	Project posted.

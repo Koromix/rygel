@@ -161,7 +161,7 @@ union MHD_ConnectionInfo *ci;
 
 ci = MHD_get_connection_info (connection,
                               MHD_CONNECTION_INFO_GNUTLS_SESSION);
-tls_session = ci->tls_session;
+tls_session = (gnutls_session_t) ci->tls_session;
 @end verbatim
 
 You can then extract the client certificate:
@@ -187,6 +187,13 @@ get_client_certificate (gnutls_session_t tls_session)
   if (gnutls_certificate_verify_peers2(tls_session,
 				       &client_cert_status))
     return NULL;
+  if (0 != client_cert_status)
+  {
+    fprintf (stderr,
+            "Failed client certificate invalid: %d\n",
+            client_cert_status);
+    return NULL;
+  }
   pcert = gnutls_certificate_get_peers(tls_session,
 				       &listsize);
   if ( (pcert == NULL) ||
@@ -229,7 +236,7 @@ and alternative names:
  * 			to the dn if found
  */
 char *
-cert_auth_get_dn(gnutls_x509_crt_c client_cert)
+cert_auth_get_dn(gnutls_x509_crt_t client_cert)
 {
   char* buf;
   size_t lbuf;

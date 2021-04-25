@@ -694,8 +694,6 @@ run_usock (void *cls)
 {
   struct MHD_UpgradeResponseHandle *urh = cls;
 
-  MHD_upgrade_action (urh,
-                      MHD_UPGRADE_ACTION_CORK_OFF);
   send_all (usock,
             "Hello");
   recv_all (usock,
@@ -1131,13 +1129,13 @@ test_upgrade (int flags,
     abort ();
   if (0 == (flags & MHD_USE_INTERNAL_POLLING_THREAD) )
   {
-    enum MHD_FLAG flags;
+    enum MHD_FLAG used_flags;
 
     /* make address sanitizer happy */
-    memcpy (&flags,
+    memcpy (&used_flags,
             real_flags /* ->flags */,
-            sizeof (flags));
-    run_mhd_loop (d, flags);
+            sizeof (used_flags));
+    run_mhd_loop (d, used_flags);
   }
   pthread_join (pt_client,
                 NULL);

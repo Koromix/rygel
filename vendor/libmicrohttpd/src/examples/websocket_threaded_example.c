@@ -492,7 +492,7 @@ ws_get_accept_value (const char *key, char **val)
     return MHD_NO;
   }
   strncpy (str, key, (WS_KEY_LEN + 1));
-  strncat (str, WS_GUID, WS_GUID_LEN);
+  strncpy (str + WS_KEY_LEN, WS_GUID, WS_GUID_LEN + 1);
   SHA1Reset (&ctx);
   SHA1Input (&ctx, (const unsigned char *) str, WS_KEY_GUID_LEN);
   SHA1Result (&ctx, hash);

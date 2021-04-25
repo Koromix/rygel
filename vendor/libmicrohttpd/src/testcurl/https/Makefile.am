@@ -1,4 +1,6 @@
 # This Makefile.am is in the public domain
+EMPTY_ITEM =
+
 SUBDIRS = .
 
 if USE_COVERAGE
@@ -34,7 +36,9 @@ THREAD_ONLY_TESTS = \
   test_https_time_out \
   test_https_multi_daemon \
   test_https_get \
-  test_empty_response
+  test_empty_response \
+  test_https_get_iovec \
+  $(EMPTY_ITEM)
 
 check_PROGRAMS = \
   test_https_get_select
@@ -49,9 +53,10 @@ check_PROGRAMS += \
 endif
 
 EXTRA_DIST = \
-  cert.pem key.pem \
+  test-ca.crt test-ca.key \
   host1.crt host1.key \
   host2.crt host2.key
+
 
 TESTS = \
   $(check_PROGRAMS)
@@ -151,6 +156,16 @@ test_https_get_SOURCES = \
   tls_test_common.h \
   tls_test_common.c
 test_https_get_LDADD  = \
+  $(top_builddir)/src/testcurl/libcurl_version_check.a \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  $(MHD_TLS_LIB_LDFLAGS) $(MHD_TLS_LIBDEPS) @LIBGCRYPT_LIBS@ @LIBCURL@
+
+test_https_get_iovec_SOURCES = \
+  test_https_get_iovec.c \
+  tls_test_keys.h \
+  tls_test_common.h \
+  tls_test_common.c
+test_https_get_iovec_LDADD  = \
   $(top_builddir)/src/testcurl/libcurl_version_check.a \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   $(MHD_TLS_LIB_LDFLAGS) $(MHD_TLS_LIBDEPS) @LIBGCRYPT_LIBS@ @LIBCURL@

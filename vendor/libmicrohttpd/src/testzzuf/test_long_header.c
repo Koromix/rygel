@@ -85,6 +85,16 @@ ahc_echo (void *cls,
   (void) version; (void) upload_data;      /* Unused. Silent compiler warning. */
   (void) upload_data_size; (void) unused;  /* Unused. Silent compiler warning. */
 
+  if (NULL == url)
+    fprintf (stderr, "The \"url\" parameter is NULL.\n");
+  if (NULL == method)
+    fprintf (stderr, "The \"method\" parameter is NULL.\n");
+  if (NULL == version)
+    fprintf (stderr, "The \"version\" parameter is NULL.\n");
+  if (NULL == upload_data_size)
+    fprintf (stderr, "The \"upload_data_size\" parameter is NULL.\n");
+  if ((0 != *upload_data_size) && (NULL == upload_data))
+    fprintf (stderr, "Upload data is NULL with non-zero size.\n");
   if (0 != strcmp (me, method))
     return MHD_NO;              /* unexpected method */
   response = MHD_create_response_from_buffer (strlen (url),
@@ -239,8 +249,8 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
-  (void) argc;   /* Unused. Silent compiler warning. */
   const char *sl;
+  (void) argc;   /* Unused. Silent compiler warning. */
 
   sl = strrchr (argv[0], (int) '/');
   oneone = (NULL != sl) ? (NULL != strstr (sl, "11")) : 0;

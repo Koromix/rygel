@@ -108,8 +108,8 @@ static void
 request_completed (void *cls, struct MHD_Connection *connection,
                    void **con_cls, enum MHD_RequestTerminationCode code)
 {
-  (void) connection; (void) con_cls; (void) code;    /* Unused. Silent compiler warning. */
   int *done = (int *) cls;
+  (void) connection; (void) con_cls; (void) code;    /* Unused. Silent compiler warning. */
   *done = 1;
 }
 

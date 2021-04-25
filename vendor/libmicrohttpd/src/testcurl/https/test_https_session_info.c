@@ -103,6 +103,7 @@ test_query_session ()
   CURLcode errornum;
   char url[256];
   int port;
+  const char *aes256_sha = "AES256-SHA";
 
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
@@ -142,7 +143,6 @@ test_query_session ()
     port = (int) dinfo->port;
   }
 
-  const char *aes256_sha = "AES256-SHA";
   if (curl_uses_nss_ssl () == 0)
   {
     aes256_sha = "rsa_aes_256_sha";

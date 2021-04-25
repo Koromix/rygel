@@ -83,6 +83,7 @@
 #   modified version of the Autoconf Macro, you may extend this special
 #   exception to the GPL to apply to your modified version as well.
 
+# locally patched for autoconf 2.70 compatibility
 #serial 27
 
 AU_ALIAS([ACX_PTHREAD], [AX_PTHREAD])
@@ -386,7 +387,7 @@ if test "x$ax_pthread_clang" = "xyes"; then
              # step
              ax_pthread_save_ac_link="$ac_link"
              ax_pthread_sed='s/conftest\.\$ac_ext/conftest.$ac_objext/g'
-             ax_pthread_link_step=`$as_echo "$ac_link" | sed "$ax_pthread_sed"`
+             ax_pthread_link_step=`AS_ECHO(["$ac_link"]) | sed "$ax_pthread_sed"`
              ax_pthread_2step_ac_link="($ac_compile) && (echo ==== >&5) && ($ax_pthread_link_step)"
              ax_pthread_save_CFLAGS="$CFLAGS"
              for ax_pthread_try in '' -Qunused-arguments -Wno-unused-command-line-argument unknown; do

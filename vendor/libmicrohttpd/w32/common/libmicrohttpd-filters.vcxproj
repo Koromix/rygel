@@ -153,6 +153,12 @@
     <ClCompile Include="$(MhdSrc)microhttpd\mhd_itc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClInclude Include="$(MhdSrc)microhttpd\mhd_send.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClCompile Include="$(MhdSrc)microhttpd\mhd_send.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClInclude Include="$(MhdSrc)microhttpd\mhd_compat.h">
       <Filter>Source Files</Filter>
     </ClInclude>

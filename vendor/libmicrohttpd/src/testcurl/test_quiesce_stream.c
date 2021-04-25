@@ -73,13 +73,14 @@ static void
 suspend_connection (struct MHD_Connection *connection)
 {
   pthread_t thread_id;
+  int status;
 
   /* fprintf (stderr, "Calling suspend\n"); */
   MHD_suspend_connection (connection);
-  int status = pthread_create (&thread_id,
-                               NULL,
-                               &resume_connection,
-                               connection);
+  status = pthread_create (&thread_id,
+                           NULL,
+                           &resume_connection,
+                           connection);
   if (0 != status)
   {
     fprintf (stderr,
@@ -143,6 +144,7 @@ http_AccessHandlerCallback (void *cls,
                             void **con_cls)
 {
   enum MHD_Result ret;
+  struct MHD_Response *response;
   (void) cls; (void) url;                        /* Unused. Silent compiler warning. */
   (void) method; (void) version; (void) upload_data; /* Unused. Silent compiler warning. */
   (void) upload_data_size;                       /* Unused. Silent compiler warning. */
@@ -150,12 +152,12 @@ http_AccessHandlerCallback (void *cls,
   /* Never respond on first call */
   if (NULL == *con_cls)
   {
+    struct ContentReaderUserdata *userdata;
     fprintf (stderr,
              "start: %d\n",
              ++request_counter);
 
-    struct ContentReaderUserdata *userdata = malloc (sizeof(struct
-                                                            ContentReaderUserdata));
+    userdata = malloc (sizeof(struct ContentReaderUserdata));
 
     if (NULL == userdata)
       return MHD_NO;
@@ -166,7 +168,7 @@ http_AccessHandlerCallback (void *cls,
   }
 
   /* Second call: create response */
-  struct MHD_Response *response
+  response
     = MHD_create_response_from_callback (-1,
                                          32 * 1024,
                                          &http_ContentReaderCallback,
@@ -187,6 +189,13 @@ main (void)
 {
   int port;
   char command_line[1024];
+  /* Flags */
+  unsigned int daemon_flags
+    = MHD_USE_INTERNAL_POLLING_THREAD
+      | MHD_USE_AUTO
+      | MHD_ALLOW_SUSPEND_RESUME
+      | MHD_USE_ITC;
+  struct MHD_Daemon *daemon;
 
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
@@ -197,21 +206,15 @@ main (void)
   MHD_set_panic_func (&http_PanicCallback,
                       NULL);
 
-  /* Flags */
-  unsigned int daemon_flags
-    = MHD_USE_INTERNAL_POLLING_THREAD
-      | MHD_USE_AUTO
-      | MHD_ALLOW_SUSPEND_RESUME
-      | MHD_USE_ITC;
 
   /* Create daemon */
-  struct MHD_Daemon *daemon = MHD_start_daemon (daemon_flags,
-                                                port,
-                                                NULL,
-                                                NULL,
-                                                &http_AccessHandlerCallback,
-                                                NULL,
-                                                MHD_OPTION_END);
+  daemon = MHD_start_daemon (daemon_flags,
+                             port,
+                             NULL,
+                             NULL,
+                             &http_AccessHandlerCallback,
+                             NULL,
+                             MHD_OPTION_END);
   if (NULL == daemon)
     return 1;
   if (0 == port)

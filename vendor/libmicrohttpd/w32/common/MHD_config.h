@@ -14,11 +14,24 @@
 #define __STDC_NO_VLA__ 1
 #endif
 
+/* If clang is used then variable-length arrays are supported. */
+#ifdef __clang__
+#define HAVE_C_VARARRAYS 1
+#endif
+
 /* Define to 1 if your C compiler supports inline functions. */
 #define INLINE_FUNC 1
 
 /* Define to prefix which will be used with MHD inline functions. */
 #define _MHD_static_inline static __forceinline
+
+#ifdef __clang__
+/* Define to 1 if you have __builtin_bswap32() builtin function */
+#define MHD_HAVE___BUILTIN_BSWAP32 1
+
+/* Define to 1 if you have __builtin_bswap64() builtin function */
+#define MHD_HAVE___BUILTIN_BSWAP64 1
+#endif /* __clang__ */
 
 
 /* *** MHD configuration *** */
@@ -88,6 +101,33 @@
 #define HAVE_INTTYPES_H 1
 #endif
 
+#if _MSC_VER + 0 >= 1800 /* VS 2013 and later */
+/* Define to 1 if you have the <stdbool.h> header file and <stdbool.h> defines
+   'bool' type. */
+#define HAVE_STDBOOL_H 1
+#else  /* before VS 2013 */
+
+/* Define to type name which will be used as boolean type. */
+#define bool int
+
+/* Define to value interpreted by compiler as boolean "false", if "false" is
+   not defined by system headers. */
+#define false 0
+
+/* Define to value interpreted by compiler as boolean "true", if "true" is not
+   defined by system headers. */
+#define true (!0)
+#endif /* before VS 2013 */
+
+/* Define to 1 if you have the `getsockname' function. */
+#define HAVE_GETSOCKNAME 1
+
+/* Define if you have usable `getsockname' function. */
+#define MHD_USE_GETSOCKNAME 1
+
+/* Define to 1 if your compiler supports __func__ magic-macro. */
+#define HAVE___FUNC__ 1
+
 
 /* *** Headers information *** */
 /* Not really important as not used by code currently */
@@ -109,6 +149,9 @@
 
 /* Define to 1 if you have the <math.h> header file. */
 #define HAVE_MATH_H 1
+
+/* Define to 1 if you have the <sdkddkver.h> header file. */
+#define HAVE_SDKDDKVER_H 1
 
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
@@ -140,23 +183,8 @@
 /* Define to 1 if you have the <stddef.h> header file. */
 #define HAVE_STDDEF_H 1
 
-#if _MSC_VER+0 >= 1800 /* VS 2013 and later */
-/* Define to 1 if you have the <stdbool.h> header file and <stdbool.h> defines
-   'bool' type. */
-#define HAVE_STDBOOL_H 1
-#else  /* before VS 2013 */
-
-/* Define to type name which will be used as boolean type. */
-#define bool int
-
-/* Define to value interpreted by compiler as boolean "false", if "false" is
-   not defined by system headers. */
-#define false 0
-
-/* Define to value interpreted by compiler as boolean "true", if "true" is not
-   defined by system headers. */
-#define true (!0)
-#endif /* before VS 2013 */
+/* Define to 1 if you have the <windows.h> header file. */
+#define HAVE_WINDOWS_H 1
 
 
 /* *** Other useful staff *** */

@@ -1,5 +1,5 @@
-# tsearch.m4 serial 6
-dnl Copyright (C) 2006-2017 Free Software Foundation, Inc.
+# tsearch.m4 serial 8
+dnl Copyright (C) 2006-2021 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
@@ -7,7 +7,7 @@ dnl with or without modifications, as long as this notice is preserved.
 AC_DEFUN([gl_FUNC_TSEARCH],
 [
   AC_REQUIRE([gl_SEARCH_H_DEFAULTS])
-  AC_CHECK_FUNCS([tsearch])
+  AC_CHECK_FUNCS([tsearch twalk])
   if test $ac_cv_func_tsearch = yes; then
     dnl On OpenBSD 4.0, the return value of tdelete() is incorrect.
     AC_REQUIRE([AC_PROG_CC])
@@ -38,8 +38,10 @@ main ()
   return result;
 }]])], [gl_cv_func_tdelete_works=yes], [gl_cv_func_tdelete_works=no],
             [case "$host_os" in
-               openbsd*) gl_cv_func_tdelete_works="guessing no";;
-               *)        gl_cv_func_tdelete_works="guessing yes";;
+               openbsd*) gl_cv_func_tdelete_works="guessing no" ;;
+                         # Guess yes on native Windows.
+               mingw*)   gl_cv_func_tdelete_works="guessing yes" ;;
+               *)        gl_cv_func_tdelete_works="guessing yes" ;;
              esac
             ])
       ])
@@ -50,6 +52,9 @@ main ()
     esac
   else
     HAVE_TSEARCH=0
+  fi
+  if test $ac_cv_func_twalk != yes; then
+    HAVE_TWALK=0
   fi
 ])
 

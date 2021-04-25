@@ -286,8 +286,17 @@ specifies path to libgcrypt installation
 @item ``--with-gnutls=PATH''
 specifies path to libgnutls installation
 
-
 @end table
+
+To cross-compile MHD for Android, install the Android NDK and use:
+@verbatim
+./configure --target=arm-linux-androideabi --host=arm-linux-androideabi --disable-doc --disable-examples
+make
+@end verbatim
+
+Similar build commands should work for cross-compilation to other platforms.
+Note that you may have to first cross-compile GnuTLS to get MHD with TLS support.
+
 
 @section Validity of pointers
 
@@ -1261,6 +1270,11 @@ Handle for a response.
 @end deftp
 
 
+@deftp {C Struct} MHD_IoVec
+An element of an array of memory buffers.
+@end deftp
+
+
 @deftp {C Struct} MHD_PostProcessor
 @cindex POST method
 Handle for @code{POST} processing.
@@ -2159,6 +2173,28 @@ response = MHD_create_response_from_buffer (strlen(data), data,
 MHD_queue_response(connection, 404, response);
 MHD_destroy_response(response);
 @end example
+
+
+@deftypefun {struct MHD_Response *} MHD_create_response_from_iovec (const struct MHD_IoVec *iov, int iovcnt, MHD_ContentReaderFreeCallback crfc, void *cls)
+Create a response object from an array of memory buffers.
+The response object can be extended with header information and then be used
+any number of times.
+@table @var
+@item iov
+the array for response data buffers, an internal copy of this will be made; however, note that the data pointed to by the @var{iov} is not copied and must be preserved unchanged at the given locations until the response is no longer in use and the @var{crfc} is called;
+
+@item iovcnt
+the number of elements in @var{iov};
+
+@item crfc
+the callback to call to free resources associated with @var{iov};
+
+@item cls
+the argument to @var{crfc};
+@end table
+
+Return @code{NULL} on error (i.e. invalid arguments, out of memory).
+@end deftypefun
 
 
 

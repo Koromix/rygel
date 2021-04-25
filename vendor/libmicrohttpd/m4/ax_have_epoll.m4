@@ -46,7 +46,7 @@
 
 AC_DEFUN([AX_HAVE_EPOLL], [dnl
   ax_have_epoll_cppflags="${CPPFLAGS}"
-  AC_CHECK_HEADER([linux/version.h], [CPPFLAGS="${CPPFLAGS} -DHAVE_LINUX_VERSION_H"])
+  AC_CHECK_HEADER([linux/version.h], [CPPFLAGS="${CPPFLAGS} -DHAVE_LINUX_VERSION_H"], [], [AC_INCLUDES_DEFAULT])
   AC_MSG_CHECKING([for Linux epoll(7) interface])
   AC_CACHE_VAL([ax_cv_have_epoll], [dnl
     AC_LINK_IFELSE([dnl

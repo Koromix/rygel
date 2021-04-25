@@ -57,6 +57,8 @@ connection_handler (void *cls,
                     void **ptr)
 {
   static int i;
+  struct MHD_Response *response;
+  enum MHD_Result ret;
   (void) cls; (void) url;                        /* Unused. Silent compiler warning. */
   (void) method; (void) version; (void) upload_data; /* Unused. Silent compiler warning. */
   (void) upload_data_size;                       /* Unused. Silent compiler warning. */
@@ -73,10 +75,10 @@ connection_handler (void *cls,
     return MHD_YES;
   }
 
-  struct MHD_Response *response =
+  response =
     MHD_create_response_from_buffer (strlen ("Response"), "Response",
                                      MHD_RESPMEM_PERSISTENT);
-  enum MHD_Result ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
+  ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
 
   return ret;
@@ -98,6 +100,7 @@ main (void)
   int port;
   char url[255];
   CURL *curl;
+  CURLcode success;
 
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
@@ -137,7 +140,7 @@ main (void)
   curl_easy_setopt (curl, CURLOPT_URL, url);
   curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, write_data);
 
-  CURLcode success = curl_easy_perform (curl);
+  success = curl_easy_perform (curl);
   if (success != 0)
   {
     fprintf (stderr, "CURL Error");

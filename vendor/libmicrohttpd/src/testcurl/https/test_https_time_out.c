@@ -103,7 +103,7 @@ test_tls_session_time_out (gnutls_session_t session, int port)
 int
 main (int argc, char *const *argv)
 {
-  int errorCount = 0;;
+  int errorCount = 0;
   struct MHD_Daemon *d;
   gnutls_session_t session;
   gnutls_datum_t key;

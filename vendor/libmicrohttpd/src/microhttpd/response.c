@@ -1,6 +1,6 @@
 /*
      This file is part of libmicrohttpd
-     Copyright (C) 2007, 2009, 2010, 2016, 2017 Daniel Pittman and Christian Grothoff
+     Copyright (C) 2007-2021 Daniel Pittman and Christian Grothoff
 
      This library is free software; you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public
@@ -42,6 +42,7 @@
 #include "mhd_str.h"
 #include "connection.h"
 #include "memorypool.h"
+#include "mhd_send.h"
 #include "mhd_compat.h"
 
 
@@ -846,6 +847,171 @@ MHD_create_response_from_buffer_with_free_callback (size_t size,
 }
 
 
+/**
+ * Create a response object from an array of memory buffers.
+ * The response object can be extended with header information and then be used
+ * any number of times.
+ *
+ * @param iov the array for response data buffers, an internal copy of this
+ *        will be made
+ * @param iovcnt the number of elements in @a iov
+ * @param free_cb the callback to clean up any data associated with @a iov when
+ *        the response is destroyed.
+ * @param cls the argument passed to @a free_cb
+ * @return NULL on error (i.e. invalid arguments, out of memory)
+ */
+_MHD_EXTERN struct MHD_Response *
+MHD_create_response_from_iovec (const struct MHD_IoVec *iov,
+                                unsigned int iovcnt,
+                                MHD_ContentReaderFreeCallback free_cb,
+                                void *cls)
+{
+  struct MHD_Response *response;
+  unsigned int i;
+  int i_cp = 0;   /**< Index in the copy of iov */
+  uint64_t total_size = 0;
+  const void *last_valid_buffer = NULL;
+
+  if ((NULL == iov) && (0 < iovcnt))
+    return NULL;
+
+  response = MHD_calloc_ (1, sizeof (struct MHD_Response));
+  if (NULL == response)
+    return NULL;
+  if (! MHD_mutex_init_ (&response->mutex))
+  {
+    free (response);
+    return NULL;
+  }
+  /* Calculate final size, number of valid elements, and check 'iov' */
+  for (i = 0; i < iovcnt; ++i)
+  {
+    if (0 == iov[i].iov_len)
+      continue;     /* skip zero-sized elements */
+    if (NULL == iov[i].iov_base)
+    {
+      i_cp = -1;     /* error */
+      break;
+    }
+    if ( (total_size > (total_size + iov[i].iov_len)) ||
+         (INT_MAX == i_cp) ||
+         (SSIZE_MAX < (total_size + iov[i].iov_len)) )
+    {
+      i_cp = -1;     /* overflow */
+      break;
+    }
+    last_valid_buffer = iov[i].iov_base;
+    total_size += iov[i].iov_len;
+#if defined(MHD_POSIX_SOCKETS) || ! defined(_WIN64)
+    i_cp++;
+#else  /* ! MHD_POSIX_SOCKETS && _WIN64 */
+    {
+      int64_t i_add;
+
+      i_add = iov[i].iov_len / ULONG_MAX;
+      if (0 != iov[i].iov_len % ULONG_MAX)
+        i_add++;
+      if (INT_MAX < (i_add + i_cp))
+      {
+        i_cp = -1;   /* overflow */
+        break;
+      }
+      i_cp += (int) i_add;
+    }
+#endif /* ! MHD_POSIX_SOCKETS && _WIN64 */
+  }
+  if (-1 == i_cp)
+  {
+    /* Some error condition */
+    MHD_mutex_destroy_chk_ (&response->mutex);
+    free (response);
+    return NULL;
+  }
+  response->fd = -1;
+  response->reference_count = 1;
+  response->total_size = total_size;
+  response->crc_cls = cls;
+  response->crfc = free_cb;
+  if (0 == i_cp)
+  {
+    mhd_assert (0 == total_size);
+    return response;
+  }
+  if (1 == i_cp)
+  {
+    mhd_assert (NULL != last_valid_buffer);
+    response->data = (void *) last_valid_buffer;
+    response->data_size = (size_t) total_size;
+    return response;
+  }
+  mhd_assert (1 < i_cp);
+  {
+    MHD_iovec_ *iov_copy;
+    int num_copy_elements = i_cp;
+
+    iov_copy = MHD_calloc_ (num_copy_elements,
+                            sizeof(MHD_iovec_));
+    if (NULL == iov_copy)
+    {
+      MHD_mutex_destroy_chk_ (&response->mutex);
+      free (response);
+      return NULL;
+    }
+    i_cp = 0;
+    for (i = 0; i < iovcnt; ++i)
+    {
+      size_t element_size = iov[i].iov_len;
+      const uint8_t *buf = (const uint8_t *) iov[i].iov_base;
+
+      if (0 == element_size)
+        continue;         /* skip zero-sized elements */
+#if defined(MHD_WINSOCK_SOCKETS) && defined(_WIN64)
+      while (MHD_IOV_ELMN_MAX_SIZE < element_size)
+      {
+        iov_copy[i_cp].iov_base = (char *) buf;
+        iov_copy[i_cp].iov_len = ULONG_MAX;
+        buf += ULONG_MAX;
+        element_size -= ULONG_MAX;
+        i_cp++;
+      }
+#endif /* MHD_WINSOCK_SOCKETS && _WIN64 */
+      iov_copy[i_cp].iov_base = (void *) buf;
+      iov_copy[i_cp].iov_len = (MHD_iov_size_) element_size;
+      i_cp++;
+    }
+    mhd_assert (num_copy_elements == i_cp);
+    response->data_iov = iov_copy;
+    response->data_iovcnt = i_cp;
+    return response;
+  }
+}
+
+
+/**
+ * Move response headers from one response object to another.
+ *
+ * @param src response object to steal from
+ * @param dest response object to move headers to
+ * @ingroup response
+ */
+_MHD_EXTERN void
+MHD_move_response_headers (struct MHD_Response *src,
+                           struct MHD_Response *dest)
+{
+  struct MHD_HTTP_Header *last_header;
+
+  if (NULL != src->first_header) {
+    last_header = src->first_header;
+    while (NULL != last_header->next)
+      last_header = last_header->next;
+
+    last_header->next = dest->first_header;
+    dest->first_header = src->first_header;
+    src->first_header = NULL;
+  }
+}
+
+
 #ifdef UPGRADE_SUPPORT
 /**
  * This connection-specific callback is provided by MHD to
@@ -902,27 +1068,13 @@ MHD_upgrade_action (struct MHD_UpgradeResponseHandle *urh,
     MHD_resume_connection (connection);
     return MHD_YES;
   case MHD_UPGRADE_ACTION_CORK_ON:
-    if (_MHD_ON == connection->sk_corked)
-      return MHD_YES;
-    if (0 !=
-        MHD_socket_cork_ (connection->socket_fd,
-                          true))
-    {
-      connection->sk_corked = _MHD_ON;
-      return MHD_YES;
-    }
-    return MHD_NO;
+    /* Unportable API. TODO: replace with portable action. */
+    return MHD_connection_set_cork_state_ (connection,
+                                           true) ? MHD_YES : MHD_NO;
   case MHD_UPGRADE_ACTION_CORK_OFF:
-    if (_MHD_OFF == connection->sk_corked)
-      return MHD_YES;
-    if (0 !=
-        MHD_socket_cork_ (connection->socket_fd,
-                          false))
-    {
-      connection->sk_corked = _MHD_OFF;
-      return MHD_YES;
-    }
-    return MHD_NO;
+    /* Unportable API. TODO: replace with portable action. */
+    return MHD_connection_set_cork_state_ (connection,
+                                           false) ? MHD_YES : MHD_NO;
   default:
     /* we don't understand this one */
     return MHD_NO;
@@ -977,6 +1129,8 @@ MHD_response_execute_upgrade_ (struct MHD_Response *response,
   urh->connection = connection;
   rbo = connection->read_buffer_offset;
   connection->read_buffer_offset = 0;
+  MHD_connection_set_nodelay_state_ (connection, false);
+  MHD_connection_set_cork_state_ (connection, false);
 #ifdef HTTPS_SUPPORT
   if (0 != (daemon->options & MHD_USE_TLS) )
   {
@@ -1256,31 +1410,6 @@ MHD_create_response_for_upgrade (MHD_UpgradeHandler upgrade_handler,
 
 
 /**
- * Move response headers from one response object to another.
- *
- * @param src response object to steal from
- * @param dest response object to move headers to
- * @ingroup response
- */
-_MHD_EXTERN void
-MHD_move_response_headers (struct MHD_Response *src,
-        struct MHD_Response *dest)
-{
-  struct MHD_HTTP_Header *last_header;
-
-  if (NULL != src->first_header) {
-    last_header = src->first_header;
-    while (NULL != last_header->next)
-      last_header = last_header->next;
-
-    last_header->next = dest->first_header;
-    dest->first_header = src->first_header;
-    src->first_header = NULL;
-  }
-}
-
-
-/**
  * Destroy a response object and associated resources.  Note that
  * libmicrohttpd may keep some of the resources around if the response
  * is still in the queue for some clients, so the memory may not
@@ -1312,6 +1441,12 @@ MHD_destroy_response (struct MHD_Response *response)
 #endif
   if (NULL != response->crfc)
     response->crfc (response->crc_cls);
+
+  if (NULL != response->data_iov)
+  {
+    free (response->data_iov);
+  }
+
   while (NULL != response->first_header)
   {
     pos = response->first_header;

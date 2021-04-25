@@ -78,6 +78,7 @@ testInternalSelectGet ()
   time_t start;
   struct timeval tv;
   int port;
+  char *aes256_sha = "AES256-SHA";
 
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
@@ -107,7 +108,6 @@ testInternalSelectGet ()
     }
     port = (int) dinfo->port;
   }
-  char *aes256_sha = "AES256-SHA";
   if (curl_uses_nss_ssl () == 0)
   {
     aes256_sha = "rsa_aes_256_sha";

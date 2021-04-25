@@ -140,6 +140,7 @@ main (int argc, char *const *argv)
   unsigned int errorCount = 0;
   const char *aes256_sha = "AES256-SHA";
   int port;
+  unsigned int iseed;
   (void) argc;   /* Unused. Silent compiler warning. */
 
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
@@ -148,7 +149,7 @@ main (int argc, char *const *argv)
     port = 3020;
 
   /* initialize random seed used by curl clients */
-  unsigned int iseed = (unsigned int) time (NULL);
+  iseed = (unsigned int) time (NULL);
   srand (iseed);
   if (! testsuite_curl_global_init ())
     return 99;

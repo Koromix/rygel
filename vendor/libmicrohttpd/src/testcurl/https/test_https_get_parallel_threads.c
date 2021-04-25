@@ -142,6 +142,8 @@ main (int argc, char *const *argv)
   unsigned int errorCount = 0;
   const char *ssl_version;
   int port;
+  unsigned int iseed;
+  char *aes256_sha = "AES256-SHA";
   (void) argc;   /* Unused. Silent compiler warning. */
 
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
@@ -150,7 +152,7 @@ main (int argc, char *const *argv)
     port = 3010;
 
   /* initialize random seed used by curl clients */
-  unsigned int iseed = (unsigned int) time (NULL);
+  iseed = (unsigned int) time (NULL);
 
 #ifdef MHD_HTTPS_REQUIRE_GRYPT
 #ifdef GCRYCTL_INITIALIZATION_FINISHED
@@ -174,7 +176,6 @@ main (int argc, char *const *argv)
     return 77;
   }
 
-  char *aes256_sha = "AES256-SHA";
   if (curl_uses_nss_ssl () == 0)
   {
     aes256_sha = "rsa_aes_256_sha";

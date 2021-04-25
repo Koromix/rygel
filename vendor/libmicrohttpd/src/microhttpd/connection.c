@@ -125,6 +125,48 @@
  */
 #define MHD_SENFILE_CHUNK_THR_P_C_ (0x200000)
 
+#ifdef HAVE_MESSAGES
+/**
+ * Return text description for MHD_ERR_*_ codes
+ * @param mhd_err_code the error code
+ * @return pointer to static string with error description
+ */
+static const char *
+str_conn_error_ (ssize_t mhd_err_code)
+{
+  switch (mhd_err_code)
+  {
+  case MHD_ERR_AGAIN_:
+    return _ ("The operation would block, retry later");
+  case MHD_ERR_CONNRESET_:
+    return _ ("The connection was forcibly closed by remote peer");
+  case MHD_ERR_NOTCONN_:
+    return _ ("The socket is not connected");
+  case MHD_ERR_NOMEM_:
+    return _ ("Not enough system resources to serve the request");
+  case MHD_ERR_BADF_:
+    return _ ("Bad FD value");
+  case MHD_ERR_INVAL_:
+    return _ ("Argument value is invalid");
+  case MHD_ERR_OPNOTSUPP_:
+    return _ ("Argument value is not supported");
+  case MHD_ERR_PIPE_:
+    return _ ("The socket is no longer available for sending");
+  case MHD_ERR_TLS_:
+    return _ ("TLS encryption or decryption error");
+  default:
+    break;   /* Mute compiler warning */
+  }
+  if (0 <= mhd_err_code)
+    return _ ("Not an error code");
+
+  mhd_assert (0); /* Should never be reachable */
+  return _ ("Wrong error code value");
+}
+
+
+#endif /* HAVE_MESSAGES */
+
 /**
  * Callback for receiving data from the socket.
  *
@@ -165,9 +207,19 @@ recv_param_adapter (struct MHD_Connection *connection,
     }
     if (MHD_SCKT_ERR_IS_EINTR_ (err))
       return MHD_ERR_AGAIN_;
-    if (MHD_SCKT_ERR_IS_ (err, MHD_SCKT_ECONNRESET_))
+    if (MHD_SCKT_ERR_IS_REMOTE_DISCNN_ (err))
       return MHD_ERR_CONNRESET_;
-    /* Treat any other error as hard error. */
+    if (MHD_SCKT_ERR_IS_ (err, MHD_SCKT_EOPNOTSUPP_))
+      return MHD_ERR_OPNOTSUPP_;
+    if (MHD_SCKT_ERR_IS_ (err, MHD_SCKT_ENOTCONN_))
+      return MHD_ERR_NOTCONN_;
+    if (MHD_SCKT_ERR_IS_ (err, MHD_SCKT_EINVAL_))
+      return MHD_ERR_INVAL_;
+    if (MHD_SCKT_ERR_IS_LOW_RESOURCES_ (err))
+      return MHD_ERR_NOMEM_;
+    if (MHD_SCKT_ERR_IS_ (err, MHD_SCKT_EBADF_))
+      return MHD_ERR_BADF_;
+    /* Treat any other error as a hard error. */
     return MHD_ERR_NOTCONN_;
   }
 #ifdef EPOLL_SUPPORT
@@ -755,6 +807,7 @@ connection_close_error (struct MHD_Connection *connection,
 #ifdef HAVE_MESSAGES
   if (NULL != emsg)
     MHD_DLOG (connection->daemon,
+              "%s\n",
               emsg);
 #else  /* ! HAVE_MESSAGES */
   (void) emsg; /* Mute compiler warning. */
@@ -794,11 +847,36 @@ try_ready_normal_body (struct MHD_Connection *connection)
   struct MHD_Response *response;
 
   response = connection->response;
-  if (NULL == response->crc)
-    return MHD_YES;
   if ( (0 == response->total_size) ||
        (connection->response_write_position == response->total_size) )
     return MHD_YES; /* 0-byte response is always ready */
+  if (NULL != response->data_iov)
+  {
+    size_t copy_size;
+
+    if (NULL != connection->resp_iov.iov)
+      return MHD_YES;
+    copy_size = response->data_iovcnt * sizeof(MHD_iovec_);
+    connection->resp_iov.iov = MHD_pool_allocate (connection->pool,
+                                                  copy_size,
+                                                  true);
+    if (NULL == connection->resp_iov.iov)
+    {
+      MHD_mutex_unlock_chk_ (&response->mutex);
+      /* not enough memory */
+      CONNECTION_CLOSE_ERROR (connection,
+                              _ ("Closing connection (out of memory)."));
+      return MHD_NO;
+    }
+    memcpy (connection->resp_iov.iov,
+            response->data_iov,
+            copy_size);
+    connection->resp_iov.cnt = response->data_iovcnt;
+    connection->resp_iov.sent = 0;
+    return MHD_YES;
+  }
+  if (NULL == response->crc)
+    return MHD_YES;
   if ( (response->data_start <=
         connection->response_write_position) &&
        (response->data_size + response->data_start >
@@ -832,7 +910,7 @@ try_ready_normal_body (struct MHD_Connection *connection)
     else
       CONNECTION_CLOSE_ERROR (connection,
                               _ (
-                                "Closing connection (application reported error generating data).\n"));
+                                "Closing connection (application reported error generating data)."));
     return MHD_NO;
   }
   response->data_start = connection->response_write_position;
@@ -881,7 +959,7 @@ try_ready_chunked_body (struct MHD_Connection *connection)
 #endif
       /* not enough memory */
       CONNECTION_CLOSE_ERROR (connection,
-                              _ ("Closing connection (out of memory).\n"));
+                              _ ("Closing connection (out of memory)."));
       return MHD_NO;
     }
     if ( (2 * (0xFFFFFF + sizeof(cbuf) + 2)) < size)
@@ -929,7 +1007,7 @@ try_ready_chunked_body (struct MHD_Connection *connection)
 #endif
     CONNECTION_CLOSE_ERROR (connection,
                             _ (
-                              "Closing connection (application error generating response).\n"));
+                              "Closing connection (application error generating response)."));
     return MHD_NO;
   }
   if ( (((ssize_t) MHD_CONTENT_READER_END_OF_STREAM) == ret) ||
@@ -1252,6 +1330,7 @@ build_header_response (struct MHD_Connection *connection)
   must_add_chunked_encoding = false;
   must_add_keep_alive = false;
   must_add_content_length = false;
+  content_length_len = 0; /* Mute compiler warning only */
   response_has_close = false;
   switch (connection->state)
   {
@@ -1598,7 +1677,7 @@ transmit_error_response (struct MHD_Connection *connection,
     /* can't even send a reply, at least close the connection */
     CONNECTION_CLOSE_ERROR (connection,
                             _ (
-                              "Closing connection (failed to queue response).\n"));
+                              "Closing connection (failed to queue response)."));
     return;
   }
   mhd_assert (NULL != connection->response);
@@ -1609,7 +1688,7 @@ transmit_error_response (struct MHD_Connection *connection,
     /* oops - close! */
     CONNECTION_CLOSE_ERROR (connection,
                             _ (
-                              "Closing connection (failed to create response header).\n"));
+                              "Closing connection (failed to create response header)."));
   }
   else
   {
@@ -2151,7 +2230,7 @@ call_connection_handler (struct MHD_Connection *connection)
     /* serious internal error, close connection */
     CONNECTION_CLOSE_ERROR (connection,
                             _ (
-                              "Application reported internal error, closing connection.\n"));
+                              "Application reported internal error, closing connection."));
     return;
   }
 }
@@ -2220,7 +2299,7 @@ process_request_body (struct MHD_Connection *connection)
           /* malformed encoding */
           CONNECTION_CLOSE_ERROR (connection,
                                   _ (
-                                    "Received malformed HTTP request (bad chunked encoding). Closing connection.\n"));
+                                    "Received malformed HTTP request (bad chunked encoding). Closing connection."));
           return;
         }
         available -= i;
@@ -2299,7 +2378,7 @@ process_request_body (struct MHD_Connection *connection)
           /* malformed encoding */
           CONNECTION_CLOSE_ERROR (connection,
                                   _ (
-                                    "Received malformed HTTP request (bad chunked encoding). Closing connection.\n"));
+                                    "Received malformed HTTP request (bad chunked encoding). Closing connection."));
           return;
         }
         /* skip 2nd part of line feed */
@@ -2355,7 +2434,7 @@ process_request_body (struct MHD_Connection *connection)
       /* serious internal error, close connection */
       CONNECTION_CLOSE_ERROR (connection,
                               _ (
-                                "Application reported internal error, closing connection.\n"));
+                                "Application reported internal error, closing connection."));
       return;
     }
     if (left_unprocessed > to_be_processed)
@@ -2453,7 +2532,7 @@ process_header_line (struct MHD_Connection *connection,
     /* error in header line, die hard */
     CONNECTION_CLOSE_ERROR (connection,
                             _ (
-                              "Received malformed line (no colon). Closing connection.\n"));
+                              "Received malformed line (no colon). Closing connection."));
     return MHD_NO;
   }
   if (-1 >= connection->daemon->strict_for_client)
@@ -2628,7 +2707,7 @@ parse_connection_headers (struct MHD_Connection *connection)
       /* can't even send a reply, at least close the connection */
       CONNECTION_CLOSE_ERROR (connection,
                               _ (
-                                "Closing connection (failed to create response).\n"));
+                                "Closing connection (failed to create response)."));
       return;
     }
     iret = MHD_queue_response (connection,
@@ -2640,7 +2719,7 @@ parse_connection_headers (struct MHD_Connection *connection)
       /* can't even send a reply, at least close the connection */
       CONNECTION_CLOSE_ERROR (connection,
                               _ (
-                                "Closing connection (failed to queue response).\n"));
+                                "Closing connection (failed to queue response)."));
     }
     return;
   }
@@ -2677,7 +2756,8 @@ parse_connection_headers (struct MHD_Connection *connection)
         connection->remaining_upload_size = 0;
 #ifdef HAVE_MESSAGES
         MHD_DLOG (connection->daemon,
-                  "Failed to parse `Content-Length' header. Closing connection.\n");
+                  _ (
+                    "Failed to parse `Content-Length' header. Closing connection.\n"));
 #endif
         CONNECTION_CLOSE_ERROR (connection,
                                 NULL);
@@ -2778,14 +2858,19 @@ MHD_connection_handle_read (struct MHD_Connection *connection)
                               (MHD_CONNECTION_INIT == connection->state) ?
                               NULL :
                               _ (
-                                "Socket disconnected while reading request.\n"));
+                                "Socket disconnected while reading request."));
       return;
     }
+
+#ifdef HAVE_MESSAGES
+    if (MHD_CONNECTION_INIT != connection->state)
+      MHD_DLOG (connection->daemon,
+                _ ("Connection socket is closed when reading " \
+                   "request due to the error: %s\n"),
+                str_conn_error_ (bytes_read));
+#endif
     CONNECTION_CLOSE_ERROR (connection,
-                            (MHD_CONNECTION_INIT == connection->state) ?
-                            NULL :
-                            _ (
-                              "Connection socket is closed due to error when reading request.\n"));
+                            NULL);
     return;
   }
 
@@ -2935,6 +3020,7 @@ MHD_connection_handle_write (struct MHD_Connection *connection)
                     connection->response_write_position) );
 
       if ( (NULL == resp->crc) &&
+           (NULL == resp->data_iov) &&
            (0 == connection->response_write_position) )
       {
         mhd_assert (resp->total_size >= resp->data_size);
@@ -2963,6 +3049,8 @@ MHD_connection_handle_write (struct MHD_Connection *connection)
                                       0,
                                       ((0 == resp->total_size) ||
                                        (resp->total_size ==
+                                        connection->response_write_position) ||
+                                       (MHD_SIZE_UNKNOWN ==
                                         connection->response_write_position)));
       }
 
@@ -2970,9 +3058,15 @@ MHD_connection_handle_write (struct MHD_Connection *connection)
       {
         if (MHD_ERR_AGAIN_ == ret)
           return;
+#ifdef HAVE_MESSAGES
+        MHD_DLOG (connection->daemon,
+                  _ ("Failed to send the response headers for the " \
+                     "request for `%s'. Error: %s\n"),
+                  connection->url,
+                  str_conn_error_ (ret));
+#endif
         CONNECTION_CLOSE_ERROR (connection,
-                                _ (
-                                  "Connection was closed while sending response headers.\n"));
+                                NULL);
         return;
       }
       /* 'ret' is not negative, it's safe to cast it to 'size_t'. */
@@ -3015,12 +3109,18 @@ MHD_connection_handle_write (struct MHD_Connection *connection)
 #if defined(_MHD_HAVE_SENDFILE)
       if (MHD_resp_sender_sendfile == connection->resp_sender)
       {
+        mhd_assert (NULL == response->data_iov);
         ret = MHD_send_sendfile_ (connection);
       }
+      else /* combined with the next 'if' */
+#endif /* _MHD_HAVE_SENDFILE */
+      if (NULL != response->data_iov)
+      {
+        ret = MHD_send_iovec_ (connection,
+                               &connection->resp_iov,
+                               true);
+      }
       else
-#else  /* ! _MHD_HAVE_SENDFILE */
-      if (1)
-#endif /* ! _MHD_HAVE_SENDFILE */
       {
         data_write_offset = connection->response_write_position
                             - response->data_start;
@@ -3052,8 +3152,10 @@ MHD_connection_handle_write (struct MHD_Connection *connection)
           return;
 #ifdef HAVE_MESSAGES
         MHD_DLOG (connection->daemon,
-                  _ ("Failed to send data in request for `%s'.\n"),
-                  connection->url);
+                  _ ("Failed to send the response body for the " \
+                     "request for `%s'. Error: %s\n"),
+                  connection->url,
+                  str_conn_error_ (ret));
 #endif
         CONNECTION_CLOSE_ERROR (connection,
                                 NULL);
@@ -3080,9 +3182,15 @@ MHD_connection_handle_write (struct MHD_Connection *connection)
     {
       if (MHD_ERR_AGAIN_ == ret)
         return;
+#ifdef HAVE_MESSAGES
+      MHD_DLOG (connection->daemon,
+                _ ("Failed to send the chunked response body for the " \
+                   "request for `%s'. Error: %s\n"),
+                connection->url,
+                str_conn_error_ (ret));
+#endif
       CONNECTION_CLOSE_ERROR (connection,
-                              _ (
-                                "Connection was closed while sending response body.\n"));
+                              NULL);
       return;
     }
     connection->write_buffer_send_offset += ret;
@@ -3110,9 +3218,15 @@ MHD_connection_handle_write (struct MHD_Connection *connection)
     {
       if (MHD_ERR_AGAIN_ == ret)
         return;
+#ifdef HAVE_MESSAGES
+      MHD_DLOG (connection->daemon,
+                _ ("Failed to send the footers for the " \
+                   "request for `%s'. Error: %s\n"),
+                connection->url,
+                str_conn_error_ (ret));
+#endif
       CONNECTION_CLOSE_ERROR (connection,
-                              _ (
-                                "Connection was closed while sending response body.\n"));
+                              NULL);
       return;
     }
     connection->write_buffer_send_offset += ret;
@@ -3591,7 +3705,7 @@ MHD_connection_handle_idle (struct MHD_Connection *connection)
         /* oops - close! */
         CONNECTION_CLOSE_ERROR (connection,
                                 _ (
-                                  "Closing connection (failed to create response header).\n"));
+                                  "Closing connection (failed to create response header)."));
         continue;
       }
       if ( (! connection->have_chunked_upload) ||
@@ -3672,6 +3786,8 @@ MHD_connection_handle_idle (struct MHD_Connection *connection)
       connection->write_buffer_size = 0;
       connection->write_buffer_send_offset = 0;
       connection->write_buffer_append_offset = 0;
+      /* iov (if any) was deallocated by MHD_pool_reset */
+      memset (&connection->resp_iov, 0, sizeof(connection->resp_iov));
       continue;
     case MHD_CONNECTION_CLOSED:
       cleanup_connection (connection);
@@ -3975,9 +4091,11 @@ MHD_queue_response (struct MHD_Connection *connection,
   if ( (response->fd == -1) ||
        (response->is_pipe) ||
        (0 != (connection->daemon->options & MHD_USE_TLS))
-#if ! defined(MHD_WINSOCK_SOCKETS) && defined(HAVE_SEND_SIGPIPE_SUPPRESS)
+#if defined(MHD_SEND_SPIPE_SUPPRESS_NEEDED) && \
+       defined(MHD_SEND_SPIPE_SUPPRESS_POSSIBLE)
        || (! daemon->sigpipe_blocked && ! connection->sk_spipe_suppress)
-#endif /* ! MHD_WINSOCK_SOCKETS && ! HAVE_SEND_SIGPIPE_SUPPRESS */
+#endif /* MHD_SEND_SPIPE_SUPPRESS_NEEDED &&
+          MHD_SEND_SPIPE_SUPPRESS_POSSIBLE */
        )
     connection->resp_sender = MHD_resp_sender_std;
   else

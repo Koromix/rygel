@@ -1,6 +1,6 @@
 /*
      This file is part of libmicrohttpd
-     Copyright (C) 2007-2013 Daniel Pittman and Christian Grothoff
+     Copyright (C) 2007-2021 Daniel Pittman and Christian Grothoff
 
      This library is free software; you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public
@@ -251,31 +251,6 @@ struct MHD_PostProcessor
 };
 
 
-/**
- * Create a `struct MHD_PostProcessor`.
- *
- * A `struct MHD_PostProcessor` can be used to (incrementally) parse
- * the data portion of a POST request.  Note that some buggy browsers
- * fail to set the encoding type.  If you want to support those, you
- * may have to call #MHD_set_connection_value with the proper encoding
- * type before creating a post processor (if no supported encoding
- * type is set, this function will fail).
- *
- * @param connection the connection on which the POST is
- *        happening (used to determine the POST format)
- * @param buffer_size maximum number of bytes to use for
- *        internal buffering (used only for the parsing,
- *        specifically the parsing of the keys).  A
- *        tiny value (256-1024) should be sufficient.
- *        Do NOT use a value smaller than 256.  For good
- *        performance, use 32 or 64k (i.e. 65536).
- * @param iter iterator to be called with the parsed data,
- *        Must NOT be NULL.
- * @param iter_cls first argument to @a iter
- * @return NULL on error (out of memory, unsupported encoding),
- *         otherwise a PP handle
- * @ingroup request
- */
 struct MHD_PostProcessor *
 MHD_create_post_processor (struct MHD_Connection *connection,
                            size_t buffer_size,
@@ -386,16 +361,14 @@ process_value (struct MHD_PostProcessor *pp,
           pp->xbuf_pos);
   xoff = pp->xbuf_pos;
   pp->xbuf_pos = 0;
-  if (NULL != last_escape)
+  if ( (NULL != last_escape) &&
+       (((size_t) (value_end - last_escape)) < sizeof (pp->xbuf)) )
   {
-    if (((size_t) (value_end - last_escape)) < sizeof (pp->xbuf))
-    {
-      pp->xbuf_pos = value_end - last_escape;
-      memcpy (pp->xbuf,
-              last_escape,
-              value_end - last_escape);
-      value_end = last_escape;
-    }
+    pp->xbuf_pos = value_end - last_escape;
+    memcpy (pp->xbuf,
+            last_escape,
+            value_end - last_escape);
+    value_end = last_escape;
   }
   while ( (value_start != value_end) ||
           (pp->must_ikvi) ||
@@ -460,7 +433,7 @@ process_value (struct MHD_PostProcessor *pp,
     MHD_unescape_plus (xbuf);
     xoff = MHD_http_unescape (xbuf);
     /* finally: call application! */
-    if ( (pp->must_ikvi || (0 != xoff)) )
+    if (pp->must_ikvi || (0 != xoff) )
     {
       pp->must_ikvi = false;
       if (MHD_NO == pp->ikvi (pp->cls,
@@ -661,6 +634,8 @@ post_process_urlencoded (struct MHD_PostProcessor *pp,
                      start_value,
                      end_value,
                      NULL);
+      if (PP_Error == pp->state)
+        continue;
       pp->value_offset = 0;
       start_value = NULL;
       end_value = NULL;
@@ -1408,19 +1383,6 @@ END:
 }
 
 
-/**
- * Parse and process POST data.  Call this function when POST data is
- * available (usually during an #MHD_AccessHandlerCallback) with the
- * "upload_data" and "upload_data_size".  Whenever possible, this will
- * then cause calls to the #MHD_PostDataIterator.
- *
- * @param pp the post processor
- * @param post_data @a post_data_len bytes of POST data
- * @param post_data_len length of @a post_data
- * @return #MHD_YES on success, #MHD_NO on error
- *         (out-of-memory, iterator aborted, parse error)
- * @ingroup request
- */
 enum MHD_Result
 MHD_post_process (struct MHD_PostProcessor *pp,
                   const char *post_data,
@@ -1449,16 +1411,6 @@ MHD_post_process (struct MHD_PostProcessor *pp,
 }
 
 
-/**
- * Release PostProcessor resources.
- *
- * @param pp post processor context to destroy
- * @return #MHD_YES if processing completed nicely,
- *         #MHD_NO if there were spurious characters / formatting
- *                problems; it is common to ignore the return
- *                value of this function
- * @ingroup request
- */
 enum MHD_Result
 MHD_destroy_post_processor (struct MHD_PostProcessor *pp)
 {

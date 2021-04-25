@@ -8,6 +8,10 @@ endif
 
 AM_CPPFLAGS = -I$(top_srcdir)/src/include \
   $(LIBCURL_CPPFLAGS)
+  
+if HEAVY_TESTS
+AM_CPPFLAGS += -D_MHD_HEAVY_TESTS=1
+endif  
 
 EXTRA_DIST = README socat.c
 

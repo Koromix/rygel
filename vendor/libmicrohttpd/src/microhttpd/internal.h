@@ -92,8 +92,9 @@
  * @param fd the FD to close
  */
 #define MHD_fd_close_chk_(fd) do {                      \
-    if ( (0 != close ((fd)) && (EBADF == errno)) )  \
-      MHD_PANIC (_ ("Failed to close FD.\n"));            \
+    if ( (0 != close ((fd)) && (EBADF == errno)) ) {    \
+      MHD_PANIC (_ ("Failed to close FD.\n"));          \
+    }                                                   \
 } while (0)
 
 /*
@@ -173,7 +174,9 @@ enum MHD_tristate
 {
   _MHD_UNKNOWN = -1,    /**< State is not yet checked nor set */
   _MHD_OFF     = false, /**< State is "off" / "disabled" */
-  _MHD_ON      = true   /**< State is "on"  / "enabled" */
+  _MHD_NO      = false, /**< State is "off" / "disabled" */
+  _MHD_ON      = true,  /**< State is "on"  / "enabled" */
+  _MHD_YES     = true   /**< State is "on"  / "enabled" */
 };
 
 
@@ -343,6 +346,60 @@ struct MHD_HTTP_Header
 };
 
 
+#if defined(MHD_WINSOCK_SOCKETS)
+/**
+ * Internally used I/O vector type for use with winsock.
+ * Binary matches system "WSABUF".
+ */
+typedef struct _MHD_W32_iovec
+{
+  unsigned long iov_len;
+  char *iov_base;
+} MHD_iovec_;
+#define MHD_IOV_ELMN_MAX_SIZE    ULONG_MAX
+typedef unsigned long MHD_iov_size_;
+#elif defined(HAVE_SENDMSG) || defined(HAVE_WRITEV)
+/**
+ * Internally used I/O vector type for use when writev or sendmsg
+ * is available. Matches system "struct iovec".
+ */
+typedef struct iovec MHD_iovec_;
+#define MHD_IOV_ELMN_MAX_SIZE    SIZE_MAX
+typedef size_t MHD_iov_size_;
+#else
+/**
+ * Internally used I/O vector type for use when writev or sendmsg
+ * is not available.
+ */
+typedef struct MHD_IoVec MHD_iovec_;
+#define MHD_IOV_ELMN_MAX_SIZE    SIZE_MAX
+typedef size_t MHD_iov_size_;
+#endif
+
+
+struct MHD_iovec_track_
+{
+  /**
+   * The copy of array of iovec elements.
+   * The copy of elements are updated during sending.
+   * The number of elements is not changed during lifetime.
+   */
+  MHD_iovec_ *iov;
+
+  /**
+   * The number of elements in @iov.
+   * This value is not changed during lifetime.
+   */
+  size_t cnt;
+
+  /**
+   * The number of sent elements.
+   * At the same time, it is the index of the next (or current) element
+   * to send.
+   */
+  size_t sent;
+};
+
 /**
  * Representation of a response.
  */
@@ -450,6 +507,15 @@ struct MHD_Response
    */
   bool is_pipe;
 
+  /**
+   * I/O vector used with MHD_create_response_from_iovec.
+   */
+  MHD_iovec_ *data_iov;
+
+  /**
+   * Number of elements in data_iov.
+   */
+  unsigned int data_iovcnt;
 };
 
 
@@ -873,6 +939,15 @@ struct MHD_Connection
    */
   uint64_t response_write_position;
 
+  /**
+   * The copy of iov response.
+   * Valid if iovec response is used.
+   * Updated during send.
+   * Members are allocated in the pool.
+   */
+  struct MHD_iovec_track_ resp_iov;
+
+
 #if defined(_MHD_HAVE_SENDFILE)
   enum MHD_resp_sender_
   {
@@ -922,6 +997,12 @@ struct MHD_Connection
    * up in that case).
    */
   MHD_socket socket_fd;
+
+  /**
+   * true if @e socket_fd is not TCP/IP (a UNIX domain socket, a pipe),
+   * false (TCP/IP) otherwise.
+   */
+  enum MHD_tristate is_nonip;
 
   /**
    * true if #socket_fd is non-blocking, false otherwise.
@@ -1369,6 +1450,11 @@ struct MHD_Daemon
    */
   struct MHD_Connection *cleanup_tail;
 
+  /**
+   * _MHD_YES if the @e listen_fd socket is a UNIX domain socket.
+   */
+  enum MHD_tristate listen_is_unix;
+
 #ifdef EPOLL_SUPPORT
   /**
    * Head of EDLL of connections ready for processing (in epoll mode).
@@ -1389,7 +1475,7 @@ struct MHD_Daemon
   int epoll_fd;
 
   /**
-   * true if the listen socket is in the 'epoll' set,
+   * true if the @e listen_fd socket is in the 'epoll' set,
    * false if not.
    */
   bool listen_socket_in_epoll;
@@ -1806,7 +1892,12 @@ struct MHD_Daemon
    */
   bool have_dhparams;
 
-#endif /* HTTPS_SUPPORT */
+  /**
+   * true if ALPN is disabled.
+   */
+  bool disable_alpn;
+
+  #endif /* HTTPS_SUPPORT */
 
 #ifdef DAUTH_SUPPORT
 
@@ -1850,6 +1941,15 @@ struct MHD_Daemon
    * The size of queue for listen socket.
    */
   unsigned int listen_backlog_size;
+
+  /**
+   * The number of user options used.
+   *
+   * Contains number of only meaningful options, i.e. #MHD_OPTION_END
+   * and #MHD_OPTION_ARRAY are not counted, while options inside
+   * #MHD_OPTION_ARRAY are counted.
+   */
+  size_t num_opts;
 };
 
 
@@ -1864,12 +1964,13 @@ struct MHD_Daemon
 #define DLL_insert(head,tail,element) do { \
     mhd_assert (NULL == (element)->next); \
     mhd_assert (NULL == (element)->prev); \
-    (element)->next = (head); \
-    (element)->prev = NULL; \
-    if ((tail) == NULL) \
-      (tail) = element; \
-    else \
-      (head)->prev = element; \
+    (element)->next = (head);       \
+    (element)->prev = NULL;         \
+    if ((tail) == NULL) {           \
+      (tail) = element;             \
+    } else {                        \
+      (head)->prev = element;       \
+    }                               \
     (head) = (element); } while (0)
 
 
@@ -1885,15 +1986,17 @@ struct MHD_Daemon
 #define DLL_remove(head,tail,element) do { \
     mhd_assert ( (NULL != (element)->next) || ((element) == (tail)));  \
     mhd_assert ( (NULL != (element)->prev) || ((element) == (head)));  \
-    if ((element)->prev == NULL) \
-      (head) = (element)->next;  \
-    else \
+    if ((element)->prev == NULL) {                                     \
+      (head) = (element)->next;                \
+    } else {                                   \
       (element)->prev->next = (element)->next; \
-    if ((element)->next == NULL) \
-      (tail) = (element)->prev;  \
-    else \
+    }                                          \
+    if ((element)->next == NULL) {             \
+      (tail) = (element)->prev;                \
+    } else {                                   \
       (element)->next->prev = (element)->prev; \
-    (element)->next = NULL; \
+    }                                          \
+    (element)->next = NULL;                    \
     (element)->prev = NULL; } while (0)
 
 
@@ -1908,12 +2011,13 @@ struct MHD_Daemon
 #define XDLL_insert(head,tail,element) do { \
     mhd_assert (NULL == (element)->nextX); \
     mhd_assert (NULL == (element)->prevX); \
-    (element)->nextX = (head); \
-    (element)->prevX = NULL; \
-    if (NULL == (tail)) \
-      (tail) = element; \
-    else \
-      (head)->prevX = element; \
+    (element)->nextX = (head);     \
+    (element)->prevX = NULL;       \
+    if (NULL == (tail)) {          \
+      (tail) = element;            \
+    } else {                       \
+      (head)->prevX = element;     \
+    }                              \
     (head) = (element); } while (0)
 
 
@@ -1929,15 +2033,17 @@ struct MHD_Daemon
 #define XDLL_remove(head,tail,element) do { \
     mhd_assert ( (NULL != (element)->nextX) || ((element) == (tail)));  \
     mhd_assert ( (NULL != (element)->prevX) || ((element) == (head)));  \
-    if (NULL == (element)->prevX) \
-      (head) = (element)->nextX;  \
-    else \
+    if (NULL == (element)->prevX) {                                     \
+      (head) = (element)->nextX;                  \
+    } else {                                      \
       (element)->prevX->nextX = (element)->nextX; \
-    if (NULL == (element)->nextX) \
-      (tail) = (element)->prevX;  \
-    else \
+    }                                             \
+    if (NULL == (element)->nextX) {               \
+      (tail) = (element)->prevX;                  \
+    } else {                                      \
       (element)->nextX->prevX = (element)->prevX; \
-    (element)->nextX = NULL; \
+    }                                             \
+    (element)->nextX = NULL;                      \
     (element)->prevX = NULL; } while (0)
 
 
@@ -1951,11 +2057,12 @@ struct MHD_Daemon
  */
 #define EDLL_insert(head,tail,element) do { \
     (element)->nextE = (head); \
-    (element)->prevE = NULL; \
-    if ((tail) == NULL) \
-      (tail) = element; \
-    else \
+    (element)->prevE = NULL;   \
+    if ((tail) == NULL) {      \
+      (tail) = element;        \
+    } else {                   \
       (head)->prevE = element; \
+    }                          \
     (head) = (element); } while (0)
 
 
@@ -1968,16 +2075,18 @@ struct MHD_Daemon
  * @param tail pointer to the tail of the EDLL
  * @param element element to remove
  */
-#define EDLL_remove(head,tail,element) do { \
-    if ((element)->prevE == NULL) \
-      (head) = (element)->nextE;  \
-    else \
+#define EDLL_remove(head,tail,element) do {       \
+    if ((element)->prevE == NULL) {               \
+      (head) = (element)->nextE;                  \
+    } else {                                      \
       (element)->prevE->nextE = (element)->nextE; \
-    if ((element)->nextE == NULL) \
-      (tail) = (element)->prevE;  \
-    else \
+    }                                             \
+    if ((element)->nextE == NULL) {               \
+      (tail) = (element)->prevE;                  \
+    } else {                                      \
       (element)->nextE->prevE = (element)->prevE; \
-    (element)->nextE = NULL; \
+    }                                             \
+    (element)->nextE = NULL;                      \
     (element)->prevE = NULL; } while (0)
 
 

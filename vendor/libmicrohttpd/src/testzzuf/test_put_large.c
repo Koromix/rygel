@@ -98,6 +98,16 @@ ahc_echo (void *cls,
   enum MHD_Result ret;
   (void) version; (void) unused; /* Unused. Silent compiler warning. */
 
+  if (NULL == url)
+    fprintf (stderr, "The \"url\" parameter is NULL.\n");
+  if (NULL == method)
+    fprintf (stderr, "The \"method\" parameter is NULL.\n");
+  if (NULL == version)
+    fprintf (stderr, "The \"version\" parameter is NULL.\n");
+  if (NULL == upload_data_size)
+    fprintf (stderr, "The \"upload_data_size\" parameter is NULL.\n");
+  if ((0 != *upload_data_size) && (NULL == upload_data))
+    fprintf (stderr, "Upload data is NULL with non-zero size.\n");
   if (0 != strcmp ("PUT", method))
     return MHD_NO;              /* unexpected method */
   if ((*done) == 0)

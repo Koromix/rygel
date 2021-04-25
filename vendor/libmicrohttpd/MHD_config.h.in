@@ -40,9 +40,9 @@
 /* Define to 1 if you have the usable `calloc' function. */
 #undef HAVE_CALLOC
 
-/* Define to 1 if you have the Mac OS X function CFLocaleCopyCurrent in the
-   CoreFoundation framework. */
-#undef HAVE_CFLOCALECOPYCURRENT
+/* Define to 1 if you have the Mac OS X function
+   CFLocaleCopyPreferredLanguages in the CoreFoundation framework. */
+#undef HAVE_CFLOCALECOPYPREFERREDLANGUAGES
 
 /* Define to 1 if you have the Mac OS X function CFPreferencesCopyAppValue in
    the CoreFoundation framework. */
@@ -159,13 +159,10 @@
 /* Define to 1 if you have the `memmem' function. */
 #undef HAVE_MEMMEM
 
-/* Define to 1 if you have the <memory.h> header file. */
-#undef HAVE_MEMORY_H
-
 /* Define to 1 to enable support for error messages. */
 #undef HAVE_MESSAGES
 
-/* Define to 1 if you have the `[nanosleep]' function. */
+/* Define to 1 if you have the `nanosleep' function. */
 #undef HAVE_NANOSLEEP
 
 /* Define to 1 if you have the <netdb.h> header file. */
@@ -351,6 +348,9 @@
 
 /* Define to 1 if you have the `tsearch' function. */
 #undef HAVE_TSEARCH
+
+/* Define to 1 if you have the `twalk' function. */
+#undef HAVE_TWALK
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
@@ -548,7 +548,9 @@
 /* This is a BSD system */
 #undef SOMEBSD
 
-/* Define to 1 if you have the ANSI C header files. */
+/* Define to 1 if all of the C90 standard headers exist (not just the ones
+   required in a freestanding environment). This macro is provided for
+   backward compatibility; new code need not use it. */
 #undef STDC_HEADERS
 
 /* Define to 1 if libmicrohttpd is compiled with HTTP Upgrade support. */
@@ -584,11 +586,6 @@
 
 /* Define to 1 if it is required by headers to expose additional symbols */
 #undef _DARWIN_C_SOURCE
-
-/* Enable large inode numbers on Mac OS X 10.5.  */
-#ifndef _DARWIN_USE_64_BIT_INODE
-# define _DARWIN_USE_64_BIT_INODE 1
-#endif
 
 /* Define to use debug asserts. */
 #undef _DEBUG
@@ -646,6 +643,10 @@
 
 /* Define to 1 if it is required by headers to expose additional symbols */
 #undef __EXTENSIONS__
+
+/* Define to 1 if C does not support variable-length arrays, and if the
+   compiler does not already define this. */
+#undef __STDC_NO_VLA__
 
 /* Define to type name which will be used as boolean type. */
 #undef bool

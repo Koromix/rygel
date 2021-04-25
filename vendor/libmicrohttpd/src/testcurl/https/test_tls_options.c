@@ -47,6 +47,7 @@ test_unmatching_ssl_version (void *cls, int port, const char *cipher_suite,
                              int curl_req_ssl_version)
 {
   struct CBC cbc;
+  char url[255];
   (void) cls;    /* Unused. Silent compiler warning. */
   if (NULL == (cbc.buf = malloc (sizeof (char) * 256)))
   {
@@ -57,7 +58,6 @@ test_unmatching_ssl_version (void *cls, int port, const char *cipher_suite,
   cbc.size = 256;
   cbc.pos = 0;
 
-  char url[255];
   if (gen_test_file_url (url,
                          sizeof (url),
                          port))
@@ -93,6 +93,8 @@ main (int argc, char *const *argv)
     MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD
     | MHD_USE_TLS | MHD_USE_ERROR_LOG;
   int port;
+  const char *aes128_sha = "AES128-SHA";
+  const char *aes256_sha = "AES256-SHA";
   (void) argc; (void) argv;       /* Unused. Silent compiler warning. */
 
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
@@ -126,8 +128,6 @@ main (int argc, char *const *argv)
   if (! testsuite_curl_global_init ())
     return 99;
 
-  const char *aes128_sha = "AES128-SHA";
-  const char *aes256_sha = "AES256-SHA";
   if (curl_uses_nss_ssl () == 0)
   {
     aes128_sha = "rsa_aes_128_sha";

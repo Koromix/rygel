@@ -60,7 +60,7 @@ MHD_daemon_get_timeout (struct MHD_Daemon *daemon,
               MHD_SC_CONFIGURATION_MISMATCH_FOR_GET_TIMEOUT,
               _ ("Illegal call to MHD_get_timeout.\n"));
 #endif
-    return MHD_SC_CONFIGURATION_MISSMATCH_FOR_GET_TIMEOUT;
+    return MHD_SC_CONFIGURATION_MISMATCH_FOR_GET_TIMEOUT;
   }
 
   if (daemon->data_already_pending)

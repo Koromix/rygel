@@ -557,6 +557,11 @@ typedef int MHD_SCKT_SEND_SIZE_;
 #  else  /* ! EINVAL */
 #    define MHD_SCKT_EINVAL_      MHD_SCKT_MISSING_ERR_CODE_
 #  endif /* ! EINVAL */
+#  ifdef EPIPE
+#    define MHD_SCKT_EPIPE_       EPIPE
+#  else  /* ! EPIPE */
+#    define MHD_SCKT_EPIPE_       MHD_SCKT_MISSING_ERR_CODE_
+#  endif /* ! EPIPE */
 #  ifdef EFAULT
 #    define MHD_SCKT_EFAUL_       EFAULT
 #  else  /* ! EFAULT */
@@ -567,6 +572,11 @@ typedef int MHD_SCKT_SEND_SIZE_;
 #  else  /* ! ENOSYS */
 #    define MHD_SCKT_ENOSYS_      MHD_SCKT_MISSING_ERR_CODE_
 #  endif /* ! ENOSYS */
+#  ifdef ENOPROTOOPT
+#    define MHD_SCKT_ENOPROTOOPT_      ENOPROTOOPT
+#  else  /* ! ENOPROTOOPT */
+#    define MHD_SCKT_ENOPROTOOPT_      MHD_SCKT_MISSING_ERR_CODE_
+#  endif /* ! ENOPROTOOPT */
 #  ifdef ENOTSUP
 #    define MHD_SCKT_ENOTSUP_     ENOTSUP
 #  else  /* ! ENOTSUP */
@@ -601,8 +611,10 @@ typedef int MHD_SCKT_SEND_SIZE_;
 #  define MHD_SCKT_EBADF_         WSAEBADF
 #  define MHD_SCKT_ENOTSOCK_      WSAENOTSOCK
 #  define MHD_SCKT_EINVAL_        WSAEINVAL
+#  define MHD_SCKT_EPIPE_         WSAESHUTDOWN
 #  define MHD_SCKT_EFAUL_         WSAEFAULT
 #  define MHD_SCKT_ENOSYS_        MHD_SCKT_MISSING_ERR_CODE_
+#  define MHD_SCKT_ENOPROTOOPT_   WSAENOPROTOOPT
 #  define MHD_SCKT_ENOTSUP_       MHD_SCKT_MISSING_ERR_CODE_
 #  define MHD_SCKT_EOPNOTSUPP_    WSAEOPNOTSUPP
 #  define MHD_SCKT_EACCESS_       WSAEACCES
@@ -886,40 +898,6 @@ int
 MHD_socket_noninheritable_ (MHD_socket sock);
 
 
-/**
- * Enable/disable the cork option.
- *
- * TCP_NOPUSH has the same logic as MSG_MSG_MORE.
- * The two are more or less equivalent by a source
- * transformation (ie
- * send(MSG_MORE) => "set TCP_NOPUSH + send() + clear TCP_NOPUSH".
- * Both of them are really fairly "local", but TCP_NOPUSH has a
- * _notion_ of persistency that is entirely lacking in MSG_MORE.
- * ... with TCP_NOPUSH you basically have to know what your last
- * write is, and clear the bit _before_ that write if you want
- * to avoid bad latencies.
- *
- * See also: https://yarchive.net/comp/linux/sendfile.html
- *
- * @param sock socket to manipulate
- * @param on set to true to enable CORK, false to disable
- * @return non-zero if succeeded, zero otherwise
- */
-int
-MHD_socket_cork_ (MHD_socket sock,
-                  bool on);
-
-
-/**
- * Change socket buffering mode to default.
- *
- * @param sock socket to manipulate
- * @return non-zero if succeeded, zero otherwise
- */
-int
-MHD_socket_buffering_reset_ (MHD_socket sock);
-
-
 #if defined(SOL_SOCKET) && defined(SO_NOSIGPIPE)
 static const int _MHD_socket_int_one = 1;
 /**
@@ -934,17 +912,22 @@ static const int _MHD_socket_int_one = 1;
 #endif /* SOL_SOCKET && SO_NOSIGPIPE */
 
 
-#if defined(MHD_WINSOCK_SOCKETS) || defined(MHD_socket_nosignal_) || \
-  defined(MSG_NOSIGNAL)
+#if defined(MHD_socket_nosignal_) || defined(MSG_NOSIGNAL)
 /**
- * Indicate that SIGPIPE can be suppressed for normal send() by flags
+ * Indicate that SIGPIPE can be suppressed by MHD for normal send() by flags
  * or socket options.
  * If this macro is undefined, MHD cannot suppress SIGPIPE for normal
  * processing so sendfile() or writev() calls is not avoided.
  */
-#define HAVE_SEND_SIGPIPE_SUPPRESS      1
+#define MHD_SEND_SPIPE_SUPPRESS_POSSIBLE   1
 #endif /* MHD_WINSOCK_SOCKETS || MHD_socket_nosignal_ || MSG_NOSIGNAL */
 
+#if ! defined(MHD_WINSOCK_SOCKETS)
+/**
+ * Indicate that suppression of SIGPIPE is required.
+ */
+#define MHD_SEND_SPIPE_SUPPRESS_NEEDED     1
+#endif
 
 /**
  * Create a listen socket, with noninheritable flag if possible.

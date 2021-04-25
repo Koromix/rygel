@@ -1,5 +1,7 @@
 # This Makefile.am is in the public domain
-SUBDIRS  = .
+EMPTY_ITEM =
+
+SUBDIRS = .
 
 if USE_COVERAGE
   AM_CFLAGS = -fprofile-arcs -ftest-coverage
@@ -23,15 +25,37 @@ THREAD_ONLY_TESTS = \
   test_long_header11 \
   test_iplimit11 \
   test_termination \
+  $(EMPTY_ITEM)
+
+if HEAVY_TESTS
+THREAD_ONLY_TESTS += \
   test_add_conn_cleanup \
   test_add_conn_cleanup_nolisten \
-  test_timeout
+  $(EMPTY_ITEM)
+endif
+
+THREAD_ONLY_TESTS += \
+  test_timeout \
+  $(EMPTY_ITEM)
 
 if HAVE_POSIX_THREADS
+if HEAVY_TESTS
 THREAD_ONLY_TESTS += \
   perf_get_concurrent11 \
+  $(EMPTY_ITEM)
+endif
+
+THREAD_ONLY_TESTS += \
+  test_get_wait \
+  test_get_wait11 \
   test_quiesce \
-  test_concurrent_stop
+  $(EMPTY_ITEM)
+
+if HEAVY_TESTS
+THREAD_ONLY_TESTS += \
+  test_concurrent_stop \
+  $(EMPTY_ITEM)
+endif
 
 if HAVE_CURL_BINARY
 THREAD_ONLY_TESTS += \
@@ -40,20 +64,23 @@ endif
 endif
 
 if ENABLE_DAUTH
-  THREAD_ONLY_TESTS += \
-    test_digestauth \
-    test_digestauth_sha256 \
-    test_digestauth_with_arguments
+THREAD_ONLY_TESTS += \
+  test_digestauth \
+  test_digestauth_sha256 \
+  test_digestauth_with_arguments
 endif
 
+if HEAVY_TESTS
 if HAVE_POSIX_THREADS
 THREAD_ONLY_TESTS += \
   perf_get_concurrent
 endif
-  
+endif
+
 if HAVE_CURL
 check_PROGRAMS = \
   test_get \
+  test_get_iovec \
   test_get_sendfile \
   test_delete \
   test_patch \
@@ -65,6 +92,7 @@ check_PROGRAMS = \
   test_parse_cookies \
   test_large_put \
   test_get11 \
+  test_get_iovec11 \
   test_get_sendfile11 \
   test_patch11 \
   test_put11 \
@@ -73,7 +101,12 @@ check_PROGRAMS = \
   test_get_chunked \
   test_put_chunked \
   test_callback \
+  $(EMPTY_ITEM)
+
+if HEAVY_TESTS
+check_PROGRAMS += \
   perf_get
+endif
 
 if HAVE_POSTPROCESSOR
  check_PROGRAMS += \
@@ -85,9 +118,11 @@ if HAVE_POSTPROCESSOR
   test_post_loop11
 endif
 
+if HEAVY_TESTS
 if HAVE_FORK_WAITPID
 if HAVE_CURL_BINARY
 check_PROGRAMS += test_get_response_cleanup
+endif
 endif
 endif
 
@@ -187,11 +222,35 @@ test_digestauth_with_arguments_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBGCRYPT_LIBS@ @LIBCURL@
 
+test_get_iovec_SOURCES = \
+  test_get_iovec.c mhd_has_in_name.h
+test_get_iovec_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  @LIBCURL@
+
 test_get_sendfile_SOURCES = \
   test_get_sendfile.c mhd_has_in_name.h
 test_get_sendfile_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
+
+test_get_wait_SOURCES = \
+  test_get_wait.c \
+  mhd_has_in_name.h
+test_get_wait_CFLAGS = \
+  $(PTHREAD_CFLAGS) $(AM_CFLAGS)
+test_get_wait_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  $(PTHREAD_LIBS) @LIBCURL@
+
+test_get_wait11_SOURCES = \
+  test_get_wait.c \
+  mhd_has_in_name.h
+test_get_wait11_CFLAGS = \
+  $(PTHREAD_CFLAGS) $(AM_CFLAGS)
+test_get_wait11_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  $(PTHREAD_LIBS) @LIBCURL@
 
 test_urlparse_SOURCES = \
   test_urlparse.c mhd_has_in_name.h
@@ -275,7 +334,7 @@ test_put_chunked_SOURCES = \
 test_put_chunked_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
-  
+
 test_add_conn_SOURCES = \
   test_add_conn.c $(top_srcdir)/src/microhttpd/test_helpers.h
 test_add_conn_CFLAGS = \
@@ -311,6 +370,12 @@ test_add_conn_cleanup_nolisten_LDADD = \
 test_get11_SOURCES = \
   test_get.c
 test_get11_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  @LIBCURL@
+
+test_get_iovec11_SOURCES = \
+  test_get_iovec.c mhd_has_in_name.h
+test_get_iovec11_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 

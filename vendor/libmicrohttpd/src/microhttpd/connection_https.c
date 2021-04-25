@@ -1,6 +1,7 @@
 /*
      This file is part of libmicrohttpd
      Copyright (C) 2007, 2008, 2010 Daniel Pittman and Christian Grothoff
+     Copyright (C) 2015-2021 Karlson2k (Evgeny Grin)
 
      This library is free software; you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public
@@ -24,6 +25,7 @@
  *         compiled if ENABLE_HTTPS is set.
  * @author Sagie Amir
  * @author Christian Grothoff
+ * @author Karlson2k (Evgeny Grin)
  */
 
 #include "internal.h"
@@ -33,6 +35,7 @@
 #include "response.h"
 #include "mhd_mono_clock.h"
 #include <gnutls/gnutls.h>
+#include "mhd_send.h"
 
 
 /**
@@ -70,9 +73,28 @@ recv_tls_adapter (struct MHD_Connection *connection,
   }
   if (res < 0)
   {
-    /* Likely 'GNUTLS_E_INVALID_SESSION' (client communication
-       disrupted); interpret as a hard error */
     connection->tls_read_ready = false;
+    if ( (GNUTLS_E_DECRYPTION_FAILED == res) ||
+         (GNUTLS_E_INVALID_SESSION == res) ||
+         (GNUTLS_E_DECOMPRESSION_FAILED == res) ||
+         (GNUTLS_E_RECEIVED_ILLEGAL_PARAMETER == res) ||
+         (GNUTLS_E_UNSUPPORTED_VERSION_PACKET == res) ||
+         (GNUTLS_E_UNEXPECTED_PACKET_LENGTH == res) ||
+         (GNUTLS_E_UNEXPECTED_PACKET == res) ||
+         (GNUTLS_E_UNEXPECTED_HANDSHAKE_PACKET == res) ||
+         (GNUTLS_E_EXPIRED == res) ||
+         (GNUTLS_E_REHANDSHAKE == res) )
+      return MHD_ERR_TLS_;
+    if ( (GNUTLS_E_PULL_ERROR == res) ||
+         (GNUTLS_E_INTERNAL_ERROR == res) ||
+         (GNUTLS_E_CRYPTODEV_IOCTL_ERROR == res) ||
+         (GNUTLS_E_CRYPTODEV_DEVICE_ERROR == res) )
+      return MHD_ERR_PIPE_;
+    if (GNUTLS_E_PREMATURE_TERMINATION == res)
+      return MHD_ERR_CONNRESET_;
+    if (GNUTLS_E_MEMORY_ERROR == res)
+      return MHD_ERR_NOMEM_;
+    /* Treat any other error as a hard error. */
     return MHD_ERR_NOTCONN_;
   }
 
@@ -107,6 +129,16 @@ MHD_run_tls_handshake_ (struct MHD_Connection *connection)
   if ((MHD_TLS_CONN_INIT == connection->tls_state) ||
       (MHD_TLS_CONN_HANDSHAKING == connection->tls_state))
   {
+#if 0
+    /* According to real-live testing, Nagel's Algorithm is not blocking
+     * partial packets on just connected sockets on modern OSes. As TLS setup
+     * is performed as the fist action upon socket connection, the next
+     * optimisation typically is not required. If any specific OS will
+     * require this optimization, it could be enabled by allowing the next
+     * lines for this specific OS. */
+    if (_MHD_ON != connection->sk_nodelay)
+      MHD_connection_set_nodelay_state_ (connection, true);
+#endif
     ret = gnutls_handshake (connection->tls_session);
     if (ret == GNUTLS_E_SUCCESS)
     {

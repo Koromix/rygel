@@ -61,6 +61,21 @@
  */
 #define MHD_ERR_INVAL_ (-3078)
 
+/**
+ * Argument values are not supported
+ */
+#define MHD_ERR_OPNOTSUPP_ (-3079)
+
+/**
+ * Socket is shut down for writing or no longer connected
+ */
+#define MHD_ERR_PIPE_ (-3080)
+
+/**
+ * General TLS encryption or decryption error
+ */
+#define MHD_ERR_TLS_ (-4097)
+
 
 /**
  * Set callbacks for this connection to those for HTTP.

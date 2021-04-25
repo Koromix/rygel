@@ -22,15 +22,15 @@
 #
 AC_PREREQ([2.64])
 LT_PREREQ([2.4.0])
-AC_INIT([GNU Libmicrohttpd],[0.9.72],[libmicrohttpd@gnu.org])
+AC_INIT([GNU Libmicrohttpd],[0.9.73],[libmicrohttpd@gnu.org])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([silent-rules] [subdir-objects])
 AC_CONFIG_HEADERS([MHD_config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
-LIB_VERSION_CURRENT=69
+LIB_VERSION_CURRENT=70
 LIB_VERSION_REVISION=0
-LIB_VERSION_AGE=57
+LIB_VERSION_AGE=58
 AC_SUBST(LIB_VERSION_CURRENT)
 AC_SUBST(LIB_VERSION_REVISION)
 AC_SUBST(LIB_VERSION_AGE)
@@ -60,13 +60,27 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_CANONICAL_HOST
+m4_version_prereq([2.70],
+  [
+# Find C compiler and compiler options to support
+# the latest C standard (C11). Fallback to C99 and C89
+# if later C versions are not supported.
+AC_PROG_CC
+  ],
+  [
+# Find C compiler and compiler options to support
+# the latest C standard (C99). Fallback to C89
+# if later C versions are not supported.
 AC_PROG_CC_STDC
+  ]
+)
 MHD_SYS_EXT
 LT_INIT([win32-dll])
 LT_LANG([Windows Resource])
 
 # Checks for gettext.
 m4_ifdef([AM_GNU_GETTEXT], [
+  AS_VAR_SET_IF([enable_nls], [], [[enable_nls=no]])
   AM_GNU_GETTEXT([external],[need-ngettext])
   AC_CONFIG_FILES([po/Makefile.in])
   have_po=yes
@@ -75,7 +89,7 @@ m4_ifdef([AM_GNU_GETTEXT], [
 ])
 m4_ifdef([AM_GNU_GETTEXT_VERSION], [
 #do not indent here
-AM_GNU_GETTEXT_VERSION([0.19.8])
+AM_GNU_GETTEXT_VERSION([0.20.2])
 ])
 AM_CONDITIONAL([HAVE_PO], [ test "$have_po" = yes ])
 
@@ -84,8 +98,8 @@ AM_CONDITIONAL([HAVE_PO], [ test "$have_po" = yes ])
 
 # Adam shostack suggests the following for Windows:
 # -D_FORTIFY_SOURCE=2 -fstack-protector-all
-AC_ARG_ENABLE(gcc-hardening,
-   AS_HELP_STRING(--enable-gcc-hardening, enable compiler security checks),
+AC_ARG_ENABLE([gcc-hardening],
+   [AS_HELP_STRING([--enable-gcc-hardening], [enable compiler security checks])],
 [AS_IF([test x$enableval = xyes],[
     CFLAGS="$CFLAGS -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-all"
     CFLAGS="$CFLAGS -fwrapv -fPIE -Wstack-protector"
@@ -95,16 +109,16 @@ AC_ARG_ENABLE(gcc-hardening,
 
 # Linker hardening options
 # Currently these options are ELF specific - you can't use this with MacOSX
-AC_ARG_ENABLE(linker-hardening,
-  AS_HELP_STRING(--enable-linker-hardening, enable linker security fixups),
+AC_ARG_ENABLE([linker-hardening],
+  [AS_HELP_STRING([--enable-linker-hardening], [enable linker security fixups])],
 [AS_IF([test x$enableval = xyes],
    [LDFLAGS="$LDFLAGS -z relro -z now"])])
 
 
-AC_ARG_ENABLE(sanitizer,
-  AS_HELP_STRING(--enable-sanitizer, enable Address Sanitizer and Undefined Behavior Sanitizer),
+AC_ARG_ENABLE([sanitizer],
+  [AS_HELP_STRING([--enable-sanitizer], [enable Address Sanitizer and Undefined Behavior Sanitizer])],
 [AS_IF([test x$enableval = xyes],[
-   LDFLAGS="$CFLAGS -fsanitize=address,undefined -fno-omit-frame-pointer"
+   CFLAGS="$CFLAGS -fsanitize=address,undefined -fno-omit-frame-pointer"
  ])])
 
 
@@ -888,14 +902,14 @@ AS_VAR_IF([mhd_cv_macro___func___avail], ["yes"],
 )
 AC_CACHE_CHECK([[whether __builtin_bswap32() is available]],
   [[mhd_cv_func___builtin_bswap32_avail]], [dnl
-  AC_TRY_LINK([#include<stdint.h>],[uint32_t a = 1; uint32_t b = __builtin_bswap32(a); a = b;],
-    [[mhd_cv_func___builtin_bswap32_avail="yes"]], [[mhd_cv_func___builtin_bswap32_avail="no"]])
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include<stdint.h>]], [[uint32_t a = 1; uint32_t b = __builtin_bswap32(a); a = b;]])],
+    [[mhd_cv_func___builtin_bswap32_avail="yes"]],[[mhd_cv_func___builtin_bswap32_avail="no"]])
 ])
 AS_IF([[test "x$mhd_cv_func___builtin_bswap32_avail" = "xyes"]],
   [AC_DEFINE([[MHD_HAVE___BUILTIN_BSWAP32]], [[1]], [Define to 1 if you have __builtin_bswap32() builtin function])])
 AC_CACHE_CHECK([[whether __builtin_bswap64() is available]],
   [[mhd_cv_func___builtin_bswap64_avail]], [dnl
-  AC_TRY_LINK([#include<stdint.h>],[uint64_t a = 1; uint32_t b = __builtin_bswap64(a); a = b;],
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include<stdint.h>]], [[uint64_t a = 1; uint32_t b = __builtin_bswap64(a); a = b;]])],
     [[mhd_cv_func___builtin_bswap64_avail="yes"]], [[mhd_cv_func___builtin_bswap64_avail="no"]])
 ])
 AS_IF([[test "x$mhd_cv_func___builtin_bswap64_avail" = "xyes"]],
@@ -919,6 +933,14 @@ AC_ARG_ENABLE([[examples]],
     [enable_examples=yes])
 test "x$enable_examples" = "xno" || enable_examples=yes
 AM_CONDITIONAL([BUILD_EXAMPLES], [test "x$enable_examples" = "xyes"])
+
+AC_ARG_ENABLE([[heavy-tests]],
+  [AS_HELP_STRING([[--enable-heavy-tests]], [use heavy tests in test-suite. WARNING:] 
+  [a dedicated host with minimal number of background processes and no network]
+  [activity is recommended to enable.])], [],
+    [enable_heavy_tests=no])
+AS_VAR_IF([enable_heavy_tests], ["yes"], [], [enable_heavy_tests=no])
+AM_CONDITIONAL([HEAVY_TESTS],[test "x$enable_heavy_tests" = "xyes"])
 
 AC_ARG_ENABLE([[poll]],
   [AS_HELP_STRING([[--enable-poll[=ARG]]], [enable poll support (yes, no, auto) [auto]])],
@@ -2331,20 +2353,8 @@ AS_VAR_IF([[enable_asserts]], [["yes"]],
                      [[mhd_cv_sys_assert_avail='no']])
      ]
    )
-   AS_VAR_IF([[mhd_cv_sys_assert_avail]], [["yes"]],
-     [
-      AC_CACHE_CHECK([[whether system assert() is usable]], [mhd_cv_sys_assert_use],
-        [
-         AC_RUN_IFELSE([AC_LANG_SOURCE([[$mhd_assert_test_prg]])],
-                       [[mhd_cv_sys_assert_use='no']],
-                       [[mhd_cv_sys_assert_use='yes']],
-                       [[mhd_cv_sys_assert_use='assuming yes']])
-        ]
-      )
-      AS_VAR_IF([[mhd_cv_sys_assert_use]], [["no"]], [],
-        [AC_DEFINE([[HAVE_ASSERT]], [[1]], [Define if you have usable assert() and assert.h])])
-     ]
-   )
+   AS_VAR_IF([[mhd_cv_sys_assert_avail]], [["no"]], [],
+     [AC_DEFINE([[HAVE_ASSERT]], [[1]], [Define if you have usable assert() and assert.h])])
    AS_UNSET([mhd_assert_test_prg])
   ],
   [AC_DEFINE([[NDEBUG]], [[1]], [Define to disable usage of debug asserts.])]
@@ -2445,10 +2455,10 @@ AC_MSG_NOTICE([GNU libmicrohttpd ${PACKAGE_VERSION} Configuration Summary:
 
 AS_IF([test "x$enable_https" = "xyes"],
  [AC_MSG_NOTICE([HTTPS subsystem configuration:
-  License         :  LGPL only
+  License         :  LGPLv2.1+ only
  ])],
  [AC_MSG_NOTICE([
-  License         :  LGPL or eCos
+  License         :  LGPLv2.1+ or eCos
  ])])
 
 AS_IF([test "x$enable_bauth" != "xyes" || \
