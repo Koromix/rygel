@@ -370,38 +370,35 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
         }
 
         // Decode Base64
-        uint8_t *nonce;
         Span<uint8_t> cypher;
         {
-            Span<uint8_t> buf;
-            buf.len = token.len / 2 + 1;
-            buf.ptr = (uint8_t *)Allocator::Allocate(&io->allocator, token.len);
+            cypher.len = token.len / 2 + 1;
+            cypher.ptr = (uint8_t *)Allocator::Allocate(&io->allocator, token.len);
 
             size_t cypher_len;
-            if (sodium_hex2bin(buf.ptr, buf.len, token.ptr, (size_t)token.len,
+            if (sodium_hex2bin(cypher.ptr, cypher.len, token.ptr, (size_t)token.len,
                                nullptr, &cypher_len, nullptr) != 0) {
                 LogError("Failed to unseal token");
                 io->AttachError(403);
                 return;
             }
-            if (cypher_len < crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES) {
+            if (cypher_len < crypto_box_SEALBYTES) {
                 LogError("Failed to unseal token");
                 io->AttachError(403);
                 return;
             }
 
-            nonce = buf.ptr;
-            cypher = MakeSpan(buf.ptr + crypto_secretbox_NONCEBYTES, (Size)cypher_len - crypto_secretbox_NONCEBYTES);
+            cypher.len = (Size)cypher_len;
         }
 
         // Decode token
         Span<uint8_t> json;
         {
-            json.len = cypher.len - crypto_secretbox_MACBYTES;
-            json.ptr = (uint8_t *)Allocator::Allocate(&io->allocator, json.len + 1);
+            json.len = cypher.len - crypto_box_SEALBYTES;
+            json.ptr = (uint8_t *)Allocator::Allocate(&io->allocator, json.len);
 
-            if (crypto_secretbox_open_easy((uint8_t *)json.ptr, cypher.ptr, cypher.len,
-                                           nonce, instance->config.token_key) != 0) {
+            if (crypto_box_seal_open((uint8_t *)json.ptr, cypher.ptr, cypher.len,
+                                     instance->config.token_pkey, instance->config.token_skey) != 0) {
                 LogError("Failed to unseal token");
                 io->AttachError(403);
                 return;

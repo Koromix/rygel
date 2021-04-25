@@ -87,10 +87,13 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                     config.shared_key = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(key, "TokenKey")) {
                     size_t key_len;
-                    int ret = sodium_base642bin(config.token_key, RG_SIZE(config.token_key),
+                    int ret = sodium_base642bin(config.token_skey, RG_SIZE(config.token_skey),
                                                 value, strlen(value), nullptr, &key_len,
                                                 nullptr, sodium_base64_VARIANT_ORIGINAL);
                     if (!ret && key_len == 32) {
+                        RG_STATIC_ASSERT(RG_SIZE(config.token_pkey) == crypto_scalarmult_BYTES);
+                        crypto_scalarmult_base(config.token_pkey, config.token_skey);
+
                         config.enable_tokens = true;
                     } else {
                         LogError("Malformed TokenKey value");
