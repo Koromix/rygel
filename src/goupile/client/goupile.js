@@ -25,21 +25,23 @@ const goupile = new function() {
     let current_url;
 
     this.start = async function() {
+        let url = new URL(window.location.href);
+        let token = url.searchParams.get('token');
+
         if (ENV.urls.base === '/admin/') {
             controller = new AdminController;
             document.documentElement.className = 'admin';
         } else {
+            controller = new InstanceController;
+            document.documentElement.className = 'instance';
+
             // Detect base URLs
             {
-                let url = new URL(window.location.href);
                 let parts = url.pathname.split('/', 3);
 
                 if (parts[2] && parts[2] !== 'main')
                     ENV.urls.instance += `${parts[2]}/`;
             }
-
-            controller = new InstanceController;
-            document.documentElement.className = 'instance';
         }
 
         ui.init();
@@ -48,9 +50,20 @@ const goupile = new function() {
         await syncProfile();
 
         if (profile.authorized) {
+            document.body.classList.remove('gp_loading');
             await initAfterAuthorization();
         } else {
-            await self.runLoginScreen();
+            if (token) {
+                await sendToken(token);
+                self.syncHistory(url.pathname, false);
+            }
+            document.body.classList.remove('gp_loading');
+
+            if (profile.confirm == 'sms') {
+                await runConfirmScreen();
+            } else {
+                await self.runLoginScreen();
+            }
         }
     };
 
@@ -177,8 +190,6 @@ const goupile = new function() {
 
     self.runLoginScreen = async function(e) {
         if (profile.userid == null) {
-            document.body.classList.remove('gp_loading');
-
             return ui.runScreen((d, resolve, reject) => {
                 d.output(html`
                     <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
@@ -213,6 +224,69 @@ const goupile = new function() {
             document.location.reload();
         }
     };
+
+    async function sendToken(token) {
+        let query = new URLSearchParams();
+        query.set('token', token);
+
+        let response = await net.fetch(`${ENV.urls.instance}api/session/token`, {
+            method: 'POST',
+            body: query
+        })
+
+        if (response.ok) {
+            let new_profile = await response.json();
+            updateProfile(new_profile);
+        } else {
+            let err = (await response.text()).trim();
+            throw new Error(err);
+        }
+    }
+
+    function runConfirmScreen() {
+        return ui.runScreen((d, resolve, reject) => {
+            d.output(html`
+                <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
+                <br/><br/>
+                Veuillez entrer le code secret qui vous a été <b>envoyé par SMS</b>.
+                <br/>
+            `);
+            let code = d.password('*code', 'Code secret');
+
+            d.action('Continuer', {disabled: !d.isValid()}, async () => {
+                let progress = log.progress('Connexion en cours');
+
+                try {
+                    let query = new URLSearchParams;
+                    query.set('code', code.value);
+
+                    let response = await net.fetch(`${ENV.urls.instance}api/session/confirm`, {
+                        method: 'POST',
+                        body: query
+                    });
+
+                    if (response.ok) {
+                        let new_profile = await response.json();
+                        updateProfile(new_profile);
+
+                        await initAfterAuthorization();
+
+                        progress.success('Connexion réussie');
+                        resolve();
+                    } else {
+                        let err = (await response.text()).trim();
+                        throw new Error(err);
+                    }
+                } catch (err) {
+                    progress.close();
+
+                    // Never reject because we want to keep the screen open
+                    log.error(err);
+                    d.refresh();
+                }
+            });
+        });
+    }
 
     function initNavigation() {
         window.addEventListener('popstate', e => controller.go(null, window.location.href, { push_history: false }));

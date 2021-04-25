@@ -15,6 +15,7 @@
 #include "domain.hh"
 #include "goupile.hh"
 #include "instance.hh"
+#include "messages.hh"
 #include "session.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
@@ -24,6 +25,9 @@ static http_SessionManager<Session> sessions;
 
 const InstanceToken *Session::GetToken(const InstanceHolder *instance) const
 {
+    if (confirm[0])
+        return nullptr;
+
     if (instance) {
         InstanceToken *token;
         {
@@ -146,7 +150,10 @@ static void WriteProfileJson(const Session *session, const InstanceHolder *insta
         json.Key("userid"); json.Int64(session->userid);
         json.Key("username"); json.String(session->username);
 
-        if (instance) {
+        if (session->confirm[0]) {
+            json.Key("authorized"); json.Bool(false);
+            json.Key("confirm"); json.String("sms");
+        } else if (instance) {
             const InstanceToken *token = session->GetToken(instance);
 
             if (token) {
@@ -331,7 +338,183 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
     });
 }
 
-void HandleSessionLogout(InstanceHolder *, const http_RequestInfo &request, http_IO *io)
+void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    if (!instance->config.enable_tokens) {
+        LogError("This instance does not use tokens");
+        io->AttachError(403);
+        return;
+    }
+    if (!gp_domain.config.sms_sid) {
+        LogError("This instance is not configured to send SMS messages");
+        io->AttachError(503);
+        return;
+    }
+
+    io->RunAsync([=]() {
+        // Read POST values
+        Span<const char> token;
+        {
+            HashMap<const char *, const char *> values;
+            if (!io->ReadPostValues(&io->allocator, &values)) {
+                io->AttachError(422);
+                return;
+            }
+
+            token = values.FindValue("token", nullptr);
+            if (!token.ptr) {
+                LogError("Missing 'token' parameter");
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        // Decode Base64
+        uint8_t *nonce;
+        Span<uint8_t> cypher;
+        {
+            Span<uint8_t> buf;
+            buf.len = token.len / 2 + 1;
+            buf.ptr = (uint8_t *)Allocator::Allocate(&io->allocator, token.len);
+
+            size_t cypher_len;
+            if (sodium_hex2bin(buf.ptr, buf.len, token.ptr, (size_t)token.len,
+                               nullptr, &cypher_len, nullptr) != 0) {
+                LogError("Failed to unseal token");
+                io->AttachError(403);
+                return;
+            }
+            if (cypher_len < crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES) {
+                LogError("Failed to unseal token");
+                io->AttachError(403);
+                return;
+            }
+
+            nonce = buf.ptr;
+            cypher = MakeSpan(buf.ptr + crypto_secretbox_NONCEBYTES, (Size)cypher_len - crypto_secretbox_NONCEBYTES);
+        }
+
+        // Decode token
+        Span<uint8_t> json;
+        {
+            json.len = cypher.len - crypto_secretbox_MACBYTES;
+            json.ptr = (uint8_t *)Allocator::Allocate(&io->allocator, json.len + 1);
+
+            if (crypto_secretbox_open_easy((uint8_t *)json.ptr, cypher.ptr, cypher.len,
+                                           nonce, instance->config.token_key) != 0) {
+                LogError("Failed to unseal token");
+                io->AttachError(403);
+                return;
+            }
+        }
+
+        // Parse JSON
+        const char *sms = nullptr;
+        const char *username = nullptr;
+        {
+            StreamReader st(json);
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                const char *key = "";
+                parser.ParseKey(&key);
+
+                if (TestStr(key, "sms")) {
+                    parser.ParseString(&sms);
+                } else if (TestStr(key, "username")) {
+                    parser.ParseString(&username);
+                } else if (parser.IsValid()) {
+                    LogError("Unknown key '%1' in token JSON", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        // Check token values
+        {
+            bool valid = true;
+
+            if (!sms || !sms[0]) {
+                LogError("Missing or empty SMS");
+                valid = false;
+            }
+            if (!username || !username[0]) {
+                LogError("Missing or empty username");
+                valid = false;
+            }
+
+            if (!valid) {
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        RetainPtr<Session> session = CreateUserSession(-1, username, "");
+
+        if (RG_LIKELY(session)) {
+            uint32_t code = 100000 + randombytes_uniform(900000); // 6 digits
+            Fmt(session->confirm, "%1", code);
+
+            sessions.Open(request, io, session);
+
+            // Send confirmation SMS
+            if (!SendSMS(gp_domain.config.sms_sid, gp_domain.config.sms_token,
+                         gp_domain.config.sms_from, sms, session->confirm))
+                return;
+
+            WriteProfileJson(session.GetRaw(), nullptr, request, io);
+        }
+    });
+}
+
+void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<Session> session = sessions.Find(request, io);
+
+    if (!session || !session->confirm[0]) {
+        LogError("There is nothing to confirm");
+        io->AttachError(403);
+        return;
+    }
+
+    io->RunAsync([=]() {
+        // Read POST values
+        Span<const char> code;
+        {
+            HashMap<const char *, const char *> values;
+            if (!io->ReadPostValues(&io->allocator, &values)) {
+                io->AttachError(422);
+                return;
+            }
+
+            code = values.FindValue("code", nullptr);
+            if (!code.ptr) {
+                LogError("Missing 'code' parameter");
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        // Immediate confirmation looks weird
+        WaitDelay(800);
+
+        if (TestStr(code, session->confirm)) {
+            session->confirm[0] = 0;
+            WriteProfileJson(session.GetRaw(), instance, request, io);
+        } else {
+            LogError("Code is incorrect");
+            io->AttachError(403);
+        }
+    });
+}
+
+void HandleSessionLogout(const http_RequestInfo &request, http_IO *io)
 {
     sessions.Close(request, io);
     io->AttachText(200, "Done!");

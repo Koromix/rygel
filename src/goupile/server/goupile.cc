@@ -17,10 +17,12 @@
 #include "files.hh"
 #include "goupile.hh"
 #include "instance.hh"
+#include "messages.hh"
 #include "records.hh"
 #include "session.hh"
 #include "../../web/libhttp/libhttp.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
+#include "../../../vendor/curl/include/curl/curl.h"
 #ifndef _WIN32
     #include <sys/time.h>
     #include <sys/resource.h>
@@ -217,8 +219,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleSessionProfile(nullptr, request, io);
         } else if (TestStr(admin_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
             HandleSessionLogin(nullptr, request, io);
+        } else if (TestStr(admin_url, "/api/session/confirm") && request.method == http_RequestMethod::Post) {
+            HandleSessionConfirm(nullptr, request, io);
         } else if (TestStr(admin_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
-            HandleSessionLogout(nullptr, request, io);
+            HandleSessionLogout(request, io);
         } else if (TestStr(admin_url, "/api/instances/create") && request.method == http_RequestMethod::Post) {
             HandleInstanceCreate(request, io);
         } else if (TestStr(admin_url, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
@@ -379,8 +383,12 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleSessionProfile(instance, request, io);
         } else if (TestStr(instance_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
             HandleSessionLogin(instance, request, io);
+        } else if (TestStr(instance_url, "/api/session/token") && request.method == http_RequestMethod::Post) {
+            HandleSessionToken(instance, request, io);
+        } else if (TestStr(instance_url, "/api/session/confirm") && request.method == http_RequestMethod::Post) {
+            HandleSessionConfirm(instance, request, io);
         } else if (TestStr(instance_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
-            HandleSessionLogout(instance, request, io);
+            HandleSessionLogout(request, io);
         } else if (TestStr(instance_url, "/api/files/static") && request.method == http_RequestMethod::Get) {
              HandleFileStatic(instance, request, io);
         } else if (TestStr(instance_url, "/api/files/list") && request.method == http_RequestMethod::Get) {
@@ -590,6 +598,12 @@ int Main(int argc, char **argv)
         LogError("Failed to initialize libsodium");
         return 1;
     }
+    if (curl_global_init(CURL_GLOBAL_ALL)) {
+        LogError("Failed to initialize libcurl");
+        return 1;
+    }
+    if (!InitSSL())
+        return 1;
 
     int (*cmd_func)(Span<const char *> arguments);
     Span<const char *> arguments;

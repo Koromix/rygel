@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 32;
+const int InstanceVersion = 33;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, const char *filename)
 {
@@ -85,6 +85,17 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                     valid &= ParseInt(value, &config.max_file_size);
                 } else if (TestStr(key, "SharedKey")) {
                     config.shared_key = DuplicateString(value, &str_alloc).ptr;
+                } else if (TestStr(key, "TokenKey")) {
+                    size_t key_len;
+                    int ret = sodium_base642bin(config.token_key, RG_SIZE(config.token_key),
+                                                value, strlen(value), nullptr, &key_len,
+                                                nullptr, sodium_base64_VARIANT_ORIGINAL);
+                    if (!ret && key_len == 32) {
+                        config.enable_tokens = true;
+                    } else {
+                        LogError("Malformed TokenKey value");
+                        valid = false;
+                    }
                 } else if (TestStr(key, "BackupKey")) {
                     config.backup_key = DuplicateString(value, &str_alloc).ptr;
                 } else {
@@ -1062,9 +1073,21 @@ bool MigrateInstance(sq_Database *db)
                 }
                 if (!stmt.IsValid())
                     return false;
+            } [[fallthrough]];
+
+            case 32: {
+                char token_key[45];
+                {
+                    uint8_t buf[32];
+                    randombytes_buf(&buf, RG_SIZE(buf));
+                    sodium_bin2base64(token_key, RG_SIZE(token_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+                }
+
+                if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('TokenKey', ?1);", token_key))
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 32);
+            RG_STATIC_ASSERT(InstanceVersion == 33);
         }
 
         int64_t time = GetUnixTime();

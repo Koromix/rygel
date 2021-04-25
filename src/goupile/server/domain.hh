@@ -35,6 +35,10 @@ struct DomainConfig {
 
     const char *demo_user = nullptr;
 
+    const char *sms_sid = nullptr;
+    const char *sms_token = nullptr;
+    const char *sms_from = nullptr;
+
     // XXX: Restore http_Config designated initializers when MSVC ICE is fixed
     // https://developercommunity.visualstudio.com/content/problem/1238876/fatal-error-c1001-ice-with-ehsc.html
     http_Config http;

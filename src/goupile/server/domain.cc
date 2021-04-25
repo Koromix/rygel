@@ -27,11 +27,23 @@ bool DomainConfig::Validate() const
 {
     bool valid = true;
 
-    valid &= http.Validate();
     if (!enable_backups) {
         LogError("Domain backup key is not set");
         valid = false;
     }
+
+    if (sms_sid) {
+        if (!sms_token) {
+            LogError("SMS token is not set");
+            valid = false;
+        }
+        if (!sms_from) {
+            LogError("SMS From setting is not set");
+            valid = false;
+        }
+    }
+
+    valid &= http.Validate();
     if (max_age < 0) {
         LogError("HTTP MaxAge must be >= 0");
         valid = false;
@@ -112,6 +124,19 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                 do {
                     if (prop.key == "DemoUser") {
                         config.demo_user = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
+            } else if (prop.section == "SMS") {
+                do {
+                    if (prop.key == "AuthSID") {
+                        config.sms_sid = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "AuthToken") {
+                        config.sms_token = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "From") {
+                        config.sms_from = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;

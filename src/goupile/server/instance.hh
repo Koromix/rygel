@@ -55,6 +55,8 @@ public:
         SyncMode sync_mode = SyncMode::Offline;
         int max_file_size = (int)Megabytes(16);
         const char *shared_key = nullptr;
+        uint8_t token_key[32] = {}; // crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES
+        bool enable_tokens = false;
         const char *backup_key = nullptr;
     } config;
 

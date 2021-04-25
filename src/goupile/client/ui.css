@@ -209,7 +209,7 @@ html.small .ui_toolbar button.icon {
 .ui_dialog.screen.active, .ui_dialog.modal.active { display: flex; }
 .ui_dialog.screen > div, .ui_dialog.modal > div {
     display: block;
-    min-width: 260px;
+    width: 280px;
     max-width: 90%;
     max-height: calc(100% - 20px);
     box-sizing: border-box;

@@ -67,8 +67,9 @@ public:
     const char *username;
     int64_t admin_until;
     char local_key[45];
+    char confirm[9];
 
-    bool IsAdmin() const { return admin_until && admin_until > GetMonotonicTime(); }
+    bool IsAdmin() const { return !confirm[0] && admin_until && admin_until > GetMonotonicTime(); }
     const InstanceToken *GetToken(const InstanceHolder *instance) const;
 
     void InvalidateTokens();
@@ -79,7 +80,9 @@ void InvalidateUserTokens(int64_t userid);
 RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http_IO *io);
 
 void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleSessionLogout(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleSessionLogout(const http_RequestInfo &request, http_IO *io);
 void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
 }
