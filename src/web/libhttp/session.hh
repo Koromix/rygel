@@ -58,7 +58,7 @@ public:
     {
         std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
-        SessionHandle *handle = CreateHandle(request, io);
+        SessionHandle *handle = CreateHandle(request, io, false);
         if (!handle)
             return;
         int64_t now = GetMonotonicTime();
@@ -105,7 +105,7 @@ public:
 
                 lock_shr.unlock();
 
-                SessionHandle *handle = CreateHandle(request, io);
+                SessionHandle *handle = CreateHandle(request, io, locked);
 
                 if (handle) {
                     handle->login_time = login_time;
@@ -140,7 +140,7 @@ public:
     }
 
 private:
-    SessionHandle *CreateHandle(const http_RequestInfo &request, http_IO *io)
+    SessionHandle *CreateHandle(const http_RequestInfo &request, http_IO *io, bool locked)
     {
         const char *user_agent = request.GetHeaderValue("User-Agent");
         if (!user_agent) {
@@ -181,7 +181,9 @@ private:
 
         // Set session cookies
         io->AddCookieHeader(cookie_path, "session_key", handle->session_key, true);
-        io->AddCookieHeader(cookie_path, "session_rnd", handle->session_rnd, false);
+        if (!locked) {
+            io->AddCookieHeader(cookie_path, "session_rnd", handle->session_rnd, false);
+        }
 
         return handle;
     }
