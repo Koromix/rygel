@@ -58,7 +58,7 @@ public:
     {
         std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
-        SessionHandle *handle = CreateHandle(request, io, false);
+        SessionHandle *handle = CreateHandle(request, io);
         if (!handle)
             return;
         int64_t now = GetMonotonicTime();
@@ -67,6 +67,10 @@ public:
         handle->register_time = now;
         handle->lock_time = now;
         handle->udata = udata;
+
+        // Set session cookies
+        io->AddCookieHeader(cookie_path, "session_key", handle->session_key, true);
+        io->AddCookieHeader(cookie_path, "session_rnd", handle->session_rnd, false);
     }
 
     void Close(const http_RequestInfo &request, http_IO *io)
@@ -100,20 +104,27 @@ public:
 
             // Regenerate session if needed
             if (now - handle->register_time >= RegenerateDelay) {
+                const char *session_rnd = handle->session_rnd;
                 int64_t login_time = handle->login_time;
                 int64_t lock_time = handle->lock_time;
 
                 lock_shr.unlock();
 
-                SessionHandle *handle = CreateHandle(request, io, locked);
-
-                if (handle) {
-                    handle->login_time = login_time;
-                    handle->register_time = now;
-                    handle->lock_time = locked ? lock_time : now;
-                    handle->udata = udata;
-                } else {
+                handle = CreateHandle(request, io, locked ? session_rnd : nullptr);
+                if (!handle) {
                     DeleteSessionCookies(request, io);
+                    return nullptr;
+                }
+
+                handle->login_time = login_time;
+                handle->register_time = now;
+                handle->lock_time = locked ? lock_time : now;
+                handle->udata = udata;
+
+                // Set session cookies
+                io->AddCookieHeader(cookie_path, "session_key", handle->session_key, true);
+                if (!locked) {
+                    io->AddCookieHeader(cookie_path, "session_rnd", handle->session_rnd, false);
                 }
             }
 
@@ -140,7 +151,7 @@ public:
     }
 
 private:
-    SessionHandle *CreateHandle(const http_RequestInfo &request, http_IO *io, bool locked)
+    SessionHandle *CreateHandle(const http_RequestInfo &request, http_IO *io, const char *session_rnd = nullptr)
     {
         const char *user_agent = request.GetHeaderValue("User-Agent");
         if (!user_agent) {
@@ -167,8 +178,11 @@ private:
                 break;
         }
 
-        // Create public randomized key (for use in session-specific URLs)
-        {
+        // Reuse or create public randomized key (for use in session-specific URLs)
+        if (session_rnd) {
+            RG_ASSERT(strlen(session_rnd) + 1 == RG_SIZE(handle->session_rnd));
+            CopyString(session_rnd, handle->session_rnd);
+        } else {
             RG_STATIC_ASSERT(RG_SIZE(handle->session_rnd) == 33);
 
             uint64_t buf[2];
@@ -178,12 +192,6 @@ private:
 
         // Fill extra security values
         CopyString(user_agent, handle->user_agent);
-
-        // Set session cookies
-        io->AddCookieHeader(cookie_path, "session_key", handle->session_key, true);
-        if (!locked) {
-            io->AddCookieHeader(cookie_path, "session_rnd", handle->session_rnd, false);
-        }
 
         return handle;
     }
