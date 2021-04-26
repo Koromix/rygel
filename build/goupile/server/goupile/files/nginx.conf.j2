@@ -5,7 +5,11 @@ server {
     server_name {{goupile_domain}};
 
     listen 80;
+
     client_max_body_size 32M;
+    proxy_request_buffering off;
+    proxy_http_version 1.1;
+    proxy_buffering off;
 
     location / {
         proxy_set_header Host $http_host;
