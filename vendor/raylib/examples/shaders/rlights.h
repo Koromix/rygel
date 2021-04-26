@@ -11,7 +11,7 @@
 *
 *   LICENSE: zlib/libpng
 *
-*   Copyright (c) 2017-2019 Victor Fisac (@victorfisac) and Ramon Santamaria (@raysan5)
+*   Copyright (c) 2017-2020 Victor Fisac (@victorfisac) and Ramon Santamaria (@raysan5)
 *
 *   This software is provided "as-is", without any express or implied warranty. In no event
 *   will the authors be held liable for any damages arising from the use of this software.
@@ -69,11 +69,6 @@ extern "C" {            // Prevents name mangling of functions
 #endif
 
 //----------------------------------------------------------------------------------
-// Global Variables Definition
-//----------------------------------------------------------------------------------
-int lightsCount = 0;    // Current amount of created lights
-
-//----------------------------------------------------------------------------------
 // Module Functions Declaration
 //----------------------------------------------------------------------------------
 Light CreateLight(int type, Vector3 position, Vector3 target, Color color, Shader shader);   // Create a light and get shader locations
@@ -109,7 +104,7 @@ void UpdateLightValues(Shader shader, Light light);         // Send light proper
 //----------------------------------------------------------------------------------
 // Global Variables Definition
 //----------------------------------------------------------------------------------
-// ...
+static int lightsCount = 0;    // Current amount of created lights
 
 //----------------------------------------------------------------------------------
 // Module specific Functions Declaration
@@ -168,21 +163,21 @@ Light CreateLight(int type, Vector3 position, Vector3 target, Color color, Shade
 void UpdateLightValues(Shader shader, Light light)
 {
     // Send to shader light enabled state and type
-    SetShaderValue(shader, light.enabledLoc, &light.enabled, UNIFORM_INT);
-    SetShaderValue(shader, light.typeLoc, &light.type, UNIFORM_INT);
+    SetShaderValue(shader, light.enabledLoc, &light.enabled, SHADER_UNIFORM_INT);
+    SetShaderValue(shader, light.typeLoc, &light.type, SHADER_UNIFORM_INT);
 
     // Send to shader light position values
     float position[3] = { light.position.x, light.position.y, light.position.z };
-    SetShaderValue(shader, light.posLoc, position, UNIFORM_VEC3);
+    SetShaderValue(shader, light.posLoc, position, SHADER_UNIFORM_VEC3);
 
     // Send to shader light target position values
     float target[3] = { light.target.x, light.target.y, light.target.z };
-    SetShaderValue(shader, light.targetLoc, target, UNIFORM_VEC3);
+    SetShaderValue(shader, light.targetLoc, target, SHADER_UNIFORM_VEC3);
 
     // Send to shader light color values
     float color[4] = { (float)light.color.r/(float)255, (float)light.color.g/(float)255, 
                        (float)light.color.b/(float)255, (float)light.color.a/(float)255 };
-    SetShaderValue(shader, light.colorLoc, color, UNIFORM_VEC4);
+    SetShaderValue(shader, light.colorLoc, color, SHADER_UNIFORM_VEC4);
 }
 
 #endif // RLIGHTS_IMPLEMENTATION

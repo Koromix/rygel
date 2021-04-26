@@ -2,7 +2,7 @@
 #
 #   raylib makefile for Desktop platforms, Raspberry Pi, Android and HTML5
 #
-#   Copyright (c) 2013-2020 Ramon Santamaria (@raysan5)
+#   Copyright (c) 2013-2021 Ramon Santamaria (@raysan5)
 #
 #   This software is provided "as-is", without any express or implied warranty. In no event
 #   will the authors be held liable for any damages arising from the use of this software.
@@ -177,15 +177,12 @@ ifeq ($(PLATFORM),PLATFORM_WEB)
     CC = emcc
 endif
 
-# Define default make program: Mingw32-make
-MAKE = mingw32-make
+# Define default make program
+MAKE = make
 
 ifeq ($(PLATFORM),PLATFORM_DESKTOP)
-    ifeq ($(PLATFORM_OS),LINUX)
-        MAKE = make
-    endif
-    ifeq ($(PLATFORM_OS),OSX)
-        MAKE = make
+    ifeq ($(PLATFORM_OS),WINDOWS)
+        MAKE = mingw32-make
     endif
 endif
 

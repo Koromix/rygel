@@ -58,7 +58,7 @@ int main(void)
                     name[letterCount] = (char)key;
                     letterCount++;
                 }
-                
+
                 key = GetCharPressed();  // Check next character in the queue
             }
 
@@ -69,7 +69,7 @@ int main(void)
                 name[letterCount] = '\0';
             }
         }
-        else if (GetMouseCursor() != MOUSE_CURSOR_DEFAULT) SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+        else SetMouseCursor(MOUSE_CURSOR_DEFAULT);
 
         if (mouseOnText) framesCounter++;
         else framesCounter = 0;

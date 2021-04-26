@@ -26,7 +26,7 @@ int main(void)
     camera.target = (Vector3){ 0.0f, 0.0f, 0.0f };      // Camera looking at point
     camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
     camera.fovy = 45.0f;                                // Camera field-of-view Y
-    camera.type = CAMERA_PERSPECTIVE;                   // Camera mode type
+    camera.projection = CAMERA_PERSPECTIVE;                   // Camera mode type
 
     Vector3 cubePosition = { 0.0f, 1.0f, 0.0f };
     Vector3 cubeSize = { 2.0f, 2.0f, 2.0f };
@@ -90,7 +90,7 @@ int main(void)
 
             DrawText("Try selecting the box with mouse!", 240, 10, 20, DARKGRAY);
 
-            if(collision) DrawText("BOX SELECTED", (screenWidth - MeasureText("BOX SELECTED", 30)) / 2, screenHeight * 0.1f, 30, GREEN);
+            if (collision) DrawText("BOX SELECTED", (screenWidth - MeasureText("BOX SELECTED", 30)) / 2, (int)(screenHeight * 0.1f), 30, GREEN);
 
             DrawFPS(10, 10);
 

@@ -2,7 +2,7 @@
 #
 #   raylib makefile for Desktop platforms, Raspberry Pi, Android and HTML5
 #
-#   Copyright (c) 2013-2020 Ramon Santamaria (@raysan5)
+#   Copyright (c) 2013-2021 Ramon Santamaria (@raysan5)
 #
 #   This software is provided "as-is", without any express or implied warranty. In no event
 #   will the authors be held liable for any damages arising from the use of this software.
@@ -101,6 +101,15 @@ ifeq ($(PLATFORM),PLATFORM_DRM)
         PLATFORM_OS=LINUX
     endif
 endif
+ifeq ($(PLATFORM),PLATFORM_ANDROID)
+    UNAMEOS=$(shell uname)
+    ifeq ($(UNAMEOS),Linux)
+        PLATFORM_OS=LINUX
+    endif
+    ifeq ($(UNAMEOS),Darwin)
+        PLATFORM_OS=OSX
+    endif
+endif
 
 # RAYLIB_PATH adjustment for different platforms.
 # If using GNU make, we can get the full path to the top of the tree. Windows? BSD?
@@ -177,16 +186,16 @@ ifeq ($(PLATFORM),PLATFORM_WEB)
     CC = emcc
 endif
 
-# Define default make program: Mingw32-make
-MAKE = mingw32-make
+# Define default make program
+MAKE = make
 
 ifeq ($(PLATFORM),PLATFORM_DESKTOP)
-    ifeq ($(PLATFORM_OS),LINUX)
-        MAKE = make
+    ifeq ($(PLATFORM_OS),WINDOWS)
+        MAKE = mingw32-make
     endif
-    ifeq ($(PLATFORM_OS),OSX)
-        MAKE = make
-    endif
+endif
+ifeq ($(PLATFORM),PLATFORM_ANDROID)
+    MAKE = mingw32-make
 endif
 
 # Define compiler flags:
@@ -237,7 +246,7 @@ ifeq ($(PLATFORM),PLATFORM_WEB)
     # -O2                        # optimization level 2, if used, also set --memory-init-file 0
     # -s USE_GLFW=3              # Use glfw3 library (context/input management)
     # -s ALLOW_MEMORY_GROWTH=1   # to allow memory resizing -> WARNING: Audio buffers could FAIL!
-    # -s TOTAL_MEMORY=16777216   # to specify heap memory size (default = 16MB)
+    # -s TOTAL_MEMORY=16777216   # to specify heap memory size (default = 16MB) (67108864 = 64MB)
     # -s USE_PTHREADS=1          # multithreading support
     # -s WASM=0                  # disable Web Assembly, emitted by default
     # -s ASYNCIFY                # lets synchronous C/C++ code interact with asynchronous JS
@@ -281,7 +290,6 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
     ifeq ($(PLATFORM_OS),LINUX)
         # Reset everything.
         # Precedence: immediately local, installed version, raysan5 provided libs -I$(RAYLIB_H_INSTALL_PATH) -I$(RAYLIB_PATH)/release/include
-        #INCLUDE_PATHS = -I$(RAYLIB_H_INSTALL_PATH) -isystem. -isystem$(RAYLIB_PATH)/src -isystem$(RAYLIB_PATH)/release/include -isystem$(RAYLIB_PATH)/src/external
         INCLUDE_PATHS = -I$(RAYLIB_H_INSTALL_PATH) -I. -I$(RAYLIB_PATH)/src -I$(RAYLIB_PATH)/release/include -I$(RAYLIB_PATH)/src/external
     endif
 endif
@@ -388,6 +396,13 @@ OBJS = $(patsubst %.c, %.o, $(PROJECT_SOURCE_FILES))
 # For Android platform we call a custom Makefile.Android
 ifeq ($(PLATFORM),PLATFORM_ANDROID)
     MAKEFILE_PARAMS = -f Makefile.Android 
+    # For Linux and macOS set make and makefile
+    ifeq ($(PLATFORM_OS),LINUX)
+        MAKEFILE_PARAMS = -f Makefile.Android.linux
+    endif
+    ifeq ($(PLATFORM_OS),OSX)
+        MAKEFILE_PARAMS = -f Makefile.Android.macos
+    endif
     export PROJECT_NAME
     export PROJECT_SOURCE_FILES
 else

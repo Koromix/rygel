@@ -22,7 +22,7 @@
 *
 *   LICENSE: zlib/libpng
 *
-*   Copyright (c) 2015-2020 Ramon Santamaria (@raysan5)
+*   Copyright (c) 2015-2021 Ramon Santamaria (@raysan5)
 *
 *   This software is provided "as-is", without any express or implied warranty. In no event
 *   will the authors be held liable for any damages arising from the use of this software.
@@ -91,7 +91,7 @@
     typedef enum {
         CAMERA_PERSPECTIVE = 0,
         CAMERA_ORTHOGRAPHIC
-    } CameraType;
+    } CameraProjection;
 #endif
 
 #ifdef __cplusplus
