@@ -590,6 +590,59 @@ int64_t GetMonotonicTime()
 #endif
 }
 
+void DecomposeUnixTime(int64_t time, TimeMode mode, TimeSpec *out_spec)
+{
+#ifdef _WIN32
+    __time64_t time64 = time / 1000;
+
+    struct tm ti = {0};
+    int offset = INT_MAX;
+    switch (mode) {
+        case TimeMode::Local: {
+            _localtime64_s(&ti, &time64);
+
+            struct tm utc = {0};
+            _gmtime64_s(&utc, &time64);
+
+            offset = _mktime64(&ti) - _mktime64(&utc) + (3600 * ti.tm_isdst);
+        } break;
+
+        case TimeMode::UTC: {
+            _gmtime64_s(&ti, &time64);
+            offset = 0;
+        } break;
+    }
+    RG_ASSERT(offset != INT_MAX);
+#else
+    time_t time64 = time / 1000;
+
+    struct tm ti = {0};
+    int offset = 0;
+    switch (mode) {
+        case TimeMode::Local: {
+            localtime_r(&time64, &ti);
+            offset = ti.tm_gmtoff + ti.tm_isdst * 3600;
+        } break;
+
+        case TimeMode::UTC: {
+            gmtime_r(&time64, &ti);
+            offset = 0;
+        } break;
+    }
+    RG_ASSERT(offset != INT_MAX);
+#endif
+
+    out_spec->year = (int16_t)(1900 + ti.tm_year);
+    out_spec->month = (int8_t)ti.tm_mon + 1; // Whose idea was it to use 0-11? ...
+    out_spec->day = (int8_t)ti.tm_mday;
+    out_spec->week_day = ti.tm_wday ? (ti.tm_wday + 1) : 7;
+    out_spec->hour = (int8_t)ti.tm_hour;
+    out_spec->min = (int8_t)ti.tm_min;
+    out_spec->sec = (int8_t)ti.tm_sec;
+    out_spec->msec = time % 1000;
+    out_spec->offset = (int16_t)(offset / 60);
+}
+
 // ------------------------------------------------------------------------
 // Strings
 // ------------------------------------------------------------------------

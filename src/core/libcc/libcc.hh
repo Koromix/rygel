@@ -2553,6 +2553,27 @@ static inline int64_t GetClockCounter()
 }
 #endif
 
+struct TimeSpec {
+    int16_t year;
+    int8_t month;
+    int8_t day;
+    int8_t week_day; // 1 (monday) to 7 (sunday)
+
+    int8_t hour;
+    int8_t min;
+    int8_t sec;
+    int16_t msec;
+
+    int16_t offset; // minutes
+};
+
+enum class TimeMode {
+    Local,
+    UTC
+};
+
+void DecomposeUnixTime(int64_t time, TimeMode mode, TimeSpec *out_spec);
+
 // ------------------------------------------------------------------------
 // Streams
 // ------------------------------------------------------------------------
