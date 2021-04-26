@@ -142,6 +142,19 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         valid = false;
                     }
                 } while (ini.NextInSection(&prop));
+            } else if (prop.section == "SMTP") {
+                do {
+                    if (prop.key == "URL") {
+                        config.smtp_url = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "Username") {
+                        config.smtp_username = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "Password") {
+                        config.smtp_password = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
             } else if (prop.section == "HTTP") {
                 do {
                     if (prop.key == "SocketType" || prop.key == "IPStack") {

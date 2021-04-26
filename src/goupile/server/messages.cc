@@ -12,8 +12,17 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "../../core/libcc/libcc.hh"
+#ifdef _WIN32
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+#endif
 #include "../../../vendor/curl/include/curl/curl.h"
 #include "../../../vendor/mbedtls/include/mbedtls/ssl.h"
+#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 #include "messages.hh"
 
 namespace RG {
@@ -48,6 +57,17 @@ bool InitSSL()
     }
 
     return true;
+}
+
+static void ConfigureSSL(CURL *curl)
+{
+    // curl_easy_setopt is variadic, so we need the + lambda operator to force the
+    // conversion to a C-style function pointer.
+    curl_easy_setopt(curl, CURLOPT_SSL_CTX_FUNCTION, +[](CURL *, void *ctx, void *) {
+        mbedtls_ssl_config *ssl = (mbedtls_ssl_config *)ctx;
+        mbedtls_ssl_conf_ca_chain(ssl, &pem, &crl);
+        return CURLE_OK;
+    });
 }
 
 static void EncodeUrlSafe(const char *str, HeapArray<char> *out_buf)
@@ -86,6 +106,7 @@ bool SendSMS(const char *sid, const char *token, const char *from,
     CURL *curl = curl_easy_init();
     RG_DEFER { curl_easy_cleanup(curl); };
 
+    ConfigureSSL(curl);
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_POST, 1L);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body);
@@ -93,13 +114,7 @@ bool SendSMS(const char *sid, const char *token, const char *from,
     curl_easy_setopt(curl, CURLOPT_PASSWORD, token);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
 
-    // curl_easy_setopt is variadic, so we need the + lambda operator to force the
-    // conversion to a C-style function pointer.
-    curl_easy_setopt(curl, CURLOPT_SSL_CTX_FUNCTION, +[](CURL *, void *ctx, void *) {
-        mbedtls_ssl_config *ssl = (mbedtls_ssl_config *)ctx;
-        mbedtls_ssl_conf_ca_chain(ssl, &pem, &crl);
-        return CURLE_OK;
-    });
+    // Don't care about output
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *, size_t size, size_t nmemb, void *) {
         return size * nmemb;
     });
@@ -118,6 +133,131 @@ bool SendSMS(const char *sid, const char *token, const char *from,
     }
 
     LogDebug("Sent SMS to %1", to);
+    return true;
+}
+
+static const char *NormalizeAddress(const char *str, Allocator *alloc)
+{
+    Span<const char> addr = SplitStr(str, ' ');
+    return DuplicateString(addr, alloc).ptr;
+}
+
+static void FormatRfcDate(int64_t time, HeapArray<char> *out_buf)
+{
+    TimeSpec spec = {};
+    DecomposeUnixTime(time, TimeMode::Local, &spec);
+
+    switch (spec.week_day) {
+        case 1: { out_buf->Append("Mon, "); } break;
+        case 2: { out_buf->Append("Tue, "); } break;
+        case 3: { out_buf->Append("Wed, "); } break;
+        case 4: { out_buf->Append("Thu, "); } break;
+        case 5: { out_buf->Append("Fri, "); } break;
+        case 6: { out_buf->Append("Sat, "); } break;
+        case 7: { out_buf->Append("Sun, "); } break;
+    }
+
+    Fmt(out_buf, "%1 ", spec.day);
+
+    switch (spec.month) {
+        case 1: { out_buf->Append("Jan "); } break;
+        case 2: { out_buf->Append("Feb "); } break;
+        case 3: { out_buf->Append("Mar "); } break;
+        case 4: { out_buf->Append("Apr "); } break;
+        case 5: { out_buf->Append("May "); } break;
+        case 6: { out_buf->Append("Jun "); } break;
+        case 7: { out_buf->Append("Jul "); } break;
+        case 8: { out_buf->Append("Aug "); } break;
+        case 9: { out_buf->Append("Sep "); } break;
+        case 10: { out_buf->Append("Oct "); } break;
+        case 11: { out_buf->Append("Nov "); } break;
+        case 12: { out_buf->Append("Dec "); } break;
+    }
+
+    int offset = (spec.offset / 60) * 100 + (spec.offset % 60);
+
+    Fmt(out_buf, "%1 %2:%3:%4 %5%6",
+                 spec.year, FmtArg(spec.hour).Pad0(-2), FmtArg(spec.min).Pad0(-2),
+                 FmtArg(spec.sec).Pad0(-2), offset >= 0 ? "+" : "", FmtArg(offset).Pad0(-4));
+}
+
+bool SendMail(const char *url, const char *username, const char *password, const char *from,
+              const char *to, const char *subject, const char *message)
+{
+    BlockAllocator temp_alloc;
+
+    Span<const char> payload;
+    {
+        HeapArray<char> buf(&temp_alloc);
+
+        char id[33];
+        const char *domain;
+        {
+            uint64_t buf[2];
+            randombytes_buf(&buf, RG_SIZE(buf));
+            Fmt(id, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
+
+            SplitStr(from, '@', &domain);
+        }
+        Fmt(&buf, "Date: "); FormatRfcDate(GetUnixTime(), &buf); buf.Append("\r\n");
+        Fmt(&buf, "To: %1\r\n", to);
+        Fmt(&buf, "From: %1\r\n", from);
+        Fmt(&buf, "Message-ID: <%1@%2>\r\n", id, domain);
+        Fmt(&buf, "Subject: %1\r\n\r\n", subject);
+        Fmt(&buf, "%1\r\n", message);
+
+        payload = buf.Leak();
+    }
+
+    CURL *curl = curl_easy_init();
+    RG_DEFER { curl_easy_cleanup(curl); };
+
+    ConfigureSSL(curl);
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    if (username) {
+        curl_easy_setopt(curl, CURLOPT_USERNAME, username);
+    }
+    if (password) {
+        curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
+    }
+    curl_easy_setopt(curl, CURLOPT_MAIL_FROM, NormalizeAddress(from, &temp_alloc));
+
+    // Recipients
+    {
+        struct curl_slist *recipients = nullptr;
+        recipients = curl_slist_append(recipients, NormalizeAddress(to, &temp_alloc));
+        curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
+    }
+
+    // Give payload to libcurl
+    curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *buf, size_t size, size_t nmemb, void *udata) {
+        Span<const char> *payload = (Span<const char> *)udata;
+
+        size_t copy_len = std::min(size * nmemb, (size_t)payload->len);
+        memcpy(buf, payload->ptr, copy_len);
+
+        payload->ptr += copy_len;
+        payload->len -= (Size)copy_len;
+
+        return copy_len;
+    });
+    curl_easy_setopt(curl, CURLOPT_READDATA, payload);
+    curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+
+    CURLcode res = curl_easy_perform(curl);
+    if (res != CURLE_OK) {
+        LogError("Failed to perform mail call: %1", curl_easy_strerror(res));
+        return false;
+    }
+
+    long status = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+    if (status != 250) {
+        LogError("Failed to send mail with status %1", status);
+        return false;
+    }
+
+    LogDebug("Sent mail to %1", to);
     return true;
 }
 
