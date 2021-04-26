@@ -59,15 +59,17 @@ bool InitSSL()
     return true;
 }
 
-static void ConfigureSSL(CURL *curl)
+static bool ConfigureSSL(CURL *curl)
 {
     // curl_easy_setopt is variadic, so we need the + lambda operator to force the
     // conversion to a C-style function pointer.
-    curl_easy_setopt(curl, CURLOPT_SSL_CTX_FUNCTION, +[](CURL *, void *ctx, void *) {
+    CURLcode ret = curl_easy_setopt(curl, CURLOPT_SSL_CTX_FUNCTION, +[](CURL *, void *ctx, void *) {
         mbedtls_ssl_config *ssl = (mbedtls_ssl_config *)ctx;
         mbedtls_ssl_conf_ca_chain(ssl, &pem, &crl);
         return CURLE_OK;
     });
+
+    return ret == CURLE_OK;
 }
 
 static void EncodeUrlSafe(const char *str, HeapArray<char> *out_buf)
@@ -104,20 +106,27 @@ bool SendSMS(const char *sid, const char *token, const char *from,
     }
 
     CURL *curl = curl_easy_init();
+    if (!curl)
+        throw std::bad_alloc();
     RG_DEFER { curl_easy_cleanup(curl); };
 
-    ConfigureSSL(curl);
-    curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_POST, 1L);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body);
-    curl_easy_setopt(curl, CURLOPT_USERNAME, sid);
-    curl_easy_setopt(curl, CURLOPT_PASSWORD, token);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+    {
+        bool success = true;
 
-    // Don't care about output
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *, size_t size, size_t nmemb, void *) {
-        return size * nmemb;
-    });
+        success &= ConfigureSSL(curl);
+        success &= !curl_easy_setopt(curl, CURLOPT_URL, url);
+        success &= !curl_easy_setopt(curl, CURLOPT_POST, 1L);
+        success &= !curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body);
+        success &= !curl_easy_setopt(curl, CURLOPT_USERNAME, sid);
+        success &= !curl_easy_setopt(curl, CURLOPT_PASSWORD, token);
+        success &= !curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+        success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *, size_t size, size_t nmemb, void *) { return size * nmemb; });
+
+        if (!success) {
+            LogError("Failed to set libcurl options");
+            return false;
+        }
+    }
 
     CURLcode res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
@@ -210,39 +219,52 @@ bool SendMail(const char *url, const char *username, const char *password, const
     }
 
     CURL *curl = curl_easy_init();
+    if (!curl)
+        throw std::bad_alloc();
     RG_DEFER { curl_easy_cleanup(curl); };
 
-    ConfigureSSL(curl);
-    curl_easy_setopt(curl, CURLOPT_URL, url);
-    if (username) {
-        curl_easy_setopt(curl, CURLOPT_USERNAME, username);
-    }
-    if (password) {
-        curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
-    }
-    curl_easy_setopt(curl, CURLOPT_MAIL_FROM, NormalizeAddress(from, &temp_alloc));
-
-    // Recipients
+    // Set CURL options
     {
-        struct curl_slist *recipients = nullptr;
-        recipients = curl_slist_append(recipients, NormalizeAddress(to, &temp_alloc));
-        curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
+        bool success = true;
+
+        success &= ConfigureSSL(curl);
+        success &= !curl_easy_setopt(curl, CURLOPT_URL, url);
+        if (username) {
+            success &= !curl_easy_setopt(curl, CURLOPT_USERNAME, username);
+        }
+        if (password) {
+            success &= !curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
+        }
+        success &= !curl_easy_setopt(curl, CURLOPT_MAIL_FROM, NormalizeAddress(from, &temp_alloc));
+
+        // Recipients
+        {
+            struct curl_slist *recipients = nullptr;
+            recipients = curl_slist_append(recipients, NormalizeAddress(to, &temp_alloc));
+
+            success &= !curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
+        }
+
+        // Give payload to libcurl
+        success &= !curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *buf, size_t size, size_t nmemb, void *udata) {
+            Span<const char> *payload = (Span<const char> *)udata;
+
+            size_t copy_len = std::min(size * nmemb, (size_t)payload->len);
+            memcpy(buf, payload->ptr, copy_len);
+
+            payload->ptr += copy_len;
+            payload->len -= (Size)copy_len;
+
+            return copy_len;
+        });
+        success &= !curl_easy_setopt(curl, CURLOPT_READDATA, payload);
+        success &= !curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+
+        if (!success) {
+            LogError("Failed to set libcurl options");
+            return false;
+        }
     }
-
-    // Give payload to libcurl
-    curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *buf, size_t size, size_t nmemb, void *udata) {
-        Span<const char> *payload = (Span<const char> *)udata;
-
-        size_t copy_len = std::min(size * nmemb, (size_t)payload->len);
-        memcpy(buf, payload->ptr, copy_len);
-
-        payload->ptr += copy_len;
-        payload->len -= (Size)copy_len;
-
-        return copy_len;
-    });
-    curl_easy_setopt(curl, CURLOPT_READDATA, payload);
-    curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
 
     CURLcode res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
