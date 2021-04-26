@@ -527,7 +527,7 @@ const goupile = new function() {
         util.deleteCookie('session_rnd', '/');
 
         window.onbeforeunload = null;
-        document.location.reload();
+        document.location.href = ENV.urls.instance;
         await util.waitFor(2000);
     };
 
