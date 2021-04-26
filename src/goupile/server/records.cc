@@ -80,7 +80,7 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
     }
 
     const InstanceToken *token = session->GetToken(instance);
-    if (!token) {
+    if (!token || !token->HasPermission(UserPermission::DataList)) {
         LogError("User is not allowed to load data");
         io->AttachError(403);
         return;
