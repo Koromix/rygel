@@ -564,8 +564,8 @@ int64_t GetUnixTime()
 #else
     struct timespec ts;
     if (clock_gettime(CLOCK_REALTIME, &ts) < 0) {
-        LogError("clock_gettime() failed: %1", strerror(errno));
-        return 0;
+        LogError("clock_gettime(CLOCK_REALTIME) failed: %1", strerror(errno));
+        abort();
     }
 
     int64_t time = (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
@@ -582,8 +582,8 @@ int64_t GetMonotonicTime()
 #else
     struct timespec ts;
     if (clock_gettime(CLOCK_MONOTONIC, &ts) < 0) {
-        LogError("clock_gettime() failed: %1", strerror(errno));
-        return 0;
+        LogError("clock_gettime(CLOCK_MONOTONIC) failed: %1", strerror(errno));
+        abort();
     }
 
     return (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
