@@ -568,7 +568,8 @@ int64_t GetUnixTime()
         return 0;
     }
 
-    return (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
+    int64_t time = (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
+    return time;
 #endif
 }
 
