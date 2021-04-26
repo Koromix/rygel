@@ -89,6 +89,10 @@
 #  include "config-mac.h"
 #endif
 
+#ifdef __linux__
+#  include "config-linux.h"
+#endif
+
 #ifdef __riscos__
 #  include "config-riscos.h"
 #endif
