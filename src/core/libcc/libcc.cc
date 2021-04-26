@@ -895,7 +895,6 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 if (arg.u.i < 0) {
                     if (arg.pad_len < 0 && arg.pad_char == '0') {
                         append('-');
-                        pad_len++;
                     } else {
                         out_buf.Append('-');
                     }
@@ -929,7 +928,6 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                     if (u.u32 & SignMask) {
                         if (arg.pad_len < 0 && arg.pad_char == '0') {
                             append('-');
-                            pad_len++;
                         } else {
                             out_buf.Append('-');
                         }
@@ -961,7 +959,6 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                     if (u.u64 & SignMask) {
                         if (arg.pad_len < 0 && arg.pad_char == '0') {
                             append('-');
-                            pad_len++;
                         } else {
                             out_buf.Append('-');
                         }
@@ -986,7 +983,6 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                     size_unsigned = (size_t)-arg.u.size;
                     if (arg.pad_len < 0 && arg.pad_char == '0') {
                         append('-');
-                        pad_len++;
                     } else {
                         out_buf.Append('-');
                     }
@@ -1013,7 +1009,6 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                     size_unsigned = (size_t)-arg.u.size;
                     if (arg.pad_len < 0 && arg.pad_char == '0') {
                         append('-');
-                        pad_len++;
                     } else {
                         out_buf.Append('-');
                     }
