@@ -1705,6 +1705,8 @@ function InstanceController() {
                         new_record.siblings.push(sibling);
                     };
                 }
+
+                new_record.siblings.sort((record1, record2) => util.compareValues(record1.ulid, record2.ulid));
             }
 
             // Safety checks
