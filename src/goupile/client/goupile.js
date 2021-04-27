@@ -26,7 +26,6 @@ const goupile = new function() {
 
     this.start = async function() {
         let url = new URL(window.location.href);
-        let token = url.searchParams.get('token');
 
         if (ENV.urls.base === '/admin/') {
             controller = new AdminController;
@@ -47,12 +46,14 @@ const goupile = new function() {
         ui.init();
         await registerSW();
         initNavigation();
-        await syncProfile();
+        if (url.searchParams.get('login') != 1)
+            await syncProfile();
 
         if (profile.authorized) {
             document.body.classList.remove('gp_loading');
             await initAfterAuthorization();
         } else {
+            let token = url.searchParams.get('token');
             if (token) {
                 await sendToken(token);
                 self.syncHistory(url.pathname, false);
@@ -62,7 +63,7 @@ const goupile = new function() {
             if (profile.confirm == 'sms') {
                 await runConfirmScreen();
             } else {
-                await self.runLoginScreen();
+                await runLoginScreen();
             }
         }
     };
@@ -87,7 +88,7 @@ const goupile = new function() {
             // Now try home page... If that fails too, show login screen.
             // This will solve some situations such as overly restrictive locks.
             controller.go(null, ENV.urls.base).catch(async err => {
-                self.runLoginScreen();
+                runLoginScreen();
             });
         });
     };
@@ -143,14 +144,6 @@ const goupile = new function() {
     async function syncProfile() {
         let new_rnd = util.getCookie('session_rnd', null);
 
-        // Hack to force login screen to show up once when DemoUser setting is in use,
-        // this cookie value is set in logout() just before page refresh.
-        if (new_rnd === 'LOGIN') {
-            util.deleteCookie('session_rnd', '/');
-            session_rnd = null;
-            return;
-        }
-
         // Deal with lock, if any
         if (new_rnd == null) {
             let lock = await loadSessionValue('lock');
@@ -163,12 +156,12 @@ const goupile = new function() {
                     username: lock.username,
                     authorized: true,
                     permissions: {
-                        'edit': true
+                        data_edit: true
                     },
                     keys: lock.keys,
                     lock: lock.ctx
                 };
-                updateProfile(new_profile);
+                updateProfile(new_profile, false);
 
                 return;
             }
@@ -177,8 +170,9 @@ const goupile = new function() {
         if (new_rnd !== session_rnd) {
             try {
                 let response = await net.fetch(`${ENV.urls.instance}api/session/profile`);
+
                 let new_profile = await response.json();
-                updateProfile(new_profile);
+                updateProfile(new_profile, true);
             } catch (err) {
                 if (!ENV.cache_offline)
                     throw err;
@@ -188,42 +182,32 @@ const goupile = new function() {
         }
     }
 
-    self.runLoginScreen = async function(e) {
-        if (profile.userid == null) {
-            return ui.runScreen((d, resolve, reject) => {
-                d.output(html`
-                    <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
-                    <br/>
-                `);
+    async function runLoginScreen(e) {
+        return ui.runScreen((d, resolve, reject) => {
+            d.output(html`
+                <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
+                <br/>
+            `);
 
-                let username = d.text('*username', 'Nom d\'utilisateur');
-                let password = d.password('*password', 'Mot de passe');
+            let username = d.text('*username', 'Nom d\'utilisateur');
+            let password = d.password('*password', 'Mot de passe');
 
-                d.action('Se connecter', {disabled: !d.isValid()}, async () => {
-                    try {
-                        let progress = log.progress('Connexion en cours');
+            d.action('Se connecter', {disabled: !d.isValid()}, async () => {
+                try {
+                    let progress = log.progress('Connexion en cours');
 
-                        await tryLogin(username.value, password.value, progress, net.isOnline());
-                        await initAfterAuthorization();
+                    await tryLogin(username.value, password.value, progress, net.isOnline());
+                    await initAfterAuthorization();
 
-                        resolve();
-                    } catch (err) {
-                        // Never reject because we want to keep the screen open
-                        log.error(err);
-                        d.refresh();
-                    }
-                });
+                    resolve();
+                } catch (err) {
+                    // Never reject because we want to keep the screen open
+                    log.error(err);
+                    d.refresh();
+                }
             });
-        } else {
-            await self.confirmDangerousAction(e);
-
-            // Force login after reload
-            util.setCookie('session_rnd', 'LOGIN', '/');
-
-            window.onbeforeunload = null;
-            document.location.reload();
-        }
-    };
+        });
+    }
 
     async function sendToken(token) {
         let query = new URLSearchParams();
@@ -236,7 +220,7 @@ const goupile = new function() {
 
         if (response.ok) {
             let new_profile = await response.json();
-            updateProfile(new_profile);
+            updateProfile(new_profile, true);
         } else {
             let err = (await response.text()).trim();
             throw new Error(err);
@@ -267,7 +251,7 @@ const goupile = new function() {
 
                     if (response.ok) {
                         let new_profile = await response.json();
-                        updateProfile(new_profile);
+                        updateProfile(new_profile, true);
 
                         await initAfterAuthorization();
 
@@ -426,7 +410,7 @@ const goupile = new function() {
                         });
                     }
 
-                    updateProfile(new_profile);
+                    updateProfile(new_profile, true);
                     await deleteSessionValue('lock');
 
                     if (progress != null)
@@ -461,7 +445,7 @@ const goupile = new function() {
                         await db.saveWithKey('usr_profiles', username, obj);
                     }
 
-                    updateProfile(new_profile);
+                    updateProfile(new_profile, false);
                     await deleteSessionValue('lock');
 
                     if (progress != null)
@@ -514,8 +498,9 @@ const goupile = new function() {
         });
     }
 
-    function updateProfile(new_profile) {
-        profile = new_profile;
+    function updateProfile(new_profile, online) {
+        profile = Object.assign({}, new_profile);
+        profile.online = online;
 
         // Keep keys local to "hide" (as much as JS allows..) them
         if (profile.keys != null) {
@@ -537,15 +522,15 @@ const goupile = new function() {
             let response = await net.fetch(`${ENV.urls.instance}api/session/logout`, {method: 'POST'})
 
             if (response.ok) {
-                updateProfile({});
+                updateProfile({}, false);
                 await deleteSessionValue('lock');
 
-                // Force login after reload
-                util.setCookie('session_rnd', 'LOGIN', '/');
-
                 // Clear state and start from fresh as a precaution
+                let url = new URL(window.location.href);
+                let reload = util.pasteURL(url.pathname, {login: 1});
+
                 window.onbeforeunload = null;
-                document.location.reload();
+                document.location.href = reload;
             } else {
                 let err = (await response.text()).trim();
                 throw new Error(err);
@@ -679,14 +664,9 @@ const goupile = new function() {
     };
 
     this.isLocked = function() { return profile.lock !== undefined; };
-    this.hasPermission = function(perm) {
-        return profile.permissions != null &&
-               profile.permissions[perm];
-    };
-    this.isLoggedOnline = function() {
-        return net.isOnline() &&
-               session_rnd != null;
-    };
+    this.hasPermission = function(perm) { return profile.permissions != null &&
+                                                 profile.permissions[perm]; };
+    this.isLoggedOnline = function() { return net.isOnline() && profile.online; };
 
     this.syncHistory = function(url, push = true) {
         if (push && current_url != null && url !== current_url) {

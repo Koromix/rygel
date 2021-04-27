@@ -217,7 +217,7 @@ function InstanceController() {
                     </div>
                 </div>
             ` : ''}
-            ${goupile.isLocked() ? html`<button class="icon" @click=${ui.wrapAction(goupile.runLoginScreen)}
+            ${goupile.isLocked() ? html`<button class="icon" @click=${ui.wrapAction(goupile.logout)}
                                                 style="background-position-y: calc(-450px + 1.2em);">Se connecter</button>` : ''}
         `;
     }
