@@ -245,6 +245,9 @@ bool SendMail(const char *url, const char *username, const char *password, const
         throw std::bad_alloc();
     RG_DEFER { curl_easy_cleanup(curl); };
 
+    // In theory you have to use curl_slist_add, but why do two allocations when none is needed?
+    curl_slist recipients = { (char *)NormalizeAddress(to, &temp_alloc), nullptr };
+
     // Set CURL options
     {
         bool success = true;
@@ -258,14 +261,7 @@ bool SendMail(const char *url, const char *username, const char *password, const
             success &= !curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
         }
         success &= !curl_easy_setopt(curl, CURLOPT_MAIL_FROM, NormalizeAddress(from, &temp_alloc));
-
-        // Recipients
-        {
-            struct curl_slist *recipients = nullptr;
-            recipients = curl_slist_append(recipients, NormalizeAddress(to, &temp_alloc));
-
-            success &= !curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
-        }
+        success &= !curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, &recipients);
 
         // Give payload to libcurl
         success &= !curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *buf, size_t size, size_t nmemb, void *udata) {
