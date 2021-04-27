@@ -541,7 +541,7 @@ function FormBuilder(state, model, readonly = false) {
                         @change=${e => handleEnumDropChange(e, key)}>
                     ${options.untoggle || !props.some(p => p != null && value === p.value) ?
                         html`<option value="undefined" .selected=${value == null}
-                                     ?disabled=${options.readonly && value != null}>-- Choisissez une option --</option>` : ''}
+                                     ?disabled=${options.readonly && value != null}>-- Valeur non renseignée --</option>` : ''}
                     ${props.map(p =>
                         html`<option value=${util.valueToStr(p.value)} .selected=${value === p.value}
                                      ?disabled=${options.readonly && value !== p.value}>${p.label}</option>`)}
