@@ -361,7 +361,7 @@ function InstanceController() {
                     <thead>
                         <tr>
                             <th>Identifiant</th>
-                            ${data_form.menu.map(item => html`<th>${item.title}</th>`)}
+                            ${data_form.menu.map(item => html`<th title=${item.title}>${item.title}</th>`)}
                         </tr>
                     </thead>
 
@@ -379,9 +379,11 @@ function InstanceController() {
                                             let url = page.url + `/${row.ulid}`;
 
                                             if (row.status.has(page.key)) {
-                                                return html`<td class=${active && page === route.page ? 'saved active' : 'saved'}><a href=${url}>${item.title}</a></td>`;
+                                                return html`<td class=${active && page === route.page ? 'saved active' : 'saved'}
+                                                                title=${item.title}><a href=${url}>${item.title}</a></td>`;
                                             } else {
-                                                return html`<td class=${active && page === route.page ? 'missing active' : 'missing'}><a href=${url}>${item.title}</a></td>`;
+                                                return html`<td class=${active && page === route.page ? 'missing active' : 'missing'}
+                                                                title=${item.title}><a href=${url}>${item.title}</a></td>`;
                                             }
                                         } else if (item.type === 'form') {
                                             let form = item.form;
@@ -390,11 +392,13 @@ function InstanceController() {
                                                 let child = row.children[form.key][0];
                                                 let url = form.url + `/${child.ulid}`;
 
-                                                return html`<td class=${active && route.form.chain.includes(form) ? 'saved active' : 'saved'}><a href=${url}>${item.title}</a></td>`;
+                                                return html`<td class=${active && route.form.chain.includes(form) ? 'saved active' : 'saved'}
+                                                                title=${item.title}><a href=${url}>${item.title}</a></td>`;
                                             } else {
                                                 let url = form.url + `/${row.ulid}`;
 
-                                                return html`<td class=${active && route.form.chain.includes(form) ? 'missing active' : 'missing'}><a href=${url}>${item.title}</a></td>`;
+                                                return html`<td class=${active && route.form.chain.includes(form) ? 'missing active' : 'missing'}
+                                                                title=${item.title}><a href=${url}>${item.title}</a></td>`;
                                             }
                                         }
                                     })}
