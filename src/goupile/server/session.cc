@@ -415,6 +415,7 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
 
         // Parse JSON
         const char *sms = nullptr;
+        int64_t userid = 0;
         const char *username = nullptr;
         {
             StreamReader st(json);
@@ -427,6 +428,8 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
 
                 if (TestStr(key, "sms")) {
                     parser.ParseString(&sms);
+                } else if (TestStr(key, "userid")) {
+                    parser.ParseInt(&userid);
                 } else if (TestStr(key, "username")) {
                     parser.ParseString(&username);
                 } else if (parser.IsValid()) {
@@ -441,12 +444,29 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
             }
         }
 
+        // Build local key from SHA-256 hash of JSON
+        char local_key[45];
+        {
+            RG_STATIC_ASSERT(crypto_hash_sha256_BYTES == 32);
+
+            uint8_t sha256[32];
+            crypto_hash_sha256(sha256, json.ptr, json.len);
+            sodium_bin2base64(local_key, RG_SIZE(local_key), sha256, RG_SIZE(sha256), sodium_base64_VARIANT_ORIGINAL);
+        }
+
         // Check token values
         {
             bool valid = true;
 
             if (!sms || !sms[0]) {
                 LogError("Missing or empty SMS");
+                valid = false;
+            }
+            if (!userid) {
+                LogError("Missing or empty username");
+                valid = false;
+            } else if (userid > 0) {
+                LogError("Only negative user ID values are allowed in tokens");
                 valid = false;
             }
             if (!username || !username[0]) {
@@ -460,7 +480,7 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
             }
         }
 
-        RetainPtr<Session> session = CreateUserSession(-1, username, "");
+        RetainPtr<Session> session = CreateUserSession(userid, username, local_key);
 
         if (RG_LIKELY(session)) {
             uint32_t code = 100000 + randombytes_uniform(900000); // 6 digits
