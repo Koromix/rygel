@@ -80,7 +80,7 @@ static void EncodeUrlSafe(const char *str, HeapArray<char> *out_buf)
         if (IsAsciiAlphaOrDigit(c) || c == '-' || c == '.' || c == '_' || c == '~') {
             out_buf->Append(c);
         } else {
-            Fmt(out_buf, "%%%1", FmtHex(c).Pad0(-2));
+            Fmt(out_buf, "%%%1", FmtHex((uint8_t)c).Pad0(-2));
         }
     }
 
@@ -151,6 +151,26 @@ static const char *NormalizeAddress(const char *str, Allocator *alloc)
     return DuplicateString(addr, alloc).ptr;
 }
 
+static void EncodeRfc2047(const char *str, HeapArray<char> *out_buf)
+{
+    out_buf->Append("=?utf-8?Q?");
+    for (Size i = 0; str[i]; i++) {
+        int c = str[i];
+
+        if (c == ' ') {
+            out_buf->Append('_');
+        } else if (c >= 32 && c < 128 && c != '=' && c != '?' && c != '_') {
+            out_buf->Append(c);
+        } else {
+            Fmt(out_buf, "=%1", FmtHex((uint8_t)c).Pad0(-2));
+        }
+    }
+    out_buf->Append("?=");
+
+    out_buf->Grow(1);
+    out_buf->ptr[out_buf->len] = 0;
+}
+
 static void FormatRfcDate(int64_t time, HeapArray<char> *out_buf)
 {
     TimeSpec spec = {};
@@ -208,11 +228,13 @@ bool SendMail(const char *url, const char *username, const char *password, const
 
             SplitStr(from, '@', &domain);
         }
-        Fmt(&buf, "Date: "); FormatRfcDate(GetUnixTime(), &buf); buf.Append("\r\n");
-        Fmt(&buf, "To: %1\r\n", to);
-        Fmt(&buf, "From: %1\r\n", from);
+
         Fmt(&buf, "Message-ID: <%1@%2>\r\n", id, domain);
-        Fmt(&buf, "Subject: %1\r\n\r\n", subject);
+        Fmt(&buf, "Date: "); FormatRfcDate(GetUnixTime(), &buf); buf.Append("\r\n");
+        Fmt(&buf, "From: "); EncodeRfc2047(from, &buf); buf.Append("\r\n");
+        Fmt(&buf, "To: "); EncodeRfc2047(to, &buf); buf.Append("\r\n");
+        Fmt(&buf, "Subject: "); EncodeRfc2047(subject, &buf); buf.Append("\r\n");
+        Fmt(&buf, "Content-Type: text/plain; charset=UTF-8;\r\n\r\n");
         Fmt(&buf, "%1\r\n", message);
 
         payload = buf.Leak();
