@@ -324,7 +324,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
 void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(instance, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -486,7 +486,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
 void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(instance, request, io);
 
     if (!session) {
         LogError("User is not logged in");

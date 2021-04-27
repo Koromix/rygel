@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 33;
+const int InstanceVersion = 34;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, const char *filename)
 {
@@ -101,6 +101,8 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                     }
                 } else if (TestStr(key, "BackupKey")) {
                     config.backup_key = DuplicateString(value, &str_alloc).ptr;
+                } else if (TestStr(key, "AutoUserID")) {
+                    valid &= ParseInt(value, &config.auto_userid);
                 } else {
                     LogError("Unknown setting '%1'", key);
                     valid = false;
@@ -540,7 +542,7 @@ bool MigrateInstance(sq_Database *db)
                     success &= db->Run(sql, "Application.UseOffline", 0 + fake2.use_offline);
                     success &= db->Run(sql, "Application.MaxFileSize", fake2.max_file_size);
                     success &= db->Run(sql, "Application.SyncMode", SyncModeNames[(int)fake2.sync_mode]);
-                    success &= db->Run(sql, "Application.DemoUser", fake1.demo_user);
+                    success &= db->Run(sql, "Application.DemoUser", nullptr);
                     success &= db->Run(sql, "HTTP.SocketType", SocketTypeNames[(int)fake1.http.sock_type]);
                     success &= db->Run(sql, "HTTP.Port", fake1.http.port);
                     success &= db->Run(sql, "HTTP.MaxConnections", fake1.http.max_connections);
@@ -1088,9 +1090,17 @@ bool MigrateInstance(sq_Database *db)
 
                 if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('TokenKey', ?1);", token_key))
                     return false;
+            } [[fallthrough]];
+
+            case 33: {
+                bool success = db->RunMany(R"(
+                    INSERT INTO fs_settings (key) VALUES ('AutoUserID');
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 33);
+            RG_STATIC_ASSERT(InstanceVersion == 34);
         }
 
         int64_t time = GetUnixTime();

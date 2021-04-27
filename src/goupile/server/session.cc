@@ -217,32 +217,40 @@ static RetainPtr<Session> CreateUserSession(int64_t userid, const char *username
     return ptr;
 }
 
-RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http_IO *io)
+RetainPtr<const Session> GetCheckedSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<Session> session = sessions.Find(request, io);
 
-    if (gp_domain.config.demo_user && !session) {
-        static RetainPtr<Session> demo_session = [&]() {
-            sq_Statement stmt;
-            if (!gp_domain.db.Prepare("SELECT userid, local_key FROM dom_users WHERE username = ?1", &stmt))
-                return RetainPtr<Session>(nullptr);
-            sqlite3_bind_text(stmt, 1, gp_domain.config.demo_user, -1, SQLITE_STATIC);
+    if (!session && instance) {
+        int64_t auto_userid = instance->master->config.auto_userid;
 
-            if (!stmt.Next()) {
-                if (stmt.IsValid()) {
-                    LogError("Demo user '%1' does not exist", gp_domain.config.demo_user);
-                }
-                return RetainPtr<Session>(nullptr);
+        if (auto_userid > 0) {
+            if (RG_UNLIKELY(!instance->auto_init)) {
+                instance->auto_session = [&]() {
+                    sq_Statement stmt;
+                    if (!gp_domain.db.Prepare("SELECT userid, username, local_key FROM dom_users WHERE userid = ?1", &stmt))
+                        return RetainPtr<Session>(nullptr);
+                    sqlite3_bind_int64(stmt, 1, auto_userid);
+
+                    if (!stmt.Next()) {
+                        if (stmt.IsValid()) {
+                            LogError("Automatic user ID %1 does not exist", auto_userid);
+                        }
+                        return RetainPtr<Session>(nullptr);
+                    }
+
+                    int64_t userid = sqlite3_column_int64(stmt, 0);
+                    const char *username = (const char *)sqlite3_column_text(stmt, 1);
+                    const char *local_key = (const char *)sqlite3_column_text(stmt, 2);
+
+                    RetainPtr<Session> session = CreateUserSession(userid, username, local_key);
+                    return session;
+                }();
+                instance->auto_init = true;
             }
 
-            int64_t userid = sqlite3_column_int64(stmt, 0);
-            const char *local_key = (const char *)sqlite3_column_text(stmt, 1);
-            RetainPtr<Session> session = CreateUserSession(userid, gp_domain.config.demo_user, local_key);
-
-            return session;
-        }();
-
-        session = demo_session;
+            session = instance->auto_session;
+        }
     }
 
     return session;
@@ -519,7 +527,7 @@ void HandleSessionLogout(const http_RequestInfo &request, http_IO *io)
 
 void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(instance, request, io);
     WriteProfileJson(session.GetRaw(), instance, request, io);
 }
 

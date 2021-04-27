@@ -120,15 +120,6 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         valid = false;
                     }
                 } while (ini.NextInSection(&prop));
-            } else if (prop.section == "Session") {
-                do {
-                    if (prop.key == "DemoUser") {
-                        config.demo_user = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
-                } while (ini.NextInSection(&prop));
             } else if (prop.section == "SMS") {
                 do {
                     if (prop.key == "AuthSID") {

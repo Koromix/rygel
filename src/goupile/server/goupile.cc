@@ -96,10 +96,10 @@ static void AttachStatic(const AssetInfo &asset, const char *etag, const http_Re
     }
 }
 
-static void HandlePing(const http_RequestInfo &request, http_IO *io)
+static void HandlePing(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     // Do this to renew session and clear invalid session cookies
-    GetCheckedSession(request, io);
+    GetCheckedSession(instance, request, io);
 
     io->AddHeader("Cache-Control", "no-store");
     io->AttachText(200, "Pong!");
@@ -214,7 +214,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
         // And now, API endpoints
         if (TestStr(admin_url, "/api/session/ping") && request.method == http_RequestMethod::Get) {
-            HandlePing(request, io);
+            HandlePing(nullptr, request, io);
         } else if (TestStr(admin_url, "/api/session/profile") && request.method == http_RequestMethod::Get) {
             HandleSessionProfile(nullptr, request, io);
         } else if (TestStr(admin_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
@@ -378,7 +378,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
         // And now, API endpoints
         if (TestStr(instance_url, "/api/session/ping") && request.method == http_RequestMethod::Get) {
-            HandlePing(request, io);
+            HandlePing(instance, request, io);
         } else if (TestStr(instance_url, "/api/session/profile") && request.method == http_RequestMethod::Get) {
             HandleSessionProfile(instance, request, io);
         } else if (TestStr(instance_url, "/api/session/login") && request.method == http_RequestMethod::Post) {

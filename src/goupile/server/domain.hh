@@ -33,8 +33,6 @@ struct DomainConfig {
     bool enable_backups = false;
     bool sync_full = false;
 
-    const char *demo_user = nullptr;
-
     const char *sms_sid = nullptr;
     const char *sms_token = nullptr;
     const char *sms_from = nullptr;

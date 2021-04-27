@@ -77,7 +77,7 @@ public:
 
 void InvalidateUserTokens(int64_t userid);
 
-RetainPtr<const Session> GetCheckedSession(const http_RequestInfo &request, http_IO *io);
+RetainPtr<const Session> GetCheckedSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
 void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);

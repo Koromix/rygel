@@ -776,7 +776,7 @@ Options:
 
 void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1100,7 +1100,7 @@ static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = n
 
 void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1210,7 +1210,7 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
 
 void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1282,6 +1282,19 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
             if (config.backup_key && !config.backup_key[0])
                 config.backup_key = nullptr;
 
+            if (const char *str = values.FindValue("auto_userid", nullptr); str) {
+                if (str[0]) {
+                    valid &= ParseInt(str, &config.auto_userid);
+
+                    if (config.auto_userid <= 0) {
+                        LogError("Invalid automatic user ID");
+                        valid = false;
+                    }
+                } else {
+                    config.auto_userid = 0;
+                }
+            }
+
             if (!valid) {
                 io->AttachError(422);
                 return;
@@ -1307,6 +1320,7 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
                 success &= instance->db.Run(sql, "SyncMode", SyncModeNames[(int)config.sync_mode]);
                 success &= instance->db.Run(sql, "BackupKey", config.backup_key);
             }
+            success &= instance->db.Run(sql, "AutoUserID", config.auto_userid ? sq_Binding(config.auto_userid) : sq_Binding());
             if (!success)
                 return false;
 
@@ -1332,7 +1346,7 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
 
 void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1379,6 +1393,9 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
             if (instance->config.backup_key) {
                 json.Key("backup_key"); json.String(instance->config.backup_key);
             }
+            if (instance->config.auto_userid > 0) {
+                json.Key("auto_userid"); json.Int64(instance->config.auto_userid);
+            }
         json.EndObject();
 
         json.EndObject();
@@ -1416,7 +1433,7 @@ static bool ParsePermissionList(Span<const char> remain, uint32_t *out_permissio
 
 void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1542,7 +1559,7 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
 
 void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1603,7 +1620,7 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
 
 void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1636,7 +1653,7 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
 
 void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1696,7 +1713,7 @@ void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io)
 
 void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1750,7 +1767,7 @@ void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
 
 void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1830,7 +1847,7 @@ void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io)
 
 void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1887,7 +1904,7 @@ void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io)
 
 void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2062,7 +2079,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
 
 void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2174,7 +2191,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
 
 void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2297,7 +2314,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
 
 void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2384,7 +2401,7 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
 
 void HandleUserList(const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(request, io);
+    RetainPtr<const Session> session = GetCheckedSession(nullptr, request, io);
 
     if (!session) {
         LogError("User is not logged in");

@@ -89,7 +89,7 @@ function AdminController() {
                                 <td>${instance.master == null ?
                                         html`<a role="button" tabindex="0" @click=${ui.wrapAction(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a>` : ''}</td>
                                 <td><a role="button" tabindex="0" href=${makeURL(instance.key)}>Droits</a></td>
-                                <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runEditInstanceDialog(e, instance))}>Configurer</a></td>
+                                <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runConfigureInstanceDialog(e, instance))}>Configurer</a></td>
                             </tr>
                         `)}
                     </tbody>
@@ -158,6 +158,8 @@ function AdminController() {
                                     ${selected_instance != null ? html`
                                         <td class=${selected_instance.master != null ? 'missing' : ''}
                                             style="white-space: normal;">
+                                            ${selected_instance.config.auto_userid === user.userid ?
+                                                html`<span class="ui_tag" style="background: #db0a0a;">Défaut</span>` : ''}
                                             ${selected_instance.master == null ? makePermissionsTag(permissions, 'admin_', '#b518bf') : ''}
                                             ${!selected_instance.slaves ? makePermissionsTag(permissions, 'data_', '#258264') : ''}
                                         </td>
@@ -351,7 +353,7 @@ function AdminController() {
 
         if (new_instances == null)
             new_instances = await net.fetchJson('/admin/api/instances/list');
-        if (ui.isPanelEnabled('users') && new_users == null)
+        if (new_users == null)
             new_users = await net.fetchJson('/admin/api/users/list');
         if (ui.isPanelEnabled('backups') && new_backups == null) {
             new_backups = await net.fetchJson('/admin/api/archives/list');
@@ -441,20 +443,22 @@ function AdminController() {
         });
     }
 
-    function runEditInstanceDialog(e, instance) {
-        return ui.runDialog(e, `Modification de ${instance.key}`, (d, resolve, reject) => {
+    function runConfigureInstanceDialog(e, instance) {
+        return ui.runDialog(e, `Configuration de ${instance.key}`, (d, resolve, reject) => {
             d.pushOptions({untoggle: false});
 
             d.tabs('actions', () => {
                 d.tab('Modifier', () => {
                     if (instance.master == null) {
                         let title = d.text('*title', 'Nom', {value: instance.config.title});
+
                         let use_offline = d.boolean('*use_offline', 'Utilisation hors-ligne', {value: instance.config.use_offline});
                         let sync_mode = d.enum('*sync_mode', 'Mode de synchronisation', [
                             ['offline', 'Hors ligne'],
                             ['online', 'En ligne'],
                             ['mirror', 'Mode miroir']
                         ], {value: instance.config.sync_mode});
+
                         let backup_key = (sync_mode.value == 'offline') ?
                                          d.text('backup_key', 'Clé d\'archivage', {value: instance.config.backup_key}) : {};
                         if (backup_key.value != null) {
@@ -467,7 +471,13 @@ function AdminController() {
                             }
                         }
 
-                        d.action('Modifier', {disabled: !d.isValid()}, async () => {
+                        let auto_userid = d.enumDrop('auto_userid', 'Session automatique',
+                                                     users.map(user => [user.userid, user.username]), {
+                            value: instance.config.auto_userid,
+                            untoggle: true
+                        });
+
+                        d.action('Configurer', {disabled: !d.isValid()}, async () => {
                             let query = new URLSearchParams();
                             query.set('key', instance.key);
                             query.set('title', title.value);
@@ -475,6 +485,7 @@ function AdminController() {
                             query.set('sync_mode', sync_mode.value);
                             if (sync_mode.value === 'offline')
                                 query.set('backup_key', backup_key.value || '');
+                            query.set('auto_userid', auto_userid.value || '');
 
                             let response = await net.fetch('/admin/api/instances/configure', {
                                 method: 'POST',
@@ -496,7 +507,7 @@ function AdminController() {
                     } else {
                         let title = d.text('*title', 'Nom', {value: instance.config.title});
 
-                        d.action('Modifier', {disabled: !d.isValid()}, async () => {
+                        d.action('Configurer', {disabled: !d.isValid()}, async () => {
                             let query = new URLSearchParams();
                             query.set('key', instance.key);
                             query.set('title', title.value);

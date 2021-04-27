@@ -16,6 +16,7 @@
 #include "../../core/libcc/libcc.hh"
 #include "../../core/libwrap/sqlite.hh"
 #include "../../web/libhttp/libhttp.hh"
+#include "session.hh"
 
 namespace RG {
 
@@ -59,7 +60,12 @@ public:
         uint8_t token_pkey[32];
         bool enable_tokens = false;
         const char *backup_key = nullptr;
+        int64_t auto_userid = 0;
     } config;
+
+    // Lazily initialized
+    bool auto_init = false;
+    RetainPtr<Session> auto_session;
 
     BlockAllocator str_alloc;
 
