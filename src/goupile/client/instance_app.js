@@ -43,7 +43,12 @@ function PageInfo(key, title) {
 function ApplicationBuilder(app) {
     let self = this;
 
-    let options_stack = [{}];
+    let options_stack = [{
+        enabled: true,
+        loackable: false,
+        dictionaries: null,
+        load: null
+    }];
     let form_ref = null;
 
     this.pushOptions = function(options = {}) {
