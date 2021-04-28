@@ -47,7 +47,8 @@ function ApplicationBuilder(app) {
         enabled: true,
         loackable: false,
         dictionaries: null,
-        load: null
+        load: null,
+        default_actions: true
     }];
     let form_ref = null;
 

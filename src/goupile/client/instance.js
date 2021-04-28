@@ -546,7 +546,7 @@ function InstanceController() {
             if (model.hasErrors())
                 form_builder.errorList();
 
-            if (model.variables.length) {
+            if (route.page.options.default_actions && model.variables.length) {
                 let enable_save = !model.hasErrors() && form_state.hasChanged();
 
                 form_builder.action('Enregistrer', {disabled: !enable_save}, () => {
