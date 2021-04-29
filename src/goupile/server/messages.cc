@@ -88,8 +88,8 @@ static void EncodeUrlSafe(const char *str, HeapArray<char> *out_buf)
     out_buf->ptr[out_buf->len] = 0;
 }
 
-bool SendSMS(const char *sid, const char *token, const char *from,
-             const char *to, const char *message)
+bool SendSMS(const char *sid, const char *token,
+             const char *from, const char *to, const char *message)
 {
     BlockAllocator temp_alloc;
 
@@ -210,8 +210,8 @@ static void FormatRfcDate(int64_t time, HeapArray<char> *out_buf)
                  FmtArg(spec.sec).Pad0(-2), offset >= 0 ? "+" : "", FmtArg(offset).Pad0(-4));
 }
 
-bool SendMail(const char *url, const char *username, const char *password, const char *from,
-              const char *to, const char *subject, const char *text, const char *html)
+bool SendMail(const char *url, const char *username, const char *password,
+              const char *from, const char *to, const MailContent &content)
 {
     BlockAllocator temp_alloc;
 
@@ -233,9 +233,11 @@ bool SendMail(const char *url, const char *username, const char *password, const
         Fmt(&buf, "Date: "); FormatRfcDate(GetUnixTime(), &buf); buf.Append("\r\n");
         Fmt(&buf, "From: "); EncodeRfc2047(from, &buf); buf.Append("\r\n");
         Fmt(&buf, "To: "); EncodeRfc2047(to, &buf); buf.Append("\r\n");
-        Fmt(&buf, "Subject: "); EncodeRfc2047(subject, &buf); buf.Append("\r\n");
+        if (content.subject) {
+            Fmt(&buf, "Subject: "); EncodeRfc2047(content.subject, &buf); buf.Append("\r\n");
+        }
 
-        if (html) {
+        if (content.text && content.html) {
             char boundary[17];
             {
                 uint64_t buf;
@@ -245,16 +247,19 @@ bool SendMail(const char *url, const char *username, const char *password, const
 
             Fmt(&buf, "Content-Type: multipart/alternative; boundary=\"%1\";\r\n", boundary);
             Fmt(&buf, "MIME-version: 1.0\r\n\r\n");
-
             Fmt(&buf, "--%1\r\nContent-Type: text/plain; charset=UTF-8;\r\n\r\n", boundary);
-            Fmt(&buf, "%1\r\n", text);
+            Fmt(&buf, "%1\r\n", content.text);
             Fmt(&buf, "--%1\r\nContent-Type: text/html; charset=UTF-8;\r\n\r\n", boundary);
-            Fmt(&buf, "%1\r\n", html);
+            Fmt(&buf, "%1\r\n", content.html);
             Fmt(&buf, "--%1--\r\n", boundary);
+        } else if (content.html) {
+            Fmt(&buf, "Content-Type: text/html; charset=UTF-8;\r\n");
+            Fmt(&buf, "MIME-version: 1.0\r\n\r\n");
+            Fmt(&buf, "%1\r\n", content.html);
         } else {
             Fmt(&buf, "Content-Type: text/plain; charset=UTF-8;\r\n");
             Fmt(&buf, "MIME-version: 1.0\r\n\r\n");
-            Fmt(&buf, "%1\r\n", text);
+            Fmt(&buf, "%1\r\n", content.text ? content.text : "");
         }
 
         payload = buf.Leak();

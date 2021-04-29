@@ -19,9 +19,15 @@ namespace RG {
 
 bool InitSSL();
 
-bool SendSMS(const char *sid, const char *token, const char *from,
-             const char *to, const char *message);
-bool SendMail(const char *url, const char *username, const char *password, const char *from,
-              const char *to, const char *subject, const char *text, const char *html = nullptr);
+struct MailContent {
+    const char *subject = nullptr;
+    const char *text = nullptr;
+    const char *html = nullptr;
+};
+
+bool SendSMS(const char *sid, const char *token,
+             const char *from, const char *to, const char *message);
+bool SendMail(const char *url, const char *username, const char *password,
+              const char *from, const char *to, const MailContent &content);
 
 }
