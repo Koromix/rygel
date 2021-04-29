@@ -216,6 +216,8 @@ html.small .ui_toolbar button.icon {
     overflow-y: auto;
     background: #f8f8f8;
 }
+.ui_dialog.screen > div { width: 280px; }
+.ui_dialog.modal > div { min-width: 280px; }
 .ui_dialog.modal > div > form, .ui_dialog.screen > div > form { padding: 16px; }
 .ui_dialog.modal > div { border: 1px solid #e6e6e6; }
 
@@ -224,7 +226,7 @@ html.small .ui_toolbar button.icon {
     position: fixed;
     box-sizing: border-box;
     max-height: calc(100% - 20px);
-    min-width: 240px;
+    min-width: 260px;
     box-sizing: border-box;
     overflow-y: auto;
     background: #f8f8f8;

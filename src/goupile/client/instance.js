@@ -734,6 +734,12 @@ function InstanceController() {
         return ui.runDialog(e, 'Historique', (d, resolve, reject) => {
             d.output(html`
                 <table class="ui_table">
+                    <colgroup>
+                        <col/>
+                        <col/>
+                        <col style="min-width: 12em;"/>
+                    </colgroup>
+
                     <tbody>
                         ${!form_record.fragments.length ? html`<tr><td>Aucune modification enregistrée</td></tr>` : ''}
                         ${util.mapRange(0, form_record.fragments.length, idx => {
