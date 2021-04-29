@@ -154,7 +154,6 @@ Options:
                                  %!D..(default: %3)%!0
     %!..+-f, --features <features>%!0    Compiler features (see below)
     %!..+-e, --environment%!0            Use compiler flags found in environment (CFLAGS, LDFLAGS, etc.)
-        %!..+--no_pch%!0                 Disable header precompilation (PCH)
 
     %!..+-j, --jobs <count>%!0           Set maximum number of parallel jobs
                                  %!D..(default: %4)%!0
@@ -250,8 +249,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 }
             } else if (opt.Test("-e", "--environment")) {
                 build.env = true;
-            } else if (opt.Test("--no_pch")) {
-                build.pch = false;
             } else if (opt.Test("-j", "--jobs", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &jobs))
                     return 1;

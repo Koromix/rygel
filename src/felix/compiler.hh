@@ -31,15 +31,17 @@ static const char *const CompileModeNames[] = {
 };
 
 enum class CompileFeature {
-    NoDebug = 1 << 0,
-    Static = 1 << 1,
-    ASan = 1 << 2,
-    TSan = 1 << 3,
-    UBSan = 1 << 4,
-    ProtectStack = 1 << 5,
-    CFI = 1 << 6
+    PCH = 1 << 0,
+    NoDebug = 1 << 1,
+    Static = 1 << 2,
+    ASan = 1 << 3,
+    TSan = 1 << 4,
+    UBSan = 1 << 5,
+    ProtectStack = 1 << 6,
+    CFI = 1 << 7
 };
 static const char *const CompileFeatureNames[] = {
+    "PCH",
     "NoDebug",
     "Static",
     "ASan",

@@ -171,7 +171,7 @@ bool Builder::AddTarget(const TargetInfo &target)
     }
 
     // Some compilers (such as MSVC) also build PCH object files that need to be linked
-    if (build.pch) {
+    if (build.features & (int)CompileFeature::PCH) {
         if (target.c_pch_src) {
             const char *pch_filename = build_map.FindValue(target.c_pch_src->filename, nullptr);
             const char *obj_filename = build.compiler->GetPchObject(pch_filename, &str_alloc);
@@ -234,7 +234,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
 {
     // Precompiled header (if any)
     const char *pch_filename = nullptr;
-    if (build.pch) {
+    if (build.features & (int)CompileFeature::PCH) {
         const SourceFileInfo *pch = nullptr;
         const char *pch_ext;
         switch (src.type) {

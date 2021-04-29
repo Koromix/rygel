@@ -154,6 +154,7 @@ public:
     {
         uint32_t supported = 0;
 
+        supported |= (int)CompileFeature::PCH;
         supported |= (int)CompileFeature::NoDebug;
         supported |= (int)CompileFeature::Static;
         supported |= (int)CompileFeature::ASan;
@@ -453,6 +454,11 @@ public:
     {
         uint32_t supported = 0;
 
+#ifndef _WIN32
+        // Sometimes it works, somestimes not and the object files are
+        // corrupt... just avoid PCH on MinGW
+        supported |= (int)CompileFeature::PCH;
+#endif
         supported |= (int)CompileFeature::NoDebug;
         supported |= (int)CompileFeature::Static;
 #ifndef _WIN32
@@ -741,6 +747,7 @@ public:
     {
         uint32_t supported = 0;
 
+        supported |= (int)CompileFeature::PCH;
         supported |= (int)CompileFeature::NoDebug;
         supported |= (int)CompileFeature::Static;
         supported |= (int)CompileFeature::ASan;
