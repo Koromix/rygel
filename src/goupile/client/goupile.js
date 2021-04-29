@@ -342,9 +342,19 @@ const goupile = new function() {
         };
 
         if (controller.runTasks != null) {
+            let ignore_ping = false;
             setInterval(async () => {
-                await pingServer();
-                runTasks();
+                if (ignore_ping)
+                    return;
+
+                try {
+                    ignore_ping = false;
+
+                    await pingServer();
+                    await runTasks();
+                } finally {
+                    ignore_ping = true;
+                }
             }, 60 * 1000);
 
             document.addEventListener('visibilitychange', () => {
