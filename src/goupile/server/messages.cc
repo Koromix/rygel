@@ -211,7 +211,7 @@ static void FormatRfcDate(int64_t time, HeapArray<char> *out_buf)
 }
 
 bool SendMail(const char *url, const char *username, const char *password, const char *from,
-              const char *to, const char *subject, const char *message)
+              const char *to, const char *subject, const char *text, const char *html)
 {
     BlockAllocator temp_alloc;
 
@@ -234,8 +234,28 @@ bool SendMail(const char *url, const char *username, const char *password, const
         Fmt(&buf, "From: "); EncodeRfc2047(from, &buf); buf.Append("\r\n");
         Fmt(&buf, "To: "); EncodeRfc2047(to, &buf); buf.Append("\r\n");
         Fmt(&buf, "Subject: "); EncodeRfc2047(subject, &buf); buf.Append("\r\n");
-        Fmt(&buf, "Content-Type: text/plain; charset=UTF-8;\r\n\r\n");
-        Fmt(&buf, "%1\r\n", message);
+
+        if (html) {
+            char boundary[17];
+            {
+                uint64_t buf;
+                randombytes_buf(&buf, RG_SIZE(buf));
+                Fmt(boundary, "%1", FmtHex(buf).Pad0(-16));
+            }
+
+            Fmt(&buf, "Content-Type: multipart/alternative; boundary=\"%1\";\r\n", boundary);
+            Fmt(&buf, "MIME-version: 1.0\r\n\r\n");
+
+            Fmt(&buf, "--%1\r\nContent-Type: text/plain; charset=UTF-8;\r\n\r\n", boundary);
+            Fmt(&buf, "%1\r\n", text);
+            Fmt(&buf, "--%1\r\nContent-Type: text/html; charset=UTF-8;\r\n\r\n", boundary);
+            Fmt(&buf, "%1\r\n", html);
+            Fmt(&buf, "--%1--\r\n", boundary);
+        } else {
+            Fmt(&buf, "Content-Type: text/plain; charset=UTF-8;\r\n");
+            Fmt(&buf, "MIME-version: 1.0\r\n\r\n");
+            Fmt(&buf, "%1\r\n", text);
+        }
 
         payload = buf.Leak();
     }
