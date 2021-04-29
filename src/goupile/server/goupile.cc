@@ -497,6 +497,13 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             return 1;
     }
 
+    if (gp_domain.config.sms_sid && !InitTwilio(gp_domain.config.sms_sid, gp_domain.config.sms_token,
+                                                gp_domain.config.sms_from))
+        return 1;
+    if (gp_domain.config.smtp_url && !InitSMTP(gp_domain.config.smtp_url, gp_domain.config.smtp_username,
+                                               gp_domain.config.smtp_password, gp_domain.config.smtp_from))
+        return 1;
+
 #ifdef NDEBUG
     if (!gp_domain.config.http.use_xrealip) {
         LogInfo("If you run this behind a reverse proxy, you may want to enable the HTTP.TrustXRealIP setting in goupile.ini");
@@ -602,8 +609,6 @@ int Main(int argc, char **argv)
         LogError("Failed to initialize libcurl");
         return 1;
     }
-    if (!InitSSL())
-        return 1;
 
     int (*cmd_func)(Span<const char *> arguments);
     Span<const char *> arguments;

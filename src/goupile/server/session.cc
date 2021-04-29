@@ -489,8 +489,7 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
             sessions.Open(request, io, session);
 
             // Send confirmation SMS
-            if (!SendSMS(gp_domain.config.sms_sid, gp_domain.config.sms_token,
-                         gp_domain.config.sms_from, sms, session->confirm))
+            if (!SendSMS(sms, session->confirm))
                 return;
 
             WriteProfileJson(session.GetRaw(), nullptr, request, io);

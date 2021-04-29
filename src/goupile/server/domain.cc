@@ -43,6 +43,13 @@ bool DomainConfig::Validate() const
         }
     }
 
+    if (smtp_url) {
+        if (!smtp_from) {
+            LogError("SMTP From setting is not set");
+            valid = false;
+        }
+    }
+
     valid &= http.Validate();
     if (max_age < 0) {
         LogError("HTTP MaxAge must be >= 0");
@@ -141,6 +148,8 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         config.smtp_username = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "Password") {
                         config.smtp_password = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "From") {
+                        config.smtp_from = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;

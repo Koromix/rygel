@@ -17,17 +17,16 @@
 
 namespace RG {
 
-bool InitSSL();
-
 struct MailContent {
     const char *subject = nullptr;
     const char *text = nullptr;
     const char *html = nullptr;
 };
 
-bool SendSMS(const char *sid, const char *token,
-             const char *from, const char *to, const char *message);
-bool SendMail(const char *url, const char *username, const char *password,
-              const char *from, const char *to, const MailContent &content);
+bool InitTwilio(const char *sid, const char *token, const char *from);
+bool InitSMTP(const char *url, const char *username, const char *password, const char *from);
+
+bool SendSMS(const char *to, const char *message);
+bool SendMail(const char *to, const MailContent &content);
 
 }

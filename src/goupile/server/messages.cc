@@ -27,10 +27,20 @@
 
 namespace RG {
 
+static bool init_ssl = false;
 static mbedtls_x509_crt pem;
 static mbedtls_x509_crl crl;
 
-bool InitSSL()
+static const char *sms_sid;
+static const char *sms_token;
+static const char *sms_from;
+
+static const char *smtp_url;
+static const char *smtp_username;
+static const char *smtp_password;
+static const char *smtp_from;
+
+static bool InitSSL()
 {
     const AssetInfo *asset = FindPackedAsset("vendor/cacert/cacert.pem");
     RG_ASSERT(asset);
@@ -55,6 +65,32 @@ bool InitSSL()
         LogError("Failed to parse CA store file");
         return false;
     }
+
+    init_ssl = true;
+    return true;
+}
+
+bool InitTwilio(const char *sid, const char *token, const char *from)
+{
+    if (!init_ssl && !InitSSL())
+        return false;
+
+    sms_sid = sid;
+    sms_token = token;
+    sms_from = from;
+
+    return true;
+}
+
+bool InitSMTP(const char *url, const char *username, const char *password, const char *from)
+{
+    if (!init_ssl && !InitSSL())
+        return false;
+
+    smtp_url = url;
+    smtp_username = username;
+    smtp_password = password;
+    smtp_from = from;
 
     return true;
 }
@@ -88,8 +124,7 @@ static void EncodeUrlSafe(const char *str, HeapArray<char> *out_buf)
     out_buf->ptr[out_buf->len] = 0;
 }
 
-bool SendSMS(const char *sid, const char *token,
-             const char *from, const char *to, const char *message)
+bool SendSMS(const char *to, const char *message)
 {
     BlockAllocator temp_alloc;
 
@@ -98,10 +133,10 @@ bool SendSMS(const char *sid, const char *token,
     {
         HeapArray<char> buf(&temp_alloc);
 
-        Fmt(&buf, "To=%1&From=%2&Body=", to, from);
+        Fmt(&buf, "To=%1&From=%2&Body=", to, sms_from);
         EncodeUrlSafe(message, &buf);
 
-        url = Fmt(&temp_alloc, "https://api.twilio.com/2010-04-01/Accounts/%1/Messages", sid).ptr;
+        url = Fmt(&temp_alloc, "https://api.twilio.com/2010-04-01/Accounts/%1/Messages", sms_sid).ptr;
         body = buf.Leak().ptr;
     }
 
@@ -117,8 +152,8 @@ bool SendSMS(const char *sid, const char *token,
         success &= !curl_easy_setopt(curl, CURLOPT_URL, url);
         success &= !curl_easy_setopt(curl, CURLOPT_POST, 1L);
         success &= !curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body);
-        success &= !curl_easy_setopt(curl, CURLOPT_USERNAME, sid);
-        success &= !curl_easy_setopt(curl, CURLOPT_PASSWORD, token);
+        success &= !curl_easy_setopt(curl, CURLOPT_USERNAME, sms_sid);
+        success &= !curl_easy_setopt(curl, CURLOPT_PASSWORD, sms_token);
         success &= !curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
         success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *, size_t size, size_t nmemb, void *) { return size * nmemb; });
 
@@ -210,8 +245,7 @@ static void FormatRfcDate(int64_t time, HeapArray<char> *out_buf)
                  FmtArg(spec.sec).Pad0(-2), offset >= 0 ? "+" : "", FmtArg(offset).Pad0(-4));
 }
 
-bool SendMail(const char *url, const char *username, const char *password,
-              const char *from, const char *to, const MailContent &content)
+bool SendMail(const char *to, const MailContent &content)
 {
     BlockAllocator temp_alloc;
 
@@ -226,12 +260,12 @@ bool SendMail(const char *url, const char *username, const char *password,
             randombytes_buf(&buf, RG_SIZE(buf));
             Fmt(id, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
 
-            SplitStr(from, '@', &domain);
+            SplitStr(smtp_from, '@', &domain);
         }
 
         Fmt(&buf, "Message-ID: <%1@%2>\r\n", id, domain);
         Fmt(&buf, "Date: "); FormatRfcDate(GetUnixTime(), &buf); buf.Append("\r\n");
-        Fmt(&buf, "From: "); EncodeRfc2047(from, &buf); buf.Append("\r\n");
+        Fmt(&buf, "From: "); EncodeRfc2047(smtp_from, &buf); buf.Append("\r\n");
         Fmt(&buf, "To: "); EncodeRfc2047(to, &buf); buf.Append("\r\n");
         if (content.subject) {
             Fmt(&buf, "Subject: "); EncodeRfc2047(content.subject, &buf); buf.Append("\r\n");
@@ -278,14 +312,14 @@ bool SendMail(const char *url, const char *username, const char *password,
         bool success = true;
 
         success &= ConfigureSSL(curl);
-        success &= !curl_easy_setopt(curl, CURLOPT_URL, url);
-        if (username) {
-            success &= !curl_easy_setopt(curl, CURLOPT_USERNAME, username);
+        success &= !curl_easy_setopt(curl, CURLOPT_URL, smtp_url);
+        if (smtp_username) {
+            success &= !curl_easy_setopt(curl, CURLOPT_USERNAME, smtp_username);
         }
-        if (password) {
-            success &= !curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
+        if (smtp_password) {
+            success &= !curl_easy_setopt(curl, CURLOPT_PASSWORD, smtp_password);
         }
-        success &= !curl_easy_setopt(curl, CURLOPT_MAIL_FROM, NormalizeAddress(from, &temp_alloc));
+        success &= !curl_easy_setopt(curl, CURLOPT_MAIL_FROM, NormalizeAddress(smtp_from, &temp_alloc));
         success &= !curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, &recipients);
 
         // Give payload to libcurl
