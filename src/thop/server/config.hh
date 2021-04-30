@@ -15,7 +15,7 @@
 
 #include "../../core/libcc/libcc.hh"
 #include "../../drd/libdrd/libdrd.hh"
-#include "../../web/libhttp/libhttp.hh"
+#include "../../core/libnet/libnet.hh"
 
 namespace RG {
 

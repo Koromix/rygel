@@ -31,30 +31,13 @@ bool DomainConfig::Validate() const
         LogError("Domain backup key is not set");
         valid = false;
     }
-
-    if (sms_sid) {
-        if (!sms_token) {
-            LogError("SMS token is not set");
-            valid = false;
-        }
-        if (!sms_from) {
-            LogError("SMS From setting is not set");
-            valid = false;
-        }
-    }
-
-    if (smtp_url) {
-        if (!smtp_from) {
-            LogError("SMTP From setting is not set");
-            valid = false;
-        }
-    }
-
     valid &= http.Validate();
     if (max_age < 0) {
         LogError("HTTP MaxAge must be >= 0");
         valid = false;
     }
+    valid &= !smtp.url || smtp.Validate();
+    valid &= !sms.sid || sms.Validate();
 
     return valid;
 }
@@ -127,34 +110,6 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         valid = false;
                     }
                 } while (ini.NextInSection(&prop));
-            } else if (prop.section == "SMS") {
-                do {
-                    if (prop.key == "AuthSID") {
-                        config.sms_sid = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "AuthToken") {
-                        config.sms_token = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "From") {
-                        config.sms_from = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
-                } while (ini.NextInSection(&prop));
-            } else if (prop.section == "SMTP") {
-                do {
-                    if (prop.key == "URL") {
-                        config.smtp_url = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "Username") {
-                        config.smtp_username = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "Password") {
-                        config.smtp_password = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "From") {
-                        config.smtp_from = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
-                } while (ini.NextInSection(&prop));
             } else if (prop.section == "HTTP") {
                 do {
                     if (prop.key == "SocketType" || prop.key == "IPStack") {
@@ -180,6 +135,34 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         valid &= ParseInt(prop.value, &config.max_age);
                     } else if (prop.key == "TrustXRealIP") {
                         valid &= ParseBool(prop.value, &config.http.use_xrealip);
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
+            } else if (prop.section == "SMTP") {
+                do {
+                    if (prop.key == "URL") {
+                        config.smtp.url = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "Username") {
+                        config.smtp.username = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "Password") {
+                        config.smtp.password = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "From") {
+                        config.smtp.from = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
+            } else if (prop.section == "SMS") {
+                do {
+                    if (prop.key == "AuthSID") {
+                        config.sms.sid = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "AuthToken") {
+                        config.sms.token = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "From") {
+                        config.sms.from = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;

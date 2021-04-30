@@ -14,19 +14,14 @@
 #pragma once
 
 #include "../../core/libcc/libcc.hh"
+#include "../../core/libnet/libnet.hh"
 
 namespace RG {
 
-struct MailContent {
-    const char *subject = nullptr;
-    const char *text = nullptr;
-    const char *html = nullptr;
-};
+bool InitSMTP(const smtp_Config &config);
+bool InitSMS(const sms_Config &config);
 
-bool InitTwilio(const char *sid, const char *token, const char *from);
-bool InitSMTP(const char *url, const char *username, const char *password, const char *from);
-
+bool SendMail(const char *to, const smtp_MailContent &content);
 bool SendSMS(const char *to, const char *message);
-bool SendMail(const char *to, const MailContent &content);
 
 }

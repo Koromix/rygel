@@ -20,7 +20,7 @@
 #include "messages.hh"
 #include "records.hh"
 #include "session.hh"
-#include "../../web/libhttp/libhttp.hh"
+#include "../../core/libnet/libnet.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 #include "../../../vendor/curl/include/curl/curl.h"
 #ifndef _WIN32
@@ -497,11 +497,10 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             return 1;
     }
 
-    if (gp_domain.config.sms_sid && !InitTwilio(gp_domain.config.sms_sid, gp_domain.config.sms_token,
-                                                gp_domain.config.sms_from))
+    LogInfo("Init messaging");
+    if (gp_domain.config.sms.sid && !InitSMS(gp_domain.config.sms))
         return 1;
-    if (gp_domain.config.smtp_url && !InitSMTP(gp_domain.config.smtp_url, gp_domain.config.smtp_username,
-                                               gp_domain.config.smtp_password, gp_domain.config.smtp_from))
+    if (gp_domain.config.smtp.url && !InitSMTP(gp_domain.config.smtp))
         return 1;
 
 #ifdef NDEBUG

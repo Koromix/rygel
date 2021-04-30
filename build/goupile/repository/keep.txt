@@ -2,6 +2,7 @@ build/goupile
 build/felix
 doc/goupile
 src/core/libcc
+src/core/libnet
 src/core/libsandbox
 src/core/libwrap
 src/felix

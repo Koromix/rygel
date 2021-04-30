@@ -14,16 +14,32 @@
 #pragma once
 
 #include "../../core/libcc/libcc.hh"
-#include "user.hh"
-#include "../../core/libnet/libnet.hh"
 
 namespace RG {
 
-void ProduceMcoDiagnoses(const http_RequestInfo &request, const User *user, http_IO *io);
-void ProduceMcoProcedures(const http_RequestInfo &request, const User *user, http_IO *io);
-void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *user, http_IO *io);
+struct smtp_Config {
+    const char *url = nullptr;
+    const char *username = nullptr;
+    const char *password = nullptr;
+    const char *from = nullptr;
 
-void ProduceMcoTree(const http_RequestInfo &request, const User *user, http_IO *io);
-void ProduceMcoHighlight(const http_RequestInfo &request, const User *user, http_IO *io);
+    bool Validate() const;
+};
+
+struct smtp_MailContent {
+    const char *subject = nullptr;
+    const char *text = nullptr;
+    const char *html = nullptr;
+};
+
+class smtp_Sender {
+    smtp_Config config;
+
+    BlockAllocator str_alloc;
+
+public:
+    bool Init(const smtp_Config &config);
+    bool Send(const char *to, const smtp_MailContent &content);
+};
 
 }

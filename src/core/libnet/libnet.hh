@@ -14,5 +14,7 @@
 #pragma once
 
 #include "http.hh"
-#include "misc.hh"
-#include "session.hh"
+#include "http_misc.hh"
+#include "http_session.hh"
+#include "sms.hh"
+#include "smtp.hh"

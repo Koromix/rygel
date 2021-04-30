@@ -17,6 +17,7 @@
 #include "instance.hh"
 #include "messages.hh"
 #include "session.hh"
+#include "../../core/libnet/libnet.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
@@ -353,7 +354,7 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
         io->AttachError(403);
         return;
     }
-    if (!gp_domain.config.sms_sid) {
+    if (!gp_domain.config.sms.sid) {
         LogError("This instance is not configured to send SMS messages");
         io->AttachError(503);
         return;

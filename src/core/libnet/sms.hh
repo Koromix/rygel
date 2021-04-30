@@ -11,6 +11,28 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#include "http.cc"
-#include "misc.cc"
-#include "session.cc"
+#pragma once
+
+#include "../../core/libcc/libcc.hh"
+
+namespace RG {
+
+struct sms_Config {
+    const char *sid = nullptr;
+    const char *token = nullptr;
+    const char *from = nullptr;
+
+    bool Validate() const;
+};
+
+class sms_Sender {
+    sms_Config config;
+
+    BlockAllocator str_alloc;
+
+public:
+    bool Init(const sms_Config &config);
+    bool Send(const char *to, const char *message);
+};
+
+}

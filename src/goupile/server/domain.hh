@@ -16,7 +16,7 @@
 #include "../../core/libcc/libcc.hh"
 #include "instance.hh"
 #include "../../core/libwrap/sqlite.hh"
-#include "../../web/libhttp/libhttp.hh"
+#include "../../core/libnet/libnet.hh"
 
 namespace RG {
 
@@ -33,19 +33,13 @@ struct DomainConfig {
     bool enable_backups = false;
     bool sync_full = false;
 
-    const char *sms_sid = nullptr;
-    const char *sms_token = nullptr;
-    const char *sms_from = nullptr;
-
-    const char *smtp_url = nullptr;
-    const char *smtp_username = nullptr;
-    const char *smtp_password = nullptr;
-    const char *smtp_from = nullptr;
-
     // XXX: Restore http_Config designated initializers when MSVC ICE is fixed
     // https://developercommunity.visualstudio.com/content/problem/1238876/fatal-error-c1001-ice-with-ehsc.html
     http_Config http;
     int max_age = 900;
+
+    smtp_Config smtp;
+    sms_Config sms;
 
     bool Validate() const;
 

@@ -12,7 +12,7 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "../../core/libcc/libcc.hh"
-#include "misc.hh"
+#include "http_misc.hh"
 
 namespace RG {
 

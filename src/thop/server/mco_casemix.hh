@@ -15,7 +15,7 @@
 
 #include "../../core/libcc/libcc.hh"
 #include "user.hh"
-#include "../../web/libhttp/libhttp.hh"
+#include "../../core/libnet/libnet.hh"
 
 namespace RG {
 

@@ -13,7 +13,7 @@
 
 #include "../../core/libcc/libcc.hh"
 #include "http.hh"
-#include "misc.hh"
+#include "http_misc.hh"
 
 #ifdef _WIN32
     #include <ws2tcpip.h>
