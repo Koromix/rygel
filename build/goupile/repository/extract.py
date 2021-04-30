@@ -70,6 +70,8 @@ REWRITE_FELIXBUILD = f'''
     imports.append('goupil')
   if config.has_section('goupil_admin'):
     imports.append('goupil_admin')
+  if config.has_section('felix'):
+    imports.append('felix')
   if len(imports) == 0:
     return
 
