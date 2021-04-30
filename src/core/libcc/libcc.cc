@@ -604,7 +604,7 @@ void DecomposeUnixTime(int64_t time, TimeMode mode, TimeSpec *out_spec)
             struct tm utc = {0};
             _gmtime64_s(&utc, &time64);
 
-            offset = _mktime64(&ti) - _mktime64(&utc) + (3600 * ti.tm_isdst);
+            offset = (int)(_mktime64(&ti) - _mktime64(&utc) + (3600 * ti.tm_isdst));
         } break;
 
         case TimeMode::UTC: {
