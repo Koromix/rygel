@@ -124,6 +124,7 @@ function AdminController() {
                         ${selected_instance == null ? html`
                             <col style="width: 160px;"/>
                             <col/>
+                            <col style="width: 160px;"/>
                             <col style="width: 100px;"/>
                         ` : ''}
                         ${selected_instance != null ? html`
@@ -150,9 +151,10 @@ function AdminController() {
                                         ${user.username}
                                         ${user.admin ? html`<span title="Administrateur">♛\uFE0F</span>` : ''}
                                     </td>
-                                    ${selected_instance == null && user.email != null ?
-                                        html`<td style="text-align: left;"><a href=${'mailto:' + user.email}>${user.email}</a></td>` : ''}
-                                    ${selected_instance == null && user.email == null ? html`<td></td>` : ''}
+                                    ${selected_instance == null ? html`
+                                        <td style="text-align: left;">${user.email != null ? html`<a href=${'mailto:' + user.email}>${user.email}</a>` : ''}</td>
+                                        <td style="text-align: left;">${user.phone != null ? html`<a href=${'tel:' + user.phone}>${user.phone}</a>` : ''}</td>
+                                    ` : ''}
                                     <td><a role="button" tabindex="0"
                                            @click=${ui.wrapAction(e => runEditUserDialog(e, user))}>Modifier</a></td>
                                     ${selected_instance != null ? html`
@@ -610,6 +612,10 @@ function AdminController() {
             let email = d.text('email', 'Courriel');
             if (email.value != null && !email.value.includes('@'))
                 email.error('Format non valide');
+            let phone = d.text('phone', 'Téléphone');
+            if (phone.value != null && !phone.value.startsWith('+'))
+                phone.error('Format non valide (préfixe obligatoire)');
+
             let admin = d.boolean('*admin', 'Administrateur', {value: false, untoggle: false});
 
             d.action('Créer', {disabled: !d.isValid()}, async () => {
@@ -618,6 +624,8 @@ function AdminController() {
                 query.set('password', password.value);
                 if (email.value != null)
                     query.set('email', email.value);
+                if (phone.value != null)
+                    query.set('phone', phone.value);
                 query.set('admin', admin.value ? 1 : 0);
 
                 let response = await net.fetch('/admin/api/users/create', {
@@ -715,6 +723,9 @@ function AdminController() {
                     let email = d.text('email', 'Courriel', {value: user.email});
                     if (email.value != null && !email.value.includes('@'))
                         email.error('Format non valide');
+                    let phone = d.text('phone', 'Téléphone', {value: user.phone});
+                    if (phone.value != null && !phone.value.startsWith('+'))
+                        phone.error('Format non valide (préfixe obligatoire)');
 
                     let admin = d.boolean('*admin', 'Administrateur', {value: user.admin});
 
@@ -727,6 +738,8 @@ function AdminController() {
                             query.set('password', password.value);
                         if (email.value != null)
                             query.set('email', email.value);
+                        if (phone.value != null)
+                            query.set('phone', phone.value);
                         query.set('admin', admin.value ? 1 : 0);
 
                         let response = await net.fetch('/admin/api/users/edit', {

@@ -2108,6 +2108,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
         const char *username;
         const char *password;
         const char *email;
+        const char *phone;
         bool admin;
         {
             bool valid = true;
@@ -2115,6 +2116,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
             username = values.FindValue("username", nullptr);
             password = values.FindValue("password", nullptr);
             email = values.FindValue("email", nullptr);
+            phone = values.FindValue("phone", nullptr);
             if (!username || !password) {
                 LogError("Missing 'username' or 'password' parameter");
                 valid = false;
@@ -2128,6 +2130,10 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
             }
             if (email && !strchr(email, '@')) {
                 LogError("Invalid email address format");
+                valid = false;
+            }
+            if (phone && phone[0] != '+') {
+                LogError("Invalid phone number format (prefix is mandatory)");
                 valid = false;
             }
 
@@ -2178,9 +2184,9 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
                 return false;
 
             // Create user
-            if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, email, admin, local_key)
-                                     VALUES (?1, ?2, ?3, ?4, ?5))",
-                                  username, hash, email, 0 + admin, local_key))
+            if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, email, phone, admin, local_key)
+                                     VALUES (?1, ?2, ?3, ?4, ?5, ?6))",
+                                  username, hash, email, phone, 0 + admin, local_key))
                 return false;
 
             io->AttachText(200, "Done!");
@@ -2221,6 +2227,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
         const char *username;
         const char *password;
         const char *email;
+        const char *phone;
         bool admin, set_admin = false;
         {
             bool valid = true;
@@ -2236,6 +2243,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
             username = values.FindValue("username", nullptr);
             password = values.FindValue("password", nullptr);
             email = values.FindValue("email", nullptr);
+            phone = values.FindValue("phone", nullptr);
             if (username && !CheckUserName(username)) {
                 valid = false;
             }
@@ -2245,6 +2253,10 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
             }
             if (email && !strchr(email, '@')) {
                 LogError("Invalid email address format");
+                valid = false;
+            }
+            if (phone && phone[0] != '+') {
+                LogError("Invalid phone number format (prefix is mandatory)");
                 valid = false;
             }
 
@@ -2302,6 +2314,8 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
             if (password && !gp_domain.db.Run("UPDATE dom_users SET password_hash = ?2 WHERE userid = ?1", userid, hash))
                 return false;
             if (email && !gp_domain.db.Run("UPDATE dom_users SET email = ?2 WHERE userid = ?1", userid, email))
+                return false;
+            if (phone && !gp_domain.db.Run("UPDATE dom_users SET phone = ?2 WHERE userid = ?1", userid, phone))
                 return false;
             if (set_admin && !gp_domain.db.Run("UPDATE dom_users SET admin = ?2 WHERE userid = ?1", userid, 0 + admin))
                 return false;
@@ -2420,7 +2434,7 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!gp_domain.db.Prepare(R"(SELECT userid, username, email, admin FROM dom_users
+    if (!gp_domain.db.Prepare(R"(SELECT userid, username, email, phone, admin FROM dom_users
                                  ORDER BY username)", &stmt))
         return;
 
@@ -2439,7 +2453,12 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
         } else {
             json.Key("email"); json.Null();
         }
-        json.Key("admin"); json.Bool(sqlite3_column_int(stmt, 3));
+        if (sqlite3_column_type(stmt, 3) != SQLITE_NULL) {
+            json.Key("phone"); json.String((const char *)sqlite3_column_text(stmt, 3));
+        } else {
+            json.Key("phone"); json.Null();
+        }
+        json.Key("admin"); json.Bool(sqlite3_column_int(stmt, 4));
         json.EndObject();
     }
     if (!stmt.IsValid())
