@@ -20,6 +20,8 @@
 
 namespace RG {
 
+extern "C" const AssetInfo RobotoMediumTtf;
+
 struct Instance {
     ~Instance();
 
@@ -269,15 +271,13 @@ RcppExport SEXP heimdallR_SetConcepts(SEXP inst_xp, SEXP name_xp, SEXP concepts_
 static void InitFontAtlas()
 {
     if (font_atlas.Fonts.empty()) {
-        const AssetInfo *font = FindPackedAsset("Roboto-Medium.ttf");
-        RG_ASSERT(font);
-        RG_ASSERT(font->data.len <= INT_MAX);
+        const AssetInfo &font = RobotoMediumTtf;
+        RG_ASSERT(font.data.len <= INT_MAX);
 
         ImFontConfig font_config;
         font_config.FontDataOwnedByAtlas = false;
 
-        font_atlas.AddFontFromMemoryTTF((void *)font->data.ptr, (int)font->data.len,
-                                        16, &font_config);
+        font_atlas.AddFontFromMemoryTTF((void *)font.data.ptr, (int)font.data.len, 16, &font_config);
     }
 }
 

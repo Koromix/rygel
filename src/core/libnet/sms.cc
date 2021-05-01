@@ -27,7 +27,7 @@
 
 namespace RG {
 
-extern "C" const char *CAcert_PEM;
+extern "C" const AssetInfo CacertPem;
 
 static bool sms_ssl = false;
 static mbedtls_x509_crt sms_pem;
@@ -68,7 +68,7 @@ bool sms_Sender::Init(const sms_Config &config)
             mbedtls_x509_crl_free(&sms_crl);
         });
 
-        if (mbedtls_x509_crt_parse(&sms_pem, (const uint8_t *)CAcert_PEM, strlen(CAcert_PEM) + 1)) {
+        if (mbedtls_x509_crt_parse(&sms_pem, CacertPem.data.ptr, CacertPem.data.len + 1)) {
             LogError("Failed to parse CA store file");
             return false;
         }

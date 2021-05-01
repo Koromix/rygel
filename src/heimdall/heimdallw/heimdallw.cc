@@ -17,6 +17,8 @@
 
 namespace RG {
 
+extern "C" const AssetInfo RobotoMediumTtf;
+
 int Main(int, char **)
 {
     InterfaceState render_state = {};
@@ -25,15 +27,13 @@ int Main(int, char **)
 
     ImFontAtlas font_atlas;
     {
-        const AssetInfo *font = FindPackedAsset("Roboto-Medium.ttf");
-        RG_ASSERT(font);
-        RG_ASSERT(font->data.len <= INT_MAX);
+        const AssetInfo &font = RobotoMediumTtf;
+        RG_ASSERT(font.data.len <= INT_MAX);
 
         ImFontConfig font_config;
         font_config.FontDataOwnedByAtlas = false;
 
-        font_atlas.AddFontFromMemoryTTF((void *)font->data.ptr, (int)font->data.len,
-                                        16, &font_config);
+        font_atlas.AddFontFromMemoryTTF((void *)font.data.ptr, (int)font.data.len, 16, &font_config);
     }
 
     gui_Window window;
