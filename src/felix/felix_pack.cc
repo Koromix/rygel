@@ -22,7 +22,7 @@ int RunPack(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    PackMode mode = PackMode::C;
+    unsigned int flags = 0;
     const char *output_path = nullptr;
     int strip_count = 0;
     CompressionType compression_type = CompressionType::None;
@@ -35,23 +35,21 @@ int RunPack(Span<const char *> arguments)
 R"(Usage: %!..+%1 pack <filename> ...%!0
 
 Options:
-    %!..+-t, --type <type>%!0            Set output file type
-                                 %!D..(default: %2)%!0
+    %!..+-f, --flags <flags>%!0          Set packing flags
     %!..+-O, --output_file <file>%!0     Redirect output to file or directory
 
     %!..+-s, --strip <count>%!0          Strip first count directory components, or 'All'
                                  %!D..(default: 0)%!0
     %!..+-c, --compress <type>%!0        Compress data, see below for available types
-                                 %!D..(default: %3)%!0
+                                 %!D..(default: %2)%!0
 
     %!..+-M, --merge_file <file>%!0      Load merge rules from file
     %!..+-m, --merge_option <options>%!0 Merge options (see below)
 
-Available output types: %!..+%4%!0
-Available compression types: %!..+%5%!0
-Available merge options: %!..+%6%!0)", FelixTarget, PackModeNames[(int)mode],
-                                       CompressionTypeNames[(int)compression_type],
-                                       FmtSpan(PackModeNames), FmtSpan(CompressionTypeNames),
+Available packing flags: %!..+%3%!0
+Available compression types: %!..+%4%!0
+Available merge options: %!..+%5%!0)", FelixTarget, CompressionTypeNames[(int)compression_type],
+                                       FmtSpan(PackFlagNames), FmtSpan(CompressionTypeNames),
                                        FmtSpan(MergeFlagNames));
     };
 
@@ -63,10 +61,21 @@ Available merge options: %!..+%6%!0)", FelixTarget, PackModeNames[(int)mode],
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-t", "--type", OptionType::Value)) {
-                if (!OptionToEnum(PackModeNames, opt.current_value, &mode)) {
-                    LogError("Unknown generator type '%1'", opt.current_value);
-                    return 1;
+            } else if (opt.Test("-f", "--flags", OptionType::Value)) {
+                const char *flags_str = opt.current_value;
+
+                while (flags_str[0]) {
+                    Span<const char> part = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
+
+                    if (part.len) {
+                        PackFlag flag;
+                        if (!OptionToEnum(PackFlagNames, part, &flag)) {
+                            LogError("Unknown packing flag '%1'", part);
+                            return 1;
+                        }
+
+                        flags |= 1u << (int)flag;
+                    }
                 }
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 output_path = opt.current_value;
@@ -128,7 +137,7 @@ Available merge options: %!..+%6%!0)", FelixTarget, PackModeNames[(int)mode],
     ResolveAssets(filenames, strip_count, merge_rule_set.rules, compression_type, &asset_set);
 
     // Generate output
-    return !PackAssets(asset_set.assets, output_path, mode);
+    return !PackAssets(asset_set.assets, flags, output_path);
 }
 
 }

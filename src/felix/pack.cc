@@ -36,9 +36,9 @@ R"(// This program is free software: you can redistribute it and/or modify
 #include <stdint.h>
 
 #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
-    typedef int64_t Size;
+typedef int64_t Size;
 #elif defined(__i386__) || defined(_M_IX86) || defined(__arm__) || defined(__EMSCRIPTEN__)
-    typedef int32_t Size;
+typedef int32_t Size;
 #endif
 
 #ifdef EXPORT
@@ -268,28 +268,16 @@ static Size PackSourceMap(const PackAssetInfo &asset, FunctionRef<void(Span<cons
     return buf.len;
 }
 
-static void PrintAsC(Span<const uint8_t> bytes, bool as_array, StreamWriter *out_st)
+static void PrintAsC(Span<const uint8_t> bytes, bool use_literals, StreamWriter *out_st)
 {
-    if (as_array) {
-        Size i = 0;
-        for (Size end = bytes.len / 8 * 8; i < end; i += 8) {
-            Print(out_st, "0x%1, 0x%2, 0x%3, 0x%4, 0x%5, 0x%6, 0x%7, 0x%8, ",
-                  FmtHex(bytes[i + 0]).Pad0(-2), FmtHex(bytes[i + 1]).Pad0(-2),
-                  FmtHex(bytes[i + 2]).Pad0(-2), FmtHex(bytes[i + 3]).Pad0(-2),
-                  FmtHex(bytes[i + 4]).Pad0(-2), FmtHex(bytes[i + 5]).Pad0(-2),
-                  FmtHex(bytes[i + 6]).Pad0(-2), FmtHex(bytes[i + 7]).Pad0(-2));
-        }
-        for (; i < bytes.len; i++) {
-            Print(out_st, "0x%1, ", FmtHex(bytes[i]).Pad0(-2));
-        }
-    } else {
+    if (use_literals) {
         Size i = 0;
         for (Size end = bytes.len / 8 * 8; i < end; i += 8) {
             Print(out_st, "\"\\x%1\\x%2\\x%3\\x%4\\x%5\\x%6\\x%7\\x%8\" ",
-                  FmtHex(bytes[i + 0]).Pad0(-2), FmtHex(bytes[i + 1]).Pad0(-2),
-                  FmtHex(bytes[i + 2]).Pad0(-2), FmtHex(bytes[i + 3]).Pad0(-2),
-                  FmtHex(bytes[i + 4]).Pad0(-2), FmtHex(bytes[i + 5]).Pad0(-2),
-                  FmtHex(bytes[i + 6]).Pad0(-2), FmtHex(bytes[i + 7]).Pad0(-2));
+                          FmtHex(bytes[i + 0]).Pad0(-2), FmtHex(bytes[i + 1]).Pad0(-2),
+                          FmtHex(bytes[i + 2]).Pad0(-2), FmtHex(bytes[i + 3]).Pad0(-2),
+                          FmtHex(bytes[i + 4]).Pad0(-2), FmtHex(bytes[i + 5]).Pad0(-2),
+                          FmtHex(bytes[i + 6]).Pad0(-2), FmtHex(bytes[i + 7]).Pad0(-2));
         }
 
         if (i < bytes.len) {
@@ -299,10 +287,44 @@ static void PrintAsC(Span<const uint8_t> bytes, bool as_array, StreamWriter *out
             }
             Print(out_st, "\" ");
         }
+    } else {
+        Size i = 0;
+        for (Size end = bytes.len / 8 * 8; i < end; i += 8) {
+            Print(out_st, "0x%1, 0x%2, 0x%3, 0x%4, 0x%5, 0x%6, 0x%7, 0x%8, ",
+                          FmtHex(bytes[i + 0]).Pad0(-2), FmtHex(bytes[i + 1]).Pad0(-2),
+                          FmtHex(bytes[i + 2]).Pad0(-2), FmtHex(bytes[i + 3]).Pad0(-2),
+                          FmtHex(bytes[i + 4]).Pad0(-2), FmtHex(bytes[i + 5]).Pad0(-2),
+                          FmtHex(bytes[i + 6]).Pad0(-2), FmtHex(bytes[i + 7]).Pad0(-2));
+        }
+        for (; i < bytes.len; i++) {
+            Print(out_st, "0x%1, ", FmtHex(bytes[i]).Pad0(-2));
+        }
     }
 }
 
-bool PackToC(Span<const PackAssetInfo> assets, bool use_arrays, const char *output_path)
+static const char *MakeVariableName(const char *name, bool short_name, Allocator *alloc)
+{
+    HeapArray<char> buf(alloc);
+    bool up = true;
+
+    for (Size i = 0; name[i]; i++) {
+        int c = name[i];
+
+        if (IsAsciiAlphaOrDigit(c)) {
+            buf.Append(up ? UpperAscii(c) : c);
+            up = false;
+        } else {
+            up = true;
+        }
+    }
+
+    buf.Grow(1);
+    buf.ptr[buf.len] = 0;
+
+    return buf.Leak().ptr;
+}
+
+bool PackAssets(Span<const PackAssetInfo> assets, unsigned int flags, const char *output_path)
 {
     BlockAllocator temp_alloc;
 
@@ -318,26 +340,28 @@ bool PackToC(Span<const PackAssetInfo> assets, bool use_arrays, const char *outp
     PrintLn(&st, CodePrefix);
 
     // Work around the ridiculousness of C++ not liking empty arrays
+    HeapArray<BlobInfo> blobs;
     if (assets.len) {
+        bool use_literals = flags & (int)PackFlag::UseLiterals;
+
         PrintLn(&st, R"(
 static const uint8_t raw_data[] = {)");
 
         // Pack assets and source maps
-        HeapArray<BlobInfo> blobs;
         for (const PackAssetInfo &asset: assets) {
             BlobInfo blob = {};
-            blob.name = asset.name;
 
+            blob.name = asset.name;
             blob.compression_type = asset.compression_type;
 
             PrintLn(&st, "    // %1", blob.name);
             Print(&st, "    ");
-            blob.len = PackAsset(asset, [&](Span<const uint8_t> buf) { PrintAsC(buf, use_arrays, &st); });
+            blob.len = PackAsset(asset, [&](Span<const uint8_t> buf) { PrintAsC(buf, use_literals, &st); });
             if (blob.len < 0)
                 return false;
 
             // Put NUL byte at the end to make it a valid C string
-            PrintAsC(0, use_arrays, &st);
+            PrintAsC(0, use_literals, &st);
             PrintLn(&st);
 
             if (asset.source_map_name) {
@@ -350,11 +374,11 @@ static const uint8_t raw_data[] = {)");
                 blob_map.compression_type = asset.compression_type;
                 PrintLn(&st, "    // %1", blob_map.name);
                 Print(&st, "    ");
-                blob_map.len = PackSourceMap(asset, [&](Span<const uint8_t> buf) { PrintAsC(buf, use_arrays, &st); });
+                blob_map.len = PackSourceMap(asset, [&](Span<const uint8_t> buf) { PrintAsC(buf, use_literals, &st); });
                 if (blob_map.len < 0)
                     return false;
 
-                PrintAsC(0, use_arrays, &st);
+                PrintAsC(0, use_literals, &st);
                 PrintLn(&st);
 
                 blobs.Append(blob);
@@ -364,109 +388,58 @@ static const uint8_t raw_data[] = {)");
             }
         }
 
-        PrintLn(&st, R"(};
+        PrintLn(&st, "};");
+    }
 
-static AssetInfo assets[%1] = {)", blobs.len);
+    if (!(flags & (int)PackFlag::NoArray)) {
+        PrintLn(&st);
 
-        // Write asset table
+        PrintLn(&st, "EXPORT_SYMBOL extern const Span PackedAssets;");
+        if (assets.len) {
+            PrintLn(&st, "static AssetInfo assets[%1] = {", blobs.len);
+
+            // Write asset table
+            for (Size i = 0, raw_offset = 0; i < blobs.len; i++) {
+                const BlobInfo &blob = blobs[i];
+
+                if (blob.source_map) {
+                    PrintLn(&st, "    {\"%1\", %2, {raw_data + %3, %4}, \"%5\"},",
+                                 blob.name, (int)blob.compression_type, raw_offset, blob.len,
+                                 blob.source_map);
+                } else {
+                    PrintLn(&st, "    {\"%1\", %2, {raw_data + %3, %4}, 0},",
+                                 blob.name, (int)blob.compression_type, raw_offset, blob.len);
+                }
+                raw_offset += blob.len + 1;
+            }
+
+            PrintLn(&st, "};");
+        }
+        PrintLn(&st, "const Span PackedAssets = {%1, %2};", blobs.len ? "assets" : "0", blobs.len);
+    }
+
+    if (!(flags & (int)PackFlag::NoSymbols)) {
+        PrintLn(&st);
+
         for (Size i = 0, raw_offset = 0; i < blobs.len; i++) {
             const BlobInfo &blob = blobs[i];
+            const char *var = MakeVariableName(blob.name, false, &temp_alloc);
 
             if (blob.source_map) {
-                PrintLn(&st, "    {\"%1\", %2, {raw_data + %3, %4}, \"%5\"},",
-                        blob.name, (int)blob.compression_type, raw_offset, blob.len,
-                        blob.source_map);
+                PrintLn(&st, "EXPORT_SYMBOL extern const AssetInfo %1;", var);
+                PrintLn(&st, "const AssetInfo %1 = {\"%2\", %3, {raw_data + %4, %5}, \"%6\"};",
+                             var, blob.name, (int)blob.compression_type, raw_offset,
+                             blob.len, blob.source_map);
             } else {
-                PrintLn(&st, "    {\"%1\", %2, {raw_data + %3, %4}, 0},",
-                        blob.name, (int)blob.compression_type, raw_offset, blob.len);
+                PrintLn(&st, "EXPORT_SYMBOL extern const AssetInfo %1;", var);
+                PrintLn(&st, "const AssetInfo %1 = {\"%2\", %3, {raw_data + %4, %5}, 0};",
+                             var, blob.name, (int)blob.compression_type, raw_offset, blob.len);
             }
             raw_offset += blob.len + 1;
         }
-
-        PrintLn(&st, R"(};
-
-EXPORT_SYMBOL extern const Span PackedAssets;
-const Span PackedAssets = {assets, %1};)", blobs.len);
-    } else {
-        PrintLn(&st, R"(
-EXPORT_SYMBOL extern const Span PackedAssets;
-const Span PackedAssets = {0, 0};)");
     }
 
     return st.Close();
-}
-
-bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path)
-{
-    BlockAllocator temp_alloc;
-
-    if (!output_path) {
-        LogError("Output directory was not specified");
-        return false;
-    }
-    if (!MakeDirectory(output_path, false))
-        return false;
-
-    for (const PackAssetInfo &asset: assets) {
-        StreamWriter st;
-
-        if (RG_UNLIKELY(PathIsAbsolute(asset.name))) {
-            LogError("Asset name '%1' cannot be an absolute path", asset.name);
-            return false;
-        }
-        if (RG_UNLIKELY(PathContainsDotDot(asset.name))) {
-            LogError("Asset name '%1' must not contain '..'", asset.name);
-            return false;
-        }
-
-        const char *compression_ext = nullptr;
-        switch (asset.compression_type) {
-            case CompressionType::None: { compression_ext = ""; } break;
-            case CompressionType::Gzip: { compression_ext = ".gz"; } break;
-            case CompressionType::Zlib: {
-                LogError("This generator cannot use Zlib compression");
-                return false;
-            } break;
-        }
-        RG_ASSERT(compression_ext);
-
-        const char *filename = Fmt(&temp_alloc, "%1%/%2%3", output_path, asset.name, compression_ext).ptr;
-
-        if (!EnsureDirectoryExists(filename))
-            return false;
-
-        if (!st.Open(filename))
-            return false;
-        if (PackAsset(asset, [&](Span<const uint8_t> buf) { st.Write(buf); }) < 0)
-            return false;
-        if (!st.Close())
-            return false;
-
-        if (asset.source_map_name) {
-            const char *map_filename = Fmt(&temp_alloc, "%1%/%2%3", output_path,
-                                           asset.source_map_name, compression_ext).ptr;
-
-            if (!st.Open(map_filename))
-                return false;
-            if (PackSourceMap(asset, [&](Span<const uint8_t> buf) { st.Write(buf); }) < 0)
-                return false;
-            if (!st.Close())
-                return false;
-        }
-    }
-
-    return true;
-}
-
-bool PackAssets(Span<const PackAssetInfo> assets, const char *output_path, PackMode mode)
-{
-    switch (mode) {
-        case PackMode::C: return PackToC(assets, false, output_path);
-        case PackMode::Carray: return PackToC(assets, true, output_path);
-        case PackMode::Files: return PackToFiles(assets, output_path);
-    }
-
-    RG_UNREACHABLE();
 }
 
 }

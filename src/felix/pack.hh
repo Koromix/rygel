@@ -18,20 +18,17 @@
 
 namespace RG {
 
-enum class PackMode {
-    C,
-    Carray,
-    Files
+enum class PackFlag {
+    UseLiterals = 1 << 0,
+    NoSymbols = 1 << 1,
+    NoArray = 1 << 2
 };
-static const char *const PackModeNames[] = {
-    "C",
-    "Carray",
-    "Files"
+static const char *const PackFlagNames[] = {
+    "UseLiterals",
+    "NoSymbols",
+    "NoArray"
 };
 
-bool PackToC(Span<const PackAssetInfo> assets, bool use_arrays, const char *output_path);
-bool PackToFiles(Span<const PackAssetInfo> assets, const char *output_path);
-
-bool PackAssets(Span<const PackAssetInfo> assets, const char *output_path, PackMode mode);
+bool PackAssets(Span<const PackAssetInfo> assets, unsigned int flags, const char *output_path);
 
 }
