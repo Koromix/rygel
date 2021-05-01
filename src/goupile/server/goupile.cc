@@ -407,6 +407,30 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     }
 }
 
+static void PruneTemporaryFiles()
+{
+    BlockAllocator temp_alloc;
+
+    int64_t treshold = GetUnixTime() - 7200 * 1000;
+
+    EnumerateDirectory(gp_domain.config.temp_directory, nullptr, -1,
+                       [&](const char *filename, FileType file_type) {
+        filename = Fmt(&temp_alloc, "%1%/%2", gp_domain.config.temp_directory, filename).ptr;
+
+        FileInfo file_info;
+        if (!StatFile(filename, &file_info))
+            return true;
+        if (file_info.type != FileType::File)
+            return true;
+
+        if (file_info.modification_time < treshold) {
+            UnlinkFile(filename);
+        }
+
+        return true;
+    });
+}
+
 static int RunServe(Span<const char *> arguments)
 {
     const char *config_filename = "goupile.ini";
@@ -529,24 +553,19 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     // Run periodic tasks until exit
     {
         bool run = true;
-        int timeout;
+        int timeout = 120 * 1000;
 
-#ifdef __GLIBC__
-        if (true) {
-#else
-        if (!gp_domain.config.sync_full) {
-#endif
-            // Randomize the delay a bit to reduce situations where all goupile
-            // services perform cleanups at the same time and cause a load spike.
-            timeout = 120 * 1000;
-            timeout += (randombytes_random() & 0x7F) * 500;
-
-            LogDebug("Periodic cleanup timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
-        } else {
-            timeout = -1;
-        }
+        // Randomize the delay a bit to reduce situations where all goupile
+        // services perform cleanups at the same time and cause a load spike.
+        timeout += (randombytes_random() & 0x7F) * 500;
+        LogDebug("Periodic cleanup timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
 
         while (run) {
+            // In theory, all temporary files are deleted. But if any remain behind (crash, etc.)
+            // we need to make sure they get deleted eventually.
+            LogDebug("Prune temporary files");
+            PruneTemporaryFiles();
+
             WaitForResult ret = WaitForInterrupt(timeout);
 
             if (ret == WaitForResult::Interrupt) {
@@ -566,9 +585,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
                 LogDebug("Checkpoint databases");
                 gp_domain.Checkpoint();
             }
-
-            // XXX: Regularly prune leftover files in tmp directory
-            // Safe to delete = fiels already seen last prune, or everything when pruning at startup
 
 #ifdef __GLIBC__
             // Actually release memory to the OS, because for some reason glibc doesn't want to
