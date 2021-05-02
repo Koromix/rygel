@@ -28,6 +28,7 @@ if __name__ == "__main__":
     parser.add_argument('url', type = str, help = 'URL of instance')
     parser.add_argument('-O', '--output_dir', dest = 'output_dir', action = 'store', help = 'Output directory')
     parser.add_argument('--shortcut_name', dest = 'shortcut_name', action = 'store', help = 'Shortcut name')
+    parser.add_argument('--no_uninstall', dest = 'uninstall', action = 'store_false', help = 'Don\'t create uninstall shortcut')
     args = parser.parse_args()
 
     # Find repository directory
@@ -73,20 +74,29 @@ if __name__ == "__main__":
     with open(build_directory + '/package.json', 'w') as f:
         json.dump(package, f, indent = 4, ensure_ascii = False)
 
-    # Prepare PNG and icon
+    # Prepare PNG and icons
     url = args.url.rstrip('/') + '/favicon.png'
     response = requests.get(url)
     if response.status_code != 200:
         raise ValueError('Failed to download favicon.png from this instance')
     with open(build_directory + '/build/icon.png', 'wb') as f:
         f.write(response.content)
-    with Image() as ico:
-        with Image(filename = build_directory + '/build/icon.png') as img:
-            for size in [16, 24, 32, 48, 64, 96, 128, 256]:
-                with img.clone() as it:
-                    it.resize(size, size)
-                    ico.sequence.append(it)
+    with Image() as ico, Image(filename = build_directory + '/build/icon.png') as img:
+        for size in [16, 24, 32, 48, 64, 96, 128, 256]:
+            with img.clone() as it:
+                it.resize(size, size)
+                ico.sequence.append(it)
         ico.save(filename = build_directory + '/build/icon.ico')
+    with Image() as ico, Image(filename = build_directory + '/build/icon.png') as img:
+        for size in [16, 24, 32, 48, 64, 96, 128, 256]:
+            with img.clone() as it:
+                it.resize(size, size)
+                width, height = int(it.width / 2), int(it.height / 2)
+                with Image(filename = build_directory + '/delete.png') as delete:
+                    delete.resize(width, height)
+                    it.composite(delete, left = width, top = height)
+                    ico.sequence.append(it)
+        ico.save(filename = build_directory + '/build/uninstallerIcon.ico')
 
     # Customize installation path
     with open(build_directory + '/build/installer.nsh', 'w') as f:
@@ -100,13 +110,23 @@ if __name__ == "__main__":
             !macroend
 
             !macro customInstall
-                CreateShortCut "$DESKTOP\\{shortcut_name}.lnk" "{root_dir}\\app\\{manifest["name"]}.exe" --user-data-dir="{root_dir}\\profiles"
-                CreateShortCut "$STARTMENU\\{shortcut_name}.lnk" "{root_dir}\\app\\{manifest["name"]}.exe" --user-data-dir="{root_dir}\\profiles"
+                CreateShortCut "$DESKTOP\\{shortcut_name}.lnk" "{root_dir}\\app\\{safe_name}.exe" --user-data-dir="{root_dir}\\profiles"
+                CreateShortCut "$STARTMENU\\{shortcut_name}.lnk" "{root_dir}\\app\\{safe_name}.exe" --user-data-dir="{root_dir}\\profiles"
+
+                !if {1 if args.uninstall else 0}
+                    CreateShortCut "$DESKTOP\\Supprimer {shortcut_name}.lnk" "{root_dir}\\app\\Uninstall {safe_name}.exe"
+                    CreateShortCut "$STARTMENU\\Supprimer {shortcut_name}.lnk" "{root_dir}\\app\\Uninstall {safe_name}.exe"
+                !endif
             !macroend
 
             !macro customUnInstall
                 Delete "$DESKTOP\\{shortcut_name}.lnk"
                 Delete "$STARTMENU\\{shortcut_name}.lnk"
+
+                !if {1 if args.uninstall else 0}
+                    Delete "$DESKTOP\\Supprimer {shortcut_name}.lnk"
+                    Delete "$STARTMENU\\Supprimer {shortcut_name}.lnk"
+                !endif
             !macroend
         '''
         f.write(nsh)
