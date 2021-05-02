@@ -27,7 +27,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'Bundle Goupile instance as EXE for offline use')
     parser.add_argument('url', type = str, help = 'URL of instance')
     parser.add_argument('-O', '--output_dir', dest = 'output_dir', action = 'store', help = 'Output directory')
-    parser.add_argument('--shortcut', dest = 'shortcut', action = 'store', help = 'Shortcut name')
+    parser.add_argument('--shortcut_name', dest = 'shortcut_name', action = 'store', help = 'Shortcut name')
     args = parser.parse_args()
 
     # Find repository directory
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     update_version = update_version.decode()
     update_version = update_version.replace('.0', '.')
     update_url = f'https://goupile.fr/files/{safe_name.lower()}/'
-    shortcut_name = args.shortcut or manifest["name"]
+    shortcut_name = args.shortcut_name or manifest["name"]
 
     # Update package.json
     with open(build_directory + '/package.json', 'r') as f:
