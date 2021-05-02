@@ -16,6 +16,7 @@
 import argparse
 import json
 import os
+import re
 import requests
 import shutil
 import subprocess
@@ -44,9 +45,12 @@ if __name__ == "__main__":
         raise ValueError('Failed to download manifest.json from this instance')
     manifest = json.loads(response.content)
 
+    # URL safe name
+    safe_name = re.sub('[^a-zA-Z0-9]', '_', manifest["name"])
+
     # Prepare build directory
     if args.output_dir is None:
-        build_directory = os.path.join(root_directory, 'bin/GoupilePortable', manifest["name"])
+        build_directory = os.path.join(root_directory, 'bin/GoupilePortable', safe_name)
     else:
         build_directory = args.output_dir
     os.makedirs(build_directory + '/build', exist_ok = True)
@@ -56,13 +60,13 @@ if __name__ == "__main__":
     update_version = subprocess.check_output('git log -n1 --pretty=format:%cd --date=format:%Y.%m.%d', shell = True)
     update_version = update_version.decode()
     update_version = update_version.replace('.0', '.')
-    update_url = f'https://goupile.fr/files/{manifest["name"].lower()}/'
+    update_url = f'https://goupile.fr/files/{safe_name.lower()}/'
     shortcut_name = args.shortcut or manifest["name"]
 
     # Update package.json
     with open(build_directory + '/package.json', 'r') as f:
         package = json.load(f)
-    package["name"] = manifest["name"]
+    package["name"] = safe_name
     package["homepage"] = args.url
     package["version"] = update_version
     package["build"]["publish"][0]["url"] = update_url
@@ -86,7 +90,7 @@ if __name__ == "__main__":
 
     # Customize installation path
     with open(build_directory + '/build/installer.nsh', 'w') as f:
-        root_dir = f'$LOCALAPPDATA\\GoupilePortable\\{manifest["name"]}'
+        root_dir = f'$LOCALAPPDATA\\GoupilePortable\\{safe_name}'
 
         nsh = f'''
             !macro preInit
