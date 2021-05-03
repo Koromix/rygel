@@ -22,22 +22,68 @@ function FormState(values = {}) {
     this.click_events = new Set;
     this.invalid_numbers = new Set;
     this.take_delayed = new Set;
+    this.follow_default = new Set;
+    this.obj_caches = new WeakMap;
 
-    // Tabs and sections
+    // Semi-public UI state
     this.state_tabs = {};
 
-    // Handling of values and changes
-    this.values = Object.assign({}, values);
-    this.cached_values = {};
-    this.default_variables = new Set;
-    this.changed_variables = new Set;
-    this.updated_variables = new Set;
+    let proxies = new WeakMap;
+    let changes = new Set;
 
-    this.clearChanges = function() {
-        self.changed_variables.clear();
-        self.updated_variables.clear();
-    };
-    this.hasChanged = function() { return !!self.changed_variables.size; };
+    // Stored values
+    this.values = proxyObject(values);
+
+    this.hasChanged = function() { return !!changes.size; };
+    this.clearChanges = function() { changes.clear(); };
+
+    function proxyObject(obj) {
+        if (typeof obj !== 'object')
+            return obj;
+        if (obj == null)
+            return undefined;
+
+        let proxy = proxies.get(obj);
+
+        if (proxy == null) {
+            let obj_cache = {};
+            let obj_changes = new Set;
+
+            proxy = new Proxy(obj, {
+                set: function(obj, key, value) {
+                    value = proxyObject(value);
+                    obj[key] = value;
+
+                    let json1 = JSON.stringify(obj_cache[key]);
+                    let json2 = JSON.stringify(value);
+
+                    if (json2 !== json1) {
+                        obj_changes.add(key);
+                    } else {
+                        obj_changes.delete(key);
+                    }
+
+                    if (obj_changes.size) {
+                        changes.add(obj);
+                    } else {
+                        changes.delete(obj);
+                    }
+                }
+            });
+
+            for (let key in obj) {
+                let value = proxyObject(obj[key]);
+
+                obj[key] = value;
+                obj_cache[key] = value;
+            }
+
+            proxies.set(proxy, proxy);
+            self.obj_caches.set(proxy, obj_cache);
+        }
+
+        return proxy;
+    }
 }
 FormState.next_unique_id = 0;
 
@@ -1558,8 +1604,6 @@ instead of:
             value: value,
 
             missing: !intf.options.disabled && value == null,
-            changed: state.changed_variables.has(key.toString()),
-            updated: state.updated_variables.has(key.toString()),
 
             error: (msg, delay = false) => {
                 if (!delay || state.take_delayed.has(key.toString())) {
@@ -1572,7 +1616,6 @@ instead of:
                 return intf;
             }
         });
-        state.updated_variables.delete(key.toString());
 
         if (props != null) {
             intf.props = props;
@@ -1582,6 +1625,7 @@ instead of:
 
         if (intf.options.mandatory && intf.missing) {
             intf.error('Obligatoire !', intf.options.missing_mode !== 'error');
+
             if (intf.options.missing_mode === 'disable')
                 valid = false;
         }
@@ -1625,48 +1669,35 @@ instead of:
 
     function readValue(key, options, func) {
         let ptr = walkPath(state.values, key.path);
+        let use_default = !ptr.hasOwnProperty(key.name) || state.follow_default.has(key.toString());
 
-        if (state.changed_variables.has(key.toString())) {
-            let value = ptr[key.name];
+        if (use_default) {
+            let value = normalizeValue(func, options.value);
+            let cache = state.obj_caches.get(ptr);
 
-            value = func(value);
-            if (value == null)
-                value = undefined;
-
-            return value;
-        } else if (state.default_variables.has(key.toString())) {
-            let value = options.value;
-
-            if (value == null)
-                value = undefined;
-            value = func(value);
-            if (value == null)
-                value = undefined;
-
-            state.cached_values[key.toString()] = value;
+            if (cache != null)
+                cache[key.name] = value;
             ptr[key.name] = value;
+
+            state.follow_default.add(key.toString());
 
             return value;
         } else {
-            let value;
-            if (ptr.hasOwnProperty(key.name)) {
-                value = ptr[key.name];
-            } else {
-                value = options.value;
-                state.default_variables.add(key.toString());
-            }
+            let orig = ptr[key.name];
+            let value = normalizeValue(func, orig);
 
-            if (value == null)
-                value = undefined;
-            value = func(value);
-            if (value == null)
-                value = undefined;
-
-            state.cached_values[key.toString()] = value;
-            ptr[key.name] = value;
+            if (value !== orig)
+                ptr[key.name] = value;
 
             return value;
         }
+    }
+
+    function normalizeValue(func, value) {
+        value = func(value);
+        if (value == null)
+            value = undefined;
+        return value;
     }
 
     function updateValue(key, value, refresh = true) {
@@ -1676,17 +1707,10 @@ instead of:
         ptr[key.name] = value;
 
         state.take_delayed.delete(key.toString());
+        state.follow_default.delete(key.toString());
 
-        if (refresh) {
-            if (value !== state.cached_values[key.toString()]) {
-                state.changed_variables.add(key.toString());
-            } else {
-                state.changed_variables.delete(key.toString());
-            }
-            state.updated_variables.add(key.toString());
-
+        if (refresh)
             self.restart();
-        }
     }
 
     function walkPath(values, path) {
