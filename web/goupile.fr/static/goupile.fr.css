@@ -84,14 +84,14 @@ td {
 #header a {
     font-size: 18px;
     font-variant: small-caps;
-    font-weight: bold;
     text-decoration: none;
     letter-spacing: 1px;
     text-align: center;
     color: white;
 }
 #header a + a { margin-left: 1em; }
-#header a:hover { text-decoration: underline; }
+#header a.active { font-weight: bold; }
+#header a:not(.active):hover { text-decoration: underline; }
 #logo {
     margin: 45px 10px 10px 10px;
     width: 56px;
