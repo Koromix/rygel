@@ -17,7 +17,7 @@
 
 namespace RG {
 
-const int DomainVersion = 19;
+const int DomainVersion = 20;
 const int MaxInstancesPerDomain = 4096;
 
 // Process-wide unique instance identifier 
@@ -1006,9 +1006,24 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 19: {
+                bool success = db->RunMany(R"(
+                    UPDATE dom_permissions SET permissions = iif(permissions & 1, 1, 0) |
+                                                             iif(permissions & 2, 2, 0) |
+                                                             iif(permissions & 4, 4, 0) |
+                                                             iif(permissions & 8, 8, 0) |
+                                                             iif(permissions & 16, 16, 0) |
+                                                             iif(permissions & 128, 32, 0) |
+                                                             iif(permissions & 512, 64, 0) |
+                                                             iif(permissions & 1024, 128, 0);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 19);
+            RG_STATIC_ASSERT(DomainVersion == 20);
         }
 
         int64_t time = GetUnixTime();

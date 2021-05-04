@@ -25,29 +25,23 @@ enum class UserPermission {
     AdminPublish = 1 << 1,
     AdminConfigure = 1 << 2,
     AdminAssign = 1 << 3,
-    DataList = 1 << 4,
-    DataRead = 1 << 5,
-    DataCreate = 1 << 6,
-    DataModify = 1 << 7,
-    DataDelete = 1 << 8,
-    DataExport = 1 << 9,
-    DataBatch = 1 << 10
+    DataLoad = 1 << 4,
+    DataSave = 1 << 5,
+    DataExport = 1 << 6,
+    DataBatch = 1 << 7
 };
 static const char *const UserPermissionNames[] = {
     "AdminDevelop",
     "AdminPublish",
     "AdminConfigure",
     "AdminAssign",
-    "DataList",
-    "DataRead",
-    "DataCreate",
-    "DataModify",
-    "DataDelete",
+    "DataLoad",
+    "DataSave",
     "DataExport",
     "DataBatch"
 };
-static const uint32_t UserPermissionMasterMask = 0b000001111u;
-static const uint32_t UserPermissionSlaveMask =  0b111110000u;
+static const uint32_t UserPermissionMasterMask = 0b00001111u;
+static const uint32_t UserPermissionSlaveMask =  0b11110000u;
 
 struct InstanceToken {
     uint32_t permissions;
