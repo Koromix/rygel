@@ -37,16 +37,20 @@ bool sms_Config::Validate() const
 {
     bool valid = true;
 
-    if (!sid) {
-        LogError("Twilio SID is not set");
+    if (provider == sms_Provider::None) {
+        LogError("SMS Provider is not set");
+        valid = false;
+    }
+    if (!authid) {
+        LogError("SMS AuthID is not set");
         valid = false;
     }
     if (!token) {
-        LogError("Twilio AuthToken is not set");
+        LogError("SMS AuthToken is not set");
         valid = false;
     }
     if (!from) {
-        LogError("Twilio From setting is not set");
+        LogError("SMS From setting is not set");
         valid = false;
     }
 
@@ -77,7 +81,8 @@ bool sms_Sender::Init(const sms_Config &config)
     }
 
     str_alloc.ReleaseAll();
-    this->config.sid = DuplicateString(config.sid, &str_alloc).ptr;
+    this->config.provider = config.provider;
+    this->config.authid = DuplicateString(config.authid, &str_alloc).ptr;
     this->config.token = DuplicateString(config.token, &str_alloc).ptr;
     this->config.from = DuplicateString(config.from, &str_alloc).ptr;
 
@@ -102,8 +107,18 @@ static void EncodeUrlSafe(const char *str, HeapArray<char> *out_buf)
 
 bool sms_Sender::Send(const char *to, const char *message)
 {
-    RG_ASSERT(config.sid);
+    RG_ASSERT(config.provider != sms_Provider::None);
 
+    switch (config.provider) {
+        case sms_Provider::None: {} break;
+        case sms_Provider::Twilio: { return SendTwilio(to, message); } break;
+    }
+
+    RG_UNREACHABLE();
+}
+
+bool sms_Sender::SendTwilio(const char *to, const char *message)
+{
     BlockAllocator temp_alloc;
 
     const char *url;
@@ -114,7 +129,7 @@ bool sms_Sender::Send(const char *to, const char *message)
         Fmt(&buf, "To=%1&From=%2&Body=", to, config.from);
         EncodeUrlSafe(message, &buf);
 
-        url = Fmt(&temp_alloc, "https://api.twilio.com/2010-04-01/Accounts/%1/Messages", config.sid).ptr;
+        url = Fmt(&temp_alloc, "https://api.twilio.com/2010-04-01/Accounts/%1/Messages", config.authid).ptr;
         body = buf.Leak().ptr;
     }
 
@@ -129,7 +144,7 @@ bool sms_Sender::Send(const char *to, const char *message)
         success &= !curl_easy_setopt(curl, CURLOPT_URL, url);
         success &= !curl_easy_setopt(curl, CURLOPT_POST, 1L);
         success &= !curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body);
-        success &= !curl_easy_setopt(curl, CURLOPT_USERNAME, config.sid);
+        success &= !curl_easy_setopt(curl, CURLOPT_USERNAME, config.authid);
         success &= !curl_easy_setopt(curl, CURLOPT_PASSWORD, config.token);
         success &= !curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
 

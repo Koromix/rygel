@@ -17,8 +17,18 @@
 
 namespace RG {
 
+enum class sms_Provider {
+    None,
+    Twilio
+};
+static const char *const sms_ProviderNames[] = {
+    "None",
+    "Twilio"
+};
+
 struct sms_Config {
-    const char *sid = nullptr;
+    sms_Provider provider = sms_Provider::None;
+    const char *authid = nullptr;
     const char *token = nullptr;
     const char *from = nullptr;
 
@@ -33,6 +43,9 @@ class sms_Sender {
 public:
     bool Init(const sms_Config &config);
     bool Send(const char *to, const char *message);
+
+private:
+    bool SendTwilio(const char *to, const char *message);
 };
 
 }

@@ -523,7 +523,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     }
 
     LogInfo("Init messaging");
-    if (gp_domain.config.sms.sid && !InitSMS(gp_domain.config.sms))
+    if (gp_domain.config.sms.provider != sms_Provider::None && !InitSMS(gp_domain.config.sms))
         return 1;
     if (gp_domain.config.smtp.url && !InitSMTP(gp_domain.config.smtp))
         return 1;

@@ -436,7 +436,7 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
         io->AttachError(403);
         return;
     }
-    if (!gp_domain.config.sms.sid) {
+    if (gp_domain.config.sms.provider == sms_Provider::None) {
         LogError("This instance is not configured to send SMS messages");
         io->AttachError(503);
         return;

@@ -37,7 +37,7 @@ bool DomainConfig::Validate() const
         valid = false;
     }
     valid &= !smtp.url || smtp.Validate();
-    valid &= !sms.sid || sms.Validate();
+    valid &= (sms.provider == sms_Provider::None) || sms.Validate();
 
     return valid;
 }
@@ -157,8 +157,13 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "SMS") {
                 do {
-                    if (prop.key == "AuthSID") {
-                        config.sms.sid = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    if (prop.key == "Provider") {
+                        if (!OptionToEnum(sms_ProviderNames, prop.value, &config.sms.provider)) {
+                            LogError("Unknown SMS provider '%1'", prop.value);
+                            valid = false;
+                        }
+                    } else if (prop.key == "AuthID") {
+                        config.sms.authid = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "AuthToken") {
                         config.sms.token = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "From") {
