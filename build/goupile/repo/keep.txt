@@ -40,3 +40,6 @@ bootstrap.bat
 bootstrap.sh
 FelixBuild.ini
 LICENSE.txt
+
+doc/goupile/README.md==>README.md
+doc/goupile/==>doc/
