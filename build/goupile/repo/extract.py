@@ -143,6 +143,8 @@ if __name__ == "__main__":
     subprocess.run(['python', script_directory + '/git-filter-repo.py',
                     '--blob-callback', REWRITE_FELIXBUILD,
                     '--paths-from-file', script_directory + '/keep.txt'])
+    subprocess.run(['python', script_directory + '/git-filter-repo.py',
+                    '--invert-paths', '--paths-from-file', script_directory + '/remove.txt'])
 
     # Push to repository
     if args.push_url is not None:
