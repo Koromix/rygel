@@ -22,7 +22,24 @@
 
 namespace RG {
 
+static const int BanTreshold = 5;
+static const int64_t BanTime = 600 * 1000;
+
+struct BanInfo {
+    int64_t userid;
+    int64_t until_time;
+
+    int tries;
+    bool active;
+
+    RG_HASHTABLE_HANDLER(BanInfo, userid);
+};
+
 static http_SessionManager<Session> sessions;
+
+static std::shared_mutex bans_mutex;
+static BucketArray<BanInfo> bans;
+static HashTable<int64_t, BanInfo *> bans_map;
 
 const InstanceToken *Session::GetToken(const InstanceHolder *instance) const
 {
@@ -259,7 +276,56 @@ RetainPtr<const Session> GetCheckedSession(InstanceHolder *instance, const http_
 
 void PruneSessions()
 {
+    // Prune sessions
     sessions.Prune();
+
+    // Prune bans
+    {
+        std::lock_guard<std::shared_mutex> lock_excl(bans_mutex);
+
+        int64_t now = GetMonotonicTime();
+
+        Size expired = 0;
+        for (const BanInfo &ban: bans) {
+            if (ban.until_time > now)
+                break;
+
+            BanInfo **ptr = bans_map.Find(ban.userid);
+            if (*ptr == &ban) {
+                bans_map.Remove(ptr);
+            }
+            expired++;
+        }
+        bans.RemoveFirst(expired);
+        bans_map.Trim();
+    }
+}
+
+static bool IsUserBanned(int64_t userid)
+{
+    std::shared_lock<std::shared_mutex> lock_shr(bans_mutex);
+
+    // We don't need to use precise timing, and a ban can last a bit
+    // more than BanTime (until_time pruning clears the ban).
+    const BanInfo *ban = bans_map.FindValue(userid, nullptr);
+    return ban && ban->active;
+}
+
+static void RegisterBanEvent(int64_t userid)
+{
+    std::lock_guard<std::shared_mutex> lock_excl(bans_mutex);
+
+    BanInfo *ban = bans_map.FindValue(userid, nullptr);
+    if (!ban || ban->until_time < GetMonotonicTime()) {
+        ban = bans.AppendDefault();
+        ban->userid = userid;
+        ban->until_time = GetMonotonicTime() + BanTime;
+        bans_map.Set(ban);
+    }
+
+    if (ban->tries++ >= BanTreshold) {
+        ban->active = true;
+    }
 }
 
 void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
@@ -311,6 +377,12 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
             bool admin = (sqlite3_column_int(stmt, 2) == 1);
             const char *local_key = (const char *)sqlite3_column_text(stmt, 3);
 
+            if (IsUserBanned(userid)) {
+                LogError("This user account has been temporarily banned (excessive logins)");
+                io->AttachError(403);
+                return;
+            }
+
             if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
                 int64_t time = GetUnixTime();
 
@@ -322,6 +394,11 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                 RetainPtr<Session> session = CreateUserSession(userid, username, local_key);
 
                 if (RG_LIKELY(session)) {
+                    // This is not a mistake; we don't want to lock people out of accounts for
+                    // password failures because this provides an easy anti-user-DDoS system.
+                    // Hoewever, we want to block shared user accounts ;)
+                    RegisterBanEvent(userid);
+
                     if (admin) {
                         if (!instance) {
                             // Require regular relogin (every 20 minutes) to access admin panel
@@ -450,16 +527,6 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
             }
         }
 
-        // Build local key from SHA-256 hash of JSON
-        char local_key[45];
-        {
-            RG_STATIC_ASSERT(crypto_hash_sha256_BYTES == 32);
-
-            uint8_t sha256[32];
-            crypto_hash_sha256(sha256, json.ptr, json.len);
-            sodium_bin2base64(local_key, RG_SIZE(local_key), sha256, RG_SIZE(sha256), sodium_base64_VARIANT_ORIGINAL);
-        }
-
         // Check token values
         {
             bool valid = true;
@@ -486,18 +553,35 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
             }
         }
 
+        if (IsUserBanned(userid)) {
+            LogError("This user account has been temporarily banned (excessive logins)");
+            io->AttachError(403);
+            return;
+        }
+
+        // Build local key from SHA-256 hash of JSON
+        char local_key[45];
+        {
+            RG_STATIC_ASSERT(crypto_hash_sha256_BYTES == 32);
+
+            uint8_t sha256[32];
+            crypto_hash_sha256(sha256, json.ptr, json.len);
+            sodium_bin2base64(local_key, RG_SIZE(local_key), sha256, RG_SIZE(sha256), sodium_base64_VARIANT_ORIGINAL);
+        }
+
         RetainPtr<Session> session = CreateUserSession(userid, username, local_key);
 
         if (RG_LIKELY(session)) {
+            RegisterBanEvent(session->userid);
+
             uint32_t code = 100000 + randombytes_uniform(900000); // 6 digits
             Fmt(session->confirm, "%1", code);
-
-            sessions.Open(request, io, session);
 
             // Send confirmation SMS
             if (!SendSMS(sms, session->confirm))
                 return;
 
+            sessions.Open(request, io, session);
             WriteProfileJson(session.GetRaw(), nullptr, request, io);
         }
     });
@@ -531,6 +615,12 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
             }
         }
 
+        if (IsUserBanned(session->userid)) {
+            LogError("This user account has been temporarily banned (excessive logins)");
+            io->AttachError(403);
+            return;
+        }
+
         // Immediate confirmation looks weird
         WaitDelay(800);
 
@@ -538,6 +628,8 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
             session->confirm[0] = 0;
             WriteProfileJson(session.GetRaw(), instance, request, io);
         } else {
+            RegisterBanEvent(session->userid);
+
             LogError("Code is incorrect");
             io->AttachError(403);
         }

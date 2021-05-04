@@ -67,6 +67,7 @@ public:
     const char *username;
     int64_t admin_until;
     char local_key[45];
+
     char confirm[9];
 
     bool IsAdmin() const { return !confirm[0] && admin_until && admin_until > GetMonotonicTime(); }
