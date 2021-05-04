@@ -24,6 +24,14 @@ import urllib.parse
 from wand.image import Image
 
 if __name__ == "__main__":
+    start_directory = os.getcwd()
+
+    # Always work from build.py directory
+    script_filename = os.path.abspath(__file__)
+    script_directory = os.path.dirname(script_filename)
+    os.chdir(script_directory)
+
+    # Parse arguments
     parser = argparse.ArgumentParser(description = 'Bundle Goupile instance as EXE for offline use')
     parser.add_argument('url', type = str, help = 'URL of instance')
     parser.add_argument('-O', '--output_dir', dest = 'output_dir', action = 'store', help = 'Output directory')
@@ -32,7 +40,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Find repository directory
-    root_directory = os.path.dirname(os.path.realpath(__file__))
+    root_directory = script_directory
     while not os.path.exists(root_directory + '/FelixBuild.ini'):
         new_directory = os.path.realpath(root_directory + '/..')
         if new_directory == root_directory:
@@ -52,6 +60,8 @@ if __name__ == "__main__":
     # Prepare build directory
     if args.output_dir is None:
         build_directory = os.path.join(root_directory, 'bin/GoupilePortable', safe_name)
+    elif not os.path.isabs(args.output_dir):
+        build_directory = os.path.join(start_directory, args.output_directory)
     else:
         build_directory = args.output_dir
     os.makedirs(build_directory + '/build', exist_ok = True)
