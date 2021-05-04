@@ -156,6 +156,11 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
 
     BlockAllocator temp_alloc;
 
+    CURL *curl = curl_easy_init();
+    if (!curl)
+        throw std::bad_alloc();
+    RG_DEFER { curl_easy_cleanup(curl); };
+
     Span<const char> payload;
     {
         HeapArray<char> buf(&temp_alloc);
@@ -205,11 +210,6 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
 
         payload = buf.Leak();
     }
-
-    CURL *curl = curl_easy_init();
-    if (!curl)
-        throw std::bad_alloc();
-    RG_DEFER { curl_easy_cleanup(curl); };
 
     // In theory you have to use curl_slist_add, but why do two allocations when none is needed?
     curl_slist recipients = { (char *)NormalizeAddress(to, &temp_alloc), nullptr };

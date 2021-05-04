@@ -121,6 +121,11 @@ bool sms_Sender::SendTwilio(const char *to, const char *message)
 {
     BlockAllocator temp_alloc;
 
+    CURL *curl = curl_easy_init();
+    if (!curl)
+        throw std::bad_alloc();
+    RG_DEFER { curl_easy_cleanup(curl); };
+
     const char *url;
     const char *body;
     {
@@ -133,11 +138,7 @@ bool sms_Sender::SendTwilio(const char *to, const char *message)
         body = buf.Leak().ptr;
     }
 
-    CURL *curl = curl_easy_init();
-    if (!curl)
-        throw std::bad_alloc();
-    RG_DEFER { curl_easy_cleanup(curl); };
-
+    // Set CURL options
     {
         bool success = true;
 
