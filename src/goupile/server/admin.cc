@@ -49,8 +49,17 @@ R"([Paths]
 BackupKey = %1
 # SynchronousFull = Off
 
-[Session]
-# DemoUser =
+[SMS]
+# Provider = Twilio
+# AuthID = <AuthID>
+# AuthToken = <AuthToken>
+# From = <Phone number or alphanumeric sender>
+
+[SMTP]
+# URL = <Curl URL>
+# Username = <Username> (if any)
+# Password = <Password> (if any)
+# From = <Sender email address>
 
 [HTTP]
 # SocketType = Dual
