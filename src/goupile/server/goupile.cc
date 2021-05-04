@@ -424,6 +424,7 @@ static void PruneTemporaryFiles()
             return true;
 
         if (file_info.modification_time < treshold) {
+            LogInfo("Delete leftover temporary file %1", filename);
             UnlinkFile(filename);
         }
 
