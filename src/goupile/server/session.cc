@@ -257,6 +257,11 @@ RetainPtr<const Session> GetCheckedSession(InstanceHolder *instance, const http_
     return session;
 }
 
+void PruneSessions()
+{
+    sessions.Prune();
+}
+
 void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     io->RunAsync([=]() {

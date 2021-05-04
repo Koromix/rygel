@@ -586,6 +586,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
                 gp_domain.Checkpoint();
             }
 
+            LogDebug("Prune sessions");
+            PruneSessions();
+
 #ifdef __GLIBC__
             // Actually release memory to the OS, because for some reason glibc doesn't want to
             // do this automatically even after 98% of the resident memory pool has been freed.

@@ -555,10 +555,27 @@ Options:
         return 1;
 #endif
 
-    WaitForInterrupt();
-    LogInfo("Exit requested");
+    // Run periodic tasks until exit
+    {
+        bool run = true;
+        int timeout = 300 * 1000;
 
-    daemon.Stop();
+        while (run) {
+            WaitForResult ret = WaitForInterrupt(timeout);
+
+            if (ret == WaitForResult::Interrupt) {
+                LogInfo("Exit requested");
+
+                LogDebug("Stop HTTP server");
+                daemon.Stop();
+
+                run = false;
+            }
+
+            LogDebug("Prune sessions");
+            PruneSessions();
+        }
+    }
 
     return 0;
 }

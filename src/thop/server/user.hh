@@ -64,6 +64,7 @@ struct UserSet {
 bool InitUsers(const char *profile_directory);
 
 const User *CheckSessionUser(const http_RequestInfo &request, http_IO *io);
+void PruneSessions();
 
 void HandleLogin(const http_RequestInfo &request, const User *user, http_IO *io);
 void HandleLogout(const http_RequestInfo &request, const User *user, http_IO *io);

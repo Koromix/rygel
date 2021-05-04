@@ -322,6 +322,11 @@ const User *CheckSessionUser(const http_RequestInfo &request, http_IO *io)
     return udata ? udata.GetRaw() : nullptr;
 }
 
+void PruneSessions()
+{
+    sessions.Prune();
+}
+
 void HandleLogin(const http_RequestInfo &request, const User *, http_IO *io)
 {
     io->RunAsync([=]() {

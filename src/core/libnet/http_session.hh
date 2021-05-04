@@ -23,7 +23,6 @@ template <typename T>
 class http_SessionManager {
     RG_DELETE_COPY(http_SessionManager)
 
-    static const int64_t PruneDelay = 60 * 60000;
     static const int64_t MaxSessionDelay = 1440 * 60000;
     static const int64_t MaxKeyDelay = 15 * 60000;
     static const int64_t MaxLockDelay = 120 * 60000;
@@ -89,8 +88,6 @@ public:
 
     RetainPtr<T> Find(const http_RequestInfo &request, http_IO *io)
     {
-        PruneStaleSessions();
-
         std::shared_lock<std::shared_mutex> lock_shr(mutex);
 
         bool mismatch = false;
@@ -139,6 +136,25 @@ public:
         } else {
             return nullptr;
         }
+    }
+
+    void Prune()
+    {
+        std::lock_guard<std::shared_mutex> lock_excl(mutex);
+
+        int64_t now = GetMonotonicTime();
+
+        Size expired = 0;
+        for (const SessionHandle &handle: sessions) {
+            if (now - handle.register_time < MaxKeyDelay)
+                break;
+
+            sessions_map.Remove(handle.session_key);
+            expired++;
+        }
+
+        sessions.RemoveFirst(expired);
+        sessions_map.Trim();
     }
 
     void ApplyAll(FunctionRef<void(T *udata)> func)
@@ -240,35 +256,6 @@ private:
     {
         io->AddCookieHeader(cookie_path, "session_key", nullptr, true);
         io->AddCookieHeader(cookie_path, "session_rnd", nullptr, false);
-    }
-
-    void PruneStaleSessions()
-    {
-        static std::atomic_int64_t last_pruning {0};
-        static std::mutex last_pruning_mutex;
-
-        // Time to prune?
-        int64_t now = GetMonotonicTime();
-        if (now - last_pruning.load(std::memory_order_acquire) >= PruneDelay) {
-            std::lock_guard<std::mutex> lock(last_pruning_mutex);
-            if (now - last_pruning.load(std::memory_order_relaxed) < PruneDelay)
-                return;
-            last_pruning.store(now, std::memory_order_release);
-        }
-
-        std::lock_guard<std::shared_mutex> lock_excl(mutex);
-
-        Size expired = 0;
-        for (const SessionHandle &handle: sessions) {
-            if (now - handle.register_time < MaxKeyDelay)
-                break;
-
-            sessions_map.Remove(handle.session_key);
-            expired++;
-        }
-
-        sessions.RemoveFirst(expired);
-        sessions_map.Trim();
     }
 };
 
