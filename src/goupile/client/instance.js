@@ -151,7 +151,7 @@ function InstanceController() {
     };
 
     this.runTasks = async function(online) {
-        if (online && ENV.sync_mode === 'mirror')
+        if (online && ENV.sync_mode !== 'offline')
             await syncRecords();
     };
     this.runTasks = util.serializeAsync(this.runTasks);
@@ -346,7 +346,7 @@ function InstanceController() {
                         <div style="flex: 1;"></div>
                     ` : ''}
                     ${visible_rows.length} ${visible_rows.length < data_rows.length ? `/ ${data_rows.length} ` : ''}${data_rows.length > 1 ? 'lignes' : 'ligne'}
-                    ${ENV.sync_mode === 'mirror' ? html` (<a @click=${ui.wrapAction(e => syncRecords())}>synchroniser</a>)` : ''}
+                    ${ENV.sync_mode !== 'offline' ? html` (<a @click=${ui.wrapAction(e => syncRecords())}>synchroniser</a>)` : ''}
                 </div>
 
                 <table class="ui_table fixed" id="ins_data">
@@ -870,7 +870,7 @@ function InstanceController() {
                 } while (record != null);
             });
 
-            if (ENV.sync_mode === 'mirror') {
+            if (ENV.sync_mode !== 'offline') {
                 try {
                     if (!net.isOnline() || goupile.isLocked())
                         throw new Error('Cannot save online');
@@ -954,7 +954,7 @@ function InstanceController() {
                 await t.saveWithKey('rec_records', key, obj);
             });
 
-            if (ENV.sync_mode === 'mirror' && net.isOnline() && !goupile.isLocked()) {
+            if (ENV.sync_mode !== 'offline' && net.isOnline() && !goupile.isLocked()) {
                 try {
                     await syncRecords(false);
                     progress.success('Suppression effectuée');

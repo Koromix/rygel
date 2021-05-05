@@ -23,14 +23,14 @@ namespace RG {
 extern const int InstanceVersion;
 
 enum SyncMode {
-    Offline,
     Online,
-    Mirror
+    Mirror,
+    Offline
 };
 static const char *const SyncModeNames[] = {
-    "Offline",
     "Online",
-    "Mirror"
+    "Mirror",
+    "Offline"
 };
 
 class InstanceHolder {
@@ -53,7 +53,7 @@ public:
     struct {
         const char *title = nullptr;
         bool use_offline = false;
-        SyncMode sync_mode = SyncMode::Offline;
+        SyncMode sync_mode = SyncMode::Online;
         int max_file_size = (int)Megabytes(16);
         const char *shared_key = nullptr;
         uint8_t token_skey[32];

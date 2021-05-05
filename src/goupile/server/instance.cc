@@ -935,10 +935,9 @@ bool MigrateInstance(sq_Database *db)
             } [[fallthrough]];
 
             case 27: {
-                bool success = db->RunMany(R"(
-                    INSERT INTO fs_settings (key, value) VALUES ('SyncMode', 'Offline');
-                )");
-                if (!success)
+                decltype(InstanceHolder::config) fake;
+                if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('SyncMode', ?1)",
+                             SyncModeNames[(int)fake.sync_mode]))
                     return false;
             } [[fallthrough]];
 

@@ -456,9 +456,9 @@ function AdminController() {
 
                         let use_offline = d.boolean('*use_offline', 'Utilisation hors-ligne', {value: instance.config.use_offline});
                         let sync_mode = d.enum('*sync_mode', 'Mode de synchronisation', [
-                            ['offline', 'Hors ligne'],
                             ['online', 'En ligne'],
-                            ['mirror', 'Mode miroir']
+                            ['mirror', 'Miroir'],
+                            ['offline', 'Hors ligne']
                         ], {value: instance.config.sync_mode});
 
                         let backup_key = (sync_mode.value == 'offline') ?
