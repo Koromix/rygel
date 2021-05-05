@@ -71,12 +71,15 @@ const goupile = new function() {
     async function initAfterAuthorization() {
         let url = new URL(window.location.href);
 
-        if (profile.instance != null) {
-            ENV.title = profile.instance.title;
-            ENV.urls.instance = profile.instance.url;
+        if (profile.instances != null) {
+            let instance = profile.instances.find(instance => url.pathname.startsWith(instance.url)) ||
+                           profile.instances[0];
 
-            if (!url.pathname.startsWith(ENV.urls.instance))
-                url = new URL(ENV.urls.instance, window.location.href);
+            ENV.title = instance.title;
+            ENV.urls.instance = instance.url;
+
+            if (!url.pathname.startsWith(instance.url))
+                url = new URL(instance.url, window.location.href);
         }
 
         await controller.init();

@@ -75,91 +75,51 @@ const SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
         stamp = stamps_map.Find(instance->unique);
 
         if (!stamp) {
-            do {
+            stamp = stamps_map.SetDefault(instance->unique);
+            stamp->unique = instance->unique;
+
+            sq_Statement stmt;
+            if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
+                                         WHERE userid = ?1 AND instance = ?2)", &stmt))
+                return nullptr;
+            sqlite3_bind_int64(stmt, 1, userid);
+            sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
+            if (!stmt.Next())
+                return nullptr;
+
+            uint32_t permissions = (uint32_t)sqlite3_column_int(stmt, 0);
+
+            if (instance->master != instance) {
+                InstanceHolder *master = instance->master;
+
                 sq_Statement stmt;
                 if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
                                              WHERE userid = ?1 AND instance = ?2)", &stmt))
-                    break;
+                    return nullptr;
                 sqlite3_bind_int64(stmt, 1, userid);
-                sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
-                if (!stmt.Next())
-                    break;
+                sqlite3_bind_text(stmt, 2, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
 
-                uint32_t permissions = (uint32_t)sqlite3_column_int(stmt, 0);
-
-                if (instance->master != instance) {
-                    InstanceHolder *master = instance->master;
-
-                    sq_Statement stmt;
-                    if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
-                                                 WHERE userid = ?1 AND instance = ?2)", &stmt))
-                        break;
-                    sqlite3_bind_int64(stmt, 1, userid);
-                    sqlite3_bind_text(stmt, 2, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
-
-                    permissions &= UserPermissionSlaveMask;
-                    if (stmt.Next()) {
-                        uint32_t master_permissions = (uint32_t)sqlite3_column_int(stmt, 0);
-                        permissions |= master_permissions & UserPermissionMasterMask;
-                    }
+                permissions &= UserPermissionSlaveMask;
+                if (stmt.Next()) {
+                    uint32_t master_permissions = (uint32_t)sqlite3_column_int(stmt, 0);
+                    permissions |= master_permissions & UserPermissionMasterMask;
                 }
-
-                stamp = stamps_map.SetDefault(instance->unique);
-                stamp->permissions = permissions;
-                stamp->title = DuplicateString(instance->title, &stamps_alloc).ptr;
-                stamp->url = Fmt(&stamps_alloc, "/%1/", instance->key).ptr;
-            } while (false);
-
-            // Redirect user to appropiate slave instance
-            if (instance->slaves.len) {
-                if (stamp) {
-                    stamp->permissions &= UserPermissionMasterMask;
-                } else {
-                    stamp = stamps_map.SetDefault(instance->unique);
-                    stamp->permissions = 0;
-                }
-
-                do {
-                    sq_Statement stmt;
-                    if (!gp_domain.db.Prepare(R"(SELECT i.instance FROM dom_instances i
-                                                 INNER JOIN dom_permissions p ON (p.instance = i.instance)
-                                                 WHERE p.userid = ?1 AND i.master = ?2
-                                                 ORDER BY i.instance)", &stmt))
-                        break;
-                    sqlite3_bind_int64(stmt, 1, userid);
-                    sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
-                    if (!stmt.Next())
-                        break;
-
-                    const char *redirect_key = (const char *)sqlite3_column_text(stmt, 0);
-
-                    InstanceHolder *redirect = gp_domain.Ref(redirect_key);
-                    if (!redirect)
-                        break;
-                    RG_DEFER { redirect->Unref(); };
-
-                    stamp->title = DuplicateString(redirect->title, &stamps_alloc).ptr;
-                    stamp->url = Fmt(&stamps_alloc, "/%1/", redirect->key).ptr;
-                } while (false);
+            } else if (instance->slaves.len) {
+                permissions &= UserPermissionMasterMask;
             }
 
-            // User is not assigned to this project, cache this information
-            if (!stamp) {
-                stamp = stamps_map.SetDefault(instance->unique);
-                stamp->permissions = 0;
-            }
+            stamp->authorized = true;
+            stamp->permissions = permissions;
         }
     }
 
-    return stamp->title ? stamp : nullptr;
+    return stamp->authorized ? stamp : nullptr;
 }
 
 void SessionInfo::InvalidateStamps()
 {
     std::lock_guard<std::shared_mutex> lock_excl(stamps_mutex);
-
     stamps_map.Clear();
-    stamps_alloc.ReleaseAll();
 }
 
 void InvalidateUserStamps(int64_t userid)
@@ -177,7 +137,7 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
     http_JsonPageBuilder json;
     if (!json.Init(io))
         return;
-    char buf[128];
+    char buf[512];
 
     json.StartObject();
     if (session) {
@@ -188,7 +148,21 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
             json.Key("authorized"); json.Bool(false);
             json.Key("confirm"); json.String("SMS");
         } else if (instance) {
-            const SessionStamp *stamp = session->GetStamp(instance);
+            const InstanceHolder *master = instance->master;
+            const SessionStamp *stamp = nullptr;
+
+            if (instance->slaves.len) {
+                for (const InstanceHolder *slave: instance->slaves) {
+                    stamp = session->GetStamp(slave);
+
+                    if (stamp) {
+                        instance = slave;
+                        break;
+                    }
+                }
+            } else {
+                stamp = session->GetStamp(instance);
+            }
 
             if (stamp) {
                 json.Key("authorized"); json.Bool(true);
@@ -200,10 +174,18 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
                     json.Key("records"); json.String(session->local_key);
                 json.EndObject();
 
-                json.Key("instance"); json.StartObject();
-                    json.Key("title"); json.String(stamp->title);
-                    json.Key("url"); json.String(stamp->url);
-                json.EndObject();
+                if (master->slaves.len) {
+                    json.Key("instances"); json.StartArray();
+                    for (const InstanceHolder *slave: master->slaves) {
+                        if (session->GetStamp(slave)) {
+                            json.StartObject();
+                            json.Key("title"); json.String(slave->title);
+                            json.Key("url"); json.String(Fmt(buf, "/%1/", slave->key).ptr);
+                            json.EndObject();
+                        }
+                    }
+                    json.EndArray();
+                }
 
                 json.Key("permissions"); json.StartObject();
                 for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {

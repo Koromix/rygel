@@ -44,17 +44,19 @@ static const uint32_t UserPermissionMasterMask = 0b00001111u;
 static const uint32_t UserPermissionSlaveMask =  0b11110000u;
 
 struct SessionStamp {
+    int64_t unique;
+
+    bool authorized;
     uint32_t permissions;
-    const char *title;
-    const char *url;
 
     bool HasPermission(UserPermission perm) const { return permissions & (int)perm; };
+
+    RG_HASHTABLE_HANDLER(SessionStamp, unique);
 };
 
 class SessionInfo: public RetainObject {
     mutable std::shared_mutex stamps_mutex;
-    mutable HashMap<int64_t, SessionStamp> stamps_map;
-    mutable BlockAllocator stamps_alloc;
+    mutable HashTable<int64_t, SessionStamp> stamps_map;
 
 public:
     int64_t userid;
