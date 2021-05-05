@@ -18,7 +18,7 @@ const goupile = new function() {
     let self = this;
 
     let session_rnd;
-    let profile_keys = new Map;
+    let profile_keys = {};
     let online = true;
 
     let controller;
@@ -156,8 +156,10 @@ const goupile = new function() {
                     username: lock.username,
                     authorized: true,
                     permissions: {
-                        data_edit: true
+                        data_load: true,
+                        data_save: true
                     },
+                    namespaces: lock.namespaces,
                     keys: lock.keys,
                     lock: lock.ctx
                 };
@@ -514,8 +516,11 @@ const goupile = new function() {
 
         // Keep keys local to "hide" (as much as JS allows..) them
         if (profile.keys != null) {
-            profile_keys = new Map(profile.keys.map(it => [it[0], base64ToBytes(it[1])]));
-            profile.keys = profile.keys.map(key => key[0]);
+            profile_keys = profile.keys;
+            delete profile.keys;
+
+            for (let key in profile_keys)
+                profile_keys[key] = base64ToBytes(profile_keys[key]);
         } else {
             profile_keys = new Map;
         }
@@ -585,12 +590,13 @@ const goupile = new function() {
             username: profile.username,
             salt: bytesToBase64(salt),
             errors: 0,
-            keys: Array.from(profile_keys.entries()),
+            namespaces: profile.namespaces,
+            keys: {},
             session_rnd: enc,
             ctx: ctx
         };
-        for (let key of lock.keys)
-            key[1] = bytesToBase64(key[1]);
+        for (let key in lock.namespaces)
+            lock.keys[key] = bytesToBase64(profile_keys[key]);
 
         await storeSessionValue('lock', lock);
         util.deleteCookie('session_rnd', '/');
@@ -688,18 +694,18 @@ const goupile = new function() {
         current_url = url;
     };
 
-    this.encryptSymmetric = function(obj, type) {
-        let key = profile_keys.get(type);
+    this.encryptSymmetric = function(obj, namespace) {
+        let key = profile_keys[namespace];
         if (key == null)
-            throw new Error(`Cannot encrypt without '${type}' key`);
+            throw new Error(`Cannot encrypt without '${namespace}' key`);
 
         return encryptSecretBox(obj, key);
     };
 
-    this.decryptSymmetric = function(enc, type) {
-        let key = profile_keys.get(type);
+    this.decryptSymmetric = function(enc, namespace) {
+        let key = profile_keys[namespace];
         if (key == null)
-            throw new Error(`Cannot decrypt without '${type}' key`);
+            throw new Error(`Cannot decrypt without '${namespace}' key`);
 
         return decryptSecretBox(enc, key);
     };
@@ -708,7 +714,7 @@ const goupile = new function() {
         if (ENV.backup_key == null)
             throw new Error('This instance is not configured for offline backups');
 
-        let key = profile_keys.get(profile.userid);
+        let key = profile_keys[profile.userid];
         if (key == null)
             throw new Error('Cannot encrypt backup without local key');
 

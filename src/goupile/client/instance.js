@@ -797,23 +797,14 @@ function InstanceController() {
                         values: values
                     };
 
-                    let namespace;
-                    let obj;
-                    for (namespace of profile.keys) {
-                        let key = namespace + `:${record.ulid}`;
-                        obj = await t.load('rec_records', key);
-
-                        if (obj != null)
-                            break;
-                    }
-
-                    // Update previous record of write new?
+                    let key = profile.namespaces.records + `:${record.ulid}`;
+                    let obj = await t.load('rec_records', key);
                     let update = (obj != null) && (obj.keys.parent == null ||
                                                    !obj.keys.parent.endsWith('!fake'));
 
                     let entry;
                     if (update) {
-                        entry = await goupile.decryptSymmetric(obj.enc, namespace);
+                        entry = await goupile.decryptSymmetric(obj.enc, 'records');
                         if (record.hid != null)
                             entry.hid = record.hid;
                     } else {
@@ -843,18 +834,16 @@ function InstanceController() {
                     }
 
                     // Always rewrite keys to fix potential namespace changes
-                    obj.keys.form = `${profile.userid}/${record.form.key}`;
+                    obj.keys.form = `${profile.namespaces.records}/${record.form.key}`;
                     if (record.parent != null)
-                        obj.keys.parent = `${profile.userid}:${record.parent.ulid}/${record.form.key}`;
-                    obj.keys.sync = profile.userid;
+                        obj.keys.parent = `${profile.namespaces.records}:${record.parent.ulid}/${record.form.key}`;
+                    obj.keys.sync = profile.namespaces.records;
 
                     if (record.version !== entry.fragments.length)
                         throw new Error('Cannot overwrite old record fragment');
                     entry.fragments.push(fragment);
 
-                    obj.enc = await goupile.encryptSymmetric(entry, profile.userid);
-
-                    let key = profile.userid + `:${record.ulid}`;
+                    obj.enc = await goupile.encryptSymmetric(entry, 'records');
                     await t.saveWithKey('rec_records', key, obj);
 
                     if (entry.parent != null)
@@ -898,7 +887,7 @@ function InstanceController() {
     // Call in save transaction!
     async function unfakeParents(t, ulid) {
         for (;;) {
-            let key = `${profile.userid}:${ulid}`;
+            let key = profile.namespaces.records + `:${ulid}`;
             let obj = await t.load('rec_records', key);
 
             if (obj == null) // Fake parents can only be in user namespace
@@ -907,7 +896,7 @@ function InstanceController() {
                 break;
 
             obj.keys.parent = obj.keys.parent.substr(0, obj.keys.parent.length - 5);
-            obj.keys.sync = profile.userid;
+            obj.keys.sync = profile.namespaces.records;
 
             await t.saveWithKey('rec_records', key, obj);
 
@@ -928,29 +917,22 @@ function InstanceController() {
 
             // XXX: Delete children (cascade)?
             await db.transaction('rw', ['rec_records'], async t => {
-                let namespace;
-                let obj;
-                for (namespace of profile.keys) {
-                    let key = namespace + `:${ulid}`;
-                    obj = await t.load('rec_records', key);
+                let key = profile.namespaces.records + `:${ulid}`;
+                let obj = await t.load('rec_records', key);
 
-                    if (obj != null)
-                        break;
-                }
                 if (obj == null)
                     throw new Error('Cet enregistrement est introuvable');
 
-                let entry = await goupile.decryptSymmetric(obj.enc, namespace);
+                let entry = await goupile.decryptSymmetric(obj.enc, 'records');
 
                 // Mark as deleted with special fragment
                 entry.fragments.push(fragment);
 
                 obj.keys.parent = null;
                 obj.keys.form = null;
-                obj.keys.sync = profile.userid;
-                obj.enc = await goupile.encryptSymmetric(entry, profile.userid);
+                obj.keys.sync = profile.namespaces.records;
 
-                let key = profile.userid + `:${ulid}`;
+                obj.enc = await goupile.encryptSymmetric(entry, 'records');
                 await t.saveWithKey('rec_records', key, obj);
             });
 
@@ -1694,28 +1676,7 @@ function InstanceController() {
 
             // Siblings (formMulti)
             if (new_route.form.multi && new_record.parent != null) {
-                let ulids = new Set;
-
-                new_record.siblings = [];
-                for (let namespace of profile.keys) {
-                    let range = IDBKeyRange.only(namespace + `:${new_record.parent.ulid}/${new_route.form.key}`);
-                    let keys = await db.list('rec_records/parent', range);
-
-                    for (let key of keys) {
-                        let ulid = key.primary.substr(key.primary.indexOf(':') + 1);
-
-                        if (ulids.has(ulid))
-                            continue;
-                        ulids.add(ulid);
-
-                        let sibling = {
-                            ulid: ulid,
-                            ctime: new Date(util.decodeULIDTime(ulid))
-                        };
-                        new_record.siblings.push(sibling);
-                    };
-                }
-
+                new_record.siblings = await listChildren(new_record.parent.ulid, new_route.form.key);
                 new_record.siblings.sort((record1, record2) => util.compareValues(record1.ulid, record2.ulid));
             }
 
@@ -1801,32 +1762,8 @@ function InstanceController() {
         if (new_route.page.options.dictionaries != null) {
             for (let dict of new_route.page.options.dictionaries) {
                 let records = form_dictionaries[dict];
-
-                if (records == null) {
-                    records = [];
-
-                    let ulids = new Set;
-
-                    for (let namespace of profile.keys) {
-                        let range = IDBKeyRange.only(namespace + `/${dict}`);
-                        let objects = await db.loadAll('rec_records/form', range);
-
-                        for (let obj of objects) {
-                            try {
-                                let record = await decryptRecord(namespace, obj, null, false, true);
-
-                                if (ulids.has(record.ulid))
-                                    continue;
-                                ulids.add(record.ulid);
-
-                                records.push(record);
-                            } catch (err) {
-                                console.log(err);
-                            }
-                        }
-                    }
-                }
-
+                if (records == null)
+                    new_dictionaries[dict] = await loadRecords(null, dict);
                 new_dictionaries[dict] = records;
             }
         }
@@ -1841,29 +1778,7 @@ function InstanceController() {
 
                     if (record != null) {
                         if (form.multi) {
-                            let array = [];
-                            new_record.map[key] = array;
-
-                            let ulids = new Set;
-
-                            for (let namespace of profile.keys) {
-                                let range = IDBKeyRange.only(namespace + `:${record.parent.ulid}/${form.key}`);
-                                let objects = await db.loadAll('rec_records/parent', range);
-
-                                for (let obj of objects) {
-                                    try {
-                                        let sibling = await decryptRecord(namespace, obj, null, false);
-
-                                        if (ulids.has(sibling.ulid))
-                                            continue;
-                                        ulids.add(sibling.ulid);
-
-                                        array.push(sibling);
-                                    } catch (err) {
-                                        console.log(err);
-                                    }
-                                }
-                            }
+                            new_record.map[key] = await loadRecords(record.parent.ulid, form.key);
                         } else {
                             new_record.map[key] = record;
                         }
@@ -1904,260 +1819,6 @@ function InstanceController() {
         // Highlight might need to change (conditions, etc.)
         if (ui.isPanelEnabled('editor'))
             syncFormHighlight(false);
-    }
-
-    function createRecord(form, parent_record) {
-        let record = {
-            form: form,
-            ulid: util.makeULID(),
-            hid: null,
-            version: 0,
-            ctime: null,
-            mtime: null,
-            fragments: [],
-            status: new Set,
-            saved: false,
-            values: {},
-
-            parent: null,
-            children: {},
-            chain: null, // Will be set later
-            map: null, // Will be set later
-            siblings: null // Same, for multi-children only
-        };
-        record.ctime = new Date(util.decodeULIDTime(record.ulid));
-
-        if (form.chain.length > 1) {
-            if (parent_record == null)
-                throw new Error('Impossible de créer cet enregistrement sans parent');
-
-            record.parent = {
-                form: parent_record.form.key,
-                ulid: parent_record.ulid,
-                version: parent_record.version
-            };
-        }
-
-        return record;
-    }
-
-    async function loadRecord(ulid, version) {
-        for (let namespace of profile.keys) {
-            let key = namespace + `:${ulid}`;
-            let obj = await db.load('rec_records', key);
-
-            if (obj != null) {
-                let record = await decryptRecord(namespace,obj, version);
-                return record;
-            }
-        }
-
-        throw new Error('L\'enregistrement demandé n\'existe pas');
-
-    }
-
-    async function decryptRecord(namespace, obj, version, allow_fake = true, load_values = true, allow_deleted = false) {
-        let entry = await goupile.decryptSymmetric(obj.enc, namespace);
-        let fragments = entry.fragments;
-
-        let form = app.forms.get(entry.form);
-        if (form == null)
-            throw new Error(`Le formulaire '${entry.form}' n'existe pas ou plus`);
-
-        if (version == null) {
-            version = fragments.length;
-        } else if (version > fragments.length) {
-            throw new Error(`Cet enregistrement n'a pas de version ${version}`);
-        }
-
-        let values = {};
-        let status = new Set;
-        for (let i = 0; i < version; i++) {
-            let fragment = fragments[i];
-
-            if (fragment.type === 'save') {
-                if (load_values)
-                    Object.assign(values, fragment.values);
-                if (form.pages.get(fragment.page))
-                    status.add(fragment.page);
-            }
-        }
-        for (let fragment of fragments) {
-            fragment.mtime = new Date(fragment.mtime);
-            if (!load_values)
-                delete fragment.values;
-        }
-
-        if (!allow_deleted && fragments.length && fragments[fragments.length - 1].type === 'delete')
-            throw new Error('L\'enregistrement demandé est supprimé');
-        if (!allow_fake && !fragments.length)
-            throw new Error('Skipping fake record');
-
-        let children_map = {};
-        {
-            let ulids = new Set;
-
-            for (let namespace of profile.keys) {
-                let range = IDBKeyRange.bound(namespace + `:${entry.ulid}/`,
-                                              namespace + `:${entry.ulid}\``, false, true);
-                let keys = await db.list('rec_records/parent', range);
-
-                for (let key of keys) {
-                    let child = {
-                        form: key.index.substr(key.index.indexOf('/') + 1),
-                        ulid: key.primary.substr(key.primary.indexOf(':') + 1)
-                    };
-
-                    if (ulids.has(child.ulid))
-                        continue;
-                    ulids.add(child.ulid);
-
-                    let fake = child.form.endsWith('!fake');
-                    if (fake)
-                        child.form = child.form.substr(0, child.form.length - 5);
-
-                    let array = children_map[child.form];
-                    if (array == null) {
-                        array = [];
-                        children_map[child.form] = array;
-                    }
-
-                    array.push(child);
-                    if (!fake)
-                        status.add(child.form);
-                }
-            }
-        }
-
-        let record = {
-            form: form,
-            ulid: entry.ulid,
-            hid: entry.hid,
-            version: version,
-            ctime: new Date(util.decodeULIDTime(entry.ulid)),
-            mtime: fragments.length ? fragments[version - 1].mtime : null,
-            fragments: fragments,
-            status: status,
-            saved: true,
-            values: values,
-
-            parent: entry.parent,
-            children: children_map,
-            chain: null, // Will be set later
-            map: null, // Will be set later
-            siblings: null // Same, for multi-children only
-        };
-        if (!load_values)
-            delete record.values;
-
-        return record;
-    }
-
-    async function moveToAppropriateRecord(record, target_form, create_new) {
-        let path = computePath(record.form, target_form);
-
-        if (path != null) {
-            for (let form of path.up) {
-                record = await loadRecord(record.parent.ulid, null);
-
-                if (record.form !== form)
-                    throw new Error('Saut impossible en raison d\'un changement de schéma');
-            }
-
-            for (let i = 0; i < path.down.length; i++) {
-                let form = path.down[i];
-                let follow = !form.multi || !create_new;
-
-                if (follow && record.children[form.key] != null) {
-                    let children = record.children[form.key];
-                    let child = children[children.length - 1];
-
-                    record = await loadRecord(child.ulid);
-                    if (record.form !== form)
-                        throw new Error('Saut impossible en raison d\'un changement de schéma');
-                } else if (create_new) {
-                    // Save fake intermediate records if needed
-                    if (!record.saved) {
-                        let key = `${profile.userid}:${record.ulid}`;
-
-                        let obj = {
-                            keys: {
-                                form: `${profile.userid}/${record.form.key}`,
-                                parent: null,
-                                anchor: null,
-                                sync: null
-                            },
-                            enc: null
-                        };
-                        let entry = {
-                            ulid: record.ulid,
-                            hid: record.hid,
-                            parent: null,
-                            form: record.form.key,
-                            fragments: []
-                        };
-
-                        if (record.parent != null) {
-                            obj.keys.parent = `${profile.userid}:${record.parent.ulid}/${record.form.key}!fake`;
-                            entry.parent = {
-                                ulid: record.parent.ulid,
-                                version: record.parent.version
-                            };
-                        }
-
-                        // XXX: This could be racy, for example if a record with the same key was saved between
-                        // the filling of children_map and getting there. Rare, but we want to avoid that!
-                        obj.enc = await goupile.encryptSymmetric(entry, profile.userid);
-                        await db.saveWithKey('rec_records', key, obj);
-                    }
-
-                    record = createRecord(form, record);
-                } else {
-                    return null;
-                }
-            }
-
-            return record;
-        } else {
-            return null;
-        }
-    }
-
-    // Assumes from != to
-    function computePath(from, to) {
-        let prefix_len = 0;
-        while (prefix_len < from.chain.length && prefix_len < to.chain.length) {
-            let parent1 = from.chain[prefix_len];
-            let parent2 = to.chain[prefix_len];
-
-            if (parent1 !== parent2)
-                break;
-
-            prefix_len++;
-        }
-        prefix_len--;
-
-        if (from.chain[prefix_len] === to) {
-            let path = {
-                up: from.chain.slice(prefix_len, from.chain.length - 1).reverse(),
-                down: []
-            };
-            return path;
-        } else if (to.chain[prefix_len] === from) {
-            let path = {
-                up: [],
-                down: to.chain.slice(prefix_len + 1)
-            };
-            return path;
-        } else if (prefix_len >= 0) {
-            let path = {
-                up: from.chain.slice(prefix_len, from.chain.length - 1).reverse(),
-                down: to.chain.slice(prefix_len + 1)
-            };
-            return path;
-        } else {
-            return null;
-        }
     }
 
     function findEnabledPage(form, record, parents = true) {
@@ -2239,7 +1900,8 @@ function InstanceController() {
             }
 
             if (data_rows == null) {
-                data_rows = await loadDataRecords(data_form, null);
+                data_rows = await loadRecords(null, data_form.key);
+
                 data_rows.sort((meta1, meta2) => {
                     if (meta1.hid != null && meta2.hid != null) {
                         return util.compareValues(meta1.hid, meta2.hid);
@@ -2268,38 +1930,6 @@ function InstanceController() {
         }
 
         return url;
-    }
-
-    async function loadDataRecords(form, parent) {
-        let records = [];
-        let ulids = new Set;
-
-        for (let namespace of profile.keys) {
-            let objects;
-            if (parent == null) {
-                let range = IDBKeyRange.only(namespace + `/${form.key}`);
-                objects = await db.loadAll('rec_records/form', range);
-            } else {
-                let range = IDBKeyRange.only(namespace + `:${parent.ulid}/${form.key}`);
-                objects = await db.loadAll('rec_records/parent', range);
-            }
-
-            for (let obj of objects) {
-                try {
-                    let record = await decryptRecord(namespace, obj, null, false, false);
-
-                    if (ulids.has(record.ulid))
-                        continue;
-                    ulids.add(record.ulid);
-
-                    records.push(record);
-                } catch (err) {
-                    console.log(err);
-                }
-            }
-        }
-
-        return records;
     }
 
     async function fetchCode(filename) {
@@ -2343,18 +1973,302 @@ function InstanceController() {
         }
     }
 
+    function createRecord(form, parent_record) {
+        let record = {
+            form: form,
+            ulid: util.makeULID(),
+            hid: null,
+            version: 0,
+            ctime: null,
+            mtime: null,
+            fragments: [],
+            status: new Set,
+            saved: false,
+            values: {},
+
+            parent: null,
+            children: {},
+            chain: null, // Will be set later
+            map: null, // Will be set later
+            siblings: null // Same, for multi-children only
+        };
+        record.ctime = new Date(util.decodeULIDTime(record.ulid));
+
+        if (form.chain.length > 1) {
+            if (parent_record == null)
+                throw new Error('Impossible de créer cet enregistrement sans parent');
+
+            record.parent = {
+                form: parent_record.form.key,
+                ulid: parent_record.ulid,
+                version: parent_record.version
+            };
+        }
+
+        return record;
+    }
+
+    async function loadRecord(ulid, version) {
+        let key = profile.namespaces.records + `:${ulid}`;
+        let obj = await db.load('rec_records', key);
+
+        if (obj != null) {
+            let record = await decryptRecord(obj, version, false);
+            return record;
+        } else {
+            throw new Error('L\'enregistrement demandé n\'existe pas');
+        }
+    }
+
+    async function loadRecords(parent_ulid = null, form_key = null)
+    {
+        let objects;
+        if (parent_ulid != null && form_key != null) {
+            let range = IDBKeyRange.only(profile.namespaces.records + `:${parent_ulid}/${form_key}`);
+            objects = await db.loadAll('rec_records/parent', range);
+        } else if (parent_ulid != null) {
+            let range = IDBKeyRange.bound(profile.namespaces.records + `:${parent_ulid}/`,
+                                          profile.namespaces.records + `:${parent_ulid}\``, false, true);
+            objects = await db.loadAll('rec_records/parent', range);
+        } else if (form_key != null) {
+            let range = IDBKeyRange.only(profile.namespaces.records + `/${form_key}`);
+            objects = await db.loadAll('rec_records/form', range);
+        }
+
+        let records = [];
+        for (let obj of objects) {
+            try {
+                let record = await decryptRecord(obj, null, false);
+                records.push(record);
+            } catch (err) {
+                console.log(err);
+            }
+        }
+
+        return records;
+    }
+
+    async function listChildren(parent_ulid, form_key = null)
+    {
+        let keys;
+        if (form_key != null) {
+            let range = IDBKeyRange.only(profile.namespaces.records + `:${parent_ulid}/${form_key}`);
+            keys = await db.list('rec_records/parent', range);
+        } else {
+            let range = IDBKeyRange.bound(profile.namespaces.records + `:${parent_ulid}/`,
+                                          profile.namespaces.records + `:${parent_ulid}\``, false, true);
+            keys = await db.list('rec_records/parent', range);
+        }
+
+        let children = [];
+        for (let key of keys) {
+            let child = {
+                form: key.index.substr(key.index.indexOf('/') + 1),
+                ulid: key.primary.substr(key.primary.indexOf(':') + 1),
+                fake: key.index.endsWith('!fake'),
+                ctime: null
+            };
+
+            child.ctime = new Date(util.decodeULIDTime(child.ulid));
+            if (child.fake)
+                child.form = child.form.substr(0, child.form.length - 5);
+
+            children.push(child);
+        }
+
+        return children;
+    }
+
+    async function decryptRecord(obj, version, allow_deleted) {
+        let entry = await goupile.decryptSymmetric(obj.enc, 'records');
+        let fragments = entry.fragments;
+
+        let form = app.forms.get(entry.form);
+        if (form == null)
+            throw new Error(`Le formulaire '${entry.form}' n'existe pas ou plus`);
+
+        if (version == null) {
+            version = fragments.length;
+        } else if (version > fragments.length) {
+            throw new Error(`Cet enregistrement n'a pas de version ${version}`);
+        }
+
+        let values = {};
+        let status = new Set;
+        for (let i = 0; i < version; i++) {
+            let fragment = fragments[i];
+
+            if (fragment.type === 'save') {
+                Object.assign(values, fragment.values);
+
+                if (form.pages.get(fragment.page))
+                    status.add(fragment.page);
+            }
+        }
+        for (let fragment of fragments)
+            fragment.mtime = new Date(fragment.mtime);
+
+        if (!allow_deleted && fragments.length && fragments[fragments.length - 1].type === 'delete')
+            throw new Error('L\'enregistrement demandé est supprimé');
+
+        let children_map = {};
+        {
+            let children = await listChildren(entry.ulid);
+
+            for (let child of children) {
+                let array = children_map[child.form];
+                if (array == null) {
+                    array = [];
+                    children_map[child.form] = array;
+                }
+
+                array.push(child);
+                if (!child.fake)
+                    status.add(child.form);
+            }
+        }
+
+        let record = {
+            form: form,
+            ulid: entry.ulid,
+            hid: entry.hid,
+            version: version,
+            ctime: new Date(util.decodeULIDTime(entry.ulid)),
+            mtime: fragments.length ? fragments[version - 1].mtime : null,
+            fragments: fragments,
+            status: status,
+            saved: true,
+            values: values,
+
+            parent: entry.parent,
+            children: children_map,
+            chain: null, // Will be set later
+            map: null, // Will be set later
+            siblings: null // Same, for multi-children only
+        };
+
+        return record;
+    }
+
+    async function moveToAppropriateRecord(record, target_form, create_new) {
+        let path = computePath(record.form, target_form);
+
+        if (path != null) {
+            for (let form of path.up) {
+                record = await loadRecord(record.parent.ulid, null);
+
+                if (record.form !== form)
+                    throw new Error('Saut impossible en raison d\'un changement de schéma');
+            }
+
+            for (let i = 0; i < path.down.length; i++) {
+                let form = path.down[i];
+                let follow = !form.multi || !create_new;
+
+                if (follow && record.children[form.key] != null) {
+                    let children = record.children[form.key];
+                    let child = children[children.length - 1];
+
+                    record = await loadRecord(child.ulid);
+                    if (record.form !== form)
+                        throw new Error('Saut impossible en raison d\'un changement de schéma');
+                } else if (create_new) {
+                    // Save fake intermediate records if needed
+                    if (!record.saved) {
+                        let key = `${profile.namespaces.records}:${record.ulid}`;
+
+                        let obj = {
+                            keys: {
+                                form: `${profile.namespaces.records}/${record.form.key}`,
+                                parent: null,
+                                anchor: null,
+                                sync: null
+                            },
+                            enc: null
+                        };
+                        let entry = {
+                            ulid: record.ulid,
+                            hid: record.hid,
+                            parent: null,
+                            form: record.form.key,
+                            fragments: []
+                        };
+
+                        if (record.parent != null) {
+                            obj.keys.parent = `${profile.namespaces.records}:${record.parent.ulid}/${record.form.key}!fake`;
+                            entry.parent = {
+                                ulid: record.parent.ulid,
+                                version: record.parent.version
+                            };
+                        }
+
+                        // XXX: This could be racy, for example if a record with the same key was saved between
+                        // the filling of children_map and getting there. Rare, but we want to avoid that!
+                        obj.enc = await goupile.encryptSymmetric(entry, 'records');
+                        await db.saveWithKey('rec_records', key, obj);
+                    }
+
+                    record = createRecord(form, record);
+                } else {
+                    return null;
+                }
+            }
+
+            return record;
+        } else {
+            return null;
+        }
+    }
+
+    // Assumes from != to
+    function computePath(from, to) {
+        let prefix_len = 0;
+        while (prefix_len < from.chain.length && prefix_len < to.chain.length) {
+            let parent1 = from.chain[prefix_len];
+            let parent2 = to.chain[prefix_len];
+
+            if (parent1 !== parent2)
+                break;
+
+            prefix_len++;
+        }
+        prefix_len--;
+
+        if (from.chain[prefix_len] === to) {
+            let path = {
+                up: from.chain.slice(prefix_len, from.chain.length - 1).reverse(),
+                down: []
+            };
+            return path;
+        } else if (to.chain[prefix_len] === from) {
+            let path = {
+                up: [],
+                down: to.chain.slice(prefix_len + 1)
+            };
+            return path;
+        } else if (prefix_len >= 0) {
+            let path = {
+                up: from.chain.slice(prefix_len, from.chain.length - 1).reverse(),
+                down: to.chain.slice(prefix_len + 1)
+            };
+            return path;
+        } else {
+            return null;
+        }
+    }
+
     async function backupRecords() {
         let progress = log.progress('Archivage sécurisé des données');
 
         try {
             let entries = [];
             {
-                let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
+                let range = IDBKeyRange.bound(profile.namespaces.records + ':', profile.namespaces.records + '`', false, true);
                 let objects = await db.loadAll('rec_records', range);
 
                 for (let obj of objects) {
                     try {
-                        let entry = await goupile.decryptSymmetric(obj.enc, profile.userid);
+                        let entry = await goupile.decryptSymmetric(obj.enc, 'records');
                         entries.push(entry);
                     } catch (err) {
                         console.log(err);
@@ -2385,13 +2299,13 @@ function InstanceController() {
 
             // Upload new fragments
             {
-                let range = IDBKeyRange.only(profile.userid);
+                let range = IDBKeyRange.only(profile.namespaces.records);
                 let objects = await db.loadAll('rec_records/sync', range);
 
                 let uploads = [];
                 for (let obj of objects) {
                     try {
-                        let record = await decryptRecord(profile.userid, obj, null, true, true, true);
+                        let record = await decryptRecord(obj, null, true);
 
                         let upload = {
                             form: record.form.key,
@@ -2427,7 +2341,8 @@ function InstanceController() {
 
             // Download new fragments
             {
-                let range = IDBKeyRange.bound('shared@', 'shared`', false, true);
+                let range = IDBKeyRange.bound(profile.namespaces.records + '@',
+                                              profile.namespaces.records + '`', false, true);
                 let [, anchor] = await db.limits('rec_records/anchor', range);
 
                 if (anchor != null) {
@@ -2446,9 +2361,9 @@ function InstanceController() {
                 for (let download of downloads) {
                     let obj = {
                         keys: {
-                            form: `shared/${download.form}`,
-                            parent: (download.parent != null) ? `shared:${download.parent.ulid}/${download.form}` : null,
-                            anchor: `shared@${(download.anchor + 1).toString().padStart(16, '0')}`,
+                            form: profile.namespaces.records + `/${download.form}`,
+                            parent: (download.parent != null) ? (profile.namespaces.records + `:${download.parent.ulid}/${download.form}`) : null,
+                            anchor: profile.namespaces.records + `@${(download.anchor + 1).toString().padStart(16, '0')}`,
                             sync: null
                         },
                         enc: null
@@ -2474,12 +2389,10 @@ function InstanceController() {
                         }))
                     };
 
-                    obj.enc = await goupile.encryptSymmetric(entry, 'shared');
+                    obj.enc = await goupile.encryptSymmetric(entry, 'records');
                     await db.transaction('rw', ['rec_records'], async t => {
-                        let key = `shared:${download.ulid}`;
-                        await t.saveWithKey('rec_records', `shared:${download.ulid}`, obj);
-
-                        await t.delete('rec_records', `${profile.userid}:${download.ulid}`);
+                        let key = profile.namespaces.records + `:${download.ulid}`;
+                        await t.saveWithKey('rec_records', key, obj);
                     });
 
                     changes.add(download.ulid);

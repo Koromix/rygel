@@ -193,16 +193,12 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
             if (stamp) {
                 json.Key("authorized"); json.Bool(true);
 
-                json.Key("keys"); json.StartArray();
-                    json.StartArray();
-                        json.Int64(session->userid);
-                        json.String(session->local_key);
-                    json.EndArray();
-                    json.StartArray();
-                        json.String("shared");
-                        json.String(instance->config.shared_key);
-                    json.EndArray();
-                json.EndArray();
+                json.Key("namespaces"); json.StartObject();
+                    json.Key("records"); json.Int64(session->userid);
+                json.EndObject();
+                json.Key("keys"); json.StartObject();
+                    json.Key("records"); json.String(session->local_key);
+                json.EndObject();
 
                 json.Key("instance"); json.StartObject();
                     json.Key("title"); json.String(stamp->title);
