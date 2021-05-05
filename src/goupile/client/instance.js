@@ -889,12 +889,6 @@ function InstanceController() {
         let progress = log.progress('Suppression en cours');
 
         try {
-            let fragment = {
-                type: 'delete',
-                user: profile.username,
-                mtime: new Date
-            };
-
             // XXX: Delete children (cascade)?
             await db.transaction('rw', ['rec_records'], async t => {
                 let key = profile.namespaces.records + `:${ulid}`;
@@ -906,6 +900,11 @@ function InstanceController() {
                 let entry = await goupile.decryptSymmetric(obj.enc, 'records');
 
                 // Mark as deleted with special fragment
+                let fragment = {
+                    type: 'delete',
+                    user: profile.username,
+                    mtime: new Date
+                };
                 entry.fragments.push(fragment);
 
                 obj.keys.parent = null;
@@ -2301,41 +2300,39 @@ function InstanceController() {
                 let downloads = await net.fetchJson(url);
 
                 for (let download of downloads) {
-                    let obj = {
-                        keys: {
-                            form: profile.namespaces.records + `/${download.form}`,
-                            parent: (download.parent != null) ? (profile.namespaces.records + `:${download.parent.ulid}/${download.form}`) : null,
-                            anchor: profile.namespaces.records + `@${(download.anchor + 1).toString().padStart(16, '0')}`,
-                            sync: null
-                        },
-                        enc: null
-                    };
+                    let key = profile.namespaces.records + `:${download.ulid}`;
 
                     if (download.fragments.length && download.fragments[download.fragments.length - 1].type == 'delete') {
-                        obj.keys.form = null;
-                        obj.keys.parent = null;
+                        await db.delete('rec_records', key);
+                    } else {
+                        let obj = {
+                            keys: {
+                                form: profile.namespaces.records + `/${download.form}`,
+                                parent: (download.parent != null) ? (profile.namespaces.records + `:${download.parent.ulid}/${download.form}`) : null,
+                                anchor: profile.namespaces.records + `@${(download.anchor + 1).toString().padStart(16, '0')}`,
+                                sync: null
+                            },
+                            enc: null
+                        };
+
+                        let entry = {
+                            ulid: download.ulid,
+                            hid: download.hid,
+                            form: download.form,
+                            parent: download.parent,
+                            fragments: download.fragments.map(fragment => ({
+                                anchor: fragment.anchor,
+                                type: fragment.type,
+                                user: fragment.username,
+                                mtime: new Date(fragment.mtime),
+                                page: fragment.page,
+                                values: fragment.values
+                            }))
+                        };
+
+                        obj.enc = await goupile.encryptSymmetric(entry, 'records');
+                        await db.saveWithKey('rec_records', key, obj);
                     }
-
-                    let entry = {
-                        ulid: download.ulid,
-                        hid: download.hid,
-                        form: download.form,
-                        parent: download.parent,
-                        fragments: download.fragments.map(fragment => ({
-                            anchor: fragment.anchor,
-                            type: fragment.type,
-                            user: fragment.username,
-                            mtime: new Date(fragment.mtime),
-                            page: fragment.page,
-                            values: fragment.values
-                        }))
-                    };
-
-                    obj.enc = await goupile.encryptSymmetric(entry, 'records');
-                    await db.transaction('rw', ['rec_records'], async t => {
-                        let key = profile.namespaces.records + `:${download.ulid}`;
-                        await t.saveWithKey('rec_records', key, obj);
-                    });
 
                     changes.add(download.ulid);
                 }
