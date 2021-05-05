@@ -783,27 +783,30 @@ function InstanceController() {
 
             await db.transaction('rw', ['rec_records'], async t => {
                 do {
-                    // Can't store undefined in IndexedDB...
-                    for (let key in values) {
-                        if (values[key] === undefined)
-                            values[key] = null;
-                    }
+                    let fragment;
+                    if (values != null) {
+                        // Can't store undefined in IndexedDB...
+                        for (let key in values) {
+                            if (values[key] === undefined)
+                                values[key] = null;
+                        }
 
-                    let fragment = {
-                        type: 'save',
-                        user: profile.username,
-                        mtime: new Date,
-                        page: page_key,
-                        values: values
-                    };
+                        fragment = {
+                            type: 'save',
+                            user: profile.username,
+                            mtime: new Date,
+                            page: page_key,
+                            values: values
+                        };
+                    } else {
+                        fragment = null;
+                    }
 
                     let key = profile.namespaces.records + `:${record.ulid}`;
                     let obj = await t.load('rec_records', key);
-                    let update = (obj != null) && (obj.keys.parent == null ||
-                                                   !obj.keys.parent.endsWith('!fake'));
 
                     let entry;
-                    if (update) {
+                    if (obj != null) {
                         entry = await goupile.decryptSymmetric(obj.enc, 'records');
                         if (record.hid != null)
                             entry.hid = record.hid;
@@ -841,13 +844,11 @@ function InstanceController() {
 
                     if (record.version !== entry.fragments.length)
                         throw new Error('Cannot overwrite old record fragment');
-                    entry.fragments.push(fragment);
+                    if (fragment != null)
+                        entry.fragments.push(fragment);
 
                     obj.enc = await goupile.encryptSymmetric(entry, 'records');
                     await t.saveWithKey('rec_records', key, obj);
-
-                    if (entry.parent != null)
-                        await unfakeParents(t, entry.parent.ulid);
 
                     do {
                         page_key = record.form.key;
@@ -855,7 +856,7 @@ function InstanceController() {
                         if (record == null)
                             break;
                         values = form_values[record.form.key];
-                    } while (values == null);
+                    } while (record.saved && values == null);
                 } while (record != null);
             });
 
@@ -881,27 +882,6 @@ function InstanceController() {
         } catch (err) {
             progress.close();
             throw err;
-        }
-    }
-
-    // Call in save transaction!
-    async function unfakeParents(t, ulid) {
-        for (;;) {
-            let key = profile.namespaces.records + `:${ulid}`;
-            let obj = await t.load('rec_records', key);
-
-            if (obj == null) // Fake parents can only be in user namespace
-                break;
-            if (obj.keys.parent == null || !obj.keys.parent.endsWith('!fake'))
-                break;
-
-            obj.keys.parent = obj.keys.parent.substr(0, obj.keys.parent.length - 5);
-            obj.keys.sync = profile.namespaces.records;
-
-            await t.saveWithKey('rec_records', key, obj);
-
-            ulid = obj.keys.parent.substring(obj.keys.parent.indexOf(':') + 1,
-                                             obj.keys.parent.indexOf('/'));
         }
     }
 
@@ -1660,7 +1640,9 @@ function InstanceController() {
 
                 let record = new_record;
                 while (record.parent != null) {
-                    let parent_record = await loadRecord(record.parent.ulid);
+                    let parent_record = record.parent;
+                    if (parent_record.values == null)
+                        parent_record = await loadRecord(record.parent.ulid);
 
                     parent_record.chain = chain;
                     parent_record.map = map;
@@ -1998,11 +1980,7 @@ function InstanceController() {
             if (parent_record == null)
                 throw new Error('Impossible de créer cet enregistrement sans parent');
 
-            record.parent = {
-                form: parent_record.form.key,
-                ulid: parent_record.ulid,
-                version: parent_record.version
-            };
+            record.parent = parent_record;
         }
 
         return record;
@@ -2065,13 +2043,9 @@ function InstanceController() {
             let child = {
                 form: key.index.substr(key.index.indexOf('/') + 1),
                 ulid: key.primary.substr(key.primary.indexOf(':') + 1),
-                fake: key.index.endsWith('!fake'),
                 ctime: null
             };
-
             child.ctime = new Date(util.decodeULIDTime(child.ulid));
-            if (child.fake)
-                child.form = child.form.substr(0, child.form.length - 5);
 
             children.push(child);
         }
@@ -2123,8 +2097,7 @@ function InstanceController() {
                 }
 
                 array.push(child);
-                if (!child.fake)
-                    status.add(child.form);
+                status.add(child.form);
             }
         }
 
@@ -2155,7 +2128,11 @@ function InstanceController() {
 
         if (path != null) {
             for (let form of path.up) {
-                record = await loadRecord(record.parent.ulid, null);
+                if (record.parent.values != null) {
+                    record = record.parent;
+                } else {
+                    record = await loadRecord(record.parent.ulid, null);
+                }
 
                 if (record.form !== form)
                     throw new Error('Saut impossible en raison d\'un changement de schéma');
@@ -2173,41 +2150,6 @@ function InstanceController() {
                     if (record.form !== form)
                         throw new Error('Saut impossible en raison d\'un changement de schéma');
                 } else if (create_new) {
-                    // Save fake intermediate records if needed
-                    if (!record.saved) {
-                        let key = `${profile.namespaces.records}:${record.ulid}`;
-
-                        let obj = {
-                            keys: {
-                                form: `${profile.namespaces.records}/${record.form.key}`,
-                                parent: null,
-                                anchor: null,
-                                sync: null
-                            },
-                            enc: null
-                        };
-                        let entry = {
-                            ulid: record.ulid,
-                            hid: record.hid,
-                            parent: null,
-                            form: record.form.key,
-                            fragments: []
-                        };
-
-                        if (record.parent != null) {
-                            obj.keys.parent = `${profile.namespaces.records}:${record.parent.ulid}/${record.form.key}!fake`;
-                            entry.parent = {
-                                ulid: record.parent.ulid,
-                                version: record.parent.version
-                            };
-                        }
-
-                        // XXX: This could be racy, for example if a record with the same key was saved between
-                        // the filling of children_map and getting there. Rare, but we want to avoid that!
-                        obj.enc = await goupile.encryptSymmetric(entry, 'records');
-                        await db.saveWithKey('rec_records', key, obj);
-                    }
-
                     record = createRecord(form, record);
                 } else {
                     return null;
