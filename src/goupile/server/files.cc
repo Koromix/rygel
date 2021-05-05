@@ -324,23 +324,21 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
 void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-
-    const char *url = request.url + instance->key.len + 1;
-    const char *client_sha256 = request.GetQueryValue("sha256");
-
-    const InstanceToken *token = session->GetToken(instance);
-    if (!token || !token->HasPermission(UserPermission::AdminPublish)) {
+    if (!session->HasPermission(instance, UserPermission::AdminPublish)) {
         LogError("User is not allowed to deploy changes");
         io->AttachError(403);
         return;
     }
+
+    const char *url = request.url + instance->key.len + 1;
+
     if (!StartsWith(url, "/files/")) {
         LogError("Cannot write to file outside '/files/'");
         io->AttachError(403);
@@ -353,6 +351,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
     }
 
     const char *filename = url + 7;
+    const char *client_sha256 = request.GetQueryValue("sha256");
 
     io->RunAsync([=]() {
         // Create temporary file
@@ -486,23 +485,21 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
 void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-
-    const char *url = request.url + instance->key.len + 1;
-    const char *client_sha256 = request.GetQueryValue("sha256");
-
-    const InstanceToken *token = session->GetToken(instance);
-    if (!token || !token->HasPermission(UserPermission::AdminPublish)) {
+    if (!session->HasPermission(instance, UserPermission::AdminPublish)) {
         LogError("User is not allowed to deploy changes");
         io->AttachError(403);
         return;
     }
+
+    const char *url = request.url + instance->key.len + 1;
+
     if (!StartsWith(url, "/files/")) {
         LogError("Cannot delete files outside '/files/'");
         io->AttachError(403);
@@ -510,6 +507,7 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
     }
 
     const char *filename = url + 7;
+    const char *client_sha256 = request.GetQueryValue("sha256");
 
     instance->db.Transaction([&]() {
         if (client_sha256) {

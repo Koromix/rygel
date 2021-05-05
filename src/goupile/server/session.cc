@@ -35,28 +35,46 @@ struct BanInfo {
     RG_HASHTABLE_HANDLER(BanInfo, userid);
 };
 
-static http_SessionManager<Session> sessions;
+static http_SessionManager<SessionInfo> sessions;
 
 static std::shared_mutex bans_mutex;
 static BucketArray<BanInfo> bans;
 static HashTable<int64_t, BanInfo *> bans_map;
 
-const InstanceToken *Session::GetToken(const InstanceHolder *instance) const
+bool SessionInfo::IsAdmin() const
+{
+    if (confirm[0])
+        return false;
+    if (!admin_until || admin_until <= GetMonotonicTime())
+        return false;
+
+    return true;
+}
+
+bool SessionInfo::HasPermission(const InstanceHolder *instance, UserPermission perm) const
+{
+    const SessionStamp *stamp = GetStamp(instance);
+    return stamp && stamp->HasPermission(perm);
+}
+
+const SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
 {
     if (confirm[0])
         return nullptr;
 
-    if (instance) {
-        InstanceToken *token;
-        {
-            std::shared_lock<std::shared_mutex> lock_shr(tokens_lock);
-            token = tokens_map.Find(instance->unique);
-        }
+    SessionStamp *stamp = nullptr;
 
-        if (!token) {
-            std::lock_guard<std::shared_mutex> lock_excl(tokens_lock);
+    // Fast path
+    {
+        std::shared_lock<std::shared_mutex> lock_shr(stamps_mutex);
+        stamp = stamps_map.Find(instance->unique);
+    }
 
-            // Actually get the token we want
+    if (!stamp) {
+        std::lock_guard<std::shared_mutex> lock_excl(stamps_mutex);
+        stamp = stamps_map.Find(instance->unique);
+
+        if (!stamp) {
             do {
                 sq_Statement stmt;
                 if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
@@ -86,19 +104,19 @@ const InstanceToken *Session::GetToken(const InstanceHolder *instance) const
                     }
                 }
 
-                token = tokens_map.SetDefault(instance->unique);
-                token->permissions = permissions;
-                token->title = DuplicateString(instance->title, &tokens_alloc).ptr;
-                token->url = Fmt(&tokens_alloc, "/%1/", instance->key).ptr;
+                stamp = stamps_map.SetDefault(instance->unique);
+                stamp->permissions = permissions;
+                stamp->title = DuplicateString(instance->title, &stamps_alloc).ptr;
+                stamp->url = Fmt(&stamps_alloc, "/%1/", instance->key).ptr;
             } while (false);
 
             // Redirect user to appropiate slave instance
             if (instance->slaves.len) {
-                if (token) {
-                    token->permissions &= UserPermissionMasterMask;
+                if (stamp) {
+                    stamp->permissions &= UserPermissionMasterMask;
                 } else {
-                    token = tokens_map.SetDefault(instance->unique);
-                    token->permissions = 0;
+                    stamp = stamps_map.SetDefault(instance->unique);
+                    stamp->permissions = 0;
                 }
 
                 do {
@@ -120,42 +138,40 @@ const InstanceToken *Session::GetToken(const InstanceHolder *instance) const
                         break;
                     RG_DEFER { redirect->Unref(); };
 
-                    token->title = DuplicateString(redirect->title, &tokens_alloc).ptr;
-                    token->url = Fmt(&tokens_alloc, "/%1/", redirect->key).ptr;
+                    stamp->title = DuplicateString(redirect->title, &stamps_alloc).ptr;
+                    stamp->url = Fmt(&stamps_alloc, "/%1/", redirect->key).ptr;
                 } while (false);
             }
 
             // User is not assigned to this project, cache this information
-            if (!token) {
-                token = tokens_map.SetDefault(instance->unique);
-                token->permissions = 0;
+            if (!stamp) {
+                stamp = stamps_map.SetDefault(instance->unique);
+                stamp->permissions = 0;
             }
         }
-
-        return token->title ? token : nullptr;
-    } else {
-        return nullptr;
     }
+
+    return stamp->title ? stamp : nullptr;
 }
 
-void Session::InvalidateTokens()
+void SessionInfo::InvalidateStamps()
 {
-    std::lock_guard<std::shared_mutex> lock_excl(tokens_lock);
+    std::lock_guard<std::shared_mutex> lock_excl(stamps_mutex);
 
-    tokens_map.Clear();
-    tokens_alloc.ReleaseAll();
+    stamps_map.Clear();
+    stamps_alloc.ReleaseAll();
 }
 
-void InvalidateUserTokens(int64_t userid)
+void InvalidateUserStamps(int64_t userid)
 {
-    sessions.ApplyAll([&](Session *session) {
+    sessions.ApplyAll([&](SessionInfo *session) {
         if (session->userid == userid) {
-            session->InvalidateTokens();
+            session->InvalidateStamps();
         }
     });
 }
 
-static void WriteProfileJson(const Session *session, const InstanceHolder *instance,
+static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *instance,
                              const http_RequestInfo &request, http_IO *io)
 {
     http_JsonPageBuilder json;
@@ -170,11 +186,11 @@ static void WriteProfileJson(const Session *session, const InstanceHolder *insta
 
         if (session->confirm[0]) {
             json.Key("authorized"); json.Bool(false);
-            json.Key("confirm"); json.String("sms");
+            json.Key("confirm"); json.String("SMS");
         } else if (instance) {
-            const InstanceToken *token = session->GetToken(instance);
+            const SessionStamp *stamp = session->GetStamp(instance);
 
-            if (token) {
+            if (stamp) {
                 json.Key("authorized"); json.Bool(true);
 
                 json.Key("keys"); json.StartArray();
@@ -189,14 +205,14 @@ static void WriteProfileJson(const Session *session, const InstanceHolder *insta
                 json.EndArray();
 
                 json.Key("instance"); json.StartObject();
-                    json.Key("title"); json.String(token->title);
-                    json.Key("url"); json.String(token->url);
+                    json.Key("title"); json.String(stamp->title);
+                    json.Key("url"); json.String(stamp->url);
                 json.EndObject();
 
                 json.Key("permissions"); json.StartObject();
                 for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
                     Span<const char> key = ConvertToJsonName(UserPermissionNames[i], buf);
-                    json.Key(key.ptr, (size_t)key.len); json.Bool(token->permissions & (1 << i));
+                    json.Key(key.ptr, (size_t)key.len); json.Bool(stamp->permissions & (1 << i));
                 }
                 json.EndObject();
             } else {
@@ -211,20 +227,20 @@ static void WriteProfileJson(const Session *session, const InstanceHolder *insta
     json.Finish();
 }
 
-static RetainPtr<Session> CreateUserSession(int64_t userid, const char *username, const char *local_key)
+static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *username, const char *local_key)
 {
     Size username_len = strlen(username);
-    Size len = RG_SIZE(Session) + username_len + 1;
-    Session *session = (Session *)Allocator::Allocate(nullptr, len, (int)Allocator::Flag::Zero);
+    Size len = RG_SIZE(SessionInfo) + username_len + 1;
+    SessionInfo *session = (SessionInfo *)Allocator::Allocate(nullptr, len, (int)Allocator::Flag::Zero);
 
-    new (session) Session;
-    RetainPtr<Session> ptr(session, [](Session *session) {
-        session->~Session();
+    new (session) SessionInfo;
+    RetainPtr<SessionInfo> ptr(session, [](SessionInfo *session) {
+        session->~SessionInfo();
         Allocator::Release(nullptr, session, -1);
     });
 
     session->userid = userid;
-    session->username = (char *)session + RG_SIZE(Session);
+    session->username = (char *)session + RG_SIZE(SessionInfo);
     CopyString(username, MakeSpan((char *)session->username, username_len + 1));
     if (!CopyString(local_key, session->local_key)) {
         // Should never happen, but let's be careful
@@ -235,9 +251,9 @@ static RetainPtr<Session> CreateUserSession(int64_t userid, const char *username
     return ptr;
 }
 
-RetainPtr<const Session> GetCheckedSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<Session> session = sessions.Find(request, io);
+    RetainPtr<SessionInfo> session = sessions.Find(request, io);
 
     if (!session && instance) {
         int64_t auto_userid = instance->master->config.auto_userid;
@@ -247,21 +263,21 @@ RetainPtr<const Session> GetCheckedSession(InstanceHolder *instance, const http_
                 instance->auto_session = [&]() {
                     sq_Statement stmt;
                     if (!gp_domain.db.Prepare("SELECT userid, username, local_key FROM dom_users WHERE userid = ?1", &stmt))
-                        return RetainPtr<Session>(nullptr);
+                        return RetainPtr<SessionInfo>(nullptr);
                     sqlite3_bind_int64(stmt, 1, auto_userid);
 
                     if (!stmt.Next()) {
                         if (stmt.IsValid()) {
                             LogError("Automatic user ID %1 does not exist", auto_userid);
                         }
-                        return RetainPtr<Session>(nullptr);
+                        return RetainPtr<SessionInfo>(nullptr);
                     }
 
                     int64_t userid = sqlite3_column_int64(stmt, 0);
                     const char *username = (const char *)sqlite3_column_text(stmt, 1);
                     const char *local_key = (const char *)sqlite3_column_text(stmt, 2);
 
-                    RetainPtr<Session> session = CreateUserSession(userid, username, local_key);
+                    RetainPtr<SessionInfo> session = CreateUserSession(userid, username, local_key);
                     return session;
                 }();
                 instance->auto_init = true;
@@ -391,7 +407,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                                       time, request.client_addr, "login", username))
                     return;
 
-                RetainPtr<Session> session = CreateUserSession(userid, username, local_key);
+                RetainPtr<SessionInfo> session = CreateUserSession(userid, username, local_key);
 
                 if (RG_LIKELY(session)) {
                     // This is not a mistake; we don't want to lock people out of accounts for
@@ -569,7 +585,7 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
             sodium_bin2base64(local_key, RG_SIZE(local_key), sha256, RG_SIZE(sha256), sodium_base64_VARIANT_ORIGINAL);
         }
 
-        RetainPtr<Session> session = CreateUserSession(userid, username, local_key);
+        RetainPtr<SessionInfo> session = CreateUserSession(userid, username, local_key);
 
         if (RG_LIKELY(session)) {
             RegisterBanEvent(session->userid);
@@ -589,7 +605,7 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
 
 void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<Session> session = sessions.Find(request, io);
+    RetainPtr<SessionInfo> session = sessions.Find(request, io);
 
     if (!session || !session->confirm[0]) {
         LogError("There is nothing to confirm");
@@ -644,7 +660,7 @@ void HandleSessionLogout(const http_RequestInfo &request, http_IO *io)
 
 void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
     WriteProfileJson(session.GetRaw(), instance, request, io);
 }
 

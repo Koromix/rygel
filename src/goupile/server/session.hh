@@ -43,7 +43,7 @@ static const char *const UserPermissionNames[] = {
 static const uint32_t UserPermissionMasterMask = 0b00001111u;
 static const uint32_t UserPermissionSlaveMask =  0b11110000u;
 
-struct InstanceToken {
+struct SessionStamp {
     uint32_t permissions;
     const char *title;
     const char *url;
@@ -51,10 +51,10 @@ struct InstanceToken {
     bool HasPermission(UserPermission perm) const { return permissions & (int)perm; };
 };
 
-class Session: public RetainObject {
-    mutable std::shared_mutex tokens_lock;
-    mutable HashMap<int64_t, InstanceToken> tokens_map;
-    mutable BlockAllocator tokens_alloc;
+class SessionInfo: public RetainObject {
+    mutable std::shared_mutex stamps_mutex;
+    mutable HashMap<int64_t, SessionStamp> stamps_map;
+    mutable BlockAllocator stamps_alloc;
 
 public:
     int64_t userid;
@@ -64,15 +64,16 @@ public:
 
     char confirm[9];
 
-    bool IsAdmin() const { return !confirm[0] && admin_until && admin_until > GetMonotonicTime(); }
-    const InstanceToken *GetToken(const InstanceHolder *instance) const;
+    bool IsAdmin() const;
+    bool HasPermission(const InstanceHolder *instance, UserPermission perm) const;
 
-    void InvalidateTokens();
+    const SessionStamp *GetStamp(const InstanceHolder *instance) const;
+    void InvalidateStamps();
 };
 
-void InvalidateUserTokens(int64_t userid);
+void InvalidateUserStamps(int64_t userid);
 
-RetainPtr<const Session> GetCheckedSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void PruneSessions();
 
 void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);

@@ -71,22 +71,21 @@ static void ExportRecord(sq_Statement *stmt, json_Writer *json)
 
 void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(instance, request, io);
+    if (instance->config.sync_mode == SyncMode::Offline) {
+        LogError("Records API is disabled in Offline mode");
+        io->AttachError(403);
+        return;
+    }
+
+    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-
-    const InstanceToken *token = session->GetToken(instance);
-    if (!token || !token->HasPermission(UserPermission::DataLoad)) {
+    if (!session->HasPermission(instance, UserPermission::DataLoad)) {
         LogError("User is not allowed to load data");
-        io->AttachError(403);
-        return;
-    }
-    if (instance->config.sync_mode == SyncMode::Offline) {
-        LogError("Records API is disabled in Offline mode");
         io->AttachError(403);
         return;
     }
@@ -173,23 +172,21 @@ struct SaveRecord {
 
 void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    RetainPtr<const Session> session = GetCheckedSession(instance, request, io);
+    if (instance->config.sync_mode == SyncMode::Offline) {
+        LogError("Records API is disabled in Offline mode");
+        io->AttachError(403);
+        return;
+    }
+
+    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-
-    // XXX: Check new/edit permissions correctly
-    const InstanceToken *token = session->GetToken(instance);
-    if (!token || !token->HasPermission(UserPermission::DataSave)) {
+    if (!session->HasPermission(instance, UserPermission::DataSave)) {
         LogError("User is not allowed to save data");
-        io->AttachError(403);
-        return;
-    }
-    if (instance->config.sync_mode == SyncMode::Offline) {
-        LogError("Records API is disabled in Offline mode");
         io->AttachError(403);
         return;
     }

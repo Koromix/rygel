@@ -65,7 +65,7 @@ public:
 
     // Lazily initialized
     bool auto_init = false;
-    RetainPtr<Session> auto_session;
+    RetainPtr<SessionInfo> auto_session;
 
     BlockAllocator str_alloc;
 
