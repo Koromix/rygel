@@ -180,6 +180,7 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
                         if (session->GetStamp(slave)) {
                             json.StartObject();
                             json.Key("title"); json.String(slave->title);
+                            json.Key("name"); json.String(slave->config.name);
                             json.Key("url"); json.String(Fmt(buf, "/%1/", slave->key).ptr);
                             json.EndObject();
                         }

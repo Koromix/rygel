@@ -421,7 +421,7 @@ function AdminController() {
             d.action('Créer', {disabled: !d.isValid()}, async () => {
                 let query = new URLSearchParams;
                 query.set('key', key.value);
-                query.set('title', name.value);
+                query.set('name', name.value);
                 query.set('demo', 0 + demo.value);
 
                 let response = await net.fetch('/admin/api/instances/create', {
@@ -452,7 +452,7 @@ function AdminController() {
             d.tabs('actions', () => {
                 d.tab('Modifier', () => {
                     if (instance.master == null) {
-                        let title = d.text('*title', 'Nom', {value: instance.config.title});
+                        let name = d.text('*name', 'Nom', {value: instance.config.name});
 
                         let use_offline = d.boolean('*use_offline', 'Utilisation hors-ligne', {value: instance.config.use_offline});
                         let sync_mode = d.enum('*sync_mode', 'Mode de synchronisation', [
@@ -482,7 +482,7 @@ function AdminController() {
                         d.action('Configurer', {disabled: !d.isValid()}, async () => {
                             let query = new URLSearchParams();
                             query.set('key', instance.key);
-                            query.set('title', title.value);
+                            query.set('name', name.value);
                             query.set('use_offline', use_offline.value);
                             query.set('sync_mode', sync_mode.value);
                             if (sync_mode.value === 'offline')
@@ -507,12 +507,12 @@ function AdminController() {
                             }
                         });
                     } else {
-                        let title = d.text('*title', 'Nom', {value: instance.config.title});
+                        let name = d.text('*name', 'Nom', {value: instance.config.name});
 
                         d.action('Configurer', {disabled: !d.isValid()}, async () => {
                             let query = new URLSearchParams();
                             query.set('key', instance.key);
-                            query.set('title', title.value);
+                            query.set('name', name.value);
 
                             let response = await net.fetch('/admin/api/instances/configure', {
                                 method: 'POST',
@@ -575,7 +575,7 @@ function AdminController() {
 
                 let query = new URLSearchParams;
                 query.set('key', full_key);
-                query.set('title', name.value);
+                query.set('name', name.value);
 
                 let response = await net.fetch('/admin/api/instances/create', {
                     method: 'POST',

@@ -200,7 +200,7 @@ static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
 }
 
 static bool CreateInstance(DomainHolder *domain, const char *instance_key,
-                           const char *title, int64_t default_userid, bool demo, int *out_error)
+                           const char *name, int64_t default_userid, bool demo, int *out_error)
 {
     BlockAllocator temp_alloc;
 
@@ -259,7 +259,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
         const char *sql = "UPDATE fs_settings SET value = ?2 WHERE key = ?1";
         bool success = true;
 
-        success &= db.Run(sql, "Title", title);
+        success &= db.Run(sql, "Name", name);
 
         if (!success)
             return false;
@@ -818,7 +818,7 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
 
         // Read POST values
         const char *instance_key;
-        const char *title;
+        const char *name;
         bool demo;
         {
             bool valid = true;
@@ -831,9 +831,9 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
                 valid = false;
             }
 
-            title = values.FindValue("title", instance_key);
-            if (title && !title[0]) {
-                LogError("Application title cannot be empty");
+            name = values.FindValue("name", instance_key);
+            if (name && !name[0]) {
+                LogError("Application name cannot be empty");
                 valid = false;
             }
 
@@ -855,7 +855,7 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
                 return false;
 
             int error;
-            if (!CreateInstance(&gp_domain, instance_key, title, session->userid, demo, &error)) {
+            if (!CreateInstance(&gp_domain, instance_key, name, session->userid, demo, &error)) {
                 io->AttachError(error);
                 return false;
             }
@@ -1265,8 +1265,8 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
             bool valid = true;
             char buf[128];
 
-            if (const char *str = values.FindValue("title", nullptr); str) {
-                config.title = str;
+            if (const char *str = values.FindValue("name", nullptr); str) {
+                config.name = str;
 
                 if (!str[0]) {
                     LogError("Application name cannot be empty");
@@ -1323,7 +1323,7 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
             const char *sql = "UPDATE fs_settings SET value = ?2 WHERE key = ?1";
             bool success = true;
 
-            success &= instance->db.Run(sql, "Title", config.title);
+            success &= instance->db.Run(sql, "Name", config.name);
             if (instance->master == instance) {
                 success &= instance->db.Run(sql, "UseOffline", 0 + config.use_offline);
                 success &= instance->db.Run(sql, "SyncMode", SyncModeNames[(int)config.sync_mode]);
@@ -1393,7 +1393,7 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
             json.Key("slaves"); json.Int64(instance->slaves.len);
         }
         json.Key("config"); json.StartObject();
-            json.Key("title"); json.String(instance->config.title);
+            json.Key("name"); json.String(instance->config.name);
             json.Key("use_offline"); json.Bool(instance->config.use_offline);
             {
                 Span<const char> str = ConvertToJsonName(SyncModeNames[(int)instance->config.sync_mode], buf);

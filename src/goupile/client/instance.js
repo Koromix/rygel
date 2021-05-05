@@ -169,7 +169,7 @@ function InstanceController() {
                         <div>
                             ${profile.instances.map(instance =>
                                 html`<button class=${instance.url === ENV.urls.instance ? 'active' : ''}
-                                             @click=${e => self.go(e, instance.url)}>${instance.title}</button>`)}
+                                             @click=${e => self.go(e, instance.url)}>${instance.name}</button>`)}
                         </div>
                     </div>
                 ` : ''}

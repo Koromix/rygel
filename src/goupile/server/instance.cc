@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 34;
+const int InstanceVersion = 35;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, const char *filename)
 {
@@ -70,9 +70,9 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
             const char *value = (const char *)sqlite3_column_text(stmt, 1);
 
             if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
-                if (TestStr(key, "Title")) {
+                if (TestStr(key, "Name")) {
                     if (master == this) {
-                        config.title = DuplicateString(value, &str_alloc).ptr;
+                        config.name = DuplicateString(value, &str_alloc).ptr;
                     }
                 } else if (TestStr(key, "UseOffline")) {
                     valid &= ParseBool(value, &config.use_offline);
@@ -126,25 +126,25 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
             const char *value = (const char *)sqlite3_column_text(stmt, 1);
 
             if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
-                if (TestStr(key, "Title")) {
-                    config.title = DuplicateString(value, &str_alloc).ptr;
+                if (TestStr(key, "Name")) {
+                    config.name = DuplicateString(value, &str_alloc).ptr;
                 }
             }
         }
         if (!stmt.IsValid() || !valid)
             return false;
 
-        title = Fmt(&str_alloc, "%1 (%2)", master->title, config.title).ptr;
+        title = Fmt(&str_alloc, "%1 (%2)", master->title, config.name).ptr;
     } else {
-        title = config.title;
+        title = config.name;
     }
 
     // Check configuration
     {
         bool valid = true;
 
-        if (!config.title) {
-            LogError("Missing instance title");
+        if (!config.name) {
+            LogError("Missing instance name");
             valid = false;
         }
         if (config.max_file_size <= 0) {
@@ -537,7 +537,7 @@ bool MigrateInstance(sq_Database *db)
                     decltype(InstanceHolder::config) fake2;
 
                     const char *sql = "INSERT INTO fs_settings (key, value) VALUES (?, ?)";
-                    success &= db->Run(sql, "Application.Name", fake2.title);
+                    success &= db->Run(sql, "Application.Name", fake2.name);
                     success &= db->Run(sql, "Application.ClientKey", nullptr);
                     success &= db->Run(sql, "Application.UseOffline", 0 + fake2.use_offline);
                     success &= db->Run(sql, "Application.MaxFileSize", fake2.max_file_size);
@@ -1097,9 +1097,17 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 34: {
+                bool success = db->RunMany(R"(
+                    UPDATE fs_settings SET key = 'Name' WHERE key = 'Title';
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 34);
+            RG_STATIC_ASSERT(InstanceVersion == 35);
         }
 
         int64_t time = GetUnixTime();

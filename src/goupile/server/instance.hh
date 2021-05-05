@@ -51,7 +51,7 @@ public:
     HeapArray<InstanceHolder *> slaves;
 
     struct {
-        const char *title = nullptr;
+        const char *name = nullptr;
         bool use_offline = false;
         SyncMode sync_mode = SyncMode::Online;
         int max_file_size = (int)Megabytes(16);

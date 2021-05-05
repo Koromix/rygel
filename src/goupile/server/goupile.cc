@@ -350,6 +350,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                             for (const InstanceHolder *slave: master->slaves) {
                                 json.StartObject();
                                 json.Key("title"); json.String(slave->title);
+                                json.Key("name"); json.String(slave->config.name);
                                 json.Key("url"); json.String(Fmt(buf, "/%1/", slave->key).ptr);
                                 json.EndObject();
                             }
