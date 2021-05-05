@@ -21,9 +21,9 @@ namespace RG {
 class InstanceHolder;
 
 enum class UserPermission {
-    AdminDevelop = 1 << 0,
+    AdminCode = 1 << 0,
     AdminPublish = 1 << 1,
-    AdminConfigure = 1 << 2,
+    AdminConfig = 1 << 2,
     AdminAssign = 1 << 3,
     DataLoad = 1 << 4,
     DataSave = 1 << 5,
@@ -31,9 +31,9 @@ enum class UserPermission {
     DataBatch = 1 << 7
 };
 static const char *const UserPermissionNames[] = {
-    "AdminDevelop",
+    "AdminCode",
     "AdminPublish",
-    "AdminConfigure",
+    "AdminConfig",
     "AdminAssign",
     "DataLoad",
     "DataSave",

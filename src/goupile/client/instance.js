@@ -173,7 +173,7 @@ function InstanceController() {
                         </div>
                     </div>
                 ` : ''}
-                ${goupile.hasPermission('admin_develop') ? html`
+                ${goupile.hasPermission('admin_code') ? html`
                     <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
                             style="background-position-y: calc(-230px + 1.2em);"
                             @click=${ui.wrapAction(e => togglePanel(e, 'editor'))}>Code</button>
