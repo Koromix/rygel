@@ -463,15 +463,11 @@ function AdminController() {
 
                         let backup_key = (sync_mode.value == 'offline') ?
                                          d.text('backup_key', 'Clé d\'archivage', {value: instance.config.backup_key}) : {};
-                        if (backup_key.value != null) {
-                            try {
-                                let key = base64ToBytes(backup_key.value);
-                                if (key.length !== 32)
-                                    throw new Error('Key length must be 32 bytes');
-                            } catch (err) {
-                                backup_key.error('Clé non valide');
-                            }
-                        }
+                        if (backup_key.value != null && !checkCryptoKey(backup_key.value))
+                            backup_key.error('Format de clé non valide');
+                        let shared_key = d.text('shared_key', 'Clé locale partagée', {value: instance.config.shared_key});
+                        if (shared_key.value != null && !checkCryptoKey(shared_key.value))
+                            shared_key.error('Format de clé non valide');
 
                         let auto_userid = d.enumDrop('auto_userid', 'Session automatique',
                                                      users.map(user => [user.userid, user.username]), {
@@ -487,6 +483,7 @@ function AdminController() {
                             query.set('sync_mode', sync_mode.value);
                             if (sync_mode.value === 'offline')
                                 query.set('backup_key', backup_key.value || '');
+                            query.set('shared_key', shared_key.value || '');
                             query.set('auto_userid', auto_userid.value || '');
 
                             let response = await net.fetch('/admin/api/instances/configure', {
@@ -562,6 +559,15 @@ function AdminController() {
                 });
             });
         });
+    }
+
+    function checkCryptoKey(str) {
+        try {
+            let key = base64ToBytes(str);
+            return key.length === 32;
+        } catch (err) {
+            return false;
+        }
     }
 
     function runSplitInstanceDialog(e, master) {

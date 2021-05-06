@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 35;
+const int InstanceVersion = 36;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, const char *filename)
 {
@@ -149,10 +149,6 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
         }
         if (config.max_file_size <= 0) {
             LogError("Maximum file size must be >= 0");
-            valid = false;
-        }
-        if (!config.shared_key) {
-            LogError("Missing SharedKey setting");
             valid = false;
         }
         if (config.backup_key && config.sync_mode != SyncMode::Offline) {
@@ -1105,9 +1101,17 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 35: {
+                bool success = db->RunMany(R"(
+                    UPDATE fs_settings SET value = NULL WHERE key = 'SharedKey';
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 35);
+            RG_STATIC_ASSERT(InstanceVersion == 36);
         }
 
         int64_t time = GetUnixTime();

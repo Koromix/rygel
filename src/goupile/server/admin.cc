@@ -1290,6 +1290,9 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
             config.backup_key = values.FindValue("backup_key", config.backup_key);
             if (config.backup_key && !config.backup_key[0])
                 config.backup_key = nullptr;
+            config.shared_key = values.FindValue("shared_key", config.shared_key);
+            if (config.shared_key && !config.shared_key[0])
+                config.shared_key = nullptr;
 
             if (const char *str = values.FindValue("auto_userid", nullptr); str) {
                 if (str[0]) {
@@ -1328,8 +1331,9 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
                 success &= instance->db.Run(sql, "UseOffline", 0 + config.use_offline);
                 success &= instance->db.Run(sql, "SyncMode", SyncModeNames[(int)config.sync_mode]);
                 success &= instance->db.Run(sql, "BackupKey", config.backup_key);
+                success &= instance->db.Run(sql, "SharedKey", config.shared_key);
+                success &= instance->db.Run(sql, "AutoUserID", config.auto_userid ? sq_Binding(config.auto_userid) : sq_Binding());
             }
-            success &= instance->db.Run(sql, "AutoUserID", config.auto_userid ? sq_Binding(config.auto_userid) : sq_Binding());
             if (!success)
                 return false;
 
@@ -1401,6 +1405,9 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
             }
             if (instance->config.backup_key) {
                 json.Key("backup_key"); json.String(instance->config.backup_key);
+            }
+            if (instance->config.shared_key) {
+                json.Key("shared_key"); json.String(instance->config.shared_key);
             }
             if (instance->config.auto_userid > 0) {
                 json.Key("auto_userid"); json.Int64(instance->config.auto_userid);
