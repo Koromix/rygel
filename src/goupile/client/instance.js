@@ -2127,11 +2127,9 @@ function InstanceController() {
 
         if (path != null) {
             for (let form of path.up) {
-                if (record.parent.values != null) {
-                    record = record.parent;
-                } else {
-                    record = await loadRecord(record.parent.ulid, null);
-                }
+                record = record.parent;
+                if (record.values == null)
+                    record = await loadRecord(record.ulid, null);
 
                 if (record.form !== form)
                     throw new Error('Saut impossible en raison d\'un changement de schéma');
