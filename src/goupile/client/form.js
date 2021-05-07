@@ -140,6 +140,10 @@ function FormBuilder(state, model, readonly = false) {
 
     let restart = false;
 
+    this.widgets = model.widgets;
+    this.widgets0 = model.widgets0;
+    this.variables = model.variables;
+
     this.hasChanged = function() { return state.hasChanged(); };
     this.isValid = function() { return model.isValid(); };
     this.hasErrors = function() { return model.hasErrors(); };
