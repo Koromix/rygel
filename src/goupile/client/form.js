@@ -1673,9 +1673,8 @@ instead of:
 
     function readValue(key, options, func) {
         let ptr = walkPath(state.values, key.path);
-        let use_default = !ptr.hasOwnProperty(key.name) || state.follow_default.has(key.toString());
 
-        if (use_default) {
+        if (!ptr.hasOwnProperty(key.name)) {
             let value = normalizeValue(func, options.value);
             let cache = state.obj_caches.get(ptr);
 
@@ -1684,6 +1683,15 @@ instead of:
             ptr[key.name] = value;
 
             state.follow_default.add(key.toString());
+
+            return value;
+        } else if (options.value != null && state.follow_default.has(key.toString())) {
+            let value = normalizeValue(func, options.value);
+            let cache = state.obj_caches.get(ptr);
+
+            if (cache != null)
+                cache[key.name] = value;
+            ptr[key.name] = value;
 
             return value;
         } else {
