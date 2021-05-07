@@ -251,7 +251,7 @@ function FormBuilder(state, model, readonly = false) {
     };
 
     function handleTextInput(e, key) {
-        if (!isModifiable(key))
+        if (!isModifiable(variables_map[key]))
             return;
 
         updateValue(key, e.target.value || undefined);
@@ -341,7 +341,7 @@ function FormBuilder(state, model, readonly = false) {
     };
 
     function handleNumberChange(e, key) {
-        if (!isModifiable(key))
+        if (!isModifiable(variables_map[key]))
             return;
 
         // Hack to accept incomplete values, mainly in the case of a '-' being typed first,
@@ -474,7 +474,7 @@ function FormBuilder(state, model, readonly = false) {
     }
 
     function handleSliderChange(e, key) {
-        if (!isModifiable(key)) {
+        if (!isModifiable(variables_map[key])) {
             e.target.value = e.target.dataset.value;
             return;
         }
@@ -497,7 +497,7 @@ function FormBuilder(state, model, readonly = false) {
     }
 
     function handleSliderClick(e, key, value, min, max) {
-        if (!isModifiable(key))
+        if (!isModifiable(variables_map[key]))
             return;
 
         return ui.runDialog(e, null, (d, resolve, reject) => {
@@ -543,7 +543,7 @@ function FormBuilder(state, model, readonly = false) {
     };
 
     function handleEnumChange(e, key, allow_untoggle) {
-        if (!isModifiable(key))
+        if (!isModifiable(variables_map[key]))
             return;
 
         let json = e.target.dataset.value;
@@ -607,7 +607,7 @@ function FormBuilder(state, model, readonly = false) {
     };
 
     function handleEnumDropChange(e, key) {
-        if (!isModifiable(key))
+        if (!isModifiable(variables_map[key]))
             return;
 
         updateValue(key, util.strToValue(e.target.value));
@@ -651,7 +651,7 @@ function FormBuilder(state, model, readonly = false) {
     };
 
     function handleEnumRadioChange(e, key, already_checked) {
-        if (!isModifiable(key))
+        if (!isModifiable(variables_map[key]))
             return;
 
         if (already_checked) {
@@ -701,7 +701,7 @@ function FormBuilder(state, model, readonly = false) {
     };
 
     function handleMultiChange(e, key) {
-        if (!isModifiable(key))
+        if (!isModifiable(variables_map[key]))
             return;
 
         e.target.classList.toggle('active');
@@ -780,7 +780,7 @@ function FormBuilder(state, model, readonly = false) {
     };
 
     function handleMultiCheckChange(e, key) {
-        if (!isModifiable(key))
+        if (!isModifiable(variables_map[key]))
             return;
 
         let els = e.target.parentNode.querySelectorAll('input');
@@ -888,7 +888,7 @@ function FormBuilder(state, model, readonly = false) {
     };
 
     function handleDateInput(e, key) {
-        if (!isModifiable(key))
+        if (!isModifiable(variables_map[key]))
             return;
 
         if (has_input_date) {
@@ -947,7 +947,7 @@ function FormBuilder(state, model, readonly = false) {
     };
 
     function handleTimeInput(e, key) {
-        if (!isModifiable(key))
+        if (!isModifiable(variables_map[key]))
             return;
 
         if (has_input_date) {
@@ -1005,7 +1005,7 @@ function FormBuilder(state, model, readonly = false) {
     };
 
     function handleFileInput(e, key) {
-        if (!isModifiable(key))
+        if (!isModifiable(variables_map[key]))
             return;
 
         state.file_lists.set(key.toString(), e.target.files);
@@ -1293,6 +1293,11 @@ instead of:
         });
         addWidget(intf);
 
+        if (!isModifiable(intf)) {
+            intf.add = null;
+            intf.remove = null;
+        }
+
         for (let i = 0;; i++) {
             if (!values.hasOwnProperty(i)) {
                 intf.length = i;
@@ -1300,7 +1305,9 @@ instead of:
             }
 
             options.path = [...path, i];
-            captureWidgets(widgets, 'repeat', () => func(values[i], i, () => intf.remove(i)), options);
+
+            let remove = intf.remove ? (() => intf.remove(i)) : null;
+            captureWidgets(widgets, 'repeat', () => func(values[i], i, remove), options);
         }
 
         return intf;
@@ -1486,7 +1493,7 @@ instead of:
         return {
             path: key.slice(0, key.length - 1),
             name: name,
-            toString: () => key.join('.'),
+            toString: () => key.join('.')
         };
     }
 
@@ -1735,8 +1742,12 @@ instead of:
         return values;
     }
 
-    function isModifiable(key) {
-        let intf = variables_map[key];
-        return !intf.options.disabled && !intf.options.readonly;
+    function isModifiable(intf) {
+        if (intf.options.disabled)
+            return false;
+        if (intf.options.readonly)
+            return false;
+
+        return true;
     }
 }
