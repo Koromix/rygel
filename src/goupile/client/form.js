@@ -54,8 +54,8 @@ function FormState(values = {}) {
                     value = proxyObject(value);
                     obj[key] = value;
 
-                    let json1 = JSON.stringify(obj_cache[key]);
-                    let json2 = JSON.stringify(value);
+                    let json1 = JSON.stringify(obj_cache[key]) || '{}';
+                    let json2 = JSON.stringify(value) || '{}';
 
                     if (json2 !== json1) {
                         obj_changes.add(key);
