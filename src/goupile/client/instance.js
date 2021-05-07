@@ -402,7 +402,7 @@ function InstanceController() {
                                             }
                                         }
                                     })}
-                                    ${row.version > 0 ? html`<th><a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a></th>` : ''}
+                                    ${row.saved ? html`<th><a @click=${ui.wrapAction(e => runDeleteRecordDialog(e, row.ulid))}>✕</a></th>` : ''}
                                 </tr>
                             `;
                         })}
@@ -609,9 +609,9 @@ function InstanceController() {
                     <div id="ins_actions">
                         ${!goupile.isLocked() ? html`
                             <div id="ins_trail">
-                                ${!form_record.chain[0].version ? html`<div>Nouvel enregistrement</div>` : ''}
-                                ${form_record.chain[0].version > 0 && form_record.chain[0].hid != null ? html`<div class="hid">${form_record.chain[0].hid}</div>` : ''}
-                                ${form_record.chain[0].version > 0 && form_record.chain[0].hid == null ? html`<div>Enregistrement existant</div>` : ''}
+                                ${!form_record.chain[0].saved ? html`<div>Nouvel enregistrement</div>` : ''}
+                                ${form_record.chain[0].saved && form_record.chain[0].hid != null ? html`<div class="hid">${form_record.chain[0].hid}</div>` : ''}
+                                ${form_record.chain[0].saved && form_record.chain[0].hid == null ? html`<div>Enregistrement existant</div>` : ''}
                                 <a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>Audit</a>
                             </div>
                             ${route.version < form_record.fragments.length ?
@@ -1623,7 +1623,7 @@ function InstanceController() {
 
             // Create new record if needed
             if (new_route.ulid == null || new_record == null) {
-                new_record = createRecord(new_route.form, null);
+                new_record = createRecord(new_route.form);
                 new_state = null;
             }
 
@@ -1727,7 +1727,7 @@ function InstanceController() {
                 ui.setPanelState('page', true);
                 ui.setPanelState('data', false);
             }
-        } else if (form_record == null && (new_record.version > 0 ||
+        } else if (form_record == null && (new_record.saved ||
                                            new_record.parent != null)) {
             if (!ui.isPanelEnabled('page')) {
                 ui.setPanelState('page', true);
@@ -1902,11 +1902,11 @@ function InstanceController() {
     this.run = util.serializeAsync(this.run);
 
     function contextualizeURL(url, record) {
-        if (record.version > 0) {
+        if (record.saved) {
             url += `/${record.ulid}`;
             if (record.version < record.fragments.length)
                 url += `@${record.version}`;
-        } else if (record.parent != null) {
+        } else if (record.parent != null && record.parent.saved) {
             url += `/${record.parent.ulid}`;
         }
 
@@ -1954,7 +1954,7 @@ function InstanceController() {
         }
     }
 
-    function createRecord(form, parent_record) {
+    function createRecord(form, parent_record = null) {
         let record = {
             form: form,
             ulid: util.makeULID(),
@@ -1977,8 +1977,7 @@ function InstanceController() {
 
         if (form.chain.length > 1) {
             if (parent_record == null)
-                throw new Error('Impossible de créer cet enregistrement sans parent');
-
+                parent_record = createRecord(form.chain[form.chain.length - 2]);
             record.parent = parent_record;
         }
 
