@@ -49,25 +49,18 @@ def parse_ini(filename, allow_no_value = False):
 
     return ini
 
-def load_config(filename, array_sections = []):
+def load_config(filename):
     ini = parse_ini(filename, allow_no_value = True)
     config = {}
 
     for section in ini.sections():
-        if section in array_sections:
-            for key, value in ini.items(section):
-                if value:
-                    raise ValueError(f'Unexpected value in {filename}')
+        for key, value in ini.items(section):
+            if not section in config:
+                config[section] = {}
+            config[section][key] = value
 
-                array = config.get(section)
-                if array is None:
-                    array = []
-                    config[section] = array
-                array.append(key)
-        else:
-            for key, value in ini.items(section):
-                name = f'{section}.{key}'
-                config[name] = value
+            name = f'{section}.{key}'
+            config[name] = value
 
     return config
 
@@ -121,15 +114,15 @@ def list_domains(root_dir, names):
 
     return domains
 
-def create_domain(binary, root_dir, domain, owner_user, owner_group,
-                  admin_username, admin_password):
+def create_domain(binary, root_dir, domain, backup_key,
+                  owner_user, owner_group, admin_username, admin_password):
     directory = os.path.join(root_dir, domain)
     print(f'>>> Create domain {domain} ({directory})', file = sys.stderr)
     os.mkdir(directory)
 
     domain_directory = os.path.join(directory, 'app')
-    execute_command([binary, 'init', '-o', owner_user,
-                    '--username', admin_username, '--password', admin_password, domain_directory])
+    execute_command([binary, 'init', '-o', owner_user, '--backup_key', backup_key,
+                     '--username', admin_username, '--password', admin_password, domain_directory])
 
 def migrate_domain(binary, domain, info):
     print(f'>>> Migrate domain {domain} ({info.directory})', file = sys.stderr)
@@ -256,15 +249,15 @@ def run_sync(config):
     binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
 
     # Create missing domains
-    for domain in config['Domains']:
+    for domain, backup_key in config['Domains'].items():
         directory = os.path.join(config['Goupile.BundleDirectory'], domain)
         if not os.path.exists(directory):
-            create_domain(binary, config['Goupile.BundleDirectory'], domain,
+            create_domain(binary, config['Goupile.BundleDirectory'], domain, backup_key,
                           config['Goupile.RunUser'], config['Goupile.RunGroup'],
                           config['Goupile.DefaultAdmin'], config['Goupile.DefaultPassword'])
 
     # List existing domains and services
-    domains = list_domains(config['Goupile.BundleDirectory'], config['Domains'])
+    domains = list_domains(config['Goupile.BundleDirectory'], config['Domains'].keys())
     services = list_services()
 
     # Detect binary mismatches
@@ -340,7 +333,7 @@ if __name__ == '__main__':
     os.chdir(directory)
 
     # Parse configuration
-    config = load_config('sync.ini', array_sections = ['Domains'])
+    config = load_config('sync.ini')
     config['Goupile.BinaryDirectory'] = os.path.abspath(config['Goupile.BinaryDirectory'])
     config['Goupile.BundleDirectory'] = os.path.abspath(config['Goupile.BundleDirectory'])
     config['NGINX.ConfigDirectory'] = os.path.abspath(config['NGINX.ConfigDirectory'])

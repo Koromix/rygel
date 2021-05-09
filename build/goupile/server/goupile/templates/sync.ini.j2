@@ -17,5 +17,5 @@ BundleTemplate = bundle.json
 
 [Domains]
 {% for domain in goupile_domains -%}
-    {{ domain }}
+    {{ domain.name }} = {{ domain.backup_key }}
 {% endfor %}
