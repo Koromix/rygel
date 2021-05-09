@@ -22,24 +22,39 @@
 
 namespace RG {
 
-static const int BanTreshold = 5;
-static const int64_t BanTime = 600 * 1000;
+static const int BanTreshold = 6;
+static const int64_t BanTime = 3600 * 1000;
 
-struct BanInfo {
-    int64_t userid;
+struct FloodInfo {
+    struct Key {
+        const char *address;
+        int64_t userid;
+
+        bool operator==(const Key &other) const { return TestStr(address, other.address) && userid == other.userid; }
+        bool operator!=(const Key &other) const { return !(*this == other); }
+
+        uint64_t Hash() const
+        {
+            uint64_t hash = HashTraits<const char *>::Hash(address) ^
+                            HashTraits<int64_t>::Hash(userid);
+            return hash;
+        }
+    };
+
+    Key key;
     int64_t until_time;
 
-    int tries;
-    bool active;
+    int events;
+    bool banned;
 
-    RG_HASHTABLE_HANDLER(BanInfo, userid);
+    RG_HASHTABLE_HANDLER(FloodInfo, key);
 };
 
 static http_SessionManager<SessionInfo> sessions;
 
-static std::shared_mutex bans_mutex;
-static BucketArray<BanInfo> bans;
-static HashTable<int64_t, BanInfo *> bans_map;
+static std::shared_mutex floods_mutex;
+static BucketArray<FloodInfo> floods;
+static HashTable<FloodInfo::Key, FloodInfo *> floods_map;
 
 bool SessionInfo::IsAdmin() const
 {
@@ -282,52 +297,57 @@ void PruneSessions()
     // Prune sessions
     sessions.Prune();
 
-    // Prune bans
+    // Prune floods
     {
-        std::lock_guard<std::shared_mutex> lock_excl(bans_mutex);
+        std::lock_guard<std::shared_mutex> lock_excl(floods_mutex);
 
         int64_t now = GetMonotonicTime();
 
         Size expired = 0;
-        for (const BanInfo &ban: bans) {
-            if (ban.until_time > now)
+        for (const FloodInfo &flood: floods) {
+            if (flood.until_time > now)
                 break;
 
-            BanInfo **ptr = bans_map.Find(ban.userid);
-            if (*ptr == &ban) {
-                bans_map.Remove(ptr);
+            FloodInfo **ptr = floods_map.Find(flood.key);
+            if (*ptr == &flood) {
+                floods_map.Remove(ptr);
             }
             expired++;
         }
-        bans.RemoveFirst(expired);
-        bans_map.Trim();
+        floods.RemoveFirst(expired);
+        floods_map.Trim();
     }
 }
 
-static bool IsUserBanned(int64_t userid)
+static bool IsUserBanned(const char *address, int64_t userid)
 {
-    std::shared_lock<std::shared_mutex> lock_shr(bans_mutex);
+    std::shared_lock<std::shared_mutex> lock_shr(floods_mutex);
+
+    FloodInfo::Key key = {address, userid};
+    const FloodInfo *flood = floods_map.FindValue(key, nullptr);
 
     // We don't need to use precise timing, and a ban can last a bit
-    // more than BanTime (until_time pruning clears the ban).
-    const BanInfo *ban = bans_map.FindValue(userid, nullptr);
-    return ban && ban->active;
+    // more than BanTime (until pruning clears the ban).
+    return flood && flood->banned;
 }
 
-static void RegisterBanEvent(int64_t userid)
+static void RegisterFloodEvent(const char *address, int64_t userid)
 {
-    std::lock_guard<std::shared_mutex> lock_excl(bans_mutex);
+    std::lock_guard<std::shared_mutex> lock_excl(floods_mutex);
 
-    BanInfo *ban = bans_map.FindValue(userid, nullptr);
-    if (!ban || ban->until_time < GetMonotonicTime()) {
-        ban = bans.AppendDefault();
-        ban->userid = userid;
-        ban->until_time = GetMonotonicTime() + BanTime;
-        bans_map.Set(ban);
+    FloodInfo::Key key = {address, userid};
+    FloodInfo *flood = floods_map.FindValue(key, nullptr);
+
+    if (!flood || flood->until_time < GetMonotonicTime()) {
+        Allocator *alloc;
+        flood = floods.AppendDefault(&alloc);
+        flood->key = {DuplicateString(address, alloc).ptr, userid};
+        flood->until_time = GetMonotonicTime() + BanTime;
+        floods_map.Set(flood);
     }
 
-    if (ban->tries++ >= BanTreshold) {
-        ban->active = true;
+    if (++flood->events >= BanTreshold) {
+        flood->banned = true;
     }
 }
 
@@ -380,8 +400,8 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
             bool admin = (sqlite3_column_int(stmt, 2) == 1);
             const char *local_key = (const char *)sqlite3_column_text(stmt, 3);
 
-            if (IsUserBanned(userid)) {
-                LogError("This user account has been temporarily banned (excessive logins)");
+            if (IsUserBanned(request.client_addr, userid)) {
+                LogError("You are banned for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
                 io->AttachError(403);
                 return;
             }
@@ -397,11 +417,6 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                 RetainPtr<SessionInfo> session = CreateUserSession(userid, username, local_key);
 
                 if (RG_LIKELY(session)) {
-                    // This is not a mistake; we don't want to lock people out of accounts for
-                    // password failures because this provides an easy anti-user-DDoS system.
-                    // Hoewever, we want to block shared user accounts ;)
-                    RegisterBanEvent(userid);
-
                     if (admin) {
                         if (!instance) {
                             // Require regular relogin (every 20 minutes) to access admin panel
@@ -418,6 +433,8 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                 }
 
                 return;
+            } else {
+                RegisterFloodEvent(request.client_addr, userid);
             }
         }
 
@@ -556,8 +573,8 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
             }
         }
 
-        if (IsUserBanned(userid)) {
-            LogError("This user account has been temporarily banned (excessive logins)");
+        if (IsUserBanned(request.client_addr, userid)) {
+            LogError("You are banned for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
             io->AttachError(403);
             return;
         }
@@ -575,8 +592,6 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
         RetainPtr<SessionInfo> session = CreateUserSession(userid, username, local_key);
 
         if (RG_LIKELY(session)) {
-            RegisterBanEvent(session->userid);
-
             uint32_t code = 100000 + randombytes_uniform(900000); // 6 digits
             Fmt(session->confirm, "%1", code);
 
@@ -618,8 +633,8 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
             }
         }
 
-        if (IsUserBanned(session->userid)) {
-            LogError("This user account has been temporarily banned (excessive logins)");
+        if (IsUserBanned(request.client_addr, session->userid)) {
+            LogError("You are banned for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
             io->AttachError(403);
             return;
         }
@@ -631,7 +646,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
             session->confirm[0] = 0;
             WriteProfileJson(session.GetRaw(), instance, request, io);
         } else {
-            RegisterBanEvent(session->userid);
+            RegisterFloodEvent(request.client_addr, session->userid);
 
             LogError("Code is incorrect");
             io->AttachError(403);
