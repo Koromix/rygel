@@ -362,6 +362,8 @@ int RunInit(Span<const char *> arguments)
     // Options
     const char *username = nullptr;
     const char *password = nullptr;
+    char backup_key[45] = {};
+    char decrypt_key[45] = {};
     const char *demo = nullptr;
     bool change_owner = false;
     uid_t owner_uid = 0;
@@ -374,6 +376,7 @@ int RunInit(Span<const char *> arguments)
 Options:
     %!..+-u, --username <username>%!0    Name of default user
         %!..+--password <pwd>%!0         Password of default user
+        %!..+--backup_key <key>%!0       Set domain public backup key
 
         %!..+--demo [<name>]%!0          Create default instance)", FelixTarget);
 
@@ -395,6 +398,20 @@ Options:
                 username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 password = opt.current_value;
+            } else if (opt.Test("--backup_key", OptionType::Value)) {
+                RG_STATIC_ASSERT(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
+
+                uint8_t key[32];
+                size_t key_len;
+                int ret = sodium_base642bin(key, RG_SIZE(key), opt.current_value, strlen(opt.current_value),
+                                            nullptr, &key_len, nullptr, sodium_base64_VARIANT_ORIGINAL);
+                if (ret || key_len != 32) {
+                    LogError("Malformed --backup_key value");
+                    return 1;
+                }
+
+                RG_ASSERT(strlen(opt.current_value) < RG_SIZE(backup_key));
+                CopyString(opt.current_value, backup_key);
             } else if (opt.Test("--demo", OptionType::OptionalValue)) {
                 demo = opt.current_value ? opt.current_value : "demo";
 #ifndef _WIN32
@@ -466,9 +483,7 @@ Options:
     LogInfo();
 
     // Create backup key pair
-    char backup_key[45];
-    char decrypt_key[45];
-    {
+    if (!backup_key[0]) {
         RG_STATIC_ASSERT(crypto_box_PUBLICKEYBYTES == 32);
         RG_STATIC_ASSERT(crypto_box_SECRETKEYBYTES == 32);
 
@@ -553,11 +568,13 @@ Options:
     if (!domain.db.Close())
         return 1;
 
-    LogInfo();
-    LogInfo("Backup decryption key: %!..+%1%!0", decrypt_key);
-    LogInfo();
-    LogInfo("You need this key to restore Goupile backups, %!..+you must not lose it!%!0");
-    LogInfo("There is no way to get it back, without it the backups are lost.");
+    if (decrypt_key[0]) {
+        LogInfo();
+        LogInfo("Backup decryption key: %!..+%1%!0", decrypt_key);
+        LogInfo();
+        LogInfo("You need this key to restore Goupile backups, %!..+you must not lose it!%!0");
+        LogInfo("There is no way to get it back, without it the backups are lost.");
+    }
 
     root_guard.Disable();
     return 0;
