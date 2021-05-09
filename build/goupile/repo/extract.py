@@ -140,10 +140,10 @@ if __name__ == "__main__":
     '''
 
     # Filter it out and rewrite FelixBuild.ini
-    subprocess.run(['python', script_directory + '/git-filter-repo.py',
+    subprocess.run(['python3', script_directory + '/git-filter-repo.py',
                     '--blob-callback', REWRITE_FELIXBUILD,
                     '--paths-from-file', script_directory + '/keep.txt'])
-    subprocess.run(['python', script_directory + '/git-filter-repo.py',
+    subprocess.run(['python3', script_directory + '/git-filter-repo.py',
                     '--invert-paths', '--paths-from-file', script_directory + '/remove.txt'])
 
     # Push to repository
