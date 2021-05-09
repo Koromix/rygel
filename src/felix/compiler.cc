@@ -162,7 +162,7 @@ public:
         supported |= (int)CompileFeature::TSan;
 #endif
         supported |= (int)CompileFeature::UBSan;
-        supported |= (int)CompileFeature::ProtectStack;
+        supported |= (int)CompileFeature::StackProtect;
         supported |= (int)CompileFeature::CFI; // LTO only
 
         uint32_t unsupported = features & ~supported;
@@ -286,7 +286,7 @@ public:
         if (features & (int)CompileFeature::UBSan) {
             Fmt(&buf, " -fsanitize=undefined");
         }
-        if (features & (int)CompileFeature::ProtectStack) {
+        if (features & (int)CompileFeature::StackProtect) {
             Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4");
 #ifdef __linux__
             if (major_version >= 11) {
@@ -466,7 +466,7 @@ public:
         supported |= (int)CompileFeature::TSan;
         supported |= (int)CompileFeature::UBSan;
 #endif
-        supported |= (int)CompileFeature::ProtectStack;
+        supported |= (int)CompileFeature::StackProtect;
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -585,7 +585,7 @@ public:
         if (features & (int)CompileFeature::UBSan) {
             Fmt(&buf, " -fsanitize=undefined");
         }
-        if (features & (int)CompileFeature::ProtectStack) {
+        if (features & (int)CompileFeature::StackProtect) {
             Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4");
 #ifndef _WIN32
             Fmt(&buf, " -fstack-clash-protection");
@@ -693,7 +693,7 @@ public:
             Fmt(&buf, " -fsanitize=undefined");
         }
 #ifdef _WIN32
-        if (features & (int)CompileFeature::ProtectStack) {
+        if (features & (int)CompileFeature::StackProtect) {
             Fmt(&buf, " -lssp");
         }
 #endif
@@ -751,7 +751,7 @@ public:
         supported |= (int)CompileFeature::NoDebug;
         supported |= (int)CompileFeature::Static;
         supported |= (int)CompileFeature::ASan;
-        supported |= (int)CompileFeature::ProtectStack;
+        supported |= (int)CompileFeature::StackProtect;
         supported |= (int)CompileFeature::CFI;
 
         uint32_t unsupported = features & ~supported;
@@ -839,7 +839,7 @@ public:
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " /fsanitize=address");
         }
-        if (features & (int)CompileFeature::ProtectStack) {
+        if (features & (int)CompileFeature::StackProtect) {
             Fmt(&buf, " /GS");
         }
         if (features & (int)CompileFeature::CFI) {
