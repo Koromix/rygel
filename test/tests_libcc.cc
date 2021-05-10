@@ -439,7 +439,7 @@ void BenchFmt()
 
     RunBenchmark("stbsp_snprintf", iterations, [&]() {
         char buf[1024];
-        stbsp_snprintf(buf, RG_SIZE(buf), "%d:%d:%d:%s:%p:%c:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
+        stbsp_snprintf(buf, RG_SIZE(buf), "%d:%d:%g:%s:%p:%c:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
     });
 
     RunBenchmark("fmt::format_to", iterations, [&]() {
