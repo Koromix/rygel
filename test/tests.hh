@@ -20,7 +20,7 @@ namespace RG {
 #define TEST_FUNCTION(Label) \
     static Size tests = 0; \
     static Size failures = 0; \
-    Print("  %1", (Label)); \
+    Print(stderr, "  %1", FmtArg(Label).Pad(20)); \
     RG_DEFER { ReportTestResults(tests, failures); };
 
 static inline void ReportTestResults(Size tests, Size failures)
