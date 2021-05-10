@@ -41,5 +41,6 @@ bootstrap.sh
 FelixBuild.ini
 LICENSE.txt
 
+src/goupile/README.md==>README.md
 doc/goupile/README.md==>README.md
 doc/goupile/==>doc/
