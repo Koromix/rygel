@@ -1,0 +1,40 @@
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+[Unit]
+Description = Goupile eCRF (%i)
+Documentation = https://goupile.fr/
+
+[Service]
+Type = forking
+User = {{ goupile_run_user }}
+Group = {{ goupile_run_group }}
+RuntimeDirectory = goupile/domains/%i goupile/runc
+RuntimeDirectoryPreserve = yes
+ExecStart = /usr/sbin/runc --root /run/goupile/runc run -d --pid-file /run/goupile/runc/%i.pid %i
+ExecStopPost = /usr/sbin/runc --root /run/goupile/runc delete %i
+WorkingDirectory = {{ goupile_root_path }}/containers/%i
+PIDFile = /run/goupile/runc/%i.pid
+Restart = on-failure
+TimeoutStopSec = 30
+LimitNOFILE = 16384
+
+# Allow rootless runC to manipulate namespaces despite
+# kernel.unprivileged_userns_clone=0.
+# runC will then run goupile without any capability.
+SecureBits = keep-caps
+CapabilityBoundingSet = CAP_SYS_ADMIN
+AmbientCapabilities = CAP_SYS_ADMIN
+
+[Install]
+WantedBy = multi-user.target

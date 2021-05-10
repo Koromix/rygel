@@ -1,0 +1,57 @@
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+- name: Install packages
+  package:
+    update_cache: yes
+    pkg:
+      - nginx
+      - python3-certbot-nginx
+    state: latest
+  become: yes
+
+- name: Prepare SSL directories
+  file:
+    path: '{{ item.path }}'
+    state: directory
+    owner: '{{ item.owner }}'
+    mode: '{{ item.mode }}'
+  loop:
+    - path: '/opt/ssl'
+      owner: root
+      mode: '0755'
+    - path: '/opt/ssl/internal'
+      owner: root
+      mode: '0700'
+  become: yes
+
+- name: Generate Diffie-Helman parameters
+  command:
+    cmd: 'openssl dhparam -out /opt/ssl/dhparam.pem 2048'
+    creates: /opt/ssl/dhparam.pem
+  become: yes
+
+- name: Configure proxy host
+  include_tasks: proxy.yml
+  when: 'inventory_hostname == "proxy"'
+
+- name: Configure server host
+  include_tasks: server.yml
+  when: 'inventory_hostname == "server"'
+
+- name: Reload NGINX
+  service:
+    name: nginx
+    state: restarted
+  when: 'not ansible_check_mode'
+  become: yes

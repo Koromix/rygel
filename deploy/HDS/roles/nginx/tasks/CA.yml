@@ -1,0 +1,69 @@
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+- name: Create local SSL folder for HDS certificate chain
+  file:
+    path: /tmp/HDS/CA
+    state: directory
+  delegate_to: localhost
+  become: no
+
+- name : Create SSL configuration files
+  template:
+    src: '{{ item }}.j2'
+    dest: '/tmp/HDS/CA/{{ item }}'
+  loop:
+    - CA.conf
+    - server.conf
+  delegate_to: localhost
+  become: no
+
+- name: Generate CA and HDS certificate
+  shell: |
+    openssl genrsa -out /tmp/HDS/CA/CA.key 4096
+    openssl req -x509 -new -key /tmp/HDS/CA/CA.key -config /tmp/HDS/CA/CA.conf -days 372 -out /tmp/HDS/CA/CA.crt
+    openssl genrsa -out /tmp/HDS/CA/server.key 2048
+    openssl req -new -key /tmp/HDS/CA/server.key -out /tmp/HDS/CA/server.csr -config /tmp/HDS/CA/server.conf
+    openssl x509 -req -in /tmp/HDS/CA/server.csr -CA /tmp/HDS/CA/CA.crt -CAkey /tmp/HDS/CA/CA.key -CAcreateserial -out /tmp/HDS/CA/server.crt -days 372 -sha256 -extfile /tmp/HDS/CA/server.conf -extensions req_ext
+  delegate_to: localhost
+  become: no
+
+- name: Push root certificate to proxy
+  copy:
+    src: /tmp/HDS/CA/CA.crt
+    dest: /opt/ssl/internal/CA.crt
+    owner: root
+    group: root
+    mode: '0600'
+  delegate_to: proxy
+  become: yes
+
+- name: Push HDS certificate and key to server
+  copy:
+    src: '/tmp/HDS/CA/{{ item }}'
+    dest: '/opt/ssl/internal/{{ item }}'
+    owner: root
+    group: root
+    mode: '0600'
+  loop:
+    - server.key
+    - server.crt
+  delegate_to: server
+  become: yes
+
+- name: Delete local SSL files
+  file:
+    path: /tmp/HDS/CA
+    state: absent
+  delegate_to: localhost
+  become: no

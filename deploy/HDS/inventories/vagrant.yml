@@ -1,0 +1,21 @@
+all:
+  hosts:
+    proxy:
+      ansible_host: 192.168.33.10
+      ansible_port: 22
+      ansible_user: vagrant
+      ansible_ssh_private_key_file: .vagrant/machines/proxy/virtualbox/private_key
+
+    server:
+      ansible_host: 192.168.33.11
+      ansible_port: 22
+      ansible_user: vagrant
+      ansible_ssh_private_key_file: .vagrant/machines/server/virtualbox/private_key
+
+  vars:
+    certbot: no
+    # certbot_email: interhop@riseup.net
+
+    goupile_domains:
+      - name: goupile.local
+        backup_key: m/6Eiy931Op607gNOLs76lTl/w0DSWXiMBRtnLb1fHA=

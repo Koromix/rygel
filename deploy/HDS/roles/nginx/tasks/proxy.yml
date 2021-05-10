@@ -1,0 +1,57 @@
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+- name: Create self-signed certificate for default server
+  command:
+    cmd: 'openssl req -x509 -newkey rsa:4096 -keyout /opt/ssl/internal/self.key -out /opt/ssl/internal/self.crt -days 372 -nodes -subj "/CN=default"'
+    creates: /opt/ssl/internal/self.crt
+  become: yes
+
+- name: Fake missing Let's Encrypt certificates to bootstrap proxy
+  shell:
+    cmd: |
+      mkdir -p /etc/letsencrypt/live/{{ item }}
+      openssl req -x509 -newkey rsa:4096 -keyout /etc/letsencrypt/live/{{ item }}/privkey.pem -out /etc/letsencrypt/live/{{ item }}/fullchain.pem -days 7 -nodes -subj '/CN={{ item }}'
+    creates: '/etc/letsencrypt/live/{{ item }}/fullchain.pem'
+    warn: false
+  loop: '{{ domains }}'
+  become: yes
+
+- name: Configure NGINX on proxy
+  template:
+    src: nginx_proxy.conf.j2
+    dest: /etc/nginx/nginx.conf
+  become: yes
+
+- name: Prepare webroot directories for certbot
+  file:
+    path: '/opt/ssl/webroot/{{ item }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop: '{{ domains }}'
+  become: yes
+
+- name: Generate Let's Encrypt certificates
+  command: 'certbot certonly --webroot --preferred-challenges http {{ domains | map("regex_replace", "^(.*)$", "-d \1 -w /opt/ssl/webroot/\1") | join(" ") }} -m {{ certbot_email }} --agree-tos --noninteractive --redirect'
+  loop: '{{ domains }}'
+  become: yes
+  when: certbot
+
+- name: Configure automatic certificate renewal
+  cron:
+    name: letsencrypt_renewal
+    special_time: monthly
+    job: /usr/bin/certbot renew
+  become: yes

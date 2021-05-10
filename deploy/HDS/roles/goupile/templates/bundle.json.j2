@@ -45,7 +45,7 @@
         },
         {
             "destination": "/app/goupile",
-            "source": "{{goupile_root_path}}/goupile",
+            "source": "{{ goupile_root_path }}/goupile",
             "options": [
                 "bind",
                 "ro"
@@ -109,14 +109,14 @@
         "uidMappings": [
             {
                 "containerID": 0,
-                "hostID": {{goupile_user.uid}},
+                "hostID": {{ goupile_user.uid }},
                 "size": 1
             }
         ],
         "gidMappings": [
             {
                 "containerID": 0,
-                "hostID": {{goupile_user.group}},
+                "hostID": {{ goupile_user.group }},
                 "size": 1
             }
         ],

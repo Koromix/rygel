@@ -1,0 +1,12 @@
+all:
+  hosts:
+    proxy:
+    server:
+
+  vars:
+    certbot: yes
+    certbot_email: interhop@riseup.net
+
+    goupile_domains:
+      - name: psy-lille.test.goupile.fr
+        backup_key: cIxC3Tlm5Uz/85t/hLgaBg4T6dbj/YiJTXX1KdZDhl0=

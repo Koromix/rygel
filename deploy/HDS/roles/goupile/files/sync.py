@@ -18,7 +18,6 @@ import configparser
 import hashlib
 import io
 import itertools
-from jinja2 import Template
 import json
 import os
 import re
@@ -232,19 +231,6 @@ def update_domain_config(info):
         ini.write(f)
         return commit_file(filename, f.getvalue())
 
-def update_nginx_config(directory, template_filename, domain, socket):
-    with open(template_filename) as f:
-        template = f.read()
-        template = Template(template)
-
-    filename = os.path.join(directory, f'{domain}.conf')
-    content = template.render({
-        "goupile_domain": domain,
-        "goupile_socket": socket
-    })
-
-    return commit_file(filename, content)
-
 def run_sync(config):
     binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
 
@@ -273,7 +259,7 @@ def run_sync(config):
     # Update bundle (OCI) configuration files
     print('>>> Write OCI bundle files')
     for domain, info in domains.items():
-        if update_bundle_config(info.bundle, config['runC.BundleTemplate'], domain,
+        if update_bundle_config(info.bundle, config['Goupile.BundleTemplate'], domain,
                                 config['Goupile.RunUser'], config['Goupile.RunGroup'], binary):
             info.mismatch = True
             changed = True
@@ -283,21 +269,6 @@ def run_sync(config):
     for domain, info in domains.items():
         if update_domain_config(info):
             info.mismatch = True
-            changed = True
-
-    # Update NGINX configuration files
-    print('>>> Write NGINX configuration files', file = sys.stderr)
-    for name in os.listdir(config['NGINX.ConfigDirectory']):
-        match = re.search('^([0-9A-Za-z_\\-\\.]+)\\.conf$', name)
-        if match is not None:
-            domain = match.group(1)
-            if domains.get(domain) is None:
-                filename = os.path.join(config['NGINX.ConfigDirectory'], name)
-                os.unlink(filename)
-                changed = True
-    for domain, info in domains.items():
-        if update_nginx_config(config['NGINX.ConfigDirectory'], config.get('NGINX.ServerTemplate'),
-                               domain, info.socket):
             changed = True
 
     # Sync systemd services
@@ -322,10 +293,6 @@ def run_sync(config):
         print('>>> Nothing has changed', file = sys.stderr)
         return
 
-    # Reload NGINX configuration
-    print('>>> Reload NGINX server', file = sys.stderr)
-    execute_command(['systemctl', 'reload', config['NGINX.ServiceName']])
-
 if __name__ == '__main__':
     # Always work from sync.py directory
     script = os.path.abspath(__file__)
@@ -336,8 +303,6 @@ if __name__ == '__main__':
     config = load_config('sync.ini')
     config['Goupile.BinaryDirectory'] = os.path.abspath(config['Goupile.BinaryDirectory'])
     config['Goupile.BundleDirectory'] = os.path.abspath(config['Goupile.BundleDirectory'])
-    config['NGINX.ConfigDirectory'] = os.path.abspath(config['NGINX.ConfigDirectory'])
-    config['NGINX.ServerTemplate'] = os.path.abspath(config['NGINX.ServerTemplate'])
-    config['runC.BundleTemplate'] = os.path.abspath(config['runC.BundleTemplate'])
+    config['Goupile.BundleTemplate'] = os.path.abspath(config['Goupile.BundleTemplate'])
 
     run_sync(config)

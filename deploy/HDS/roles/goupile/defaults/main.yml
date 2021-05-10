@@ -1,3 +1,16 @@
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
 goupile_root_path: /opt/goupile # Installation directory
 goupile_build_options: -mLTO -fStackProtect,CFI # Felix options
 goupile_run_user: goupile # POSIX user that will run goupile services
@@ -9,6 +22,3 @@ goupile_domains: # List of goupile domains to configure and run
                                                              # Decryption key for this example: 4QvJpgCOlyDvWRP09oYO58kPllIKaGVFHw1mhpedOMM=
 goupile_default_username: admin # Default admin username and password for newly created goupile domains
 goupile_default_password: admin
-
-nginx_service_name: nginx.service # NGINX systemd unit name
-nginx_conf_path: /etc/nginx/conf.d # A file will be deposited here, and will include NGINX conf files for goupile domains
