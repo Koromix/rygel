@@ -31,7 +31,7 @@
     dest: /opt/logrotate.conf
   become: yes
 
-- name: Link NGINX configuration
+- name: Link logrotate configuration
   file:
     path: /etc/logrotate.conf
     state: link
