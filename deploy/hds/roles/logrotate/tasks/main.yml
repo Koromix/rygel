@@ -11,13 +11,30 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-- hosts: all
+- name: Install packages
+  package:
+    update_cache: yes
+    pkg:
+      - logrotate
+    state: latest
+  become: yes
 
-  vars:
-    domains: '{{ goupile_domains | map(attribute = "name") | list }}'
+- name: Enable logrotate
+  service:
+    name: logrotate
+    enabled: yes
+  become: yes
 
-  roles:
-    - role: goupile
-      when: 'inventory_hostname == "server"'
-    - role: nginx
-    - role: logrotate
+- name: Configure logrotate
+  copy:
+    src: logrotate.conf
+    dest: /opt/logrotate.conf
+  become: yes
+
+- name: Link NGINX configuration
+  file:
+    path: /etc/logrotate.conf
+    state: link
+    src: /opt/logrotate.conf
+    force: yes
+  become: yes
