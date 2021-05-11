@@ -54,7 +54,7 @@
 - name: Generate Let's Encrypt certificates
   shell:
     cmd: |
-      rm -rf /etc/letsencrypt/live/{{ item }}
+      rm -rf /etc/letsencrypt/live/{{ item }} /etc/letsencrypt/renewal/{{ item }}.conf /etc/letsencrypt/archive/{{ item }}
       certbot certonly --cert-name {{ item }} --webroot --preferred-challenges http -w /opt/nginx/ssl/webroot/{{ item }} -d {{ item }} -m {{ certbot_email }} --agree-tos --noninteractive
     creates: '/etc/letsencrypt/live/{{ item }}/chain.pem'
     warn: false
