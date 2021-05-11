@@ -58,7 +58,7 @@
 - name: Generate Let's Encrypt certificates
   shell: |
     rm -rf /etc/letsencrypt/live/{{ item }}
-    certbot certonly --webroot --preferred-challenges http {{ domains | map("regex_replace", "^(.*)$", "-w /opt/nginx/ssl/webroot/\1 -d \1") | join(" ") }} -m {{ certbot_email }} --agree-tos --noninteractive --redirect
+    certbot certonly --cert-name {{ item }} --webroot --preferred-challenges http -w /opt/nginx/ssl/webroot/{{ item }} -d {{ item }} -m {{ certbot_email }} --agree-tos --noninteractive --redirect
   loop: '{{ domains }}'
   become: yes
   when: certbot
