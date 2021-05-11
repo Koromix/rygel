@@ -216,9 +216,11 @@ def list_system_libraries(binary):
 
     return libraries
 
-def update_domain_config(info):
+def update_domain_config(info, backup_key):
     filename = os.path.join(info.directory, 'goupile.ini')
     ini = parse_ini(filename)
+
+    ini.set('Data', 'BackupKey', backup_key)
 
     if not ini.has_section('HTTP'):
         ini.add_section('HTTP')
@@ -267,7 +269,8 @@ def run_sync(config):
     # Update instance configuration files
     print('>>> Write Goupile configuration files', file = sys.stderr)
     for domain, info in domains.items():
-        if update_domain_config(info):
+        backup_key = config['Domains'][domain]
+        if update_domain_config(info, backup_key):
             info.mismatch = True
             changed = True
 
