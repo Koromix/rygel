@@ -20,10 +20,9 @@
     state: latest
   become: yes
 
-- name: Start and enable NGINX
+- name: Enable NGINX
   service:
     name: nginx
-    state: started
     enabled: yes
   become: yes
 
@@ -70,6 +69,6 @@
 - name: Reload NGINX
   service:
     name: nginx
-    state: restarted
+    state: reloaded
   when: 'not ansible_check_mode'
   become: yes

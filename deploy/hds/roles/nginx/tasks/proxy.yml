@@ -41,7 +41,7 @@
 - name: Reload NGINX (for certbot)
   service:
     name: nginx
-    state: restarted
+    state: reloaded
   when: 'nginx.changed and not ansible_check_mode'
   become: yes
 
