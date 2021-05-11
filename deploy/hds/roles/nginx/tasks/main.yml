@@ -45,6 +45,14 @@
       mode: '0700'
   become: yes
 
+- name: Link NGINX configuration
+  file:
+    path: /etc/nginx/nginx.conf
+    state: link
+    src: /opt/nginx/nginx.conf
+    force: yes
+  become: yes
+
 - name: Generate Diffie-Helman parameters
   command:
     cmd: 'openssl dhparam -out /opt/nginx/ssl/dhparam.pem 2048'
@@ -58,14 +66,6 @@
 - name: Configure server host
   include_tasks: server.yml
   when: 'inventory_hostname == "server"'
-
-- name: Link NGINX configuration
-  file:
-    path: /etc/nginx/nginx.conf
-    state: link
-    src: /opt/nginx/nginx.conf
-    force: yes
-  become: yes
 
 - name: Reload NGINX
   service:
