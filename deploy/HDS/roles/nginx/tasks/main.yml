@@ -20,25 +20,28 @@
     state: latest
   become: yes
 
-- name: Prepare SSL directories
+- name: Prepare NGINX and SSL directories
   file:
     path: '{{ item.path }}'
     state: directory
     owner: '{{ item.owner }}'
     mode: '{{ item.mode }}'
   loop:
-    - path: '/opt/ssl'
+    - path: '/opt/nginx'
       owner: root
       mode: '0755'
-    - path: '/opt/ssl/internal'
+    - path: '/opt/nginx/ssl'
+      owner: root
+      mode: '0755'
+    - path: '/opt/nginx/ssl/internal'
       owner: root
       mode: '0700'
   become: yes
 
 - name: Generate Diffie-Helman parameters
   command:
-    cmd: 'openssl dhparam -out /opt/ssl/dhparam.pem 2048'
-    creates: /opt/ssl/dhparam.pem
+    cmd: 'openssl dhparam -out /opt/nginx/ssl/dhparam.pem 2048'
+    creates: /opt/nginx/ssl/dhparam.pem
   become: yes
 
 - name: Configure proxy host
@@ -48,6 +51,14 @@
 - name: Configure server host
   include_tasks: server.yml
   when: 'inventory_hostname == "server"'
+
+- name: Link NGINX configuration
+  file:
+    path: /etc/nginx/nginx.conf
+    state: link
+    src: /opt/nginx/nginx.conf
+    force: yes
+  become: yes
 
 - name: Reload NGINX
   service:

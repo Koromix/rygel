@@ -18,5 +18,5 @@
 - name: Configure NGINX on server
   template:
     src: nginx_server.conf.j2
-    dest: /etc/nginx/nginx.conf
+    dest: /opt/nginx/nginx.conf
   become: yes

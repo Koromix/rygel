@@ -41,7 +41,7 @@
 - name: Push root certificate to proxy
   copy:
     src: /tmp/HDS/CA/CA.crt
-    dest: /opt/ssl/internal/CA.crt
+    dest: /opt/nginx/ssl/internal/CA.crt
     owner: root
     group: root
     mode: '0600'
@@ -51,7 +51,7 @@
 - name: Push HDS certificate and key to server
   copy:
     src: '/tmp/HDS/CA/{{ item }}'
-    dest: '/opt/ssl/internal/{{ item }}'
+    dest: '/opt/nginx/ssl/internal/{{ item }}'
     owner: root
     group: root
     mode: '0600'

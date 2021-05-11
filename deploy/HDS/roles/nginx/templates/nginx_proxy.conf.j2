@@ -49,8 +49,8 @@ http {
         listen 443 ssl;
         listen [::]:443 ssl;
 
-        ssl_certificate /opt/ssl/internal/self.crt;
-        ssl_certificate_key /opt/ssl/internal/self.key;
+        ssl_certificate /opt/nginx/ssl/self.crt;
+        ssl_certificate_key /opt/nginx/ssl/self.key;
 
         location / {
             return 404;
@@ -72,7 +72,7 @@ http {
         }
 
         location /.well-known/acme-challenge {
-            root /opt/ssl/webroot/{{ domain }};
+            root /opt/nginx/ssl/webroot/{{ domain }};
         }
     }
 
@@ -89,7 +89,7 @@ http {
 
         ssl_certificate /etc/letsencrypt/live/{{ domain }}/fullchain.pem;
         ssl_certificate_key /etc/letsencrypt/live/{{ domain }}/privkey.pem;
-        ssl_dhparam /opt/ssl/dhparam.pem;
+        ssl_dhparam /opt/nginx/ssl/dhparam.pem;
         ssl_protocols TLSv1.2 TLSv1.3;
         ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
         ssl_prefer_server_ciphers on;
@@ -103,7 +103,7 @@ http {
             proxy_http_version 1.1;
             proxy_buffering off;
 
-            proxy_ssl_trusted_certificate /opt/ssl/internal/CA.crt;
+            proxy_ssl_trusted_certificate /opt/nginx/ssl/internal/CA.crt;
             proxy_ssl_protocols TLSv1.2 TLSv1.3;
             proxy_ssl_ciphers CDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
             proxy_ssl_verify on;

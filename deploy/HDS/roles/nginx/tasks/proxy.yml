@@ -13,8 +13,8 @@
 
 - name: Create self-signed certificate for default server
   command:
-    cmd: 'openssl req -x509 -newkey rsa:4096 -keyout /opt/ssl/internal/self.key -out /opt/ssl/internal/self.crt -days 372 -nodes -subj "/CN=default"'
-    creates: /opt/ssl/internal/self.crt
+    cmd: 'openssl req -x509 -newkey rsa:4096 -keyout /opt/nginx/ssl/self.key -out /opt/nginx/ssl/self.crt -days 372 -nodes -subj "/CN=default"'
+    creates: /opt/nginx/ssl/self.crt
   become: yes
 
 - name: Fake missing Let's Encrypt certificates to bootstrap proxy
@@ -30,12 +30,12 @@
 - name: Configure NGINX on proxy
   template:
     src: nginx_proxy.conf.j2
-    dest: /etc/nginx/nginx.conf
+    dest: /opt/nginx/nginx.conf
   become: yes
 
 - name: Prepare webroot directories for certbot
   file:
-    path: '/opt/ssl/webroot/{{ item }}'
+    path: '/opt/nginx/ssl/webroot/{{ item }}'
     state: directory
     owner: root
     group: root
@@ -44,7 +44,7 @@
   become: yes
 
 - name: Generate Let's Encrypt certificates
-  command: 'certbot certonly --webroot --preferred-challenges http {{ domains | map("regex_replace", "^(.*)$", "-d \1 -w /opt/ssl/webroot/\1") | join(" ") }} -m {{ certbot_email }} --agree-tos --noninteractive --redirect'
+  command: 'certbot certonly --webroot --preferred-challenges http {{ domains | map("regex_replace", "^(.*)$", "-d \1 -w /opt/nginx/ssl/webroot/\1") | join(" ") }} -m {{ certbot_email }} --agree-tos --noninteractive --redirect'
   loop: '{{ domains }}'
   become: yes
   when: certbot
