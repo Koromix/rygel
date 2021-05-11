@@ -56,7 +56,9 @@
   become: yes
 
 - name: Generate Let's Encrypt certificates
-  command: 'certbot certonly --webroot --preferred-challenges http {{ domains | map("regex_replace", "^(.*)$", "-w /opt/nginx/ssl/webroot/\1 -d \1") | join(" ") }} -m {{ certbot_email }} --agree-tos --noninteractive --redirect'
+  shell: |
+    rm -rf /etc/letsencrypt/live/{{ item }}
+    certbot certonly --webroot --preferred-challenges http {{ domains | map("regex_replace", "^(.*)$", "-w /opt/nginx/ssl/webroot/\1 -d \1") | join(" ") }} -m {{ certbot_email }} --agree-tos --noninteractive --redirect
   loop: '{{ domains }}'
   become: yes
   when: certbot
