@@ -19,6 +19,8 @@ all:
     goupile_domains:
       - name: psy-lille.test.goupile.fr
         backup_key: cIxC3Tlm5Uz/85t/hLgaBg4T6dbj/YiJTXX1KdZDhl0=
+      - name: demo.test.goupile.fr
+        backup_key: pr3m+wokFdBy2JHyCHZe4yP3vLBdQPsVkVCwG/in5xI=
     goupile_default_username: admin
     goupile_default_password: !vault |
               $ANSIBLE_VAULT;1.1;AES256
