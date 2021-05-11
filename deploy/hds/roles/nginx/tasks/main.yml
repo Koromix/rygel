@@ -20,6 +20,13 @@
     state: latest
   become: yes
 
+- name: Start and enable NGINX
+  service:
+    name: nginx
+    state: started
+    enabled: yes
+  become: yes
+
 - name: Prepare NGINX and SSL directories
   file:
     path: '{{ item.path }}'
