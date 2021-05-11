@@ -30,17 +30,15 @@
   file:
     path: '{{ item.path }}'
     state: directory
-    owner: '{{ item.owner }}'
+    owner: root
+    group: root
     mode: '{{ item.mode }}'
   loop:
     - path: /opt/nginx
-      owner: root
       mode: '0755'
     - path: /opt/nginx/ssl
-      owner: root
       mode: '0755'
     - path: /opt/nginx/ssl/internal
-      owner: root
       mode: '0700'
   become: yes
 
