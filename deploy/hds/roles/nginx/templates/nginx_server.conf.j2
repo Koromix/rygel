@@ -53,6 +53,9 @@ http {
         ssl_session_timeout 1d;
         ssl_session_cache shared:MozSSL:10m;
         ssl_session_tickets off;
+        ssl_client_certificate /opt/nginx/ssl/internal/ca.crt;
+        ssl_verify_client on;
+        ssl_verify_depth 2;
 
         location / {
             proxy_request_buffering off;
