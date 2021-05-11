@@ -48,7 +48,8 @@
 
 - name: Fetch Goupile repository
   git:
-    repo: https://framagit.org/interhop/goupile.git
+    repo: '{{ goupile_repo }}'
+    version: '{{ goupile_commit }}'
     dest: '{{ goupile_root_path }}/repo'
   become: no
 
