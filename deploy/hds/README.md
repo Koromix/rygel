@@ -17,7 +17,7 @@ vagrant provision
 ### Directly
 
 ```
-ansible-playbook -i inventories/vagrant.yml HDS.yml
+ansible-playbook -i inventories/vagrant.yml hds.yml
 ```
 
 # Preproduction
@@ -25,5 +25,5 @@ ansible-playbook -i inventories/vagrant.yml HDS.yml
 The secret ansible-vault key is needed for this. You must __never ever__ distribute it or put it in the repository!
 
 ```
-ansible-playbook -i inventories/preprod.yml HDS.yml --vault-password-file FICHIER_CLE_VAULT
+ansible-playbook -i inventories/preprod.yml hds.yml --vault-password-file FICHIER_CLE_VAULT
 ```
