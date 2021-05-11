@@ -11,10 +11,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-- name: Generate private CA and certificates
-  include_tasks: internal_ssl.yml
-  when: 'not ansible_check_mode'
-
 - name: Create self-signed certificate for default server
   command:
     cmd: 'openssl req -x509 -newkey rsa:4096 -keyout /opt/nginx/ssl/self.key -out /opt/nginx/ssl/self.crt -days 372 -nodes -subj "/CN=default"'

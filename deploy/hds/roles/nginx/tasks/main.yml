@@ -58,6 +58,10 @@
     creates: /opt/nginx/ssl/dhparam.pem
   become: yes
 
+- name: Generate private CA and certificates
+  include_tasks: internal_ssl.yml
+  when: 'not ansible_check_mode'
+
 - name: Configure proxy host
   include_tasks: proxy.yml
   when: 'inventory_hostname == "proxy"'

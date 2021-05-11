@@ -16,6 +16,7 @@
     path: /tmp/hds/internal_ssl
     state: directory
   delegate_to: localhost
+  run_once: yes
   become: no
 
 - name : Create SSL configuration files
@@ -27,6 +28,7 @@
     - ssl_proxy.conf
     - ssl_server.conf
   delegate_to: localhost
+  run_once: yes
   become: no
 
 - name: Generate CA and HDS certificates
@@ -40,6 +42,7 @@
     openssl req -new -key /tmp/hds/internal_ssl/proxy.key -out /tmp/hds/internal_ssl/proxy.csr -config /tmp/hds/internal_ssl/ssl_proxy.conf
     openssl x509 -req -in /tmp/hds/internal_ssl/proxy.csr -CA /tmp/hds/internal_ssl/ca.crt -CAkey /tmp/hds/internal_ssl/ca.key -CAcreateserial -out /tmp/hds/internal_ssl/proxy.crt -days 372 -sha256 -extfile /tmp/hds/internal_ssl/ssl_proxy.conf -extensions req_ext
   delegate_to: localhost
+  run_once: yes
   become: no
 
 - name: Push internal keys and certificates
@@ -60,4 +63,5 @@
     path: /tmp/hds/internal_ssl
     state: absent
   delegate_to: localhost
+  run_once: yes
   become: no
