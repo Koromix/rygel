@@ -29,21 +29,27 @@
   register: goupile_user
   become: yes
 
-- name: Prepare Goupile directories
+- name: Prepare Goupile installation directories
   file:
-    path: '{{ item.path }}'
+    path: '{{ item }}'
     state: directory
-    owner: '{{ item.owner }}'
+    owner: root
+    group: root
     mode: '0755'
   loop:
-    - path: '{{ goupile_root_path }}'
-      owner: root
-    - path: '{{ goupile_root_path }}/repo'
-      owner: '{{ ansible_user_id }}'
-    - path: '{{ goupile_root_path }}/containers'
-      owner: root
-    - path: '{{ goupile_root_path }}/sync'
-      owner: root
+    - '{{ goupile_root_path }}'
+    - '{{ goupile_root_path }}/containers'
+    - '{{ goupile_root_path }}/sync'
+  become: yes
+
+- name: Prepare Goupile repository directory
+  file:
+    path: '{{ goupile_root_path }}/repo'
+    state: directory
+    owner: '{{ ansible_user_id }}'
+    group: root
+    recurse: yes
+  when: 'not ansible_check_mode'
   become: yes
 
 - name: Fetch Goupile repository
