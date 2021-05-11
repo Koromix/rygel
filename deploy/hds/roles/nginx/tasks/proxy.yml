@@ -59,7 +59,7 @@
   shell:
     cmd: |
       rm -rf /etc/letsencrypt/live/{{ item }}
-      certbot certonly --cert-name {{ item }} --webroot --preferred-challenges http -w /opt/nginx/ssl/webroot/{{ item }} -d {{ item }} -m {{ certbot_email }} --agree-tos --noninteractive --redirect
+      certbot certonly --cert-name {{ item }} --webroot --preferred-challenges http -w /opt/nginx/ssl/webroot/{{ item }} -d {{ item }} -m {{ certbot_email }} --agree-tos --noninteractive
     creates: '/etc/letsencrypt/live/{{ item }}/chain.pem'
     warn: false
   loop: '{{ domains }}'
