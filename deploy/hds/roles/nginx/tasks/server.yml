@@ -11,10 +11,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-- name: Generate private CA and certificates
-  include_tasks: internal_ssl.yml
-  when: 'not ansible_check_mode'
-
 - name: Configure NGINX on server
   template:
     src: nginx_server.conf.j2
