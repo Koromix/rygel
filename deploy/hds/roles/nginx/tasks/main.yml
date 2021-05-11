@@ -27,13 +27,13 @@
     owner: '{{ item.owner }}'
     mode: '{{ item.mode }}'
   loop:
-    - path: '/opt/nginx'
+    - path: /opt/nginx
       owner: root
       mode: '0755'
-    - path: '/opt/nginx/ssl'
+    - path: /opt/nginx/ssl
       owner: root
       mode: '0755'
-    - path: '/opt/nginx/ssl/internal'
+    - path: /opt/nginx/ssl/internal
       owner: root
       mode: '0700'
   become: yes
