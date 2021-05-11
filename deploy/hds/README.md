@@ -25,5 +25,5 @@ ansible-playbook -i inventories/vagrant.yml hds.yml
 The secret ansible-vault key is needed for this. You must __never ever__ distribute it or put it in the repository!
 
 ```
-ansible-playbook -i inventories/preprod.yml hds.yml --vault-password-file FICHIER_CLE_VAULT
+ansible-playbook hds.yml -i inventories/preprod.yml -u <USER> --key-file <KEY_FILE> --vault-password-file <VAULT_FILE> --ask-become-pass
 ```
