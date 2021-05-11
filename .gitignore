@@ -12,3 +12,4 @@ RcppExports.*
 .Rhistory
 .Rbuildignore
 .vagrant
+*.vault
