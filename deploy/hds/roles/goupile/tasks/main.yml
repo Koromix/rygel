@@ -12,11 +12,11 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 - name: Install Debian packages
-  include: debian.yml
+  include: pkg_debian.yml
   when: 'ansible_os_family == "Debian"'
 
 - name: Install distribution packages
-  include: generic.yml
+  include: pkg_generic.yml
   when: 'ansible_os_family != "Debian"'
 
 - name: Create Goupile user

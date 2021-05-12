@@ -53,7 +53,7 @@
   become: yes
 
 - name: Generate private CA and certificates
-  include_tasks: internal_ssl.yml
+  include_tasks: ssl_internal.yml
   when: 'not ansible_check_mode'
 
 - name: Configure NGINX
@@ -72,8 +72,8 @@
     follow: no
   become: yes
 
-- name: Configure proxy host
-  include_tasks: proxy.yml
+- name: Configure certbot on proxy
+  include_tasks: ssl_certbot.yml
   when: 'inventory_hostname == "proxy"'
 
 - name: Reload NGINX
