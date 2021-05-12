@@ -47,9 +47,8 @@
     path: '{{ goupile_root_path }}/repo'
     state: directory
     owner: '{{ ansible_user_id }}'
-    group: root
+    group: '{{ ansible_user_gid | string }}'
     recurse: yes
-  when: 'not ansible_check_mode'
   become: yes
 
 - name: Fetch Goupile repository
