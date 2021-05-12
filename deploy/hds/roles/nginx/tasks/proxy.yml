@@ -61,3 +61,24 @@
   loop: '{{ domains }}'
   become: yes
   when: certbot
+
+- name: List old certbot renewals
+  find:
+    paths:
+      - /etc/letsencrypt/renewal
+      - /etc/letsencrypt/archive
+      - /etc/letsencrypt/live
+    file_type: any
+    recurse: no
+    exclude: '{{ domains | union(domains | map("regex_replace", "^(.*)$", "\1.conf") | list) }}'
+  register: certbot_old
+  become: yes
+  when: certbot
+
+- name: Clean up old certbot renewals
+  file:
+    path: '{{ item.path }}'
+    state: absent
+  loop: '{{ certbot_old.files }}'
+  become: yes
+  when: certbot
