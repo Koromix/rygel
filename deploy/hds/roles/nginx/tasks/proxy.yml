@@ -61,10 +61,3 @@
   loop: '{{ domains }}'
   become: yes
   when: certbot
-
-- name: Configure automatic certificate renewal
-  cron:
-    name: letsencrypt_renewal
-    special_time: monthly
-    job: /usr/bin/certbot renew
-  become: yes
