@@ -48,6 +48,7 @@
     state: link
     src: /opt/nginx/nginx.conf
     force: yes
+    follow: no
   become: yes
 
 - name: Generate Diffie-Helman parameters
