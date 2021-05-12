@@ -27,13 +27,6 @@
   loop: '{{ domains }}'
   become: yes
 
-- name: Configure NGINX on proxy
-  template:
-    src: nginx_proxy.conf.j2
-    dest: /opt/nginx/nginx.conf
-  register: nginx_config
-  become: yes
-
 - name: Reload NGINX (for certbot)
   service:
     name: nginx

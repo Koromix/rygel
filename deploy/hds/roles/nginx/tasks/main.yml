@@ -46,15 +46,6 @@
       mode: '0700'
   become: yes
 
-- name: Link NGINX configuration
-  file:
-    path: /etc/nginx/nginx.conf
-    state: link
-    src: /opt/nginx/nginx.conf
-    force: yes
-    follow: no
-  become: yes
-
 - name: Generate Diffie-Helman parameters
   command:
     cmd: 'openssl dhparam -out /opt/nginx/ssl/dhparam.pem 2048'
@@ -65,13 +56,25 @@
   include_tasks: internal_ssl.yml
   when: 'not ansible_check_mode'
 
+- name: Configure NGINX
+  template:
+    src: 'nginx_{{ inventory_hostname }}.conf.j2'
+    dest: /opt/nginx/nginx.conf
+  register: nginx_config
+  become: yes
+
+- name: Link NGINX configuration
+  file:
+    path: /etc/nginx/nginx.conf
+    state: link
+    src: /opt/nginx/nginx.conf
+    force: yes
+    follow: no
+  become: yes
+
 - name: Configure proxy host
   include_tasks: proxy.yml
   when: 'inventory_hostname == "proxy"'
-
-- name: Configure server host
-  include_tasks: server.yml
-  when: 'inventory_hostname == "server"'
 
 - name: Reload NGINX
   service:

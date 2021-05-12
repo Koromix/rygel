@@ -11,6 +11,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
+{% import 'nginx_util.conf.j2' as util %}
+
 user www-data www-data;
 
 worker_processes auto;
@@ -33,26 +35,13 @@ http {
     default_type application/octet-stream;
 
 {% for domain in goupile_domains %}
+
     server {
-        server_name {{ domain.name }};
-
-        listen 443 ssl;
-        listen [::]:443 ssl;
-
-        access_log /var/log/nginx/{{ domain.name }}.access.log;
-        error_log /var/log/nginx/{{ domain.name }}.error.log error;
-
-        client_max_body_size 32M;
+        {{ util.configure_https(domain.name) }}
 
         ssl_certificate /opt/nginx/ssl/internal/server.crt;
         ssl_certificate_key /opt/nginx/ssl/internal/server.key;
-        ssl_dhparam /opt/nginx/ssl/dhparam.pem;
-        ssl_protocols TLSv1.2 TLSv1.3;
-        ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
-        ssl_prefer_server_ciphers on;
-        ssl_session_timeout 1d;
-        ssl_session_cache shared:MozSSL:10m;
-        ssl_session_tickets off;
+
         ssl_client_certificate /opt/nginx/ssl/internal/ca.crt;
         ssl_verify_client on;
         ssl_verify_depth 2;
