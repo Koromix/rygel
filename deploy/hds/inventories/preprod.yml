@@ -17,9 +17,9 @@ all:
     certbot_email: interhop@riseup.net
 
     goupile_domains:
-      - name: psy-lille.test.goupile.fr
+      - name: psy-lille.preprod.goupile.fr
         backup_key: c0cxZblCz4cWCQ5xFqFHUnTnLSw2T9EKwela41402hU=
-      - name: demo.test.goupile.fr
+      - name: demo.preprod.goupile.fr
         backup_key: pr3m+wokFdBy2JHyCHZe4yP3vLBdQPsVkVCwG/in5xI=
     goupile_default_username: admin
     goupile_default_password: !vault |
