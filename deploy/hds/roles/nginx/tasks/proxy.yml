@@ -31,14 +31,14 @@
   template:
     src: nginx_proxy.conf.j2
     dest: /opt/nginx/nginx.conf
-  register: nginx
+  register: nginx_config
   become: yes
 
 - name: Reload NGINX (for certbot)
   service:
     name: nginx
     state: reloaded
-  when: 'nginx.changed and not ansible_check_mode'
+  when: 'nginx_config.changed and not ansible_check_mode'
   become: yes
 
 - name: Prepare webroot directories for certbot
