@@ -339,7 +339,7 @@ function InstanceController() {
                     <input type="text" placeholder="Filtrer..." .value=${data_filter || ''}
                            @input=${e => { data_filter = e.target.value || null; self.run(); }} />
                     <div style="flex: 1;"></div>
-                    <a @click=${ui.wrapAction(goNewRoot)}>Créer un enregistrement</a>
+                    <a @click=${ui.wrapAction(e => self.go(e, route.form.chain[0].url + '/new'))}>Créer un enregistrement</a>
                     <div style="flex: 1;"></div>
                     ${ENV.backup_key != null ? html`
                         <a @click=${ui.wrapAction(backupRecords)}>Faire une sauvegarde chiffrée</a>
@@ -512,7 +512,10 @@ function InstanceController() {
                     page: route.page,
                     go: (url) => self.go(null, url),
 
-                    save: () => saveRecord(),
+                    save: async () => {
+                        await saveRecord(form_record, form_values, route.page)
+                        await self.run();
+                    },
                     delete: (e, ulid, confirm = true) => {
                         if (confirm) {
                             runDeleteRecordDialog(e, ulid);
@@ -547,27 +550,37 @@ function InstanceController() {
                 form_builder.errorList();
 
             if (route.page.options.default_actions && model.variables.length) {
-                form_builder.action('Enregistrer', {disabled: !form_state.hasChanged()}, () => {
+                let disable = !form_state.hasChanged();
+
+                form_builder.action('Enregistrer', {disabled: disable}, async () => {
                     form_builder.triggerErrors();
-                    return saveRecord();
+
+                    await saveRecord(form_record, form_values, route.page);
+
+                    self.run();
                 });
 
                 if (form_state.just_triggered) {
                     form_builder.action('-');
+
                     form_builder.action('Forcer l\'enregistrement', {}, async e => {
                         await ui.runConfirm(e, html`Confirmez-vous l'enregistrement <b>malgré la présence d'erreurs</b> ?`,
-                                               "Enregistrer malgré tout", () => {});
-                        await saveRecord();
+                                               'Enregistrer malgré tout', () => {});
+
+                        await saveRecord(form_record, form_values, route.page);
+
+                        self.run();
                     });
                     form_builder.action('Effacer les modifications', {}, async e => {
                         await ui.runConfirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
-                                               "Effacer", () => {});
-                        if (form_record.saved) {
-                            await self.go(e, null, { reload: true });
-                        } else {
-                            let url = contextualizeURL(route.page.url, form_record, '/new');
-                            await self.go(e, url, { force: true });
-                        }
+                                               'Effacer', () => {});
+
+                        let record = await loadRecord(form_record.ulid, form_record.version);
+                        await expandRecord(record, route.page.options.load || []);
+
+                        updateContext(route, record);
+
+                        self.run();
                     });
                 }
 
@@ -766,40 +779,27 @@ function InstanceController() {
         });
     }
 
-    function goNewRoot(e) {
-        let url = route.form.chain[0].url + '/new';
-        return self.go(e, url);
-    }
-
-    async function saveRecord(reload = true) {
+    async function saveRecord(record, values, page) {
         if (develop)
             throw new Error('Enregistrement refusé : formulaire non publié');
 
         let progress = log.progress('Enregistrement en cours');
 
         try {
-            let url = route.page.url + `/${form_record.ulid}`;
-
-            let page_key = route.page.key;
-            let record = form_record;
-            let values = Object.assign({}, form_state.values);
+            let ulid = record.ulid;
+            let page_key = page.key;
+            let ptr = values[record.form.key];
 
             await db.transaction('rw', ['rec_records'], async t => {
                 do {
                     let fragment;
-                    if (values != null) {
-                        // Can't store undefined in IndexedDB...
-                        for (let key in values) {
-                            if (values[key] === undefined)
-                                values[key] = null;
-                        }
-
+                    if (ptr != null) {
                         fragment = {
                             type: 'save',
                             user: profile.username,
                             mtime: new Date,
                             page: page_key,
-                            values: values
+                            values: ptr
                         };
                     } else {
                         fragment = null;
@@ -858,10 +858,17 @@ function InstanceController() {
                         record = record.parent;
                         if (record == null)
                             break;
-                        values = form_values[record.form.key];
-                    } while (record.saved && values == null);
+                        ptr = form_values[record.form.key];
+                    } while (record.saved && ptr == null);
                 } while (record != null);
+
+                record = await loadRecord(ulid, null);
+                await expandRecord(record, page.options.load || []);
+
+                updateContext(route, record);
             });
+
+            data_rows = null;
 
             if (ENV.sync_mode !== 'offline') {
                 try {
@@ -878,10 +885,6 @@ function InstanceController() {
                 progress.success('Enregistrement local effectué');
                 enablePersistence();
             }
-
-            data_rows = null;
-            if (reload)
-                self.go(null, url, { reload: true });
         } catch (err) {
             progress.close();
             throw err;
@@ -937,15 +940,13 @@ function InstanceController() {
                 let idx = form_record.chain.findIndex(record => record.ulid === ulid);
 
                 if (idx >= 0) {
-                    form_state.clearChanges();
-
                     if (idx > 0) {
                         let record = form_record.chain[idx];
                         let url = contextualizeURL(record.form.multi ? route.page.url : record.parent.form.url, record.parent);
 
-                        self.go(null, url);
+                        self.go(null, url, { force: true });
                     } else {
-                        goNewRoot(null);
+                        self.go(null, route.form.chain[0].url + '/new', { force: true });
                     }
                 } else {
                     self.go();
@@ -1527,8 +1528,6 @@ function InstanceController() {
 
         let new_route = Object.assign({}, route);
         let new_record;
-        let new_state;
-        let new_values;
         let new_dictionaries;
         let new_code;
 
@@ -1602,10 +1601,9 @@ function InstanceController() {
         // We may need to restart in some cases, hence the fake loop to do it with continue.
         for (;;) {
             new_record = form_record;
-            new_state = form_state;
             new_values = form_values;
 
-            // Load record if needed
+            // Get to the record damn it
             if (new_record != null && options.reload) {
                 new_route.version = null;
                 new_record = null;
@@ -1613,56 +1611,15 @@ function InstanceController() {
             if (new_record != null && (new_route.ulid !== new_record.ulid ||
                                        new_route.version !== new_record.version))
                 new_record = null;
-            if (new_record == null && new_route.ulid != null) {
+            if (new_record == null && new_route.ulid != null)
                 new_record = await loadRecord(new_route.ulid, new_route.version);
-                new_state = null;
-            }
-
-            // Go to parent or child automatically
-            if (new_record != null && new_record.form !== new_route.form) {
+            if (new_record != null && new_record.form !== new_route.form)
                 new_record = await moveToAppropriateRecord(new_record, new_route.form, true);
-                new_state = null;
-            }
-
-            // Create new record if needed
-            if (new_route.ulid == null || new_record == null) {
+            if (new_route.ulid == null || new_record == null)
                 new_record = createRecord(new_route.form);
-                new_state = null;
-            }
 
-            // Load record parents
-            if (new_record.chain == null) {
-                let chain = [];
-                let map = {};
-
-                new_record.chain = chain;
-                new_record.map = map;
-                chain.push(new_record);
-                map[new_record.form.key] = new_record;
-
-                let record = new_record;
-                while (record.parent != null) {
-                    let parent_record = record.parent;
-                    if (parent_record.values == null)
-                        parent_record = await loadRecord(record.parent.ulid);
-
-                    parent_record.chain = chain;
-                    parent_record.map = map;
-                    chain.push(parent_record);
-                    map[parent_record.form.key] = parent_record;
-                    record.parent = parent_record;
-
-                    record = parent_record;
-                }
-
-                chain.reverse();
-            }
-
-            // Siblings (formMulti)
-            if (new_route.form.multi && new_record.parent != null) {
-                new_record.siblings = await listChildren(new_record.parent.ulid, new_route.form.key);
-                new_record.siblings.sort((record1, record2) => util.compareValues(record1.ulid, record2.ulid));
-            }
+            // Load close records (parents, siblings, children)
+            await expandRecord(new_record, new_route.page.options.load || []);
 
             // Safety checks
             if (goupile.isLocked() && !new_record.chain.some(record => record.ulid === profile.lock))
@@ -1686,7 +1643,9 @@ function InstanceController() {
                         await ui.runConfirm(e, html`Si vous continuez, vos <b>modifications seront enregistrées</b>. Voulez-vous enregistrer ?`,
                                                "Enregistrer", async () => {
                             form_builder.triggerErrors();
-                            await saveRecord(false);
+
+                            await saveRecord(form_record, form_values, route.page);
+                            new_route.version = null;
                         });
 
                         options.reload = true;
@@ -1705,18 +1664,18 @@ function InstanceController() {
             break;
         }
 
-        // Sync route and state with magic record navigation
-        new_route.ulid = new_record.ulid;
-        new_route.version = new_record.version;
-        if (new_state == null) {
-            new_state = new FormState(new_record.values);
-            new_state.changeHandler = handleStateChange;
+        // Fetch page code (for page panel)
+        new_code = await fetchCode(new_route.page.filename);
 
-            if (form_state != null && new_route.page === route.page)
-                new_state.state_tabs = form_state.state_tabs;
-
-            new_values = {};
-            new_values[new_route.form.key] = new_state.values;
+        // Dictionaries
+        new_dictionaries = {};
+        if (new_route.page.options.dictionaries != null) {
+            for (let dict of new_route.page.options.dictionaries) {
+                let records = form_dictionaries[dict];
+                if (records == null)
+                    new_dictionaries[dict] = await loadRecords(null, dict);
+                new_dictionaries[dict] = records;
+            }
         }
 
         // Help the user fill new or selected forms and pages
@@ -1740,61 +1699,19 @@ function InstanceController() {
             }
         }
 
-        // Fetch page code (for page panel)
-        new_code = await fetchCode(new_route.page.filename);
-
-        // Dictionaries
-        new_dictionaries = {};
-        if (new_route.page.options.dictionaries != null) {
-            for (let dict of new_route.page.options.dictionaries) {
-                let records = form_dictionaries[dict];
-                if (records == null)
-                    new_dictionaries[dict] = await loadRecords(null, dict);
-                new_dictionaries[dict] = records;
-            }
-        }
-
-        // Load children if requested
-        if (new_route.page.options.load != null) {
-            for (let key of new_route.page.options.load) {
-                let form = app.forms.get(key);
-
-                try {
-                    let record = await moveToAppropriateRecord(new_record, form, false);
-
-                    if (record != null) {
-                        if (form.multi) {
-                            new_record.map[key] = await loadRecords(record.parent.ulid, form.key);
-                        } else {
-                            new_record.map[key] = record;
-                        }
-                    } else {
-                        new_record.map[key] = null;
-                    }
-                } catch (err) {
-                    new_record.map[key] = null;
-                    console.log(err);
-                }
-            }
-        }
-
         // Commit!
-        route = new_route;
-        form_record = new_record;
-        if (new_state !== form_state)
-            form_builder = null;
-        form_state = new_state;
-        form_values = new_values;
-        form_dictionaries = new_dictionaries;
+        updateContext(new_route, new_record);
         page_code = new_code;
+        form_dictionaries = new_dictionaries;
 
-        // Update browser URL
+        // Update URL and title
         {
             let url = contextualizeURL(route.page.url, form_record);
             goupile.syncHistory(url, options.push_history);
+
+            document.title = `${route.page.title} — ${ENV.title}`;
         }
 
-        document.title = `${route.page.title} — ${ENV.title}`;
         await self.run();
     };
     this.go = util.serializeAsync(this.go);
@@ -1906,6 +1823,27 @@ function InstanceController() {
     };
     this.run = util.serializeAsync(this.run);
 
+    function updateContext(new_route, new_record) {
+        let copy_ui = (new_route.page === route.page);
+
+        route = new_route;
+        route.ulid = new_record.ulid;
+        route.version = new_record.version;
+
+        if (new_record !== form_record) {
+            form_record = new_record;
+
+            let new_state = new FormState(new_record.values);
+            new_state.changeHandler = handleStateChange;
+            if (form_state != null && copy_ui)
+                new_state.state_tabs = form_state.state_tabs;
+            form_state = new_state;
+
+            form_values = {};
+            form_values[new_record.form.key] = form_state.values;
+        }
+    }
+
     function contextualizeURL(url, record, default_ctx = '') {
         while (record != null && !record.saved)
             record = record.parent;
@@ -2001,6 +1939,64 @@ function InstanceController() {
             return record;
         } else {
             throw new Error('L\'enregistrement demandé n\'existe pas');
+        }
+    }
+
+    async function expandRecord(record, load_children = []) {
+        // Load record parents
+        if (record.chain == null) {
+            let chain = [];
+            let map = {};
+
+            record.chain = chain;
+            record.map = map;
+            chain.push(record);
+            map[record.form.key] = record;
+
+            let it = record;
+            while (it.parent != null) {
+                let parent_record = it.parent;
+                if (parent_record.values == null)
+                    parent_record = await loadRecord(it.parent.ulid);
+
+                parent_record.chain = chain;
+                parent_record.map = map;
+                chain.push(parent_record);
+                map[parent_record.form.key] = parent_record;
+                it.parent = parent_record;
+
+                it = parent_record;
+            }
+
+            chain.reverse();
+        }
+
+        // Siblings (formMulti)
+        if (record.form.multi && record.parent != null) {
+            record.siblings = await listChildren(record.parent.ulid, record.form.key);
+            record.siblings.sort((record1, record2) => util.compareValues(record1.ulid, record2.ulid));
+        }
+
+        // Load children (if requested)
+        for (let key of load_children) {
+            let form = app.forms.get(key);
+
+            try {
+                let child = await moveToAppropriateRecord(record, form, false);
+
+                if (child != null) {
+                    if (form.multi) {
+                        record.map[key] = await loadRecords(child.parent.ulid, form.key);
+                    } else {
+                        record.map[key] = child;
+                    }
+                } else {
+                    record.map[key] = null;
+                }
+            } catch (err) {
+                record.map[key] = null;
+                console.log(err);
+            }
         }
     }
 
@@ -2346,16 +2342,10 @@ function InstanceController() {
             if (changes.size && standalone) {
                 progress.success('Synchronisation terminée');
 
+                // XXX: Keep current user value changes
                 if (form_record != null) {
-                    // XXX: What about current record being edited?
-                    if (!self.hasUnsavedData() && form_record.saved) {
-                        route.version = null;
-                        form_record = null;
-                        form_state.clearChanges();
-                    }
                     data_rows = null;
-
-                    self.go(null, window.location.href);
+                    self.go(null, window.location.href, { reload: true });
                 }
             } else {
                 if (standalone)

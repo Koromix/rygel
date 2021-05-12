@@ -36,7 +36,6 @@ function FormState(values = {}) {
     this.values = proxyObject(values);
 
     this.hasChanged = function() { return !!changes.size; };
-    this.clearChanges = function() { changes.clear(); };
 
     function proxyObject(obj) {
         if (typeof obj !== 'object')
