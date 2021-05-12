@@ -17,13 +17,17 @@
     pkg:
       - nginx
       - python3-certbot-nginx
+      - logrotate
     state: latest
   become: yes
 
-- name: Enable NGINX
+- name: Enable services
   service:
-    name: nginx
+    name: '{{ item }}'
     enabled: yes
+  loop:
+    - nginx
+    - logrotate
   become: yes
 
 - name: Prepare NGINX and SSL directories
