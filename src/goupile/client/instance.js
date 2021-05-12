@@ -547,14 +547,12 @@ function InstanceController() {
                 form_builder.errorList();
 
             if (route.page.options.default_actions && model.variables.length) {
-                let enable_save = !model.hasErrors() && form_state.hasChanged();
-
-                form_builder.action('Enregistrer', {disabled: !enable_save}, () => {
+                form_builder.action('Enregistrer', {disabled: !form_state.hasChanged()}, () => {
                     form_builder.triggerErrors();
                     return saveRecord();
                 });
 
-                if (form_builder.hasErrors()) {
+                if (form_state.just_triggered) {
                     form_builder.action('-');
                     form_builder.action('Forcer l\'enregistrement', {}, async e => {
                         await ui.runConfirm(e, html`Confirmez-vous l'enregistrement <b>malgré la présence d'erreurs</b> ?`,

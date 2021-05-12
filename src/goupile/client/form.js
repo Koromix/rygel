@@ -26,6 +26,7 @@ function FormState(values = {}) {
     this.obj_caches = new WeakMap;
 
     // Semi-public UI state
+    this.just_triggered = false;
     this.state_tabs = {};
 
     let proxies = new WeakMap;
@@ -97,6 +98,7 @@ function FormModel() {
 
     this.errors = 0;
     this.valid = true;
+    this.triggered = false;
 
     this.isValid = function() { return self.valid; };
     this.hasErrors = function() { return !!self.errors; };
@@ -151,7 +153,9 @@ function FormBuilder(state, model, readonly = false) {
     this.triggerErrors = function() {
         if (!self.isValid()) {
             state.take_delayed = new Set(model.variables.map(variable => variable.key.toString()));
+
             self.restart();
+            state.just_triggered = true;
 
             throw new Error('Corrigez les erreurs avant de continuer');
         }
@@ -1439,6 +1443,8 @@ instead of:
 
     this.refresh = function() {
         if (!restart) {
+            state.just_triggered = false;
+
             setTimeout(() => state.changeHandler(model), 0);
             restart = true;
         }
