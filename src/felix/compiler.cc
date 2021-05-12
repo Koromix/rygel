@@ -261,9 +261,15 @@ public:
         }
 #elif defined(__APPLE__)
         Fmt(&buf, " -pthread -fPIC");
+        if (major_version >= 11) {
+            Fmt(&buf, " -fno-semantic-interposition");
+        }
 #else
         Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
                   " -pthread -fPIC");
+        if (major_version >= 11) {
+            Fmt(&buf, " -fno-semantic-interposition");
+        }
         if (compile_mode == CompileMode::Fast || compile_mode == CompileMode::LTO) {
             Fmt(&buf, " -D_FORTIFY_SOURCE=2");
         }
@@ -560,10 +566,10 @@ public:
                   " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
                   " -D__USE_MINGW_ANSI_STDIO=1");
 #elif defined(__APPLE__)
-        Fmt(&buf, " -pthread -fPIC");
+        Fmt(&buf, " -pthread -fPIC -fno-semantic-interposition");
 #else
         Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
-                  " -pthread -fPIC");
+                  " -pthread -fPIC -fno-semantic-interposition");
         if (compile_mode == CompileMode::Fast || compile_mode == CompileMode::LTO) {
             Fmt(&buf, " -D_FORTIFY_SOURCE=2");
         }
