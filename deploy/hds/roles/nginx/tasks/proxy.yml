@@ -13,7 +13,7 @@
 
 - name: Create self-signed certificate for default server
   command:
-    cmd: 'openssl req -x509 -newkey rsa:4096 -keyout /opt/nginx/ssl/self.key -out /opt/nginx/ssl/self.crt -days 372 -nodes -subj "/CN=default"'
+    cmd: 'openssl req -x509 -newkey rsa:2048 -keyout /opt/nginx/ssl/self.key -out /opt/nginx/ssl/self.crt -days 372 -nodes -subj "/CN=default"'
     creates: /opt/nginx/ssl/self.crt
   become: yes
 
@@ -21,7 +21,7 @@
   shell:
     cmd: |
       mkdir -p /etc/letsencrypt/live/{{ item }}
-      openssl req -x509 -newkey rsa:4096 -keyout /etc/letsencrypt/live/{{ item }}/privkey.pem -out /etc/letsencrypt/live/{{ item }}/fullchain.pem -days 7 -nodes -subj '/CN={{ item }}'
+      openssl req -x509 -newkey rsa:2048 -keyout /etc/letsencrypt/live/{{ item }}/privkey.pem -out /etc/letsencrypt/live/{{ item }}/fullchain.pem -days 7 -nodes -subj '/CN={{ item }}'
     creates: '/etc/letsencrypt/live/{{ item }}/fullchain.pem'
     warn: false
   loop: '{{ domains }}'
