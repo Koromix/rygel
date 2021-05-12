@@ -564,7 +564,12 @@ function InstanceController() {
                     form_builder.action('Effacer les modifications', {}, async e => {
                         await ui.runConfirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
                                                "Effacer", () => {});
-                        await self.go(e, null, { reload: true });
+                        if (form_record.saved) {
+                            await self.go(e, null, { reload: true });
+                        } else {
+                            let url = contextualizeURL(route.page.url, form_record, '/new');
+                            await self.go(e, url, { force: true });
+                        }
                     });
                 }
 
@@ -1676,24 +1681,26 @@ function InstanceController() {
             }
 
             // Confirm dangerous actions (at risk of data loss)
-            if (!options.reload && self.hasUnsavedData() && (new_record !== form_record ||
-                                                             new_route.page !== route.page)) {
-                try {
-                    await ui.runConfirm(e, html`Si vous continuez, vos <b>modifications seront enregistrées</b>. Voulez-vous enregistrer ?`,
-                                           "Enregistrer", async () => {
-                        form_builder.triggerErrors();
-                        await saveRecord(false);
-                    });
+            if (!options.reload && !options.force) {
+                if (self.hasUnsavedData() && (new_record !== form_record || 
+                                              new_route.page !== route.page)) {
+                    try {
+                        await ui.runConfirm(e, html`Si vous continuez, vos <b>modifications seront enregistrées</b>. Voulez-vous enregistrer ?`,
+                                               "Enregistrer", async () => {
+                            form_builder.triggerErrors();
+                            await saveRecord(false);
+                        });
 
-                    options.reload = true;
-                    continue;
-                } catch (err) {
-                    if (err != null)
-                        log.error(err);
+                        options.reload = true;
+                        continue;
+                    } catch (err) {
+                        if (err != null)
+                            log.error(err);
 
-                    // If we're popping state, this will fuck up navigation history but we can't
-                    // refuse popstate events. History mess is better than data loss.
-                    return self.run();
+                        // If we're popping state, this will fuck up navigation history but we can't
+                        // refuse popstate events. History mess is better than data loss.
+                        return self.run();
+                    }
                 }
             }
 
@@ -1901,13 +1908,16 @@ function InstanceController() {
     };
     this.run = util.serializeAsync(this.run);
 
-    function contextualizeURL(url, record) {
-        if (record.saved) {
+    function contextualizeURL(url, record, default_ctx = '') {
+        while (record != null && !record.saved)
+            record = record.parent;
+
+        if (record != null) {
             url += `/${record.ulid}`;
             if (record.version < record.fragments.length)
                 url += `@${record.version}`;
-        } else if (record.parent != null && record.parent.saved) {
-            url += `/${record.parent.ulid}`;
+        } else {
+            url += default_ctx;
         }
 
         return url;
