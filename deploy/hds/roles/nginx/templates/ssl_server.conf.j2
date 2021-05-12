@@ -15,6 +15,4 @@ CN = interhop.org
 subjectAltName = @names
 
 [names]
-{% for domain in domains -%}
-    DNS.{{ loop.index }} = {{ domain }}
-{% endfor %}
+DNS.1 = {{ hostvars['server'].ansible_host }}
