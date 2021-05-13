@@ -19,6 +19,7 @@ import os.path
 import subprocess
 import shutil
 import stat
+import sys
 
 if __name__ == "__main__":
     start_directory = os.getcwd()
@@ -140,10 +141,10 @@ if __name__ == "__main__":
     '''
 
     # Filter it out and rewrite FelixBuild.ini
-    subprocess.run(['python3', script_directory + '/git-filter-repo.py',
+    subprocess.run([sys.executable, script_directory + '/git-filter-repo.py',
                     '--blob-callback', REWRITE_FELIXBUILD,
                     '--paths-from-file', script_directory + '/keep.txt'])
-    subprocess.run(['python3', script_directory + '/git-filter-repo.py',
+    subprocess.run([sys.executable, script_directory + '/git-filter-repo.py',
                     '--invert-paths', '--paths-from-file', script_directory + '/remove.txt'])
 
     # Push to repository
