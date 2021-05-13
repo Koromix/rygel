@@ -13,8 +13,8 @@ if NOT ERRORLEVEL 1 (
     if NOT ERRORLEVEL 1 (
         echo Bootstrapping felix with MSVC...
         mkdir %BUILD%
-        cl /nologo /std:c++latest /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /c %SRC% /Fo%BUILD%
-        link /nologo tmp\*.obj /out:%BUILD%\felix.exe
+        cl /nologo /std:c++latest /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /c %SRC% /Fo%BUILD%\
+        link /nologo %BUILD%\*.obj /out:%BUILD%\felix.exe
         %BUILD%\felix.exe -mFast -fStatic -O %BUILD%\Fast felix
         move %BUILD%\Fast\felix.exe %BIN%
 
@@ -31,8 +31,8 @@ if NOT ERRORLEVEL 1 (
     if NOT ERRORLEVEL 1 (
         echo Bootstrapping felix with Clang...
         mkdir %BUILD%
-        cl /nologo /std:c++latest /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /c %SRC% /Fo%BUILD%
-        link /nologo tmp\*.obj /out:%BUILD%\felix.exe
+        cl /nologo /std:c++latest /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /c %SRC% /Fo%BUILD%\
+        link /nologo %BUILD%\*.obj /out:%BUILD%\felix.exe
         %BUILD%\felix.exe -mFast -fStatic -O %BUILD%\Fast felix
         move %BUILD%\Fast\felix.exe %BIN%
 
