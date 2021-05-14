@@ -255,6 +255,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleUserDelete(request, io);
         } else if (TestStr(admin_url, "/api/users/list") && request.method == http_RequestMethod::Get) {
             HandleUserList(request, io);
+        } else if (TestStr(admin_url, "/api/send/mail") && request.method == http_RequestMethod::Post) {
+            HandleSendMail(nullptr, request, io);
+        } else if (TestStr(admin_url, "/api/send/sms") && request.method == http_RequestMethod::Post) {
+            HandleSendSMS(nullptr, request, io);
         } else {
             io->AttachError(404);
         }
@@ -402,6 +406,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleRecordLoad(instance, request, io);
         } else if (TestStr(instance_url, "/api/records/save") && request.method == http_RequestMethod::Post) {
             HandleRecordSave(instance, request, io);
+        } else if (TestStr(instance_url, "/api/send/mail") && request.method == http_RequestMethod::Post) {
+            HandleSendMail(instance, request, io);
+        } else if (TestStr(instance_url, "/api/send/sms") && request.method == http_RequestMethod::Post) {
+            HandleSendSMS(instance, request, io);
         } else {
             io->AttachError(404);
         }

@@ -18,10 +18,15 @@
 
 namespace RG {
 
+class InstanceHolder;
+
 bool InitSMTP(const smtp_Config &config);
 bool InitSMS(const sms_Config &config);
 
 bool SendMail(const char *to, const smtp_MailContent &content);
 bool SendSMS(const char *to, const char *message);
+
+void HandleSendMail(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleSendSMS(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
 }

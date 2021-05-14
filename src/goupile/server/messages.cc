@@ -12,8 +12,10 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "../../core/libcc/libcc.hh"
-#include "../../core/libnet/libnet.hh"
+#include "domain.hh"
+#include "goupile.hh"
 #include "messages.hh"
+#include "../../core/libnet/libnet.hh"
 
 namespace RG {
 
@@ -38,6 +40,144 @@ bool SendMail(const char *to, const smtp_MailContent &content)
 bool SendSMS(const char *to, const char *message)
 {
     return sms.Send(to, message);
+}
+
+void HandleSendMail(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    if (!gp_domain.config.smtp.url) {
+        LogError("This instance is not configured to send mails");
+        io->AttachError(503);
+        return;
+    }
+
+    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (instance && !session->HasPermission(instance, UserPermission::DataMessage)) {
+        LogError("User is not allowed to send messages");
+        io->AttachError(403);
+        return;
+    } else if (!session->IsAdmin()) {
+        if (session->admin_until) {
+            LogError("Admin user needs to confirm identity");
+            io->AttachError(401);
+        } else {
+            LogError("Non-admin users are not allowed to send mails");
+            io->AttachError(403);
+        }
+        return;
+    }
+
+    io->RunAsync([=]() {
+        HashMap<const char *, const char *> values;
+        if (!io->ReadPostValues(&io->allocator, &values)) {
+            io->AttachError(422);
+            return;
+        }
+
+        // Read POST values
+        const char *to;
+        smtp_MailContent content;
+        {
+            bool valid = true;
+
+            to = values.FindValue("to", nullptr);
+            content.subject = values.FindValue("subject", nullptr);
+            content.text = values.FindValue("text", nullptr);
+            content.html = values.FindValue("html", nullptr);
+
+            if (!to || !strchr(to, '@')) {
+                LogError("Missing or invalid 'to' parameter");
+                valid = false;
+            }
+            if (!content.subject && !content.text && !content.html) {
+                LogError("Missing 'subject', 'text' and 'html' parameters");
+                valid = false;
+            }
+
+            if (!valid) {
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        if (!SendMail(to, content))
+            return;
+
+        io->AttachText(200, "Done!");
+    });
+}
+
+void HandleSendSMS(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    if (gp_domain.config.sms.provider == sms_Provider::None) {
+        LogError("This instance is not configured to send SMS messages");
+        io->AttachError(503);
+        return;
+    }
+
+    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (instance && !session->HasPermission(instance, UserPermission::DataMessage)) {
+        LogError("User is not allowed to send messages");
+        io->AttachError(403);
+        return;
+    } else if (!session->IsAdmin()) {
+        if (session->admin_until) {
+            LogError("Admin user needs to confirm identity");
+            io->AttachError(401);
+        } else {
+            LogError("Non-admin users are not allowed to send mails");
+            io->AttachError(403);
+        }
+        return;
+    }
+
+    io->RunAsync([=]() {
+        HashMap<const char *, const char *> values;
+        if (!io->ReadPostValues(&io->allocator, &values)) {
+            io->AttachError(422);
+            return;
+        }
+
+        // Read POST values
+        const char *to;
+        const char *message;
+        {
+            bool valid = true;
+
+            to = values.FindValue("to", nullptr);
+            message = values.FindValue("message", nullptr);
+
+            if (!to || !to[0]) {
+                LogError("Missing or empty 'to' parameter");
+                valid = false;
+            }
+            if (!message) {
+                LogError("Missing 'message' parameter");
+                valid = false;
+            }
+
+            if (!valid) {
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        if (!SendSMS(to, message))
+            return;
+
+        io->AttachText(200, "Done!");
+    });
 }
 
 }
