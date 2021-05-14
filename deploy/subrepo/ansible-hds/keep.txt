@@ -1,0 +1,14 @@
+deploy/HDS/
+deploy/hds/
+deploy/ansible/README.md
+deploy/ansible/hds.yml
+deploy/ansible/vagrant/hds
+deploy/ansible/roles/goupile
+deploy/ansible/roles/nginx
+deploy/ansible/inventories/hds
+deploy/subrepo/ansible-hds/gitignore
+
+deploy/HDS/==>
+deploy/hds/==>
+deploy/ansible/==>
+deploy/subrepo/ansible-hds/gitignore==>.gitignore
