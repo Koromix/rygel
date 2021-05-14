@@ -119,6 +119,89 @@ static const CompilerInfo *FindDefaultCompiler()
     return nullptr;
 }
 
+static bool ParseCompilerString(const char *str, CompilerInfo *out_compiler_info)
+{
+    Span<const char> binary;
+    Span<const char> name = SplitStr(str, ':', &binary);
+
+    const CompilerInfo *info =
+        FindIfPtr(Compilers, [&](const CompilerInfo &info) { return TestStr(info.name, name); });
+
+    if (!info) {
+        LogError("Unknown compiler '%1'", name);
+        return false;
+    }
+
+    *out_compiler_info = *info;
+    if (binary.ptr > name.end()) {
+        out_compiler_info->binary = binary.ptr;
+    }
+
+    return true;
+}
+
+static bool ParseFeatureString(const char *str, uint32_t *out_features)
+{
+    while (str[0]) {
+        Span<const char> part = TrimStr(SplitStr(str, ',', &str), " ");
+
+        if (part.len) {
+            CompileFeature feature;
+            if (!OptionToEnum(CompileFeatureNames, part, &feature)) {
+                LogError("Unknown target feature '%1'", part);
+                return false;
+            }
+
+            *out_features |= 1u << (int)feature;
+        }
+    }
+
+    return true;
+}
+
+static bool LoadUserFile(const char *filename, CompilerInfo *out_compiler_info, BuildSettings *out_build)
+{
+    StreamReader st(filename);
+    if (!st.IsValid())
+        return false;
+
+    IniParser ini(&st);
+    ini.PushLogFilter();
+    RG_DEFER { PopLogFilter(); };
+
+    bool valid = true;
+    {
+        IniProperty prop;
+        while (ini.Next(&prop)) {
+            if (!prop.section.len) {
+                do {
+                    if (prop.key == "Compiler") {
+                        valid &= ParseCompilerString(prop.value.ptr, out_compiler_info);
+                    } else if (prop.key == "Mode") {
+                        if (!OptionToEnum(CompileModeNames, prop.value.ptr, &out_build->compile_mode)) {
+                            LogError("Unknown build mode '%1'", prop.value);
+                            valid = false;
+                        }
+                    } else if (prop.key == "Features") {
+                        valid &= ParseFeatureString(prop.value.ptr, &out_build->features);
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
+            } else {
+                LogError("Unknown section '%1'", prop.section);
+                while (ini.NextInSection(&prop));
+                valid = false;
+            }
+        }
+    }
+    if (!ini.IsValid() || !valid)
+        return false;
+
+    return true;
+}
+
 int RunBuild(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -191,6 +274,57 @@ Felix can also run the following special commands:
 For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget);
     };
 
+    // Find config filename
+    {
+        OptionParser opt(arguments, (int)OptionParser::Flag::SkipNonOptions);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                config_filename = opt.current_value;
+            } else if (opt.Test("--run") || opt.Test("--run_here")) {
+                break;
+            }
+        }
+    }
+
+    // Root directory
+    const char *start_directory = DuplicateString(GetWorkingDirectory(), &temp_alloc).ptr;
+    if (config_filename) {
+        Span<const char> root_directory;
+        config_filename = SplitStrReverseAny(config_filename, RG_PATH_SEPARATORS, &root_directory).ptr;
+
+        if (root_directory.len) {
+            const char *root_directory0 = DuplicateString(root_directory, &temp_alloc).ptr;
+            if (!SetWorkingDirectory(root_directory0))
+                return 1;
+        }
+    } else {
+        config_filename = "FelixBuild.ini";
+
+        // Try to find FelixBuild.ini in current directory and all parent directories. We
+        // don't need to handle not finding it anywhere, because in this case the config load
+        // will fail with a simple "Cannot open 'FelixBuild.ini'" message.
+        for (Size i = 0; start_directory[i]; i++) {
+            if (IsPathSeparator(start_directory[i])) {
+                if (TestFile(config_filename))
+                    break;
+
+                SetWorkingDirectory("..");
+            }
+        }
+    }
+
+    // Load user settings
+    {
+        const char *user_filename = Fmt(&temp_alloc, "%1.user", config_filename).ptr;
+
+        if (TestFile(user_filename) && !LoadUserFile(user_filename, &compiler_info, &build))
+            return 1;
+    }
+
     // Parse arguments
     {
         OptionParser opt(arguments);
@@ -203,50 +337,21 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             if (!opt.Next())
                 break;
 
-            if (opt.Test("--help")) {
-                print_usage(stdout);
-                return 0;
-            } else if (opt.Test("-C", "--config", OptionType::Value)) {
-                config_filename = opt.current_value;
+            if (opt.Test("-C", "--config", OptionType::Value)) {
+                // Already handled
             } else if (opt.Test("-O", "--output", OptionType::Value)) {
                 build.output_directory = opt.current_value;
             } else if (opt.Test("-c", "--compiler", OptionType::Value)) {
-                Span<const char> binary;
-                Span<const char> name = SplitStr(opt.current_value, ':', &binary);
-
-                const CompilerInfo *info =
-                    FindIfPtr(Compilers, [&](const CompilerInfo &info) { return TestStr(info.name, name); });
-
-                if (!info) {
-                    LogError("Unknown compiler '%1'", name);
+                if (!ParseCompilerString(opt.current_value, &compiler_info))
                     return 1;
-                }
-
-                compiler_info = *info;
-                if (binary.ptr > name.end()) {
-                    compiler_info.binary = binary.ptr;
-                }
             } else if (opt.Test("-m", "--mode", OptionType::Value)) {
                 if (!OptionToEnum(CompileModeNames, opt.current_value, &build.compile_mode)) {
                     LogError("Unknown build mode '%1'", opt.current_value);
                     return 1;
                 }
             } else if (opt.Test("-f", "--features", OptionType::Value)) {
-                const char *features_str = opt.current_value;
-
-                while (features_str[0]) {
-                    Span<const char> part = TrimStr(SplitStr(features_str, ',', &features_str), " ");
-
-                    if (part.len) {
-                        CompileFeature feature;
-                        if (!OptionToEnum(CompileFeatureNames, part, &feature)) {
-                            LogError("Unknown target feature '%1'", part);
-                            return 1;
-                        }
-
-                        build.features |= 1u << (int)feature;
-                    }
-                }
+                if (!ParseFeatureString(opt.current_value, &build.features))
+                    return 1;
             } else if (opt.Test("-e", "--environment")) {
                 build.env = true;
             } else if (opt.Test("-j", "--jobs", OptionType::Value)) {
@@ -312,33 +417,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     if (!compiler->CheckFeatures(build.compile_mode, build.features))
         return 1;
     build.compiler = compiler.get();
-
-    // Root directory
-    const char *start_directory = DuplicateString(GetWorkingDirectory(), &temp_alloc).ptr;
-    if (config_filename) {
-        Span<const char> root_directory;
-        config_filename = SplitStrReverseAny(config_filename, RG_PATH_SEPARATORS, &root_directory).ptr;
-
-        if (root_directory.len) {
-            const char *root_directory0 = DuplicateString(root_directory, &temp_alloc).ptr;
-            if (!SetWorkingDirectory(root_directory0))
-                return 1;
-        }
-    } else {
-        config_filename = "FelixBuild.ini";
-
-        // Try to find FelixBuild.ini in current directory and all parent directories. We
-        // don't need to handle not finding it anywhere, because in this case the config load
-        // will fail with a simple "Cannot open 'FelixBuild.ini'" message.
-        for (Size i = 0; start_directory[i]; i++) {
-            if (IsPathSeparator(start_directory[i])) {
-                if (TestFile(config_filename))
-                    break;
-
-                SetWorkingDirectory("..");
-            }
-        }
-    }
 
     // Output directory
     if (build.output_directory) {

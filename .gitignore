@@ -13,3 +13,4 @@ RcppExports.*
 .Rbuildignore
 .vagrant
 *.vault
+FelixBuild.ini.user
