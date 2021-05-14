@@ -20,6 +20,28 @@ RunGroup = {{ goupile_run_group }}
 DefaultAdmin = {{ goupile_default_username }}
 DefaultPassword = {{ goupile_default_password }}
 
+{% if goupile_smtp is defined -%}
+
+[SMTP]
+URL = {{ goupile_smtp.url }}
+{% if goupile_smtp.username is defined %}
+Username = {{ goupile_smtp.username }}
+Password = {{ goupile_smtp.password }}
+{% endif %}
+From = {{ goupile_smtp.from }}
+
+{%- endif %}
+
+{% if goupile_sms is defined -%}
+
+[SMS]
+Provider = {{ goupile_sms.provider }}
+AuthID = {{ goupile_sms.auth_id }}
+AuthToken = {{ goupile_sms.auth_token }}
+From = {{ goupile_sms.from }}
+
+{% endif %}
+
 [Domains]
 {% for domain in goupile_domains -%}
     {{ domain.name }} = {{ domain.backup_key }}

@@ -216,7 +216,7 @@ def list_system_libraries(binary):
 
     return libraries
 
-def update_domain_config(info, backup_key):
+def update_domain_config(info, backup_key, smtp, sms):
     filename = os.path.join(info.directory, 'goupile.ini')
     ini = parse_ini(filename)
 
@@ -228,6 +228,18 @@ def update_domain_config(info, backup_key):
     ini.set('HTTP', 'UnixPath', info.socket)
     ini.set('HTTP', 'TrustXRealIP', 'On')
     ini.remove_option('HTTP', 'Port')
+
+    ini.remove_section('SMTP')
+    if smtp is not None:
+        ini.add_section('SMTP')
+        for key, value in smtp.items():
+            ini.set('SMTP', key, value)
+
+    ini.remove_section('SMS')
+    if sms is not None:
+        ini.add_section('SMS')
+        for key, value in sms.items():
+            ini.set('SMS', key, value)
 
     with io.StringIO() as f:
         ini.write(f)
@@ -270,7 +282,9 @@ def run_sync(config):
     print('>>> Write Goupile configuration files', file = sys.stderr)
     for domain, info in domains.items():
         backup_key = config['Domains'][domain]
-        if update_domain_config(info, backup_key):
+        smtp = config.get('SMTP')
+        sms = config.get('SMS')
+        if update_domain_config(info, backup_key, smtp, sms):
             info.mismatch = True
             changed = True
 
