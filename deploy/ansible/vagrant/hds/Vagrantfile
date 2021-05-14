@@ -26,7 +26,7 @@ Vagrant.configure('2') do |config|
         proxy.vm.network 'private_network', ip: proxy_ip
 
         proxy.vm.provider 'virtualbox' do |v|
-            v.name = 'proxy'
+            v.name = 'vagrant_proxy'
             v.memory = 2048
             v.cpus = 2
             v.linked_clone = true
@@ -39,7 +39,7 @@ Vagrant.configure('2') do |config|
         server.vm.network 'private_network', ip: server_ip
 
         server.vm.provider 'virtualbox' do |v|
-            v.name = 'server'
+            v.name = 'vagrant_server'
             v.memory = 2048
             v.cpus = 2
             v.linked_clone = true
@@ -47,9 +47,9 @@ Vagrant.configure('2') do |config|
         end
 
         server.vm.provision 'ansible' do |ansible|
-            ansible.playbook = 'hds.yml'
+            ansible.playbook = '../../hds.yml'
             ansible.limit = 'all'
-            ansible.inventory_path = 'inventories/vagrant.yml'
+            ansible.inventory_path = '../../inventories/hds/vagrant.yml'
             ansible.extra_vars = { ansible_python_interpreter: '/usr/bin/python3' }
             # ansible.raw_arguments = ['--check']
         end
