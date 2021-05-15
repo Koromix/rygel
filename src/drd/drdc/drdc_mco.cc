@@ -371,7 +371,7 @@ Test options:)");
                 const char *flags_str = opt.current_value;
 
                 while (flags_str[0]) {
-                    Span<const char> part = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
+                    Span<const char> part = TrimStr(SplitStrAny(flags_str, " ,", &flags_str), " ");
 
                     if (part.len) {
                         mco_ClassifyFlag flag;
@@ -401,7 +401,7 @@ Test options:)");
 
                 if (flags_str) {
                     while (flags_str[0]) {
-                        Span<const char> part = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
+                        Span<const char> part = TrimStr(SplitStrAny(flags_str, " ,", &flags_str), " ");
 
                         if (part.len) {
                             TestFlag flag;

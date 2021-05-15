@@ -65,7 +65,7 @@ Available merge options: %!..+%5%!0)", FelixTarget, CompressionTypeNames[(int)co
                 const char *flags_str = opt.current_value;
 
                 while (flags_str[0]) {
-                    Span<const char> part = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
+                    Span<const char> part = TrimStr(SplitStrAny(flags_str, " ,", &flags_str), " ");
 
                     if (part.len) {
                         PackFlag flag;
@@ -96,7 +96,7 @@ Available merge options: %!..+%5%!0)", FelixTarget, CompressionTypeNames[(int)co
                 const char *flags_str = opt.current_value;
 
                 while (flags_str[0]) {
-                    Span<const char> part = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
+                    Span<const char> part = TrimStr(SplitStrAny(flags_str, " ,", &flags_str), " ");
 
                     if (part.len) {
                         MergeFlag flag;

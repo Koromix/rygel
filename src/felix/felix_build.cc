@@ -143,7 +143,7 @@ static bool ParseCompilerString(const char *str, CompilerInfo *out_compiler_info
 static bool ParseFeatureString(const char *str, uint32_t *out_features)
 {
     while (str[0]) {
-        Span<const char> part = TrimStr(SplitStr(str, ',', &str), " ");
+        Span<const char> part = TrimStr(SplitStrAny(str, " ,", &str), " ");
 
         if (part.len) {
             CompileFeature feature;

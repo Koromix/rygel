@@ -107,7 +107,7 @@ bool LoadMergeRules(const char *filename, unsigned int flags, MergeRuleSet *out_
 #endif
                 } else if (prop.key == "Include") {
                     while (prop.value.len) {
-                        Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
+                        Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
 
                         if (part.len) {
                             const char *copy = DuplicateString(part, &out_set->str_alloc).ptr;
@@ -116,7 +116,7 @@ bool LoadMergeRules(const char *filename, unsigned int flags, MergeRuleSet *out_
                     }
                 } else if (prop.key == "Exclude") {
                     while (prop.value.len) {
-                        Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
+                        Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
 
                         if (part.len) {
                             const char *copy = DuplicateString(part, &out_set->str_alloc).ptr;

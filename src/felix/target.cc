@@ -71,7 +71,7 @@ static void AppendListValues(Span<const char> str,
     RG_ASSERT(alloc);
 
     while (str.len) {
-        Span<const char> lib = TrimStr(SplitStr(str, ' ', &str));
+        Span<const char> lib = TrimStr(SplitStrAny(str, " ,", &str));
 
         if (lib.len) {
             const char *copy = DuplicateString(lib, alloc).ptr;
@@ -223,7 +223,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                     valid = false;
                 } else if (prop.key == "Platforms") {
                     while (prop.value.len) {
-                        Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
+                        Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
 
                         if (part.len) {
                             valid &= MatchPlatform(part, &supported_platform);
@@ -256,7 +256,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                                                       &set.str_alloc, &target_config.src_file_set.filenames);
                     } else if (prop.key == "SourceIgnore") {
                         while (prop.value.len) {
-                            Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
+                            Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
 
                             if (part.len) {
                                 const char *copy = DuplicateString(part, &set.str_alloc).ptr;
@@ -265,7 +265,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         }
                     } else if (prop.key == "ImportFrom") {
                         while (prop.value.len) {
-                            Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
+                            Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
 
                             if (part.len) {
                                 const char *copy = DuplicateString(part, &set.str_alloc).ptr;
@@ -285,7 +285,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         AppendListValues(prop.value, &set.str_alloc, &target_config.export_definitions);
                     } else if (prop.key == "Features") {
                         while (prop.value.len) {
-                            Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
+                            Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
 
                             bool enable;
                             if (part.len && part[0] == '-') {
@@ -323,7 +323,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
 
                     } else if (prop.key == "AssetIgnore") {
                         while (prop.value.len) {
-                            Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
+                            Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
 
                             if (part.len) {
                                 const char *copy = DuplicateString(part, &set.str_alloc).ptr;
