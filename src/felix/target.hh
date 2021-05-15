@@ -55,6 +55,8 @@ struct TargetInfo {
 
     const SourceFileInfo *c_pch_src;
     const SourceFileInfo *cxx_pch_src;
+    HeapArray<const char *> pchs;
+
     HeapArray<const SourceFileInfo *> sources;
 
     HeapArray<const char *> pack_filenames;

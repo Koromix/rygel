@@ -430,6 +430,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         for (const TargetInfo *import: target->imports) {
             target->definitions.Append(import->export_definitions);
             target->libraries.Append(import->libraries);
+            target->pchs.Append(import->pchs);
             target->sources.Append(import->sources);
         }
     }
@@ -459,9 +460,11 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     // PCH
     if (target_config->c_pch_filename) {
         target->c_pch_src = CreateSource(target, target_config->c_pch_filename, SourceType::C);
+        target->pchs.Append(target->c_pch_src->filename);
     }
     if (target_config->cxx_pch_filename) {
         target->cxx_pch_src = CreateSource(target, target_config->cxx_pch_filename, SourceType::CXX);
+        target->pchs.Append(target->cxx_pch_src->filename);
     }
 
     // Deduplicate libraries
@@ -474,6 +477,18 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
             j += handled.TrySet(target->libraries[i]).second;
         }
         target->libraries.len = j;
+    }
+
+    // Deduplicate PCHs
+    {
+        HashSet<const char *> handled;
+
+        Size j = 0;
+        for (Size i = 0; i < target->pchs.len; i++) {
+            target->pchs[j] = target->pchs[i];
+            j += handled.TrySet(target->pchs[i]).second;
+        }
+        target->pchs.len = j;
     }
 
     // Deduplicate sources

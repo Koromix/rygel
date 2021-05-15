@@ -172,20 +172,15 @@ bool Builder::AddTarget(const TargetInfo &target)
 
     // Some compilers (such as MSVC) also build PCH object files that need to be linked
     if (build.features & (int)CompileFeature::PCH) {
-        if (target.c_pch_src) {
-            const char *pch_filename = build_map.FindValue(target.c_pch_src->filename, nullptr);
-            const char *obj_filename = build.compiler->GetPchObject(pch_filename, &str_alloc);
+        for (const char *filename: target.pchs) {
+            const char *pch_filename = build_map.FindValue(filename, nullptr);
 
-            if (obj_filename) {
-                obj_filenames.Append(obj_filename);
-            }
-        }
-        if (target.cxx_pch_src) {
-            const char *pch_filename = build_map.FindValue(target.cxx_pch_src->filename, nullptr);
-            const char *obj_filename = build.compiler->GetPchObject(pch_filename, &str_alloc);
+            if (pch_filename) {
+                const char *obj_filename = build.compiler->GetPchObject(pch_filename, &str_alloc);
 
-            if (obj_filename) {
-                obj_filenames.Append(obj_filename);
+                if (obj_filename) {
+                    obj_filenames.Append(obj_filename);
+                }
             }
         }
     }
