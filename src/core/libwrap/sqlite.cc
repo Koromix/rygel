@@ -75,7 +75,7 @@ sqlite3_stmt *sq_Statement::Leak()
     return copy;
 }
 
-bool sq_Database::Open(const char *filename, unsigned int flags)
+bool sq_Database::Open(const char *filename, const uint8_t key[32], unsigned int flags)
 {
     static const char *const sql = R"(
         PRAGMA foreign_keys = ON;
@@ -88,6 +88,11 @@ bool sq_Database::Open(const char *filename, unsigned int flags)
     RG_DEFER_N(out_guard) { Close(); };
 
     if (sqlite3_open_v2(filename, &db, flags, nullptr) != SQLITE_OK) {
+        LogError("SQLite failed to open '%1': %2", filename, sqlite3_errmsg(db));
+        return false;
+    }
+
+    if (key && sqlite3_key(db, key, 32) != SQLITE_OK) {
         LogError("SQLite failed to open '%1': %2", filename, sqlite3_errmsg(db));
         return false;
     }

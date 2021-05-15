@@ -113,7 +113,8 @@ public:
 
     bool IsValid() const { return db; }
 
-    bool Open(const char *filename, unsigned int flags);
+    bool Open(const char *filename, const uint8_t key[32], unsigned int flags);
+    bool Open(const char *filename, unsigned int flags) { return Open(filename, nullptr, flags); }
     bool Close();
 
     bool SetSynchronousFull(bool enable);
