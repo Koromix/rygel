@@ -71,18 +71,6 @@ static void MakePackCommand(Span<const char *const> pack_filenames, CompileMode 
     out_cmd->cmd_line = buf.TrimAndLeak(1);
 }
 
-static void LogUnsupportedFeatures(const char *name, uint32_t unsupported)
-{
-    LocalArray<const char *, RG_LEN(CompileFeatureNames)> list;
-    for (int i = 0; i < RG_LEN(CompileFeatureNames); i++) {
-        if (unsupported & (1u << i)) {
-            list.Append(CompileFeatureNames[i]);
-        }
-    }
-
-    LogError("Some features are not supported by %1: %2", name, FmtSpan((Span<const char *>)list));
-}
-
 class ClangCompiler final: public Compiler {
     const char *cc;
     const char *cxx;
@@ -167,7 +155,8 @@ public:
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
-            LogUnsupportedFeatures(name, unsupported);
+            LogError("Some features are not supported by %1: %2",
+                     name, FmtFlags(unsupported, CompileFeatureNames));
             return false;
         }
 
@@ -476,7 +465,8 @@ public:
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
-            LogUnsupportedFeatures(name, unsupported);
+            LogError("Some features are not supported by %1: %2",
+                     name, FmtFlags(unsupported, CompileFeatureNames));
             return false;
         }
 
@@ -762,7 +752,8 @@ public:
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
-            LogUnsupportedFeatures(name, unsupported);
+            LogError("Some features are not supported by %1: %2",
+                     name, FmtFlags(unsupported, CompileFeatureNames));
             return false;
         }
 
@@ -969,7 +960,8 @@ public:
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
-            LogUnsupportedFeatures(name, unsupported);
+            LogError("Some features are not supported by %1: %2",
+                     name, FmtFlags(unsupported, CompileFeatureNames));
             return false;
         }
 

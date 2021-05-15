@@ -925,7 +925,7 @@ template <typename AppendFunc>
 static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 {
     for (int i = 0; i < arg.repeat; i++) {
-        LocalArray<char, 512> out_buf;
+        LocalArray<char, 2048> out_buf;
         char num_buf[128];
         Span<const char> out;
 
@@ -1113,6 +1113,21 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 out = out_buf;
             } break;
 
+            case FmtType::Flags: {
+                if (arg.u.flags.flags) {
+                    Span<const char> sep = arg.u.flags.separator;
+                    for (Size i = 0; i < arg.u.flags.names.len; i++) {
+                        if (arg.u.flags.flags & (1 << i)) {
+                            out_buf.Append(arg.u.flags.names[i]);
+                            out_buf.Append(sep);
+                        }
+                    }
+                    out = out_buf.Take(0, out_buf.len - sep.len);
+                } else {
+                    out = "None";
+                }
+            } break;
+
             case FmtType::Function: {
                 arg.u.func(append);
                 continue;
@@ -1158,6 +1173,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                         case FmtType::MemorySize: { arg2.u.size = *(const Size *)ptr; } break;
                         case FmtType::DiskSize: { arg2.u.size = *(const Size *)ptr; } break;
                         case FmtType::Date: { arg2.u.date = *(const Date *)ptr; } break;
+                        case FmtType::Flags: { RG_UNREACHABLE(); } break;
                         case FmtType::Function: { arg2.u.func = *(FunctionRef<FmtFunction> *)ptr; } break;
                         case FmtType::Span: { RG_UNREACHABLE(); } break;
                     }
