@@ -15,7 +15,7 @@ if NOT ERRORLEVEL 1 (
         mkdir %BUILD%
         cl /nologo /std:c++latest /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /c %SRC% /Fo%BUILD%\
         link /nologo %BUILD%\*.obj /out:%BUILD%\felix.exe
-        %BUILD%\felix.exe -mFast -fStatic -O %BUILD%\Fast felix
+        %BUILD%\felix.exe -mFast -fStatic,StackProtect -O %BUILD%\Fast felix
         move %BUILD%\Fast\felix.exe %BIN%
 
         echo Cleaning up...
@@ -33,7 +33,7 @@ if NOT ERRORLEVEL 1 (
         mkdir %BUILD%
         cl /nologo /std:c++latest /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /c %SRC% /Fo%BUILD%\
         link /nologo %BUILD%\*.obj /out:%BUILD%\felix.exe
-        %BUILD%\felix.exe -mFast -fStatic -O %BUILD%\Fast felix
+        %BUILD%\felix.exe -mFast -fStatic,StackProtect -O %BUILD%\Fast felix
         move %BUILD%\Fast\felix.exe %BIN%
 
         echo Cleaning up...
@@ -51,7 +51,7 @@ if NOT ERRORLEVEL 1 (
     echo Bootstrapping felix with GCC...
     mkdir %BUILD%
     g++ -std=gnu++2a -O0 -DNDEBUG -DNOMINMAX  -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE %SRC% -w -o%BUILD%\felix.exe
-    %BUILD%\felix.exe -mFast -fStatic -O %BUILD%\Fast felix
+    %BUILD%\felix.exe -mFast -fStatic,StackProtect -O %BUILD%\Fast felix
     move %BUILD%\Fast\felix.exe %BIN%
 
     echo Cleaning up...
