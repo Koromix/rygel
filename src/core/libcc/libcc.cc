@@ -1117,7 +1117,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 if (arg.u.flags.flags) {
                     Span<const char> sep = arg.u.flags.separator;
                     for (Size i = 0; i < arg.u.flags.names.len; i++) {
-                        if (arg.u.flags.flags & (1 << i)) {
+                        if (arg.u.flags.flags & (1ull << i)) {
                             out_buf.Append(arg.u.flags.names[i]);
                             out_buf.Append(sep);
                         }
