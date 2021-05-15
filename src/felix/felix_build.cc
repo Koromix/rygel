@@ -509,6 +509,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     // We're ready to output stuff
     LogInfo("Root directory: %!..+%1%!0", GetWorkingDirectory());
     LogInfo("  Compiler: %!..+%1 (%2)%!0", build.compiler->name, CompileModeNames[(int)build.compile_mode]);
+    LogInfo("  Features: %!..+%1%!0", FmtFlags(build.features, CompileFeatureNames));
     LogInfo("  Output directory: %!..+%1%!0", build.output_directory);
     LogInfo("  Version: %!..+%1%!0", build.version_str);
     if (!build.fake && !MakeDirectoryRec(build.output_directory))
