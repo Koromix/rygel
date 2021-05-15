@@ -906,9 +906,6 @@ public:
 
         // Features
         Fmt(&buf, (features & (int)CompileFeature::NoDebug) ? " /DEBUG:NONE" : " /DEBUG:FULL");
-        if (features & (int)CompileFeature::ASan) {
-            Fmt(&buf, " /fsanitize=address");
-        }
         if (features & (int)CompileFeature::CFI) {
             Fmt(&buf, " /guard:cf /guard:ehcont");
         }
