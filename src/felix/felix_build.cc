@@ -350,6 +350,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                     return 1;
                 }
             } else if (opt.Test("-f", "--features", OptionType::Value)) {
+                build.features = 0;
                 if (!ParseFeatureString(opt.current_value, &build.features))
                     return 1;
             } else if (opt.Test("-e", "--environment")) {
