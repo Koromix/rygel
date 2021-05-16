@@ -463,17 +463,23 @@ bool sb_SandboxBuilder::Apply()
         }
 
         // Check support for KILL_PROCESS action
+#ifdef SCMP_ACT_KILL_PROCESS
         uint32_t kill_code = SCMP_ACT_KILL_PROCESS;
         if (syscall(__NR_seccomp, 2, 0, &kill_code) < 0) { // SECCOMP_GET_ACTION_AVAIL
             LogDebug("Seccomp action KILL_PROCESS is not available; falling back to KILL_THREAD");
             kill_code = SCMP_ACT_KILL_THREAD;
         }
+#else
+        // The kernel may supported it but the installed libseccomp library
+        // does not, and will throw us out if we don't use an action if knows about.
+        uint32_t kill_code = SCMP_ACT_KILL;
+        LogDebug("Seccomp action KILL_PROCESS is not available; falling back to KILL_THREAD");
+#endif
 
         const auto translate_action = [&](sb_FilterAction action) {
             uint32_t seccomp_action = UINT32_MAX;
             switch (action) {
                 case sb_FilterAction::Allow: { seccomp_action = SCMP_ACT_ALLOW; } break;
-                case sb_FilterAction::Log: { seccomp_action = SCMP_ACT_LOG; } break;
                 case sb_FilterAction::Block: { seccomp_action = SCMP_ACT_ERRNO(EPERM); } break;
                 case sb_FilterAction::Trap: { seccomp_action = SCMP_ACT_TRAP; } break;
                 case sb_FilterAction::Kill: { seccomp_action = kill_code; } break;
@@ -498,13 +504,8 @@ bool sb_SandboxBuilder::Apply()
                     int syscall = seccomp_syscall_resolve_name("ioctl");
                     RG_ASSERT(syscall != __NR_SCMP_ERROR);
 
-#ifdef RG_ARCH_64
                     ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 1,
-                                           SCMP_A1_64(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFFFFFFF00ul, 0x5400u));
-#else
-                    ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 1,
-                                           SCMP_A1_32(SCMP_CMP_MASKED_EQ, 0xFFFFFF00ul, 0x5400u));
-#endif
+                                           SCMP_A1(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFFFFFFF00ul, 0x5400u));
                 } else if (TestStr(item.name, "mmap/anon")) {
                     int syscall = seccomp_syscall_resolve_name("mmap");
                     RG_ASSERT(syscall != __NR_SCMP_ERROR);

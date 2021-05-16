@@ -19,7 +19,6 @@ namespace RG {
 
 enum class sb_FilterAction {
     Allow,
-    Log,
     Block,
     Trap,
     Kill
