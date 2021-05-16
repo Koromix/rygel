@@ -21,6 +21,7 @@
 #include "records.hh"
 #include "session.hh"
 #include "../../core/libnet/libnet.hh"
+#include "../../core/libsandbox/sandbox.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 #include "../../../vendor/curl/include/curl/curl.h"
 #ifndef _WIN32
@@ -40,6 +41,118 @@ static const AssetInfo *assets_root;
 static HeapArray<const char *> assets_for_cache;
 static LinkedAllocator assets_alloc;
 static char etag[17];
+
+static bool ApplySandbox(Span<const char *const> paths)
+{
+    if (!sb_IsSandboxSupported()) {
+        LogError("Sandbox mode is not supported on this platform");
+        return false;
+    }
+
+    sb_SandboxBuilder sb;
+
+    sb.IsolateProcess();
+    sb.DropPrivileges();
+    sb.RevealPaths(paths, false);
+
+#ifdef __linux__
+    sb.FilterSyscalls(sb_FilterAction::Kill, {
+        {"exit", sb_FilterAction::Allow},
+        {"exit_group", sb_FilterAction::Allow},
+        {"brk", sb_FilterAction::Allow},
+        {"mmap/anon", sb_FilterAction::Allow},
+        {"munmap", sb_FilterAction::Allow},
+        {"mprotect", sb_FilterAction::Allow},
+        {"mlock", sb_FilterAction::Allow},
+        {"mlock2", sb_FilterAction::Allow},
+        {"mlockall", sb_FilterAction::Allow},
+        {"madvise", sb_FilterAction::Allow},
+        {"pipe", sb_FilterAction::Allow},
+        {"pipe2", sb_FilterAction::Allow},
+        {"open", sb_FilterAction::Allow},
+        {"openat", sb_FilterAction::Allow},
+        {"openat2", sb_FilterAction::Allow},
+        {"close", sb_FilterAction::Allow},
+        {"fcntl", sb_FilterAction::Allow},
+        {"read", sb_FilterAction::Allow},
+        {"readv", sb_FilterAction::Allow},
+        {"write", sb_FilterAction::Allow},
+        {"writev", sb_FilterAction::Allow},
+        {"lseek", sb_FilterAction::Allow},
+        {"ftruncate", sb_FilterAction::Allow},
+        {"fsync", sb_FilterAction::Allow},
+        {"fstat", sb_FilterAction::Allow},
+        {"stat", sb_FilterAction::Allow},
+        {"lstat", sb_FilterAction::Allow},
+        {"lstat64", sb_FilterAction::Allow},
+        {"ioctl/tty", sb_FilterAction::Allow},
+        {"getrandom", sb_FilterAction::Allow},
+        {"getpid", sb_FilterAction::Allow},
+        {"gettid", sb_FilterAction::Allow},
+        {"getuid", sb_FilterAction::Allow},
+        {"getgid", sb_FilterAction::Allow},
+        {"geteuid", sb_FilterAction::Allow},
+        {"getegid", sb_FilterAction::Allow},
+        {"getcwd", sb_FilterAction::Allow},
+        {"rt_sigaction", sb_FilterAction::Allow},
+        {"rt_sigpending", sb_FilterAction::Allow},
+        {"rt_sigprocmask", sb_FilterAction::Allow},
+        {"rt_sigqueueinfo", sb_FilterAction::Allow},
+        {"rt_sigreturn", sb_FilterAction::Allow},
+        {"rt_sigsuspend", sb_FilterAction::Allow},
+        {"rt_sigtimedwait", sb_FilterAction::Allow},
+        {"rt_sigtimedwait_time64", sb_FilterAction::Allow},
+        {"tgkill", sb_FilterAction::Allow},
+        {"mkdir", sb_FilterAction::Allow},
+        {"mkdirat", sb_FilterAction::Allow},
+        {"unlink", sb_FilterAction::Allow},
+        {"unlinkat", sb_FilterAction::Allow},
+        {"rename", sb_FilterAction::Allow},
+        {"renameat", sb_FilterAction::Allow},
+        {"renameat2", sb_FilterAction::Allow},
+        {"chown", sb_FilterAction::Allow},
+        {"chmod", sb_FilterAction::Allow},
+        {"clone/thread", sb_FilterAction::Allow},
+        {"futex", sb_FilterAction::Allow},
+        {"set_robust_list", sb_FilterAction::Allow},
+        {"socket", sb_FilterAction::Allow},
+        {"getsockopt", sb_FilterAction::Allow},
+        {"setsockopt", sb_FilterAction::Allow},
+        {"bind", sb_FilterAction::Allow},
+        {"listen", sb_FilterAction::Allow},
+        {"accept", sb_FilterAction::Allow},
+        {"accept4", sb_FilterAction::Allow},
+        {"eventfd", sb_FilterAction::Allow},
+        {"eventfd2", sb_FilterAction::Allow},
+        {"getdents", sb_FilterAction::Allow},
+        {"getdents64", sb_FilterAction::Allow},
+        {"prctl", sb_FilterAction::Allow},
+        {"epoll_create", sb_FilterAction::Allow},
+        {"epoll_create1", sb_FilterAction::Allow},
+        {"epoll_ctl", sb_FilterAction::Allow},
+        {"epoll_pwait", sb_FilterAction::Allow},
+        {"epoll_wait", sb_FilterAction::Allow},
+        {"clock_nanosleep", sb_FilterAction::Allow},
+        {"clock_gettime", sb_FilterAction::Allow},
+        {"clock_gettime64", sb_FilterAction::Allow},
+        {"clock_nanosleep", sb_FilterAction::Allow},
+        {"clock_nanosleep_time64", sb_FilterAction::Allow},
+        {"recv", sb_FilterAction::Allow},
+        {"recvfrom", sb_FilterAction::Allow},
+        {"recvmmsg", sb_FilterAction::Allow},
+        {"recvmmsg_time64", sb_FilterAction::Allow},
+        {"recvmsg", sb_FilterAction::Allow},
+        {"sendmsg", sb_FilterAction::Allow},
+        {"sendmmsg", sb_FilterAction::Allow},
+        {"sendfile", sb_FilterAction::Allow},
+        {"sendfile64", sb_FilterAction::Allow},
+        {"sendto", sb_FilterAction::Allow},
+        {"shutdown", sb_FilterAction::Allow}
+    });
+#endif
+
+    return sb.Apply();
+}
 
 static void InitAssets()
 {
@@ -444,6 +557,7 @@ static void PruneTemporaryFiles()
 static int RunServe(Span<const char *> arguments)
 {
     const char *config_filename = "goupile.ini";
+    bool sandbox = false;
 
     const auto print_usage = [&](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 serve [options]%!0
@@ -454,6 +568,8 @@ Options:
 
         %!..+--port <port>%!0            Change web server port
                                  %!D..(default: %3)%!0
+
+        %!..+--sandbox%!0                Run sandboxed (on supported platforms)
 
 Other commands:
     %!..+init%!0                         Create new domain
@@ -474,6 +590,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 config_filename = opt.current_value;
+            } else if (opt.Test("--sandbox")) {
+                sandbox = true;
             }
         }
     }
@@ -520,6 +638,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             } else if (opt.Test("--port", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &gp_domain.config.http.port))
                     return 1;
+            } else if (opt.Test("--sandbox")) {
+                // Already handled
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -537,6 +657,30 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     if (gp_domain.config.smtp.url && !InitSMTP(gp_domain.config.smtp))
         return 1;
 
+    // We need to bind the socket before sandboxing
+    http_Daemon daemon;
+    if (!daemon.Bind(gp_domain.config.http))
+        return 1;
+
+    // Apply sandbox
+    if (sandbox) {
+        LogInfo("Init sandbox");
+
+        const char *const paths[] = {
+#ifndef NDEBUG
+            // Needed for asset module
+            GetApplicationDirectory(),
+#endif
+            gp_domain.config.database_filename,
+            gp_domain.config.instances_directory,
+            gp_domain.config.temp_directory,
+            gp_domain.config.backup_directory
+        };
+
+        if (!ApplySandbox(paths))
+            return 1;
+    }
+
 #ifdef NDEBUG
     if (!gp_domain.config.http.use_xrealip) {
         LogInfo("If you run this behind a reverse proxy, you may want to enable the HTTP.TrustXRealIP setting in goupile.ini");
@@ -544,7 +688,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
 #endif
 
     // Run!
-    http_Daemon daemon;
     if (!daemon.Start(gp_domain.config.http, HandleRequest))
         return 1;
 #ifndef _WIN32
