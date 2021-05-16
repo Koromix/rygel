@@ -165,8 +165,9 @@ static bool WriteUidGidMap(pid_t pid, uid_t uid, gid_t gid)
 
 static bool InitNamespaces()
 {
-    uint32_t unshare_flags = CLONE_NEWNS | CLONE_NEWUSER | CLONE_NEWIPC | CLONE_NEWUTS |
-                             CLONE_NEWNET | CLONE_NEWPID | CLONE_NEWCGROUP;
+    uint32_t unshare_flags = CLONE_NEWNS | CLONE_NEWUSER | CLONE_NEWIPC |
+                             CLONE_NEWUTS | CLONE_NEWCGROUP | CLONE_NEWNET |
+                             CLONE_THREAD;
 
     if (unshare(unshare_flags) < 0) {
         LogError("Failed to create namespace: %1", strerror(errno));
