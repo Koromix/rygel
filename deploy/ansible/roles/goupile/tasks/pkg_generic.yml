@@ -18,6 +18,5 @@
       - nginx
       - git
       - clang-11
-      - runc
     state: latest
   become: yes

@@ -16,22 +16,19 @@ Description = Goupile eCRF (%i)
 Documentation = https://goupile.fr/
 
 [Service]
-Type = forking
+Type = notify
 User = {{ goupile_run_user }}
 Group = {{ goupile_run_group }}
-RuntimeDirectory = goupile/domains/%i goupile/runc
+RuntimeDirectory = goupile
 RuntimeDirectoryPreserve = yes
-ExecStart = /usr/sbin/runc --root /run/goupile/runc run -d --pid-file /run/goupile/runc/%i.pid %i
-ExecStopPost = /usr/sbin/runc --root /run/goupile/runc delete %i
-WorkingDirectory = {{ goupile_root_path }}/containers/%i
-PIDFile = /run/goupile/runc/%i.pid
+ExecStart = {{ goupile_root_path }}/goupile --sandbox
+WorkingDirectory = {{ goupile_root_path }}/domains/%i
 Restart = on-failure
 TimeoutStopSec = 30
 LimitNOFILE = 16384
 
-# Allow rootless runC to manipulate namespaces despite
+# Allow Goupile to manipulate namespaces despite
 # kernel.unprivileged_userns_clone=0.
-# runC will then run goupile without any capability.
 SecureBits = keep-caps
 CapabilityBoundingSet = CAP_SYS_ADMIN
 AmbientCapabilities = CAP_SYS_ADMIN
