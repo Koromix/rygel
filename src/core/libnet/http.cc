@@ -16,6 +16,7 @@
 #include "http_misc.hh"
 
 #ifdef _WIN32
+    #include <io.h>
     #include <ws2tcpip.h>
 #else
     #include <sys/stat.h>
@@ -68,6 +69,122 @@ bool http_Config::Validate() const
     return valid;
 }
 
+static int OpenIPSocket(SocketType type, int port)
+{
+    RG_ASSERT(type == SocketType::Dual || type == SocketType::IPv4 || type == SocketType::IPv6);
+
+    int family = (type == SocketType::IPv4) ? AF_INET : AF_INET6;
+    int fd = socket(family, SOCK_STREAM, 0);
+    if (fd < 0) {
+        LogError("Failed to create AF_INET socket: %1", strerror(errno));
+        return -1;
+    }
+    RG_DEFER_N(err_guard) { close(fd); };
+
+#ifndef _WIN32
+    int reuseport = 1;
+    setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &reuseport, sizeof(reuseport));
+#endif
+
+    if (type == SocketType::IPv4) {
+        struct sockaddr_in addr = {};
+
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(port);
+        addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+        if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+            LogError("Failed to bind to port %1: %2", port, strerror(errno));
+            return -1;
+        }
+    } else {
+        struct sockaddr_in6 addr = {};
+
+        addr.sin6_family = AF_INET6;
+        addr.sin6_port = htons(port);
+        addr.sin6_addr = IN6ADDR_ANY_INIT;
+
+        int v6only = (type == SocketType::IPv6);
+#ifdef _WIN32
+        if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, (const char *)&v6only, sizeof(v6only)) < 0) {
+#else
+        if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &v6only, sizeof(v6only)) < 0) {
+#endif
+            LogError("Failed to change Dual-stack socket option: %1", strerror(errno));
+            return -1;
+        }
+
+        if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+            LogError("Failed to bind to port %1: %2", port, strerror(errno));
+            return -1;
+        }
+    }
+
+    if (listen(fd, SOMAXCONN) < 0) {
+        LogError("Failed to listen for connections: %1", strerror(errno));
+        return -1;
+    }
+
+    err_guard.Disable();
+    return fd;
+}
+
+#ifndef _WIN32
+static int OpenUnixSocket(const char *path)
+{
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) {
+        LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
+        return -1;
+    }
+    RG_DEFER_N(err_guard) { close(fd); };
+
+    struct sockaddr_un addr = {};
+    addr.sun_family = AF_UNIX;
+    if (!CopyString(path, addr.sun_path)) {
+        LogError("Excessive UNIX socket path length");
+        return -1;
+    }
+
+    unlink(path);
+    if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        LogError("Failed to bind socket to '%1': %2", path, strerror(errno));
+        return -1;
+    }
+    if (listen(fd, 256) < 0) {
+        LogError("Failed to listen on socket '%1': %2", path, strerror(errno));
+        return -1;
+    }
+    chmod(path, 0666);
+
+    err_guard.Disable();
+    return fd;
+}
+#endif
+
+bool http_Daemon::Bind(const http_Config &config)
+{
+    RG_ASSERT(!daemon);
+    RG_ASSERT(listen_fd < 0);
+
+    // Validate configuration
+    if (!config.Validate())
+        return false;
+
+    switch (config.sock_type) {
+        case SocketType::Dual:
+        case SocketType::IPv4:
+        case SocketType::IPv6: { listen_fd = OpenIPSocket(config.sock_type, config.port); } break;
+#ifndef _WIN32
+        case SocketType::Unix: { listen_fd = OpenUnixSocket(config.unix_path); } break;
+#endif
+    }
+    if (listen_fd < 0)
+        return false;
+
+    return true;
+}
+
 bool http_Daemon::Start(const http_Config &config,
                         std::function<void(const http_RequestInfo &request, http_IO *io)> func)
 {
@@ -78,43 +195,19 @@ bool http_Daemon::Start(const http_Config &config,
     if (!config.Validate())
         return false;
 
-    // MHD options
+    // Prepare socket (if not done yet)
+    if (listen_fd < 0 && !Bind(config))
+        return false;
+
+    // MHD flags
     int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_ALLOW_SUSPEND_RESUME | MHD_USE_ERROR_LOG;
-    LocalArray<MHD_OptionItem, 16> mhd_options;
-    switch (config.sock_type) {
-        case SocketType::Dual: { flags |= MHD_USE_DUAL_STACK; } break;
-        case SocketType::IPv4: {} break;
-        case SocketType::IPv6: { flags |= MHD_USE_IPv6; } break;
-#ifndef _WIN32
-        case SocketType::Unix: {
-            unix_fd = socket(AF_UNIX, SOCK_STREAM, 0);
-            if (unix_fd < 0) {
-                LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
-                return false;
-            }
-
-            struct sockaddr_un addr = {};
-            addr.sun_family = AF_UNIX;
-            if (!CopyString(config.unix_path, addr.sun_path)) {
-                LogError("Excessive UNIX socket path length");
-                return false;
-            }
-
-            unlink(config.unix_path);
-            if (bind(unix_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-                LogError("Failed to bind socket to '%1': %2", config.unix_path, strerror(errno));
-                return false;
-            }
-            if (listen(unix_fd, 256) < 0) {
-                LogError("Failed to listen on socket '%1': %2", config.unix_path, strerror(errno));
-                return false;
-            }
-            chmod(config.unix_path, 0666);
-
-            mhd_options.Append({MHD_OPTION_LISTEN_SOCKET, unix_fd});
-        } break;
+#ifndef NDEBUG
+    flags |= MHD_USE_DEBUG;
 #endif
-    }
+
+    // MHD options
+    LocalArray<MHD_OptionItem, 16> mhd_options;
+    mhd_options.Append({MHD_OPTION_LISTEN_SOCKET, listen_fd});
     if (config.threads > 1) {
         mhd_options.Append({MHD_OPTION_THREAD_POOL_SIZE, config.threads});
     }
@@ -124,15 +217,12 @@ bool http_Daemon::Start(const http_Config &config,
     mhd_options.Append({MHD_OPTION_CONNECTION_TIMEOUT, config.idle_timeout});
     mhd_options.Append({MHD_OPTION_END, 0, nullptr});
     use_xrealip = config.use_xrealip;
-#ifndef NDEBUG
-    flags |= MHD_USE_DEBUG;
-#endif
 
     handle_func = func;
     async = new Async(config.async_threads - 1);
 
     running = true;
-    daemon = MHD_start_daemon(flags, (int16_t)config.port, nullptr, nullptr,
+    daemon = MHD_start_daemon(flags, 0, nullptr, nullptr,
                               &http_Daemon::HandleRequest, this,
                               MHD_OPTION_NOTIFY_COMPLETED, &http_Daemon::RequestCompleted, this,
                               MHD_OPTION_ARRAY, mhd_options.data, MHD_OPTION_END);
@@ -148,15 +238,18 @@ void http_Daemon::Stop()
         async->Sync();
         delete async;
     }
+
     if (daemon) {
         MHD_stop_daemon(daemon);
-    }
-#ifndef _WIN32
-    if (unix_fd >= 0) {
-        close(unix_fd);
-        unix_fd = -1;
-    }
+    } else if (listen_fd >= 0) {
+#ifdef _WIN32
+        shutdown(listen_fd, SD_BOTH);
+#else
+        shutdown(listen_fd, SHUT_RDWR);
 #endif
+        close(listen_fd);
+    }
+    listen_fd = -1;
 
     async = nullptr;
     daemon = nullptr;

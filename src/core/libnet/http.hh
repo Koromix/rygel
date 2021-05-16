@@ -49,9 +49,7 @@ class http_Daemon {
     RG_DELETE_COPY(http_Daemon)
 
     MHD_Daemon *daemon = nullptr;
-#ifndef _WIN32
-    int unix_fd = -1;
-#endif
+    int listen_fd = -1;
     bool use_xrealip = false;
     std::atomic_bool running {false};
 
@@ -63,8 +61,10 @@ public:
     http_Daemon() {}
     ~http_Daemon() { Stop(); }
 
+    bool Bind(const http_Config &config);
     bool Start(const http_Config &config,
                std::function<void(const http_RequestInfo &request, http_IO *io)> func);
+
     void Stop();
 
 private:
