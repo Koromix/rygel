@@ -3493,15 +3493,26 @@ void WaitDelay(int64_t delay)
     }
 }
 
+static void SetSignalHandler(int signal, void (*func)(int))
+{
+    struct sigaction action = {};
+
+    action.sa_handler = func;
+    sigemptyset(&action.sa_mask);
+    action.sa_flags = 0;
+
+    sigaction(signal, &action, nullptr);
+}
+
 WaitForResult WaitForInterrupt(int64_t timeout)
 {
     static volatile bool run = true;
     static volatile bool message = false;
 
-    signal(SIGINT, [](int) { run = false; });
-    signal(SIGTERM, [](int) { run = false; });
-    signal(SIGHUP, [](int) { run = false; });
-    signal(SIGUSR1, [](int) { message = true; });
+    SetSignalHandler(SIGINT, [](int) { run = false; });
+    SetSignalHandler(SIGTERM, [](int) { run = false; });
+    SetSignalHandler(SIGHUP, [](int) { run = false; });
+    SetSignalHandler(SIGUSR1, [](int) { message = true; });
 
     if (timeout >= 0) {
         struct timespec ts;
