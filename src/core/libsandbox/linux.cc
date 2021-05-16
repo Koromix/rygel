@@ -20,6 +20,7 @@
 #include <sched.h>
 #include <seccomp.h>
 #include <sys/eventfd.h>
+#include <sys/mman.h>
 #include <sys/mount.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -507,10 +508,19 @@ bool sb_SandboxBuilder::Apply()
                     int syscall = seccomp_syscall_resolve_name("mmap");
                     RG_ASSERT(syscall != __NR_SCMP_ERROR);
 
-                    // Only allow MAP_PRIVATE | MAP_ANONYMOUS, and enforce fd = -1 argument
-                    ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 3,
-                                           SCMP_A0(SCMP_CMP_EQ, 0), SCMP_A3(SCMP_CMP_EQ, 0x22),
-                                           SCMP_A4(SCMP_CMP_EQ, (scmp_datum_t)-1));
+                    unsigned int combinations[] = {
+                        MAP_PRIVATE | MAP_ANONYMOUS,
+                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK,
+                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE
+                    };
+
+                    for (unsigned int flags: combinations) {
+                        ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 2,
+                                               SCMP_A3(SCMP_CMP_EQ, flags),
+                                               SCMP_A4(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFu, 0xFFFFFFFFu));
+                        if (ret < 0)
+                            break;
+                    }
                 } else {
                     int syscall = seccomp_syscall_resolve_name(item.name);
 
