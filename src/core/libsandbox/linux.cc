@@ -316,7 +316,7 @@ bool sb_SandboxBuilder::Apply()
             const char *fs_root = CreateTemporaryDirectory("/tmp/sandbox", "", &str_alloc);
             if (!fs_root)
                 return false;
-            if (mount("tmpfs", fs_root, "tmpfs", 0, "size=4k") < 0) {
+            if (mount("tmpfs", fs_root, "tmpfs", 0, "size=1M,mode=0700") < 0) {
                 LogError("Failed to mount tmpfs on '%1': %2", fs_root, strerror(errno));
                 return false;
             }
@@ -358,7 +358,7 @@ bool sb_SandboxBuilder::Apply()
             }
 
             // Remount root FS as readonly
-            if (mount(nullptr, fs_root, nullptr, MS_REMOUNT, "size=1M,mode=0700,ro") < 0) {
+            if (mount(nullptr, fs_root, nullptr, MS_REMOUNT | MS_RDONLY, nullptr) < 0) {
                 LogError("Failed to set sandbox root to readonly");
                 return false;
             }
