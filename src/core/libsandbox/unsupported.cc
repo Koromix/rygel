@@ -28,7 +28,7 @@ void sb_SandboxBuilder::IsolateProcess()
     RG_ASSERT(false);
 }
 
-void sb_SandboxBuilder::RevealPath(const char *, bool)
+void sb_SandboxBuilder::RevealPaths(Span<const char *const>, bool)
 {
     RG_ASSERT(false);
 }

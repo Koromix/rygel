@@ -57,7 +57,7 @@ public:
 
     void DropPrivileges();
     void IsolateProcess();
-    void RevealPath(const char *path, bool readonly);
+    void RevealPaths(Span<const char *const> paths, bool readonly);
 
 #ifdef __linux__
     void MountPath(const char *src, const char *dest, bool readonly);

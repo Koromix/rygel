@@ -61,20 +61,20 @@ void sb_SandboxBuilder::IsolateProcess()
     unshare = true;
 }
 
-void sb_SandboxBuilder::RevealPath(const char *path, bool readonly)
+void sb_SandboxBuilder::RevealPaths(Span<const char *const> paths, bool readonly)
 {
-    MountPath(path, path, readonly);
+    for (const char *path: paths) {
+        MountPath(path, path, readonly);
+    }
 }
 
 void sb_SandboxBuilder::MountPath(const char *src, const char *dest, bool readonly)
 {
     RG_ASSERT(unshare);
-    RG_ASSERT(src[0] == '/');
-    RG_ASSERT(dest[0] == '/');
 
     BindMount bind = {};
-    bind.src = DuplicateString(src, &str_alloc).ptr;
-    bind.dest = DuplicateString(dest, &str_alloc).ptr;
+    bind.src = NormalizePath(src, &str_alloc).ptr;
+    bind.dest = NormalizePath(dest, "/", &str_alloc).ptr;
     bind.readonly = readonly;
     mounts.Append(bind);
 }
