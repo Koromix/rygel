@@ -662,6 +662,11 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     if (!daemon.Bind(gp_domain.config.http))
         return 1;
 
+#ifdef __linux__
+    if (!NotifySystemd())
+        return 1;
+#endif
+
     // Apply sandbox
     if (sandbox) {
         LogInfo("Init sandbox");
@@ -697,11 +702,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
 #endif
     LogInfo("Listening on port %1 (%2 stack)",
             gp_domain.config.http.port, SocketTypeNames[(int)gp_domain.config.http.sock_type]);
-
-#ifdef __linux__
-    if (!NotifySystemd())
-        return 1;
-#endif
 
     // Run periodic tasks until exit
     {
