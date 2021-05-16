@@ -540,7 +540,7 @@ bool sb_SandboxBuilder::Apply()
                             LogError("Unknown syscall specifier '%1'", item.name);
                             return false;
                         } else {
-                            LogError("Ignoring unknown syscall '%1'", item.name);
+                            LogDebug("Ignoring unknown syscall '%1'", item.name);
                         }
                     }
                 }
