@@ -1625,7 +1625,7 @@ function InstanceController() {
 
             // Safety checks
             if (goupile.isLocked() && !new_record.chain.some(record => record.ulid === profile.lock))
-                throw new Error('Enregistrement non autorisé en mode de navigation restreint');
+                throw new Error('Enregistrement non autorisé');
             if (!isPageEnabled(new_route.page, new_record)) {
                 new_route.page = findEnabledPage(new_route.form, new_record);
                 if (new_route.page == null)

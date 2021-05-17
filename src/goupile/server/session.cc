@@ -233,6 +233,10 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
                     json.Key(key.ptr, (size_t)key.len); json.Bool(stamp->permissions & (1 << i));
                 }
                 json.EndObject();
+
+                if (stamp->ulid) {
+                    json.Key("lock"); json.String(stamp->ulid);
+                }
             } else {
                 json.Key("authorized"); json.Bool(false);
             }
