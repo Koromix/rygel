@@ -460,14 +460,21 @@ Options:
     }
     if (!CheckUserName(username))
         return 1;
-    if (!password) {
+    if (password) {
+        if (!CheckPassword(password)) {
+            LogError("Password is not strong enough");
+            return 1;
+        }
+    } else {
+retry:
         password = Prompt("Password: ", "*", &temp_alloc);
         if (!password)
             return 1;
-    }
-    if (!CheckPassword(password)) {
-        LogError("Password is not strong enough");
-        return 1;
+
+        if (!CheckPassword(password)) {
+            LogError("Password is not strong enough");
+            goto retry;
+        }
     }
     LogInfo();
 
