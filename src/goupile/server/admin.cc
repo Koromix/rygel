@@ -465,8 +465,8 @@ Options:
         if (!password)
             return 1;
     }
-    if (!password[0]) {
-        LogError("Password cannot be empty");
+    if (!CheckPassword(password)) {
+        LogError("Password is not strong enough");
         return 1;
     }
     LogInfo();
@@ -2146,8 +2146,8 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
             if (username && !CheckUserName(username)) {
                 valid = false;
             }
-            if (password && !password[0]) {
-                LogError("Empty password is not allowed");
+            if (password && !CheckPassword(password)) {
+                LogError("Password is not strong enough");
                 valid = false;
             }
             if (email && !strchr(email, '@')) {
@@ -2269,8 +2269,8 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
             if (username && !CheckUserName(username)) {
                 valid = false;
             }
-            if (password && !password[0]) {
-                LogError("Empty password is not allowed");
+            if (password && !CheckPassword(password)) {
+                LogError("Password is not strong enough");
                 valid = false;
             }
             if (email && !strchr(email, '@')) {

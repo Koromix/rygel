@@ -319,6 +319,16 @@ void PruneSessions()
     }
 }
 
+// Keep in sync with text in password dialogs
+bool CheckPassword(Span<const char> password)
+{
+    // XXX: Use cracklib, zxcvbn or something like that to check for password strength
+    if (password.len < 8)
+        return false;
+
+    return true;
+}
+
 bool HashPassword(Span<const char> password, char out_hash[crypto_pwhash_STRBYTES])
 {
     if (crypto_pwhash_str(out_hash, password.ptr, password.len,
@@ -723,7 +733,19 @@ void HandlePasswordChange(const http_RequestInfo &request, http_IO *io)
             }
         }
 
-        // Check user password
+        // Check password strength
+        if (!CheckPassword(new_password)) {
+            LogError("Password is not strong enough");
+            io->AttachError(422);
+            return;
+        }
+        if (TestStr(new_password, old_password)) {
+            LogError("This is the same password");
+            io->AttachError(422);
+            return;
+        }
+
+        // Authenticate with old password
         {
             // We use this to extend/fix the response delay in case of error
             int64_t now = GetMonotonicTime();

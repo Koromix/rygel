@@ -611,11 +611,17 @@ function AdminController() {
             let username = d.text('*username', 'Nom d\'utilisateur');
 
             let password = d.password('*password', 'Mot de passe');
-            let password2 = d.password('password2', null, {
-                placeholder: 'Confirmation'
+            let password2 = d.password('*password2', null, {
+                placeholder: 'Confirmation',
+                help: 'Doit contenir au moins 8 caractères'
             });
-            if (password.value != null && password2.value != null && password.value !== password2.value)
-                password2.error('Les mots de passe sont différents');
+            if (password.value != null && password2.value != null) {
+                if (password.value !== password2.value) {
+                    password2.error('Les mots de passe sont différents');
+                } else if (password.value.length < 8) {
+                    password2.error('Mot de passe trop court', true);
+                }
+            }
 
             let email = d.text('email', 'Courriel');
             if (email.value != null && !email.value.includes('@'))
@@ -723,10 +729,19 @@ function AdminController() {
                     let password = d.password('password', 'Mot de passe');
                     let password2 = d.password('password2', null, {
                         placeholder: 'Confirmation',
-                        help: 'Laissez vide pour ne pas modifier'
+                        help: [
+                            'Laissez vide pour ne pas modifier',
+                            'Doit contenir au moins 8 caractères'
+                        ],
+                        mandatory: password.value != null
                     });
-                    if (password.value != null && password2.value != null && password.value !== password2.value)
-                        password2.error('Les mots de passe sont différents');
+                    if (password.value != null && password2.value != null) {
+                        if (password.value !== password2.value) {
+                            password2.error('Les mots de passe sont différents');
+                        } else if (password.value.length < 8) {
+                            password2.error('Mot de passe trop court', true);
+                        }
+                    }
 
                     let email = d.text('email', 'Courriel', {value: user.email});
                     if (email.value != null && !email.value.includes('@'))
