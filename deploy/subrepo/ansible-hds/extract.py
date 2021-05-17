@@ -33,6 +33,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'Clone Goupile-specific repository')
     parser.add_argument('-O', '--output_dir', dest = 'output_dir', action = 'store', help = 'Output directory')
     parser.add_argument('--push', dest = 'push_url', action = 'store', help = 'Push to repository')
+    parser.add_argument('--force', dest = 'force_push', action = 'store_true', help = 'Use force push to repository')
     args = parser.parse_args()
 
     # Find repository directory
@@ -77,4 +78,7 @@ if __name__ == "__main__":
     # Push to repository
     if args.push_url is not None:
         subprocess.run(['git', 'remote', 'add', 'origin', args.push_url])
-        subprocess.run(['git', 'push', '-u', 'origin', 'master'])
+        if args.force_push:
+            subprocess.run(['git', 'push', '-u', 'origin', 'master', '--force'])
+        else:
+            subprocess.run(['git', 'push', '-u', 'origin', 'master'])
