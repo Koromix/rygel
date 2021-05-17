@@ -57,10 +57,12 @@ void HandleSendMail(InstanceHolder *instance, const http_RequestInfo &request, h
         io->AttachError(401);
         return;
     }
-    if (instance && !session->HasPermission(instance, UserPermission::DataMessage)) {
-        LogError("User is not allowed to send messages");
-        io->AttachError(403);
-        return;
+    if (instance) {
+        if (!session->HasPermission(instance, UserPermission::DataMessage)) {
+            LogError("User is not allowed to send messages");
+            io->AttachError(403);
+            return;
+        }
     } else if (!session->IsAdmin()) {
         if (session->admin_until) {
             LogError("Admin user needs to confirm identity");
@@ -127,10 +129,12 @@ void HandleSendSMS(InstanceHolder *instance, const http_RequestInfo &request, ht
         io->AttachError(401);
         return;
     }
-    if (instance && !session->HasPermission(instance, UserPermission::DataMessage)) {
-        LogError("User is not allowed to send messages");
-        io->AttachError(403);
-        return;
+    if (instance) {
+        if (!session->HasPermission(instance, UserPermission::DataMessage)) {
+            LogError("User is not allowed to send messages");
+            io->AttachError(403);
+            return;
+        }
     } else if (!session->IsAdmin()) {
         if (session->admin_until) {
             LogError("Admin user needs to confirm identity");
