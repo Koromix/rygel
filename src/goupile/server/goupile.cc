@@ -138,6 +138,7 @@ static bool ApplySandbox(Span<const char *const> paths)
         {"clock_nanosleep", sb_FilterAction::Allow},
         {"clock_nanosleep_time64", sb_FilterAction::Allow},
         {"nanosleep", sb_FilterAction::Allow},
+        {"sched_yield", sb_FilterAction::Allow},
         {"recv", sb_FilterAction::Allow},
         {"recvfrom", sb_FilterAction::Allow},
         {"recvmmsg", sb_FilterAction::Allow},
