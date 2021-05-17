@@ -55,8 +55,12 @@ const goupile = new function() {
         } else {
             let token = url.searchParams.get('token');
             if (token) {
-                await sendToken(token);
-                self.syncHistory(url.pathname, false);
+                try {
+                    await sendToken(token);
+                    self.syncHistory(url.pathname, false);
+                } catch (err) {
+                    log.error(err);
+                }
             }
             document.body.classList.remove('gp_loading');
 
