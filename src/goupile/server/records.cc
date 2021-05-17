@@ -90,48 +90,33 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
         return;
     }
 
-    const char *form = request.GetQueryValue("form");
-    const char *ulid = request.GetQueryValue("ulid");
-    int64_t anchor = -1;
-    {
-        const char *anchor_str = request.GetQueryValue("anchor");
-        if (anchor_str && !ParseInt(anchor_str, &anchor)) {
+    int64_t anchor;
+    if (const char *str = request.GetQueryValue("anchor"); str) {
+        if (!ParseInt(str, &anchor)) {
             io->AttachError(422);
             return;
         }
+    } else {
+        LogError("Missing 'userid' parameter");
+        io->AttachError(422);
+        return;
     }
 
     sq_Statement stmt;
     {
         LocalArray<char, 1024> sql;
 
-        sql.len += Fmt(sql.TakeAvailable(), R"(SELECT r.rowid, r.ulid, r.hid, r.form, r.anchor, r.parent_ulid, r.parent_version,
-                                                      f.anchor, f.version, f.type, f.username, f.mtime, f.page, f.json FROM rec_entries r
+        sql.len += Fmt(sql.TakeAvailable(), R"(SELECT r.rowid, r.ulid, r.hid, r.form, r.anchor,
+                                                      r.parent_ulid, r.parent_version, f.anchor, f.version,
+                                                      f.type, f.username, f.mtime, f.page, f.json FROM rec_entries r
                                                LEFT JOIN rec_fragments f ON (f.ulid = r.ulid)
-                                               WHERE 1 = 1)").len;
-        if (form) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND r.form = ?2").len;
-        }
-        if (ulid) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND r.ulid = ?3").len;
-        }
-        if (anchor) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND r.anchor >= ?4").len;
-        }
+                                               WHERE r.anchor >= ?1)").len;
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY r.rowid, f.anchor").len;
 
         if (!instance->db.Prepare(sql.data, &stmt))
             return;
 
-        if (form) {
-            sqlite3_bind_text(stmt, 2, form, -1, SQLITE_STATIC);
-        }
-        if (ulid) {
-            sqlite3_bind_text(stmt, 3, ulid, -1, SQLITE_STATIC);
-        }
-        if (anchor) {
-            sqlite3_bind_int64(stmt, 4, anchor);
-        }
+        sqlite3_bind_int64(stmt, 1, anchor);
     }
 
     // Export data
