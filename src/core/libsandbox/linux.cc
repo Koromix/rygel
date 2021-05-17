@@ -18,7 +18,7 @@
 
 #include <fcntl.h>
 #include <sched.h>
-#include <seccomp.h>
+#include "../../../vendor/libseccomp/include/seccomp.h"
 #include <sys/eventfd.h>
 #include <sys/mman.h>
 #include <sys/mount.h>
@@ -463,18 +463,11 @@ bool sb_SandboxBuilder::Apply()
         }
 
         // Check support for KILL_PROCESS action
-#ifdef SCMP_ACT_KILL_PROCESS
         uint32_t kill_code = SCMP_ACT_KILL_PROCESS;
         if (syscall(__NR_seccomp, 2, 0, &kill_code) < 0) { // SECCOMP_GET_ACTION_AVAIL
             LogDebug("Seccomp action KILL_PROCESS is not available; falling back to KILL_THREAD");
             kill_code = SCMP_ACT_KILL_THREAD;
         }
-#else
-        // The kernel may supported it but the installed libseccomp library
-        // does not, and will throw us out if we don't use an action if knows about.
-        uint32_t kill_code = SCMP_ACT_KILL;
-        LogDebug("Seccomp action KILL_PROCESS is not available; falling back to KILL_THREAD");
-#endif
 
         const auto translate_action = [&](sb_FilterAction action) {
             uint32_t seccomp_action = UINT32_MAX;

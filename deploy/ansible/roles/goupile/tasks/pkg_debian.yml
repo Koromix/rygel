@@ -32,6 +32,5 @@
       - nginx
       - git
       - clang-11
-      - libseccomp-dev
     state: latest
   become: yes

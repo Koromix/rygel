@@ -20,6 +20,7 @@ vendor/docxtemplater
 vendor/dragonbox
 vendor/grisu-exact
 vendor/libmicrohttpd
+vendor/libseccomp
 vendor/libsodium
 vendor/lit-html
 vendor/mbedtls
