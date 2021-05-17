@@ -161,7 +161,7 @@ html.small .ui_toolbar button.icon {
 .ui_toolbar > .drop > div hr {
     width: 94%;
     border: none;
-    border-top: 0.5px solid #376db9;
+    border-top: 0.5px solid var(--menu_color_n3);
     height: 3px;
 }
 .ui_toolbar > .drop.active { background-color: var(--menu_color_n1); }
