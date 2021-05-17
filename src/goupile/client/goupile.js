@@ -426,7 +426,7 @@ const goupile = new function() {
 
     async function runTasks() {
         try {
-            let online = net.isOnline() && !self.isLocked();
+            let online = net.isOnline() && (session_rnd != null);
             await controller.runTasks(online);
         } catch (err) {
             console.log(err);
