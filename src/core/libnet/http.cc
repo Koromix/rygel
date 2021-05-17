@@ -721,24 +721,35 @@ bool http_IO::ReadPostValues(Allocator *alloc, HashMap<const char *, const char 
 
     struct PostProcessorContext {
         HashMap<const char *, const char *> *values;
-        Allocator *alloc;
+        const char *key;
+        HeapArray<char> buf;
     };
 
     PostProcessorContext ctx = {};
     ctx.values = out_values;
-    ctx.alloc = alloc;
+    ctx.buf.allocator = alloc;
 
     // Create POST data processor
     MHD_PostProcessor *pp =
         MHD_create_post_processor(request.conn, Kibibytes(32),
                                   [](void *cls, enum MHD_ValueKind, const char *key,
                                      const char *, const char *, const char *,
-                                     const char *data, uint64_t, size_t) {
+                                     const char *data, uint64_t offset, size_t size) {
         PostProcessorContext *ctx = (PostProcessorContext *)cls;
 
-        key = DuplicateString(key, ctx->alloc).ptr;
-        data = DuplicateString(data, ctx->alloc).ptr;
-        ctx->values->Set(key, data);
+        if (!ctx->key) {
+            ctx->key = DuplicateString(key, ctx->buf.allocator).ptr;
+        } else if (!TestStr(key, ctx->key)) {
+            ctx->buf.Append(0);
+
+            const char *value = ctx->buf.TrimAndLeak().ptr;
+            ctx->values->Set(ctx->key, value);
+
+            ctx->key = DuplicateString(key, ctx->buf.allocator).ptr;
+        }
+
+        RG_ASSERT(offset == (uint64_t)ctx->buf.len);
+        ctx->buf.Append(MakeSpan(data, (Size)size));
 
         return MHD_YES;
     }, &ctx);
@@ -764,6 +775,13 @@ bool http_IO::ReadPostValues(Allocator *alloc, HashMap<const char *, const char 
             LogError("Failed to parse POST data");
             return false;
         }
+    }
+
+    if (ctx.key) {
+        ctx.buf.Append(0);
+
+        const char *value = ctx.buf.TrimAndLeak().ptr;
+        out_values->Set(ctx.key, value);
     }
 
     return true;
