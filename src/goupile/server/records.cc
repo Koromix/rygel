@@ -353,15 +353,34 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
 
                 // Insert or update record entry (if needed)
                 if (RG_LIKELY(updated)) {
+                    const char *root_ulid;
+                    if (record.parent.ulid) {
+                        sq_Statement stmt;
+                        if (!instance->db.Prepare("SELECT root_ulid FROM rec_entries WHERE ulid = ?1", &stmt))
+                            return false;
+                        sqlite3_bind_text(stmt, 1, record.parent.ulid, -1, SQLITE_STATIC);
+
+                        if (!stmt.Next()) {
+                            if (stmt.IsValid()) {
+                                LogError("Parent record '%1' does not exist", record.parent.ulid);
+                                return false;
+                            }
+                        }
+
+                        root_ulid = DuplicateString((const char *)sqlite3_column_text(stmt, 0), &io->allocator).ptr;
+                    } else {
+                        root_ulid = record.ulid;
+                    }
+
                     if (!instance->db.Run(R"(INSERT INTO rec_entries (ulid, hid, form,
-                                                                      parent_ulid, parent_version, anchor)
-                                             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                                                                      parent_ulid, parent_version, root_ulid, anchor)
+                                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
                                              ON CONFLICT (ulid)
                                                  DO UPDATE SET hid = excluded.hid,
                                                                anchor = excluded.anchor)",
                                           record.ulid, record.hid, record.form, record.parent.ulid,
                                           record.parent.version >= 0 ? sq_Binding(record.parent.version) : sq_Binding(),
-                                          anchor))
+                                          root_ulid, anchor))
                         return false;
                 }
             }
