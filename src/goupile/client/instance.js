@@ -185,8 +185,9 @@ function InstanceController() {
                         style="background-position-y: calc(-318px + 1.2em);"
                         @click=${ui.wrapAction(e => togglePanel(e, 'page'))}>Formulaire</button>
             ` : ''}
-            ${goupile.isLocked() ? html`<button class="icon" style="background-position-y: calc(-186px + 1.2em)"
-                                                @click=${ui.wrapAction(goupile.runUnlockDialog)}>Déverrouiller</button>` : ''}
+            ${goupile.isLocked() && profile.lock.unlockable ?
+                html`<button class="icon" style="background-position-y: calc(-186px + 1.2em)"
+                             @click=${ui.wrapAction(goupile.runUnlockDialog)}>Déverrouiller</button>` : ''}
 
             <div style="flex: 1; min-width: 15px;"></div>
             ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormDrop(route.form.chain[idx]))}
@@ -1575,7 +1576,7 @@ function InstanceController() {
             if (!ulid && !options.push_history)
                 ulid = 'new';
             if (!ulid && goupile.isLocked())
-                ulid = profile.lock;
+                ulid = profile.lock.ctx;
 
             // Deal with ULID
             if (ulid && ulid !== new_route.ulid) {
@@ -1624,7 +1625,7 @@ function InstanceController() {
             await expandRecord(new_record, new_route.page.options.load || []);
 
             // Safety checks
-            if (goupile.isLocked() && !new_record.chain.some(record => record.ulid === profile.lock))
+            if (goupile.isLocked() && !new_record.chain.some(record => record.ulid === profile.lock.ctx))
                 throw new Error('Enregistrement non autorisé');
             if (!isPageEnabled(new_route.page, new_record)) {
                 new_route.page = findEnabledPage(new_route.form, new_record);

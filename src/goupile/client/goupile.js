@@ -168,7 +168,10 @@ const goupile = new function() {
                     },
                     namespaces: lock.namespaces,
                     keys: lock.keys,
-                    lock: lock.ctx
+                    lock: {
+                        unlockable: true,
+                        ctx: lock.ctx
+                    }
                 };
                 updateProfile(new_profile, false);
 
