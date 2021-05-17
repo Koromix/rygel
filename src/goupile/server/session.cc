@@ -93,38 +93,40 @@ const SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
             stamp = stamps_map.SetDefault(instance->unique);
             stamp->unique = instance->unique;
 
-            sq_Statement stmt;
-            if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
-                                         WHERE userid = ?1 AND instance = ?2)", &stmt))
-                return nullptr;
-            sqlite3_bind_int64(stmt, 1, userid);
-            sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
-            if (!stmt.Next())
-                return nullptr;
-
-            uint32_t permissions = (uint32_t)sqlite3_column_int(stmt, 0);
-
-            if (instance->master != instance) {
-                InstanceHolder *master = instance->master;
-
+            if (userid >= 0) {
                 sq_Statement stmt;
                 if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
                                              WHERE userid = ?1 AND instance = ?2)", &stmt))
                     return nullptr;
                 sqlite3_bind_int64(stmt, 1, userid);
-                sqlite3_bind_text(stmt, 2, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
+                if (!stmt.Next())
+                    return nullptr;
 
-                permissions &= UserPermissionSlaveMask;
-                if (stmt.Next()) {
-                    uint32_t master_permissions = (uint32_t)sqlite3_column_int(stmt, 0);
-                    permissions |= master_permissions & UserPermissionMasterMask;
+                uint32_t permissions = (uint32_t)sqlite3_column_int(stmt, 0);
+
+                if (instance->master != instance) {
+                    InstanceHolder *master = instance->master;
+
+                    sq_Statement stmt;
+                    if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
+                                                 WHERE userid = ?1 AND instance = ?2)", &stmt))
+                        return nullptr;
+                    sqlite3_bind_int64(stmt, 1, userid);
+                    sqlite3_bind_text(stmt, 2, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
+
+                    permissions &= UserPermissionSlaveMask;
+                    if (stmt.Next()) {
+                        uint32_t master_permissions = (uint32_t)sqlite3_column_int(stmt, 0);
+                        permissions |= master_permissions & UserPermissionMasterMask;
+                    }
+                } else if (instance->slaves.len) {
+                    permissions &= UserPermissionMasterMask;
                 }
-            } else if (instance->slaves.len) {
-                permissions &= UserPermissionMasterMask;
-            }
 
-            stamp->authorized = true;
-            stamp->permissions = permissions;
+                stamp->authorized = true;
+                stamp->permissions = permissions;
+            }
         }
     }
 
@@ -134,7 +136,21 @@ const SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
 void SessionInfo::InvalidateStamps()
 {
     std::lock_guard<std::shared_mutex> lock_excl(stamps_mutex);
+
     stamps_map.Clear();
+    stamps_alloc.ReleaseAll();
+}
+
+void SessionInfo::AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions, const char *ulid)
+{
+    std::lock_guard<std::shared_mutex> lock_excl(stamps_mutex);
+
+    SessionStamp *stamp = stamps_map.SetDefault(instance->unique);
+
+    stamp->unique = instance->unique;
+    stamp->authorized = true;
+    stamp->permissions = permissions;
+    stamp->ulid = ulid ? DuplicateString(ulid, &stamps_alloc).ptr : nullptr;
 }
 
 void InvalidateUserStamps(int64_t userid)
@@ -541,6 +557,7 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
         const char *sms = nullptr;
         int64_t userid = 0;
         const char *username = nullptr;
+        const char *ulid = nullptr;
         {
             StreamReader st(json);
             json_Parser parser(&st, &io->allocator);
@@ -556,6 +573,8 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
                     parser.ParseInt(&userid);
                 } else if (TestStr(key, "username")) {
                     parser.ParseString(&username);
+                } else if (TestStr(key, "ulid")) {
+                    parser.ParseString(&ulid);
                 } else if (parser.IsValid()) {
                     LogError("Unknown key '%1' in token JSON", key);
                     io->AttachError(422);
@@ -585,6 +604,10 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
             }
             if (!username || !username[0]) {
                 LogError("Missing or empty username");
+                valid = false;
+            }
+            if (!ulid || !ulid[0]) {
+                LogError("Missing or empty ULID");
                 valid = false;
             }
 
@@ -619,6 +642,9 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
             // Send confirmation SMS
             if (!SendSMS(sms, session->confirm))
                 return;
+
+            uint32_t permissions = (int)UserPermission::DataLoad | (int)UserPermission::DataSave;
+            session->AuthorizeInstance(instance, permissions, ulid);
 
             sessions.Open(request, io, session);
             WriteProfileJson(session.GetRaw(), nullptr, request, io);

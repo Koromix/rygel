@@ -50,6 +50,7 @@ struct SessionStamp {
 
     bool authorized;
     uint32_t permissions;
+    const char *ulid;
 
     bool HasPermission(UserPermission perm) const { return permissions & (int)perm; };
 
@@ -59,6 +60,7 @@ struct SessionStamp {
 class SessionInfo: public RetainObject {
     mutable std::shared_mutex stamps_mutex;
     mutable HashTable<int64_t, SessionStamp> stamps_map;
+    mutable BlockAllocator stamps_alloc;
 
 public:
     int64_t userid;
@@ -73,6 +75,8 @@ public:
 
     const SessionStamp *GetStamp(const InstanceHolder *instance) const;
     void InvalidateStamps();
+
+    void AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions, const char *ulid = nullptr);
 };
 
 void InvalidateUserStamps(int64_t userid);

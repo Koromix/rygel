@@ -78,13 +78,14 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
     }
 
     RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+    const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->HasPermission(instance, UserPermission::DataLoad)) {
+    if (!stamp || !stamp->HasPermission(UserPermission::DataLoad)) {
         LogError("User is not allowed to load data");
         io->AttachError(403);
         return;
@@ -106,17 +107,23 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
     {
         LocalArray<char, 1024> sql;
 
-        sql.len += Fmt(sql.TakeAvailable(), R"(SELECT r.rowid, r.ulid, r.hid, r.form, r.anchor,
-                                                      r.parent_ulid, r.parent_version, f.anchor, f.version,
-                                                      f.type, f.username, f.mtime, f.page, f.json FROM rec_entries r
-                                               LEFT JOIN rec_fragments f ON (f.ulid = r.ulid)
-                                               WHERE r.anchor >= ?1)").len;
-        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY r.rowid, f.anchor").len;
+        sql.len += Fmt(sql.TakeAvailable(), R"(SELECT e.rowid, e.ulid, e.hid, e.form, e.anchor,
+                                                      e.parent_ulid, e.parent_version, f.anchor, f.version,
+                                                      f.type, f.username, f.mtime, f.page, f.json FROM rec_entries e
+                                               LEFT JOIN rec_fragments f ON (f.ulid = e.ulid)
+                                               WHERE e.anchor >= ?1)").len;
+        if (stamp->ulid) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND e.root_ulid = ?2").len;
+        }
+        sql.len += Fmt(sql.TakeAvailable(), " ORDER BY e.rowid, f.anchor").len;
 
         if (!instance->db.Prepare(sql.data, &stmt))
             return;
 
         sqlite3_bind_int64(stmt, 1, anchor);
+        if (stamp->ulid) {
+            sqlite3_bind_text(stmt, 2, stamp->ulid, -1, SQLITE_STATIC);
+        }
     }
 
     // Export data
@@ -164,13 +171,14 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
     }
 
     RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+    const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
 
     if (!session) {
         LogError("User is not logged in");
         io->AttachError(401);
         return;
     }
-    if (!session->HasPermission(instance, UserPermission::DataSave)) {
+    if (!stamp || !stamp->HasPermission(UserPermission::DataSave)) {
         LogError("User is not allowed to save data");
         io->AttachError(403);
         return;
@@ -312,6 +320,32 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
             for (const SaveRecord &record: records) {
                 bool updated = false;
 
+                // Retrieve root ULID
+                char root_ulid[32];
+                if (record.parent.ulid) {
+                    sq_Statement stmt;
+                    if (!instance->db.Prepare("SELECT root_ulid FROM rec_entries WHERE ulid = ?1", &stmt))
+                        return false;
+                    sqlite3_bind_text(stmt, 1, record.parent.ulid, -1, SQLITE_STATIC);
+
+                    if (!stmt.Next()) {
+                        if (stmt.IsValid()) {
+                            LogError("Parent record '%1' does not exist", record.parent.ulid);
+                        }
+                        return false;
+                    }
+
+                    CopyString((const char *)sqlite3_column_text(stmt, 0), root_ulid);
+                } else {
+                    CopyString(record.ulid, root_ulid);
+                }
+
+                // Reject restricted users
+                if (stamp->ulid && !TestStr(root_ulid, stamp->ulid)) {
+                    LogError("You are not allowed to alter this record");
+                    return false;
+                }
+
                 // Save record fragments
                 int64_t anchor;
                 if (record.fragments.len) {
@@ -353,27 +387,8 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
 
                 // Insert or update record entry (if needed)
                 if (RG_LIKELY(updated)) {
-                    const char *root_ulid;
-                    if (record.parent.ulid) {
-                        sq_Statement stmt;
-                        if (!instance->db.Prepare("SELECT root_ulid FROM rec_entries WHERE ulid = ?1", &stmt))
-                            return false;
-                        sqlite3_bind_text(stmt, 1, record.parent.ulid, -1, SQLITE_STATIC);
-
-                        if (!stmt.Next()) {
-                            if (stmt.IsValid()) {
-                                LogError("Parent record '%1' does not exist", record.parent.ulid);
-                                return false;
-                            }
-                        }
-
-                        root_ulid = DuplicateString((const char *)sqlite3_column_text(stmt, 0), &io->allocator).ptr;
-                    } else {
-                        root_ulid = record.ulid;
-                    }
-
-                    if (!instance->db.Run(R"(INSERT INTO rec_entries (ulid, hid, form,
-                                                                      parent_ulid, parent_version, root_ulid, anchor)
+                    if (!instance->db.Run(R"(INSERT INTO rec_entries (ulid, hid, form, parent_ulid,
+                                                                      parent_version, root_ulid, anchor)
                                              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
                                              ON CONFLICT (ulid)
                                                  DO UPDATE SET hid = excluded.hid,
