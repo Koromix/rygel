@@ -74,6 +74,15 @@ static int OpenIPSocket(SocketType type, int port)
     RG_ASSERT(type == SocketType::Dual || type == SocketType::IPv4 || type == SocketType::IPv6);
 
     int family = (type == SocketType::IPv4) ? AF_INET : AF_INET6;
+
+#ifdef _WIN32
+    SOCKET fd = socket(family, SOCK_STREAM, 0);
+    if (fd == INVALID_SOCKET) {
+        LogError("Failed to create AF_INET socket: %1", strerror(errno));
+        return -1;
+    }
+    RG_DEFER_N(err_guard) { closesocket(fd); };
+#else
     int fd = socket(family, SOCK_STREAM, 0);
     if (fd < 0) {
         LogError("Failed to create AF_INET socket: %1", strerror(errno));
@@ -81,7 +90,6 @@ static int OpenIPSocket(SocketType type, int port)
     }
     RG_DEFER_N(err_guard) { close(fd); };
 
-#ifndef _WIN32
     int reuseport = 1;
     setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &reuseport, sizeof(reuseport));
 #endif
@@ -126,7 +134,7 @@ static int OpenIPSocket(SocketType type, int port)
     }
 
     err_guard.Disable();
-    return fd;
+    return (int)fd;
 }
 
 #ifndef _WIN32
