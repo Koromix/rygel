@@ -46,8 +46,12 @@ const goupile = new function() {
         ui.init();
         await registerSW();
         initNavigation();
-        if (url.searchParams.get('login') != 1)
+
+        if (url.searchParams.get('login') == 1) {
+            self.syncHistory(url.pathname, false);
+        } else {
             await syncProfile();
+        }
 
         if (profile.authorized) {
             document.body.classList.remove('gp_loading');
