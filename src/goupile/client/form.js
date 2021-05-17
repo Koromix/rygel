@@ -1643,7 +1643,7 @@ instead of:
             intf.error('Obligatoire !', intf.options.missing_mode !== 'error');
 
             if (intf.options.missing_mode === 'disable')
-                valid = false;
+                model.valid = false;
         }
 
         model.variables.push(intf);
