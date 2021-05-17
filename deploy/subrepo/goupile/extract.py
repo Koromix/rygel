@@ -118,9 +118,10 @@ if __name__ == "__main__":
       while len(next_imports) > 0:
         new_imports = []
         for imp in next_imports:
-          import_str = config.get(imp, 'ImportFrom', fallback = '').strip()
-          if import_str:
-            new_imports.extend(import_str.split(' '))
+          for suffix in ['', '_Linux', '_Win32', '_macOS', '_Linux', '_POSIX']:
+            import_str = config.get(imp, 'ImportFrom' + suffix, fallback = '').strip()
+            if import_str:
+              new_imports.extend(import_str.split(' '))
         imports.extend(new_imports)
         next_imports = new_imports
 
