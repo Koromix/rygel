@@ -56,6 +56,7 @@
     repo: '{{ goupile_repo }}'
     version: '{{ goupile_commit }}'
     dest: '{{ goupile_root_path }}/repo'
+    force: yes
   become: no
 
 - name: Update Felix build system
