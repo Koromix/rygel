@@ -277,6 +277,44 @@ const goupile = new function() {
         });
     }
 
+    this.runChangePasswordDialog = function(e) {
+        return ui.runDialog(e, 'Changement de mot de passe', (d, resolve, reject) => {
+            let old_password = d.password('*old_password', 'Ancien mot de passe');
+            let new_password = d.password('*new_password', 'Nouveau mot de passe');
+            let new_password2 = d.password('*new_password2', null, {
+                placeholder: 'Confirmation'
+            });
+            if (new_password.value != null && new_password2.value != null && new_password.value !== new_password2.value)
+                new_password2.error('Les mots de passe sont différents');
+
+            d.action('Modifier', {disabled: !d.isValid()}, async () => {
+                let progress = log.progress('Modification du mot de passe');
+
+                try {
+                    let query = new URLSearchParams;
+                    query.set('old_password', old_password.value);
+                    query.set('new_password', new_password.value);
+
+                    let response = await net.fetch(`${ENV.urls.instance}api/password/change`, {
+                        method: 'POST',
+                        body: query
+                    });
+
+                    if (response.ok) {
+                        resolve();
+                        progress.success('Mot de passe modifié');
+                    } else {
+                        let err = (await response.text()).trim();
+                        throw new Error(err);
+                    }
+                } catch (err) {
+                    progress.close();
+                    reject(err);
+                }
+            });
+        });
+    };
+
     function initNavigation() {
         window.addEventListener('popstate', e => controller.go(null, window.location.href, { push_history: false }));
 

@@ -176,17 +176,6 @@ again:
 }
 #endif
 
-static bool HashPassword(Span<const char> password, char out_hash[crypto_pwhash_STRBYTES])
-{
-    if (crypto_pwhash_str(out_hash, password.ptr, password.len,
-                          crypto_pwhash_OPSLIMIT_INTERACTIVE, crypto_pwhash_MEMLIMIT_INTERACTIVE) != 0) {
-        LogError("Failed to hash password");
-        return false;
-    }
-
-    return true;
-}
-
 static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
 {
 #ifndef _WIN32

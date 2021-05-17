@@ -49,6 +49,8 @@ function AdminController() {
             <div class="drop right" @click=${ui.deployMenu}>
                 <button class="icon" style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}>${profile.username}</button>
                 <div>
+                    <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Changer le mot de passe</button>
+                    <hr/>
                     <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
                 </div>
             </div>

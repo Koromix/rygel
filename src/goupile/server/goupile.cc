@@ -338,6 +338,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleSessionConfirm(nullptr, request, io);
         } else if (TestStr(admin_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
             HandleSessionLogout(request, io);
+        } else if (TestStr(admin_url, "/api/password/change") && request.method == http_RequestMethod::Post) {
+            HandlePasswordChange(request, io);
         } else if (TestStr(admin_url, "/api/instances/create") && request.method == http_RequestMethod::Post) {
             HandleInstanceCreate(request, io);
         } else if (TestStr(admin_url, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
@@ -509,6 +511,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleSessionConfirm(instance, request, io);
         } else if (TestStr(instance_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
             HandleSessionLogout(request, io);
+        } else if (TestStr(instance_url, "/api/password/change") && request.method == http_RequestMethod::Post) {
+            HandlePasswordChange(request, io);
         } else if (TestStr(instance_url, "/api/files/static") && request.method == http_RequestMethod::Get) {
              HandleFileStatic(instance, request, io);
         } else if (TestStr(instance_url, "/api/files/list") && request.method == http_RequestMethod::Get) {

@@ -319,6 +319,17 @@ void PruneSessions()
     }
 }
 
+bool HashPassword(Span<const char> password, char out_hash[crypto_pwhash_STRBYTES])
+{
+    if (crypto_pwhash_str(out_hash, password.ptr, password.len,
+                          crypto_pwhash_OPSLIMIT_INTERACTIVE, crypto_pwhash_MEMLIMIT_INTERACTIVE) != 0) {
+        LogError("Failed to hash password");
+        return false;
+    }
+
+    return true;
+}
+
 static bool IsUserBanned(const char *address, int64_t userid)
 {
     std::shared_lock<std::shared_mutex> lock_shr(floods_mutex);
@@ -664,6 +675,108 @@ void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &requ
 {
     RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
     WriteProfileJson(session.GetRaw(), instance, request, io);
+}
+
+void HandlePasswordChange(const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<SessionInfo> session = sessions.Find(request, io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (session->userid < 0) {
+        LogError("This account does not use passwords");
+        io->AttachError(403);
+        return;
+    }
+
+    io->RunAsync([=]() {
+        // Read POST values
+        const char *old_password;
+        const char *new_password;
+        {
+            HashMap<const char *, const char *> values;
+            if (!io->ReadPostValues(&io->allocator, &values)) {
+                io->AttachError(422);
+                return;
+            }
+
+            bool valid = true;
+
+            old_password = values.FindValue("old_password", nullptr);
+            if (!old_password) {
+                LogError("Missing 'old_password' parameter");
+                valid = false;
+            }
+
+            new_password = values.FindValue("new_password", nullptr);
+            if (!new_password) {
+                LogError("Missing 'new_password' parameter");
+                valid = false;
+            }
+
+            if (!valid) {
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        // Check user password
+        {
+            // We use this to extend/fix the response delay in case of error
+            int64_t now = GetMonotonicTime();
+
+            sq_Statement stmt;
+            if (!gp_domain.db.Prepare(R"(SELECT password_hash FROM dom_users
+                                         WHERE userid = ?1)", &stmt))
+                return;
+            sqlite3_bind_int64(stmt, 1, session->userid);
+
+            if (!stmt.Next()) {
+                if (stmt.IsValid()) {
+                    LogError("User does not exist");
+                    io->AttachError(404);
+                }
+                return;
+            }
+
+            const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
+
+            if (crypto_pwhash_str_verify(password_hash, old_password, strlen(old_password)) < 0) {
+                // Enforce constant delay if authentification fails
+                int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
+                WaitDelay(safety_delay);
+
+                LogError("Invalid password");
+                io->AttachError(403);
+            }
+        }
+
+        // Hash password
+        char new_hash[crypto_pwhash_STRBYTES];
+        if (!HashPassword(new_password, new_hash))
+            return;
+
+        bool success = gp_domain.db.Transaction([&]() {
+            int64_t time = GetUnixTime();
+
+            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username)
+                                     VALUES (?1, ?2, ?3, ?4))",
+                                  time, request.client_addr, "change_password", session->username))
+                return false;
+            if (!gp_domain.db.Run("UPDATE dom_users SET password_hash = ?2 WHERE userid = ?1",
+                                  session->userid, new_hash))
+                return false;
+
+            return true;
+        });
+        if (!success)
+            return;
+
+        io->AttachText(200, "Done!");
+    });
 }
 
 }
