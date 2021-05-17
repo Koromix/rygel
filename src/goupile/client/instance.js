@@ -924,8 +924,11 @@ function InstanceController() {
                 await t.saveWithKey('rec_records', key, obj);
             });
 
-            if (ENV.sync_mode !== 'offline' && net.isOnline() && !goupile.isLocked()) {
+            if (ENV.sync_mode !== 'offline') {
                 try {
+                    if (!net.isOnline() || goupile.isLocked())
+                        throw new Error('Cannot delete online');
+
                     await syncRecords(false);
                     progress.success('Suppression effectuée');
                 } catch (err) {
