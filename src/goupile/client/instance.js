@@ -252,7 +252,7 @@ function InstanceController() {
                                     <button ?disabled=${!enabled}
                                             class=${page === route.page ? 'active' : ''}
                                             @click=${ui.wrapAction(e => self.go(e, page.url))}>
-                                        ${!goupile.isLocked() && meta && meta.status.has(page.key) ? '✓\uFE0E' : ''}
+                                        ${meta && meta.status.has(page.key) ? '✓\uFE0E' : ''}
                                         ${page.title}
                                    </button>`;
                             } else if (item.type === 'form') {
@@ -266,7 +266,7 @@ function InstanceController() {
                                     <button ?disabled=${!enabled}
                                             class=${route.form.chain.some(parent => form === parent) ? 'active' : ''}
                                             @click=${ui.wrapAction(e => self.go(e, form.url))}>
-                                        ${!goupile.isLocked() && meta && meta.status.has(form.key) ? '✓\uFE0E ' : ''}
+                                        ${meta && meta.status.has(form.key) ? '✓\uFE0E ' : ''}
                                         ${form.multi || form.title}
                                    </button>`;
                             }
@@ -279,7 +279,7 @@ function InstanceController() {
                 <button ?disabled=${!isFormEnabled(form, form_record)}
                         class=${route.form.chain.some(parent => form === parent) ? 'active' : ''}
                         @click=${ui.wrapAction(e => self.go(e, form.url))}>
-                    ${!goupile.isLocked() && meta && meta.status.has(form.key) ? '✓\uFE0E ' : ''}
+                    ${meta && meta.status.has(form.key) ? '✓\uFE0E ' : ''}
                     ${form.multi || form.title}
                 </button>`;
         }
@@ -677,7 +677,7 @@ function InstanceController() {
                         return html`
                             <li><a class=${cls} href=${contextualizeURL(page.url, form_record)}>
                                 <div style="flex: 1;">${page.title}</div>
-                                ${!goupile.isLocked() && meta && meta.status.has(page.key) ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
+                                ${meta && meta.status.has(page.key) ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
                             </a></li>
                         `;
                     } else if (item.type === 'form') {
@@ -696,7 +696,7 @@ function InstanceController() {
                         return html`
                             <li><a class=${cls} href=${contextualizeURL(form.url, form_record)} style="display: flex;">
                                 <div style="flex: 1;">${form.multi || form.title}</div>
-                                ${!goupile.isLocked() && meta && meta.status.has(form.key) ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
+                                ${meta && meta.status.has(form.key) ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
                             </a></li>
                         `;
                     }
