@@ -101,13 +101,13 @@ def list_domains(root_dir, names):
 def create_domain(binary, root_dir, domain, backup_key,
                   owner_user, owner_group, admin_username, admin_password):
     directory = os.path.join(root_dir, domain)
-    print(f'>>> Create domain {domain} ({directory})', file = sys.stderr)
+    print(f'  + Create domain {domain} ({directory})', file = sys.stderr)
 
     execute_command([binary, 'init', '-o', owner_user, '--backup_key', backup_key,
                      '--username', admin_username, '--password', admin_password, directory])
 
 def migrate_domain(binary, domain, info):
-    print(f'>>> Migrate domain {domain} ({info.directory})', file = sys.stderr)
+    print(f'  + Migrate domain {domain} ({info.directory})', file = sys.stderr)
     filename = os.path.join(info.directory, 'goupile.ini')
     execute_command([binary, 'migrate', '-C', filename])
 
@@ -147,7 +147,7 @@ def list_services():
 
 def run_service_command(domain, cmd):
     service = f'goupile@{domain}.service'
-    print(f'>>> {cmd.capitalize()} {service}', file = sys.stderr)
+    print(f'  + {cmd.capitalize()} {service}', file = sys.stderr)
     execute_command(['systemctl', cmd, '--quiet', service])
 
 def update_domain_config(info, backup_key, smtp, sms):
@@ -183,6 +183,7 @@ def run_sync(config):
     binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
 
     # Create missing domains
+    print('>>> Create new domains', file = sys.stderr)
     for domain, backup_key in config['Domains'].items():
         directory = os.path.join(config['Goupile.DomainDirectory'], domain)
         if not os.path.exists(directory):
@@ -195,17 +196,18 @@ def run_sync(config):
     services = list_services()
 
     # Detect binary mismatches
+    print('>>> Check Goupile binary versions', file = sys.stderr)
     binary_inode = os.stat(binary).st_ino
     for domain, info in domains.items():
         status = services.get(domain)
         if status is not None and status.running and status.inode != binary_inode:
-            print(f'+++ Domain {domain} is running old version')
+            print(f'  + Domain {domain} is running old version')
             info.mismatch = True
 
     changed = False
 
     # Update instance configuration files
-    print('>>> Write Goupile configuration files', file = sys.stderr)
+    print('>>> Update Goupile configuration files', file = sys.stderr)
     for domain, info in domains.items():
         backup_key = config['Domains'][domain]
         smtp = config.get('SMTP')
@@ -215,6 +217,7 @@ def run_sync(config):
             changed = True
 
     # Sync systemd services
+    print('>>> Sync systemd services', file = sys.stderr)
     for domain in services:
         info = domains.get(domain)
         if info is None:
