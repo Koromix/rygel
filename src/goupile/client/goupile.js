@@ -64,7 +64,7 @@ const goupile = new function() {
             }
             document.body.classList.remove('gp_loading');
 
-            if (profile.confirm == 'sms') {
+            if (profile.confirm == 'SMS') {
                 await runConfirmScreen();
             } else {
                 await runLoginScreen();
