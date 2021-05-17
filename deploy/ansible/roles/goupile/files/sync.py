@@ -90,21 +90,11 @@ def list_domains(root_dir, names):
     domains = {}
 
     for domain in names:
-        directory = os.path.join(root_dir, domain)
-        filename = os.path.join(directory, 'goupile.ini')
+        info = DomainConfig()
+        info.directory = os.path.join(root_dir, domain)
+        info.socket = f'/run/goupile/{domain}.sock'
 
-        if os.path.isfile(filename):
-            config = load_config(filename)
-
-            info = DomainConfig()
-            info.directory = directory
-            info.socket = f'/run/goupile/{domain}.sock'
-
-            prev_socket = config.get('HTTP.UnixPath')
-            if prev_socket != info.socket:
-                info.mismatch = True
-
-            domains[domain] = info
+        domains[domain] = info
 
     return domains
 
@@ -159,18 +149,6 @@ def run_service_command(domain, cmd):
     service = f'goupile@{domain}.service'
     print(f'>>> {cmd.capitalize()} {service}', file = sys.stderr)
     execute_command(['systemctl', cmd, '--quiet', service])
-
-def list_system_libraries(binary):
-    output = subprocess.check_output(['ldd', binary])
-    output = output.decode()
-
-    libraries = []
-    for line in output.splitlines():
-        match = re.search('(?:=> )?(\\/.*) \\(0x[0-9abcdefABCDEF]+\\)$', line)
-        if match is not None:
-            libraries.append(match.group(1))
-
-    return libraries
 
 def update_domain_config(info, backup_key, smtp, sms):
     filename = os.path.join(info.directory, 'goupile.ini')
