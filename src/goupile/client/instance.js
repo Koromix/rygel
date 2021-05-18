@@ -553,9 +553,10 @@ function InstanceController() {
                 form_builder.errorList();
 
             if (route.page.options.default_actions && model.variables.length) {
-                let disable = !form_state.hasChanged();
+                let prev_actions = model.actions;
+                model.actions = [];
 
-                form_builder.action('Enregistrer', {disabled: disable}, async () => {
+                form_builder.action('Enregistrer', {disabled: !form_state.hasChanged()}, async () => {
                     form_builder.triggerErrors();
 
                     await saveRecord(form_record, form_values, route.page);
@@ -590,6 +591,11 @@ function InstanceController() {
                 if (route.form.multi && form_record.saved) {
                     form_builder.action('-');
                     form_builder.action('Supprimer', {}, e => runDeleteRecordDialog(e, form_record.ulid));
+                }
+
+                if (prev_actions.length) {
+                    form_builder.action('-');
+                    model.actions.push(...prev_actions);
                 }
             }
 
