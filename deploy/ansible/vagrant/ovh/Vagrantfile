@@ -11,8 +11,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-proxy_ip = '192.168.33.10'
-server_ip = '192.168.33.11'
+ovh_ip = '192.168.33.20'
 
 Vagrant.configure('2') do |config|
     config.vm.box = 'generic/debian10'
@@ -20,36 +19,22 @@ Vagrant.configure('2') do |config|
     config.hostmanager.enabled = true
     config.hostmanager.manage_host = true
 
-    config.vm.define 'proxy' do |proxy|
-        proxy.vm.box = 'generic/debian10'
-        proxy.vm.hostname = 'proxy.local'
-        proxy.vm.network 'private_network', ip: proxy_ip
+    config.vm.define 'ovh' do |ovh|
+        ovh.vm.hostname = 'ovh.local'
+        ovh.vm.network 'private_network', ip: ovh_ip
 
-        proxy.vm.provider 'virtualbox' do |v|
-            v.name = 'vagrant_proxy'
-            v.memory = 2048
-            v.cpus = 2
-            v.linked_clone = true
-            v.gui = false
-        end
-    end
-
-    config.vm.define 'server' do |server|
-        server.vm.hostname = 'server.local'
-        server.vm.network 'private_network', ip: server_ip
-
-        server.vm.provider 'virtualbox' do |v|
-            v.name = 'vagrant_server'
-            v.memory = 2048
-            v.cpus = 2
+        ovh.vm.provider 'virtualbox' do |v|
+            v.name = 'vagrant_ovh'
+            v.memory = 4096
+            v.cpus = 4
             v.linked_clone = true
             v.gui = false
         end
 
-        server.vm.provision 'ansible' do |ansible|
-            ansible.playbook = 'hds.yml'
+        ovh.vm.provision 'ansible' do |ansible|
+            ansible.playbook = '../../ovh.yml'
             ansible.limit = 'all'
-            ansible.inventory_path = 'inventories/vagrant.yml'
+            ansible.inventory_path = '../../inventories/ovh/vagrant.yml'
             ansible.extra_vars = { ansible_python_interpreter: '/usr/bin/python3' }
             # ansible.raw_arguments = ['--check']
         end

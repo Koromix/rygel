@@ -19,4 +19,4 @@
   roles:
     - role: goupile
       when: 'inventory_hostname == "server"'
-    - role: nginx
+    - role: nginx_dual

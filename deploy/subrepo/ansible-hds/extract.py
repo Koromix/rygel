@@ -74,6 +74,8 @@ if __name__ == "__main__":
     # Filter it out and rewrite FelixBuild.ini
     subprocess.run([sys.executable, script_directory + '/git-filter-repo.py',
                     '--paths-from-file', script_directory + '/keep.txt'])
+    subprocess.run([sys.executable, script_directory + '/git-filter-repo.py',
+                    '--invert-paths', '--paths-from-file', script_directory + '/remove.txt'])
 
     # Push to repository
     if args.push_url is not None:
