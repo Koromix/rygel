@@ -61,6 +61,7 @@ static bool ApplySandbox(Span<const char *const> paths)
         {"exit_group", sb_FilterAction::Allow},
         {"brk", sb_FilterAction::Allow},
         {"mmap/anon", sb_FilterAction::Allow},
+        {"mmap/shared", sb_FilterAction::Allow},
         {"munmap", sb_FilterAction::Allow},
         {"mprotect", sb_FilterAction::Allow},
         {"mlock", sb_FilterAction::Allow},

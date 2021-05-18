@@ -78,7 +78,7 @@ sqlite3_stmt *sq_Statement::Leak()
 bool sq_Database::Open(const char *filename, const uint8_t key[32], unsigned int flags)
 {
     static const char *const sql = R"(
-        PRAGMA locking_mode = EXCLUSIVE;
+        PRAGMA locking_mode = NORMAL;
         PRAGMA foreign_keys = ON;
         PRAGMA journal_mode = WAL;
         PRAGMA synchronous = NORMAL;
