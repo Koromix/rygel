@@ -46,7 +46,7 @@ void HandleSendMail(InstanceHolder *instance, const http_RequestInfo &request, h
 {
     if (!gp_domain.config.smtp.url) {
         LogError("This instance is not configured to send mails");
-        io->AttachError(503);
+        io->AttachError(403);
         return;
     }
 
@@ -118,7 +118,7 @@ void HandleSendSMS(InstanceHolder *instance, const http_RequestInfo &request, ht
 {
     if (gp_domain.config.sms.provider == sms_Provider::None) {
         LogError("This instance is not configured to send SMS messages");
-        io->AttachError(503);
+        io->AttachError(403);
         return;
     }
 
