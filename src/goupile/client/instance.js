@@ -875,7 +875,7 @@ function InstanceController() {
 
             if (ENV.sync_mode !== 'offline') {
                 try {
-                    if (!net.isOnline() || goupile.isLocked())
+                    if (!goupile.isLoggedOnline())
                         throw new Error('Cannot save online');
 
                     await syncRecords(false);
@@ -926,7 +926,7 @@ function InstanceController() {
 
             if (ENV.sync_mode !== 'offline') {
                 try {
-                    if (!net.isOnline() || goupile.isLocked())
+                    if (!goupile.isLoggedOnline())
                         throw new Error('Cannot delete online');
 
                     await syncRecords(false);
