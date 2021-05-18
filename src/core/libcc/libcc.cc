@@ -31,6 +31,7 @@
     #ifndef WIN32_LEAN_AND_MEAN
         #define WIN32_LEAN_AND_MEAN
     #endif
+    #include <ws2tcpip.h>
     #include <windows.h>
     #include <fcntl.h>
     #include <io.h>
@@ -49,11 +50,12 @@
     #include <signal.h>
     #include <spawn.h>
     #include <sys/ioctl.h>
-    #include <sys/socket.h>
     #include <sys/stat.h>
     #include <sys/types.h>
+    #include <sys/socket.h>
     #include <sys/un.h>
     #include <sys/wait.h>
+    #include <arpa/inet.h>
     #include <termios.h>
     #include <time.h>
     #include <unistd.h>
@@ -3633,6 +3635,113 @@ bool NotifySystemd()
     return true;
 }
 #endif
+
+// ------------------------------------------------------------------------
+// Sockets
+// ------------------------------------------------------------------------
+
+int OpenIPSocket(SocketType type, int port)
+{
+    RG_ASSERT(type == SocketType::Dual || type == SocketType::IPv4 || type == SocketType::IPv6);
+
+    int family = (type == SocketType::IPv4) ? AF_INET : AF_INET6;
+
+#ifdef _WIN32
+    SOCKET fd = socket(family, SOCK_STREAM, 0);
+    if (fd == INVALID_SOCKET) {
+        LogError("Failed to create AF_INET socket: %1", strerror(errno));
+        return -1;
+    }
+    RG_DEFER_N(err_guard) { closesocket(fd); };
+#else
+    int fd = socket(family, SOCK_STREAM, 0);
+    if (fd < 0) {
+        LogError("Failed to create AF_INET socket: %1", strerror(errno));
+        return -1;
+    }
+    RG_DEFER_N(err_guard) { close(fd); };
+
+    int reuseport = 1;
+    setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &reuseport, sizeof(reuseport));
+#endif
+
+    if (type == SocketType::IPv4) {
+        struct sockaddr_in addr = {};
+
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(port);
+        addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+        if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+            LogError("Failed to bind to port %1: %2", port, strerror(errno));
+            return -1;
+        }
+    } else {
+        struct sockaddr_in6 addr = {};
+
+        addr.sin6_family = AF_INET6;
+        addr.sin6_port = htons(port);
+        addr.sin6_addr = IN6ADDR_ANY_INIT;
+
+        int v6only = (type == SocketType::IPv6);
+#ifdef _WIN32
+        if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, (const char *)&v6only, sizeof(v6only)) < 0) {
+#else
+        if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &v6only, sizeof(v6only)) < 0) {
+#endif
+            LogError("Failed to change Dual-stack socket option: %1", strerror(errno));
+            return -1;
+        }
+
+        if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+            LogError("Failed to bind to port %1: %2", port, strerror(errno));
+            return -1;
+        }
+    }
+
+    err_guard.Disable();
+    return (int)fd;
+}
+
+#ifndef _WIN32
+int OpenUnixSocket(const char *path)
+{
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) {
+        LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
+        return -1;
+    }
+    RG_DEFER_N(err_guard) { close(fd); };
+
+    struct sockaddr_un addr = {};
+    addr.sun_family = AF_UNIX;
+    if (!CopyString(path, addr.sun_path)) {
+        LogError("Excessive UNIX socket path length");
+        return -1;
+    }
+
+    unlink(path);
+    if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        LogError("Failed to bind socket to '%1': %2", path, strerror(errno));
+        return -1;
+    }
+    chmod(path, 0666);
+
+    err_guard.Disable();
+    return fd;
+}
+#endif
+
+void CloseSocket(int fd)
+{
+#ifdef _WIN32
+    shutdown((SOCKET)fd, SD_BOTH);
+    closesocket((SOCKET)fd);
+#else
+    shutdown(fd, SHUT_RDWR);
+    close(fd);
+#endif
+}
 
 // ------------------------------------------------------------------------
 // Tasks

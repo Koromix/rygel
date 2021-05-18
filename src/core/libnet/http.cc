@@ -69,107 +69,6 @@ bool http_Config::Validate() const
     return valid;
 }
 
-static int OpenIPSocket(SocketType type, int port)
-{
-    RG_ASSERT(type == SocketType::Dual || type == SocketType::IPv4 || type == SocketType::IPv6);
-
-    int family = (type == SocketType::IPv4) ? AF_INET : AF_INET6;
-
-#ifdef _WIN32
-    SOCKET fd = socket(family, SOCK_STREAM, 0);
-    if (fd == INVALID_SOCKET) {
-        LogError("Failed to create AF_INET socket: %1", strerror(errno));
-        return -1;
-    }
-    RG_DEFER_N(err_guard) { closesocket(fd); };
-#else
-    int fd = socket(family, SOCK_STREAM, 0);
-    if (fd < 0) {
-        LogError("Failed to create AF_INET socket: %1", strerror(errno));
-        return -1;
-    }
-    RG_DEFER_N(err_guard) { close(fd); };
-
-    int reuseport = 1;
-    setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &reuseport, sizeof(reuseport));
-#endif
-
-    if (type == SocketType::IPv4) {
-        struct sockaddr_in addr = {};
-
-        addr.sin_family = AF_INET;
-        addr.sin_port = htons(port);
-        addr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-        if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-            LogError("Failed to bind to port %1: %2", port, strerror(errno));
-            return -1;
-        }
-    } else {
-        struct sockaddr_in6 addr = {};
-
-        addr.sin6_family = AF_INET6;
-        addr.sin6_port = htons(port);
-        addr.sin6_addr = IN6ADDR_ANY_INIT;
-
-        int v6only = (type == SocketType::IPv6);
-#ifdef _WIN32
-        if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, (const char *)&v6only, sizeof(v6only)) < 0) {
-#else
-        if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &v6only, sizeof(v6only)) < 0) {
-#endif
-            LogError("Failed to change Dual-stack socket option: %1", strerror(errno));
-            return -1;
-        }
-
-        if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-            LogError("Failed to bind to port %1: %2", port, strerror(errno));
-            return -1;
-        }
-    }
-
-    if (listen(fd, SOMAXCONN) < 0) {
-        LogError("Failed to listen for connections: %1", strerror(errno));
-        return -1;
-    }
-
-    err_guard.Disable();
-    return (int)fd;
-}
-
-#ifndef _WIN32
-static int OpenUnixSocket(const char *path)
-{
-    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (fd < 0) {
-        LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
-        return -1;
-    }
-    RG_DEFER_N(err_guard) { close(fd); };
-
-    struct sockaddr_un addr = {};
-    addr.sun_family = AF_UNIX;
-    if (!CopyString(path, addr.sun_path)) {
-        LogError("Excessive UNIX socket path length");
-        return -1;
-    }
-
-    unlink(path);
-    if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        LogError("Failed to bind socket to '%1': %2", path, strerror(errno));
-        return -1;
-    }
-    if (listen(fd, 256) < 0) {
-        LogError("Failed to listen on socket '%1': %2", path, strerror(errno));
-        return -1;
-    }
-    chmod(path, 0666);
-
-    err_guard.Disable();
-    return fd;
-}
-#endif
-
 bool http_Daemon::Bind(const http_Config &config)
 {
     RG_ASSERT(!daemon);
@@ -189,6 +88,11 @@ bool http_Daemon::Bind(const http_Config &config)
     }
     if (listen_fd < 0)
         return false;
+
+    if (listen(listen_fd, 1024) < 0) {
+        LogError("Failed to listen on socket: %1", strerror(errno));
+        return false;
+    }
 
     return true;
 }
@@ -250,12 +154,7 @@ void http_Daemon::Stop()
     if (daemon) {
         MHD_stop_daemon(daemon);
     } else if (listen_fd >= 0) {
-#ifdef _WIN32
-        shutdown(listen_fd, SD_BOTH);
-#else
-        shutdown(listen_fd, SHUT_RDWR);
-#endif
-        close(listen_fd);
+        CloseSocket(listen_fd);
     }
     listen_fd = -1;
 

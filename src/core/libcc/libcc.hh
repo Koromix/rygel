@@ -3766,6 +3766,19 @@ int GetCoreCount();
 bool NotifySystemd();
 #endif
 
+#ifndef _WIN32
+    #define RG_POSIX_RESTART_EINTR(CallCode, ErrorCond) \
+        ([&]() { \
+            decltype(CallCode) ret; \
+            while ((ret = (CallCode)) ErrorCond && errno == EINTR); \
+            return ret; \
+        })()
+#endif
+
+// ------------------------------------------------------------------------
+// Sockets
+// ------------------------------------------------------------------------
+
 enum class SocketType {
     Dual,
     IPv4,
@@ -3783,14 +3796,11 @@ static const char *const SocketTypeNames[] = {
 #endif
 };
 
+int OpenIPSocket(SocketType type, int port);
 #ifndef _WIN32
-    #define RG_POSIX_RESTART_EINTR(CallCode, ErrorCond) \
-        ([&]() { \
-            decltype(CallCode) ret; \
-            while ((ret = (CallCode)) ErrorCond && errno == EINTR); \
-            return ret; \
-        })()
+int OpenUnixSocket(const char *path);
 #endif
+void CloseSocket(int fd);
 
 // ------------------------------------------------------------------------
 // Tasks
