@@ -516,6 +516,12 @@ bool sb_SandboxBuilder::Apply()
                         if (ret < 0)
                             break;
                     }
+                } else if (TestStr(item.name, "mmap/shared")) {
+                    int syscall = seccomp_syscall_resolve_name("mmap");
+                    RG_ASSERT(syscall != __NR_SCMP_ERROR);
+
+                    ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 1,
+                                           SCMP_A3(SCMP_CMP_EQ, MAP_SHARED));
                 } else if (TestStr(item.name, "clone/thread")) {
                     int syscall = seccomp_syscall_resolve_name("clone");
                     RG_ASSERT(syscall != __NR_SCMP_ERROR);
