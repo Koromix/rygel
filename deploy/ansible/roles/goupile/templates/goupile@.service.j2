@@ -25,7 +25,7 @@ ExecStart = {{ goupile_root_path }}/goupile --sandbox
 WorkingDirectory = {{ goupile_root_path }}/domains/%i
 Restart = on-failure
 TimeoutStopSec = 30
-LimitNOFILE = 16384
+LimitNOFILE = 4096
 
 # Allow Goupile to manipulate namespaces despite
 # kernel.unprivileged_userns_clone=0.

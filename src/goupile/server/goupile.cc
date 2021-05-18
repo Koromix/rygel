@@ -604,7 +604,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
 
 #ifndef _WIN32
     {
-        const rlim_t max_nofile = 16384;
+        const rlim_t max_nofile = 4096;
         struct rlimit lim;
 
         // Increase maximum number of open file descriptors

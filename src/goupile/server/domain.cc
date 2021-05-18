@@ -18,7 +18,7 @@
 namespace RG {
 
 const int DomainVersion = 21;
-const int MaxInstancesPerDomain = 4096;
+const int MaxInstancesPerDomain = 1024;
 
 // Process-wide unique instance identifier 
 static std::atomic_int64_t next_unique = 0;
