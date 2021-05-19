@@ -2317,37 +2317,37 @@ function InstanceController() {
                 for (let download of downloads) {
                     let key = profile.namespaces.records + `:${download.ulid}`;
 
+                    let obj = {
+                        keys: {
+                            form: profile.namespaces.records + `/${download.form}`,
+                            parent: (download.parent != null) ? (profile.namespaces.records + `:${download.parent.ulid}/${download.form}`) : null,
+                            anchor: profile.namespaces.records + `@${(download.anchor + 1).toString().padStart(16, '0')}`,
+                            sync: null
+                        },
+                        enc: null
+                    };
                     if (download.fragments.length && download.fragments[download.fragments.length - 1].type == 'delete') {
-                        await db.delete('rec_records', key);
-                    } else {
-                        let obj = {
-                            keys: {
-                                form: profile.namespaces.records + `/${download.form}`,
-                                parent: (download.parent != null) ? (profile.namespaces.records + `:${download.parent.ulid}/${download.form}`) : null,
-                                anchor: profile.namespaces.records + `@${(download.anchor + 1).toString().padStart(16, '0')}`,
-                                sync: null
-                            },
-                            enc: null
-                        };
-
-                        let entry = {
-                            ulid: download.ulid,
-                            hid: download.hid,
-                            form: download.form,
-                            parent: download.parent,
-                            fragments: download.fragments.map(fragment => ({
-                                anchor: fragment.anchor,
-                                type: fragment.type,
-                                user: fragment.username,
-                                mtime: new Date(fragment.mtime),
-                                page: fragment.page,
-                                values: fragment.values
-                            }))
-                        };
-
-                        obj.enc = await goupile.encryptSymmetric(entry, 'records');
-                        await db.saveWithKey('rec_records', key, obj);
+                        obj.keys.form = null;
+                        obj.keys.parent = null;
                     }
+
+                    let entry = {
+                        ulid: download.ulid,
+                        hid: download.hid,
+                        form: download.form,
+                        parent: download.parent,
+                        fragments: download.fragments.map(fragment => ({
+                            anchor: fragment.anchor,
+                            type: fragment.type,
+                            user: fragment.username,
+                            mtime: new Date(fragment.mtime),
+                            page: fragment.page,
+                            values: fragment.values
+                        }))
+                    };
+
+                    obj.enc = await goupile.encryptSymmetric(entry, 'records');
+                    await db.saveWithKey('rec_records', key, obj);
 
                     changes.add(download.ulid);
                 }
