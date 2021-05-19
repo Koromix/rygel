@@ -23,7 +23,7 @@
 namespace RG {
 
 static const int BanTreshold = 6;
-static const int64_t BanTime = 3600 * 1000;
+static const int64_t BanTime = 1800 * 1000;
 
 struct FloodInfo {
     struct Key {
