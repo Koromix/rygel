@@ -2251,7 +2251,7 @@ function InstanceController() {
         let progress = standalone ? log.progress('Synchronisation en cours') : null;
 
         try {
-            let changes = new Set;
+            let changed = false;
 
             // Upload new fragments
             {
@@ -2349,11 +2349,11 @@ function InstanceController() {
                     obj.enc = await goupile.encryptSymmetric(entry, 'records');
                     await db.saveWithKey('rec_records', key, obj);
 
-                    changes.add(download.ulid);
+                    changed = true;
                 }
             }
 
-            if (changes.size && standalone) {
+            if (changed && standalone) {
                 progress.success('Synchronisation terminée');
 
                 // XXX: Keep current user value changes
