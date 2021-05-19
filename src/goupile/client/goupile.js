@@ -47,34 +47,32 @@ const goupile = new function() {
         await registerSW();
         initNavigation();
 
-        if (url.searchParams.get('login') == 1) {
-            self.syncHistory(url.pathname, false);
-        } else {
-            await syncProfile();
-        }
-
-        if (profile.authorized) {
-            document.body.classList.remove('gp_loading');
-            await initAfterAuthorization();
-        } else {
+        {
+            let login = url.searchParams.get('login');
             let token = url.searchParams.get('token');
-            if (token) {
+
+            if (login) {
+                self.syncHistory(url.pathname, false);
+            } else if (token) {
                 try {
                     await sendToken(token);
-                    self.syncHistory(url.pathname, false);
                 } catch (err) {
                     log.error(err);
                 }
-            }
-            document.body.classList.remove('gp_loading');
-
-            if (profile.authorized) {
-                await initAfterAuthorization();
-            } else if (profile.confirm == 'SMS') {
-                await runConfirmScreen();
+                self.syncHistory(url.pathname, false);
             } else {
-                await runLoginScreen();
+                await syncProfile();
             }
+        }
+
+        document.body.classList.remove('gp_loading');
+
+        if (profile.authorized) {
+            await initAfterAuthorization();
+        } else if (profile.confirm == 'SMS') {
+            await runConfirmScreen();
+        } else {
+            await runLoginScreen();
         }
     };
 
