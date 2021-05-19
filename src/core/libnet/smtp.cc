@@ -244,7 +244,7 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
 
             return copy_len;
         });
-        success &= !curl_easy_setopt(curl, CURLOPT_READDATA, payload);
+        success &= !curl_easy_setopt(curl, CURLOPT_READDATA, &payload);
         success &= !curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
 
         if (!success) {
