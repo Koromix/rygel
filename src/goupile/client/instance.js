@@ -1624,11 +1624,11 @@ function InstanceController() {
                                        new_route.version !== new_record.version))
                 new_record = null;
             if (new_record == null && new_route.ulid != null)
-                new_record = await loadRecord(new_route.ulid, new_route.version);
+                new_record = await loadRecord(new_route.ulid, new_route.version, !goupile.isLocked());
             if (new_record != null && new_record.form !== new_route.form)
                 new_record = await moveToAppropriateRecord(new_record, new_route.form, true);
             if (new_route.ulid == null || new_record == null)
-                new_record = createRecord(new_route.form);
+                new_record = createRecord(new_route.form, new_route.ulid);
 
             // Load close records (parents, siblings, children)
             await expandRecord(new_record, new_route.page.options.load || []);
@@ -1912,10 +1912,10 @@ function InstanceController() {
         }
     }
 
-    function createRecord(form, parent_record = null) {
+    function createRecord(form, ulid = null, parent_record = null) {
         let record = {
             form: form,
-            ulid: util.makeULID(),
+            ulid: ulid || util.makeULID(),
             hid: null,
             version: 0,
             ctime: null,
@@ -1942,15 +1942,17 @@ function InstanceController() {
         return record;
     }
 
-    async function loadRecord(ulid, version) {
+    async function loadRecord(ulid, version, error_missing = false) {
         let key = profile.namespaces.records + `:${ulid}`;
         let obj = await db.load('rec_records', key);
 
         if (obj != null) {
             let record = await decryptRecord(obj, version, false);
             return record;
-        } else {
+        } else if (error_missing) {
             throw new Error('L\'enregistrement demandé n\'existe pas');
+        } else {
+            return null;
         }
     }
 
@@ -1969,7 +1971,7 @@ function InstanceController() {
             while (it.parent != null) {
                 let parent_record = it.parent;
                 if (parent_record.values == null)
-                    parent_record = await loadRecord(it.parent.ulid);
+                    parent_record = await loadRecord(it.parent.ulid, null);
 
                 parent_record.chain = chain;
                 parent_record.map = map;
@@ -2158,11 +2160,11 @@ function InstanceController() {
                     let children = record.children[form.key];
                     let child = children[children.length - 1];
 
-                    record = await loadRecord(child.ulid);
+                    record = await loadRecord(child.ulid, null);
                     if (record.form !== form)
                         throw new Error('Saut impossible en raison d\'un changement de schéma');
                 } else if (create_new) {
-                    record = createRecord(form, record);
+                    record = createRecord(form, null, record);
                 } else {
                     return null;
                 }
