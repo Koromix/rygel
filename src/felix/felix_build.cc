@@ -219,9 +219,10 @@ int RunBuild(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    HeapArray<const char *> default_selectors;
     HeapArray<const char *> selectors;
     const char *config_filename = nullptr;
+    bool load_user = true;
+    HeapArray<const char *> default_selectors;
     CompilerInfo compiler_info = {};
     BuildSettings build = {};
     int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_WORKERS + 1);
@@ -243,6 +244,8 @@ Options:
                                  %!D..(default: FelixBuild.ini)%!0
     %!..+-O, --output <directory>%!0     Set output directory
                                  %!D..(default: bin/<toolchain>)%!0
+
+        %!..+--no_user%!0                Ignore user settings (FelixBuild.ini.user)
 
     %!..+-c, --compiler <compiler>%!0    Set compiler, see below
                                  %!D..(default: %2)%!0
@@ -297,6 +300,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 config_filename = opt.current_value;
+            } else if (opt.Test("--no_user")) {
+                load_user = false;
             } else if (opt.Test("--run") || opt.Test("--run_here")) {
                 break;
             }
@@ -352,6 +357,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 break;
 
             if (opt.Test("-C", "--config", OptionType::Value)) {
+                // Already handled
+            } else if (opt.Test("--no_user")) {
                 // Already handled
             } else if (opt.Test("-O", "--output", OptionType::Value)) {
                 build.output_directory = opt.current_value;
