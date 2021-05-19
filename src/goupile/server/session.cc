@@ -445,7 +445,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
             const char *local_key = (const char *)sqlite3_column_text(stmt, 3);
 
             if (IsUserBanned(request.client_addr, userid)) {
-                LogError("You are banned for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
+                LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
                 io->AttachError(403);
                 return;
             }
@@ -628,7 +628,7 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
         RegisterFloodEvent(request.client_addr, userid);
 
         if (IsUserBanned(request.client_addr, userid)) {
-            LogError("You are banned for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
+            LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
             io->AttachError(403);
             return;
         }
@@ -691,7 +691,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
         }
 
         if (IsUserBanned(request.client_addr, session->userid)) {
-            LogError("You are banned for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
+            LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
             io->AttachError(403);
             return;
         }
