@@ -159,7 +159,8 @@ static bool ParseFeatureString(const char *str, uint32_t *out_features)
     return true;
 }
 
-static bool LoadUserFile(const char *filename, CompilerInfo *out_compiler_info, BuildSettings *out_build)
+static bool LoadUserFile(const char *filename, Allocator *alloc, CompilerInfo *out_compiler_info,
+                         BuildSettings *out_build, HeapArray<const char *> *out_selectors)
 {
     StreamReader st(filename);
     if (!st.IsValid())
@@ -175,7 +176,18 @@ static bool LoadUserFile(const char *filename, CompilerInfo *out_compiler_info, 
         while (ini.Next(&prop)) {
             if (!prop.section.len) {
                 do {
-                    if (prop.key == "Compiler") {
+                    if (prop.key == "Defaults") {
+                        const char *str = prop.value.ptr;
+
+                        while (str[0]) {
+                            Span<const char> part = TrimStr(SplitStrAny(str, " ,", &str), " ");
+
+                            if (part.len) {
+                                const char *selector = DuplicateString(part, alloc).ptr;
+                                out_selectors->Append(selector);
+                            }
+                        }
+                    } else if (prop.key == "Compiler") {
                         valid &= ParseCompilerString(prop.value.ptr, out_compiler_info);
                     } else if (prop.key == "Mode") {
                         if (!OptionToEnum(CompileModeNames, prop.value.ptr, &out_build->compile_mode)) {
@@ -207,6 +219,7 @@ int RunBuild(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
+    HeapArray<const char *> default_selectors;
     HeapArray<const char *> selectors;
     const char *config_filename = nullptr;
     CompilerInfo compiler_info = {};
@@ -321,7 +334,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     {
         const char *user_filename = Fmt(&temp_alloc, "%1.user", config_filename).ptr;
 
-        if (TestFile(user_filename) && !LoadUserFile(user_filename, &compiler_info, &build))
+        if (TestFile(user_filename) && !LoadUserFile(user_filename, &temp_alloc,
+                                                     &compiler_info, &build, &default_selectors))
             return 1;
     }
 
@@ -388,6 +402,10 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         if (run_target_name) {
             selectors.Append(run_target_name);
             run_arguments = opt.GetRemainingArguments();
+        }
+
+        if (!selectors.len) {
+            std::swap(selectors, default_selectors);
         }
     }
 
