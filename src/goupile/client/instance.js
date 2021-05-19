@@ -2259,6 +2259,7 @@ function InstanceController() {
                 let objects = await db.loadAll('rec_records/sync', range);
 
                 let uploads = [];
+                let buckets = {};
                 for (let obj of objects) {
                     try {
                         let record = await decryptRecord(obj, null, true);
@@ -2275,10 +2276,37 @@ function InstanceController() {
                                 json: JSON.stringify(fragment.values)
                             }))
                         };
-                        uploads.push(upload);
+
+                        if (upload.parent == null) {
+                            uploads.push(upload);
+                        } else {
+                            let bucket = buckets[upload.parent.ulid];
+                            if (bucket == null) {
+                                bucket = [];
+                                buckets[upload.parent.ulid] = bucket;
+                            }
+                            bucket.push(upload);
+                        }
                     } catch (err) {
                         console.log(err);
                     }
+                }
+
+                // We append to the array as we go, and I couldn't make sure that
+                // a for of loop is okay with that (even though it probably is).
+                // So instead I use a dumb increment to be sure it works correctly.
+                for (let i = 0; i < uploads.length; i++) {
+                    let upload = uploads[i];
+                    let bucket = buckets[upload.ulid];
+
+                    if (bucket != null) {
+                        uploads.push(...bucket);
+                        delete buckets[upload.ulid];
+                    }
+                }
+                for (let key in buckets) {
+                    let bucket = buckets[key];
+                    uploads.push(...bucket);
                 }
 
                 if (uploads.length) {
