@@ -42,6 +42,8 @@ html.instance {
     max-width: 1080px;
 }
 
+#ins_form a { color: var(--page_color); }
+
 html.mobile #ins_page { padding-top: 0; }
 
 /* -------------------- Left menu -------------------- */
