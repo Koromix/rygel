@@ -177,7 +177,7 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
 
         Fmt(&buf, "Message-ID: <%1@%2>\r\n", id, domain);
         Fmt(&buf, "Date: "); FormatRfcDate(GetUnixTime(), &buf); buf.Append("\r\n");
-        Fmt(&buf, "From: "); EncodeRfc2047(config.from, &buf); buf.Append("\r\n");
+        Fmt(&buf, "From: %1", config.from); buf.Append("\r\n");
         Fmt(&buf, "To: "); EncodeRfc2047(to, &buf); buf.Append("\r\n");
         if (content.subject) {
             Fmt(&buf, "Subject: "); EncodeRfc2047(content.subject, &buf); buf.Append("\r\n");
