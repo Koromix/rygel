@@ -624,6 +624,9 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
             }
         }
 
+        // Avoid SMS flood
+        RegisterFloodEvent(request.client_addr, userid);
+
         if (IsUserBanned(request.client_addr, userid)) {
             LogError("You are banned for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
             io->AttachError(403);
