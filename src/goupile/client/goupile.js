@@ -608,6 +608,16 @@ const goupile = new function() {
         }
     }
 
+    this.goToLogin = async function(e) {
+        await self.confirmDangerousAction(e);
+
+        let url = new URL(window.location.href);
+        let reload = util.pasteURL(url.pathname, {login: 1});
+
+        window.onbeforeunload = null;
+        document.location.href = reload;
+    }
+
     this.runLockDialog = function(e, ctx) {
         return ui.runDialog(e, 'Verrouillage', (d, resolve, reject) => {
             let pin = d.pin('*pin', 'Code de déverrouillage');
