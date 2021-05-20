@@ -451,6 +451,11 @@ bool sb_SandboxBuilder::Apply()
             LogError("Failed to drop capabilities: %1", strerror(errno));
             return false;
         }
+
+        if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) < 0) {
+            LogError("Failed to restrict privileges: %1", strerror(errno));
+            return false;
+        }
     }
 
     // Install syscall filters
