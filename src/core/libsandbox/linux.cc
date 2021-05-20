@@ -34,7 +34,7 @@
 // For some reason sys/capability.h is in some crap separate package, because why make
 // it simple when you could instead make it a mess and require users to install
 // random distribution-specifc packages to do anything of value.
-#define _LINUX_CAPABILITY_VERSION_3  0x20080522
+#define _LINUX_CAPABILITY_VERSION_3 0x20080522
 struct cap_user_header {
     uint32_t version;
     int pid;
