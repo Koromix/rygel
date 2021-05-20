@@ -51,8 +51,6 @@ static bool ApplySandbox(Span<const char *const> paths)
 
     sb_SandboxBuilder sb;
 
-    sb.IsolateProcess();
-    sb.DropPrivileges();
     sb.RevealPaths(paths, false);
 
 #ifdef __linux__

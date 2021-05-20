@@ -23,17 +23,7 @@ bool sb_IsSandboxSupported()
     return false;
 }
 
-void sb_SandboxBuilder::IsolateProcess()
-{
-    RG_ASSERT(false);
-}
-
 void sb_SandboxBuilder::RevealPaths(Span<const char *const>, bool)
-{
-    RG_ASSERT(false);
-}
-
-void sb_SandboxBuilder::DropPrivileges()
 {
     RG_ASSERT(false);
 }

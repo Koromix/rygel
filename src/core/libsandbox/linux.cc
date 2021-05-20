@@ -52,16 +52,6 @@ bool sb_IsSandboxSupported()
     return true;
 }
 
-void sb_SandboxBuilder::DropPrivileges()
-{
-    drop_caps = true;
-}
-
-void sb_SandboxBuilder::IsolateProcess()
-{
-    unshare = true;
-}
-
 void sb_SandboxBuilder::RevealPaths(Span<const char *const> paths, bool readonly)
 {
     for (const char *path: paths) {
@@ -71,8 +61,6 @@ void sb_SandboxBuilder::RevealPaths(Span<const char *const> paths, bool readonly
 
 void sb_SandboxBuilder::MountPath(const char *src, const char *dest, bool readonly)
 {
-    RG_ASSERT(unshare);
-
     BindMount bind = {};
     bind.src = NormalizePath(src, &str_alloc).ptr;
     bind.dest = NormalizePath(dest, "/", &str_alloc).ptr;
@@ -187,7 +175,8 @@ bool sb_SandboxBuilder::Apply()
         return false;
     }
 
-    if (unshare) {
+    // Start new namespace
+    {
         // We support two namespacing code paths: unprivileged, or CAP_SYS_ADMIN (root).
         // First, decide between the two. Unprivileged is simpler but it requires a
         // relatively recent kernel, and may be disabled (Debian). If we have CAP_SYS_ADMIN,
@@ -425,7 +414,7 @@ bool sb_SandboxBuilder::Apply()
     }
 
     // Drop all capabilities
-    if (drop_caps) {
+    {
         LogDebug("Dropping all capabilities");
 
         // PR_CAPBSET_DROP is thread-specific, so hopefully the sandbox is run before any thread

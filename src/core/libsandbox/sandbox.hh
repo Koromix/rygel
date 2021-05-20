@@ -41,9 +41,7 @@ class sb_SandboxBuilder final {
         bool readonly;
     };
 
-    bool unshare = false;
     HeapArray<BindMount> mounts;
-    bool drop_caps = false;
     bool filter_syscalls = false;
     sb_FilterAction default_action;
     HeapArray<sb_FilterItem> filter_items;
@@ -54,8 +52,6 @@ class sb_SandboxBuilder final {
 public:
     sb_SandboxBuilder() {};
 
-    void DropPrivileges();
-    void IsolateProcess();
     void RevealPaths(Span<const char *const> paths, bool readonly);
 
 #ifdef __linux__

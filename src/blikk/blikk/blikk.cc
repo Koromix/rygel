@@ -29,9 +29,6 @@ static bool ApplySandbox()
 
     sb_SandboxBuilder sb;
 
-    sb.IsolateProcess();
-    sb.DropPrivileges();
-
 #ifdef __linux__
     sb.FilterSyscalls(sb_FilterAction::Kill, {
         {"exit", sb_FilterAction::Allow},
