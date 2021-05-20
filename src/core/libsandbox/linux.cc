@@ -49,7 +49,24 @@ namespace RG {
 
 bool sb_IsSandboxSupported()
 {
+#ifdef __clang__
+    #if __has_feature(address_sanitizer)
+        #define __SANITIZE_ADDRESS__
+    #endif
+    #if __has_feature(thread_sanitizer)
+        #define __SANITIZE_THREAD__
+    #endif
+#endif
+
+#if defined(__SANITIZE_ADDRESS__)
+    LogError("Sandboxing does not support AddressSanitizer");
+    return false;
+#elif defined(__SANITIZE_THREAD__)
+    LogError("Sandboxing does not support ThreadSanitizer");
+    return false;
+#else
     return true;
+#endif
 }
 
 void sb_SandboxBuilder::RevealPaths(Span<const char *const> paths, bool readonly)
