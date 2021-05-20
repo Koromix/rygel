@@ -291,7 +291,13 @@ public:
         }
         if (features & (int)CompileFeature::CFI) {
             RG_ASSERT(compile_mode == CompileMode::LTO);
+
             Fmt(&buf, " -fsanitize=cfi");
+            if (src_type == SourceType::C) {
+                // There's too much pointer type fuckery going on in C
+                // to not take this precaution. Without it, SQLite3 crashes.
+                Fmt(&buf, " -fsanitize-cfi-icall-generalize-pointers");
+            }
         }
 
         // Sources and definitions
