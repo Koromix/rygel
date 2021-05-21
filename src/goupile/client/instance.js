@@ -506,10 +506,12 @@ function InstanceController() {
 
             let meta = Object.assign({}, form_record);
             runCodeSync('Formulaire', page_code, {
-                form: form_builder,
-                values: form_state.values,
-                meta: meta,
                 app: app,
+
+                form: form_builder,
+                meta: meta,
+                values: form_state.values,
+
                 nav: {
                     form: route.form,
                     page: route.page,
@@ -529,6 +531,7 @@ function InstanceController() {
 
                     isLocked: goupile.isLocked
                 },
+
                 data: {
                     dict: form_dictionaries,
                     store: (idx, values) => {
