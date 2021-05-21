@@ -121,7 +121,7 @@ static const CompilerInfo *FindDefaultCompiler()
 
 static bool ParseCompilerString(const char *str, CompilerInfo *out_compiler_info)
 {
-    Span<const char> binary;
+    const char *binary;
     Span<const char> name = SplitStr(str, ':', &binary);
 
     const CompilerInfo *info =
@@ -133,16 +133,21 @@ static bool ParseCompilerString(const char *str, CompilerInfo *out_compiler_info
     }
 
     *out_compiler_info = *info;
-    if (binary.ptr > name.end()) {
-        out_compiler_info->binary = binary.ptr;
+    if (binary > name.end()) {
+        out_compiler_info->binary = binary;
     }
 
     return true;
 }
 
-static bool ParseFeatureString(const char *str, uint32_t *out_features)
+static bool ParseFeatureString(Span<const char> str, uint32_t *out_features)
 {
-    while (str[0]) {
+    str = TrimStr(str);
+
+    if (str == "None")
+        return true;
+
+    while (str.len) {
         Span<const char> part = TrimStr(SplitStrAny(str, " ,", &str), " ");
 
         if (part.len) {
