@@ -238,6 +238,8 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
     sq_Database db;
     if (!db.Open(database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
         return false;
+    if (!db.SetWAL(true))
+        return false;
     if (!MigrateInstance(&db))
         return false;
     if (!ChangeFileOwner(database_filename, owner_uid, owner_gid))
@@ -530,6 +532,8 @@ retry:
     if (!domain.db.Open(domain.config.database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
         return 1;
     files.Append(domain.config.database_filename);
+    if (!domain.db.SetWAL(true))
+        return 1;
     if (!MigrateDomain(&domain.db, domain.config.instances_directory))
         return 1;
     if (change_owner && !ChangeFileOwner(domain.config.database_filename, owner_uid, owner_gid))
