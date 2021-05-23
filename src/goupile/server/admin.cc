@@ -1219,6 +1219,20 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
         for (const char *filename: unlink_filenames) {
             // Not much we can do if this fails to succeed anyway; the backup is okay and the
             // instance is deleted. We're mostly successful and we can't go back.
+
+            // Switch off WAL to make sure new databases with the same name don't get into trouble
+            sq_Database db;
+            if (!db.Open(filename, SQLITE_OPEN_READWRITE)) {
+                complete = false;
+                continue;
+            }
+            if (!db.RunMany(R"(PRAGMA locking_mode = EXCLUSIVE;
+                               PRAGMA journal_mode = DELETE;)")) {
+                complete = false;
+                continue;
+            }
+            db.Close();
+
             complete &= UnlinkFile(filename);
         }
 
