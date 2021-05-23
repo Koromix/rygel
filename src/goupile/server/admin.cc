@@ -894,6 +894,10 @@ static bool BackupDatabase(sq_Database *src, const char *filename)
     sq_Database db;
     if (!db.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
         return false;
+    if (!db.RunMany(R"(PRAGMA locking_mode = EXCLUSIVE;
+                       PRAGMA journal_mode = MEMORY;
+                       PRAGMA synchronous = FULL;)"))
+        return false;
 
     sqlite3_backup *backup = sqlite3_backup_init(db, "main", *src, "main");
     if (!backup)
