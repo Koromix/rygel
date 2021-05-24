@@ -284,7 +284,7 @@ void gui_Window::RenderImGui()
                 if (cmd.UserCallback) {
                     cmd.UserCallback(cmds, &cmd);
                 } else {
-                    glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)cmd.TextureId);
+                    glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)cmd.GetTexID());
                     glScissor((int)cmd.ClipRect.x, info.display.height - (int)cmd.ClipRect.w,
                               (int)(cmd.ClipRect.z - cmd.ClipRect.x),
                               (int)(cmd.ClipRect.w - cmd.ClipRect.y));
