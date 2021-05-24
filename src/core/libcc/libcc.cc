@@ -671,6 +671,24 @@ bool CopyString(const char *str, Span<char> buf)
     return true;
 }
 
+bool CopyString(Span<const char> str, Span<char> buf)
+{
+#ifndef NDEBUG
+    RG_ASSERT(buf.len > 0);
+#else
+    if (RG_UNLIKELY(!buf.len))
+        return false;
+#endif
+
+    if (RG_UNLIKELY(str.len > buf.len - 1))
+        return false;
+
+    memcpy(buf.ptr, str.ptr, str.len);
+    buf[str.len] = 0;
+
+    return true;
+}
+
 Span<char> DuplicateString(Span<const char> str, Allocator *alloc)
 {
     char *new_str = (char *)Allocator::Allocate(alloc, str.len + 1);
