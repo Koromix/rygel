@@ -211,7 +211,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
         }
     }
 
-    const char *database_filename = domain->config.GetInstanceFileName(instance_key, &temp_alloc);
+    const char *database_filename = MakeInstanceFileName(domain->config.instances_directory, instance_key, &temp_alloc);
     if (TestFile(database_filename)) {
         LogError("Database '%1' already exists (old deleted instance?)", database_filename);
         *out_error = 409;
@@ -633,7 +633,7 @@ Options:
 
         while (stmt.Next()) {
             const char *key = (const char *)sqlite3_column_text(stmt, 0);
-            const char *filename = config.GetInstanceFileName(key, &temp_alloc);
+            const char *filename = MakeInstanceFileName(config.instances_directory, key, &temp_alloc);
 
             success &= MigrateInstance(filename);
         }
@@ -2020,7 +2020,9 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
         if (!tmp_filename)
             return;
         RG_DEFER {
-            fclose(fp);
+            if (fp) {
+                fclose(fp);
+            }
             UnlinkFile(tmp_filename);
         };
 
@@ -2092,6 +2094,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
             }
         }
 
+        // Extract cleartext ZIP archive
         for (;;) {
             LocalArray<uint8_t, 4096> cypher;
             cypher.len = reader.Read(cypher.data);
@@ -2120,8 +2123,82 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                 break;
             }
         }
+
         if (!writer.Close())
             return;
+        fclose(fp);
+        fp = nullptr;
+
+        // Open ZIP file
+        mz_zip_archive zip;
+        mz_zip_zero_struct(&zip);
+        if (!mz_zip_reader_init_file(&zip, tmp_filename, 0)) {
+            LogError("Failed to open ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
+            return;
+        }
+        RG_DEFER { mz_zip_reader_end(&zip); };
+
+        struct RestoreEntry {
+            const char *key;
+            const char *basename;
+            const char *filename;
+        };
+
+        // Prepare new instances directory
+        const char *tmp_directory = CreateTemporaryDirectory(gp_domain.config.temp_directory, "", &io->allocator);
+        RG_DEFER { UnlinkDirectory(tmp_directory); };
+
+        HeapArray<RestoreEntry> entries;
+        RG_DEFER {
+            for (const RestoreEntry &entry: entries) {
+                UnlinkFile(entry.filename);
+            }
+        };
+
+        // List instances in goupile.db
+        {
+            FILE *fp = nullptr;
+            const char *tmp_filename = CreateTemporaryFile(gp_domain.config.temp_directory, "", ".tmp",
+                                                           &io->allocator, &fp);
+            if (!tmp_filename)
+                return;
+            RG_DEFER {
+                fclose(fp);
+                UnlinkFile(tmp_filename);
+            };
+
+            if (!mz_zip_reader_extract_file_to_cfile(&zip, "goupile.db", fp, 0)) {
+                LogError("Failed to extract 'goupile.db' from archive: %1", mz_zip_get_error_string(zip.m_last_error));
+                return;
+            }
+
+            sq_Database db;
+            sq_Statement stmt;
+            if (!db.Open(tmp_filename, SQLITE_OPEN_READWRITE))
+                return;
+            if (!db.Prepare("SELECT instance, master FROM dom_instances ORDER BY instance", &stmt))
+                return;
+
+            while (stmt.Next()) {
+                const char *instance_key = (const char *)sqlite3_column_text(stmt, 0);
+
+                RestoreEntry entry = {};
+                entry.key = DuplicateString(instance_key, &io->allocator).ptr;
+                entry.basename = MakeInstanceFileName("instances", instance_key, &io->allocator);
+                entry.filename = MakeInstanceFileName(tmp_directory, instance_key, &io->allocator);
+                entries.Append(entry);
+            }
+            if (!stmt.IsValid())
+                return;
+        }
+
+        // Extract individual database files
+        for (const RestoreEntry &entry: entries) {
+            if (!mz_zip_reader_extract_file_to_file(&zip, entry.basename, entry.filename, 0)) {
+                LogError("Failed to extract '%1' from archive: %2", entry.basename, mz_zip_get_error_string(zip.m_last_error));
+                return;
+            }
+        }
 
         // XXX: Finish archive restoration
         io->AttachError(501);

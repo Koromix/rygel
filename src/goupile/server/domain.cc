@@ -42,13 +42,11 @@ bool DomainConfig::Validate() const
     return valid;
 }
 
-const char *DomainConfig::GetInstanceFileName(const char *key, Allocator *alloc) const
+const char *MakeInstanceFileName(const char *directory, const char *key, Allocator *alloc)
 {
-    RG_ASSERT(instances_directory);
-
     HeapArray<char> buf(alloc);
 
-    Fmt(&buf, "%1%/", instances_directory);
+    Fmt(&buf, "%1%/", directory);
     for (Size i = 0; key[i]; i++) {
         char c = key[i];
         buf.Append(c != '/' ? c : '@');
@@ -403,7 +401,7 @@ bool DomainHolder::Sync()
             master = nullptr;
         }
 
-        const char *filename = config.GetInstanceFileName(start.instance_key, &temp_alloc);
+        const char *filename = MakeInstanceFileName(config.instances_directory, start.instance_key, &temp_alloc);
         InstanceHolder *instance = new InstanceHolder();
         RG_DEFER_N(instance_guard) { delete instance; };
 

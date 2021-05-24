@@ -43,10 +43,10 @@ struct DomainConfig {
 
     bool Validate() const;
 
-    const char *GetInstanceFileName(const char *key, Allocator *alloc) const;
-
     BlockAllocator str_alloc;
 };
+
+const char *MakeInstanceFileName(const char *directory, const char *key, Allocator *alloc);
 
 bool LoadConfig(StreamReader *st, DomainConfig *out_config);
 bool LoadConfig(const char *filename, DomainConfig *out_config);
