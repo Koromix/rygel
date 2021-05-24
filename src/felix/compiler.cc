@@ -151,6 +151,7 @@ public:
 #endif
         supported |= (int)CompileFeature::UBSan;
         supported |= (int)CompileFeature::StackProtect;
+        supported |= (int)CompileFeature::SafeStack;
         supported |= (int)CompileFeature::CFI; // LTO only
 
         uint32_t unsupported = features & ~supported;
@@ -289,6 +290,9 @@ public:
             }
 #endif
         }
+        if (features & (int)CompileFeature::SafeStack) {
+            Fmt(&buf, " -fsanitize=safe-stack");
+        }
         if (features & (int)CompileFeature::CFI) {
             RG_ASSERT(compile_mode == CompileMode::LTO);
 
@@ -401,6 +405,9 @@ public:
         }
         if (features & (int)CompileFeature::UBSan) {
             Fmt(&buf, " -fsanitize=undefined");
+        }
+        if (features & (int)CompileFeature::SafeStack) {
+            Fmt(&buf, " -fsanitize=safe-stack");
         }
         if (features & (int)CompileFeature::CFI) {
             RG_ASSERT(compile_mode == CompileMode::LTO);
