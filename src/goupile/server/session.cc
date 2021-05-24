@@ -500,11 +500,6 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
         io->AttachError(403);
         return;
     }
-    if (gp_domain.config.sms.provider == sms_Provider::None) {
-        LogError("This instance is not configured to send SMS messages");
-        io->AttachError(403);
-        return;
-    }
 
     io->RunAsync([=]() {
         // Read POST values
@@ -598,8 +593,8 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
         {
             bool valid = true;
 
-            if (!sms || !sms[0]) {
-                LogError("Missing or empty SMS");
+            if (sms && !sms[0]) {
+                LogError("Empty SMS");
                 valid = false;
             }
             if (!userid) {
@@ -624,7 +619,7 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
             }
         }
 
-        // Avoid SMS flood
+        // Avoid confirmation flood (especially SMS)
         RegisterFloodEvent(request.client_addr, userid);
 
         if (IsUserBanned(request.client_addr, userid)) {
@@ -646,12 +641,19 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
         RetainPtr<SessionInfo> session = CreateUserSession(userid, username, local_key);
 
         if (RG_LIKELY(session)) {
-            uint32_t code = 100000 + randombytes_uniform(900000); // 6 digits
-            Fmt(session->confirm, "%1", code);
+            if (sms) {
+                if (RG_UNLIKELY(gp_domain.config.sms.provider == sms_Provider::None)) {
+                    LogError("This instance is not configured to send SMS messages");
+                    io->AttachError(403);
+                    return;
+                }
 
-            // Send confirmation SMS
-            if (!SendSMS(sms, session->confirm))
-                return;
+                uint32_t code = 100000 + randombytes_uniform(900000); // 6 digits
+                Fmt(session->confirm, "%1", code);
+
+                if (!SendSMS(sms, session->confirm))
+                    return;
+            }
 
             uint32_t permissions = (int)UserPermission::DataLoad | (int)UserPermission::DataSave;
             session->AuthorizeInstance(instance, permissions, ulid);
