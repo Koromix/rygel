@@ -514,25 +514,66 @@ bool sb_SandboxBuilder::Apply()
                     int syscall = seccomp_syscall_resolve_name("mmap");
                     RG_ASSERT(syscall != __NR_SCMP_ERROR);
 
-                    unsigned int combinations[] = {
+                    unsigned int prot_mask = PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC;
+                    unsigned int prot_combinations[] = {
+                        PROT_NONE,
+                        PROT_READ,
+                        PROT_WRITE,
+                        PROT_READ | PROT_WRITE
+                    };
+                    unsigned int map_combinations[] = {
                         MAP_PRIVATE | MAP_ANONYMOUS,
                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK,
                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE
                     };
 
-                    for (unsigned int flags: combinations) {
-                        ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 2,
-                                               SCMP_A3(SCMP_CMP_EQ, flags),
-                                               SCMP_A4(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFu, 0xFFFFFFFFu));
-                        if (ret < 0)
-                            break;
+                    for (unsigned int prot_flags: prot_combinations) {
+                        for (unsigned int map_flags: map_combinations) {
+                            ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 3,
+                                                   SCMP_A2(SCMP_CMP_MASKED_EQ, prot_mask, prot_flags),
+                                                   SCMP_A3(SCMP_CMP_EQ, map_flags),
+                                                   SCMP_A4(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFu, 0xFFFFFFFFu));
+                            if (ret < 0)
+                                break;
+                        }
                     }
                 } else if (TestStr(item.name, "mmap/shared")) {
                     int syscall = seccomp_syscall_resolve_name("mmap");
                     RG_ASSERT(syscall != __NR_SCMP_ERROR);
 
-                    ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 1,
-                                           SCMP_A3(SCMP_CMP_EQ, MAP_SHARED));
+                    unsigned int prot_mask = PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC;
+                    unsigned int prot_combinations[] = {
+                        PROT_NONE,
+                        PROT_READ,
+                        PROT_WRITE,
+                        PROT_READ | PROT_WRITE
+                    };
+
+                    for (unsigned int prot_flags: prot_combinations) {
+                        ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 2,
+                                               SCMP_A2(SCMP_CMP_MASKED_EQ, prot_mask, prot_flags),
+                                               SCMP_A3(SCMP_CMP_EQ, MAP_SHARED));
+                        if (ret < 0)
+                            break;
+                    }
+                } else if (TestStr(item.name, "mprotect/noexec")) {
+                    int syscall = seccomp_syscall_resolve_name("mprotect");
+                    RG_ASSERT(syscall != __NR_SCMP_ERROR);
+
+                    unsigned int prot_mask = PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC;
+                    unsigned int prot_combinations[] = {
+                        PROT_NONE,
+                        PROT_READ,
+                        PROT_WRITE,
+                        PROT_READ | PROT_WRITE
+                    };
+
+                    for (unsigned int prot_flags: prot_combinations) {
+                        ret = seccomp_rule_add(ctx, translate_action(item.action), syscall, 1,
+                                               SCMP_A2(SCMP_CMP_MASKED_EQ, prot_mask, prot_flags));
+                        if (ret < 0)
+                            break;
+                    }
                 } else if (TestStr(item.name, "clone/thread")) {
                     int syscall = seccomp_syscall_resolve_name("clone");
                     RG_ASSERT(syscall != __NR_SCMP_ERROR);
