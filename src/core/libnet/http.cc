@@ -720,6 +720,11 @@ bool http_IO::ReadPostValues(Allocator *alloc, HashMap<const char *, const char 
         }
     }
 
+    // This may trigger a new call to the iterator callback with remaining buffered
+    // data, so we really need to do this before we handle our own leftovers.
+    MHD_destroy_post_processor(pp);
+    pp = nullptr;
+
     if (ctx.key) {
         ctx.buf.Append(0);
 
