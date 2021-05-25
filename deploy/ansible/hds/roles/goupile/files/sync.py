@@ -160,7 +160,8 @@ def update_domain_config(info, backup_key, smtp, sms):
         ini.add_section('HTTP')
     ini.set('HTTP', 'SocketType', 'Unix')
     ini.set('HTTP', 'UnixPath', info.socket)
-    ini.set('HTTP', 'TrustXRealIP', 'On')
+    ini.set('HTTP', 'ClientAddress', 'X-Forwarded-For')
+    ini.remove_option('HTTP', 'TrustXRealIP')
     ini.remove_option('HTTP', 'Port')
 
     ini.remove_section('SMTP')
