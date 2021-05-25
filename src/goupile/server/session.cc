@@ -663,6 +663,121 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
     });
 }
 
+static void Encode30Bits(uint32_t value, char out_buf[6])
+{
+    static const char *characters = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+
+    out_buf[0] = characters[(value >> 25) & 0x1F];
+    out_buf[1] = characters[(value >> 20) & 0x1F];
+    out_buf[2] = characters[(value >> 15) & 0x1F];
+    out_buf[3] = characters[(value >> 10) & 0x1F];
+    out_buf[4] = characters[(value >> 5) & 0x1F];
+    out_buf[5] = characters[value & 0x1F];
+}
+
+static bool MakeULID(char out_buf[27])
+{
+    // Generate time part
+    {
+        int64_t now = GetUnixTime();
+        if (RG_UNLIKELY(now < 0 || now >= 0x1000000000000ull)) {
+            LogError("Cannot generate ULID with current UTC time");
+            return false;
+        }
+
+        Encode30Bits((uint32_t)(now % 0x100000), out_buf + 4);
+        Encode30Bits((uint32_t)(now / 0x100000), out_buf + 0);
+    }
+
+    // Generate random part
+    {
+        uint32_t buf[3];
+        randombytes_buf(buf, RG_SIZE(buf));
+
+        Encode30Bits(buf[0], out_buf + 10);
+        Encode30Bits(buf[1], out_buf + 16);
+        Encode30Bits(buf[2], out_buf + 20);
+    }
+
+    return true;
+}
+
+// Returns true if there is nothing to do (no session change) or if a session key was used
+bool CreateKeyedSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    RG_ASSERT(instance->config.auto_key);
+
+    const char *key = request.GetQueryValue(instance->config.auto_key);
+    if (!key)
+        return true;
+
+    int64_t userid = 0;
+    const char *local_key = nullptr;
+    const char *ulid = nullptr;
+
+    sq_Statement stmt;
+    if (!instance->db.Prepare("SELECT userid, local_key, ulid FROM usr_auto WHERE key = ?1", &stmt))
+        return false;
+    sqlite3_bind_text(stmt, 1, key, -1, SQLITE_STATIC);
+
+    if (stmt.Next()) {
+        userid = -sqlite3_column_int64(stmt, 0);
+        local_key = (const char *)sqlite3_column_text(stmt, 1);
+        ulid = (const char *)sqlite3_column_text(stmt, 2);
+    } else if (stmt.IsValid()) {
+        stmt.Finalize();
+
+        bool success = instance->db.Transaction([&]() {
+            if (!instance->db.Prepare("SELECT userid, local_key, ulid FROM usr_auto WHERE key = ?1", &stmt))
+                return false;
+            sqlite3_bind_text(stmt, 1, key, -1, SQLITE_STATIC);
+
+            if (stmt.Next()) {
+                userid = -sqlite3_column_int64(stmt, 0);
+                local_key = (const char *)sqlite3_column_text(stmt, 1);
+                ulid = (const char *)sqlite3_column_text(stmt, 2);
+            } else if (stmt.IsValid()) {
+                local_key = (const char *)Allocator::Allocate(&io->allocator, 45 + 27, (int)Allocator::Flag::Zero);
+                ulid = local_key + 45;
+
+                // Create random local key
+                {
+                    uint8_t buf[32];
+                    randombytes_buf(&buf, RG_SIZE(buf));
+                    sodium_bin2base64((char *)local_key, 45, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+                }
+
+                if (RG_UNLIKELY(!MakeULID((char *)ulid)))
+                    return false;
+
+                if (!instance->db.Run("INSERT INTO usr_auto (key, local_key, ulid) VALUES (?1, ?2, ?3)",
+                                      key, local_key, ulid))
+                    return false;
+
+                userid = -sqlite3_last_insert_rowid(instance->db);
+            } else {
+                return false;
+            }
+
+            return true;
+        });
+        if (!success)
+            return false;
+    } else {
+        return false;
+    }
+
+    RG_ASSERT(userid < 0);
+    RetainPtr<SessionInfo> session = CreateUserSession(userid, key, local_key);
+    if (RG_UNLIKELY(!session))
+        return false;
+
+    session->AuthorizeInstance(instance, 0, ulid);
+    sessions.Open(request, io, session);
+
+    return true;
+}
+
 void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<SessionInfo> session = sessions.Find(request, io);

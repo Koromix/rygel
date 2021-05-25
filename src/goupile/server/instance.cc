@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 37;
+const int InstanceVersion = 38;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, const char *filename)
 {
@@ -101,8 +101,10 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                     }
                 } else if (TestStr(key, "BackupKey")) {
                     config.backup_key = DuplicateString(value, &str_alloc).ptr;
-                } else if (TestStr(key, "AutoUserID")) {
+                } else if (TestStr(key, "AutoUser")) {
                     valid &= ParseInt(value, &config.auto_userid);
+                } else if (TestStr(key, "AutoKey")) {
+                    config.auto_key = DuplicateString(value, &str_alloc).ptr;
                 } else {
                     LogError("Unknown setting '%1'", key);
                     valid = false;
@@ -1183,9 +1185,26 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 37: {
+                bool success = db->RunMany(R"(
+                    UPDATE fs_settings SET key = 'AutoUser' WHERE key = 'AutoUserID';
+                    INSERT INTO fs_settings (key) VALUES ('AutoKey');
+
+                    CREATE TABLE usr_auto (
+                        key TEXT NOT NULL,
+                        userid INTEGER PRIMARY KEY AUTOINCREMENT,
+                        local_key TEXT NOT NULL,
+                        ulid TEXT NOT NULL
+                    );
+                    CREATE UNIQUE INDEX usr_auto_k ON usr_auto (key);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 37);
+            RG_STATIC_ASSERT(InstanceVersion == 38);
         }
 
         int64_t time = GetUnixTime();

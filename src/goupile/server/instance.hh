@@ -61,6 +61,7 @@ public:
         bool enable_tokens = false;
         const char *backup_key = nullptr;
         int64_t auto_userid = 0;
+        const char *auto_key = nullptr;
     } config;
 
     // Lazily initialized
