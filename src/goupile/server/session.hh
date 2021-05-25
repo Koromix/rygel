@@ -89,7 +89,7 @@ bool HashPassword(Span<const char> password, char out_hash[crypto_pwhash_STRBYTE
 
 void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-bool HandleKeyedSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleSessionLogout(const http_RequestInfo &request, http_IO *io);
 void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);

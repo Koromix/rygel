@@ -703,7 +703,7 @@ static bool MakeULID(char out_buf[27])
 }
 
 // Returns true when request has been handled (even if an error has occured)
-bool HandleKeyedSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RG_ASSERT(instance->config.auto_key);
 

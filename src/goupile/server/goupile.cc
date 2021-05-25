@@ -410,7 +410,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         io->AddFinalizer([=]() { instance->Unref(); });
 
         // Handle sessions triggered by query parameters
-        if (instance->config.auto_key && HandleKeyedSession(instance, request, io))
+        if (instance->config.auto_key && HandleSessionKey(instance, request, io))
             return;
 
         // Enforce trailing slash on base URLs. Use 302 instead of 301 to avoid
