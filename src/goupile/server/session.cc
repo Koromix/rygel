@@ -708,7 +708,7 @@ bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
     RG_ASSERT(instance->config.auto_key);
 
     const char *key = request.GetQueryValue(instance->config.auto_key);
-    if (!key)
+    if (!key || !key[0])
         return false;
 
     int64_t userid = 0;
