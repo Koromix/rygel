@@ -493,6 +493,130 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
     });
 }
 
+static void Encode30Bits(uint32_t value, char out_buf[6])
+{
+    static const char *characters = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+
+    out_buf[0] = characters[(value >> 25) & 0x1F];
+    out_buf[1] = characters[(value >> 20) & 0x1F];
+    out_buf[2] = characters[(value >> 15) & 0x1F];
+    out_buf[3] = characters[(value >> 10) & 0x1F];
+    out_buf[4] = characters[(value >> 5) & 0x1F];
+    out_buf[5] = characters[value & 0x1F];
+}
+
+static bool MakeULID(char out_buf[27])
+{
+    // Generate time part
+    {
+        int64_t now = GetUnixTime();
+        if (RG_UNLIKELY(now < 0 || now >= 0x1000000000000ull)) {
+            LogError("Cannot generate ULID with current UTC time");
+            return false;
+        }
+
+        Encode30Bits((uint32_t)(now % 0x100000), out_buf + 4);
+        Encode30Bits((uint32_t)(now / 0x100000), out_buf + 0);
+    }
+
+    // Generate random part
+    {
+        uint32_t buf[3];
+        randombytes_buf(buf, RG_SIZE(buf));
+
+        Encode30Bits(buf[0], out_buf + 10);
+        Encode30Bits(buf[1], out_buf + 16);
+        Encode30Bits(buf[2], out_buf + 20);
+    }
+
+    return true;
+}
+
+static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, const char *key, const char *sms)
+{
+    char tmp[128];
+
+    int64_t userid = 0;
+    const char *local_key = nullptr;
+    const char *ulid = nullptr;
+
+    sq_Statement stmt;
+    if (!instance->db.Prepare("SELECT userid, local_key, ulid FROM usr_auto WHERE key = ?1", &stmt))
+        return nullptr;
+    sqlite3_bind_text(stmt, 1, key, -1, SQLITE_STATIC);
+
+    if (stmt.Next()) {
+        userid = sqlite3_column_int64(stmt, 0);
+        local_key = (const char *)sqlite3_column_text(stmt, 1);
+        ulid = (const char *)sqlite3_column_text(stmt, 2);
+    } else if (stmt.IsValid()) {
+        stmt.Finalize();
+
+        bool success = instance->db.Transaction([&]() {
+            if (!instance->db.Prepare("SELECT userid, local_key, ulid FROM usr_auto WHERE key = ?1", &stmt))
+                return false;
+            sqlite3_bind_text(stmt, 1, key, -1, SQLITE_STATIC);
+
+            if (stmt.Next()) {
+                userid = sqlite3_column_int64(stmt, 0);
+                local_key = (const char *)sqlite3_column_text(stmt, 1);
+                ulid = (const char *)sqlite3_column_text(stmt, 2);
+            } else if (stmt.IsValid()) {
+                local_key = tmp;
+                ulid = tmp + 45;
+
+                // Create random local key
+                {
+                    uint8_t buf[32];
+                    randombytes_buf(&buf, RG_SIZE(buf));
+                    sodium_bin2base64((char *)local_key, 45, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+                }
+
+                if (RG_UNLIKELY(!MakeULID((char *)ulid)))
+                    return false;
+
+                if (!instance->db.Run("INSERT INTO usr_auto (key, local_key, ulid) VALUES (?1, ?2, ?3)",
+                                      key, local_key, ulid))
+                    return false;
+
+                userid = sqlite3_last_insert_rowid(instance->db);
+            } else {
+                return false;
+            }
+
+            return true;
+        });
+        if (!success)
+            return nullptr;
+    } else {
+        return nullptr;
+    }
+
+    RG_ASSERT(userid > 0);
+    userid = -userid;
+
+    RetainPtr<SessionInfo> session = CreateUserSession(userid, key, local_key);
+    if (RG_UNLIKELY(!session))
+        return nullptr;
+
+    if (sms) {
+        if (RG_UNLIKELY(gp_domain.config.sms.provider == sms_Provider::None)) {
+            LogError("This instance is not configured to send SMS messages");
+            return nullptr;
+        }
+
+        uint32_t code = 100000 + randombytes_uniform(900000); // 6 digits
+        Fmt(session->confirm, "%1", code);
+
+        if (!SendSMS(sms, session->confirm))
+            return nullptr;
+    }
+
+    session->AuthorizeInstance(instance, 0, ulid);
+
+    return session;
+}
+
 void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     if (!instance->config.token_key) {
@@ -557,9 +681,7 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
 
         // Parse JSON
         const char *sms = nullptr;
-        int64_t userid = 0;
-        const char *username = nullptr;
-        const char *ulid = nullptr;
+        const char *key = nullptr;
         {
             StreamReader st(json);
             json_Parser parser(&st, &io->allocator);
@@ -571,12 +693,8 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
 
                 if (TestStr(key, "sms")) {
                     parser.ParseString(&sms);
-                } else if (TestStr(key, "userid")) {
-                    parser.ParseInt(&userid);
-                } else if (TestStr(key, "username")) {
-                    parser.ParseString(&username);
-                } else if (TestStr(key, "ulid")) {
-                    parser.ParseString(&ulid);
+                } else if (TestStr(key, "key")) {
+                    parser.ParseString(&key);
                 } else if (parser.IsValid()) {
                     LogError("Unknown key '%1' in token JSON", key);
                     io->AttachError(422);
@@ -597,19 +715,8 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
                 LogError("Empty SMS");
                 valid = false;
             }
-            if (!userid) {
-                LogError("Missing or empty username");
-                valid = false;
-            } else if (userid > 0) {
-                LogError("Only negative user ID values are allowed in tokens");
-                valid = false;
-            }
-            if (!username || !username[0]) {
-                LogError("Missing or empty username");
-                valid = false;
-            }
-            if (!ulid || !ulid[0]) {
-                LogError("Missing or empty ULID");
+            if (!key || !key[0]) {
+                LogError("Missing or empty key");
                 valid = false;
             }
 
@@ -619,87 +726,13 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
             }
         }
 
-        // Avoid confirmation flood (especially SMS)
-        RegisterFloodEvent(request.client_addr, userid);
-
-        if (IsUserBanned(request.client_addr, userid)) {
-            LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
-            io->AttachError(403);
+        RetainPtr<SessionInfo> session = CreateAutoSession(instance, key, sms);
+        if (!session)
             return;
-        }
+        sessions.Open(request, io, session);
 
-        // Build local key from SHA-256 hash of JSON
-        char local_key[45];
-        {
-            RG_STATIC_ASSERT(crypto_hash_sha256_BYTES == 32);
-
-            uint8_t sha256[32];
-            crypto_hash_sha256(sha256, json.ptr, json.len);
-            sodium_bin2base64(local_key, RG_SIZE(local_key), sha256, RG_SIZE(sha256), sodium_base64_VARIANT_ORIGINAL);
-        }
-
-        RetainPtr<SessionInfo> session = CreateUserSession(userid, username, local_key);
-
-        if (RG_LIKELY(session)) {
-            if (sms) {
-                if (RG_UNLIKELY(gp_domain.config.sms.provider == sms_Provider::None)) {
-                    LogError("This instance is not configured to send SMS messages");
-                    io->AttachError(403);
-                    return;
-                }
-
-                uint32_t code = 100000 + randombytes_uniform(900000); // 6 digits
-                Fmt(session->confirm, "%1", code);
-
-                if (!SendSMS(sms, session->confirm))
-                    return;
-            }
-
-            session->AuthorizeInstance(instance, 0, ulid);
-
-            sessions.Open(request, io, session);
-            WriteProfileJson(session.GetRaw(), nullptr, request, io);
-        }
+        WriteProfileJson(session.GetRaw(), nullptr, request, io);
     });
-}
-
-static void Encode30Bits(uint32_t value, char out_buf[6])
-{
-    static const char *characters = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-
-    out_buf[0] = characters[(value >> 25) & 0x1F];
-    out_buf[1] = characters[(value >> 20) & 0x1F];
-    out_buf[2] = characters[(value >> 15) & 0x1F];
-    out_buf[3] = characters[(value >> 10) & 0x1F];
-    out_buf[4] = characters[(value >> 5) & 0x1F];
-    out_buf[5] = characters[value & 0x1F];
-}
-
-static bool MakeULID(char out_buf[27])
-{
-    // Generate time part
-    {
-        int64_t now = GetUnixTime();
-        if (RG_UNLIKELY(now < 0 || now >= 0x1000000000000ull)) {
-            LogError("Cannot generate ULID with current UTC time");
-            return false;
-        }
-
-        Encode30Bits((uint32_t)(now % 0x100000), out_buf + 4);
-        Encode30Bits((uint32_t)(now / 0x100000), out_buf + 0);
-    }
-
-    // Generate random part
-    {
-        uint32_t buf[3];
-        randombytes_buf(buf, RG_SIZE(buf));
-
-        Encode30Bits(buf[0], out_buf + 10);
-        Encode30Bits(buf[1], out_buf + 16);
-        Encode30Bits(buf[2], out_buf + 20);
-    }
-
-    return true;
 }
 
 // Returns true when request has been handled (even if an error has occured)
@@ -711,72 +744,15 @@ bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
     if (!key || !key[0])
         return false;
 
-    int64_t userid = 0;
-    const char *local_key = nullptr;
-    const char *ulid = nullptr;
-
-    sq_Statement stmt;
-    if (!instance->db.Prepare("SELECT userid, local_key, ulid FROM usr_auto WHERE key = ?1", &stmt))
+    // If we fail here, it is an internal error. But we return true anyway to signal
+    // the caller that we have handled the request!
+    RetainPtr<SessionInfo> session = CreateAutoSession(instance, key, nullptr);
+    if (!session)
         return true;
-    sqlite3_bind_text(stmt, 1, key, -1, SQLITE_STATIC);
+    sessions.Open(request, io, session);
 
-    if (stmt.Next()) {
-        userid = -sqlite3_column_int64(stmt, 0);
-        local_key = (const char *)sqlite3_column_text(stmt, 1);
-        ulid = (const char *)sqlite3_column_text(stmt, 2);
-    } else if (stmt.IsValid()) {
-        stmt.Finalize();
-
-        bool success = instance->db.Transaction([&]() {
-            if (!instance->db.Prepare("SELECT userid, local_key, ulid FROM usr_auto WHERE key = ?1", &stmt))
-                return true;
-            sqlite3_bind_text(stmt, 1, key, -1, SQLITE_STATIC);
-
-            if (stmt.Next()) {
-                userid = -sqlite3_column_int64(stmt, 0);
-                local_key = (const char *)sqlite3_column_text(stmt, 1);
-                ulid = (const char *)sqlite3_column_text(stmt, 2);
-            } else if (stmt.IsValid()) {
-                local_key = (const char *)Allocator::Allocate(&io->allocator, 45 + 27, (int)Allocator::Flag::Zero);
-                ulid = local_key + 45;
-
-                // Create random local key
-                {
-                    uint8_t buf[32];
-                    randombytes_buf(&buf, RG_SIZE(buf));
-                    sodium_bin2base64((char *)local_key, 45, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
-                }
-
-                if (RG_UNLIKELY(!MakeULID((char *)ulid)))
-                    return true;
-
-                if (!instance->db.Run("INSERT INTO usr_auto (key, local_key, ulid) VALUES (?1, ?2, ?3)",
-                                      key, local_key, ulid))
-                    return true;
-
-                userid = -sqlite3_last_insert_rowid(instance->db);
-            } else {
-                return true;
-            }
-
-            return true;
-        });
-        if (!success)
-            return true;
-    } else {
-        return true;
-    }
-
-    RG_ASSERT(userid < 0);
-    RetainPtr<SessionInfo> session = CreateUserSession(userid, key, local_key);
-
-    if (RG_LIKELY(session)) {
-        session->AuthorizeInstance(instance, 0, ulid);
-        sessions.Open(request, io, session);
-
-        io->AddHeader("Location", request.url);
-        io->AttachNothing(302);
-    }
+    io->AddHeader("Location", request.url);
+    io->AttachNothing(302);
 
     return true;
 }
