@@ -152,6 +152,7 @@ public:
         supported |= (int)CompileFeature::UBSan;
         supported |= (int)CompileFeature::StackProtect;
         supported |= (int)CompileFeature::SafeStack;
+        supported |= (int)CompileFeature::ZeroInit;
         supported |= (int)CompileFeature::CFI; // LTO only
 
         uint32_t unsupported = features & ~supported;
@@ -292,6 +293,9 @@ public:
         }
         if (features & (int)CompileFeature::SafeStack) {
             Fmt(&buf, " -fsanitize=safe-stack");
+        }
+        if (features & (int)CompileFeature::ZeroInit) {
+            Fmt(&buf, " -ftrivial-auto-var-init=zero -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang");
         }
         if (features & (int)CompileFeature::CFI) {
             RG_ASSERT(compile_mode == CompileMode::LTO);
