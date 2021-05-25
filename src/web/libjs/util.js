@@ -288,7 +288,7 @@ const util = new function() {
         return ulid.join('');
     };
 
-    function encode30bits(value, buf, offset, len) {
+    function encode30bits(value, buf, offset) {
         let characters = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
         buf[offset + 0] = characters[(value >>> 25) & 0x1F];
