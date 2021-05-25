@@ -570,33 +570,35 @@ function InstanceController() {
                     self.run();
                 });
 
-                if (form_state.just_triggered) {
-                    form_builder.action('-');
+                if (!goupile.isLocked()) {
+                    if (form_state.just_triggered) {
+                        form_builder.action('-');
 
-                    form_builder.action('Forcer l\'enregistrement', {}, async e => {
-                        await ui.runConfirm(e, html`Confirmez-vous l'enregistrement <b>malgré la présence d'erreurs</b> ?`,
-                                               'Enregistrer malgré tout', () => {});
+                        form_builder.action('Forcer l\'enregistrement', {}, async e => {
+                            await ui.runConfirm(e, html`Confirmez-vous l'enregistrement <b>malgré la présence d'erreurs</b> ?`,
+                                                   'Enregistrer malgré tout', () => {});
 
-                        await saveRecord(form_record, form_values, route.page);
+                            await saveRecord(form_record, form_values, route.page);
 
-                        self.run();
-                    });
-                    form_builder.action('Effacer les modifications', {}, async e => {
-                        await ui.runConfirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
-                                               'Effacer', () => {});
+                            self.run();
+                        });
+                        form_builder.action('Effacer les modifications', {}, async e => {
+                            await ui.runConfirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
+                                                   'Effacer', () => {});
 
-                        let record = await loadRecord(form_record.ulid, form_record.version);
-                        await expandRecord(record, route.page.options.load || []);
+                            let record = await loadRecord(form_record.ulid, form_record.version);
+                            await expandRecord(record, route.page.options.load || []);
 
-                        updateContext(route, record);
+                            updateContext(route, record);
 
-                        self.run();
-                    });
-                }
+                            self.run();
+                        });
+                    }
 
-                if (route.form.multi && form_record.saved) {
-                    form_builder.action('-');
-                    form_builder.action('Supprimer', {}, e => runDeleteRecordDialog(e, form_record.ulid));
+                    if (route.form.multi && form_record.saved) {
+                        form_builder.action('-');
+                        form_builder.action('Supprimer', {}, e => runDeleteRecordDialog(e, form_record.ulid));
+                    }
                 }
 
                 if (prev_actions.length) {
