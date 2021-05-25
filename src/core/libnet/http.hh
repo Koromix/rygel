@@ -26,7 +26,19 @@
 
 namespace RG {
 
+enum class http_ClientAddressMode {
+    Socket,
+    XForwardedFor,
+    XRealIP
+};
+static const char *const http_ClientAddressModeNames[] = {
+    "Socket",
+    "X-Forwarded-For",
+    "X-Real-IP"
+};
+
 struct http_Config {
+
     SocketType sock_type = SocketType::Dual;
     int port = 8888;
 #ifndef _WIN32
@@ -37,7 +49,7 @@ struct http_Config {
     int idle_timeout = 60;
     int threads = std::max(GetCoreCount(), 4);
     int async_threads = std::max(GetCoreCount() * 2, 8);
-    bool use_xrealip = false;
+    http_ClientAddressMode client_addr_mode = http_ClientAddressMode::Socket;
 
     bool Validate() const;
 };
@@ -50,7 +62,7 @@ class http_Daemon {
 
     MHD_Daemon *daemon = nullptr;
     int listen_fd = -1;
-    bool use_xrealip = false;
+    http_ClientAddressMode client_addr_mode = http_ClientAddressMode::Socket;
     std::atomic_bool running {false};
 
     std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;

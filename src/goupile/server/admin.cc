@@ -66,7 +66,7 @@ BackupKey = %1
 # Port = 8888
 # Threads =
 # AsyncThreads =
-# TrustXRealIP = Off
+# ClientAddress = Socket
 )";
 
 #pragma pack(push, 1)

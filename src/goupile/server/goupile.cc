@@ -691,13 +691,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             return 1;
     }
 
-#ifdef NDEBUG
-    if (!gp_domain.config.http.use_xrealip) {
-        LogInfo("You may want to %!.._enable the HTTP.TrustXRealIP%!0 setting in goupile.ini "
-                "if you run this behind a reverse proxy that sets the X-Real-IP header.");
-    }
-#endif
-
     // Run!
     if (!daemon.Start(gp_domain.config.http, HandleRequest))
         return 1;

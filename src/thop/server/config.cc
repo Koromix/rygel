@@ -119,10 +119,13 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                         valid &= ParseInt(prop.value, &config.http.async_threads);
                     } else if (prop.key == "BaseUrl") {
                         config.base_url = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "ClientAddress") {
+                        if (!OptionToEnum(http_ClientAddressModeNames, prop.value, &config.http.client_addr_mode)) {
+                            LogError("Unknown client address mode '%1'", prop.value);
+                            valid = false;
+                        }
                     } else if (prop.key == "MaxAge") {
                         valid &= ParseInt(prop.value, &config.max_age);
-                    } else if (prop.key == "TrustXRealIP") {
-                        valid &= ParseBool(prop.value, &config.http.use_xrealip);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;

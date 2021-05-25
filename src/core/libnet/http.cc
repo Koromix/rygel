@@ -107,6 +107,11 @@ bool http_Daemon::Start(const http_Config &config,
     if (!config.Validate())
         return false;
 
+    if (config.client_addr_mode == http_ClientAddressMode::Socket) {
+        LogInfo("You may want to %!.._set HTTP.ClientAddress%!0 to X-Forwarded-For or X-Real-IP "
+                "if you run this behind a reverse proxy that sets one of these headers.");
+    }
+
     // Prepare socket (if not done yet)
     if (listen_fd < 0 && !Bind(config))
         return false;
@@ -128,7 +133,7 @@ bool http_Daemon::Start(const http_Config &config,
     }
     mhd_options.Append({MHD_OPTION_CONNECTION_TIMEOUT, config.idle_timeout});
     mhd_options.Append({MHD_OPTION_END, 0, nullptr});
-    use_xrealip = config.use_xrealip;
+    client_addr_mode = config.client_addr_mode;
 
     handle_func = func;
     async = new Async(config.async_threads - 1);
@@ -162,46 +167,85 @@ void http_Daemon::Stop()
     daemon = nullptr;
 }
 
-static bool GetClientAddress(MHD_Connection *conn, bool use_xrealip, Span<char> out_address)
+static bool GetClientAddress(MHD_Connection *conn, http_ClientAddressMode addr_mode, Span<char> out_address)
 {
     RG_ASSERT(out_address.len);
 
-    if (use_xrealip) {
-        const char *xrealip = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "X-Real-IP");
+    switch (addr_mode) {
+        case http_ClientAddressMode::Socket: {
+            int family;
+            void *addr;
+            {
+                sockaddr *saddr =
+                    MHD_get_connection_info(conn, MHD_CONNECTION_INFO_CLIENT_ADDRESS)->client_addr;
 
-        if (xrealip) {
-            CopyString(xrealip, out_address);
-            return true;
-        }
-    }
-
-    int family;
-    void *addr;
-    {
-        sockaddr *saddr =
-            MHD_get_connection_info(conn, MHD_CONNECTION_INFO_CLIENT_ADDRESS)->client_addr;
-
-        family = saddr->sa_family;
-        switch (saddr->sa_family) {
-            case AF_INET: { addr = &((sockaddr_in *)saddr)->sin_addr; } break;
-            case AF_INET6: { addr = &((sockaddr_in6 *)saddr)->sin6_addr; } break;
+                family = saddr->sa_family;
+                switch (saddr->sa_family) {
+                    case AF_INET: { addr = &((sockaddr_in *)saddr)->sin_addr; } break;
+                    case AF_INET6: { addr = &((sockaddr_in6 *)saddr)->sin6_addr; } break;
 #ifndef _WIN32
-            case AF_UNIX: {
-                CopyString("unix", out_address);
-                return true;
-            } break;
+                    case AF_UNIX: {
+                        CopyString("unix", out_address);
+                        return true;
+                    } break;
 #endif
 
-            default: { RG_UNREACHABLE(); } break;
-        }
+                    default: { RG_UNREACHABLE(); } break;
+                }
+            }
+
+            if (!inet_ntop(family, addr, out_address.ptr, out_address.len)) {
+                LogError("Cannot convert network address to text");
+                return false;
+            }
+
+            return true;
+        } break;
+
+        case http_ClientAddressMode::XForwardedFor: {
+            const char *str = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "X-Forwarded-For");
+            if (!str) {
+                LogError("X-Forwarded-For header is missing but is required by the configuration");
+                return false;
+            }
+
+            Span<const char> addr = TrimStr(SplitStr(str, ','));
+
+            if (RG_UNLIKELY(!addr.len)) {
+                LogError("Empty client address in X-Forwarded-For header");
+                return false;
+            }
+            if (RG_UNLIKELY(!CopyString(addr, out_address))) {
+                LogError("Excessively long client address in X-Forwarded-For header");
+                return false;
+            }
+
+            return true;
+        } break;
+
+        case http_ClientAddressMode::XRealIP: {
+            const char *str = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "X-Real-IP");
+            if (!str) {
+                LogError("X-Real-IP header is missing but is required by the configuration");
+                return false;
+            }
+
+            Span<const char> addr = TrimStr(str);
+
+            if (RG_UNLIKELY(!addr.len)) {
+                LogError("Empty client address in X-Forwarded-For header");
+                return false;
+            }
+            if (RG_UNLIKELY(!CopyString(addr, out_address))) {
+                LogError("Excessively long client address in X-Forwarded-For header");
+                return false;
+            }
+
+            return true;
+        } break;
     }
 
-    if (!inet_ntop(family, addr, out_address.ptr, out_address.len)) {
-        LogError("Cannot convert network address to text");
-        return false;
-    }
-
-    return true;
+    RG_UNREACHABLE();
 }
 
 MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url, const char *method,
@@ -244,7 +288,7 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
             io->AttachError(405);
             return MHD_queue_response(conn, (unsigned int)io->code, io->response);
         }
-        if (!GetClientAddress(conn, daemon->use_xrealip, io->request.client_addr)) {
+        if (!GetClientAddress(conn, daemon->client_addr_mode, io->request.client_addr)) {
             io->AttachError(422);
             return MHD_queue_response(conn, (unsigned int)io->code, io->response);
         }
