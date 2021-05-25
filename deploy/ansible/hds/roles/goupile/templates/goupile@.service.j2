@@ -24,6 +24,7 @@ RuntimeDirectoryPreserve = yes
 ExecStart = {{ goupile_root_path }}/goupile --sandbox
 WorkingDirectory = {{ goupile_root_path }}/domains/%i
 Restart = on-failure
+RestartSec = 20
 TimeoutStopSec = 30
 LimitNOFILE = 4096
 
