@@ -413,11 +413,12 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         if (instance->config.auto_key && !CreateKeyedSession(instance, request, io))
             return;
 
-        // Enforce trailing slash on base URLs
+        // Enforce trailing slash on base URLs. Use 302 instead of 301 to avoid
+        // problems with query strings being erased without question.
         if (!instance_url[0]) {
             const char *redirect = Fmt(&io->allocator, "%1/", request.url).ptr;
             io->AddHeader("Location", redirect);
-            io->AttachNothing(301);
+            io->AttachNothing(302);
             return;
         }
 
