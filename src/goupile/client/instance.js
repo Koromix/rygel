@@ -772,7 +772,7 @@ function InstanceController() {
                     </colgroup>
 
                     <tbody>
-                        ${!form_record.fragments.length ? html`<tr><td>Aucune modification enregistrée</td></tr>` : ''}
+                        ${!form_record.fragments.length ? html`<tr><td colspan="3">Aucune modification enregistrée</td></tr>` : ''}
                         ${util.mapRange(0, form_record.fragments.length, idx => {
                             let version = form_record.fragments.length - idx;
                             let fragment = form_record.fragments[version - 1];
