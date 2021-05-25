@@ -173,19 +173,17 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
 #ifndef NDEBUG
     #define RG_ASSERT(Cond) \
         do { \
-            if (!RG_LIKELY(Cond)) { \
+            if (RG_UNLIKELY(!(Cond))) { \
                 RG::AssertMessage(__FILE__, __LINE__, RG_STRINGIFY(Cond)); \
                 RG_DEBUG_BREAK(); \
                 abort(); \
             } \
         } while (false)
-    #define RG_ASSERT_DEBUG(Cond) RG_ASSERT(Cond)
 #else
     #define RG_ASSERT(Cond) \
         do { \
             (void)sizeof(Cond); \
         } while (false)
-    #define RG_ASSERT_DEBUG(Cond) ((void)0)
 #endif
 #define RG_STATIC_ASSERT(Cond) \
     static_assert((Cond), RG_STRINGIFY(Cond))
