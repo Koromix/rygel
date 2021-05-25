@@ -655,8 +655,7 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
                     return;
             }
 
-            uint32_t permissions = (int)UserPermission::DataLoad | (int)UserPermission::DataSave;
-            session->AuthorizeInstance(instance, permissions, ulid);
+            session->AuthorizeInstance(instance, 0, ulid);
 
             sessions.Open(request, io, session);
             WriteProfileJson(session.GetRaw(), nullptr, request, io);

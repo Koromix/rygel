@@ -85,7 +85,7 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
         io->AttachError(401);
         return;
     }
-    if (!stamp || !stamp->HasPermission(UserPermission::DataLoad)) {
+    if (!stamp || (!stamp->HasPermission(UserPermission::DataLoad) && !stamp->ulid)) {
         LogError("User is not allowed to load data");
         io->AttachError(403);
         return;
@@ -178,7 +178,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
         io->AttachError(401);
         return;
     }
-    if (!stamp || !stamp->HasPermission(UserPermission::DataSave)) {
+    if (!stamp || (!stamp->HasPermission(UserPermission::DataSave) && !stamp->ulid)) {
         LogError("User is not allowed to save data");
         io->AttachError(403);
         return;
