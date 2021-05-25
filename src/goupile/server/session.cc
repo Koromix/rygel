@@ -702,14 +702,14 @@ static bool MakeULID(char out_buf[27])
     return true;
 }
 
-// Returns true if there is nothing to do (no session change) or if a session key was used
-bool CreateKeyedSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+// Returns true when request has been handled (even if an error has occured)
+bool HandleKeyedSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RG_ASSERT(instance->config.auto_key);
 
     const char *key = request.GetQueryValue(instance->config.auto_key);
     if (!key)
-        return true;
+        return false;
 
     int64_t userid = 0;
     const char *local_key = nullptr;
@@ -717,7 +717,7 @@ bool CreateKeyedSession(InstanceHolder *instance, const http_RequestInfo &reques
 
     sq_Statement stmt;
     if (!instance->db.Prepare("SELECT userid, local_key, ulid FROM usr_auto WHERE key = ?1", &stmt))
-        return false;
+        return true;
     sqlite3_bind_text(stmt, 1, key, -1, SQLITE_STATIC);
 
     if (stmt.Next()) {
@@ -729,7 +729,7 @@ bool CreateKeyedSession(InstanceHolder *instance, const http_RequestInfo &reques
 
         bool success = instance->db.Transaction([&]() {
             if (!instance->db.Prepare("SELECT userid, local_key, ulid FROM usr_auto WHERE key = ?1", &stmt))
-                return false;
+                return true;
             sqlite3_bind_text(stmt, 1, key, -1, SQLITE_STATIC);
 
             if (stmt.Next()) {
@@ -748,32 +748,35 @@ bool CreateKeyedSession(InstanceHolder *instance, const http_RequestInfo &reques
                 }
 
                 if (RG_UNLIKELY(!MakeULID((char *)ulid)))
-                    return false;
+                    return true;
 
                 if (!instance->db.Run("INSERT INTO usr_auto (key, local_key, ulid) VALUES (?1, ?2, ?3)",
                                       key, local_key, ulid))
-                    return false;
+                    return true;
 
                 userid = -sqlite3_last_insert_rowid(instance->db);
             } else {
-                return false;
+                return true;
             }
 
             return true;
         });
         if (!success)
-            return false;
+            return true;
     } else {
-        return false;
+        return true;
     }
 
     RG_ASSERT(userid < 0);
     RetainPtr<SessionInfo> session = CreateUserSession(userid, key, local_key);
-    if (RG_UNLIKELY(!session))
-        return false;
 
-    session->AuthorizeInstance(instance, 0, ulid);
-    sessions.Open(request, io, session);
+    if (RG_LIKELY(session)) {
+        session->AuthorizeInstance(instance, 0, ulid);
+        sessions.Open(request, io, session);
+
+        io->AddHeader("Location", request.url);
+        io->AttachNothing(302);
+    }
 
     return true;
 }
