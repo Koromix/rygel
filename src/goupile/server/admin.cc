@@ -1329,6 +1329,12 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
             if (config.shared_key && !config.shared_key[0])
                 config.shared_key = nullptr;
 
+            config.token_key = values.FindValue("token_key", config.token_key);
+            if (config.token_key && !config.token_key[0])
+                config.token_key = nullptr;
+            config.auto_key = values.FindValue("auto_key", config.auto_key);
+            if (config.auto_key && !config.auto_key[0])
+                config.auto_key = nullptr;
             if (const char *str = values.FindValue("auto_userid", nullptr); str) {
                 if (str[0]) {
                     valid &= ParseInt(str, &config.auto_userid);
@@ -1367,6 +1373,8 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
                 success &= instance->db.Run(sql, "SyncMode", SyncModeNames[(int)config.sync_mode]);
                 success &= instance->db.Run(sql, "BackupKey", config.backup_key);
                 success &= instance->db.Run(sql, "SharedKey", config.shared_key);
+                success &= instance->db.Run(sql, "TokenKey", config.token_key);
+                success &= instance->db.Run(sql, "AutoKey", config.auto_key);
                 success &= instance->db.Run(sql, "AutoUser", config.auto_userid ? sq_Binding(config.auto_userid) : sq_Binding());
             }
             if (!success)
@@ -1443,6 +1451,12 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
             }
             if (instance->config.shared_key) {
                 json.Key("shared_key"); json.String(instance->config.shared_key);
+            }
+            if (instance->config.token_key) {
+                json.Key("token_key"); json.String(instance->config.token_key);
+            }
+            if (instance->config.auto_key) {
+                json.Key("auto_key"); json.String(instance->config.auto_key);
             }
             if (instance->config.auto_userid > 0) {
                 json.Key("auto_userid"); json.Int64(instance->config.auto_userid);

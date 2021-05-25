@@ -495,7 +495,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
 
 void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    if (!instance->config.enable_tokens) {
+    if (!instance->config.token_key) {
         LogError("This instance does not use tokens");
         io->AttachError(403);
         return;

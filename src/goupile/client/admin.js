@@ -471,7 +471,11 @@ function AdminController() {
                         if (shared_key.value != null && !checkCryptoKey(shared_key.value))
                             shared_key.error('Format de clé non valide');
 
-                        let auto_userid = d.enumDrop('auto_userid', 'Session automatique',
+                        let token_key = d.text('token_key', 'Session par token', {value: instance.config.token_key});
+                        if (token_key.value != null && !checkCryptoKey(token_key.value))
+                            token_key.error('Format de clé non valide');
+                        let auto_key = d.text('auto_key', 'Session de requête', {value: instance.config.auto_key});
+                        let auto_userid = d.enumDrop('auto_userid', 'Session par défaut',
                                                      users.map(user => [user.userid, user.username]), {
                             value: instance.config.auto_userid,
                             untoggle: true
@@ -486,6 +490,8 @@ function AdminController() {
                             if (sync_mode.value === 'offline')
                                 query.set('backup_key', backup_key.value || '');
                             query.set('shared_key', shared_key.value || '');
+                            query.set('token_key', token_key.value || '');
+                            query.set('auto_key', auto_key.value || '');
                             query.set('auto_userid', auto_userid.value || '');
 
                             let response = await net.fetch('/admin/api/instances/configure', {

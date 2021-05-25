@@ -94,17 +94,17 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                         RG_STATIC_ASSERT(RG_SIZE(config.token_pkey) == crypto_scalarmult_BYTES);
                         crypto_scalarmult_base(config.token_pkey, config.token_skey);
 
-                        config.enable_tokens = true;
+                        config.token_key = DuplicateString(value, &str_alloc).ptr;
                     } else {
                         LogError("Malformed TokenKey value");
                         valid = false;
                     }
                 } else if (TestStr(key, "BackupKey")) {
                     config.backup_key = DuplicateString(value, &str_alloc).ptr;
-                } else if (TestStr(key, "AutoUser")) {
-                    valid &= ParseInt(value, &config.auto_userid);
                 } else if (TestStr(key, "AutoKey")) {
                     config.auto_key = DuplicateString(value, &str_alloc).ptr;
+                } else if (TestStr(key, "AutoUser")) {
+                    valid &= ParseInt(value, &config.auto_userid);
                 } else {
                     LogError("Unknown setting '%1'", key);
                     valid = false;
@@ -1189,8 +1189,8 @@ bool MigrateInstance(sq_Database *db)
 
             case 37: {
                 bool success = db->RunMany(R"(
-                    UPDATE fs_settings SET key = 'AutoUser' WHERE key = 'AutoUserID';
                     INSERT INTO fs_settings (key) VALUES ('AutoKey');
+                    UPDATE fs_settings SET key = 'AutoUser' WHERE key = 'AutoUserID';
 
                     CREATE TABLE usr_auto (
                         key TEXT NOT NULL,
