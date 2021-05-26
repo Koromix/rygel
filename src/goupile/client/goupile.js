@@ -17,7 +17,6 @@ let profile = {};
 const goupile = new function() {
     let self = this;
 
-    let session_rnd;
     let profile_keys = {};
     let online = true;
 
@@ -153,10 +152,22 @@ const goupile = new function() {
     }
 
     async function syncProfile() {
-        let new_rnd = util.getCookie('session_rnd', null);
+        let session_rnd = util.getCookie('session_rnd');
 
-        // Deal with lock, if any
-        if (new_rnd == null) {
+        if (session_rnd != null) {
+            try {
+                let response = await net.fetch(`${ENV.urls.instance}api/session/profile`);
+
+                let new_profile = await response.json();
+                updateProfile(new_profile, true);
+            } catch (err) {
+                if (!ENV.cache_offline)
+                    throw err;
+            }
+        }
+
+        // Client-side lock?
+        {
             let lock = await loadSessionValue('lock');
 
             if (lock != null) {
@@ -180,20 +191,6 @@ const goupile = new function() {
                 updateProfile(new_profile, false);
 
                 return;
-            }
-        }
-
-        if (new_rnd !== session_rnd) {
-            try {
-                let response = await net.fetch(`${ENV.urls.instance}api/session/profile`);
-
-                let new_profile = await response.json();
-                updateProfile(new_profile, true);
-            } catch (err) {
-                if (!ENV.cache_offline)
-                    throw err;
-
-                session_rnd = util.getCookie('session_rnd');
             }
         }
     }
@@ -382,7 +379,7 @@ const goupile = new function() {
     }
 
     async function initTasks() {
-        net.retryHandler = async response => {
+        net.retryHandler = util.serialize(async response => {
             if (response.status === 401) {
                 try {
                     await confirmIdentity();
@@ -393,7 +390,7 @@ const goupile = new function() {
             } else {
                 return false;
             }
-        };
+        });
 
         if (controller.runTasks != null) {
             let ignore_ping = false;
@@ -428,7 +425,7 @@ const goupile = new function() {
 
     async function runTasks() {
         try {
-            let online = net.isOnline() && (session_rnd != null);
+            let online = net.isOnline() && util.getCookie('session_rnd') != null;
             await controller.runTasks(online);
         } catch (err) {
             console.log(err);
@@ -576,8 +573,6 @@ const goupile = new function() {
         } else {
             profile_keys = new Map;
         }
-
-        session_rnd = util.getCookie('session_rnd');
     }
 
     this.logout = async function(e) {
@@ -636,10 +631,14 @@ const goupile = new function() {
     };
 
     this.lock = async function(e, password, ctx = null) {
+        let session_rnd = util.getCookie('session_rnd');
+
         if (self.isLocked())
             throw new Error('Cannot lock unauthorized session');
         if (typeof ctx == undefined)
             throw new Error('Lock context must not be undefined');
+        if (session_rnd == null)
+            throw new Error('Cannot lock without session cookie');
 
         await self.confirmDangerousAction(e);
 
@@ -682,7 +681,7 @@ const goupile = new function() {
         await util.waitFor(800);
 
         try {
-            session_rnd = await decryptSecretBox(lock.session_rnd, key);
+            let session_rnd = await decryptSecretBox(lock.session_rnd, key);
 
             util.setCookie('session_rnd', session_rnd, '/');
             await deleteSessionValue('lock');
@@ -709,24 +708,25 @@ const goupile = new function() {
             return;
         }
 
-        util.setCookie('session_rnd', session_rnd, '/');
-        await deleteSessionValue('lock');
-
         window.onbeforeunload = null;
         document.location.reload();
         await util.waitFor(2000);
     };
 
     function confirmIdentity(e) {
-        return ui.runDialog(e, 'Confirmation d\'identité', (d, resolve, reject) => {
-            d.calc('username', 'Nom d\'utilisateur', profile.username);
-            let password = d.password('*password', 'Mot de passe');
+        let session_rnd = util.getCookie('session_rnd');
 
-            d.action('Confirmer', {disabled: !d.isValid()}, async e => {
-                await tryLogin(profile.username, password.value, null, true);
-                resolve();
+        if (session_rnd == null) {
+            return ui.runDialog(e, 'Confirmation d\'identité', (d, resolve, reject) => {
+                d.calc('username', 'Nom d\'utilisateur', profile.username);
+                let password = d.password('*password', 'Mot de passe');
+
+                d.action('Confirmer', {disabled: !d.isValid()}, async e => {
+                    await tryLogin(profile.username, password.value, null, true);
+                    resolve();
+                });
             });
-        });
+        }
     };
 
     this.confirmDangerousAction = function(e) {
