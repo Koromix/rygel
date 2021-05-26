@@ -17,22 +17,22 @@
 
 namespace RG {
 
-enum class sb_FilterAction {
+enum class sec_FilterAction {
     Allow,
     Block,
     Trap,
     Kill
 };
 
-struct sb_FilterItem {
+struct sec_FilterItem {
     const char *name;
-    sb_FilterAction action;
+    sec_FilterAction action;
 };
 
-bool sb_IsSandboxSupported();
+bool sec_IsSandboxSupported();
 
-class sb_SandboxBuilder final {
-    RG_DELETE_COPY(sb_SandboxBuilder)
+class sec_SandboxBuilder final {
+    RG_DELETE_COPY(sec_SandboxBuilder)
 
 #ifdef __linux__
     struct BindMount {
@@ -43,21 +43,21 @@ class sb_SandboxBuilder final {
 
     HeapArray<BindMount> mounts;
     bool filter_syscalls = false;
-    sb_FilterAction default_action;
-    HeapArray<sb_FilterItem> filter_items;
+    sec_FilterAction default_action;
+    HeapArray<sec_FilterItem> filter_items;
 #endif
 
     BlockAllocator str_alloc;
 
 public:
-    sb_SandboxBuilder() {};
+    sec_SandboxBuilder() {};
 
     void RevealPaths(Span<const char *const> paths, bool readonly);
 
 #ifdef __linux__
     void MountPath(const char *src, const char *dest, bool readonly);
-    void FilterSyscalls(sb_FilterAction default_action, Span<const sb_FilterItem> items = {});
-    void FilterSyscalls(Span<const sb_FilterItem> items);
+    void FilterSyscalls(sec_FilterAction default_action, Span<const sec_FilterItem> items = {});
+    void FilterSyscalls(Span<const sec_FilterItem> items);
 #endif
 
     // If this fails, just exit; the process is probably in a half-sandboxed

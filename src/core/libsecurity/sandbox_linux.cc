@@ -47,7 +47,7 @@ struct cap_user_data {
 
 namespace RG {
 
-bool sb_IsSandboxSupported()
+bool sec_IsSandboxSupported()
 {
 #ifdef __clang__
     #if __has_feature(address_sanitizer)
@@ -69,14 +69,14 @@ bool sb_IsSandboxSupported()
 #endif
 }
 
-void sb_SandboxBuilder::RevealPaths(Span<const char *const> paths, bool readonly)
+void sec_SandboxBuilder::RevealPaths(Span<const char *const> paths, bool readonly)
 {
     for (const char *path: paths) {
         MountPath(path, path, readonly);
     }
 }
 
-void sb_SandboxBuilder::MountPath(const char *src, const char *dest, bool readonly)
+void sec_SandboxBuilder::MountPath(const char *src, const char *dest, bool readonly)
 {
     BindMount bind = {};
     bind.src = NormalizePath(src, &str_alloc).ptr;
@@ -85,7 +85,7 @@ void sb_SandboxBuilder::MountPath(const char *src, const char *dest, bool readon
     mounts.Append(bind);
 }
 
-void sb_SandboxBuilder::FilterSyscalls(sb_FilterAction default_action, Span<const sb_FilterItem> items)
+void sec_SandboxBuilder::FilterSyscalls(sec_FilterAction default_action, Span<const sec_FilterItem> items)
 {
     RG_ASSERT(!filter_syscalls);
 
@@ -95,12 +95,12 @@ void sb_SandboxBuilder::FilterSyscalls(sb_FilterAction default_action, Span<cons
     FilterSyscalls(items);
 }
 
-void sb_SandboxBuilder::FilterSyscalls(Span<const sb_FilterItem> items)
+void sec_SandboxBuilder::FilterSyscalls(Span<const sec_FilterItem> items)
 {
     RG_ASSERT(filter_syscalls);
 
     filter_items.Reserve(items.len);
-    for (sb_FilterItem item: items) {
+    for (sec_FilterItem item: items) {
         item.name = DuplicateString(item.name, &str_alloc).ptr;
         filter_items.Append(item);
     }
@@ -182,7 +182,7 @@ static bool InitNamespaces()
     return true;
 }
 
-bool sb_SandboxBuilder::Apply()
+bool sec_SandboxBuilder::Apply()
 {
     uid_t uid = getuid();
     gid_t gid = getgid();
@@ -480,13 +480,13 @@ bool sb_SandboxBuilder::Apply()
             kill_code = SCMP_ACT_KILL_THREAD;
         }
 
-        const auto translate_action = [&](sb_FilterAction action) {
+        const auto translate_action = [&](sec_FilterAction action) {
             uint32_t seccomp_action = UINT32_MAX;
             switch (action) {
-                case sb_FilterAction::Allow: { seccomp_action = SCMP_ACT_ALLOW; } break;
-                case sb_FilterAction::Block: { seccomp_action = SCMP_ACT_ERRNO(EPERM); } break;
-                case sb_FilterAction::Trap: { seccomp_action = SCMP_ACT_TRAP; } break;
-                case sb_FilterAction::Kill: { seccomp_action = kill_code; } break;
+                case sec_FilterAction::Allow: { seccomp_action = SCMP_ACT_ALLOW; } break;
+                case sec_FilterAction::Block: { seccomp_action = SCMP_ACT_ERRNO(EPERM); } break;
+                case sec_FilterAction::Trap: { seccomp_action = SCMP_ACT_TRAP; } break;
+                case sec_FilterAction::Kill: { seccomp_action = kill_code; } break;
             }
             RG_ASSERT(seccomp_action != UINT32_MAX);
 
@@ -500,7 +500,7 @@ bool sb_SandboxBuilder::Apply()
         }
         RG_DEFER { seccomp_release(ctx); };
 
-        for (const sb_FilterItem &item: filter_items) {
+        for (const sec_FilterItem &item: filter_items) {
             if (item.action != default_action) {
                 int ret = 0;
 

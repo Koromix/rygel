@@ -18,17 +18,17 @@
 
 namespace RG {
 
-bool sb_IsSandboxSupported()
+bool sec_IsSandboxSupported()
 {
     return false;
 }
 
-void sb_SandboxBuilder::RevealPaths(Span<const char *const>, bool)
+void sec_SandboxBuilder::RevealPaths(Span<const char *const>, bool)
 {
     RG_ASSERT(false);
 }
 
-bool sb_SandboxBuilder::Apply()
+bool sec_SandboxBuilder::Apply()
 {
     RG_ASSERT(false);
     return false;

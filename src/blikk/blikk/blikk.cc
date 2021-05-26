@@ -22,32 +22,32 @@ int RunInteractive(bool execute);
 
 static bool ApplySandbox()
 {
-    if (!sb_IsSandboxSupported()) {
+    if (!sec_IsSandboxSupported()) {
         LogError("Sandbox mode is not supported on this platform");
         return false;
     }
 
-    sb_SandboxBuilder sb;
+    sec_SandboxBuilder sb;
 
 #ifdef __linux__
-    sb.FilterSyscalls(sb_FilterAction::Kill, {
-        {"exit", sb_FilterAction::Allow},
-        {"exit_group", sb_FilterAction::Allow},
-        {"brk", sb_FilterAction::Allow},
-        {"mmap/anon", sb_FilterAction::Allow},
-        {"munmap", sb_FilterAction::Allow},
-        {"read", sb_FilterAction::Allow},
-        {"readv", sb_FilterAction::Allow},
-        {"write", sb_FilterAction::Allow},
-        {"writev", sb_FilterAction::Allow},
-        {"fstat", sb_FilterAction::Allow},
-        {"ioctl/tty", sb_FilterAction::Allow},
-        {"rt_sigaction", sb_FilterAction::Allow},
+    sb.FilterSyscalls(sec_FilterAction::Kill, {
+        {"exit", sec_FilterAction::Allow},
+        {"exit_group", sec_FilterAction::Allow},
+        {"brk", sec_FilterAction::Allow},
+        {"mmap/anon", sec_FilterAction::Allow},
+        {"munmap", sec_FilterAction::Allow},
+        {"read", sec_FilterAction::Allow},
+        {"readv", sec_FilterAction::Allow},
+        {"write", sec_FilterAction::Allow},
+        {"writev", sec_FilterAction::Allow},
+        {"fstat", sec_FilterAction::Allow},
+        {"ioctl/tty", sec_FilterAction::Allow},
+        {"rt_sigaction", sec_FilterAction::Allow},
 
-        {"fsync", sb_FilterAction::Block},
-        {"sync", sb_FilterAction::Block},
-        {"syncfs", sb_FilterAction::Block},
-        {"close", sb_FilterAction::Block}
+        {"fsync", sec_FilterAction::Block},
+        {"sync", sec_FilterAction::Block},
+        {"syncfs", sec_FilterAction::Block},
+        {"close", sec_FilterAction::Block}
     });
 #endif
 
