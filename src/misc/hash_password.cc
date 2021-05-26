@@ -52,7 +52,7 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-p", OptionType::Value)) {
+            } else if (opt.Test("-p", "--password", OptionType::Value)) {
                 password = opt.current_value;
             } else if (opt.Test("--no_mask")) {
                 mask = false;
