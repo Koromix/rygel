@@ -191,6 +191,9 @@ mark_as_advanced(CURL_DISABLE_GOPHER)
 option(CURL_DISABLE_MQTT "to disable MQTT" OFF)
 mark_as_advanced(CURL_DISABLE_MQTT)
 
+option(CURL_ENABLE_EXPORT_TARGET "to enable cmake export target" ON)
+mark_as_advanced(CURL_ENABLE_EXPORT_TARGET)
+
 if(HTTP_ONLY)
   set(CURL_DISABLE_DICT ON)
   set(CURL_DISABLE_FILE ON)
@@ -210,6 +213,8 @@ endif()
 
 option(CURL_DISABLE_ALTSVC "to disable alt-svc support" OFF)
 mark_as_advanced(CURL_DISABLE_ALTSVC)
+option(CURL_DISABLE_HSTS "to disable HSTS support" OFF)
+mark_as_advanced(CURL_DISABLE_HSTS)
 option(CURL_DISABLE_COOKIES "to disable cookies support" OFF)
 mark_as_advanced(CURL_DISABLE_COOKIES)
 option(CURL_DISABLE_CRYPTO_AUTH "to disable cryptographic authentication" OFF)
@@ -379,6 +384,14 @@ if(CMAKE_USE_SECTRANSP)
   set(SSL_ENABLED ON)
   set(USE_SECTRANSP ON)
   list(APPEND CURL_LIBS "${COREFOUNDATION_FRAMEWORK}" "${SECURITY_FRAMEWORK}")
+endif()
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  find_library(SYSTEMCONFIGURATION_FRAMEWORK "SystemConfiguration")
+  if(NOT SYSTEMCONFIGURATION_FRAMEWORK)
+     message(FATAL_ERROR "SystemConfiguration framework not found")
+  endif()
+  list(APPEND CURL_LIBS "${SYSTEMCONFIGURATION_FRAMEWORK}")
 endif()
 
 if(CMAKE_USE_OPENSSL)
@@ -849,7 +862,8 @@ elseif(CURL_CA_PATH_AUTODETECT OR CURL_CA_BUNDLE_AUTODETECT)
     foreach(SEARCH_CA_BUNDLE_PATH ${SEARCH_CA_BUNDLE_PATHS})
       if(EXISTS "${SEARCH_CA_BUNDLE_PATH}")
         message(STATUS "Found CA bundle: ${SEARCH_CA_BUNDLE_PATH}")
-        set(CURL_CA_BUNDLE "${SEARCH_CA_BUNDLE_PATH}")
+        set(CURL_CA_BUNDLE "${SEARCH_CA_BUNDLE_PATH}" CACHE STRING
+            "Path to the CA bundle. Set 'none' to disable or 'auto' for auto-detection. Defaults to 'auto'.")
         set(CURL_CA_BUNDLE_SET TRUE CACHE BOOL "Path to the CA bundle has been set")
         break()
       endif()
@@ -858,7 +872,8 @@ elseif(CURL_CA_PATH_AUTODETECT OR CURL_CA_BUNDLE_AUTODETECT)
 
   if(CURL_CA_PATH_AUTODETECT AND (NOT CURL_CA_PATH_SET))
     if(EXISTS "/etc/ssl/certs")
-      set(CURL_CA_PATH "/etc/ssl/certs")
+      set(CURL_CA_PATH "/etc/ssl/certs" CACHE STRING
+          "Location of default CA path. Set 'none' to disable or 'auto' for auto-detection. Defaults to 'auto'.")
       set(CURL_CA_PATH_SET TRUE CACHE BOOL "Path to the CA bundle has been set")
     endif()
   endif()
@@ -999,18 +1014,18 @@ check_symbol_exists(alarm         "${CURL_INCLUDES}" HAVE_ALARM)
 if(NOT HAVE_STRNCMPI)
   set(HAVE_STRCMPI)
 endif()
+check_symbol_exists(getppid       "${CURL_INCLUDES}" HAVE_GETPPID)
+check_symbol_exists(utimes        "${CURL_INCLUDES}" HAVE_UTIMES)
+
 check_symbol_exists(gethostbyaddr "${CURL_INCLUDES}" HAVE_GETHOSTBYADDR)
 check_symbol_exists(gethostbyaddr_r "${CURL_INCLUDES}" HAVE_GETHOSTBYADDR_R)
 check_symbol_exists(gettimeofday  "${CURL_INCLUDES}" HAVE_GETTIMEOFDAY)
 check_symbol_exists(inet_addr     "${CURL_INCLUDES}" HAVE_INET_ADDR)
 check_symbol_exists(inet_ntoa     "${CURL_INCLUDES}" HAVE_INET_NTOA)
 check_symbol_exists(inet_ntoa_r   "${CURL_INCLUDES}" HAVE_INET_NTOA_R)
-check_symbol_exists(perror        "${CURL_INCLUDES}" HAVE_PERROR)
 check_symbol_exists(closesocket   "${CURL_INCLUDES}" HAVE_CLOSESOCKET)
-check_symbol_exists(setvbuf       "${CURL_INCLUDES}" HAVE_SETVBUF)
 check_symbol_exists(sigsetjmp     "${CURL_INCLUDES}" HAVE_SIGSETJMP)
 check_symbol_exists(getpass_r     "${CURL_INCLUDES}" HAVE_GETPASS_R)
-check_symbol_exists(strlcat       "${CURL_INCLUDES}" HAVE_STRLCAT)
 check_symbol_exists(getpwuid      "${CURL_INCLUDES}" HAVE_GETPWUID)
 check_symbol_exists(getpwuid_r    "${CURL_INCLUDES}" HAVE_GETPWUID_R)
 check_symbol_exists(geteuid       "${CURL_INCLUDES}" HAVE_GETEUID)
@@ -1059,6 +1074,16 @@ if(HAVE_FSETXATTR)
     curl_internal_test(${CURL_TEST})
   endforeach()
 endif()
+
+set(CMAKE_EXTRA_INCLUDE_FILES   "sys/socket.h")
+check_type_size("sa_family_t"   SIZEOF_SA_FAMILY_T)
+set(HAVE_SA_FAMILY_T            ${HAVE_SIZEOF_SA_FAMILY_T})
+set(CMAKE_EXTRA_INCLUDE_FILES   "")
+
+set(CMAKE_EXTRA_INCLUDE_FILES   "ws2def.h")
+check_type_size("ADDRESS_FAMILY"    SIZEOF_ADDRESS_FAMILY)
+set(HAVE_ADDRESS_FAMILY         ${HAVE_SIZEOF_ADDRESS_FAMILY})
+set(CMAKE_EXTRA_INCLUDE_FILES   "")
 
 # sigaction and sigsetjmp are special. Use special mechanism for
 # detecting those, but only if previous attempt failed.
@@ -1270,6 +1295,11 @@ if(MSVC)
   else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4")
   endif()
+
+  # Use multithreaded compilation on VS 2008+
+  if(MSVC_VERSION GREATER_EQUAL 1500)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+  endif()
 endif()
 
 if(CURL_WERROR)
@@ -1371,6 +1401,7 @@ _add_if("Largefile"     (SIZEOF_CURL_OFF_T GREATER 4) AND
 _add_if("SSPI"          USE_WINDOWS_SSPI)
 _add_if("GSS-API"       HAVE_GSSAPI)
 _add_if("alt-svc"       NOT CURL_DISABLE_ALTSVC)
+_add_if("HSTS"          NOT CURL_DISABLE_HSTS)
 # TODO SSP1 missing for SPNEGO
 _add_if("SPNEGO"        NOT CURL_DISABLE_CRYPTO_AUTH AND
                         (HAVE_GSSAPI OR USE_WINDOWS_SSPI))
@@ -1541,11 +1572,13 @@ configure_package_config_file(CMake/curl-config.cmake.in
         INSTALL_DESTINATION ${CURL_INSTALL_CMAKE_DIR}
 )
 
-install(
-        EXPORT "${TARGETS_EXPORT_NAME}"
-        NAMESPACE "${PROJECT_NAME}::"
-        DESTINATION ${CURL_INSTALL_CMAKE_DIR}
-)
+if(CURL_ENABLE_EXPORT_TARGET)
+  install(
+          EXPORT "${TARGETS_EXPORT_NAME}"
+          NAMESPACE "${PROJECT_NAME}::"
+          DESTINATION ${CURL_INSTALL_CMAKE_DIR}
+  )
+endif()
 
 install(
         FILES ${version_config} ${project_config}

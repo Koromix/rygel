@@ -1142,6 +1142,18 @@ enable_rt
 enable_ech
 enable_code_coverage
 enable_dependency_tracking
+with_schannel
+with_secure_transport
+with_amissl
+with_ssl
+with_openssl
+with_gnutls
+with_mbedtls
+with_wolfssl
+with_mesalink
+with_bearssl
+with_rustls
+with_nss
 enable_largefile
 enable_shared
 enable_static
@@ -1180,22 +1192,9 @@ with_gssapi_includes
 with_gssapi_libs
 with_gssapi
 with_default_ssl_backend
-with_winssl
-with_schannel
-with_darwinssl
-with_secure_transport
-with_amissl
-with_ssl
 with_egd_socket
 with_random
 enable_openssl_auto_load_config
-with_gnutls
-with_mbedtls
-with_wolfssl
-with_mesalink
-with_bearssl
-with_rustls
-with_nss
 with_ca_bundle
 with_ca_path
 with_ca_fallback
@@ -2007,11 +2006,34 @@ Optional Features:
   --enable-alt-svc        Enable alt-svc support
   --disable-alt-svc       Disable alt-svc support
   --enable-hsts           Enable HSTS support
-  --disable-hsts          Disable HSTS support
+    --disable-hsts          Disable HSTS support
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-schannel         enable Windows native SSL/TLS
+  --with-secure-transport enable Apple OS native SSL/TLS
+  --with-amissl           enable Amiga native SSL/TLS (AmiSSL)
+  --with-ssl=PATH         old version of --with-openssl
+  --without-ssl           build without any TLS library
+  --with-openssl=PATH     Where to look for OpenSSL, PATH points to the SSL
+                          installation (default: /usr/local/ssl); when
+                          possible, set the PKG_CONFIG_PATH environment
+                          variable instead of using this option
+  --with-gnutls=PATH      where to look for GnuTLS, PATH points to the
+                          installation root
+  --with-mbedtls=PATH     where to look for mbedTLS, PATH points to the
+                          installation root
+  --with-wolfssl=PATH     where to look for WolfSSL, PATH points to the
+                          installation root (default: system lib default)
+  --with-mesalink=PATH    where to look for MesaLink, PATH points to the
+                          installation root
+  --with-bearssl=PATH     where to look for BearSSL, PATH points to the
+                          installation root
+  --with-rustls=PATH      where to look for rustls, PATH points to the
+                          installation root
+  --with-nss=PATH         where to look for NSS, PATH points to the
+                          installation root
   --with-pic[=PKGS]       try to use only PIC/non-PIC objects [default=use
                           both]
   --with-aix-soname=aix|svr4|both
@@ -2041,45 +2063,8 @@ Optional Packages:
                           Use NAME as default SSL backend
   --without-default-ssl-backend
                           Use implicit default SSL backend
-  --with-winssl           enable Windows native SSL/TLS
-  --without-winssl        disable Windows native SSL/TLS
-  --with-schannel         enable Windows native SSL/TLS
-  --without-schannel      disable Windows native SSL/TLS
-  --with-darwinssl        enable Apple OS native SSL/TLS
-  --without-darwinssl     disable Apple OS native SSL/TLS
-  --with-secure-transport enable Apple OS native SSL/TLS
-  --without-secure-transport
-                          disable Apple OS native SSL/TLS
-  --with-amissl           enable Amiga native SSL/TLS (AmiSSL)
-  --without-amissl        disable Amiga native SSL/TLS (AmiSSL)
-  --with-ssl=PATH         Where to look for OpenSSL, PATH points to the SSL
-                          installation (default: /usr/local/ssl); when
-                          possible, set the PKG_CONFIG_PATH environment
-                          variable instead of using this option
-  --without-ssl           disable OpenSSL
   --with-egd-socket=FILE  Entropy Gathering Daemon socket pathname
   --with-random=FILE      read randomness from FILE (default=/dev/urandom)
-  --with-gnutls=PATH      where to look for GnuTLS, PATH points to the
-                          installation root
-  --without-gnutls        disable GnuTLS detection
-  --with-mbedtls=PATH     where to look for mbedTLS, PATH points to the
-                          installation root
-  --without-mbedtls       disable mbedTLS detection
-  --with-wolfssl=PATH     where to look for WolfSSL, PATH points to the
-                          installation root (default: system lib default)
-  --without-wolfssl       disable WolfSSL detection
-  --with-mesalink=PATH    where to look for MesaLink, PATH points to the
-                          installation root
-  --without-mesalink      disable MesaLink detection
-  --with-bearssl=PATH     where to look for BearSSL, PATH points to the
-                          installation root
-  --without-bearssl       disable BearSSL detection
-  --with-rustls=PATH      where to look for rustls, PATH points to the
-                          installation root
-  --without-rustls        disable rustls detection
-  --with-nss=PATH         where to look for NSS, PATH points to the
-                          installation root
-  --without-nss           disable NSS detection
   --with-ca-bundle=FILE   Path to a file containing CA certificates (example:
                           /etc/ca-bundle.crt)
   --without-ca-bundle     Don't use a default CA bundle
@@ -5892,7 +5877,7 @@ PKGADD_VENDOR="curl.se"
 
 
 
-    curl_ssl_msg="no      (--with-{ssl,gnutls,nss,mbedtls,wolfssl,schannel,secure-transport,mesalink,amissl,bearssl,rustls} )"
+    curl_ssl_msg="no      (--with-{openssl,gnutls,nss,mbedtls,wolfssl,schannel,secure-transport,mesalink,amissl,bearssl,rustls} )"
     curl_ssh_msg="no      (--with-{libssh,libssh2})"
    curl_zlib_msg="no      (--with-zlib)"
  curl_brotli_msg="no      (--with-brotli)"
@@ -5914,16 +5899,171 @@ curl_verbose_msg="enabled (--disable-verbose)"
    curl_rtmp_msg="no      (--with-librtmp)"
   curl_mtlnk_msg="no      (--with-libmetalink)"
     curl_psl_msg="no      (--with-libpsl)"
- curl_altsvc_msg="enabled";
+ curl_altsvc_msg="enabled (--disable-alt-svc)"
+   curl_hsts_msg="enabled (--disable-hsts)"
     ssl_backends=
      curl_h1_msg="enabled (internal)"
      curl_h2_msg="no      (--with-nghttp2, --with-hyper)"
      curl_h3_msg="no      (--with-ngtcp2, --with-quiche)"
 
 enable_altsvc="yes"
+enable_hsts="yes"
 
 INITIAL_LDFLAGS=$LDFLAGS
 INITIAL_LIBS=$LIBS
+
+OPT_SCHANNEL=no
+
+# Check whether --with-schannel was given.
+if test "${with_schannel+set}" = set; then :
+  withval=$with_schannel; OPT_SCHANNEL=$withval
+  TLSCHOICE="schannel"
+fi
+
+
+OPT_SECURETRANSPORT=no
+
+# Check whether --with-secure-transport was given.
+if test "${with_secure_transport+set}" = set; then :
+  withval=$with_secure_transport; OPT_SECURETRANSPORT=$withval
+  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+else
+  }Secure-Transport"
+
+fi
+
+
+OPT_AMISSL=no
+
+# Check whether --with-amissl was given.
+if test "${with_amissl+set}" = set; then :
+  withval=$with_amissl; OPT_AMISSL=$withval
+  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+else
+  }AmiSSL"
+fi
+
+
+OPT_OPENSSL=no
+ca="no"
+
+# Check whether --with-ssl was given.
+if test "${with_ssl+set}" = set; then :
+  withval=$with_ssl; OPT_SSL=$withval
+  OPT_OPENSSL=$withval
+  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+else
+  }OpenSSL"
+fi
+
+
+
+# Check whether --with-openssl was given.
+if test "${with_openssl+set}" = set; then :
+  withval=$with_openssl; OPT_OPENSSL=$withval
+  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+else
+  }OpenSSL"
+fi
+
+
+OPT_GNUTLS=no
+
+# Check whether --with-gnutls was given.
+if test "${with_gnutls+set}" = set; then :
+  withval=$with_gnutls; OPT_GNUTLS=$withval
+  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+else
+  }GnuTLS"
+fi
+
+
+OPT_MBEDTLS=no
+
+# Check whether --with-mbedtls was given.
+if test "${with_mbedtls+set}" = set; then :
+  withval=$with_mbedtls; OPT_MBEDTLS=$withval
+  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+else
+  }mbedTLS"
+fi
+
+
+OPT_WOLFSSL=no
+
+# Check whether --with-wolfssl was given.
+if test "${with_wolfssl+set}" = set; then :
+  withval=$with_wolfssl; OPT_WOLFSSL=$withval
+  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+else
+  }wolfSSL"
+fi
+
+
+OPT_MESALINK=no
+
+# Check whether --with-mesalink was given.
+if test "${with_mesalink+set}" = set; then :
+  withval=$with_mesalink; OPT_MESALINK=$withval
+  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+else
+  }MesaLink"
+fi
+
+
+OPT_BEARSSL=no
+
+# Check whether --with-bearssl was given.
+if test "${with_bearssl+set}" = set; then :
+  withval=$with_bearssl; OPT_BEARSSL=$withval
+  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+else
+  }BearSSL"
+fi
+
+
+OPT_RUSTLS=no
+
+# Check whether --with-rustls was given.
+if test "${with_rustls+set}" = set; then :
+  withval=$with_rustls; OPT_RUSTLS=$withval
+  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+else
+  }rustls"
+fi
+
+
+OPT_NSS=no
+
+# Check whether --with-nss was given.
+if test "${with_nss+set}" = set; then :
+  withval=$with_nss; OPT_NSS=$withval
+  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+else
+  }NSS"
+fi
+
+
+if test -z "$TLSCHOICE"; then
+  if test "x$OPT_SSL" != "xno"; then
+    as_fn_error $? "select TLS backend(s) or disable TLS with --without-ssl.
+
+Select from these:
+
+  --with-amissl
+  --with-bearssl
+  --with-gnutls
+  --with-mbedtls
+  --with-mesalink
+  --with-nss
+  --with-openssl (also works for BoringSSL and libressl)
+  --with-rustls
+  --with-schannel
+  --with-secure-transport
+  --with-wolfssl
+" "$LINENO" 5
+  fi
+fi
 
 
 # Make sure we can run config.sub.
@@ -20147,6 +20287,55 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
 
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to link macOS SystemConfiguration framework" >&5
+$as_echo_n "checking whether to link macOS SystemConfiguration framework... " >&6; }
+case $host_os in
+  darwin*)
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+#include <TargetConditionals.h>
+
+int main (void)
+{
+
+#if (TARGET_OS_OSX)
+      return 0;
+#else
+#error Not a macOS
+#endif
+
+ ;
+ return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+
+      build_for_macos="yes"
+
+else
+
+      build_for_macos="no"
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+    if test "x$build_for_macos" != xno; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+      LDFLAGS="$LDFLAGS -framework SystemConfiguration"
+    else
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+    fi
+    ;;
+  *)
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+esac
+
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking to see if the compiler supports __builtin_available()" >&5
 $as_echo_n "checking to see if the compiler supports __builtin_available()... " >&6; }
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -20209,9 +20398,14 @@ $as_echo "#define CURL_DISABLE_RTSP 1" >>confdefs.h
 
 $as_echo "#define CURL_DISABLE_ALTSVC 1" >>confdefs.h
 
+
+$as_echo "#define CURL_DISABLE_HSTS 1" >>confdefs.h
+
        curl_h1_msg="no      (--enable-http, --with-hyper)"
        curl_altsvc_msg="no";
+       curl_hsts_msg="no      (--enable-hsts)";
        enable_altsvc="no"
+       enable_hsts="no"
        ;;
   *)   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
@@ -20284,6 +20478,11 @@ $as_echo "#define CURL_DISABLE_LDAP 1" >>confdefs.h
 
        CURL_DISABLE_LDAP=1
 
+       ;;
+  yes)
+       ldap_askedfor="yes"
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
        ;;
   *)
        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
@@ -22888,6 +23087,9 @@ _ACEOF
 
 else
 
+      if test -n "$ldap_askedfor"; then
+        as_fn_error $? "couldn't detect the LDAP libraries" "$LINENO" 5
+      fi
       { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: \"$LDAPLIBNAME\" is not an LDAP library: LDAP disabled" >&5
 $as_echo "$as_me: WARNING: \"$LDAPLIBNAME\" is not an LDAP library: LDAP disabled" >&2;}
 
@@ -23006,6 +23208,9 @@ $as_echo "$curl_cv_ldap_LIBS" >&6; }
 
     case X-"$curl_cv_ldap_LIBS" in
       X-unknown)
+        if test -n "$ldap_askedfor"; then
+          as_fn_error $? "couldn't detect the LDAP libraries" "$LINENO" 5
+        fi
         { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Cannot find libraries for LDAP support: LDAP disabled" >&5
 $as_echo "$as_me: WARNING: Cannot find libraries for LDAP support: LDAP disabled" >&2;}
 
@@ -23563,25 +23768,9 @@ case "$DEFAULT_SSL_BACKEND" in
 esac
 
 
-
-OPT_SCHANNEL=no
-
-# Check whether --with-winssl was given.
-if test "${with_winssl+set}" = set; then :
-  withval=$with_winssl; OPT_SCHANNEL=$withval
-fi
-
-
-
-# Check whether --with-schannel was given.
-if test "${with_schannel+set}" = set; then :
-  withval=$with_schannel; OPT_SCHANNEL=$withval
-fi
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to enable Windows native SSL/TLS (Windows native builds only)" >&5
-$as_echo_n "checking whether to enable Windows native SSL/TLS (Windows native builds only)... " >&6; }
-if test -z "$ssl_backends" -o "x$OPT_SCHANNEL" != xno; then
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to enable Windows native SSL/TLS" >&5
+$as_echo_n "checking whether to enable Windows native SSL/TLS... " >&6; }
+if test "x$OPT_SCHANNEL" != xno; then
   ssl_msg=
   if test "x$OPT_SCHANNEL" != "xno"  &&
      test "x$curl_cv_native_windows" = "xyes"; then
@@ -23592,7 +23781,7 @@ $as_echo "#define USE_SCHANNEL 1" >>confdefs.h
 
     USE_SCHANNEL=1
 
-    ssl_msg="Windows-native"
+    ssl_msg="Schannel"
     test schannel != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
     SCHANNEL_ENABLED=1
     # --with-schannel implies --enable-sspi
@@ -23612,28 +23801,10 @@ else
 $as_echo "no" >&6; }
 fi
 
-if test "x$USE_WIN32_CRYPTO" = "x1" -o "x$USE_SCHANNEL" = "x1"; then
-  LIBS="-ladvapi32 -lcrypt32 $LIBS"
-fi
-
-OPT_SECURETRANSPORT=no
-
-# Check whether --with-darwinssl was given.
-if test "${with_darwinssl+set}" = set; then :
-  withval=$with_darwinssl; OPT_SECURETRANSPORT=$withval
-fi
-
-
-
-# Check whether --with-secure-transport was given.
-if test "${with_secure_transport+set}" = set; then :
-  withval=$with_secure_transport; OPT_SECURETRANSPORT=$withval
-fi
-
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to enable Secure Transport" >&5
 $as_echo_n "checking whether to enable Secure Transport... " >&6; }
-if test -z "$ssl_backends" -o "x$OPT_SECURETRANSPORT" != xno; then
+if test "x$OPT_SECURETRANSPORT" != xno; then
   if test "x$OPT_SECURETRANSPORT" != "xno" &&
      (test "x$cross_compiling" != "xno" || test -d "/System/Library/Frameworks/Security.framework"); then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
@@ -23657,18 +23828,12 @@ else
 $as_echo "no" >&6; }
 fi
 
-OPT_AMISSL=no
-
-# Check whether --with-amissl was given.
-if test "${with_amissl+set}" = set; then :
-  withval=$with_amissl; OPT_AMISSL=$withval
-fi
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to enable Amiga native SSL/TLS (AmiSSL)" >&5
 $as_echo_n "checking whether to enable Amiga native SSL/TLS (AmiSSL)... " >&6; }
 if test "$HAVE_PROTO_BSDSOCKET_H" = "1"; then
-  if test -z "$ssl_backends" -o "x$OPT_AMISSL" != xno; then
+  if test "x$OPT_AMISSL" != xno; then
     ssl_msg=
     if test "x$OPT_AMISSL" != "xno"; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
@@ -23698,17 +23863,8 @@ $as_echo "no" >&6; }
 fi
 
 
-OPT_SSL=off
-ca="no"
 
-# Check whether --with-ssl was given.
-if test "${with_ssl+set}" = set; then :
-  withval=$with_ssl; OPT_SSL=$withval
-fi
-
-
-if test -z "$ssl_backends" -o "x$OPT_SSL" != xno &&
-   test X"$OPT_SSL" != Xno; then
+if test "x$OPT_OPENSSL" != xno; then
   ssl_msg=
 
     CLEANLDFLAGS="$LDFLAGS"
@@ -23750,27 +23906,22 @@ rm -f core conftest.err conftest.$ac_objext \
       ;;
   esac
 
-  case "$OPT_SSL" in
+  case "$OPT_OPENSSL" in
   yes)
-        PKGTEST="yes"
-    PREFIX_OPENSSL=/usr/local/ssl
-    LIB_OPENSSL="$PREFIX_OPENSSL/lib$libsuff"
-    ;;
-  off)
         PKGTEST="yes"
     PREFIX_OPENSSL=
     ;;
   *)
         PKGTEST="no"
-    PREFIX_OPENSSL=$OPT_SSL
+    PREFIX_OPENSSL=$OPT_OPENSSL
 
-                OPENSSL_PCDIR="$OPT_SSL/lib/pkgconfig"
+                OPENSSL_PCDIR="$OPT_OPENSSL/lib/pkgconfig"
     if test -f "$OPENSSL_PCDIR/openssl.pc"; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: PKG_CONFIG_LIBDIR will be set to \"$OPENSSL_PCDIR\"" >&5
 $as_echo "$as_me: PKG_CONFIG_LIBDIR will be set to \"$OPENSSL_PCDIR\"" >&6;}
       PKGTEST="yes"
     elif test ! -f "$PREFIX_OPENSSL/include/openssl/ssl.h"; then
-      as_fn_error $? "$PREFIX_OPENSSL is a bad --with-ssl prefix!" "$LINENO" 5
+      as_fn_error $? "$PREFIX_OPENSSL is a bad --with-openssl prefix!" "$LINENO" 5
     fi
 
             LIB_OPENSSL="$PREFIX_OPENSSL/lib$libsuff"
@@ -23997,8 +24148,9 @@ else
        # only set this if pkg-config wasn't used
        CPPFLAGS="$CLEANCPPFLAGS -I$PREFIX_OPENSSL/include/openssl -I$PREFIX_OPENSSL/include"
      fi
-     # Linking previously failed, try extra paths from --with-ssl or pkg-config.
-     # Use a different function name to avoid reusing the earlier cached result.
+     # Linking previously failed, try extra paths from --with-openssl or
+     # pkg-config.  Use a different function name to avoid reusing the earlier
+     # cached result.
      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for HMAC_Init_ex in -lcrypto" >&5
 $as_echo_n "checking for HMAC_Init_ex in -lcrypto... " >&6; }
 if ${ac_cv_lib_crypto_HMAC_Init_ex+:} false; then :
@@ -24267,7 +24419,7 @@ done
        LIBS="$CLEANLIBS"
     fi
 
-    if test X"$OPT_SSL" != Xoff &&
+    if test X"$OPT_OPENSSL" != Xoff &&
        test "$OPENSSL_ENABLED" != "1"; then
       as_fn_error $? "OpenSSL libs and/or directories were not found where specified!" "$LINENO" 5
     fi
@@ -25083,14 +25235,13 @@ $as_echo "$as_me: WARNING: $tst_warns" >&2;}
   test -z "$ssl_msg" || ssl_backends="${ssl_backends:+$ssl_backends, }$ssl_msg"
 fi
 
-if test X"$OPT_SSL" != Xoff &&
-  test X"$OPT_SSL" != Xno &&
+if test X"$OPT_OPENSSL" != Xno &&
   test "$OPENSSL_ENABLED" != "1"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: OPT_SSL: $OPT_SSL" >&5
-$as_echo "$as_me: OPT_SSL: $OPT_SSL" >&6;}
+  { $as_echo "$as_me:${as_lineno-$LINENO}: OPT_OPENSSL: $OPT_OPENSSL" >&5
+$as_echo "$as_me: OPT_OPENSSL: $OPT_OPENSSL" >&6;}
   { $as_echo "$as_me:${as_lineno-$LINENO}: OPENSSL_ENABLED: $OPENSSL_ENABLED" >&5
 $as_echo "$as_me: OPENSSL_ENABLED: $OPENSSL_ENABLED" >&6;}
-  as_fn_error $? "--with-ssl was given but OpenSSL could not be detected" "$LINENO" 5
+  as_fn_error $? "--with-openssl was given but OpenSSL could not be detected" "$LINENO" 5
 fi
 
 
@@ -25218,16 +25369,8 @@ fi
 fi
 
 
-OPT_GNUTLS=no
 
-
-# Check whether --with-gnutls was given.
-if test "${with_gnutls+set}" = set; then :
-  withval=$with_gnutls; OPT_GNUTLS=$withval
-fi
-
-
-if test -z "$ssl_backends" -o "x$OPT_GNUTLS" != xno; then
+if test "x$OPT_GNUTLS" != xno; then
   ssl_msg=
 
   if test X"$OPT_GNUTLS" != Xno; then
@@ -25622,18 +25765,11 @@ fi
 fi
 
 
-OPT_MBEDTLS=no
-
-_cppflags=$CPPFLAGS
-_ldflags=$LDFLAGS
-
-# Check whether --with-mbedtls was given.
-if test "${with_mbedtls+set}" = set; then :
-  withval=$with_mbedtls; OPT_MBEDTLS=$withval
-fi
 
 
-if test -z "$ssl_backends" -o "x$OPT_MBEDTLS" != xno; then
+if test "x$OPT_MBEDTLS" != xno; then
+  _cppflags=$CPPFLAGS
+  _ldflags=$LDFLAGS
   ssl_msg=
 
   if test X"$OPT_MBEDTLS" != Xno; then
@@ -25784,16 +25920,6 @@ $as_echo "$as_me: Added $mbedtlslib to CURL_LIBRARY_PATH" >&6;}
 fi
 
 
-OPT_WOLFSSL=no
-
-_cppflags=$CPPFLAGS
-_ldflags=$LDFLAGS
-
-
-# Check whether --with-wolfssl was given.
-if test "${with_wolfssl+set}" = set; then :
-  withval=$with_wolfssl; OPT_WOLFSSL=$withval
-fi
 
 
 case "$OPT_WOLFSSL" in
@@ -25805,7 +25931,10 @@ case "$OPT_WOLFSSL" in
     ;;
 esac
 
-if test -z "$ssl_backends" -o "x$OPT_WOLFSSL" != xno; then
+if test "x$OPT_WOLFSSL" != xno; then
+  _cppflags=$CPPFLAGS
+  _ldflags=$LDFLAGS
+
   ssl_msg=
 
   if test X"$OPT_WOLFSSL" != Xno; then
@@ -26098,8 +26227,7 @@ _ACEOF
 
       LIBS="$addlib -lm $LIBS"
 
-                              for ac_func in wolfSSLv3_client_method \
-                     wolfSSL_get_peer_certificate \
+                        for ac_func in wolfSSL_get_peer_certificate \
                      wolfSSL_UseALPN
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
@@ -26127,9 +26255,9 @@ $as_echo "$as_me: Add $f/wolfssl to CPPFLAGS" >&6;}
                 break
               done
             else
-                                          CPPFLAGS="-I$includedir/wolfssl $CPPFLAGS"
-              { $as_echo "$as_me:${as_lineno-$LINENO}: Add $includedir/wolfssl to CPPFLAGS" >&5
-$as_echo "$as_me: Add $includedir/wolfssl to CPPFLAGS" >&6;}
+                                          CPPFLAGS="-I/usr/include/wolfssl $CPPFLAGS"
+              { $as_echo "$as_me:${as_lineno-$LINENO}: Add /usr/include/wolfssl to CPPFLAGS" >&5
+$as_echo "$as_me: Add /usr/include/wolfssl to CPPFLAGS" >&6;}
             fi
             WOLFSSL_NTLM=1
 
@@ -26153,18 +26281,11 @@ $as_echo "$as_me: Added $wolfssllibpath to CURL_LIBRARY_PATH" >&6;}
 fi
 
 
-OPT_MESALINK=no
-
-_cppflags=$CPPFLAGS
-_ldflags=$LDFLAGS
-
-# Check whether --with-mesalink was given.
-if test "${with_mesalink+set}" = set; then :
-  withval=$with_mesalink; OPT_MESALINK=$withval
-fi
 
 
-if test -z "$ssl_backends" -o "x$OPT_MESALINK" != xno; then
+if test "x$OPT_MESALINK" != xno; then
+  _cppflags=$CPPFLAGS
+  _ldflags=$LDFLAGS
   ssl_msg=
 
   if test X"$OPT_MESALINK" != Xno; then
@@ -26314,18 +26435,10 @@ $as_echo "$as_me: Added $mesalinklib to LD_LIBRARY_PATH" >&6;}
 fi
 
 
-OPT_BEARSSL=no
 
-_cppflags=$CPPFLAGS
-_ldflags=$LDFLAGS
-
-# Check whether --with-bearssl was given.
-if test "${with_bearssl+set}" = set; then :
-  withval=$with_bearssl; OPT_BEARSSL=$withval
-fi
-
-
-if test -z "$ssl_backends" -o "x$OPT_BEARSSL" != xno; then
+if test "x$OPT_BEARSSL" != xno; then
+  _cppflags=$CPPFLAGS
+  _ldflags=$LDFLAGS
   ssl_msg=
 
   if test X"$OPT_BEARSSL" != Xno; then
@@ -26476,18 +26589,10 @@ $as_echo "$as_me: Added $bearssllib to CURL_LIBRARY_PATH" >&6;}
 fi
 
 
-OPT_RUSTLS=no
 
-_cppflags=$CPPFLAGS
-_ldflags=$LDFLAGS
-
-# Check whether --with-rustls was given.
-if test "${with_rustls+set}" = set; then :
-  withval=$with_rustls; OPT_RUSTLS=$withval
-fi
-
-
-if test -z "$ssl_backends" -o "x$OPT_RUSTLS" != xno; then
+if test "x$OPT_RUSTLS" != xno; then
+  _cppflags=$CPPFLAGS
+  _ldflags=$LDFLAGS
   ssl_msg=
 
   if test X"$OPT_RUSTLS" != Xno; then
@@ -26558,13 +26663,16 @@ fi
       rustlslib=$OPT_RUSTLS/lib$libsuff
 
       LDFLAGS="$LDFLAGS $addld"
+      if (test -d "/System/Library/Frameworks/Security.framework" && test "x$cross_compiling" != "xyes"); then
+        LDFLAGS="$LDFLAGS -framework CoreFoundation -framework Security"
+      fi
       if test "$addcflags" != "-I/usr/include"; then
          CPPFLAGS="$CPPFLAGS $addcflags"
       fi
 
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for rustls_client_session_read in -lcrustls" >&5
-$as_echo_n "checking for rustls_client_session_read in -lcrustls... " >&6; }
-if ${ac_cv_lib_crustls_rustls_client_session_read+:} false; then :
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for rustls_connection_read in -lcrustls" >&5
+$as_echo_n "checking for rustls_connection_read in -lcrustls... " >&6; }
+if ${ac_cv_lib_crustls_rustls_connection_read+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -26576,26 +26684,26 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char rustls_client_session_read ();
+char rustls_connection_read ();
 int main (void)
 {
-return rustls_client_session_read ();
+return rustls_connection_read ();
  ;
  return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_crustls_rustls_client_session_read=yes
+  ac_cv_lib_crustls_rustls_connection_read=yes
 else
-  ac_cv_lib_crustls_rustls_client_session_read=no
+  ac_cv_lib_crustls_rustls_connection_read=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_crustls_rustls_client_session_read" >&5
-$as_echo "$ac_cv_lib_crustls_rustls_client_session_read" >&6; }
-if test "x$ac_cv_lib_crustls_rustls_client_session_read" = xyes; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_crustls_rustls_connection_read" >&5
+$as_echo "$ac_cv_lib_crustls_rustls_connection_read" >&6; }
+if test "x$ac_cv_lib_crustls_rustls_connection_read" = xyes; then :
 
 
 $as_echo "#define USE_RUSTLS 1" >>confdefs.h
@@ -26635,16 +26743,7 @@ $as_echo "$as_me: Added $rustlslib to CURL_LIBRARY_PATH" >&6;}
 fi
 
 
-OPT_NSS=no
-
-
-# Check whether --with-nss was given.
-if test "${with_nss+set}" = set; then :
-  withval=$with_nss; OPT_NSS=$withval
-fi
-
-
-if test -z "$ssl_backends" -o "x$OPT_NSS" != xno; then
+if test "x$OPT_NSS" != xno; then
   ssl_msg=
 
   if test X"$OPT_NSS" != Xno; then
@@ -27071,13 +27170,19 @@ $as_echo "$as_me: Added $nssprefix/lib$libsuff to CURL_LIBRARY_PATH" >&6;}
   test -z "$ssl_msg" || ssl_backends="${ssl_backends:+$ssl_backends, }$ssl_msg"
 fi
 
+
+
+if test "x$USE_WIN32_CRYPTO" = "x1" -o "x$USE_SCHANNEL" = "x1"; then
+  LIBS="-ladvapi32 -lcrypt32 $LIBS"
+fi
+
 case "x$OPENSSL_ENABLED$GNUTLS_ENABLED$NSS_ENABLED$MBEDTLS_ENABLED$WOLFSSL_ENABLED$SCHANNEL_ENABLED$SECURETRANSPORT_ENABLED$MESALINK_ENABLED$BEARSSL_ENABLED$AMISSL_ENABLED$RUSTLS_ENABLED"
 in
 x)
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: SSL disabled, you will not be able to use HTTPS, FTPS, NTLM and more." >&5
 $as_echo "$as_me: WARNING: SSL disabled, you will not be able to use HTTPS, FTPS, NTLM and more." >&2;}
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Use --with-ssl, --with-gnutls, --with-wolfssl, --with-mbedtls, --with-nss, --with-schannel, --with-secure-transport, --with-mesalink, --with-amissl or --with-bearssl to address this." >&5
-$as_echo "$as_me: WARNING: Use --with-ssl, --with-gnutls, --with-wolfssl, --with-mbedtls, --with-nss, --with-schannel, --with-secure-transport, --with-mesalink, --with-amissl or --with-bearssl to address this." >&2;}
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Use --with-openssl, --with-gnutls, --with-wolfssl, --with-mbedtls, --with-nss, --with-schannel, --with-secure-transport, --with-mesalink, --with-amissl, --with-bearssl or --with-rustls to address this." >&5
+$as_echo "$as_me: WARNING: Use --with-openssl, --with-gnutls, --with-wolfssl, --with-mbedtls, --with-nss, --with-schannel, --with-secure-transport, --with-mesalink, --with-amissl, --with-bearssl or --with-rustls to address this." >&2;}
   ;;
 x1)
   # one SSL backend is enabled
@@ -30810,7 +30915,12 @@ if test "x$ac_cv_lib_quiche_quiche_connect" = xyes; then :
 
        for ac_header in quiche.h
 do :
-  ac_fn_c_check_header_mongrel "$LINENO" "quiche.h" "ac_cv_header_quiche_h" "$ac_includes_default"
+  ac_fn_c_check_header_compile "$LINENO" "quiche.h" "ac_cv_header_quiche_h" "
+$ac_includes_default
+#include <sys/socket.h>
+
+
+"
 if test "x$ac_cv_header_quiche_h" = xyes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_QUICHE_H 1
@@ -44790,34 +44900,39 @@ $as_echo "no" >&6; }
 fi
 
 
-curl_hsts_msg="no      (--enable-hsts)";
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to support HSTS" >&5
+if test -n "$SSL_ENABLED"; then
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to support HSTS" >&5
 $as_echo_n "checking whether to support HSTS... " >&6; }
-# Check whether --enable-hsts was given.
+  # Check whether --enable-hsts was given.
 if test "${enable_hsts+set}" = set; then :
   enableval=$enable_hsts;  case "$enableval" in
-  no)
+    no)
        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
+       enable_hsts="no"
        ;;
-  *) { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+    *) { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-       curl_hsts_msg="enabled";
-       enable_hsts="yes"
        ;;
-  esac
+    esac
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 
 fi
 
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: disables HSTS due to lack of SSL" >&5
+$as_echo "$as_me: disables HSTS due to lack of SSL" >&6;}
+  enable_hsts="no"
+fi
 
-if test "$enable_hsts" = "yes"; then
+if test "x$enable_hsts" != "xyes"; then
+  curl_hsts_msg="no      (--enable-hsts)";
 
-$as_echo "#define USE_HSTS 1" >>confdefs.h
+$as_echo "#define CURL_DISABLE_HSTS 1" >>confdefs.h
 
-  experimental="$experimental HSTS"
 fi
 
 if test "x$want_ech" != "xno"; then
@@ -48019,6 +48134,7 @@ done
   Metalink:         ${curl_mtlnk_msg}
   PSL:              ${curl_psl_msg}
   Alt-svc:          ${curl_altsvc_msg}
+  HSTS:             ${curl_hsts_msg}
   HTTP1:            ${curl_h1_msg}
   HTTP2:            ${curl_h2_msg}
   HTTP3:            ${curl_h3_msg}
@@ -48065,6 +48181,7 @@ $as_echo "$as_me: Configured to build curl/libcurl:
   Metalink:         ${curl_mtlnk_msg}
   PSL:              ${curl_psl_msg}
   Alt-svc:          ${curl_altsvc_msg}
+  HSTS:             ${curl_hsts_msg}
   HTTP1:            ${curl_h1_msg}
   HTTP2:            ${curl_h2_msg}
   HTTP3:            ${curl_h3_msg}

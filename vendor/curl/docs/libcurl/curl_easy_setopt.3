@@ -20,7 +20,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH curl_easy_setopt 3 "March 26, 2021" "libcurl 7.76.1" "libcurl Manual"
+.TH curl_easy_setopt 3 "April 24, 2021" "libcurl 7.77.0" "libcurl Manual"
 
 .SH NAME
 curl_easy_setopt \- set options for a curl easy handle
@@ -495,7 +495,7 @@ Timeout for the connection phase. See \fICURLOPT_CONNECTTIMEOUT(3)\fP
 .IP CURLOPT_CONNECTTIMEOUT_MS
 Millisecond timeout for the connection phase. See \fICURLOPT_CONNECTTIMEOUT_MS(3)\fP
 .IP CURLOPT_IPRESOLVE
-IP version to resolve to. See \fICURLOPT_IPRESOLVE(3)\fP
+IP version to use. See \fICURLOPT_IPRESOLVE(3)\fP
 .IP CURLOPT_CONNECT_ONLY
 Only connect, nothing else. See \fICURLOPT_CONNECT_ONLY(3)\fP
 .IP CURLOPT_USE_SSL
@@ -585,8 +585,12 @@ Verify the DOH (DNS-over-HTTPS) SSL certificate's status. See
 \fICURLOPT_DOH_SSL_VERIFYSTATUS(3)\fP
 .IP CURLOPT_CAINFO
 CA cert bundle. See \fICURLOPT_CAINFO(3)\fP
+.IP CURLOPT_CAINFO_BLOB
+CA cert bundle memory buffer. See \fICURLOPT_CAINFO_BLOB(3)\fP
 .IP CURLOPT_PROXY_CAINFO
 Proxy CA cert bundle. See \fICURLOPT_PROXY_CAINFO(3)\fP
+.IP CURLOPT_PROXY_CAINFO_BLOB
+Proxy CA cert bundle memory buffer. See \fICURLOPT_PROXY_CAINFO_BLOB(3)\fP
 .IP CURLOPT_ISSUERCERT
 Issuer certificate. See \fICURLOPT_ISSUERCERT(3)\fP
 .IP CURLOPT_ISSUERCERT_BLOB
