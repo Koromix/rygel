@@ -18,6 +18,7 @@
 #include "messages.hh"
 #include "session.hh"
 #include "../../core/libnet/libnet.hh"
+#include "../../core/libsecurity/libsecurity.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
@@ -340,16 +341,6 @@ void PruneSessions()
         floods.RemoveFirst(expired);
         floods_map.Trim();
     }
-}
-
-// Keep in sync with text in password dialogs
-bool CheckPassword(Span<const char> password)
-{
-    // XXX: Use cracklib, zxcvbn or something like that to check for password strength
-    if (password.len < 8)
-        return false;
-
-    return true;
 }
 
 bool HashPassword(Span<const char> password, char out_hash[crypto_pwhash_STRBYTES])
@@ -865,7 +856,7 @@ void HandlePasswordChange(const http_RequestInfo &request, http_IO *io)
         }
 
         // Check password strength
-        if (!CheckPassword(new_password)) {
+        if (!sec_CheckPassword(new_password)) {
             LogError("Password is not strong enough");
             io->AttachError(422);
             return;

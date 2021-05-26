@@ -21,7 +21,7 @@
 #include "records.hh"
 #include "session.hh"
 #include "../../core/libnet/libnet.hh"
-#include "../../core/libsecurity/sandbox.hh"
+#include "../../core/libsecurity/libsecurity.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 #include "../../../vendor/curl/include/curl/curl.h"
 #ifndef _WIN32

@@ -13,7 +13,7 @@
 
 #include "../../core/libcc/libcc.hh"
 #include "../libblikk/libblikk.hh"
-#include "../../core/libsecurity/sandbox.hh"
+#include "../../core/libsecurity/libsecurity.hh"
 
 namespace RG {
 

@@ -84,7 +84,6 @@ void InvalidateUserStamps(int64_t userid);
 RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void PruneSessions();
 
-bool CheckPassword(Span<const char> password);
 bool HashPassword(Span<const char> password, char out_hash[crypto_pwhash_STRBYTES]);
 
 void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);

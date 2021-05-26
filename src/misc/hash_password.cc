@@ -12,6 +12,7 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "../core/libcc/libcc.hh"
+#include "../core/libsecurity/libsecurity.hh"
 
 #include "../../vendor/libsodium/src/libsodium/include/sodium.h"
 
@@ -25,6 +26,7 @@ int Main(int argc, char **argv)
     const char *password = nullptr;
     bool mask = true;
     bool confirm = true;
+    bool check = true;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp,
@@ -35,7 +37,8 @@ Options:
     %!..+-p, --password <password>%!0    Use password given as option
 
         %!..+--no_mask%!0                Show password as typed
-        %!..+--no_confirm%!0             Ask only once for password)", FelixTarget);
+        %!..+--no_confirm%!0             Ask only once for password
+        %!..+--no_check%!0               Don't check password strength)", FelixTarget);
     };
 
     // Handle version
@@ -58,6 +61,8 @@ Options:
                 mask = false;
             } else if (opt.Test("--no_confirm")) {
                 confirm = false;
+            } else if (opt.Test("--no_check")) {
+                check = false;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -80,11 +85,16 @@ Options:
         }
 
         if (confirm) {
-            const char *password2 = Prompt("Confirm: ", mask ? "*" : nullptr, &temp_alloc);
-            if (!password2)
+            // Don't ask the user to do it twice if the check fails
+            if (check && !sec_CheckPassword(password))
+                return 1;
+            check = false;
+
+            const char *confirm = Prompt("Confirm: ", mask ? "*" : nullptr, &temp_alloc);
+            if (!confirm)
                 return 1;
 
-            if (!TestStr(password, password2)) {
+            if (!TestStr(password, confirm)) {
                 LogError("Password mismatch");
                 return 1;
             }
@@ -93,6 +103,9 @@ Options:
         LogError("Password must not be empty");
         return 1;
     }
+
+    if (check && !sec_CheckPassword(password))
+        return 1;
 
     char hash[crypto_pwhash_STRBYTES];
     if (crypto_pwhash_str(hash, password, strlen(password),

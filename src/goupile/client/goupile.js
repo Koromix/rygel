@@ -290,7 +290,8 @@ const goupile = new function() {
             let old_password = d.password('*old_password', 'Ancien mot de passe');
             let new_password = d.password('*new_password', 'Nouveau mot de passe');
             let new_password2 = d.password('*new_password2', null, {
-                placeholder: 'Confirmation'
+                placeholder: 'Confirmation',
+                help: 'Doit contenir au moins 8 caractères de 3 classes différentes'
             });
             if (new_password.value != null && new_password2.value != null && new_password.value !== new_password2.value)
                 new_password2.error('Les mots de passe sont différents');

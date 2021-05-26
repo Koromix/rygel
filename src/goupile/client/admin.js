@@ -619,7 +619,7 @@ function AdminController() {
             let password = d.password('*password', 'Mot de passe');
             let password2 = d.password('*password2', null, {
                 placeholder: 'Confirmation',
-                help: 'Doit contenir au moins 8 caractères'
+                help: 'Doit contenir au moins 8 caractères de 3 classes différentes'
             });
             if (password.value != null && password2.value != null) {
                 if (password.value !== password2.value) {
@@ -737,7 +737,7 @@ function AdminController() {
                         placeholder: 'Confirmation',
                         help: [
                             'Laissez vide pour ne pas modifier',
-                            'Doit contenir au moins 8 caractères'
+                            'Doit contenir au moins 8 caractères de 3 classes différentes'
                         ],
                         mandatory: password.value != null
                     });

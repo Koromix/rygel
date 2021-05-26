@@ -18,6 +18,7 @@
 #include "goupile.hh"
 #include "instance.hh"
 #include "session.hh"
+#include "../../core/libsecurity/libsecurity.hh"
 #include "../../core/libwrap/json.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 #include "../../../vendor/miniz/miniz.h"
@@ -463,7 +464,7 @@ Options:
     if (!CheckUserName(username))
         return 1;
     if (password) {
-        if (!CheckPassword(password)) {
+        if (!sec_CheckPassword(password)) {
             LogError("Password is not strong enough");
             return 1;
         }
@@ -473,7 +474,7 @@ retry:
         if (!password)
             return 1;
 
-        if (!CheckPassword(password)) {
+        if (!sec_CheckPassword(password)) {
             LogError("Password is not strong enough");
             goto retry;
         }
@@ -2266,7 +2267,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
             if (username && !CheckUserName(username)) {
                 valid = false;
             }
-            if (password && !CheckPassword(password)) {
+            if (password && !sec_CheckPassword(password)) {
                 LogError("Password is not strong enough");
                 valid = false;
             }
@@ -2389,7 +2390,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
             if (username && !CheckUserName(username)) {
                 valid = false;
             }
-            if (password && !CheckPassword(password)) {
+            if (password && !sec_CheckPassword(password)) {
                 LogError("Password is not strong enough");
                 valid = false;
             }
