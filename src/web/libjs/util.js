@@ -479,25 +479,78 @@ const util = new function() {
         });
     };
 
-    this.serializeAsync = function(func) {
-        let queue = Promise.resolve();
-
-        return (...args) => {
-            let p = queue.then(() => func(...args));
-            queue = p.catch(() => {});
-
-            return p;
-        };
-    };
-
     this.capitalize = function(str) {
         if (str.length > 1) {
             return str[0].toUpperCase() + str.substr(1);
         } else {
             return str.toUpperCase();
         }
-    }
+    };
+
+    this.serialize = function(func, mutex = new Mutex) {
+        return (...args) => mutex.run(() => func(...args));
+    };
 };
+
+// ------------------------------------------------------------------------
+// Mutex
+// ------------------------------------------------------------------------
+
+function Mutex() {
+    let self = this;
+
+    let root = {
+        prev: null,
+        next: null
+    };
+    root.prev = root;
+    root.next = root;
+
+    this.lock = function() {
+        return new Promise((resolve, reject) => {
+            let node = {
+                prev: root.prev,
+                next: root,
+                resolve: resolve
+            };
+
+            root.prev.next = node;
+            root.prev = node;
+
+            if (node.prev === root)
+                resolve();
+        });
+    };
+
+    this.unlock = function() {
+        if (root.prev !== root) {
+            let node = root.prev;
+
+            node.next.prev = node.prev;
+            node.prev.next = node.next;
+
+            node.resolve();
+        }
+    };
+
+    this.run = async function(func) {
+        await self.lock();
+
+        try {
+            let ret = await func();
+            return ret;
+        } catch (err) {
+            throw err;
+        } finally {
+            self.unlock();
+        }
+    };
+
+    this.chain = function(func) {
+        self.unlock();
+        func();
+    };
+}
 
 // ------------------------------------------------------------------------
 // Log
@@ -686,7 +739,10 @@ function LruMap(limit) {
 
     this.size = 0;
 
-    let root_bucket = {}
+    let root_bucket = {
+        prev: null,
+        next: null
+    };
     root_bucket.prev = root_bucket;
     root_bucket.next = root_bucket;
 

@@ -17,6 +17,9 @@ function InstanceController() {
     let db;
     let app;
 
+    // Explicit mutex to serialize (global) state-changing functions
+    let mutex = new Mutex;
+
     let route = {
         form: null,
         page: null,
@@ -152,9 +155,9 @@ function InstanceController() {
 
     this.runTasks = async function(online) {
         if (online && ENV.sync_mode !== 'offline')
-            await syncRecords();
+            await mutex.chain(syncRecords);
     };
-    this.runTasks = util.serializeAsync(this.runTasks);
+    this.runTasks = util.serialize(this.runTasks, mutex);
 
     function renderMenu() {
         return html`
@@ -797,185 +800,189 @@ function InstanceController() {
     }
 
     async function saveRecord(record, values, page) {
-        if (develop)
-            throw new Error('Enregistrement refusé : formulaire non publié');
+        await mutex.run(async () => {
+            if (develop)
+                throw new Error('Enregistrement refusé : formulaire non publié');
 
-        let progress = log.progress('Enregistrement en cours');
+            let progress = log.progress('Enregistrement en cours');
 
-        try {
-            let ulid = record.ulid;
-            let page_key = page.key;
-            let ptr = values[record.form.key];
+            try {
+                let ulid = record.ulid;
+                let page_key = page.key;
+                let ptr = values[record.form.key];
 
-            await db.transaction('rw', ['rec_records'], async t => {
-                do {
-                    let fragment;
-                    if (ptr != null) {
-                        fragment = {
-                            type: 'save',
-                            user: profile.username,
-                            mtime: new Date,
-                            page: page_key,
-                            values: ptr
-                        };
-                    } else {
-                        fragment = null;
-                    }
-
-                    let key = profile.namespaces.records + `:${record.ulid}`;
-                    let obj = await t.load('rec_records', key);
-
-                    let entry;
-                    if (obj != null) {
-                        entry = await goupile.decryptSymmetric(obj.enc, 'records');
-                        if (record.hid != null)
-                            entry.hid = record.hid;
-                    } else {
-                        obj = {
-                            keys: {
-                                form: null,
-                                parent: null,
-                                anchor: null,
-                                sync: null
-                            },
-                            enc: null
-                        };
-                        entry = {
-                            ulid: record.ulid,
-                            hid: record.hid,
-                            parent: null,
-                            form: record.form.key,
-                            fragments: []
-                        };
-
-                        if (record.parent != null) {
-                            entry.parent = {
-                                ulid: record.parent.ulid,
-                                version: record.parent.version
-                            };
-                        }
-                    }
-
-                    // Always rewrite keys to fix potential namespace changes
-                    obj.keys.form = `${profile.namespaces.records}/${record.form.key}`;
-                    if (record.parent != null)
-                        obj.keys.parent = `${profile.namespaces.records}:${record.parent.ulid}/${record.form.key}`;
-                    obj.keys.sync = profile.namespaces.records;
-
-                    if (record.version !== entry.fragments.length)
-                        throw new Error('Cannot overwrite old record fragment');
-                    if (fragment != null)
-                        entry.fragments.push(fragment);
-
-                    obj.enc = await goupile.encryptSymmetric(entry, 'records');
-                    await t.saveWithKey('rec_records', key, obj);
-
+                await db.transaction('rw', ['rec_records'], async t => {
                     do {
-                        page_key = record.form.key;
-                        record = record.parent;
-                        if (record == null)
-                            break;
-                        ptr = form_values[record.form.key];
-                    } while (record.saved && ptr == null);
-                } while (record != null);
+                        let fragment;
+                        if (ptr != null) {
+                            fragment = {
+                                type: 'save',
+                                user: profile.username,
+                                mtime: new Date,
+                                page: page_key,
+                                values: ptr
+                            };
+                        } else {
+                            fragment = null;
+                        }
 
-                record = await loadRecord(ulid, null);
-                await expandRecord(record, page.options.load || []);
+                        let key = profile.namespaces.records + `:${record.ulid}`;
+                        let obj = await t.load('rec_records', key);
 
-                updateContext(route, record);
-            });
+                        let entry;
+                        if (obj != null) {
+                            entry = await goupile.decryptSymmetric(obj.enc, 'records');
+                            if (record.hid != null)
+                                entry.hid = record.hid;
+                        } else {
+                            obj = {
+                                keys: {
+                                    form: null,
+                                    parent: null,
+                                    anchor: null,
+                                    sync: null
+                                },
+                                enc: null
+                            };
+                            entry = {
+                                ulid: record.ulid,
+                                hid: record.hid,
+                                parent: null,
+                                form: record.form.key,
+                                fragments: []
+                            };
 
-            data_rows = null;
+                            if (record.parent != null) {
+                                entry.parent = {
+                                    ulid: record.parent.ulid,
+                                    version: record.parent.version
+                                };
+                            }
+                        }
 
-            if (ENV.sync_mode !== 'offline') {
-                try {
-                    if (!goupile.isLoggedOnline())
-                        throw new Error('Cannot save online');
+                        // Always rewrite keys to fix potential namespace changes
+                        obj.keys.form = `${profile.namespaces.records}/${record.form.key}`;
+                        if (record.parent != null)
+                            obj.keys.parent = `${profile.namespaces.records}:${record.parent.ulid}/${record.form.key}`;
+                        obj.keys.sync = profile.namespaces.records;
 
-                    await syncRecords(false);
-                    progress.success('Enregistrement effectué');
-                } catch (err) {
-                    progress.info('Enregistrement local effectué');
+                        if (record.version !== entry.fragments.length)
+                            throw new Error('Cannot overwrite old record fragment');
+                        if (fragment != null)
+                            entry.fragments.push(fragment);
+
+                        obj.enc = await goupile.encryptSymmetric(entry, 'records');
+                        await t.saveWithKey('rec_records', key, obj);
+
+                        do {
+                            page_key = record.form.key;
+                            record = record.parent;
+                            if (record == null)
+                                break;
+                            ptr = form_values[record.form.key];
+                        } while (record.saved && ptr == null);
+                    } while (record != null);
+
+                    record = await loadRecord(ulid, null);
+                    await expandRecord(record, page.options.load || []);
+
+                    updateContext(route, record);
+                });
+
+                data_rows = null;
+
+                if (ENV.sync_mode !== 'offline') {
+                    try {
+                        if (!goupile.isLoggedOnline())
+                            throw new Error('Cannot save online');
+
+                        await mutex.chain(() => syncRecords(false));
+                        progress.success('Enregistrement effectué');
+                    } catch (err) {
+                        progress.info('Enregistrement local effectué');
+                        enablePersistence();
+                    }
+                } else {
+                    progress.success('Enregistrement local effectué');
                     enablePersistence();
                 }
-            } else {
-                progress.success('Enregistrement local effectué');
-                enablePersistence();
+            } catch (err) {
+                progress.close();
+                throw err;
             }
-        } catch (err) {
-            progress.close();
-            throw err;
-        }
+        });
     }
 
     async function deleteRecord(ulid) {
-        let progress = log.progress('Suppression en cours');
+        await mutex.run(async () => {
+            let progress = log.progress('Suppression en cours');
 
-        try {
-            // XXX: Delete children (cascade)?
-            await db.transaction('rw', ['rec_records'], async t => {
-                let key = profile.namespaces.records + `:${ulid}`;
-                let obj = await t.load('rec_records', key);
+            try {
+                // XXX: Delete children (cascade)?
+                await db.transaction('rw', ['rec_records'], async t => {
+                    let key = profile.namespaces.records + `:${ulid}`;
+                    let obj = await t.load('rec_records', key);
 
-                if (obj == null)
-                    throw new Error('Cet enregistrement est introuvable');
+                    if (obj == null)
+                        throw new Error('Cet enregistrement est introuvable');
 
-                let entry = await goupile.decryptSymmetric(obj.enc, 'records');
+                    let entry = await goupile.decryptSymmetric(obj.enc, 'records');
 
-                // Mark as deleted with special fragment
-                let fragment = {
-                    type: 'delete',
-                    user: profile.username,
-                    mtime: new Date
-                };
-                entry.fragments.push(fragment);
+                    // Mark as deleted with special fragment
+                    let fragment = {
+                        type: 'delete',
+                        user: profile.username,
+                        mtime: new Date
+                    };
+                    entry.fragments.push(fragment);
 
-                obj.keys.parent = null;
-                obj.keys.form = null;
-                obj.keys.sync = profile.namespaces.records;
+                    obj.keys.parent = null;
+                    obj.keys.form = null;
+                    obj.keys.sync = profile.namespaces.records;
 
-                obj.enc = await goupile.encryptSymmetric(entry, 'records');
-                await t.saveWithKey('rec_records', key, obj);
-            });
+                    obj.enc = await goupile.encryptSymmetric(entry, 'records');
+                    await t.saveWithKey('rec_records', key, obj);
+                });
 
-            if (ENV.sync_mode !== 'offline') {
-                try {
-                    if (!goupile.isLoggedOnline())
-                        throw new Error('Cannot delete online');
+                if (ENV.sync_mode !== 'offline') {
+                    try {
+                        if (!goupile.isLoggedOnline())
+                            throw new Error('Cannot delete online');
 
-                    await syncRecords(false);
-                    progress.success('Suppression effectuée');
-                } catch (err) {
-                    progress.info('Suppression effectuée (non synchronisée)');
-                    console.log(err);
-                }
-            } else {
-                progress.success('Suppression locale effectuée');
-            }
-
-            data_rows = null;
-
-            // Redirect if needed
-            {
-                let idx = form_record.chain.findIndex(record => record.ulid === ulid);
-
-                if (idx >= 0) {
-                    if (idx > 0) {
-                        let record = form_record.chain[idx];
-                        let url = contextualizeURL(record.form.multi ? route.page.url : record.parent.form.url, record.parent);
-
-                        self.go(null, url, { force: true });
-                    } else {
-                        self.go(null, route.form.chain[0].url + '/new', { force: true });
+                        await mutex.chain(() => syncRecords(false));
+                        progress.success('Suppression effectuée');
+                    } catch (err) {
+                        progress.info('Suppression effectuée (non synchronisée)');
+                        console.log(err);
                     }
                 } else {
-                    self.go();
+                    progress.success('Suppression locale effectuée');
                 }
+
+                data_rows = null;
+
+                // Redirect if needed
+                {
+                    let idx = form_record.chain.findIndex(record => record.ulid === ulid);
+
+                    if (idx >= 0) {
+                        if (idx > 0) {
+                            let record = form_record.chain[idx];
+                            let url = contextualizeURL(record.form.multi ? route.page.url : record.parent.form.url, record.parent);
+
+                            self.go(null, url, { force: true });
+                        } else {
+                            self.go(null, route.form.chain[0].url + '/new', { force: true });
+                        }
+                    } else {
+                        self.go();
+                    }
+                }
+            } catch (err) {
+                progress.close();
+                throw err;
             }
-        } catch (err) {
-            progress.close();
-            throw err;
-        }
+        });
     }
 
     function enablePersistence() {
@@ -1664,7 +1671,7 @@ function InstanceController() {
                                                "Enregistrer", async () => {
                             form_builder.triggerErrors();
 
-                            await saveRecord(form_record, form_values, route.page);
+                            await mutex.chain(() => saveRecord(form_record, form_values, route.page));
                             new_route.version = null;
                         });
 
@@ -1732,17 +1739,9 @@ function InstanceController() {
             document.title = `${route.page.title} — ${ENV.title}`;
         }
 
-        await self.run();
+        await mutex.chain(self.run);
     };
-    this.go = util.serializeAsync(this.go);
-
-    async function handleStateChange() {
-        await self.run();
-
-        // Highlight might need to change (conditions, etc.)
-        if (ui.isPanelEnabled('editor'))
-            syncFormHighlight(false);
-    }
+    this.go = util.serialize(this.go, mutex);
 
     function findEnabledPage(form, record, parents = true) {
         for (let item of form.menu) {
@@ -1841,7 +1840,7 @@ function InstanceController() {
 
         ui.render();
     };
-    this.run = util.serializeAsync(this.run);
+    this.run = util.serialize(this.run, mutex);
 
     function updateContext(new_route, new_record) {
         let copy_ui = (new_route.page === route.page);
@@ -1862,6 +1861,14 @@ function InstanceController() {
             form_values = {};
             form_values[new_record.form.key] = form_state.values;
         }
+    }
+
+    async function handleStateChange() {
+        await self.run();
+
+        // Highlight might need to change (conditions, etc.)
+        if (ui.isPanelEnabled('editor'))
+            syncFormHighlight(false);
     }
 
     function contextualizeURL(url, record, default_ctx = '') {
@@ -2256,155 +2263,157 @@ function InstanceController() {
     }
 
     async function syncRecords(standalone = true) {
-        let progress = standalone ? log.progress('Synchronisation en cours') : null;
+        await mutex.run(async () => {
+            let progress = standalone ? log.progress('Synchronisation en cours') : null;
 
-        try {
-            let changed = false;
+            try {
+                let changed = false;
 
-            // Upload new fragments
-            {
-                let range = IDBKeyRange.only(profile.namespaces.records);
-                let objects = await db.loadAll('rec_records/sync', range);
+                // Upload new fragments
+                {
+                    let range = IDBKeyRange.only(profile.namespaces.records);
+                    let objects = await db.loadAll('rec_records/sync', range);
 
-                let uploads = [];
-                let buckets = {};
-                for (let obj of objects) {
-                    try {
-                        let record = await decryptRecord(obj, null, true);
+                    let uploads = [];
+                    let buckets = {};
+                    for (let obj of objects) {
+                        try {
+                            let record = await decryptRecord(obj, null, true);
 
-                        let upload = {
-                            form: record.form.key,
-                            ulid: record.ulid,
-                            hid: record.hid,
-                            parent: record.parent,
-                            fragments: record.fragments.map((fragment, idx) => ({
+                            let upload = {
+                                form: record.form.key,
+                                ulid: record.ulid,
+                                hid: record.hid,
+                                parent: record.parent,
+                                fragments: record.fragments.map((fragment, idx) => ({
+                                    type: fragment.type,
+                                    mtime: fragment.mtime.toISOString(),
+                                    page: fragment.page,
+                                    json: JSON.stringify(fragment.values)
+                                }))
+                            };
+
+                            if (upload.parent == null) {
+                                uploads.push(upload);
+                            } else {
+                                let bucket = buckets[upload.parent.ulid];
+                                if (bucket == null) {
+                                    bucket = [];
+                                    buckets[upload.parent.ulid] = bucket;
+                                }
+                                bucket.push(upload);
+                            }
+                        } catch (err) {
+                            console.log(err);
+                        }
+                    }
+
+                    // We append to the array as we go, and I couldn't make sure that
+                    // a for of loop is okay with that (even though it probably is).
+                    // So instead I use a dumb increment to be sure it works correctly.
+                    for (let i = 0; i < uploads.length; i++) {
+                        let upload = uploads[i];
+                        let bucket = buckets[upload.ulid];
+
+                        if (bucket != null) {
+                            uploads.push(...bucket);
+                            delete buckets[upload.ulid];
+                        }
+                    }
+                    for (let key in buckets) {
+                        let bucket = buckets[key];
+                        uploads.push(...bucket);
+                    }
+
+                    if (uploads.length) {
+                        let url = `${ENV.urls.instance}api/records/save`;
+                        let response = await net.fetch(url, {
+                            method: 'POST',
+                            body: JSON.stringify(uploads)
+                        });
+
+                        if (!response.ok) {
+                            let err = (await response.text()).trim();
+                            throw new Error(err);
+                        }
+                    }
+                }
+
+                // Download new fragments
+                {
+                    let range = IDBKeyRange.bound(profile.namespaces.records + '@',
+                                                  profile.namespaces.records + '`', false, true);
+                    let [, anchor] = await db.limits('rec_records/anchor', range);
+
+                    if (anchor != null) {
+                        anchor = anchor.toString();
+                        anchor = anchor.substr(anchor.indexOf('@') + 1);
+                        anchor = parseInt(anchor, 10);
+                    } else {
+                        anchor = 0;
+                    }
+
+                    let url = util.pasteURL(`${ENV.urls.instance}api/records/load`, {
+                        anchor: anchor
+                    });
+                    let downloads = await net.fetchJson(url);
+
+                    for (let download of downloads) {
+                        let key = profile.namespaces.records + `:${download.ulid}`;
+
+                        let obj = {
+                            keys: {
+                                form: profile.namespaces.records + `/${download.form}`,
+                                parent: (download.parent != null) ? (profile.namespaces.records + `:${download.parent.ulid}/${download.form}`) : null,
+                                anchor: profile.namespaces.records + `@${(download.anchor + 1).toString().padStart(16, '0')}`,
+                                sync: null
+                            },
+                            enc: null
+                        };
+                        if (download.fragments.length && download.fragments[download.fragments.length - 1].type == 'delete') {
+                            obj.keys.form = null;
+                            obj.keys.parent = null;
+                        }
+
+                        let entry = {
+                            ulid: download.ulid,
+                            hid: download.hid,
+                            form: download.form,
+                            parent: download.parent,
+                            fragments: download.fragments.map(fragment => ({
+                                anchor: fragment.anchor,
                                 type: fragment.type,
-                                mtime: fragment.mtime.toISOString(),
+                                user: fragment.username,
+                                mtime: new Date(fragment.mtime),
                                 page: fragment.page,
-                                json: JSON.stringify(fragment.values)
+                                values: fragment.values
                             }))
                         };
 
-                        if (upload.parent == null) {
-                            uploads.push(upload);
-                        } else {
-                            let bucket = buckets[upload.parent.ulid];
-                            if (bucket == null) {
-                                bucket = [];
-                                buckets[upload.parent.ulid] = bucket;
-                            }
-                            bucket.push(upload);
-                        }
-                    } catch (err) {
-                        console.log(err);
+                        obj.enc = await goupile.encryptSymmetric(entry, 'records');
+                        await db.saveWithKey('rec_records', key, obj);
+
+                        changed = true;
                     }
                 }
 
-                // We append to the array as we go, and I couldn't make sure that
-                // a for of loop is okay with that (even though it probably is).
-                // So instead I use a dumb increment to be sure it works correctly.
-                for (let i = 0; i < uploads.length; i++) {
-                    let upload = uploads[i];
-                    let bucket = buckets[upload.ulid];
+                if (changed && standalone) {
+                    progress.success('Synchronisation terminée');
 
-                    if (bucket != null) {
-                        uploads.push(...bucket);
-                        delete buckets[upload.ulid];
+                    // XXX: Keep current user value changes
+                    if (form_record != null) {
+                        data_rows = null;
+                        self.go(null, window.location.href, { reload: true });
                     }
-                }
-                for (let key in buckets) {
-                    let bucket = buckets[key];
-                    uploads.push(...bucket);
-                }
-
-                if (uploads.length) {
-                    let url = `${ENV.urls.instance}api/records/save`;
-                    let response = await net.fetch(url, {
-                        method: 'POST',
-                        body: JSON.stringify(uploads)
-                    });
-
-                    if (!response.ok) {
-                        let err = (await response.text()).trim();
-                        throw new Error(err);
-                    }
-                }
-            }
-
-            // Download new fragments
-            {
-                let range = IDBKeyRange.bound(profile.namespaces.records + '@',
-                                              profile.namespaces.records + '`', false, true);
-                let [, anchor] = await db.limits('rec_records/anchor', range);
-
-                if (anchor != null) {
-                    anchor = anchor.toString();
-                    anchor = anchor.substr(anchor.indexOf('@') + 1);
-                    anchor = parseInt(anchor, 10);
                 } else {
-                    anchor = 0;
+                    if (standalone)
+                        progress.close();
                 }
-
-                let url = util.pasteURL(`${ENV.urls.instance}api/records/load`, {
-                    anchor: anchor
-                });
-                let downloads = await net.fetchJson(url);
-
-                for (let download of downloads) {
-                    let key = profile.namespaces.records + `:${download.ulid}`;
-
-                    let obj = {
-                        keys: {
-                            form: profile.namespaces.records + `/${download.form}`,
-                            parent: (download.parent != null) ? (profile.namespaces.records + `:${download.parent.ulid}/${download.form}`) : null,
-                            anchor: profile.namespaces.records + `@${(download.anchor + 1).toString().padStart(16, '0')}`,
-                            sync: null
-                        },
-                        enc: null
-                    };
-                    if (download.fragments.length && download.fragments[download.fragments.length - 1].type == 'delete') {
-                        obj.keys.form = null;
-                        obj.keys.parent = null;
-                    }
-
-                    let entry = {
-                        ulid: download.ulid,
-                        hid: download.hid,
-                        form: download.form,
-                        parent: download.parent,
-                        fragments: download.fragments.map(fragment => ({
-                            anchor: fragment.anchor,
-                            type: fragment.type,
-                            user: fragment.username,
-                            mtime: new Date(fragment.mtime),
-                            page: fragment.page,
-                            values: fragment.values
-                        }))
-                    };
-
-                    obj.enc = await goupile.encryptSymmetric(entry, 'records');
-                    await db.saveWithKey('rec_records', key, obj);
-
-                    changed = true;
-                }
-            }
-
-            if (changed && standalone) {
-                progress.success('Synchronisation terminée');
-
-                // XXX: Keep current user value changes
-                if (form_record != null) {
-                    data_rows = null;
-                    self.go(null, window.location.href, { reload: true });
-                }
-            } else {
+            } catch (err) {
                 if (standalone)
                     progress.close();
+                throw err;
             }
-        } catch (err) {
-            if (standalone)
-                progress.close();
-            throw err;
-        }
+        });
     }
 };

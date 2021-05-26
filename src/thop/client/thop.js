@@ -115,7 +115,7 @@ const thop = new function() {
 
         route_url = url;
     };
-    this.go = util.serializeAsync(this.go);
+    this.go = util.serialize(this.go);
 
     this.goBack = function() { self.go(prev_url || '/'); };
 

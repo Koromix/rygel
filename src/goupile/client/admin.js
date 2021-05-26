@@ -412,7 +412,7 @@ function AdminController() {
 
         ui.render();
     };
-    this.go = util.serializeAsync(this.go);
+    this.go = util.serialize(this.go);
 
     function runCreateInstanceDialog(e) {
         return ui.runDialog(e, 'Création d\'un projet', (d, resolve, reject) => {
