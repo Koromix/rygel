@@ -368,8 +368,8 @@ bool DomainHolder::Sync()
             Size remove_idx = std::find(master->slaves.begin(), master->slaves.end(), instance) - master->slaves.ptr;
             RG_ASSERT(remove_idx < master->slaves.len);
 
-            memmove(master->slaves.ptr + remove_idx, master->slaves.ptr + remove_idx + 1,
-                    (master->slaves.len - remove_idx - 1) * RG_SIZE(*master->slaves.ptr));
+            memmove_safe(master->slaves.ptr + remove_idx, master->slaves.ptr + remove_idx + 1,
+                         (master->slaves.len - remove_idx - 1) * RG_SIZE(*master->slaves.ptr));
             master->slaves.len--;
 
             if (master->unique < prev_unique) {
@@ -458,8 +458,8 @@ bool DomainHolder::Sync()
 
                 // Add instance to parent list
                 master->slaves.Grow(1);
-                memmove(master->slaves.ptr + insert_idx + 1, master->slaves.ptr + insert_idx,
-                        (master->slaves.len - insert_idx) * RG_SIZE(*master->slaves.ptr));
+                memmove_safe(master->slaves.ptr + insert_idx + 1, master->slaves.ptr + insert_idx,
+                             (master->slaves.len - insert_idx) * RG_SIZE(*master->slaves.ptr));
                 master->slaves.ptr[insert_idx] = instance;
                 master->slaves.len++;
 

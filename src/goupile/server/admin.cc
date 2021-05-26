@@ -1060,7 +1060,7 @@ static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = n
 
         while (len) {
             size_t copy_len = std::min(len, (size_t)ctx->buf.Available());
-            memcpy(ctx->buf.end(), buf, copy_len);
+            memcpy_safe(ctx->buf.end(), buf, copy_len);
             ctx->buf.len += (Size)copy_len;
 
             if (!ctx->buf.Available()) {

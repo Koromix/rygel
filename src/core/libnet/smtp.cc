@@ -237,7 +237,7 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
             Span<const char> *payload = (Span<const char> *)udata;
 
             size_t copy_len = std::min(size * nmemb, (size_t)payload->len);
-            memcpy(buf, payload->ptr, copy_len);
+            memcpy_safe(buf, payload->ptr, copy_len);
 
             payload->ptr += copy_len;
             payload->len -= (Size)copy_len;

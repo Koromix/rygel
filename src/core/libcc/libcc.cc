@@ -683,7 +683,7 @@ bool CopyString(Span<const char> str, Span<char> buf)
     if (RG_UNLIKELY(str.len > buf.len - 1))
         return false;
 
-    memcpy(buf.ptr, str.ptr, str.len);
+    memcpy_safe(buf.ptr, str.ptr, str.len);
     buf[str.len] = 0;
 
     return true;
@@ -4632,7 +4632,7 @@ bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compress
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     dest.type = DestinationType::File;
-    memset(&dest.u.file, 0, RG_SIZE(dest.u.file));
+    memset_safe(&dest.u.file, 0, RG_SIZE(dest.u.file));
     dest.u.file.fp = fp;
     dest.vt100 = FileIsVt100(fp);
 
@@ -4656,7 +4656,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags, CompressionTyp
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     dest.type = DestinationType::File;
-    memset(&dest.u.file, 0, RG_SIZE(dest.u.file));
+    memset_safe(&dest.u.file, 0, RG_SIZE(dest.u.file));
 
     if (flags & (int)StreamWriterFlag::Atomic) {
         const char *directory = DuplicateString(GetPathDirectory(filename), &str_alloc).ptr;
