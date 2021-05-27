@@ -435,7 +435,8 @@ const mco_info = new function() {
                     case 'à':
                     case 'â': { re += '[aàâ]'; } break;
                     case 'i':
-                    case 'ï': { re += '[iï]'; } break;
+                    case 'î':
+                    case 'ï': { re += '[iîï]'; } break;
                     case 'u':
                     case 'ù':
                     case 'ü': { re += '[uùü]'; } break;
