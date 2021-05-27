@@ -424,27 +424,33 @@ const mco_info = new function() {
                 let c = filter[i].toLowerCase();
 
                 switch (c) {
+                    case 'c':
+                    case 'ç': { re += '[cç]'; } break;
                     case 'e':
                     case 'ê':
                     case 'é':
-                    case 'è': { re += '[eèéê]'; } break;
+                    case 'è':
+                    case 'ë': { re += '[eèéêë]'; } break;
                     case 'a':
                     case 'à':
                     case 'â': { re += '[aàâ]'; } break;
                     case 'i':
                     case 'ï': { re += '[iï]'; } break;
                     case 'u':
-                    case 'ù': { re += '[uù]'; } break;
-                    case 'ô': { re += '[ôo]'; } break;
+                    case 'ù':
+                    case 'ü': { re += '[uùü]'; } break;
                     case 'o': {
                         if (filter[i + 1] === 'e') {
                             re += '(oe|œ)';
                             i++;
                         } else {
-                            re += '[ôo]';
+                            re += '[oô]';
                         }
                     } break;
+                    case 'ô': { re += '[oô]'; } break;
                     case 'œ': { re += '(oe|œ)'; } break;
+                    case 'y':
+                    case 'ÿ': { re += '[yÿ]'; } break;
                     case '—':
                     case '–':
                     case '-': { re += '[—–\\-]'; } break;
