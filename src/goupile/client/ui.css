@@ -60,10 +60,12 @@ button:disabled {
     cursor: not-allowed;
 }
 button::-moz-focus-inner { border: 0; }
-button:not(:disabled):hover {
-    background-color: var(--anchor_color);
-    border-color: var(--anchor_color);
-    color: white;
+button:not(:disabled):hover { border-color: var(--anchor_color); }
+@media (pointer: fine) {
+    button:not(:disabled):hover {
+        background-color: var(--anchor_color);
+        color: white;
+    }
 }
 
 /* -------------------- Toolbars -------------------- */
