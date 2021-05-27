@@ -120,6 +120,81 @@ static Size SimplifyPassword(Span<const char> password, Span<char> out_buf)
     return len;
 }
 
+static bool CheckComplexity(Span<const char> password)
+{
+    int score = 0;
+
+    Bitset<256> chars;
+    uint32_t classes = 0;
+
+    for (Size i = 0; i < password.len;) {
+        int c = (uint8_t)password[i];
+
+        if (c < 32) {
+            LogError("Control characters are not allowed");
+            return false;
+        }
+
+        if (IsAsciiAlpha(c)) {
+            score += !chars.TestAndSet(c) ? 4 : 2;
+            classes |= 1 << 0;
+
+            while (++i < password.len && IsAsciiAlpha(password[i])) {
+                int next = (uint8_t)password[i];
+                int diff = c - next;
+
+                c = next;
+                score += !chars.TestAndSet(c) && (diff < -1 || diff > 1) ? 2 : 1;
+            }
+        } else if (IsAsciiDigit(c)) {
+            score += !chars.TestAndSet(c) ? 4 : 2;
+            classes |= 1 << 1;
+
+            while (++i < password.len && IsAsciiDigit(password[i])) {
+                int next = (uint8_t)password[i];
+                int diff = c - next;
+
+                c = next;
+                score += !chars.TestAndSet(c) && (diff < -1 || diff > 1) ? 2 : 1;
+            }
+        } else if (IsAsciiWhite(c)) {
+            score++;
+            classes |= 1 << 2;
+
+            // Consecutive white spaces characters don't count
+            while (++i < password.len && IsAsciiWhite(password[i]));
+        } else {
+            score += !chars.TestAndSet(c) ? 4 : 1;
+            classes |= 1 << 3;
+
+            while (++i < password.len && !IsAsciiAlpha(password[i]) &&
+                                         !IsAsciiDigit(password[i]) &&
+                                         !IsAsciiWhite(password[i])) {
+                c = (uint8_t)password[i];
+                score += !chars.TestAndSet(c) ? 2 : 1;
+            }
+        }
+    }
+
+    if (PopCount(classes) < 3) {
+        LogError("Password contains less than 3 character classes (a-z, 0-9, symbols, whitespaces)");
+        return false;
+    }
+    if (chars.PopCount() < 8) {
+        LogError("Password contains less than 8 unique characters (spaces don't count)");
+        return false;
+    }
+
+    // LogDebug("Password score = %1", score);
+
+    if (score < 32) {
+        LogError("Password is not complex enough");
+        return false;
+    }
+
+    return true;
+}
+
 bool sec_CheckPassword(Span<const char> password, Span<const char *const> blacklist)
 {
     // Simplify it (casing, accents)
@@ -136,77 +211,8 @@ bool sec_CheckPassword(Span<const char> password, Span<const char *const> blackl
     }
 
     // Check complexity
-    {
-        int score = 0;
-
-        Bitset<256> chars;
-        uint32_t classes = 0;
-
-        for (Size i = 0; i < password.len;) {
-            int c = (uint8_t)password[i];
-
-            if (c < 32) {
-                LogError("Control characters are not allowed");
-                return false;
-            }
-
-            if (IsAsciiAlpha(c)) {
-                score += !chars.TestAndSet(c) ? 4 : 2;
-                classes |= 1 << 0;
-
-                while (++i < password.len && IsAsciiAlpha(password[i])) {
-                    int next = (uint8_t)password[i];
-                    int diff = c - next;
-
-                    c = next;
-                    score += !chars.TestAndSet(c) && (diff < -1 || diff > 1) ? 2 : 1;
-                }
-            } else if (IsAsciiDigit(c)) {
-                score += !chars.TestAndSet(c) ? 4 : 2;
-                classes |= 1 << 1;
-
-                while (++i < password.len && IsAsciiDigit(password[i])) {
-                    int next = (uint8_t)password[i];
-                    int diff = c - next;
-
-                    c = next;
-                    score += !chars.TestAndSet(c) && (diff < -1 || diff > 1) ? 2 : 1;
-                }
-            } else if (IsAsciiWhite(c)) {
-                score++;
-                classes |= 1 << 2;
-
-                // Consecutive white spaces characters don't count
-                while (++i < password.len && IsAsciiWhite(password[i]));
-            } else {
-                score += !chars.TestAndSet(c) ? 4 : 1;
-                classes |= 1 << 3;
-
-                while (++i < password.len && !IsAsciiAlpha(password[i]) &&
-                                             !IsAsciiDigit(password[i]) &&
-                                             !IsAsciiWhite(password[i])) {
-                    c = (uint8_t)password[i];
-                    score += !chars.TestAndSet(c) ? 2 : 1;
-                }
-            }
-        }
-
-        if (PopCount(classes) < 3) {
-            LogError("Password contains less than 3 character classes (a-z, 0-9, symbols, whitespaces)");
-            return false;
-        }
-        if (chars.PopCount() < 8) {
-            LogError("Password contains less than 8 unique characters (spaces don't count)");
-            return false;
-        }
-
-        // LogDebug("Password score = %1", score);
-
-        if (score < 32) {
-            LogError("Password is not complex enough");
-            return false;
-        }
-    }
+    if (!CheckComplexity(password))
+        return false;
 
     return true;
 }
