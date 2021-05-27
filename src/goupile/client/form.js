@@ -28,6 +28,7 @@ function FormState(values = {}) {
     // Semi-public UI state
     this.just_triggered = false;
     this.state_tabs = {};
+    this.state_sections = {};
 
     let proxies = new WeakMap;
     let changes = new Set;
@@ -129,6 +130,7 @@ function FormBuilder(state, model, readonly = false) {
 
     let variables_map = {};
     let options_stack = [{
+        deploy: true,
         untoggle: true
     }];
     let widgets_ref = model.widgets0;
@@ -1102,11 +1104,20 @@ function FormBuilder(state, model, readonly = false) {
     this.section = function(label, func, options = {}) {
         options = expandOptions(options);
 
+        let deploy = state.state_sections[label];
+        if (deploy == null) {
+            deploy = options.deploy;
+            state.state_sections[label] = deploy;
+        }
+
         let widgets = [];
         let render = intf => html`
             <fieldset class="fm_container fm_section">
-                ${label ? html`<div class="fm_legend" style=${makeLegendStyle(options)}>${label}</div>` : ''}
-                ${widgets.map(intf => intf.render())}
+                ${label ? html`<div class="fm_legend" style=${makeLegendStyle(options)}
+                                    @click=${e => handleSectionClick(e, label)}>${label}</div>` : ''}
+                ${deploy ? widgets.map(intf => intf.render()) : ''}
+                ${!deploy ? html`<a class="fm_deploy"
+                                    @click=${e => handleSectionClick(e, label)}>(afficher le contenu)</a>` : ''}
             </fieldset>
         `;
 
@@ -1119,7 +1130,7 @@ function FormBuilder(state, model, readonly = false) {
     };
 
     function handleSectionClick(e, label) {
-        state.sections_state[label] = !state.sections_state[label];
+        state.state_sections[label] = !state.state_sections[label];
         self.restart();
     }
 

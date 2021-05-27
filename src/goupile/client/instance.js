@@ -1854,8 +1854,10 @@ function InstanceController() {
 
             let new_state = new FormState(new_record.values);
             new_state.changeHandler = handleStateChange;
-            if (form_state != null && copy_ui)
+            if (form_state != null && copy_ui) {
                 new_state.state_tabs = form_state.state_tabs;
+                new_state.state_sections = form_state.state_sections;
+            }
             form_state = new_state;
 
             form_values = {};

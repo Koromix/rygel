@@ -38,10 +38,18 @@
     color: white;
     color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
+    cursor: pointer;
 }
 .fm_legend::before {
     padding-right: 0.5em;
     content: '#';
+}
+.fm_deploy {
+    width: 100%;
+    display: block;
+    text-align: center;
+    font-size: 0.9em;
+    text-decoration: none;
 }
 
 .fm_section.error { background: #ffeeee; }
