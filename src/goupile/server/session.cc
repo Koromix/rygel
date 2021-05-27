@@ -29,15 +29,15 @@ static const int64_t BanTime = 1800 * 1000;
 struct FloodInfo {
     struct Key {
         const char *address;
-        int64_t userid;
+        const char *context;
 
-        bool operator==(const Key &other) const { return TestStr(address, other.address) && userid == other.userid; }
+        bool operator==(const Key &other) const { return TestStr(address, other.address) && TestStr(context, other.context); }
         bool operator!=(const Key &other) const { return !(*this == other); }
 
         uint64_t Hash() const
         {
             uint64_t hash = HashTraits<const char *>::Hash(address) ^
-                            HashTraits<int64_t>::Hash(userid);
+                            HashTraits<const char *>::Hash(context);
             return hash;
         }
     };
@@ -354,11 +354,11 @@ bool HashPassword(Span<const char> password, char out_hash[crypto_pwhash_STRBYTE
     return true;
 }
 
-static bool IsUserBanned(const char *address, int64_t userid)
+static bool IsUserBanned(const char *address, const char *context)
 {
     std::shared_lock<std::shared_mutex> lock_shr(floods_mutex);
 
-    FloodInfo::Key key = {address, userid};
+    FloodInfo::Key key = {address, context};
     const FloodInfo *flood = floods_map.FindValue(key, nullptr);
 
     // We don't need to use precise timing, and a ban can last a bit
@@ -366,17 +366,17 @@ static bool IsUserBanned(const char *address, int64_t userid)
     return flood && flood->banned;
 }
 
-static void RegisterFloodEvent(const char *address, int64_t userid)
+static void RegisterFloodEvent(const char *address, const char *context)
 {
     std::lock_guard<std::shared_mutex> lock_excl(floods_mutex);
 
-    FloodInfo::Key key = {address, userid};
+    FloodInfo::Key key = {address, context};
     FloodInfo *flood = floods_map.FindValue(key, nullptr);
 
     if (!flood || flood->until_time < GetMonotonicTime()) {
         Allocator *alloc;
         flood = floods.AppendDefault(&alloc);
-        flood->key = {DuplicateString(address, alloc).ptr, userid};
+        flood->key = {DuplicateString(address, alloc).ptr, DuplicateString(context, alloc).ptr};
         flood->until_time = GetMonotonicTime() + BanTime;
         floods_map.Set(flood);
     }
@@ -435,7 +435,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
             bool admin = (sqlite3_column_int(stmt, 2) == 1);
             const char *local_key = (const char *)sqlite3_column_text(stmt, 3);
 
-            if (IsUserBanned(request.client_addr, userid)) {
+            if (IsUserBanned(request.client_addr, username)) {
                 LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
                 io->AttachError(403);
                 return;
@@ -469,7 +469,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
 
                 return;
             } else {
-                RegisterFloodEvent(request.client_addr, userid);
+                RegisterFloodEvent(request.client_addr, username);
             }
         }
 
@@ -717,6 +717,16 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
             }
         }
 
+        if (sms) {
+            // Avoid confirmation flood (SMS are costly)
+            RegisterFloodEvent(request.client_addr, key);
+        }
+
+        if (IsUserBanned(request.client_addr, key)) {
+            LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
+            io->AttachError(403);
+        }
+
         RetainPtr<SessionInfo> session = CreateAutoSession(instance, key, sms);
         if (!session)
             return;
@@ -776,7 +786,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
             }
         }
 
-        if (IsUserBanned(request.client_addr, session->userid)) {
+        if (IsUserBanned(request.client_addr, session->username)) {
             LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
             io->AttachError(403);
             return;
@@ -789,7 +799,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
             session->confirm[0] = 0;
             WriteProfileJson(session.GetRaw(), instance, request, io);
         } else {
-            RegisterFloodEvent(request.client_addr, session->userid);
+            RegisterFloodEvent(request.client_addr, session->username);
 
             LogError("Code is incorrect");
             io->AttachError(403);
