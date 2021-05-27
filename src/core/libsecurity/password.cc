@@ -176,20 +176,24 @@ static bool CheckComplexity(Span<const char> password)
         }
     }
 
-    if (PopCount(classes) < 3) {
-        LogError("Password contains less than 3 character classes (a-z, 0-9, symbols, whitespaces)");
-        return false;
-    }
-    if (chars.PopCount() < 8) {
-        LogError("Password contains less than 8 unique characters (spaces don't count)");
-        return false;
-    }
+    // Help user!
+    {
+        LocalArray<const char *, 8> problems;
 
-    // LogDebug("Password score = %1", score);
+        if (PopCount(classes) < 3) {
+            problems.Append("less than 3 character classes");
+        }
+        if (chars.PopCount() < 8) {
+            problems.Append("less than 8 unique characters");
+        }
+        if (score < 32) {
+            problems.Append("not complex enough");
+        }
 
-    if (score < 32) {
-        LogError("Password is not complex enough");
-        return false;
+        if (problems.len) {
+            LogError("Password is insufficient: %1", FmtSpan((Span<const char *>)problems));
+            return false;
+        }
     }
 
     return true;
