@@ -194,13 +194,12 @@ static bool CheckComplexity(Span<const char> password)
             }
         } else if (IsAsciiWhite(c)) {
             score++;
-            classes |= 1 << 2;
 
             // Consecutive white spaces characters don't count
             while (++i < password.len && IsAsciiWhite(password[i]));
         } else {
             score += !chars.TestAndSet(c) ? 4 : 1;
-            classes |= 1 << 3;
+            classes |= 1 << 2;
 
             while (++i < password.len && !IsAsciiAlpha(password[i]) &&
                                          !IsAsciiDigit(password[i]) &&
