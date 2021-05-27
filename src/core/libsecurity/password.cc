@@ -60,34 +60,34 @@ static const HashMap<int32_t, char> replacements = {
     { DecodeUtf8Unsafe("–"), '-' }
 };
 
-// Deals with QWERTY and AZERTY for now
+// Deals with QWERTY and AZERTY for now (left-to-right and right-to-left)
 static const char *spatial_sequences[26] = {
-    "sz", // a
-    "n",  // b
-    "v",  // c
-    "f",  // d
-    "r",  // e
-    "g",  // f
-    "h",  // g
-    "j",  // h
-    "o",  // i
-    "k",  // j
-    "l",  // k
-    "m",  // l
-    "",   // m
-    "m",  // n
-    "p",  // o
-    "",   // p
-    "ws", // q
-    "t",  // r
-    "d",  // s
-    "y",  // t
-    "i",  // u
-    "b",  // v
-    "ex", // w
-    "c",  // x
-    "u",  // y
-    "xe"  // z
+    "sz",  // a
+    "nv",  // b
+    "vx",  // c
+    "fs",  // d
+    "rz",  // e
+    "gd",  // f
+    "hf",  // g
+    "jg",  // h
+    "ou",  // i
+    "kh",  // j
+    "lj",  // k
+    "mk",  // l
+    "ln",  // m
+    "mb",  // n
+    "pi",  // o
+    "o",   // p
+    "ws",  // q
+    "te",  // r
+    "dqa", // s
+    "yr",  // t
+    "iy",  // u
+    "bc",  // v
+    "exq", // w
+    "cwz", // x
+    "ut",  // y
+    "xea"  // z
 };
 
 static int32_t DecodeUtf8Unsafe(const char *str)
