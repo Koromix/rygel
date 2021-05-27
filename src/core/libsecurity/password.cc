@@ -182,7 +182,7 @@ static bool CheckComplexity(Span<const char> password)
                 c = next;
             }
         } else if (IsAsciiDigit(c)) {
-            score += !chars.TestAndSet(c) ? 4 : 2;
+            score += !chars.TestAndSet(c) ? 2 : 1;
             classes |= 1 << 1;
 
             while (++i < password.len && IsAsciiDigit(password[i])) {
