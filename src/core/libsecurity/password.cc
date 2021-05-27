@@ -16,7 +16,6 @@
 
 namespace RG {
 
-// XXX: Check for spatial sequences (keyboard layout)
 // XXX: Detect words using dictionary
 // XXX: Detect date-like parts
 
@@ -59,6 +58,36 @@ static const HashMap<int32_t, char> replacements = {
     { DecodeUtf8Unsafe("–"), '-' }
 };
 
+// Deals with QWERTY and AZERTY for now
+static const char *spatial_sequences[26] = {
+    "sz", // a
+    "n",  // b
+    "v",  // c
+    "f",  // d
+    "r",  // e
+    "g",  // f
+    "h",  // g
+    "j",  // h
+    "o",  // i
+    "k",  // j
+    "l",  // k
+    "m",  // l
+    "",   // m
+    "m",  // n
+    "p",  // o
+    "",   // p
+    "ws", // q
+    "t",  // r
+    "d",  // s
+    "y",  // t
+    "i",  // u
+    "b",  // v
+    "ex", // w
+    "c",  // x
+    "u",  // y
+    "xe"  // z
+};
+
 static int32_t DecodeUtf8Unsafe(const char *str)
 {
     int32_t uc = -1;
@@ -88,6 +117,8 @@ static Size SimplifyText(Span<const char> password, Span<char> out_buf)
                 return -1;
             }
 
+            // Some code in later steps assume lowercase, don't omit
+            // this step without good reason!
             out_buf[len++] = LowerAscii(password[offset]);
         } else if (bytes > 1) {
             // Return value is not a string but a pointer to a single char!
@@ -144,8 +175,9 @@ static bool CheckComplexity(Span<const char> password)
                 int next = (uint8_t)password[i];
                 int diff = c - next;
 
+                score += !chars.TestAndSet(next) &&
+                         (diff < -1 || diff > 1) && !strchr(spatial_sequences[c - 'a'], next) ? 2 : 1;
                 c = next;
-                score += !chars.TestAndSet(c) && (diff < -1 || diff > 1) ? 2 : 1;
             }
         } else if (IsAsciiDigit(c)) {
             score += !chars.TestAndSet(c) ? 4 : 2;
@@ -155,8 +187,8 @@ static bool CheckComplexity(Span<const char> password)
                 int next = (uint8_t)password[i];
                 int diff = c - next;
 
+                score += !chars.TestAndSet(next) && (diff < -1 || diff > 1) ? 2 : 1;
                 c = next;
-                score += !chars.TestAndSet(c) && (diff < -1 || diff > 1) ? 2 : 1;
             }
         } else if (IsAsciiWhite(c)) {
             score++;
