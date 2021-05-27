@@ -4155,6 +4155,7 @@ bool StreamReader::Close()
     raw_read = 0;
     error = false;
     eof = false;
+    str_alloc.ReleaseAll();
 
     return ret;
 }
@@ -4323,8 +4324,6 @@ void StreamReader::ReleaseResources()
         } break;
     }
     source.type = SourceType::Memory;
-
-    str_alloc.ReleaseAll();
 }
 
 Size StreamReader::Inflate(Size max_len, void *out_buf)
@@ -4723,6 +4722,7 @@ bool StreamWriter::Close()
 
         filename = nullptr;
         error = false;
+        str_alloc.ReleaseAll();
     };
 
     if (IsValid()) {
@@ -4932,8 +4932,6 @@ void StreamWriter::ReleaseResources()
         } break;
     }
     dest.type = DestinationType::Memory;
-
-    str_alloc.ReleaseAll();
 }
 
 #ifdef MZ_VERSION
