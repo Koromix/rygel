@@ -464,20 +464,16 @@ Options:
     if (!CheckUserName(username))
         return 1;
     if (password) {
-        if (!sec_CheckPassword(password, username)) {
-            LogError("Password is not strong enough");
+        if (!sec_CheckPassword(password, username))
             return 1;
-        }
     } else {
 retry:
         password = Prompt("Password: ", "*", &temp_alloc);
         if (!password)
             return 1;
 
-        if (!sec_CheckPassword(password, username)) {
-            LogError("Password is not strong enough");
+        if (!sec_CheckPassword(password, username))
             goto retry;
-        }
     }
     LogInfo();
 
@@ -2268,7 +2264,6 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
                 valid = false;
             }
             if (password && !sec_CheckPassword(password)) {
-                LogError("Password is not strong enough");
                 valid = false;
             }
             if (email && !strchr(email, '@')) {
@@ -2391,7 +2386,6 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
                 valid = false;
             }
             if (password && !sec_CheckPassword(password)) {
-                LogError("Password is not strong enough");
                 valid = false;
             }
             if (email && !strchr(email, '@')) {
