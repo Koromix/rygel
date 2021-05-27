@@ -1704,7 +1704,7 @@ public:
     {
         Size count = 0;
         for (size_t bits: data) {
-            count += PopCount(bits);
+            count += RG::PopCount(bits);
         }
         return count;
     }
