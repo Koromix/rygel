@@ -16,8 +16,9 @@
 
 namespace RG {
 
-// XXX: Use blacklist (e.g. username), check for spatial sequences (keyboard layout),
-//      detect word segments, detect dates
+// XXX: Check for spatial sequences (keyboard layout)
+// XXX: Detect words using dictionary
+// XXX: Detect date-like parts
 
 static int32_t DecodeUtf8Unsafe(const char *str);
 
