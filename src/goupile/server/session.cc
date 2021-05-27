@@ -856,7 +856,7 @@ void HandlePasswordChange(const http_RequestInfo &request, http_IO *io)
         }
 
         // Check password strength
-        if (!sec_CheckPassword(new_password)) {
+        if (!sec_CheckPassword(new_password, session->username)) {
             LogError("Password is not strong enough");
             io->AttachError(422);
             return;

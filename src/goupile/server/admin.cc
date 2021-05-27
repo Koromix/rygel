@@ -464,7 +464,7 @@ Options:
     if (!CheckUserName(username))
         return 1;
     if (password) {
-        if (!sec_CheckPassword(password)) {
+        if (!sec_CheckPassword(password, username)) {
             LogError("Password is not strong enough");
             return 1;
         }
@@ -474,7 +474,7 @@ retry:
         if (!password)
             return 1;
 
-        if (!sec_CheckPassword(password)) {
+        if (!sec_CheckPassword(password, username)) {
             LogError("Password is not strong enough");
             goto retry;
         }

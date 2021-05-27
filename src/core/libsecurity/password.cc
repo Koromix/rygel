@@ -68,7 +68,7 @@ static int32_t DecodeUtf8Unsafe(const char *str)
     return uc;
 }
 
-static Size SimplifyPassword(Span<const char> password, Span<char> out_buf)
+static Size SimplifyText(Span<const char> password, Span<char> out_buf)
 {
     RG_ASSERT(out_buf.len > 0);
 
@@ -203,7 +203,7 @@ bool sec_CheckPassword(Span<const char> password, Span<const char *const> blackl
 {
     // Simplify it (casing, accents)
     LocalArray<char, 129> buf;
-    buf.len = SimplifyPassword(password, buf.data);
+    buf.len = SimplifyText(password, buf.data);
     if (buf.len < 0)
         return false;
     password = buf;
@@ -212,6 +212,19 @@ bool sec_CheckPassword(Span<const char> password, Span<const char *const> blackl
     if (password.len < 8) {
         LogError("Password is too short");
         return false;
+    }
+
+    // Check for blacklisted words
+    for (const char *needle: blacklist) {
+        LocalArray<char, 129> buf;
+        buf.len = SimplifyText(needle, buf.data);
+        if (buf.len < 0)
+            continue;
+
+        if (strstr(password.ptr, buf.data)) {
+            LogError("Password contains blacklisted content (username?)");
+            return false;
+        }
     }
 
     // Check complexity
