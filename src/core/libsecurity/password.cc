@@ -255,10 +255,17 @@ bool sec_CheckPassword(Span<const char> password, Span<const char *const> blackl
         if (buf.len < 0)
             continue;
 
-        if (strstr(password.ptr, buf.data)) {
-            LogError("Password contains blacklisted content (username?)");
-            return false;
-        }
+        Span<char> remain = buf;
+
+        do {
+            Span<char> frag = SplitStrAny(remain, " _-./", &remain);
+            frag.ptr[frag.len] = 0;
+
+            if (strstr(password.ptr, frag.ptr)) {
+                LogError("Password contains blacklisted content (username?)");
+                return false;
+            }
+        } while (remain.len);
     }
 
     // Check complexity
