@@ -1683,7 +1683,8 @@ function InstanceController() {
 
                         // If we're popping state, this will fuck up navigation history but we can't
                         // refuse popstate events. History mess is better than data loss.
-                        return self.run();
+                        await mutex.chain(self.run);
+                        return;
                     }
                 }
             }
