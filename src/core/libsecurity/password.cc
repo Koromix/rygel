@@ -159,7 +159,7 @@ bool sec_CheckPassword(Span<const char> password, Span<const char *const> blackl
                     int diff = c - next;
 
                     c = next;
-                    score += (diff < -1 || diff > 1) && !chars.TestAndSet(c) ? 2 : 1;
+                    score += !chars.TestAndSet(c) && (diff < -1 || diff > 1) ? 2 : 1;
                 }
             } else if (IsAsciiDigit(c)) {
                 score += !chars.TestAndSet(c) ? 4 : 2;
@@ -170,7 +170,7 @@ bool sec_CheckPassword(Span<const char> password, Span<const char *const> blackl
                     int diff = c - next;
 
                     c = next;
-                    score += (diff < -1 || diff > 1) && !chars.TestAndSet(c) ? 2 : 1;
+                    score += !chars.TestAndSet(c) && (diff < -1 || diff > 1) ? 2 : 1;
                 }
             } else if (IsAsciiWhite(c)) {
                 score++;
@@ -193,6 +193,10 @@ bool sec_CheckPassword(Span<const char> password, Span<const char *const> blackl
 
         if (PopCount(classes) < 3) {
             LogError("Password contains less than 3 character classes (a-z, 0-9, symbols, whitespaces)");
+            return false;
+        }
+        if (chars.PopCount() < 8) {
+            LogError("Password contains less than 8 unique characters (spaces don't count)");
             return false;
         }
 
