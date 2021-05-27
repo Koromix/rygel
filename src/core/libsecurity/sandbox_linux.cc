@@ -49,15 +49,6 @@ namespace RG {
 
 bool sec_IsSandboxSupported()
 {
-#ifdef __clang__
-    #if __has_feature(address_sanitizer)
-        #define __SANITIZE_ADDRESS__
-    #endif
-    #if __has_feature(thread_sanitizer)
-        #define __SANITIZE_THREAD__
-    #endif
-#endif
-
 #if defined(__SANITIZE_ADDRESS__)
     LogError("Sandboxing does not support AddressSanitizer");
     return false;

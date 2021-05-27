@@ -154,6 +154,18 @@ enum class Endianness {
     #error Compiler not supported
 #endif
 
+#ifdef __clang__
+    #if __has_feature(address_sanitizer)
+        #define __SANITIZE_ADDRESS__
+    #endif
+    #if __has_feature(thread_sanitizer)
+        #define __SANITIZE_THREAD__
+    #endif
+    #if __has_feature(undefined_sanitizer)
+        #define __SANITIZE_UNDEFINED__
+    #endif
+#endif
+
 extern "C" void AssertMessage(const char *filename, int line, const char *cond);
 
 #if defined(_MSC_VER)
