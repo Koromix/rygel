@@ -76,6 +76,7 @@ Options:
     }
 
     if (!password) {
+retry:
         password = Prompt("Password: ", mask ? "*" : nullptr, &temp_alloc);
         if (!password)
             return 1;
@@ -84,28 +85,29 @@ Options:
             return 1;
         }
 
-        if (confirm) {
-            // Don't ask the user to do it twice if the check fails
-            if (check && !sec_CheckPassword(password))
-                return 1;
-            check = false;
+        if (check && !sec_CheckPassword(password))
+            goto retry;
 
+        if (confirm) {
+reconfirm:
             const char *confirm = Prompt("Confirm: ", mask ? "*" : nullptr, &temp_alloc);
             if (!confirm)
                 return 1;
 
             if (!TestStr(password, confirm)) {
                 LogError("Password mismatch");
-                return 1;
+                goto reconfirm;
             }
+        } else if (check && !sec_CheckPassword(password)) {
+            goto retry;
         }
-    } else if (!password[0]) {
+    } else if (password[0]) {
+        if (check && !sec_CheckPassword(password))
+            return 1;
+    } else {
         LogError("Password must not be empty");
         return 1;
     }
-
-    if (check && !sec_CheckPassword(password))
-        return 1;
 
     char hash[crypto_pwhash_STRBYTES];
     if (crypto_pwhash_str(hash, password, strlen(password),
