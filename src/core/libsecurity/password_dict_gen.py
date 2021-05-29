@@ -26,6 +26,7 @@ def load_words(filename):
 
 def simplify(word):
     word = word.lower()
+    word = re.sub(' .*$', '', word)
 
     word = re.sub('[ç]', 'c', word)
     word = re.sub('[èéêë]', 'e', word)
