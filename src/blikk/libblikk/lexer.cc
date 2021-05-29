@@ -14,7 +14,7 @@
 #include "../../core/libcc/libcc.hh"
 #include "error.hh"
 #include "lexer.hh"
-#include "lexer_xid.hh"
+#include "lexer_xid.inc"
 #include "../../../vendor/fast_float/include/fast_float/fast_float.h"
 
 namespace RG {

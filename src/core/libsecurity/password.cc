@@ -13,7 +13,7 @@
 
 #include "../libcc/libcc.hh"
 #include "password.hh"
-#include "password_dict.hh"
+#include "password_dict.inc"
 
 namespace RG {
 
