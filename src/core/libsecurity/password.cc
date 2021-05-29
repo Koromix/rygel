@@ -261,8 +261,10 @@ static bool CheckComplexity(Span<const char> password)
     {
         LocalArray<const char *, 8> problems;
 
-        if (PopCount(classes) < 3) {
+        if (password.len < 16 && PopCount(classes) < 3) {
             problems.Append("less than 3 character classes");
+        } else if (PopCount(classes) < 2) {
+            problems.Append("less than 2 character classes");
         }
         if (chars.PopCount() < 8) {
             problems.Append("less than 8 unique characters");
