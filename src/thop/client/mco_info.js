@@ -433,13 +433,19 @@ const mco_info = new function() {
                     case 'ë': { re += '[eèéêë]'; } break;
                     case 'a':
                     case 'à':
-                    case 'â': { re += '[aàâ]'; } break;
+                    case 'â':
+                    case 'ä':
+                    case 'å': { re += '[aàâäå]'; } break;
                     case 'i':
                     case 'î':
                     case 'ï': { re += '[iîï]'; } break;
                     case 'u':
                     case 'ù':
-                    case 'ü': { re += '[uùü]'; } break;
+                    case 'ü': 
+                    case 'û':
+                    case 'ú': { re += '[uùüûú]'; } break;
+                    case 'n':
+                    case 'ñ': { re += '[nñ]'; } break;
                     case 'o': {
                         if (filter[i + 1] === 'e') {
                             re += '(oe|œ)';
@@ -448,7 +454,9 @@ const mco_info = new function() {
                             re += '[oô]';
                         }
                     } break;
-                    case 'ô': { re += '[oô]'; } break;
+                    case 'ó':
+                    case 'ö':
+                    case 'ô': { re += '[oôóö]'; } break;
                     case 'œ': { re += '(oe|œ)'; } break;
                     case 'y':
                     case 'ÿ': { re += '[yÿ]'; } break;

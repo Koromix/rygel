@@ -21,43 +21,53 @@ namespace RG {
 
 static int32_t DecodeUtf8Unsafe(const char *str);
 
-static const HashMap<int32_t, char> replacements = {
-    { DecodeUtf8Unsafe("Ç"), 'c' },
-    { DecodeUtf8Unsafe("Ê"), 'e' },
-    { DecodeUtf8Unsafe("É"), 'e' },
-    { DecodeUtf8Unsafe("È"), 'e' },
-    { DecodeUtf8Unsafe("Ë"), 'e' },
-    { DecodeUtf8Unsafe("A"), 'a' },
-    { DecodeUtf8Unsafe("À"), 'a' },
-    { DecodeUtf8Unsafe("Â"), 'a' },
-    { DecodeUtf8Unsafe("I"), 'i' },
-    { DecodeUtf8Unsafe("Î"), 'i' },
-    { DecodeUtf8Unsafe("Ï"), 'i' },
-    { DecodeUtf8Unsafe("U"), 'u' },
-    { DecodeUtf8Unsafe("Ù"), 'u' },
-    { DecodeUtf8Unsafe("Ü"), 'u' },
-    { DecodeUtf8Unsafe("Ô"), 'o' },
-    { DecodeUtf8Unsafe("O"), 'o' },
-    { DecodeUtf8Unsafe("Ÿ"), 'y' },
-    { DecodeUtf8Unsafe("ç"), 'c' },
-    { DecodeUtf8Unsafe("ê"), 'e' },
-    { DecodeUtf8Unsafe("é"), 'e' },
-    { DecodeUtf8Unsafe("è"), 'e' },
-    { DecodeUtf8Unsafe("ë"), 'e' },
-    { DecodeUtf8Unsafe("a"), 'a' },
-    { DecodeUtf8Unsafe("à"), 'a' },
-    { DecodeUtf8Unsafe("â"), 'a' },
-    { DecodeUtf8Unsafe("i"), 'i' },
-    { DecodeUtf8Unsafe("î"), 'i' },
-    { DecodeUtf8Unsafe("ï"), 'i' },
-    { DecodeUtf8Unsafe("u"), 'u' },
-    { DecodeUtf8Unsafe("ù"), 'u' },
-    { DecodeUtf8Unsafe("ü"), 'u' },
-    { DecodeUtf8Unsafe("ô"), 'o' },
-    { DecodeUtf8Unsafe("o"), 'o' },
-    { DecodeUtf8Unsafe("ÿ"), 'y' },
-    { DecodeUtf8Unsafe("—"), '-' },
-    { DecodeUtf8Unsafe("–"), '-' }
+static const HashMap<int32_t, const char *> replacements = {
+    { DecodeUtf8Unsafe("Ç"), "c" },
+    { DecodeUtf8Unsafe("È"), "e" },
+    { DecodeUtf8Unsafe("É"), "e" },
+    { DecodeUtf8Unsafe("Ê"), "e" },
+    { DecodeUtf8Unsafe("Ë"), "e" },
+    { DecodeUtf8Unsafe("À"), "a" },
+    { DecodeUtf8Unsafe("Å"), "a" },
+    { DecodeUtf8Unsafe("Â"), "a" },
+    { DecodeUtf8Unsafe("Ä"), "a" },
+    { DecodeUtf8Unsafe("Î"), "i" },
+    { DecodeUtf8Unsafe("Ï"), "i" },
+    { DecodeUtf8Unsafe("Ù"), "u" },
+    { DecodeUtf8Unsafe("Ü"), "u" },
+    { DecodeUtf8Unsafe("Û"), "u" },
+    { DecodeUtf8Unsafe("Ú"), "u" },
+    { DecodeUtf8Unsafe("Ñ"), "n" },
+    { DecodeUtf8Unsafe("Ô"), "o" },
+    { DecodeUtf8Unsafe("Ó"), "o" },
+    { DecodeUtf8Unsafe("Ö"), "o" },
+    { DecodeUtf8Unsafe("Œ"), "oe" },
+    { DecodeUtf8Unsafe("Ÿ"), "y" },
+
+    { DecodeUtf8Unsafe("ç"), "c" },
+    { DecodeUtf8Unsafe("è"), "e" },
+    { DecodeUtf8Unsafe("é"), "e" },
+    { DecodeUtf8Unsafe("ê"), "e" },
+    { DecodeUtf8Unsafe("ë"), "e" },
+    { DecodeUtf8Unsafe("à"), "a" },
+    { DecodeUtf8Unsafe("å"), "a" },
+    { DecodeUtf8Unsafe("â"), "a" },
+    { DecodeUtf8Unsafe("ä"), "a" },
+    { DecodeUtf8Unsafe("î"), "i" },
+    { DecodeUtf8Unsafe("ï"), "i" },
+    { DecodeUtf8Unsafe("ù"), "u" },
+    { DecodeUtf8Unsafe("ü"), "u" },
+    { DecodeUtf8Unsafe("û"), "u" },
+    { DecodeUtf8Unsafe("ú"), "u" },
+    { DecodeUtf8Unsafe("ñ"), "n" },
+    { DecodeUtf8Unsafe("ô"), "o" },
+    { DecodeUtf8Unsafe("ó"), "o" },
+    { DecodeUtf8Unsafe("ö"), "o" },
+    { DecodeUtf8Unsafe("œ"), "oe" },
+    { DecodeUtf8Unsafe("ÿ"), "y" },
+
+    { DecodeUtf8Unsafe("—"), "-" },
+    { DecodeUtf8Unsafe("–"), "-" }
 };
 
 // Deals with QWERTY and AZERTY for now (left-to-right and right-to-left)
@@ -96,6 +106,7 @@ static int32_t DecodeUtf8Unsafe(const char *str)
     Size bytes = DecodeUtf8(str, 0, &uc);
 
     RG_ASSERT(bytes > 0);
+    RG_ASSERT(!str[bytes]);
 
     return uc;
 }
@@ -123,25 +134,21 @@ static Size SimplifyText(Span<const char> password, Span<char> out_buf)
             // this step without good reason!
             out_buf[len++] = LowerAscii(password[offset]);
         } else if (bytes > 1) {
-            // Return value is not a string but a pointer to a single char!
-            const char *ptr = replacements.Find(uc);
+            const char *ptr = replacements.FindValue(uc, nullptr);
 
             if (ptr) {
-                if (RG_UNLIKELY(len >= out_buf.len - 2)) {
-                    LogError("Excessive password length");
-                    return -1;
-                }
-
-                out_buf[len++] = *ptr;
+                bytes = strlen(ptr);
             } else {
-                if (RG_UNLIKELY(len >= out_buf.len - bytes - 1)) {
-                    LogError("Excessive password length");
-                    return -1;
-                }
-
-                memcpy_safe(out_buf.ptr + len, password.ptr + offset, (size_t)bytes);
-                len += bytes;
+                ptr = password.ptr + offset;
             }
+
+            if (RG_UNLIKELY(len >= out_buf.len - bytes - 1)) {
+                LogError("Excessive password length");
+                return -1;
+            }
+
+            memcpy_safe(out_buf.ptr + len, ptr, (size_t)bytes);
+            len += bytes;
         } else {
             LogError("Illegal UTF-8 sequence");
             return -1;
