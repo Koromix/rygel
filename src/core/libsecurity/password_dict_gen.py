@@ -26,7 +26,23 @@ def load_words(filename):
 
 def simplify(word):
     word = word.lower()
-    word = re.sub('[ ,;:].*$', '', word)
+    parts = re.split('[ ,;:]+', word)
+
+    if len(parts) > 2:
+        return None
+
+    if len(parts) == 2:
+        word = parts[0]
+        frequency = int(parts[1])
+    else:
+        frequency = 100
+
+    if frequency < 10:
+        return None
+    if re.match('[0-9]', word):
+        return None
+    if word.endswith('\'s'):
+        return None
 
     word = re.sub('[ç]', 'c', word)
     word = re.sub('[èéêë]', 'e', word)
@@ -40,11 +56,6 @@ def simplify(word):
     word = re.sub('[—–\\-]', '', word)
 
     return word
-
-def keep(word):
-    if word.endswith('\'s'):
-        return False
-    return True
 
 def write_dict_header(words, f):
     f.write("""// This program is free software: you can redistribute it and/or modify
@@ -101,7 +112,7 @@ if __name__ == "__main__":
         raw_words.extend(file_words)
 
     simplified_words = set((simplify(word) for word in raw_words if len(word) > 3))
-    simplified_words = [word for word in simplified_words if keep(word)]
+    simplified_words = [word for word in simplified_words if word is not None]
     simplified_words.sort()
 
     write_dict_header(simplified_words, sys.stdout)
