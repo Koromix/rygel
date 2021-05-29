@@ -13,11 +13,13 @@
 
 #include "../libcc/libcc.hh"
 #include "password.hh"
+#include "password_dict.hh"
 
 namespace RG {
 
-// XXX: Detect words using dictionary
-// XXX: Detect date-like parts
+// XXX: Should we try to detect date-like parts?
+// XXX: Use compact and RO-only data structure made for big dictionaries
+// XXX: Add proper names to dictionary, and automatically manage plurals
 
 static int32_t DecodeUtf8Unsafe(const char *str);
 
@@ -64,10 +66,7 @@ static const HashMap<int32_t, const char *> replacements = {
     { DecodeUtf8Unsafe("ó"), "o" },
     { DecodeUtf8Unsafe("ö"), "o" },
     { DecodeUtf8Unsafe("œ"), "oe" },
-    { DecodeUtf8Unsafe("ÿ"), "y" },
-
-    { DecodeUtf8Unsafe("—"), "-" },
-    { DecodeUtf8Unsafe("–"), "-" }
+    { DecodeUtf8Unsafe("ÿ"), "y" }
 };
 
 // Deals with QWERTY and AZERTY for now (left-to-right and right-to-left)
@@ -161,6 +160,28 @@ static Size SimplifyText(Span<const char> password, Span<char> out_buf)
     return len;
 }
 
+static bool SearchWord(const char *word)
+{
+    Size start = 0;
+    Size end = RG_LEN(sec_DictWords);
+
+    while (end > start) {
+        Size i = (start + end) / 2;
+        const char *needle = sec_DictRaw + sec_DictWords[i];
+        int cmp = CmpStr(word, needle);
+
+        if (cmp > 0) {
+            start = i + 1;
+        } else if (cmp < 0) {
+            end = i;
+        } else {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 static bool CheckComplexity(Span<const char> password)
 {
     int score = 0;
@@ -180,6 +201,12 @@ static bool CheckComplexity(Span<const char> password)
             score += !chars.TestAndSet(c) ? 4 : 2;
             classes |= 1 << 0;
 
+            int prev_score = score;
+            LocalArray<char, 32> word_buf;
+            char reverse_buf[RG_SIZE(word_buf.data)];
+
+            word_buf.Append(c);
+            reverse_buf[RG_SIZE(reverse_buf) - 2] = c;
             while (++i < password.len && IsAsciiAlpha(password[i])) {
                 int next = (uint8_t)password[i];
                 int diff = c - next;
@@ -187,6 +214,19 @@ static bool CheckComplexity(Span<const char> password)
                 score += !chars.TestAndSet(next) &&
                          (diff < -1 || diff > 1) && !strchr(spatial_sequences[c - 'a'], next) ? 2 : 1;
                 c = next;
+
+                if (RG_LIKELY(word_buf.Available() > 1)) {
+                    word_buf.Append(c);
+                    reverse_buf[RG_SIZE(reverse_buf) - word_buf.len - 1] = c;
+                }
+            }
+            word_buf.data[word_buf.len] = 0;
+            reverse_buf[RG_SIZE(reverse_buf) - 1] = 0;
+
+            const char *reverse_word = std::end(reverse_buf) - word_buf.len - 1;
+
+            if (SearchWord(word_buf.data) || SearchWord(reverse_word)) {
+                score = prev_score + word_buf.len / 2;
             }
         } else if (IsAsciiDigit(c)) {
             score += !chars.TestAndSet(c) ? 2 : 1;
