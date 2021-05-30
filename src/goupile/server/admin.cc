@@ -1006,7 +1006,7 @@ static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = n
     for (InstanceHolder *instance: instances) {
         if (filter == nullptr || instance == filter || instance->master == filter) {
             const char *basename = SplitStrReverseAny(instance->filename, RG_PATH_SEPARATORS).ptr;
-            basename = Fmt(&temp_alloc, "instances%/%1", basename).ptr;
+            basename = Fmt(&temp_alloc, "instances/%1", basename).ptr;
 
             entries.Append({&instance->db, basename});
         }
@@ -2205,6 +2205,14 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                 RestoreEntry entry = {};
                 entry.key = DuplicateString(instance_key, &io->allocator).ptr;
                 entry.basename = MakeInstanceFileName("instances", instance_key, &io->allocator);
+#ifdef _WIN32
+                for (Size i = 0; entry.basename[i]; i++) {
+                    char *ptr = (char *)entry.basename;
+                    int c = entry.basename[i];
+
+                    ptr[i] = (c == '\\' ? '/' : c);
+                }
+#endif
                 entry.filename = MakeInstanceFileName(tmp_directory, instance_key, &io->allocator);
                 entries.Append(entry);
             }
