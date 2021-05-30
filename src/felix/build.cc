@@ -124,26 +124,26 @@ bool Builder::AddTarget(const TargetInfo &target)
         // Make C file
         {
             Command cmd = {};
-            build.compiler->MakePackCommand(target.pack_filenames, build.compile_mode,
+            build.compiler->MakePackCommand(target.pack_filenames, build.compile_opt,
                                             target.pack_options, src_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Pack %1 assets", target.name).ptr;
             AppendNode(text, src_filename, cmd, target.pack_filenames);
         }
 
-        bool module = (build.compile_mode == CompileMode::Debug ||
-                       build.compile_mode == CompileMode::DebugFast);
+        bool module = (build.compile_opt == CompileOptimization::None ||
+                       build.compile_opt == CompileOptimization::Debug);
         uint32_t features = target.CombineFeatures(build.features);
 
         // Build object file
         {
             Command cmd = {};
             if (module) {
-                build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
+                build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_opt,
                                                   false, nullptr, {"EXPORT"}, {}, features, build.env,
                                                   obj_filename, &str_alloc, &cmd);
             } else {
-                build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
+                build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_opt,
                                                   false, nullptr, {}, {}, features, build.env,
                                                   obj_filename,  &str_alloc, &cmd);
             }
@@ -158,7 +158,7 @@ bool Builder::AddTarget(const TargetInfo &target)
                                               target.name, RG_SHARED_LIBRARY_EXTENSION).ptr;
 
             Command cmd = {};
-            build.compiler->MakeLinkCommand(obj_filename, CompileMode::Debug, {},
+            build.compiler->MakeLinkCommand(obj_filename, CompileOptimization::None, {},
                                             LinkType::SharedLibrary, features, build.env,
                                             module_filename, &str_alloc, &cmd);
 
@@ -195,7 +195,7 @@ bool Builder::AddTarget(const TargetInfo &target)
             return false;
 
         Command cmd = {};
-        build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_mode,
+        build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_opt,
                                           false, nullptr, {}, {}, features, build.env,
                                           obj_filename, &str_alloc, &cmd);
 
@@ -212,7 +212,7 @@ bool Builder::AddTarget(const TargetInfo &target)
         uint32_t features = target.CombineFeatures(build.features);
 
         Command cmd = {};
-        build.compiler->MakeLinkCommand(obj_filenames, build.compile_mode, target.libraries,
+        build.compiler->MakeLinkCommand(obj_filenames, build.compile_opt, target.libraries,
                                         LinkType::Executable, features, build.env, target_filename,
                                         &str_alloc, &cmd);
 
@@ -252,7 +252,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
                 uint32_t features = pch->target->CombineFeatures(build.features);
 
                 Command cmd = {};
-                build.compiler->MakePchCommand(pch_filename, pch->type, build.compile_mode, warnings,
+                build.compiler->MakePchCommand(pch_filename, pch->type, build.compile_opt, warnings,
                                                pch->target->definitions, pch->target->include_directories,
                                                features, build.env, &str_alloc, &cmd);
 
@@ -275,7 +275,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
         uint32_t features = src.target->CombineFeatures(build.features);
 
         Command cmd = {};
-        build.compiler->MakeObjectCommand(src.filename, src.type, build.compile_mode, warnings,
+        build.compiler->MakeObjectCommand(src.filename, src.type, build.compile_opt, warnings,
                                           pch_filename, src.target->definitions, src.target->include_directories,
                                           features, build.env, obj_filename, &str_alloc, &cmd);
 

@@ -41,6 +41,7 @@ web/sites/goupile.fr
 bootstrap.bat
 bootstrap.sh
 FelixBuild.ini
+FelixBuild.ini.presets
 LICENSE.txt
 
 src/goupile/README.md==>README.md

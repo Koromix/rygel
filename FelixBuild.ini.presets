@@ -1,0 +1,16 @@
+[DebugSlow]
+Optimization = None
+Features = PCH, ASan, StackProtect
+
+[DebugFast]
+Optimization = Debug
+Features = PCH, ASan, StackProtect
+
+[ReleaseSafe]
+Compiler = Clang
+Optimization = LTO
+Features = PCH, StackProtect, SafeStack, CFI, ZeroInit
+
+[ReleaseFast]
+Optimization = LTO
+Features = PCH, StackProtect

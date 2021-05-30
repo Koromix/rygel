@@ -17,15 +17,15 @@
 
 namespace RG {
 
-enum class CompileMode {
+enum class CompileOptimization {
+    None,
     Debug,
-    DebugFast,
     Fast,
     LTO
 };
-static const char *const CompileModeNames[] = {
+static const char *const CompileOptimizationNames[] = {
+    "None",
     "Debug",
-    "DebugFast",
     "Fast",
     "LTO"
 };
@@ -90,27 +90,27 @@ public:
 
     virtual ~Compiler() {}
 
-    virtual bool CheckFeatures(CompileMode compile_mode, uint32_t features) const = 0;
+    virtual bool CheckFeatures(CompileOptimization compile_opt, uint32_t features) const = 0;
 
     virtual const char *GetObjectExtension() const = 0;
     virtual const char *GetExecutableExtension() const = 0;
 
-    virtual void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
+    virtual void MakePackCommand(Span<const char *const> pack_filenames, CompileOptimization compile_opt,
                                  const char *pack_options, const char *dest_filename,
                                  Allocator *alloc, Command *out_cmd) const = 0;
 
-    virtual void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
+    virtual void MakePchCommand(const char *pch_filename, SourceType src_type, CompileOptimization compile_opt,
                                 bool warnings, Span<const char *const> definitions,
                                 Span<const char *const> include_directories, uint32_t features, bool env_flags,
                                 Allocator *alloc, Command *out_cmd) const = 0;
     virtual const char *GetPchObject(const char *pch_filename, Allocator *alloc) const = 0;
 
-    virtual void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
+    virtual void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileOptimization compile_opt,
                                    bool warnings, const char *pch_filename, Span<const char *const> definitions,
                                    Span<const char *const> include_directories, uint32_t features, bool env_flags,
                                    const char *dest_filename, Allocator *alloc, Command *out_cmd) const = 0;
 
-    virtual void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
+    virtual void MakeLinkCommand(Span<const char *const> obj_filenames, CompileOptimization compile_opt,
                                  Span<const char *const> libraries, LinkType link_type,
                                  uint32_t features, bool env_flags, const char *dest_filename,
                                  Allocator *alloc, Command *out_cmd) const = 0;

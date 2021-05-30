@@ -42,7 +42,7 @@ static void AddEnvironmentFlags(Span<const char *const> names, HeapArray<char> *
     }
 }
 
-static void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
+static void MakePackCommand(Span<const char *const> pack_filenames, CompileOptimization compile_opt,
                             bool use_arrays, const char *pack_options, const char *dest_filename,
                             Allocator *alloc, Command *out_cmd)
 {
@@ -53,11 +53,11 @@ static void MakePackCommand(Span<const char *const> pack_filenames, CompileMode 
     Fmt(&buf, "\"%1\" pack -O \"%2\"", GetApplicationExecutable(), dest_filename);
 
     Fmt(&buf, use_arrays ? "" : " -fUseLiterals");
-    switch (compile_mode) {
-        case CompileMode::Debug:
-        case CompileMode::DebugFast: { Fmt(&buf, " -m SourceMap"); } break;
-        case CompileMode::Fast:
-        case CompileMode::LTO: { Fmt(&buf, " -m RunTransform"); } break;
+    switch (compile_opt) {
+        case CompileOptimization::None:
+        case CompileOptimization::Debug: { Fmt(&buf, " -m SourceMap"); } break;
+        case CompileOptimization::Fast:
+        case CompileOptimization::LTO: { Fmt(&buf, " -m RunTransform"); } break;
     }
 
     if (pack_options) {
@@ -138,7 +138,7 @@ public:
         return compiler;
     }
 
-    bool CheckFeatures(CompileMode compile_mode, uint32_t features) const override
+    bool CheckFeatures(CompileOptimization compile_opt, uint32_t features) const override
     {
         uint32_t supported = 0;
 
@@ -166,7 +166,7 @@ public:
             LogError("Cannot use ASan and TSan at the same time");
             return false;
         }
-        if (compile_mode != CompileMode::LTO && (features & (int)CompileFeature::CFI)) {
+        if (compile_opt != CompileOptimization::LTO && (features & (int)CompileFeature::CFI)) {
             LogError("Clang CFI feature requires LTO compilation");
             return false;
         }
@@ -182,28 +182,28 @@ public:
     const char *GetExecutableExtension() const override { return ""; }
 #endif
 
-    void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
+    void MakePackCommand(Span<const char *const> pack_filenames, CompileOptimization compile_opt,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        RG::MakePackCommand(pack_filenames, compile_mode, false, pack_options,
+        RG::MakePackCommand(pack_filenames, compile_opt, false, pack_options,
                             dest_filename, alloc, out_cmd);
     }
 
-    void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
+    void MakePchCommand(const char *pch_filename, SourceType src_type, CompileOptimization compile_opt,
                         bool warnings, Span<const char *const> definitions,
                         Span<const char *const> include_directories, uint32_t features, bool env_flags,
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr, definitions,
+        MakeObjectCommand(pch_filename, src_type, compile_opt, warnings, nullptr, definitions,
                           include_directories, features, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
-    void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
+    void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileOptimization compile_opt,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, uint32_t features, bool env_flags,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
@@ -230,11 +230,11 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        switch (compile_mode) {
-            case CompileMode::Debug: { Fmt(&buf, " -O0 -ftrapv"); } break;
-            case CompileMode::DebugFast: { Fmt(&buf, " -Og -ftrapv -fno-omit-frame-pointer"); } break;
-            case CompileMode::Fast: { Fmt(&buf, " -O2 -DNDEBUG"); } break;
-            case CompileMode::LTO: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
+        switch (compile_opt) {
+            case CompileOptimization::None: { Fmt(&buf, " -O0 -ftrapv"); } break;
+            case CompileOptimization::Debug: { Fmt(&buf, " -Og -ftrapv -fno-omit-frame-pointer"); } break;
+            case CompileOptimization::Fast: { Fmt(&buf, " -O2 -DNDEBUG"); } break;
+            case CompileOptimization::LTO: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
         }
         Fmt(&buf, " -fvisibility=hidden");
         Fmt(&buf, warnings ? " -Wall" : " -Wno-everything");
@@ -261,7 +261,7 @@ public:
         if (major_version >= 11) {
             Fmt(&buf, " -fno-semantic-interposition");
         }
-        if (compile_mode == CompileMode::Fast || compile_mode == CompileMode::LTO) {
+        if (compile_opt == CompileOptimization::Fast || compile_opt == CompileOptimization::LTO) {
             Fmt(&buf, " -D_FORTIFY_SOURCE=2");
         }
 #endif
@@ -298,7 +298,7 @@ public:
             Fmt(&buf, " -ftrivial-auto-var-init=zero -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang");
         }
         if (features & (int)CompileFeature::CFI) {
-            RG_ASSERT(compile_mode == CompileMode::LTO);
+            RG_ASSERT(compile_opt == CompileOptimization::LTO);
 
             Fmt(&buf, " -fsanitize=cfi");
             if (src_type == SourceType::C) {
@@ -338,7 +338,7 @@ public:
         out_cmd->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
     }
 
-    void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
+    void MakeLinkCommand(Span<const char *const> obj_filenames, CompileOptimization compile_opt,
                          Span<const char *const> libraries, LinkType link_type,
                          uint32_t features, bool env_flags, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
@@ -356,15 +356,15 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build mode
-        switch (compile_mode) {
-            case CompileMode::Debug:
-            case CompileMode::DebugFast: {} break;
+        switch (compile_opt) {
+            case CompileOptimization::None:
+            case CompileOptimization::Debug: {} break;
 #ifdef _WIN32
-            case CompileMode::Fast: { Fmt(&buf, " %1", link_type == LinkType::Executable ? " -static" : ""); } break;
-            case CompileMode::LTO: { Fmt(&buf, " -flto%1", link_type == LinkType::Executable ? " -static" : ""); } break;
+            case CompileOptimization::Fast: { Fmt(&buf, " %1", link_type == LinkType::Executable ? " -static" : ""); } break;
+            case CompileOptimization::LTO: { Fmt(&buf, " -flto%1", link_type == LinkType::Executable ? " -static" : ""); } break;
 #else
-            case CompileMode::Fast: {} break;
-            case CompileMode::LTO: { Fmt(&buf, " -flto -Wl,-O1"); } break;
+            case CompileOptimization::Fast: {} break;
+            case CompileOptimization::LTO: { Fmt(&buf, " -flto -Wl,-O1"); } break;
 #endif
         }
 
@@ -414,7 +414,7 @@ public:
             Fmt(&buf, " -fsanitize=safe-stack");
         }
         if (features & (int)CompileFeature::CFI) {
-            RG_ASSERT(compile_mode == CompileMode::LTO);
+            RG_ASSERT(compile_opt == CompileOptimization::LTO);
             Fmt(&buf, " -fsanitize=cfi");
         }
 
@@ -462,7 +462,7 @@ public:
         return compiler;
     }
 
-    bool CheckFeatures(CompileMode compile_mode, uint32_t features) const override
+    bool CheckFeatures(CompileOptimization compile_opt, uint32_t features) const override
     {
         uint32_t supported = 0;
 
@@ -503,28 +503,28 @@ public:
     const char *GetExecutableExtension() const override { return ""; }
 #endif
 
-    void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
+    void MakePackCommand(Span<const char *const> pack_filenames, CompileOptimization compile_opt,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        RG::MakePackCommand(pack_filenames, compile_mode, false, pack_options,
+        RG::MakePackCommand(pack_filenames, compile_opt, false, pack_options,
                             dest_filename, alloc, out_cmd);
     }
 
-    void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
+    void MakePchCommand(const char *pch_filename, SourceType src_type, CompileOptimization compile_opt,
                         bool warnings, Span<const char *const> definitions,
                         Span<const char *const> include_directories, uint32_t features, bool env_flags,
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr,
+        MakeObjectCommand(pch_filename, src_type, compile_opt, warnings, nullptr,
                           definitions, include_directories, features, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
-    void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
+    void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileOptimization compile_opt,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, uint32_t features, bool env_flags,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
@@ -550,12 +550,12 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        switch (compile_mode) {
-            case CompileMode::Debug: { Fmt(&buf, " -O0 -fsanitize=signed-integer-overflow -fsanitize-undefined-trap-on-error"); } break;
-            case CompileMode::DebugFast: { Fmt(&buf, " -Og -fsanitize=signed-integer-overflow -fsanitize-undefined-trap-on-error"
+        switch (compile_opt) {
+            case CompileOptimization::None: { Fmt(&buf, " -O0 -fsanitize=signed-integer-overflow -fsanitize-undefined-trap-on-error"); } break;
+            case CompileOptimization::Debug: { Fmt(&buf, " -Og -fsanitize=signed-integer-overflow -fsanitize-undefined-trap-on-error"
                                                      " -fno-omit-frame-pointer"); } break;
-            case CompileMode::Fast: { Fmt(&buf, " -O2 -DNDEBUG"); } break;
-            case CompileMode::LTO: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
+            case CompileOptimization::Fast: { Fmt(&buf, " -O2 -DNDEBUG"); } break;
+            case CompileOptimization::LTO: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
         }
         if (warnings) {
             Fmt(&buf, " -Wall");
@@ -577,7 +577,7 @@ public:
 #else
         Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
                   " -pthread -fPIC -fno-semantic-interposition");
-        if (compile_mode == CompileMode::Fast || compile_mode == CompileMode::LTO) {
+        if (compile_opt == CompileOptimization::Fast || compile_opt == CompileOptimization::LTO) {
             Fmt(&buf, " -D_FORTIFY_SOURCE=2");
         }
     #if defined(__arm__) || defined(__thumb__)
@@ -635,7 +635,7 @@ public:
         out_cmd->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
     }
 
-    void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
+    void MakeLinkCommand(Span<const char *const> obj_filenames, CompileOptimization compile_opt,
                          Span<const char *const> libraries, LinkType link_type,
                          uint32_t features, bool env_flags, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
@@ -653,15 +653,15 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build mode
-        switch (compile_mode) {
-            case CompileMode::Debug:
-            case CompileMode::DebugFast: {} break;
+        switch (compile_opt) {
+            case CompileOptimization::None:
+            case CompileOptimization::Debug: {} break;
 #ifdef _WIN32
-            case CompileMode::Fast: { Fmt(&buf, " -s%1", link_type == LinkType::Executable ? " -static" : ""); } break;
-            case CompileMode::LTO: { Fmt(&buf, " -flto -Wl,-O1 -s%1", link_type == LinkType::Executable ? " -static" : ""); } break;
+            case CompileOptimization::Fast: { Fmt(&buf, " -s%1", link_type == LinkType::Executable ? " -static" : ""); } break;
+            case CompileOptimization::LTO: { Fmt(&buf, " -flto -Wl,-O1 -s%1", link_type == LinkType::Executable ? " -static" : ""); } break;
 #else
-            case CompileMode::Fast: { Fmt(&buf, " -s"); } break;
-            case CompileMode::LTO: { Fmt(&buf, " -flto -Wl,-O1 -s"); } break;
+            case CompileOptimization::Fast: { Fmt(&buf, " -s"); } break;
+            case CompileOptimization::LTO: { Fmt(&buf, " -flto -Wl,-O1 -s"); } break;
 #endif
         }
 
@@ -756,7 +756,7 @@ public:
         return compiler;
     }
 
-    bool CheckFeatures(CompileMode compile_mode, uint32_t features) const override
+    bool CheckFeatures(CompileOptimization compile_opt, uint32_t features) const override
     {
         uint32_t supported = 0;
 
@@ -780,24 +780,24 @@ public:
     const char *GetObjectExtension() const override { return ".obj"; }
     const char *GetExecutableExtension() const override { return ".exe"; }
 
-    void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
+    void MakePackCommand(Span<const char *const> pack_filenames, CompileOptimization compile_opt,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 
         // Strings literals are limited in length in MSVC, even with concatenation (64kiB)
-        RG::MakePackCommand(pack_filenames, compile_mode, true, pack_options,
+        RG::MakePackCommand(pack_filenames, compile_opt, true, pack_options,
                             dest_filename, alloc, out_cmd);
     }
 
-    void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
+    void MakePchCommand(const char *pch_filename, SourceType src_type, CompileOptimization compile_opt,
                         bool warnings, Span<const char *const> definitions,
                         Span<const char *const> include_directories, uint32_t features, bool env_flags,
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr, definitions,
+        MakeObjectCommand(pch_filename, src_type, compile_opt, warnings, nullptr, definitions,
                           include_directories, features, env_flags, nullptr, alloc, out_cmd);
     }
 
@@ -809,7 +809,7 @@ public:
         return obj_filename;
     }
 
-    void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
+    void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileOptimization compile_opt,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, uint32_t features, bool env_flags,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
@@ -833,11 +833,11 @@ public:
 
         // Build options
         Fmt(&buf, " /EHsc %1", warnings ? "/W3 /wd4200" : "/w");
-        switch (compile_mode) {
-            case CompileMode::Debug: { Fmt(&buf, " /Od"); } break;
-            case CompileMode::DebugFast: { Fmt(&buf, " /O2"); } break;
-            case CompileMode::Fast: { Fmt(&buf, " /O2 /DNDEBUG"); } break;
-            case CompileMode::LTO: { Fmt(&buf, " /O2 /GL /DNDEBUG"); } break;
+        switch (compile_opt) {
+            case CompileOptimization::None: { Fmt(&buf, " /Od"); } break;
+            case CompileOptimization::Debug: { Fmt(&buf, " /O2"); } break;
+            case CompileOptimization::Fast: { Fmt(&buf, " /O2 /DNDEBUG"); } break;
+            case CompileOptimization::LTO: { Fmt(&buf, " /O2 /GL /DNDEBUG"); } break;
         }
 
         // Platform flags
@@ -887,7 +887,7 @@ public:
         out_cmd->deps_mode = Command::DependencyMode::ShowIncludes;
     }
 
-    void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
+    void MakeLinkCommand(Span<const char *const> obj_filenames, CompileOptimization compile_opt,
                          Span<const char *const> libraries, LinkType link_type,
                          uint32_t features, bool env_flags, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
@@ -905,11 +905,11 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build mode
-        switch (compile_mode) {
-            case CompileMode::Debug:
-            case CompileMode::DebugFast:
-            case CompileMode::Fast: {} break;
-            case CompileMode::LTO: { Fmt(&buf, " /LTCG"); } break;
+        switch (compile_opt) {
+            case CompileOptimization::None:
+            case CompileOptimization::Debug:
+            case CompileOptimization::Fast: {} break;
+            case CompileOptimization::LTO: { Fmt(&buf, " /LTCG"); } break;
         }
         Fmt(&buf, " /DYNAMICBASE /HIGHENTROPYVA");
 
@@ -965,7 +965,7 @@ public:
         return compiler;
     }
 
-    bool CheckFeatures(CompileMode compile_mode, uint32_t features) const override
+    bool CheckFeatures(CompileOptimization compile_opt, uint32_t features) const override
     {
         uint32_t supported = 0;
 
@@ -985,28 +985,28 @@ public:
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetExecutableExtension() const override { return ".js"; }
 
-    void MakePackCommand(Span<const char *const> pack_filenames, CompileMode compile_mode,
+    void MakePackCommand(Span<const char *const> pack_filenames, CompileOptimization compile_opt,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        RG::MakePackCommand(pack_filenames, compile_mode, false, pack_options,
+        RG::MakePackCommand(pack_filenames, compile_opt, false, pack_options,
                             dest_filename, alloc, out_cmd);
     }
 
-    void MakePchCommand(const char *pch_filename, SourceType src_type, CompileMode compile_mode,
+    void MakePchCommand(const char *pch_filename, SourceType src_type, CompileOptimization compile_opt,
                         bool warnings, Span<const char *const> definitions,
                         Span<const char *const> include_directories, uint32_t features, bool env_flags,
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        MakeObjectCommand(pch_filename, src_type, compile_mode, warnings, nullptr,
+        MakeObjectCommand(pch_filename, src_type, compile_opt, warnings, nullptr,
                           definitions, include_directories, features, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
-    void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileMode compile_mode,
+    void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileOptimization compile_opt,
                            bool warnings, const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, uint32_t features, bool env_flags,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
@@ -1037,11 +1037,11 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        switch (compile_mode) {
-            case CompileMode::Debug: { Fmt(&buf, " -O0 -ftrapv"); } break;
-            case CompileMode::DebugFast: { Fmt(&buf, " -Og -ftrapv"); } break;
-            case CompileMode::Fast: { Fmt(&buf, " -O2 -DNDEBUG"); } break;
-            case CompileMode::LTO: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
+        switch (compile_opt) {
+            case CompileOptimization::None: { Fmt(&buf, " -O0 -ftrapv"); } break;
+            case CompileOptimization::Debug: { Fmt(&buf, " -Og -ftrapv"); } break;
+            case CompileOptimization::Fast: { Fmt(&buf, " -O2 -DNDEBUG"); } break;
+            case CompileOptimization::LTO: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
         }
         Fmt(&buf, warnings ? " -Wall" : " -w");
         Fmt(&buf, " -fvisibility=hidden");
@@ -1084,7 +1084,7 @@ public:
         out_cmd->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
     }
 
-    void MakeLinkCommand(Span<const char *const> obj_filenames, CompileMode compile_mode,
+    void MakeLinkCommand(Span<const char *const> obj_filenames, CompileOptimization compile_opt,
                          Span<const char *const> libraries, LinkType link_type,
                          uint32_t features, bool env_flags, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
@@ -1107,11 +1107,11 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build mode
-        switch (compile_mode) {
-            case CompileMode::Debug:
-            case CompileMode::DebugFast: {} break;
-            case CompileMode::Fast: { Fmt(&buf, " -s"); } break;
-            case CompileMode::LTO: { Fmt(&buf, " -flto -s"); } break;
+        switch (compile_opt) {
+            case CompileOptimization::None:
+            case CompileOptimization::Debug: {} break;
+            case CompileOptimization::Fast: { Fmt(&buf, " -s"); } break;
+            case CompileOptimization::LTO: { Fmt(&buf, " -flto -s"); } break;
         }
 
         // Objects and libraries

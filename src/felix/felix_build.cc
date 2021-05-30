@@ -164,10 +164,20 @@ static bool ParseFeatureString(Span<const char> str, uint32_t *out_features)
     return true;
 }
 
-static bool LoadUserFile(const char *filename, Allocator *alloc, CompilerInfo *out_compiler_info,
-                         BuildSettings *out_build, HeapArray<const char *> *out_selectors)
+struct BuildPreset {
+    const char *name;
+
+    CompilerInfo compiler_info;
+    BuildSettings build;
+};
+
+static bool LoadPresetFile(const char *basename, Allocator *alloc,
+                           const char **out_default, HeapArray<BuildPreset> *out_presets)
 {
-    StreamReader st(filename);
+    // This function assumes the file is in the current working directory
+    RG_ASSERT(!strpbrk(basename, RG_PATH_SEPARATORS));
+
+    StreamReader st(basename);
     if (!st.IsValid())
         return false;
 
@@ -180,36 +190,37 @@ static bool LoadUserFile(const char *filename, Allocator *alloc, CompilerInfo *o
         IniProperty prop;
         while (ini.Next(&prop)) {
             if (!prop.section.len) {
+                if (prop.key == "Default") {
+                    *out_default = DuplicateString(prop.value, alloc).ptr;
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
+            } else {
+                BuildPreset *preset = std::find_if(out_presets->begin(), out_presets->end(),
+                                                   [&](const BuildPreset &preset) { return TestStr(preset.name, prop.section); });
+                if (preset == out_presets->end()) {
+                    preset = out_presets->AppendDefault();
+                    preset->name = DuplicateString(prop.section, alloc).ptr;
+                }
+
                 do {
-                    if (prop.key == "Defaults") {
-                        const char *str = prop.value.ptr;
-
-                        while (str[0]) {
-                            Span<const char> part = TrimStr(SplitStrAny(str, " ,", &str), " ");
-
-                            if (part.len) {
-                                const char *selector = DuplicateString(part, alloc).ptr;
-                                out_selectors->Append(selector);
-                            }
-                        }
+                    if (prop.key == "Directory") {
+                        preset->build.output_directory = NormalizePath(prop.value, GetWorkingDirectory(), alloc).ptr;
                     } else if (prop.key == "Compiler") {
-                        valid &= ParseCompilerString(prop.value.ptr, out_compiler_info);
-                    } else if (prop.key == "Mode") {
-                        if (!OptionToEnum(CompileModeNames, prop.value.ptr, &out_build->compile_mode)) {
-                            LogError("Unknown build mode '%1'", prop.value);
+                        valid &= ParseCompilerString(prop.value.ptr, &preset->compiler_info);
+                    } else if (prop.key == "Optimization") {
+                        if (!OptionToEnum(CompileOptimizationNames, prop.value.ptr, &preset->build.compile_opt)) {
+                            LogError("Unknown optimization level '%1'", prop.value);
                             valid = false;
                         }
                     } else if (prop.key == "Features") {
-                        valid &= ParseFeatureString(prop.value.ptr, &out_build->features);
+                        valid &= ParseFeatureString(prop.value.ptr, &preset->build.features);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
                     }
                 } while (ini.NextInSection(&prop));
-            } else {
-                LogError("Unknown section '%1'", prop.section);
-                while (ini.NextInSection(&prop));
-                valid = false;
             }
         }
     }
@@ -226,8 +237,8 @@ int RunBuild(Span<const char *> arguments)
     // Options
     HeapArray<const char *> selectors;
     const char *config_filename = nullptr;
-    bool load_user = true;
-    HeapArray<const char *> default_selectors;
+    bool load_presets = true;
+    const char *preset_name = nullptr;
     CompilerInfo compiler_info = {};
     BuildSettings build = {};
     int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_WORKERS + 1);
@@ -250,13 +261,15 @@ Options:
     %!..+-O, --output <directory>%!0     Set output directory
                                  %!D..(default: bin/<toolchain>)%!0
 
-        %!..+--no_user%!0                Ignore user settings (FelixBuild.ini.user)
+        %!..+--no_presets%!0             Ignore presets
+                                 %!D..(FelixBuild.ini.presets, FelixBuild.ini.user)%!0
+    %!..+-p, --preset <preset>%!0        Select specific preset
 
     %!..+-c, --compiler <compiler>%!0    Set compiler, see below
                                  %!D..(default: %2)%!0
-    %!..+-m, --mode <mode>%!0            Set build mode, see below
+    %!..+-o, --optimize <level>%!0       Set compiler optimization level
                                  %!D..(default: %3)%!0
-    %!..+-f, --features <features>%!0    Compiler features (see below)
+    %!..+-f, --features <features>%!0    Set additional compilation features (see below)
     %!..+-e, --environment%!0            Use compiler flags found in environment (CFLAGS, LDFLAGS, etc.)
 
     %!..+-j, --jobs <count>%!0           Set maximum number of parallel jobs
@@ -273,7 +286,7 @@ Options:
         %!..+--run_here <target>%!0      Same thing, but run from current directory
 
 Supported compilers:)", FelixTarget, default_compiler ? default_compiler->name : "?",
-                        CompileModeNames[(int)build.compile_mode], jobs);
+                        CompileOptimizationNames[(int)build.compile_opt], jobs);
 
         for (const CompilerInfo &info: Compilers) {
             PrintLn(fp, "    %!..+%1%!0 %2", FmtArg(info.name).Pad(28), info.binary);
@@ -283,8 +296,8 @@ Supported compilers:)", FelixTarget, default_compiler ? default_compiler->name :
 Use %!..+--compiler=<compiler>:<binary>%!0 to specify a custom compiler binary, for example
 you can use: %!..+felix --compiler=Clang:clang-11%!0.
 
-Supported compilation modes: %!..+%1%!0
-Supported compiler features: %!..+%2%!0)", FmtSpan(CompileModeNames),
+Supported optimization levels: %!..+%1%!0
+Supported compiler features: %!..+%2%!0)", FmtSpan(CompileOptimizationNames),
                                            FmtSpan(CompileFeatureNames));
 
         PrintLn(fp, R"(
@@ -305,8 +318,10 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 config_filename = opt.current_value;
-            } else if (opt.Test("--no_user")) {
-                load_user = false;
+            } else if (opt.Test("--no_presets")) {
+                load_presets = false;
+            } else if (opt.Test("-p", "--preset", OptionType::Value)) {
+                preset_name = opt.current_value;
             } else if (opt.Test("--run") || opt.Test("--run_here")) {
                 break;
             }
@@ -340,13 +355,40 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         }
     }
 
-    // Load user settings
-    if (load_user) {
+    // Load customized presets
+    if (load_presets) {
+        const char *presets_filename = Fmt(&temp_alloc, "%1.presets", config_filename).ptr;
         const char *user_filename = Fmt(&temp_alloc, "%1.user", config_filename).ptr;
 
-        if (TestFile(user_filename) && !LoadUserFile(user_filename, &temp_alloc,
-                                                     &compiler_info, &build, &default_selectors))
+        HeapArray<BuildPreset> presets;
+        const BuildPreset *preset;
+
+        if (TestFile(presets_filename) && !LoadPresetFile(presets_filename, &temp_alloc,
+                                                          &preset_name, &presets))
             return 1;
+        if (TestFile(user_filename) && !LoadPresetFile(user_filename, &temp_alloc,
+                                                       &preset_name, &presets))
+            return 1;
+
+        if (preset_name) {
+            preset = std::find_if(presets.begin(), presets.end(),
+                                  [&](const BuildPreset &preset) { return TestStr(preset.name, preset_name); });
+            if (preset == presets.end()) {
+                LogError("Preset '%1' does not exist", preset_name);
+                return 1;
+            }
+        } else {
+            preset = presets.len ? &presets[0] : nullptr;
+        }
+
+        if (preset) {
+            preset_name = preset->name;
+            compiler_info = preset->compiler_info;
+            build = preset->build;
+        }
+    } else if (preset_name) {
+        LogError("Option --preset cannot be used with --no_presets");
+        return 1;
     }
 
     // Parse arguments
@@ -363,15 +405,17 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
 
             if (opt.Test("-C", "--config", OptionType::Value)) {
                 // Already handled
-            } else if (opt.Test("--no_user")) {
+            } else if (opt.Test("--no_presets")) {
+                // Already handled
+            } else if (opt.Test("-p", "--preset", OptionType::Value)) {
                 // Already handled
             } else if (opt.Test("-O", "--output", OptionType::Value)) {
                 build.output_directory = opt.current_value;
             } else if (opt.Test("-c", "--compiler", OptionType::Value)) {
                 if (!ParseCompilerString(opt.current_value, &compiler_info))
                     return 1;
-            } else if (opt.Test("-m", "--mode", OptionType::Value)) {
-                if (!OptionToEnum(CompileModeNames, opt.current_value, &build.compile_mode)) {
+            } else if (opt.Test("-o", "--optimize", OptionType::Value)) {
+                if (!OptionToEnum(CompileOptimizationNames, opt.current_value, &build.compile_opt)) {
                     LogError("Unknown build mode '%1'", opt.current_value);
                     return 1;
                 }
@@ -415,10 +459,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             selectors.Append(run_target_name);
             run_arguments = opt.GetRemainingArguments();
         }
-
-        if (!selectors.len) {
-            std::swap(selectors, default_selectors);
-        }
     }
 
     if (quiet) {
@@ -445,16 +485,18 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     std::unique_ptr<const Compiler> compiler = compiler_info.Create();
     if (!compiler)
         return 1;
-    if (!compiler->CheckFeatures(build.compile_mode, build.features))
+    if (!compiler->CheckFeatures(build.compile_opt, build.features))
         return 1;
     build.compiler = compiler.get();
 
     // Output directory
     if (build.output_directory) {
         build.output_directory = NormalizePath(build.output_directory, start_directory, &temp_alloc).ptr;
+    } else if (preset_name) {
+        build.output_directory = Fmt(&temp_alloc, "%1%/bin%/%2", GetWorkingDirectory(), preset_name).ptr;
     } else {
         build.output_directory = Fmt(&temp_alloc, "%1%/bin%/%2_%3", GetWorkingDirectory(),
-                                     build.compiler->name, CompileModeNames[(int)build.compile_mode]).ptr;
+                                     build.compiler->name, CompileOptimizationNames[(int)build.compile_opt]).ptr;
     }
 
     // Load configuration file
@@ -538,9 +580,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
 
     // We're ready to output stuff
     LogInfo("Root directory: %!..+%1%!0", GetWorkingDirectory());
-    LogInfo("  Compiler: %!..+%1 (%2)%!0", build.compiler->name, CompileModeNames[(int)build.compile_mode]);
-    LogInfo("  Features: %!..+%1%!0", FmtFlags(build.features, CompileFeatureNames));
     LogInfo("  Output directory: %!..+%1%!0", build.output_directory);
+    LogInfo("  Compiler: %!..+%1 (%2)%!0", build.compiler->name, CompileOptimizationNames[(int)build.compile_opt]);
+    LogInfo("  Features: %!..+%1%!0", FmtFlags(build.features, CompileFeatureNames));
     LogInfo("  Version: %!..+%1%!0", build.version_str);
     if (!build.fake && !MakeDirectoryRec(build.output_directory))
         return 1;
