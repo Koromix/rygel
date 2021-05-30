@@ -127,21 +127,20 @@ Commands:
         }
     }
 
-    if (config_filename && !LoadConfig(config_filename, &drdc_config))
-        return 1;
-
-#define HANDLE_COMMAND(Cmd, Func) \
+#define HANDLE_COMMAND(Cmd, Func, ReadConfig) \
         do { \
+            if ((ReadConfig) && !LoadConfig(config_filename, &drdc_config)) \
+                return 1; \
             if (TestStr(cmd, RG_STRINGIFY(Cmd))) \
                 return Func(arguments); \
         } while (false)
 
-    HANDLE_COMMAND(mco_classify, RunMcoClassify);
-    HANDLE_COMMAND(mco_dump, RunMcoDump);
-    HANDLE_COMMAND(mco_list, RunMcoList);
-    HANDLE_COMMAND(mco_map, RunMcoMap);
-    HANDLE_COMMAND(mco_pack, RunMcoPack);
-    HANDLE_COMMAND(mco_show, RunMcoShow);
+    HANDLE_COMMAND(mco_classify, RunMcoClassify, TestFile(config_filename));
+    HANDLE_COMMAND(mco_dump, RunMcoDump, TestFile(config_filename));
+    HANDLE_COMMAND(mco_list, RunMcoList, TestFile(config_filename));
+    HANDLE_COMMAND(mco_map, RunMcoMap, TestFile(config_filename));
+    HANDLE_COMMAND(mco_pack, RunMcoPack, false);
+    HANDLE_COMMAND(mco_show, RunMcoShow, TestFile(config_filename));
 
 #undef HANDLE_COMMAND
 
