@@ -341,7 +341,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     }
 
     // Load user settings
-    {
+    if (load_user) {
         const char *user_filename = Fmt(&temp_alloc, "%1.user", config_filename).ptr;
 
         if (TestFile(user_filename) && !LoadUserFile(user_filename, &temp_alloc,
