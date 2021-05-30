@@ -250,8 +250,6 @@ int RunBuild(Span<const char *> arguments)
     bool run_here = false;
 
     const auto print_usage = [=](FILE *fp) {
-        const CompilerInfo *default_compiler = FindDefaultCompiler();
-
         PrintLn(fp,
 R"(Usage: %!..+%1 build [options] [target...]
        %1 build [options] --run target [arguments...]%!0
