@@ -173,7 +173,8 @@ static bool ParseFeatureString(Span<const char> str, uint32_t *out_features)
 }
 
 static bool LoadPresetFile(const char *basename, Allocator *alloc,
-                           const char **out_default, HeapArray<BuildPreset> *out_presets)
+                           const char **out_preset_name, CompilerInfo *out_compiler_info,
+                           HeapArray<BuildPreset> *out_presets)
 {
     // This function assumes the file is in the current working directory
     RG_ASSERT(!strpbrk(basename, RG_PATH_SEPARATORS));
@@ -191,8 +192,16 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
         IniProperty prop;
         while (ini.Next(&prop)) {
             if (!prop.section.len) {
-                if (prop.key == "Default") {
-                    *out_default = DuplicateString(prop.value, alloc).ptr;
+                if (prop.key == "Preset") {
+                    *out_preset_name = DuplicateString(prop.value, alloc).ptr;
+                } else if (prop.key == "Compiler") {
+                    if (ParseCompilerString(prop.value.ptr, out_compiler_info)) {
+                        for (BuildPreset &preset: *out_presets) {
+                            preset.compiler_info = *out_compiler_info;
+                        }
+                    } else {
+                        valid = false;
+                    }
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
@@ -363,10 +372,10 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         const BuildPreset *preset;
 
         if (TestFile(presets_filename) && !LoadPresetFile(presets_filename, &temp_alloc,
-                                                          &preset_name, &presets))
+                                                          &preset_name, &compiler_info, &presets))
             return 1;
         if (TestFile(user_filename) && !LoadPresetFile(user_filename, &temp_alloc,
-                                                       &preset_name, &presets))
+                                                       &preset_name, &compiler_info, &presets))
             return 1;
 
         if (preset_name) {
