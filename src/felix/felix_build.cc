@@ -30,6 +30,13 @@
 
 namespace RG {
 
+struct BuildPreset {
+    const char *name;
+
+    CompilerInfo compiler_info;
+    BuildSettings build;
+};
+
 static int RunTarget(const char *target_filename, Span<const char *const> arguments)
 {
     LogInfo("Run '%1'", target_filename);
@@ -164,13 +171,6 @@ static bool ParseFeatureString(Span<const char> str, uint32_t *out_features)
 
     return true;
 }
-
-struct BuildPreset {
-    const char *name;
-
-    CompilerInfo compiler_info;
-    BuildSettings build;
-};
 
 static bool LoadPresetFile(const char *basename, Allocator *alloc,
                            const char **out_default, HeapArray<BuildPreset> *out_presets)
