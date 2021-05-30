@@ -557,26 +557,6 @@ T ApplyMask(T value, U mask, bool enable)
     }
 }
 
-template <typename T, typename Fun>
-auto FindIf(const T &arr, Fun func,
-            const decltype(*std::begin(arr)) &default_value = {}) -> decltype(*std::begin(arr))
-{
-    for (auto &it: arr) {
-        if (func(it))
-            return it;
-    }
-    return default_value;
-}
-template <typename T, typename Fun>
-auto FindIfPtr(const T &arr, Fun func) -> decltype(&(*std::begin(arr)))
-{
-    for (auto &it: arr) {
-        if (func(it))
-            return &it;
-    }
-    return nullptr;
-}
-
 enum class ParseFlag {
     Log = 1 << 0,
     Validate = 1 << 1,
@@ -3989,27 +3969,31 @@ public:
 template <typename T>
 bool OptionToEnum(Span<const char *const> options, Span<const char> str, T *out_value)
 {
-    const char *const *ptr = FindIfPtr(options, [&](const char *name) { return TestStr(name, str); });
+    for (Size i = 0; i < options.len; i++) {
+        const char *opt = options[i];
 
-    if (ptr) {
-        *out_value = (T)(ptr - options.ptr);
-        return true;
-    } else {
-        return false;
+        if (TestStr(opt, str)) {
+            *out_value = (T)i;
+            return true;
+        }
     }
+
+    return false;
 }
 
 template <typename T>
 bool OptionToEnum(Span<const OptionDesc> options, Span<const char> str, T *out_value)
 {
-    const OptionDesc *desc = FindIfPtr(options, [&](const OptionDesc &desc) { return TestStr(desc.name, str); });
+    for (Size i = 0; i < options.len; i++) {
+        const OptionDesc &desc = options[i];
 
-    if (desc) {
-        *out_value = (T)(desc - options.ptr);
-        return true;
-    } else {
-        return false;
+        if (TestStr(desc.name, str)) {
+            *out_value = (T)i;
+            return true;
+        }
     }
+
+    return false;
 }
 
 // ------------------------------------------------------------------------

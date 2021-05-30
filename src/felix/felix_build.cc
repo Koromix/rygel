@@ -125,9 +125,10 @@ static bool ParseCompilerString(const char *str, CompilerInfo *out_compiler_info
     Span<const char> name = SplitStr(str, ':', &binary);
 
     const CompilerInfo *info =
-        FindIfPtr(Compilers, [&](const CompilerInfo &info) { return TestStr(info.name, name); });
+        std::find_if(Compilers.begin(), Compilers.end(),
+                     [&](const CompilerInfo &info) { return TestStr(info.name, name); });
 
-    if (!info) {
+    if (info == Compilers.end()) {
         LogError("Unknown compiler '%1'", name);
         return false;
     }
