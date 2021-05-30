@@ -226,7 +226,7 @@ static bool CheckComplexity(Span<const char> password)
             const char *reverse_word = std::end(reverse_buf) - word_buf.len - 1;
 
             if (SearchWord(word_buf.data) || SearchWord(reverse_word)) {
-                score = prev_score + word_buf.len / 2;
+                score = (int)(prev_score + word_buf.len / 2);
             }
         } else if (IsAsciiDigit(c)) {
             score += !chars.TestAndSet(c) ? 2 : 1;
