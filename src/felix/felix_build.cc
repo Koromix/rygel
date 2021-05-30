@@ -264,9 +264,9 @@ R"(Usage: %!..+%1 build [options] [target...]
        %1 build [options] --run target [arguments...]%!0
 
 Options:
-    %!..+-C, --config <filename>%!0      Set configuration filename
+    %!..+-C, --config_file <file>%!0     Set configuration filename
                                  %!D..(default: FelixBuild.ini)%!0
-    %!..+-O, --output <directory>%!0     Set output directory
+    %!..+-O, --output_dir <dir>%!0       Set output directory
                                  %!D..(default: bin/<preset>)%!0
 
         %!..+--no_presets%!0             Ignore presets
@@ -411,13 +411,13 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             if (!opt.Next())
                 break;
 
-            if (opt.Test("-C", "--config", OptionType::Value)) {
+            if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
             } else if (opt.Test("--no_presets")) {
                 // Already handled
             } else if (opt.Test("-p", "--preset", OptionType::Value)) {
                 // Already handled
-            } else if (opt.Test("-O", "--output", OptionType::Value)) {
+            } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 build.output_directory = opt.current_value;
             } else if (opt.Test("--compiler", OptionType::Value)) {
                 if (!ParseCompilerString(opt.current_value, &compiler_info))
