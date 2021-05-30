@@ -6,11 +6,15 @@ Features = PCH, ASan, StackProtect
 Optimization = Debug
 Features = PCH, ASan, StackProtect
 
-[ReleaseSafe]
+[ReleaseFast]
+Optimization = Fast
+Features = PCH, StackProtect
+
+[ReleaseLTO]
+Optimization = LTO
+Features = PCH, StackProtect
+
+[ReleaseParanoid]
 Compiler = Clang
 Optimization = LTO
 Features = PCH, StackProtect, SafeStack, CFI, ZeroInit
-
-[ReleaseFast]
-Optimization = LTO
-Features = PCH, StackProtect
