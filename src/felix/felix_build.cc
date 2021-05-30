@@ -260,21 +260,20 @@ Options:
     %!..+-C, --config <filename>%!0      Set configuration filename
                                  %!D..(default: FelixBuild.ini)%!0
     %!..+-O, --output <directory>%!0     Set output directory
-                                 %!D..(default: bin/<toolchain>)%!0
+                                 %!D..(default: bin/<preset>)%!0
 
         %!..+--no_presets%!0             Ignore presets
                                  %!D..(FelixBuild.ini.presets, FelixBuild.ini.user)%!0
     %!..+-p, --preset <preset>%!0        Select specific preset
 
-    %!..+-c, --compiler <compiler>%!0    Set compiler, see below
-                                 %!D..(default: %2)%!0
-    %!..+-o, --optimize <level>%!0       Set compiler optimization level
-                                 %!D..(default: %3)%!0
-    %!..+-f, --features <features>%!0    Set additional compilation features (see below)
+        %!..+--compiler <compiler>%!0    Override compiler
+        %!..+--optimize <level>%!0       Override optimization level
+        %!..+--features <features>%!0    Override compilation features
+
     %!..+-e, --environment%!0            Use compiler flags found in environment (CFLAGS, LDFLAGS, etc.)
 
     %!..+-j, --jobs <count>%!0           Set maximum number of parallel jobs
-                                 %!D..(default: %4)%!0
+                                 %!D..(default: %2)%!0
     %!..+-s, --stop_after_error%!0       Continue build after errors
         %!..+--rebuild%!0                Force rebuild all files
 
@@ -286,8 +285,7 @@ Options:
                                  %!D..(all remaining arguments are passed as-is)%!0
         %!..+--run_here <target>%!0      Same thing, but run from current directory
 
-Supported compilers:)", FelixTarget, default_compiler ? default_compiler->name : "?",
-                        CompileOptimizationNames[(int)build.compile_opt], jobs);
+Supported compilers:)", FelixTarget, jobs);
 
         for (const CompilerInfo &info: Compilers) {
             PrintLn(fp, "    %!..+%1%!0 %2", FmtArg(info.name).Pad(28), info.binary);
@@ -412,15 +410,15 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 // Already handled
             } else if (opt.Test("-O", "--output", OptionType::Value)) {
                 build.output_directory = opt.current_value;
-            } else if (opt.Test("-c", "--compiler", OptionType::Value)) {
+            } else if (opt.Test("--compiler", OptionType::Value)) {
                 if (!ParseCompilerString(opt.current_value, &compiler_info))
                     return 1;
-            } else if (opt.Test("-o", "--optimize", OptionType::Value)) {
+            } else if (opt.Test("--optimize", OptionType::Value)) {
                 if (!OptionToEnum(CompileOptimizationNames, opt.current_value, &build.compile_opt)) {
                     LogError("Unknown build mode '%1'", opt.current_value);
                     return 1;
                 }
-            } else if (opt.Test("-f", "--features", OptionType::Value)) {
+            } else if (opt.Test("--features", OptionType::Value)) {
                 build.features = 0;
                 if (!ParseFeatureString(opt.current_value, &build.features))
                     return 1;

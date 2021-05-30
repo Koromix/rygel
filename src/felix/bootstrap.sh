@@ -10,7 +10,7 @@ if command -v clang++ >/dev/null 2>&1; then
     echo "Bootstrapping felix with Clang..."
     mkdir -p $BUILD
     clang++ -std=gnu++2a -O0 -DNDEBUG $SRC -Wno-everything -ldl -pthread -o $BUILD/felix
-    $BUILD/felix --no_presets -oFast -fStackProtect -O $BUILD/Fast felix
+    $BUILD/felix --no_presets --optimize=Fast --features=StackProtect -O $BUILD/Fast felix
     mv $BUILD/Fast/felix $BIN
 
     echo "Cleaning up..."
@@ -25,7 +25,7 @@ if command -v g++ >/dev/null 2>&1; then
     echo "Bootstrapping felix with GCC..."
     mkdir -p $BUILD
     g++ -std=gnu++2a -O0 -DNDEBUG $SRC -w -ldl -pthread -o $BUILD/felix
-    $BUILD/felix --no_presets -oFast -fStackProtect -O $BUILD/Fast felix
+    $BUILD/felix --no_presets --optimize=Fast --features=StackProtect -O $BUILD/Fast felix
     mv $BUILD/Fast/felix $BIN
 
     echo "Cleaning up..."
