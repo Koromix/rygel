@@ -2165,13 +2165,14 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
 
         // Prepare new instances directory
         const char *tmp_directory = CreateTemporaryDirectory(gp_domain.config.temp_directory, "", &io->allocator);
-        RG_DEFER { UnlinkDirectory(tmp_directory); };
-
         HeapArray<RestoreEntry> entries;
-        RG_DEFER {
+        if (!tmp_directory)
+            return;
+        RG_DEFER_N(tmp_guard) {
             for (const RestoreEntry &entry: entries) {
                 UnlinkFile(entry.filename);
             }
+            UnlinkDirectory(tmp_directory);
         };
 
         // List instances in goupile.db
@@ -2211,16 +2212,96 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                 return;
         }
 
-        // Extract individual database files
+        // Extract and migrate individual database files
         for (const RestoreEntry &entry: entries) {
             if (!mz_zip_reader_extract_file_to_file(&zip, entry.basename, entry.filename, 0)) {
                 LogError("Failed to extract '%1' from archive: %2", entry.basename, mz_zip_get_error_string(zip.m_last_error));
                 return;
             }
+
+            if (!MigrateInstance(entry.filename))
+                return;
         }
 
-        // XXX: Finish archive restoration
-        io->AttachError(501);
+        // Save current instances
+        {
+            bool conflict;
+            if (!BackupInstances(nullptr, &conflict)) {
+                if (conflict) {
+                    io->AttachError(409, "Archive already exists");
+                }
+                return;
+            }
+        }
+
+        // Replace running instances
+        const char *swap_directory;
+        bool success = gp_domain.db.Transaction([&]() {
+            // Log action
+            int64_t time = GetUnixTime();
+            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                                     VALUES (?1, ?2, ?3, ?4, ?5))",
+                                  time, request.client_addr, "restore", session->username,
+                                  basename))
+                return false;
+
+            if (!gp_domain.db.Run("DELETE FROM dom_instances"))
+                return false;
+            if (!gp_domain.Sync())
+                return false;
+
+            for (const RestoreEntry &entry: entries) {
+                if (!gp_domain.db.Run("INSERT INTO dom_instances (instance) VALUES (?1)", entry.key))
+                    return false;
+            }
+
+#ifdef __linux__
+            swap_directory = tmp_directory;
+
+            if (renameat2(AT_FDCWD, gp_domain.config.instances_directory,
+                          AT_FDCWD, swap_directory, RENAME_EXCHANGE) < 0) {
+                LogDebug("Failed to swap directories atomically");
+
+#else
+            if (true) {
+#endif
+                swap_directory = MakeTemporaryFileName(gp_domain.config.temp_directory, "", "", &io->allocator);
+
+                // Non atomic swap but it is hard to do better here
+                if (!RenameFile(gp_domain.config.instances_directory, swap_directory, true))
+                    return false;
+                if (!RenameFile(tmp_directory, gp_domain.config.instances_directory, true)) {
+                    // If this goes wrong, we're completely screwed :)
+                    // At least on Linux we have some hope to avoid this problem
+                    RenameFile(swap_directory, gp_domain.config.instances_directory, true);
+                    return false;
+                }
+
+                tmp_guard.Disable();
+            }
+
+            return gp_domain.Sync();
+        });
+        if (!success) {
+            gp_domain.Sync();
+            return;
+        }
+
+        // Clean up old instance directory
+        bool complete = true;
+        EnumerateDirectory(swap_directory, nullptr, -1, [&](const char *filename, FileType file_type) {
+            filename = Fmt(&io->allocator, "%1%/%2", swap_directory, filename).ptr;
+            complete &= UnlinkFile(filename);
+
+            return true;
+        });
+        complete &= UnlinkDirectory(swap_directory);
+
+        if (complete) {
+            io->AttachText(200, "Done!");
+        } else {
+            io->AttachText(202, "Done, but with leftover files");
+        }
     });
 }
 
