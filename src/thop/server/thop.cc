@@ -479,6 +479,8 @@ Options:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 config_filename = opt.current_value;
+            } else if (opt.TestHasFailed()) {
+                return 1;
             }
         }
     }
@@ -506,7 +508,9 @@ Options:
             } else if (opt.Test("--base_url", OptionType::Value)) {
                 thop_config.base_url = opt.current_value;
             } else {
-                LogError("Cannot handle option '%1'", opt.current_option);
+                if (!opt.TestHasFailed()) {
+                    LogError("Unknown option '%1'", opt.current_option);
+                }
                 return 1;
             }
         }

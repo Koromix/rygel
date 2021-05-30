@@ -323,6 +323,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 preset_name = opt.current_value;
             } else if (opt.Test("--run") || opt.Test("--run_here")) {
                 break;
+            } else if (opt.TestHasFailed()) {
+                return 1;
             }
         }
     }
@@ -449,7 +451,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 run_here = true;
                 break;
             } else {
-                LogError("Cannot handle option '%1'", opt.current_option);
+                if (!opt.TestHasFailed()) {
+                    LogError("Unknown option '%1'", opt.current_option);
+                }
                 return 1;
             }
         }

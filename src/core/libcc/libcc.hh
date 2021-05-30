@@ -3940,6 +3940,8 @@ class OptionParser {
     Size smallopt_offset = 0;
     char buf[80];
 
+    bool test_failed = false;
+
 public:
     enum class Flag {
         SkipNonOptions = 1 << 0
@@ -3955,15 +3957,17 @@ public:
           flags(flags), limit(args.len) {}
 
     const char *Next();
-    bool Test(const char *test1, const char *test2, OptionType type = OptionType::NoValue);
-    bool Test(const char *test1, OptionType type = OptionType::NoValue)
-        { return Test(test1, nullptr, type); }
 
     const char *ConsumeValue();
     const char *ConsumeNonOption();
     void ConsumeNonOptions(HeapArray<const char *> *non_options);
 
     Span<const char *> GetRemainingArguments() const { return args.Take(pos, args.len - pos); }
+
+    bool Test(const char *test1, const char *test2, OptionType type = OptionType::NoValue);
+    bool Test(const char *test1, OptionType type = OptionType::NoValue)
+        { return Test(test1, nullptr, type); }
+    bool TestHasFailed() const { return test_failed; }
 };
 
 template <typename T>

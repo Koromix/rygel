@@ -5324,6 +5324,7 @@ const char *OptionParser::Next()
 {
     current_option = nullptr;
     current_value = nullptr;
+    test_failed = false;
 
     // Support aggregate short options, such as '-fbar'. Note that this can also be
     // parsed as the short option '-f' with value 'bar', if the user calls
@@ -5406,36 +5407,6 @@ const char *OptionParser::Next()
     return current_option;
 }
 
-bool OptionParser::Test(const char *test1, const char *test2, OptionType type)
-{
-    RG_ASSERT(test1 && IsOption(test1));
-    RG_ASSERT(!test2 || IsOption(test2));
-
-    if (TestStr(test1, current_option) || (test2 && TestStr(test2, current_option))) {
-        switch (type) {
-            case OptionType::NoValue: {
-                if (current_value) {
-                    LogError("Option '%1' does not support values", current_option);
-                    return false;
-                }
-            } break;
-            case OptionType::Value: {
-                if (!ConsumeValue()) {
-                    LogError("Option '%1' requires a value", current_option);
-                    return false;
-                }
-            } break;
-            case OptionType::OptionalValue: {
-                ConsumeValue();
-            } break;
-        }
-
-        return true;
-    } else {
-        return false;
-    }
-}
-
 const char *OptionParser::ConsumeValue()
 {
     if (current_value)
@@ -5473,6 +5444,38 @@ void OptionParser::ConsumeNonOptions(HeapArray<const char *> *non_options)
     const char *non_option;
     while ((non_option = ConsumeNonOption())) {
         non_options->Append(non_option);
+    }
+}
+
+bool OptionParser::Test(const char *test1, const char *test2, OptionType type)
+{
+    RG_ASSERT(test1 && IsOption(test1));
+    RG_ASSERT(!test2 || IsOption(test2));
+
+    if (TestStr(test1, current_option) || (test2 && TestStr(test2, current_option))) {
+        switch (type) {
+            case OptionType::NoValue: {
+                if (current_value) {
+                    LogError("Option '%1' does not support values", current_option);
+                    test_failed = true;
+                    return false;
+                }
+            } break;
+            case OptionType::Value: {
+                if (!ConsumeValue()) {
+                    LogError("Option '%1' requires a value", current_option);
+                    test_failed = true;
+                    return false;
+                }
+            } break;
+            case OptionType::OptionalValue: {
+                ConsumeValue();
+            } break;
+        }
+
+        return true;
+    } else {
+        return false;
     }
 }
 

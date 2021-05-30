@@ -602,6 +602,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
                 config_filename = opt.current_value;
             } else if (opt.Test("--sandbox")) {
                 sandbox = true;
+            } else if (opt.TestHasFailed()) {
+                return 1;
             }
         }
     }
@@ -651,7 +653,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             } else if (opt.Test("--sandbox")) {
                 // Already handled
             } else {
-                LogError("Cannot handle option '%1'", opt.current_option);
+                if (!opt.TestHasFailed()) {
+                    LogError("Unknown option '%1'", opt.current_option);
+                }
                 return 1;
             }
         }

@@ -109,7 +109,9 @@ Available merge options: %!..+%5%!0)", FelixTarget, CompressionTypeNames[(int)co
                     }
                 }
             } else {
-                LogError("Cannot handle option '%1'", opt.current_option);
+                if (!opt.TestHasFailed()) {
+                    LogError("Unknown option '%1'", opt.current_option);
+                }
                 return 1;
             }
         }

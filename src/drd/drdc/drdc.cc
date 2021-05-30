@@ -57,7 +57,9 @@ bool HandleCommonOption(OptionParser &opt)
             return false;
         }
     } else {
-        LogError("Cannot handle option '%1'", opt.current_option);
+        if (!opt.TestHasFailed()) {
+            LogError("Unknown option '%1'", opt.current_option);
+        }
         return false;
     }
 
@@ -119,6 +121,8 @@ Commands:
                 break;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 config_filename = opt.current_value;
+            } else if (opt.TestHasFailed()) {
+                return 1;
             }
         }
     }
