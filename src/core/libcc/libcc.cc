@@ -2959,6 +2959,11 @@ const char *CreateTemporaryDirectory(const char *directory, const char *prefix, 
     });
 }
 
+const char *MakeTemporaryFileName(const char *directory, const char *prefix, const char *extension, Allocator *alloc)
+{
+    return CreateTemporaryPath(directory, prefix, "", alloc, [&](const char *path) { return true; });
+}
+
 bool EnsureDirectoryExists(const char *filename)
 {
     Span<const char> directory = GetPathDirectory(filename);
