@@ -1252,7 +1252,7 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
         if (complete) {
             io->AttachText(200, "Done!");
         } else {
-            io->AttachText(202, "Done, but with leftover databases");
+            io->AttachText(202, "Done, but with leftover files");
         }
     });
 }
