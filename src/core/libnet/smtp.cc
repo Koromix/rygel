@@ -85,12 +85,6 @@ bool smtp_Sender::Init(const smtp_Config &config)
     return true;
 }
 
-static const char *NormalizeAddress(const char *str, Allocator *alloc)
-{
-    Span<const char> addr = SplitStr(str, ' ');
-    return DuplicateString(addr, alloc).ptr;
-}
-
 static void EncodeRfc2047(const char *str, HeapArray<char> *out_buf)
 {
     out_buf->Append("=?utf-8?Q?");
@@ -178,7 +172,7 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
         Fmt(&buf, "Message-ID: <%1@%2>\r\n", id, domain);
         Fmt(&buf, "Date: "); FormatRfcDate(GetUnixTime(), &buf); buf.Append("\r\n");
         Fmt(&buf, "From: %1", config.from); buf.Append("\r\n");
-        Fmt(&buf, "To: "); EncodeRfc2047(to, &buf); buf.Append("\r\n");
+        Fmt(&buf, "To: %1", to); buf.Append("\r\n");
         if (content.subject) {
             Fmt(&buf, "Subject: "); EncodeRfc2047(content.subject, &buf); buf.Append("\r\n");
         }
@@ -212,7 +206,7 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
     }
 
     // In theory you have to use curl_slist_add, but why do two allocations when none is needed?
-    curl_slist recipients = { (char *)NormalizeAddress(to, &temp_alloc), nullptr };
+    curl_slist recipients = { (char *)to, nullptr };
 
     // Set CURL options
     {
@@ -223,7 +217,7 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
             success &= !curl_easy_setopt(curl, CURLOPT_USERNAME, config.username);
             success &= !curl_easy_setopt(curl, CURLOPT_PASSWORD, config.password);
         }
-        success &= !curl_easy_setopt(curl, CURLOPT_MAIL_FROM, NormalizeAddress(config.from, &temp_alloc));
+        success &= !curl_easy_setopt(curl, CURLOPT_MAIL_FROM, config.from);
         success &= !curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, &recipients);
 
         // curl_easy_setopt is variadic, so we need the + lambda operator to force the
