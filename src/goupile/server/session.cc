@@ -672,7 +672,7 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
 
         // Parse JSON
         const char *sms = nullptr;
-        const char *key = nullptr;
+        const char *tid = nullptr;
         {
             StreamReader st(json);
             json_Parser parser(&st, &io->allocator);
@@ -684,8 +684,8 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
 
                 if (TestStr(key, "sms")) {
                     parser.ParseString(&sms);
-                } else if (TestStr(key, "key")) {
-                    parser.ParseString(&key);
+                } else if (TestStr(key, "id")) {
+                    parser.ParseString(&tid);
                 } else if (parser.IsValid()) {
                     LogError("Unknown key '%1' in token JSON", key);
                     io->AttachError(422);
@@ -706,8 +706,8 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
                 LogError("Empty SMS");
                 valid = false;
             }
-            if (!key || !key[0]) {
-                LogError("Missing or empty key");
+            if (!tid || !tid[0]) {
+                LogError("Missing or empty token id");
                 valid = false;
             }
 
@@ -719,15 +719,15 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
 
         if (sms) {
             // Avoid confirmation flood (SMS are costly)
-            RegisterFloodEvent(request.client_addr, key);
+            RegisterFloodEvent(request.client_addr, tid);
         }
 
-        if (IsUserBanned(request.client_addr, key)) {
+        if (IsUserBanned(request.client_addr, tid)) {
             LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
             io->AttachError(403);
         }
 
-        RetainPtr<SessionInfo> session = CreateAutoSession(instance, key, sms);
+        RetainPtr<SessionInfo> session = CreateAutoSession(instance, tid, sms);
         if (!session)
             return;
         sessions.Open(request, io, session);
