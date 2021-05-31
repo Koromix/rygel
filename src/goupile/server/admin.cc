@@ -2263,7 +2263,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                     return false;
             }
 
-#ifdef __linux__
+#if defined(__linux__) && defined(RENAME_EXCHANGE)
             swap_directory = tmp_directory;
 
             if (renameat2(AT_FDCWD, gp_domain.config.instances_directory,
