@@ -37,6 +37,7 @@ if __name__ == "__main__":
     parser.add_argument('-O', '--output_dir', dest = 'output_dir', action = 'store', help = 'Output directory')
     parser.add_argument('--shortcut_name', dest = 'shortcut_name', action = 'store', help = 'Shortcut name')
     parser.add_argument('--no_uninstall', dest = 'uninstall', action = 'store_false', help = 'Don\'t create uninstall shortcut')
+    parser.add_argument('--assisted', dest = 'assisted', action = 'store_true', help = 'Create assisted installer')
     args = parser.parse_args()
 
     # Find repository directory
@@ -81,6 +82,9 @@ if __name__ == "__main__":
     package['homepage'] = args.url
     package['version'] = update_version
     package['build']['publish'][0]['url'] = update_url
+    if args.assisted:
+        package['build']['nsis']['oneClick'] = False
+        package['build']['nsis']['allowToChangeInstallationDirectory'] = True
     with open(build_directory + '/package.json', 'w') as f:
         json.dump(package, f, indent = 4, ensure_ascii = False)
 
