@@ -77,10 +77,10 @@ if __name__ == "__main__":
     # Update package.json
     with open(build_directory + '/package.json', 'r') as f:
         package = json.load(f)
-    package["name"] = safe_name
-    package["homepage"] = args.url
-    package["version"] = update_version
-    package["build"]["publish"][0]["url"] = update_url
+    package['name'] = safe_name
+    package['homepage'] = args.url
+    package['version'] = update_version
+    package['build']['publish'][0]['url'] = update_url
     with open(build_directory + '/package.json', 'w') as f:
         json.dump(package, f, indent = 4, ensure_ascii = False)
 
@@ -110,22 +110,22 @@ if __name__ == "__main__":
 
     # Customize installation path
     with open(build_directory + '/build/installer.nsh', 'w') as f:
-        root_dir = f'$LOCALAPPDATA\\GoupilePortable\\{safe_name}'
+        default_dir = f'$LOCALAPPDATA\\GoupilePortable\\{safe_name}'
 
         nsh = f'''
             !macro preInit
                 SetRegView 32
-                WriteRegExpandStr HKLM "${{INSTALL_REGISTRY_KEY}}" InstallLocation "{root_dir}\\app"
-                WriteRegExpandStr HKCU "${{INSTALL_REGISTRY_KEY}}" InstallLocation "{root_dir}\\app"
+                WriteRegExpandStr HKLM "${{INSTALL_REGISTRY_KEY}}" InstallLocation "{default_dir}"
+                WriteRegExpandStr HKCU "${{INSTALL_REGISTRY_KEY}}" InstallLocation "{default_dir}"
             !macroend
 
             !macro customInstall
-                CreateShortCut "$DESKTOP\\{shortcut_name}.lnk" "{root_dir}\\app\\{safe_name}.exe" --user-data-dir="{root_dir}\\profiles"
-                CreateShortCut "$STARTMENU\\{shortcut_name}.lnk" "{root_dir}\\app\\{safe_name}.exe" --user-data-dir="{root_dir}\\profiles"
+                CreateShortCut "$DESKTOP\\{shortcut_name}.lnk" "$INSTDIR\\{safe_name}.exe" --user-data-dir="$INSTDIR\\profiles"
+                CreateShortCut "$STARTMENU\\{shortcut_name}.lnk" "$INSTDIR\\{safe_name}.exe" --user-data-dir="$INSTDIR\\profiles"
 
                 !if {1 if args.uninstall else 0}
-                    CreateShortCut "$DESKTOP\\Supprimer {shortcut_name}.lnk" "{root_dir}\\app\\Uninstall {safe_name}.exe"
-                    CreateShortCut "$STARTMENU\\Supprimer {shortcut_name}.lnk" "{root_dir}\\app\\Uninstall {safe_name}.exe"
+                    CreateShortCut "$DESKTOP\\Supprimer {shortcut_name}.lnk" "$INSTDIR\\Uninstall {safe_name}.exe"
+                    CreateShortCut "$STARTMENU\\Supprimer {shortcut_name}.lnk" "$INSTDIR\\Uninstall {safe_name}.exe"
                 !endif
             !macroend
 
