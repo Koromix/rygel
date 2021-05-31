@@ -13,8 +13,11 @@ all:
       # ansible_ssh_private_key_file:
 
   vars:
-    certbot: yes
-    certbot_email: interhop@riseup.net
+    ssl_certbot: no
+    # ssl_certbot_email: interhop@riseup.net
+
+    ssl_public_key: '{{ inventory_dir }}/prod/goupile.fr/fullchain.pem'
+    ssl_private_key: '{{ inventory_dir }}/prod/goupile.fr/privkey.pem'
 
     goupile_domains:
       - name: psy-lille.goupile.fr

@@ -33,6 +33,7 @@
     state: reloaded
   when: 'nginx_config.changed and not ansible_check_mode'
   become: yes
+  when: ssl_certbot
 
 - name: Prepare webroot directories for certbot
   file:
@@ -43,17 +44,18 @@
     mode: '0755'
   loop: '{{ domains }}'
   become: yes
+  when: ssl_certbot
 
 - name: Generate Let's Encrypt certificates
   shell:
     cmd: |
       rm -rf /etc/letsencrypt/live/{{ item }} /etc/letsencrypt/renewal/{{ item }}.conf /etc/letsencrypt/archive/{{ item }}
-      certbot certonly --cert-name {{ item }} --webroot --preferred-challenges http -w /opt/nginx/ssl/webroot/{{ item }} -d {{ item }} -m {{ certbot_email }} --agree-tos --noninteractive
+      certbot certonly --cert-name {{ item }} --webroot --preferred-challenges http -w /opt/nginx/ssl/webroot/{{ item }} -d {{ item }} -m {{ ssl_certbot_email }} --agree-tos --noninteractive
     creates: '/etc/letsencrypt/live/{{ item }}/chain.pem'
     warn: false
   loop: '{{ domains }}'
   become: yes
-  when: certbot
+  when: ssl_certbot
 
 - name: List old certbot renewals
   find:
@@ -66,7 +68,7 @@
     exclude: '{{ domains | union(domains | map("regex_replace", "^(.*)$", "\1.conf") | list) | union(["README"]) }}'
   register: certbot_old
   become: yes
-  when: certbot
+  when: ssl_certbot
 
 - name: Clean up old certbot renewals
   file:
@@ -74,4 +76,30 @@
     state: absent
   loop: '{{ certbot_old.files }}'
   become: yes
-  when: certbot
+  when: ssl_certbot
+
+- name: Use provided private certificates (migration mode)
+  copy:
+    src: '{{ ssl_private_key }}'
+    dest: '/etc/letsencrypt/live/{{ item }}/privkey.pem'
+    mode: '0600'
+  loop: '{{ domains }}'
+  become: yes
+  when: 'ssl_public_key is defined'
+
+- name: Use provided public certificates (migration mode)
+  copy:
+    src: '{{ ssl_public_key }}'
+    dest: '/etc/letsencrypt/live/{{ item }}/fullchain.pem'
+    mode: '0644'
+  loop: '{{ domains }}'
+  become: yes
+  when: 'ssl_public_key is defined'
+
+- name: Clean up certbot flag file (migration mode)
+  file:
+    path: '/etc/letsencrypt/live/{{ item }}/chain.pem'
+    state: absent
+  loop: '{{ domains }}'
+  become: yes
+  when: 'ssl_public_key is defined'

@@ -13,8 +13,8 @@ all:
       ansible_ssh_private_key_file: .vagrant/machines/server/virtualbox/private_key
 
   vars:
-    certbot: no
-    # certbot_email: interhop@riseup.net
+    ssl_certbot: no
+    # ssl_certbot_email: interhop@riseup.net
 
     goupile_domains:
       - name: goupile1.local
