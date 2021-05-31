@@ -251,7 +251,7 @@ function InstanceController() {
                                 let page = item.page;
 
                                 let enabled = isPageEnabled(page, form_record);
-                                if (!enabled && (form.chain.length > 1 || goupile.isLocked()))
+                                if (!enabled && goupile.isLocked())
                                     return '';
 
                                 return html`
@@ -265,7 +265,7 @@ function InstanceController() {
                                 let form = item.form;
 
                                 let enabled = isFormEnabled(form, form_record);
-                                if (!enabled && (form.chain.length > 1 || goupile.isLocked()))
+                                if (!enabled && goupile.isLocked())
                                     return '';
 
                                 return html`
@@ -683,7 +683,7 @@ function InstanceController() {
 
                         let cls = '';
                         if (!isPageEnabled(page, form_record)) {
-                            if (form.chain.length > 1 || goupile.isLocked())
+                            if (goupile.isLocked())
                                 return '';
 
                             cls = 'disabled';
@@ -702,7 +702,7 @@ function InstanceController() {
 
                         let cls = '';
                         if (!isFormEnabled(form, form_record)) {
-                            if (form.chain.length > 1 || goupile.isLocked())
+                            if (goupile.isLocked())
                                 return '';
 
                             cls = 'disabled';
