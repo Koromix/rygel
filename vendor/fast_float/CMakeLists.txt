@@ -2,14 +2,12 @@ cmake_minimum_required(VERSION 3.9)
 
 project(fast_float VERSION 1.0.0 LANGUAGES CXX)
 option(FASTFLOAT_TEST "Enable tests" OFF)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(FASTFLOAT_TEST)
-  set(CMAKE_CXX_STANDARD 17)
-  set(CMAKE_CXX_STANDARD_REQUIRED OFF)
   enable_testing()
   add_subdirectory(tests)
 else(FASTFLOAT_TEST)
-  set(CMAKE_CXX_STANDARD 11)
-  set(CMAKE_CXX_STANDARD_REQUIRED ON)
   message(STATUS "Tests are disabled. Set FASTFLOAT_TEST to ON to run tests.")
 endif(FASTFLOAT_TEST)
 
@@ -39,6 +37,10 @@ if(FASTFLOAT_SANITIZE)
     target_link_libraries(fast_float INTERFACE -fuse-ld=gold)
   endif()
 endif()
+if(MSVC_VERSION GREATER 1910)
+  target_compile_options(fast_float INTERFACE /permissive-)
+endif()
+
 
 include(CMakePackageConfigHelpers)
 

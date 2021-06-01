@@ -2,10 +2,10 @@
 
 ![Ubuntu 20.04 CI (GCC 9)](https://github.com/lemire/fast_float/workflows/Ubuntu%2020.04%20CI%20(GCC%209)/badge.svg)
 ![Ubuntu 18.04 CI (GCC 7)](https://github.com/lemire/fast_float/workflows/Ubuntu%2018.04%20CI%20(GCC%207)/badge.svg)
-![VS16-CI](https://github.com/lemire/fast_float/workflows/VS16-CI/badge.svg)
 ![Alpine Linux](https://github.com/lemire/fast_float/workflows/Alpine%20Linux/badge.svg)
 ![MSYS2-CI](https://github.com/lemire/fast_float/workflows/MSYS2-CI/badge.svg)
 ![VS16-CLANG-CI](https://github.com/lemire/fast_float/workflows/VS16-CLANG-CI/badge.svg)
+[![VS16-CI](https://github.com/fastfloat/fast_float/actions/workflows/vs16-ci.yml/badge.svg)](https://github.com/fastfloat/fast_float/actions/workflows/vs16-ci.yml)
 
 The fast_float library provides fast header-only implementations for the C++ from_chars
 functions for `float` and `double` types.  These functions convert ASCII strings representing
@@ -70,13 +70,15 @@ We support Visual Studio, macOS, Linux, freeBSD. We support big and little endia
 
 ## Reference
 
-- Daniel Lemire, [Number Parsing at a Gigabyte per Second](https://arxiv.org/abs/2101.11408), arXiv:2101.11408
+- Daniel Lemire, [Number Parsing at a Gigabyte per Second](https://arxiv.org/abs/2101.11408), Software: Pratice and Experience (to appear)
 
 
 ## Other programming languages
 
 - [There is an R binding](https://github.com/eddelbuettel/rcppfastfloat) called `rcppfastfloat`.
 - [There is a Rust port of the fast_float library](https://github.com/aldanor/fast-float-rust/) called `fast-float-rust`.
+- [There is a Java port of the fast_float library](https://github.com/wrandelshofer/FastDoubleParser) called `FastDoubleParser`.
+- [There is a C# port of the fast_float library](https://github.com/CarlVerret/csFastFloat) called `csFastFloat`.
 
 
 ## Relation With Other Work
@@ -85,7 +87,7 @@ The fast_float library provides a performance similar to that of the [fast_doubl
 
 ## Users
 
-The fast_float library is used by [Apache Arrow](https://github.com/apache/arrow/pull/8494) where it multiplied the number parsing speed by two or three times. It is also used by [Yandex ClickHouse](https://github.com/ClickHouse/ClickHouse).
+The fast_float library is used by [Apache Arrow](https://github.com/apache/arrow/pull/8494) where it multiplied the number parsing speed by two or three times. It is also used by [Yandex ClickHouse](https://github.com/ClickHouse/ClickHouse) and by [Google Jsonnet](https://github.com/google/jsonnet).
 
 
 ## How fast is it?
@@ -140,18 +142,6 @@ target_link_libraries(myprogram PUBLIC fast_float)
 ```
 
 
-## Requirements and Limitations
-
-In many cases, this library can be used as a drop-in replacement for the C++17 `from_chars` function, especially when performance is a concerned. Thus we expect C++17 support. Though it might be reasonable to want C++17 features as part of old compilers, support old systems is not an objective of this library.
-
-The `from_chars` is meant to be locale-independent. Thus it is not an objective of this library to support
-locale-sensitive parsing.
-
-The performance is optimized for 19 or fewer significant digits. In practice, there should
-never be more than 17 digits since it is enough to identify exactly all possible 64-bit numbers (double).
-In fact, for many numbers, far fewer than 17 digits are needed.
-
-
 ## Credit
 
 Though this work is inspired by many different people, this work benefited especially from exchanges with 
@@ -160,3 +150,18 @@ invaluable feedback. Rémy Oudompheng first implemented a fast path we use in th
 
 The library includes code adapted from Google Wuffs (written by Nigel Tao) which was originally published 
 under the Apache 2.0 license.
+
+## License
+
+<sup>
+Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
+2.0</a> or <a href="LICENSE-MIT">MIT license</a> at your option.
+</sup>
+
+<br>
+
+<sub>
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in this repository by you, as defined in the Apache-2.0 license,
+shall be dual licensed as above, without any additional terms or conditions.
+</sub>
