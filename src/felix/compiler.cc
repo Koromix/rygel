@@ -144,7 +144,7 @@ public:
 
         supported |= (int)CompileFeature::PCH;
         supported |= (int)CompileFeature::NoDebug;
-        supported |= (int)CompileFeature::Static;
+        supported |= (int)CompileFeature::StaticLink;
         supported |= (int)CompileFeature::ASan;
 #ifndef _WIN32
         supported |= (int)CompileFeature::TSan;
@@ -271,8 +271,8 @@ public:
             Fmt(&buf, " -g");
         }
 #ifdef _WIN32
-        Fmt(&buf, (features & (int)CompileFeature::Static) ? " -Xclang --dependent-lib=libcmt"
-                                                           : " -Xclang --dependent-lib=msvcrt");
+        Fmt(&buf, (features & (int)CompileFeature::StaticLink) ? " -Xclang --dependent-lib=libcmt"
+                                                               : " -Xclang --dependent-lib=msvcrt");
 #endif
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
@@ -398,7 +398,7 @@ public:
         if (!(features & (int)CompileFeature::NoDebug)) {
             Fmt(&buf, " -g");
         }
-        if (features & (int)CompileFeature::Static) {
+        if (features & (int)CompileFeature::StaticLink) {
             Fmt(&buf, " -static");
         }
         if (features & (int)CompileFeature::ASan) {
@@ -472,7 +472,7 @@ public:
         supported |= (int)CompileFeature::PCH;
 #endif
         supported |= (int)CompileFeature::NoDebug;
-        supported |= (int)CompileFeature::Static;
+        supported |= (int)CompileFeature::StaticLink;
 #ifndef _WIN32
         supported |= (int)CompileFeature::ASan;
         supported |= (int)CompileFeature::TSan;
@@ -693,7 +693,7 @@ public:
 
         // Features
         Fmt(&buf, (features & (int)CompileFeature::NoDebug) ? " -s" : " -g");
-        if (features & (int)CompileFeature::Static) {
+        if (features & (int)CompileFeature::StaticLink) {
             Fmt(&buf, " -static");
         }
         if (features & (int)CompileFeature::ASan) {
@@ -762,7 +762,7 @@ public:
 
         supported |= (int)CompileFeature::PCH;
         supported |= (int)CompileFeature::NoDebug;
-        supported |= (int)CompileFeature::Static;
+        supported |= (int)CompileFeature::StaticLink;
         supported |= (int)CompileFeature::ASan;
         supported |= (int)CompileFeature::StackProtect;
         supported |= (int)CompileFeature::CFI;
@@ -849,7 +849,7 @@ public:
         if (!(features & (int)CompileFeature::NoDebug)) {
             Fmt(&buf, " /Z7 /Zo");
         }
-        Fmt(&buf, (features & (int)CompileFeature::Static) ? " /MT" : " /MD");
+        Fmt(&buf, (features & (int)CompileFeature::StaticLink) ? " /MT" : " /MD");
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " /fsanitize=address");
         }
@@ -970,7 +970,7 @@ public:
         uint32_t supported = 0;
 
         supported |= (int)CompileFeature::NoDebug;
-        supported |= (int)CompileFeature::Static;
+        supported |= (int)CompileFeature::StaticLink;
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {

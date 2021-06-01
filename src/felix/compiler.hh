@@ -33,7 +33,7 @@ static const char *const CompileOptimizationNames[] = {
 enum class CompileFeature {
     PCH = 1 << 0,
     NoDebug = 1 << 1,
-    Static = 1 << 2,
+    StaticLink = 1 << 2,
     ASan = 1 << 3,
     TSan = 1 << 4,
     UBSan = 1 << 5,
@@ -45,7 +45,7 @@ enum class CompileFeature {
 static const char *const CompileFeatureNames[] = {
     "PCH",
     "NoDebug",
-    "Static",
+    "StaticLink",
     "ASan",
     "TSan",
     "UBSan",
