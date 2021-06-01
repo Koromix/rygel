@@ -1116,8 +1116,8 @@ function FormBuilder(state, model, readonly = false) {
         let widgets = [];
         let render = intf => html`
             <fieldset class="fm_container fm_section">
-                ${label ? html`<div class="fm_legend" style=${makeLegendStyle(options)}
-                                    @click=${e => handleSectionClick(e, label)}>${label}</div>` : ''}
+                ${label ? html`<div class="fm_legend" style=${makeLegendStyle(options)}>
+                                   <span @click=${e => handleSectionClick(e, label)}>${label}</span></div>` : ''}
                 ${deploy ? widgets.map(intf => intf.render()) : ''}
                 ${!deploy ? html`<a class="fm_deploy"
                                     @click=${e => handleSectionClick(e, label)}>(afficher le contenu)</a>` : ''}
