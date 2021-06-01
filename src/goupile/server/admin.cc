@@ -1951,7 +1951,7 @@ void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io)
         }
 
         StreamReader reader;
-        if (!io->OpenForRead(Megabytes(128), &reader))
+        if (!io->OpenForRead(Megabytes(512), &reader))
             return;
 
         // Read and store
