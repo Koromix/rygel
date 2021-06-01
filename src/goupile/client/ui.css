@@ -328,9 +328,9 @@ html.small .ui_toolbar button.icon {
 
 #ui_log {
     position: fixed;
-    left: calc(50% - 180px);
+    left: calc(50% - 160px);
     top: calc(2.8em + 12px);
-    width: 360px;
+    width: 320px;
     user-select: none;
     -moz-user-select: none;
     -webkit-user-select: none;
@@ -339,7 +339,7 @@ html.small .ui_toolbar button.icon {
 
 #ui_log > div {
     margin-bottom: 8px;
-    padding: 10px;
+    padding: 8px;
     background: #373737;
     color: white;
     box-shadow: 1px 1px rgba(0, 0, 0, 0.5);
