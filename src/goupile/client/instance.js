@@ -187,12 +187,14 @@ function InstanceController() {
                 <button class=${'icon' + (ui.isPanelEnabled('page') ? ' active' : '')}
                         style="background-position-y: calc(-318px + 1.2em);"
                         @click=${ui.wrapAction(e => togglePanel(e, 'page'))}>Formulaire</button>
+                <div style="flex: 1; min-width: 15px;"></div>
             ` : ''}
-            ${goupile.isLocked() && profile.lock.unlockable ?
-                html`<button class="icon" style="background-position-y: calc(-186px + 1.2em)"
-                             @click=${ui.wrapAction(goupile.runUnlockDialog)}>Déverrouiller</button>` : ''}
+            ${goupile.isLocked() && profile.lock.unlockable ? html`
+                <button class="icon" style="background-position-y: calc(-186px + 1.2em)"
+                        @click=${ui.wrapAction(goupile.runUnlockDialog)}>Déverrouiller</button>
+                <div style="flex: 1; min-width: 15px;"></div>
+            ` : ''}
 
-            <div style="flex: 1; min-width: 15px;"></div>
             ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormDrop(route.form.chain[idx]))}
             ${!goupile.isLocked() && route.form.multi ? html`
                 <div class="drop" @click=${ui.deployMenu}>
