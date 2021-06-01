@@ -651,7 +651,7 @@ Prefilter* Prefilter::FromRegexp(Regexp* re) {
   if (simple == NULL)
     return NULL;
 
-  Prefilter::Info *info = BuildInfo(simple);
+  Prefilter::Info* info = BuildInfo(simple);
   simple->Decref();
   if (info == NULL)
     return NULL;
