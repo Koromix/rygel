@@ -31,9 +31,8 @@
   service:
     name: nginx
     state: reloaded
-  when: 'nginx_config.changed and not ansible_check_mode'
+  when: 'ssl_certbot and nginx_config.changed and not ansible_check_mode'
   become: yes
-  when: ssl_certbot
 
 - name: Prepare webroot directories for certbot
   file:
