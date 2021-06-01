@@ -42,8 +42,8 @@
     group: root
     mode: '0755'
   loop: '{{ domains }}'
-  become: yes
   when: ssl_certbot
+  become: yes
 
 - name: Generate Let's Encrypt certificates
   shell:
@@ -53,8 +53,8 @@
     creates: '/etc/letsencrypt/live/{{ item }}/chain.pem'
     warn: false
   loop: '{{ domains }}'
-  become: yes
   when: ssl_certbot
+  become: yes
 
 - name: List old certbot renewals
   find:
@@ -66,16 +66,16 @@
     recurse: no
     exclude: '{{ domains | union(domains | map("regex_replace", "^(.*)$", "\1.conf") | list) | union(["README"]) }}'
   register: certbot_old
-  become: yes
   when: ssl_certbot
+  become: yes
 
 - name: Clean up old certbot renewals
   file:
     path: '{{ item.path }}'
     state: absent
   loop: '{{ certbot_old.files }}'
-  become: yes
   when: ssl_certbot
+  become: yes
 
 - name: Use provided private certificates (migration mode)
   copy:
@@ -83,8 +83,8 @@
     dest: '/etc/letsencrypt/live/{{ item }}/privkey.pem'
     mode: '0600'
   loop: '{{ domains }}'
-  become: yes
   when: 'ssl_public_key is defined'
+  become: yes
 
 - name: Use provided public certificates (migration mode)
   copy:
@@ -92,13 +92,13 @@
     dest: '/etc/letsencrypt/live/{{ item }}/fullchain.pem'
     mode: '0644'
   loop: '{{ domains }}'
-  become: yes
   when: 'ssl_public_key is defined'
+  become: yes
 
 - name: Clean up certbot flag file (migration mode)
   file:
     path: '/etc/letsencrypt/live/{{ item }}/chain.pem'
     state: absent
   loop: '{{ domains }}'
-  become: yes
   when: 'ssl_public_key is defined'
+  become: yes
