@@ -41,6 +41,8 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
     // Open database
     if (!db.Open(filename, SQLITE_OPEN_READWRITE))
         return false;
+    if (!db.SetWAL(true))
+        return false;
 
     // Check schema version
     {

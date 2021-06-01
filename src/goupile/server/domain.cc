@@ -218,6 +218,8 @@ bool DomainHolder::Open(const char *filename)
         return false;
     if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))
         return false;
+    if (!db.SetWAL(true))
+        return false;
     if (!db.SetSynchronousFull(config.sync_full))
         return false;
 
