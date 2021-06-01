@@ -44,6 +44,9 @@ function FormState(values = {}) {
         if (obj == null)
             return undefined;
 
+        if (obj instanceof Blob)
+            return obj;
+
         let proxy = proxies.get(obj);
 
         if (proxy == null) {
