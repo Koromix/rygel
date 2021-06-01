@@ -501,7 +501,7 @@ static bool MakeULID(char out_buf[27])
     // Generate time part
     {
         int64_t now = GetUnixTime();
-        if (RG_UNLIKELY(now < 0 || now >= 0x1000000000000ull)) {
+        if (RG_UNLIKELY(now < 0 || now >= 0x1000000000000ll)) {
             LogError("Cannot generate ULID with current UTC time");
             return false;
         }
