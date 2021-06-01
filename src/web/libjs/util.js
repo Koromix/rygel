@@ -612,10 +612,10 @@ const log = new function() {
         this.msg = null;
         this.timer_id = null;
 
-        this.debug = function(msg, timeout = 6000) { return updateEntry(self, 'debug', msg, timeout); };
-        this.info = function(msg, timeout = 6000) { return updateEntry(self, 'info', msg, timeout); };
-        this.success = function(msg, timeout = 6000) { return updateEntry(self, 'success', msg, timeout); };
-        this.error = function(msg, timeout = 6000) { return updateEntry(self, 'error', msg, timeout); };
+        this.debug = function(msg, timeout = 3000) { return updateEntry(self, 'debug', msg, timeout); };
+        this.info = function(msg, timeout = 3000) { return updateEntry(self, 'info', msg, timeout); };
+        this.success = function(msg, timeout = 3000) { return updateEntry(self, 'success', msg, timeout); };
+        this.error = function(msg, timeout = 3000) { return updateEntry(self, 'error', msg, timeout); };
 
         this.progress = function(action, value = null, max = null) {
             if (value != null) {
@@ -629,10 +629,10 @@ const log = new function() {
         this.close = function() { closeEntry(self); };
     };
 
-    this.debug = function(msg, timeout = 6000) { return (new self.Entry).debug(msg, timeout); };
-    this.info = function(msg, timeout = 6000) { return (new self.Entry).info(msg, timeout); };
-    this.success = function(msg, timeout = 6000) { return (new self.Entry).success(msg, timeout); };
-    this.error = function(msg, timeout = 6000) { return (new self.Entry).error(msg, timeout); };
+    this.debug = function(msg, timeout = 3000) { return (new self.Entry).debug(msg, timeout); };
+    this.info = function(msg, timeout = 3000) { return (new self.Entry).info(msg, timeout); };
+    this.success = function(msg, timeout = 3000) { return (new self.Entry).success(msg, timeout); };
+    this.error = function(msg, timeout = 3000) { return (new self.Entry).error(msg, timeout); };
     this.progress = function(action, value = null, max = null) { return (new self.Entry).progress(action, value, max); };
 };
 
