@@ -1734,15 +1734,7 @@ function InstanceController() {
         page_code = new_code;
         form_dictionaries = new_dictionaries;
 
-        // Update URL and title
-        {
-            let url = contextualizeURL(route.page.url, form_record);
-            goupile.syncHistory(url, options.push_history);
-
-            document.title = `${route.page.title} — ${ENV.title}`;
-        }
-
-        await mutex.chain(self.run);
+        await mutex.chain(self.run, options.push_history);
     };
     this.go = util.serialize(this.go, mutex);
 
@@ -1800,7 +1792,7 @@ function InstanceController() {
         }
     }
 
-    this.run = async function() {
+    this.run = async function(push_history = true) {
         // Is the user developing?
         {
             let range = IDBKeyRange.bound(profile.userid + ':', profile.userid + '`', false, true);
@@ -1839,6 +1831,14 @@ function InstanceController() {
                     }
                 });
             }
+        }
+
+        // Update URL and title
+        {
+            let url = contextualizeURL(route.page.url, form_record);
+            goupile.syncHistory(url, push_history);
+
+            document.title = `${route.page.title} — ${ENV.title}`;
         }
 
         ui.render();

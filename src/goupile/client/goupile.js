@@ -748,6 +748,13 @@ const goupile = new function() {
     this.isLoggedOnline = function() { return net.isOnline() && profile.online; };
 
     this.syncHistory = function(url, push = true) {
+        if (profile.restore != null) {
+            let query = new URLSearchParams;
+            for (let key in profile.restore)
+                query.set(key, profile.restore[key]);
+            url += '?' + query;
+        }
+
         if (push && current_url != null && url !== current_url) {
             window.history.pushState(null, null, url);
         } else {

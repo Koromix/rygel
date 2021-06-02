@@ -409,18 +409,33 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         }
         io->AddFinalizer([=]() { instance->Unref(); });
 
-        // Handle sessions triggered by query parameters
-        if (instance->config.auto_key && HandleSessionKey(instance, request, io))
-            return;
-
         // Enforce trailing slash on base URLs. Use 302 instead of 301 to avoid
         // problems with query strings being erased without question.
         if (!instance_url[0]) {
-            const char *redirect = Fmt(&io->allocator, "%1/", request.url).ptr;
-            io->AddHeader("Location", redirect);
+            HeapArray<char> buf(&io->allocator);
+
+            Fmt(&buf, "%1/?", request.url);
+            MHD_get_connection_values(request.conn, MHD_GET_ARGUMENT_KIND, [](void *udata, enum MHD_ValueKind,
+                                                                         const char *key, const char *value) {
+                HeapArray<char> *buf = (HeapArray<char> *)udata;
+
+                http_EncodeUrlSafe(key, buf);
+                buf->Append('=');
+                http_EncodeUrlSafe(value, buf);
+                buf->Append('&');
+
+                return MHD_YES;
+            }, &buf);
+            buf.ptr[buf.len - 1] = 0;
+
+            io->AddHeader("Location", buf.ptr);
             io->AttachNothing(302);
             return;
         }
+
+        // Handle sessions triggered by query parameters
+        if (instance->config.auto_key && !HandleSessionKey(instance, request, io))
+            return;
 
         // Try application files
         if (request.method == http_RequestMethod::Get && HandleFileGet(instance, request, io))

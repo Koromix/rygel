@@ -546,9 +546,9 @@ function Mutex() {
         }
     };
 
-    this.chain = function(func) {
+    this.chain = function(func, ...args) {
         self.unlock();
-        return func();
+        return func(...args);
     };
 }
 

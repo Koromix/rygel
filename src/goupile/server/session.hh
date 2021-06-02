@@ -45,6 +45,12 @@ static const char *const UserPermissionNames[] = {
 static const uint32_t UserPermissionMasterMask = 0b000001111u;
 static const uint32_t UserPermissionSlaveMask =  0b111110000u;
 
+enum class SessionType {
+    User,
+    Token,
+    Key
+};
+
 struct SessionStamp {
     int64_t unique;
 
@@ -63,6 +69,7 @@ class SessionInfo: public RetainObject {
     mutable BlockAllocator stamps_alloc;
 
 public:
+    SessionType type;
     int64_t userid;
     const char *username;
     int64_t admin_until;

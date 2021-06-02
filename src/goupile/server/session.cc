@@ -94,7 +94,7 @@ const SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
             stamp = stamps_map.SetDefault(instance->unique);
             stamp->unique = instance->unique;
 
-            if (userid >= 0) {
+            if (type == SessionType::User) {
                 sq_Statement stmt;
                 if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
                                              WHERE userid = ?1 AND instance = ?2)", &stmt))
@@ -199,6 +199,14 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
             if (stamp) {
                 json.Key("authorized"); json.Bool(true);
 
+                if (session->type == SessionType::Key) {
+                    RG_ASSERT(instance->config.auto_key);
+
+                    json.Key("restore"); json.StartObject();
+                        json.Key(instance->config.auto_key); json.String(session->username);
+                    json.EndObject();
+                }
+
                 json.Key("namespaces"); json.StartObject();
                     if (instance->config.shared_key) {
                         json.Key("records"); json.String("shared");
@@ -253,7 +261,8 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
     json.Finish();
 }
 
-static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *username, const char *local_key)
+static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid,
+                                                const char *username, const char *local_key)
 {
     Size username_len = strlen(username);
     Size len = RG_SIZE(SessionInfo) + username_len + 1;
@@ -265,6 +274,7 @@ static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *user
         Allocator::Release(nullptr, session, -1);
     });
 
+    session->type = type;
     session->userid = userid;
     session->username = (char *)session + RG_SIZE(SessionInfo);
     CopyString(username, MakeSpan((char *)session->username, username_len + 1));
@@ -303,7 +313,7 @@ RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const h
                     const char *username = (const char *)sqlite3_column_text(stmt, 1);
                     const char *local_key = (const char *)sqlite3_column_text(stmt, 2);
 
-                    RetainPtr<SessionInfo> session = CreateUserSession(userid, username, local_key);
+                    RetainPtr<SessionInfo> session = CreateUserSession(SessionType::User, userid, username, local_key);
                     return session;
                 }();
                 instance->auto_init = true;
@@ -449,7 +459,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                                       time, request.client_addr, "login", username))
                     return;
 
-                RetainPtr<SessionInfo> session = CreateUserSession(userid, username, local_key);
+                RetainPtr<SessionInfo> session = CreateUserSession(SessionType::User, userid, username, local_key);
 
                 if (RG_LIKELY(session)) {
                     if (admin) {
@@ -523,7 +533,8 @@ static bool MakeULID(char out_buf[27])
     return true;
 }
 
-static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, const char *key, const char *sms)
+static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, SessionType type,
+                                                const char *key, const char *sms)
 {
     char tmp[128];
 
@@ -586,7 +597,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, const 
     RG_ASSERT(userid > 0);
     userid = -userid;
 
-    RetainPtr<SessionInfo> session = CreateUserSession(userid, key, local_key);
+    RetainPtr<SessionInfo> session = CreateUserSession(type, userid, key, local_key);
     if (RG_UNLIKELY(!session))
         return nullptr;
 
@@ -727,7 +738,7 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
             io->AttachError(403);
         }
 
-        RetainPtr<SessionInfo> session = CreateAutoSession(instance, tid, sms);
+        RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Token, tid, sms);
         if (!session)
             return;
         sessions.Open(request, io, session);
@@ -736,24 +747,19 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
     });
 }
 
-// Returns true when request has been handled (even if an error has occured)
+// Returns true if not handled or not revelant, false if an error has occured
 bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RG_ASSERT(instance->config.auto_key);
 
     const char *key = request.GetQueryValue(instance->config.auto_key);
     if (!key || !key[0])
-        return false;
-
-    // If we fail here, it is an internal error. But we return true anyway to signal
-    // the caller that we have handled the request!
-    RetainPtr<SessionInfo> session = CreateAutoSession(instance, key, nullptr);
-    if (!session)
         return true;
-    sessions.Open(request, io, session);
 
-    io->AddHeader("Location", request.url);
-    io->AttachNothing(302);
+    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, key, nullptr);
+    if (!session)
+        return false;
+    sessions.Open(request, io, session);
 
     return true;
 }
@@ -828,7 +834,7 @@ void HandlePasswordChange(const http_RequestInfo &request, http_IO *io)
         io->AttachError(401);
         return;
     }
-    if (session->userid < 0) {
+    if (session->type != SessionType::User) {
         LogError("This account does not use passwords");
         io->AttachError(403);
         return;
