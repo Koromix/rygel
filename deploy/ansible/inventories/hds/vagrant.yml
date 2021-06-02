@@ -17,7 +17,7 @@ all:
     # ssl_certbot_email: interhop@riseup.net
 
     goupile_domains:
-      - name: goupile1.local
+      - name: goupile1.hds.local
         backup_key: YyQHN671EI9hEixEcUjsIVQvfMcsKUEe888V1Qx8UBI= # Decryption: mfoMJb1Zv4hh68MZ8c8UjjMv5yAnY7dwxPrY2EcNTrU=
-      - name: goupile2.local
+      - name: goupile2.hds.local
         backup_key: aZmAwOf9E/3WwnhS1LCM1r54TLjog/d0hwM0k72ULmw= # Decryption: D55mv4rBOk/9WywLcS//Zb8k7jhcr+ZGYi+JoVKUrdQ=

@@ -22,7 +22,7 @@ Vagrant.configure('2') do |config|
 
     config.vm.define 'proxy' do |proxy|
         proxy.vm.box = 'generic/debian10'
-        proxy.vm.hostname = 'proxy.hds.local'
+        proxy.vm.hostname = 'hds.local'
         proxy.vm.network 'private_network', ip: proxy_ip
 
         proxy.vm.provider 'virtualbox' do |v|
@@ -35,7 +35,7 @@ Vagrant.configure('2') do |config|
     end
 
     config.vm.define 'server' do |server|
-        server.vm.hostname = 'server.hds.local'
+        server.vm.hostname = 'hds-server.local'
         server.vm.network 'private_network', ip: server_ip
 
         server.vm.provider 'virtualbox' do |v|
