@@ -7,6 +7,10 @@ all:
       # ansible_ssh_private_key_file:
 
   vars:
+    ovh_ipv6_addr: 2001:41d0:701:1100::3f69
+    ovh_ipv6_netmask: 128
+    ovh_ipv6_gateway: 2001:41d0:701:1100::1
+
     ssl_certbot: no
     # ssl_certbot_email: interhop@riseup.net
 

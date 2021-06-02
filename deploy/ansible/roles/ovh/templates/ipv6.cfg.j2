@@ -1,0 +1,9 @@
+auto eth0
+iface eth0 inet6 static
+mtu 1500
+address {{ ovh_ipv6_addr }}
+netmask {{ ovh_ipv6_netmask }}
+post-up /sbin/ip -6 route add {{ ovh_ipv6_gateway }} dev eth0
+post-up /sbin/ip -6 route add default via {{ ovh_ipv6_gateway }} dev eth0
+pre-down /sbin/ip -6 route del default via {{ ovh_ipv6_gateway }} dev eth0
+pre-down /sbin/ip -6 route del {{ ovh_ipv6_gateway }} dev eth0

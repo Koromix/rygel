@@ -17,5 +17,6 @@
     domains: '{{ goupile_domains | map(attribute = "name") | list }}'
 
   roles:
-    - role: goupile
-    - role: nginx
+    - ovh
+    - goupile
+    - nginx
