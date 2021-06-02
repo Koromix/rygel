@@ -17,6 +17,7 @@ goupile_root_path: /opt/goupile # Installation directory
 goupile_run_user: goupile # POSIX user that will run goupile services
 goupile_run_group: goupile # POSIX group that will run goupile services
 
+goupile_sandbox: yes
 goupile_domains: # List of goupile domains to configure and run
   - name: localhost
     backup_key: Sm3MnI6J8rltqwG9PX3Sxzhg+IApKOQjf8DROZKCpjw= # Public backup key in base64 format (NaCl / Curve25519-XSalsa20-Poly1305)

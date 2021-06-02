@@ -28,6 +28,8 @@ all:
           32613661343032336234613465643365623337336634623038376135393731336563336666383331
           6236376161666261633232363638663939616435393939653864
 
+    goupile_sandbox: no
+
     goupile_default_username: admin
     goupile_default_password: !vault |
       $ANSIBLE_VAULT;1.1;AES256
