@@ -34,7 +34,7 @@ http {
     include /etc/nginx/mime.types;
     default_type application/octet-stream;
 
-    limit_req_zone $binary_remote_addr zone=default:10m rate=10r/s;
+    limit_req_zone $binary_remote_addr zone=default:10m rate=20r/s;
     limit_req_status 429;
     limit_req zone=default burst=20 nodelay;
 
