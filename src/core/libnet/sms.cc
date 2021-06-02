@@ -24,6 +24,7 @@
 #include "../../../vendor/mbedtls/include/mbedtls/ssl.h"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 #include "sms.hh"
+#include "http_misc.hh"
 
 namespace RG {
 
@@ -89,22 +90,6 @@ bool sms_Sender::Init(const sms_Config &config)
     return true;
 }
 
-static void EncodeUrlSafe(const char *str, HeapArray<char> *out_buf)
-{
-    for (Size i = 0; str[i]; i++) {
-        int c = str[i];
-
-        if (IsAsciiAlphaOrDigit(c) || c == '-' || c == '.' || c == '_' || c == '~') {
-            out_buf->Append(c);
-        } else {
-            Fmt(out_buf, "%%%1", FmtHex((uint8_t)c).Pad0(-2));
-        }
-    }
-
-    out_buf->Grow(1);
-    out_buf->ptr[out_buf->len] = 0;
-}
-
 bool sms_Sender::Send(const char *to, const char *message)
 {
     RG_ASSERT(config.provider != sms_Provider::None);
@@ -132,7 +117,7 @@ bool sms_Sender::SendTwilio(const char *to, const char *message)
         HeapArray<char> buf(&temp_alloc);
 
         Fmt(&buf, "To=%1&From=%2&Body=", to, config.from);
-        EncodeUrlSafe(message, &buf);
+        http_EncodeUrlSafe(message, &buf);
 
         url = Fmt(&temp_alloc, "https://api.twilio.com/2010-04-01/Accounts/%1/Messages", config.authid).ptr;
         body = buf.Leak().ptr;

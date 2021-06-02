@@ -12,6 +12,7 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "../../core/libcc/libcc.hh"
+#include "http.hh"
 #include "http_misc.hh"
 
 namespace RG {
@@ -164,6 +165,22 @@ bool http_ParseRange(Span<const char> str, Size len, LocalArray<http_ByteRange, 
 
     out_guard.Disable();
     return true;
+}
+
+void http_EncodeUrlSafe(const char *str, HeapArray<char> *out_buf)
+{
+    for (Size i = 0; str[i]; i++) {
+        int c = str[i];
+
+        if (IsAsciiAlphaOrDigit(c) || c == '-' || c == '.' || c == '_' || c == '~') {
+            out_buf->Append(c);
+        } else {
+            Fmt(out_buf, "%%%1", FmtHex((uint8_t)c).Pad0(-2));
+        }
+    }
+
+    out_buf->Grow(1);
+    out_buf->ptr[out_buf->len] = 0;
 }
 
 static void ReleaseDataCallback(void *ptr)

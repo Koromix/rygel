@@ -14,10 +14,11 @@
 #pragma once
 
 #include "../../core/libcc/libcc.hh"
-#include "http.hh"
 #include "../../core/libwrap/json.hh"
 
 namespace RG {
+
+class http_IO;
 
 struct http_ByteRange {
     Size start;
@@ -29,6 +30,8 @@ const char *http_GetMimeType(Span<const char> extension,
 
 uint32_t http_ParseAcceptableEncodings(Span<const char> encodings);
 bool http_ParseRange(Span<const char> str, Size len, LocalArray<http_ByteRange, 16> *out_ranges);
+
+void http_EncodeUrlSafe(const char *str, HeapArray<char> *out_buf);
 
 class http_JsonPageBuilder: public json_Writer {
     http_IO *io = nullptr;
