@@ -391,12 +391,38 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                                                                       parent_version, root_ulid, anchor)
                                              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
                                              ON CONFLICT (ulid)
-                                                 DO UPDATE SET hid = excluded.hid,
+                                                 DO UPDATE SET hid = IFNULL(excluded.hid, hid),
                                                                anchor = excluded.anchor)",
                                           record.ulid, record.hid, record.form, record.parent.ulid,
                                           record.parent.version >= 0 ? sq_Binding(record.parent.version) : sq_Binding(),
                                           root_ulid, anchor))
                         return false;
+
+                    if (sqlite3_changes(instance->db) && !record.hid && !record.parent.ulid) {
+                        int64_t rowid = sqlite3_last_insert_rowid(instance->db);
+
+                        sq_Statement stmt;
+                        if (!instance->db.Prepare(R"(INSERT INTO rec_sequences (form, counter)
+                                                     VALUES (?1, 1)
+                                                     ON CONFLICT (form)
+                                                         DO UPDATE SET counter = counter + 1
+                                                     RETURNING counter)", &stmt))
+                            return false;
+                        sqlite3_bind_text(stmt, 1, record.form, -1, SQLITE_STATIC);
+
+                        if (!stmt.Next()) {
+                            RG_ASSERT(!stmt.IsValid());
+                            return false;
+                        }
+
+                        char buf[16];
+                        int64_t counter = sqlite3_column_int64(stmt, 0);
+                        Fmt(buf, "%1", FmtArg(counter).Pad0(-6));
+
+                        if (!instance->db.Run("UPDATE rec_entries SET hid = ?2 WHERE rowid = ?1",
+                                              rowid, buf))
+                            return false;
+                    }
                 }
             }
 

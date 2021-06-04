@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 38;
+const int InstanceVersion = 39;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, const char *filename)
 {
@@ -1204,9 +1204,21 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 38: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE rec_sequences (
+                        form TEXT NOT NULL,
+                        counter INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX rec_sequences_f ON rec_sequences (form);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 38);
+            RG_STATIC_ASSERT(InstanceVersion == 39);
         }
 
         int64_t time = GetUnixTime();
