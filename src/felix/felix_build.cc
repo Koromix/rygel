@@ -326,8 +326,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 config_filename = opt.current_value;
             } else if (opt.Test("--no_presets")) {
                 load_presets = false;
-            } else if (opt.Test("-p", "--preset", OptionType::Value)) {
-                preset_name = opt.current_value;
             } else if (opt.Test("--run") || opt.Test("--run_here")) {
                 break;
             } else if (opt.TestHasFailed()) {
@@ -416,7 +414,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             } else if (opt.Test("--no_presets")) {
                 // Already handled
             } else if (opt.Test("-p", "--preset", OptionType::Value)) {
-                // Already handled
+                preset_name = opt.current_value;
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 build.output_directory = opt.current_value;
             } else if (opt.Test("--compiler", OptionType::Value)) {
