@@ -2281,6 +2281,7 @@ function InstanceController() {
 
                     let uploads = [];
                     let buckets = {};
+                    let ulids = new Set;
                     for (let obj of objects) {
                         try {
                             let record = await decryptRecord(obj, null, true);
@@ -2308,14 +2309,24 @@ function InstanceController() {
                                 }
                                 bucket.push(upload);
                             }
+                            ulids.add(record.ulid);
                         } catch (err) {
                             console.log(err);
                         }
                     }
 
+                    // For the topological sort to be correct we first need to find records
+                    // that are not real roots but are parents of other records that we
+                    // want to upload.
                     // We append to the array as we go, and I couldn't make sure that
                     // a for of loop is okay with that (even though it probably is).
                     // So instead I use a dumb increment to be sure it works correctly.
+                    for (let ulid in buckets) {
+                        if (!ulids.has(ulid)) {
+                            uploads.push(...buckets[ulid]);
+                            delete buckets[ulid];
+                        }
+                    }
                     for (let i = 0; i < uploads.length; i++) {
                         let upload = uploads[i];
                         let bucket = buckets[upload.ulid];
@@ -2325,8 +2336,8 @@ function InstanceController() {
                             delete buckets[upload.ulid];
                         }
                     }
-                    for (let key in buckets) {
-                        let bucket = buckets[key];
+                    for (let ulid in buckets) {
+                        let bucket = buckets[ulid];
                         uploads.push(...bucket);
                     }
 
