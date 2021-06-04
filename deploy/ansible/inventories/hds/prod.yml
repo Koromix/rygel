@@ -15,10 +15,10 @@ all:
   vars:
     ssl_certbot: no
     # ssl_certbot_email: interhop@riseup.net
-
     ssl_public_key: '{{ inventory_dir }}/goupile.fr/fullchain.pem'
     ssl_private_key: '{{ inventory_dir }}/goupile.fr/privkey.pem'
 
+    goupile_commit: deploy_hds
     goupile_domains:
       - name: psy-lille.goupile.fr
         backup_key: !vault |
@@ -38,7 +38,6 @@ all:
           6666653264633237370a393939356431323731333836353036336331396636393335663031626137
           62626231653938623734333364366562323862316239366537343037643834636263316135336336
           3265346636373961386230373362333261663966396439316466
-
     goupile_default_username: admin
     goupile_default_password: !vault |
       $ANSIBLE_VAULT;1.1;AES256
@@ -47,7 +46,6 @@ all:
       64636266356433356331336638376631353831333639376636303166656632623136373561393561
       3435373166333761610a343931323631346437306630663261373031316639303135316234666235
       37333834383364373666656539303537363738356262306165613663396235383632
-
     goupile_smtp:
       url: smtps://mail.gandi.net
       username: noreply@goupile.fr
@@ -59,7 +57,6 @@ all:
         3136333337383333320a646131316539356364623034643661656238343332303065356561653430
         30353963383633333632613334646133373538623437383030663333336335366332
       from: noreply@goupile.fr
-
     goupile_sms:
       provider: Twilio
       auth_id: !vault |

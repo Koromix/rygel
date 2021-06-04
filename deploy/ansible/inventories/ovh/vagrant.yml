@@ -10,6 +10,7 @@ all:
     ssl_certbot: no
     # ssl_certbot_email: niels.martignene@protonmail.com
 
+    goupile_commit: deploy_ovh
     goupile_domains:
       - name: goupile1.ovh.local
         backup_key: YyQHN671EI9hEixEcUjsIVQvfMcsKUEe888V1Qx8UBI= # Decryption: mfoMJb1Zv4hh68MZ8c8UjjMv5yAnY7dwxPrY2EcNTrU=

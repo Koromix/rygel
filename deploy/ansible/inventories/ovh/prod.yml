@@ -13,10 +13,11 @@ all:
 
     ssl_certbot: no
     # ssl_certbot_email: interhop@riseup.net
-
     ssl_public_key: '{{ inventory_dir }}/goupile.fr/fullchain.pem'
     ssl_private_key: '{{ inventory_dir }}/goupile.fr/privkey.pem'
 
+    goupile_commit: deploy_ovh
+    goupile_sandbox: no
     goupile_domains:
       - name: cn2r.goupile.fr
         backup_key: !vault |
@@ -27,9 +28,6 @@ all:
           6132656465363538650a323036626362396238383730363763386365363763653333343536626132
           32613661343032336234613465643365623337336634623038376135393731336563336666383331
           6236376161666261633232363638663939616435393939653864
-
-    goupile_sandbox: no
-
     goupile_default_username: admin
     goupile_default_password: !vault |
       $ANSIBLE_VAULT;1.1;AES256
@@ -38,7 +36,6 @@ all:
       63626233646666313234353665616433386362616538633339303363333466333934663930653463
       3034363236366438340a373564336135393264636533313464323061356364616361383935393436
       33323139353761396134363130316631633235333761316336613331353132646539
-
     goupile_smtp:
       url: smtps://mail.gandi.net
       username: noreply@goupile.fr
@@ -50,7 +47,6 @@ all:
         3461323164643435610a336463633930396336613165623139353635376237373831616563653861
         66623264356136343266383135393135653235396165646333336362313931663633
       from: noreply@goupile.fr
-
     goupile_sms:
       provider: Twilio
       auth_id: !vault |
