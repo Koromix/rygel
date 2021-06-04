@@ -602,6 +602,8 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
         return nullptr;
 
     if (sms) {
+        char buf[128];
+
         if (RG_UNLIKELY(gp_domain.config.sms.provider == sms_Provider::None)) {
             LogError("This instance is not configured to send SMS messages");
             return nullptr;
@@ -610,7 +612,8 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
         uint32_t code = 100000 + randombytes_uniform(900000); // 6 digits
         Fmt(session->confirm, "%1", code);
 
-        if (!SendSMS(sms, session->confirm))
+        Fmt(buf, "Code: %1", session->confirm);
+        if (!SendSMS(sms, buf))
             return nullptr;
     }
 
