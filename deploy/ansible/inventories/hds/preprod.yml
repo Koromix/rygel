@@ -16,6 +16,7 @@ all:
     ssl_certbot: yes
     ssl_certbot_email: interhop@riseup.net
 
+    goupile_commit: deploy_hds
     goupile_domains:
       - name: psy-lille.preprod.goupile.fr
         backup_key: c0cxZblCz4cWCQ5xFqFHUnTnLSw2T9EKwela41402hU=
