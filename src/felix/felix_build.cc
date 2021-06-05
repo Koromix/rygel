@@ -266,8 +266,8 @@ Supported compilers:)", FelixTarget, jobs);
         }
 
         PrintLn(fp, R"(
-Use %!..+--compiler=<compiler>:<binary>%!0 to specify a custom compiler binary, for example
-you can use: %!..+felix --compiler=Clang:clang-11%!0.
+Use %!..+--compiler=<binary>%!0 to specify a custom C compiler, such as: %!..+felix --compiler=clang-11%!0.
+Felix will use the matching C++ compiler automatically.
 
 Supported optimization levels: %!..+%1%!0
 Supported compiler features: %!..+%2%!0)", FmtSpan(CompileOptimizationNames),
