@@ -17,7 +17,8 @@
     pkg:
       - nginx
       - git
-      - clang-11
+      - clang
+      - lld
       - gcc
     state: latest
   become: yes

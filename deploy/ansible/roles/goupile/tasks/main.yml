@@ -61,7 +61,7 @@
 
 - name: Update Felix build system
   command:
-    cmd: '{{ goupile_root_path }}/repo/bin/Paranoid/felix -pParanoid --compiler=Clang:clang-11 felix'
+    cmd: '{{ goupile_root_path }}/repo/bin/Paranoid/felix -pParanoid --compiler=clang-11 --linker=lld-11 felix'
     chdir: '{{ goupile_root_path }}/repo'
   ignore_errors: yes
   register: build_felix
@@ -76,7 +76,7 @@
         chdir: '{{ goupile_root_path }}/repo'
     - name: Update Felix build system
       command:
-        cmd: '{{ goupile_root_path }}/repo/felix -pParanoid --compiler=Clang:clang-11 felix'
+        cmd: '{{ goupile_root_path }}/repo/felix -pParanoid --compiler=clang-11 --linker=lld-11 felix'
         chdir: '{{ goupile_root_path }}/repo'
     - name: Delete bootstrapped Felix
       file:
@@ -87,7 +87,7 @@
 
 - name: Build Goupile
   command:
-    cmd: '{{ goupile_root_path }}/repo/bin/Paranoid/felix -pParanoid --compiler=Clang:clang-11'
+    cmd: '{{ goupile_root_path }}/repo/bin/Paranoid/felix -pParanoid --compiler=clang-11 --linker=lld-11'
     chdir: '{{ goupile_root_path }}/repo'
   register: build_goupile
   changed_when: 'build_goupile.stderr_lines[-1] != "Nothing to do!" and build_goupile.stderr_lines[-2] != "Nothing to do!"'
