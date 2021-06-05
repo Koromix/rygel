@@ -329,12 +329,10 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     }
 
     // Load customized presets
+    HeapArray<BuildPreset> presets;
     if (load_presets) {
         const char *presets_filename = Fmt(&temp_alloc, "%1.presets", config_filename).ptr;
         const char *user_filename = Fmt(&temp_alloc, "%1.user", config_filename).ptr;
-
-        HeapArray<BuildPreset> presets;
-        const BuildPreset *preset;
 
         if (TestFile(presets_filename) && !LoadPresetFile(presets_filename, &temp_alloc,
                                                           &preset_name, &compiler_info, &presets))
@@ -342,26 +340,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         if (TestFile(user_filename) && !LoadPresetFile(user_filename, &temp_alloc,
                                                        &preset_name, &compiler_info, &presets))
             return 1;
-
-        if (preset_name) {
-            preset = std::find_if(presets.begin(), presets.end(),
-                                  [&](const BuildPreset &preset) { return TestStr(preset.name, preset_name); });
-            if (preset == presets.end()) {
-                LogError("Preset '%1' does not exist", preset_name);
-                return 1;
-            }
-        } else {
-            preset = presets.len ? &presets[0] : nullptr;
-        }
-
-        if (preset) {
-            preset_name = preset->name;
-            compiler_info = preset->compiler_info;
-            build = preset->build;
-        }
-    } else if (preset_name) {
-        LogError("Option --preset cannot be used with --no_presets");
-        return 1;
     }
 
     // Parse arguments
@@ -443,6 +421,34 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 DefaultLogHandler(level, ctx, msg);
             }
         });
+    }
+
+    // Find selected preset
+    {
+        const BuildPreset *preset;
+
+        if (preset_name) {
+            if (!load_presets) {
+                LogError("Option --preset cannot be used with --no_presets");
+                return 1;
+            }
+
+            preset = std::find_if(presets.begin(), presets.end(),
+                                  [&](const BuildPreset &preset) { return TestStr(preset.name, preset_name); });
+            if (preset == presets.end()) {
+                LogError("Preset '%1' does not exist", preset_name);
+                return 1;
+            }
+        } else {
+            preset = presets.len ? &presets[0] : nullptr;
+        }
+
+        if (preset) {
+            preset_name = preset->name;
+            compiler_info.cc = compiler_info.cc ? compiler_info.cc : preset->compiler_info.cc;
+            compiler_info.ld = compiler_info.ld ? compiler_info.ld : preset->compiler_info.ld;
+            build = preset->build;
+        }
     }
 
     // Initialize and check compiler
