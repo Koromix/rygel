@@ -3281,6 +3281,21 @@ static inline bool StartsWith(const char *str, const char *prefix)
     return !prefix[i];
 }
 
+static inline bool EndsWith(Span<const char> str, const char *suffix)
+{
+    Size i = str.len;
+    Size j = strlen(suffix);
+    while (i >= 0 && j >= 0) {
+        if (str[i] != suffix[j])
+            return false;
+
+        i--;
+        j--;
+    }
+
+    return j < 0;
+}
+
 static inline Span<char> SplitStr(Span<char> str, char split_char, Span<char> *out_remainder = nullptr)
 {
     Size part_len = 0;

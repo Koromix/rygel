@@ -116,38 +116,6 @@ static const char *BuildGitVersionString(Allocator *alloc)
     return output.TrimAndLeak().ptr;
 }
 
-static const CompilerInfo *FindDefaultCompiler()
-{
-    for (const CompilerInfo &info: Compilers) {
-        if (FindExecutableInPath(info.binary))
-            return &info;
-    }
-
-    return nullptr;
-}
-
-static bool ParseCompilerString(const char *str, CompilerInfo *out_compiler_info)
-{
-    const char *binary;
-    Span<const char> name = SplitStr(str, ':', &binary);
-
-    const CompilerInfo *info =
-        std::find_if(Compilers.begin(), Compilers.end(),
-                     [&](const CompilerInfo &info) { return TestStr(info.name, name); });
-
-    if (info == Compilers.end()) {
-        LogError("Unknown compiler '%1'", name);
-        return false;
-    }
-
-    *out_compiler_info = *info;
-    if (binary > name.end()) {
-        out_compiler_info->binary = binary;
-    }
-
-    return true;
-}
-
 static bool ParseFeatureString(Span<const char> str, uint32_t *out_features)
 {
     str = TrimStr(str);
@@ -195,13 +163,9 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
                 if (prop.key == "Preset") {
                     *out_preset_name = DuplicateString(prop.value, alloc).ptr;
                 } else if (prop.key == "Compiler") {
-                    if (ParseCompilerString(prop.value.ptr, out_compiler_info)) {
-                        for (BuildPreset &preset: *out_presets) {
-                            preset.compiler_info = *out_compiler_info;
-                        }
-                    } else {
-                        valid = false;
-                    }
+                    out_compiler_info->cc = DuplicateString(prop.value, alloc).ptr;
+                } else if (prop.key == "Linker") {
+                    out_compiler_info->ld = DuplicateString(prop.value, alloc).ptr;
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
@@ -218,7 +182,9 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
                     if (prop.key == "Directory") {
                         preset->build.output_directory = NormalizePath(prop.value, GetWorkingDirectory(), alloc).ptr;
                     } else if (prop.key == "Compiler") {
-                        valid &= ParseCompilerString(prop.value.ptr, &preset->compiler_info);
+                        preset->compiler_info.cc = DuplicateString(prop.value, alloc).ptr;
+                    } else if (prop.key == "Linker") {
+                        preset->compiler_info.ld = DuplicateString(prop.value, alloc).ptr;
                     } else if (prop.key == "Optimization") {
                         if (!OptionToEnum(CompileOptimizationNames, prop.value.ptr, &preset->build.compile_opt)) {
                             LogError("Unknown optimization level '%1'", prop.value);
@@ -274,6 +240,7 @@ Options:
     %!..+-p, --preset <preset>%!0        Select specific preset
 
         %!..+--compiler <compiler>%!0    Override compiler
+        %!..+--linker <linker>%!0        Override linker
         %!..+--optimize <level>%!0       Override optimization level
         %!..+--features <features>%!0    Override compilation features
 
@@ -294,8 +261,8 @@ Options:
 
 Supported compilers:)", FelixTarget, jobs);
 
-        for (const CompilerInfo &info: Compilers) {
-            PrintLn(fp, "    %!..+%1%!0 %2", FmtArg(info.name).Pad(28), info.binary);
+        for (const SupportedCompiler &supported: SupportedCompilers) {
+            PrintLn(fp, "    %!..+%1%!0 %2", FmtArg(supported.name).Pad(28), supported.cc);
         }
 
         PrintLn(fp, R"(
@@ -418,8 +385,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 build.output_directory = opt.current_value;
             } else if (opt.Test("--compiler", OptionType::Value)) {
-                if (!ParseCompilerString(opt.current_value, &compiler_info))
-                    return 1;
+                compiler_info.cc = opt.current_value;
+            } else if (opt.Test("--linker", OptionType::Value)) {
+                compiler_info.ld = opt.current_value;
             } else if (opt.Test("--optimize", OptionType::Value)) {
                 if (!OptionToEnum(CompileOptimizationNames, opt.current_value, &build.compile_opt)) {
                     LogError("Unknown build mode '%1'", opt.current_value);
@@ -477,20 +445,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         });
     }
 
-    // Find supported compiler (if none was specified)
-    if (!compiler_info.name) {
-        const CompilerInfo *default_compiler = FindDefaultCompiler();
-
-        if (default_compiler) {
-            compiler_info = *default_compiler;
-        } else {
-            LogError("Could not find any supported compiler in PATH");
-            return 1;
-        }
-    }
-
     // Initialize and check compiler
-    std::unique_ptr<const Compiler> compiler = compiler_info.Create();
+    std::unique_ptr<const Compiler> compiler = PrepareCompiler(compiler_info);
     if (!compiler)
         return 1;
     if (!compiler->CheckFeatures(build.compile_opt, build.features))

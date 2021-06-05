@@ -86,7 +86,6 @@ class Compiler {
 
 public:
     const char *name;
-    const char *binary;
 
     virtual ~Compiler() {}
 
@@ -116,24 +115,21 @@ public:
                                  Allocator *alloc, Command *out_cmd) const = 0;
 
 protected:
-    Compiler(const char *name, const char *binary) : name(name), binary(binary) {}
+    Compiler(const char *name) : name(name) {}
 };
 
-class CompilerInfo {
-    std::unique_ptr<const Compiler> (*create)(const char *name, const char *binary);
-
-public:
-    const char *name = nullptr;
-    const char *binary;
-
-    CompilerInfo() {}
-    CompilerInfo(const char *name, const char *binary,
-                 std::unique_ptr<const Compiler> (*create)(const char *, const char *))
-        : create(create), name(name), binary(binary) {}
-
-    std::unique_ptr<const Compiler> Create() const { return create(name, binary); };
+struct SupportedCompiler {
+    const char *name;
+    const char *cc;
 };
 
-extern const Span<const CompilerInfo> Compilers;
+struct CompilerInfo {
+    const char *cc = nullptr;
+    const char *ld = nullptr;
+};
+
+std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info);
+
+extern const Span<const SupportedCompiler> SupportedCompilers;
 
 }

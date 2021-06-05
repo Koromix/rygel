@@ -19,11 +19,11 @@ Optimization = Fast
 Features = PCH, StackProtect, StaticLink
 
 [Paranoid]
-Compiler = Clang
+Compiler = clang
 Optimization = LTO
 Features = PCH, StackProtect, SafeStack, CFI, ZeroInit
 
 [ParanoidStatic]
-Compiler = Clang
+Compiler = clang
 Optimization = LTO
 Features = PCH, StackProtect, SafeStack, CFI, ZeroInit, StaticLink
