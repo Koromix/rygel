@@ -18,7 +18,6 @@ all:
     ssl_public_key: '{{ inventory_dir }}/goupile.fr/fullchain.pem'
     ssl_private_key: '{{ inventory_dir }}/goupile.fr/privkey.pem'
 
-    goupile_commit: deploy_hds
     goupile_domains:
       - name: psy-lille.goupile.fr
         backup_key: !vault |
