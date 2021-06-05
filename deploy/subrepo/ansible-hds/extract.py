@@ -17,56 +17,13 @@ import argparse
 import os
 import os.path
 import subprocess
-import shutil
 import stat
 import sys
+import tempfile
 
-if __name__ == "__main__":
-    start_directory = os.getcwd()
+DEFAULT_REMOTE = 'git@framagit.org:interhop/hds/ansible-hds.git'
 
-    # Always work from build.py directory
-    script_filename = os.path.abspath(__file__)
-    script_directory = os.path.dirname(script_filename)
-    os.chdir(script_directory)
-
-    # Parse arguments
-    parser = argparse.ArgumentParser(description = 'Clone Goupile-specific repository')
-    parser.add_argument('-O', '--output_dir', dest = 'output_dir', action = 'store', help = 'Output directory')
-    parser.add_argument('--push', dest = 'push_url', action = 'store', help = 'Push to repository')
-    parser.add_argument('--force', dest = 'force_push', action = 'store_true', help = 'Use force push to repository')
-    args = parser.parse_args()
-
-    # Find repository directory
-    root_directory = script_directory
-    while not os.path.exists(root_directory + '/FelixBuild.ini'):
-        new_directory = os.path.realpath(root_directory + '/..')
-        if new_directory == root_directory:
-            raise ValueError('Could not find FelixBuild.ini')
-        root_directory = new_directory
-
-    # Prepare clone directory
-    if args.output_dir is None:
-        clone_directory = os.path.join(root_directory, 'bin/subrepo/ansible-hds')
-    elif not os.path.isabs(args.output_dir):
-        clone_directory = os.path.join(start_directory, args.output_directory)
-    else:
-        clone_directory = args.output_dir
-    if os.path.exists(clone_directory):
-        def onerror(func, path, exc_info):
-            if not os.access(path, os.W_OK):
-                os.chmod(path, stat.S_IWUSR)
-                func(path)
-            else:
-                raise
-        shutil.rmtree(clone_directory, onerror = onerror)
-
-    def onerror(func, path, exc_info):
-        if not os.access(path, os.W_OK):
-            os.chmod(path, stat.S_IWUSR)
-            func(path)
-        else:
-            raise
-
+def rewrite_repository(root_directory, clone_directory, force_push = False):
     # Clone or update repository
     subprocess.run(['git', 'clone', root_directory, clone_directory, '--no-local'], check = True)
     os.chdir(clone_directory)
@@ -78,9 +35,33 @@ if __name__ == "__main__":
                     '--invert-paths', '--paths-from-file', script_directory + '/remove.txt'])
 
     # Push to repository
-    if args.push_url is not None:
-        subprocess.run(['git', 'remote', 'add', 'origin', args.push_url])
-        if args.force_push:
-            subprocess.run(['git', 'push', '-u', 'origin', 'master', '--force'])
-        else:
-            subprocess.run(['git', 'push', '-u', 'origin', 'master'])
+    subprocess.run(['git', 'remote', 'add', 'origin', args.remote_url])
+    if force_push:
+        subprocess.run(['git', 'push', '-u', 'origin', 'master', '--force'])
+    else:
+        subprocess.run(['git', 'push', '-u', 'origin', 'master'])
+
+if __name__ == "__main__":
+    start_directory = os.getcwd()
+
+    # Always work from build.py directory
+    script_filename = os.path.abspath(__file__)
+    script_directory = os.path.dirname(script_filename)
+    os.chdir(script_directory)
+
+    # Parse arguments
+    parser = argparse.ArgumentParser(description = 'Clone HDS-specific repository')
+    parser.add_argument('--remote', dest = 'remote_url', action = 'store', default = DEFAULT_REMOTE, help = 'Change remote URL')
+    parser.add_argument('--force', dest = 'force_push', action = 'store_true', help = 'Use force push to repository')
+    args = parser.parse_args()
+
+    # Find repository directory
+    root_directory = script_directory
+    while not os.path.exists(root_directory + '/FelixBuild.ini'):
+        new_directory = os.path.realpath(root_directory + '/..')
+        if new_directory == root_directory:
+            raise ValueError('Could not find FelixBuild.ini')
+        root_directory = new_directory
+
+    with tempfile.TemporaryDirectory() as clone_directory:
+        rewrite_repository(root_directory, clone_directory, args.force_push)
