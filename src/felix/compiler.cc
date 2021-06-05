@@ -156,6 +156,7 @@ public:
         supported |= (int)CompileFeature::SafeStack;
         supported |= (int)CompileFeature::ZeroInit;
         supported |= (int)CompileFeature::CFI; // LTO only
+        supported |= (int)CompileFeature::ShuffleCode; // Requires LLD-11
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -309,6 +310,9 @@ public:
                 Fmt(&buf, " -fsanitize-cfi-icall-generalize-pointers");
             }
         }
+        if (features & (int)CompileFeature::ShuffleCode) {
+            Fmt(&buf, " -ffunction-sections -fdata-sections");
+        }
 
         // Sources and definitions
         Fmt(&buf, " -DFELIX -c \"%1\"", src_filename);
@@ -418,6 +422,9 @@ public:
         if (features & (int)CompileFeature::CFI) {
             RG_ASSERT(compile_opt == CompileOptimization::LTO);
             Fmt(&buf, " -fsanitize=cfi");
+        }
+        if (features & (int)CompileFeature::ShuffleCode) {
+            Fmt(&buf, " -Wl,--shuffle-sections=0");
         }
 
         if (ld) {

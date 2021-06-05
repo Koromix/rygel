@@ -40,7 +40,8 @@ enum class CompileFeature {
     StackProtect = 1 << 6,
     SafeStack = 1 << 7,
     ZeroInit = 1 << 8,
-    CFI = 1 << 9
+    CFI = 1 << 9,
+    ShuffleCode = 1 << 10
 };
 static const char *const CompileFeatureNames[] = {
     "PCH",
@@ -52,7 +53,8 @@ static const char *const CompileFeatureNames[] = {
     "StackProtect",
     "SafeStack", // Clang
     "ZeroInit", // Clang
-    "CFI" // Clang
+    "CFI", // Clang
+    "ShuffleCode" // Clang
 };
 
 enum class SourceType {

@@ -20,10 +20,12 @@ Features = PCH, StackProtect, StaticLink
 
 [Paranoid]
 Compiler = clang
+Linker = lld
 Optimization = LTO
-Features = PCH, StackProtect, SafeStack, CFI, ZeroInit
+Features = PCH, StackProtect, SafeStack, CFI, ZeroInit, ShuffleCode
 
 [ParanoidStatic]
 Compiler = clang
+Linker = lld
 Optimization = LTO
-Features = PCH, StackProtect, SafeStack, CFI, ZeroInit, StaticLink
+Features = PCH, StackProtect, SafeStack, CFI, ZeroInit, StaticLink, ShuffleCode
