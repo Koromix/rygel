@@ -235,16 +235,20 @@ const util = new function() {
         return Math.round(n) / multiplicator;
     };
 
-    this.compareValues = function(value1, value2) {
-        value1 = value1 || '';
-        value2 = value2 || '';
+    this.makeComparator = function(key_func, locales, options = {}) {
+        let collator = new Intl.Collator(locales, options);
 
-        if (value1 < value2) {
-            return -1;
-        } else if (value1 > value2) {
-            return 1;
+        if (key_func != null) {
+            let func = (a, b) => {
+                a = key_func(a);
+                b = key_func(b);
+
+                return collator.compare(a, b);
+            };
+
+            return func;
         } else {
-            return 0;
+            return collator.compare;
         }
     };
 

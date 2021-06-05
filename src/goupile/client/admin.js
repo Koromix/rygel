@@ -361,7 +361,7 @@ function AdminController() {
             new_users = await net.fetchJson('/admin/api/users/list');
         if (ui.isPanelEnabled('backups') && new_backups == null) {
             new_backups = await net.fetchJson('/admin/api/archives/list');
-            new_backups.sort((bak1, bak2) => util.compareValues(bak1.filename, bak2.filename));
+            new_backups.sort(util.makeComparator(bak => bak.filename));
         }
 
         if (url != null) {

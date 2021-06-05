@@ -72,7 +72,11 @@ function EasyTable() {
             key: key,
             title: title,
             render: options.render || (value => value),
-            sort: options.sort || util.compareValues,
+            sort: options.sort || util.makeComparator(null, navigator.language, {
+                numeric: true,
+                ignorePunctuation: true,
+                sensitivity: 'base'
+            }),
             tooltip: options.tooltip || ''
         };
 
