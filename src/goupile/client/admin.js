@@ -278,7 +278,9 @@ function AdminController() {
                     }
                 } catch (err) {
                     progress.close();
-                    reject(err);
+
+                    log.error(err);
+                    d.refresh();
                 }
             });
         });
@@ -316,7 +318,9 @@ function AdminController() {
                     }
                 } catch (err) {
                     progress.close();
-                    reject(err);
+
+                    log.error(err);
+                    d.refresh();
                 }
             });
         });
@@ -441,7 +445,9 @@ function AdminController() {
                     self.go();
                 } else {
                     let err = (await response.text()).trim();
-                    reject(new Error(err));
+
+                    log.error(err);
+                    d.refresh();
                 }
             });
         });
@@ -508,7 +514,9 @@ function AdminController() {
                                 self.go();
                             } else {
                                 let err = (await response.text()).trim();
-                                reject(new Error(err));
+
+                                log.error(err);
+                                d.refresh();
                             }
                         });
                     } else {
@@ -533,7 +541,9 @@ function AdminController() {
                                 self.go();
                             } else {
                                 let err = (await response.text()).trim();
-                                reject(new Error(err));
+
+                                log.error(err);
+                                d.refresh();
                             }
                         });
                     }
@@ -561,7 +571,9 @@ function AdminController() {
                             self.go();
                         } else {
                             let err = (await response.text()).trim();
-                            reject(new Error(err));
+
+                            log.error(err);
+                            d.refresh();
                         }
                     });
                 });
@@ -606,7 +618,9 @@ function AdminController() {
                     self.go();
                 } else {
                     let err = (await response.text()).trim();
-                    reject(new Error(err));
+
+                    log.error(err);
+                    d.refresh();
                 }
             });
         });
@@ -663,7 +677,9 @@ function AdminController() {
                     self.go();
                 } else {
                     let err = (await response.text()).trim();
-                    reject(new Error(err));
+
+                    log.error(err);
+                    d.refresh();
                 }
             });
         });
@@ -713,7 +729,9 @@ function AdminController() {
                     self.go();
                 } else {
                     let err = (await response.text()).trim();
-                    reject(new Error(err));
+
+                    log.error(err);
+                    d.refresh();
                 }
             });
         });
@@ -785,7 +803,9 @@ function AdminController() {
                             self.go();
                         } else {
                             let err = (await response.text()).trim();
-                            reject(new Error(err));
+
+                            log.error(err);
+                            d.refresh();
                         }
                     });
                 });

@@ -344,7 +344,8 @@ const ui = new function() {
                     await func(e);
                     resolve();
                 } catch (err) {
-                    reject(err);
+                    log.error(err);
+                    d.refresh();
                 }
             });
         });

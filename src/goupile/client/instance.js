@@ -1486,7 +1486,9 @@ function InstanceController() {
                     self.run();
                 } catch (err) {
                     progress.close();
-                    reject(err);
+
+                    log.error(err);
+                    d.refresh();
                 }
             });
         });

@@ -214,7 +214,6 @@ const goupile = new function() {
 
                     resolve();
                 } catch (err) {
-                    // Never reject because we want to keep the screen open
                     log.error(err);
                     d.refresh();
                 }
@@ -277,7 +276,6 @@ const goupile = new function() {
                 } catch (err) {
                     progress.close();
 
-                    // Never reject because we want to keep the screen open
                     log.error(err);
                     d.refresh();
                 }
@@ -318,7 +316,9 @@ const goupile = new function() {
                     }
                 } catch (err) {
                     progress.close();
-                    reject(err);
+
+                    log.error(err);
+                    d.refresh();
                 }
             });
         });
