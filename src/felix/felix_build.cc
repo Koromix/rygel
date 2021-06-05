@@ -293,6 +293,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 config_filename = opt.current_value;
             } else if (opt.Test("--no_presets")) {
                 load_presets = false;
+            } else if (opt.Test("-p", "--preset", OptionType::Value)) {
+                preset_name = opt.current_value;
             } else if (opt.Test("--run") || opt.Test("--run_here")) {
                 break;
             } else if (opt.TestHasFailed()) {
@@ -334,12 +336,44 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         const char *presets_filename = Fmt(&temp_alloc, "%1.presets", config_filename).ptr;
         const char *user_filename = Fmt(&temp_alloc, "%1.user", config_filename).ptr;
 
+        const char *default_preset = nullptr;
+
         if (TestFile(presets_filename) && !LoadPresetFile(presets_filename, &temp_alloc,
-                                                          &preset_name, &compiler_info, &presets))
+                                                          &default_preset, &compiler_info, &presets))
             return 1;
         if (TestFile(user_filename) && !LoadPresetFile(user_filename, &temp_alloc,
-                                                       &preset_name, &compiler_info, &presets))
+                                                       &default_preset, &compiler_info, &presets))
             return 1;
+
+        preset_name = preset_name ? preset_name : default_preset;
+    }
+
+    // Find selected preset
+    {
+        const BuildPreset *preset;
+
+        if (preset_name) {
+            if (!load_presets) {
+                LogError("Option --preset cannot be used with --no_presets");
+                return 1;
+            }
+
+            preset = std::find_if(presets.begin(), presets.end(),
+                                  [&](const BuildPreset &preset) { return TestStr(preset.name, preset_name); });
+            if (preset == presets.end()) {
+                LogError("Preset '%1' does not exist", preset_name);
+                return 1;
+            }
+        } else {
+            preset = presets.len ? &presets[0] : nullptr;
+        }
+
+        if (preset) {
+            preset_name = preset->name;
+            compiler_info.cc = preset->compiler_info.cc ? preset->compiler_info.cc : compiler_info.cc;
+            compiler_info.ld = preset->compiler_info.ld ? preset->compiler_info.ld : compiler_info.ld;
+            build = preset->build;
+        }
     }
 
     // Parse arguments
@@ -359,7 +393,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             } else if (opt.Test("--no_presets")) {
                 // Already handled
             } else if (opt.Test("-p", "--preset", OptionType::Value)) {
-                preset_name = opt.current_value;
+                // Already handled
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 build.output_directory = opt.current_value;
             } else if (opt.Test("--compiler", OptionType::Value)) {
@@ -421,34 +455,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 DefaultLogHandler(level, ctx, msg);
             }
         });
-    }
-
-    // Find selected preset
-    {
-        const BuildPreset *preset;
-
-        if (preset_name) {
-            if (!load_presets) {
-                LogError("Option --preset cannot be used with --no_presets");
-                return 1;
-            }
-
-            preset = std::find_if(presets.begin(), presets.end(),
-                                  [&](const BuildPreset &preset) { return TestStr(preset.name, preset_name); });
-            if (preset == presets.end()) {
-                LogError("Preset '%1' does not exist", preset_name);
-                return 1;
-            }
-        } else {
-            preset = presets.len ? &presets[0] : nullptr;
-        }
-
-        if (preset) {
-            preset_name = preset->name;
-            compiler_info.cc = compiler_info.cc ? compiler_info.cc : preset->compiler_info.cc;
-            compiler_info.ld = compiler_info.ld ? compiler_info.ld : preset->compiler_info.ld;
-            build = preset->build;
-        }
     }
 
     // Initialize and check compiler
