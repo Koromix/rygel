@@ -2162,38 +2162,48 @@ bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_p
 {
     RG_ASSERT(alloc || !out_path);
 
-    // XXX: Non-Unicode friendly on Win32
-    Span<const char> env = getenv("PATH");
+    if (strpbrk(name, RG_PATH_SEPARATORS)) {
+        if (!TestFile(name, FileType::File))
+            return false;
 
-    while (env.len) {
-        Span<const char> path = SplitStr(env, RG_PATH_DELIMITER, &env);
+        if (out_path) {
+            *out_path = DuplicateString(name, alloc).ptr;
+        }
+        return true;
+    } else {
+        // XXX: Non-Unicode friendly on Win32
+        Span<const char> env = getenv("PATH");
 
-        LocalArray<char, 4096> buf;
-        buf.len = Fmt(buf.data, "%1%/%2", path, name).len;
+        while (env.len) {
+            Span<const char> path = SplitStr(env, RG_PATH_DELIMITER, &env);
+
+            LocalArray<char, 4096> buf;
+            buf.len = Fmt(buf.data, "%1%/%2", path, name).len;
 
 #ifdef _WIN32
-        static const Span<const char> extensions[] = {".com", ".exe", ".bat", ".cmd"};
+            static const Span<const char> extensions[] = {".com", ".exe", ".bat", ".cmd"};
 
-        for (Span<const char> ext: extensions) {
-            if (RG_LIKELY(ext.len < buf.Available() - 1)) {
-                memcpy_safe(buf.end(), ext.ptr, ext.len + 1);
+            for (Span<const char> ext: extensions) {
+                if (RG_LIKELY(ext.len < buf.Available() - 1)) {
+                    memcpy_safe(buf.end(), ext.ptr, ext.len + 1);
 
-                if (TestFile(buf.data)) {
-                    if (out_path) {
-                        *out_path = DuplicateString(buf.data, alloc).ptr;
+                    if (TestFile(buf.data)) {
+                        if (out_path) {
+                            *out_path = DuplicateString(buf.data, alloc).ptr;
+                        }
+                        return true;
                     }
-                    return true;
                 }
             }
-        }
 #else
-        if (RG_LIKELY(buf.len < RG_SIZE(buf.data) - 1) && TestFile(buf.data)) {
-            if (out_path) {
-                *out_path = DuplicateString(buf.data, alloc).ptr;
+            if (RG_LIKELY(buf.len < RG_SIZE(buf.data) - 1) && TestFile(buf.data)) {
+                if (out_path) {
+                    *out_path = DuplicateString(buf.data, alloc).ptr;
+                }
+                return true;
             }
-            return true;
-        }
 #endif
+        }
     }
 
     return false;
