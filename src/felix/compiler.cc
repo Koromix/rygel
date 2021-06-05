@@ -87,11 +87,6 @@ public:
     {
         std::unique_ptr<ClangCompiler> compiler = std::make_unique<ClangCompiler>();
 
-        if (!FindExecutableInPath(cc)) {
-            LogError("Cannot find '%1' in PATH", cc);
-            return nullptr;
-        }
-
         // Find executables
         {
             Span<const char> prefix;
@@ -456,11 +451,6 @@ public:
     {
         std::unique_ptr<GnuCompiler> compiler = std::make_unique<GnuCompiler>();
 
-        if (!FindExecutableInPath(cc)) {
-            LogError("Cannot find '%1' in PATH", cc);
-            return nullptr;
-        }
-
         // Find executables
         {
             Span<const char> prefix;
@@ -754,11 +744,6 @@ public:
     {
         std::unique_ptr<MsCompiler> compiler = std::make_unique<MsCompiler>();
 
-        if (!FindExecutableInPath(cl)) {
-            LogError("Cannot find '%1' in PATH", cl);
-            return nullptr;
-        }
-
         // Find executables
         {
             Span<const char> prefix;
@@ -993,11 +978,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info)
         }
     }
 
-    if (FindExecutableInPath(info.cc)) {
-        LogError("Cannot find this compiler in PATH");
-    } else {
-        LogError("Cannot find any driver for this compiler");
-    }
+    LogError("Cannot find any driver for this compiler");
     return nullptr;
 }
 
