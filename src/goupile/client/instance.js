@@ -526,7 +526,7 @@ function InstanceController() {
                     go: (url) => self.go(null, url),
 
                     save: async () => {
-                        await saveRecord(form_record, form_values, route.page)
+                        await saveRecord(form_record, form_values, route.page);
                         await self.run();
                     },
                     delete: (e, ulid, confirm = true) => {
