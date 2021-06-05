@@ -884,11 +884,6 @@ function InstanceController() {
                             ptr = form_values[record.form.key];
                         } while (record.saved && ptr == null);
                     } while (record != null);
-
-                    record = await loadRecord(ulid, null);
-                    await expandRecord(record, page.options.load || []);
-
-                    updateContext(route, record);
                 });
 
                 data_rows = null;
@@ -908,6 +903,11 @@ function InstanceController() {
                     progress.success('Enregistrement local effectué');
                     enablePersistence();
                 }
+
+                record = await loadRecord(ulid, null);
+                await expandRecord(record, page.options.load || []);
+
+                updateContext(route, record);
             } catch (err) {
                 progress.close();
                 throw err;
