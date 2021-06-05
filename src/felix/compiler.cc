@@ -983,7 +983,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info)
         }
     }
 
-    LogError("Cannot find any driver for this compiler");
+    LogError("Cannot find driver for compiler '%1'", info.cc);
     return nullptr;
 }
 
