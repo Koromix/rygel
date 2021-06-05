@@ -943,9 +943,7 @@ public:
 
 std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info)
 {
-    bool select_auto = !info.cc;
-
-    if (select_auto) {
+    if (!info.cc) {
         for (const SupportedCompiler &supported: SupportedCompilers) {
             if (FindExecutableInPath(supported.cc)) {
                 info.cc = supported.cc;
@@ -957,6 +955,9 @@ std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info)
             LogError("Could not find any supported compiler in PATH");
             return nullptr;
         }
+    } else if (!FindExecutableInPath(info.cc)) {
+        LogError("Cannot find compiler '%1' in PATH", info.cc);
+        return nullptr;
     }
 
     // Find appropriate driver
