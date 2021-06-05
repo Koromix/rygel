@@ -26,10 +26,10 @@ static void ExportRecord(sq_Statement *stmt, json_Writer *json)
     json->StartObject();
 
     json->Key("ulid"); json->String((const char *)sqlite3_column_text(*stmt, 1));
-    if (sqlite3_column_type(*stmt, 2) != SQLITE_NULL) {
-        json->Key("hid"); json->String((const char *)sqlite3_column_text(*stmt, 2));
-    } else {
-        json->Key("hid"); json->Null();
+    json->Key("hid"); switch (sqlite3_column_type(*stmt, 2)) {
+        case SQLITE_NULL: { json->Null(); } break;
+        case SQLITE_INTEGER: { json->Int64(sqlite3_column_int64(*stmt, 2)); } break;
+        default: { json->String((const char *)sqlite3_column_text(*stmt, 2)); } break;
     }
     json->Key("form"); json->String((const char *)sqlite3_column_text(*stmt, 3));
     json->Key("anchor"); json->Int64(sqlite3_column_int64(*stmt, 4));
@@ -415,12 +415,10 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                             return false;
                         }
 
-                        char buf[16];
                         int64_t counter = sqlite3_column_int64(stmt, 0);
-                        Fmt(buf, "%1", FmtArg(counter).Pad0(-6));
 
                         if (!instance->db.Run("UPDATE rec_entries SET hid = ?2 WHERE rowid = ?1",
-                                              rowid, buf))
+                                              rowid, counter))
                             return false;
                     }
                 }
