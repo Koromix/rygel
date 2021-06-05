@@ -148,10 +148,14 @@ public:
 #endif
         supported |= (int)CompileFeature::UBSan;
         supported |= (int)CompileFeature::StackProtect;
+#ifndef _WIN32
         supported |= (int)CompileFeature::SafeStack;
+#endif
         supported |= (int)CompileFeature::ZeroInit;
         supported |= (int)CompileFeature::CFI; // LTO only
+#ifndef _WIN32
         supported |= (int)CompileFeature::ShuffleCode; // Requires LLD-11
+#endif
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
