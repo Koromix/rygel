@@ -405,7 +405,7 @@ html:not(.small) .fm_widget.compact .fm_error {
 .fm_slider {
     position: relative;
     display: flex;
-    width: 24em;
+    width: 21em;
     height: 3em;
     align-items: start;
 }
