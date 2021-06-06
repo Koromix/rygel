@@ -1133,12 +1133,26 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 out = out_buf;
             } break;
 
-            case FmtType::Flags: {
+            case FmtType::FlagNames: {
                 if (arg.u.flags.flags) {
                     Span<const char> sep = arg.u.flags.separator;
-                    for (Size i = 0; i < arg.u.flags.names.len; i++) {
+                    for (Size i = 0; i < arg.u.flags.u.names.len; i++) {
                         if (arg.u.flags.flags & (1ull << i)) {
-                            out_buf.Append(arg.u.flags.names[i]);
+                            out_buf.Append(arg.u.flags.u.names[i]);
+                            out_buf.Append(sep);
+                        }
+                    }
+                    out = out_buf.Take(0, out_buf.len - sep.len);
+                } else {
+                    out = "None";
+                }
+            } break;
+            case FmtType::FlagOptions: {
+                if (arg.u.flags.flags) {
+                    Span<const char> sep = arg.u.flags.separator;
+                    for (Size i = 0; i < arg.u.flags.u.options.len; i++) {
+                        if (arg.u.flags.flags & (1ull << i)) {
+                            out_buf.Append(arg.u.flags.u.options[i].name);
                             out_buf.Append(sep);
                         }
                     }
@@ -1193,7 +1207,8 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                         case FmtType::MemorySize: { arg2.u.size = *(const Size *)ptr; } break;
                         case FmtType::DiskSize: { arg2.u.size = *(const Size *)ptr; } break;
                         case FmtType::Date: { arg2.u.date = *(const Date *)ptr; } break;
-                        case FmtType::Flags: { RG_UNREACHABLE(); } break;
+                        case FmtType::FlagNames: { RG_UNREACHABLE(); } break;
+                        case FmtType::FlagOptions: { RG_UNREACHABLE(); } break;
                         case FmtType::Function: { arg2.u.func = *(FunctionRef<FmtFunction> *)ptr; } break;
                         case FmtType::Span: { RG_UNREACHABLE(); } break;
                     }

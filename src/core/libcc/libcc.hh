@@ -2858,7 +2858,8 @@ enum class FmtType {
     MemorySize,
     DiskSize,
     Date,
-    Flags,
+    FlagNames,
+    FlagOptions,
     Function,
     Span
 };
@@ -2891,7 +2892,10 @@ public:
         Date date;
         struct {
             uint64_t flags;
-            Span<const char *const> names;
+            union {
+                Span<const char *const> names;
+                Span<const struct OptionDesc> options;
+            } u;
             const char *separator;
         } flags;
         FunctionRef<FmtFunction> func;
@@ -2990,9 +2994,19 @@ static inline FmtArg FmtDiskSize(Size size)
 static inline FmtArg FmtFlags(uint64_t flags, Span<const char *const> names, const char *sep = ", ")
 {
     FmtArg arg;
-    arg.type = FmtType::Flags;
+    arg.type = FmtType::FlagNames;
     arg.u.flags.flags = flags & ((1ull << names.len) - 1);
-    arg.u.flags.names = names;
+    arg.u.flags.u.names = names;
+    arg.u.flags.separator = sep;
+    return arg;
+}
+
+static inline FmtArg FmtFlags(uint64_t flags, Span<const struct OptionDesc> options, const char *sep = ", ")
+{
+    FmtArg arg;
+    arg.type = FmtType::FlagOptions;
+    arg.u.flags.flags = flags & ((1ull << options.len) - 1);
+    arg.u.flags.u.options = options;
     arg.u.flags.separator = sep;
     return arg;
 }
