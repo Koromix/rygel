@@ -410,7 +410,7 @@ public:
 
         // Platform flags
 #if defined(_WIN32)
-        Fmt(&buf, " -fuse-ld=lld --rtlib=compiler-rt");
+        Fmt(&buf, " --rtlib=compiler-rt");
 #elif defined(__APPLE__)
         Fmt(&buf, " -ldl -pthread");
         if (link_type == LinkType::Executable) {
