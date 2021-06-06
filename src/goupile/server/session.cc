@@ -156,11 +156,24 @@ void SessionInfo::AuthorizeInstance(const InstanceHolder *instance, uint32_t per
 
 void InvalidateUserStamps(int64_t userid)
 {
+    // Deal with real sessions
     sessions.ApplyAll([&](SessionInfo *session) {
         if (session->userid == userid) {
             session->InvalidateStamps();
         }
     });
+
+    // Deal with automatic sessions
+    {
+        Span<InstanceHolder *> instances = gp_domain.LockInstances();
+        RG_DEFER { gp_domain.UnlockInstances(); };
+
+        for (const InstanceHolder *instance: instances) {
+            if (instance->auto_init && instance->auto_session->userid == userid) {
+                instance->auto_session->InvalidateStamps();
+            }
+        }
+    }
 }
 
 static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *instance,
