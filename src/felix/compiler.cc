@@ -87,6 +87,11 @@ public:
     {
         std::unique_ptr<ClangCompiler> compiler = std::make_unique<ClangCompiler>();
 
+        // Prefer LLD
+        if (!ld && FindExecutableInPath("lld")) {
+            ld = "lld";
+        }
+
         // Find executables
         {
             Span<const char> prefix;
