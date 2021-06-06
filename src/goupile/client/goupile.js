@@ -796,7 +796,7 @@ const goupile = new function() {
         let nonce = new Uint8Array(24);
         crypto.getRandomValues(nonce);
 
-        let json = JSON.stringify(obj);
+        let json = JSON.stringify(obj, (k, v) => v != null ? v : null);
         let message = (new TextEncoder()).encode(json);
         let box = nacl.secretbox(message, nonce, key);
 
@@ -831,7 +831,7 @@ const goupile = new function() {
         let nonce = new Uint8Array(24);
         crypto.getRandomValues(nonce);
 
-        let json = JSON.stringify(obj);
+        let json = JSON.stringify(obj, (k, v) => v != null ? v : null);
         let message = (new TextEncoder()).encode(json);
         let box = nacl.box(message, nonce, public_key, secret_key);
 
