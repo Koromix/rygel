@@ -162,20 +162,6 @@ function InstanceController() {
     function renderMenu() {
         return html`
             ${!goupile.isLocked() ? html`
-                ${profile.instances == null ?
-                    html`<button class="icon" style="background-position-y: calc(-538px + 1.2em);"
-                                 @click=${e => self.go(e, ENV.urls.instance)}>${ENV.title}</button>` : ''}
-                ${profile.instances != null ? html`
-                    <div class="drop" @click=${ui.deployMenu}>
-                        <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
-                                @click=${ui.deployMenu}>${ENV.title}</button>
-                        <div>
-                            ${profile.instances.map(instance =>
-                                html`<button class=${instance.url === ENV.urls.instance ? 'active' : ''}
-                                             @click=${e => self.go(e, instance.url)}>${instance.name}</button>`)}
-                        </div>
-                    </div>
-                ` : ''}
                 ${goupile.hasPermission('admin_code') ? html`
                     <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
                             style="background-position-y: calc(-230px + 1.2em);"
@@ -230,6 +216,20 @@ function InstanceController() {
             ${goupile.isLocked() && profile.userid >= 0 ?
                 html`<button class="icon" @click=${ui.wrapAction(goupile.goToLogin)}
                              style="background-position-y: calc(-450px + 1.2em);">Se connecter</button>` : ''}
+            ${!goupile.isLocked() && profile.instances == null ?
+                    html`<button class="icon" style="background-position-y: calc(-538px + 1.2em);"
+                                 @click=${e => self.go(e, ENV.urls.instance)}>${ENV.title}</button>` : ''}
+            ${!goupile.isLocked() && profile.instances != null ? html`
+                <div class="drop right" @click=${ui.deployMenu}>
+                    <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
+                            @click=${ui.deployMenu}>${ENV.title}</button>
+                    <div>
+                        ${profile.instances.map(instance =>
+                            html`<button class=${instance.url === ENV.urls.instance ? 'active' : ''}
+                                         @click=${e => self.go(e, instance.url)}>${instance.name}</button>`)}
+                    </div>
+                </div>
+            ` : ''}
         `;
     }
 
