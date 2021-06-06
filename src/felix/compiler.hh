@@ -37,11 +37,10 @@ enum class CompileFeature {
     ASan = 1 << 3,
     TSan = 1 << 4,
     UBSan = 1 << 5,
-    StackProtect = 1 << 6,
-    SafeStack = 1 << 7,
-    ZeroInit = 1 << 8,
-    CFI = 1 << 9,
-    ShuffleCode = 1 << 10
+    SafeStack = 1 << 6,
+    ZeroInit = 1 << 7,
+    CFI = 1 << 8,
+    ShuffleCode = 1 << 9
 };
 static const char *const CompileFeatureNames[] = {
     "PCH",
@@ -50,7 +49,6 @@ static const char *const CompileFeatureNames[] = {
     "ASan",
     "TSan",
     "UBSan",
-    "StackProtect",
     "SafeStack", // Clang
     "ZeroInit", // Clang
     "CFI", // Clang

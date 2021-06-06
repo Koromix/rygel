@@ -1,31 +1,31 @@
 [DebugSlow]
 Optimization = None
-Features = PCH, ASan, StackProtect
+Features = PCH, ASan
 
 [DebugFast]
 Optimization = Debug
-Features = PCH, ASan, StackProtect
+Features = PCH, ASan
 
 [Fast]
 Optimization = Fast
-Features = PCH, StackProtect
+Features = PCH
 
 [FastLTO]
 Optimization = LTO
-Features = PCH, StackProtect
+Features = PCH
 
 [FastStatic]
 Optimization = Fast
-Features = PCH, StackProtect, StaticLink
+Features = PCH, StaticLink
 
 [Paranoid]
 Compiler = clang
 Linker = lld
 Optimization = LTO
-Features = PCH, StackProtect, SafeStack, CFI, ZeroInit, ShuffleCode
+Features = PCH, SafeStack, CFI, ZeroInit, ShuffleCode
 
 [ParanoidStatic]
 Compiler = clang
 Linker = lld
 Optimization = LTO
-Features = PCH, StackProtect, SafeStack, CFI, ZeroInit, StaticLink, ShuffleCode
+Features = PCH, SafeStack, CFI, ZeroInit, StaticLink, ShuffleCode
