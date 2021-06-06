@@ -169,10 +169,10 @@ function InstanceController() {
                 ` : ''}
                 <button class=${'icon' + (ui.isPanelEnabled('data') ? ' active' : '')}
                         style="background-position-y: calc(-274px + 1.2em);"
-                        @click=${ui.wrapAction(e => togglePanel(e, 'data'))}>Données</button>
+                        @click=${ui.wrapAction(e => togglePanel(e, 'data'))}>Liste</button>
                 <button class=${'icon' + (ui.isPanelEnabled('page') ? ' active' : '')}
                         style="background-position-y: calc(-318px + 1.2em);"
-                        @click=${ui.wrapAction(e => togglePanel(e, 'page'))}>Formulaire</button>
+                        @click=${ui.wrapAction(e => togglePanel(e, 'page'))}>Saisie</button>
                 <div style="flex: 1; min-width: 15px;"></div>
             ` : ''}
             ${goupile.isLocked() && profile.lock.unlockable ? html`
