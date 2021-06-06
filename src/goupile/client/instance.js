@@ -673,7 +673,8 @@ function InstanceController() {
                 ${model.actions.length ? html`
                     <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
                         ${!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null ?
-                            html`<button class="hid">${form_record.chain[0].hid}</button>` : ''}
+                            html`<button class="hid"
+                                         @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>${form_record.chain[0].hid}</button>` : ''}
                         <div style="flex: 1;"></div>
                         ${model.actions.length > 1 ? html`
                             <div class="drop up right" @click=${ui.deployMenu}>
