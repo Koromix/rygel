@@ -71,12 +71,47 @@ static void MakePackCommand(Span<const char *const> pack_filenames, CompileOptim
     out_cmd->cmd_line = buf.TrimAndLeak(1);
 }
 
+static int ParseClangMajorVersion(const char *cmd, const char *marker)
+{
+    HeapArray<char> output;
+    int exit_code;
+    if (!ExecuteCommandLine(cmd, {}, Kilobytes(1), &output, &exit_code))
+        return -1;
+    if (exit_code) {
+        LogError("Command '%1 failed (exit code: %2)", cmd, exit_code);
+        return -1;
+    }
+
+    Span<const char> remain = output;
+    while (remain.len) {
+        Span<const char> token = SplitStr(remain, ' ', &remain);
+
+        if (token == marker) {
+            int version;
+            if (!ParseInt(remain, &version, 0, &remain)) {
+                LogError("Unexpected version format returned by '%1'", cmd);
+                return -1;
+            }
+            if (!remain.len || remain[0] != '.') {
+                LogError("Unexpected version format returned by '%1'", cmd);
+                return -1;
+            }
+
+            return version;
+        }
+    }
+
+    // Fail graciously
+    return -1;
+}
+
 class ClangCompiler final: public Compiler {
     const char *cc;
     const char *cxx;
     const char *ld;
 
-    int major_version;
+    bool clang11;
+    bool lld11;
 
     BlockAllocator str_alloc;
 
@@ -106,35 +141,22 @@ public:
 
         // Determine Clang version
         {
-            char cmd[1024];
+            char cmd[2048];
             Fmt(cmd, "%1 --version", compiler->cc);
 
-            HeapArray<char> output;
-            int exit_code;
-            if (!ExecuteCommandLine(cmd, {}, Kilobytes(1), &output, &exit_code))
-                return nullptr;
-            if (exit_code) {
-                LogError("Command '%1 failed (exit code: %2)", cmd, exit_code);
-                return nullptr;
+            compiler->clang11 = ParseClangMajorVersion(cmd, "version") >= 11;
+        }
+
+        // Determine LLD version
+        {
+            char cmd[2048];
+            if (compiler->ld) {
+                Fmt(cmd, "%1 -fuse-ld=%2 -Wl,--version", compiler->cc, compiler->ld);
+            } else {
+                Fmt(cmd, "%1 -Wl,--version", compiler->cc);
             }
 
-            Span<const char> remain = output;
-            while (remain.len) {
-                Span<const char> token = SplitStr(remain, ' ', &remain);
-
-                if (token == "version") {
-                    if (!ParseInt(remain, &compiler->major_version, 0, &remain)) {
-                        LogError("Unexpected version format returned by '%1'", cmd);
-                        return nullptr;
-                    }
-                    if (!remain.len || remain[0] != '.') {
-                        LogError("Unexpected version format returned by '%1'", cmd);
-                        return nullptr;
-                    }
-
-                    break;
-                }
-            }
+            compiler->lld11 = ParseClangMajorVersion(cmd, "LLD") >= 11;
         }
 
         return compiler;
@@ -159,7 +181,7 @@ public:
         supported |= (int)CompileFeature::ZeroInit;
         supported |= (int)CompileFeature::CFI; // LTO only
 #ifndef _WIN32
-        supported |= (int)CompileFeature::ShuffleCode; // Requires LLD-11
+        supported |= (int)CompileFeature::ShuffleCode; // Requires lld version >= 11
 #endif
 
         uint32_t unsupported = features & ~supported;
@@ -175,6 +197,10 @@ public:
         }
         if (compile_opt != CompileOptimization::LTO && (features & (int)CompileFeature::CFI)) {
             LogError("Clang CFI feature requires LTO compilation");
+            return false;
+        }
+        if (!lld11 && (features & (int)CompileFeature::ShuffleCode)) {
+            LogError("ShuffleCode requires LLD >= 11, try --linker option (e.g. --linker=lld-11)");
             return false;
         }
 
@@ -215,7 +241,6 @@ public:
                            Span<const char *const> include_directories, uint32_t features, bool env_flags,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
-        RG_ASSERT(major_version >= 0);
         RG_ASSERT(alloc);
 
         HeapArray<char> buf(alloc);
@@ -259,13 +284,13 @@ public:
         }
 #elif defined(__APPLE__)
         Fmt(&buf, " -pthread -fPIC");
-        if (major_version >= 11) {
+        if (clang11) {
             Fmt(&buf, " -fno-semantic-interposition");
         }
 #else
         Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
                   " -pthread -fPIC");
-        if (major_version >= 11) {
+        if (clang11) {
             Fmt(&buf, " -fno-semantic-interposition");
         }
         if (compile_opt == CompileOptimization::Fast || compile_opt == CompileOptimization::LTO) {
@@ -293,7 +318,7 @@ public:
         if (features & (int)CompileFeature::StackProtect) {
             Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4");
 #ifdef __linux__
-            if (major_version >= 11) {
+            if (clang11) {
                 Fmt(&buf, " -fstack-clash-protection");
             }
 #endif
