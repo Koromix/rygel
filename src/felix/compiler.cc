@@ -186,7 +186,7 @@ public:
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
             LogError("Some features are not supported by %1: %2",
-                     name, FmtFlags(unsupported, CompileFeatureNames));
+                     name, FmtFlags(unsupported, CompileFeatureOptions));
             return false;
         }
 
@@ -517,7 +517,7 @@ public:
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
             LogError("Some features are not supported by %1: %2",
-                     name, FmtFlags(unsupported, CompileFeatureNames));
+                     name, FmtFlags(unsupported, CompileFeatureOptions));
             return false;
         }
 
@@ -798,7 +798,7 @@ public:
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
             LogError("Some features are not supported by %1: %2",
-                     name, FmtFlags(unsupported, CompileFeatureNames));
+                     name, FmtFlags(unsupported, CompileFeatureOptions));
             return false;
         }
 

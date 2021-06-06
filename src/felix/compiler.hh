@@ -42,17 +42,17 @@ enum class CompileFeature {
     CFI = 1 << 8,
     ShuffleCode = 1 << 9
 };
-static const char *const CompileFeatureNames[] = {
-    "PCH",
-    "NoDebug",
-    "StaticLink",
-    "ASan",
-    "TSan",
-    "UBSan",
-    "SafeStack", // Clang
-    "ZeroInit", // Clang
-    "CFI", // Clang
-    "ShuffleCode" // Clang
+static const OptionDesc CompileFeatureOptions[] = {
+    {"PCH",         "Use precompiled headers for faster compilation"},
+    {"NoDebug",     "Omit debug information from generated binaries"},
+    {"StaticLink",  "Static link base system libraries (libc, etc.)"},
+    {"ASan",        "Enable AdressSanitizer (ASan)"},
+    {"TSan",        "Enable ThreadSanitizer (TSan)"},
+    {"UBSan",       "Enable UndefinedBehaviorSanitizer (UBSan)"},
+    {"SafeStack",   "Enable SafeStack protection (Clang)"},
+    {"ZeroInit",    "Zero-init all undefined variables (Clang)"},
+    {"CFI",         "Enable forward-edge CFI protection (Clang LTO)"},
+    {"ShuffleCode", "Randomize ordering of data and functions (Clang)"}
 };
 
 enum class SourceType {

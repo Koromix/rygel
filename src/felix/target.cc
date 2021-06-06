@@ -297,7 +297,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
 
                             if (part.len) {
                                 CompileFeature feature;
-                                if (OptionToEnum(CompileFeatureNames, part, &feature)) {
+                                if (OptionToEnum(CompileFeatureOptions, part, &feature)) {
                                     if (enable) {
                                         target_config.enable_features |= 1u << (int)feature;
                                     } else {

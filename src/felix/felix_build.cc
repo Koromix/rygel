@@ -128,7 +128,7 @@ static bool ParseFeatureString(Span<const char> str, uint32_t *out_features)
 
         if (part.len) {
             CompileFeature feature;
-            if (!OptionToEnum(CompileFeatureNames, part, &feature)) {
+            if (!OptionToEnum(CompileFeatureOptions, part, &feature)) {
                 LogError("Unknown target feature '%1'", part);
                 return false;
             }
@@ -271,7 +271,7 @@ Options:
 Supported compilers:)", FelixTarget, jobs);
 
         for (const SupportedCompiler &supported: SupportedCompilers) {
-            PrintLn(fp, "    %!..+%1%!0 %2", FmtArg(supported.name).Pad(28), supported.cc);
+            PrintLn(fp, "    %!..+%1%!0 Binary: %2", FmtArg(supported.name).Pad(28), supported.cc);
         }
 
         PrintLn(fp, R"(
@@ -279,8 +279,12 @@ Use %!..+--compiler=<binary>%!0 to specify a custom C compiler, such as: %!..+fe
 Felix will use the matching C++ compiler automatically.
 
 Supported optimization levels: %!..+%1%!0
-Supported compiler features: %!..+%2%!0)", FmtSpan(CompileOptimizationNames),
-                                           FmtSpan(CompileFeatureNames));
+
+Supported compiler features:)", FmtSpan(CompileOptimizationNames));
+
+        for (const OptionDesc &desc: CompileFeatureOptions) {
+            PrintLn(fp, "    %!..+%1%!0  %2", FmtArg(desc.name).Pad(27), desc.help);
+        }
 
         PrintLn(fp, R"(
 Felix can also run the following special commands:
@@ -566,7 +570,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     LogInfo("Root directory: %!..+%1%!0", GetWorkingDirectory());
     LogInfo("  Output directory: %!..+%1%!0", build.output_directory);
     LogInfo("  Compiler: %!..+%1 (%2)%!0", build.compiler->name, CompileOptimizationNames[(int)build.compile_opt]);
-    LogInfo("  Features: %!..+%1%!0", FmtFlags(build.features, CompileFeatureNames));
+    LogInfo("  Features: %!..+%1%!0", FmtFlags(build.features, CompileFeatureOptions));
     LogInfo("  Version: %!..+%1%!0", build.version_str);
     if (!build.fake && !MakeDirectoryRec(build.output_directory))
         return 1;
