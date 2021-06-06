@@ -622,6 +622,8 @@ function InstanceController() {
             ignore_page_scroll = false;
         }
 
+        let historical = (route.version < form_record.fragments.length);
+
         return html`
             <div class="print" style="display: block;" @scroll=${syncEditorScroll}}>
                 <div id="ins_page">
@@ -652,8 +654,7 @@ function InstanceController() {
                                 ${form_record.chain[0].saved && form_record.chain[0].hid == null ? html`<div>Enregistrement existant</div>` : ''}
                                 <a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>Audit</a>
                             </div>
-                            ${route.version < form_record.fragments.length ?
-                                html`<span style="color: red;">Archive : ${form_record.mtime.toLocaleString()}</span>` : ''}
+                            ${historical ? html`<span style="color: red;">Archive : ${form_record.mtime.toLocaleString()}</span>` : ''}
 
                             ${model.actions.length ? html`<hr/>` : ''}
                         ` : ''}
@@ -672,9 +673,13 @@ function InstanceController() {
 
                 ${model.actions.length ? html`
                     <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
-                        ${!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null ?
-                            html`<button class="hid"
-                                         @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>${form_record.chain[0].hid}</button>` : ''}
+                        ${!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null ? html`
+                            <button class="hid" style=${historical ? 'color: #00ffff;' : ''}
+                                    @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
+                                ${form_record.chain[0].hid}
+                                ${historical ? ' (historique)' : ''}
+                            </button>
+                        ` : ''}
                         <div style="flex: 1;"></div>
                         ${model.actions.length > 1 ? html`
                             <div class="drop up right" @click=${ui.deployMenu}>

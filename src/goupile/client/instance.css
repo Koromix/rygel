@@ -111,7 +111,7 @@ html.mobile #ins_page { padding-top: 0; }
 #ins_trail > .hid { font-size: 1.1em; }
 #ins_trail > .hid::before {
     content: '#';
-    padding-right: 4px;
+    padding-right: 3px;
     color: #ccc;
 }
 
@@ -143,8 +143,7 @@ html:not(.small) #ui_panels > div:only-child #ins_actions { display: block; }
 }
 #ins_tasks > .hid::before {
     content: '#';
-    padding-right: 4px;
-    color: var(--menu_color_n3);
+    padding-right: 3px;
 }
 html.small #ins_tasks {
     display: flex;
