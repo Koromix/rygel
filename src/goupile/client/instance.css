@@ -141,6 +141,7 @@ html:not(.small) #ui_panels > div:only-child #ins_actions { display: block; }
     display: none;
     filter: invert(100%);
 }
+#ins_tasks > .hid { font-weight: bold; }
 #ins_tasks > .hid::before {
     content: '#';
     padding-right: 3px;
