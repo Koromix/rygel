@@ -591,10 +591,17 @@ function InstanceController() {
                             await ui.runConfirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
                                                    'Effacer', () => {});
 
-                            let record = await loadRecord(form_record.ulid, form_record.version);
-                            await expandRecord(record, route.page.options.load || []);
+                            if (form_record.saved) {
+                                let record = await loadRecord(form_record.ulid, form_record.version);
+                                await expandRecord(record, route.page.options.load || []);
 
-                            updateContext(route, record);
+                                updateContext(route, record);
+                            } else {
+                                let record = Object.assign({}, form_record);
+                                record.values = {};
+
+                                updateContext(route, record);
+                            }
 
                             self.run();
                         });
