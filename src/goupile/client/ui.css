@@ -217,15 +217,13 @@ html.small .ui_toolbar button.icon {
 .ui_dialog.screen.active, .ui_dialog.modal.active { display: flex; }
 .ui_dialog.screen > div, .ui_dialog.modal > div {
     display: block;
-    width: 260px;
+    min-width: 260px;
     max-width: 90%;
     max-height: calc(100% - 20px);
     box-sizing: border-box;
     overflow-y: auto;
     background: #f8f8f8;
 }
-.ui_dialog.screen > div { width: 260px; }
-.ui_dialog.modal > div { min-width: 260px; }
 .ui_dialog.modal > div > form, .ui_dialog.screen > div > form { padding: 16px; }
 .ui_dialog.modal > div { border: 1px solid #e6e6e6; }
 
