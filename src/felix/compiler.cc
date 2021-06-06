@@ -983,6 +983,11 @@ std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info)
         return nullptr;
     }
 
+    if (info.ld && !FindExecutableInPath(info.ld)) {
+        LogError("Cannot find linker '%1' in PATH", info.ld);
+        return nullptr;
+    }
+
     // Find appropriate driver
     {
         Span<const char> remain = SplitStrReverseAny(info.cc, RG_PATH_SEPARATORS).ptr;
