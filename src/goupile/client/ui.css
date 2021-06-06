@@ -26,7 +26,7 @@ body {
 }
 #ui_root, #ui_main { height: 100%; }
 @media (pointer: coarse) {
-    body { font-size: 16px; }
+    body { font-size: 15px; }
 }
 
 /* -------------------- Base elements -------------------- */
@@ -74,7 +74,6 @@ button:not(:disabled):hover { border-color: var(--anchor_color); }
     position: sticky;
     left: 0;
     top: 0;
-    width: 100%;
     height: 2.8em;
     display: flex;
     background: var(--menu_color);
@@ -100,7 +99,10 @@ button:not(:disabled):hover { border-color: var(--anchor_color); }
 .ui_toolbar button.active { background-color: var(--menu_color_n2); }
 .ui_toolbar button:not(.active):hover { background-color: var(--menu_color_n1); }
 .ui_toolbar button.active:hover { background-color: var(--menu_color_n3); }
-.ui_toolbar button:disabled { filter: brightness(80%) !important; }
+.ui_toolbar button:disabled {
+    background-color: var(--menu_color_n3) !important;
+    color: #888;
+}
 
 .ui_toolbar button.icon {
     padding-left: 36px;
@@ -154,6 +156,8 @@ html.small .ui_toolbar button.icon {
     background-color: inherit;
     z-index: 9999;
 }
+.ui_toolbar > .drop.up > button::after { background-position: 1px calc(-107px + 1.2em); }
+.ui_toolbar > .drop.up > div { bottom: 100%; }
 .ui_toolbar > .drop.right > div { right: 0; }
 .ui_toolbar > .drop > div button {
     height: 2.4em;
@@ -166,6 +170,8 @@ html.small .ui_toolbar button.icon {
     border-top: 0.5px solid var(--menu_color_n3);
     height: 3px;
 }
+.ui_toolbar > .drop > div hr:first-child,
+    .ui_toolbar > .drop > div hr:last-child { display: none; } 
 .ui_toolbar > .drop.active { background-color: var(--menu_color_n1); }
 .ui_toolbar > .drop.active > div {
     display: flex;

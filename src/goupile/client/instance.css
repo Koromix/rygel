@@ -137,6 +137,29 @@ html:not(.small) #ui_panels > div:only-child #ins_actions { display: block; }
 
 /* -------------------- Misc -------------------- */
 
+#ins_tasks {
+    display: none;
+    filter: invert(100%);
+}
+#ins_tasks > .hid::before {
+    content: '#';
+    padding-right: 4px;
+    color: var(--menu_color_n3);
+}
+html.small #ins_tasks {
+    display: flex;
+    bottom: 0;
+    background: #070707;
+}
+html:not(.small) #ui_panels > div:not(:only-child) #ins_tasks {
+    display: flex;
+    bottom: 0;
+    background: #070707;
+    border: 12px solid black;
+}
+
+/* -------------------- Misc -------------------- */
+
 #ins_notice {
     position: sticky;
     left: calc(50% - 160px);

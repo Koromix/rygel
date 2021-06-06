@@ -612,7 +612,7 @@ function InstanceController() {
                 }
             }
 
-            render(model.render(), page_div);
+            render(model.renderWidgets(), page_div);
             page_div.classList.remove('disabled');
         } catch (err) {
             if (!page_div.children.length)
@@ -623,7 +623,7 @@ function InstanceController() {
         }
 
         return html`
-            <div class="print" @scroll=${syncEditorScroll}}>
+            <div class="print" style="display: block;" @scroll=${syncEditorScroll}}>
                 <div id="ins_page">
                     <div id="ins_menu">
                         ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormMenu(route.form.chain[idx]))}
@@ -668,6 +668,27 @@ function InstanceController() {
                         Formulaires en développement<br/>
                         Publiez les avant d'enregistrer des données
                     </div>
+                ` : ''}
+
+                ${model.actions.length ? html`
+                    <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
+                        ${!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null ?
+                            html`<button class="hid">${form_record.chain[0].hid}</button>` : ''}
+                        <div style="flex: 1;"></div>
+                        ${model.actions.length > 1 ? html`
+                            <div class="drop up right" @click=${ui.deployMenu}>
+                                <button @click=${ui.deployMenu}>Autres</button>
+                                <div>
+                                    ${util.mapRange(1, model.actions.length, idx => {
+                                        let action = model.actions[idx];
+                                        return action.render();
+                                    })}
+                                </div>
+                            </div>
+                            <hr/>
+                        ` : ''}
+                        ${model.actions[0].render()}
+                    </nav>
                 ` : ''}
             </div>
         `;
