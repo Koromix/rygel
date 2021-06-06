@@ -164,8 +164,16 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
                     *out_preset_name = DuplicateString(prop.value, alloc).ptr;
                 } else if (prop.key == "Compiler") {
                     out_compiler_info->cc = DuplicateString(prop.value, alloc).ptr;
+
+                    for (BuildPreset &preset: *out_presets) {
+                        preset.compiler_info.cc = out_compiler_info->cc;
+                    }
                 } else if (prop.key == "Linker") {
                     out_compiler_info->ld = DuplicateString(prop.value, alloc).ptr;
+
+                    for (BuildPreset &preset: *out_presets) {
+                        preset.compiler_info.ld = out_compiler_info->ld;
+                    }
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
@@ -176,6 +184,7 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
                 if (preset == out_presets->end()) {
                     preset = out_presets->AppendDefault();
                     preset->name = DuplicateString(prop.section, alloc).ptr;
+                    preset->compiler_info = *out_compiler_info;
                 }
 
                 do {
@@ -370,8 +379,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
 
         if (preset) {
             preset_name = preset->name;
-            compiler_info.cc = preset->compiler_info.cc ? preset->compiler_info.cc : compiler_info.cc;
-            compiler_info.ld = preset->compiler_info.ld ? preset->compiler_info.ld : compiler_info.ld;
+            compiler_info = preset->compiler_info;
             build = preset->build;
         }
     }
