@@ -581,7 +581,7 @@ function InstanceController() {
 
                         form_builder.action('Forcer l\'enregistrement', {}, async e => {
                             await ui.runConfirm(e, html`Confirmez-vous l'enregistrement <b>malgré la présence d'erreurs</b> ?`,
-                                                   'Enregistrer malgré tout', () => {});
+                                                   'Enregistrer', () => {});
 
                             await saveRecord(form_record, form_values, route.page);
 
