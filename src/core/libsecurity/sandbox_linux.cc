@@ -67,14 +67,25 @@ void sec_SandboxBuilder::RevealPaths(Span<const char *const> paths, bool readonl
     }
 }
 
+void sec_SandboxBuilder::MaskFiles(Span<const char *const> filenames)
+{
+    masked_filenames.Grow(filenames.len);
+    for (const char *filename: filenames) {
+        RG_ASSERT(filename[0] == '/');
+
+        const char *copy = DuplicateString(filename, &str_alloc).ptr;
+        masked_filenames.Append(copy);
+    }
+}
+
 void sec_SandboxBuilder::MountPath(const char *src, const char *dest, bool readonly)
 {
     RG_ASSERT(src[0] == '/');
     RG_ASSERT(dest[0] == '/' && dest[1]);
 
     BindMount bind = {};
-    bind.src = NormalizePath(src, &str_alloc).ptr;
-    bind.dest = NormalizePath(dest, "/", &str_alloc).ptr;
+    bind.src = DuplicateString(src, &str_alloc).ptr;
+    bind.dest = DuplicateString(dest, &str_alloc).ptr;
     bind.readonly = readonly;
     mounts.Append(bind);
 }
@@ -353,6 +364,20 @@ bool sec_SandboxBuilder::Apply()
 
                 if (mount(bind.src, dest, nullptr, flags, nullptr) < 0) {
                     LogError("Failed to mount '%1' to '%2': %3", bind.src, dest, strerror(errno));
+                    return false;
+                }
+            }
+
+            // Hide masked paths
+            for (const char *filename: masked_filenames) {
+                const char *dest = Fmt(&str_alloc, "%1%2", fs_root, filename).ptr;
+
+                // No need to mask it if it does not exist
+                if (!TestFile(dest))
+                    continue;
+
+                if (mount("/dev/null", dest, nullptr, MS_BIND, nullptr) < 0) {
+                    LogError("Failed to mask '%1': %2", dest, strerror(errno));
                     return false;
                 }
             }

@@ -42,6 +42,7 @@ class sec_SandboxBuilder final {
     };
 
     HeapArray<BindMount> mounts;
+    HeapArray<const char *> masked_filenames;
     bool filter_syscalls = false;
     sec_FilterAction default_action;
     HeapArray<sec_FilterItem> filter_items;
@@ -53,6 +54,7 @@ public:
     sec_SandboxBuilder() {};
 
     void RevealPaths(Span<const char *const> paths, bool readonly);
+    void MaskFiles(Span<const char *const> filenames);
 
 #ifdef __linux__
     void MountPath(const char *src, const char *dest, bool readonly);

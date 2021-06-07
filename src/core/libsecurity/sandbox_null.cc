@@ -28,6 +28,11 @@ void sec_SandboxBuilder::RevealPaths(Span<const char *const>, bool)
     RG_ASSERT(false);
 }
 
+void sec_SandboxBuilder::MaskFiles(Span<const char *const>)
+{
+    RG_ASSERT(false);
+}
+
 bool sec_SandboxBuilder::Apply()
 {
     RG_ASSERT(false);
