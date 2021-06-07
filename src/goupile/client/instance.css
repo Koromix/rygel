@@ -140,6 +140,7 @@ html:not(.small) #ui_panels > div:only-child #ins_actions { display: block; }
 #ins_tasks {
     display: none;
     filter: invert(100%);
+    color: #d9d9d9;
 }
 #ins_tasks > .hid { font-weight: bold; }
 #ins_tasks > .hid::before {
