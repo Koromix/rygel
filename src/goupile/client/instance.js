@@ -635,7 +635,7 @@ function InstanceController() {
         let historical = (route.version < form_record.fragments.length);
 
         return html`
-            <div class="print" style="display: block;" @scroll=${syncEditorScroll}}>
+            <div class="print" @scroll=${syncEditorScroll}}>
                 <div id="ins_page">
                     <div id="ins_menu">
                         ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormMenu(route.form.chain[idx]))}
@@ -672,9 +672,9 @@ function InstanceController() {
                         ${model.renderActions()}
                     </div>
                 </div>
+                <div style="flex: 1;"></div>
 
                 ${develop ? html`
-                    <div style="flex: 1;"></div>
                     <div id="ins_notice">
                         Formulaires en développement<br/>
                         Publiez les avant d'enregistrer des données

@@ -75,6 +75,7 @@ button:not(:disabled):hover { border-color: var(--anchor_color); }
     left: 0;
     top: 0;
     height: 2.8em;
+    min-height: 2.8em;
     display: flex;
     background: var(--menu_color);
     color: white;
