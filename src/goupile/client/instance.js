@@ -150,7 +150,10 @@ function InstanceController() {
     };
 
     this.hasUnsavedData = function() {
-        return form_state != null && form_state.hasChanged();
+        if (form_state == null)
+            return false;
+
+        return form_state.hasChanged();
     };
 
     this.runTasks = async function(online) {

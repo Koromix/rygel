@@ -24,6 +24,7 @@ function FormState(values = {}) {
     this.take_delayed = new Set;
     this.follow_default = new Set;
     this.obj_caches = new WeakMap;
+    this.explicitly_changed = false;
 
     // Semi-public UI state
     this.just_triggered = false;
@@ -36,7 +37,7 @@ function FormState(values = {}) {
     // Stored values
     this.values = proxyObject(values);
 
-    this.hasChanged = function() { return !!changes.size; };
+    this.hasChanged = function() { return !!changes.size && self.explicitly_changed; };
 
     function proxyObject(obj) {
         if (typeof obj !== 'object')
@@ -1748,6 +1749,7 @@ instead of:
 
         state.take_delayed.delete(key.toString());
         state.follow_default.delete(key.toString());
+        state.explicitly_changed = true;
 
         if (refresh)
             self.restart();
