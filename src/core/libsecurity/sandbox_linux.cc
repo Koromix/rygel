@@ -69,6 +69,9 @@ void sec_SandboxBuilder::RevealPaths(Span<const char *const> paths, bool readonl
 
 void sec_SandboxBuilder::MountPath(const char *src, const char *dest, bool readonly)
 {
+    RG_ASSERT(src[0] == '/');
+    RG_ASSERT(dest[0] == '/' && dest[1]);
+
     BindMount bind = {};
     bind.src = NormalizePath(src, &str_alloc).ptr;
     bind.dest = NormalizePath(dest, "/", &str_alloc).ptr;

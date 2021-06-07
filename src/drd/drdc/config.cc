@@ -22,6 +22,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
     Config config;
 
     Span<const char> root_directory = GetPathDirectory(st->GetFileName());
+    root_directory = NormalizePath(root_directory, GetWorkingDirectory(), &config.str_alloc);
 
     IniParser ini(st);
     ini.PushLogFilter();
