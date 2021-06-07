@@ -357,12 +357,6 @@ bool sec_SandboxBuilder::Apply()
                 }
             }
 
-            // Remount root FS as readonly
-            if (mount(nullptr, fs_root, nullptr, MS_REMOUNT | MS_RDONLY, nullptr) < 0) {
-                LogError("Failed to set sandbox root to readonly");
-                return false;
-            }
-
             // Do the silly pivot_root dance
             {
                 int old_root_fd = open("/", O_DIRECTORY | O_PATH);
