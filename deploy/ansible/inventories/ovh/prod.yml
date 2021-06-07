@@ -13,8 +13,8 @@ all:
 
     ssl_certbot: no
     # ssl_certbot_email: niels.martignene@protonmail.com
-    ssl_public_key: '{{ inventory_dir }}/goupile.fr/fullchain.pem'
-    ssl_private_key: '{{ inventory_dir }}/goupile.fr/privkey.pem'
+    ssl_public_key: '{{ playbook_dir }}/inventories/ovh/goupile.fr/fullchain.pem'
+    ssl_private_key: '{{ playbook_dir }}/inventories/ovh/goupile.fr/privkey.pem'
 
     goupile_commit: deploy_ovh
     goupile_sandbox: no
