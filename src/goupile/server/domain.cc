@@ -61,8 +61,9 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
 {
     DomainConfig config;
 
-    Span<const char> root_directory = GetPathDirectory(st->GetFileName());
-    root_directory = NormalizePath(root_directory, GetWorkingDirectory(), &config.str_alloc);
+    config.config_filename = NormalizePath(st->GetFileName(), GetWorkingDirectory(), &config.str_alloc).ptr;
+
+    Span<const char> root_directory = GetPathDirectory(config.config_filename);
 
     IniParser ini(st);
     ini.PushLogFilter();

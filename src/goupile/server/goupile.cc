@@ -42,7 +42,7 @@ static HeapArray<const char *> assets_for_cache;
 static LinkedAllocator assets_alloc;
 static char etag[17];
 
-static bool ApplySandbox(Span<const char *const> paths)
+static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *const> mask_files)
 {
     if (!sec_IsSandboxSupported()) {
         LogError("Sandbox mode is not supported on this platform");
@@ -51,7 +51,8 @@ static bool ApplySandbox(Span<const char *const> paths)
 
     sec_SandboxBuilder sb;
 
-    sb.RevealPaths(paths, false);
+    sb.RevealPaths(reveal_paths, false);
+    sb.MaskFiles(mask_files);
 
 #ifdef __linux__
     sb.FilterSyscalls(sec_FilterAction::Kill, {
@@ -700,18 +701,18 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     if (sandbox) {
         LogInfo("Init sandbox");
 
-        const char *const paths[] = {
+        const char *const reveal_paths[] = {
 #ifndef NDEBUG
             // Needed for asset module
             GetApplicationDirectory(),
 #endif
-            gp_domain.config.database_directory,
-            gp_domain.config.instances_directory,
-            gp_domain.config.temp_directory,
-            gp_domain.config.backup_directory
+            gp_domain.config.database_directory
+        };
+        const char *const mask_files[] = {
+            gp_domain.config.config_filename
         };
 
-        if (!ApplySandbox(paths))
+        if (!ApplySandbox(reveal_paths, mask_files))
             return 1;
     }
 

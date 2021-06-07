@@ -24,6 +24,7 @@ extern const int DomainVersion;
 extern const int MaxInstancesPerDomain;
 
 struct DomainConfig {
+    const char *config_filename = nullptr;
     const char *database_filename = nullptr;
     const char *database_directory = nullptr;
     const char *instances_directory = nullptr;
