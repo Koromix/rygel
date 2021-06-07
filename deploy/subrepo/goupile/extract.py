@@ -123,9 +123,16 @@ if __name__ == "__main__":
 
     # Parse arguments
     parser = argparse.ArgumentParser(description = 'Clone Goupile-specific repository')
+    parser.add_argument('-O', '--clone_dir', dest = 'clone_dir', action = 'store', help = 'Clone in this directory')
     parser.add_argument('--remote', dest = 'remote_url', action = 'store', default = DEFAULT_REMOTE, help = 'Change remote URL')
     parser.add_argument('--force', dest = 'force_push', action = 'store_true', help = 'Use force push to repository')
     args = parser.parse_args()
+
+    # Clone directory
+    if args.clone_dir is not None:
+        clone_directory = os.path.normpath(os.path.join(start_directory, args.clone_dir))
+    else:
+        clone_directory = None
 
     # Find repository directory
     root_directory = script_directory
@@ -135,5 +142,8 @@ if __name__ == "__main__":
             raise ValueError('Could not find FelixBuild.ini')
         root_directory = new_directory
 
-    with tempfile.TemporaryDirectory() as clone_directory:
+    if clone_directory is not None:
         rewrite_repository(root_directory, clone_directory, args.force_push)
+    else:
+        with tempfile.TemporaryDirectory() as clone_directory:
+            rewrite_repository(root_directory, clone_directory, args.force_push)
