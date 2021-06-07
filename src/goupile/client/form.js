@@ -40,14 +40,11 @@ function FormState(values = {}) {
     this.hasChanged = function() { return !!changes.size && self.explicitly_changed; };
 
     function proxyObject(obj) {
-        if (typeof obj !== 'object')
-            return obj;
         if (obj == null)
             return undefined;
-
-        if (obj instanceof Blob)
+        if (typeof obj !== 'object')
             return obj;
-        if (obj instanceof Date)
+        if (Object.prototype.toString.call(obj) !== '[object Object]') // Don't mess with "special" objects
             return obj;
 
         let proxy = proxies.get(obj);
