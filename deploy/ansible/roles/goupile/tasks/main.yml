@@ -46,8 +46,8 @@
   file:
     path: '{{ goupile_root_path }}/repo'
     state: directory
-    owner: '{{ ansible_user_id }}'
-    group: '{{ ansible_user_gid | string }}'
+    owner: '{{ ansible_user | default(lookup("env", "USER"), True) }}'
+    group: 'root'
     recurse: yes
   become: yes
 
