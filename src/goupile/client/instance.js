@@ -681,31 +681,29 @@ function InstanceController() {
                     </div>
                 ` : ''}
 
-                ${model.actions.length ? html`
-                    <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
-                        ${!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null ? html`
-                            <button class="hid" style=${historical ? 'color: #00ffff;' : ''}
-                                    @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
-                                ${form_record.chain[0].hid}
-                                ${historical ? ' (historique)' : ''}
-                            </button>
-                        ` : ''}
-                        <div style="flex: 1;"></div>
-                        ${model.actions.length > 1 ? html`
-                            <div class="drop up right" @click=${ui.deployMenu}>
-                                <button @click=${ui.deployMenu}>Autres</button>
-                                <div>
-                                    ${util.mapRange(1, model.actions.length, idx => {
-                                        let action = model.actions[idx];
-                                        return action.render();
-                                    })}
-                                </div>
+                <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
+                    ${!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null ? html`
+                        <button class="hid" style=${historical ? 'color: #00ffff;' : ''}
+                                @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
+                            ${form_record.chain[0].hid}
+                            ${historical ? ' (historique)' : ''}
+                        </button>
+                    ` : ''}
+                    <div style="flex: 1;"></div>
+                    ${model.actions.length > 1 ? html`
+                        <div class="drop up right" @click=${ui.deployMenu}>
+                            <button @click=${ui.deployMenu}>Autres</button>
+                            <div>
+                                ${util.mapRange(1, model.actions.length, idx => {
+                                    let action = model.actions[idx];
+                                    return action.render();
+                                })}
                             </div>
-                            <hr/>
-                        ` : ''}
-                        ${model.actions[0].render()}
-                    </nav>
-                ` : ''}
+                        </div>
+                        <hr/>
+                    ` : ''}
+                    ${model.actions.length ? model.actions[0].render() : ''}
+                </nav>
             </div>
         `;
     }
