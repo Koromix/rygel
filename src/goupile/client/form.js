@@ -46,6 +46,8 @@ function FormState(values = {}) {
 
         if (obj instanceof Blob)
             return obj;
+        if (obj instanceof Date)
+            return obj;
 
         let proxy = proxies.get(obj);
 
