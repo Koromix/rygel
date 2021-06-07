@@ -189,6 +189,7 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
     if (!config.database_filename) {
         config.database_filename = NormalizePath("goupile.db", root_directory, &config.str_alloc).ptr;
     }
+    config.database_directory = DuplicateString(GetPathDirectory(config.database_filename), &config.str_alloc).ptr;
     if (!config.instances_directory) {
         config.instances_directory = NormalizePath("instances", root_directory, &config.str_alloc).ptr;
     }
