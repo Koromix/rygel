@@ -104,7 +104,6 @@ button:not(:disabled):hover { border-color: var(--anchor_color); }
     background-color: var(--menu_color_n3) !important;
     color: #888;
 }
-
 .ui_toolbar button.icon {
     padding-left: 36px;
     background-image: url('icons.png');
@@ -112,7 +111,10 @@ button:not(:disabled):hover { border-color: var(--anchor_color); }
     background-size: 22px 594px;
     background-position-x: 6px;
 }
-
+.ui_toolbar > hr {
+    border: none;
+    border-left: 0.5px solid var(--menu_color_n3);
+}
 html.small .ui_toolbar button.icon {
     min-width: 3em;
     max-width: 3em;
