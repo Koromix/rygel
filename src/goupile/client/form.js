@@ -1746,10 +1746,11 @@ instead of:
 
         state.take_delayed.delete(key.toString());
         state.follow_default.delete(key.toString());
-        state.explicitly_changed = true;
 
-        if (refresh)
+        if (refresh) {
+            state.explicitly_changed = true;
             self.restart();
+        }
     }
 
     function walkPath(values, path) {
