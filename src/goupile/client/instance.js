@@ -349,21 +349,26 @@ function InstanceController() {
 
         return html`
             <div class="padded">
-                <div class="ui_quick">
+                <div class="ui_actions" style="margin-bottom: 1.2em;">
+                    <button @click=${ui.wrapAction(e => self.go(e, route.form.chain[0].url + '/new'))}>Créer un enregistrement</button>
+                </div>
+
+                <div class="ui_quick" style="margin-right: 2.2em;">
                     <input type="text" placeholder="Filtrer..." .value=${data_filter || ''}
                            @input=${e => { data_filter = e.target.value || null; self.run(); }} />
                     <div style="flex: 1;"></div>
-                    <a @click=${ui.wrapAction(e => self.go(e, route.form.chain[0].url + '/new'))}>Créer un enregistrement</a>
-                    <div style="flex: 1;"></div>
+                    <p>
+                        ${visible_rows.length} ${visible_rows.length < data_rows.length ? `/ ${data_rows.length} ` : ''} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
+                        ${ENV.sync_mode !== 'offline' ? html`(<a @click=${ui.wrapAction(e => syncRecords())}>synchroniser</a>)` : ''}
+                    </p>
                     ${ENV.backup_key != null ? html`
                         <a @click=${ui.wrapAction(backupRecords)}>Faire une sauvegarde chiffrée</a>
                         <div style="flex: 1;"></div>
                     ` : ''}
-                    ${visible_rows.length} ${visible_rows.length < data_rows.length ? `/ ${data_rows.length} ` : ''}${data_rows.length > 1 ? 'lignes' : 'ligne'}
-                    ${ENV.sync_mode !== 'offline' ? html` (<a @click=${ui.wrapAction(e => syncRecords())}>synchroniser</a>)` : ''}
                 </div>
 
-                <table class="ui_table fixed" id="ins_data">
+                <table class="ui_table fixed" id="ins_data"
+                       style=${'min-width: ' + (5 + 5 * data_form.menu.length) + 'em;'}>
                     ${visible_rows.length ? html`
                         <colgroup>
                             <col/>
@@ -374,7 +379,7 @@ function InstanceController() {
 
                     <thead>
                         <tr>
-                            <th>Identifiant</th>
+                            <th>ID</th>
                             ${data_form.menu.map(item => html`<th title=${item.title}>${item.title}</th>`)}
                         </tr>
                     </thead>

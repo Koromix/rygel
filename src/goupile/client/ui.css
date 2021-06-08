@@ -269,6 +269,7 @@ html.small .ui_toolbar button.icon {
     border: 1px solid #ccc;
     border-width: 0.5px;
     font-size: 0.9em;
+    width: 12em;
 }
 
 .ui_table {
@@ -314,9 +315,9 @@ html.small .ui_toolbar button.icon {
 /* -------------------- Actions -------------------- */
 
 .ui_actions {
-    width: 60%;
+    width: 75%;
     max-width: 340px;
-    margin: 32px auto 0 auto;
+    margin: 0 auto;
 }
 .ui_actions:empty { display: none; }
 .ui_actions > button {
