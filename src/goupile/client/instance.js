@@ -178,13 +178,12 @@ function InstanceController() {
                 <button class=${'icon' + (ui.isPanelEnabled('page') ? ' active' : '')}
                         style="background-position-y: calc(-318px + 1.2em);"
                         @click=${ui.wrapAction(e => togglePanel(e, 'page'))}>Saisie</button>
-                <div style="flex: 1; min-width: 15px;"></div>
             ` : ''}
             ${goupile.isLocked() && profile.lock.unlockable ? html`
                 <button class="icon" style="background-position-y: calc(-186px + 1.2em)"
                         @click=${ui.wrapAction(goupile.runUnlockDialog)}>Déverrouiller</button>
-                <div style="flex: 1; min-width: 15px;"></div>
             ` : ''}
+            <div style="flex: 1; min-width: 15px;"></div>
 
             ${!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null ? html`
                 <button class="hid" @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
@@ -192,7 +191,7 @@ function InstanceController() {
                     ${historical ? html`<br/><span style="font-size: 0.7em;">${form_record.ctime.toLocaleString()}</span>` : ''}
                 </button>
             ` : ''}
-            <div class="drop right">
+            <div class="drop">
                 <button @click=${ui.deployMenu}>
                     ${ENV.title}<br/>
                     <span style="font-size: 0.7em;">${route.page.title}</span>
