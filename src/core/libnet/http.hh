@@ -38,7 +38,6 @@ static const char *const http_ClientAddressModeNames[] = {
 };
 
 struct http_Config {
-
     SocketType sock_type = SocketType::Dual;
     int port = 8888;
 #ifndef _WIN32
@@ -88,6 +87,8 @@ private:
 
     static void RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
                                  MHD_RequestTerminationCode toe);
+
+    friend http_IO;
 };
 
 enum class http_RequestMethod {
@@ -155,6 +156,7 @@ class http_IO {
     Size read_total = 0;
     bool read_eof = false;
 
+    bool write_attached = false;
     int write_code;
     uint64_t write_len;
     std::condition_variable write_cv;

@@ -330,16 +330,8 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
     }
 
     // Handle write or attached response (if any)
-    if (io->write_buf.len || io->write_eof) {
+    if (io->write_attached) {
         io->Resume();
-
-        MHD_Response *new_response =
-            MHD_create_response_from_callback(io->write_len, Kilobytes(16),
-                                              &http_Daemon::HandleWrite, io, nullptr);
-        MHD_move_response_headers(io->response, new_response);
-
-        io->AttachResponse(io->write_code, new_response);
-
         return MHD_queue_response(conn, (unsigned int)io->code, io->response);
     } else if (io->state == http_IO::State::Idle) {
         if (io->code < 0) {
@@ -794,6 +786,15 @@ bool http_IO::Write(Span<const uint8_t> buf)
     RG_ASSERT(!write_eof);
 
     std::unique_lock<std::mutex> lock(mutex);
+
+    if (!write_attached) {
+        MHD_Response *new_response =
+            MHD_create_response_from_callback(write_len, Kilobytes(16),
+                                              &http_Daemon::HandleWrite, this, nullptr);
+        AttachResponse(write_code, new_response);
+
+        write_attached = true;
+    }
 
     // Make sure we switch to write state
     Resume();
