@@ -163,6 +163,8 @@ function InstanceController() {
     this.runTasks = util.serialize(this.runTasks, mutex);
 
     function renderMenu() {
+        let historical = (route.version < form_record.fragments.length);
+
         return html`
             ${!goupile.isLocked() ? html`
                 ${goupile.hasPermission('admin_code') ? html`
@@ -184,28 +186,42 @@ function InstanceController() {
                 <div style="flex: 1; min-width: 15px;"></div>
             ` : ''}
 
-            ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormDrop(route.form.chain[idx]))}
-            ${!goupile.isLocked() && route.form.multi ? html`
-                <div class="drop" @click=${ui.deployMenu}>
-                    <button>${route.form.multi}</button>
-                    <div>
-                        ${form_record.siblings.map(sibling => {
-                            let url = route.page.url + `/${sibling.ulid}`;
-                            return html`<button @click=${ui.wrapAction(e => self.go(e, url))}
-                                                class=${sibling.ulid === form_record.ulid ? 'active' : ''}>${sibling.ctime.toLocaleString()}</a>`;
-                        })}
-                        <button @click=${ui.wrapAction(e => self.go(e, contextualizeURL(route.page.url, form_record.parent)))}
-                                class=${!form_record.saved ? 'active' : ''}>Nouvelle fiche</button>
-                    </div>
-                </ul>
+            ${!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null ? html`
+                <button class="hid" @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
+                    ${form_record.chain[0].hid}
+                    ${historical ? html`<br/><span style="font-size: 0.7em;">${form_record.ctime.toLocaleString()}</span>` : ''}
+                </button>
             ` : ''}
-            ${route.form.chain.length === 1 || route.form.menu.length > 1 ? renderFormDrop(route.form) : ''}
+            <div class="drop right">
+                <button @click=${ui.deployMenu}>
+                    ${ENV.title}<br/>
+                    <span style="font-size: 0.7em;">${route.page.title}</span>
+                </button>
+                <div>
+                    ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormDrop(route.form.chain[idx]))}
+                    ${!goupile.isLocked() && route.form.multi ? html`
+                        <div class="expand">
+                            <button @click=${ui.expandMenu}>${route.form.multi}</button>
+                            <div>
+                                ${form_record.siblings.map(sibling => {
+                                    let url = route.page.url + `/${sibling.ulid}`;
+                                    return html`<button @click=${ui.wrapAction(e => self.go(e, url))}
+                                                        class=${sibling.ulid === form_record.ulid ? 'active' : ''}>${sibling.ctime.toLocaleString()}</a>`;
+                                })}
+                                <button @click=${ui.wrapAction(e => self.go(e, contextualizeURL(route.page.url, form_record.parent)))}
+                                        class=${!form_record.saved ? 'active' : ''}>Nouvelle fiche</button>
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${route.form.chain.length === 1 || route.form.menu.length > 1 ? renderFormDrop(route.form) : ''}
+                </div>
+            </div>
             <div style="flex: 1; min-width: 15px;"></div>
 
             ${!goupile.isLocked() || profile.userid < 0 ? html`
-                <div class="drop right" @click=${ui.deployMenu}>
-                    <button class="icon"
-                            style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}>${profile.username}</button>
+                <div class="drop right">
+                    <button class="icon" style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}
+                            @click=${ui.deployMenu}>${profile.username}</button>
                     <div>
                         ${profile.userid >= 0 ? html`
                             <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Changer le mot de passe</button>
@@ -219,20 +235,6 @@ function InstanceController() {
             ${goupile.isLocked() && profile.userid >= 0 ?
                 html`<button class="icon" @click=${ui.wrapAction(goupile.goToLogin)}
                              style="background-position-y: calc(-450px + 1.2em);">Se connecter</button>` : ''}
-            ${!goupile.isLocked() && profile.instances == null ?
-                    html`<button class="icon" style="background-position-y: calc(-538px + 1.2em);"
-                                 @click=${e => self.go(e, ENV.urls.instance)}>${ENV.title}</button>` : ''}
-            ${!goupile.isLocked() && profile.instances != null ? html`
-                <div class="drop right" @click=${ui.deployMenu}>
-                    <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
-                            @click=${ui.deployMenu}>${ENV.title}</button>
-                    <div>
-                        ${profile.instances.map(instance =>
-                            html`<button class=${instance.url === ENV.urls.instance ? 'active' : ''}
-                                         @click=${e => self.go(e, instance.url)}>${instance.name}</button>`)}
-                    </div>
-                </div>
-            ` : ''}
         `;
     }
 
@@ -246,53 +248,85 @@ function InstanceController() {
     function renderFormDrop(form) {
         let meta = form_record.map[form.key];
 
-        if (form.menu.length > 1) {
+        let items= [];
+        let active_item;
+        for (let item of form.menu) {
+            if (item.type === 'page') {
+                if (!isPageEnabled(item.page, form_record))
+                    continue;
+
+                if (item.page === route.page)
+                    active_item = item;
+
+                items.push(item);
+            } else if (item.type === 'form') {
+                if (!isFormEnabled(item.form, form_record))
+                    continue;
+
+                if (route.form.chain.some(parent => item.form === parent))
+                    active_item = item;
+
+                items.push(item);
+            } else {
+                throw new Error(`Unknown item type '${item.type}'`);
+            }
+        }
+
+        if (items.length > 1) {
+            let active_item = form.menu.find(item => {
+                if (item.type === 'page') {
+                    return item.page === route.page;
+                } else if (item.type === 'form') {
+                    return route.form.chain.some(parent => item.form === parent);
+                }
+            });
+
             return html`
-                <div class="drop" @click=${ui.deployMenu}>
-                    <button>${form.title}</button>
+                <div class="expand">
+                    <button @click=${ui.expandMenu}>${form.title}</button>
                     <div>
                         ${util.map(form.menu, item => {
+                            let active;
+                            let url;
+                            let title;
+                            let status;
+
                             if (item.type === 'page') {
                                 let page = item.page;
 
-                                let enabled = isPageEnabled(page, form_record);
-                                if (!enabled && goupile.isLocked())
+                                if (!isPageEnabled(page, form_record))
                                     return '';
 
-                                return html`
-                                    <button ?disabled=${!enabled}
-                                            class=${page === route.page ? 'active' : ''}
-                                            @click=${ui.wrapAction(e => self.go(e, page.url))}>
-                                        ${meta && meta.status.has(page.key) ? '✓\uFE0E' : ''}
-                                        ${page.title}
-                                   </button>`;
+                                active = (page === route.page);
+                                url = page.url;
+                                title = page.title;
+                                status = (meta != null) && meta.status.has(form.key);
                             } else if (item.type === 'form') {
                                 let form = item.form;
 
-                                let enabled = isFormEnabled(form, form_record);
-                                if (!enabled && goupile.isLocked())
+                                if (!isFormEnabled(form, form_record))
                                     return '';
 
-                                return html`
-                                    <button ?disabled=${!enabled}
-                                            class=${route.form.chain.some(parent => form === parent) ? 'active' : ''}
-                                            @click=${ui.wrapAction(e => self.go(e, form.url))}>
-                                        ${meta && meta.status.has(form.key) ? '✓\uFE0E ' : ''}
-                                        ${form.multi || form.title}
-                                   </button>`;
+                                active = route.form.chain.some(parent => form === parent);
+                                url = form.url;
+                                title = form.multi || form.title;
+                                status = (meta != null) && meta.status.has(form.key);
+                            } else {
+                                throw new Error(`Unknown item type '${item.type}'`);
                             }
+
+                            return html`
+                                <button class=${active ? 'active' : ''} @click=${ui.wrapAction(e => self.go(e, url))}>
+                                    <div style="flex: 1;">${title}</div>
+                                    ${status ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
+                               </button>
+                            `;
                         })}
                     </div>
                 </div>
             `;
         } else {
-            return html`
-                <button ?disabled=${!isFormEnabled(form, form_record)}
-                        class=${route.form.chain.some(parent => form === parent) ? 'active' : ''}
-                        @click=${ui.wrapAction(e => self.go(e, form.url))}>
-                    ${meta && meta.status.has(form.key) ? '✓\uFE0E ' : ''}
-                    ${form.multi || form.title}
-                </button>`;
+            return '';
         }
     }
 
@@ -662,18 +696,6 @@ function InstanceController() {
                     </form>
 
                     <div id="ins_actions">
-                        ${!goupile.isLocked() ? html`
-                            <div id="ins_trail">
-                                ${!form_record.chain[0].saved ? html`<div>Nouvel enregistrement</div>` : ''}
-                                ${form_record.chain[0].saved && form_record.chain[0].hid != null ? html`<div class="hid">${form_record.chain[0].hid}</div>` : ''}
-                                ${form_record.chain[0].saved && form_record.chain[0].hid == null ? html`<div>Enregistrement existant</div>` : ''}
-                                <a @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>Audit</a>
-                            </div>
-                            ${historical ? html`<span style="color: red;">Archive : ${form_record.mtime.toLocaleString()}</span>` : ''}
-
-                            ${model.actions.length ? html`<hr/>` : ''}
-                        ` : ''}
-
                         ${model.renderActions()}
                     </div>
                 </div>
@@ -696,7 +718,7 @@ function InstanceController() {
                     ` : ''}
                     <div style="flex: 1;"></div>
                     ${model.actions.length > 1 ? html`
-                        <div class="drop up right" @click=${ui.deployMenu}>
+                        <div class="drop up right">
                             <button @click=${ui.deployMenu}>Autres</button>
                             <div>
                                 ${util.mapRange(1, model.actions.length, idx => {

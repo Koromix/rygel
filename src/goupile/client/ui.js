@@ -94,7 +94,7 @@ const ui = new function() {
         if (render_main) {
             render(html`
                 ${menu_render != null ? html`<nav class=${goupile.isLocked() ? 'ui_toolbar locked' : 'ui_toolbar'}
-                                                  style="z-index: 999999;">${menu_render()}</nav>` : ''}
+                                                  id="ui_top" style="z-index: 999999;">${menu_render()}</nav>` : ''}
 
                 <main id="ui_panels">
                     ${util.map(panels.values(), panel => panel.active ? panel.render() : '')}
@@ -245,9 +245,12 @@ const ui = new function() {
         // Close dropdown menus
         {
             let els = document.querySelectorAll('.ui_toolbar > .drop.active');
+            let target = util.findParent(e.target, el => el.classList.contains('drop'));
 
-            for (let el of els)
-                el.classList.remove('active');
+            for (let el of els) {
+                if (el !== target)
+                    el.classList.remove('active');
+            }
         }
     }
 
@@ -387,6 +390,28 @@ const ui = new function() {
         } else {
             closeOldDialogs(e);
             el.classList.add('active');
+        }
+
+        let expands = el.querySelectorAll('.expand');
+        for (let i = 0; i < expands.length; i++) {
+            let exp = expands[i];
+            exp.classList.toggle('active', i === expands.length - 1);
+        }
+
+        e.stopPropagation();
+    };
+
+    this.expandMenu = function(e) {
+        let menu = util.findParent(e.target, el => el.classList.contains('drop'));
+        let el = util.findParent(e.target, el => el.classList.contains('expand'));
+
+        if (el.classList.contains('active')) {
+            if (!e.ctrlKey)
+                el.classList.remove('active');
+        } else {
+            let expands = menu.querySelectorAll('.expand');
+            for (let exp of expands)
+                exp.classList.toggle('active', exp === el);
         }
 
         e.stopPropagation();

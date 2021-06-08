@@ -102,19 +102,6 @@ html.mobile #ins_page { padding-top: 0; }
     border-top: 1px solid #dfdfdf;
 }
 
-#ins_trail {
-    display: flex;
-    color: #777;
-    align-items: start;
-}
-#ins_trail > div { flex: 1; }
-#ins_trail > .hid { font-size: 1.1em; }
-#ins_trail > .hid::before {
-    content: '#';
-    padding-right: 3px;
-    color: #ccc;
-}
-
 #ins_actions {
     display: none;
     position: sticky;
@@ -135,7 +122,7 @@ html.mobile #ins_page { padding-top: 0; }
 html:not(.small) #ui_panels > div:only-child #ins_menu { display: block; }
 html:not(.small) #ui_panels > div:only-child #ins_actions { display: block; }
 
-/* -------------------- Misc -------------------- */
+/* -------------------- Bottom bar -------------------- */
 
 #ins_tasks {
     display: none;
@@ -143,10 +130,6 @@ html:not(.small) #ui_panels > div:only-child #ins_actions { display: block; }
     color: #d9d9d9;
 }
 #ins_tasks > .hid { font-weight: bold; }
-#ins_tasks > .hid::before {
-    content: '#';
-    padding-right: 3px;
-}
 html.small #ins_tasks {
     display: flex;
     bottom: 0;
@@ -162,6 +145,13 @@ html.small #ins_page { border-bottom-width: calc(2.8em + 12px); }
 html:not(.small) #ui_panels > div:not(:only-child) #ins_page { border-bottom-width: calc(2.8em + 2 * 12px); }
 
 /* -------------------- Misc -------------------- */
+
+#ui_top .hid {
+    border: none;
+    border-right: 1px solid var(--menu_color_n3);
+    border-right-width: 0.5px;
+}
+html.small #ui_top .hid { display: none; }
 
 #ins_notice {
     position: sticky;

@@ -96,6 +96,7 @@ button:not(:disabled):hover { border-color: var(--anchor_color); }
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 1.1em;
+    line-height: 1em;
 }
 .ui_toolbar button.active { background-color: var(--menu_color_n2); }
 .ui_toolbar button:not(.active):hover { background-color: var(--menu_color_n1); }
@@ -131,14 +132,18 @@ html.small .ui_toolbar button.icon {
     margin: 0;
     background-color: inherit;
 }
+.ui_toolbar > .drop > button { padding-right: 24px; }
 .ui_toolbar > .drop > button::after {
-    padding-left: 8px;
-    padding-right: 10px;
+    position: absolute;
+    right: 2px;
+    top: 9px;
+    width: 22px;
+    height: 16px;
     background-image: url('icons.png');
     background-repeat: no-repeat;
     background-size: 22px 594px;
     background-position: 1px calc(-591px + 1.2em);
-    content: '';
+    content: ' ';
 }
 .ui_toolbar > .drop.disabled {
     background-color: #bbb;
@@ -181,6 +186,35 @@ html.small .ui_toolbar button.icon {
     flex-direction: column;
 }
 .ui_toolbar > .drop > div button:not(.active):hover { background-color: var(--menu_color_n2); }
+html.small .ui_toolbar > .drop > button.icon::after { display: none; }
+
+.ui_toolbar .expand {
+    display: flex;
+    flex-direction: column;
+}
+.ui_toolbar .expand > button::before {
+    padding-right: 3px;
+    content: '+';
+    color: #ccc;
+}
+.ui_toolbar .expand > div { display: none; }
+.ui_toolbar .expand.active > div {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.9em;
+}
+.ui_toolbar .expand > div > button {
+    display: flex;
+    font-style: italic;
+    background: var(--menu_color_n2);
+    align-items: center;
+}
+.ui_toolbar .expand > div > button::before {
+    padding-left: 6px;
+    padding-right: 3px;
+    content: '–';
+    color: #ccc;
+}
 
 /* -------------------- Panels -------------------- */
 
