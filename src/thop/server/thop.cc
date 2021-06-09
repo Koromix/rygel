@@ -543,6 +543,7 @@ Options:
     InitRoutes();
 
     // Run!
+    LogInfo("Init HTTP server");
     http_Daemon daemon;
     if (!daemon.Start(thop_config.http, HandleRequest))
         return 1;

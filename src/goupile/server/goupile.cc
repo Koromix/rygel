@@ -688,6 +688,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
         return 1;
 
     // We need to bind the socket before sandboxing
+    LogInfo("Init HTTP server");
     http_Daemon daemon;
     if (!daemon.Bind(gp_domain.config.http))
         return 1;
