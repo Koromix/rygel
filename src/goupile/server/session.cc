@@ -221,18 +221,18 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
                 }
 
                 json.Key("namespaces"); json.StartObject();
-                    if (instance->config.shared_key) {
-                        json.Key("records"); json.String("shared");
-                    } else {
-                        json.Key("records"); json.Int64(session->userid);
-                    }
+                if (instance->config.shared_key) {
+                    json.Key("records"); json.String("shared");
+                } else {
+                    json.Key("records"); json.Int64(session->userid);
+                }
                 json.EndObject();
                 json.Key("keys"); json.StartObject();
-                    if (instance->config.shared_key) {
-                        json.Key("records"); json.String(instance->config.shared_key);
-                    } else {
-                        json.Key("records"); json.String(session->local_key);
-                    }
+                if (instance->config.shared_key) {
+                    json.Key("records"); json.String(instance->config.shared_key);
+                } else {
+                    json.Key("records"); json.String(session->local_key);
+                }
                 json.EndObject();
 
                 if (master->slaves.len) {
