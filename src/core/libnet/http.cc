@@ -18,6 +18,7 @@
 #ifdef _WIN32
     #include <io.h>
     #include <ws2tcpip.h>
+    #include <afunix.h>
 #else
     #include <sys/stat.h>
     #include <sys/socket.h>
@@ -31,7 +32,6 @@ bool http_Config::Validate() const
 {
     bool valid = true;
 
-#ifndef _WIN32
     if (sock_type == SocketType::Unix) {
         struct sockaddr_un addr;
 
@@ -43,9 +43,7 @@ bool http_Config::Validate() const
             LogError("Socket path '%1' is too long (max length = %2)", unix_path, sizeof(addr.sun_path) - 1);
             valid = false;
         }
-    } else
-#endif
-    if (port < 1 || port > UINT16_MAX) {
+    } else if (port < 1 || port > UINT16_MAX) {
         LogError("HTTP port %1 is invalid (range: 1 - %2)", port, UINT16_MAX);
         valid = false;
     }
@@ -82,9 +80,7 @@ bool http_Daemon::Bind(const http_Config &config)
         case SocketType::Dual:
         case SocketType::IPv4:
         case SocketType::IPv6: { listen_fd = OpenIPSocket(config.sock_type, config.port); } break;
-#ifndef _WIN32
         case SocketType::Unix: { listen_fd = OpenUnixSocket(config.unix_path); } break;
-#endif
     }
     if (listen_fd < 0)
         return false;

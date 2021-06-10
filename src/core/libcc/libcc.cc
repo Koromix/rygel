@@ -38,6 +38,7 @@
     #include <sys/types.h>
     #include <sys/stat.h>
     #include <direct.h>
+    #include <afunix.h>
     #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
         #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
     #endif
@@ -3751,15 +3752,23 @@ int OpenIPSocket(SocketType type, int port)
     return (int)fd;
 }
 
-#ifndef _WIN32
 int OpenUnixSocket(const char *path)
 {
-    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+#ifdef _WIN32
+    SOCKET fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd == INVALID_SOCKET) {
+        LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
+        return -1;
+    }
+    RG_DEFER_N(err_guard) { closesocket(fd); };
+#else
+    int fd = (int)socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {
         LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
         return -1;
     }
     RG_DEFER_N(err_guard) { close(fd); };
+#endif
 
     struct sockaddr_un addr = {};
     addr.sun_family = AF_UNIX;
@@ -3778,7 +3787,6 @@ int OpenUnixSocket(const char *path)
     err_guard.Disable();
     return fd;
 }
-#endif
 
 void CloseSocket(int fd)
 {

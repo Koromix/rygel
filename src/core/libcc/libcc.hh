@@ -3804,23 +3804,17 @@ enum class SocketType {
     Dual,
     IPv4,
     IPv6,
-#ifndef _WIN32
     Unix
-#endif
 };
 static const char *const SocketTypeNames[] = {
     "Dual",
     "IPv4",
     "IPv6",
-#ifndef _WIN32
     "Unix"
-#endif
 };
 
 int OpenIPSocket(SocketType type, int port);
-#ifndef _WIN32
 int OpenUnixSocket(const char *path);
-#endif
 void CloseSocket(int fd);
 
 // ------------------------------------------------------------------------

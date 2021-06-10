@@ -40,9 +40,7 @@ static const char *const http_ClientAddressModeNames[] = {
 struct http_Config {
     SocketType sock_type = SocketType::Dual;
     int port = 8888;
-#ifndef _WIN32
     const char *unix_path = nullptr;
-#endif
 
     int max_connections = 512;
     int idle_timeout = 60;
