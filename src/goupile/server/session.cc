@@ -771,10 +771,13 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
     });
 }
 
-// Returns true if not handled or not revelant, false if an error has occured
+// Returns true if not handled or not relevant, false if an error has occured
 bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RG_ASSERT(instance->config.auto_key);
+
+    if (request.method != http_RequestMethod::Get)
+        return true;
 
     const char *key = request.GetQueryValue(instance->config.auto_key);
     if (!key || !key[0])
