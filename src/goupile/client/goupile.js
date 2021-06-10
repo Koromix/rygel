@@ -380,10 +380,10 @@ const goupile = new function() {
     }
 
     async function initTasks() {
-        net.retryHandler = util.serialize(async response => {
+        net.retryHandler = async response => {
             if (response.status === 401) {
                 try {
-                    await confirmIdentity();
+                    await self.confirmIdentity();
                     return true;
                 } catch (err) {
                     return false;
@@ -391,7 +391,7 @@ const goupile = new function() {
             } else {
                 return false;
             }
-        });
+        };
 
         if (controller.runTasks != null) {
             let ignore_ping = false;
@@ -714,21 +714,43 @@ const goupile = new function() {
         await util.waitFor(2000);
     };
 
-    function confirmIdentity(e) {
+    this.confirmIdentity = async function(e) {
         let session_rnd = util.getCookie('session_rnd');
 
-        if (session_rnd == null) {
+        // We're OK!
+        if (session_rnd != null)
+            return;
+
+        if (profile.restore != null) {
+            let url = util.pasteURL(`${ENV.urls.instance}api/session/profile`, profile.restore);
+            let response = await net.fetch(url);
+
+            if (!response.ok) {
+                let err = (await response.text()).trim();
+                throw new Error(err);
+            }
+        } else if (profile.userid >= 0) {
             return ui.runDialog(e, 'Confirmation d\'identité', (d, resolve, reject) => {
                 d.calc('username', 'Nom d\'utilisateur', profile.username);
                 let password = d.password('*password', 'Mot de passe');
 
                 d.action('Confirmer', {disabled: !d.isValid()}, async e => {
-                    await tryLogin(profile.username, password.value, null, true);
-                    resolve();
+                    let progress = log.progress('Confirmation en cours');
+
+                    try {
+                        await tryLogin(profile.username, password.value, progress, true);
+                        resolve();
+                    } catch (err) {
+                        log.error(err);
+                        d.refresh();
+                    }
                 });
             });
+        } else {
+            throw new Error('Cette session n\'est plus valide veuillez vous reconnecter');
         }
     };
+    this.confirmIdentity = util.serialize(this.confirmIdentity);
 
     this.confirmDangerousAction = function(e) {
         if (controller == null)
