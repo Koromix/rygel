@@ -347,6 +347,17 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     }
 #endif
 
+    // CSRF protection
+    if (request.method != http_RequestMethod::Get) {
+        const char *str = request.GetHeaderValue("X-Requested-With");
+
+        if (!str || !TestStr(str, "XMLHTTPRequest")) {
+            LogError("Anti-CSRF header is missing");
+            io->AttachError(403);
+            return;
+        }
+    }
+
     // Find user information
     const User *user = CheckSessionUser(request, io);
 

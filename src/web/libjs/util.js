@@ -669,6 +669,11 @@ const net = new function() {
                 options = {};
             if (options.credentials == null)
                 options.credentials = 'same-origin';
+            if (options.headers == null)
+                options.headers = {};
+
+            // CSRF protection
+            options.headers['X-Requested-With'] = 'XMLHTTPRequest';
 
             for (;;) {
                 let response = await fetch(request, options);
