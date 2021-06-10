@@ -506,7 +506,7 @@ void http_IO::AddCookieHeader(const char *path, const char *name, const char *va
     }
 
     RG_ASSERT(buf.Available() >= 64);
-    buf.len += Fmt(buf.TakeAvailable(), " SameSite=Lax;%1", http_only ? " HttpOnly;" : "").len;
+    buf.len += Fmt(buf.TakeAvailable(), " SameSite=Strict;%1", http_only ? " HttpOnly;" : "").len;
 
     AddHeader("Set-Cookie", buf.data);
 }
