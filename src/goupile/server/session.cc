@@ -776,9 +776,6 @@ bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
 {
     RG_ASSERT(instance->config.auto_key);
 
-    if (request.method != http_RequestMethod::Get)
-        return true;
-
     const char *key = request.GetQueryValue(instance->config.auto_key);
     if (!key || !key[0])
         return true;

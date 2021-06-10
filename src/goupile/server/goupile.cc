@@ -446,8 +446,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         }
 
         // Handle sessions triggered by query parameters
-        if (instance->config.auto_key && !HandleSessionKey(instance, request, io))
-            return;
+        if (request.method == http_RequestMethod::Get && instance->config.auto_key) {
+            if (!HandleSessionKey(instance, request, io))
+                return;
+        }
 
         // Try application files
         if (request.method == http_RequestMethod::Get && HandleFileGet(instance, request, io))
