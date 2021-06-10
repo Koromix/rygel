@@ -400,12 +400,12 @@ const goupile = new function() {
                     return;
 
                 try {
-                    ignore_ping = false;
+                    ignore_ping = true;
 
                     await pingServer();
                     await runTasks();
                 } finally {
-                    ignore_ping = true;
+                    ignore_ping = false;
                 }
             }, 60 * 1000);
 
