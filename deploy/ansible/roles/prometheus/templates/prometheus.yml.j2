@@ -11,11 +11,22 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-- name: interhop_hds
+global:
+  scrape_interval: 1m
+  evaluation_interval: 1m
 
-  hosts: all
-
-  roles:
-    - role: goupile
-      when: 'inventory_hostname == "server"'
-    - role: nginx
+scrape_configs:
+{% for pkg in prometheus_packages %}
+  - job_name: {{ pkg.name }}
+    scheme: https
+    metrics_path: metrics/{{ pkg.name }}
+    tls_config:
+      insecure_skip_verify: true
+    static_configs:
+      - targets:
+{% for vars in hostvars.values() %}
+{% if vars.prometheus_domain is defined and pkg.name in vars.prometheus_exporters %}
+          - {{ vars.prometheus_domain }}
+{% endif %}
+{% endfor %}
+{% endfor %}

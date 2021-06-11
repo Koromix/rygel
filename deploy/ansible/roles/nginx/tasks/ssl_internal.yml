@@ -25,37 +25,49 @@
     dest: 'tmp_interhop_ssl/{{ item }}'
   loop:
     - ssl_ca.conf
-    - ssl_proxy.conf
-    - ssl_server.conf
+    - ssl_host.conf
   delegate_to: localhost
   run_once: yes
   become: no
 
-- name: Generate CA and HDS certificates
+- name: Generate root CA certificate
   shell: |
     openssl genrsa -out tmp_interhop_ssl/ca.key 4096
     openssl req -x509 -new -key tmp_interhop_ssl/ca.key -config tmp_interhop_ssl/ssl_ca.conf -days 372 -out tmp_interhop_ssl/ca.crt
-    openssl genrsa -out tmp_interhop_ssl/server.key 2048
-    openssl req -new -key tmp_interhop_ssl/server.key -out tmp_interhop_ssl/server.csr -config tmp_interhop_ssl/ssl_server.conf
-    openssl x509 -req -in tmp_interhop_ssl/server.csr -CA tmp_interhop_ssl/ca.crt -CAkey tmp_interhop_ssl/ca.key -CAcreateserial -out tmp_interhop_ssl/server.crt -days 372 -sha256 -extfile tmp_interhop_ssl/ssl_server.conf -extensions req_ext
-    openssl genrsa -out tmp_interhop_ssl/proxy.key 2048
-    openssl req -new -key tmp_interhop_ssl/proxy.key -out tmp_interhop_ssl/proxy.csr -config tmp_interhop_ssl/ssl_proxy.conf
-    openssl x509 -req -in tmp_interhop_ssl/proxy.csr -CA tmp_interhop_ssl/ca.crt -CAkey tmp_interhop_ssl/ca.key -CAcreateserial -out tmp_interhop_ssl/proxy.crt -days 372 -sha256 -extfile tmp_interhop_ssl/ssl_proxy.conf -extensions req_ext
   delegate_to: localhost
   run_once: yes
   become: no
 
-- name: Push internal keys and certificates
+- name: Generate host certificates
+  shell: |
+    openssl genrsa -out tmp_interhop_ssl/{{ inventory_hostname }}.key 2048
+    openssl req -new -key tmp_interhop_ssl/{{ inventory_hostname }}.key -out tmp_interhop_ssl/{{ inventory_hostname }}.csr -config tmp_interhop_ssl/ssl_host.conf
+    openssl x509 -req -in tmp_interhop_ssl/{{ inventory_hostname }}.csr -CA tmp_interhop_ssl/ca.crt -CAkey tmp_interhop_ssl/ca.key -CAcreateserial -out tmp_interhop_ssl/{{ inventory_hostname }}.crt -days 372 -sha256 -extfile tmp_interhop_ssl/ssl_host.conf -extensions req_ext
+  delegate_to: localhost
+  become: no
+
+- name: Push internal root certificate
   copy:
-    src: 'tmp_interhop_ssl/{{ item }}'
-    dest: '/opt/nginx/ssl/internal/{{ item }}'
+    src: tmp_interhop_ssl/ca.crt
+    dest: /opt/nginx/ssl/internal/ca.crt
     owner: root
     group: root
-    mode: '0600'
+    mode: '0644'
+  when: ''
+  become: yes
+
+- name: Push internal host keys and certificates
+  copy:
+    src: 'tmp_interhop_ssl/{{ item.path }}'
+    dest: '/opt/nginx/ssl/internal/{{ item.path }}'
+    owner: root
+    group: root
+    mode: '{{ item.mode }}'
   loop:
-    - ca.crt
-    - '{{ inventory_hostname }}.key'
-    - '{{ inventory_hostname }}.crt'
+    - path: '{{ inventory_hostname }}.key'
+      mode: '0600'
+    - path: '{{ inventory_hostname }}.crt'
+      mode: '0644'
   become: yes
 
 - name: Delete local SSL files

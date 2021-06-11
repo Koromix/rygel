@@ -11,11 +11,4 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-- name: interhop_hds
-
-  hosts: all
-
-  roles:
-    - role: goupile
-      when: 'inventory_hostname == "server"'
-    - role: nginx
+nginx_mode: single

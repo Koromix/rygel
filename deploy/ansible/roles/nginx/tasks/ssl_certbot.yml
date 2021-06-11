@@ -20,18 +20,18 @@
 - name: Fake missing Let's Encrypt certificates to bootstrap proxy
   shell:
     cmd: |
-      mkdir -p /etc/letsencrypt/live/{{ item }}
-      openssl req -x509 -newkey rsa:2048 -keyout /etc/letsencrypt/live/{{ item }}/privkey.pem -out /etc/letsencrypt/live/{{ item }}/fullchain.pem -days 7 -nodes -subj '/CN={{ item }}'
-    creates: '/etc/letsencrypt/live/{{ item }}/fullchain.pem'
+      mkdir -p /etc/letsencrypt/live/{{ item.name }}
+      openssl req -x509 -newkey rsa:2048 -keyout /etc/letsencrypt/live/{{ item.name }}/privkey.pem -out /etc/letsencrypt/live/{{ item.name }}/fullchain.pem -days 7 -nodes -subj '/CN={{ item.name }}'
+    creates: '/etc/letsencrypt/live/{{ item.name }}/fullchain.pem'
     warn: false
-  loop: '{{ domains }}'
+  loop: '{{ nginx_domains }}'
   become: yes
 
 - name: Reload NGINX (for certbot)
   service:
     name: nginx
     state: reloaded
-  when: 'ssl_certbot and nginx_config.changed and not ansible_check_mode'
+  when: 'nginx_config.changed and not ansible_check_mode'
   become: yes
 
 - name: Prepare webroot directories for certbot
@@ -41,19 +41,19 @@
     owner: root
     group: root
     mode: '0755'
-  loop: '{{ domains }}'
-  when: ssl_certbot
+  loop: '{{ nginx_domains }}'
+  when: item.ssl_certbot
   become: yes
 
 - name: Generate Let's Encrypt certificates
   shell:
     cmd: |
       rm -rf /etc/letsencrypt/live/{{ item }} /etc/letsencrypt/renewal/{{ item }}.conf /etc/letsencrypt/archive/{{ item }}
-      certbot certonly --cert-name {{ item }} --webroot --preferred-challenges http -w /opt/nginx/ssl/webroot/{{ item }} -d {{ item }} -m {{ ssl_certbot_email }} --agree-tos --noninteractive
+      certbot certonly --cert-name {{ item }} --webroot --preferred-challenges http -w /opt/nginx/ssl/webroot/{{ item }} -d {{ item }} -m {{ item.ssl_certbot_email }} --agree-tos --noninteractive
     creates: '/etc/letsencrypt/live/{{ item }}/chain.pem'
     warn: false
-  loop: '{{ domains }}'
-  when: ssl_certbot
+  loop: '{{ nginx_domains }}'
+  when: item.ssl_certbot
   become: yes
 
 - name: List old certbot renewals
@@ -64,9 +64,11 @@
       - /etc/letsencrypt/live
     file_type: any
     recurse: no
-    exclude: '{{ domains | union(domains | map("regex_replace", "^(.*)$", "\1.conf") | list) | union(["README"]) }}'
+    exclude: |
+      {{ nginx_domains | map(attribute = "name") | list |
+         union(nginx_domains | map(attribute = "name") | map("regex_replace", "^(.*)$", "\1.conf") | list) |
+         union(["README"]) }}
   register: certbot_old
-  when: ssl_certbot
   become: yes
 
 - name: Clean up old certbot renewals
@@ -74,31 +76,30 @@
     path: '{{ item.path }}'
     state: absent
   loop: '{{ certbot_old.files }}'
-  when: ssl_certbot
   become: yes
 
 - name: Use provided private certificates (migration mode)
   copy:
-    src: '{{ ssl_private_key }}'
-    dest: '/etc/letsencrypt/live/{{ item }}/privkey.pem'
+    src: '{{ item.ssl_private_key }}'
+    dest: '/etc/letsencrypt/live/{{ item.name }}/privkey.pem'
     mode: '0600'
-  loop: '{{ domains }}'
-  when: 'ssl_public_key is defined'
+  loop: '{{ nginx_domains }}'
+  when: 'item.ssl_public_key is defined'
   become: yes
 
 - name: Use provided public certificates (migration mode)
   copy:
-    src: '{{ ssl_public_key }}'
-    dest: '/etc/letsencrypt/live/{{ item }}/fullchain.pem'
+    src: '{{ item.ssl_public_key }}'
+    dest: '/etc/letsencrypt/live/{{ item.name }}/fullchain.pem'
     mode: '0644'
-  loop: '{{ domains }}'
-  when: 'ssl_public_key is defined'
+  loop: '{{ nginx_domains }}'
+  when: 'item.ssl_public_key is defined'
   become: yes
 
 - name: Clean up certbot flag file (migration mode)
   file:
-    path: '/etc/letsencrypt/live/{{ item }}/chain.pem'
+    path: '/etc/letsencrypt/live/{{ item.name }}/chain.pem'
     state: absent
-  loop: '{{ domains }}'
-  when: 'ssl_public_key is defined'
+  loop: '{{ nginx_domains }}'
+  when: 'not item.ssl_certbot'
   become: yes

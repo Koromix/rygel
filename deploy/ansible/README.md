@@ -4,13 +4,13 @@ Execute from the directory with the Vagrantfile (e.g. _vagrant/hds_).
 
 ## Initialize VMs
 
-```
+```sh
 vagrant up --no-provision
 ```
 
 ## Deploy
 
-```
+```sh
 vagrant provision
 ```
 
@@ -20,7 +20,7 @@ vagrant provision
 
 The secret ansible-vault key is needed for this. You must __never ever__ distribute it or put it in the repository!
 
-```
+```sh
 ansible-playbook hds.yml -i inventories/hds/preprod.yml -u <USER> --key-file <KEY_FILE> --vault-password-file ansible-hds.vault --ask-become-pass
 ```
 
@@ -28,10 +28,10 @@ ansible-playbook hds.yml -i inventories/hds/preprod.yml -u <USER> --key-file <KE
 
 Ask GPLExpert :)
 
-# OVH
+# PK network
 
 The secret ansible-vault key is needed for this. You must __never ever__ distribute it or put it in the repository!
 
-```
-ansible-playbook hds.yml -i inventories/ovh/prod.yml -u <USER> --key-file <KEY_FILE> --vault-password-file ansible-ovh.vault --ask-become-pass
+```sh
+ansible-playbook hds.yml -i inventories/pknet/prod.yml -u <USER> --key-file <KEY_FILE> --vault-password-file ansible-pknet.vault --ask-become-pass
 ```

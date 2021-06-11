@@ -1,0 +1,130 @@
+all:
+  hosts:
+    primary:
+      ansible_host: 192.168.33.20
+      ansible_port: 22
+      ansible_user: ansible
+      ansible_ssh_private_key_file: .vagrant/machines/primary/virtualbox/private_key
+
+      addr_public: 192.168.33.20
+
+      nginx_domains:
+        - name: pknet.local
+          ssl_certbot: no
+          config: |
+            location /metrics/node_exporter {
+                allow {{ hostvars.monitor.addr_public | default(hostvars.monitor.ansible_default_ipv4.address) }};
+                allow 127.0.0.1;
+                allow ::1;
+                deny all;
+                proxy_pass http://127.0.0.1:9100/metrics;
+            }
+
+            location /metrics/nginx_exporter {
+                allow {{ hostvars.monitor.addr_public | default(hostvars.monitor.ansible_default_ipv4.address) }};
+                allow 127.0.0.1;
+                allow ::1;
+                deny all;
+                proxy_pass http://127.0.0.1:9113/metrics;
+            }
+        - name: goupile1.pknet.local
+          ssl_certbot: no
+          config: |
+            location / {
+                proxy_http_version 1.1;
+                proxy_request_buffering off;
+                proxy_buffering off;
+                proxy_pass http://unix:/run/goupile/goupile1.pknet.local.sock:;
+            }
+        - name: goupile2.pknet.local
+          ssl_certbot: no
+          config: |
+            location / {
+                proxy_http_version 1.1;
+                proxy_request_buffering off;
+                proxy_buffering off;
+                proxy_pass http://unix:/run/goupile/goupile2.pknet.local.sock:;
+            }
+
+      goupile_commit: deploy_pknet
+      goupile_domains:
+        - name: goupile1.pknet.local
+          backup_key: YyQHN671EI9hEixEcUjsIVQvfMcsKUEe888V1Qx8UBI= # Decryption: mfoMJb1Zv4hh68MZ8c8UjjMv5yAnY7dwxPrY2EcNTrU=
+        - name: goupile2.pknet.local
+          backup_key: aZmAwOf9E/3WwnhS1LCM1r54TLjog/d0hwM0k72ULmw= # Decryption: D55mv4rBOk/9WywLcS//Zb8k7jhcr+ZGYi+JoVKUrdQ=
+
+      prometheus_exporters:
+        - node_exporter
+        - nginx_exporter
+      prometheus_domain: pknet.local
+
+    backup:
+      ansible_host: 192.168.33.21
+      ansible_port: 22
+      ansible_user: vagrant
+      ansible_ssh_private_key_file: .vagrant/machines/backup/virtualbox/private_key
+
+      addr_public: 192.168.33.21
+
+      nginx_domains:
+        - name: pknet-backup.local
+          ssl_certbot: no
+          config: |
+            location /metrics/node_exporter {
+                allow {{ hostvars.monitor.addr_public | default(hostvars.monitor.ansible_default_ipv4.address) }};
+                allow 127.0.0.1;
+                allow ::1;
+                deny all;
+                proxy_pass http://127.0.0.1:9100/metrics;
+            }
+
+            location /metrics/nginx_exporter {
+                allow {{ hostvars.monitor.addr_public | default(hostvars.monitor.ansible_default_ipv4.address) }};
+                allow 127.0.0.1;
+                allow ::1;
+                deny all;
+                proxy_pass http://127.0.0.1:9113/metrics;
+            }
+
+      prometheus_exporters:
+        - node_exporter
+        - nginx_exporter
+      prometheus_domain: pknet-backup.local
+
+    monitor:
+      ansible_host: 192.168.33.22
+      ansible_port: 22
+      ansible_user: vagrant
+      ansible_ssh_private_key_file: .vagrant/machines/monitor/virtualbox/private_key
+
+      addr_public: 192.168.33.22
+
+      nginx_domains:
+        - name: pknet-monitor.local
+          ssl_certbot: no
+          config: |
+            location /metrics/node_exporter {
+                allow {{ hostvars.monitor.addr_public | default(hostvars.monitor.ansible_default_ipv4.address) }};
+                allow 127.0.0.1;
+                allow ::1;
+                deny all;
+                proxy_pass http://127.0.0.1:9100/metrics;
+            }
+
+            location /metrics/nginx_exporter {
+                allow {{ hostvars.monitor.addr_public | default(hostvars.monitor.ansible_default_ipv4.address) }};
+                allow 127.0.0.1;
+                allow ::1;
+                deny all;
+                proxy_pass http://127.0.0.1:9113/metrics;
+            }
+
+            location /monitor {
+                proxy_pass http://127.0.0.1:9090;
+            }
+
+      prometheus_exporters:
+        - node_exporter
+        - nginx_exporter
+      prometheus_domain: pknet-monitor.local
+      prometheus_url: 'https://pknet-monitor.local/monitor'

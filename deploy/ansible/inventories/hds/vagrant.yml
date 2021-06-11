@@ -1,24 +1,40 @@
 all:
   hosts:
-    proxy:
-      ansible_host: 192.168.33.10
-      ansible_port: 22
-      ansible_user: vagrant
-      ansible_ssh_private_key_file: .vagrant/machines/proxy/virtualbox/private_key
-
     server:
       ansible_host: 192.168.33.11
       ansible_port: 22
       ansible_user: vagrant
       ansible_ssh_private_key_file: .vagrant/machines/server/virtualbox/private_key
 
-  vars:
-    ssl_certbot: no
-    # ssl_certbot_email: interhop@riseup.net
+      nginx_mode: back
 
-    goupile_commit: deploy_hds
-    goupile_domains:
+      goupile_commit: deploy_hds
+      goupile_domains:
+        - name: goupile1.hds.local
+          backup_key: YyQHN671EI9hEixEcUjsIVQvfMcsKUEe888V1Qx8UBI= # Decryption: mfoMJb1Zv4hh68MZ8c8UjjMv5yAnY7dwxPrY2EcNTrU=
+        - name: goupile2.hds.local
+          backup_key: aZmAwOf9E/3WwnhS1LCM1r54TLjog/d0hwM0k72ULmw= # Decryption: D55mv4rBOk/9WywLcS//Zb8k7jhcr+ZGYi+JoVKUrdQ=
+
+    proxy:
+      ansible_host: 192.168.33.10
+      ansible_port: 22
+      ansible_user: vagrant
+      ansible_ssh_private_key_file: .vagrant/machines/proxy/virtualbox/private_key
+
+      nginx_mode: front
+      nginx_back_addr: 192.168.33.11
+
+  vars:
+    nginx_domains:
       - name: goupile1.hds.local
-        backup_key: YyQHN671EI9hEixEcUjsIVQvfMcsKUEe888V1Qx8UBI= # Decryption: mfoMJb1Zv4hh68MZ8c8UjjMv5yAnY7dwxPrY2EcNTrU=
+        locations:
+          - path: /
+            proxy_addr: 'http://unix:/run/goupile/goupile1.hds.local.sock:'
+            proxy_buffering: no
+        ssl_certbot: no
       - name: goupile2.hds.local
-        backup_key: aZmAwOf9E/3WwnhS1LCM1r54TLjog/d0hwM0k72ULmw= # Decryption: D55mv4rBOk/9WywLcS//Zb8k7jhcr+ZGYi+JoVKUrdQ=
+        locations:
+          - path: /
+            proxy_addr: 'http://unix:/run/goupile/goupile2.hds.local.sock:'
+            proxy_buffering: no
+        ssl_certbot: no

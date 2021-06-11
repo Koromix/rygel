@@ -2,3 +2,5 @@ ovh.yml
 inventories/ovh
 vagrant/ovh
 roles/ovh
+roles/base
+roles/prometheus

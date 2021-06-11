@@ -11,12 +11,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-- hosts: all
+[Unit]
+Description = Prometheus %i
+Documentation = https://prometheus.io/
 
-  vars:
-    domains: '{{ goupile_domains | map(attribute = "name") | list }}'
+[Service]
+Type = simple
+User = prometheus
+Group = prometheus
+ExecStart = {{ prometheus_root_path }}/%i
+WorkingDirectory = {{ prometheus_root_path }}
+Restart = on-failure
+RestartSec = 20
+TimeoutStopSec = 30
 
-  roles:
-    - ovh
-    - goupile
-    - nginx
+[Install]
+WantedBy = multi-user.target

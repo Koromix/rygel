@@ -11,11 +11,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-- name: interhop_hds
+- name: pknet
 
   hosts: all
 
   roles:
-    - role: goupile
-      when: 'inventory_hostname == "server"'
-    - role: nginx
+    - name: base
+    - name: nginx
+      when: 'nginx_domains is defined'
+    - name: goupile
+      when: 'goupile_domains is defined'
+    - name: prometheus
+      when: 'prometheus_exporters is defined or prometheus_url is defined'
