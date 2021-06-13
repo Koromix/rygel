@@ -28,11 +28,13 @@ RestartSec = 20
 TimeoutStopSec = 30
 LimitNOFILE = 4096
 
+{% if goupile_sandbox %}
 # Allow Goupile to manipulate namespaces despite
 # kernel.unprivileged_userns_clone=0.
 SecureBits = keep-caps
 CapabilityBoundingSet = CAP_SYS_ADMIN
 AmbientCapabilities = CAP_SYS_ADMIN
+{% endif %}
 
 [Install]
 WantedBy = multi-user.target
