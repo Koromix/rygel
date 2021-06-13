@@ -1,0 +1,106 @@
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+- name: Create Prometheus user
+  user:
+    name: prometheus
+    create_home: no
+    home: /nonexistent
+    shell: /usr/sbin/nologin
+    system: yes
+  become: yes
+
+- name: List Prometheus services
+  set_fact:
+    prometheus_services: '{{ (prometheus_exporters | default([])) + (["prometheus"] if prometheus_url is defined else []) }}'
+
+- name: Prepare Prometheus package directories
+  file:
+    path: '{{ prometheus_root_path }}/packages/{{ item }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+    recurse: yes
+  loop: '{{ prometheus_services }}'
+  become: yes
+
+- name: Prepare Prometheus data directory
+  file:
+    path: '{{ prometheus_root_path }}/data'
+    state: directory
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+  when: 'prometheus_url is defined'
+  become: yes
+
+- name: Download Prometheus packages
+  get_url:
+    url: '{{ prometheus_packages[item].src }}'
+    checksum: '{{ prometheus_packages[item].checksum }}'
+    dest: '{{ prometheus_root_path }}/packages/{{ prometheus_packages[item].src | basename }}'
+    mode: '0644'
+  loop: '{{ prometheus_services }}'
+  become: yes
+
+- name: Extract Prometheus packages
+  unarchive:
+    src: '{{ prometheus_root_path }}/packages/{{ prometheus_packages[item].src | basename }}'
+    remote_src: yes
+    dest: '{{ prometheus_root_path }}/packages/{{ item }}'
+  loop: '{{ prometheus_services }}'
+  become: yes
+
+- name: Update Prometheus exporter wrappers
+  copy:
+    content: |
+      #!/bin/sh -e
+      {{ prometheus_root_path }}/packages/{{ item }}/{{ prometheus_packages[item].binary }} {{ prometheus_packages[item].args | trim }} "$@"
+    dest: '{{ prometheus_root_path }}/{{ item }}'
+    mode: '0755'
+  loop: '{{ prometheus_services }}'
+  become: yes
+
+- name: Update main Prometheus configuration
+  template:
+    src: prometheus.yml.j2
+    dest: '{{ prometheus_root_path }}/prometheus.yml'
+    mode: '0644'
+  when: 'prometheus_url is defined'
+  become: yes
+
+- name: Update systemd service file
+  template:
+    src: prometheus@.service.j2
+    dest: '/etc/systemd/system/prometheus@.service'
+    owner: root
+    group: root
+    mode: '0644'
+  register: service_config
+  become: yes
+
+- name: Reload systemd units
+  systemd:
+    daemon_reload: yes
+  when: service_config.changed
+  become: yes
+
+- name: Restart Prometheus services
+  service:
+    name: 'prometheus@{{ item }}'
+    state: restarted
+    enabled: yes
+  loop: '{{ prometheus_services }}'
+  when: 'not ansible_check_mode'
+  become: yes

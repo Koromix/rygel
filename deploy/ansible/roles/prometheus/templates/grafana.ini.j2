@@ -11,9 +11,23 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-- name: Install Prometheus
-  include: prometheus.yml
+app_mode = production
 
-- name: Install Grafana
-  include: grafana.yml
-  when: 'grafana_url is defined'
+[server]
+protocol = http
+http_addr = 127.0.0.1
+http_port = {{ grafana_port }}
+
+[paths]
+data = {{ grafana_root_path }}/data
+
+[database]
+type = sqlite3
+path = grafana.db
+
+[security]
+admin_user = {{ grafana_default_user }}
+admin_password = {{ grafana_default_password }}
+
+# [auth.basic]
+# enabled = true

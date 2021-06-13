@@ -1,0 +1,75 @@
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+- name: Add Grafana repository key
+  ansible.builtin.apt_key:
+    url: https://packages.grafana.com/gpg.key
+    id: 4E40DDF6D76E284A4A6780E48C8C34C524098CB6
+    state: present
+  become: yes
+
+- name: Add Grafana repository
+  apt_repository:
+    repo: deb https://packages.grafana.com/oss/deb stable main
+    state: present
+  become: yes
+
+- name: Install packages
+  apt:
+    update_cache: yes
+    pkg:
+      - grafana
+    state: latest
+  become: yes
+
+- name: Prepare Grafana base directory
+  file:
+    path: '{{ grafana_root_path }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+
+- name: Prepare Grafana data directory
+  file:
+    path: '{{ grafana_root_path }}/data'
+    state: directory
+    owner: grafana
+    group: grafana
+    mode: '0700'
+  become: yes
+
+- name: Configure Grafana
+  template:
+    src: 'grafana.ini.j2'
+    dest: '{{ grafana_root_path }}/grafana.ini'
+  register: nginx_config
+  become: yes
+
+- name: Link Grafana configuration
+  file:
+    path: /etc/grafana/grafana.ini
+    state: link
+    src: '{{ grafana_root_path }}/grafana.ini'
+    force: yes
+    follow: no
+  become: yes
+
+- name: Restart Grafana services
+  service:
+    name: grafana-server
+    state: restarted
+    enabled: yes
+  when: 'not ansible_check_mode'
+  become: yes

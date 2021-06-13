@@ -109,12 +109,17 @@ all:
             {% endfor %}
         - name: pknet-monitor.local
           config: |
-            location /monitor {
+            location /prometheus {
                 proxy_pass http://127.0.0.1:9090;
+            }
+
+            location / {
+                proxy_pass http://127.0.0.1:9200;
             }
 
       prometheus_public_addr: '{{ ansible_host }}'
       prometheus_exporters:
         - node_exporter
         - nginx_exporter
-      prometheus_url: 'https://pknet-monitor.local/monitor'
+      prometheus_url: 'https://pknet-monitor.local/prometheus'
+      grafana_url: 'https://pknet-monitor.local/'

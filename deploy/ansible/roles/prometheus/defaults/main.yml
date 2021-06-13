@@ -11,6 +11,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
+# Prometheus
+
 prometheus_root_path: /opt/prometheus # Installation directory
 
 prometheus_packages:
@@ -45,3 +47,11 @@ prometheus_packages:
           -nginx.scrape-uri http://127.0.0.1:80/stub_status
 
 prometheus_public_addr: '{{ ansible_default_ipv4.address }}'
+
+# Grafana
+
+grafana_root_path: /opt/grafana
+grafana_port: 9200
+
+grafana_default_user: admin
+grafana_default_password: grafana!16/default_pwd
