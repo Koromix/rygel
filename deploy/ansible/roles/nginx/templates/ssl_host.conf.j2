@@ -9,10 +9,15 @@ distinguished_name = dn
 C = FR
 L = Paris
 O = InterHop
-CN = interhop.org
+OU = InterHop CA
+CN = {{ nginx_public_addr | default(ansible_default_ipv4.address) }}
 
 [req_ext]
+keyUsage = digitalSignature, keyEncipherment, dataEncipherment
+extendedKeyUsage = serverAuth, clientAuth
 subjectAltName = @names
 
 [names]
-DNS.1 = {{ nginx_public_addr | default(ansible_default_ipv4.address) }}
+IP.1 = 127.0.0.1
+IP.2 = ::1
+IP.3 = {{ nginx_public_addr | default(ansible_default_ipv4.address) }}

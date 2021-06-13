@@ -21,12 +21,14 @@ scrape_configs:
     scheme: https
     metrics_path: metrics/{{ pkg.name }}
     tls_config:
-      insecure_skip_verify: true
+      ca_file: /opt/nginx/ssl/internal/ca.crt
+      cert_file: /opt/nginx/ssl/internal/{{ inventory_hostname }}.crt
+      key_file: /opt/nginx/ssl/internal/{{ inventory_hostname }}.key
     static_configs:
       - targets:
 {% for vars in hostvars.values() %}
-{% if vars.prometheus_domain is defined and pkg.name in vars.prometheus_exporters %}
-          - {{ vars.prometheus_domain }}
+{% if vars.prometheus_public_addr is defined and pkg.name in vars.prometheus_exporters %}
+          - {{ vars.prometheus_public_addr }}
 {% endif %}
 {% endfor %}
 {% endfor %}

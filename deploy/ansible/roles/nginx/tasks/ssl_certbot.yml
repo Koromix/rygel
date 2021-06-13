@@ -11,19 +11,34 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-- name: Create self-signed certificate for default server
-  command:
-    cmd: 'openssl req -x509 -newkey rsa:2048 -keyout /opt/nginx/ssl/self.key -out /opt/nginx/ssl/self.crt -days 372 -nodes -subj "/CN=default"'
-    creates: /opt/nginx/ssl/self.crt
+- name: Bootstrap missing Let's Encrypt directories
+  file:
+    path: '/etc/letsencrypt/live/{{ item.name }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0600'
+    recurse: yes
+  loop: '{{ nginx_domains }}'
   become: yes
 
-- name: Fake missing Let's Encrypt certificates to bootstrap proxy
-  shell:
-    cmd: |
-      mkdir -p /etc/letsencrypt/live/{{ item.name }}
-      openssl req -x509 -newkey rsa:2048 -keyout /etc/letsencrypt/live/{{ item.name }}/privkey.pem -out /etc/letsencrypt/live/{{ item.name }}/fullchain.pem -days 7 -nodes -subj '/CN={{ item.name }}'
-    creates: '/etc/letsencrypt/live/{{ item.name }}/fullchain.pem'
-    warn: false
+- name: Bootstrap missing Let's Encrypt private keys
+  copy:
+    src: '/opt/nginx/ssl/internal/{{ inventory_hostname }}.key'
+    remote_src: yes
+    dest: '/etc/letsencrypt/live/{{ item.name }}/privkey.pem'
+    mode: '0600'
+    force: no
+  loop: '{{ nginx_domains }}'
+  become: yes
+
+- name: Bootstrap missing Let's Encrypt certificates
+  copy:
+    src: '/opt/nginx/ssl/internal/{{ inventory_hostname }}.crt'
+    remote_src: yes
+    dest: '/etc/letsencrypt/live/{{ item.name }}/fullchain.pem'
+    mode: '0600'
+    force: no
   loop: '{{ nginx_domains }}'
   become: yes
 
