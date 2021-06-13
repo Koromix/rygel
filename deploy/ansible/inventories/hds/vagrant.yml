@@ -33,10 +33,8 @@ all:
           - path: /
             proxy_addr: 'http://unix:/run/goupile/goupile1.hds.local.sock:'
             proxy_buffering: no
-        ssl_certbot: no
       - name: goupile2.hds.local
         locations:
           - path: /
             proxy_addr: 'http://unix:/run/goupile/goupile2.hds.local.sock:'
             proxy_buffering: no
-        ssl_certbot: no

@@ -27,7 +27,7 @@ scrape_configs:
     static_configs:
       - targets:
 {% for vars in hostvars.values() %}
-{% if vars.prometheus_public_addr is defined and pkg.name in vars.prometheus_exporters %}
+{% if pkg.name in vars.prometheus_exporters %}
           - {{ vars.prometheus_public_addr }}
 {% endif %}
 {% endfor %}

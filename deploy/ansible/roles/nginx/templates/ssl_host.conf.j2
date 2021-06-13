@@ -10,7 +10,7 @@ C = FR
 L = Paris
 O = InterHop
 OU = InterHop CA
-CN = {{ nginx_public_addr | default(ansible_default_ipv4.address) }}
+CN = {{ nginx_public_addr }}
 
 [req_ext]
 keyUsage = digitalSignature, keyEncipherment, dataEncipherment
@@ -20,4 +20,4 @@ subjectAltName = @names
 [names]
 IP.1 = 127.0.0.1
 IP.2 = ::1
-IP.3 = {{ nginx_public_addr | default(ansible_default_ipv4.address) }}
+IP.3 = {{ nginx_public_addr }}

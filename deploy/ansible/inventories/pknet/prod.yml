@@ -16,7 +16,6 @@ all:
             - path: /
               proxy_addr: 'http://unix:/run/goupile/cn2r.goupile.fr.sock:'
               proxy_buffering: no
-          ssl_certbot: no
           ssl_public_key: '{{ playbook_dir }}/inventories/pknet/goupile.fr/fullchain.pem'
           ssl_private_key: '{{ playbook_dir }}/inventories/pknet/goupile.fr/privkey.pem'
 

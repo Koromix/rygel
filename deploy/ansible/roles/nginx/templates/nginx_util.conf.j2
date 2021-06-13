@@ -1,21 +1,21 @@
-{% macro configure_http(domain_name) -%}
-        server_name {{ domain_name }};
+{% macro configure_http(name) -%}
+        server_name {{ name }};
 
         listen 80;
         listen [::]:80;
 
-        access_log /var/log/nginx/{{ domain_name }}.access.log;
-        error_log /var/log/nginx/{{ domain_name }}.error.log error;
+        access_log /var/log/nginx/{{ name }}.access.log;
+        error_log /var/log/nginx/{{ name }}.error.log error;
 {%- endmacro %}
 
-{% macro configure_https(domain_name) -%}
-        server_name {{ domain_name }};
+{% macro configure_https(name) -%}
+        server_name {{ name }};
 
         listen 443 ssl;
         listen [::]:443 ssl;
 
-        access_log /var/log/nginx/{{ domain_name }}.access.log;
-        error_log /var/log/nginx/{{ domain_name }}.error.log error;
+        access_log /var/log/nginx/{{ name }}.access.log;
+        error_log /var/log/nginx/{{ name }}.error.log error;
 
         client_max_body_size 256M;
 

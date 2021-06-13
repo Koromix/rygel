@@ -11,6 +11,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
+- name: Create self-signed certificate for default server
+  command:
+    cmd: 'openssl req -x509 -newkey rsa:2048 -keyout /opt/nginx/ssl/self.key -out /opt/nginx/ssl/self.crt -days 372 -nodes -subj "/CN=default"'
+    creates: /opt/nginx/ssl/self.crt
+  become: yes
+
 - name: Bootstrap missing Let's Encrypt directories
   file:
     path: '/etc/letsencrypt/live/{{ item.name }}'
@@ -51,13 +57,13 @@
 
 - name: Prepare webroot directories for certbot
   file:
-    path: '/opt/nginx/ssl/webroot/{{ item }}'
+    path: '/opt/nginx/ssl/webroot/{{ item.name }}'
     state: directory
     owner: root
     group: root
     mode: '0755'
   loop: '{{ nginx_domains }}'
-  when: item.ssl_certbot
+  when: 'item.ssl_certbot_email is defined'
   become: yes
 
 - name: Generate Let's Encrypt certificates
@@ -68,7 +74,7 @@
     creates: '/etc/letsencrypt/live/{{ item }}/chain.pem'
     warn: false
   loop: '{{ nginx_domains }}'
-  when: item.ssl_certbot
+  when: 'item.ssl_certbot_email is defined'
   become: yes
 
 - name: List old certbot renewals
@@ -116,5 +122,5 @@
     path: '/etc/letsencrypt/live/{{ item.name }}/chain.pem'
     state: absent
   loop: '{{ nginx_domains }}'
-  when: 'not item.ssl_certbot'
+  when: 'item.ssl_certbot_email is not defined'
   become: yes
