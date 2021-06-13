@@ -26,14 +26,13 @@
 
 - name: Prepare Prometheus package directories
   file:
-    path: '{{ prometheus_root_path }}/packages/{{ item.name }}'
+    path: '{{ prometheus_root_path }}/packages/{{ item }}'
     state: directory
     owner: root
     group: root
     mode: '0755'
     recurse: yes
-  loop: '{{ prometheus_packages }}'
-  when: 'item.name in prometheus_services'
+  loop: '{{ prometheus_services }}'
   become: yes
 
 - name: Prepare Prometheus data directory
@@ -48,32 +47,29 @@
 
 - name: Download Prometheus packages
   get_url:
-    url: '{{ item.src }}'
-    checksum: '{{ item.checksum }}'
-    dest: '{{ prometheus_root_path }}/packages/{{ item.src | basename }}'
+    url: '{{ prometheus_packages[item].src }}'
+    checksum: '{{ prometheus_packages[item].checksum }}'
+    dest: '{{ prometheus_root_path }}/packages/{{ prometheus_packages[item].src | basename }}'
     mode: '0644'
-  loop: '{{ prometheus_packages }}'
-  when: 'item.name in prometheus_services'
+  loop: '{{ prometheus_services }}'
   become: yes
 
 - name: Extract Prometheus packages
   unarchive:
-    src: '{{ prometheus_root_path }}/packages/{{ item.src | basename }}'
+    src: '{{ prometheus_root_path }}/packages/{{ prometheus_packages[item].src | basename }}'
     remote_src: yes
-    dest: '{{ prometheus_root_path }}/packages/{{ item.name }}'
-  loop: '{{ prometheus_packages }}'
-  when: 'item.name in prometheus_services'
+    dest: '{{ prometheus_root_path }}/packages/{{ item }}'
+  loop: '{{ prometheus_services }}'
   become: yes
 
 - name: Update Prometheus exporter wrappers
   copy:
     content: |
       #!/bin/sh -e
-      {{ prometheus_root_path }}/packages/{{ item.name }}/{{ item.binary }} {{ item.args | trim }} "$@"
-    dest: '{{ prometheus_root_path }}/{{ item.name }}'
+      {{ prometheus_root_path }}/packages/{{ item }}/{{ prometheus_packages[item].binary }} {{ prometheus_packages[item].args | trim }} "$@"
+    dest: '{{ prometheus_root_path }}/{{ item }}'
     mode: '0755'
-  loop: '{{ prometheus_packages }}'
-  when: 'item.name in prometheus_services'
+  loop: '{{ prometheus_services }}'
   become: yes
 
 - name: Update main Prometheus configuration
@@ -102,9 +98,9 @@
 
 - name: Restart Prometheus services
   service:
-    name: 'prometheus@{{ item.name }}'
+    name: 'prometheus@{{ item }}'
     state: restarted
     enabled: yes
-  loop: '{{ prometheus_packages }}'
-  when: 'not ansible_check_mode and item.name in prometheus_services'
+  loop: '{{ prometheus_services }}'
+  when: 'not ansible_check_mode'
   become: yes

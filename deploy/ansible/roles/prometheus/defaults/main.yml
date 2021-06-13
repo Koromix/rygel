@@ -14,7 +14,7 @@
 prometheus_root_path: /opt/prometheus # Installation directory
 
 prometheus_packages:
-  - name: prometheus
+  prometheus:
     src: 'https://github.com/prometheus/prometheus/releases/download/v2.27.1/prometheus-2.27.1.linux-amd64.tar.gz'
     checksum: 'sha256:ce637d0167d5e6d2561f3bd37e1c58fe8601e13e4e1ea745653c068f6e1317ae'
     binary: prometheus-2.27.1.linux-amd64/prometheus
@@ -28,14 +28,14 @@ prometheus_packages:
           --web.console.libraries "{{ prometheus_root_path }}/packages/prometheus/prometheus-2.27.1.linux-amd64/console_libraries" \
           --web.page-title "{{ ansible_play_name }} monitoring"
 
-  - name: node_exporter
+  node_exporter:
     src: 'https://github.com/prometheus/node_exporter/releases/download/v1.1.2/node_exporter-1.1.2.linux-amd64.tar.gz'
     checksum: 'sha256:8c1f6a317457a658e0ae68ad710f6b4098db2cad10204649b51e3c043aa3e70d'
     binary: node_exporter-1.1.2.linux-amd64/node_exporter
     args: |
       --web.listen-address 127.0.0.1:9100
 
-  - name: nginx_exporter
+  nginx_exporter:
     src: 'https://github.com/nginxinc/nginx-prometheus-exporter/releases/download/v0.9.0/nginx-prometheus-exporter_0.9.0_linux_amd64.tar.gz'
     checksum: 'sha256:469851e5705a83e9bba9eb402a7484d196293826470f4f66b1d2a4a1074b6599'
     binary: nginx-prometheus-exporter

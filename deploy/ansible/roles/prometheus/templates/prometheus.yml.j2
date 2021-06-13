@@ -16,10 +16,10 @@ global:
   evaluation_interval: 1m
 
 scrape_configs:
-{% for pkg in prometheus_packages %}
-  - job_name: {{ pkg.name }}
+{% for pkg in prometheus_packages.keys() %}
+  - job_name: {{ pkg }}
     scheme: https
-    metrics_path: metrics/{{ pkg.name }}
+    metrics_path: metrics/{{ pkg }}
     tls_config:
       ca_file: /opt/nginx/ssl/internal/ca.crt
       cert_file: /opt/nginx/ssl/internal/{{ inventory_hostname }}.crt
@@ -27,7 +27,7 @@ scrape_configs:
     static_configs:
       - targets:
 {% for vars in hostvars.values() %}
-{% if pkg.name in vars.prometheus_exporters %}
+{% if pkg in vars.prometheus_exporters %}
           - {{ vars.prometheus_public_addr }}
 {% endif %}
 {% endfor %}
