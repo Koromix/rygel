@@ -60,6 +60,10 @@ http {
         ssl_certificate /opt/nginx/ssl/internal/{{ inventory_hostname }}.crt;
         ssl_certificate_key /opt/nginx/ssl/internal/{{ inventory_hostname }}.key;
 
+        ssl_client_certificate /opt/nginx/ssl/internal/ca.crt;
+        ssl_verify_client on;
+        ssl_verify_depth 2;
+
         location / {
             return 404;
         }

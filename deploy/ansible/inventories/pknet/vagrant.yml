@@ -10,10 +10,9 @@ all:
       nginx_domains:
         - name: '{{ prometheus_public_addr }}'
           config: |
-            # Prometheus does not want to send anything for some reason
-            # ssl_client_certificate /opt/nginx/ssl/internal/ca.crt;
-            # ssl_verify_client on;
-            # ssl_verify_depth 2;
+            ssl_client_certificate /opt/nginx/ssl/internal/ca.crt;
+            ssl_verify_client on;
+            ssl_verify_depth 2;
 
             {% for exporter in prometheus_exporters %}
 
@@ -74,10 +73,9 @@ all:
       nginx_domains:
         - name: '{{ prometheus_public_addr }}'
           config: |
-            # Prometheus does not want to send anything for some reason
-            # ssl_client_certificate /opt/nginx/ssl/internal/ca.crt;
-            # ssl_verify_client off;
-            # ssl_verify_depth 2;
+            ssl_client_certificate /opt/nginx/ssl/internal/ca.crt;
+            ssl_verify_client on;
+            ssl_verify_depth 2;
 
             {% for exporter in prometheus_exporters %}
 
@@ -107,10 +105,9 @@ all:
       nginx_domains:
         - name: '{{ prometheus_public_addr }}'
           config: |
-            # Prometheus does not want to send anything for some reason
-            # ssl_client_certificate /opt/nginx/ssl/internal/ca.crt;
-            # ssl_verify_client off;
-            # ssl_verify_depth 2;
+            ssl_client_certificate /opt/nginx/ssl/internal/ca.crt;
+            ssl_verify_client on;
+            ssl_verify_depth 2;
 
             {% for exporter in prometheus_exporters %}
 
