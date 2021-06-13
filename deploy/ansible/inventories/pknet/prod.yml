@@ -11,17 +11,75 @@ all:
       ovh_ipv6_gateway: 2001:41d0:701:1100::1
 
       nginx_domains:
+        - name: anesth-lille.goupile.fr
+          config: |
+            location / {
+                proxy_http_version 1.1;
+                proxy_request_buffering off;
+                proxy_buffering off;
+
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+                proxy_pass http://unix:/run/goupile/anesth-lille.goupile.fr.sock:;
+            }
+          ssl_public_key: '{{ playbook_dir }}/inventories/pknet/goupile.fr/fullchain.pem'
+          ssl_private_key: '{{ playbook_dir }}/inventories/pknet/goupile.fr/privkey.pem'
         - name: cn2r.goupile.fr
-          locations:
-            - path: /
-              proxy_addr: 'http://unix:/run/goupile/cn2r.goupile.fr.sock:'
-              proxy_buffering: no
+          config: |
+            location / {
+                proxy_http_version 1.1;
+                proxy_request_buffering off;
+                proxy_buffering off;
+
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+                proxy_pass http://unix:/run/goupile/cn2r.goupile.fr.sock:;
+            }
+          ssl_public_key: '{{ playbook_dir }}/inventories/pknet/goupile.fr/fullchain.pem'
+          ssl_private_key: '{{ playbook_dir }}/inventories/pknet/goupile.fr/privkey.pem'
+        - name: medita.goupile.fr
+          config: |
+            location / {
+                proxy_http_version 1.1;
+                proxy_request_buffering off;
+                proxy_buffering off;
+
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+                proxy_pass http://unix:/run/goupile/medita.goupile.fr.sock:;
+            }
+          ssl_public_key: '{{ playbook_dir }}/inventories/pknet/goupile.fr/fullchain.pem'
+          ssl_private_key: '{{ playbook_dir }}/inventories/pknet/goupile.fr/privkey.pem'
+        - name: psy-lille.goupile.fr
+          config: |
+            location / {
+                proxy_http_version 1.1;
+                proxy_request_buffering off;
+                proxy_buffering off;
+
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+                proxy_pass http://unix:/run/goupile/psy-lille.goupile.fr.sock:;
+            }
           ssl_public_key: '{{ playbook_dir }}/inventories/pknet/goupile.fr/fullchain.pem'
           ssl_private_key: '{{ playbook_dir }}/inventories/pknet/goupile.fr/privkey.pem'
 
       goupile_commit: deploy_pknet
       goupile_sandbox: no
       goupile_domains:
+        - name: anesth-lille.goupile.fr
+          backup_key: !vault |
+            $ANSIBLE_VAULT;1.1;AES256
+            32323730623935316332306663346465613433313237643665373066396636653538623431303030
+            3132363332636136613834333931646264343039643263380a333533653765323364656439333732
+            37323964303036343332623233316536386364303031373338376134373938323437306235303537
+            3065653563363964370a393337636661336663373266333337613863356163353236383839346463
+            33306537363233646534613435373034623830323366383732373931616466346332636531356135
+            6131383634643465336465613438386334333265363835303430
         - name: cn2r.goupile.fr
           backup_key: !vault |
             $ANSIBLE_VAULT;1.1;AES256
@@ -31,6 +89,24 @@ all:
             3165616137343532340a616465333339613466333430323330363135656435336635643366313364
             63323838313166396165663839353064636538663536616238646265666533323838346231636331
             3034393331333163366363323035313466656430346265386161
+        - name: medita.goupile.fr
+          backup_key: !vault |
+            $ANSIBLE_VAULT;1.1;AES256
+            64356337386430643235373337393838396139363663643164376466633030363163666266303534
+            3639613836616239343330663465636638363464653063390a373332373539343234353437303136
+            63313666633463386362636434366131316331333763336362313139633137656463636665623561
+            6437363239366234630a663262323763333630343363366636383962356336656334643531323735
+            65653263636236373631356232656565623164616439303337613532393835396131643433306632
+            3062396235663361346538373234336133373564633533383138
+        - name: psy-lille.goupile.fr
+          backup_key: !vault |
+            $ANSIBLE_VAULT;1.1;AES256
+            64616133313638376337646636313131353433643533343633383565333736323763313366343564
+            3532393239386533356666303063363939663933356462390a613734323037333839653733663762
+            34646638656263633634336136386164656164393064653436656363313162343237666537633665
+            6562373064366135610a346336663336336164386139363730333839633733366635666138633032
+            66363262373937616338663961663239353333313564313531393763393939373637373633363133
+            6161663962383565386364653434393532373535323836613565
       goupile_default_username: admin
       goupile_default_password: !vault |
         $ANSIBLE_VAULT;1.1;AES256
@@ -75,10 +151,6 @@ all:
           65303237633438353139623564633436393266326530326532333830656136623165363862333839
           3831306332653033610a626432303566353532333865636133346665353335653833643237363061
           3536
-
-      prometheus_exporters:
-        - node_exporter
-        - nginx_exporter
 
     backup:
       ansible_host: 46.226.106.221
