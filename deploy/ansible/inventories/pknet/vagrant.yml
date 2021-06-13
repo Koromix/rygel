@@ -6,14 +6,13 @@ all:
       ansible_user: ansible
       ansible_ssh_private_key_file: .vagrant/machines/primary/virtualbox/private_key
 
-      addr_public: 192.168.33.20
-
+      nginx_public_addr: 192.168.33.20
       nginx_domains:
         - name: pknet.local
           ssl_certbot: no
           config: |
             location /metrics/node_exporter {
-                allow {{ hostvars.monitor.addr_public | default(hostvars.monitor.ansible_default_ipv4.address) }};
+                allow {{ hostvars.monitor.nginx_public_addr | default(hostvars.monitor.ansible_default_ipv4.address) }};
                 allow 127.0.0.1;
                 allow ::1;
                 deny all;
@@ -21,7 +20,7 @@ all:
             }
 
             location /metrics/nginx_exporter {
-                allow {{ hostvars.monitor.addr_public | default(hostvars.monitor.ansible_default_ipv4.address) }};
+                allow {{ hostvars.monitor.nginx_public_addr | default(hostvars.monitor.ansible_default_ipv4.address) }};
                 allow 127.0.0.1;
                 allow ::1;
                 deny all;
@@ -64,14 +63,13 @@ all:
       ansible_user: vagrant
       ansible_ssh_private_key_file: .vagrant/machines/backup/virtualbox/private_key
 
-      addr_public: 192.168.33.21
-
+      nginx_public_addr: 192.168.33.21
       nginx_domains:
         - name: pknet-backup.local
           ssl_certbot: no
           config: |
             location /metrics/node_exporter {
-                allow {{ hostvars.monitor.addr_public | default(hostvars.monitor.ansible_default_ipv4.address) }};
+                allow {{ hostvars.monitor.nginx_public_addr | default(hostvars.monitor.ansible_default_ipv4.address) }};
                 allow 127.0.0.1;
                 allow ::1;
                 deny all;
@@ -79,7 +77,7 @@ all:
             }
 
             location /metrics/nginx_exporter {
-                allow {{ hostvars.monitor.addr_public | default(hostvars.monitor.ansible_default_ipv4.address) }};
+                allow {{ hostvars.monitor.nginx_public_addr | default(hostvars.monitor.ansible_default_ipv4.address) }};
                 allow 127.0.0.1;
                 allow ::1;
                 deny all;
@@ -97,14 +95,13 @@ all:
       ansible_user: vagrant
       ansible_ssh_private_key_file: .vagrant/machines/monitor/virtualbox/private_key
 
-      addr_public: 192.168.33.22
-
+      nginx_public_addr: 192.168.33.22
       nginx_domains:
         - name: pknet-monitor.local
           ssl_certbot: no
           config: |
             location /metrics/node_exporter {
-                allow {{ hostvars.monitor.addr_public | default(hostvars.monitor.ansible_default_ipv4.address) }};
+                allow {{ hostvars.monitor.nginx_public_addr | default(hostvars.monitor.ansible_default_ipv4.address) }};
                 allow 127.0.0.1;
                 allow ::1;
                 deny all;
@@ -112,7 +109,7 @@ all:
             }
 
             location /metrics/nginx_exporter {
-                allow {{ hostvars.monitor.addr_public | default(hostvars.monitor.ansible_default_ipv4.address) }};
+                allow {{ hostvars.monitor.nginx_public_addr | default(hostvars.monitor.ansible_default_ipv4.address) }};
                 allow 127.0.0.1;
                 allow ::1;
                 deny all;

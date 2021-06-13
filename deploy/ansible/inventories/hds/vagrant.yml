@@ -6,6 +6,7 @@ all:
       ansible_user: vagrant
       ansible_ssh_private_key_file: .vagrant/machines/server/virtualbox/private_key
 
+      nginx_public_addr: 192.168.33.11
       nginx_mode: back
 
       goupile_commit: deploy_hds
@@ -21,6 +22,7 @@ all:
       ansible_user: vagrant
       ansible_ssh_private_key_file: .vagrant/machines/proxy/virtualbox/private_key
 
+      nginx_public_addr: 192.168.33.10
       nginx_mode: front
       nginx_back_addr: 192.168.33.11
 

@@ -15,4 +15,4 @@ CN = interhop.org
 subjectAltName = @names
 
 [names]
-DNS.1 = {{ addr_public | default(ansible_default_ipv4.address) }}
+DNS.1 = {{ nginx_public_addr | default(ansible_default_ipv4.address) }}
