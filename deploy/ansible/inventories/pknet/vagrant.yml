@@ -21,6 +21,9 @@ all:
                 allow {{ hostvars.monitor.nginx_public_addr }};
                 deny all;
 
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
                 proxy_pass http://127.0.0.1:{{ prometheus_packages[exporter].port }}/metrics;
             }
             {% endfor %}
@@ -30,6 +33,10 @@ all:
                 proxy_http_version 1.1;
                 proxy_request_buffering off;
                 proxy_buffering off;
+
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
                 proxy_pass http://unix:/run/goupile/goupile1.pknet.local.sock:;
             }
         - name: goupile2.pknet.local
@@ -38,6 +45,10 @@ all:
                 proxy_http_version 1.1;
                 proxy_request_buffering off;
                 proxy_buffering off;
+
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
                 proxy_pass http://unix:/run/goupile/goupile2.pknet.local.sock:;
             }
 
@@ -74,6 +85,9 @@ all:
                 allow {{ hostvars.monitor.nginx_public_addr }};
                 deny all;
 
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
                 proxy_pass http://127.0.0.1:{{ prometheus_packages[exporter].port }}/metrics;
             }
             {% endfor %}
@@ -104,16 +118,25 @@ all:
                 allow {{ hostvars.monitor.nginx_public_addr }};
                 deny all;
 
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
                 proxy_pass http://127.0.0.1:{{ prometheus_packages[exporter].port }}/metrics;
             }
             {% endfor %}
         - name: pknet-monitor.local
           config: |
             location /prometheus {
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
                 proxy_pass http://127.0.0.1:9090;
             }
 
             location / {
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
                 proxy_pass http://127.0.0.1:9200;
             }
 

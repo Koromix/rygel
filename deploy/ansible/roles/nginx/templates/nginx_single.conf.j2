@@ -39,10 +39,7 @@ http {
     limit_req zone=default burst=20 nodelay;
 
     server {
-        server_name _;
-
-        listen 80;
-        listen [::]:80;
+        {{ util.configure_http('_') }}
 
         location / {
             return 404;
@@ -58,10 +55,7 @@ http {
     }
 
     server {
-        server_name _;
-
-        listen 443 ssl;
-        listen [::]:443 ssl;
+        {{ util.configure_https('_') }}
 
         ssl_certificate /opt/nginx/ssl/internal/{{ inventory_hostname }}.crt;
         ssl_certificate_key /opt/nginx/ssl/internal/{{ inventory_hostname }}.key;
@@ -92,11 +86,6 @@ http {
         ssl_certificate_key /etc/letsencrypt/live/{{ domain.name }}/privkey.pem;
 
         add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
-
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
 
         {{ domain.config | indent(width=8) }}
     }
