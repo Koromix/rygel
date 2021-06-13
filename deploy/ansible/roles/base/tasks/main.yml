@@ -65,17 +65,6 @@
   when: ovh_ipv6_config.changed
   become: yes
 
-- name: Configure ufw defaults
-  ufw:
-    direction: '{{ item.direction }}'
-    policy: '{{ item.policy }}'
-  loop:
-    - direction: incoming
-      policy: deny
-    - direction: outgoing
-      policy: allow
-  become: yes
-
 - name: Configure ufw rules
   ufw:
     rule: '{{ item.rule }}'
@@ -91,6 +80,17 @@
     - rule: allow
       port: 443
       proto: tcp
+  become: yes
+
+- name: Configure ufw defaults
+  ufw:
+    direction: '{{ item.direction }}'
+    policy: '{{ item.policy }}'
+  loop:
+    - direction: incoming
+      policy: deny
+    - direction: outgoing
+      policy: allow
   become: yes
 
 - name: Enable ufw
