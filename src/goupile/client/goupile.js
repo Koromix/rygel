@@ -17,6 +17,10 @@ let profile = {};
 const goupile = new function() {
     let self = this;
 
+    // Copied that crap from a random corner of the internet
+    let electron = (typeof process !== 'undefined' && typeof process.versions === 'object' &&
+                    !!process.versions.electron);
+
     let profile_keys = {};
     let online = true;
 
@@ -159,7 +163,7 @@ const goupile = new function() {
                 let response = await net.fetch(`${ENV.urls.instance}api/session/profile`);
 
                 let new_profile = await response.json();
-                updateProfile(new_profile, true);
+                await updateProfile(new_profile, true);
             } catch (err) {
                 if (!ENV.cache_offline)
                     throw err;
@@ -188,7 +192,7 @@ const goupile = new function() {
                         ctx: lock.ctx
                     }
                 };
-                updateProfile(new_profile, false);
+                await updateProfile(new_profile, false);
 
                 return;
             }
@@ -232,7 +236,7 @@ const goupile = new function() {
 
         if (response.ok) {
             let new_profile = await response.json();
-            updateProfile(new_profile, true);
+            await updateProfile(new_profile, true);
         } else {
             let err = (await response.text()).trim();
             throw new Error(err);
@@ -263,7 +267,7 @@ const goupile = new function() {
 
                     if (response.ok) {
                         let new_profile = await response.json();
-                        updateProfile(new_profile, true);
+                        await updateProfile(new_profile, true);
 
                         await initAfterAuthorization();
 
@@ -334,9 +338,6 @@ const goupile = new function() {
             e.preventDefault();
         });
 
-        // Copied that crap from a random corner of the internet
-        let electron = (typeof process !== 'undefined' && typeof process.versions === 'object' &&
-                        !!process.versions.electron);
         if (electron) {
             let protect = true;
 
@@ -472,7 +473,7 @@ const goupile = new function() {
                         });
                     }
 
-                    updateProfile(new_profile, true);
+                    await updateProfile(new_profile, true);
                     await deleteSessionValue('lock');
 
                     if (progress != null)
@@ -497,18 +498,16 @@ const goupile = new function() {
                     throw new Error('Profil hors ligne inconnu');
 
                 let key = await deriveKey(password, base64ToBytes(obj.salt));
+                let new_profile;
 
                 try {
-                    let new_profile = await decryptSecretBox(obj.profile, key);
+                    new_profile = await decryptSecretBox(obj.profile, key);
 
                     // Reset errors after successful offline login
                     if (obj.errors) {
                         obj.errors = 0;
                         await db.saveWithKey('usr_profiles', username, obj);
                     }
-
-                    updateProfile(new_profile, false);
-                    await deleteSessionValue('lock');
 
                     if (progress != null)
                         progress.success('Connexion réussie (hors ligne)');
@@ -523,6 +522,9 @@ const goupile = new function() {
                         throw new Error('Mot de passe non reconnu');
                     }
                 }
+
+                await updateProfile(new_profile, false);
+                await deleteSessionValue('lock');
             }
         } catch (err) {
             if ((err instanceof NetworkError) && online && ENV.cache_offline) {
@@ -560,7 +562,30 @@ const goupile = new function() {
         });
     }
 
-    function updateProfile(new_profile, online) {
+    async function updateProfile(new_profile, online) {
+        let usb_key;
+        if (new_profile.encrypt_usb) {
+            if (!electron)
+                throw new Error('La sécurisation USB n\'est disponible que sur le client Electron');
+
+            let ipcRenderer = require('electron').ipcRenderer;
+            let id = Sha256(ENV.urls.instance);
+
+            usb_key = ipcRenderer.sendSync('get_usb_key', id);
+            if (usb_key == null)
+                throw new Error('Insérez la clé USB de sécurité avant de continuer');
+            usb_key = base64ToBytes(usb_key);
+
+            let waiting = log.progress('Veuillez retirer la clé pour continuer');
+
+            try {
+                while (ipcRenderer.sendSync('has_usb_key', id))
+                    await util.waitFor(2000);
+            } finally {
+                waiting.close();
+            }
+        }
+
         profile = Object.assign({}, new_profile);
         profile.online = online;
 
@@ -569,8 +594,17 @@ const goupile = new function() {
             profile_keys = profile.keys;
             delete profile.keys;
 
-            for (let key in profile_keys)
-                profile_keys[key] = base64ToBytes(profile_keys[key]);
+            for (let key in profile_keys) {
+                let value = base64ToBytes(profile_keys[key]);
+                if (usb_key != null) {
+                    let salt = value.slice(0, 24);
+                    let combined = new Uint8Array(value.length + usb_key.length);
+                    combined.set(value, 0);
+                    combined.set(usb_key, value.length);
+                    value = await deriveKey(combined, salt);
+                }
+                profile_keys[key] = value;
+            }
         } else {
             profile_keys = new Map;
         }
@@ -585,7 +619,7 @@ const goupile = new function() {
             let response = await net.fetch(`${ENV.urls.instance}api/session/logout`, {method: 'POST'})
 
             if (response.ok) {
-                updateProfile({}, false);
+                await updateProfile({}, false);
                 await deleteSessionValue('lock');
 
                 // Clear state and start from fresh as a precaution

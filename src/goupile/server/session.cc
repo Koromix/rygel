@@ -234,6 +234,9 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
                     json.Key("records"); json.String(session->local_key);
                 }
                 json.EndObject();
+                if (instance->config.shared_key) {
+                    json.Key("encrypt_usb"); json.Bool(true);
+                }
 
                 if (master->slaves.len) {
                     json.Key("instances"); json.StartArray();

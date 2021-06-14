@@ -59,7 +59,7 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
         }
     }
 
-    // Load configuration
+    // Get whole project settings
     {
         sq_Statement stmt;
         if (!master->db.Prepare("SELECT key, value FROM fs_settings", &stmt))
@@ -72,11 +72,7 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
             const char *value = (const char *)sqlite3_column_text(stmt, 1);
 
             if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
-                if (TestStr(key, "Name")) {
-                    if (master == this) {
-                        config.name = DuplicateString(value, &str_alloc).ptr;
-                    }
-                } else if (TestStr(key, "UseOffline")) {
+                if (TestStr(key, "UseOffline")) {
                     valid &= ParseBool(value, &config.use_offline);
                 } else if (TestStr(key, "SyncMode")) {
                     if (!OptionToEnum(SyncModeNames, value, &config.sync_mode)) {
@@ -85,8 +81,6 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                     }
                 } else if (TestStr(key, "MaxFileSize")) {
                     valid &= ParseInt(value, &config.max_file_size);
-                } else if (TestStr(key, "SharedKey")) {
-                    config.shared_key = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(key, "TokenKey")) {
                     size_t key_len;
                     int ret = sodium_base642bin(config.token_skey, RG_SIZE(config.token_skey),
@@ -107,9 +101,6 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                     config.auto_key = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(key, "AutoUser")) {
                     valid &= ParseInt(value, &config.auto_userid);
-                } else {
-                    LogError("Unknown setting '%1'", key);
-                    valid = false;
                 }
             }
         }
@@ -117,8 +108,8 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
             return false;
     }
 
-    // Get slave-specific settings (if needed)
-    if (master != this) {
+    // Get instance-specific settings
+    {
         sq_Statement stmt;
         if (!db.Prepare("SELECT key, value FROM fs_settings", &stmt))
             return false;
@@ -132,15 +123,13 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
             if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
                 if (TestStr(key, "Name")) {
                     config.name = DuplicateString(value, &str_alloc).ptr;
+                } else if (TestStr(key, "SharedKey")) {
+                    config.shared_key = DuplicateString(value, &str_alloc).ptr;
                 }
             }
         }
         if (!stmt.IsValid() || !valid)
             return false;
-
-        title = Fmt(&str_alloc, "%1 (%2)", master->title, config.name).ptr;
-    } else {
-        title = config.name;
     }
 
     // Check configuration
@@ -162,6 +151,13 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
 
         if (!valid)
             return false;
+    }
+
+    // Instance title
+    if (master != this) {
+        title = Fmt(&str_alloc, "%1 (%2)", master->title, config.name).ptr;
+    } else {
+        title = config.name;
     }
 
     return true;
