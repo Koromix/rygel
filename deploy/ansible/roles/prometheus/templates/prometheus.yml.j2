@@ -25,10 +25,12 @@ scrape_configs:
       cert_file: /opt/nginx/ssl/internal/{{ inventory_hostname }}.crt
       key_file: /opt/nginx/ssl/internal/{{ inventory_hostname }}.key
     static_configs:
-      - targets:
-{% for vars in hostvars.values() %}
+{% for host, vars in hostvars.items() %}
 {% if pkg in vars.prometheus_exporters %}
+      - targets:
           - {{ vars.prometheus_public_addr }}
+        labels:
+          instance: {{ host }}
 {% endif %}
 {% endfor %}
 {% endfor %}
