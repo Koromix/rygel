@@ -222,7 +222,7 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
 
                 json.Key("namespaces"); json.StartObject();
                 if (instance->config.shared_key) {
-                    json.Key("records"); json.String("shared");
+                    json.Key("records"); json.String("global");
                 } else {
                     json.Key("records"); json.Int64(session->userid);
                 }
