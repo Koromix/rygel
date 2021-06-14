@@ -165,8 +165,12 @@ const goupile = new function() {
                 let new_profile = await response.json();
                 await updateProfile(new_profile, true);
             } catch (err) {
-                if (!ENV.cache_offline)
+                if (ENV.cache_offline) {
+                    if (!(err instanceof NetworkError))
+                        log.error(err);
+                } else {
                     throw err;
+                }
             }
         }
 
