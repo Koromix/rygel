@@ -4,7 +4,7 @@ all:
       ansible_host: vps-53119527.vps.ovh.net
       ansible_port: 22
       ansible_user: ansible
-      ansible_ssh_private_key_file: ~/.ssh/primary
+      ansible_ssh_private_key_file: ~/.ssh/pknet/prod_primary
 
       ovh_ipv6_addr: 2001:41d0:701:1100::3f69
       ovh_ipv6_netmask: 128
@@ -152,14 +152,89 @@ all:
           3831306332653033610a626432303566353532333865636133346665353335653833643237363061
           3536
 
+      prometheus_public_addr: '{{ ansible_host }}'
+      prometheus_exporters:
+        - node_exporter
+        - nginx_exporter
+
     backup:
       ansible_host: 46.226.106.221
       ansible_port: 22
       ansible_user: ansible
-      ansible_ssh_private_key_file: ~/.ssh/backup
+      ansible_ssh_private_key_file: ~/.ssh/pknet/prod_backup
+
+      nginx_public_addr: '{{ ansible_host }}'
+      nginx_domains:
+        - name: '{{ prometheus_public_addr }}'
+          config: |
+            ssl_client_certificate /opt/nginx/ssl/internal/ca.crt;
+            ssl_verify_client on;
+            ssl_verify_depth 2;
+
+            {% for exporter in prometheus_exporters %}
+
+            location /metrics/{{ exporter }} {
+                allow {{ hostvars.monitor.nginx_public_addr }};
+                deny all;
+
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+                proxy_pass http://127.0.0.1:{{ prometheus_packages[exporter].port }}/metrics;
+            }
+            {% endfor %}
+
+      prometheus_public_addr: '{{ ansible_host }}'
+      prometheus_exporters:
+        - node_exporter
+        - nginx_exporter
 
     monitor:
       ansible_host: 46.226.106.128
       ansible_port: 22
       ansible_user: ansible
-      ansible_ssh_private_key_file: ~/.ssh/monitor
+      ansible_ssh_private_key_file: ~/.ssh/pknet/prod_monitor
+
+      nginx_public_addr: '{{ ansible_host }}'
+      nginx_domains:
+        - name: '{{ prometheus_public_addr }}'
+          config: |
+            ssl_client_certificate /opt/nginx/ssl/internal/ca.crt;
+            ssl_verify_client on;
+            ssl_verify_depth 2;
+
+            {% for exporter in prometheus_exporters %}
+
+            location /metrics/{{ exporter }} {
+                allow {{ hostvars.monitor.nginx_public_addr }};
+                deny all;
+
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+                proxy_pass http://127.0.0.1:{{ prometheus_packages[exporter].port }}/metrics;
+            }
+            {% endfor %}
+        - name: monitor.volpil.fr
+          rate_burst: 100
+          config: |
+            location /prometheus {
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+                proxy_pass http://127.0.0.1:9090;
+            }
+
+            location / {
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+                proxy_pass http://127.0.0.1:9200;
+            }
+
+      prometheus_public_addr: '{{ ansible_host }}'
+      prometheus_exporters:
+        - node_exporter
+        - nginx_exporter
+      prometheus_url: 'https://monitor.volpil.fr/prometheus'
+      grafana_url: 'https://monitor.volpil.fr/'
