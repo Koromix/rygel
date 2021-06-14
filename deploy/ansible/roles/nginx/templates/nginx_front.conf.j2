@@ -86,6 +86,10 @@ http {
     server {
         {{ util.configure_https(domain.name) }}
 
+        {% if domain.rate_burst is defined %}
+        limit_req zone=default burst={{ domain.rate_burst }} nodelay;
+        {% endif %}
+
         ssl_certificate /etc/letsencrypt/live/{{ domain.name }}/fullchain.pem;
         ssl_certificate_key /etc/letsencrypt/live/{{ domain.name }}/privkey.pem;
 

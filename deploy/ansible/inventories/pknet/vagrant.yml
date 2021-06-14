@@ -122,6 +122,7 @@ all:
             }
             {% endfor %}
         - name: pknet-monitor.local
+          rate_burst: 100
           config: |
             location /prometheus {
                 proxy_set_header Host $host;
