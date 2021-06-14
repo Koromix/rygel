@@ -225,7 +225,7 @@ function InstanceController() {
                         ${profile.userid >= 0 ? html`
                             <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Changer le mot de passe</button>
                             <hr/>
-                            ${app.lockable ? html`<button @click=${ui.wrapAction(e => runLockDialog(e, form_record.chain[0]))}>Verrouiller</button>` : ''}
+                            ${app.lockable ? html`<button @click=${ui.wrapAction(e => goupile.runLockDialog(e, form_record.chain[0].ulid))}>Verrouiller</button>` : ''}
                             ` : ''}
                         <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
                     </div>
@@ -236,13 +236,6 @@ function InstanceController() {
                              style="background-position-y: calc(-450px + 1.2em);">Se connecter</button>` : ''}
         `;
     }
-
-    function runLockDialog(e, record) {
-        if (!record.saved)
-            throw new Error('Vous devez valider cet enregistrement avant de verrouiller');
-
-        return goupile.runLockDialog(e, record.ulid);
-    };
 
     function renderFormDrop(form) {
         let meta = form_record.map[form.key];
