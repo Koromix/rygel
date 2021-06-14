@@ -146,12 +146,8 @@ html:not(.small) #ui_panels > div:not(:only-child) #ins_page { border-bottom-wid
 
 /* -------------------- Misc -------------------- */
 
-#ui_top .hid {
-    border: none;
-    border-right: 1px solid var(--menu_color_n3);
-    border-right-width: 0.5px;
-}
-html.small #ui_top .hid { display: none; }
+.ins_hid::before { content: '#'; }
+html.mobile #ui_top .ins_hid { display: none; }
 
 #ins_notice {
     position: sticky;

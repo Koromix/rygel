@@ -186,7 +186,7 @@ function InstanceController() {
             <div style="flex: 1; min-width: 15px;"></div>
 
             ${!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null ? html`
-                <button class="hid" @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
+                <button class="ins_hid" @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
                     ${form_record.chain[0].hid}
                     ${historical ? html`<br/><span style="font-size: 0.7em;">${form_record.ctime.toLocaleString()}</span>` : ''}
                 </button>
@@ -709,7 +709,7 @@ function InstanceController() {
 
                 <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
                     ${!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null ? html`
-                        <button class="hid" style=${historical ? 'color: #00ffff;' : ''}
+                        <button class="ins_hid" style=${historical ? 'color: #00ffff;' : ''}
                                 @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
                             ${form_record.chain[0].hid}
                             ${historical ? ' (historique)' : ''}
