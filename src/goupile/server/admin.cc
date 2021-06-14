@@ -1377,10 +1377,12 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
                 success &= instance->db.Run(sql, "UseOffline", 0 + config.use_offline);
                 success &= instance->db.Run(sql, "SyncMode", SyncModeNames[(int)config.sync_mode]);
                 success &= instance->db.Run(sql, "BackupKey", config.backup_key);
-                success &= instance->db.Run(sql, "SharedKey", config.shared_key);
                 success &= instance->db.Run(sql, "TokenKey", config.token_key);
                 success &= instance->db.Run(sql, "AutoKey", config.auto_key);
                 success &= instance->db.Run(sql, "AutoUser", config.auto_userid ? sq_Binding(config.auto_userid) : sq_Binding());
+            }
+            if (!instance->slaves.len) {
+                success &= instance->db.Run(sql, "SharedKey", config.shared_key);
             }
             if (!success)
                 return false;
