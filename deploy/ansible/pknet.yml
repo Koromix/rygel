@@ -21,5 +21,9 @@
       when: 'nginx_domains is defined'
     - name: goupile
       when: 'goupile_domains is defined'
+      tags:
+        - goupile
     - name: prometheus
       when: 'prometheus_exporters is defined or prometheus_url is defined'
+      tags:
+        - prometheus
