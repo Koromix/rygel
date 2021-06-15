@@ -216,6 +216,7 @@ all:
             }
             {% endfor %}
         - name: monitor.volpil.fr
+          ssl_certbot_email: niels.martignene@protonmail.com
           rate_burst: 100
           config: |
             location /prometheus {
