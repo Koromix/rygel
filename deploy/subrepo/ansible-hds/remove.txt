@@ -4,3 +4,4 @@ vagrant/ovh
 roles/ovh
 roles/base
 roles/prometheus
+roles/static

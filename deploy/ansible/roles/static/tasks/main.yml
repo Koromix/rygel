@@ -1,0 +1,62 @@
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+- name: Install packages
+  package:
+    update_cache: yes
+    pkg:
+      - git
+      - rsync
+    state: latest
+  become: yes
+
+- name: Prepare static directories
+  file:
+    path: '{{ item }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - '{{ static_root_path }}'
+    - '{{ static_root_path }}/live'
+  become: yes
+
+- name: Prepare static repository directory
+  file:
+    path: '{{ static_root_path }}/repo'
+    state: directory
+    owner: '{{ ansible_user | default(lookup("env", "USER"), True) }}'
+    recurse: yes
+  become: yes
+
+- name: Clone repositories
+  git:
+    repo: '{{ item.repo }}'
+    version: '{{ item.version | default("HEAD") }}'
+    dest: '{{ static_root_path }}/repo/{{ item.name }}'
+    force: yes
+  loop: '{{ static_deploys }}'
+  become: no
+
+- name: Extract static subdirectories
+  synchronize:
+    src: '{{ static_root_path }}/repo/{{ item.name }}/{{ item.path }}/'
+    dest: '{{ static_root_path }}/live/{{ item.name }}/'
+    delete: yes
+    recursive: yes
+    rsync_opts:
+      - '--exclude=".*"'
+  delegate_to: "{{ inventory_hostname }}"
+  loop: '{{ static_deploys }}'
+  become: yes

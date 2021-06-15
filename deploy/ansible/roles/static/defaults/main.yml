@@ -11,26 +11,5 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-- name: pknet
-
-  hosts: all
-
-  roles:
-    - name: base
-      tags:
-        - base
-    - name: nginx
-      when: 'nginx_domains is defined'
-      tags:
-        - nginx
-    - name: goupile
-      when: 'goupile_domains is defined'
-      tags:
-        - goupile
-    - name: prometheus
-      when: 'prometheus_exporters is defined or prometheus_url is defined'
-      tags:
-        - prometheus
-    - name: static
-      tags:
-        - static
+static_root_path: /opt/static
+static_deploys: []
