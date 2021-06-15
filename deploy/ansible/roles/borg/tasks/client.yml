@@ -1,0 +1,64 @@
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+- name: Install Borgmatic
+  pip:
+    name: borgmatic
+    version: '{{ borgmatic_version }}'
+    virtualenv: '{{ borg_root_path }}/venv'
+    virtualenv_python: python3
+  become: yes
+
+- name: Create Borgmatic symbolic link
+  file:
+    path: '{{ borg_root_path }}/borgmatic'
+    state: link
+    src: '{{ borg_root_path }}/venv/bin/borgmatic'
+    force: yes
+    follow: no
+  become: yes
+
+- name: Create Borg SSH key for backups
+  shell:
+    cmd: |
+      mkdir -m 0700 -p /root/.ssh
+      ssh-keygen -t ed25519 -f /root/.ssh/borg -N ""
+    creates: /root/.ssh/borg
+    warn: no
+  become: yes
+
+- name: Create local temporary SSH folder
+  file:
+    path: tmp_borg_ssh
+    state: directory
+  delegate_to: localhost
+  run_once: yes
+  when: 'not ansible_check_mode'
+  become: no
+
+- name: Fetch host-specific SSH keys
+  fetch:
+    src: /root/.ssh/borg.pub
+    dest: 'tmp_borg_ssh/{{ inventory_hostname }}.pub'
+    flat: yes
+  when: 'not ansible_check_mode'
+  become: yes
+
+- name: Configure Borgmatic
+  template:
+    src: borgmatic.yml.j2
+    dest: '{{ borg_root_path }}/borgmatic.yml'
+    owner: root
+    group: root
+    mode: '0600'
+  become: yes

@@ -11,30 +11,30 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-- name: pknet
+location:
+  local_path: /opt/borg/borg
+  remote_path: /opt/borg/borg
 
-  hosts: all
+  source_directories: {{ borg_directories | to_yaml }}
 
-  roles:
-    - name: base
-      tags:
-        - base
-    - name: nginx
-      when: 'nginx_domains is defined'
-      tags:
-        - nginx
-    - name: goupile
-      when: 'goupile_domains is defined'
-      tags:
-        - goupile
-    - name: prometheus
-      when: 'prometheus_exporters is defined or prometheus_url is defined'
-      tags:
-        - prometheus
-    - name: static
-      tags:
-        - static
-    - name: borg
-      when: 'borg_public_addr is defined'
-      tags:
-        - borg
+  repositories:
+{% for host in ansible_play_hosts_all %}
+{% if hostvars[host].borg_server is defined and hostvars[host].borg_server %}
+    - 'borg@{{ hostvars[host].borg_public_addr }}:{{ borg_backup_path }}/{{ inventory_hostname }}'
+{% endif %}
+{% endfor %}
+
+storage:
+  encryption_passphrase: '{{ borg_passphrase }}'
+  ssh_command: 'ssh -i /root/.ssh/borg -o StrictHostKeyChecking=no'
+
+retention:
+  keep_daily: 14
+  keep_weekly: 2
+  keep_monthly: 6
+
+consistency:
+  checks:
+    - repository
+    - archives
+  check_last: 3

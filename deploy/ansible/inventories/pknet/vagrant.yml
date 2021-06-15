@@ -64,6 +64,9 @@ all:
         - node_exporter
         - nginx_exporter
 
+      borg_public_addr: '{{ ansible_host }}'
+      borg_passphrase: 'borg!16/default_pwd'
+
     backup:
       ansible_host: 192.168.33.28
       ansible_port: 22
@@ -96,6 +99,9 @@ all:
       prometheus_exporters:
         - node_exporter
         - nginx_exporter
+
+      borg_public_addr: '{{ ansible_host }}'
+      borg_server: yes
 
     monitor:
       ansible_host: 192.168.33.29
@@ -148,3 +154,6 @@ all:
         - nginx_exporter
       prometheus_url: 'https://pknet-monitor.local/prometheus'
       grafana_url: 'https://pknet-monitor.local/'
+
+      borg_public_addr: '{{ ansible_host }}'
+

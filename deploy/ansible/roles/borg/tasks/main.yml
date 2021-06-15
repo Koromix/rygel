@@ -1,0 +1,86 @@
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+- name: Install packages (dependencies)
+  package:
+    update_cache: yes
+    pkg:
+      - python3
+      - python3-pip
+      - virtualenv
+    state: latest
+  become: yes
+
+- name: Prepare Borg directory
+  file:
+    path: '{{ borg_root_path }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+
+- name: Install Borg
+  get_url:
+    url: '{{ borg_url }}'
+    checksum: '{{ borg_checksum }}'
+    dest: '{{ borg_root_path }}/borg'
+    mode: '0755'
+  become: yes
+
+- name: Configure Borgmatic clients
+  include: client.yml
+  when: 'borg_passphrase is defined'
+
+- name: Configure Borg servers
+  include: server.yml
+  when: borg_server
+
+- name: Delete local SSH keys
+  file:
+    path: tmp_borg_ssh
+    state: absent
+  delegate_to: localhost
+  run_once: yes
+  when: 'not ansible_check_mode'
+  become: no
+
+- name: Initialize Borg repositories
+  command: '{{ borg_root_path }}/borgmatic -c {{ borg_root_path }}/borgmatic.yml init -e repokey --append-only --verbosity 1'
+  register: borg_init
+  changed_when:
+    - '"Initializing repository at" in borg_init.stderr'
+    - '"Done." in borg_init.stderr'
+  when: 'borg_passphrase is defined'
+  become: yes
+
+- name: Install scheduled Borgmatic systemd units
+  template:
+    src: '{{ item }}.j2'
+    dest: '/etc/systemd/system/{{ item }}'
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - borgmatic.service
+    - borgmatic.timer
+  when: 'borg_passphrase is defined'
+  become: yes
+
+- name: Enabled scheduled backups
+  service:
+    name: borgmatic.timer
+    state: started
+    enabled: yes
+  when: 'borg_passphrase is defined'
+  become: yes

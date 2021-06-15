@@ -1,0 +1,57 @@
+[Unit]
+Description = Run Borgmatic backup
+Wants = network-online.target
+After = network-online.target
+
+[Service]
+Type = oneshot
+
+# Security settings for systemd running as root, optional but recommended to improve security. You
+# can disable individual settings if they cause problems for your use case. For more details, see
+# the systemd manual: https://www.freedesktop.org/software/systemd/man/systemd.exec.html
+LockPersonality=true
+# Certain borgmatic features like Healthchecks integration need MemoryDenyWriteExecute to be off.
+# But you can try setting it to "yes" for improved security if you don't use those features.
+MemoryDenyWriteExecute = no
+NoNewPrivileges = yes
+PrivateDevices = yes
+PrivateTmp = yes
+ProtectClock = yes
+ProtectControlGroups = yes
+ProtectHostname = yes
+ProtectKernelLogs = yes
+ProtectKernelModules = yes
+ProtectKernelTunables = yes
+RestrictAddressFamilies = AF_UNIX AF_INET AF_INET6 AF_NETLINK
+RestrictNamespaces = yes
+RestrictRealtime = yes
+RestrictSUIDSGID = yes
+SystemCallArchitectures = native
+SystemCallFilter = @system-service
+SystemCallErrorNumber = EPERM
+# Restrict write access
+# Change to 'ProtectSystem=strict' and uncomment 'ProtectHome' to make the whole file
+# system read-only be default and uncomment 'ReadWritePaths' for the required write access.
+# Add local repositroy paths to the list of 'ReadWritePaths' like '-/mnt/my_backup_drive'.
+ProtectSystem = full
+# ProtectHome = read-only
+# ReadWritePaths = -/root/.config/borg -/root/.cache/borg -/root/.borgmatic
+
+CapabilityBoundingSet = CAP_DAC_READ_SEARCH CAP_NET_RAW
+
+# Lower CPU and I/O priority.
+Nice = 19
+CPUSchedulingPolicy = batch
+IOSchedulingClass = best-effort
+IOSchedulingPriority = 7
+IOWeight = 100
+
+Restart = no
+# Prevent rate limiting of borgmatic log events. If you are using an older version of systemd that
+# doesn't support this (pre-240 or so), you may have to remove this option.
+LogRateLimitIntervalSec = 0
+
+# Delay start to prevent backups running during boot. Note that systemd-inhibit requires dbus and
+# dbus-user-session to be installed.
+ExecStartPre = sleep 1m
+ExecStart = systemd-inhibit --who="borgmatic" --why="Prevent interrupting scheduled backup" {{ borg_root_path }}/borgmatic --syslog-verbosity 1

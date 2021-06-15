@@ -11,30 +11,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-- name: pknet
+# Borg
 
-  hosts: all
+borg_url: 'https://github.com/borgbackup/borg/releases/download/1.1.16/borg-linux64'
+borg_checksum: 'sha256:fe1caaeee9354ead27379b8235a92eb1885d7948126d2edd49e60a2b85d4bcee'
+borgmatic_version: 1.5.14
 
-  roles:
-    - name: base
-      tags:
-        - base
-    - name: nginx
-      when: 'nginx_domains is defined'
-      tags:
-        - nginx
-    - name: goupile
-      when: 'goupile_domains is defined'
-      tags:
-        - goupile
-    - name: prometheus
-      when: 'prometheus_exporters is defined or prometheus_url is defined'
-      tags:
-        - prometheus
-    - name: static
-      tags:
-        - static
-    - name: borg
-      when: 'borg_public_addr is defined'
-      tags:
-        - borg
+borg_root_path: /opt/borg
+borg_backup_path: '{{ borg_root_path }}/backup'
+
+borg_public_addr: '{{ ansible_default_ipv4.address }}'
+
+borg_directories: []
+borg_time: '02:00'
+
+borg_server: no

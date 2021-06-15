@@ -5,3 +5,4 @@ roles/ovh
 roles/base
 roles/prometheus
 roles/static
+roles/borg

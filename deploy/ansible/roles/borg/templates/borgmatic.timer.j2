@@ -1,0 +1,9 @@
+[Unit]
+Description = Run Borgmatic backup
+
+[Timer]
+OnCalendar = {{ borg_time }}
+Persistent = true
+
+[Install]
+WantedBy = timers.target
