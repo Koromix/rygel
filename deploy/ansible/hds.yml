@@ -16,10 +16,10 @@
   hosts: all
 
   roles:
+    - role: nginx
+      tags:
+        - nginx
     - role: goupile
       when: 'inventory_hostname == "server"'
       tags:
         - goupile
-    - role: nginx
-      tags:
-        - nginx
