@@ -39,6 +39,15 @@
     key: '{{ lookup("file", "{{ ssh_key_file }}.pub") }}'
   become: yes
 
+- name: Enable password-less sudo for ansible user
+  copy:
+    content: 'ansible ALL=(ALL) NOPASSWD: ALL'
+    dest: '/etc/sudoers.d/ansible'
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+
 - name: Install packages
   package:
     update_cache: yes
