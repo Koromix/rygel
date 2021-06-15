@@ -11,21 +11,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-primary_ip = '192.168.33.20'
-backup_ip = '192.168.33.21'
-monitor_ip = '192.168.33.22'
+host1_ip = '192.168.33.20'
+backup_ip = '192.168.33.28'
+monitor_ip = '192.168.33.29'
 
 Vagrant.configure('2') do |config|
     config.hostmanager.enabled = true
     config.hostmanager.manage_host = true
 
-    config.vm.define 'primary' do |m|
+    config.vm.define 'host1' do |m|
         m.vm.box = 'generic/debian10'
-        m.vm.hostname = 'pknet.local'
-        m.vm.network 'private_network', ip: primary_ip
+        m.vm.hostname = 'pknet-host1.local'
+        m.vm.network 'private_network', ip: host1_ip
 
         m.vm.provider 'virtualbox' do |v|
-            v.name = 'pknet_primary'
+            v.name = 'pknet_host1'
             v.memory = 4096
             v.cpus = 4
             v.linked_clone = true

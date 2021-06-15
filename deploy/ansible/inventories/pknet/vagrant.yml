@@ -1,10 +1,10 @@
 all:
   hosts:
-    primary:
+    host1:
       ansible_host: 192.168.33.20
       ansible_port: 22
       ansible_user: ansible
-      ansible_ssh_private_key_file: .vagrant/machines/primary/virtualbox/private_key
+      ansible_ssh_private_key_file: .vagrant/machines/host1/virtualbox/private_key
 
       nginx_public_addr: '{{ ansible_host }}'
       nginx_domains:

@@ -1,10 +1,10 @@
 all:
   hosts:
-    primary:
+    host1:
       ansible_host: vps-53119527.vps.ovh.net
       ansible_port: 22
       ansible_user: ansible
-      ansible_ssh_private_key_file: ~/.ssh/pknet/prod_primary
+      ansible_ssh_private_key_file: ~/.ssh/pknet/prod_host1
 
       ovh_ipv6_addr: 2001:41d0:701:1100::3f69
       ovh_ipv6_netmask: 128
