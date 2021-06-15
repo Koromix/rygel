@@ -510,7 +510,28 @@ function Mutex() {
     root.prev = root;
     root.next = root;
 
-    this.lock = function() {
+    let chain = false;
+
+    this.run = async function(func) {
+        let locked = await lock();
+
+        try {
+            let ret = await func();
+            return ret;
+        } catch (err) {
+            throw err;
+        } finally {
+            if (locked)
+                unlock();
+        }
+    };
+
+    function lock() {
+        if (chain) {
+            chain = false;
+            return false;
+        }
+
         return new Promise((resolve, reject) => {
             let node = {
                 prev: root.prev,
@@ -522,37 +543,27 @@ function Mutex() {
             root.prev = node;
 
             if (node.prev === root)
-                resolve();
+                resolve(true);
         });
     };
 
-    this.unlock = function() {
-        if (root.prev !== root) {
-            let node = root.prev;
+    function unlock() {
+        if (root.next !== root) {
+            let node = root.next;
 
             node.next.prev = node.prev;
             node.prev.next = node.next;
+        }
 
-            node.resolve();
+        if (root.next !== root) {
+            let node = root.next;
+            node.resolve(true);
         }
     };
 
-    this.run = async function(func) {
-        await self.lock();
-
-        try {
-            let ret = await func();
-            return ret;
-        } catch (err) {
-            throw err;
-        } finally {
-            self.unlock();
-        }
-    };
-
-    this.chain = function(func, ...args) {
-        self.unlock();
-        return func(...args);
+    this.chain = function(func) {
+        chain = true;
+        return func();
     };
 }
 

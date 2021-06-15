@@ -1790,7 +1790,7 @@ function InstanceController() {
         page_code = new_code;
         form_dictionaries = new_dictionaries;
 
-        await mutex.chain(self.run, options.push_history);
+        await mutex.chain(() => self.run(options.push_history));
     };
     this.go = util.serialize(this.go, mutex);
 
