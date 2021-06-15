@@ -26,7 +26,7 @@ scrape_configs:
       key_file: /opt/nginx/ssl/internal/{{ inventory_hostname }}.key
     static_configs:
 {% for host, vars in hostvars.items() %}
-{% if pkg in vars.prometheus_exporters %}
+{% if vars.prometheus_exporters is defined and pkg in vars.prometheus_exporters %}
       - targets:
           - {{ vars.prometheus_public_addr }}
         labels:
