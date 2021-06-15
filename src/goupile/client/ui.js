@@ -108,6 +108,8 @@ const ui = new function() {
         // above screen and modal dialogs (which show up above eveyerthing else), but
         // below menu bar dropdown menus.
         log_el.style.zIndex = (dialogs.next != dialogs) ? 999999999 : 99999;
+
+        document.body.classList.remove('gp_loading');
     };
 
     this.setMenu = function(func) {
@@ -208,6 +210,8 @@ const ui = new function() {
             // Show it!
             document.querySelector('#ui_root').appendChild(dialog.el);
             dialog.render();
+
+            document.body.classList.remove('gp_loading');
         });
     };
 

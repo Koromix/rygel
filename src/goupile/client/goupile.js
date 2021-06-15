@@ -68,8 +68,6 @@ const goupile = new function() {
             }
         }
 
-        document.body.classList.remove('gp_loading');
-
         if (profile.authorized) {
             await initAfterAuthorization();
         } else if (profile.confirm == 'SMS') {
