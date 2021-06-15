@@ -122,8 +122,9 @@ all:
             }
             {% endfor %}
         - name: pknet-monitor.local
-          rate_burst: 100
           config: |
+            limit_req zone=default burst=100 nodelay;
+
             location /prometheus {
                 proxy_set_header Host $host;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
