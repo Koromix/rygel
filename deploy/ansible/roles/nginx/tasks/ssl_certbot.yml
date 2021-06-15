@@ -17,14 +17,25 @@
     creates: /opt/nginx/ssl/self.crt
   become: yes
 
-- name: Bootstrap missing Let's Encrypt directories
+- name: Bootstrap Let's Encrypt configuration directories
+  file:
+    path: '{{ item }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - '/etc/letsencrypt'
+    - '/etc/letsencrypt/live'
+  become: yes
+
+- name: Bootstrap missing Let's Encrypt domain directories
   file:
     path: '/etc/letsencrypt/live/{{ item.name }}'
     state: directory
     owner: root
     group: root
-    mode: '0600'
-    recurse: yes
+    mode: '0700'
   loop: '{{ nginx_domains }}'
   become: yes
 

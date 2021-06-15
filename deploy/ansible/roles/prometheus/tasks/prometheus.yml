@@ -24,6 +24,23 @@
   set_fact:
     prometheus_services: '{{ (prometheus_exporters | default([])) + (["prometheus"] if prometheus_url is defined else []) }}'
 
+- name: Prepare Prometheus directories
+  file:
+    path: '{{ item }}'
+    state: directory
+    mode: '0755'
+  loop:
+    - path: '{{ prometheus_root_path }}'
+      owner: root
+      group: root
+    - path: '{{ prometheus_root_path }}/packages'
+      owner: root
+      group: root
+    - path: '{{ prometheus_root_path }}/data'
+      owner: prometheus
+      group: prometheus
+  become: yes
+
 - name: Prepare Prometheus package directories
   file:
     path: '{{ prometheus_root_path }}/packages/{{ item }}'
@@ -31,18 +48,7 @@
     owner: root
     group: root
     mode: '0755'
-    recurse: yes
   loop: '{{ prometheus_services }}'
-  become: yes
-
-- name: Prepare Prometheus data directory
-  file:
-    path: '{{ prometheus_root_path }}/data'
-    state: directory
-    owner: prometheus
-    group: prometheus
-    mode: '0755'
-  when: 'prometheus_url is defined'
   become: yes
 
 - name: Download Prometheus packages
