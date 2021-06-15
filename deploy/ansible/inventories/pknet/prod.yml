@@ -4,7 +4,7 @@ all:
       ansible_host: vps-53119527.vps.ovh.net
       ansible_port: 22
       ansible_user: ansible
-      ansible_ssh_private_key_file: ~/.ssh/pknet/prod_host1
+      ansible_ssh_private_key_file: ~/.ssh/pknet/prod
 
       ovh_ipv6_addr: 2001:41d0:701:1100::3f69
       ovh_ipv6_netmask: 128
@@ -161,7 +161,7 @@ all:
       ansible_host: 46.226.106.221
       ansible_port: 22
       ansible_user: ansible
-      ansible_ssh_private_key_file: ~/.ssh/pknet/prod_backup
+      ansible_ssh_private_key_file: ~/.ssh/pknet/prod
 
       nginx_public_addr: '{{ ansible_host }}'
       nginx_domains:
@@ -193,7 +193,7 @@ all:
       ansible_host: 46.226.106.128
       ansible_port: 22
       ansible_user: ansible
-      ansible_ssh_private_key_file: ~/.ssh/pknet/prod_monitor
+      ansible_ssh_private_key_file: ~/.ssh/pknet/prod
 
       nginx_public_addr: '{{ ansible_host }}'
       nginx_domains:
