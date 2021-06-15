@@ -57,6 +57,6 @@
     recursive: yes
     rsync_opts:
       - '--exclude=".*"'
-  delegate_to: "{{ inventory_hostname }}"
+  delegate_to: '{{ inventory_hostname }}'
   loop: '{{ static_deploys }}'
   become: yes
