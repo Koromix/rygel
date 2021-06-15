@@ -48,6 +48,22 @@
     mode: '0644'
   become: yes
 
+- name: Disable root login over SSH
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    regexp: '^PermitRootLogin'
+    line: 'PermitRootLogin no'
+    state: present
+  register: disable_root_sshd
+  become: yes
+
+- name: Restart sshd to disable root login
+  service:
+    name: sshd
+    state: restarted
+  when: disable_root_sshd.changed
+  become: yes
+
 - name: Install packages
   package:
     update_cache: yes
