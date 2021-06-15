@@ -21,3 +21,5 @@
       tags:
         - goupile
     - role: nginx
+      tags:
+        - nginx

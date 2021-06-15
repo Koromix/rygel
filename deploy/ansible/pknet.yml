@@ -17,8 +17,12 @@
 
   roles:
     - name: base
+      tags:
+        - base
     - name: nginx
       when: 'nginx_domains is defined'
+      tags:
+        - nginx
     - name: goupile
       when: 'goupile_domains is defined'
       tags:
