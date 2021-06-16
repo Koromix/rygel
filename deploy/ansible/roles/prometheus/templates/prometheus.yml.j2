@@ -25,10 +25,10 @@ scrape_configs:
       cert_file: /opt/nginx/ssl/internal/{{ inventory_hostname }}.crt
       key_file: /opt/nginx/ssl/internal/{{ inventory_hostname }}.key
     static_configs:
-{% for host, vars in hostvars.items() %}
-{% if vars.prometheus_exporters is defined and pkg in vars.prometheus_exporters %}
+{% for host in ansible_play_hosts_all %}
+{% if hostvars[host].prometheus_exporters is defined and pkg in hostvars[host].prometheus_exporters %}
       - targets:
-          - {{ vars.prometheus_public_addr }}
+          - {{ hostvars[host].prometheus_public_addr }}
         labels:
           instance: {{ host }}
 {% endif %}

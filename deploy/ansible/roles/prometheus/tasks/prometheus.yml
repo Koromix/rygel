@@ -26,8 +26,10 @@
 
 - name: Prepare Prometheus directories
   file:
-    path: '{{ item }}'
+    path: '{{ item.path }}'
     state: directory
+    owner: '{{ item.owner }}'
+    group: '{{ item.group }}'
     mode: '0755'
   loop:
     - path: '{{ prometheus_root_path }}'
