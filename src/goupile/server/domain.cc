@@ -196,7 +196,7 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
         config.temp_directory = NormalizePath("tmp", root_directory, &config.str_alloc).ptr;
     }
     if (!config.backup_directory) {
-        config.backup_directory = NormalizePath("backup", root_directory, &config.str_alloc).ptr;
+        config.backup_directory = NormalizePath("backups", root_directory, &config.str_alloc).ptr;
     }
 
     std::swap(*out_config, config);

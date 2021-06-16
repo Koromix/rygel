@@ -44,7 +44,7 @@ R"([Paths]
 # DatabaseFile = goupile.db
 # InstanceDirectory = instances
 # TempDirectory = tmp
-# BackupDirectory = backup
+# BackupDirectory = backups
 
 [Data]
 BackupKey = %1
