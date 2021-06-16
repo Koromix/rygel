@@ -293,9 +293,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
         // Try static assets
         {
-            const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
-
             if (TestStr(admin_url, "/")) {
+                const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
                 RG_ASSERT(asset);
 
                 AssetInfo copy = *asset;
@@ -332,9 +331,19 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
                 AttachStatic(copy, etag, request, io);
                 return;
-            } else if (asset) {
+            } else if (TestStr(admin_url, "/favicon.png")) {
+                const AssetInfo *asset = assets_map.FindValue("/static/admin.png", nullptr);
+                RG_ASSERT(asset);
+
                 AttachStatic(*asset, etag, request, io);
                 return;
+            } else {
+                const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
+
+                if (asset) {
+                    AttachStatic(*asset, etag, request, io);
+                    return;
+                }
             }
         }
 
