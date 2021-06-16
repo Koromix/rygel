@@ -5,6 +5,7 @@ all:
       ansible_port: 22
       ansible_user: ansible
       ansible_ssh_private_key_file: .vagrant/machines/host1/virtualbox/private_key
+      ansible_python_interpreter: /usr/bin/python3
 
       nginx_public_addr: '{{ ansible_host }}'
       nginx_domains:
@@ -68,6 +69,7 @@ all:
       ansible_port: 22
       ansible_user: vagrant
       ansible_ssh_private_key_file: .vagrant/machines/backup/virtualbox/private_key
+      ansible_python_interpreter: /usr/bin/python3
 
       nginx_public_addr: '{{ ansible_host }}'
       nginx_domains:
@@ -100,6 +102,7 @@ all:
       ansible_port: 22
       ansible_user: vagrant
       ansible_ssh_private_key_file: .vagrant/machines/monitor/virtualbox/private_key
+      ansible_python_interpreter: /usr/bin/python3
 
       nginx_public_addr: '{{ ansible_host }}'
       nginx_domains:
