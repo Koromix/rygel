@@ -45,6 +45,7 @@ R"([Paths]
 # InstanceDirectory = instances
 # TempDirectory = tmp
 # BackupDirectory = backups
+# SnapshotDirectory = snapshots
 
 [Data]
 BackupKey = %1
@@ -526,6 +527,8 @@ retry:
             return 1;
         if (!make_directory(domain.config.backup_directory))
             return 1;
+        if (!make_directory(domain.config.snapshot_directory))
+            return 1;
     }
 
     // Create database
@@ -927,7 +930,7 @@ restart:
     return db.Close();
 }
 
-static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = nullptr)
+static bool BackupInstances(const InstanceHolder *filter, bool encrypt, bool *out_conflict = nullptr)
 {
     BlockAllocator temp_alloc;
 
@@ -980,14 +983,14 @@ static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = n
         }
 
         HeapArray<char> buf(&temp_alloc);
-        Fmt(&buf, "%1%/%2", gp_domain.config.backup_directory, mtime_str);
+        Fmt(&buf, "%1%/%2", encrypt ? gp_domain.config.backup_directory : gp_domain.config.snapshot_directory, mtime_str);
         if (filter) {
             Span<const char> basename = SplitStrReverseAny(filter->filename, RG_PATH_SEPARATORS);
             SplitStrReverse(basename, '.', &basename);
 
             Fmt(&buf, "_%1", basename);
         }
-        Fmt(&buf, ".goupilebackup");
+        Fmt(&buf, encrypt ? ".goupilebackup" : ".zip");
 
         archive_filename = buf.Leak().ptr;
     }
@@ -1036,7 +1039,7 @@ static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = n
     ctx.writer = &writer;
 
     // Write archive intro
-    {
+    if (encrypt) {
         ArchiveIntro intro = {};
 
         CopyString(ARCHIVE_SIGNATURE, intro.signature);
@@ -1060,34 +1063,45 @@ static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = n
     // Init ZIP compressor
     mz_zip_archive zip;
     mz_zip_zero_struct(&zip);
-    zip.m_pWrite = [](void *udata, mz_uint64, const void *buf, size_t len) {
-        BackupContext *ctx = (BackupContext *)udata;
-        size_t copy = len;
+    if (encrypt) {
+        zip.m_pWrite = [](void *udata, mz_uint64, const void *buf, size_t len) {
+            BackupContext *ctx = (BackupContext *)udata;
+            size_t copy = len;
 
-        while (len) {
-            size_t copy_len = std::min(len, (size_t)ctx->buf.Available());
-            memcpy_safe(ctx->buf.end(), buf, copy_len);
-            ctx->buf.len += (Size)copy_len;
+            while (len) {
+                size_t copy_len = std::min(len, (size_t)ctx->buf.Available());
+                memcpy_safe(ctx->buf.end(), buf, copy_len);
+                ctx->buf.len += (Size)copy_len;
 
-            if (!ctx->buf.Available()) {
-                uint8_t cypher[4096];
-                unsigned long long cypher_len;
-                if (crypto_secretstream_xchacha20poly1305_push(&ctx->state, cypher, &cypher_len,
-                                                               ctx->buf.data, ctx->buf.len, nullptr, 0, 0) != 0) {
-                    LogError("Failed during symmetric encryption");
-                    return (size_t)-1;
+                if (!ctx->buf.Available()) {
+                    uint8_t cypher[4096];
+                    unsigned long long cypher_len;
+                    if (crypto_secretstream_xchacha20poly1305_push(&ctx->state, cypher, &cypher_len,
+                                                                   ctx->buf.data, ctx->buf.len, nullptr, 0, 0) != 0) {
+                        LogError("Failed during symmetric encryption");
+                        return (size_t)-1;
+                    }
+                    if (!ctx->writer->Write(cypher, (Size)cypher_len))
+                        return (size_t)-1;
+                    ctx->buf.len = 0;
                 }
-                if (!ctx->writer->Write(cypher, (Size)cypher_len))
-                    return (size_t)-1;
-                ctx->buf.len = 0;
+
+                buf = (const void *)((const uint8_t *)buf + copy_len);
+                len -= copy_len;
             }
 
-            buf = (const void *)((const uint8_t *)buf + copy_len);
-            len -= copy_len;
-        }
+            return copy;
+        };
+    } else {
+        zip.m_pWrite = [](void *udata, mz_uint64, const void *buf, size_t len) {
+            BackupContext *ctx = (BackupContext *)udata;
 
-        return copy;
-    };
+            if (!ctx->writer->Write(buf, (Size)len))
+                return (size_t)-1;
+
+            return len;
+        };
+    }
     zip.m_pIO_opaque = &ctx;
     if (!mz_zip_writer_init(&zip, 0)) {
         LogError("Failed to create ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
@@ -1114,7 +1128,7 @@ static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = n
     }
 
     // Finalize encryption
-    {
+    if (encrypt) {
         uint8_t cypher[4096];
         unsigned long long cypher_len;
         if (crypto_secretstream_xchacha20poly1305_push(&ctx.state, cypher, &cypher_len, ctx.buf.data, ctx.buf.len, nullptr, 0,
@@ -1131,6 +1145,13 @@ static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = n
     if (!writer.Close())
         return false;
 
+    return true;
+}
+
+bool SnapshotDomain()
+{
+    if (!BackupInstances(nullptr, false))
+        return false;
     return true;
 }
 
@@ -1177,7 +1198,7 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
         RG_DEFER_N(ref_guard) { instance->Unref(); };
 
         bool conflict;
-        if (!BackupInstances(instance, &conflict)) {
+        if (!BackupInstances(instance, true, &conflict)) {
             if (conflict) {
                 io->AttachError(409, "Archive already exists");
             }
@@ -1713,7 +1734,7 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
 
     io->RunAsync([=]() {
         bool conflict;
-        if (!BackupInstances(nullptr, &conflict)) {
+        if (!BackupInstances(nullptr, true, &conflict)) {
             if (conflict) {
                 io->AttachError(409, "Archive already exists");
             }
@@ -2237,7 +2258,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
         // Save current instances
         {
             bool conflict;
-            if (!BackupInstances(nullptr, &conflict)) {
+            if (!BackupInstances(nullptr, true, &conflict)) {
                 if (conflict) {
                     io->AttachError(409, "Archive already exists");
                 }

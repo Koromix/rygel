@@ -730,6 +730,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             return 1;
     }
 
+    // From here on, don't quit abruptly
+    WaitForInterrupt(0);
+
     // Run!
     if (!daemon.Start(gp_domain.config.http, HandleRequest))
         return 1;

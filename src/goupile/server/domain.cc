@@ -83,6 +83,8 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         config.temp_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "BackupDirectory") {
                         config.backup_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                    } else if (prop.key == "SnapshotDirectory") {
+                        config.snapshot_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -198,6 +200,9 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
     if (!config.backup_directory) {
         config.backup_directory = NormalizePath("backups", root_directory, &config.str_alloc).ptr;
     }
+    if (!config.snapshot_directory) {
+        config.snapshot_directory = NormalizePath("snapshots", root_directory, &config.str_alloc).ptr;
+    }
 
     std::swap(*out_config, config);
     return true;
@@ -244,6 +249,8 @@ bool DomainHolder::Open(const char *filename)
     if (!MakeDirectory(config.temp_directory, false))
         return false;
     if (!MakeDirectory(config.backup_directory, false))
+        return false;
+    if (!MakeDirectory(config.snapshot_directory, false))
         return false;
 
     err_guard.Disable();

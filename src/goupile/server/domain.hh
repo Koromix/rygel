@@ -30,6 +30,7 @@ struct DomainConfig {
     const char *instances_directory = nullptr;
     const char *temp_directory = nullptr;
     const char *backup_directory = nullptr;
+    const char *snapshot_directory = nullptr;
 
     uint8_t backup_key[32] = {}; // crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES
     bool enable_backups = false;
