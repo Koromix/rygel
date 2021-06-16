@@ -27,8 +27,8 @@ bool DomainConfig::Validate() const
 {
     bool valid = true;
 
-    if (!enable_backups) {
-        LogError("Domain backup key is not set");
+    if (!enable_archives) {
+        LogError("Domain archive key is not set");
         valid = false;
     }
     valid &= http.Validate();
@@ -81,8 +81,8 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         config.instances_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "TempDirectory") {
                         config.temp_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
-                    } else if (prop.key == "BackupDirectory") {
-                        config.backup_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                    } else if (prop.key == "ArchiveDirectory" || prop.key == "BackupDirectory") {
+                        config.archive_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "SnapshotDirectory") {
                         config.snapshot_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                     } else {
@@ -96,11 +96,11 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         RG_STATIC_ASSERT(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
 
                         size_t key_len;
-                        int ret = sodium_base642bin(config.backup_key, RG_SIZE(config.backup_key),
+                        int ret = sodium_base642bin(config.archive_key, RG_SIZE(config.archive_key),
                                                     prop.value.ptr, (size_t)prop.value.len, nullptr, &key_len,
                                                     nullptr, sodium_base64_VARIANT_ORIGINAL);
                         if (!ret && key_len == 32) {
-                            config.enable_backups = true;
+                            config.enable_archives = true;
                         } else {
                             LogError("Malformed BackupKey value");
                             valid = false;
@@ -197,8 +197,8 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
     if (!config.temp_directory) {
         config.temp_directory = NormalizePath("tmp", root_directory, &config.str_alloc).ptr;
     }
-    if (!config.backup_directory) {
-        config.backup_directory = NormalizePath("backups", root_directory, &config.str_alloc).ptr;
+    if (!config.archive_directory) {
+        config.archive_directory = NormalizePath("archives", root_directory, &config.str_alloc).ptr;
     }
     if (!config.snapshot_directory) {
         config.snapshot_directory = NormalizePath("snapshots", root_directory, &config.str_alloc).ptr;
@@ -244,11 +244,11 @@ bool DomainHolder::Open(const char *filename)
         }
     }
 
-    // XXX: Check that temp_directory and backup_directory are one the same volume,
+    // XXX: Check that these directories are one the same volume,
     // because we might want to rename from one to the other atomically.
     if (!MakeDirectory(config.temp_directory, false))
         return false;
-    if (!MakeDirectory(config.backup_directory, false))
+    if (!MakeDirectory(config.archive_directory, false))
         return false;
     if (!MakeDirectory(config.snapshot_directory, false))
         return false;

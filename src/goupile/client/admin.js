@@ -16,7 +16,7 @@ function AdminController() {
 
     let instances;
     let users;
-    let backups;
+    let archives;
 
     let selected_instance;
     let selected_permissions;
@@ -25,7 +25,7 @@ function AdminController() {
         ui.setMenu(renderMenu);
         ui.createPanel('instances', 1, true, renderInstances);
         ui.createPanel('users', 0, true, renderUsers);
-        ui.createPanel('backups', 0, false, renderBackups);
+        ui.createPanel('archives', 0, false, renderArchives);
     }
 
     this.hasUnsavedData = function() {
@@ -42,9 +42,9 @@ function AdminController() {
             <button class=${'icon' + (ui.isPanelEnabled('users') ? ' active' : '')}
                     style="background-position-y: calc(-406px + 1.2em);"
                     @click=${ui.wrapAction(e => togglePanel(e, 'users'))}>Utilisateurs</button>
-            <button class=${'icon' + (ui.isPanelEnabled('backups') ? ' active' : '')}
+            <button class=${'icon' + (ui.isPanelEnabled('archives') ? ' active' : '')}
                     style="background-position-y: calc(-142px + 1.2em);"
-                    @click=${ui.wrapAction(e => togglePanel(e, 'backups'))}>Sauvegardes</button>
+                    @click=${ui.wrapAction(e => togglePanel(e, 'archives'))}>Archives</button>
             <div style="flex: 1;"></div>
             <div class="drop right" @click=${ui.deployMenu}>
                 <button class="icon" style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}>${profile.username}</button>
@@ -191,13 +191,13 @@ function AdminController() {
         }
     }
 
-    function renderBackups() {
+    function renderArchives() {
         return html`
             <div class="padded">
                 <div class="ui_quick">
-                    <a @click=${ui.wrapAction(createBackup)}>Faire une sauvegarde</a>
+                    <a @click=${ui.wrapAction(createBackup)}>Créer une archive</a>
                     <div style="flex: 1;"></div>
-                    Sauvegardes (<a @click=${ui.wrapAction(e => { backups = null; return self.go(); })}>rafraichir</a>)
+                    Archives (<a @click=${ui.wrapAction(e => { archives = null; return self.go(); })}>rafraichir</a>)
                 </div>
 
                 <table class="ui_table fixed">
@@ -209,14 +209,14 @@ function AdminController() {
                     </colgroup>
 
                     <tbody>
-                        ${!backups.length ? html`<tr><td colspan="4">Aucune sauvegarde</td></tr>` : ''}
-                        ${backups.map(bak => html`
+                        ${!archives.length ? html`<tr><td colspan="4">Aucune archive</td></tr>` : ''}
+                        ${archives.map(archive => html`
                             <tr>
-                                <td style="text-align: left;"><a href=${util.pasteURL('/admin/api/archives/download', {filename: bak.filename})}
-                                                                 download>${bak.filename}</a></td>
-                                <td>${util.formatDiskSize(bak.size)}</td>
-                                <td><a @click=${ui.wrapAction(e => runRestoreBackupDialog(e, bak.filename))}>Restaurer</a></td>
-                                <td><a @click=${ui.wrapAction(e => runDeleteBackupDialog(e, bak.filename))}>Supprimer</a></td>
+                                <td style="text-align: left;"><a href=${util.pasteURL('/admin/api/archives/download', {filename: archive.filename})}
+                                                                 download>${archive.filename}</a></td>
+                                <td>${util.formatDiskSize(archive.size)}</td>
+                                <td><a @click=${ui.wrapAction(e => runRestoreBackupDialog(e, archive.filename))}>Restaurer</a></td>
+                                <td><a @click=${ui.wrapAction(e => runDeleteBackupDialog(e, archive.filename))}>Supprimer</a></td>
                             </tr>
                         `)}
                     </tbody>
@@ -231,15 +231,15 @@ function AdminController() {
     }
 
     async function createBackup() {
-        let progress = log.progress('Sauvegarde en cours');
+        let progress = log.progress('Archivage en cours');
 
         try {
             let response = await net.fetch('/admin/api/archives/create', {method: 'POST'});
 
             if (response.ok) {
-                progress.success('Sauvegarde complétée');
+                progress.success('Archivage complété');
 
-                backups = null;
+                archives = null;
 
                 self.go();
             } else {
@@ -269,7 +269,7 @@ function AdminController() {
                         resolve();
                         progress.success('Envoi complété');
 
-                        backups = null;
+                        archives = null;
 
                         self.go();
                     } else {
@@ -305,11 +305,11 @@ function AdminController() {
 
                     if (response.ok) {
                         resolve();
-                        progress.success(`Sauvegarde '${filename}' restaurée`);
+                        progress.success(`Archive '${filename}' restaurée`);
 
                         instances = null;
                         users = null;
-                        backups = null;
+                        archives = null;
 
                         self.go();
                     } else {
@@ -338,9 +338,9 @@ function AdminController() {
             });
 
             if (response.ok) {
-                log.success(`Sauvegarde '${filename}' supprimée`);
+                log.success(`Archive '${filename}' supprimée`);
 
-                backups = null;
+                archives = null;
 
                 self.go();
             } else {
@@ -355,7 +355,7 @@ function AdminController() {
 
         let new_instances = instances;
         let new_users = users;
-        let new_backups = backups;
+        let new_archives = archives;
         let new_selected = selected_instance;
         let new_permissions = selected_permissions;
 
@@ -363,9 +363,9 @@ function AdminController() {
             new_instances = await net.fetchJson('/admin/api/instances/list');
         if (new_users == null)
             new_users = await net.fetchJson('/admin/api/users/list');
-        if (ui.isPanelEnabled('backups') && new_backups == null) {
-            new_backups = await net.fetchJson('/admin/api/archives/list');
-            new_backups.sort(util.makeComparator(bak => bak.filename));
+        if (ui.isPanelEnabled('archives') && new_archives == null) {
+            new_archives = await net.fetchJson('/admin/api/archives/list');
+            new_archives.sort(util.makeComparator(archive => archive.filename));
         }
 
         if (url != null) {
@@ -404,7 +404,7 @@ function AdminController() {
         // Commit
         instances = new_instances;
         users = new_users;
-        backups = new_backups;
+        archives = new_archives;
         selected_instance = new_selected;
         selected_permissions = new_permissions;
 
@@ -574,7 +574,7 @@ function AdminController() {
                             log.success(`Projet '${instance.key}' supprimé`);
 
                             instances = null;
-                            backups = null;
+                            archives = null;
 
                             self.go();
                         } else {

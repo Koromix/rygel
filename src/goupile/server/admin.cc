@@ -44,7 +44,7 @@ R"([Paths]
 # DatabaseFile = goupile.db
 # InstanceDirectory = instances
 # TempDirectory = tmp
-# BackupDirectory = backups
+# ArchiveDirectory = archives
 # SnapshotDirectory = snapshots
 
 [Data]
@@ -355,7 +355,7 @@ int RunInit(Span<const char *> arguments)
     // Options
     const char *username = nullptr;
     const char *password = nullptr;
-    char backup_key[45] = {};
+    char archive_key[45] = {};
     char decrypt_key[45] = {};
     const char *demo = nullptr;
     bool change_owner = false;
@@ -369,7 +369,7 @@ int RunInit(Span<const char *> arguments)
 Options:
     %!..+-u, --username <username>%!0    Name of default user
         %!..+--password <pwd>%!0         Password of default user
-        %!..+--backup_key <key>%!0       Set domain public backup key
+        %!..+--archive_key <key>%!0      Set domain public archive key
 
         %!..+--demo [<name>]%!0          Create default instance)", FelixTarget);
 
@@ -391,7 +391,7 @@ Options:
                 username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 password = opt.current_value;
-            } else if (opt.Test("--backup_key", OptionType::Value)) {
+            } else if (opt.Test("--archive_key", OptionType::Value)) {
                 RG_STATIC_ASSERT(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
 
                 uint8_t key[32];
@@ -399,12 +399,12 @@ Options:
                 int ret = sodium_base642bin(key, RG_SIZE(key), opt.current_value, strlen(opt.current_value),
                                             nullptr, &key_len, nullptr, sodium_base64_VARIANT_ORIGINAL);
                 if (ret || key_len != 32) {
-                    LogError("Malformed --backup_key value");
+                    LogError("Malformed --archive_key value");
                     return 1;
                 }
 
-                RG_ASSERT(strlen(opt.current_value) < RG_SIZE(backup_key));
-                CopyString(opt.current_value, backup_key);
+                RG_ASSERT(strlen(opt.current_value) < RG_SIZE(archive_key));
+                CopyString(opt.current_value, archive_key);
             } else if (opt.Test("--demo", OptionType::OptionalValue)) {
                 demo = opt.current_value ? opt.current_value : "demo";
 #ifndef _WIN32
@@ -482,8 +482,8 @@ retry:
     }
     LogInfo();
 
-    // Create backup key pair
-    if (!backup_key[0]) {
+    // Create archive key pair
+    if (!archive_key[0]) {
         RG_STATIC_ASSERT(crypto_box_PUBLICKEYBYTES == 32);
         RG_STATIC_ASSERT(crypto_box_SECRETKEYBYTES == 32);
 
@@ -491,7 +491,7 @@ retry:
         uint8_t sk[crypto_box_SECRETKEYBYTES];
         crypto_box_keypair(pk, sk);
 
-        sodium_bin2base64(backup_key, RG_SIZE(backup_key), pk, RG_SIZE(pk), sodium_base64_VARIANT_ORIGINAL);
+        sodium_bin2base64(archive_key, RG_SIZE(archive_key), pk, RG_SIZE(pk), sodium_base64_VARIANT_ORIGINAL);
         sodium_bin2base64(decrypt_key, RG_SIZE(decrypt_key), sk, RG_SIZE(sk), sodium_base64_VARIANT_ORIGINAL);
     }
 
@@ -501,7 +501,7 @@ retry:
         files.Append(filename);
 
         StreamWriter writer(filename);
-        Print(&writer, DefaultConfig, backup_key);
+        Print(&writer, DefaultConfig, archive_key);
         if (!writer.Close())
             return 1;
 
@@ -525,7 +525,7 @@ retry:
             return 1;
         if (!make_directory(domain.config.temp_directory))
             return 1;
-        if (!make_directory(domain.config.backup_directory))
+        if (!make_directory(domain.config.archive_directory))
             return 1;
         if (!make_directory(domain.config.snapshot_directory))
             return 1;
@@ -575,8 +575,8 @@ retry:
         LogInfo();
         LogInfo("Backup decryption key: %!..+%1%!0", decrypt_key);
         LogInfo();
-        LogInfo("You need this key to restore Goupile backups, %!..+you must not lose it!%!0");
-        LogInfo("There is no way to get it back, without it the backups are lost.");
+        LogInfo("You need this key to restore Goupile archives, %!..+you must not lose it!%!0");
+        LogInfo("There is no way to get it back, without it the archives are lost.");
     }
 
     root_guard.Disable();
@@ -983,14 +983,14 @@ static bool BackupInstances(const InstanceHolder *filter, bool encrypt, bool *ou
         }
 
         HeapArray<char> buf(&temp_alloc);
-        Fmt(&buf, "%1%/%2", encrypt ? gp_domain.config.backup_directory : gp_domain.config.snapshot_directory, mtime_str);
+        Fmt(&buf, "%1%/%2", encrypt ? gp_domain.config.archive_directory : gp_domain.config.snapshot_directory, mtime_str);
         if (filter) {
             Span<const char> basename = SplitStrReverseAny(filter->filename, RG_PATH_SEPARATORS);
             SplitStrReverse(basename, '.', &basename);
 
             Fmt(&buf, "_%1", basename);
         }
-        Fmt(&buf, encrypt ? ".goupilebackup" : ".zip");
+        Fmt(&buf, encrypt ? ".goupilearchive" : ".zip");
 
         archive_filename = buf.Leak().ptr;
     }
@@ -1051,7 +1051,7 @@ static bool BackupInstances(const InstanceHolder *filter, bool encrypt, bool *ou
             LogError("Failed to initialize symmetric encryption");
             return false;
         }
-        if (crypto_box_seal(intro.eskey, skey, RG_SIZE(skey), gp_domain.config.backup_key) != 0) {
+        if (crypto_box_seal(intro.eskey, skey, RG_SIZE(skey), gp_domain.config.archive_key) != 0) {
             LogError("Failed to seal symmetric key");
             return false;
         }
@@ -1792,7 +1792,7 @@ void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        const char *filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.backup_directory, basename).ptr;
+        const char *filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
 
         if (!TestFile(filename, FileType::File)) {
             io->AttachError(404);
@@ -1832,17 +1832,17 @@ void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
     HeapArray<char> buf;
 
     json.StartArray();
-    EnumStatus status = EnumerateDirectory(gp_domain.config.backup_directory, "*.goupilebackup", -1,
+    EnumStatus status = EnumerateDirectory(gp_domain.config.archive_directory, "*.goupilearchive", -1,
                                            [&](const char *basename, FileType) {
         buf.RemoveFrom(0);
 
-        const char *filename = Fmt(&buf, "%1%/%2", gp_domain.config.backup_directory, basename).ptr;
+        const char *filename = Fmt(&buf, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
 
         FileInfo file_info;
         if (!StatFile(filename, &file_info))
             return false;
 
-        // Don't list backups currently in creation
+        // Don't list archives currently in creation
         if (file_info.size) {
             json.StartObject();
             json.Key("filename"); json.String(basename);
@@ -1897,13 +1897,13 @@ void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io)
         io->AttachError(403);
         return;
     }
-    if (GetPathExtension(basename) != ".goupilebackup") {
-        LogError("Path must end with '.goupilebackup' extension");
+    if (GetPathExtension(basename) != ".goupilearchive") {
+        LogError("Path must end with '.goupilearchive' extension");
         io->AttachError(403);
         return;
     }
 
-    const char *filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.backup_directory, basename).ptr;
+    const char *filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
 
     FileInfo file_info;
     if (!StatFile(filename, &file_info)) {
@@ -1961,8 +1961,8 @@ void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io)
 
     io->RunAsync([=]() {
         int64_t time = GetUnixTime();
-        const char *filename = Fmt(&io->allocator, "%1%/upload_%2@%3.goupilebackup",
-                                   gp_domain.config.backup_directory, session->username, time).ptr;
+        const char *filename = Fmt(&io->allocator, "%1%/upload_%2@%3.goupilearchive",
+                                   gp_domain.config.archive_directory, session->username, time).ptr;
 
         StreamWriter writer;
         if (!writer.Open(filename, (int)StreamWriterFlag::Exclusive |
@@ -2048,13 +2048,13 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
             io->AttachError(403);
             return;
         }
-        if (GetPathExtension(basename) != ".goupilebackup") {
-            LogError("Path must end with '.goupilebackup' extension");
+        if (GetPathExtension(basename) != ".goupilearchive") {
+            LogError("Path must end with '.goupilearchive' extension");
             io->AttachError(403);
             return;
         }
 
-        const char *filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.backup_directory, basename).ptr;
+        const char *filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
 
         // Create temporary file
         FILE *fp = nullptr;

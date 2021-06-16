@@ -29,11 +29,11 @@ struct DomainConfig {
     const char *database_directory = nullptr;
     const char *instances_directory = nullptr;
     const char *temp_directory = nullptr;
-    const char *backup_directory = nullptr;
+    const char *archive_directory = nullptr;
     const char *snapshot_directory = nullptr;
 
-    uint8_t backup_key[32] = {}; // crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES
-    bool enable_backups = false;
+    uint8_t archive_key[32] = {}; // crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES
+    bool enable_archives = false;
     bool sync_full = false;
 
     // XXX: Restore http_Config designated initializers when MSVC ICE is fixed
