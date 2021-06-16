@@ -431,6 +431,8 @@ Options:
         return 1;
     }
 
+    DomainHolder domain;
+
     // Drop created files and directories if anything fails
     HeapArray<const char *> directories;
     HeapArray<const char *> files;
@@ -492,8 +494,7 @@ retry:
         sodium_bin2base64(decrypt_key, RG_SIZE(decrypt_key), sk, RG_SIZE(sk), sodium_base64_VARIANT_ORIGINAL);
     }
 
-    // Create domain
-    DomainHolder domain;
+    // Create domain config
     {
         const char *filename = Fmt(&temp_alloc, "%1%/goupile.ini", root_directory).ptr;
         files.Append(filename);
