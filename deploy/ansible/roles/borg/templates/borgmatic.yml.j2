@@ -26,7 +26,7 @@ location:
 
 storage:
   encryption_passphrase: '{{ borg_passphrase }}'
-  ssh_command: 'ssh -i /root/.ssh/borg -o StrictHostKeyChecking=no'
+  ssh_command: 'ssh -i /root/.ssh/borg -o StrictHostKeyChecking=no -o ServerAliveInterval=120'
 
 retention:
   keep_daily: 14
