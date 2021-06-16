@@ -46,8 +46,6 @@ prometheus_packages:
       -web.listen-address 127.0.0.1:9113 \
           -nginx.scrape-uri http://127.0.0.1:80/stub_status
 
-prometheus_public_addr: '{{ ansible_default_ipv4.address }}'
-
 # Grafana
 
 grafana_root_path: /opt/grafana
