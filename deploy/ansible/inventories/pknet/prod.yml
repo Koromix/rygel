@@ -178,6 +178,8 @@ all:
         - nginx_exporter
 
       borg_public_addr: '{{ ansible_host }}'
+      borg_directories:
+        - '{{ goupile_backup_path }}'
       borg_passphrase: !vault |
         $ANSIBLE_VAULT;1.1;AES256
         39383632613037383762363338363336653561306439376330643533616663363435633865363930

@@ -28,7 +28,8 @@ from dataclasses import dataclass
 
 @dataclass
 class DomainConfig:
-    directory = None
+    main_directory = None
+    backup_directory = None
     socket = None
     mismatch = False
 
@@ -86,12 +87,13 @@ def commit_file(filename, data):
     else:
         return False
 
-def list_domains(root_dir, names):
+def list_domains(root_dir, backup_dir, names):
     domains = {}
 
     for domain in names:
         info = DomainConfig()
-        info.directory = os.path.join(root_dir, domain)
+        info.main_directory = os.path.join(root_dir, domain)
+        info.backup_directory = os.path.join(backup_dir, domain)
         info.socket = f'/run/goupile/{domain}.sock'
 
         domains[domain] = info
@@ -107,12 +109,12 @@ def create_domain(binary, root_dir, domain, backup_key,
                      '--username', admin_username, '--password', admin_password, directory])
 
 def migrate_domain(binary, domain, info):
-    print(f'  + Migrate domain {domain} ({info.directory})', file = sys.stderr)
-    filename = os.path.join(info.directory, 'goupile.ini')
+    print(f'  + Migrate domain {domain} ({info.main_directory})', file = sys.stderr)
+    filename = os.path.join(info.main_directory, 'goupile.ini')
     execute_command([binary, 'migrate', '-C', filename])
 
     # Does not hurt safety
-    os.chmod(info.directory, 0o700)
+    os.chmod(info.main_directory, 0o700)
 
 def list_services():
     services = {}
@@ -151,9 +153,10 @@ def run_service_command(domain, cmd):
     execute_command(['systemctl', cmd, '--quiet', service])
 
 def update_domain_config(info, backup_key, smtp, sms):
-    filename = os.path.join(info.directory, 'goupile.ini')
+    filename = os.path.join(info.main_directory, 'goupile.ini')
     ini = parse_ini(filename)
 
+    ini.set('Paths', 'BackupDirectory', info.backup_directory)
     ini.set('Data', 'BackupKey', backup_key)
 
     if not ini.has_section('HTTP'):
@@ -181,7 +184,7 @@ def update_domain_config(info, backup_key, smtp, sms):
         return commit_file(filename, f.getvalue())
 
 def run_sync(config):
-    binary = os.path.join(config['Goupile.BinaryDirectory'], 'goupile')
+    binary = config['Goupile.BinaryFile']
 
     # Create missing domains
     print('>>> Create new domains', file = sys.stderr)
@@ -193,7 +196,7 @@ def run_sync(config):
                           config['Goupile.DefaultAdmin'], config['Goupile.DefaultPassword'])
 
     # List existing domains and services
-    domains = list_domains(config['Goupile.DomainDirectory'], config['Domains'].keys())
+    domains = list_domains(config['Goupile.DomainDirectory'], config['Goupile.BackupDirectory'], config['Domains'].keys())
     services = list_services()
 
     # Detect binary mismatches
@@ -206,6 +209,17 @@ def run_sync(config):
             info.mismatch = True
 
     changed = False
+
+    # Create missing backup directories
+    for info in domains.values():
+        if not os.path.exists(info.backup_directory):
+            os.mkdir(info.backup_directory, mode = 0o700)
+            shutil.chown(info.backup_directory, config['Goupile.RunUser'], config['Goupile.RunGroup'])
+
+            info.mismatch = True
+            changed = True
+
+        os.chmod(info.backup_directory, 0o700)
 
     # Update instance configuration files
     print('>>> Update Goupile configuration files', file = sys.stderr)
@@ -248,7 +262,8 @@ if __name__ == '__main__':
 
     # Parse configuration
     config = load_config('sync.ini')
-    config['Goupile.BinaryDirectory'] = os.path.abspath(config['Goupile.BinaryDirectory'])
+    config['Goupile.BinaryFile'] = os.path.abspath(config['Goupile.BinaryFile'])
     config['Goupile.DomainDirectory'] = os.path.abspath(config['Goupile.DomainDirectory'])
+    config['Goupile.BackupDirectory'] = os.path.abspath(config['Goupile.BackupDirectory'])
 
     run_sync(config)

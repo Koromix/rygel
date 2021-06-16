@@ -12,10 +12,13 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 [Goupile]
-BinaryDirectory = ..
-DomainDirectory = ../domains
+BinaryFile = {{ goupile_root_path }}/goupile
+DomainDirectory = {{ goupile_root_path }}/domains
+BackupDirectory = {{ goupile_backup_path }}
+
 RunUser = {{ goupile_run_user }}
 RunGroup = {{ goupile_run_group }}
+
 DefaultAdmin = {{ goupile_default_username }}
 DefaultPassword = {{ goupile_default_password }}
 
