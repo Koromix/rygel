@@ -1658,6 +1658,11 @@ Size ConvertUtf8ToWin32Wide(Span<const char> str, Span<wchar_t> out_str_w)
 {
     RG_ASSERT(out_str_w.len >= 2);
 
+    if (RG_UNLIKELY(!str.len)) {
+        out_str_w[0] = 0;
+        return 0;
+    }
+
     int len = MultiByteToWideChar(CP_UTF8, 0, str.ptr, (int)str.len, out_str_w.ptr, (int)out_str_w.len - 1);
     if (!len) {
         switch (GetLastError()) {
