@@ -11,9 +11,9 @@ all:
       goupile_commit: deploy_hds
       goupile_domains:
         - name: psy-lille.preprod.goupile.fr
-          backup_key: c0cxZblCz4cWCQ5xFqFHUnTnLSw2T9EKwela41402hU=
+          archive_key: c0cxZblCz4cWCQ5xFqFHUnTnLSw2T9EKwela41402hU=
         - name: demo.preprod.goupile.fr
-          backup_key: pr3m+wokFdBy2JHyCHZe4yP3vLBdQPsVkVCwG/in5xI=
+          archive_key: pr3m+wokFdBy2JHyCHZe4yP3vLBdQPsVkVCwG/in5xI=
       goupile_default_username: admin
       goupile_default_password: !vault |
         $ANSIBLE_VAULT;1.1;AES256

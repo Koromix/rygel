@@ -29,7 +29,7 @@ from dataclasses import dataclass
 @dataclass
 class DomainConfig:
     main_directory = None
-    backup_directory = None
+    snapshot_directory = None
     socket = None
     mismatch = False
 
@@ -87,25 +87,25 @@ def commit_file(filename, data):
     else:
         return False
 
-def list_domains(root_dir, backup_dir, names):
+def list_domains(root_dir, snapshot_dir, names):
     domains = {}
 
     for domain in names:
         info = DomainConfig()
         info.main_directory = os.path.join(root_dir, domain)
-        info.backup_directory = os.path.join(backup_dir, domain)
+        info.snapshot_directory = os.path.join(snapshot_dir, domain)
         info.socket = f'/run/goupile/{domain}.sock'
 
         domains[domain] = info
 
     return domains
 
-def create_domain(binary, root_dir, domain, backup_key,
+def create_domain(binary, root_dir, domain, archive_key,
                   owner_user, owner_group, admin_username, admin_password):
     directory = os.path.join(root_dir, domain)
     print(f'  + Create domain {domain} ({directory})', file = sys.stderr)
 
-    execute_command([binary, 'init', '-o', owner_user, '--backup_key', backup_key,
+    execute_command([binary, 'init', '-o', owner_user, '--archive_key', archive_key,
                      '--username', admin_username, '--password', admin_password, directory])
 
 def migrate_domain(binary, domain, info):
@@ -152,12 +152,14 @@ def run_service_command(domain, cmd):
     print(f'  + {cmd.capitalize()} {service}', file = sys.stderr)
     execute_command(['systemctl', cmd, '--quiet', service])
 
-def update_domain_config(info, backup_key, smtp, sms):
+def update_domain_config(info, archive_key, smtp, sms):
     filename = os.path.join(info.main_directory, 'goupile.ini')
     ini = parse_ini(filename)
 
-    ini.set('Paths', 'BackupDirectory', info.backup_directory)
-    ini.set('Data', 'BackupKey', backup_key)
+    ini.remove_option('Paths', 'BackupDirectory')
+    ini.set('Paths', 'SnapshotDirectory', info.snapshot_directory)
+
+    ini.set('Data', 'ArchiveKey', archive_key)
 
     if not ini.has_section('HTTP'):
         ini.add_section('HTTP')
@@ -188,15 +190,15 @@ def run_sync(config):
 
     # Create missing domains
     print('>>> Create new domains', file = sys.stderr)
-    for domain, backup_key in config['Domains'].items():
+    for domain, archive_key in config['Domains'].items():
         directory = os.path.join(config['Goupile.DomainDirectory'], domain)
         if not os.path.exists(directory):
-            create_domain(binary, config['Goupile.DomainDirectory'], domain, backup_key,
+            create_domain(binary, config['Goupile.DomainDirectory'], domain, archive_key,
                           config['Goupile.RunUser'], config['Goupile.RunGroup'],
                           config['Goupile.DefaultAdmin'], config['Goupile.DefaultPassword'])
 
     # List existing domains and services
-    domains = list_domains(config['Goupile.DomainDirectory'], config['Goupile.BackupDirectory'], config['Domains'].keys())
+    domains = list_domains(config['Goupile.DomainDirectory'], config['Goupile.SnapshotDirectory'], config['Domains'].keys())
     services = list_services()
 
     # Detect binary mismatches
@@ -210,24 +212,24 @@ def run_sync(config):
 
     changed = False
 
-    # Create missing backup directories
+    # Create missing snapshot directories
     for info in domains.values():
-        if not os.path.exists(info.backup_directory):
-            os.mkdir(info.backup_directory, mode = 0o700)
-            shutil.chown(info.backup_directory, config['Goupile.RunUser'], config['Goupile.RunGroup'])
+        if not os.path.exists(info.snapshot_directory):
+            os.mkdir(info.snapshot_directory, mode = 0o700)
+            shutil.chown(info.snapshot_directory, config['Goupile.RunUser'], config['Goupile.RunGroup'])
 
             info.mismatch = True
             changed = True
 
-        os.chmod(info.backup_directory, 0o700)
+        os.chmod(info.snapshot_directory, 0o700)
 
     # Update instance configuration files
     print('>>> Update Goupile configuration files', file = sys.stderr)
     for domain, info in domains.items():
-        backup_key = config['Domains'][domain]
+        archive_key = config['Domains'][domain]
         smtp = config.get('SMTP')
         sms = config.get('SMS')
-        if update_domain_config(info, backup_key, smtp, sms):
+        if update_domain_config(info, archive_key, smtp, sms):
             info.mismatch = True
             changed = True
 
@@ -264,6 +266,6 @@ if __name__ == '__main__':
     config = load_config('sync.ini')
     config['Goupile.BinaryFile'] = os.path.abspath(config['Goupile.BinaryFile'])
     config['Goupile.DomainDirectory'] = os.path.abspath(config['Goupile.DomainDirectory'])
-    config['Goupile.BackupDirectory'] = os.path.abspath(config['Goupile.BackupDirectory'])
+    config['Goupile.SnapshotDirectory'] = os.path.abspath(config['Goupile.SnapshotDirectory'])
 
     run_sync(config)

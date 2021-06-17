@@ -14,7 +14,7 @@
 goupile_repo: https://framagit.org/interhop/goupile.git
 goupile_commit: master
 goupile_root_path: /opt/goupile # Installation directory
-goupile_backup_path: '{{ goupile_root_path }}/backups' # Backup directory
+goupile_snapshot_path: '{{ goupile_root_path }}/snapshots' # Snapshot directory
 goupile_run_user: goupile # POSIX user that will run goupile services
 goupile_run_group: goupile # POSIX group that will run goupile services
 

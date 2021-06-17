@@ -48,7 +48,7 @@ R"([Paths]
 # SnapshotDirectory = snapshots
 
 [Data]
-BackupKey = %1
+ArchiveKey = %1
 # SynchronousFull = Off
 
 [SMS]

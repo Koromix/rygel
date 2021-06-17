@@ -92,7 +92,7 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "Data" || prop.section == "SQLite") {
                 do {
-                    if (prop.key == "BackupKey") {
+                    if (prop.key == "ArchiveKey" || prop.key == "BackupKey") {
                         RG_STATIC_ASSERT(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
 
                         size_t key_len;

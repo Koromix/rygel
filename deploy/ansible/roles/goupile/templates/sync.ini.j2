@@ -14,7 +14,7 @@
 [Goupile]
 BinaryFile = {{ goupile_root_path }}/goupile
 DomainDirectory = {{ goupile_root_path }}/domains
-BackupDirectory = {{ goupile_backup_path }}
+SnapshotDirectory = {{ goupile_snapshot_path }}
 
 RunUser = {{ goupile_run_user }}
 RunGroup = {{ goupile_run_group }}
@@ -46,5 +46,5 @@ From = {{ goupile_sms.from }}
 
 [Domains]
 {% for domain in goupile_domains -%}
-    {{ domain.name }} = {{ domain.backup_key }}
+    {{ domain.name }} = {{ domain.archive_key }}
 {% endfor %}
