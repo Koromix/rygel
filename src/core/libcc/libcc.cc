@@ -803,22 +803,23 @@ static Size FakeFloatPrecision(Span<char> buf, int K, int min_prec, int max_prec
         if (-K <= buf.len) {
             int offset = (int)buf.len + K;
             int truncate = offset + max_prec;
+            int scale = offset + max_prec;
 
             if (buf[truncate] >= '5') {
-                int i = truncate;
-                while (i >= offset && i > 0) {
-                    if (buf[i - 1] == '9') {
-                        buf[--i] = '0';
+                buf[truncate] = '0';
+
+                for (int i = truncate - 1; i >= 0; i--) {
+                    if (buf[i] == '9') {
+                        buf[i] = '0' + !i;
+                        truncate += !i;
                     } else {
-                        buf[i - 1]++;
+                        buf[i]++;
                         break;
                     }
                 }
-
-                truncate = std::max(i, offset + min_prec);
             }
 
-            *out_K -= (int)(truncate - buf.len);
+            *out_K -= (int)(scale - buf.len);
             return truncate;
         } else {
             buf[0] = '0' + (-K == buf.len + 1 && buf[0] >= '5');

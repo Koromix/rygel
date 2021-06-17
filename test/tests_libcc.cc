@@ -63,6 +63,9 @@ static void TestFormatDouble()
     TEST_STR(Fmt(buf, "%1", FmtDouble(0.08, 1, 1)), "0.1");
     TEST_STR(Fmt(buf, "%1", FmtDouble(0.001, 1, 1)), "0.0");
     TEST_STR(Fmt(buf, "%1", FmtDouble(0.008, 1, 1)), "0.0");
+    TEST_STR(Fmt(buf, "%1", FmtDouble(9.999, 1, 1)), "10.0");
+    TEST_STR(Fmt(buf, "%1", FmtDouble(9.55, 1, 1)), "9.6");
+    TEST_STR(Fmt(buf, "%1", FmtDouble(9.95, 1, 1)), "10.0");
     TEST_STR(Fmt(buf, "%1", FmtDouble(0.02, 0, 1)), "0");
     TEST_STR(Fmt(buf, "%1", FmtDouble(0.2, 0, 0)), "0");
     TEST_STR(Fmt(buf, "%1", FmtDouble(0.6, 0, 0)), "0");
