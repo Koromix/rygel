@@ -1148,6 +1148,34 @@ static bool BackupInstances(const InstanceHolder *filter, bool encrypt, bool *ou
     return true;
 }
 
+int64_t PruneDomainSnapshots()
+{
+    BlockAllocator temp_alloc;
+
+    int64_t time = GetUnixTime();
+    int64_t max_mtime = 0;
+
+    EnumStatus status = EnumerateDirectory(gp_domain.config.snapshot_directory, nullptr, -1,
+                                           [&](const char *filename, FileType file_type) {
+        filename = Fmt(&temp_alloc, "%1%/%2", gp_domain.config.snapshot_directory, filename).ptr;
+
+        FileInfo file_info;
+        if (!StatFile(filename, &file_info))
+            return false;
+
+        if (time - file_info.modification_time > 7 * 86400 * 1000) {
+            UnlinkFile(filename);
+        }
+
+        max_mtime = std::max(max_mtime, file_info.modification_time);
+        return true;
+    });
+    if (status != EnumStatus::Done)
+        return -1;
+
+    return max_mtime;
+}
+
 bool SnapshotDomain()
 {
     if (!BackupInstances(nullptr, false))

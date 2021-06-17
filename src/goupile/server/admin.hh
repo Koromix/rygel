@@ -22,6 +22,7 @@ int RunInit(Span<const char *> arguments);
 int RunMigrate(Span<const char *> arguments);
 int RunUnseal(Span<const char *> arguments);
 
+int64_t PruneDomainSnapshots();
 bool SnapshotDomain();
 
 void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io);
