@@ -683,11 +683,24 @@ const net = new function() {
             if (options.headers == null)
                 options.headers = {};
 
-            // CSRF protection
-            options.headers['X-Requested-With'] = 'XMLHTTPRequest';
+            if (!options.hasOwnProperty('timeout') && options.signal == null)
+                options.timeout = 6000;
+            if (!options.headers.hasOwnProperty('X-Requested-With'))
+                options.headers['X-Requested-With'] = 'XMLHTTPRequest';
 
             for (;;) {
+                let timer;
+                if (typeof AbortController !== 'undefined' && options.timeout != null) {
+                    let controller = new AbortController;
+                    options.signal = controller.signal;
+
+                    timer = setTimeout(controller.abort, options.timeout);
+                }
+
                 let response = await fetch(request, options);
+
+                if (timer != null)
+                    clearTimeout(timer);
 
                 if (!response.ok) {
                     let retry = await self.retryHandler(response);

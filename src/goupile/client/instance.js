@@ -1569,7 +1569,11 @@ function InstanceController() {
                                 let key = `${profile.userid}:${action.filename}`;
                                 let file = await db.load('fs_files', key);
 
-                                let response = await net.fetch(url, {method: 'PUT', body: file.blob});
+                                let response = await net.fetch(url, {
+                                    method: 'PUT',
+                                    body: file.blob,
+                                    timeout: null
+                                });
                                 if (!response.ok) {
                                     let err = (await response.text()).trim();
                                     throw new Error(err);

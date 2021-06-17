@@ -262,7 +262,8 @@ function AdminController() {
                 try {
                     let response = await net.fetch('/admin/api/archives/upload', {
                         method: 'PUT',
-                        body: archive.value
+                        body: archive.value,
+                        timeout: null
                     });
 
                     if (response.ok) {
