@@ -334,7 +334,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                             json.Key("base"); json.String("/admin/");
                             json.Key("instance"); json.String("/admin/");
                         json.EndObject();
-                        json.Key("title"); json.String("Goupile Admin");
+                        json.Key("title"); json.String("Admin");
                         json.Key("permissions"); json.StartArray();
                         for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
                             Span<const char> str = ConvertToJsonName(UserPermissionNames[i], buf);

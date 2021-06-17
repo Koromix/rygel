@@ -210,6 +210,7 @@ const goupile = new function() {
         return ui.runScreen((d, resolve, reject) => {
             d.output(html`
                 <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
+                <div id="gp_title">${ENV.title}</div>
                 <br/>
             `);
 
