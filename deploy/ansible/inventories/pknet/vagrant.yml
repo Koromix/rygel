@@ -68,6 +68,7 @@ all:
       borg_directories:
         - '{{ goupile_snapshot_path }}'
       borg_passphrase: 'borg!16/default_pwd'
+      borg_time: '04:00' # Run after goupile snapshot
 
     backup:
       ansible_host: 192.168.33.28
