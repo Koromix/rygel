@@ -16,12 +16,8 @@
 
 namespace RG {
 
-void TestFormatDouble();
-void TestMatchPathName();
-void TestOptionParser();
-
-void BenchFmt();
-void BenchMatchPathName();
+void TestLibCC();
+void BenchLibCC();
 
 int RunTest(int argc, char **argv)
 {
@@ -61,18 +57,11 @@ Options:
     }
 
     if (test) {
-        PrintLn(stderr, "Testing libcc");
-        TestFormatDouble();
-        TestMatchPathName();
-        TestOptionParser();
-
+        TestLibCC();
         PrintLn();
     }
     if (bench) {
-        PrintLn(stderr, "Benchmarking libcc");
-        BenchFmt();
-        BenchMatchPathName();
-
+        BenchLibCC();
         PrintLn();
     }
 

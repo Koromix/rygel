@@ -25,7 +25,7 @@
 
 namespace RG {
 
-void TestFormatDouble()
+static void TestFormatDouble()
 {
     TEST_FUNCTION("FormatDouble");
 
@@ -71,7 +71,7 @@ void TestFormatDouble()
     TEST_STR(Fmt(buf, "%1", FmtDouble(10.2, 0, 0)), "10");
 }
 
-void TestMatchPathName()
+static void TestMatchPathName()
 {
     TEST_FUNCTION("MatchPathName");
 
@@ -162,7 +162,7 @@ void TestMatchPathName()
 #undef CHECK_PATH_SPEC
 }
 
-void TestOptionParser()
+static void TestOptionParser()
 {
     TEST_FUNCTION("OptionParser");
 
@@ -406,7 +406,16 @@ void TestOptionParser()
     }
 }
 
-void BenchFmt()
+void TestLibCC()
+{
+    PrintLn(stderr, "Testing libcc");
+
+    TestFormatDouble();
+    TestMatchPathName();
+    TestOptionParser();
+}
+
+static void BenchFmt()
 {
     PrintLn("  Fmt");
 
@@ -473,7 +482,7 @@ void BenchFmt()
     });
 }
 
-void BenchMatchPathName()
+static void BenchMatchPathName()
 {
     PrintLn("  MatchPathName");
 
@@ -492,6 +501,14 @@ void BenchMatchPathName()
     RunBenchmark("MatchPathName", iterations, [&]() {
         MatchPathName("aaa/bbb", "a*/*b");
     });
+}
+
+void BenchLibCC()
+{
+    PrintLn(stderr, "Benchmarking libcc");
+
+    BenchFmt();
+    BenchMatchPathName();
 }
 
 }
