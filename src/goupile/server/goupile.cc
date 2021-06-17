@@ -295,6 +295,11 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         });
 
         AttachStatic(copy, etag, request, io);
+    } else if (TestStr(request.url, "/favicon.png")) {
+        const AssetInfo *asset = assets_map.FindValue("/favicon.png", nullptr);
+        RG_ASSERT(asset);
+
+        AttachStatic(*asset, etag, request, io);
     } else if (StartsWith(request.url, "/admin/") || TestStr(request.url, "/admin")) {
         const char *admin_url = request.url + 6;
 
