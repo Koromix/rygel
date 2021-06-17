@@ -65,6 +65,8 @@ all:
         - nginx_exporter
 
       borg_public_addr: '{{ ansible_host }}'
+      borg_directories:
+        - '{{ goupile_snapshot_path }}'
       borg_passphrase: 'borg!16/default_pwd'
 
     backup:
