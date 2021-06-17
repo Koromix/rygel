@@ -74,7 +74,14 @@
   loop:
     - borgmatic.service
     - borgmatic.timer
+  register: service_config
   when: 'borg_passphrase is defined'
+  become: yes
+
+- name: Reload systemd units
+  systemd:
+    daemon_reload: yes
+  when: service_config.changed
   become: yes
 
 - name: Enabled scheduled backups
