@@ -665,7 +665,7 @@ int RunUnseal(Span<const char *> arguments)
     const char *decrypt_key = nullptr;
 
     const auto print_usage = [&](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 unseal <archive_file>%!0
+        PrintLn(fp, R"(Usage: %!..+%1 unseal [options] <archive_file>%!0
 
 Options:
     %!..+-O, --output_file <file>%!0      Set output file

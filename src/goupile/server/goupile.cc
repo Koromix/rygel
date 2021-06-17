@@ -608,7 +608,7 @@ static int RunServe(Span<const char *> arguments)
     bool sandbox = false;
 
     const auto print_usage = [&](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 serve [options]%!0
+        PrintLn(fp, R"(Usage: %!..+%1 [serve] [options]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
