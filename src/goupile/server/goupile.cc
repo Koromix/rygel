@@ -250,6 +250,21 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     }
 #endif
 
+    if (gp_domain.config.require_host) {
+        const char *host = request.GetHeaderValue("Host");
+
+        if (!host) {
+            LogError("Request is missing required Host header");
+            io->AttachError(400);
+            return;
+        }
+        if (!TestStr(host, gp_domain.config.require_host)) {
+            LogError("Unexpected Host header '%1'", host);
+            io->AttachError(403);
+            return;
+        }
+    }
+
     // CSRF protection
     if (request.method != http_RequestMethod::Get) {
         const char *str = request.GetHeaderValue("X-Requested-With");

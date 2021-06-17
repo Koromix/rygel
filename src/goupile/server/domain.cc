@@ -138,6 +138,8 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         }
                     } else if (prop.key == "MaxAge") {
                         valid &= ParseInt(prop.value, &config.max_age);
+                    } else if (prop.key == "RequireHost") {
+                        config.require_host = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
