@@ -14,6 +14,8 @@
 [Unit]
 Description = Prometheus %i
 Documentation = https://prometheus.io/
+Wants = network-online.target
+After = network-online.target
 
 [Service]
 Type = simple
