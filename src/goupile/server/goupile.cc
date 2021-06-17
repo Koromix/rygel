@@ -744,7 +744,11 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             // Needed for asset module
             GetApplicationDirectory(),
 #endif
-            gp_domain.config.database_directory
+            gp_domain.config.database_directory,
+            gp_domain.config.instances_directory,
+            gp_domain.config.temp_directory,
+            gp_domain.config.archive_directory,
+            gp_domain.config.snapshot_directory
         };
         const char *const mask_files[] = {
             gp_domain.config.config_filename
