@@ -16,20 +16,28 @@
 
 namespace RG {
 
-void TestLibCC();
-void BenchLibCC();
+static HeapArray<const TestInfo *> tests;
+static HeapArray<const BenchmarkInfo *> benchmarks;
+
+TestInfo::TestInfo(const char *path, const char *category, const char *label, void (*func)(Size *out_total, Size *out_failures))
+    : path(path), category(category), label(label), func(func)
+{
+    tests.Append(this);
+}
+
+BenchmarkInfo::BenchmarkInfo(const char *path, const char *category, const char *label, void (*func)())
+    : path(path), category(category), label(label), func(func)
+{
+    benchmarks.Append(this);
+}
 
 int RunTest(int argc, char **argv)
 {
-    bool test = false;
-    bool bench = false;
+    // Options
+    const char *pattern = nullptr;
 
     const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp, R"(Usage: %1 [options]
-
-Options:
-        --test                   Run tests
-        --bench                  Run benchmarks)", FelixTarget);
+        PrintLn(fp, R"(Usage: %1 [pattern])", FelixTarget);
     };
 
     // Parse arguments
@@ -40,29 +48,55 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("--test")) {
-                test = true;
-            } else if (opt.Test("--bench")) {
-                bench = true;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
             }
         }
+
+        pattern = opt.ConsumeNonOption();
     }
 
-    if (!test && !bench) {
-        LogError("You must specify --test or --bench");
-        return 1;
+    // We want to group the output, make sure everything is sorted correctly
+    std::sort(tests.begin(), tests.end(), [](const TestInfo *test1, const TestInfo *test2) {
+        return CmpStr(test1->path, test2->path) < 0;
+    });
+    std::sort(benchmarks.begin(), benchmarks.end(), [](const BenchmarkInfo *bench1, const BenchmarkInfo *bench2) {
+        return CmpStr(bench1->path, bench2->path) < 0;
+    });
+
+    for (Size i = 0; i < tests.len; i++) {
+        const TestInfo &test = *tests[i];
+
+        if (!pattern || MatchPathSpec(test.path, pattern)) {
+            if (!i || !TestStr(test.category, tests[i - 1]->category)) {
+                PrintLn(stderr, "%1Tests: %!y..%2%!0", i ? "\n" : "", test.category);
+            }
+            Print(stderr, "  %!..+%1%!0", FmtArg(test.label).Pad(32));
+
+            Size total = 0;
+            Size failures = 0;
+            test.func(&total, &failures);
+
+            if (failures) {
+                PrintLn(stderr, "\n    %!R..Failed%!0 (%1/%2)", failures, total);
+            } else {
+                PrintLn(stderr, " %!G..Success%!0 (%1)", total);
+            }
+        }
     }
 
-    if (test) {
-        TestLibCC();
-        PrintLn();
-    }
-    if (bench) {
-        BenchLibCC();
-        PrintLn();
+    for (Size i = 0; i < benchmarks.len; i++) {
+        const BenchmarkInfo &bench = *benchmarks[i];
+
+        if (!pattern || MatchPathSpec(bench.path, pattern)) {
+            if (!i || !TestStr(bench.category, tests[i - 1]->category)) {
+                PrintLn(stderr, "\nBenchmarks: %!y..%1%!0", bench.category);
+            }
+            PrintLn(stderr, "  %!..+%1%!0", FmtArg(bench.label).Pad(20));
+
+            bench.func();
+        }
     }
 
     return 0;

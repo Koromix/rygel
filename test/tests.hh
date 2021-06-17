@@ -17,28 +17,39 @@
 
 namespace RG {
 
-#define TEST_FUNCTION(Label) \
-    static Size tests = 0; \
-    static Size failures = 0; \
-    Print(stderr, "  %1", FmtArg(Label).Pad(20)); \
-    RG_DEFER { ReportTestResults(tests, failures); };
+struct TestInfo {
+    const char *path;
+    const char *category;
+    const char *label;
+    void (*func)(Size *out_total, Size *out_failures);
 
-static inline void ReportTestResults(Size tests, Size failures)
-{
-    if (failures) {
-        PrintLn(stderr, "\n    %!R..Failed%!0 (%1/%2)", failures, tests);
-    } else {
-        PrintLn(stderr, " %!G..Success%!0 (%1)", tests);
-    }
-}
+    TestInfo(const char *path, const char *category, const char *label, void (*func)(Size *out_total, Size *out_failures));
+};
+
+struct BenchmarkInfo {
+    const char *path;
+    const char *category;
+    const char *label;
+    void (*func)();
+
+    BenchmarkInfo(const char *path, const char *category, const char *label, void (*func)());
+};
+
+#define TEST_FUNCTION(Category, Label) \
+    static void RG_UNIQUE_ID(func_)(Size *out_total, Size *out_failures); \
+     \
+    static const TestInfo RG_UNIQUE_ID(test_)(RG_STRINGIFY(Category) "/" RG_STRINGIFY(Label), \
+                                              RG_STRINGIFY(Category), RG_STRINGIFY(Label), RG_UNIQUE_ID(func_)); \
+     \
+    static void RG_UNIQUE_ID(func_)(Size *out_total, Size *out_failures)
 
 #define TEST_EX(Condition, ...) \
     do { \
-        tests++; \
+        (*out_total)++; \
         if (!(Condition)) { \
             Print(stderr, "\n    %!D..[%1:%2]%!0 ", SplitStrReverseAny(__FILE__, RG_PATH_SEPARATORS), __LINE__); \
             Print(stderr, __VA_ARGS__); \
-            failures++; \
+            (*out_failures)++; \
         } \
     } while (false)
 
@@ -66,9 +77,17 @@ static inline void ReportTestResults(Size tests, Size failures)
         TEST_EX(str1 == str2, "%1: '%2' == '%3'", RG_STRINGIFY(Str1), str1, str2); \
     } while (false)
 
-static inline void RunBenchmark(const char *label, Size iterations, FunctionRef<void()> func)
+#define BENCHMARK_FUNCTION(Category, Label) \
+    static void RG_UNIQUE_ID(func_)(); \
+     \
+    static const BenchmarkInfo RG_UNIQUE_ID(bench_)(RG_STRINGIFY(Category) "/" RG_STRINGIFY(Label), \
+                                                    RG_STRINGIFY(Category), RG_STRINGIFY(Label), RG_UNIQUE_ID(func_)); \
+     \
+    static void RG_UNIQUE_ID(func_)()
+
+static inline void RunBenchmark(const char *name, Size iterations, FunctionRef<void()> func)
 {
-    Print("    + %1", label);
+    Print("    %!..+%1%!0", FmtArg(name).Pad(30));
 
     int64_t time = GetMonotonicTime();
     int64_t clock = GetClockCounter();
@@ -80,7 +99,7 @@ static inline void RunBenchmark(const char *label, Size iterations, FunctionRef<
     time = GetMonotonicTime() - time;
     clock = GetClockCounter() - clock;
 
-    PrintLn(" %1 ms / %2 cycles (%3 cycles per iteration)", time, clock, clock / iterations);
+    PrintLn(" %!..+%1%!0 ms / %2 cycles (%3 cycles per iteration)", time, clock, clock / iterations);
 }
 
 }

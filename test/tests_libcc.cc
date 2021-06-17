@@ -25,10 +25,8 @@
 
 namespace RG {
 
-static void TestFormatDouble()
+TEST_FUNCTION(libcc, FormatDouble)
 {
-    TEST_FUNCTION("FormatDouble");
-
     char buf[512];
 
     // Simple stuff
@@ -74,10 +72,8 @@ static void TestFormatDouble()
     TEST_STR(Fmt(buf, "%1", FmtDouble(10.2, 0, 0)), "10");
 }
 
-static void TestMatchPathName()
+TEST_FUNCTION(libcc, MatchPathName)
 {
-    TEST_FUNCTION("MatchPathName");
-
 #define CHECK_PATH_SPEC(Pattern, Path, Expected) \
         TEST(MatchPathName(Path, Pattern) == Expected)
 
@@ -165,10 +161,8 @@ static void TestMatchPathName()
 #undef CHECK_PATH_SPEC
 }
 
-static void TestOptionParser()
+TEST_FUNCTION(libcc, OptionParser)
 {
-    TEST_FUNCTION("OptionParser");
-
     // Empty
 
     {
@@ -409,19 +403,8 @@ static void TestOptionParser()
     }
 }
 
-void TestLibCC()
+BENCHMARK_FUNCTION(libcc, BenchFmt)
 {
-    PrintLn(stderr, "Testing libcc");
-
-    TestFormatDouble();
-    TestMatchPathName();
-    TestOptionParser();
-}
-
-static void BenchFmt()
-{
-    PrintLn("  Fmt");
-
     static const int iterations = 1600000;
 
 #ifdef _WIN32
@@ -485,10 +468,8 @@ static void BenchFmt()
     });
 }
 
-static void BenchMatchPathName()
+BENCHMARK_FUNCTION(libcc, BenchMatchPathName)
 {
-    PrintLn("  MatchPathName");
-
     static const int iterations = 3000000;
 
 #ifdef _WIN32
@@ -504,14 +485,6 @@ static void BenchMatchPathName()
     RunBenchmark("MatchPathName", iterations, [&]() {
         MatchPathName("aaa/bbb", "a*/*b");
     });
-}
-
-void BenchLibCC()
-{
-    PrintLn(stderr, "Benchmarking libcc");
-
-    BenchFmt();
-    BenchMatchPathName();
 }
 
 }
