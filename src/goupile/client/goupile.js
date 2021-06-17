@@ -847,7 +847,7 @@ const goupile = new function() {
         if (ENV.backup_key == null)
             throw new Error('This instance is not configured for offline backups');
 
-        let key = profile_keys[profile.userid];
+        let key = profile_keys.records;
         if (key == null)
             throw new Error('Cannot encrypt backup without local key');
 
