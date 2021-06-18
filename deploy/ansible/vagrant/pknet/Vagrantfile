@@ -24,6 +24,9 @@ Vagrant.configure('2') do |config|
         m.vm.hostname = 'pknet-host1.local'
         m.vm.network 'private_network', ip: host1_ip
 
+        # It's kind of ugly to hardcode this but.. meh. Keep it simple
+        m.hostmanager.aliases = ['goupile1.pknet.local', 'goupile2.pknet.local']
+
         m.vm.provider 'virtualbox' do |v|
             v.name = 'pknet_host1'
             v.memory = 4096
