@@ -415,9 +415,7 @@ Options:
                     return 1;
 #endif
             } else {
-                if (!opt.TestHasFailed()) {
-                    LogError("Unknown option '%1'", opt.current_option);
-                }
+                opt.LogUnknownError();
                 return 1;
             }
         }
@@ -609,9 +607,7 @@ Options:
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 config_filename = opt.current_value;
             } else {
-                if (!opt.TestHasFailed()) {
-                    LogError("Unknown option '%1'", opt.current_option);
-                }
+                opt.LogUnknownError();
                 return 1;
             }
         }
@@ -685,9 +681,7 @@ Options:
             } else if (opt.Test("-k", "--key", OptionType::Value)) {
                 decrypt_key = opt.current_value;
             } else {
-                if (!opt.TestHasFailed()) {
-                    LogError("Unknown option '%1'", opt.current_option);
-                }
+                opt.LogUnknownError();
                 return 1;
             }
         }

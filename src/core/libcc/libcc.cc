@@ -5523,6 +5523,13 @@ bool OptionParser::Test(const char *test1, const char *test2, OptionType type)
     }
 }
 
+void OptionParser::LogUnknownError() const
+{
+    if (!TestHasFailed()) {
+        LogError("Unknown option '%1'", current_option);
+    }
+}
+
 // ------------------------------------------------------------------------
 // Console prompter (simplified readline)
 // ------------------------------------------------------------------------

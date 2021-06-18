@@ -3991,7 +3991,9 @@ public:
     bool Test(const char *test1, const char *test2, OptionType type = OptionType::NoValue);
     bool Test(const char *test1, OptionType type = OptionType::NoValue)
         { return Test(test1, nullptr, type); }
+
     bool TestHasFailed() const { return test_failed; }
+    void LogUnknownError() const;
 };
 
 template <typename T>

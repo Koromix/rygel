@@ -711,9 +711,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             } else if (opt.Test("--sandbox")) {
                 // Already handled
             } else {
-                if (!opt.TestHasFailed()) {
-                    LogError("Unknown option '%1'", opt.current_option);
-                }
+                opt.LogUnknownError();
                 return 1;
             }
         }

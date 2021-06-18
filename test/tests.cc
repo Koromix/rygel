@@ -49,7 +49,7 @@ int RunTest(int argc, char **argv)
                 print_usage(stdout);
                 return 0;
             } else {
-                LogError("Cannot handle option '%1'", opt.current_option);
+                opt.LogUnknownError();
                 return 1;
             }
         }

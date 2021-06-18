@@ -534,9 +534,7 @@ Options:
             } else if (opt.Test("--base_url", OptionType::Value)) {
                 thop_config.base_url = opt.current_value;
             } else {
-                if (!opt.TestHasFailed()) {
-                    LogError("Unknown option '%1'", opt.current_option);
-                }
+                opt.LogUnknownError();
                 return 1;
             }
         }

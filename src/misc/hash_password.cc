@@ -64,9 +64,7 @@ Options:
             } else if (opt.Test("--no_check")) {
                 check = false;
             } else {
-                if (!opt.TestHasFailed()) {
-                    LogError("Unknown option '%1'", opt.current_option);
-                }
+                opt.LogUnknownError();
                 return 1;
             }
         }

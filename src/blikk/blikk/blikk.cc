@@ -136,9 +136,7 @@ Options:
             } else if (opt.Test("--no_execute")) {
                 execute = false;
             } else {
-                if (!opt.TestHasFailed()) {
-                    LogError("Unknown option '%1'", opt.current_option);
-                }
+                opt.LogUnknownError();
                 return 1;
             }
         }

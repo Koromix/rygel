@@ -57,9 +57,7 @@ bool HandleCommonOption(OptionParser &opt)
             return false;
         }
     } else {
-        if (!opt.TestHasFailed()) {
-            LogError("Unknown option '%1'", opt.current_option);
-        }
+        opt.LogUnknownError();
         return false;
     }
 
