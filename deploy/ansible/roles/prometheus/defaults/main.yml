@@ -45,6 +45,13 @@ prometheus_packages:
     args: |
       -web.listen-address 127.0.0.1:9113 \
           -nginx.scrape-uri http://127.0.0.1:80/stub_status
+  systemd_exporter:
+    src: 'https://github.com/povilasv/systemd_exporter/releases/download/v0.4.0/systemd_exporter-0.4.0.linux-amd64.tar.gz'
+    checksum: 'sha256:e417e279c55789e7c0bd6dc68643ae164dc819425116e84c8a7e0c5a316cae03'
+    binary: systemd_exporter-0.4.0.linux-amd64/systemd_exporter
+    port: 9558
+    args: |
+      --web.listen-address 127.0.0.1:9558
 
 # Grafana
 

@@ -176,6 +176,7 @@ all:
       prometheus_exporters:
         - node_exporter
         - nginx_exporter
+        - systemd_exporter
 
       borg_public_addr: '{{ ansible_host }}'
       borg_directories:
@@ -224,6 +225,7 @@ all:
       prometheus_exporters:
         - node_exporter
         - nginx_exporter
+        - systemd_exporter
 
       borg_public_addr: '{{ ansible_host }}'
       borg_server: yes
@@ -296,6 +298,7 @@ all:
       prometheus_exporters:
         - node_exporter
         - nginx_exporter
+        - systemd_exporter
       prometheus_url: 'https://monitor.volpil.fr/prometheus'
       grafana_url: 'https://monitor.volpil.fr/'
 
