@@ -13,23 +13,23 @@
 
 [DebugSlow]
 Optimization = None
-Features = PCH, ASan
+Features = PCH, DebugInfo, ASan
 
 [DebugFast]
 Optimization = Debug
-Features = PCH, ASan
+Features = PCH, DebugInfo, ASan
 
 [Fast]
 Optimization = Fast
-Features = PCH
+Features = PCH, DebugInfo
 
 [FastLTO]
 Optimization = LTO
-Features = PCH
+Features = PCH, DebugInfo
 
 [FastStatic]
 Optimization = Fast
-Features = PCH, StaticLink
+Features = PCH, DebugInfo, StaticLink
 
 [Paranoid]
 Compiler = clang

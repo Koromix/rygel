@@ -32,7 +32,7 @@ static const char *const CompileOptimizationNames[] = {
 
 enum class CompileFeature {
     PCH = 1 << 0,
-    NoDebug = 1 << 1,
+    DebugInfo = 1 << 1,
     StaticLink = 1 << 2,
     ASan = 1 << 3,
     TSan = 1 << 4,
@@ -44,7 +44,7 @@ enum class CompileFeature {
 };
 static const OptionDesc CompileFeatureOptions[] = {
     {"PCH",         "Use precompiled headers for faster compilation"},
-    {"NoDebug",     "Omit debug information from generated binaries"},
+    {"DebugInfo",   "Add debug information to generated binaries"},
     {"StaticLink",  "Static link base system libraries (libc, etc.)"},
     {"ASan",        "Enable AdressSanitizer (ASan)"},
     {"TSan",        "Enable ThreadSanitizer (TSan)"},

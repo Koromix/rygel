@@ -167,7 +167,7 @@ public:
         uint32_t supported = 0;
 
         supported |= (int)CompileFeature::PCH;
-        supported |= (int)CompileFeature::NoDebug;
+        supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::StaticLink;
         supported |= (int)CompileFeature::ASan;
 #ifndef _WIN32
@@ -298,7 +298,7 @@ public:
 #endif
 
         // Features
-        if (!(features & (int)CompileFeature::NoDebug)) {
+        if (features & (int)CompileFeature::DebugInfo) {
             Fmt(&buf, " -g");
         }
 #ifdef _WIN32
@@ -427,7 +427,7 @@ public:
 #endif
 
         // Features
-        if (!(features & (int)CompileFeature::NoDebug)) {
+        if (features & (int)CompileFeature::DebugInfo) {
             Fmt(&buf, " -g");
         }
         if (features & (int)CompileFeature::StaticLink) {
@@ -506,7 +506,7 @@ public:
         // corrupt... just avoid PCH on MinGW
         supported |= (int)CompileFeature::PCH;
 #endif
-        supported |= (int)CompileFeature::NoDebug;
+        supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::StaticLink;
 #ifndef _WIN32
         supported |= (int)CompileFeature::ASan;
@@ -620,7 +620,7 @@ public:
 #endif
 
         // Features
-        if (!(features & (int)CompileFeature::NoDebug)) {
+        if (features & (int)CompileFeature::DebugInfo) {
             Fmt(&buf, " -g");
         }
         if (features & (int)CompileFeature::ASan) {
@@ -724,7 +724,7 @@ public:
 #endif
 
         // Features
-        Fmt(&buf, (features & (int)CompileFeature::NoDebug) ? " -s" : " -g");
+        Fmt(&buf, (features & (int)CompileFeature::DebugInfo) ? " -g" : " -s");
         if (features & (int)CompileFeature::StaticLink) {
             Fmt(&buf, " -static");
         }
@@ -790,7 +790,7 @@ public:
         uint32_t supported = 0;
 
         supported |= (int)CompileFeature::PCH;
-        supported |= (int)CompileFeature::NoDebug;
+        supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::StaticLink;
         supported |= (int)CompileFeature::ASan;
         supported |= (int)CompileFeature::CFI;
@@ -874,7 +874,7 @@ public:
                   " /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_DEPRECATE");
 
         // Features
-        if (!(features & (int)CompileFeature::NoDebug)) {
+        if (features & (int)CompileFeature::DebugInfo) {
             Fmt(&buf, " /Z7 /Zo");
         }
         Fmt(&buf, (features & (int)CompileFeature::StaticLink) ? " /MT" : " /MD");
@@ -948,7 +948,7 @@ public:
         }
 
         // Features
-        Fmt(&buf, (features & (int)CompileFeature::NoDebug) ? " /DEBUG:NONE" : " /DEBUG:FULL");
+        Fmt(&buf, (features & (int)CompileFeature::DebugInfo) ? " /DEBUG:FULL" : " /DEBUG:NONE");
         if (features & (int)CompileFeature::CFI) {
             Fmt(&buf, " /guard:cf /guard:ehcont");
         }
