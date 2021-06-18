@@ -67,6 +67,7 @@ all:
         - node_exporter
         - nginx_exporter
         - systemd_exporter
+        - borg_exporter
 
       borg_public_addr: '{{ ansible_host }}'
       borg_directories:

@@ -19,6 +19,13 @@
     virtualenv_python: python3
   become: yes
 
+- name: Create Borg status directory
+  file:
+    path: '{{ borg_root_path }}/status'
+    state: directory
+    mode: '0755'
+  become: yes
+
 - name: Create Borgmatic symbolic link
   file:
     path: '{{ borg_root_path }}/borgmatic'

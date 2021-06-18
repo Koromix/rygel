@@ -53,21 +53,32 @@
   loop: '{{ prometheus_services }}'
   become: yes
 
-- name: Download Prometheus packages
+- name: Download external Prometheus packages
   get_url:
-    url: '{{ prometheus_packages[item].src }}'
+    url: '{{ prometheus_packages[item].url }}'
     checksum: '{{ prometheus_packages[item].checksum }}'
-    dest: '{{ prometheus_root_path }}/packages/{{ prometheus_packages[item].src | basename }}'
+    dest: '{{ prometheus_root_path }}/packages/{{ prometheus_packages[item].url | basename }}'
     mode: '0644'
   loop: '{{ prometheus_services }}'
+  when: 'prometheus_packages[item].url is defined'
   become: yes
 
 - name: Extract Prometheus packages
   unarchive:
-    src: '{{ prometheus_root_path }}/packages/{{ prometheus_packages[item].src | basename }}'
+    src: '{{ prometheus_root_path }}/packages/{{ prometheus_packages[item].url | basename }}'
     remote_src: yes
     dest: '{{ prometheus_root_path }}/packages/{{ item }}'
   loop: '{{ prometheus_services }}'
+  when: 'prometheus_packages[item].url is defined'
+  become: yes
+
+- name: Install internal Prometheus exporters
+  copy:
+    src: '{{ prometheus_packages[item].src }}'
+    dest: '{{ prometheus_root_path }}/packages/{{ item }}/{{ prometheus_packages[item].binary }}'
+    mode: '0755'
+  loop: '{{ prometheus_services }}'
+  when: 'prometheus_packages[item].src is defined'
   become: yes
 
 - name: Update Prometheus exporter wrappers

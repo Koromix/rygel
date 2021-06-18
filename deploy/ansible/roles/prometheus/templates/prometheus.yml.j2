@@ -16,7 +16,7 @@ global:
   evaluation_interval: 1m
 
 scrape_configs:
-{% for pkg in prometheus_packages.keys() %}
+{% for pkg, config in prometheus_packages.items() %}
   - job_name: {{ pkg }}
     scheme: https
     metrics_path: metrics/{{ pkg }}
@@ -24,6 +24,8 @@ scrape_configs:
       ca_file: /opt/nginx/ssl/internal/ca.crt
       cert_file: /opt/nginx/ssl/internal/{{ inventory_hostname }}.crt
       key_file: /opt/nginx/ssl/internal/{{ inventory_hostname }}.key
+    scrape_interval: {{ config.scrape_interval | default('') }}
+    scrape_timeout: {{ config.scrape_timeout | default('') }}
     static_configs:
 {% for host in ansible_play_hosts_all %}
 {% if hostvars[host].prometheus_exporters is defined and pkg in hostvars[host].prometheus_exporters %}

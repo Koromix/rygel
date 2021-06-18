@@ -17,7 +17,7 @@ prometheus_root_path: /opt/prometheus # Installation directory
 
 prometheus_packages:
   prometheus:
-    src: 'https://github.com/prometheus/prometheus/releases/download/v2.27.1/prometheus-2.27.1.linux-amd64.tar.gz'
+    url: 'https://github.com/prometheus/prometheus/releases/download/v2.27.1/prometheus-2.27.1.linux-amd64.tar.gz'
     checksum: 'sha256:ce637d0167d5e6d2561f3bd37e1c58fe8601e13e4e1ea745653c068f6e1317ae'
     binary: prometheus-2.27.1.linux-amd64/prometheus
     port: 9090
@@ -31,14 +31,14 @@ prometheus_packages:
           --web.console.libraries "{{ prometheus_root_path }}/packages/prometheus/prometheus-2.27.1.linux-amd64/console_libraries" \
           --web.page-title "{{ ansible_play_name }} monitoring"
   node_exporter:
-    src: 'https://github.com/prometheus/node_exporter/releases/download/v1.1.2/node_exporter-1.1.2.linux-amd64.tar.gz'
+    url: 'https://github.com/prometheus/node_exporter/releases/download/v1.1.2/node_exporter-1.1.2.linux-amd64.tar.gz'
     checksum: 'sha256:8c1f6a317457a658e0ae68ad710f6b4098db2cad10204649b51e3c043aa3e70d'
     binary: node_exporter-1.1.2.linux-amd64/node_exporter
     port: 9100
     args: |
       --web.listen-address 127.0.0.1:9100
   nginx_exporter:
-    src: 'https://github.com/nginxinc/nginx-prometheus-exporter/releases/download/v0.9.0/nginx-prometheus-exporter_0.9.0_linux_amd64.tar.gz'
+    url: 'https://github.com/nginxinc/nginx-prometheus-exporter/releases/download/v0.9.0/nginx-prometheus-exporter_0.9.0_linux_amd64.tar.gz'
     checksum: 'sha256:469851e5705a83e9bba9eb402a7484d196293826470f4f66b1d2a4a1074b6599'
     binary: nginx-prometheus-exporter
     port: 9113
@@ -46,12 +46,21 @@ prometheus_packages:
       -web.listen-address 127.0.0.1:9113 \
           -nginx.scrape-uri http://127.0.0.1:80/stub_status
   systemd_exporter:
-    src: 'https://github.com/povilasv/systemd_exporter/releases/download/v0.4.0/systemd_exporter-0.4.0.linux-amd64.tar.gz'
+    url: 'https://github.com/povilasv/systemd_exporter/releases/download/v0.4.0/systemd_exporter-0.4.0.linux-amd64.tar.gz'
     checksum: 'sha256:e417e279c55789e7c0bd6dc68643ae164dc819425116e84c8a7e0c5a316cae03'
     binary: systemd_exporter-0.4.0.linux-amd64/systemd_exporter
     port: 9558
     args: |
       --web.listen-address 127.0.0.1:9558
+  borg_exporter:
+    src: borg_exporter
+    binary: borg_exporter
+    port: 9559
+    args: |
+      --web.listen-address 127.0.0.1:9559 \
+          --collector.info-file="{{ borg_root_path }}/status/info.json" \
+          --collector.list-file="{{ borg_root_path }}/status/list.json"
+    scrape_interval: 2m
 
 # Grafana
 

@@ -9,7 +9,7 @@ Type = oneshot
 # Security settings for systemd running as root, optional but recommended to improve security. You
 # can disable individual settings if they cause problems for your use case. For more details, see
 # the systemd manual: https://www.freedesktop.org/software/systemd/man/systemd.exec.html
-LockPersonality=true
+LockPersonality = true
 # Certain borgmatic features like Healthchecks integration need MemoryDenyWriteExecute to be off.
 # But you can try setting it to "yes" for improved security if you don't use those features.
 MemoryDenyWriteExecute = no
@@ -55,3 +55,5 @@ LogRateLimitIntervalSec = 0
 # dbus-user-session to be installed.
 ExecStartPre = sleep 1m
 ExecStart = systemd-inhibit --who="borgmatic" --why="Prevent interrupting scheduled backup" {{ borg_root_path }}/borgmatic -c {{ borg_root_path }}/borgmatic.yml --syslog-verbosity 1
+ExecStartPost = /bin/sh -c "{{ borg_root_path }}/borgmatic -c {{ borg_root_path }}/borgmatic.yml list --json > {{ borg_root_path }}/status/list.json"
+ExecStartPost = /bin/sh -c "{{ borg_root_path }}/borgmatic -c {{ borg_root_path }}/borgmatic.yml info --json > {{ borg_root_path }}/status/info.json"
