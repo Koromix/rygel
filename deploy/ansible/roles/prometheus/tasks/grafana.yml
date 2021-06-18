@@ -32,13 +32,22 @@
     state: latest
   become: yes
 
-- name: Prepare Grafana base directory
+- name: Prepare Grafana base directories
   file:
-    path: '{{ grafana_root_path }}'
+    path: '{{ item }}'
     state: directory
     owner: root
     group: root
     mode: '0755'
+  loop:
+    - '{{ grafana_root_path }}'
+    - '{{ grafana_root_path }}/provision'
+    - '{{ grafana_root_path }}/provision/access-control'
+    - '{{ grafana_root_path }}/provision/dashboards'
+    - '{{ grafana_root_path }}/provision/datasources'
+    - '{{ grafana_root_path }}/provision/notifiers'
+    - '{{ grafana_root_path }}/provision/plugins'
+    - '{{ grafana_root_path }}/dashboards'
   become: yes
 
 - name: Prepare Grafana data directory
@@ -52,9 +61,25 @@
 
 - name: Configure Grafana
   template:
-    src: 'grafana.ini.j2'
-    dest: '{{ grafana_root_path }}/grafana.ini'
+    src: '{{ item.src }}'
+    dest: '{{ item.dest }}'
+    mode: '0644'
   register: nginx_config
+  loop:
+    - src: 'grafana.ini.j2'
+      dest: '{{ grafana_root_path }}/grafana.ini'
+    - src: 'grafana_dashboards.yml.j2'
+      dest: '{{ grafana_root_path }}/provision/dashboards/ansible.yml'
+    - src: 'grafana_datasources.yml.j2'
+      dest: '{{ grafana_root_path }}/provision/datasources/ansible.yml'
+  become: yes
+
+- name: Configure Grafana dashboards
+  copy:
+    src: '{{ item }}'
+    dest: '{{ grafana_root_path }}/dashboards/{{ item | basename }}'
+    mode: '0644'
+  loop: '{{ lookup("fileglob", "dashboards/*.json", wantlist = True) }}'
   become: yes
 
 - name: Link Grafana configuration

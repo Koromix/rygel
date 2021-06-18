@@ -11,29 +11,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-app_mode = production
+apiVersion: 1
 
-[server]
-protocol = http
-http_addr = 127.0.0.1
-http_port = {{ grafana_port }}
-root_url = {{ grafana_url }}
-serve_from_sub_path = true
-
-[paths]
-data = {{ grafana_root_path }}/data
-provisioning = {{ grafana_root_path }}/provision
-
-[database]
-type = sqlite3
-path = grafana.db
-
-[security]
-admin_user = {{ grafana_default_user }}
-admin_password = {{ grafana_default_password }}
-
-[dashboards]
-default_home_dashboard_path = {{ grafana_root_path }}/dashboards/node_exporter.json
-
-# [auth.basic]
-# enabled = true
+providers:
+  - name: Ansible
+    type: file
+    updateIntervalSeconds: 120
+    disableDeletion: true
+    allowUiUpdates: false
+    options:
+      path: {{ grafana_root_path }}/dashboards
+      foldersFromFilesStructure: true
