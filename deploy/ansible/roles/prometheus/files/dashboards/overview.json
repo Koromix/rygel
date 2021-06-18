@@ -82,7 +82,7 @@
       "options": {
         "colorMode": "background",
         "graphMode": "none",
-        "justifyMode": "auto",
+        "justifyMode": "center",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -234,7 +234,7 @@
           },
           "custom": {
             "axisLabel": "",
-            "axisPlacement": "right",
+            "axisPlacement": "auto",
             "axisSoftMin": 0,
             "barAlignment": 0,
             "drawStyle": "line",
@@ -292,7 +292,7 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom"
         },
         "tooltip": {
@@ -684,7 +684,7 @@
         "h": 7,
         "w": 6,
         "x": 0,
-        "y": 9
+        "y": 17
       },
       "id": 18,
       "links": [],
@@ -808,7 +808,7 @@
         "h": 7,
         "w": 6,
         "x": 6,
-        "y": 9
+        "y": 17
       },
       "hiddenSeries": false,
       "id": 20,
@@ -1000,7 +1000,7 @@
         "h": 7,
         "w": 6,
         "x": 12,
-        "y": 9
+        "y": 17
       },
       "hiddenSeries": false,
       "id": 22,
@@ -1123,7 +1123,7 @@
         "h": 7,
         "w": 6,
         "x": 18,
-        "y": 9
+        "y": 17
       },
       "height": "",
       "hiddenSeries": false,
