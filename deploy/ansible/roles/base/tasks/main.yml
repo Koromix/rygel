@@ -11,6 +11,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
+- name: Install packages
+  package:
+    update_cache: yes
+    pkg:
+      - ufw
+    state: latest
+  become: yes
+
 - name: Configure ansible user
   user:
     name: ansible
@@ -62,14 +70,6 @@
     name: sshd
     state: restarted
   when: disable_root_sshd.changed
-  become: yes
-
-- name: Install packages
-  package:
-    update_cache: yes
-    pkg:
-      - ufw
-    state: latest
   become: yes
 
 - name: Configure IPv6 (OVH)
