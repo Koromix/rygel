@@ -25,7 +25,7 @@
 
 namespace RG {
 
-TEST_FUNCTION(libcc, FormatDouble)
+TEST_FUNCTION("libcc/TestFormatDouble")
 {
     char buf[512];
 
@@ -72,7 +72,7 @@ TEST_FUNCTION(libcc, FormatDouble)
     TEST_STR(Fmt(buf, "%1", FmtDouble(10.2, 0, 0)), "10");
 }
 
-TEST_FUNCTION(libcc, MatchPathName)
+TEST_FUNCTION("libcc/TestMatchPathName")
 {
 #define CHECK_PATH_SPEC(Pattern, Path, Expected) \
         TEST(MatchPathName(Path, Pattern) == Expected)
@@ -161,7 +161,7 @@ TEST_FUNCTION(libcc, MatchPathName)
 #undef CHECK_PATH_SPEC
 }
 
-TEST_FUNCTION(libcc, OptionParser)
+TEST_FUNCTION("libcc/TestOptionParser")
 {
     // Empty
 
@@ -403,7 +403,7 @@ TEST_FUNCTION(libcc, OptionParser)
     }
 }
 
-BENCHMARK_FUNCTION(libcc, BenchFmt)
+BENCHMARK_FUNCTION("libcc/BenchFmt")
 {
     static const int iterations = 1600000;
 
@@ -468,7 +468,7 @@ BENCHMARK_FUNCTION(libcc, BenchFmt)
     });
 }
 
-BENCHMARK_FUNCTION(libcc, BenchMatchPathName)
+BENCHMARK_FUNCTION("libcc/BenchMatchPathName")
 {
     static const int iterations = 3000000;
 

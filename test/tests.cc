@@ -19,14 +19,14 @@ namespace RG {
 static HeapArray<const TestInfo *> tests;
 static HeapArray<const BenchmarkInfo *> benchmarks;
 
-TestInfo::TestInfo(const char *path, const char *category, const char *label, void (*func)(Size *out_total, Size *out_failures))
-    : path(path), category(category), label(label), func(func)
+TestInfo::TestInfo(const char *path, void (*func)(Size *out_total, Size *out_failures))
+    : path(path), func(func)
 {
     tests.Append(this);
 }
 
-BenchmarkInfo::BenchmarkInfo(const char *path, const char *category, const char *label, void (*func)())
-    : path(path), category(category), label(label), func(func)
+BenchmarkInfo::BenchmarkInfo(const char *path, void (*func)())
+    : path(path), func(func)
 {
     benchmarks.Append(this);
 }
@@ -65,38 +65,48 @@ int RunTest(int argc, char **argv)
         return CmpStr(bench1->path, bench2->path) < 0;
     });
 
+    Size matches = 0;
+
+    // Run tests
     for (Size i = 0; i < tests.len; i++) {
         const TestInfo &test = *tests[i];
 
         if (!pattern || MatchPathSpec(test.path, pattern)) {
-            if (!i || !TestStr(test.category, tests[i - 1]->category)) {
-                PrintLn(stderr, "%1Tests: %!y..%2%!0", i ? "\n" : "", test.category);
-            }
-            Print(stderr, "  %!..+%1%!0", FmtArg(test.label).Pad(32));
+            Print(stderr, "Test: %!y..%1%!0", FmtArg(test.path).Pad(28));
 
             Size total = 0;
             Size failures = 0;
             test.func(&total, &failures);
 
             if (failures) {
-                PrintLn(stderr, "\n    %!R..Failed%!0 (%1/%2)", failures, total);
+                PrintLn(stderr, "\n    %!R..Failed%!0 (%1/%2)\n", failures, total);
             } else {
                 PrintLn(stderr, " %!G..Success%!0 (%1)", total);
             }
+
+            matches++;
         }
     }
+    if (matches) {
+        PrintLn(stderr);
+    }
 
+    // Run benchmarks
     for (Size i = 0; i < benchmarks.len; i++) {
         const BenchmarkInfo &bench = *benchmarks[i];
 
         if (!pattern || MatchPathSpec(bench.path, pattern)) {
-            if (!i || !TestStr(bench.category, tests[i - 1]->category)) {
-                PrintLn(stderr, "\nBenchmarks: %!y..%1%!0", bench.category);
-            }
-            PrintLn(stderr, "  %!..+%1%!0", FmtArg(bench.label).Pad(20));
-
+            PrintLn(stderr, "Benchmark: %!y..%1%!0", bench.path);
             bench.func();
+            PrintLn(stderr);
+
+            matches++;
         }
+    }
+
+    if (pattern && !matches) {
+        LogError("Pattern '%1' does not match any test", pattern);
+        return 1;
     }
 
     return 0;

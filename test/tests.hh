@@ -19,27 +19,22 @@ namespace RG {
 
 struct TestInfo {
     const char *path;
-    const char *category;
-    const char *label;
     void (*func)(Size *out_total, Size *out_failures);
 
-    TestInfo(const char *path, const char *category, const char *label, void (*func)(Size *out_total, Size *out_failures));
+    TestInfo(const char *path, void (*func)(Size *out_total, Size *out_failures));
 };
 
 struct BenchmarkInfo {
     const char *path;
-    const char *category;
-    const char *label;
     void (*func)();
 
-    BenchmarkInfo(const char *path, const char *category, const char *label, void (*func)());
+    BenchmarkInfo(const char *path, void (*func)());
 };
 
-#define TEST_FUNCTION(Category, Label) \
+#define TEST_FUNCTION(Path) \
     static void RG_UNIQUE_ID(func_)(Size *out_total, Size *out_failures); \
      \
-    static const TestInfo RG_UNIQUE_ID(test_)(RG_STRINGIFY(Category) "/" RG_STRINGIFY(Label), \
-                                              RG_STRINGIFY(Category), RG_STRINGIFY(Label), RG_UNIQUE_ID(func_)); \
+    static const TestInfo RG_UNIQUE_ID(test_)((Path), RG_UNIQUE_ID(func_)); \
      \
     static void RG_UNIQUE_ID(func_)(Size *out_total, Size *out_failures)
 
@@ -77,17 +72,16 @@ struct BenchmarkInfo {
         TEST_EX(str1 == str2, "%1: '%2' == '%3'", RG_STRINGIFY(Str1), str1, str2); \
     } while (false)
 
-#define BENCHMARK_FUNCTION(Category, Label) \
+#define BENCHMARK_FUNCTION(Path) \
     static void RG_UNIQUE_ID(func_)(); \
      \
-    static const BenchmarkInfo RG_UNIQUE_ID(bench_)(RG_STRINGIFY(Category) "/" RG_STRINGIFY(Label), \
-                                                    RG_STRINGIFY(Category), RG_STRINGIFY(Label), RG_UNIQUE_ID(func_)); \
+    static const BenchmarkInfo RG_UNIQUE_ID(bench_)((Path), RG_UNIQUE_ID(func_)); \
      \
     static void RG_UNIQUE_ID(func_)()
 
 static inline void RunBenchmark(const char *name, Size iterations, FunctionRef<void()> func)
 {
-    Print("    %!..+%1%!0", FmtArg(name).Pad(30));
+    Print("  %!..+%1%!0", FmtArg(name).Pad(32));
 
     int64_t time = GetMonotonicTime();
     int64_t clock = GetClockCounter();
@@ -99,7 +93,7 @@ static inline void RunBenchmark(const char *name, Size iterations, FunctionRef<v
     time = GetMonotonicTime() - time;
     clock = GetClockCounter() - clock;
 
-    PrintLn(" %!..+%1%!0 ms / %2 cycles (%3 cycles per iteration)", time, clock, clock / iterations);
+    PrintLn(" %!B..%1 ms%!0 (%2 cycles per iteration)", time, clock / iterations);
 }
 
 }
