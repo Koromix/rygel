@@ -31,6 +31,7 @@ all:
   vars:
     nginx_domains:
       - name: goupile1.hds.local
+        # ssl_certbot_email: niels.martignene@protonmail.com
         config: |
           location / {
               proxy_http_version 1.1;
@@ -43,6 +44,7 @@ all:
               proxy_pass http://unix:/run/goupile/goupile1.hds.local.sock:;
           }
       - name: goupile2.hds.local
+        # ssl_certbot_email: niels.martignene@protonmail.com
         config: |
           location / {
               proxy_http_version 1.1;

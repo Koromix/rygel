@@ -10,6 +10,7 @@ all:
       nginx_public_addr: '{{ ansible_host }}'
       nginx_domains:
         - name: '{{ prometheus_public_addr }}'
+          # ssl_certbot_email: niels.martignene@protonmail.com
           config: |
             ssl_client_certificate /opt/nginx/ssl/internal/ca.crt;
             ssl_verify_client on;
@@ -28,6 +29,7 @@ all:
             }
             {% endfor %}
         - name: goupile1.pknet.local
+          # ssl_certbot_email: niels.martignene@protonmail.com
           config: |
             location / {
                 proxy_http_version 1.1;
@@ -40,6 +42,7 @@ all:
                 proxy_pass http://unix:/run/goupile/goupile1.pknet.local.sock:;
             }
         - name: goupile2.pknet.local
+          # ssl_certbot_email: niels.martignene@protonmail.com
           config: |
             location / {
                 proxy_http_version 1.1;
@@ -80,6 +83,7 @@ all:
       nginx_public_addr: '{{ ansible_host }}'
       nginx_domains:
         - name: '{{ prometheus_public_addr }}'
+          # ssl_certbot_email: niels.martignene@protonmail.com
           config: |
             ssl_client_certificate /opt/nginx/ssl/internal/ca.crt;
             ssl_verify_client on;
@@ -116,6 +120,7 @@ all:
       nginx_public_addr: '{{ ansible_host }}'
       nginx_domains:
         - name: '{{ prometheus_public_addr }}'
+          # ssl_certbot_email: niels.martignene@protonmail.com
           config: |
             ssl_client_certificate /opt/nginx/ssl/internal/ca.crt;
             ssl_verify_client on;
@@ -134,6 +139,7 @@ all:
             }
             {% endfor %}
         - name: pknet-monitor.local
+          # ssl_certbot_email: niels.martignene@protonmail.com
           config: |
             limit_req zone=default burst=100 nodelay;
 
