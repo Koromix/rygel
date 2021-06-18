@@ -108,7 +108,7 @@ if __name__ == "__main__":
     os.chdir(script_directory)
 
     # Parse arguments
-    parser = argparse.ArgumentParser(description = 'Clone Goupile-specific repository')
+    parser = argparse.ArgumentParser(description = 'Clone public version of monorepository')
     parser.add_argument('-O', '--clone_dir', dest = 'clone_dir', action = 'store', help = 'Clone in this directory')
     parser.add_argument('--remote', dest = 'remote_url', action = 'store', default = DEFAULT_REMOTE, help = 'Change remote URL')
     parser.add_argument('--force', dest = 'force_push', action = 'store_true', help = 'Use force push to repository')
