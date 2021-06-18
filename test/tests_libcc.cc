@@ -72,6 +72,43 @@ TEST_FUNCTION("libcc/TestFormatDouble")
     TEST_STR(Fmt(buf, "%1", FmtDouble(10.2, 0, 0)), "10");
 }
 
+TEST_FUNCTION("libcc/TestFormatSize")
+{
+    char buf[512];
+
+    // Memory sizes (binary / 1024)
+    TEST_STR(Fmt(buf, "%1", FmtMemSize(999)), "999 B");
+    TEST_STR(Fmt(buf, "%1", FmtMemSize(1024)), "1.000 kiB");
+    TEST_STR(Fmt(buf, "%1", FmtMemSize(1025)), "1.001 kiB");
+    TEST_STR(Fmt(buf, "%1", FmtMemSize(10240)), "10.00 kiB");
+    TEST_STR(Fmt(buf, "%1", FmtMemSize(10243)), "10.00 kiB");
+    TEST_STR(Fmt(buf, "%1", FmtMemSize(10247)), "10.01 kiB");
+    TEST_STR(Fmt(buf, "%1", FmtMemSize(1048523)), "1023.9 kiB");
+    TEST_STR(Fmt(buf, "%1", FmtMemSize(1048524)), "1.000 MiB");
+    TEST_STR(Fmt(buf, "%1", FmtMemSize(1073688136)), "1023.9 MiB");
+    TEST_STR(Fmt(buf, "%1", FmtMemSize(1073688137)), "1.000 GiB");
+    TEST_STR(Fmt(buf, "%1", FmtMemSize(10736881370)), "10.00 GiB");
+    TEST_STR(Fmt(buf, "%1", FmtMemSize(107368813700)), "100.0 GiB");
+
+    // Disk sizes (SI / 1000)
+    TEST_STR(Fmt(buf, "%1", FmtDiskSize(999)), "999 B");
+    TEST_STR(Fmt(buf, "%1", FmtDiskSize(1000)), "1.000 kB");
+    TEST_STR(Fmt(buf, "%1", FmtDiskSize(1001)), "1.001 kB");
+    TEST_STR(Fmt(buf, "%1", FmtDiskSize(10000)), "10.00 kB");
+    TEST_STR(Fmt(buf, "%1", FmtDiskSize(10001)), "10.00 kB");
+    TEST_STR(Fmt(buf, "%1", FmtDiskSize(10005)), "10.01 kB");
+    TEST_STR(Fmt(buf, "%1", FmtDiskSize(999900)), "999.9 kB");
+    TEST_STR(Fmt(buf, "%1", FmtDiskSize(999949)), "999.9 kB");
+    TEST_STR(Fmt(buf, "%1", FmtDiskSize(999999)), "1.000 MB");
+    TEST_STR(Fmt(buf, "%1", FmtDiskSize(1000000)), "1.000 MB");
+    TEST_STR(Fmt(buf, "%1", FmtDiskSize(1001499)), "1.001 MB");
+    TEST_STR(Fmt(buf, "%1", FmtDiskSize(1001500)), "1.002 MB");
+    TEST_STR(Fmt(buf, "%1", FmtDiskSize(1000000000)), "1.000 GB");
+    TEST_STR(Fmt(buf, "%1", FmtDiskSize(1001499000)), "1.001 GB");
+    TEST_STR(Fmt(buf, "%1", FmtDiskSize(1001500000)), "1.002 GB");
+    TEST_STR(Fmt(buf, "%1", FmtDiskSize(10000000000000)), "10000.0 GB");
+}
+
 TEST_FUNCTION("libcc/TestMatchPathName")
 {
 #define CHECK_PATH_SPEC(Pattern, Path, Expected) \

@@ -1054,55 +1054,79 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             } break;
 
             case FmtType::MemorySize: {
-                size_t size_unsigned;
+                double size;
                 if (arg.u.size < 0) {
-                    size_unsigned = (size_t)-arg.u.size;
+                    size = (double)-arg.u.size;
                     if (arg.pad_len < 0 && arg.pad_char == '0') {
                         append('-');
                     } else {
                         out_buf.Append('-');
                     }
                 } else {
-                    size_unsigned = (size_t)arg.u.size;
+                    size = (double)arg.u.size;
                 }
-                if (size_unsigned > 1024 * 1024) {
-                    double size_mib = (double)size_unsigned / (1024.0 * 1024.0);
-                    out_buf.Append(FormatFloatingPoint(size_mib, 2, 2, num_buf));
+
+                if (size >= 1073688137.0) {
+                    size /= 1073741824.0;
+
+                    int prec = 1 + (size < 9.9995) + (size < 99.995);
+                    out_buf.Append(FormatFloatingPoint(size, prec, prec, num_buf));
+                    out_buf.Append(" GiB");
+                } else if (size >= 1048524.0) {
+                    size /= 1048576.0;
+
+                    int prec = 1 + (size < 9.9995) + (size < 99.995);
+                    out_buf.Append(FormatFloatingPoint(size, prec, prec, num_buf));
                     out_buf.Append(" MiB");
-                } else if (size_unsigned > 1024) {
-                    double size_kib = (double)size_unsigned / 1024.0;
-                    out_buf.Append(FormatFloatingPoint(size_kib, 2, 2, num_buf));
+                } else if (size >= 1023.95) {
+                    size /= 1024.0;
+
+                    int prec = 1 + (size < 9.9995) + (size < 99.995);
+                    out_buf.Append(FormatFloatingPoint(size, prec, prec, num_buf));
                     out_buf.Append(" kiB");
                 } else {
-                    out_buf.Append(FormatUnsignedToDecimal(size_unsigned, num_buf));
+                    out_buf.Append(FormatFloatingPoint(size, 0, 0, num_buf));
                     out_buf.Append(" B");
                 }
+
                 out = out_buf;
             } break;
             case FmtType::DiskSize: {
-                size_t size_unsigned;
+                double size;
                 if (arg.u.size < 0) {
-                    size_unsigned = (size_t)-arg.u.size;
+                    size = (double)-arg.u.size;
                     if (arg.pad_len < 0 && arg.pad_char == '0') {
                         append('-');
                     } else {
                         out_buf.Append('-');
                     }
                 } else {
-                    size_unsigned = (size_t)arg.u.size;
+                    size = (double)arg.u.size;
                 }
-                if (size_unsigned > 1000 * 1000) {
-                    double size_mib = (double)size_unsigned / (1000.0 * 1000.0);
-                    out_buf.Append(FormatFloatingPoint(size_mib, 2, 2, num_buf));
+
+                if (size >= 999950000.0) {
+                    size /= 1000000000.0;
+
+                    int prec = 1 + (size < 9.9995) + (size < 99.995);
+                    out_buf.Append(FormatFloatingPoint(size, prec, prec, num_buf));
+                    out_buf.Append(" GB");
+                } else if (size >= 999950.0) {
+                    size /= 1000000.0;
+
+                    int prec = 1 + (size < 9.9995) + (size < 99.995);
+                    out_buf.Append(FormatFloatingPoint(size, prec, prec, num_buf));
                     out_buf.Append(" MB");
-                } else if (size_unsigned > 1000) {
-                    double size_kib = (double)size_unsigned / 1000.0;
-                    out_buf.Append(FormatFloatingPoint(size_kib, 2, 2, num_buf));
+                } else if (size >= 999.95) {
+                    size /= 1000.0;
+
+                    int prec = 1 + (size < 9.9995) + (size < 99.995);
+                    out_buf.Append(FormatFloatingPoint(size, prec, prec, num_buf));
                     out_buf.Append(" kB");
                 } else {
-                    out_buf.Append(FormatUnsignedToDecimal(size_unsigned, num_buf));
+                    out_buf.Append(FormatFloatingPoint(size, 0, 0, num_buf));
                     out_buf.Append(" B");
                 }
+
                 out = out_buf;
             } break;
 
