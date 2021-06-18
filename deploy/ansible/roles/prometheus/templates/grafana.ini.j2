@@ -17,6 +17,8 @@ app_mode = production
 protocol = http
 http_addr = 127.0.0.1
 http_port = {{ grafana_port }}
+root_url = {{ grafana_url }}
+serve_from_sub_path = true
 
 [paths]
 data = {{ grafana_root_path }}/data
