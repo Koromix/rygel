@@ -1,6 +1,6 @@
 # Vagrant
 
-Execute from the directory with the Vagrantfile (e.g. _vagrant/hds_).
+Execute from the directory with the relevant Vagrantfile (e.g. _vagrant/pknet_ for PKnet).
 
 ## Initialize VMs
 
