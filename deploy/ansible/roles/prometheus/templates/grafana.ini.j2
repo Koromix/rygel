@@ -35,6 +35,9 @@ admin_password = {{ grafana_default_password }}
 [dashboards]
 default_home_dashboard_path = {{ grafana_root_path }}/dashboards/overview.json
 
+[feature_toggles]
+enable = ngalert
+
 {% if grafana_smtp is defined -%}
 
 [smtp]
