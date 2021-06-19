@@ -18,9 +18,9 @@ location:
   source_directories: {{ borg_directories | to_yaml }}
 
   repositories:
-{% for host in ansible_play_hosts_all %}
-{% if hostvars[host].borg_server is defined and hostvars[host].borg_server %}
-    - 'borg@{{ hostvars[host].borg_public_addr }}:{{ borg_backup_path }}/{{ inventory_hostname }}'
+{% for vars in hostvars.values() %}
+{% if vars.borg_server is defined and vars.borg_server %}
+    - 'borg@{{ vars.borg_public_addr }}:{{ borg_backup_path }}/{{ inventory_hostname }}'
 {% endif %}
 {% endfor %}
 

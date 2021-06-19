@@ -27,10 +27,10 @@ scrape_configs:
     scrape_interval: {{ config.scrape_interval | default('') }}
     scrape_timeout: {{ config.scrape_timeout | default('') }}
     static_configs:
-{% for host in ansible_play_hosts_all %}
-{% if hostvars[host].prometheus_exporters is defined and pkg in hostvars[host].prometheus_exporters %}
+{% for host, vars in hostvars.items() %}
+{% if vars.prometheus_exporters is defined and pkg in vars.prometheus_exporters %}
       - targets:
-          - {{ hostvars[host].prometheus_public_addr }}
+          - {{ vars.prometheus_public_addr }}
         labels:
           instance: {{ host }}
 {% endif %}
