@@ -515,7 +515,7 @@
           "refId": "A"
         }
       ],
-      "title": "Disk space",
+      "title": "Deduplicated size",
       "transformations": [
         {
           "id": "renameByRegex",
