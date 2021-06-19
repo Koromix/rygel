@@ -48,8 +48,6 @@ user = {{ grafana_smtp.username }}
 password = {{ grafana_smtp.password }}
 {% endif %}
 from_address = {{ grafana_smtp.from }}
+startTLS_policy = {{ grafana_smtp.start_tls | default('') }}
 
 {%- endif %}
-
-# [auth.basic]
-# enabled = true
