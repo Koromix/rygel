@@ -35,5 +35,18 @@ admin_password = {{ grafana_default_password }}
 [dashboards]
 default_home_dashboard_path = {{ grafana_root_path }}/dashboards/overview.json
 
+{% if grafana_smtp is defined -%}
+
+[smtp]
+enabled = true
+host = {{ grafana_smtp.host }}
+{% if grafana_smtp.username is defined %}
+user = {{ grafana_smtp.username }}
+password = {{ grafana_smtp.password }}
+{% endif %}
+from_address = {{ grafana_smtp.from }}
+
+{%- endif %}
+
 # [auth.basic]
 # enabled = true
