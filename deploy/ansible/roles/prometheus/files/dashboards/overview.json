@@ -120,7 +120,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Status",
+      "title": "Uptime",
       "transformations": [
         {
           "id": "renameByRegex",
