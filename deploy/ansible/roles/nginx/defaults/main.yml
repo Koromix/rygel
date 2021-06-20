@@ -12,3 +12,9 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 nginx_mode: single
+
+# Define when using dual NGINX configuration
+# nginx_back_addr:
+
+# List of domains to serve
+nginx_domains:

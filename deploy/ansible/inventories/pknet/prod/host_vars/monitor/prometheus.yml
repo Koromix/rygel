@@ -17,7 +17,6 @@ prometheus_exporters:
   - node_exporter
   - nginx_exporter
   - systemd_exporter
-prometheus_url: 'https://volpil.fr/prometheus'
 
 grafana_url: 'https://volpil.fr/grafana'
 grafana_default_password: !vault |

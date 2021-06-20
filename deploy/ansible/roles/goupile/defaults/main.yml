@@ -25,12 +25,14 @@ goupile_default_password: rygel!16/default_pwd
 goupile_snapshot_hour: 0
 goupile_snapshot_zone: Local
 
+# Set these to enable SMTP support
 # goupile_smtp:
   # url:
   # username:
   # password:
   # from:
 
+# Set these to enable SMS support
 # goupile_sms:
   # provider: Twilio
   # auth_id:

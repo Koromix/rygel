@@ -11,19 +11,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-borg_public_addr: '{{ ansible_default_ipv4.address }}'
-
-borg_url: 'https://github.com/borgbackup/borg/releases/download/1.1.16/borg-linux64'
-borg_checksum: 'sha256:fe1caaeee9354ead27379b8235a92eb1885d7948126d2edd49e60a2b85d4bcee'
-borgmatic_version: 1.5.14
-
-borg_root_path: /opt/borg
-borg_backup_path: '{{ borg_root_path }}/backup'
-
-# Set these on hosts that need to be backed up
-# borg_directories:
-# borg_passphrase:
-borg_time: '02:00 UTC' # systemd timestamp
-
-# Set these on hosts where backups will be stored
-borg_server: no
+# Use these variables to set up IPv6 on OVH VPS
+# Documentation here: https://docs.ovh.com/fr/vps/configurer-ipv6/
+# ovh_ipv6_addr:
+# ovh_ipv6_netmask:
+# ovh_ipv6_gateway:

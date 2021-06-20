@@ -37,13 +37,6 @@ nginx_domains:
     config: |
       limit_req zone=default burst=100 nodelay;
 
-      location /prometheus {
-          proxy_set_header Host $host;
-          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
-          proxy_pass http://127.0.0.1:9090;
-      }
-
       location /grafana {
           proxy_set_header Host $host;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

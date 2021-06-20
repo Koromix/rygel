@@ -11,7 +11,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
+# ------------------------------------------------------------------------
 # Prometheus
+# ------------------------------------------------------------------------
+
+prometheus_public_addr: '{{ ansible_default_ipv4.address }}'
 
 prometheus_root_path: /opt/prometheus # Installation directory
 
@@ -23,7 +27,6 @@ prometheus_packages:
     port: 9090
     args: |
       --web.listen-address 127.0.0.1:9090 \
-          {{ "--web.external-url " + prometheus_url if prometheus_url is defined else "" }}  \
           --config.file "{{ prometheus_root_path }}/prometheus.yml" \
           --storage.tsdb.path "{{ prometheus_root_path }}/data" \
           --storage.tsdb.retention.time 14d \
@@ -62,10 +65,18 @@ prometheus_packages:
           --collector.list-file="{{ borg_root_path }}/status/list.json"
     scrape_interval: 2m
 
+# Define these to export Prometheus
+# prometheus_exporters:
+
+# ------------------------------------------------------------------------
 # Grafana
+# ------------------------------------------------------------------------
 
 grafana_root_path: /opt/grafana
-grafana_port: 9200
 
 grafana_default_user: admin
 grafana_default_password: grafana!16/default_pwd
+
+# Set this to public Grafana URL to enable grafana
+# grafana_url:
+grafana_port: 9200

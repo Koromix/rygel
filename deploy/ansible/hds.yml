@@ -17,6 +17,7 @@
 
   roles:
     - role: nginx
+      when: 'nginx_domains is defined'
       tags:
         - nginx
     - role: goupile

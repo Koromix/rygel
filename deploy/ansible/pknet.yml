@@ -28,13 +28,14 @@
       tags:
         - goupile
     - name: prometheus
-      when: 'prometheus_exporters is defined or prometheus_url is defined'
+      when: 'prometheus_exporters is defined or grafana_url is defined'
       tags:
         - prometheus
     - name: static
+      when: 'static_deploys is defined'
       tags:
         - static
     - name: borg
-      when: 'borg_public_addr is defined'
+      when: 'borg_directories is defined or borg_server'
       tags:
         - borg

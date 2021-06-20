@@ -18,5 +18,4 @@ prometheus_exporters:
   - nginx_exporter
   - systemd_exporter
 
-prometheus_url: 'https://pknet-monitor.local/prometheus'
 grafana_url: 'https://pknet-monitor.local/grafana'
