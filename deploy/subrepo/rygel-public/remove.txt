@@ -6,6 +6,7 @@ deploy/HDS/
 deploy/hds/
 deploy/ansible/inventories/pknet/prod.yml
 deploy/ansible/inventories/pknet/goupile.fr
+deploy/ansible/inventories/pknet/prod
 deploy/subrepo/
 build/subrepo/
 src/otocyon/

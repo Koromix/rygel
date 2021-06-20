@@ -1,0 +1,41 @@
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+prometheus_public_addr: '{{ ansible_host }}'
+
+prometheus_exporters:
+  - node_exporter
+  - nginx_exporter
+  - systemd_exporter
+prometheus_url: 'https://volpil.fr/prometheus'
+
+grafana_url: 'https://volpil.fr/grafana'
+grafana_default_password: !vault |
+  $ANSIBLE_VAULT;1.1;AES256
+  66633065343632386261343466373833613162386238356665373365353765663238306430666365
+  6666626662616265336634663366303461336566623039610a356261393835323263666632313761
+  38636362666462626566353065643264663139326463303134356231616137343535346135363132
+  6235666638613438660a323865636630313133393561663436653033336331663338353764383465
+  66613237663466353436393531393535383038313562646564656335353263313763
+grafana_smtp:
+  host: mail.gandi.net:587
+  username: admin@goupile.fr
+  password: !vault |
+    $ANSIBLE_VAULT;1.1;AES256
+    31303735346366666531356166356130613239636238396337353439636536623766356338663832
+    6436633963643930623539376638653166353134666265310a646333626630386561323938366564
+    36316333303139383632323336393664626636353134353334366465383039353666616136346534
+    6337393331303031340a633364303263346330666435396331386436363930613930626336663461
+    36343262376239363165633836643134653538643735633863616439393663353339
+  from: admin@goupile.fr
+  start_tls: MandatoryStartTLS

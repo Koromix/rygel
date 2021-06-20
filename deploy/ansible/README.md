@@ -33,5 +33,5 @@ Ask GPLExpert :)
 The secret ansible-vault key is needed for this. You must __never ever__ distribute it or put it in the repository!
 
 ```sh
-ansible-playbook hds.yml -i inventories/pknet/prod.yml -u <USER> --key-file <KEY_FILE> --vault-password-file ansible-pknet.vault --ask-become-pass
+ansible-playbook hds.yml -i inventories/pknet/prod/hosts.yml -u <USER> --key-file <KEY_FILE> --vault-password-file ansible-pknet.vault --ask-become-pass
 ```

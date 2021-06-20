@@ -1,0 +1,28 @@
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+borg_public_addr: '{{ ansible_host }}'
+
+borg_directories:
+  - '{{ goupile_snapshot_path }}'
+borg_passphrase: !vault |
+  $ANSIBLE_VAULT;1.1;AES256
+  64393332306531306432336131313861636238613332333532636665323835356164313162353766
+  3163376234396533316131636665356261326338653532330a336430386161636538366334623032
+  36373839396138626536316237643938646334323831306137376466353438653563363930333364
+  3366643436353265650a623839623930643161613531373230363266306337353438653637636664
+  30303763373735626238366534633332393564336261366362353064323731623232316365363766
+  35373334373665343432393132333331656363326665306563663830333731336636383637626230
+  38613237393632323138366438346233353631333934343239313430613831633933376163303635
+  30613939366233356666
+borg_time: '02:00 UTC' # Run after goupile snapshot
