@@ -1,0 +1,23 @@
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+goupile_commit: deploy_pknet
+
+goupile_domains:
+  - name: goupile1.pknet.local
+    archive_key: YyQHN671EI9hEixEcUjsIVQvfMcsKUEe888V1Qx8UBI= # Decryption: mfoMJb1Zv4hh68MZ8c8UjjMv5yAnY7dwxPrY2EcNTrU=
+  - name: goupile2.pknet.local
+    archive_key: aZmAwOf9E/3WwnhS1LCM1r54TLjog/d0hwM0k72ULmw= # Decryption: D55mv4rBOk/9WywLcS//Zb8k7jhcr+ZGYi+JoVKUrdQ=
+
+goupile_snapshot_hour: 0
+goupile_snapshot_zone: UTC

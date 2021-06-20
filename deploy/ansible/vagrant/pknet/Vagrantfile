@@ -66,7 +66,7 @@ Vagrant.configure('2') do |config|
         m.vm.provision 'ansible' do |ansible|
             ansible.playbook = '../../pknet.yml'
             ansible.limit = 'all'
-            ansible.inventory_path = '../../inventories/pknet/vagrant.yml'
+            ansible.inventory_path = '../../inventories/pknet/vagrant/hosts.yml'
             ansible.extra_vars = { ansible_python_interpreter: '/usr/bin/python3' }
             # ansible.raw_arguments = ['--check']
         end
