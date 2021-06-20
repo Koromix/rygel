@@ -91,3 +91,12 @@
     enabled: yes
   when: 'borg_passphrase is defined'
   become: yes
+
+- name: Gather initial backup information
+  shell:
+    cmd: |
+      {{ borg_root_path }}/borgmatic -c {{ borg_root_path }}/borgmatic.yml list --json > {{ borg_root_path }}/status/list.json
+      {{ borg_root_path }}/borgmatic -c {{ borg_root_path }}/borgmatic.yml info --json > {{ borg_root_path }}/status/info.json
+    creates: '{{ borg_root_path }}/status/info.json'
+  when: 'borg_passphrase is defined'
+  become: yes

@@ -541,7 +541,20 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "options": {
+                "from": 31536000,
+                "result": {
+                  "color": "red",
+                  "index": 0,
+                  "text": "Empty"
+                },
+                "to": 6307200000
+              },
+              "type": "range"
+            }
+          ],
           "noValue": "No data",
           "thresholds": {
             "mode": "absolute",
