@@ -777,7 +777,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     // Run periodic tasks until exit
     {
         bool run = true;
-        int timeout = 300 * 1000;
+        int timeout = 120 * 1000;
 
         // Randomize the delay a bit to reduce situations where all goupile
         // services perform cleanups at the same time and cause a load spike.
@@ -785,30 +785,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
         LogDebug("Periodic cleanup timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
 
         while (run) {
-            // Create daily snapshot
-            {
-                int64_t time = GetUnixTime();
-                int64_t snapshot = PruneDomainSnapshots();
-
-                // Don't pretend things are fine if snapshots don't work
-                // A shutdown will prompt the administrator to look into it.
-                if (snapshot < 0)
-                    return 1;
-
-                TimeSpec spec = {};
-                DecomposeUnixTime(time, gp_domain.config.snapshot_zone, &spec);
-
-                if (spec.hour == gp_domain.config.snapshot_hour && time - snapshot > 2 * 3600 * 1000) {
-                    LogInfo("Creating daily snapshot");
-                    if (!SnapshotDomain())
-                        return 1;
-                } else if (time - snapshot > 25 * 3600 * 1000) {
-                    LogInfo("Creating forced snapshot (previous one is old)");
-                    if (!SnapshotDomain())
-                        return 1;
-                }
-            }
-
             // In theory, all temporary files are deleted. But if any remain behind (crash, etc.)
             // we need to make sure they get deleted eventually.
             LogDebug("Prune temporary files");
@@ -828,11 +804,11 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
                 gp_domain.Sync();
             }
 
-            // Make sure data loss (if it happens) is very limited in time
-            if (!gp_domain.config.sync_full) {
-                LogDebug("Checkpoint databases");
-                gp_domain.Checkpoint();
-            }
+            // Make sure data loss (if it happens) is very limited in time.
+            // If it fails, exit; something is really wrong and we don't fake to it.
+            LogDebug("Checkpoint databases");
+            if (!gp_domain.Checkpoint())
+                return 1;
 
             LogDebug("Prune sessions");
             PruneSessions();

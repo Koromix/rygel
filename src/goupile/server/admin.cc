@@ -890,41 +890,7 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
     });
 }
 
-static bool BackupDatabase(sq_Database *src, const char *filename)
-{
-    sq_Database db;
-    if (!db.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
-        return false;
-    if (!db.RunMany(R"(PRAGMA locking_mode = EXCLUSIVE;
-                       PRAGMA journal_mode = MEMORY;
-                       PRAGMA synchronous = FULL;)"))
-        return false;
-
-    sqlite3_backup *backup = sqlite3_backup_init(db, "main", *src, "main");
-    if (!backup)
-        return false;
-    RG_DEFER { sqlite3_backup_finish(backup); };
-
-restart:
-    int ret = sqlite3_backup_step(backup, -1);
-
-    if (ret != SQLITE_DONE) {
-        if (ret == SQLITE_OK || ret == SQLITE_BUSY || ret == SQLITE_LOCKED) {
-            WaitDelay(100);
-            goto restart;
-        } else {
-            LogError("SQLite Error: %1", sqlite3_errstr(ret));
-            return false;
-        }
-    }
-
-    sqlite3_backup_finish(backup);
-    backup = nullptr;
-
-    return db.Close();
-}
-
-static bool BackupInstances(const InstanceHolder *filter, bool encrypt, bool *out_conflict = nullptr)
+static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = nullptr)
 {
     BlockAllocator temp_alloc;
 
@@ -977,14 +943,14 @@ static bool BackupInstances(const InstanceHolder *filter, bool encrypt, bool *ou
         }
 
         HeapArray<char> buf(&temp_alloc);
-        Fmt(&buf, "%1%/%2", encrypt ? gp_domain.config.archive_directory : gp_domain.config.snapshot_directory, mtime_str);
+        Fmt(&buf, "%1%/%2", gp_domain.config.archive_directory, mtime_str);
         if (filter) {
             Span<const char> basename = SplitStrReverseAny(filter->filename, RG_PATH_SEPARATORS);
             SplitStrReverse(basename, '.', &basename);
 
             Fmt(&buf, "_%1", basename);
         }
-        Fmt(&buf, encrypt ? ".goupilearchive" : ".zip");
+        Fmt(&buf, ".goupilearchive");
 
         archive_filename = buf.Leak().ptr;
     }
@@ -1018,7 +984,7 @@ static bool BackupInstances(const InstanceHolder *filter, bool encrypt, bool *ou
     // Backup databases
     Async async;
     for (const BackupEntry &entry: entries) {
-        async.Run([&, entry]() { return BackupDatabase(entry.db, entry.filename); });
+        async.Run([&, entry]() { return entry.db->BackupTo(entry.filename); });
     }
     if (!async.Sync())
         return false;
@@ -1033,7 +999,7 @@ static bool BackupInstances(const InstanceHolder *filter, bool encrypt, bool *ou
     ctx.writer = &writer;
 
     // Write archive intro
-    if (encrypt) {
+    {
         ArchiveIntro intro = {};
 
         CopyString(ARCHIVE_SIGNATURE, intro.signature);
@@ -1057,45 +1023,34 @@ static bool BackupInstances(const InstanceHolder *filter, bool encrypt, bool *ou
     // Init ZIP compressor
     mz_zip_archive zip;
     mz_zip_zero_struct(&zip);
-    if (encrypt) {
-        zip.m_pWrite = [](void *udata, mz_uint64, const void *buf, size_t len) {
-            BackupContext *ctx = (BackupContext *)udata;
-            size_t copy = len;
+    zip.m_pWrite = [](void *udata, mz_uint64, const void *buf, size_t len) {
+        BackupContext *ctx = (BackupContext *)udata;
+        size_t copy = len;
 
-            while (len) {
-                size_t copy_len = std::min(len, (size_t)ctx->buf.Available());
-                memcpy_safe(ctx->buf.end(), buf, copy_len);
-                ctx->buf.len += (Size)copy_len;
+        while (len) {
+            size_t copy_len = std::min(len, (size_t)ctx->buf.Available());
+            memcpy_safe(ctx->buf.end(), buf, copy_len);
+            ctx->buf.len += (Size)copy_len;
 
-                if (!ctx->buf.Available()) {
-                    uint8_t cypher[4096];
-                    unsigned long long cypher_len;
-                    if (crypto_secretstream_xchacha20poly1305_push(&ctx->state, cypher, &cypher_len,
-                                                                   ctx->buf.data, ctx->buf.len, nullptr, 0, 0) != 0) {
-                        LogError("Failed during symmetric encryption");
-                        return (size_t)-1;
-                    }
-                    if (!ctx->writer->Write(cypher, (Size)cypher_len))
-                        return (size_t)-1;
-                    ctx->buf.len = 0;
+            if (!ctx->buf.Available()) {
+                uint8_t cypher[4096];
+                unsigned long long cypher_len;
+                if (crypto_secretstream_xchacha20poly1305_push(&ctx->state, cypher, &cypher_len,
+                                                               ctx->buf.data, ctx->buf.len, nullptr, 0, 0) != 0) {
+                    LogError("Failed during symmetric encryption");
+                    return (size_t)-1;
                 }
-
-                buf = (const void *)((const uint8_t *)buf + copy_len);
-                len -= copy_len;
+                if (!ctx->writer->Write(cypher, (Size)cypher_len))
+                    return (size_t)-1;
+                ctx->buf.len = 0;
             }
 
-            return copy;
-        };
-    } else {
-        zip.m_pWrite = [](void *udata, mz_uint64, const void *buf, size_t len) {
-            BackupContext *ctx = (BackupContext *)udata;
+            buf = (const void *)((const uint8_t *)buf + copy_len);
+            len -= copy_len;
+        }
 
-            if (!ctx->writer->Write(buf, (Size)len))
-                return (size_t)-1;
-
-            return len;
-        };
-    }
+        return copy;
+    };
     zip.m_pIO_opaque = &ctx;
     if (!mz_zip_writer_init(&zip, 0)) {
         LogError("Failed to create ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
@@ -1122,7 +1077,7 @@ static bool BackupInstances(const InstanceHolder *filter, bool encrypt, bool *ou
     }
 
     // Finalize encryption
-    if (encrypt) {
+    {
         uint8_t cypher[4096];
         unsigned long long cypher_len;
         if (crypto_secretstream_xchacha20poly1305_push(&ctx.state, cypher, &cypher_len, ctx.buf.data, ctx.buf.len, nullptr, 0,
@@ -1139,41 +1094,6 @@ static bool BackupInstances(const InstanceHolder *filter, bool encrypt, bool *ou
     if (!writer.Close())
         return false;
 
-    return true;
-}
-
-int64_t PruneDomainSnapshots()
-{
-    BlockAllocator temp_alloc;
-
-    int64_t time = GetUnixTime();
-    int64_t max_mtime = 0;
-
-    EnumStatus status = EnumerateDirectory(gp_domain.config.snapshot_directory, nullptr, -1,
-                                           [&](const char *filename, FileType file_type) {
-        filename = Fmt(&temp_alloc, "%1%/%2", gp_domain.config.snapshot_directory, filename).ptr;
-
-        FileInfo file_info;
-        if (!StatFile(filename, &file_info))
-            return false;
-
-        if (time - file_info.modification_time > 7 * 86400 * 1000) {
-            UnlinkFile(filename);
-        }
-
-        max_mtime = std::max(max_mtime, file_info.modification_time);
-        return true;
-    });
-    if (status != EnumStatus::Done)
-        return -1;
-
-    return max_mtime;
-}
-
-bool SnapshotDomain()
-{
-    if (!BackupInstances(nullptr, false))
-        return false;
     return true;
 }
 
@@ -1220,7 +1140,7 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
         RG_DEFER_N(ref_guard) { instance->Unref(); };
 
         bool conflict;
-        if (!BackupInstances(instance, true, &conflict)) {
+        if (!BackupInstances(instance, &conflict)) {
             if (conflict) {
                 io->AttachError(409, "Archive already exists");
             }
@@ -1756,7 +1676,7 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
 
     io->RunAsync([=]() {
         bool conflict;
-        if (!BackupInstances(nullptr, true, &conflict)) {
+        if (!BackupInstances(nullptr, &conflict)) {
             if (conflict) {
                 io->AttachError(409, "Archive already exists");
             }
@@ -2280,7 +2200,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
         // Save current instances
         {
             bool conflict;
-            if (!BackupInstances(nullptr, true, &conflict)) {
+            if (!BackupInstances(nullptr, &conflict)) {
                 if (conflict) {
                     io->AttachError(409, "Archive already exists");
                 }

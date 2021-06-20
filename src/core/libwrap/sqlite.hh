@@ -106,6 +106,12 @@ class sq_Database {
     std::thread::id running_transaction_thread;
     int running_requests = 0;
 
+    FILE *snapshot_fp = nullptr;
+    HeapArray<char> snapshot_filename_buf;
+    int64_t snapshot_full_delay;
+    int64_t snapshot_start;
+    Size snapshot_idx;
+
 public:
     sq_Database() {}
     sq_Database(const char *filename, unsigned int flags) { Open(filename, flags); }
@@ -119,6 +125,7 @@ public:
 
     bool SetWAL(bool enable);
     bool SetSynchronousFull(bool enable);
+    bool SetSnapshotFile(const char *filename, int64_t full_delay);
 
     bool GetUserVersion(int *out_version);
     bool SetUserVersion(int version);
@@ -136,6 +143,7 @@ public:
 
     bool RunMany(const char *sql);
 
+    bool BackupTo(const char *filename);
     bool Checkpoint();
 
     operator sqlite3 *() { return db; }
@@ -150,5 +158,7 @@ private:
 
     friend class sq_Statement;
 };
+
+bool sq_RestoreDatabase(const char *filename, const char *dest_filename);
 
 }

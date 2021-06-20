@@ -19,6 +19,7 @@ namespace RG {
 
 const int DomainVersion = 21;
 const int MaxInstancesPerDomain = 1024;
+const int64_t FullSnapshotDelay = 86400 * 1000;
 
 // Process-wide unique instance identifier 
 static std::atomic_int64_t next_unique = 0;
@@ -221,6 +222,7 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
     if (!config.snapshot_directory) {
         config.snapshot_directory = NormalizePath("snapshots", root_directory, &config.str_alloc).ptr;
     }
+    config.snapshot_directory_instances = Fmt(&config.str_alloc, "%1%/instances", config.snapshot_directory).ptr;
 
     std::swap(*out_config, config);
     return true;
@@ -247,6 +249,14 @@ bool DomainHolder::Open(const char *filename)
     if (!db.SetSynchronousFull(config.sync_full))
         return false;
 
+    // Configure snapshots
+    {
+        const char *snapshot_filename = Fmt(&config.str_alloc, "%1%/goupile.db", config.snapshot_directory).ptr;
+
+        if (!db.SetSnapshotFile(snapshot_filename, FullSnapshotDelay))
+            return false;
+    }
+
     // Check schema version
     {
         int version;
@@ -269,6 +279,8 @@ bool DomainHolder::Open(const char *filename)
     if (!MakeDirectory(config.archive_directory, false))
         return false;
     if (!MakeDirectory(config.snapshot_directory, false))
+        return false;
+    if (!MakeDirectory(config.snapshot_directory_instances, false))
         return false;
 
     err_guard.Disable();
@@ -433,16 +445,27 @@ bool DomainHolder::Sync()
         InstanceHolder *instance = new InstanceHolder();
         RG_DEFER_N(instance_guard) { delete instance; };
 
-        if (!instance->Open(next_unique++, master, start.instance_key, filename)) {
-            complete = false;
-            continue;
+        // Open and configure instance database
+        {
+            const char *snapshot_filename = MakeInstanceFileName(config.snapshot_directory_instances,
+                                                                 start.instance_key, &temp_alloc);
+
+            if (!instance->Open(next_unique++, master, start.instance_key, filename)) {
+                complete = false;
+                continue;
+            }
+            if (!instance->db.SetSynchronousFull(config.sync_full)) {
+                complete = false;
+                continue;
+            }
+            if (!instance->db.SetSnapshotFile(snapshot_filename, FullSnapshotDelay)) {
+                complete = false;
+                continue;
+            }
+
+            instance->generation = start.generation;
+            instance_guard.Disable();
         }
-        if (!instance->db.SetSynchronousFull(config.sync_full)) {
-            complete = false;
-            continue;
-        }
-        instance->generation = start.generation;
-        instance_guard.Disable();
 
         new_instances.Append(instance);
         new_map.Set(instance);
@@ -511,14 +534,14 @@ bool DomainHolder::Checkpoint()
 {
     std::shared_lock<std::shared_mutex> lock_shr(mutex);
 
-    bool success = true;
+    Async async(-1, false);
 
-    success &= db.Checkpoint();
+    async.Run([&]() { return db.Checkpoint(); });
     for (InstanceHolder *instance: instances) {
-        success &= instance->Checkpoint();
+        async.Run([instance]() { return instance->Checkpoint(); });
     }
 
-    return success;
+    return async.Sync();
 }
 
 Span<InstanceHolder *> DomainHolder::LockInstances()

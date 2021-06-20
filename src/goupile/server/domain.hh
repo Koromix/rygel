@@ -31,6 +31,7 @@ struct DomainConfig {
     const char *temp_directory = nullptr;
     const char *archive_directory = nullptr;
     const char *snapshot_directory = nullptr;
+    const char *snapshot_directory_instances = nullptr;
 
     uint8_t archive_key[32] = {}; // crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES
     bool enable_archives = false;
