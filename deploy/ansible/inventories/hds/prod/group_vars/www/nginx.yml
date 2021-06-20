@@ -1,0 +1,28 @@
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+nginx_domains:
+  - name: psy-lille.goupile.fr
+    locations:
+      - path: /
+        proxy_addr: 'http://unix:/run/goupile/psy-lille.goupile.fr.sock:'
+        proxy_buffering: no
+    ssl_public_key: '{{ playbook_dir }}/inventories/hds/prod/goupile.fr/fullchain.pem'
+    ssl_private_key: '{{ playbook_dir }}/inventories/hds/prod/goupile.fr/privkey.pem'
+  - name: mire.goupile.fr
+    locations:
+      - path: /
+        proxy_addr: 'http://unix:/run/goupile/mire.goupile.fr.sock:'
+        proxy_buffering: no
+    ssl_public_key: '{{ playbook_dir }}/inventories/hds/prod/goupile.fr/fullchain.pem'
+    ssl_private_key: '{{ playbook_dir }}/inventories/hds/prod/goupile.fr/privkey.pem'

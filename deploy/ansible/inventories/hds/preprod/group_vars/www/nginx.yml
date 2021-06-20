@@ -1,0 +1,13 @@
+nginx_domains:
+  - name: psy-lille.preprod.goupile.fr
+    locations:
+      - path: /
+        proxy_addr: 'http://unix:/run/goupile/psy-lille.preprod.goupile.fr.sock:'
+        proxy_buffering: no
+    ssl_certbot_email: interhop@riseup.net
+  - name: demo.preprod.goupile.fr
+    locations:
+      - path: /
+        proxy: 'http://unix:/run/goupile/demo.preprod.goupile.fr.sock:'
+        proxy_buffering: no
+    ssl_certbot_email: interhop@riseup.net

@@ -11,15 +11,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-- name: hds
+goupile_commit: deploy_hds
 
-  hosts: all
+goupile_domains:
+  - name: goupile1.hds.local
+    archive_key: YyQHN671EI9hEixEcUjsIVQvfMcsKUEe888V1Qx8UBI= # Decryption: mfoMJb1Zv4hh68MZ8c8UjjMv5yAnY7dwxPrY2EcNTrU=
+  - name: goupile2.hds.local
+    archive_key: aZmAwOf9E/3WwnhS1LCM1r54TLjog/d0hwM0k72ULmw= # Decryption: D55mv4rBOk/9WywLcS//Zb8k7jhcr+ZGYi+JoVKUrdQ=
 
-  roles:
-    - role: nginx
-      tags:
-        - nginx
-    - role: goupile
-      when: 'goupile_domains is defined'
-      tags:
-        - goupile
+goupile_snapshot_hour: 0
+goupile_snapshot_zone: UTC 

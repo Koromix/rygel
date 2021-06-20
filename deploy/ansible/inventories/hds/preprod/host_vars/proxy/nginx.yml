@@ -11,15 +11,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-- name: hds
+nginx_public_addr: '{{ ansible_default_ipv4.address }}'
 
-  hosts: all
-
-  roles:
-    - role: nginx
-      tags:
-        - nginx
-    - role: goupile
-      when: 'goupile_domains is defined'
-      tags:
-        - goupile
+nginx_mode: front
+nginx_back_addr: '{{ hostvars.server.ansible_default_ipv4.address }}'
