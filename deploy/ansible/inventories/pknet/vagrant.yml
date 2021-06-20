@@ -61,6 +61,8 @@ all:
           archive_key: YyQHN671EI9hEixEcUjsIVQvfMcsKUEe888V1Qx8UBI= # Decryption: mfoMJb1Zv4hh68MZ8c8UjjMv5yAnY7dwxPrY2EcNTrU=
         - name: goupile2.pknet.local
           archive_key: aZmAwOf9E/3WwnhS1LCM1r54TLjog/d0hwM0k72ULmw= # Decryption: D55mv4rBOk/9WywLcS//Zb8k7jhcr+ZGYi+JoVKUrdQ=
+      goupile_snapshot_hour: 0
+      goupile_snapshot_zone: UTC
 
       prometheus_public_addr: '{{ ansible_host }}'
       prometheus_exporters:
@@ -73,7 +75,7 @@ all:
       borg_directories:
         - '{{ goupile_snapshot_path }}'
       borg_passphrase: 'borg!16/default_pwd'
-      borg_time: '04:00' # Run after goupile snapshot
+      borg_time: '02:00 UTC' # Run after goupile snapshot
 
     backup:
       ansible_host: 192.168.33.28

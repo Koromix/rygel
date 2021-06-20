@@ -2561,6 +2561,10 @@ enum class TimeMode {
     Local,
     UTC
 };
+static const char *const TimeModeNames[] = {
+    "Local",
+    "UTC"
+};
 
 void DecomposeUnixTime(int64_t time, TimeMode mode, TimeSpec *out_spec);
 

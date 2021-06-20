@@ -14,13 +14,17 @@
 [Goupile]
 BinaryFile = {{ goupile_root_path }}/goupile
 DomainDirectory = {{ goupile_root_path }}/domains
-SnapshotDirectory = {{ goupile_snapshot_path }}
 
 RunUser = {{ goupile_run_user }}
 RunGroup = {{ goupile_run_group }}
 
 DefaultAdmin = {{ goupile_default_username }}
 DefaultPassword = {{ goupile_default_password }}
+
+[Backup]
+SnapshotDirectory = {{ goupile_snapshot_path }}
+SnapshotHour = {{ goupile_snapshot_hour }}
+SnapshotZone = {{ goupile_snapshot_zone }}
 
 {% if goupile_smtp is defined -%}
 

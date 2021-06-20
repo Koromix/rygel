@@ -22,6 +22,9 @@ goupile_sandbox: yes
 goupile_default_username: admin # Default admin username and password for newly created goupile domains
 goupile_default_password: rygel!16/default_pwd
 
+goupile_snapshot_hour: 0
+goupile_snapshot_zone: Local
+
 # goupile_smtp:
   # url:
   # username:

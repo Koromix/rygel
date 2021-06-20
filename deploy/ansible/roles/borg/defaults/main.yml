@@ -23,6 +23,6 @@ borg_backup_path: '{{ borg_root_path }}/backup'
 borg_public_addr: '{{ ansible_default_ipv4.address }}'
 
 borg_directories: []
-borg_time: '02:00'
+borg_time: '02:00 UTC' # systemd timestamp
 
 borg_server: no

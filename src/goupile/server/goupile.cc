@@ -796,13 +796,13 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
                     return 1;
 
                 TimeSpec spec = {};
-                DecomposeUnixTime(time, TimeMode::Local, &spec);
+                DecomposeUnixTime(time, gp_domain.config.snapshot_zone, &spec);
 
-                if (spec.hour >= 2 && spec.hour < 6 && time - snapshot > 6 * 3600 * 1000) {
+                if (spec.hour == gp_domain.config.snapshot_hour && time - snapshot > 2 * 3600 * 1000) {
                     LogInfo("Creating daily snapshot");
                     if (!SnapshotDomain())
                         return 1;
-                } else if (time - snapshot > 24 * 3600 * 1000) {
+                } else if (time - snapshot > 25 * 3600 * 1000) {
                     LogInfo("Creating forced snapshot (previous one is old)");
                     if (!SnapshotDomain())
                         return 1;
