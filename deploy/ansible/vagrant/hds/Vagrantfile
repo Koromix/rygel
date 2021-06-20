@@ -23,9 +23,6 @@ Vagrant.configure('2') do |config|
         m.vm.hostname = 'hds-server.local'
         m.vm.network 'private_network', ip: server_ip
 
-        # It's kind of ugly to hardcode this but.. meh. Keep it simple
-        m.hostmanager.aliases = ['goupile1.hds.local', 'goupile2.hds.local']
-
         m.vm.provider 'virtualbox' do |v|
             v.name = 'hds_server'
             v.memory = 2048
@@ -39,6 +36,9 @@ Vagrant.configure('2') do |config|
         m.vm.box = 'generic/debian10'
         m.vm.hostname = 'hds.local'
         m.vm.network 'private_network', ip: proxy_ip
+
+        # It's kind of ugly to hardcode this but.. meh. Keep it simple
+        m.hostmanager.aliases = ['goupile1.hds.local', 'goupile2.hds.local']
 
         m.vm.provider 'virtualbox' do |v|
             v.name = 'hds_proxy'
