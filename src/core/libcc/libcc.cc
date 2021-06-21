@@ -3815,7 +3815,7 @@ int OpenUnixSocket(const char *path)
     chmod(path, 0666);
 
     err_guard.Disable();
-    return fd;
+    return (int)fd;
 }
 
 void CloseSocket(int fd)
