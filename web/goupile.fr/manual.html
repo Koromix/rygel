@@ -202,62 +202,62 @@
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 58px; object-position: 0px 0px;"/></td>
-                    <td class="code">page.text("variable", "Libellé")</td>
+                    <td class="code">form.text("variable", "Libellé")</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 58px; object-position: 0 -53px;"/></td>
-                    <td class="code">page.number("variable", "Libellé")</td>
+                    <td class="code">form.number("variable", "Libellé")</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 58px; object-position: 0 -106px;"/></td>
-                    <td class="code">page.slider("variable", "Libellé")</td>
+                    <td class="code">form.slider("variable", "Libellé")</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 58px; object-position: 0 -175px;"/></td>
-                    <td class="code">page.date("nom_variable", "Libellé")</td>
+                    <td class="code">form.date("nom_variable", "Libellé")</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 63px; object-position: 0 -228px;"/></td>
-                    <td class="code">page.binary("nom_variable", "Libellé")</td>
+                    <td class="code">form.binary("nom_variable", "Libellé")</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 63px; object-position: 0 -285px;"/></td>
-                    <td class="code">page.enum("nom_variable", "Libellé", [
+                    <td class="code">form.enum("nom_variable", "Libellé", [
     ["modality1", "modality1 Label"],
     ["modality2", "modality2 Label"]
 ])</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 58px; object-position: 0 -340px;"/></td>
-                    <td class="code">page.enumDrop("nom_variable", "Libellé", [
+                    <td class="code">form.enumDrop("nom_variable", "Libellé", [
     ["modality1", "modality1 Label"],
     ["modality2", "modality2 Label"]
 ])</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 74px; object-position: 0 -392px;"/></td>
-                    <td class="code">page.enumRadio("nom_variable", "Libellé", [
+                    <td class="code">form.enumRadio("nom_variable", "Libellé", [
     ["modality1", "modality1 Label"],
     ["modality2", "modality2 Label"]
 ])</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 63px; object-position: 0 -461px;"/></td>
-                    <td class="code">page.multi("nom_variable", "Libellé", [
+                    <td class="code">form.multi("nom_variable", "Libellé", [
     ["modality1", "modality1 Label"],
     ["modality2", "modality2 Label"]
 ])</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 74px; object-position: 0 -517px;"/></td>
-                    <td class="code">page.multiCheck("nom_variable", "Libellé", [
+                    <td class="code">form.multiCheck("nom_variable", "Libellé", [
     ["modality1", "modality1 Label"],
     ["modality2", "modality2 Label"]
 ])</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 51px; object-position: 0 -586px;"/></td>
-                    <td class="code">page.calc("nom_variable", 18)</td>
+                    <td class="code">form.calc("nom_variable", 18)</td>
                 </tr>
             </table>
 
@@ -269,18 +269,18 @@
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 152px; object-position: 0 -632px;"/></td>
-                    <td class="code">page.section("Nom de la section", () => {
-    page.text("variable1", "Label 1")
-    page.number("variable2", "Label 2")
+                    <td class="code">form.section("Nom de la section", () => {
+    form.text("variable1", "Label 1")
+    form.number("variable2", "Label 2")
 })</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 27px; object-position: 0 -779px;"/></td>
-                    <td class="code">page.output("This is &lt;b&gt;text&lt;/b&gt; content")</td>
+                    <td class="code">form.output("This is &lt;b&gt;text&lt;/b&gt; content")</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="static/screenshots/widgets.png" style="height: 27px; object-position: 0 -801px;"/></td>
-                    <td class="code">page.output(html`This is &lt;b&gt;HTML&lt;/b&gt; content`)</td>
+                    <td class="code">form.output(html`This is &lt;b&gt;HTML&lt;/b&gt; content`)</td>
                 </tr>
             </table>
 
