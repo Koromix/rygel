@@ -48,7 +48,7 @@ const goupile = new function() {
 
         // Try to work around Safari bug:
         // https://bugs.webkit.org/show_bug.cgi?id=226547
-        if (navigator.userAgent.toLowerCase().indexOf('Safari') >= 0)
+        if (navigator.userAgent.toLowerCase().indexOf('safari') >= 0)
             await indexeddb.open('dummy');
 
         ui.init();
