@@ -333,8 +333,82 @@
       },
       "id": 52,
       "panels": [],
-      "title": "Backups",
+      "title": "Hosts",
       "type": "row"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "index": 0,
+                  "text": "Down"
+                },
+                "1": {
+                  "index": 1,
+                  "text": "Up"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 9
+      },
+      "id": 76,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "8.0.3",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "up { job = \"node_exporter\" }",
+          "interval": "",
+          "legendFormat": "{{ instance }}",
+          "refId": "A"
+        }
+      ],
+      "title": "Status",
+      "transformations": [],
+      "type": "stat"
     },
     {
       "datasource": null,
@@ -391,9 +465,9 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 0,
+        "h": 6,
+        "w": 6,
+        "x": 6,
         "y": 9
       },
       "id": 50,
@@ -490,9 +564,9 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 8,
+        "h": 6,
+        "w": 6,
+        "x": 12,
         "y": 9
       },
       "id": 48,
@@ -582,9 +656,9 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 16,
+        "h": 6,
+        "w": 6,
+        "x": 18,
         "y": 9
       },
       "id": 64,
@@ -614,7 +688,7 @@
           "refId": "A"
         }
       ],
-      "title": "Status",
+      "title": "Backups",
       "transformations": [
         {
           "id": "renameByRegex",
@@ -640,7 +714,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 15
       },
       "id": 14,
       "panels": [],
@@ -995,7 +1069,7 @@
         "h": 7,
         "w": 6,
         "x": 0,
-        "y": 17
+        "y": 16
       },
       "id": 18,
       "links": [],
@@ -1119,7 +1193,7 @@
         "h": 7,
         "w": 6,
         "x": 6,
-        "y": 17
+        "y": 16
       },
       "hiddenSeries": false,
       "id": 20,
@@ -1311,7 +1385,7 @@
         "h": 7,
         "w": 6,
         "x": 12,
-        "y": 17
+        "y": 16
       },
       "hiddenSeries": false,
       "id": 22,
@@ -1434,7 +1508,7 @@
         "h": 7,
         "w": 6,
         "x": 18,
-        "y": 17
+        "y": 16
       },
       "height": "",
       "hiddenSeries": false,
