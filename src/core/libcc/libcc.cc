@@ -4903,6 +4903,22 @@ bool StreamWriter::Close()
     return IsValid();
 }
 
+bool StreamWriter::Flush()
+{
+    RG_ASSERT(compression.type == CompressionType::None);
+
+    if (RG_UNLIKELY(!IsValid()))
+        return false;
+
+    switch (dest.type) {
+        case DestinationType::Memory: { return true; } break;
+        case DestinationType::File: { return FlushFile(dest.u.file.fp, filename); } break;
+        case DestinationType::Function: { return true; } break;
+    }
+
+    RG_UNREACHABLE();
+}
+
 bool StreamWriter::Write(Span<const uint8_t> buf)
 {
     if (RG_UNLIKELY(error))

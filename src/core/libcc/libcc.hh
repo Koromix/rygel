@@ -2804,6 +2804,8 @@ public:
               CompressionType compression_type = CompressionType::None);
     bool Close();
 
+    bool Flush();
+
     const char *GetFileName() const { return filename; }
     CompressionType GetCompressionType() const { return compression.type; }
     bool IsVt100() const { return dest.vt100; }
