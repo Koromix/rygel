@@ -18,7 +18,14 @@
 #ifdef _WIN32
     #include <io.h>
     #include <ws2tcpip.h>
-    #include <afunix.h>
+
+    #ifndef UNIX_PATH_MAX
+        #define UNIX_PATH_MAX 108
+    #endif
+    typedef struct sockaddr_un {
+        ADDRESS_FAMILY sun_family;
+        char sun_path[UNIX_PATH_MAX];
+    } SOCKADDR_UN, *PSOCKADDR_UN;
 #else
     #include <sys/stat.h>
     #include <sys/socket.h>

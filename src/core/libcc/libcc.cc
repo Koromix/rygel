@@ -38,10 +38,17 @@
     #include <sys/types.h>
     #include <sys/stat.h>
     #include <direct.h>
-    #include <afunix.h>
     #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
         #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
     #endif
+
+    #ifndef UNIX_PATH_MAX
+        #define UNIX_PATH_MAX 108
+    #endif
+    typedef struct sockaddr_un {
+        ADDRESS_FAMILY sun_family;
+        char sun_path[UNIX_PATH_MAX];
+    } SOCKADDR_UN, *PSOCKADDR_UN;
 #else
     #include <dlfcn.h>
     #include <dirent.h>
