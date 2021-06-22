@@ -286,11 +286,6 @@ bool sec_SandboxBuilder::Apply()
                     LogError("Cannot change UID or GID: %1", strerror(errno));
                     return false;
                 }
-
-                if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) < 0) {
-                    LogError("Failed to clear dumpable proc attribute: %1", strerror(errno));
-                    return false;
-                }
             } else {
                 int64_t dummy;
                 if (RG_POSIX_RESTART_EINTR(read(efd, &dummy, RG_SIZE(dummy)), < 0) < 0) {
@@ -473,6 +468,10 @@ bool sec_SandboxBuilder::Apply()
 
         if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) < 0) {
             LogError("Failed to restrict privileges: %1", strerror(errno));
+            return false;
+        }
+        if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) < 0) {
+            LogError("Failed to clear dumpable proc attribute: %1", strerror(errno));
             return false;
         }
     }
