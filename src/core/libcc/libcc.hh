@@ -3301,8 +3301,8 @@ static inline bool StartsWith(const char *str, const char *prefix)
 
 static inline bool EndsWith(Span<const char> str, const char *suffix)
 {
-    Size i = str.len;
-    Size j = strlen(suffix);
+    Size i = str.len - 1;
+    Size j = (Size)strlen(suffix) - 1;
     while (i >= 0 && j >= 0) {
         if (str[i] != suffix[j])
             return false;
