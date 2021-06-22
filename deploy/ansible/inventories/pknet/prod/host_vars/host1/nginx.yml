@@ -58,8 +58,7 @@ nginx_domains:
 
           proxy_pass http://unix:/run/goupile/cn2r.goupile.fr.sock:;
       }
-    ssl_public_key: '{{ playbook_dir }}/inventories/pknet/prod/goupile.fr/fullchain.pem'
-    ssl_private_key: '{{ playbook_dir }}/inventories/pknet/prod/goupile.fr/privkey.pem'
+    ssl_certbot_email: niels.martignene@protonmail.com
   - name: medita.goupile.fr
     config: |
       location / {
@@ -74,6 +73,19 @@ nginx_domains:
       }
     ssl_public_key: '{{ playbook_dir }}/inventories/pknet/prod/goupile.fr/fullchain.pem'
     ssl_private_key: '{{ playbook_dir }}/inventories/pknet/prod/goupile.fr/privkey.pem'
+  - name: neurorea-kb.goupile.fr
+    config: |
+      location / {
+          proxy_http_version 1.1;
+          proxy_request_buffering off;
+          proxy_buffering off;
+
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+          proxy_pass http://unix:/run/goupile/neurorea-kb.goupile.fr.sock:;
+      }
+    ssl_certbot_email: niels.martignene@protonmail.com
   - name: psy-lille.goupile.fr
     config: |
       location / {
