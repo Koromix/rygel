@@ -2654,6 +2654,8 @@ public:
               CompressionType compression_type = CompressionType::None);
     bool Close();
 
+    bool Rewind();
+
     const char *GetFileName() const { return filename; }
     CompressionType GetCompressionType() const { return compression.type; }
     bool IsValid() const { return filename && !error; }

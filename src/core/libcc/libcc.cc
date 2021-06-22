@@ -4235,6 +4235,42 @@ bool StreamReader::Close()
     return ret;
 }
 
+bool StreamReader::Rewind()
+{
+    if (RG_UNLIKELY(error))
+        return false;
+
+    switch (compression.type) {
+        case CompressionType::None: {} break;
+
+        case CompressionType::Gzip:
+        case CompressionType::Zlib: {
+            memset(compression.u.miniz, 0, sizeof(*compression.u.miniz));
+            tinfl_init(&compression.u.miniz->inflator);
+            compression.u.miniz->crc32 = MZ_CRC32_INIT;
+        } break;
+    }
+
+    switch (source.type) {
+        case SourceType::Memory: { source.u.memory.pos = 0; } break;
+        case SourceType::File: {
+            if (fseek(source.u.file.fp, 0, SEEK_SET) < 0) {
+                LogError("Failed to rewind '%1': %2", filename, strerror(errno));
+                error = true;
+            }
+        } break;
+        case SourceType::Function: {
+            LogError("Cannot rewind stream '%1'", filename);
+            error = true;
+        } break;
+    }
+
+    source.eof &= error;
+    eof &= error;
+
+    return !error;
+}
+
 Size StreamReader::Read(Span<uint8_t> out_buf)
 {
     if (RG_UNLIKELY(error))
