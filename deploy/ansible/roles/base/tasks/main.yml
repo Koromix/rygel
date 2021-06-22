@@ -129,6 +129,13 @@
   when: 'not ansible_check_mode'
   become: yes
 
+- name: Restrict ptrace scope (YAMA)
+  sysctl:
+    name: kernel.yama.ptrace_scope
+    value: '3'
+    sysctl_set: yes
+  become: yes
+
 # - name: Delete default debian user
 #   user:
 #     name: debian
