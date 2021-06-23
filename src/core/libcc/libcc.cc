@@ -4240,6 +4240,22 @@ bool StreamReader::Rewind()
     if (RG_UNLIKELY(error))
         return false;
 
+    switch (source.type) {
+        case SourceType::Memory: { source.u.memory.pos = 0; } break;
+        case SourceType::File: {
+            if (fseek(source.u.file.fp, 0, SEEK_SET) < 0) {
+                LogError("Failed to rewind '%1': %2", filename, strerror(errno));
+                error = true;
+                return false;
+            }
+        } break;
+        case SourceType::Function: {
+            LogError("Cannot rewind stream '%1'", filename);
+            error = true;
+            return false;
+        } break;
+    }
+
     switch (compression.type) {
         case CompressionType::None: {} break;
 
@@ -4251,24 +4267,10 @@ bool StreamReader::Rewind()
         } break;
     }
 
-    switch (source.type) {
-        case SourceType::Memory: { source.u.memory.pos = 0; } break;
-        case SourceType::File: {
-            if (fseek(source.u.file.fp, 0, SEEK_SET) < 0) {
-                LogError("Failed to rewind '%1': %2", filename, strerror(errno));
-                error = true;
-            }
-        } break;
-        case SourceType::Function: {
-            LogError("Cannot rewind stream '%1'", filename);
-            error = true;
-        } break;
-    }
+    source.eof = false;
+    eof = false;
 
-    source.eof &= error;
-    eof &= error;
-
-    return !error;
+    return true;
 }
 
 Size StreamReader::Read(Span<uint8_t> out_buf)
@@ -4706,7 +4708,7 @@ struct MinizDeflateContext {
 #endif
 
 bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
-                        CompressionType compression_type)
+                        CompressionType compression_type, CompressionSpeed compression_speed)
 {
     RG_ASSERT(!this->filename);
 
@@ -4721,14 +4723,15 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
     dest.u.memory = mem;
     dest.vt100 = false;
 
-    if (!InitCompressor(compression_type))
+    if (!InitCompressor(compression_type, compression_speed))
         return false;
 
     error_guard.Disable();
     return true;
 }
 
-bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compression_type)
+bool StreamWriter::Open(FILE *fp, const char *filename,
+                        CompressionType compression_type, CompressionSpeed compression_speed)
 {
     RG_ASSERT(!this->filename);
 
@@ -4746,14 +4749,15 @@ bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compress
     dest.u.file.fp = fp;
     dest.vt100 = FileIsVt100(fp);
 
-    if (!InitCompressor(compression_type))
+    if (!InitCompressor(compression_type, compression_speed))
         return false;
 
     error_guard.Disable();
     return true;
 }
 
-bool StreamWriter::Open(const char *filename, unsigned int flags, CompressionType compression_type)
+bool StreamWriter::Open(const char *filename, unsigned int flags,
+                        CompressionType compression_type, CompressionSpeed compression_speed)
 {
     RG_ASSERT(!this->filename);
 
@@ -4796,7 +4800,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags, CompressionTyp
     }
     dest.vt100 = FileIsVt100(dest.u.file.fp);
 
-    if (!InitCompressor(compression_type))
+    if (!InitCompressor(compression_type, compression_speed))
         return false;
 
     error_guard.Disable();
@@ -4804,7 +4808,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags, CompressionTyp
 }
 
 bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename,
-                        CompressionType compression_type)
+                        CompressionType compression_type, CompressionSpeed compression_speed)
 {
     RG_ASSERT(!this->filename);
 
@@ -4819,7 +4823,7 @@ bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, co
     new (&dest.u.func) std::function<bool(Span<const uint8_t>)>(func);
     dest.vt100 = false;
 
-    if (!InitCompressor(compression_type))
+    if (!InitCompressor(compression_type, compression_speed))
         return false;
 
     error_guard.Disable();
@@ -4965,7 +4969,7 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
     RG_UNREACHABLE();
 }
 
-bool StreamWriter::InitCompressor(CompressionType type)
+bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
 {
     switch (type) {
         case CompressionType::None: {} break;
@@ -4978,7 +4982,13 @@ bool StreamWriter::InitCompressor(CompressionType type)
                                                            (int)Allocator::Flag::Zero);
             compression.u.miniz->crc32 = MZ_CRC32_INIT;
 
-            int flags = 32 | (type == CompressionType::Zlib ? TDEFL_WRITE_ZLIB_HEADER : 0);
+            int flags = 0;
+            switch (speed) {
+                case CompressionSpeed::Default: { flags = 32 | TDEFL_GREEDY_PARSING_FLAG; } break;
+                case CompressionSpeed::Slow: { flags = 512; } break;
+                case CompressionSpeed::Fast: { flags = 1 | TDEFL_GREEDY_PARSING_FLAG; } break;
+            }
+            flags |= (type == CompressionType::Zlib ? TDEFL_WRITE_ZLIB_HEADER : 0);
 
             tdefl_status status = tdefl_init(&compression.u.miniz->deflator,
                                              [](const void *buf, int len, void *udata) {
@@ -4994,11 +5004,11 @@ bool StreamWriter::InitCompressor(CompressionType type)
             if (type == CompressionType::Gzip) {
                 static uint8_t gzip_header[] = {
                     0x1F, 0x8B, // Fixed bytes
-                    8, // Deflate
-                    0, // FLG
+                    8,          // Deflate
+                    0,          // FLG
                     0, 0, 0, 0, // MTIME
-                    0, // XFL
-                    0 // OS
+                    0,          // XFL
+                    0           // OS
                 };
 
                 if (!WriteRaw(gzip_header))
@@ -5011,7 +5021,9 @@ bool StreamWriter::InitCompressor(CompressionType type)
 #endif
         } break;
     }
+
     compression.type = type;
+    compression.speed = speed;
 
     return true;
 }

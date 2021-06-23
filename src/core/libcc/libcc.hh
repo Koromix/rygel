@@ -2583,6 +2583,12 @@ static const char *const CompressionTypeNames[] = {
     "Gzip"
 };
 
+enum class CompressionSpeed {
+    Default,
+    Slow,
+    Fast
+};
+
 class StreamReader {
     RG_DELETE_COPY(StreamReader)
 
@@ -2769,6 +2775,7 @@ class StreamWriter {
 
     struct {
         CompressionType type = CompressionType::None;
+        CompressionSpeed speed = CompressionSpeed::Default;
         union {
             struct MinizDeflateContext *miniz;
         } u;
@@ -2781,27 +2788,35 @@ class StreamWriter {
 public:
     StreamWriter() { Close(); }
     StreamWriter(HeapArray<uint8_t> *mem, const char *filename = nullptr,
-                 CompressionType compression_type = CompressionType::None)
-        : StreamWriter() { Open(mem, filename, compression_type); }
+                 CompressionType compression_type = CompressionType::None,
+                 CompressionSpeed compression_speed = CompressionSpeed::Default)
+        : StreamWriter() { Open(mem, filename, compression_type, compression_speed); }
     StreamWriter(FILE *fp, const char *filename,
-                 CompressionType compression_type = CompressionType::None)
-        : StreamWriter() { Open(fp, filename, compression_type); }
+                 CompressionType compression_type = CompressionType::None,
+                 CompressionSpeed compression_speed = CompressionSpeed::Default)
+        : StreamWriter() { Open(fp, filename, compression_type, compression_speed); }
     StreamWriter(const char *filename, unsigned int flags = 0,
-                 CompressionType compression_type = CompressionType::None)
-        : StreamWriter() { Open(filename, flags, compression_type); }
+                 CompressionType compression_type = CompressionType::None,
+                 CompressionSpeed compression_speed = CompressionSpeed::Default)
+        : StreamWriter() { Open(filename, flags, compression_type, compression_speed); }
     StreamWriter(const std::function<bool(Span<const uint8_t>)> &func, const char *filename = nullptr,
-                 CompressionType compression_type = CompressionType::None)
-        : StreamWriter() { Open(func, filename, compression_type); }
+                 CompressionType compression_type = CompressionType::None,
+                 CompressionSpeed compression_speed = CompressionSpeed::Default)
+        : StreamWriter() { Open(func, filename, compression_type, compression_speed); }
     ~StreamWriter() { ReleaseResources(); }
 
     bool Open(HeapArray<uint8_t> *mem, const char *filename = nullptr,
-              CompressionType compression_type = CompressionType::None);
+              CompressionType compression_type = CompressionType::None,
+              CompressionSpeed compression_speed = CompressionSpeed::Default);
     bool Open(FILE *fp, const char *filename,
-              CompressionType compression_type = CompressionType::None);
+              CompressionType compression_type = CompressionType::None,
+              CompressionSpeed compression_speed = CompressionSpeed::Default);
     bool Open(const char *filename, unsigned int flags = 0,
-              CompressionType compression_type = CompressionType::None);
+              CompressionType compression_type = CompressionType::None,
+              CompressionSpeed compression_speed = CompressionSpeed::Default);
     bool Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename = nullptr,
-              CompressionType compression_type = CompressionType::None);
+              CompressionType compression_type = CompressionType::None,
+              CompressionSpeed compression_speed = CompressionSpeed::Default);
     bool Close();
 
     bool Flush();
@@ -2817,7 +2832,7 @@ public:
     bool Write(const void *buf, Size len) { return Write(MakeSpan((const uint8_t *)buf, len)); }
 
 private:
-    bool InitCompressor(CompressionType type);
+    bool InitCompressor(CompressionType type, CompressionSpeed speed);
     void ReleaseResources();
 
     bool Deflate(Span<const uint8_t> buf);
