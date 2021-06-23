@@ -597,15 +597,15 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     }
 }
 
-static void PruneTemporaryFiles()
+static void PruneTemporaryFiles(const char *dirname, const char *filter)
 {
     BlockAllocator temp_alloc;
 
     int64_t treshold = GetUnixTime() - 7200 * 1000;
 
-    EnumerateDirectory(gp_domain.config.temp_directory, nullptr, -1,
+    EnumerateDirectory(dirname, filter, -1,
                        [&](const char *filename, FileType file_type) {
-        filename = Fmt(&temp_alloc, "%1%/%2", gp_domain.config.temp_directory, filename).ptr;
+        filename = Fmt(&temp_alloc, "%1%/%2", dirname, filename).ptr;
 
         FileInfo file_info;
         if (!StatFile(filename, &file_info))
@@ -777,18 +777,20 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     // Run periodic tasks until exit
     {
         bool run = true;
-        int timeout = 120 * 1000;
+        int timeout = 30 * 1000;
 
         // Randomize the delay a bit to reduce situations where all goupile
         // services perform cleanups at the same time and cause a load spike.
-        timeout += (randombytes_random() & 0x7F) * 468;
-        LogDebug("Periodic cleanup timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
+        timeout += randombytes_uniform(timeout + 1);
+        LogDebug("Periodic timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
 
         while (run) {
             // In theory, all temporary files are deleted. But if any remain behind (crash, etc.)
             // we need to make sure they get deleted eventually.
             LogDebug("Prune temporary files");
-            PruneTemporaryFiles();
+            PruneTemporaryFiles(gp_domain.config.temp_directory, nullptr);
+            PruneTemporaryFiles(gp_domain.config.snapshot_directory, "*.tmp");
+            PruneTemporaryFiles(gp_domain.config.archive_directory, "*.tmp");
 
             WaitForResult ret = WaitForInterrupt(timeout);
 
