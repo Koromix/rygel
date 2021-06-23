@@ -147,17 +147,18 @@ bool sq_Database::SetSnapshotFile(const char *filename, int64_t full_delay)
     }, this);
 
     // Reset snapshot information
-    Fmt(&snapshot_filename_buf, "%1", filename);
     snapshot_full_delay = full_delay;
     snapshot_idx = 0;
     snapshot_progress = false;
-    snapshot = true;
 
-    if (!Checkpoint()) {
-        snapshot = false;
+    if (!snapshot_main_writer.Open(filename))
+        return false;
+    if (!CheckpointSnapshot()) {
+        snapshot_main_writer.Close();
         return false;
     }
 
+    snapshot = true;
     return true;
 }
 
@@ -169,7 +170,6 @@ bool sq_Database::Close()
         success &= Checkpoint();
 
         snapshot_main_writer.Close();
-        snapshot_filename_buf.Clear();
         snapshot = false;
     }
 
@@ -330,32 +330,28 @@ bool sq_Database::Checkpoint()
 
 bool sq_Database::CheckpointSnapshot()
 {
-    bool locked = false;
-    RG_DEFER {
-        if (locked) {
-            UnlockExclusive();
-        }
-    };
+    BlockAllocator temp_alloc;
 
+    const char *snapshot_filename = snapshot_main_writer.GetFileName();
     const char *db_filename = sqlite3_db_filename(db, "main");
     const char *wal_filename = sqlite3_filename_wal(db_filename);
     int64_t now = GetUnixTime();
+
+    Async async;
     bool success = true;
 
     // Restart snapshot stream if needed
     if (!snapshot_idx || now - snapshot_start >= snapshot_full_delay) {
-        snapshot_main_writer.Close();
-        success &= snapshot_main_writer.Open(snapshot_filename_buf.ptr);
+        success &= snapshot_main_writer.Reset();
         success &= snapshot_main_writer.Write(SnapshotSignature);
 
         // Perform initial copy
         {
-            RG_DEFER_C(len = snapshot_filename_buf.len) { snapshot_filename_buf.ptr[snapshot_filename_buf.len = len] = 0; };
-            Fmt(&snapshot_filename_buf, "-%1", FmtHex(0).Pad0(-16));
+            const char *dest_filename = Fmt(&temp_alloc, "%1-0000000000000000", snapshot_filename).ptr;
 
             StreamReader reader(db_filename);
-            StreamWriter writer(snapshot_filename_buf.ptr, (int)StreamWriterFlag::Atomic,
-                                                           CompressionType::Gzip);
+            StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic,
+                                CompressionType::Gzip, CompressionSpeed::Fast);
 
             FrameData frame;
             frame.mtime = LittleEndian(now);
@@ -366,41 +362,75 @@ bool sq_Database::CheckpointSnapshot()
         }
 
         // Delete all WAL copies
-        for (Size i = 1;; i++) {
-            RG_DEFER_C(len = snapshot_filename_buf.len) { snapshot_filename_buf.ptr[snapshot_filename_buf.len = len] = 0; };
-            Fmt(&snapshot_filename_buf, "-%1", FmtHex(i).Pad0(-16));
+        {
+            HeapArray<char> filename_buf(&temp_alloc);
+            filename_buf.Append(snapshot_main_writer.GetFileName());
 
-            if (!TestFile(snapshot_filename_buf.ptr))
-                break;
+            for (Size i = 1;; i++) {
+                RG_DEFER_C(len = filename_buf.len) {
+                    filename_buf.RemoveFrom(len);
+                    filename_buf.ptr[filename_buf.len] = 0;
+                };
+                Fmt(&filename_buf, "-%1", FmtHex(i).Pad0(-16));
 
-            success &= UnlinkFile(snapshot_filename_buf.ptr);
+                if (!TestFile(filename_buf.ptr))
+                    break;
+
+                success &= UnlinkFile(filename_buf.ptr);
+            }
         }
 
         snapshot_start = now;
         snapshot_idx = 1;
     }
 
-    locked = !LockExclusive();
-    RG_ASSERT(locked);
+    bool nested = LockExclusive();
+    RG_ASSERT(!nested);
 
     // Copy WAL file if needed
     if (snapshot_progress) {
-        RG_DEFER_C(len = snapshot_filename_buf.len) { snapshot_filename_buf.ptr[snapshot_filename_buf.len = len] = 0; };
-        Fmt(&snapshot_filename_buf, "-%1", FmtHex(snapshot_idx).Pad0(-16));
+        Span<const char> snapshot_directory = GetPathDirectory(snapshot_filename);
 
-        StreamReader reader(wal_filename);
-        StreamWriter writer(snapshot_filename_buf.ptr, (int)StreamWriterFlag::Atomic,
-                                                       CompressionType::Gzip);
+        FILE *fp;
+        const char *tmp_filename = CreateTemporaryFile(snapshot_directory, "", ".tmp", &temp_alloc, &fp);
+        const char *dest_filename = Fmt(&temp_alloc, "%1-%2", snapshot_filename, FmtHex(snapshot_idx).Pad0(-16)).ptr;
 
-        FrameData frame;
-        frame.mtime = LittleEndian(now);
+        if (tmp_filename) {
+            StreamReader reader(wal_filename);
+            StreamWriter writer(fp, tmp_filename);
 
-        success &= SpliceWithChecksum(&reader, &writer, frame.sha256);
-        success &= snapshot_main_writer.Write((const uint8_t *)&frame, RG_SIZE(frame));
-        success &= snapshot_main_writer.Flush();
+            FrameData frame;
+            frame.mtime = LittleEndian(now);
 
-        snapshot_idx++;
-        snapshot_progress = false;
+            success &= SpliceWithChecksum(&reader, &writer, frame.sha256);
+            success &= snapshot_main_writer.Write((const uint8_t *)&frame, RG_SIZE(frame));
+            success &= snapshot_main_writer.Flush();
+
+            async.Run([=]() {
+                RG_DEFER { 
+                    fclose(fp);
+                    UnlinkFile(tmp_filename);
+                };
+
+                StreamReader reader(tmp_filename);
+                StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic,
+                                    CompressionType::Gzip, CompressionSpeed::Fast);
+
+                if (!SpliceStream(&reader, -1, &writer))
+                    return false;
+                if (!reader.Close())
+                    return false;
+                if (!writer.Close())
+                    return false;
+
+                return true;
+            });
+
+            snapshot_idx++;
+            snapshot_progress = false;
+        } else {
+            success = false;
+        }
     }
 
     // Perform SQLite checkpoint, with truncation so that we can just copy each WAL file
@@ -408,6 +438,9 @@ bool sq_Database::CheckpointSnapshot()
         LogError("SQLite checkpoint failed: %1", sqlite3_errmsg(db));
         success = false;
     }
+
+    UnlockExclusive();
+    success &= async.Sync();
 
     // If anything goes wrong, do a full snapshot next time
     snapshot_idx = success ? snapshot_idx : 0;
@@ -417,8 +450,8 @@ bool sq_Database::CheckpointSnapshot()
 
 bool sq_Database::CheckpointDirect()
 {
-    bool locked = !LockExclusive();
-    RG_ASSERT(locked);
+    bool nested = LockExclusive();
+    RG_ASSERT(!nested);
     RG_DEFER { UnlockExclusive(); };
 
     if (sqlite3_wal_checkpoint_v2(db, nullptr, SQLITE_CHECKPOINT_FULL, nullptr, nullptr) != SQLITE_OK) {
@@ -433,36 +466,74 @@ bool sq_Database::LockExclusive()
 {
     std::unique_lock<std::mutex> lock(mutex);
 
-    if ((running_transaction && running_transaction_thread != std::this_thread::get_id()) ||
-            running_requests) {
-        do {
-            transactions_cv.wait(lock);
-        } while (running_transaction || running_requests);
+    // Handle nested lock
+    if (running_transaction && running_transaction_thread == std::this_thread::get_id()) {
+        running_transaction++;
+        return true;
     }
+
+    // Wait for our turn
+    if (running_transaction || running_requests) {
+        LockTicket ticket;
+
+        ticket.prev = &lock_root;
+        ticket.next = lock_root.next;
+        ticket.next->prev = &ticket;
+        lock_root.next = &ticket;
+        ticket.shared = false;
+
+        do {
+            ticket.cv.wait(lock);
+        } while (running_transaction || running_requests);
+
+        ticket.prev->next = ticket.next;
+        ticket.next->prev = ticket.prev;
+    }
+
     running_transaction++;
     running_transaction_thread = std::this_thread::get_id();
 
-    return running_transaction > 1;
+    return false;
 }
 
 void sq_Database::UnlockExclusive()
 {
     std::unique_lock<std::mutex> lock(mutex);
 
-    running_transaction--;
-    transactions_cv.notify_one();
-    requests_cv.notify_all();
+    if (!--running_transaction) {
+        LockTicket *ticket = lock_root.next;
+
+        if (ticket != &lock_root) {
+            do {
+                ticket->cv.notify_one();
+                ticket = ticket->next;
+            } while (ticket->shared);
+        }
+    }
 }
 
 void sq_Database::LockShared()
 {
     std::unique_lock<std::mutex> lock(mutex);
 
-    if (running_transaction && running_transaction_thread != std::this_thread::get_id()) {
+    // Wait for our turn
+    if (running_transaction || lock_root.next != &lock_root) {
+        LockTicket ticket;
+
+        ticket.prev = &lock_root;
+        ticket.next = lock_root.next;
+        ticket.next->prev = &ticket;
+        lock_root.next = &ticket;
+        ticket.shared = true;
+
         do {
-            requests_cv.wait(lock);
+            ticket.cv.wait(lock);
         } while (running_transaction);
+
+        ticket.prev->next = ticket.next;
+        ticket.next->prev = ticket.prev;
     }
+
     running_requests++;
 }
 
@@ -471,7 +542,14 @@ void sq_Database::UnlockShared()
     std::unique_lock<std::mutex> lock(mutex);
 
     if (!--running_requests) {
-        transactions_cv.notify_one();
+        LockTicket *ticket = lock_root.next;
+
+        if (ticket != &lock_root) {
+            do {
+                ticket->cv.notify_one();
+                ticket = ticket->next;
+            } while (ticket->shared);
+        }
     }
 }
 

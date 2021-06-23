@@ -97,9 +97,17 @@ public:
 class sq_Database {
     RG_DELETE_COPY(sq_Database)
 
+    struct LockTicket {
+        LockTicket *prev;
+        LockTicket *next;
+        std::condition_variable cv;
+        bool shared;
+    };
+
     sqlite3 *db = nullptr;
 
     std::mutex mutex;
+    LockTicket lock_root = { &lock_root, &lock_root };
     std::condition_variable transactions_cv;
     std::condition_variable requests_cv;
     int running_transaction = 0;
@@ -108,7 +116,6 @@ class sq_Database {
 
     bool snapshot = false;
     StreamWriter snapshot_main_writer;
-    HeapArray<char> snapshot_filename_buf;
     int64_t snapshot_full_delay;
     std::atomic_bool snapshot_progress { false };
     int64_t snapshot_start;
