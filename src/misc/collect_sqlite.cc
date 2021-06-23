@@ -12,7 +12,7 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "../core/libcc/libcc.hh"
-#include "../core/libwrap/sqlite.hh"
+#include "../core/libsqlite/libsqlite.hh"
 
 namespace RG {
 

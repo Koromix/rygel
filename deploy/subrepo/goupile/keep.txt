@@ -5,6 +5,7 @@ src/core/libcc
 src/core/libnet
 src/core/libsandbox
 src/core/libsecurity
+src/core/libsqlite
 src/core/libwrap
 src/felix
 src/goupil

@@ -14,8 +14,8 @@
 #pragma once
 
 #include "../../core/libcc/libcc.hh"
-#include "../../core/libwrap/sqlite.hh"
 #include "../../core/libnet/libnet.hh"
+#include "../../core/libsqlite/libsqlite.hh"
 #include "session.hh"
 
 namespace RG {

@@ -15,8 +15,8 @@
 
 #include "../../core/libcc/libcc.hh"
 #include "instance.hh"
-#include "../../core/libwrap/sqlite.hh"
 #include "../../core/libnet/libnet.hh"
+#include "../../core/libsqlite/libsqlite.hh"
 
 namespace RG {
 
