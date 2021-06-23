@@ -4720,7 +4720,8 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<memory>";
 
     dest.type = DestinationType::Memory;
-    dest.u.memory = mem;
+    dest.u.mem.memory = mem;
+    dest.u.mem.start = mem->len;
     dest.vt100 = false;
 
     if (!InitCompressor(compression_type, compression_speed))
@@ -4923,6 +4924,62 @@ bool StreamWriter::Flush()
     RG_UNREACHABLE();
 }
 
+bool StreamWriter::Reset()
+{
+    if (RG_UNLIKELY(error))
+        return false;
+
+    switch (dest.type) {
+        case DestinationType::Memory: { dest.u.mem.memory->RemoveFrom(dest.u.mem.start); } break;
+
+        case DestinationType::File: {
+            if (fseek(dest.u.file.fp, 0, SEEK_SET) < 0) {
+                LogError("Failed to rewind '%1': %2", filename, strerror(errno));
+                error = true;
+                return false;
+            }
+
+#ifdef _WIN32
+            HANDLE handle = (HANDLE)_get_osfhandle(_fileno(dest.u.file.fp));
+
+            if (!SetEndOfFile(handle)) {
+                LogError("Failed to truncate '%1'", filename, GetWin32ErrorString());
+                error = true;
+                return false;
+            }
+#else
+            if (ftruncate(fileno(dest.u.file.fp), 0) < 0) {
+                LogError("Failed to truncate '%1': %2", filename, strerror(errno));
+                error = true;
+                return false;
+            }
+#endif
+        } break;
+
+        case DestinationType::Function: {
+            LogError("Cannot rewind stream '%1'", filename);
+            error = true;
+            return false;
+        } break;
+    }
+
+    switch (compression.type) {
+        case CompressionType::None: {} break;
+
+        case CompressionType::Gzip:
+        case CompressionType::Zlib: {
+#ifdef MZ_VERSION
+            Allocator::Release(nullptr, compression.u.miniz, RG_SIZE(*compression.u.miniz));
+            compression.u.miniz = nullptr;
+#endif
+        } break;
+    }
+    if (!InitCompressor(compression.type, compression.speed))
+        return false;
+
+    return true;
+}
+
 bool StreamWriter::Write(Span<const uint8_t> buf)
 {
     if (RG_UNLIKELY(error))
@@ -5043,9 +5100,7 @@ void StreamWriter::ReleaseResources()
     compression.type = CompressionType::None;
 
     switch (dest.type) {
-        case DestinationType::Memory: {
-            dest.u.memory = nullptr;
-        } break;
+        case DestinationType::Memory: { dest.u.mem = {}; } break;
 
         case DestinationType::File: {
             if (dest.u.file.owned && dest.u.file.fp) {
@@ -5066,9 +5121,7 @@ void StreamWriter::ReleaseResources()
             dest.u.file.tmp_exclusive = false;
         } break;
 
-        case DestinationType::Function: {
-            dest.u.func.~function();
-        } break;
+        case DestinationType::Function: { dest.u.func.~function(); } break;
     }
     dest.type = DestinationType::Memory;
 }
@@ -5102,9 +5155,9 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
     switch (dest.type) {
         case DestinationType::Memory: {
             // dest.u.memory->Append(buf) would work but it's probably slower
-            dest.u.memory->Grow(buf.len);
-            memcpy_safe(dest.u.memory->ptr + dest.u.memory->len, buf.ptr, (size_t)buf.len);
-            dest.u.memory->len += buf.len;
+            dest.u.mem.memory->Grow(buf.len);
+            memcpy_safe(dest.u.mem.memory->ptr + dest.u.mem.memory->len, buf.ptr, (size_t)buf.len);
+            dest.u.mem.memory->len += buf.len;
 
             return true;
         } break;

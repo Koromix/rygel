@@ -2660,6 +2660,7 @@ public:
               CompressionType compression_type = CompressionType::None);
     bool Close();
 
+    // File-specific
     bool Rewind();
 
     const char *GetFileName() const { return filename; }
@@ -2754,7 +2755,10 @@ class StreamWriter {
     struct {
         DestinationType type = DestinationType::Memory;
         union U {
-            HeapArray<uint8_t> *memory;
+            struct {
+                HeapArray<uint8_t> *memory;
+                Size start;
+            } mem;
             struct {
                 FILE *fp;
                 bool owned;
@@ -2820,6 +2824,7 @@ public:
     bool Close();
 
     bool Flush();
+    bool Reset();
 
     const char *GetFileName() const { return filename; }
     CompressionType GetCompressionType() const { return compression.type; }
