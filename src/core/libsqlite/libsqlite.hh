@@ -106,9 +106,11 @@ class sq_Database {
     std::thread::id running_transaction_thread;
     int running_requests = 0;
 
-    FILE *snapshot_fp = nullptr;
+    bool snapshot = false;
+    StreamWriter snapshot_main_writer;
     HeapArray<char> snapshot_filename_buf;
     int64_t snapshot_full_delay;
+    std::atomic_bool snapshot_progress { false };
     int64_t snapshot_start;
     Size snapshot_idx;
 
@@ -149,6 +151,9 @@ public:
     operator sqlite3 *() { return db; }
 
 private:
+    bool CheckpointSnapshot();
+    bool CheckpointDirect();
+
     bool LockExclusive();
     void UnlockExclusive();
     void LockShared();

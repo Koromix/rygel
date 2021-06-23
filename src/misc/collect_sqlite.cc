@@ -27,7 +27,7 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 [options] <database>%!0
+R"(Usage: %!..+%1 [options] <snapshot> -O <destination>%!0
 
 Options:
     %!..+-O, --output_file <file>%!0     Change final database filename
@@ -59,17 +59,25 @@ Options:
         }
 
         src_filename = opt.ConsumeNonOption();
-        if (!src_filename) {
-            LogError("No database filename provided");
-            return 1;
-        }
-        dest_filename = dest_filename ? dest_filename : src_filename;
     }
 
-    if (!force && TestFile(dest_filename)) {
-        LogError("Refusing to overwrite '%1'", dest_filename);
+    if (!src_filename) {
+        LogError("No snapshot filename provided");
         return 1;
     }
+    if (!dest_filename) {
+        LogError("No destination filename provided");
+        return 1;
+    }
+    if (TestFile(dest_filename)) {
+        if (force) {
+            UnlinkFile(dest_filename);
+        } else {
+            LogError("Refusing to overwrite '%1'", dest_filename);
+            return 1;
+        }
+    }
+
     if (!sq_RestoreDatabase(src_filename, dest_filename)) {
         UnlinkFile(dest_filename);
         return 1;

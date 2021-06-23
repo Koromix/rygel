@@ -781,7 +781,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
 
         // Randomize the delay a bit to reduce situations where all goupile
         // services perform cleanups at the same time and cause a load spike.
-        timeout += (randombytes_random() & 0x7F) * 500;
+        timeout += (randombytes_random() & 0x7F) * 468;
         LogDebug("Periodic cleanup timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
 
         while (run) {

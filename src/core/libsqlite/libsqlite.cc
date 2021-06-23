@@ -13,8 +13,18 @@
 
 #include "../libcc/libcc.hh"
 #include "libsqlite.hh"
+#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
+
+const char *SnapshotSignature = "SQLITESNAPSHOT01";
+
+#pragma pack(push, 1)
+struct FrameData {
+    int64_t mtime;
+    uint8_t sha256[32];
+};
+#pragma pack(pop)
 
 sq_Statement &sq_Statement::operator=(sq_Statement &&other)
 {
@@ -121,33 +131,30 @@ bool sq_Database::SetSynchronousFull(bool enable)
 
 bool sq_Database::SetSnapshotFile(const char *filename, int64_t full_delay)
 {
-    RG_ASSERT(!snapshot_fp);
+    RG_ASSERT(!snapshot);
 
     // Configure database to let us manipulate the WAL manually
     if (!RunMany(R"(PRAGMA locking_mode = EXCLUSIVE;
-                    PRAGMA wal_autocheckpoint = 0;
+                    PRAGMA journal_mode = WAL;
                     PRAGMA auto_vacuum = 0;)"))
         return false;
 
-    // Open WAL file
-    {
-        const char *db_filename = sqlite3_db_filename(db, "main");
-        const char *wal_filename = sqlite3_filename_wal(db_filename);
-
-        snapshot_fp = OpenFile(wal_filename, (int)OpenFileFlag::Read);
-        if (!snapshot_fp)
-            return false;
-    }
+    // Disable WAL autocommit and use the hook to set flag when WAL contains pages
+    sqlite3_wal_hook(db, [](void *udata, sqlite3 *, const char *, int) {
+        sq_Database *db = (sq_Database *)udata;
+        db->snapshot_progress = true;
+        return SQLITE_OK;
+    }, this);
 
     // Reset snapshot information
     Fmt(&snapshot_filename_buf, "%1", filename);
     snapshot_full_delay = full_delay;
     snapshot_idx = 0;
+    snapshot_progress = false;
+    snapshot = true;
 
     if (!Checkpoint()) {
-        fclose(snapshot_fp);
-        snapshot_fp = nullptr;
-
+        snapshot = false;
         return false;
     }
 
@@ -158,12 +165,12 @@ bool sq_Database::Close()
 {
     bool success = true;
 
-    if (snapshot_fp) {
+    if (snapshot) {
         success &= Checkpoint();
 
-        fclose(snapshot_fp);
-        snapshot_fp = nullptr;
+        snapshot_main_writer.Close();
         snapshot_filename_buf.Clear();
+        snapshot = false;
     }
 
     int ret = sqlite3_close(db);
@@ -286,10 +293,43 @@ restart:
     return dest_db.Close();
 }
 
+static bool SpliceWithChecksum(StreamReader *reader, StreamWriter *writer, uint8_t out_hash[32])
+{
+    if (!reader->IsValid())
+        return false;
+
+    crypto_hash_sha256_state state;
+    crypto_hash_sha256_init(&state);
+
+    while (!reader->IsEOF()) {
+        LocalArray<uint8_t, 16384> buf;
+        buf.len = reader->Read(buf.data);
+        if (buf.len < 0)
+            return false;
+
+        if (!writer->Write(buf))
+            return false;
+        crypto_hash_sha256_update(&state, buf.data, buf.len);
+    }
+
+    if (!writer->Close())
+        return false;
+    crypto_hash_sha256_final(&state, out_hash);
+
+    return true;
+}
+
 bool sq_Database::Checkpoint()
 {
-    BlockAllocator temp_alloc;
+    if (snapshot) {
+        return CheckpointSnapshot();
+    } else {
+        return CheckpointDirect();
+    }
+}
 
+bool sq_Database::CheckpointSnapshot()
+{
     bool locked = false;
     RG_DEFER {
         if (locked) {
@@ -299,90 +339,94 @@ bool sq_Database::Checkpoint()
 
     const char *db_filename = sqlite3_db_filename(db, "main");
     const char *wal_filename = sqlite3_filename_wal(db_filename);
+    int64_t now = GetUnixTime();
     bool success = true;
 
-    if (snapshot_fp) {
-        int64_t now = GetMonotonicTime();
+    // Restart snapshot stream if needed
+    if (!snapshot_idx || now - snapshot_start >= snapshot_full_delay) {
+        snapshot_main_writer.Close();
+        success &= snapshot_main_writer.Open(snapshot_filename_buf.ptr);
+        success &= snapshot_main_writer.Write(SnapshotSignature);
 
-        if (snapshot_idx > 0 && now - snapshot_start < snapshot_full_delay) {
-            bool empty;
-            {
-                long position;
+        // Perform initial copy
+        {
+            RG_DEFER_C(len = snapshot_filename_buf.len) { snapshot_filename_buf.ptr[snapshot_filename_buf.len = len] = 0; };
+            Fmt(&snapshot_filename_buf, "-%1", FmtHex(0).Pad0(-16));
 
-                success &= !fseek(snapshot_fp, 0, SEEK_END);
-                position = ftell(snapshot_fp);
-                success &= (position >= 0);
-                success &= !fseek(snapshot_fp, 0, SEEK_SET);
+            StreamReader reader(db_filename);
+            StreamWriter writer(snapshot_filename_buf.ptr, (int)StreamWriterFlag::Atomic,
+                                                           CompressionType::Gzip);
 
-                if (RG_LIKELY(success)) {
-                    empty = !position;
-                } else {
-                    LogError("Failed to compute WAL size: %1", strerror(errno));
-                    empty = true;
-                }
-            }
+            FrameData frame;
+            frame.mtime = LittleEndian(now);
 
-            locked = !LockExclusive();
-            RG_ASSERT(locked);
-
-            // Copy WAL file if needed
-            if (!empty) {
-                RG_DEFER_C(len = snapshot_filename_buf.len) { snapshot_filename_buf.ptr[snapshot_filename_buf.len = len] = 0; };
-                Fmt(&snapshot_filename_buf, "-%1", FmtHex(snapshot_idx).Pad0(-16));
-
-                StreamReader reader(snapshot_fp, wal_filename);
-                StreamWriter writer(snapshot_filename_buf.ptr, (int)StreamWriterFlag::Exclusive |
-                                                               (int)StreamWriterFlag::Atomic);
-                success &= SpliceStream(&reader, -1, &writer);
-                success &= writer.Close();
-
-                snapshot_idx++;
-            }
-
-            // Reset and do a full snapshot after error
-            snapshot_idx = success ? snapshot_idx : 0;
-        } else {
-            // Perform initial snapshot
-            {
-                RG_DEFER_C(len = snapshot_filename_buf.len) { snapshot_filename_buf.ptr[snapshot_filename_buf.len = len] = 0; };
-                Fmt(&snapshot_filename_buf, "-%1", FmtHex(0).Pad0(-16));
-
-                StreamReader reader(db_filename);
-                StreamWriter writer(snapshot_filename_buf.ptr, (int)StreamWriterFlag::Exclusive |
-                                                               (int)StreamWriterFlag::Atomic);
-                success &= SpliceStream(&reader, -1, &writer);
-                success &= writer.Close();
-            }
-
-            // Delete all WAL copies
-            for (Size i = 1;; i++) {
-                RG_DEFER_C(len = snapshot_filename_buf.len) { snapshot_filename_buf.ptr[snapshot_filename_buf.len = len] = 0; };
-                Fmt(&snapshot_filename_buf, "-%1", FmtHex(i).Pad0(-16));
-
-                if (!TestFile(snapshot_filename_buf.ptr))
-                    break;
-
-                UnlinkFile(snapshot_filename_buf.ptr);
-            }
-
-            snapshot_start = now;
-            snapshot_idx = 1;
-
-            locked = !LockExclusive();
-            RG_ASSERT(locked);
+            success &= SpliceWithChecksum(&reader, &writer, frame.sha256);
+            success &= snapshot_main_writer.Write((const uint8_t *)&frame, RG_SIZE(frame));
+            success &= snapshot_main_writer.Flush();
         }
-    } else {
-        locked = !LockExclusive();
-        RG_ASSERT(locked);
+
+        // Delete all WAL copies
+        for (Size i = 1;; i++) {
+            RG_DEFER_C(len = snapshot_filename_buf.len) { snapshot_filename_buf.ptr[snapshot_filename_buf.len = len] = 0; };
+            Fmt(&snapshot_filename_buf, "-%1", FmtHex(i).Pad0(-16));
+
+            if (!TestFile(snapshot_filename_buf.ptr))
+                break;
+
+            success &= UnlinkFile(snapshot_filename_buf.ptr);
+        }
+
+        snapshot_start = now;
+        snapshot_idx = 1;
     }
 
-    int mode = snapshot_fp ? SQLITE_CHECKPOINT_TRUNCATE : SQLITE_CHECKPOINT_FULL;
-    if (sqlite3_wal_checkpoint_v2(db, nullptr, mode, nullptr, nullptr) != SQLITE_OK) {
+    locked = !LockExclusive();
+    RG_ASSERT(locked);
+
+    // Copy WAL file if needed
+    if (snapshot_progress) {
+        RG_DEFER_C(len = snapshot_filename_buf.len) { snapshot_filename_buf.ptr[snapshot_filename_buf.len = len] = 0; };
+        Fmt(&snapshot_filename_buf, "-%1", FmtHex(snapshot_idx).Pad0(-16));
+
+        StreamReader reader(wal_filename);
+        StreamWriter writer(snapshot_filename_buf.ptr, (int)StreamWriterFlag::Atomic,
+                                                       CompressionType::Gzip);
+
+        FrameData frame;
+        frame.mtime = LittleEndian(now);
+
+        success &= SpliceWithChecksum(&reader, &writer, frame.sha256);
+        success &= snapshot_main_writer.Write((const uint8_t *)&frame, RG_SIZE(frame));
+        success &= snapshot_main_writer.Flush();
+
+        snapshot_idx++;
+        snapshot_progress = false;
+    }
+
+    // Perform SQLite checkpoint, with truncation so that we can just copy each WAL file
+    if (sqlite3_wal_checkpoint_v2(db, nullptr, SQLITE_CHECKPOINT_TRUNCATE, nullptr, nullptr) != SQLITE_OK) {
         LogError("SQLite checkpoint failed: %1", sqlite3_errmsg(db));
         success = false;
     }
 
+    // If anything goes wrong, do a full snapshot next time
+    snapshot_idx = success ? snapshot_idx : 0;
+
     return success;
+}
+
+bool sq_Database::CheckpointDirect()
+{
+    bool locked = !LockExclusive();
+    RG_ASSERT(locked);
+    RG_DEFER { UnlockExclusive(); };
+
+    if (sqlite3_wal_checkpoint_v2(db, nullptr, SQLITE_CHECKPOINT_FULL, nullptr, nullptr) != SQLITE_OK) {
+        LogError("SQLite checkpoint failed: %1", sqlite3_errmsg(db));
+        return false;
+    }
+
+    return true;
 }
 
 bool sq_Database::LockExclusive()
@@ -455,51 +499,103 @@ bool sq_Database::RunWithBindings(const char *sql, Span<const sq_Binding> bindin
     return stmt.Run();
 }
 
-static bool CopyFile(const char *src, const char *dest)
+static void LogFrameTime(const char *type, const char *filename, int64_t mtime)
 {
-    StreamReader reader(src);
-    StreamWriter writer(dest);
+    TimeSpec spec = {};
+    DecomposeUnixTime(mtime, TimeMode::UTC, &spec);
 
-    if (!SpliceStream(&reader, -1, &writer))
-        return false;
-    if (!writer.Close())
-        return false;
-
-    return true;
+    LogInfo("Restoring %1 '%2' (%3-%4-%5 %6:%7:%8.%9)",
+            type, SplitStrReverseAny(filename, RG_PATH_SEPARATORS),
+            FmtArg(spec.year).Pad0(-2), FmtArg(spec.month).Pad0(-2), FmtArg(spec.day).Pad0(-2),
+            FmtArg(spec.hour).Pad0(-2), FmtArg(spec.min).Pad0(-2), FmtArg(spec.sec).Pad0(-2),
+            FmtArg(spec.msec).Pad0(-3));
 }
 
 bool sq_RestoreDatabase(const char *filename, const char *dest_filename)
 {
     BlockAllocator temp_alloc;
 
+    // Safety check
+    if (TestFile(dest_filename)) {
+        LogError("Refusing to overwrite '%1'", dest_filename);
+        return false;
+    }
+
+    Span<const uint8_t> frames;
+    {
+        HeapArray<uint8_t> buf(&temp_alloc);
+        if (!ReadFile(filename, Megabytes(32), &buf))
+            return false;
+
+        if (!StartsWith(MakeSpan((const char *)buf.ptr, buf.len), SnapshotSignature)) {
+            LogError("Unexpected file signature");
+            return false;
+        }
+
+        Size signature_len = strlen(SnapshotSignature);
+        frames = buf.Leak();
+        frames = frames.Take(signature_len, frames.len - signature_len);
+    }
+
     const char *wal_filename = Fmt(&temp_alloc, "%1-wal", dest_filename).ptr;
+    RG_DEFER { UnlinkFile(wal_filename); };
 
     HeapArray<char> path_buf(&temp_alloc);
     Fmt(&path_buf, "%1", filename);
 
     // Copy initial database
     {
+        if (frames.len < RG_SIZE(FrameData)) {
+            LogError("Checksum file '%1' is truncated", filename);
+            return false;
+        }
+
+        FrameData frame;
+        memcpy_safe(&frame, frames.ptr, RG_SIZE(frame));
+        frame.mtime = LittleEndian(frame.mtime);
+        frames = frames.Take(RG_SIZE(frame), frames.len - RG_SIZE(frame));
+
         RG_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
         Fmt(&path_buf, "-%1", FmtHex(0).Pad0(-16));
 
-        LogInfo("Copy database from '%1'", path_buf);
+        LogFrameTime("database", path_buf.ptr, frame.mtime);
 
-        if (!CopyFile(path_buf.ptr, dest_filename))
+        StreamReader reader(path_buf.ptr, CompressionType::Gzip);
+        StreamWriter writer(dest_filename);
+        uint8_t sha256[32];
+
+        if (!SpliceWithChecksum(&reader, &writer, sha256))
             return false;
+
+        if (memcmp(sha256, frame.sha256, RG_SIZE(sha256))) {
+            LogError("Database copy checksum does not match");
+            return false;
+        }
     }
 
     // Apply WAL copies
-    for (Size i = 1;; i++) {
+    for (Size i = 1; frames.len >= RG_SIZE(FrameData); i++) {
+        FrameData frame;
+        memcpy_safe(&frame, frames.ptr, RG_SIZE(frame));
+        frame.mtime = LittleEndian(frame.mtime);
+        frames = frames.Take(RG_SIZE(frame), frames.len - RG_SIZE(frame));
+
         RG_DEFER_C(len = path_buf.len) { path_buf.ptr[path_buf.len = len] = 0; };
         Fmt(&path_buf, "-%1", FmtHex(i).Pad0(-16));
 
-        if (!TestFile(path_buf.ptr))
-            break;
+        LogFrameTime("WAL", path_buf.ptr, frame.mtime);
 
-        LogInfo("Applying WAL '%1'", path_buf);
+        StreamReader reader(path_buf.ptr, CompressionType::Gzip);
+        StreamWriter writer(wal_filename);
+        uint8_t sha256[32];
 
-        if (!CopyFile(path_buf.ptr, wal_filename))
+        if (!SpliceWithChecksum(&reader, &writer, sha256))
             return false;
+
+        if (memcmp(sha256, frame.sha256, RG_SIZE(sha256))) {
+            LogError("WAL copy checksum does not match");
+            return false;
+        }
 
         sq_Database db;
         if (!db.Open(dest_filename, SQLITE_OPEN_READWRITE))
@@ -510,9 +606,14 @@ bool sq_RestoreDatabase(const char *filename, const char *dest_filename)
             return false;
 
         if (TestFile(wal_filename)) {
-            LogError("SQLite is not using the WAL for some reason");
+            LogError("SQLite won't replay the WAL for some reason");
             return false;
         }
+    }
+
+    if (frames.len) {
+        LogError("Snapshot file '%1' appears truncated", filename);
+        return false;
     }
 
     LogInfo("Database '%1' restored", dest_filename);
