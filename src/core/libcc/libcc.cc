@@ -2950,7 +2950,7 @@ bool UnlinkFile(const char *filename, bool error_if_missing)
 
 #endif
 
-static const char *CreateTemporaryPath(const char *directory, const char *prefix, const char *extension,
+static const char *CreateTemporaryPath(Span<const char> directory, const char *prefix, const char *extension,
                                        Allocator *alloc, FunctionRef<bool(const char *path)> create)
 {
     RG_ASSERT(alloc);
@@ -2994,7 +2994,7 @@ static const char *CreateTemporaryPath(const char *directory, const char *prefix
     return nullptr;
 }
 
-const char *CreateTemporaryFile(const char *directory, const char *prefix, const char *extension,
+const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, const char *extension,
                                 Allocator *alloc, FILE **out_fp)
 {
     return CreateTemporaryPath(directory, prefix, extension, alloc, [&](const char *path) {
@@ -3015,14 +3015,14 @@ const char *CreateTemporaryFile(const char *directory, const char *prefix, const
     });
 }
 
-const char *CreateTemporaryDirectory(const char *directory, const char *prefix, Allocator *alloc)
+const char *CreateTemporaryDirectory(Span<const char> directory, const char *prefix, Allocator *alloc)
 {
     return CreateTemporaryPath(directory, prefix, "", alloc, [&](const char *path) {
         return MakeDirectory(path);
     });
 }
 
-const char *MakeTemporaryFileName(const char *directory, const char *prefix, const char *extension, Allocator *alloc)
+const char *MakeTemporaryFileName(Span<const char> directory, const char *prefix, const char *extension, Allocator *alloc)
 {
     return CreateTemporaryPath(directory, prefix, "", alloc, [&](const char *path) { return true; });
 }
@@ -4773,7 +4773,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
     memset_safe(&dest.u.file, 0, RG_SIZE(dest.u.file));
 
     if (flags & (int)StreamWriterFlag::Atomic) {
-        const char *directory = DuplicateString(GetPathDirectory(filename), &str_alloc).ptr;
+        Span<const char> directory = GetPathDirectory(filename);
 
         if (flags & (int)StreamWriterFlag::Exclusive) {
             FILE *fp = OpenFile(filename, (int)OpenFileFlag::Write |
