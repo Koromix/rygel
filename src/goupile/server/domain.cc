@@ -249,14 +249,6 @@ bool DomainHolder::Open(const char *filename)
     if (!db.SetSynchronousFull(config.sync_full))
         return false;
 
-    // Configure snapshots
-    {
-        const char *snapshot_filename = Fmt(&config.str_alloc, "%1%/goupile.db", config.snapshot_directory).ptr;
-
-        if (!db.SetSnapshotFile(snapshot_filename, FullSnapshotDelay))
-            return false;
-    }
-
     // Check schema version
     {
         int version;
@@ -282,6 +274,14 @@ bool DomainHolder::Open(const char *filename)
         return false;
     if (!MakeDirectory(config.snapshot_directory_instances, false))
         return false;
+
+    // Configure snapshots
+    {
+        const char *snapshot_filename = Fmt(&config.str_alloc, "%1%/goupile.db", config.snapshot_directory).ptr;
+
+        if (!db.SetSnapshotFile(snapshot_filename, FullSnapshotDelay))
+            return false;
+    }
 
     err_guard.Disable();
     return true;
