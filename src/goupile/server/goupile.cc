@@ -792,6 +792,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             PruneTemporaryFiles(gp_domain.config.temp_directory, nullptr, first ? 0 : 7200 * 1000);
             PruneTemporaryFiles(gp_domain.config.snapshot_directory, "*.tmp", first ? 0 : 7200 * 1000);
             PruneTemporaryFiles(gp_domain.config.archive_directory, "*.tmp", first ? 0 : 7200 * 1000);
+            PruneTemporaryFiles(gp_domain.config.database_directory, "*.tmp", first ? 0 : 7200 * 1000);
 
             WaitForResult ret = WaitForInterrupt(timeout);
 
