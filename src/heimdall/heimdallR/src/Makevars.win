@@ -14,4 +14,4 @@
 include Makevars.inc
 
 PKG_CPPFLAGS += -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -D__USE_MINGW_ANSI_STDIO=1 -DNOMINMAX
-PKG_LIBS += -lgdi32 -lopengl32 -limm32
+PKG_LIBS += -lws2_32 -lgdi32 -lopengl32 -limm32
