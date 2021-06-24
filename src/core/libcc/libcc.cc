@@ -4828,7 +4828,8 @@ bool StreamWriter::Close()
                     break;
                 }
 
-                tdefl_status status = tdefl_compress_buffer(&ctx->deflator, nullptr, 0, TDEFL_FINISH);
+                uint8_t dummy; // Avoid UB in miniz
+                tdefl_status status = tdefl_compress_buffer(&ctx->deflator, &dummy, 0, TDEFL_FINISH);
                 if (status != TDEFL_STATUS_DONE) {
                     if (status != TDEFL_STATUS_PUT_BUF_FAILED) {
                         LogError("Failed to end Deflate stream for '%1", filename);
