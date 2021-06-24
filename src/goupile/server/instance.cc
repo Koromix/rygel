@@ -485,7 +485,7 @@ bool MigrateInstance(sq_Database *db)
                             crypto_hash_sha256_state state;
                             crypto_hash_sha256_init(&state);
 
-                            while (!reader.IsEOF()) {
+                            do {
                                 LocalArray<uint8_t, 16384> buf;
                                 buf.len = reader.Read(buf.data);
                                 if (buf.len < 0)
@@ -493,7 +493,7 @@ bool MigrateInstance(sq_Database *db)
 
                                 writer.Write(buf);
                                 crypto_hash_sha256_update(&state, buf.data, buf.len);
-                            }
+                            } while (!reader.IsEOF());
 
                             bool success = writer.Close();
                             RG_ASSERT(success);
@@ -781,14 +781,14 @@ bool MigrateInstance(sq_Database *db)
                             return copy_len;
                         }, path, compression_type);
 
-                        while (!reader.IsEOF()) {
+                        do {
                             LocalArray<uint8_t, 16384> buf;
                             buf.len = reader.Read(buf.data);
                             if (buf.len < 0)
                                 return false;
 
                             real_len += buf.len;
-                        }
+                        } while (!reader.IsEOF());
                     }
 
                     if (!db->Run(R"(UPDATE fs_files SET mtime = ?, size = ?
@@ -1044,7 +1044,7 @@ bool MigrateInstance(sq_Database *db)
                     {
                         Size read_len = 0;
 
-                        while (!reader.IsEOF()) {
+                        do {
                             LocalArray<uint8_t, 16384> buf;
                             buf.len = reader.Read(buf.data);
                             if (buf.len < 0)
@@ -1060,7 +1060,7 @@ bool MigrateInstance(sq_Database *db)
                             }
 
                             read_len += buf.len;
-                        }
+                        } while (!reader.IsEOF());
                         if (read_len < total_len) {
                             LogError("Total file size has changed (truncated)");
                             return false;

@@ -4129,10 +4129,8 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
 {
     RG_ASSERT(!this->filename);
 
-    RG_DEFER_N(error_guard) {
-        ReleaseResources();
-        error = true;
-    };
+    RG_DEFER_N(error_guard) { error = true; };
+    error = false;
 
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<memory>";
 
@@ -4151,10 +4149,8 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
 {
     RG_ASSERT(!this->filename);
 
-    RG_DEFER_N(error_guard) {
-        ReleaseResources();
-        error = true;
-    };
+    RG_DEFER_N(error_guard) { error = true; };
+    error = false;
 
     RG_ASSERT(fp);
     RG_ASSERT(filename);
@@ -4175,10 +4171,8 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
 {
     RG_ASSERT(!this->filename);
 
-    RG_DEFER_N(error_guard) {
-        ReleaseResources();
-        error = true;
-    };
+    RG_DEFER_N(error_guard) { error = true; };
+    error = false;
 
     RG_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
@@ -4201,10 +4195,8 @@ bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const ch
 {
     RG_ASSERT(!this->filename);
 
-    RG_DEFER_N(error_guard) {
-        ReleaseResources();
-        error = true;
-    };
+    RG_DEFER_N(error_guard) { error = true; };
+    error = false;
 
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<closure>";
 
@@ -4220,16 +4212,41 @@ bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const ch
 
 bool StreamReader::Close()
 {
-    ReleaseResources();
+    switch (compression.type) {
+        case CompressionType::None: {} break;
 
-    bool ret = !error;
+        case CompressionType::Gzip:
+        case CompressionType::Zlib: {
+#ifdef MZ_VERSION
+            Allocator::Release(nullptr, compression.u.miniz, RG_SIZE(*compression.u.miniz));
+            compression.u.miniz = nullptr;
+#endif
+        } break;
+    }
+
+    switch (source.type) {
+        case SourceType::Memory: { source.u.memory = {}; } break;
+        case SourceType::File: {
+            if (source.u.file.owned && source.u.file.fp) {
+                fclose(source.u.file.fp);
+            }
+
+            source.u.file.fp = nullptr;
+            source.u.file.owned = false;
+        } break;
+        case SourceType::Function: { source.u.func.~function(); } break;
+    }
+
+    bool ret = !filename || !error;
 
     filename = nullptr;
+    error = true;
+    compression.type = CompressionType::None;
+    source.type = SourceType::Memory;
     source.eof = false;
+    eof = false;
     raw_len = -1;
     raw_read = 0;
-    error = false;
-    eof = false;
     str_alloc.ReleaseAll();
 
     return ret;
@@ -4296,7 +4313,7 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
 
 Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
 {
-    if (error)
+    if (RG_UNLIKELY(error))
         return -1;
 
     if (compression.type == CompressionType::None && ComputeStreamLen() >= 0) {
@@ -4338,6 +4355,8 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
 
 Size StreamReader::ComputeStreamLen()
 {
+    if (RG_UNLIKELY(error))
+        return -1;
     if (raw_read || raw_len >= 0)
         return raw_len;
 
@@ -4402,41 +4421,6 @@ bool StreamReader::InitDecompressor(CompressionType type)
     compression.type = type;
 
     return true;
-}
-
-void StreamReader::ReleaseResources()
-{
-    switch (compression.type) {
-        case CompressionType::None: {} break;
-
-        case CompressionType::Gzip:
-        case CompressionType::Zlib: {
-#ifdef MZ_VERSION
-            Allocator::Release(nullptr, compression.u.miniz, RG_SIZE(*compression.u.miniz));
-#endif
-        } break;
-    }
-    compression.type = CompressionType::None;
-
-    switch (source.type) {
-        case SourceType::Memory: {
-            source.u.memory = {};
-        } break;
-
-        case SourceType::File: {
-            if (source.u.file.owned && source.u.file.fp) {
-                fclose(source.u.file.fp);
-            }
-
-            source.u.file.fp = nullptr;
-            source.u.file.owned = false;
-        } break;
-
-        case SourceType::Function: {
-            source.u.func.~function();
-        } break;
-    }
-    source.type = SourceType::Memory;
 }
 
 Size StreamReader::Inflate(Size max_len, void *out_buf)
@@ -4619,7 +4603,7 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
             }
             memcpy_safe(out_buf, source.u.memory.buf.ptr + source.u.memory.pos, (size_t)read_len);
             source.u.memory.pos += read_len;
-            source.eof |= (source.u.memory.pos >= source.u.memory.buf.len);
+            source.eof = (source.u.memory.pos >= source.u.memory.buf.len);
         } break;
 
         case SourceType::File: {
@@ -4633,7 +4617,7 @@ restart:
                 error = true;
                 return -1;
             }
-            source.eof |= (bool)feof(source.u.file.fp);
+            source.eof = (bool)feof(source.u.file.fp);
         } break;
 
         case SourceType::Function: {
@@ -4642,7 +4626,7 @@ restart:
                 error = true;
                 return -1;
             }
-            source.eof |= (read_len == 0);
+            source.eof = (read_len == 0);
         } break;
     }
 
@@ -4712,10 +4696,8 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
 {
     RG_ASSERT(!this->filename);
 
-    RG_DEFER_N(error_guard) {
-        ReleaseResources();
-        error = true;
-    };
+    RG_DEFER_N(error_guard) { error = true; };
+    error = false;
 
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<memory>";
 
@@ -4736,10 +4718,8 @@ bool StreamWriter::Open(FILE *fp, const char *filename,
 {
     RG_ASSERT(!this->filename);
 
-    RG_DEFER_N(error_guard) {
-        ReleaseResources();
-        error = true;
-    };
+    RG_DEFER_N(error_guard) { error = true; };
+    error = false;
 
     RG_ASSERT(fp);
     RG_ASSERT(filename);
@@ -4762,10 +4742,8 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
 {
     RG_ASSERT(!this->filename);
 
-    RG_DEFER_N(error_guard) {
-        ReleaseResources();
-        error = true;
-    };
+    RG_DEFER_N(error_guard) { error = true; };
+    error = false;
 
     RG_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
@@ -4813,10 +4791,8 @@ bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, co
 {
     RG_ASSERT(!this->filename);
 
-    RG_DEFER_N(error_guard) {
-        ReleaseResources();
-        error = true;
-    };
+    RG_DEFER_N(error_guard) { error = true; };
+    error = false;
 
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<closure>";
 
@@ -4833,32 +4809,33 @@ bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, co
 
 bool StreamWriter::Close()
 {
-    RG_DEFER {
-        ReleaseResources();
+    switch (compression.type) {
+        case CompressionType::None: {} break;
 
-        filename = nullptr;
-        error = false;
-        str_alloc.ReleaseAll();
-    };
-
-    if (IsValid()) {
-        switch (compression.type) {
-            case CompressionType::None: {} break;
-
-            case CompressionType::Gzip:
-            case CompressionType::Zlib: {
+        case CompressionType::Gzip:
+        case CompressionType::Zlib: {
 #ifdef MZ_VERSION
-                MinizDeflateContext *ctx = compression.u.miniz;
+            MinizDeflateContext *ctx = compression.u.miniz;
 
-                if (ctx->buf.len && !Deflate(ctx->buf))
-                    return false;
+            RG_DEFER { 
+                Allocator::Release(nullptr, ctx, RG_SIZE(*ctx)); 
+                compression.u.miniz = nullptr;
+            };
+
+            if (IsValid() && ctx) {
+                if (ctx->buf.len && !Deflate(ctx->buf)) {
+                    error = true;
+                    break;
+                }
 
                 tdefl_status status = tdefl_compress_buffer(&ctx->deflator, nullptr, 0, TDEFL_FINISH);
                 if (status != TDEFL_STATUS_DONE) {
                     if (status != TDEFL_STATUS_PUT_BUF_FAILED) {
                         LogError("Failed to end Deflate stream for '%1", filename);
                     }
-                    return false;
+
+                    error = true;
+                    break;
                 }
 
                 if (compression.type == CompressionType::Gzip) {
@@ -4867,20 +4844,23 @@ bool StreamWriter::Close()
                         LittleEndian((uint32_t)ctx->uncompressed_size)
                     };
 
-                    if (!WriteRaw(MakeSpan((uint8_t *)gzip_footer, RG_SIZE(gzip_footer))))
-                        return false;
+                    if (!WriteRaw(MakeSpan((uint8_t *)gzip_footer, RG_SIZE(gzip_footer)))) {
+                        error = true;
+                        break;
+                    }
                 }
+            }
 #endif
-            } break;
-        }
+        } break;
     }
 
     switch (dest.type) {
-        case DestinationType::Memory: {} break;
+        case DestinationType::Memory: { dest.u.mem = {}; } break;
 
         case DestinationType::File: {
-            if (IsValid() && !FlushFile(dest.u.file.fp, filename))
-                return false;
+            if (IsValid() && !FlushFile(dest.u.file.fp, filename)) {
+                error = true;
+            }
 
             if (dest.u.file.tmp_filename) {
                 if (IsValid()) {
@@ -4897,22 +4877,43 @@ bool StreamWriter::Close()
                     error = true;
                 }
             }
+
+            if (dest.u.file.owned && dest.u.file.fp) {
+                fclose(dest.u.file.fp);
+            }
+
+            // Try to clean up, though we can't do much if that fails (except log error)
+            if (dest.u.file.tmp_filename) {
+                UnlinkFile(dest.u.file.tmp_filename);
+            }
+            if (dest.u.file.tmp_exclusive && filename) {
+                UnlinkFile(filename);
+            }
+
+            memset_safe(&dest.u.file, 0, RG_SIZE(dest.u.file));
         } break;
 
         case DestinationType::Function: {
             if (IsValid() && !dest.u.func({}))
                 return false;
+            dest.u.func.~function();
         } break;
     }
 
-    return IsValid();
+    bool ret = !filename || !error;
+
+    filename = nullptr;
+    error = true;
+    compression.type = CompressionType::None;
+    dest.type = DestinationType::Memory;
+    str_alloc.ReleaseAll();
+
+    return ret;
 }
 
 bool StreamWriter::Flush()
 {
-    RG_ASSERT(compression.type == CompressionType::None);
-
-    if (RG_UNLIKELY(!IsValid()))
+    if (RG_UNLIKELY(error))
         return false;
 
     switch (dest.type) {
@@ -4957,7 +4958,7 @@ bool StreamWriter::Reset()
         } break;
 
         case DestinationType::Function: {
-            LogError("Cannot rewind stream '%1'", filename);
+            LogError("Cannot rewind function stream '%1'", filename);
             error = true;
             return false;
         } break;
@@ -5085,47 +5086,6 @@ bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
     return true;
 }
 
-void StreamWriter::ReleaseResources()
-{
-    switch (compression.type) {
-        case CompressionType::None: {} break;
-
-        case CompressionType::Gzip:
-        case CompressionType::Zlib: {
-#ifdef MZ_VERSION
-            Allocator::Release(nullptr, compression.u.miniz, RG_SIZE(*compression.u.miniz));
-#endif
-        } break;
-    }
-    compression.type = CompressionType::None;
-
-    switch (dest.type) {
-        case DestinationType::Memory: { dest.u.mem = {}; } break;
-
-        case DestinationType::File: {
-            if (dest.u.file.owned && dest.u.file.fp) {
-                fclose(dest.u.file.fp);
-            }
-
-            // Try to clean up, though we can't do much if that fails (except log error)
-            if (dest.u.file.tmp_filename) {
-                UnlinkFile(dest.u.file.tmp_filename);
-            }
-            if (dest.u.file.tmp_exclusive && filename) {
-                UnlinkFile(filename);
-            }
-
-            dest.u.file.fp = nullptr;
-            dest.u.file.owned = false;
-            dest.u.file.tmp_filename = nullptr;
-            dest.u.file.tmp_exclusive = false;
-        } break;
-
-        case DestinationType::Function: { dest.u.func.~function(); } break;
-    }
-    dest.type = DestinationType::Memory;
-}
-
 #ifdef MZ_VERSION
 bool StreamWriter::Deflate(Span<const uint8_t> buf)
 {
@@ -5203,7 +5163,7 @@ bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer)
         return false;
 
     Size total_len = 0;
-    while (!reader->IsEOF()) {
+    do {
         LocalArray<uint8_t, 16384> buf;
         buf.len = reader->Read(buf.data);
         if (buf.len < 0)
@@ -5217,7 +5177,7 @@ bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer)
 
         if (!writer->Write(buf))
             return false;
-    }
+    } while (!reader->IsEOF());
 
     return true;
 }

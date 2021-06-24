@@ -380,7 +380,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
             crypto_hash_sha256_state state;
             crypto_hash_sha256_init(&state);
 
-            while (!reader.IsEOF()) {
+            do {
                 LocalArray<uint8_t, 16384> buf;
                 buf.len = reader.Read(buf.data);
                 if (buf.len < 0)
@@ -391,7 +391,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
                     return;
 
                 crypto_hash_sha256_update(&state, buf.data, buf.len);
-            }
+            } while (!reader.IsEOF());
             if (!writer.Close())
                 return;
 
@@ -455,7 +455,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
             StreamReader reader(fp, "<temp>");
             Size read_len = 0;
 
-            while (!reader.IsEOF()) {
+            do {
                 LocalArray<uint8_t, 16384> buf;
                 buf.len = reader.Read(buf.data);
                 if (buf.len < 0)
@@ -471,7 +471,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
                 }
 
                 read_len += buf.len;
-            }
+            } while (!reader.IsEOF());
             if (read_len < file_len) {
                 LogError("Temporary file size has changed (truncated)");
                 return false;

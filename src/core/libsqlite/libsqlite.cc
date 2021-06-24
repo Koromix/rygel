@@ -301,7 +301,7 @@ static bool SpliceWithChecksum(StreamReader *reader, StreamWriter *writer, uint8
     crypto_hash_sha256_state state;
     crypto_hash_sha256_init(&state);
 
-    while (!reader->IsEOF()) {
+    do {
         LocalArray<uint8_t, 16384> buf;
         buf.len = reader->Read(buf.data);
         if (buf.len < 0)
@@ -310,7 +310,7 @@ static bool SpliceWithChecksum(StreamReader *reader, StreamWriter *writer, uint8
         if (!writer->Write(buf))
             return false;
         crypto_hash_sha256_update(&state, buf.data, buf.len);
-    }
+    } while (!reader->IsEOF());
 
     if (!writer->Close())
         return false;

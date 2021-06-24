@@ -1921,7 +1921,7 @@ void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io)
             return;
 
         // Read and store
-        while (!reader.IsEOF()) {
+        do {
             LocalArray<uint8_t, 16384> buf;
             buf.len = reader.Read(buf.data);
             if (buf.len < 0)
@@ -1929,7 +1929,7 @@ void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io)
 
             if (!writer.Write(buf))
                 return;
-        }
+        } while (!reader.IsEOF());
 
         if (!writer.Close())
             return;

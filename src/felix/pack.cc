@@ -144,14 +144,14 @@ static bool BuildJavaScriptMap3(Span<const PackSourceInfo> sources, StreamWriter
         Size lines = 0;
         {
             StreamReader reader(src.filename);
-            while (!reader.IsEOF()) {
+            do {
                 LocalArray<char, 16384> buf;
                 buf.len = reader.Read(buf.data);
                 if (buf.len < 0)
                     return false;
 
                 lines += CountNewLines(buf);
-            }
+            } while (!reader.IsEOF());
         }
 
         Print(out_writer, "%1", FmtArg(";").Repeat(CountNewLines(src.prefix)));
@@ -181,14 +181,14 @@ static bool MergeAssetSourceFiles(Span<const PackSourceInfo> sources,
         func(Span<const char>(src.prefix).CastAs<const uint8_t>());
 
         StreamReader reader(src.filename);
-        while (!reader.IsEOF()) {
+        do {
             LocalArray<uint8_t, 16384> read_buf;
             read_buf.len = reader.Read(read_buf.data);
             if (read_buf.len < 0)
                 return false;
 
             func(read_buf);
-        }
+        } while (!reader.IsEOF());
 
         func(Span<const char>(src.suffix).CastAs<const uint8_t>());
     }

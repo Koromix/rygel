@@ -2598,7 +2598,8 @@ class StreamReader {
         Function
     };
 
-    const char *filename;
+    const char *filename = nullptr;
+    bool error = true;
 
     struct {
         SourceType type = SourceType::Memory;
@@ -2618,7 +2619,7 @@ class StreamReader {
             ~U() {}
         } u;
 
-        bool eof;
+        bool eof = false;
     } source;
 
     struct {
@@ -2628,10 +2629,9 @@ class StreamReader {
         } u;
     } compression;
 
-    Size raw_len;
-    Size raw_read;
-    bool eof;
-    bool error = false;
+    Size raw_len = -1;
+    Size raw_read = 0;
+    bool eof = false;
 
     BlockAllocator str_alloc;
 
@@ -2649,7 +2649,7 @@ public:
     StreamReader(const std::function<Size(Span<uint8_t>)> &func, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
         : StreamReader() { Open(func, filename, compression_type); }
-    ~StreamReader() { ReleaseResources(); }
+    ~StreamReader() { Close(); }
 
     bool Open(Span<const uint8_t> buf, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
@@ -2679,8 +2679,6 @@ public:
     Size ComputeStreamLen();
 private:
     bool InitDecompressor(CompressionType type);
-    void ReleaseResources();
-
     Size Inflate(Size max_len, void *out_buf);
 
     Size ReadRaw(Size max_len, void *out_buf);
@@ -2716,14 +2714,14 @@ class LineReader {
     Span<char> view = {};
 
     StreamReader *st;
+    bool error;
     bool eof = false;
-    bool error = false;
 
     Span<char> line = {};
     Size line_number = 0;
 
 public:
-    LineReader(StreamReader *st) : st(st) {}
+    LineReader(StreamReader *st) : st(st), error(!st->IsValid()) {}
 
     const char *GetFileName() const { return st->GetFileName(); }
     Size GetLineNumber() const { return line_number; }
@@ -2751,6 +2749,7 @@ class StreamWriter {
     };
 
     const char *filename = nullptr;
+    bool error = true;
 
     struct {
         DestinationType type = DestinationType::Memory;
@@ -2785,8 +2784,6 @@ class StreamWriter {
         } u;
     } compression;
 
-    bool error = false;
-
     BlockAllocator str_alloc;
 
 public:
@@ -2807,7 +2804,7 @@ public:
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
         : StreamWriter() { Open(func, filename, compression_type, compression_speed); }
-    ~StreamWriter() { ReleaseResources(); }
+    ~StreamWriter() { Close(); }
 
     bool Open(HeapArray<uint8_t> *mem, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None,
@@ -2823,6 +2820,7 @@ public:
               CompressionSpeed compression_speed = CompressionSpeed::Default);
     bool Close();
 
+    // For compressed streams, Flush may not be complete and only Close() can finalize the file.
     bool Flush();
     bool Reset();
 
@@ -2838,8 +2836,6 @@ public:
 
 private:
     bool InitCompressor(CompressionType type, CompressionSpeed speed);
-    void ReleaseResources();
-
     bool Deflate(Span<const uint8_t> buf);
 
     bool WriteRaw(Span<const uint8_t> buf);
