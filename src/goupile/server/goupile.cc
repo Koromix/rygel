@@ -597,11 +597,11 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     }
 }
 
-static void PruneTemporaryFiles(const char *dirname, const char *filter)
+static void PruneTemporaryFiles(const char *dirname, const char *filter, int64_t max_age)
 {
     BlockAllocator temp_alloc;
 
-    int64_t treshold = GetUnixTime() - 7200 * 1000;
+    int64_t treshold = GetUnixTime() - max_age;
 
     EnumerateDirectory(dirname, filter, -1,
                        [&](const char *filename, FileType file_type) {
@@ -614,7 +614,7 @@ static void PruneTemporaryFiles(const char *dirname, const char *filter)
             return true;
 
         if (file_info.modification_time < treshold) {
-            LogInfo("Delete leftover temporary file %1", filename);
+            LogInfo("Delete leftover file '%1'", filename);
             UnlinkFile(filename);
         }
 
@@ -777,6 +777,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     // Run periodic tasks until exit
     {
         bool run = true;
+        bool first = true;
         int timeout = 30 * 1000;
 
         // Randomize the delay a bit to reduce situations where all goupile
@@ -788,9 +789,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             // In theory, all temporary files are deleted. But if any remain behind (crash, etc.)
             // we need to make sure they get deleted eventually.
             LogDebug("Prune temporary files");
-            PruneTemporaryFiles(gp_domain.config.temp_directory, nullptr);
-            PruneTemporaryFiles(gp_domain.config.snapshot_directory, "*.tmp");
-            PruneTemporaryFiles(gp_domain.config.archive_directory, "*.tmp");
+            PruneTemporaryFiles(gp_domain.config.temp_directory, nullptr, first ? 0 : 7200 * 1000);
+            PruneTemporaryFiles(gp_domain.config.snapshot_directory, "*.tmp", first ? 0 : 7200 * 1000);
+            PruneTemporaryFiles(gp_domain.config.archive_directory, "*.tmp", first ? 0 : 7200 * 1000);
 
             WaitForResult ret = WaitForInterrupt(timeout);
 
@@ -821,6 +822,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             LogDebug("Release memory (glibc)");
             malloc_trim(0);
 #endif
+
+            first = false;
         }
     }
 
