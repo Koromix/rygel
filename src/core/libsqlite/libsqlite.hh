@@ -15,6 +15,7 @@
 
 #include "../libcc/libcc.hh"
 #include "../../../vendor/sqlite3mc/sqlite3mc.h"
+#include "../../../vendor/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h"
 
 #include <thread>
 
@@ -115,11 +116,15 @@ class sq_Database {
     int running_requests = 0;
 
     bool snapshot = false;
+    HeapArray<char> snapshot_path_buf;
     StreamWriter snapshot_main_writer;
+    StreamReader snapshot_wal_reader;
+    StreamWriter snapshot_wal_writer;
+    crypto_hash_sha256_state snapshot_wal_state;
     int64_t snapshot_full_delay;
-    std::atomic_bool snapshot_progress { false };
     int64_t snapshot_start;
     Size snapshot_idx;
+    std::atomic_bool snapshot_data { false };
 
 public:
     sq_Database() {}
@@ -153,12 +158,12 @@ public:
     bool RunMany(const char *sql);
 
     bool BackupTo(const char *filename);
-    bool Checkpoint();
+    bool Checkpoint(bool restart = false);
 
     operator sqlite3 *() { return db; }
 
 private:
-    bool CheckpointSnapshot();
+    bool CheckpointSnapshot(bool restart = false);
     bool CheckpointDirect();
 
     bool LockExclusive();

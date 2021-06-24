@@ -13,7 +13,6 @@
 
 #include "../libcc/libcc.hh"
 #include "libsqlite.hh"
-#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
 
@@ -133,32 +132,62 @@ bool sq_Database::SetSnapshotFile(const char *filename, int64_t full_delay)
 {
     RG_ASSERT(!snapshot);
 
+    LockExclusive();
+    RG_DEFER { UnlockExclusive(); };
+
+    RG_DEFER_N(err_guard) {
+        snapshot_main_writer.Close();
+        snapshot_wal_reader.Close();
+        snapshot_wal_writer.Close();
+    };
+
+    const char *db_filename = sqlite3_db_filename(db, "main");
+    const char *wal_filename = sqlite3_filename_wal(db_filename);
+
+    // Reset snapshot information
+    snapshot_path_buf.Clear();
+    Fmt(&snapshot_path_buf, "%1", filename);
+    snapshot_full_delay = full_delay;
+    snapshot_data = false;
+
     // Configure database to let us manipulate the WAL manually
     if (!RunMany(R"(PRAGMA locking_mode = EXCLUSIVE;
                     PRAGMA journal_mode = WAL;
                     PRAGMA auto_vacuum = 0;)"))
         return false;
 
-    // Disable WAL autocommit and use the hook to set flag when WAL contains pages
+    // Open permanent streams
+    if (!snapshot_main_writer.Open(filename))
+        return false;
+    if (!snapshot_wal_reader.Open(wal_filename))
+        return false;
+
+    // Perform initial checkpoint
+    if (!CheckpointSnapshot(true))
+        return false;
+
+    // Set up WAL hook to copy new pages
     sqlite3_wal_hook(db, [](void *udata, sqlite3 *, const char *, int) {
         sq_Database *db = (sq_Database *)udata;
-        db->snapshot_progress = true;
+
+        do {
+            LocalArray<uint8_t, 16384> buf;
+            buf.len = db->snapshot_wal_reader.Read(buf.data);
+            if (buf.len < 0)
+                break;
+
+            if (!db->snapshot_wal_writer.Write(buf))
+                break;
+            crypto_hash_sha256_update(&db->snapshot_wal_state, buf.data, buf.len);
+        } while (!db->snapshot_wal_reader.IsEOF());
+        db->snapshot_data = true;
+
         return SQLITE_OK;
     }, this);
 
-    // Reset snapshot information
-    snapshot_full_delay = full_delay;
-    snapshot_idx = 0;
-    snapshot_progress = false;
-
-    if (!snapshot_main_writer.Open(filename))
-        return false;
-    if (!CheckpointSnapshot()) {
-        snapshot_main_writer.Close();
-        return false;
-    }
-
     snapshot = true;
+    err_guard.Disable();
+
     return true;
 }
 
@@ -170,6 +199,9 @@ bool sq_Database::Close()
         success &= Checkpoint();
 
         snapshot_main_writer.Close();
+        snapshot_wal_reader.Close();
+        snapshot_wal_writer.Close();
+
         snapshot = false;
     }
 
@@ -319,38 +351,38 @@ static bool SpliceWithChecksum(StreamReader *reader, StreamWriter *writer, uint8
     return true;
 }
 
-bool sq_Database::Checkpoint()
+bool sq_Database::Checkpoint(bool restart)
 {
     if (snapshot) {
-        return CheckpointSnapshot();
+        return CheckpointSnapshot(restart);
     } else {
         return CheckpointDirect();
     }
 }
 
-bool sq_Database::CheckpointSnapshot()
+bool sq_Database::CheckpointSnapshot(bool restart)
 {
-    BlockAllocator temp_alloc;
-
-    const char *snapshot_filename = snapshot_main_writer.GetFileName();
     const char *db_filename = sqlite3_db_filename(db, "main");
-    const char *wal_filename = sqlite3_filename_wal(db_filename);
     int64_t now = GetUnixTime();
 
     Async async;
     bool success = true;
 
     // Restart snapshot stream if needed
-    if (!snapshot_idx || now - snapshot_start >= snapshot_full_delay) {
+    if (restart || now - snapshot_start >= snapshot_full_delay) {
         success &= snapshot_main_writer.Reset();
         success &= snapshot_main_writer.Write(SnapshotSignature);
 
         // Perform initial copy
         {
-            const char *dest_filename = Fmt(&temp_alloc, "%1-0000000000000000", snapshot_filename).ptr;
+            RG_DEFER_C(len = snapshot_path_buf.len) {
+                snapshot_path_buf.RemoveFrom(len);
+                snapshot_path_buf.ptr[snapshot_path_buf.len] = 0;
+            };
+            Fmt(&snapshot_path_buf, "-%1", FmtHex(0).Pad0(-16));
 
             StreamReader reader(db_filename);
-            StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic,
+            StreamWriter writer(snapshot_path_buf.ptr, (int)StreamWriterFlag::Atomic,
                                 CompressionType::Gzip, CompressionSpeed::Fast);
 
             FrameData frame;
@@ -363,74 +395,63 @@ bool sq_Database::CheckpointSnapshot()
 
         // Delete all WAL copies
         {
-            HeapArray<char> filename_buf(&temp_alloc);
-            filename_buf.Append(snapshot_main_writer.GetFileName());
+            snapshot_wal_writer.Close();
 
             for (Size i = 1;; i++) {
-                RG_DEFER_C(len = filename_buf.len) {
-                    filename_buf.RemoveFrom(len);
-                    filename_buf.ptr[filename_buf.len] = 0;
+                RG_DEFER_C(len = snapshot_path_buf.len) {
+                    snapshot_path_buf.RemoveFrom(len);
+                    snapshot_path_buf.ptr[snapshot_path_buf.len] = 0;
                 };
-                Fmt(&filename_buf, "-%1", FmtHex(i).Pad0(-16));
+                Fmt(&snapshot_path_buf, "-%1", FmtHex(i).Pad0(-16));
 
-                if (!TestFile(filename_buf.ptr))
+                if (!TestFile(snapshot_path_buf.ptr))
                     break;
 
-                success &= UnlinkFile(filename_buf.ptr);
+                success &= UnlinkFile(snapshot_path_buf.ptr);
             }
         }
 
         snapshot_start = now;
-        snapshot_idx = 1;
+        snapshot_idx = 0;
+        snapshot_data = true;
     }
 
-    bool nested = LockExclusive();
-    RG_ASSERT(!nested);
+    if (snapshot_wal_writer.IsValid()) {
+        // Not strictly needed, but it may help close faster
+        // after we acquire the lock.
+       success &= snapshot_wal_writer.Flush();
+    }
 
-    // Copy WAL file if needed
-    if (snapshot_progress) {
-        Span<const char> snapshot_directory = GetPathDirectory(snapshot_filename);
+    LockExclusive();
+    RG_DEFER { UnlockExclusive(); };
 
-        FILE *fp;
-        const char *tmp_filename = CreateTemporaryFile(snapshot_directory, "", ".tmp", &temp_alloc, &fp);
-        const char *dest_filename = Fmt(&temp_alloc, "%1-%2", snapshot_filename, FmtHex(snapshot_idx).Pad0(-16)).ptr;
+    if (snapshot_data) {
+        snapshot_idx++;
 
-        if (tmp_filename) {
-            StreamReader reader(wal_filename);
-            StreamWriter writer(fp, tmp_filename);
+        RG_DEFER_C(len = snapshot_path_buf.len) {
+            snapshot_path_buf.RemoveFrom(len);
+            snapshot_path_buf.ptr[snapshot_path_buf.len] = 0;
+        };
+        Fmt(&snapshot_path_buf, "-%1", FmtHex(snapshot_idx).Pad0(-16));
 
+        if (snapshot_idx > 1) {
             FrameData frame;
             frame.mtime = LittleEndian(now);
+            crypto_hash_sha256_final(&snapshot_wal_state, frame.sha256);
 
-            success &= SpliceWithChecksum(&reader, &writer, frame.sha256);
             success &= snapshot_main_writer.Write((const uint8_t *)&frame, RG_SIZE(frame));
             success &= snapshot_main_writer.Flush();
-
-            async.Run([=]() {
-                RG_DEFER { 
-                    fclose(fp);
-                    UnlinkFile(tmp_filename);
-                };
-
-                StreamReader reader(tmp_filename);
-                StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic,
-                                    CompressionType::Gzip, CompressionSpeed::Fast);
-
-                if (!SpliceStream(&reader, -1, &writer))
-                    return false;
-                if (!reader.Close())
-                    return false;
-                if (!writer.Close())
-                    return false;
-
-                return true;
-            });
-
-            snapshot_idx++;
-            snapshot_progress = false;
-        } else {
-            success = false;
         }
+
+        // Open new WAL copy for writing
+        success &= snapshot_wal_writer.Close();
+        success &= snapshot_wal_writer.Open(snapshot_path_buf.ptr, 0, CompressionType::Gzip, CompressionSpeed::Fast);
+
+        // Rewind WAL reader
+        success &= snapshot_wal_reader.Rewind();
+        crypto_hash_sha256_init(&snapshot_wal_state);
+
+        snapshot_data = false;
     }
 
     // Perform SQLite checkpoint, with truncation so that we can just copy each WAL file
@@ -439,11 +460,10 @@ bool sq_Database::CheckpointSnapshot()
         success = false;
     }
 
-    UnlockExclusive();
-    success &= async.Sync();
-
-    // If anything goes wrong, do a full snapshot next time
-    snapshot_idx = success ? snapshot_idx : 0;
+    // If anything went wrong, do a full snapshot next time
+    if (!success) {
+        snapshot_start = 0;
+    }
 
     return success;
 }
@@ -515,6 +535,12 @@ void sq_Database::UnlockExclusive()
 void sq_Database::LockShared()
 {
     std::unique_lock<std::mutex> lock(mutex);
+
+    // Handle nested lock
+    if (running_transaction && running_transaction_thread == std::this_thread::get_id()) {
+        running_requests++;
+        return;
+    }
 
     // Wait for our turn
     if (running_transaction || lock_root.next != &lock_root) {
