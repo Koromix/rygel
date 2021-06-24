@@ -628,7 +628,7 @@ bool sq_RestoreDatabase(const char *filename, const char *dest_filename)
     Span<const uint8_t> frames;
     {
         HeapArray<uint8_t> buf(&temp_alloc);
-        if (!ReadFile(filename, Megabytes(32), &buf))
+        if (ReadFile(filename, Megabytes(32), &buf) < 0)
             return false;
 
         if (!StartsWith(MakeSpan((const char *)buf.ptr, buf.len), SnapshotSignature)) {
