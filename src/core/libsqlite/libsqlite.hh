@@ -111,9 +111,9 @@ class sq_Database {
     LockTicket lock_root = { &lock_root, &lock_root };
     std::condition_variable transactions_cv;
     std::condition_variable requests_cv;
-    int running_transaction = 0;
-    std::thread::id running_transaction_thread;
-    int running_requests = 0;
+    int running_exclusive = 0;
+    std::thread::id running_exclusive_thread;
+    int running_shared = 0;
 
     bool snapshot = false;
     HeapArray<char> snapshot_path_buf;
