@@ -365,7 +365,6 @@ bool sq_Database::CheckpointSnapshot(bool restart)
     const char *db_filename = sqlite3_db_filename(db, "main");
     int64_t now = GetUnixTime();
 
-    Async async;
     bool success = true;
 
     // Restart snapshot stream if needed
