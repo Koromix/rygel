@@ -44,8 +44,7 @@ nginx_domains:
 
           proxy_pass http://unix:/run/goupile/anesth-lille.goupile.fr.sock:;
       }
-    ssl_public_key: '{{ playbook_dir }}/inventories/pknet/prod/goupile.fr/fullchain.pem'
-    ssl_private_key: '{{ playbook_dir }}/inventories/pknet/prod/goupile.fr/privkey.pem'
+    ssl_certbot_email: niels.martignene@protonmail.com
   - name: cn2r.goupile.fr
     config: |
       location / {
@@ -72,6 +71,7 @@ nginx_domains:
           proxy_pass http://unix:/run/goupile/inter.goupile.fr.sock:;
       }
     ssl_certbot_email: niels.martignene@protonmail.com
+    ssl_certbot_relay: 185.176.148.84
   - name: medita.goupile.fr
     config: |
       location / {
@@ -84,8 +84,7 @@ nginx_domains:
 
           proxy_pass http://unix:/run/goupile/medita.goupile.fr.sock:;
       }
-    ssl_public_key: '{{ playbook_dir }}/inventories/pknet/prod/goupile.fr/fullchain.pem'
-    ssl_private_key: '{{ playbook_dir }}/inventories/pknet/prod/goupile.fr/privkey.pem'
+    ssl_certbot_email: niels.martignene@protonmail.com
   - name: neurorea-kb.goupile.fr
     config: |
       location / {
@@ -99,6 +98,7 @@ nginx_domains:
           proxy_pass http://unix:/run/goupile/neurorea-kb.goupile.fr.sock:;
       }
     ssl_certbot_email: niels.martignene@protonmail.com
+    ssl_certbot_relay: 185.176.148.84
   - name: psy-lille.goupile.fr
     config: |
       location / {
@@ -111,8 +111,8 @@ nginx_domains:
 
           proxy_pass http://unix:/run/goupile/psy-lille.goupile.fr.sock:;
       }
-    ssl_public_key: '{{ playbook_dir }}/inventories/pknet/prod/goupile.fr/fullchain.pem'
-    ssl_private_key: '{{ playbook_dir }}/inventories/pknet/prod/goupile.fr/privkey.pem'
+    ssl_certbot_email: niels.martignene@protonmail.com
+    ssl_certbot_relay: 185.176.148.84
   - name: test.goupile.fr
     config: |
       location / {
@@ -125,5 +125,5 @@ nginx_domains:
 
           proxy_pass http://unix:/run/goupile/test.goupile.fr.sock:;
       }
-    ssl_public_key: '{{ playbook_dir }}/inventories/pknet/prod/goupile.fr/fullchain.pem'
-    ssl_private_key: '{{ playbook_dir }}/inventories/pknet/prod/goupile.fr/privkey.pem'
+    ssl_certbot_email: niels.martignene@protonmail.com
+    ssl_certbot_relay: 185.176.148.83

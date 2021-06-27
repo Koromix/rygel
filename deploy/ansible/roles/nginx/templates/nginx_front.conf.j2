@@ -80,7 +80,16 @@ http {
 
         location /.well-known/acme-challenge {
             root /opt/nginx/ssl/webroot/{{ domain.name }};
+{% if domain.ssl_certbot_relay is defined %}
+            try_files $uri @relay;
+{% endif %}
         }
+{% if domain.ssl_certbot_relay is defined %}
+        location @relay {
+            proxy_set_header Host $host;
+            proxy_pass http://{{ domain.ssl_certbot_relay }};
+        }
+{% endif %}
     }
 
     server {
