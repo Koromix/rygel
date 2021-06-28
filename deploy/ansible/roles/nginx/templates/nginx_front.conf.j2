@@ -28,6 +28,8 @@ http {
     tcp_nodelay on;
     keepalive_timeout 60;
 
+    server_tokens off;
+
     access_log /var/log/nginx/access.log;
     error_log /var/log/nginx/error.log;
 
