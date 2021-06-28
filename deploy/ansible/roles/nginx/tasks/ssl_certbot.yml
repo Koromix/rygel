@@ -109,11 +109,3 @@
     state: absent
   loop: '{{ certbot_old.files }}'
   become: yes
-
-- name: Clean up certbot flag files
-  file:
-    path: '/etc/letsencrypt/live/{{ item.name }}/chain.pem'
-    state: absent
-  loop: '{{ nginx_domains }}'
-  when: 'item.ssl_certbot_email is not defined'
-  become: yes
