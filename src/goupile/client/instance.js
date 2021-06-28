@@ -166,6 +166,20 @@ function InstanceController() {
         let historical = (route.version < form_record.fragments.length);
 
         return html`
+            ${!goupile.isLocked() && profile.instances == null ?
+                html`<button class="icon" style="background-position-y: calc(-538px + 1.2em);"
+                             @click=${e => self.go(e, ENV.urls.instance)}>${ENV.title}</button>` : ''}
+            ${!goupile.isLocked() && profile.instances != null ? html`
+                <div class="drop" @click=${ui.deployMenu}>
+                    <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
+                            @click=${ui.deployMenu}>${ENV.title}</button>
+                    <div>
+                        ${profile.instances.map(instance =>
+                            html`<button class=${instance.url === ENV.urls.instance ? 'active' : ''}
+                                         @click=${e => self.go(e, instance.url)}>${instance.name}</button>`)}
+                    </div>
+                </div>
+            ` : ''}
             ${!goupile.isLocked() ? html`
                 ${goupile.hasPermission('admin_code') ? html`
                     <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
@@ -193,7 +207,7 @@ function InstanceController() {
             ` : ''}
             <div class="drop">
                 <button @click=${ui.deployMenu}>
-                    ${ENV.title}<br/>
+                    ${route.form.title}<br/>
                     <span style="font-size: 0.7em;">${route.page.title}</span>
                 </button>
                 <div>
