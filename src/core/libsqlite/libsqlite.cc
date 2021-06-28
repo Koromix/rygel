@@ -90,7 +90,7 @@ bool sq_Database::Open(const char *filename, const uint8_t key[32], unsigned int
         PRAGMA locking_mode = NORMAL;
         PRAGMA foreign_keys = ON;
         PRAGMA synchronous = NORMAL;
-        PRAGMA busy_timeout = 5000;
+        PRAGMA busy_timeout = 15000;
     )";
 
     RG_ASSERT(!db);
