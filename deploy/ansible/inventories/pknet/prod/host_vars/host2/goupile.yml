@@ -12,7 +12,6 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 goupile_commit: deploy_pknet
-goupile_sandbox: no
 
 goupile_domains:
   - name: anesth-lille.goupile.fr
