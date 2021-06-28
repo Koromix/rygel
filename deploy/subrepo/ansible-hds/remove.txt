@@ -1,8 +1,11 @@
 ovh.yml
+pknet.yml
 inventories/ovh
 vagrant/ovh
+inventories/pknet
 roles/ovh
 roles/base
 roles/prometheus
 roles/static
 roles/borg
+vagrant/pknet
