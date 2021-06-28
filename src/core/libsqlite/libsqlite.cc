@@ -411,6 +411,19 @@ bool sq_Database::CheckpointSnapshot(bool restart)
     LockExclusive();
     RG_DEFER { UnlockExclusive(); };
 
+    // Perform SQLite checkpoint, with truncation so that we can just copy each WAL file
+    int ret = sqlite3_wal_checkpoint_v2(db, nullptr, SQLITE_CHECKPOINT_TRUNCATE, nullptr, nullptr);
+    if (ret != SQLITE_OK) {
+        if (success && ret == SQLITE_LOCKED) {
+            LogDebug("Could not checkpoint because of connection LOCK, will try again later");
+            return true;
+        }
+
+        LogError("SQLite checkpoint failed: %1", sqlite3_errmsg(db));
+        success = false;
+    }
+
+    // Switch to next WAL copy
     if (snapshot_data) {
         snapshot_idx++;
 
@@ -440,13 +453,8 @@ bool sq_Database::CheckpointSnapshot(bool restart)
         snapshot_data = false;
     }
 
-    // Perform SQLite checkpoint, with truncation so that we can just copy each WAL file
-    if (sqlite3_wal_checkpoint_v2(db, nullptr, SQLITE_CHECKPOINT_TRUNCATE, nullptr, nullptr) != SQLITE_OK) {
-        LogError("SQLite checkpoint failed: %1", sqlite3_errmsg(db));
-        success = false;
-    }
-
     // If anything went wrong, do a full snapshot next time
+    // Assuming the caller wants to carry on :)
     if (!success) {
         snapshot_start = 0;
     }
@@ -460,7 +468,13 @@ bool sq_Database::CheckpointDirect()
     RG_ASSERT(!nested);
     RG_DEFER { UnlockExclusive(); };
 
-    if (sqlite3_wal_checkpoint_v2(db, nullptr, SQLITE_CHECKPOINT_FULL, nullptr, nullptr) != SQLITE_OK) {
+    int ret = sqlite3_wal_checkpoint_v2(db, nullptr, SQLITE_CHECKPOINT_FULL, nullptr, nullptr);
+    if (ret != SQLITE_OK) {
+        if (ret == SQLITE_LOCKED) {
+            LogDebug("Could not checkpoint because of connection LOCK, will try again later");
+            return true;
+        }
+
         LogError("SQLite checkpoint failed: %1", sqlite3_errmsg(db));
         return false;
     }
