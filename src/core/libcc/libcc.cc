@@ -4895,8 +4895,7 @@ bool StreamWriter::Close()
         } break;
 
         case DestinationType::Function: {
-            if (IsValid() && !dest.u.func({}))
-                return false;
+            error |= IsValid() && !dest.u.func({});
             dest.u.func.~function();
         } break;
     }
