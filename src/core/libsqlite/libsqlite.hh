@@ -88,8 +88,6 @@ public:
     bool Next();
     void Reset();
 
-    sqlite3_stmt *Leak();
-
     operator sqlite3_stmt *() { return stmt; }
 
     friend class sq_Database;

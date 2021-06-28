@@ -71,19 +71,6 @@ void sq_Statement::Reset()
     RG_ASSERT(ret == SQLITE_OK);
 }
 
-sqlite3_stmt *sq_Statement::Leak()
-{
-    RG_ASSERT(db);
-
-    sqlite3_stmt *copy = stmt;
-
-    db->UnlockShared();
-    db = nullptr;
-    stmt = nullptr;
-
-    return copy;
-}
-
 bool sq_Database::Open(const char *filename, const uint8_t key[32], unsigned int flags)
 {
     static const char *const sql = R"(

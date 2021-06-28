@@ -98,20 +98,24 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
         return !stmt.IsValid();
 
     int64_t rowid = sqlite3_column_int64(stmt, 0);
-    const char *sha256 = (const char *)sqlite3_column_text(stmt, 2);
 
-    // Handle cache headers
-    if (client_etag && TestStr(client_etag, sha256)) {
-        MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-        io->AttachResponse(304, response);
-        return true;
+    // Handle hash check and caching
+    {
+        const char *sha256 = (const char *)sqlite3_column_text(stmt, 2);
+
+        if (client_etag && TestStr(client_etag, sha256)) {
+            MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+            io->AttachResponse(304, response);
+            return true;
+        }
+        if (client_sha256 && !TestStr(client_sha256, sha256)) {
+            LogError("Fetch refused because of sha256 mismatch");
+            io->AttachError(409);
+            return true;
+        }
+
+        io->AddCachingHeaders(0, sha256);
     }
-    if (client_sha256 && !TestStr(client_sha256, sha256)) {
-        LogError("Fetch refused because of sha256 mismatch");
-        io->AttachError(409);
-        return true;
-    }
-    io->AddCachingHeaders(0, sha256);
 
     // Negociate content encoding
     CompressionType src_encoding;
@@ -136,11 +140,8 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
     }
     src_len = sqlite3_blob_bytes(src_blob);
 
-    // SQLite data needs to remain valid until the end of connection
-    io->AddFinalizer([src_blob, stmt = stmt.Leak()]() {
-        sqlite3_blob_close(src_blob);
-        sqlite3_finalize(stmt);
-    });
+    // The blob needs to remain valid until the end of connection
+    io->AddFinalizer([=]() { sqlite3_blob_close(src_blob); });
 
     // Fast path
     if (dest_encoding == src_encoding && src_len <= 65536) {
