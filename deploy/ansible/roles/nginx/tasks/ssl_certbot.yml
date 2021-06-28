@@ -110,25 +110,7 @@
   loop: '{{ certbot_old.files }}'
   become: yes
 
-- name: Use provided private certificates (migration mode)
-  copy:
-    src: '{{ item.ssl_private_key }}'
-    dest: '/etc/letsencrypt/live/{{ item.name }}/privkey.pem'
-    mode: '0600'
-  loop: '{{ nginx_domains }}'
-  when: 'item.ssl_public_key is defined'
-  become: yes
-
-- name: Use provided public certificates (migration mode)
-  copy:
-    src: '{{ item.ssl_public_key }}'
-    dest: '/etc/letsencrypt/live/{{ item.name }}/fullchain.pem'
-    mode: '0644'
-  loop: '{{ nginx_domains }}'
-  when: 'item.ssl_public_key is defined'
-  become: yes
-
-- name: Clean up certbot flag file (migration mode)
+- name: Clean up certbot flag files
   file:
     path: '/etc/letsencrypt/live/{{ item.name }}/chain.pem'
     state: absent
