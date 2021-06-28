@@ -778,7 +778,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     {
         bool run = true;
         bool first = true;
-        int timeout = 30 * 1000;
+        int timeout = 300 * 1000;
 
         // Randomize the delay a bit to reduce situations where all goupile
         // services perform cleanups at the same time and cause a load spike.
