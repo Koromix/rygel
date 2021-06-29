@@ -396,7 +396,7 @@ function InstanceController() {
         return html`
             <div class="padded">
                 <div class="ui_actions" style="margin-bottom: 1.2em;">
-                    <button @click=${ui.wrapAction(e => self.go(e, route.form.chain[0].url + '/new'))}>Créer un ${data_form.title.toLowerCase()}</button>
+                    <button @click=${ui.wrapAction(e => self.go(e, route.form.chain[0].url + '/new'))}>Ajouter un ${data_form.title.toLowerCase()}</button>
                 </div>
 
                 <div class="ui_quick" style="margin-right: 2.2em;">
