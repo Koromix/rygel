@@ -432,7 +432,7 @@ function InstanceController() {
 
                                 return html`
                                     <th title=${title}>
-                                        ${item.title}&nbsp;&nbsp;
+                                        ${item.title}<br/>
                                         <span style="font-size: 0.7em; font-weight: normal;">${prec}</span>
                                     </th>
                                 `;
