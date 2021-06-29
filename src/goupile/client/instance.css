@@ -146,7 +146,6 @@ html:not(.small) #ui_panels > div:not(:only-child) #ins_page { border-bottom-wid
 
 /* -------------------- Misc -------------------- */
 
-.ins_hid::before { content: '#'; }
 html.mobile #ui_top .ins_hid { display: none; }
 
 #ins_notice {
@@ -172,6 +171,7 @@ html.mobile #ui_top .ins_hid { display: none; }
     #ins_notice:hover { filter: opacity(20%); }
 }
 
+#ins_data td:not(.active).saved a { color: #21936e; }
 #ins_data td.saved a::before {
     padding-right: 8px;
     font-size: 0.9em;

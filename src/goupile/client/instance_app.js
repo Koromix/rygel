@@ -101,6 +101,7 @@ function ApplicationBuilder(app) {
 
             if (prev_form != null) {
                 let item = {
+                    key: key,
                     title: title,
                     type: 'form',
                     form: form_ref
@@ -150,6 +151,7 @@ function ApplicationBuilder(app) {
         page.filename = (options.filename != null) ? options.filename : `pages/${key}.js`;
 
         let item = {
+            key: key,
             title: title,
             type: 'page',
             page: page

@@ -306,7 +306,7 @@ function InstanceController() {
                                 active = (page === route.page);
                                 url = page.url;
                                 title = page.title;
-                                status = (meta != null) && meta.status.has(form.key);
+                                status = (meta != null) && (meta.status[form.key] != null);
                             } else if (item.type === 'form') {
                                 let form = item.form;
 
@@ -316,7 +316,7 @@ function InstanceController() {
                                 active = route.form.chain.some(parent => form === parent);
                                 url = form.url;
                                 title = form.multi || form.title;
-                                status = (meta != null) && meta.status.has(form.key);
+                                status = (meta != null) && (meta.status[form.key] != null);
                             } else {
                                 throw new Error(`Unknown item type '${item.type}'`);
                             }
@@ -387,6 +387,14 @@ function InstanceController() {
             visible_rows = visible_rows.filter(meta => func(meta.hid));
         }
 
+        let stats = {};
+        for (let row of visible_rows) {
+            for (let key of data_form.pages.keys())
+                stats[key] = (stats[key] || 0) + (row.status[key] != null);
+            for (let key of data_form.forms.keys())
+                stats[key] = (stats[key] || 0) + (row.status[key] != null);
+        }
+
         return html`
             <div class="padded">
                 <div class="ui_actions" style="margin-bottom: 1.2em;">
@@ -420,7 +428,17 @@ function InstanceController() {
                     <thead>
                         <tr>
                             <th>ID</th>
-                            ${data_form.menu.map(item => html`<th title=${item.title}>${item.title}</th>`)}
+                            ${data_form.menu.map(item => {
+                                let prec = `${stats[item.key] || 0} / ${visible_rows.length}`;
+                                let title = `${item.title}\nDisponible : ${prec} ${visible_rows.length > 1 ? 'lignes' : 'ligne'}`;
+
+                                return html`
+                                    <th title=${title}>
+                                        ${item.title}&nbsp;&nbsp;
+                                        <span style="font-size: 0.7em; font-weight: normal;">${prec}</span>
+                                    </th>
+                                `;
+                            })}
                         </tr>
                     </thead>
 
@@ -437,27 +455,27 @@ function InstanceController() {
                                             let page = item.page;
                                             let url = page.url + `/${row.ulid}`;
 
-                                            if (row.status.has(page.key)) {
+                                            if (row.status[page.key] != null) {
                                                 return html`<td class=${active && page === route.page ? 'saved active' : 'saved'}
-                                                                title=${item.title}><a href=${url}>${item.title}</a></td>`;
+                                                                title=${row.status[page.key].toLocaleString()}><a href=${url}>${row.status[page.key].toLocaleDateString()}</a></td>`;
                                             } else {
                                                 return html`<td class=${active && page === route.page ? 'missing active' : 'missing'}
-                                                                title=${item.title}><a href=${url}>${item.title}</a></td>`;
+                                                                title=${item.title}><a href=${url}>Afficher</a></td>`;
                                             }
                                         } else if (item.type === 'form') {
                                             let form = item.form;
 
-                                            if (row.status.has(form.key)) {
+                                            if (row.status[form.key] != null) {
                                                 let child = row.children[form.key][0];
                                                 let url = form.url + `/${child.ulid}`;
 
                                                 return html`<td class=${active && route.form.chain.includes(form) ? 'saved active' : 'saved'}
-                                                                title=${item.title}><a href=${url}>${item.title}</a></td>`;
+                                                                title=${item.title}><a href=${url}>${row.status[form.key].toLocaleDateString()}</a></td>`;
                                             } else {
                                                 let url = form.url + `/${row.ulid}`;
 
                                                 return html`<td class=${active && route.form.chain.includes(form) ? 'missing active' : 'missing'}
-                                                                title=${item.title}><a href=${url}>${item.title}</a></td>`;
+                                                                title=${item.title}><a href=${url}>Afficher</a></td>`;
                                             }
                                         }
                                     })}
@@ -718,7 +736,7 @@ function InstanceController() {
                     ${!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null ? html`
                         <button class="ins_hid" style=${historical ? 'color: #00ffff;' : ''}
                                 @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
-                            ${form_record.chain[0].hid}
+                            ${form_record.chain[0].form.title} <span style="font-weight: bold;">#${form_record.chain[0].hid}</span>
                             ${historical ? ' (historique)' : ''}
                         </button>
                     ` : ''}
@@ -764,7 +782,7 @@ function InstanceController() {
                         return html`
                             <li><a class=${cls} href=${contextualizeURL(page.url, form_record)}>
                                 <div style="flex: 1;">${page.title}</div>
-                                ${meta && meta.status.has(page.key) ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
+                                ${meta && meta.status[page.key] != null ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
                             </a></li>
                         `;
                     } else if (item.type === 'form') {
@@ -783,7 +801,7 @@ function InstanceController() {
                         return html`
                             <li><a class=${cls} href=${contextualizeURL(form.url, form_record)} style="display: flex;">
                                 <div style="flex: 1;">${form.multi || form.title}</div>
-                                ${meta && meta.status.has(form.key) ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
+                                ${meta && meta.status[form.key] != null ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
                             </a></li>
                         `;
                     }
@@ -2171,15 +2189,15 @@ function InstanceController() {
         }
 
         let values = {};
-        let status = new Set;
+        let status = {};
         for (let i = 0; i < version; i++) {
             let fragment = fragments[i];
 
             if (fragment.type === 'save') {
                 Object.assign(values, fragment.values);
 
-                if (form.pages.get(fragment.page))
-                    status.add(fragment.page);
+                if (form.pages.get(fragment.page) && status[fragment.page] == null)
+                    status[fragment.page] = new Date(fragment.mtime);
             }
         }
         for (let fragment of fragments)
@@ -2200,7 +2218,7 @@ function InstanceController() {
                 }
 
                 array.push(child);
-                status.add(child.form);
+                status[child.form] = child.ctime;
             }
         }
 
