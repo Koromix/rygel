@@ -166,20 +166,6 @@ function InstanceController() {
         let historical = (route.version < form_record.fragments.length);
 
         return html`
-            ${!goupile.isLocked() && profile.instances == null ?
-                html`<button class="icon" style="background-position-y: calc(-538px + 1.2em);"
-                             @click=${e => self.go(e, ENV.urls.instance)}>${ENV.title}</button>` : ''}
-            ${!goupile.isLocked() && profile.instances != null ? html`
-                <div class="drop" @click=${ui.deployMenu}>
-                    <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
-                            @click=${ui.deployMenu}>${ENV.title}</button>
-                    <div>
-                        ${profile.instances.map(instance =>
-                            html`<button class=${instance.url === ENV.urls.instance ? 'active' : ''}
-                                         @click=${e => self.go(e, instance.url)}>${instance.name}</button>`)}
-                    </div>
-                </div>
-            ` : ''}
             ${!goupile.isLocked() ? html`
                 ${goupile.hasPermission('admin_code') ? html`
                     <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
@@ -192,24 +178,22 @@ function InstanceController() {
                 <button class=${'icon' + (ui.isPanelEnabled('page') ? ' active' : '')}
                         style="background-position-y: calc(-318px + 1.2em);"
                         @click=${ui.wrapAction(e => togglePanel(e, 'page'))}>Saisie</button>
+                <div style="flex: 1; min-width: 15px;"></div>
             ` : ''}
             ${goupile.isLocked() && profile.lock.unlockable ? html`
                 <button class="icon" style="background-position-y: calc(-186px + 1.2em)"
                         @click=${ui.wrapAction(goupile.runUnlockDialog)}>Déverrouiller</button>
+                <div style="flex: 1; min-width: 15px;"></div>
             ` : ''}
-            <div style="flex: 1; min-width: 15px;"></div>
 
             ${!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null ? html`
                 <button class="ins_hid" @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
-                    ${form_record.chain[0].hid}
+                    ${form_record.chain[0].form.title} <span style="font-weight: bold;">#${form_record.chain[0].hid}</span>
                     ${historical ? html`<br/><span style="font-size: 0.7em;">${form_record.ctime.toLocaleString()}</span>` : ''}
                 </button>
             ` : ''}
             <div class="drop">
-                <button @click=${ui.deployMenu}>
-                    ${route.form.title}<br/>
-                    <span style="font-size: 0.7em;">${route.page.title}</span>
-                </button>
+                <button @click=${ui.deployMenu}>${route.page.title}</button>
                 <div>
                     ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormDrop(route.form.chain[idx]))}
                     ${!goupile.isLocked() && route.form.multi ? html`
@@ -248,6 +232,20 @@ function InstanceController() {
             ${goupile.isLocked() && profile.userid >= 0 ?
                 html`<button class="icon" @click=${ui.wrapAction(goupile.goToLogin)}
                              style="background-position-y: calc(-450px + 1.2em);">Se connecter</button>` : ''}
+            ${!goupile.isLocked() && profile.instances == null ?
+                html`<button class="icon" style="background-position-y: calc(-538px + 1.2em);"
+                             @click=${e => self.go(e, ENV.urls.instance)}>${ENV.title}</button>` : ''}
+            ${!goupile.isLocked() && profile.instances != null ? html`
+                <div class="drop right" @click=${ui.deployMenu}>
+                    <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
+                            @click=${ui.deployMenu}>${ENV.title}</button>
+                    <div>
+                        ${profile.instances.map(instance =>
+                            html`<button class=${instance.url === ENV.urls.instance ? 'active' : ''}
+                                         @click=${e => self.go(e, instance.url)}>${instance.name}</button>`)}
+                    </div>
+                </div>
+            ` : ''}
         `;
     }
 
