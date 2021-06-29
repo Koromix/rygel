@@ -167,6 +167,7 @@ bool sq_Database::SetSnapshotFile(const char *filename, int64_t full_delay)
                 break;
             crypto_hash_sha256_update(&db->snapshot_wal_state, buf.data, buf.len);
         } while (!db->snapshot_wal_reader.IsEOF());
+
         db->snapshot_data = true;
 
         return SQLITE_OK;
@@ -354,6 +355,13 @@ bool sq_Database::CheckpointSnapshot(bool restart)
 
     bool success = true;
 
+    bool locked = false;
+    RG_DEFER {
+        if (locked) {
+            UnlockExclusive();
+        }
+    };
+
     // Restart snapshot stream if needed
     if (restart || now - snapshot_start >= snapshot_full_delay) {
         success &= snapshot_main_writer.Reset();
@@ -379,6 +387,9 @@ bool sq_Database::CheckpointSnapshot(bool restart)
             success &= snapshot_main_writer.Flush();
         }
 
+        LockExclusive();
+        locked = true;
+
         // Delete all WAL copies
         {
             snapshot_wal_writer.Close();
@@ -400,16 +411,10 @@ bool sq_Database::CheckpointSnapshot(bool restart)
         snapshot_start = now;
         snapshot_idx = 0;
         snapshot_data = true;
+    } else {
+        LockExclusive();
+        locked = true;
     }
-
-    if (snapshot_wal_writer.IsValid()) {
-        // Not strictly needed, but it may help close faster
-        // after we acquire the lock.
-       success &= snapshot_wal_writer.Flush();
-    }
-
-    LockExclusive();
-    RG_DEFER { UnlockExclusive(); };
 
     // Perform SQLite checkpoint, with truncation so that we can just copy each WAL file
     int ret = sqlite3_wal_checkpoint_v2(db, nullptr, SQLITE_CHECKPOINT_TRUNCATE, nullptr, nullptr);
@@ -426,6 +431,7 @@ bool sq_Database::CheckpointSnapshot(bool restart)
     // Switch to next WAL copy
     if (snapshot_data) {
         snapshot_idx++;
+        snapshot_data = false;
 
         RG_DEFER_C(len = snapshot_path_buf.len) {
             snapshot_path_buf.RemoveFrom(len);
@@ -450,7 +456,19 @@ bool sq_Database::CheckpointSnapshot(bool restart)
         success &= snapshot_wal_reader.Rewind();
         crypto_hash_sha256_init(&snapshot_wal_state);
 
-        snapshot_data = false;
+        // Copy existing WAL (if any)
+        do {
+            LocalArray<uint8_t, 16384> buf;
+            buf.len = snapshot_wal_reader.Read(buf.data);
+            if (buf.len < 0)
+                break;
+
+            if (!snapshot_wal_writer.Write(buf))
+                break;
+            crypto_hash_sha256_update(&snapshot_wal_state, buf.data, buf.len);
+
+            snapshot_data |= buf.len;
+        } while (!snapshot_wal_reader.IsEOF());
     }
 
     // If anything went wrong, do a full snapshot next time

@@ -122,7 +122,7 @@ class sq_Database {
     int64_t snapshot_full_delay;
     int64_t snapshot_start;
     Size snapshot_idx;
-    std::atomic_bool snapshot_data { false };
+    bool snapshot_data = false;
 
 public:
     sq_Database() {}
