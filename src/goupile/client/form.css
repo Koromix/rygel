@@ -173,6 +173,7 @@ html:not(.small) .fm_widget.compact .fm_error {
 /* -------------------- Simple widgets -------------------- */
 
 .fm_input {
+    width: 18em;
     max-width: 100%;
     padding: 3px calc(4px + var(--widget_rounding) / 4);
     background: white;
