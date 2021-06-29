@@ -162,7 +162,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
         return true;
     }
 
-    io->RunAsync([=]() {
+    io->RunAsync([=]() mutable {
         // Handle range requests
         if (src_encoding == CompressionType::None && dest_encoding == src_encoding) {
             LocalArray<http_ByteRange, 16> ranges;
@@ -296,8 +296,16 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
         // Default path, for big files and/or transcoding (Gzip to None, etc.)
         {
             StreamWriter writer;
-            if (!io->OpenForWrite(200, src_len, dest_encoding, &writer))
-                return;
+            if (src_encoding == dest_encoding) {
+                src_encoding = CompressionType::None;
+
+                if (!io->OpenForWrite(200, src_len, CompressionType::None, &writer))
+                    return;
+            } else {
+                if (!io->OpenForWrite(200, -1, dest_encoding, &writer))
+                    return;
+            }
+
             io->AddEncodingHeader(dest_encoding);
             AddMimeTypeHeader(filename, io);
 
