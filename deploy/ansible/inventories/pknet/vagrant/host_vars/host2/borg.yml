@@ -14,6 +14,8 @@
 borg_public_addr: '{{ ansible_host }}'
 
 borg_directories:
+  - /opt/nginx/nginx.conf
+  - '{{ goupile_root_path }}/sync/sync.ini'
   - '{{ goupile_snapshot_path }}'
 borg_passphrase: 'borg!16/default_pwd'
 borg_time: '03:00 UTC' # Run after goupile snapshot
