@@ -447,7 +447,8 @@ function InstanceController() {
                             return html`
                                 <tr>
                                     <td class=${(row.hid == null ? 'missing' : '') +
-                                                (active ? ' active' : '')}>${row.hid != null ? row.hid : 'NA'}</td>
+                                                (active ? ' active' : '')}
+                                        title=${row.hid || ''}>${row.hid != null ? row.hid : 'NA'}</td>
                                     ${row.form.menu.map(item => {
                                         if (item.type === 'page') {
                                             let page = item.page;
