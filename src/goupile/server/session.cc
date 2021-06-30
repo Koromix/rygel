@@ -770,7 +770,7 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
             return;
         sessions.Open(request, io, session);
 
-        WriteProfileJson(session.GetRaw(), nullptr, request, io);
+        WriteProfileJson(session.GetRaw(), instance, request, io);
     });
 }
 
