@@ -171,6 +171,7 @@ private:
     void LockShared();
     void UnlockShared();
     inline void Wait(std::unique_lock<std::mutex> *lock, bool shared);
+    inline void WakeUpWaiters();
 
     bool RunWithBindings(const char *sql, Span<const sq_Binding> bindings);
 

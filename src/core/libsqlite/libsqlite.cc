@@ -535,12 +535,7 @@ void sq_Database::UnlockExclusive()
         running_exclusive_thread = std::thread::id();
         busy_thread = false;
 
-        LockWaiter *waiter = wait_root.next;
-
-        if (waiter != &wait_root) {
-            RG_ASSERT(waiter->shared);
-            waiter->cv.notify_one();
-        }
+        WakeUpWaiters();
     }
 }
 
@@ -577,15 +572,7 @@ void sq_Database::UnlockShared()
 
     if (!--running_shared && !running_exclusive) {
         busy_thread = false;
-
-        LockWaiter *waiter = wait_root.next;
-
-        if (waiter != &wait_root) {
-            do {
-                waiter->cv.notify_one();
-                waiter = waiter->next;
-            } while (waiter->shared);
-        }
+        WakeUpWaiters();
     }
 }
 
@@ -605,6 +592,24 @@ inline void sq_Database::Wait(std::unique_lock<std::mutex> *lock, bool shared)
 
     waiter.prev->next = waiter.next;
     waiter.next->prev = waiter.prev;
+}
+
+inline void sq_Database::WakeUpWaiters()
+{
+    LockWaiter *waiter = wait_root.next;
+
+    if (waiter != &wait_root) {
+        waiter->cv.notify_one();
+
+        if (waiter->shared) {
+            waiter = waiter->next;
+
+            while (waiter->shared) {
+                waiter->cv.notify_one();
+                waiter = waiter->next;
+            }
+        }
+    }
 }
 
 bool sq_Database::RunWithBindings(const char *sql, Span<const sq_Binding> bindings)
