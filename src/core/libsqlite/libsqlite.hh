@@ -111,8 +111,6 @@ class sq_Database {
     // lock (inside a transaction basically) works correctly.
     std::mutex wait_mutex;
     LockWaiter wait_root = { &wait_root, &wait_root };
-    std::condition_variable transactions_cv;
-    std::condition_variable requests_cv;
     int running_exclusive = 0; // Only one exclusive runs but the counter is used for reentrancy
     std::thread::id running_exclusive_thread;
     int running_shared = 0;
