@@ -111,9 +111,9 @@ class sq_Database {
     // lock (inside a transaction basically) works correctly.
     std::mutex wait_mutex;
     LockWaiter wait_root = { &wait_root, &wait_root };
-    int running_exclusive = 0; // Only one exclusive runs but the counter is used for reentrancy
-    std::thread::id running_exclusive_thread;
+    int running_exclusive = 0;
     int running_shared = 0;
+    std::thread::id running_exclusive_thread;
 
     bool snapshot = false;
     HeapArray<char> snapshot_path_buf;
@@ -170,6 +170,7 @@ private:
     void UnlockExclusive();
     void LockShared();
     void UnlockShared();
+    inline void Wait(std::unique_lock<std::mutex> *lock, bool shared);
 
     bool RunWithBindings(const char *sql, Span<const sq_Binding> bindings);
 

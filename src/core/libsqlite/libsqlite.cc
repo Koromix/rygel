@@ -25,6 +25,8 @@ struct FrameData {
 };
 #pragma pack(pop)
 
+static RG_THREAD_LOCAL bool busy_thread = false;
+
 sq_Statement &sq_Statement::operator=(sq_Statement &&other)
 {
     Finalize();
@@ -504,48 +506,40 @@ bool sq_Database::LockExclusive()
 {
     std::unique_lock<std::mutex> lock(wait_mutex);
 
-    // Handle nested lock
-    if (running_exclusive && running_exclusive_thread == std::this_thread::get_id()) {
-        running_exclusive++;
-        return true;
-    }
-
-    // Wait for our turn if anything else (exclusive or shared) is running
+    // Wait for our turn if anything else (exclusive or shared) is running,
+    // unless it is from this exact same thread.
     if (running_exclusive || running_shared) {
-        LockWaiter waiter;
+        if (running_exclusive_thread == std::this_thread::get_id()) {
+            running_exclusive++;
+            return true;
+        }
 
-        waiter.prev = &wait_root;
-        waiter.next = wait_root.next;
-        waiter.next->prev = &waiter;
-        wait_root.next = &waiter;
-        waiter.shared = false;
-
-        do {
-            waiter.cv.wait(lock);
-        } while (running_exclusive || running_shared);
-
-        waiter.prev->next = waiter.next;
-        waiter.next->prev = waiter.prev;
+        Wait(&lock, false);
     }
 
-    running_exclusive++;
+    RG_ASSERT(!running_exclusive);
+    RG_ASSERT(!running_shared);
+
+    running_exclusive = 1;
     running_exclusive_thread = std::this_thread::get_id();
+    busy_thread = true;
 
     return false;
 }
 
 void sq_Database::UnlockExclusive()
 {
-    std::unique_lock<std::mutex> lock(wait_mutex);
+    std::lock_guard<std::mutex> lock(wait_mutex);
 
     if (!--running_exclusive) {
+        running_exclusive_thread = std::thread::id();
+        busy_thread = false;
+
         LockWaiter *waiter = wait_root.next;
 
         if (waiter != &wait_root) {
-            do {
-                waiter->cv.notify_one();
-                waiter = waiter->next;
-            } while (waiter->shared);
+            RG_ASSERT(waiter->shared);
+            waiter->cv.notify_one();
         }
     }
 }
@@ -554,38 +548,36 @@ void sq_Database::LockShared()
 {
     std::unique_lock<std::mutex> lock(wait_mutex);
 
-    // Handle nested lock
-    if (running_exclusive && running_exclusive_thread == std::this_thread::get_id()) {
-        running_shared++;
-        return;
-    }
+    // Wait for our turn if there's an exclusive lock or if there is one pending,
+    // unless it is from this exact same thread or (in the second case) we're already
+    // doing database stuff (even on another database) in this thread.
+    if (running_exclusive) {
+        if (running_exclusive_thread == std::this_thread::get_id()) {
+            running_shared++;
+            return;
+        }
 
-    // Wait for our turn if there's an exclusive lock or if there is one pending
-    if (running_exclusive || wait_root.next != &wait_root) {
-        LockWaiter waiter;
+        Wait(&lock, true);
+    } else if (wait_root.next != &wait_root) {
+        if (busy_thread) {
+            running_shared++;
+            return;
+        }
 
-        waiter.prev = &wait_root;
-        waiter.next = wait_root.next;
-        waiter.next->prev = &waiter;
-        wait_root.next = &waiter;
-        waiter.shared = true;
-
-        do {
-            waiter.cv.wait(lock);
-        } while (running_exclusive);
-
-        waiter.prev->next = waiter.next;
-        waiter.next->prev = waiter.prev;
+        Wait(&lock, true);
     }
 
     running_shared++;
+    busy_thread = true;
 }
 
 void sq_Database::UnlockShared()
 {
-    std::unique_lock<std::mutex> lock(wait_mutex);
+    std::lock_guard<std::mutex> lock(wait_mutex);
 
-    if (!--running_shared) {
+    if (!--running_shared && !running_exclusive) {
+        busy_thread = false;
+
         LockWaiter *waiter = wait_root.next;
 
         if (waiter != &wait_root) {
@@ -595,6 +587,24 @@ void sq_Database::UnlockShared()
             } while (waiter->shared);
         }
     }
+}
+
+inline void sq_Database::Wait(std::unique_lock<std::mutex> *lock, bool shared)
+{
+    LockWaiter waiter;
+
+    waiter.prev = &wait_root;
+    waiter.next = wait_root.next;
+    waiter.next->prev = &waiter;
+    wait_root.next = &waiter;
+    waiter.shared = shared;
+
+    do {
+        waiter.cv.wait(*lock);
+    } while (running_exclusive || (!shared && running_shared));
+
+    waiter.prev->next = waiter.next;
+    waiter.next->prev = waiter.prev;
 }
 
 bool sq_Database::RunWithBindings(const char *sql, Span<const sq_Binding> bindings)
