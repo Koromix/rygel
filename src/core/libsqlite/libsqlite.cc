@@ -502,7 +502,7 @@ bool sq_Database::CheckpointDirect()
 
 bool sq_Database::LockExclusive()
 {
-    std::unique_lock<std::mutex> lock(mutex);
+    std::unique_lock<std::mutex> lock(wait_mutex);
 
     // Handle nested lock
     if (running_exclusive && running_exclusive_thread == std::this_thread::get_id()) {
@@ -510,22 +510,22 @@ bool sq_Database::LockExclusive()
         return true;
     }
 
-    // Wait for our turn if any other lock (exclusive or shared) exists
+    // Wait for our turn if anything else (exclusive or shared) is running
     if (running_exclusive || running_shared) {
-        LockTicket ticket;
+        LockWaiter waiter;
 
-        ticket.prev = &lock_root;
-        ticket.next = lock_root.next;
-        ticket.next->prev = &ticket;
-        lock_root.next = &ticket;
-        ticket.shared = false;
+        waiter.prev = &wait_root;
+        waiter.next = wait_root.next;
+        waiter.next->prev = &waiter;
+        wait_root.next = &waiter;
+        waiter.shared = false;
 
         do {
-            ticket.cv.wait(lock);
+            waiter.cv.wait(lock);
         } while (running_exclusive || running_shared);
 
-        ticket.prev->next = ticket.next;
-        ticket.next->prev = ticket.prev;
+        waiter.prev->next = waiter.next;
+        waiter.next->prev = waiter.prev;
     }
 
     running_exclusive++;
@@ -536,23 +536,23 @@ bool sq_Database::LockExclusive()
 
 void sq_Database::UnlockExclusive()
 {
-    std::unique_lock<std::mutex> lock(mutex);
+    std::unique_lock<std::mutex> lock(wait_mutex);
 
     if (!--running_exclusive) {
-        LockTicket *ticket = lock_root.next;
+        LockWaiter *waiter = wait_root.next;
 
-        if (ticket != &lock_root) {
+        if (waiter != &wait_root) {
             do {
-                ticket->cv.notify_one();
-                ticket = ticket->next;
-            } while (ticket->shared);
+                waiter->cv.notify_one();
+                waiter = waiter->next;
+            } while (waiter->shared);
         }
     }
 }
 
 void sq_Database::LockShared()
 {
-    std::unique_lock<std::mutex> lock(mutex);
+    std::unique_lock<std::mutex> lock(wait_mutex);
 
     // Handle nested lock
     if (running_exclusive && running_exclusive_thread == std::this_thread::get_id()) {
@@ -561,21 +561,21 @@ void sq_Database::LockShared()
     }
 
     // Wait for our turn if there's an exclusive lock or if there is one pending
-    if (running_exclusive || lock_root.next != &lock_root) {
-        LockTicket ticket;
+    if (running_exclusive || wait_root.next != &wait_root) {
+        LockWaiter waiter;
 
-        ticket.prev = &lock_root;
-        ticket.next = lock_root.next;
-        ticket.next->prev = &ticket;
-        lock_root.next = &ticket;
-        ticket.shared = true;
+        waiter.prev = &wait_root;
+        waiter.next = wait_root.next;
+        waiter.next->prev = &waiter;
+        wait_root.next = &waiter;
+        waiter.shared = true;
 
         do {
-            ticket.cv.wait(lock);
+            waiter.cv.wait(lock);
         } while (running_exclusive);
 
-        ticket.prev->next = ticket.next;
-        ticket.next->prev = ticket.prev;
+        waiter.prev->next = waiter.next;
+        waiter.next->prev = waiter.prev;
     }
 
     running_shared++;
@@ -583,16 +583,16 @@ void sq_Database::LockShared()
 
 void sq_Database::UnlockShared()
 {
-    std::unique_lock<std::mutex> lock(mutex);
+    std::unique_lock<std::mutex> lock(wait_mutex);
 
     if (!--running_shared) {
-        LockTicket *ticket = lock_root.next;
+        LockWaiter *waiter = wait_root.next;
 
-        if (ticket != &lock_root) {
+        if (waiter != &wait_root) {
             do {
-                ticket->cv.notify_one();
-                ticket = ticket->next;
-            } while (ticket->shared);
+                waiter->cv.notify_one();
+                waiter = waiter->next;
+            } while (waiter->shared);
         }
     }
 }

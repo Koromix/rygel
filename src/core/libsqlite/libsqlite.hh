@@ -96,20 +96,24 @@ public:
 class sq_Database {
     RG_DELETE_COPY(sq_Database)
 
-    struct LockTicket {
-        LockTicket *prev;
-        LockTicket *next;
+    struct LockWaiter {
+        LockWaiter *prev;
+        LockWaiter *next;
         std::condition_variable cv;
         bool shared;
     };
 
     sqlite3 *db = nullptr;
 
-    std::mutex mutex;
-    LockTicket lock_root = { &lock_root, &lock_root };
+    // This wrapper uses a read-write lock that can be locked and unlocked
+    // in different threads and FIFO scheduling to avoid starvation.
+    // It is also reentrant, so that running requests inside an exclusive
+    // lock (inside a transaction basically) works correctly.
+    std::mutex wait_mutex;
+    LockWaiter wait_root = { &wait_root, &wait_root };
     std::condition_variable transactions_cv;
     std::condition_variable requests_cv;
-    int running_exclusive = 0;
+    int running_exclusive = 0; // Only one exclusive runs but the counter is used for reentrancy
     std::thread::id running_exclusive_thread;
     int running_shared = 0;
 
