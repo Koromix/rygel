@@ -694,7 +694,7 @@ const net = new function() {
                     let controller = new AbortController;
                     options.signal = controller.signal;
 
-                    timer = setTimeout(controller.abort, options.timeout);
+                    timer = setTimeout(() => controller.abort(), options.timeout);
                 }
 
                 let response = await fetch(request, options);
