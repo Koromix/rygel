@@ -353,7 +353,7 @@ bool DomainHolder::Sync()
                     registry_unload.Append(instance);
                     offset++;
                 } else if (!cmp) {
-                    if (instance->generation == generation) {
+                    if (instance->generation == generation && (!master_key || new_map.Find(master_key))) {
                         new_instances.Append(instance);
                         new_map.Set(instance);
                     } else {
