@@ -945,7 +945,9 @@ static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = n
         HeapArray<char> buf(&temp_alloc);
         Fmt(&buf, "%1%/%2", gp_domain.config.archive_directory, mtime_str);
         if (filter) {
-            Span<const char> basename = SplitStrReverseAny(filter->filename, RG_PATH_SEPARATORS);
+            const char *filename = sqlite3_db_filename(*filter->db, "main");
+
+            Span<const char> basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
             SplitStrReverse(basename, '.', &basename);
 
             Fmt(&buf, "_%1", basename);
@@ -969,10 +971,12 @@ static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = n
     entries.Append({&gp_domain.db, "goupile.db"});
     for (InstanceHolder *instance: instances) {
         if (filter == nullptr || instance == filter || instance->master == filter) {
-            const char *basename = SplitStrReverseAny(instance->filename, RG_PATH_SEPARATORS).ptr;
+            const char *filename = sqlite3_db_filename(*instance->db, "main");
+
+            const char *basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
             basename = Fmt(&temp_alloc, "instances/%1", basename).ptr;
 
-            entries.Append({&instance->db, basename});
+            entries.Append({instance->db, basename});
         }
     }
     for (BackupEntry &entry: entries) {
@@ -1179,11 +1183,11 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
         HeapArray<const char *> unlink_filenames;
         {
             for (const InstanceHolder *slave: instance->slaves) {
-                const char *filename = DuplicateString(slave->filename, &io->allocator).ptr;
+                const char *filename = DuplicateString(sqlite3_db_filename(*slave->db, "main"), &io->allocator).ptr;
                 unlink_filenames.Append(filename);
             }
 
-            const char *filename = DuplicateString(instance->filename, &io->allocator).ptr;
+            const char *filename = DuplicateString(sqlite3_db_filename(*instance->db, "main"), &io->allocator).ptr;
             unlink_filenames.Append(filename);
         }
 
@@ -1324,7 +1328,7 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
         }
 
         // Write new configuration to database
-        bool success = instance->db.Transaction([&]() {
+        bool success = instance->db->Transaction([&]() {
             // Log action
             int64_t time = GetUnixTime();
             if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
@@ -1336,17 +1340,17 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
             const char *sql = "UPDATE fs_settings SET value = ?2 WHERE key = ?1";
             bool success = true;
 
-            success &= instance->db.Run(sql, "Name", config.name);
+            success &= instance->db->Run(sql, "Name", config.name);
             if (instance->master == instance) {
-                success &= instance->db.Run(sql, "UseOffline", 0 + config.use_offline);
-                success &= instance->db.Run(sql, "SyncMode", SyncModeNames[(int)config.sync_mode]);
-                success &= instance->db.Run(sql, "BackupKey", config.backup_key);
-                success &= instance->db.Run(sql, "TokenKey", config.token_key);
-                success &= instance->db.Run(sql, "AutoKey", config.auto_key);
-                success &= instance->db.Run(sql, "AutoUser", config.auto_userid ? sq_Binding(config.auto_userid) : sq_Binding());
+                success &= instance->db->Run(sql, "UseOffline", 0 + config.use_offline);
+                success &= instance->db->Run(sql, "SyncMode", SyncModeNames[(int)config.sync_mode]);
+                success &= instance->db->Run(sql, "BackupKey", config.backup_key);
+                success &= instance->db->Run(sql, "TokenKey", config.token_key);
+                success &= instance->db->Run(sql, "AutoKey", config.auto_key);
+                success &= instance->db->Run(sql, "AutoUser", config.auto_userid ? sq_Binding(config.auto_userid) : sq_Binding());
             }
             if (!instance->slaves.len) {
-                success &= instance->db.Run(sql, "SharedKey", config.shared_key);
+                success &= instance->db->Run(sql, "SharedKey", config.shared_key);
             }
             if (!success)
                 return false;

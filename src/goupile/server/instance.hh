@@ -43,8 +43,7 @@ public:
     int64_t unique = -1;
 
     Span<const char> key = {};
-    const char *filename = nullptr;
-    sq_Database db;
+    sq_Database *db = nullptr;
     const char *title = nullptr;
 
     InstanceHolder *master = nullptr;
@@ -82,7 +81,7 @@ public:
 private:
     InstanceHolder() {};
 
-    bool Open(int64_t unique, InstanceHolder *master, const char *key, const char *filename);
+    bool Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db);
 
     friend class DomainHolder;
 };

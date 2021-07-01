@@ -567,7 +567,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
     const char *ulid = nullptr;
 
     sq_Statement stmt;
-    if (!instance->db.Prepare("SELECT userid, local_key, ulid FROM usr_auto WHERE key = ?1", &stmt))
+    if (!instance->db->Prepare("SELECT userid, local_key, ulid FROM usr_auto WHERE key = ?1", &stmt))
         return nullptr;
     sqlite3_bind_text(stmt, 1, key, -1, SQLITE_STATIC);
 
@@ -578,8 +578,8 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
     } else if (stmt.IsValid()) {
         stmt.Finalize();
 
-        bool success = instance->db.Transaction([&]() {
-            if (!instance->db.Prepare("SELECT userid, local_key, ulid FROM usr_auto WHERE key = ?1", &stmt))
+        bool success = instance->db->Transaction([&]() {
+            if (!instance->db->Prepare("SELECT userid, local_key, ulid FROM usr_auto WHERE key = ?1", &stmt))
                 return false;
             sqlite3_bind_text(stmt, 1, key, -1, SQLITE_STATIC);
 
@@ -601,11 +601,11 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
                 if (RG_UNLIKELY(!MakeULID((char *)ulid)))
                     return false;
 
-                if (!instance->db.Run("INSERT INTO usr_auto (key, local_key, ulid) VALUES (?1, ?2, ?3)",
-                                      key, local_key, ulid))
+                if (!instance->db->Run("INSERT INTO usr_auto (key, local_key, ulid) VALUES (?1, ?2, ?3)",
+                                       key, local_key, ulid))
                     return false;
 
-                userid = sqlite3_last_insert_rowid(instance->db);
+                userid = sqlite3_last_insert_rowid(*instance->db);
             } else {
                 return false;
             }

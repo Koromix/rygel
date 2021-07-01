@@ -30,9 +30,9 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
     }
 
     sq_Statement stmt;
-    if (!instance->db.Prepare(R"(SELECT filename, size, sha256 FROM fs_files
-                                 WHERE active = 1
-                                 ORDER BY filename)", &stmt))
+    if (!instance->db->Prepare(R"(SELECT filename, size, sha256 FROM fs_files
+                                  WHERE active = 1
+                                  ORDER BY filename)", &stmt))
         return;
 
     http_JsonPageBuilder json;
@@ -90,8 +90,8 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
     // Lookup file in database
     sq_Statement stmt;
-    if (!instance->db.Prepare(R"(SELECT rowid, compression, sha256 FROM fs_files
-                                 WHERE active = 1 AND filename = ?1)", &stmt))
+    if (!instance->db->Prepare(R"(SELECT rowid, compression, sha256 FROM fs_files
+                                  WHERE active = 1 AND filename = ?1)", &stmt))
         return true;
     sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
     if (!stmt.Next())
@@ -134,8 +134,8 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
     // Open file blob
     sqlite3_blob *src_blob;
     Size src_len;
-    if (sqlite3_blob_open(instance->db, "main", "fs_files", "blob", rowid, 0, &src_blob) != SQLITE_OK) {
-        LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
+    if (sqlite3_blob_open(*instance->db, "main", "fs_files", "blob", rowid, 0, &src_blob) != SQLITE_OK) {
+        LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
         return true;
     }
     src_len = sqlite3_blob_bytes(src_blob);
@@ -149,7 +149,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
         io->AddFinalizer([=] { Allocator::Release(&io->allocator, ptr, src_len); });
 
         if (sqlite3_blob_read(src_blob, ptr, (int)src_len, 0) != SQLITE_OK) {
-            LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
+            LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
             return true;
         }
 
@@ -241,7 +241,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
                         Size copy_len = std::min(range_len - offset, RG_SIZE(buf));
 
                         if (sqlite3_blob_read(src_blob, buf, (int)copy_len, (int)(range.start + offset)) != SQLITE_OK) {
-                            LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
+                            LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
                             return;
                         }
 
@@ -276,7 +276,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
                     Size copy_len = std::min(range_len - offset, RG_SIZE(buf));
 
                     if (sqlite3_blob_read(src_blob, buf, (int)copy_len, (int)(range.start + offset)) != SQLITE_OK) {
-                        LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
+                        LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
                         return;
                     }
 
@@ -314,7 +314,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
                 Size copy_len = std::min(src_len - offset, buf.len);
 
                 if (sqlite3_blob_read(src_blob, buf.ptr, (int)copy_len, (int)offset) != SQLITE_OK) {
-                    LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
+                    LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
                     return (Size)-1;
                 }
 
@@ -410,7 +410,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
         }
 
         // Copy and commit to database
-        instance->db.Transaction([&]() {
+        instance->db->Transaction([&]() {
             Size file_len = ftell(fp);
             if (fseek(fp, 0, SEEK_SET) < 0) {
                 LogError("fseek('<temp>') failed: %1", strerror(errno));
@@ -419,8 +419,8 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
             if (client_sha256) {
                 sq_Statement stmt;
-                if (!instance->db.Prepare(R"(SELECT sha256 FROM fs_files
-                                             WHERE active = 1 AND filename = ?1)", &stmt))
+                if (!instance->db->Prepare(R"(SELECT sha256 FROM fs_files
+                                              WHERE active = 1 AND filename = ?1)", &stmt))
                     return false;
                 sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
 
@@ -445,19 +445,19 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
             int64_t mtime = GetUnixTime();
 
-            if (!instance->db.Run(R"(UPDATE fs_files SET active = 0
-                                     WHERE active = 1 AND filename = ?1)", filename))
+            if (!instance->db->Run(R"(UPDATE fs_files SET active = 0
+                                      WHERE active = 1 AND filename = ?1)", filename))
                 return false;
-            if (!instance->db.Run(R"(INSERT INTO fs_files (active, filename, mtime, blob, compression, sha256, size)
-                                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
+            if (!instance->db->Run(R"(INSERT INTO fs_files (active, filename, mtime, blob, compression, sha256, size)
+                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
                                   1, filename, mtime, sq_Binding::Zeroblob(file_len),
                                   CompressionTypeNames[(int)compression_type], sha256, total_len))
                 return false;
 
-            int64_t rowid = sqlite3_last_insert_rowid(instance->db);
+            int64_t rowid = sqlite3_last_insert_rowid(*instance->db);
 
             sqlite3_blob *blob;
-            if (sqlite3_blob_open(instance->db, "main", "fs_files", "blob", rowid, 1, &blob) != SQLITE_OK)
+            if (sqlite3_blob_open(*instance->db, "main", "fs_files", "blob", rowid, 1, &blob) != SQLITE_OK)
                 return false;
             RG_DEFER { sqlite3_blob_close(blob); };
 
@@ -475,7 +475,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
                     return false;
                 }
                 if (sqlite3_blob_write(blob, buf.data, (int)buf.len, (int)read_len) != SQLITE_OK) {
-                    LogError("SQLite Error: %1", sqlite3_errmsg(instance->db));
+                    LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
                     return false;
                 }
 
@@ -518,12 +518,12 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
     const char *filename = url + 7;
     const char *client_sha256 = request.GetQueryValue("sha256");
 
-    instance->db.Transaction([&]() {
+    instance->db->Transaction([&]() {
         if (client_sha256) {
             sq_Statement stmt;
-            if (!instance->db.Prepare(R"(SELECT active, sha256 FROM fs_files
-                                         WHERE filename = ?1
-                                         ORDER BY active DESC)", &stmt))
+            if (!instance->db->Prepare(R"(SELECT active, sha256 FROM fs_files
+                                          WHERE filename = ?1
+                                          ORDER BY active DESC)", &stmt))
                 return false;
             sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
 
@@ -546,11 +546,11 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
             }
         }
 
-        if (!instance->db.Run(R"(UPDATE fs_files SET active = 0
-                                 WHERE active = 1 AND filename = ?1)", filename))
+        if (!instance->db->Run(R"(UPDATE fs_files SET active = 0
+                                  WHERE active = 1 AND filename = ?1)", filename))
             return false;
 
-        if (sqlite3_changes(instance->db)) {
+        if (sqlite3_changes(*instance->db)) {
             io->AttachText(200, "Done!");
         } else {
             io->AttachError(404);

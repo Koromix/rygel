@@ -117,7 +117,7 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
         }
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY e.rowid, f.anchor").len;
 
-        if (!instance->db.Prepare(sql.data, &stmt))
+        if (!instance->db->Prepare(sql.data, &stmt))
             return;
 
         sqlite3_bind_int64(stmt, 1, anchor);
@@ -316,7 +316,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
         }
 
         // Save to database
-        bool success = instance->db.Transaction([&]() {
+        bool success = instance->db->Transaction([&]() {
             for (const SaveRecord &record: records) {
                 bool updated = false;
 
@@ -324,7 +324,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                 char root_ulid[32];
                 if (record.parent.ulid) {
                     sq_Statement stmt;
-                    if (!instance->db.Prepare("SELECT root_ulid FROM rec_entries WHERE ulid = ?1", &stmt))
+                    if (!instance->db->Prepare("SELECT root_ulid FROM rec_entries WHERE ulid = ?1", &stmt))
                         return false;
                     sqlite3_bind_text(stmt, 1, record.parent.ulid, -1, SQLITE_STATIC);
 
@@ -352,15 +352,15 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     for (Size i = 0; i < record.fragments.len; i++) {
                         const SaveRecord::Fragment &fragment = record.fragments[i];
 
-                        if (!instance->db.Run(R"(INSERT INTO rec_fragments (ulid, version, type, userid, username,
-                                                                            mtime, page, json)
-                                                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
-                                                 ON CONFLICT DO NOTHING)",
+                        if (!instance->db->Run(R"(INSERT INTO rec_fragments (ulid, version, type, userid, username,
+                                                                             mtime, page, json)
+                                                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                                                  ON CONFLICT DO NOTHING)",
                                               record.ulid, i + 1, fragment.type, session->userid, session->username,
                                               fragment.mtime, fragment.page, fragment.json))
                             return false;
 
-                        if (sqlite3_changes(instance->db)) {
+                        if (sqlite3_changes(*instance->db)) {
                             updated = true;
                         } else {
                             LogDebug("Ignored conflicting fragment %1 for '%2'", i + 1, record.ulid);
@@ -368,10 +368,10 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                         }
                     }
 
-                    anchor = sqlite3_last_insert_rowid(instance->db);
+                    anchor = sqlite3_last_insert_rowid(*instance->db);
                 } else {
                     sq_Statement stmt;
-                    if (!instance->db.Prepare("SELECT seq FROM sqlite_sequence WHERE name = 'rec_fragments'", &stmt))
+                    if (!instance->db->Prepare("SELECT seq FROM sqlite_sequence WHERE name = 'rec_fragments'", &stmt))
                         return false;
 
                     if (stmt.Next()) {
@@ -387,26 +387,26 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
 
                 // Insert or update record entry (if needed)
                 if (RG_LIKELY(updated)) {
-                    if (!instance->db.Run(R"(INSERT INTO rec_entries (ulid, hid, form, parent_ulid,
-                                                                      parent_version, root_ulid, anchor)
-                                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-                                             ON CONFLICT (ulid)
-                                                 DO UPDATE SET hid = IFNULL(excluded.hid, hid),
-                                                               anchor = excluded.anchor)",
+                    if (!instance->db->Run(R"(INSERT INTO rec_entries (ulid, hid, form, parent_ulid,
+                                                                       parent_version, root_ulid, anchor)
+                                              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                                              ON CONFLICT (ulid)
+                                                  DO UPDATE SET hid = IFNULL(excluded.hid, hid),
+                                                                anchor = excluded.anchor)",
                                           record.ulid, record.hid, record.form, record.parent.ulid,
                                           record.parent.version >= 0 ? sq_Binding(record.parent.version) : sq_Binding(),
                                           root_ulid, anchor))
                         return false;
 
-                    if (sqlite3_changes(instance->db) && !record.hid && !record.parent.ulid) {
-                        int64_t rowid = sqlite3_last_insert_rowid(instance->db);
+                    if (sqlite3_changes(*instance->db) && !record.hid && !record.parent.ulid) {
+                        int64_t rowid = sqlite3_last_insert_rowid(*instance->db);
 
                         sq_Statement stmt;
-                        if (!instance->db.Prepare(R"(INSERT INTO rec_sequences (form, counter)
-                                                     VALUES (?1, 1)
-                                                     ON CONFLICT (form)
-                                                         DO UPDATE SET counter = counter + 1
-                                                     RETURNING counter)", &stmt))
+                        if (!instance->db->Prepare(R"(INSERT INTO rec_sequences (form, counter)
+                                                      VALUES (?1, 1)
+                                                      ON CONFLICT (form)
+                                                          DO UPDATE SET counter = counter + 1
+                                                      RETURNING counter)", &stmt))
                             return false;
                         sqlite3_bind_text(stmt, 1, record.form, -1, SQLITE_STATIC);
 
@@ -417,8 +417,8 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
 
                         int64_t counter = sqlite3_column_int64(stmt, 0);
 
-                        if (!instance->db.Run("UPDATE rec_entries SET hid = ?2 WHERE rowid = ?1",
-                                              rowid, counter))
+                        if (!instance->db->Run("UPDATE rec_entries SET hid = ?2 WHERE rowid = ?1",
+                                               rowid, counter))
                             return false;
                     }
                 }

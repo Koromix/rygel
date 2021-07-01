@@ -60,8 +60,11 @@ bool LoadConfig(const char *filename, DomainConfig *out_config);
 
 class DomainHolder {
     mutable std::shared_mutex mutex;
+
     HeapArray<InstanceHolder *> instances;
     HashTable<Span<const char>, InstanceHolder *> instances_map;
+
+    HeapArray<sq_Database *> databases;
 
 public:
     DomainConfig config = {};

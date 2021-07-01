@@ -244,10 +244,6 @@ bool DomainHolder::Open(const char *filename)
         return false;
     if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))
         return false;
-    if (!db.SetWAL(true))
-        return false;
-    if (!db.SetSynchronousFull(config.sync_full))
-        return false;
 
     // Check schema version
     {
@@ -275,10 +271,14 @@ bool DomainHolder::Open(const char *filename)
     if (!MakeDirectory(config.snapshot_directory_instances, false))
         return false;
 
-    // Configure snapshots
+    // Properly configure database
     {
         const char *snapshot_filename = Fmt(&config.str_alloc, "%1%/goupile.db", config.snapshot_directory).ptr;
 
+        if (!db.SetWAL(true))
+            return false;
+        if (!db.SetSynchronousFull(config.sync_full))
+            return false;
         if (!db.SetSnapshotFile(snapshot_filename, FullSnapshotDelay))
             return false;
     }
@@ -302,6 +302,11 @@ void DomainHolder::Close()
     }
     instances.Clear();
     instances_map.Clear();
+
+    for (sq_Database *db: databases) {
+        delete db;
+    }
+    databases.Clear();
 }
 
 bool DomainHolder::Sync()
@@ -441,32 +446,54 @@ bool DomainHolder::Sync()
             master = nullptr;
         }
 
-        const char *filename = MakeInstanceFileName(config.instances_directory, start.instance_key, &temp_alloc);
         InstanceHolder *instance = new InstanceHolder();
         RG_DEFER_N(instance_guard) { delete instance; };
 
-        // Open and configure instance database
-        {
-            const char *snapshot_filename = MakeInstanceFileName(config.snapshot_directory_instances,
-                                                                 start.instance_key, &temp_alloc);
+        if (start.prev_instance) {
+            InstanceHolder *prev_instance = start.prev_instance;
 
-            if (!instance->Open(next_unique++, master, start.instance_key, filename)) {
-                complete = false;
-                continue;
-            }
-            if (!instance->db.SetSynchronousFull(config.sync_full)) {
-                complete = false;
-                continue;
-            }
-            if (!instance->db.SetSnapshotFile(snapshot_filename, FullSnapshotDelay)) {
-                complete = false;
-                continue;
+            while (prev_instance->master->refcount) {
+                WaitDelay(100);
             }
 
-            instance->generation = start.generation;
-            instance_guard.Disable();
+            if (!instance->Open(next_unique++, master, start.instance_key, prev_instance->db)) {
+                complete = false;
+                continue;
+            }
+        } else {
+            sq_Database *db = new sq_Database;
+            RG_DEFER_N(db_guard) { delete db; };
+
+            const char *db_filename = MakeInstanceFileName(config.instances_directory, start.instance_key, &temp_alloc);
+            const char *snapshot_filename = MakeInstanceFileName(config.snapshot_directory_instances, start.instance_key, &temp_alloc);
+
+            if (!db->Open(db_filename, SQLITE_OPEN_READWRITE)) {
+                complete = false;
+                continue;
+            }
+            if (!db->SetWAL(true)) {
+                complete = false;
+                continue;
+            }
+            if (!db->SetSynchronousFull(config.sync_full)) {
+                complete = false;
+                continue;
+            }
+            if (!db->SetSnapshotFile(snapshot_filename, FullSnapshotDelay)) {
+                complete = false;
+                continue;
+            }
+            if (!instance->Open(next_unique++, master, start.instance_key, db)) {
+                complete = false;
+                continue;
+            }
+
+            db_guard.Disable();
+            databases.Append(db);
         }
 
+        instance->generation = start.generation;
+        instance_guard.Disable();
         new_instances.Append(instance);
         new_map.Set(instance);
 
@@ -517,6 +544,31 @@ bool DomainHolder::Sync()
                 master->unique = next_unique++;
             }
         }
+    }
+
+    // Close unused databases
+    {
+        HashSet<const void *> used_databases;
+
+        for (const InstanceHolder *instance: new_instances) {
+            used_databases.Set(instance->db);
+        }
+
+        Size j = 0;
+        for (Size i = 0; i < databases.len; i++) {
+            sq_Database *db = databases[i];
+            databases[j] = db;
+
+            if (used_databases.Find(db)) {
+                j++;
+            } else {
+                const char *filename = sqlite3_db_filename(*db, "main");
+                LogDebug("Close unused database '%1'", filename);
+
+                complete &= db->Close();
+            }
+        }
+        databases.RemoveFrom(j);
     }
 
     // Commit changes

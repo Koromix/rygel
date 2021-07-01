@@ -23,7 +23,7 @@ namespace RG {
 // If you change InstanceVersion, don't forget to update the migration switch!
 const int InstanceVersion = 40;
 
-bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, const char *filename)
+bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db)
 {
     this->unique = unique;
 
@@ -36,25 +36,23 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
 
     this->master = master;
     this->key = DuplicateString(key, &str_alloc);
-    this->filename = DuplicateString(filename, &str_alloc).ptr;
-
-    // Open database
-    if (!db.Open(filename, SQLITE_OPEN_READWRITE))
-        return false;
-    if (!db.SetWAL(true))
-        return false;
+    this->db = db;
 
     // Check schema version
     {
         int version;
-        if (!db.GetUserVersion(&version))
+        if (!db->GetUserVersion(&version))
             return false;
 
         if (version > InstanceVersion) {
+            const char *filename = sqlite3_db_filename(*db, "main");
             LogError("Schema of '%1' is too recent (%2, expected %3)", filename, version, InstanceVersion);
+
             return false;
         } else if (version < InstanceVersion) {
+            const char *filename = sqlite3_db_filename(*db, "main");
             LogError("Schema of '%1' is outdated", filename);
+
             return false;
         }
     }
@@ -62,7 +60,7 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
     // Get whole project settings
     {
         sq_Statement stmt;
-        if (!master->db.Prepare("SELECT key, value FROM fs_settings", &stmt))
+        if (!master->db->Prepare("SELECT key, value FROM fs_settings", &stmt))
             return false;
 
         bool valid = true;
@@ -111,7 +109,7 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
     // Get instance-specific settings
     {
         sq_Statement stmt;
-        if (!db.Prepare("SELECT key, value FROM fs_settings", &stmt))
+        if (!db->Prepare("SELECT key, value FROM fs_settings", &stmt))
             return false;
 
         bool valid = true;
@@ -165,14 +163,14 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
 
 InstanceHolder::~InstanceHolder()
 {
-    if (filename) {
+    if (db) {
         LogDebug("Close instance '%1' @%2", key, unique);
     }
 }
 
 bool InstanceHolder::Checkpoint()
 {
-    return db.Checkpoint();
+    return db->Checkpoint();
 }
 
 bool MigrateInstance(sq_Database *db)
