@@ -71,8 +71,6 @@ public:
 
     RG_HASHTABLE_HANDLER(InstanceHolder, key);
 
-    ~InstanceHolder();
-
     bool Checkpoint();
 
     void Ref() const { master->refcount++; }

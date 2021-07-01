@@ -25,15 +25,9 @@ const int InstanceVersion = 40;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db)
 {
+    master = master ? master : this;
+
     this->unique = unique;
-
-    if (master) {
-        LogDebug("Open instance '%1' @%2 (master: %3)", key, unique, master->key);
-    } else {
-        LogDebug("Open instance '%1' @%2", key, unique);
-        master = this;
-    }
-
     this->master = master;
     this->key = DuplicateString(key, &str_alloc);
     this->db = db;
@@ -159,13 +153,6 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
     }
 
     return true;
-}
-
-InstanceHolder::~InstanceHolder()
-{
-    if (db) {
-        LogDebug("Close instance '%1' @%2", key, unique);
-    }
 }
 
 bool InstanceHolder::Checkpoint()

@@ -422,6 +422,7 @@ bool DomainHolder::Sync()
             }
         }
 
+        LogDebug("Close instance '%1' @%2", instance->key, instance->unique);
         delete instance;
     }
 
@@ -447,6 +448,7 @@ bool DomainHolder::Sync()
         }
 
         InstanceHolder *instance = new InstanceHolder();
+        int64_t unique = next_unique++;
         RG_DEFER_N(instance_guard) { delete instance; };
 
         if (start.prev_instance) {
@@ -456,7 +458,9 @@ bool DomainHolder::Sync()
                 WaitDelay(100);
             }
 
-            if (!instance->Open(next_unique++, master, start.instance_key, prev_instance->db)) {
+            LogDebug("Reconfigure instance '%1' @%2", start.instance_key, unique);
+
+            if (!instance->Open(unique, master, start.instance_key, prev_instance->db)) {
                 complete = false;
                 continue;
             }
@@ -467,6 +471,7 @@ bool DomainHolder::Sync()
             const char *db_filename = MakeInstanceFileName(config.instances_directory, start.instance_key, &temp_alloc);
             const char *snapshot_filename = MakeInstanceFileName(config.snapshot_directory_instances, start.instance_key, &temp_alloc);
 
+            LogDebug("Open database '%1'", db_filename);
             if (!db->Open(db_filename, SQLITE_OPEN_READWRITE)) {
                 complete = false;
                 continue;
@@ -483,7 +488,10 @@ bool DomainHolder::Sync()
                 complete = false;
                 continue;
             }
-            if (!instance->Open(next_unique++, master, start.instance_key, db)) {
+
+            LogDebug("Open instance '%1' @%2", start.instance_key, unique);
+
+            if (!instance->Open(unique, master, start.instance_key, db)) {
                 complete = false;
                 continue;
             }
