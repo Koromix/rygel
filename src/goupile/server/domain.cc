@@ -474,7 +474,7 @@ bool DomainHolder::Sync()
             InstanceHolder *prev_instance = start.prev_instance;
             RG_ASSERT(prev_instance->key == instance->key);
 
-            while (prev_instance->refcount) {
+            while (prev_instance->master->refcount) {
                 WaitDelay(100);
             }
 
