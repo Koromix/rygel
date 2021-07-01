@@ -385,12 +385,16 @@ function InstanceController() {
             visible_rows = visible_rows.filter(meta => func(meta.hid));
         }
 
-        let stats = {};
+        let column_stats = {};
+        let hid_width = 20;
         for (let row of visible_rows) {
             for (let key of data_form.pages.keys())
-                stats[key] = (stats[key] || 0) + (row.status[key] != null);
+                column_stats[key] = (column_stats[key] || 0) + (row.status[key] != null);
             for (let key of data_form.forms.keys())
-                stats[key] = (stats[key] || 0) + (row.status[key] != null);
+                column_stats[key] = (column_stats[key] || 0) + (row.status[key] != null);
+
+            if (row.hid != null)
+                hid_width = Math.max(hid_width, computeHidWidth(row.hid));
         }
 
         return html`
@@ -417,7 +421,7 @@ function InstanceController() {
                        style=${'min-width: ' + (5 + 5 * data_form.menu.length) + 'em;'}>
                     ${visible_rows.length ? html`
                         <colgroup>
-                            <col/>
+                            <col style=${'width: ' + hid_width + 'px;'} />
                             ${util.mapRange(0, data_form.menu.length, () => html`<col/>`)}
                             <col style="width: 2em;"/>
                         </colgroup>
@@ -427,7 +431,7 @@ function InstanceController() {
                         <tr>
                             <th>ID</th>
                             ${data_form.menu.map(item => {
-                                let prec = `${stats[item.key] || 0} / ${visible_rows.length}`;
+                                let prec = `${column_stats[item.key] || 0} / ${visible_rows.length}`;
                                 let title = `${item.title}\nDisponible : ${prec} ${visible_rows.length > 1 ? 'lignes' : 'ligne'}`;
 
                                 return html`
@@ -487,6 +491,24 @@ function InstanceController() {
                 </table>
             </div>
         `;
+    }
+
+    function computeHidWidth(hid) {
+        let ctx = computeHidWidth.ctx;
+
+        if (ctx == null) {
+            let canvas = document.createElement('canvas');
+            let style = window.getComputedStyle(document.body);
+
+            ctx = canvas.getContext('2d');
+            ctx.font = style.getPropertyValue('font-size') + ' ' +
+                       style.getPropertyValue('font-family');
+
+            computeHidWidth.ctx = ctx;
+        }
+
+        let metrics = ctx.measureText(hid);
+        return Math.ceil(metrics.width * 1.1) + 20; // `width: ${Math.ceil(metrics.width * 1.1) + 20}px;`;
     }
 
     function makeFilterFunction(filter) {
