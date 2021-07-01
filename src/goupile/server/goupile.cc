@@ -27,6 +27,9 @@
 #ifndef _WIN32
     #include <sys/time.h>
     #include <sys/resource.h>
+    #include <sys/types.h>
+    #include <sys/socket.h>
+    #include <netdb.h>
 #endif
 #ifdef __GLIBC__
     #include <malloc.h>
@@ -55,6 +58,29 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
     sb.MaskFiles(mask_files);
 
 #ifdef __linux__
+    // Force glibc to load all the NSS crap beforehand, so we don't need to
+    // expose it in the sandbox...
+    // What a bunch of crap. Why does all this need to use shared libraries??
+    {
+        struct addrinfo *result = nullptr;
+        int err = getaddrinfo("www.example.com", nullptr, nullptr, &result);
+
+        if (err != 0) {
+            LogError("Failed to init DNS resolver: '%1'", gai_strerror(err));
+            return false;
+        }
+
+        freeaddrinfo(result);
+    }
+
+    // More DNS resolving crap, the list was determined through an elaborate
+    // process of trial and error.
+    sb.RevealPaths({
+        "/etc/resolv.conf",
+        "/etc/hosts",
+        "/etc/ld.so.cache"
+    }, true);
+
     sb.FilterSyscalls(sec_FilterAction::Kill, {
         {"exit", sec_FilterAction::Allow},
         {"exit_group", sec_FilterAction::Allow},
@@ -116,8 +142,12 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         {"futex", sec_FilterAction::Allow},
         {"set_robust_list", sec_FilterAction::Allow},
         {"socket", sec_FilterAction::Allow},
+        {"socketpair", sec_FilterAction::Allow},
         {"getsockopt", sec_FilterAction::Allow},
         {"setsockopt", sec_FilterAction::Allow},
+        {"getsockname", sec_FilterAction::Allow},
+        {"getpeername", sec_FilterAction::Allow},
+        {"connect", sec_FilterAction::Allow},
         {"bind", sec_FilterAction::Allow},
         {"listen", sec_FilterAction::Allow},
         {"accept", sec_FilterAction::Allow},
@@ -132,6 +162,8 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         {"epoll_ctl", sec_FilterAction::Allow},
         {"epoll_pwait", sec_FilterAction::Allow},
         {"epoll_wait", sec_FilterAction::Allow},
+        {"poll", sec_FilterAction::Allow},
+        {"select", sec_FilterAction::Allow},
         {"clock_nanosleep", sec_FilterAction::Allow},
         {"clock_gettime", sec_FilterAction::Allow},
         {"clock_gettime64", sec_FilterAction::Allow},
@@ -149,7 +181,9 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         {"sendfile", sec_FilterAction::Allow},
         {"sendfile64", sec_FilterAction::Allow},
         {"sendto", sec_FilterAction::Allow},
-        {"shutdown", sec_FilterAction::Allow}
+        {"shutdown", sec_FilterAction::Allow},
+        {"uname", sec_FilterAction::Allow},
+        {"restart_syscall", sec_FilterAction::Allow}
     });
 #endif
 
