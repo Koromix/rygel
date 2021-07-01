@@ -353,10 +353,12 @@ bool DomainHolder::Sync()
                     registry_unload.Append(instance);
                     offset++;
                 } else if (!cmp) {
-                    if (instance->generation == generation && (!master_key || new_map.Find(master_key))) {
-                        new_instances.Append(instance);
-                        new_map.Set(instance);
-                    } else {
+                    // Reload configuration if the database says so (generation check)
+                    // or if the master instance is being reconfigured itself.
+                    bool reconfigure = (instance->generation != generation) ||
+                                       (master_key && !new_map.Find(master_key));
+
+                    if (reconfigure) {
                         StartInfo start = {};
 
                         start.instance_key = DuplicateString(instance_key, &temp_alloc).ptr;
@@ -365,6 +367,9 @@ bool DomainHolder::Sync()
                         start.prev_instance = instance;
 
                         registry_start.Append(start);
+                    } else {
+                        new_instances.Append(instance);
+                        new_map.Set(instance);
                     }
 
                     offset++;
