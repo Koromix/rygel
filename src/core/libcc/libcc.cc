@@ -4934,8 +4934,7 @@ bool StreamWriter::Reset()
         case DestinationType::Memory: { dest.u.mem.memory->RemoveFrom(dest.u.mem.start); } break;
 
         case DestinationType::File: {
-            if (fseek(dest.u.file.fp, 0, SEEK_SET) < 0) {
-                LogError("Failed to rewind '%1': %2", filename, strerror(errno));
+            if (!FlushFile(dest.u.file.fp, filename)) {
                 error = true;
                 return false;
             }
@@ -4943,6 +4942,11 @@ bool StreamWriter::Reset()
 #ifdef _WIN32
             HANDLE handle = (HANDLE)_get_osfhandle(_fileno(dest.u.file.fp));
 
+            if (fseek(dest.u.file.fp, 0, SEEK_SET) < 0) {
+                LogError("Failed to rewind '%1': %2", filename, strerror(errno));
+                error = true;
+                return false;
+            }
             if (!SetEndOfFile(handle)) {
                 LogError("Failed to truncate '%1'", filename, GetWin32ErrorString());
                 error = true;
@@ -4951,6 +4955,11 @@ bool StreamWriter::Reset()
 #else
             if (ftruncate(fileno(dest.u.file.fp), 0) < 0) {
                 LogError("Failed to truncate '%1': %2", filename, strerror(errno));
+                error = true;
+                return false;
+            }
+            if (fseek(dest.u.file.fp, 0, SEEK_SET) < 0) {
+                LogError("Failed to rewind '%1': %2", filename, strerror(errno));
                 error = true;
                 return false;
             }
