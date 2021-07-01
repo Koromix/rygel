@@ -17,6 +17,10 @@
 
 namespace RG {
 
+enum class sec_IsolationFlag {
+    Network = 1 << 0
+};
+
 enum class sec_FilterAction {
     Allow,
     Block,
@@ -41,8 +45,11 @@ class sec_SandboxBuilder final {
         bool readonly;
     };
 
+    unsigned int isolation_flags = 0;
+
     HeapArray<BindMount> mounts;
     HeapArray<const char *> masked_filenames;
+
     bool filter_syscalls = false;
     sec_FilterAction default_action;
     HeapArray<sec_FilterItem> filter_items;
@@ -52,6 +59,8 @@ class sec_SandboxBuilder final {
 
 public:
     sec_SandboxBuilder() {};
+
+    void SetIsolationFlags(unsigned int flags);
 
     void RevealPaths(Span<const char *const> paths, bool readonly);
     void MaskFiles(Span<const char *const> filenames);

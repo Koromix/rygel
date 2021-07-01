@@ -23,6 +23,11 @@ bool sec_IsSandboxSupported()
     return false;
 }
 
+void sec_SandboxBuilder::SetIsolationFlags(unsigned int)
+{
+    RG_ASSERT(false);
+}
+
 void sec_SandboxBuilder::RevealPaths(Span<const char *const>, bool)
 {
     RG_ASSERT(false);

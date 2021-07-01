@@ -60,6 +60,11 @@ bool sec_IsSandboxSupported()
 #endif
 }
 
+void sec_SandboxBuilder::SetIsolationFlags(unsigned int flags)
+{
+    isolation_flags = flags;
+}
+
 void sec_SandboxBuilder::RevealPaths(Span<const char *const> paths, bool readonly)
 {
     for (const char *path: paths) {
@@ -173,11 +178,14 @@ static bool WriteUidGidMap(pid_t pid, uid_t uid, gid_t gid)
     return true;
 }
 
-static bool InitNamespaces()
+static bool InitNamespaces(unsigned int flags)
 {
     uint32_t unshare_flags = CLONE_NEWNS | CLONE_NEWUSER | CLONE_NEWIPC |
-                             CLONE_NEWUTS | CLONE_NEWCGROUP | CLONE_NEWNET |
-                             CLONE_THREAD;
+                             CLONE_NEWUTS | CLONE_NEWCGROUP | CLONE_THREAD;
+
+    if (flags & (int)sec_IsolationFlag::Network) {
+        unshare_flags |= CLONE_NEWNET;
+    }
 
     if (unshare(unshare_flags) < 0) {
         LogError("Failed to create namespace: %1", strerror(errno));
@@ -260,7 +268,7 @@ bool sec_SandboxBuilder::Apply()
                 prctl(PR_SET_DUMPABLE, 1, 0, 0, 0);
 
                 int64_t dummy = 1;
-                if (!InitNamespaces())
+                if (!InitNamespaces(isolation_flags))
                     return false;
                 if (RG_POSIX_RESTART_EINTR(write(efd, &dummy, RG_SIZE(dummy)), < 0) < 0) {
                     LogError("Failed to write to eventfd: %1", strerror(errno));
@@ -299,7 +307,7 @@ bool sec_SandboxBuilder::Apply()
         } else {
             LogDebug("Trying unprivileged sandbox method");
 
-            if (!InitNamespaces())
+            if (!InitNamespaces(isolation_flags))
                 return false;
             if (!WriteUidGidMap(getpid(), uid, gid))
                 return false;
