@@ -15,14 +15,14 @@ let ENV = {ENV_JSON};
 
 self.addEventListener('install', e => {
     e.waitUntil(async function() {
-        let [assets, files, cache] = await Promise.all([
-            fetch(`${ENV.urls.base}api/files/static`).then(response => response.json()),
-            fetch(`${ENV.urls.base}api/files/list`).then(response => response.json()),
+        let [assets, list, cache] = await Promise.all([
+            net.fetchJson(`${ENV.urls.base}api/files/static`),
+            net.fetchJson(util.pasteURL(`${ENV.urls.base}api/files/list`, { version: ENV.version })),
             caches.open(ENV.cache_key)
         ]);
 
         await cache.addAll(assets.map(url => `${ENV.urls.base}${url}`));
-        await cache.addAll(files.map(file => `${ENV.urls.base}files/${file.filename}`));
+        await cache.addAll(list.files.map(file => `${ENV.urls.files}${file.filename}`));
 
         await self.skipWaiting();
     }());
@@ -51,25 +51,6 @@ self.addEventListener('fetch', e => {
                 return await caches.match(ENV.urls.base) || await fetch(e.request);
             } else {
                 return await caches.match(e.request) || await fetch(e.request);
-            }
-        }
-
-        // Update cached files after deploy
-        if (e.request.method === 'PUT' || e.request.method === 'DELETE') {
-            let prefix = `${ENV.urls.base}files/`;
-
-            if (url.pathname.startsWith(prefix)) {
-                let response = await fetch(e.request);
-
-                if (response.ok) {
-                    let cache = await caches.open(ENV.cache_key);
-
-                    await cache.delete(url.pathname);
-                    if (e.request.method === 'PUT')
-                        await cache.add(url.pathname);
-                }
-
-                return response;
             }
         }
 

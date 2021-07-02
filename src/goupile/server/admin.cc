@@ -264,13 +264,21 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
 
     // Create default files
     if (demo) {
-        sq_Statement stmt;
-        if (!db.Prepare(R"(INSERT INTO fs_files (active, filename, mtime, blob, compression, sha256, size)
-                           VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6))", &stmt))
-            return false;
-
         // Use same modification time for all files
         int64_t mtime = GetUnixTime();
+
+        if (!db.Run(R"(INSERT INTO fs_versions (version, mtime, userid, username, atomic)
+                       VALUES (1, ?1, 0, 'goupile', 1))", mtime))
+            return false;
+
+        sq_Statement stmt1;
+        sq_Statement stmt2;
+        if (!db.Prepare(R"(INSERT INTO fs_objects (sha256, mtime, compression, size, blob)
+                           VALUES (?1, ?2, ?3, ?4, ?5))", &stmt1))
+            return false;
+        if (!db.Prepare(R"(INSERT INTO fs_index (version, filename, sha256)
+                           VALUES (1, ?1, ?2))", &stmt2))
+            return false;
 
         for (const AssetInfo &asset: GetPackedAssets()) {
             if (StartsWith(asset.name, "src/goupile/demo/")) {
@@ -279,12 +287,12 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
                 CompressionType compression_type = ShouldCompressFile(filename) ? CompressionType::Gzip
                                                                                 : CompressionType::None;
 
-                HeapArray<uint8_t> gzip;
+                HeapArray<uint8_t> blob;
                 char sha256[65];
                 Size total_len = 0;
                 {
                     StreamReader reader(asset.data, "<asset>", asset.compression_type);
-                    StreamWriter writer(&gzip, "<gzip>", compression_type);
+                    StreamWriter writer(&blob, "<blob>", compression_type);
 
                     crypto_hash_sha256_state state;
                     crypto_hash_sha256_init(&state);
@@ -308,18 +316,25 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
                     FormatSha256(hash, sha256);
                 }
 
-                stmt.Reset();
-                sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
-                sqlite3_bind_int64(stmt, 2, mtime);
-                sqlite3_bind_blob64(stmt, 3, gzip.ptr, gzip.len, SQLITE_STATIC);
-                sqlite3_bind_text(stmt, 4, CompressionTypeNames[(int)compression_type], -1, SQLITE_STATIC);
-                sqlite3_bind_text(stmt, 5, sha256, -1, SQLITE_STATIC);
-                sqlite3_bind_int64(stmt, 6, total_len);
+                stmt1.Reset();
+                stmt2.Reset();
+                sqlite3_bind_text(stmt1, 1, sha256, -1, SQLITE_STATIC);
+                sqlite3_bind_int64(stmt1, 2, mtime);
+                sqlite3_bind_text(stmt1, 3, CompressionTypeNames[(int)compression_type], -1, SQLITE_STATIC);
+                sqlite3_bind_int64(stmt1, 4, total_len);
+                sqlite3_bind_blob64(stmt1, 5, blob.ptr, blob.len, SQLITE_STATIC);
+                sqlite3_bind_text(stmt2, 1, filename, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt2, 2, sha256, -1, SQLITE_STATIC);
 
-                if (!stmt.Run())
+                if (!stmt1.Run())
+                    return false;
+                if (!stmt2.Run())
                     return false;
             }
         }
+
+        if (!db.Run("UPDATE fs_settings SET value = 1 WHERE key = 'FsVersion';"))
+            return false;
     }
 
     if (!db.Close())

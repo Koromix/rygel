@@ -684,6 +684,8 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
     LogInfo("Migrate domain database: %1 to %2", version, DomainVersion);
 
     bool success = db->Transaction([&]() {
+        int64_t time = GetUnixTime();
+
         switch (version) {
             case 0: {
                 bool success = db->RunMany(R"(
@@ -1188,7 +1190,6 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
             RG_STATIC_ASSERT(DomainVersion == 22);
         }
 
-        int64_t time = GetUnixTime();
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
                      DomainVersion, FelixVersion, time))
             return false;

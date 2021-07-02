@@ -634,6 +634,27 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
 {
     RG_ASSERT(state != State::Sync);
 
+    if (max_len >= 0) {
+        if (const char *str = request.GetHeaderValue("Content-Length"); str) {
+            Size len;
+            if (RG_UNLIKELY(!ParseInt(str, &len))) {
+                AttachError(400);
+                return false;
+            }
+            if (RG_UNLIKELY(len < 0)) {
+                LogError("Refusing negative Content-Length");
+                AttachError(400);
+                return  false;
+            }
+
+            if (len > max_len) {
+                LogError("HTTP body is too big (max = %1)", FmtDiskSize(max_len));
+                AttachError(413);
+                return false;
+            }
+        }
+    }
+
     read_max = max_len;
 
     bool success = out_st->Open([this](Span<uint8_t> out_buf) { return Read(out_buf); }, "<http>");

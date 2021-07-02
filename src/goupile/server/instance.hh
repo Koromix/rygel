@@ -64,6 +64,8 @@ public:
     bool auto_init = false;
     RetainPtr<SessionInfo> auto_session;
 
+    std::atomic_int64_t fs_version { 0 };
+
     BlockAllocator str_alloc;
 
     RG_HASHTABLE_HANDLER(InstanceHolder, key);

@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 40;
+const int InstanceVersion = 41;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db)
 {
@@ -93,6 +93,10 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                     config.auto_key = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(key, "AutoUser")) {
                     valid &= ParseInt(value, &config.auto_userid);
+                } else if (TestStr(key, "FsVersion")) {
+                    int version = -1;
+                    valid &= ParseInt(value, &version);
+                    fs_version = version;
                 }
             }
         }
@@ -192,6 +196,8 @@ bool MigrateInstance(sq_Database *db)
             SplitStrReverseAny(filename, RG_PATH_SEPARATORS), version, InstanceVersion);
 
     bool success = db->Transaction([&]() {
+        int64_t time = GetUnixTime();
+
         switch (version) {
             case 0: {
                 bool success = db->RunMany(R"(
@@ -1245,12 +1251,61 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 40: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE fs_versions (
+                        version INTEGER PRIMARY KEY AUTOINCREMENT,
+                        mtime INTEGER NOT NULL,
+                        userid INTEGER NOT NULL,
+                        username TEXT NOT NULL,
+                        atomic CHECK(atomic IN (0, 1)) NOT NULL
+                    );
+
+                    CREATE TABLE fs_objects (
+                        sha256 TEXT PRIMARY KEY NOT NULL,
+                        mtime INTEGER NOT NULL,
+                        compression TEXT NOT NULL,
+                        size INTEGER NOT NULL,
+                        blob BLOB NOT NULL
+                    );
+
+                    CREATE TABLE fs_index (
+                        version REFERENCES fs_versions (version),
+                        filename TEXT NOT NULL,
+                        sha256 TEXT NOT NULL REFERENCES fs_objects (sha256)
+                    );
+                    CREATE UNIQUE INDEX fs_index_vf ON fs_index (version, filename);
+                )");
+                if (!success)
+                    return false;
+
+                if (version) {
+                    // Migrate from old fs_files table to new schema
+                    if (!db->Run(R"(INSERT INTO fs_versions (version, mtime, userid, username, atomic)
+                                    VALUES (1, ?1, 0, 'goupile', 1))", time))
+                        return false;
+                    if (!db->Run(R"(INSERT INTO fs_objects (sha256, mtime, compression, size, blob)
+                                    SELECT sha256, mtime, compression, size, blob FROM fs_files WHERE active = 1)"))
+                        return false;
+                    if (!db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
+                                    SELECT 1, filename, sha256 FROM fs_files WHERE active = 1)"))
+                        return false;
+                    if (!db->Run("DROP TABLE fs_files"))
+                        return false;
+
+                    if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('FsVersion', 1)"))
+                        return false;
+                } else {
+                    if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('FsVersion', 0)"))
+                        return false;
+                }
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 40);
+            RG_STATIC_ASSERT(InstanceVersion == 41);
         }
 
-        int64_t time = GetUnixTime();
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
                      InstanceVersion, FelixVersion, time))
             return false;

@@ -534,9 +534,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 RG_ASSERT(asset);
 
                 const InstanceHolder *master = instance->master;
+                int64_t fs_version = master->fs_version.load(std::memory_order_relaxed);
 
                 char master_etag[64];
-                Fmt(master_etag, "%1/%2", shared_etag, master->unique);
+                Fmt(master_etag, "%1/%2/%3", shared_etag, master->unique, fs_version);
 
                 // XXX: Use some kind of dynamic cache to avoid doing this all the time
                 AssetInfo copy = *asset;
@@ -555,7 +556,9 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         json.Key("urls"); json.StartObject();
                             json.Key("base"); json.String(Fmt(buf, "/%1/", master->key).ptr);
                             json.Key("instance"); json.String(Fmt(buf, "/%1/", master->key).ptr);
+                            json.Key("files"); json.String(Fmt(buf, "/%1/files/%2/", master->key, fs_version).ptr);
                         json.EndObject();
+                        json.Key("version"); json.Int64(fs_version);
                         json.Key("title"); json.String(master->title);
                         json.Key("cache_offline"); json.Bool(master->config.use_offline);
                         if (master->config.use_offline) {
@@ -616,10 +619,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
              HandleFileStatic(instance, request, io);
         } else if (TestStr(instance_url, "/api/files/list") && request.method == http_RequestMethod::Get) {
              HandleFileList(instance, request, io);
-        } else if (StartsWith(instance_url, "/files/") && request.method == http_RequestMethod::Put) {
+        } else if (StartsWith(instance_url, "/api/files/objects/") && request.method == http_RequestMethod::Put) {
             HandleFilePut(instance, request, io);
-        } else if (StartsWith(instance_url, "/files/") && request.method == http_RequestMethod::Delete) {
-            HandleFileDelete(instance, request, io);
+        } else if (StartsWith(instance_url, "/api/files/publish") && request.method == http_RequestMethod::Post) {
+            HandleFilePublish(instance, request, io);
         } else if (TestStr(instance_url, "/api/records/load") && request.method == http_RequestMethod::Get) {
             HandleRecordLoad(instance, request, io);
         } else if (TestStr(instance_url, "/api/records/save") && request.method == http_RequestMethod::Post) {

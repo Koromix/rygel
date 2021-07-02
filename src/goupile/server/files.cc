@@ -29,17 +29,31 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
         return;
     }
 
+    int64_t fs_version;
+    if (const char *str = request.GetQueryValue("version"); str) {
+        if (!ParseInt(str, &fs_version)) {
+            io->AttachError(422);
+            return;
+        }
+    } else {
+        fs_version = instance->fs_version.load(std::memory_order_relaxed);
+    }
+
     sq_Statement stmt;
-    if (!instance->db->Prepare(R"(SELECT filename, size, sha256 FROM fs_files
-                                  WHERE active = 1
-                                  ORDER BY filename)", &stmt))
+    if (!instance->db->Prepare(R"(SELECT i.filename, o.size, i.sha256 FROM fs_index i
+                                  INNER JOIN fs_objects o ON (o.sha256 = i.sha256)
+                                  WHERE i.version = ?1
+                                  ORDER BY i.filename)", &stmt))
         return;
+    sqlite3_bind_int64(stmt, 1, fs_version);
 
     http_JsonPageBuilder json;
     if (!json.Init(io))
         return;
 
-    json.StartArray();
+    json.StartObject();
+    json.Key("version"); json.Int64(fs_version);
+    json.Key("files"); json.StartArray();
     while (stmt.Step()) {
         json.StartObject();
         json.Key("filename"); json.String((const char *)sqlite3_column_text(stmt, 0));
@@ -50,6 +64,7 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
     if (!stmt.IsValid())
         return;
     json.EndArray();
+    json.EndObject();
 
     json.Finish();
 }
@@ -66,7 +81,7 @@ static void AddMimeTypeHeader(const char *filename, http_IO *io)
 // Returns true when request has been handled (file exists or an error has occured)
 bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    const char *url = request.url + instance->key.len + 1;
+    const char *url = request.url + 1 + instance->key.len;
     const char *client_etag = request.GetHeaderValue("If-None-Match");
     const char *client_sha256 = request.GetQueryValue("sha256");
 
@@ -86,14 +101,30 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
         return true;
     }
 
-    const char *filename = url + 7;
+    Span<const char> filename = url + 7;
+
+    int64_t fs_version;
+    bool explicit_version;
+    {
+        Span<const char> remain;
+
+        if (ParseInt(filename, &fs_version, 0, &remain) && remain.ptr[0] == '/') {
+            filename = remain.Take(1, remain.len - 1);
+            fs_version = instance->fs_version.load(std::memory_order_relaxed);
+            explicit_version = true;
+        } else {
+            explicit_version = false;
+        }
+    }
 
     // Lookup file in database
     sq_Statement stmt;
-    if (!instance->db->Prepare(R"(SELECT rowid, compression, sha256 FROM fs_files
-                                  WHERE active = 1 AND filename = ?1)", &stmt))
+    if (!instance->db->Prepare(R"(SELECT o.rowid, o.compression, o.sha256 FROM fs_index i
+                                  INNER JOIN fs_objects o ON (o.sha256 = i.sha256)
+                                  WHERE i.version = ?1 AND i.filename = ?2)", &stmt))
         return true;
-    sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
+    sqlite3_bind_int64(stmt, 1, fs_version);
+    sqlite3_bind_text(stmt, 2, filename.ptr, filename.len, SQLITE_STATIC);
     if (!stmt.Step())
         return !stmt.IsValid();
 
@@ -114,7 +145,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
             return true;
         }
 
-        io->AddCachingHeaders(0, sha256);
+        io->AddCachingHeaders(explicit_version ? 86400 : 0, sha256);
     }
 
     // Negociate content encoding
@@ -134,7 +165,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
     // Open file blob
     sqlite3_blob *src_blob;
     Size src_len;
-    if (sqlite3_blob_open(*instance->db, "main", "fs_files", "blob", rowid, 0, &src_blob) != SQLITE_OK) {
+    if (sqlite3_blob_open(*instance->db, "main", "fs_objects", "blob", rowid, 0, &src_blob) != SQLITE_OK) {
         LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
         return true;
     }
@@ -156,7 +187,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
             MHD_create_response_from_buffer((size_t)src_len, (void *)ptr, MHD_RESPMEM_PERSISTENT);
         io->AttachResponse(200, response);
         io->AddEncodingHeader(dest_encoding);
-        AddMimeTypeHeader(filename, io);
+        AddMimeTypeHeader(filename.ptr, io);
 
         return true;
     }
@@ -264,7 +295,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
                 if (!io->OpenForWrite(206, range_len, dest_encoding, &writer))
                     return;
                 io->AddEncodingHeader(dest_encoding);
-                AddMimeTypeHeader(filename, io);
+                AddMimeTypeHeader(filename.ptr, io);
 
                 // Range header
                 {
@@ -309,7 +340,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
             }
 
             io->AddEncodingHeader(dest_encoding);
-            AddMimeTypeHeader(filename, io);
+            AddMimeTypeHeader(filename.ptr, io);
 
             Size offset = 0;
             StreamReader reader([&](Span<uint8_t> buf) {
@@ -322,13 +353,29 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
                 offset += copy_len;
                 return copy_len;
-            }, filename, src_encoding);
+            }, filename.ptr, src_encoding);
 
             // Not much we can do at this stage in case of error. Client will get truncated data.
             SpliceStream(&reader, -1, &writer);
             writer.Close();
         }
     });
+
+    return true;
+}
+
+static bool CheckSha256(Span<const char> sha256)
+{
+    const auto test_char = [](char c) { return (c >= 'A' && c <= 'Z') || IsAsciiDigit(c); };
+
+    if (sha256.len != 64) {
+        LogError("Malformed SHA256 (incorrect length)");
+        return false;
+    }
+    if (!std::all_of(sha256.begin(), sha256.end(), test_char)) {
+        LogError("Malformed SHA256 (unexpected character)");
+        return false;
+    }
 
     return true;
 }
@@ -343,26 +390,39 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
         return;
     }
     if (!session->HasPermission(instance, UserPermission::AdminPublish)) {
-        LogError("User is not allowed to deploy changes");
+        LogError("User is not allowed to upload files");
         io->AttachError(403);
         return;
     }
 
-    const char *url = request.url + instance->key.len + 1;
+    const char *url = request.url + 1 + instance->key.len;
+    const char *client_sha256 = url + 19;
+    const char *filename = request.GetQueryValue("filename");
 
-    if (!StartsWith(url, "/files/")) {
-        LogError("Cannot write to file outside '/files/'");
+    if (!StartsWith(url, "/api/files/objects/")) {
+        LogError("Cannot write to file outside '/api/files/objects/'");
         io->AttachError(403);
         return;
     }
-    if (PathContainsDotDot(url)) {
-        LogError("Path must not contain any '..' component");
-        io->AttachError(403);
+    if (!CheckSha256(client_sha256)) {
+        io->AttachError(422);
         return;
     }
 
-    const char *filename = url + 7;
-    const char *client_sha256 = request.GetQueryValue("sha256");
+    // See if this object is already on the server
+    {
+        sq_Statement stmt;
+        if (!instance->db->Prepare("SELECT rowid FROM fs_objects WHERE sha256 = ?1", &stmt))
+            return;
+        sqlite3_bind_text(stmt, 1, client_sha256, -1, SQLITE_STATIC);
+
+        if (stmt.Step()) {
+            LogError("This object already exists");
+            io->AttachError(409);
+        } else if (!stmt.IsValid()) {
+            return;
+        }
+    }
 
     io->RunAsync([=]() {
         // Create temporary file
@@ -376,8 +436,8 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
             UnlinkFile(tmp_filename);
         };
 
-        CompressionType compression_type = ShouldCompressFile(filename) ? CompressionType::Gzip
-                                                                        : CompressionType::None;
+        CompressionType compression_type = filename && ShouldCompressFile(filename) ? CompressionType::Gzip
+                                                                                    : CompressionType::None;
 
         // Read and compress request body
         Size total_len = 0;
@@ -411,6 +471,13 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
             FormatSha256(hash, sha256);
         }
 
+        // Don't lie to me :)
+        if (!TestStr(sha256, client_sha256)) {
+            LogError("Upload refused because of sha256 mismatch");
+            io->AttachError(403);
+            return;
+        }
+
         // Copy and commit to database
         instance->db->Transaction([&]() {
             Size file_len = ftell(fp);
@@ -419,48 +486,21 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
                 return false;
             }
 
-            if (client_sha256) {
-                sq_Statement stmt;
-                if (!instance->db->Prepare(R"(SELECT sha256 FROM fs_files
-                                              WHERE active = 1 AND filename = ?1)", &stmt))
-                    return false;
-                sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
-
-                if (stmt.Step()) {
-                    const char *sha256 = (const char *)sqlite3_column_text(stmt, 0);
-
-                    if (!TestStr(client_sha256, sha256)) {
-                        LogError("Update refused because of sha256 mismatch");
-                        io->AttachError(409);
-                        return false;
-                    }
-                } else if (stmt.IsValid()) {
-                    if (client_sha256[0]) {
-                        LogError("Update refused because of sha256 mismatch");
-                        io->AttachError(409);
-                        return false;
-                    }
-                } else {
-                    return false;
-                }
-            }
-
             int64_t mtime = GetUnixTime();
 
-            if (!instance->db->Run(R"(UPDATE fs_files SET active = 0
-                                      WHERE active = 1 AND filename = ?1)", filename))
-                return false;
-            if (!instance->db->Run(R"(INSERT INTO fs_files (active, filename, mtime, blob, compression, sha256, size)
-                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
-                                  1, filename, mtime, sq_Binding::Zeroblob(file_len),
-                                  CompressionTypeNames[(int)compression_type], sha256, total_len))
+            if (!instance->db->Run(R"(INSERT INTO fs_objects (sha256, mtime, compression, size, blob)
+                                      VALUES (?1, ?2, ?3, ?4, ?5))",
+                                  sha256, mtime, CompressionTypeNames[(int)compression_type],
+                                  total_len, sq_Binding::Zeroblob(file_len)))
                 return false;
 
             int64_t rowid = sqlite3_last_insert_rowid(*instance->db);
 
             sqlite3_blob *blob;
-            if (sqlite3_blob_open(*instance->db, "main", "fs_files", "blob", rowid, 1, &blob) != SQLITE_OK)
+            if (sqlite3_blob_open(*instance->db, "main", "fs_objects", "blob", rowid, 1, &blob) != SQLITE_OK) {
+                LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
                 return false;
+            }
             RG_DEFER { sqlite3_blob_close(blob); };
 
             StreamReader reader(fp, "<temp>");
@@ -494,7 +534,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
     });
 }
 
-void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
 
@@ -504,60 +544,60 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
         return;
     }
     if (!session->HasPermission(instance, UserPermission::AdminPublish)) {
-        LogError("User is not allowed to deploy changes");
+        LogError("User is not allowed to publish a new version");
         io->AttachError(403);
         return;
     }
 
-    const char *url = request.url + instance->key.len + 1;
+    io->RunAsync([=]() {
+        HashMap<const char *, const char *> files;
+        if (!io->ReadPostValues(&io->allocator, &files)) {
+            io->AttachError(422);
+            return;
+        }
 
-    if (!StartsWith(url, "/files/")) {
-        LogError("Cannot delete files outside '/files/'");
-        io->AttachError(403);
-        return;
-    }
+        instance->db->Transaction([&]() {
+            int64_t mtime = GetUnixTime();
 
-    const char *filename = url + 7;
-    const char *client_sha256 = request.GetQueryValue("sha256");
-
-    instance->db->Transaction([&]() {
-        if (client_sha256) {
-            sq_Statement stmt;
-            if (!instance->db->Prepare(R"(SELECT active, sha256 FROM fs_files
-                                          WHERE filename = ?1
-                                          ORDER BY active DESC)", &stmt))
+            if (!instance->db->Run(R"(INSERT INTO fs_versions (mtime, userid, username, atomic)
+                                      VALUES (?1, ?2, ?3, 1))",
+                                   mtime, session->userid, session->username))
                 return false;
-            sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
 
-            if (stmt.Step()) {
-                bool active = sqlite3_column_int(stmt, 0);
-                const char *sha256 = active ? (const char *)sqlite3_column_text(stmt, 1) : "";
+            int64_t version = sqlite3_last_insert_rowid(*instance->db);
 
-                if (!TestStr(client_sha256, sha256)) {
-                    LogError("Deletion refused because of sha256 mismatch");
-                    io->AttachError(409);
+            for (const auto &file: files.table) {
+                if (PathContainsDotDot(file.key)) {
+                    LogError("File name must not contain any '..' component");
+                    io->AttachError(403);
                     return false;
                 }
-            } else {
-                if (stmt.IsValid() && client_sha256[0]) {
-                    LogError("Deletion refused because of sha256 mismatch");
-                    io->AttachError(409);
+                if (!CheckSha256(file.value)) {
+                    io->AttachError(422);
+                    return false;
                 }
 
-                return false;
+                if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
+                                          VALUES (?1, ?2, ?3))",
+                                       version, file.key, file.value)) {
+                    if (sqlite3_extended_errcode(*instance->db) == SQLITE_CONSTRAINT_FOREIGNKEY) {
+                        LogError("Object '%1' does not exist", file.value);
+                        io->AttachError(404);
+                    }
+
+                    return false;
+                }
             }
-        }
 
-        if (!instance->db->Run(R"(UPDATE fs_files SET active = 0
-                                  WHERE active = 1 AND filename = ?1)", filename))
-            return false;
+            if (!instance->db->Run("UPDATE fs_settings SET value = ?1 WHERE key = 'FsVersion'", version))
+                return false;
+            instance->fs_version = version;
 
-        if (sqlite3_changes(*instance->db)) {
-            io->AttachText(200, "Done!");
-        } else {
-            io->AttachError(404);
-        }
-        return true;
+            const char *json = Fmt(&io->allocator, "{\"version\": %1}", version).ptr;
+            io->AttachText(200, json, "application/json");
+
+            return true;
+        });
     });
 }
 
