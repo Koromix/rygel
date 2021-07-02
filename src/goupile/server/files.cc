@@ -140,11 +140,10 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
     }
     src_len = sqlite3_blob_bytes(src_blob);
 
-    // The blob needs to remain valid until the end of connection
-    io->AddFinalizer([=]() { sqlite3_blob_close(src_blob); });
-
-    // Fast path
+    // Fast path (small objects)
     if (dest_encoding == src_encoding && src_len <= 65536) {
+        RG_DEFER { sqlite3_blob_close(src_blob); };
+
         uint8_t *ptr = (uint8_t *)Allocator::Allocate(&io->allocator, src_len);
         io->AddFinalizer([=] { Allocator::Release(&io->allocator, ptr, src_len); });
 
@@ -161,6 +160,9 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
         return true;
     }
+
+    // The blob needs to remain valid until the end of connection
+    io->AddFinalizer([=]() { sqlite3_blob_close(src_blob); });
 
     io->RunAsync([=]() mutable {
         // Handle range requests
