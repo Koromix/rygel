@@ -17,7 +17,7 @@
 
 namespace RG {
 
-const int DomainVersion = 21;
+const int DomainVersion = 22;
 const int MaxInstancesPerDomain = 1024;
 const int64_t FullSnapshotDelay = 86400 * 1000;
 
@@ -309,14 +309,68 @@ void DomainHolder::Close()
     databases.Clear();
 }
 
-bool DomainHolder::Sync()
+bool DomainHolder::SyncAll(bool thorough)
+{
+    return Sync(nullptr, thorough);
+}
+
+bool DomainHolder::SyncInstance(const char *key)
+{
+    return Sync(key, true);
+}
+
+bool DomainHolder::Checkpoint()
+{
+    std::shared_lock<std::shared_mutex> lock_shr(mutex);
+
+    Async async(-1, false);
+
+    async.Run([&]() { return db.Checkpoint(); });
+    for (InstanceHolder *instance: instances) {
+        async.Run([instance]() { return instance->Checkpoint(); });
+    }
+
+    return async.Sync();
+}
+
+Span<InstanceHolder *> DomainHolder::LockInstances()
+{
+    mutex.lock_shared();
+    return instances;
+}
+
+void DomainHolder::UnlockInstances()
+{
+    mutex.unlock_shared();
+}
+
+Size DomainHolder::CountInstances() const
+{
+    std::shared_lock<std::shared_mutex> lock_shr(mutex);
+    return instances.len;
+}
+
+InstanceHolder *DomainHolder::Ref(Span<const char> key)
+{
+    std::shared_lock<std::shared_mutex> lock_shr(mutex);
+
+    InstanceHolder *instance = instances_map.FindValue(key, nullptr);
+
+    if (instance) {
+        instance->Ref();
+        return instance;
+    } else {
+        return nullptr;
+    }
+}
+
+bool DomainHolder::Sync(const char *filter_key, bool thorough)
 {
     BlockAllocator temp_alloc;
 
     struct StartInfo {
         const char *instance_key;
         const char *master_key;
-        int64_t generation;
         InstanceHolder *prev_instance;
     };
 
@@ -331,39 +385,44 @@ bool DomainHolder::Sync()
         Size offset = 0;
 
         sq_Statement stmt;
-        if (!db.Prepare(R"(WITH RECURSIVE rec (instance, master, generation) AS (
-                               SELECT instance, master, generation FROM dom_instances WHERE master IS NULL
+        if (!db.Prepare(R"(WITH RECURSIVE rec (instance, master) AS (
+                               SELECT instance, master FROM dom_instances WHERE master IS NULL
                                UNION ALL
-                               SELECT i.instance, i.master, i.generation FROM dom_instances i, rec WHERE i.master = rec.instance
+                               SELECT i.instance, i.master FROM dom_instances i, rec WHERE i.master = rec.instance
                                ORDER BY 2 DESC, 1
                            )
-                           SELECT instance, master, generation FROM rec)", &stmt))
+                           SELECT instance, master FROM rec)", &stmt))
             return false;
 
         while (stmt.Next()) {
             Span<const char> instance_key = (const char *)sqlite3_column_text(stmt, 0);
             const char *master_key = (const char *)sqlite3_column_text(stmt, 1);
-            int64_t generation = sqlite3_column_int64(stmt, 2);
 
             for (;;) {
                 InstanceHolder *instance = (offset < instances.len) ? instances[offset] : nullptr;
                 int cmp = instance ? CmpStr(instance->key, instance_key) : 1;
+                bool match = !filter_key || TestStr(filter_key, instance->key) ||
+                                            TestStr(filter_key, instance->master->key);
 
                 if (cmp < 0) {
-                    registry_unload.Append(instance);
+                    if (match) {
+                        registry_unload.Append(instance);
+                    } else {
+                        new_instances.Append(instance);
+                        new_map.Set(instance);
+                    }
+
                     offset++;
                 } else if (!cmp) {
-                    // Reload configuration if the database says so (generation check)
-                    // or if the master instance is being reconfigured itself.
-                    bool reconfigure = (instance->generation != generation) ||
-                                       (master_key && !new_map.Find(master_key));
+                    // Reload instance for thorough syncs or if the master instance is being
+                    // reconfigured itself for some reason.
+                    match &= thorough | (master_key && !new_map.Find(master_key));
 
-                    if (reconfigure) {
+                    if (match) {
                         StartInfo start = {};
 
                         start.instance_key = DuplicateString(instance_key, &temp_alloc).ptr;
                         start.master_key = master_key ? DuplicateString(master_key, &temp_alloc).ptr : nullptr;
-                        start.generation = generation;
                         start.prev_instance = instance;
 
                         registry_start.Append(start);
@@ -375,13 +434,17 @@ bool DomainHolder::Sync()
                     offset++;
                     break;
                 } else {
-                    StartInfo start = {};
+                    if (match) {
+                        StartInfo start = {};
 
-                    start.instance_key = DuplicateString(instance_key, &temp_alloc).ptr;
-                    start.master_key = master_key ? DuplicateString(master_key, &temp_alloc).ptr : nullptr;
-                    start.generation = generation;
+                        start.instance_key = DuplicateString(instance_key, &temp_alloc).ptr;
+                        start.master_key = master_key ? DuplicateString(master_key, &temp_alloc).ptr : nullptr;
 
-                    registry_start.Append(start);
+                        registry_start.Append(start);
+                    } else {
+                        new_instances.Append(instance);
+                        new_map.Set(instance);
+                    }
 
                     break;
                 }
@@ -392,12 +455,21 @@ bool DomainHolder::Sync()
 
         while (offset < instances.len) {
             InstanceHolder *instance = instances[offset];
-            registry_unload.Append(instance);
+            bool match = filter_key || TestStr(filter_key, instance->key) ||
+                                       TestStr(filter_key, instance->master->key);
+
+            if (match) {
+                registry_unload.Append(instance);
+            } else {
+                new_instances.Append(instance);
+                new_map.Set(instance);
+            }
+
             offset++;
         }
     }
 
-    // Most calls should follow this path
+    // Most (non-thorough) calls should follow this path
     if (!registry_start.len && !registry_unload.len)
         return true;
 
@@ -505,7 +577,6 @@ bool DomainHolder::Sync()
             databases.Append(db);
         }
 
-        instance->generation = start.generation;
         instance_guard.Disable();
         new_instances.Append(instance);
         new_map.Set(instance);
@@ -593,51 +664,6 @@ bool DomainHolder::Sync()
     std::swap(instances_map, new_map);
 
     return complete;
-}
-
-bool DomainHolder::Checkpoint()
-{
-    std::shared_lock<std::shared_mutex> lock_shr(mutex);
-
-    Async async(-1, false);
-
-    async.Run([&]() { return db.Checkpoint(); });
-    for (InstanceHolder *instance: instances) {
-        async.Run([instance]() { return instance->Checkpoint(); });
-    }
-
-    return async.Sync();
-}
-
-Span<InstanceHolder *> DomainHolder::LockInstances()
-{
-    mutex.lock_shared();
-    return instances;
-}
-
-void DomainHolder::UnlockInstances()
-{
-    mutex.unlock_shared();
-}
-
-Size DomainHolder::CountInstances() const
-{
-    std::shared_lock<std::shared_mutex> lock_shr(mutex);
-    return instances.len;
-}
-
-InstanceHolder *DomainHolder::Ref(Span<const char> key)
-{
-    std::shared_lock<std::shared_mutex> lock_shr(mutex);
-
-    InstanceHolder *instance = instances_map.FindValue(key, nullptr);
-
-    if (instance) {
-        instance->Ref();
-        return instance;
-    } else {
-        return nullptr;
-    }
 }
 
 bool MigrateDomain(sq_Database *db, const char *instances_directory)
@@ -1149,7 +1175,15 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 21);
+            case 21: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE dom_instances DROP COLUMN generation;
+                )");
+                if (!success)
+                    return false;
+            } // [[fallthrough]];
+
+            RG_STATIC_ASSERT(DomainVersion == 22);
         }
 
         int64_t time = GetUnixTime();

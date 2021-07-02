@@ -36,9 +36,6 @@ static const char *const SyncModeNames[] = {
 class InstanceHolder {
     mutable std::atomic_int refcount {0};
 
-    // Strictly managed by DomainHolder
-    int64_t generation;
-
 public:
     int64_t unique = -1;
 

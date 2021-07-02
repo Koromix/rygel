@@ -729,7 +729,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     LogInfo("Init instances");
     if (!gp_domain.Open(config_filename))
         return 1;
-    if (!gp_domain.Sync())
+    if (!gp_domain.SyncAll())
         return 1;
 
     // Parse arguments
@@ -839,7 +839,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
                 run = false;
             } else if (ret == WaitForResult::Message) {
                 LogDebug("Syncing instances");
-                gp_domain.Sync();
+                gp_domain.SyncAll(true);
             }
 
             // Make sure data loss (if it happens) is very limited in time.

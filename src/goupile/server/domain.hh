@@ -75,7 +75,9 @@ public:
     bool Open(const char *filename);
     void Close();
 
-    bool Sync();
+    bool SyncAll(bool thorough = false);
+    bool SyncInstance(const char *key);
+
     bool Checkpoint();
 
     Span<InstanceHolder *> LockInstances();
@@ -83,6 +85,9 @@ public:
     Size CountInstances() const;
 
     InstanceHolder *Ref(Span<const char> key);
+
+private:
+    bool Sync(const char *key, bool thorough);
 };
 
 bool MigrateDomain(sq_Database *db, const char *instances_directory);

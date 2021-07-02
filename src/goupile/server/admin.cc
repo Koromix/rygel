@@ -887,7 +887,7 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
         if (!success)
             return;
 
-        if (!gp_domain.Sync())
+        if (!gp_domain.SyncInstance(instance_key))
             return;
 
         io->AttachText(200, "Done!");
@@ -1197,7 +1197,7 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
 
         instance->Unref();
         ref_guard.Disable();
-        if (!gp_domain.Sync())
+        if (!gp_domain.SyncInstance(instance_key))
             return;
 
         bool complete = true;
@@ -1359,20 +1359,14 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
             if (!success)
                 return false;
 
-            if (!gp_domain.db.Run(R"(UPDATE dom_instances SET generation = generation + 1
-                                     WHERE instance = ?1)", instance->key))
-                return false;
-
             return true;
         });
         if (!success)
             return;
 
-        // Avoid deadlock
         instance->Unref();
         ref_guard.Disable();
-
-        if (!gp_domain.Sync())
+        if (!gp_domain.SyncInstance(instance_key))
             return;
 
         io->AttachText(200, "Done!");
@@ -2229,7 +2223,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
 
             if (!gp_domain.db.Run("DELETE FROM dom_instances"))
                 return false;
-            if (!gp_domain.Sync())
+            if (!gp_domain.SyncAll())
                 return false;
 
             for (const RestoreEntry &entry: entries) {
@@ -2262,10 +2256,10 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                 tmp_guard.Disable();
             }
 
-            return gp_domain.Sync();
+            return gp_domain.SyncAll();
         });
         if (!success) {
-            gp_domain.Sync();
+            gp_domain.SyncAll(true);
             return;
         }
 
