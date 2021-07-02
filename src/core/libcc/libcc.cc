@@ -4607,6 +4607,8 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
         } break;
 
         case SourceType::File: {
+            clearerr(source.u.file.fp);
+
 restart:
             read_len = (Size)fread(out_buf, 1, (size_t)max_len, source.u.file.fp);
             if (ferror(source.u.file.fp)) {
