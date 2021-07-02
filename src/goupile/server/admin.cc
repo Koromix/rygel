@@ -144,6 +144,10 @@ static bool CheckUserName(Span<const char> username)
         LogError("Username must only contain lowercase alphanumeric, '_', '.' or '-' characters");
         return false;
     }
+    if (username == "goupile" || username == "admin") {
+        LogError("These usernames are forbidden: goupile, admin");
+        return false;
+    }
 
     return true;
 }
