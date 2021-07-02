@@ -166,6 +166,8 @@ private:
     bool CheckpointSnapshot(bool restart = false);
     bool CheckpointDirect();
 
+    bool CopyWAL();
+
     bool LockExclusive();
     void UnlockExclusive();
     void LockShared();

@@ -158,20 +158,7 @@ bool sq_Database::SetSnapshotFile(const char *filename, int64_t full_delay)
     // Set up WAL hook to copy new pages
     sqlite3_wal_hook(db, [](void *udata, sqlite3 *, const char *, int) {
         sq_Database *db = (sq_Database *)udata;
-
-        do {
-            LocalArray<uint8_t, 16384> buf;
-            buf.len = db->snapshot_wal_reader.Read(buf.data);
-            if (buf.len < 0)
-                break;
-
-            if (!db->snapshot_wal_writer.Write(buf))
-                break;
-            crypto_hash_sha256_update(&db->snapshot_wal_state, buf.data, buf.len);
-        } while (!db->snapshot_wal_reader.IsEOF());
-
-        db->snapshot_data = true;
-
+        db->CopyWAL();
         return SQLITE_OK;
     }, this);
 
@@ -416,6 +403,8 @@ bool sq_Database::CheckpointSnapshot(bool restart)
     } else {
         LockExclusive();
         locked = true;
+
+        success &= CopyWAL();
     }
 
     // Perform SQLite checkpoint, with truncation so that we can just copy each WAL file
@@ -457,20 +446,6 @@ bool sq_Database::CheckpointSnapshot(bool restart)
         // Rewind WAL reader
         success &= snapshot_wal_reader.Rewind();
         crypto_hash_sha256_init(&snapshot_wal_state);
-
-        // Copy existing WAL (if any)
-        do {
-            LocalArray<uint8_t, 16384> buf;
-            buf.len = snapshot_wal_reader.Read(buf.data);
-            if (buf.len < 0)
-                break;
-
-            if (!snapshot_wal_writer.Write(buf))
-                break;
-            crypto_hash_sha256_update(&snapshot_wal_state, buf.data, buf.len);
-
-            snapshot_data |= buf.len;
-        } while (!snapshot_wal_reader.IsEOF());
     }
 
     // If anything went wrong, do a full snapshot next time
@@ -480,6 +455,24 @@ bool sq_Database::CheckpointSnapshot(bool restart)
     }
 
     return success;
+}
+
+bool sq_Database::CopyWAL()
+{
+    do {
+        LocalArray<uint8_t, 16384> buf;
+        buf.len = snapshot_wal_reader.Read(buf.data);
+        if (buf.len < 0)
+            return false;
+
+        if (!snapshot_wal_writer.Write(buf))
+            return false;
+        crypto_hash_sha256_update(&snapshot_wal_state, buf.data, buf.len);
+
+        snapshot_data |= buf.len;
+    } while (!snapshot_wal_reader.IsEOF());
+
+    return true;
 }
 
 bool sq_Database::CheckpointDirect()
