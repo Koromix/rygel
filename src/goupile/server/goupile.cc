@@ -43,7 +43,7 @@ static HashMap<const char *, const AssetInfo *> assets_map;
 static const AssetInfo *assets_root;
 static HeapArray<const char *> assets_for_cache;
 static LinkedAllocator assets_alloc;
-static char etag[17];
+static char shared_etag[17];
 
 static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *const> mask_files)
 {
@@ -223,7 +223,7 @@ static void InitAssets()
     {
         uint64_t buf;
         randombytes_buf(&buf, RG_SIZE(buf));
-        Fmt(etag, "%1", FmtHex(buf).Pad0(-16));
+        Fmt(shared_etag, "%1", FmtHex(buf).Pad0(-16));
     }
 }
 
@@ -328,12 +328,12 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             }
         });
 
-        AttachStatic(copy, etag, request, io);
+        AttachStatic(copy, shared_etag, request, io);
     } else if (TestStr(request.url, "/favicon.png")) {
         const AssetInfo *asset = assets_map.FindValue("/favicon.png", nullptr);
         RG_ASSERT(asset);
 
-        AttachStatic(*asset, etag, request, io);
+        AttachStatic(*asset, shared_etag, request, io);
     } else if (StartsWith(request.url, "/admin/") || TestStr(request.url, "/admin")) {
         const char *admin_url = request.url + 6;
 
@@ -383,19 +383,19 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                     }
                 });
 
-                AttachStatic(copy, etag, request, io);
+                AttachStatic(copy, shared_etag, request, io);
                 return;
             } else if (TestStr(admin_url, "/favicon.png")) {
                 const AssetInfo *asset = assets_map.FindValue("/static/admin.png", nullptr);
                 RG_ASSERT(asset);
 
-                AttachStatic(*asset, etag, request, io);
+                AttachStatic(*asset, shared_etag, request, io);
                 return;
             } else {
                 const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
 
                 if (asset) {
-                    AttachStatic(*asset, etag, request, io);
+                    AttachStatic(*asset, shared_etag, request, io);
                     return;
                 }
             }
@@ -530,11 +530,14 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                                               TestStr(instance_url, "/manifest.json")) {
                 RG_ASSERT(asset);
 
+                const InstanceHolder *master = instance->master;
+
+                char master_etag[64];
+                Fmt(master_etag, "%1/%2", shared_etag, master->unique);
+
                 // XXX: Use some kind of dynamic cache to avoid doing this all the time
                 AssetInfo copy = *asset;
                 copy.data = PatchAsset(copy, &io->allocator, [&](const char *key, StreamWriter *writer) {
-                    const InstanceHolder *master = instance->master;
-
                     if (TestStr(key, "VERSION")) {
                         writer->Write(FelixVersion);
                     } else if (TestStr(key, "TITLE")) {
@@ -553,7 +556,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         json.Key("title"); json.String(master->title);
                         json.Key("cache_offline"); json.Bool(master->config.use_offline);
                         if (master->config.use_offline) {
-                            json.Key("cache_key"); json.String(Fmt(buf, "%1_%2", etag, master->unique).ptr);
+                            json.Key("cache_key"); json.String(master_etag);
                         }
                         {
                             Span<const char> str = ConvertToJsonName(SyncModeNames[(int)master->config.sync_mode], buf);
@@ -562,7 +565,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         if (master->config.backup_key) {
                             json.Key("backup_key"); json.String(master->config.backup_key);
                         }
-                        if (instance != master || instance->slaves.len) {
+                        if (master->slaves.len) {
                             json.Key("instances"); json.StartArray();
                             for (const InstanceHolder *slave: master->slaves) {
                                 json.StartObject();
@@ -583,13 +586,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                     }
                 });
 
-                char specific_etag[33];
-                Fmt(specific_etag, "%1_%2", etag, instance->unique);
-
-                AttachStatic(copy, specific_etag, request, io);
+                AttachStatic(copy, master_etag, request, io);
                 return;
             } else if (asset) {
-                AttachStatic(*asset, etag, request, io);
+                AttachStatic(*asset, shared_etag, request, io);
                 return;
             }
         }
