@@ -182,8 +182,7 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         {"sendfile64", sec_FilterAction::Allow},
         {"sendto", sec_FilterAction::Allow},
         {"shutdown", sec_FilterAction::Allow},
-        {"uname", sec_FilterAction::Allow},
-        {"restart_syscall", sec_FilterAction::Allow}
+        {"uname", sec_FilterAction::Allow}
     });
 #endif
 
