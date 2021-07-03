@@ -101,7 +101,7 @@ const SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
                     return nullptr;
                 sqlite3_bind_int64(stmt, 1, userid);
                 sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
-                if (!stmt.Next())
+                if (!stmt.Step())
                     return nullptr;
 
                 uint32_t permissions = (uint32_t)sqlite3_column_int(stmt, 0);
@@ -117,7 +117,7 @@ const SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
                     sqlite3_bind_text(stmt, 2, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
 
                     permissions &= UserPermissionSlaveMask;
-                    if (stmt.Next()) {
+                    if (stmt.Step()) {
                         uint32_t master_permissions = (uint32_t)sqlite3_column_int(stmt, 0);
                         permissions |= master_permissions & UserPermissionMasterMask;
                     }
@@ -318,7 +318,7 @@ RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const h
                         return RetainPtr<SessionInfo>(nullptr);
                     sqlite3_bind_int64(stmt, 1, auto_userid);
 
-                    if (!stmt.Next()) {
+                    if (!stmt.Step()) {
                         if (stmt.IsValid()) {
                             LogError("Automatic user ID %1 does not exist", auto_userid);
                         }
@@ -463,7 +463,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
         }
 
-        if (stmt.Next()) {
+        if (stmt.Step()) {
             int64_t userid = sqlite3_column_int64(stmt, 0);
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
             bool admin = (sqlite3_column_int(stmt, 2) == 1);
@@ -571,7 +571,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
         return nullptr;
     sqlite3_bind_text(stmt, 1, key, -1, SQLITE_STATIC);
 
-    if (stmt.Next()) {
+    if (stmt.Step()) {
         userid = sqlite3_column_int64(stmt, 0);
         local_key = (const char *)sqlite3_column_text(stmt, 1);
         ulid = (const char *)sqlite3_column_text(stmt, 2);
@@ -583,7 +583,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
                 return false;
             sqlite3_bind_text(stmt, 1, key, -1, SQLITE_STATIC);
 
-            if (stmt.Next()) {
+            if (stmt.Step()) {
                 userid = sqlite3_column_int64(stmt, 0);
                 local_key = (const char *)sqlite3_column_text(stmt, 1);
                 ulid = (const char *)sqlite3_column_text(stmt, 2);
@@ -920,7 +920,7 @@ void HandlePasswordChange(const http_RequestInfo &request, http_IO *io)
                 return;
             sqlite3_bind_int64(stmt, 1, session->userid);
 
-            if (!stmt.Next()) {
+            if (!stmt.Step()) {
                 if (stmt.IsValid()) {
                     LogError("User does not exist");
                     io->AttachError(404);

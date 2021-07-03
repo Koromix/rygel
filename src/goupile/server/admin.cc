@@ -208,7 +208,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
             return false;
         sqlite3_bind_text(stmt, 1, instance_key, -1, SQLITE_STATIC);
 
-        if (stmt.Next()) {
+        if (stmt.Step()) {
             LogError("Instance '%1' already exists", instance_key);
             *out_error = 409;
             return false;
@@ -636,7 +636,7 @@ Options:
 
         bool success = true;
 
-        while (stmt.Next()) {
+        while (stmt.Step()) {
             const char *key = (const char *)sqlite3_column_text(stmt, 0);
             const char *filename = MakeInstanceFileName(config.instances_directory, key, &temp_alloc);
 
@@ -1537,7 +1537,7 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
                     return false;
                 sqlite3_bind_text(stmt, 1, instance, -1, SQLITE_STATIC);
 
-                if (!stmt.Next()) {
+                if (!stmt.Step()) {
                     if (stmt.IsValid()) {
                         LogError("Instance '%1' does not exist", instance);
                         io->AttachError(404);
@@ -1554,7 +1554,7 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
                     return false;
                 sqlite3_bind_int64(stmt, 1, userid);
 
-                if (!stmt.Next()) {
+                if (!stmt.Step()) {
                     if (stmt.IsValid()) {
                         LogError("User ID '%1' does not exist", userid);
                         io->AttachError(404);
@@ -1635,7 +1635,7 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
         return;
 
     json.StartObject();
-    while (stmt.Next()) {
+    while (stmt.Step()) {
         int64_t userid = sqlite3_column_int64(stmt, 0);
         uint32_t permissions = (uint32_t)sqlite3_column_int64(stmt, 1);
         char buf[128];
@@ -2167,7 +2167,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
             if (!db.Prepare("SELECT instance, master FROM dom_instances ORDER BY instance", &stmt))
                 return;
 
-            while (stmt.Next()) {
+            while (stmt.Step()) {
                 const char *instance_key = (const char *)sqlite3_column_text(stmt, 0);
 
                 RestoreEntry entry = {};
@@ -2369,7 +2369,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
                     return false;
                 sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
 
-                if (stmt.Next()) {
+                if (stmt.Step()) {
                     LogError("User '%1' already exists", username);
                     io->AttachError(409);
                     return false;
@@ -2493,7 +2493,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
                     return false;
                 sqlite3_bind_int64(stmt, 1, userid);
 
-                if (!stmt.Next()) {
+                if (!stmt.Step()) {
                     if (stmt.IsValid()) {
                         LogError("User ID '%1' does not exist", userid);
                         io->AttachError(404);
@@ -2587,7 +2587,7 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
                 return false;
             sqlite3_bind_int64(stmt, 1, userid);
 
-            if (!stmt.Next()) {
+            if (!stmt.Step()) {
                 if (stmt.IsValid()) {
                     LogError("User ID '%1' does not exist", userid);
                     io->AttachError(404);
@@ -2646,7 +2646,7 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
         return;
 
     json.StartArray();
-    while (stmt.Next()) {
+    while (stmt.Step()) {
         json.StartObject();
         json.Key("userid"); json.Int64(sqlite3_column_int64(stmt, 0));
         json.Key("username"); json.String((const char *)sqlite3_column_text(stmt, 1));

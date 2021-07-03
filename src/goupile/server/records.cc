@@ -60,9 +60,9 @@ static void ExportRecord(sq_Statement *stmt, json_Writer *json)
             }
 
             json->EndObject();
-        } while (stmt->Next() && sqlite3_column_int64(*stmt, 0) == rowid);
+        } while (stmt->Step() && sqlite3_column_int64(*stmt, 0) == rowid);
     } else {
-        stmt->Next();
+        stmt->Step();
     }
     json->EndArray();
 
@@ -132,7 +132,7 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
         return;
 
     json.StartArray();
-    if (stmt.Next()) {
+    if (stmt.Step()) {
         do {
             ExportRecord(&stmt, &json);
         } while (stmt.IsRow());
@@ -328,7 +328,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                         return false;
                     sqlite3_bind_text(stmt, 1, record.parent.ulid, -1, SQLITE_STATIC);
 
-                    if (!stmt.Next()) {
+                    if (!stmt.Step()) {
                         if (stmt.IsValid()) {
                             LogError("Parent record '%1' does not exist", record.parent.ulid);
                         }
@@ -374,7 +374,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     if (!instance->db->Prepare("SELECT seq FROM sqlite_sequence WHERE name = 'rec_fragments'", &stmt))
                         return false;
 
-                    if (stmt.Next()) {
+                    if (stmt.Step()) {
                         anchor = sqlite3_column_int64(stmt, 0) + 1;
                     } else if (stmt.IsValid()) {
                         anchor = 1;
@@ -410,7 +410,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                             return false;
                         sqlite3_bind_text(stmt, 1, record.form, -1, SQLITE_STATIC);
 
-                        if (!stmt.Next()) {
+                        if (!stmt.Step()) {
                             RG_ASSERT(!stmt.IsValid());
                             return false;
                         }

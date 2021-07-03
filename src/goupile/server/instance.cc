@@ -59,7 +59,7 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
 
         bool valid = true;
 
-        while (stmt.Next()) {
+        while (stmt.Step()) {
             const char *key = (const char *)sqlite3_column_text(stmt, 0);
             const char *value = (const char *)sqlite3_column_text(stmt, 1);
 
@@ -108,7 +108,7 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
 
         bool valid = true;
 
-        while (stmt.Next()) {
+        while (stmt.Step()) {
             const char *key = (const char *)sqlite3_column_text(stmt, 0);
             const char *value = (const char *)sqlite3_column_text(stmt, 1);
 
@@ -170,7 +170,7 @@ bool MigrateInstance(sq_Database *db)
         sq_Statement stmt;
         if (!db->Prepare("PRAGMA database_list", &stmt))
             return false;
-        if (!stmt.Next())
+        if (!stmt.Step())
             return false;
 
         filename = (const char *)sqlite3_column_text(stmt, 2);
@@ -727,7 +727,7 @@ bool MigrateInstance(sq_Database *db)
 
                 int64_t mtime = GetUnixTime();
 
-                while (stmt.Next()) {
+                while (stmt.Step()) {
                     int64_t rowid = sqlite3_column_int64(stmt, 0);
                     const char *path = (const char *)sqlite3_column_text(stmt, 1);
 
@@ -956,7 +956,7 @@ bool MigrateInstance(sq_Database *db)
                 if (!db->Prepare("SELECT rowid, filename, size, compression FROM fs_files", &stmt))
                     return false;
 
-                while (stmt.Next()) {
+                while (stmt.Step()) {
                     int64_t rowid = sqlite3_column_int64(stmt, 0);
                     const char *filename = (const char *)sqlite3_column_text(stmt, 1);
                     Size total_len = (Size)sqlite3_column_int64(stmt, 2);

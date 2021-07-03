@@ -40,7 +40,7 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
         return;
 
     json.StartArray();
-    while (stmt.Next()) {
+    while (stmt.Step()) {
         json.StartObject();
         json.Key("filename"); json.String((const char *)sqlite3_column_text(stmt, 0));
         json.Key("size"); json.Int64(sqlite3_column_int64(stmt, 1));
@@ -94,7 +94,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
                                   WHERE active = 1 AND filename = ?1)", &stmt))
         return true;
     sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
-    if (!stmt.Next())
+    if (!stmt.Step())
         return !stmt.IsValid();
 
     int64_t rowid = sqlite3_column_int64(stmt, 0);
@@ -426,7 +426,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
                     return false;
                 sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
 
-                if (stmt.Next()) {
+                if (stmt.Step()) {
                     const char *sha256 = (const char *)sqlite3_column_text(stmt, 0);
 
                     if (!TestStr(client_sha256, sha256)) {
@@ -529,7 +529,7 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
                 return false;
             sqlite3_bind_text(stmt, 1, filename, -1, SQLITE_STATIC);
 
-            if (stmt.Next()) {
+            if (stmt.Step()) {
                 bool active = sqlite3_column_int(stmt, 0);
                 const char *sha256 = active ? (const char *)sqlite3_column_text(stmt, 1) : "";
 

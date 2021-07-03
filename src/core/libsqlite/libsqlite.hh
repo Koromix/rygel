@@ -85,7 +85,7 @@ public:
     bool IsRow() const { return stmt && rc == SQLITE_ROW; }
 
     bool Run();
-    bool Next();
+    bool Step();
     void Reset();
 
     operator sqlite3_stmt *() { return stmt; }

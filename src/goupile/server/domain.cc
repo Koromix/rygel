@@ -394,7 +394,7 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
                            SELECT instance, master FROM rec)", &stmt))
             return false;
 
-        while (stmt.Next()) {
+        while (stmt.Step()) {
             Span<const char> instance_key = (const char *)sqlite3_column_text(stmt, 0);
             const char *master_key = (const char *)sqlite3_column_text(stmt, 1);
 
@@ -818,7 +818,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 if (!db->Prepare("SELECT rowid FROM dom_users", &stmt))
                     return false;
 
-                while (stmt.Next()) {
+                while (stmt.Step()) {
                     int64_t rowid = sqlite3_column_int64(stmt, 0);
 
                     // Create passport key

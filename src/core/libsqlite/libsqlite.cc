@@ -62,7 +62,7 @@ bool sq_Statement::Run()
     return true;
 }
 
-bool sq_Statement::Next()
+bool sq_Statement::Step()
 {
     return Run() && rc == SQLITE_ROW;
 }
@@ -197,7 +197,7 @@ bool sq_Database::GetUserVersion(int *out_version)
     sq_Statement stmt;
     if (!Prepare("PRAGMA user_version", &stmt))
         return false;
-    if (!stmt.Next())
+    if (!stmt.Step())
         return false;
 
     *out_version = sqlite3_column_int(stmt, 0);
