@@ -1982,18 +1982,37 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        const char *basename = values.FindValue("filename", nullptr);
-        if (!basename) {
-            LogError("Missing 'filename' paramreter");
-            io->AttachError(422);
-            return;
-        }
+        // Parse options
+        const char *basename;
+        const char *decrypt_key;
+        bool restore_users;
+        {
+            bool valid = true;
+            char buf[32];
 
-        const char *decrypt_key = values.FindValue("key", nullptr);
-        if (!decrypt_key) {
-            LogError("Missing 'key' parameter");
-            io->AttachError(422);
-            return;
+            basename = values.FindValue("filename", nullptr);
+            if (!basename) {
+                LogError("Missing 'filename' paramreter");
+                valid = false;
+            }
+
+            decrypt_key = values.FindValue("key", nullptr);
+            if (!decrypt_key) {
+                LogError("Missing 'key' parameter");
+                valid = false;
+            }
+
+            if (const char *str = values.FindValue("users", nullptr); str) {
+                Span<const char> str2 = ConvertFromJsonName(str, buf);
+                valid &= ParseBool(str2, &restore_users);
+            } else {
+                restore_users = false;
+            }
+
+            if (!valid) {
+                io->AttachError(422);
+                return;
+            }
         }
 
         // Safety checks
@@ -2013,128 +2032,136 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        const char *filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
-
-        // Create temporary file
-        FILE *fp = nullptr;
-        const char *tmp_filename = CreateTemporaryFile(gp_domain.config.temp_directory, "", ".tmp",
-                                                       &io->allocator, &fp);
-        if (!tmp_filename)
-            return;
+        // Create directory for instance files
+        const char *tmp_directory = CreateTemporaryDirectory(gp_domain.config.temp_directory, "", &io->allocator);
+        HeapArray<const char *> tmp_filenames;
         RG_DEFER {
-            if (fp) {
-                fclose(fp);
+            for (const char *filename: tmp_filenames) {
+                UnlinkFile(filename);
             }
-            UnlinkFile(tmp_filename);
+            if (tmp_directory) {
+                UnlinkDirectory(tmp_directory);
+            }
         };
 
-        StreamReader reader(filename);
-        StreamWriter writer(fp, tmp_filename);
-        if (!reader.IsValid()) {
-            if (errno == ENOENT) {
-                LogError("Archive '%1' does not exist", basename);
-                io->AttachError(404);
-            }
-            return;
-        }
-        if (!writer.IsValid())
-            return;
-
-        // Derive asymmetric keys
-        uint8_t askey[crypto_box_SECRETKEYBYTES];
-        uint8_t apkey[crypto_box_PUBLICKEYBYTES];
+        // Extract archive to unencrypted ZIP file
+        const char *extract_filename;
         {
-            RG_STATIC_ASSERT(crypto_scalarmult_SCALARBYTES == crypto_box_SECRETKEYBYTES);
-            RG_STATIC_ASSERT(crypto_scalarmult_BYTES == crypto_box_PUBLICKEYBYTES);
+            const char *src_filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
 
-            size_t key_len;
-            int ret = sodium_base642bin(askey, RG_SIZE(askey),
-                                        decrypt_key, strlen(decrypt_key), nullptr, &key_len,
-                                        nullptr, sodium_base64_VARIANT_ORIGINAL);
-            if (ret || key_len != 32) {
-                LogError("Malformed decryption key");
-                io->AttachError(422);
+            FILE *fp = nullptr;
+            extract_filename = CreateTemporaryFile(gp_domain.config.temp_directory, "", ".tmp", &io->allocator, &fp);
+            if (!extract_filename)
                 return;
-            }
+            tmp_filenames.Append(extract_filename);
+            RG_DEFER { fclose(fp); };
 
-            crypto_scalarmult_base(apkey, askey);
-        }
-
-        // Check signature and initialize symmetric decryption
-        uint8_t skey[crypto_secretstream_xchacha20poly1305_KEYBYTES];
-        crypto_secretstream_xchacha20poly1305_state state;
-        {
-            ArchiveIntro intro;
-            if (reader.Read(RG_SIZE(intro), &intro) != RG_SIZE(intro)) {
-                if (reader.IsValid()) {
-                    LogError("Truncated archive");
-                    io->AttachError(422);
+            StreamReader reader(src_filename);
+            StreamWriter writer(fp, extract_filename);
+            if (!reader.IsValid()) {
+                if (errno == ENOENT) {
+                    LogError("Archive '%1' does not exist", basename);
+                    io->AttachError(404);
                 }
                 return;
             }
-
-            if (strncmp(intro.signature, ARCHIVE_SIGNATURE, RG_SIZE(intro.signature)) != 0) {
-                LogError("Unexpected archive signature");
-                io->AttachError(422);
-                return;
-            }
-            if (intro.version != ARCHIVE_VERSION) {
-                LogError("Unexpected archive version %1 (expected %2)", intro.version, ARCHIVE_VERSION);
-                io->AttachError(422);
-                return;
-            }
-
-            if (crypto_box_seal_open(skey, intro.eskey, RG_SIZE(intro.eskey), apkey, askey) != 0) {
-                LogError("Failed to unseal archive (wrong key?)");
-                io->AttachError(403);
-                return;
-            }
-            if (crypto_secretstream_xchacha20poly1305_init_pull(&state, intro.header, skey) != 0) {
-                LogError("Failed to initialize symmetric decryption (corrupt archive?)");
-                io->AttachError(422);
-                return;
-            }
-        }
-
-        // Extract cleartext ZIP archive
-        for (;;) {
-            LocalArray<uint8_t, 4096> cypher;
-            cypher.len = reader.Read(cypher.data);
-            if (cypher.len < 0)
+            if (!writer.IsValid())
                 return;
 
-            uint8_t buf[4096];
-            unsigned long long buf_len = 5;
-            uint8_t tag;
-            if (crypto_secretstream_xchacha20poly1305_pull(&state, buf, &buf_len, &tag,
-                                                           cypher.data, cypher.len, nullptr, 0) != 0) {
-                LogError("Failed during symmetric decryption (corrupt archive?)");
-                io->AttachError(422);
-                return;
-            }
+            // Derive asymmetric keys
+            uint8_t askey[crypto_box_SECRETKEYBYTES];
+            uint8_t apkey[crypto_box_PUBLICKEYBYTES];
+            {
+                RG_STATIC_ASSERT(crypto_scalarmult_SCALARBYTES == crypto_box_SECRETKEYBYTES);
+                RG_STATIC_ASSERT(crypto_scalarmult_BYTES == crypto_box_PUBLICKEYBYTES);
 
-            if (!writer.Write(buf, (Size)buf_len))
-                return;
-
-            if (reader.IsEOF()) {
-                if (tag != crypto_secretstream_xchacha20poly1305_TAG_FINAL) {
-                    LogError("Truncated archive");
+                size_t key_len;
+                int ret = sodium_base642bin(askey, RG_SIZE(askey),
+                                            decrypt_key, strlen(decrypt_key), nullptr, &key_len,
+                                            nullptr, sodium_base64_VARIANT_ORIGINAL);
+                if (ret || key_len != 32) {
+                    LogError("Malformed decryption key");
                     io->AttachError(422);
                     return;
                 }
-                break;
-            }
-        }
 
-        if (!writer.Close())
-            return;
-        fclose(fp);
-        fp = nullptr;
+                crypto_scalarmult_base(apkey, askey);
+            }
+
+            // Check signature and initialize symmetric decryption
+            uint8_t skey[crypto_secretstream_xchacha20poly1305_KEYBYTES];
+            crypto_secretstream_xchacha20poly1305_state state;
+            {
+                ArchiveIntro intro;
+                if (reader.Read(RG_SIZE(intro), &intro) != RG_SIZE(intro)) {
+                    if (reader.IsValid()) {
+                        LogError("Truncated archive");
+                        io->AttachError(422);
+                    }
+                    return;
+                }
+
+                if (strncmp(intro.signature, ARCHIVE_SIGNATURE, RG_SIZE(intro.signature)) != 0) {
+                    LogError("Unexpected archive signature");
+                    io->AttachError(422);
+                    return;
+                }
+                if (intro.version != ARCHIVE_VERSION) {
+                    LogError("Unexpected archive version %1 (expected %2)", intro.version, ARCHIVE_VERSION);
+                    io->AttachError(422);
+                    return;
+                }
+
+                if (crypto_box_seal_open(skey, intro.eskey, RG_SIZE(intro.eskey), apkey, askey) != 0) {
+                    LogError("Failed to unseal archive (wrong key?)");
+                    io->AttachError(403);
+                    return;
+                }
+                if (crypto_secretstream_xchacha20poly1305_init_pull(&state, intro.header, skey) != 0) {
+                    LogError("Failed to initialize symmetric decryption (corrupt archive?)");
+                    io->AttachError(422);
+                    return;
+                }
+            }
+
+            // Extract cleartext ZIP archive
+            for (;;) {
+                LocalArray<uint8_t, 4096> cypher;
+                cypher.len = reader.Read(cypher.data);
+                if (cypher.len < 0)
+                    return;
+
+                uint8_t buf[4096];
+                unsigned long long buf_len = 5;
+                uint8_t tag;
+                if (crypto_secretstream_xchacha20poly1305_pull(&state, buf, &buf_len, &tag,
+                                                               cypher.data, cypher.len, nullptr, 0) != 0) {
+                    LogError("Failed during symmetric decryption (corrupt archive?)");
+                    io->AttachError(422);
+                    return;
+                }
+
+                if (!writer.Write(buf, (Size)buf_len))
+                    return;
+
+                if (reader.IsEOF()) {
+                    if (tag != crypto_secretstream_xchacha20poly1305_TAG_FINAL) {
+                        LogError("Truncated archive");
+                        io->AttachError(422);
+                        return;
+                    }
+                    break;
+                }
+            }
+
+            if (!writer.Close())
+                return;
+        }
 
         // Open ZIP file
         mz_zip_archive zip;
         mz_zip_zero_struct(&zip);
-        if (!mz_zip_reader_init_file(&zip, tmp_filename, 0)) {
+        if (!mz_zip_reader_init_file(&zip, extract_filename, 0)) {
             LogError("Failed to open ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
             return;
         }
@@ -2145,39 +2172,29 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
             const char *basename;
             const char *filename;
         };
-
-        // Prepare new instances directory
-        const char *tmp_directory = CreateTemporaryDirectory(gp_domain.config.temp_directory, "", &io->allocator);
         HeapArray<RestoreEntry> entries;
-        if (!tmp_directory)
-            return;
-        RG_DEFER_N(tmp_guard) {
-            for (const RestoreEntry &entry: entries) {
-                UnlinkFile(entry.filename);
-            }
-            UnlinkDirectory(tmp_directory);
-        };
 
-        // List instances in goupile.db
+        // Open archived main database
+        const char *main_filename;
         {
             FILE *fp = nullptr;
-            const char *tmp_filename = CreateTemporaryFile(gp_domain.config.temp_directory, "", ".tmp",
-                                                           &io->allocator, &fp);
-            if (!tmp_filename)
+            main_filename = CreateTemporaryFile(gp_domain.config.temp_directory, "", ".tmp", &io->allocator, &fp);
+            if (!main_filename)
                 return;
-            RG_DEFER {
-                fclose(fp);
-                UnlinkFile(tmp_filename);
-            };
+            tmp_filenames.Append(main_filename);
+            RG_DEFER { fclose(fp); };
 
             if (!mz_zip_reader_extract_file_to_cfile(&zip, "goupile.db", fp, 0)) {
                 LogError("Failed to extract 'goupile.db' from archive: %1", mz_zip_get_error_string(zip.m_last_error));
                 return;
             }
+        }
 
+        // Gather instance entries from goupile.db
+        {
             sq_Database db;
             sq_Statement stmt;
-            if (!db.Open(tmp_filename, SQLITE_OPEN_READWRITE))
+            if (!db.Open(main_filename, SQLITE_OPEN_READWRITE))
                 return;
             if (!db.Prepare("SELECT instance, master FROM dom_instances ORDER BY instance", &stmt))
                 return;
@@ -2186,6 +2203,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                 const char *instance_key = (const char *)sqlite3_column_text(stmt, 0);
 
                 RestoreEntry entry = {};
+
                 entry.key = DuplicateString(instance_key, &io->allocator).ptr;
                 entry.basename = MakeInstanceFileName("instances", instance_key, &io->allocator);
 #ifdef _WIN32
@@ -2197,7 +2215,9 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                 }
 #endif
                 entry.filename = MakeInstanceFileName(tmp_directory, instance_key, &io->allocator);
+
                 entries.Append(entry);
+                tmp_filenames.Append(entry.filename);
             }
             if (!stmt.IsValid())
                 return;
@@ -2225,8 +2245,30 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
             }
         }
 
+        // Prepare restoration of users
+        if (restore_users && !gp_domain.db.Run("ATTACH ?1 AS archived", main_filename))
+            return;
+        RG_DEFER {
+            if (restore_users) {
+                gp_domain.db.Run("DETACH archived");
+            }
+        };
+
+        // Prepare for cleanup up of old instance directory
+        const char *swap_directory = nullptr;
+        RG_DEFER {
+            if (swap_directory) {
+                EnumerateDirectory(swap_directory, nullptr, -1, [&](const char *filename, FileType file_type) {
+                    filename = Fmt(&io->allocator, "%1%/%2", swap_directory, filename).ptr;
+                    UnlinkFile(filename);
+
+                    return true;
+                });
+                UnlinkDirectory(swap_directory);
+            }
+        };
+
         // Replace running instances
-        const char *swap_directory;
         bool success = gp_domain.db.Transaction([&]() {
             // Log action
             int64_t time = GetUnixTime();
@@ -2240,18 +2282,29 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                 return false;
             if (!gp_domain.SyncAll())
                 return false;
-
             for (const RestoreEntry &entry: entries) {
                 if (!gp_domain.db.Run("INSERT INTO dom_instances (instance) VALUES (?1)", entry.key))
                     return false;
             }
 
-#if defined(__linux__) && defined(RENAME_EXCHANGE)
-            swap_directory = tmp_directory;
+            if (restore_users) {
+                bool success = gp_domain.db.RunMany(R"(
+                    DELETE FROM dom_permissions;
+                    DELETE FROM dom_users;
 
+                    INSERT INTO dom_users (userid, username, password_hash, admin, local_key, email, phone)
+                        SELECT userid, username, password_hash, admin, local_key, email, phone FROM archived.dom_users;
+                    INSERT INTO dom_permissions (userid, instance, permissions)
+                        SELECT userid, instance, permissions FROM archived.dom_permissions;
+                )");
+                if (!success)
+                    return false;
+            }
+
+#if defined(__linux__) && defined(RENAME_EXCHANGE)
             if (renameat2(AT_FDCWD, gp_domain.config.instances_directory,
-                          AT_FDCWD, swap_directory, RENAME_EXCHANGE) < 0) {
-                LogDebug("Failed to swap directories atomically");
+                          AT_FDCWD, tmp_directory, RENAME_EXCHANGE) < 0) {
+                LogDebug("Failed to swap directories atomically: %1", strerror(errno));
 
 #else
             if (true) {
@@ -2267,9 +2320,13 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                     RenameFile(swap_directory, gp_domain.config.instances_directory, true);
                     return false;
                 }
-
-                tmp_guard.Disable();
+            } else {
+                swap_directory = tmp_directory;
             }
+
+            RG_ASSERT(tmp_filenames.len == entries.len + 2);
+            tmp_filenames.RemoveFrom(2);
+            tmp_directory = nullptr;
 
             return gp_domain.SyncAll();
         });
@@ -2278,21 +2335,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
-        // Clean up old instance directory
-        bool complete = true;
-        EnumerateDirectory(swap_directory, nullptr, -1, [&](const char *filename, FileType file_type) {
-            filename = Fmt(&io->allocator, "%1%/%2", swap_directory, filename).ptr;
-            complete &= UnlinkFile(filename);
-
-            return true;
-        });
-        complete &= UnlinkDirectory(swap_directory);
-
-        if (complete) {
-            io->AttachText(200, "Done!");
-        } else {
-            io->AttachText(202, "Done, but with leftover files");
-        }
+        io->AttachText(200, "Done!");
     });
 }
 

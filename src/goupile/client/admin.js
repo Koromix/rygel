@@ -290,6 +290,7 @@ function AdminController() {
     async function runRestoreBackupDialog(e, filename) {
         return ui.runDialog(e, `Restauration de '${filename}'`, (d, resolve, reject) => {
             let key = d.password('*key', 'Clé de restauration');
+            let restore_users = d.boolean('*restore_users', 'Restaurer les utilisateurs et leurs droits', { value: false, untoggle: false });
 
             d.action('Restaurer', {disabled: !d.isValid()}, async () => {
                 let progress = log.progress('Restauration en cours');
@@ -298,6 +299,7 @@ function AdminController() {
                     let query = new URLSearchParams;
                     query.set('filename', filename);
                     query.set('key', key.value);
+                    query.set('users', 0 + restore_users.value);
 
                     let response = await net.fetch('/admin/api/archives/restore', {
                         method: 'POST',
