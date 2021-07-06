@@ -2167,18 +2167,11 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
         }
         RG_DEFER { mz_zip_reader_end(&zip); };
 
-        struct RestoreEntry {
-            const char *key;
-            const char *basename;
-            const char *filename;
-        };
-        HeapArray<RestoreEntry> entries;
-
-        // Open archived main database
-        const char *main_filename;
+        // Extract and open archived main database (goupile.db)
+        sq_Database main_db;
         {
             FILE *fp = nullptr;
-            main_filename = CreateTemporaryFile(gp_domain.config.temp_directory, "", ".tmp", &io->allocator, &fp);
+            const char *main_filename = CreateTemporaryFile(gp_domain.config.temp_directory, "", ".tmp", &io->allocator, &fp);
             if (!main_filename)
                 return;
             tmp_filenames.Append(main_filename);
@@ -2188,15 +2181,22 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                 LogError("Failed to extract 'goupile.db' from archive: %1", mz_zip_get_error_string(zip.m_last_error));
                 return;
             }
+
+            if (!main_db.Open(main_filename, SQLITE_OPEN_READWRITE))
+                return;
         }
 
-        // Gather instance entries from goupile.db
+        struct RestoreEntry {
+            const char *key;
+            const char *basename;
+            const char *filename;
+        };
+
+        // Gather information from goupile.db
+        HeapArray<RestoreEntry> entries;
         {
-            sq_Database db;
             sq_Statement stmt;
-            if (!db.Open(main_filename, SQLITE_OPEN_READWRITE))
-                return;
-            if (!db.Prepare("SELECT instance, master FROM dom_instances ORDER BY instance", &stmt))
+            if (!main_db.Prepare("SELECT instance, master FROM dom_instances ORDER BY instance", &stmt))
                 return;
 
             while (stmt.Step()) {
@@ -2245,15 +2245,6 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
             }
         }
 
-        // Prepare restoration of users
-        if (restore_users && !gp_domain.db.Run("ATTACH ?1 AS archived", main_filename))
-            return;
-        RG_DEFER {
-            if (restore_users) {
-                gp_domain.db.Run("DETACH archived");
-            }
-        };
-
         // Prepare for cleanup up of old instance directory
         const char *swap_directory = nullptr;
         RG_DEFER {
@@ -2287,18 +2278,64 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                     return false;
             }
 
+            // It would be much better to do this bu ATTACHing the old database and do the copy
+            // in SQL Unfortunately this triggers memory problems in SQLite Multiple Ciphers and
+            // I don't have time to investigate this right now.
             if (restore_users) {
                 bool success = gp_domain.db.RunMany(R"(
                     DELETE FROM dom_permissions;
                     DELETE FROM dom_users;
-
-                    INSERT INTO dom_users (userid, username, password_hash, admin, local_key, email, phone)
-                        SELECT userid, username, password_hash, admin, local_key, email, phone FROM archived.dom_users;
-                    INSERT INTO dom_permissions (userid, instance, permissions)
-                        SELECT userid, instance, permissions FROM archived.dom_permissions;
+                    DELETE FROM sqlite_sequence WHERE name = 'dom_users';
                 )");
                 if (!success)
                     return false;
+
+                // Copy users
+                {
+                    sq_Statement stmt;
+                    if (!main_db.Prepare(R"(SELECT userid, username, password_hash,
+                                                   admin, local_key, email, phone
+                                            FROM dom_users)", &stmt))
+                        return false;
+
+                    while (stmt.Step()) {
+                        int64_t userid = sqlite3_column_int64(stmt, 0);
+                        const char *username = (const char *)sqlite3_column_text(stmt, 1);
+                        const char *password_hash = (const char *)sqlite3_column_text(stmt, 2);
+                        int admin = sqlite3_column_int(stmt, 3);
+                        const char *local_key = (const char *)sqlite3_column_text(stmt, 4);
+                        const char *email = (const char *)sqlite3_column_text(stmt, 5);
+                        const char *phone = (const char *)sqlite3_column_text(stmt, 6);
+
+                        if (!gp_domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
+                                                                        admin, local_key, email, phone)
+                                                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
+                                              userid, username, password_hash, admin, local_key, email, phone))
+                            return false;
+                    }
+                    if (!stmt.IsValid())
+                        return false;
+                }
+
+                // Copy permissions
+                {
+                    sq_Statement stmt;
+                    if (!main_db.Prepare("SELECT userid, instance, permissions FROM dom_permissions", &stmt))
+                        return false;
+
+                    while (stmt.Step()) {
+                        int64_t userid = sqlite3_column_int64(stmt, 0);
+                        const char *instance_key = (const char *)sqlite3_column_text(stmt, 1);
+                        int64_t permissions = sqlite3_column_int(stmt, 2);
+
+                        if (!gp_domain.db.Run(R"(INSERT INTO dom_permissions (userid, instance, permissions)
+                                                 VALUES (?1, ?2, ?3))",
+                                              userid, instance_key, permissions))
+                            return false;
+                    }
+                    if (!stmt.IsValid())
+                        return false;
+                }
             }
 
 #if defined(__linux__) && defined(RENAME_EXCHANGE)
