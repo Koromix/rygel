@@ -1005,12 +1005,10 @@ static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = n
     }
 
     // Backup databases
-    Async async;
     for (const BackupEntry &entry: entries) {
-        async.Run([&, entry]() { return entry.db->BackupTo(entry.filename); });
+        if (!entry.db->BackupTo(entry.filename))
+            return false;
     }
-    if (!async.Sync())
-        return false;
 
     // Closure context for miniz write callback
     struct BackupContext {
@@ -2183,6 +2181,8 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
             }
 
             if (!main_db.Open(main_filename, SQLITE_OPEN_READWRITE))
+                return;
+            if (!MigrateDomain(&main_db, nullptr))
                 return;
         }
 

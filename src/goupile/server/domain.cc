@@ -742,7 +742,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     return false;
 
                 // Insert existing instances
-                if (version) {
+                if (version && instances_directory) {
                     sq_Statement stmt;
                     if (!db->Prepare("INSERT INTO dom_instances (instance) VALUES (?)", &stmt))
                         return false;
