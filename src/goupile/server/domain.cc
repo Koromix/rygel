@@ -651,6 +651,7 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
                 LogDebug("Close unused database '%1'", filename);
 
                 complete &= db->Close();
+                delete db;
             }
         }
         databases.RemoveFrom(j);
