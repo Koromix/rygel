@@ -27,7 +27,7 @@ function InstanceController() {
         version: null
     };
 
-    let page_code;
+    let head_length = Number.MAX_SAFE_INTEGER;
     let page_div = document.createElement('div');
 
     let form_record;
@@ -39,7 +39,10 @@ function InstanceController() {
     let editor_el;
     let editor_ace;
     let editor_filename;
-    let editor_buffers = new LruMap(32);
+    let code_buffers = new LruMap(32);
+
+    let develop = false;
+    let error_entries = {};
 
     let ignore_editor_change = false;
     let ignore_editor_scroll = false;
@@ -48,10 +51,6 @@ function InstanceController() {
     let data_form;
     let data_rows;
     let data_filter;
-
-    let head_length = Number.MAX_SAFE_INTEGER;
-    let develop = false;
-    let error_entries = {};
 
     this.init = async function() {
         initUI();
@@ -587,6 +586,8 @@ function InstanceController() {
     }
 
     function renderPage() {
+        let code = code_buffers.get(route.page.filename).code;
+
         let readonly = (route.version < form_record.fragments.length);
 
         let model = new FormModel;
@@ -599,7 +600,7 @@ function InstanceController() {
             form_builder.pushOptions({});
 
             let meta = Object.assign({}, form_record);
-            runCodeSync('Formulaire', page_code, {
+            runCodeSync('Formulaire', code, {
                 app: app,
 
                 form: form_builder,
@@ -1126,15 +1127,19 @@ function InstanceController() {
             });
         }
 
-        let buffer = editor_buffers.get(editor_filename);
+        let buffer = code_buffers.get(editor_filename);
 
         if (buffer == null) {
-            let code = await fetchCode(editor_filename);
+            await fetchCode(editor_filename);
+            buffer = code_buffers.get(editor_filename);
+        }
 
+        if (buffer.session == null) {
             let session = new ace.EditSession('', 'ace/mode/javascript');
+
             session.setOption('useWorker', false);
             session.setUseWrapMode(true);
-            session.doc.setValue(code);
+            session.doc.setValue(buffer.code);
             session.setUndoManager(new ace.UndoManager());
             session.on('change', e => handleFileChange(editor_filename));
 
@@ -1147,23 +1152,7 @@ function InstanceController() {
                 ignore_editor_scroll = true;
             });
 
-            buffer = {
-                session: session,
-                version: ENV.version,
-                sha256: Sha256(code)
-            };
-            editor_buffers.set(editor_filename, buffer);
-        } else if (buffer.version !== ENV.version) {
-            let code = await fetchCode(editor_filename);
-            let sha256 = Sha256(code);
-
-            if (sha256 !== buffer.sha256) {
-                ignore_editor_change = true;
-                buffer.session.doc.setValue(code);
-                ignore_editor_change = false;
-            }
-
-            buffer.version = ENV.version;
+            buffer.session = session;
         }
 
         if (editor_filename.startsWith('pages/')) {
@@ -1184,11 +1173,8 @@ function InstanceController() {
         if (ignore_editor_change)
             return;
 
-        let buffer = editor_buffers.get(filename);
+        let buffer = code_buffers.get(filename);
         let code = buffer.session.doc.getValue();
-
-        if (filename === route.page.filename)
-            page_code = code;
 
         // Should never fail, but who knows..
         if (buffer != null) {
@@ -1203,6 +1189,7 @@ function InstanceController() {
                 blob: blob
             });
 
+            buffer.code = code;
             buffer.sha256 = sha256;
         }
 
@@ -1531,8 +1518,8 @@ function InstanceController() {
             break;
         }
 
-        // Fetch page code (for page panel)
-        new_code = await fetchCode(new_route.page.filename);
+        // Fetch and cache page code for page panel
+        await fetchCode(new_route.page.filename);
 
         // Dictionaries
         new_dictionaries = {};
@@ -1568,7 +1555,6 @@ function InstanceController() {
 
         // Commit!
         updateContext(new_route, new_record);
-        page_code = new_code;
         form_dictionaries = new_dictionaries;
 
         await mutex.chain(() => self.run(options.push_history));
@@ -1637,6 +1623,10 @@ function InstanceController() {
 
             develop = !!count;
         }
+
+        // Fetch and cache page code for page panel
+        // Again to make sure we are up to date (e.g. publication)
+        await fetchCode(route.page.filename);
 
         // Sync editor (if needed)
         if (ui.isPanelEnabled('editor')) {
@@ -1722,39 +1712,69 @@ function InstanceController() {
     }
 
     async function fetchCode(filename) {
-        // Anything in the editor?
+        let code = null;
+
+        // Anything in cache or in the editor?
         {
-            let buffer = editor_buffers.get(filename);
+            let buffer = code_buffers.get(filename);
+
             if (buffer != null && buffer.version === ENV.version)
-                return buffer.session.doc.getValue();
+                return buffer.code;
         }
 
         // Try locally saved files
-        {
+        if (code == null) {
             let key = `${profile.userid}:${filename}`;
             let file = await db.load('fs_files', key);
 
             if (file != null) {
                 if (file.blob != null) {
-                    let code = await file.blob.text();
-                    return code;
+                    code = await file.blob.text();
                 } else {
-                    return '';
+                    code = '';
                 }
             }
         }
 
         // The server is our last hope
-        {
+        if (code == null) {
             let response = await net.fetch(`${ENV.urls.files}${filename}`);
 
             if (response.ok) {
-                let code = await response.text();
-                return code;
+                code = await response.text();
             } else {
-                return '';
+                code = '';
             }
         }
+
+        // Create or update buffer
+        {
+            let buffer = code_buffers.get(filename);
+
+            if (buffer == null) {
+                buffer = {
+                    code: code,
+                    version: ENV.version,
+                    sha256: Sha256(code),
+                    session: null
+                };
+                code_buffers.set(filename, buffer);
+            } else {
+                let sha256 = Sha256(code);
+
+                if (buffer.session != null && sha256 !== buffer.sha256) {
+                    ignore_editor_change = true;
+                    buffer.session.doc.setValue(code);
+                    ignore_editor_change = false;
+                }
+
+                buffer.code = code;
+                buffer.version = ENV.version;
+                buffer.sha256 = sha256;
+            }
+        }
+
+        return code;
     }
 
     function createRecord(form, ulid = null, parent_record = null) {
