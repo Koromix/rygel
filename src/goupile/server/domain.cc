@@ -400,9 +400,10 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
 
             for (;;) {
                 InstanceHolder *instance = (offset < instances.len) ? instances[offset] : nullptr;
+
                 int cmp = instance ? CmpStr(instance->key, instance_key) : 1;
-                bool match = !filter_key || TestStr(filter_key, instance->key) ||
-                                            TestStr(filter_key, instance->master->key);
+                bool match = !filter_key || TestStr(filter_key, instance_key) ||
+                                            (master_key && TestStr(filter_key, master_key));
 
                 if (cmp < 0) {
                     if (match) {
@@ -455,8 +456,8 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
 
         while (offset < instances.len) {
             InstanceHolder *instance = instances[offset];
-            bool match = filter_key || TestStr(filter_key, instance->key) ||
-                                       TestStr(filter_key, instance->master->key);
+            bool match = !filter_key || TestStr(filter_key, instance->key) ||
+                                        TestStr(filter_key, instance->master->key);
 
             if (match) {
                 registry_unload.Append(instance);
