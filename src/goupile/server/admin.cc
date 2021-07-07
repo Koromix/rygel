@@ -999,7 +999,7 @@ static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = n
         }
     }
     for (BackupEntry &entry: entries) {
-        entry.filename = CreateTemporaryFile(gp_domain.config.tmp_directory, "", nullptr, &temp_alloc);
+        entry.filename = CreateTemporaryFile(gp_domain.config.tmp_directory, "", ".tmp", &temp_alloc);
         if (!entry.filename)
             return false;
     }
