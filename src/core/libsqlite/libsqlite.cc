@@ -16,14 +16,25 @@
 
 namespace RG {
 
-const char *SnapshotSignature = "SQLITESNAPSHOT01";
 
 #pragma pack(push, 1)
+struct SnapshotHeader {
+    char signature[15];
+    int8_t version;
+    int32_t filename_len;
+};
 struct FrameData {
     int64_t mtime;
     uint8_t sha256[32];
 };
 #pragma pack(pop)
+#define SNAPSHOT_VERSION 1
+#define SNAPSHOT_SIGNATURE "SQLITESNAPSHOT"
+
+// This should warn us in most cases when we break the file format
+RG_STATIC_ASSERT(RG_SIZE(SnapshotHeader::signature) == RG_SIZE(SNAPSHOT_SIGNATURE));
+RG_STATIC_ASSERT(RG_SIZE(SnapshotHeader) == 20);
+RG_STATIC_ASSERT(RG_SIZE(FrameData) == 40);
 
 static RG_THREAD_LOCAL bool busy_thread = false;
 
@@ -117,7 +128,7 @@ bool sq_Database::SetSynchronousFull(bool enable)
     return Run(sql);
 }
 
-bool sq_Database::SetSnapshotFile(const char *filename, int64_t full_delay)
+bool sq_Database::SetSnapshotDirectory(const char *directory, int64_t full_delay)
 {
     RG_ASSERT(!snapshot);
 
@@ -135,7 +146,7 @@ bool sq_Database::SetSnapshotFile(const char *filename, int64_t full_delay)
 
     // Reset snapshot information
     snapshot_path_buf.Clear();
-    Fmt(&snapshot_path_buf, "%1", filename);
+    Fmt(&snapshot_path_buf, "%1%/", directory);
     snapshot_full_delay = full_delay;
     snapshot_data = false;
 
@@ -145,9 +156,7 @@ bool sq_Database::SetSnapshotFile(const char *filename, int64_t full_delay)
                     PRAGMA auto_vacuum = 0;)"))
         return false;
 
-    // Open permanent streams
-    if (!snapshot_main_writer.Open(filename))
-        return false;
+    // Open permanent WAL stream
     if (!snapshot_wal_reader.Open(wal_filename))
         return false;
 
@@ -339,7 +348,7 @@ bool sq_Database::Checkpoint(bool restart)
 
 bool sq_Database::CheckpointSnapshot(bool restart)
 {
-    const char *db_filename = sqlite3_db_filename(db, "main");
+    Span<const char> db_filename = sqlite3_db_filename(db, "main");
     int64_t now = GetUnixTime();
 
     bool success = true;
@@ -353,8 +362,30 @@ bool sq_Database::CheckpointSnapshot(bool restart)
 
     // Restart snapshot stream if needed
     if (restart || now - snapshot_start >= snapshot_full_delay) {
-        success &= snapshot_main_writer.Reset();
-        success &= snapshot_main_writer.Write(SnapshotSignature);
+        snapshot_path_buf.len = SplitStrReverseAny(snapshot_path_buf, RG_PATH_SEPARATORS).ptr - snapshot_path_buf.ptr;
+        snapshot_path_buf.ptr[snapshot_path_buf.len] = 0;
+
+        // Start new checksum file
+        {
+            Size base_len = snapshot_path_buf.len;
+
+            snapshot_main_writer.Close();
+            for (int i = 0; i < 1000; i++) {
+                snapshot_path_buf.len = base_len;
+                Fmt(&snapshot_path_buf, "%1.dbsnap", FmtRandom(24));
+
+                if (snapshot_main_writer.Open(snapshot_path_buf.ptr, (int)StreamWriterFlag::Exclusive))
+                    break;
+            }
+
+            SnapshotHeader sh;
+            CopyString(SNAPSHOT_SIGNATURE, sh.signature);
+            sh.version = SNAPSHOT_VERSION;
+            sh.filename_len = LittleEndian((int32_t)db_filename.len);
+
+            success &= snapshot_main_writer.Write(&sh, RG_SIZE(sh));
+            success &= snapshot_main_writer.Write(db_filename);
+        }
 
         // Perform initial copy
         {
@@ -364,7 +395,7 @@ bool sq_Database::CheckpointSnapshot(bool restart)
             };
             Fmt(&snapshot_path_buf, "-%1", FmtHex(0).Pad0(-16));
 
-            StreamReader reader(db_filename);
+            StreamReader reader(db_filename.ptr);
             StreamWriter writer(snapshot_path_buf.ptr, (int)StreamWriterFlag::Atomic,
                                 CompressionType::Gzip, CompressionSpeed::Fast);
 
@@ -641,15 +672,9 @@ static void LogFrameTime(const char *type, const char *filename, int64_t mtime)
             FmtArg(spec.msec).Pad0(-3));
 }
 
-bool sq_RestoreDatabase(const char *filename, const char *dest_filename)
+bool sq_RestoreDatabase(const char *filename, const char *dest_filename, bool overwrite)
 {
     BlockAllocator temp_alloc;
-
-    // Safety check
-    if (TestFile(dest_filename)) {
-        LogError("Refusing to overwrite '%1'", dest_filename);
-        return false;
-    }
 
     Span<const uint8_t> frames;
     {
@@ -657,14 +682,48 @@ bool sq_RestoreDatabase(const char *filename, const char *dest_filename)
         if (ReadFile(filename, Megabytes(32), &buf) < 0)
             return false;
 
-        if (!StartsWith(MakeSpan((const char *)buf.ptr, buf.len), SnapshotSignature)) {
-            LogError("Unexpected file signature");
+        if (buf.len < RG_SIZE(SnapshotHeader)) {
+            LogError("Truncated snapshot header in '%1", filename);
             return false;
         }
 
-        Size signature_len = strlen(SnapshotSignature);
-        frames = buf.Leak();
-        frames = frames.Take(signature_len, frames.len - signature_len);
+        SnapshotHeader sh;
+        memcpy_safe(&sh, buf.ptr, RG_SIZE(sh));
+        sh.filename_len = LittleEndian(sh.filename_len);
+
+        if (strncmp(sh.signature, SNAPSHOT_SIGNATURE, RG_SIZE(sh.signature)) != 0) {
+            LogError("File '%1' does not have snapshot signature", filename);
+            return false;
+        }
+        if (sh.version != SNAPSHOT_VERSION) {
+            LogError("Cannot load '%1' (version %2), expected version %3", filename, sh.version, SNAPSHOT_VERSION);
+            return false;
+        }
+        if (buf.len < RG_SIZE(sh) + sh.filename_len) {
+            LogError("Truncated snapshot header in '%1", filename);
+            return false;
+        }
+
+        Span<const char> orig_filename = MakeSpan((const char *)buf.ptr + RG_SIZE(sh), sh.filename_len);
+        LogInfo("Original file: %1", orig_filename);
+
+        if (!dest_filename) {
+            dest_filename = DuplicateString(orig_filename, &temp_alloc).ptr;
+        }
+
+        frames.ptr = buf.ptr + RG_SIZE(sh) + sh.filename_len;
+        frames.len = buf.end() - frames.ptr;
+        buf.Leak();
+    }
+
+    // Safety check
+    if (TestFile(dest_filename)) {
+        if (overwrite) {
+            UnlinkFile(dest_filename);
+        } else {
+            LogError("Refusing to overwrite '%1'", dest_filename);
+            return false;
+        }
     }
 
     const char *wal_filename = Fmt(&temp_alloc, "%1-wal", dest_filename).ptr;

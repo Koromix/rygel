@@ -214,7 +214,6 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
     if (!config.snapshot_directory) {
         config.snapshot_directory = NormalizePath("snapshots", root_directory, &config.str_alloc).ptr;
     }
-    config.snapshot_directory_instances = Fmt(&config.str_alloc, "%1%/instances", config.snapshot_directory).ptr;
 
     std::swap(*out_config, config);
     return true;
@@ -260,20 +259,14 @@ bool DomainHolder::Open(const char *filename)
         return false;
     if (!MakeDirectory(config.snapshot_directory, false))
         return false;
-    if (!MakeDirectory(config.snapshot_directory_instances, false))
-        return false;
 
     // Properly configure database
-    {
-        const char *snapshot_filename = Fmt(&config.str_alloc, "%1%/goupile.db", config.snapshot_directory).ptr;
-
-        if (!db.SetWAL(true))
-            return false;
-        if (!db.SetSynchronousFull(config.sync_full))
-            return false;
-        if (!db.SetSnapshotFile(snapshot_filename, FullSnapshotDelay))
-            return false;
-    }
+    if (!db.SetWAL(true))
+        return false;
+    if (!db.SetSynchronousFull(config.sync_full))
+        return false;
+    if (!db.SetSnapshotDirectory(config.snapshot_directory, FullSnapshotDelay))
+        return false;
 
     err_guard.Disable();
     return true;
@@ -539,7 +532,6 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
             RG_DEFER_N(db_guard) { delete db; };
 
             const char *db_filename = MakeInstanceFileName(config.instances_directory, start.instance_key, &temp_alloc);
-            const char *snapshot_filename = MakeInstanceFileName(config.snapshot_directory_instances, start.instance_key, &temp_alloc);
 
             LogDebug("Open database '%1'", db_filename);
             if (!db->Open(db_filename, SQLITE_OPEN_READWRITE)) {
@@ -554,7 +546,7 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
                 complete = false;
                 continue;
             }
-            if (!db->SetSnapshotFile(snapshot_filename, FullSnapshotDelay)) {
+            if (!db->SetSnapshotDirectory(config.snapshot_directory, FullSnapshotDelay)) {
                 complete = false;
                 continue;
             }

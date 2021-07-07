@@ -139,7 +139,7 @@ public:
 
     bool SetWAL(bool enable);
     bool SetSynchronousFull(bool enable);
-    bool SetSnapshotFile(const char *filename, int64_t full_delay);
+    bool SetSnapshotDirectory(const char *directory, int64_t full_delay);
 
     bool GetUserVersion(int *out_version);
     bool SetUserVersion(int version);
@@ -180,6 +180,6 @@ private:
     friend class sq_Statement;
 };
 
-bool sq_RestoreDatabase(const char *filename, const char *dest_filename);
+bool sq_RestoreDatabase(const char *filename, const char *dest_filename, bool overwrite);
 
 }

@@ -31,7 +31,7 @@ R"(Usage: %!..+%1 [options] <snapshot> -O <destination>%!0
 
 Options:
     %!..+-O, --output_file <file>%!0     Change final database filename
-    %!..+-f, --force%!0                  Allow overwrite of destination file)", FelixTarget);
+    %!..+-f, --force%!0                  Allow automatic filename change and overwrite)", FelixTarget);
     };
 
     // Handle version
@@ -65,20 +65,12 @@ Options:
         LogError("No snapshot filename provided");
         return 1;
     }
-    if (!dest_filename) {
+    if (!dest_filename && !force) {
         LogError("No destination filename provided");
         return 1;
     }
-    if (TestFile(dest_filename)) {
-        if (force) {
-            UnlinkFile(dest_filename);
-        } else {
-            LogError("Refusing to overwrite '%1'", dest_filename);
-            return 1;
-        }
-    }
 
-    if (!sq_RestoreDatabase(src_filename, dest_filename)) {
+    if (!sq_RestoreDatabase(src_filename, dest_filename, force)) {
         UnlinkFile(dest_filename);
         return 1;
     }
