@@ -90,7 +90,7 @@ function AdminController() {
                                 </td>
                                 <td>${instance.master == null ?
                                         html`<a role="button" tabindex="0" @click=${ui.wrapAction(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a>` : ''}</td>
-                                <td><a role="button" tabindex="0" href=${makeURL(instance.key)}>Droits</a></td>
+                                <td><a role="button" tabindex="0" href=${makeURL(instance.key)} @click=${e => ui.setPanelState('users', true)}>Droits</a></td>
                                 <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runConfigureInstanceDialog(e, instance))}>Configurer</a></td>
                             </tr>
                         `)}
