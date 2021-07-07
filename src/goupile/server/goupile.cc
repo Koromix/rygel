@@ -801,10 +801,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             GetApplicationDirectory(),
 #endif
             gp_domain.config.database_directory,
-            // XXX: These two need to be on the same disk; disallow customization and enforce
-            //      them being under database directory
-            // gp_domain.config.instances_directory,
-            // gp_domain.config.temp_directory,
             gp_domain.config.archive_directory,
             gp_domain.config.snapshot_directory
         };
@@ -844,7 +840,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             // In theory, all temporary files are deleted. But if any remain behind (crash, etc.)
             // we need to make sure they get deleted eventually.
             LogDebug("Prune temporary files");
-            PruneTemporaryFiles(gp_domain.config.temp_directory, nullptr, true, first ? 0 : 7200 * 1000);
+            PruneTemporaryFiles(gp_domain.config.tmp_directory, nullptr, true, first ? 0 : 7200 * 1000);
             PruneTemporaryFiles(gp_domain.config.snapshot_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
             PruneTemporaryFiles(gp_domain.config.archive_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
             PruneTemporaryFiles(gp_domain.config.database_directory, "*.tmp", false, first ? 0 : 7200 * 1000);

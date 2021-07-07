@@ -540,7 +540,7 @@ retry:
 
         if (!make_directory(domain.config.instances_directory))
             return 1;
-        if (!make_directory(domain.config.temp_directory))
+        if (!make_directory(domain.config.tmp_directory))
             return 1;
         if (!make_directory(domain.config.archive_directory))
             return 1;
@@ -999,7 +999,7 @@ static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = n
         }
     }
     for (BackupEntry &entry: entries) {
-        entry.filename = CreateTemporaryFile(gp_domain.config.temp_directory, "", nullptr, &temp_alloc);
+        entry.filename = CreateTemporaryFile(gp_domain.config.tmp_directory, "", nullptr, &temp_alloc);
         if (!entry.filename)
             return false;
     }
@@ -2031,7 +2031,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
         }
 
         // Create directory for instance files
-        const char *tmp_directory = CreateTemporaryDirectory(gp_domain.config.temp_directory, "", &io->allocator);
+        const char *tmp_directory = CreateTemporaryDirectory(gp_domain.config.tmp_directory, "", &io->allocator);
         HeapArray<const char *> tmp_filenames;
         RG_DEFER {
             for (const char *filename: tmp_filenames) {
@@ -2048,7 +2048,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
             const char *src_filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
 
             FILE *fp = nullptr;
-            extract_filename = CreateTemporaryFile(gp_domain.config.temp_directory, "", ".tmp", &io->allocator, &fp);
+            extract_filename = CreateTemporaryFile(gp_domain.config.tmp_directory, "", ".tmp", &io->allocator, &fp);
             if (!extract_filename)
                 return;
             tmp_filenames.Append(extract_filename);
@@ -2169,7 +2169,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
         sq_Database main_db;
         {
             FILE *fp = nullptr;
-            const char *main_filename = CreateTemporaryFile(gp_domain.config.temp_directory, "", ".tmp", &io->allocator, &fp);
+            const char *main_filename = CreateTemporaryFile(gp_domain.config.tmp_directory, "", ".tmp", &io->allocator, &fp);
             if (!main_filename)
                 return;
             tmp_filenames.Append(main_filename);
@@ -2346,7 +2346,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
 #else
             if (true) {
 #endif
-                swap_directory = MakeTemporaryFileName(gp_domain.config.temp_directory, "", "", &io->allocator);
+                swap_directory = MakeTemporaryFileName(gp_domain.config.tmp_directory, "", "", &io->allocator);
 
                 // Non atomic swap but it is hard to do better here
                 if (!RenameFile(gp_domain.config.instances_directory, swap_directory, true))

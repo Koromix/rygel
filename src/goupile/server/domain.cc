@@ -78,10 +78,6 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                 do {
                     if (prop.key == "DatabaseFile") {
                         config.database_filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
-                    } else if (prop.key == "InstanceDirectory") {
-                        config.instances_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
-                    } else if (prop.key == "TempDirectory") {
-                        config.temp_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "ArchiveDirectory" || prop.key == "BackupDirectory") {
                         config.archive_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "SnapshotDirectory") {
@@ -210,12 +206,8 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
         config.database_filename = NormalizePath("goupile.db", root_directory, &config.str_alloc).ptr;
     }
     config.database_directory = DuplicateString(GetPathDirectory(config.database_filename), &config.str_alloc).ptr;
-    if (!config.instances_directory) {
-        config.instances_directory = NormalizePath("instances", root_directory, &config.str_alloc).ptr;
-    }
-    if (!config.temp_directory) {
-        config.temp_directory = NormalizePath("tmp", root_directory, &config.str_alloc).ptr;
-    }
+    config.instances_directory = NormalizePath("instances", root_directory, &config.str_alloc).ptr;
+    config.tmp_directory = NormalizePath("tmp", root_directory, &config.str_alloc).ptr;
     if (!config.archive_directory) {
         config.archive_directory = NormalizePath("archives", root_directory, &config.str_alloc).ptr;
     }
@@ -262,7 +254,7 @@ bool DomainHolder::Open(const char *filename)
 
     // XXX: Check that these directories are one the same volume,
     // because we might want to rename from one to the other atomically.
-    if (!MakeDirectory(config.temp_directory, false))
+    if (!MakeDirectory(config.tmp_directory, false))
         return false;
     if (!MakeDirectory(config.archive_directory, false))
         return false;

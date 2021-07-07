@@ -28,7 +28,7 @@ struct DomainConfig {
     const char *database_filename = nullptr;
     const char *database_directory = nullptr;
     const char *instances_directory = nullptr;
-    const char *temp_directory = nullptr;
+    const char *tmp_directory = nullptr;
     const char *archive_directory = nullptr;
     const char *snapshot_directory = nullptr;
     const char *snapshot_directory_instances = nullptr;
@@ -67,8 +67,9 @@ class DomainHolder {
     HeapArray<sq_Database *> databases;
 
 public:
-    DomainConfig config = {};
     sq_Database db;
+
+    DomainConfig config = {};
 
     ~DomainHolder() { Close(); }
 
