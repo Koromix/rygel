@@ -21,7 +21,7 @@ vagrant provision
 The secret ansible-vault key is needed for this. You must __never ever__ distribute it or put it in the repository!
 
 ```sh
-ansible-playbook hds.yml -i inventories/hds/preprod.yml -u <USER> --key-file <KEY_FILE> --vault-password-file ansible-hds.vault --ask-become-pass
+ansible-playbook hds.yml -i inventories/hds/preprod/hosts.yml -u <USER> --key-file <KEY_FILE> --vault-password-file ansible-hds.vault --ask-become-pass
 ```
 
 ## Production
