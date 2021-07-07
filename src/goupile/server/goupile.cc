@@ -785,8 +785,10 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             GetApplicationDirectory(),
 #endif
             gp_domain.config.database_directory,
-            gp_domain.config.instances_directory,
-            gp_domain.config.temp_directory,
+            // XXX: These two need to be on the same disk; disallow customization and enforce
+            //      them being under database directory
+            // gp_domain.config.instances_directory,
+            // gp_domain.config.temp_directory,
             gp_domain.config.archive_directory,
             gp_domain.config.snapshot_directory
         };
