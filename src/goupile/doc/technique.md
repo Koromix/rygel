@@ -57,10 +57,8 @@ Ces droits sont détaillés dans les tableaux qui suivent :
 
 | Droit    | Explication |
 | -------- | ----------- |
-| *Read*   | Lecture des enregistrements |
-| *Create* | Création d'un nouvel enregistrement |
-| *Modify* | Modification d'un enregistrement existant |
-| *Delete* | Suppression d'un enregistrement existant |
+| *Load*   | Lecture des enregistrements |
+| *Save*   | Modification des enregistrements |
 | *Export* | Export facile des données (CSV, XLSX, etc.) |
 | *Batch*  | Recalcul de toutes les variables calculées sur tous les enregistrements |
 
@@ -71,6 +69,7 @@ Plusieurs modes d'authentification forte sont disponibles ou prévus :
 * Fichier clé supplémentaire stocké sur clé USB (ce mode présente l'avantage d'être compatible avec une utilisation chiffrée hors ligne)
 * **[WIP]** Génération d'une clé de type OTP envoyée par mail
 * **[WIP]** Support de tokens TOTP
+* **[WIP]** Support de clés physiques type Yubikey (Webauthn)
 
 # Utilisation de Goupile
 
@@ -132,6 +131,20 @@ Ce service peut utiliser un seul (mode mono-processus) ou plusieurs processus (m
 
 Dans tous les cas, lorsque le serveur valide les données du formulaire (option non systématique selon les besoins de validation de données d'un formulaire), le code Javascript est exécuté par le moteur V8 (en mode jitless) dans un processus forké avec des droits complètement restreints (pas d'accès au système de fichier ou à la base de données).
 
+## Compilation du serveur
+
+En plus de la containerisation, plusieurs options de compilation Clang sont utilisées pour mitiger la vulnérabilité du serveur en cas de faille.
+
+Plusieurs mesures sont destinées à empêcher les attaques par corruption de la pile d'appels ou de détournement du flux d'exécution :
+
+* *Stack Smashing Protection* (et Stack Clash Protection) pour limiter les attaques par corruption de pile
+* *Safe Stack* pour limiter les attaques de type ROP
+* *Compilation en PIE* pour le support ASLR (qui complète la mesure précédente)
+* *CFI (Control Flow Integrity)* : coarse grained forward-edge protection
+* *Options de lien* : relro, noexecstack, separate-code
+
+Par ailleurs, pendant le développement nous utilisons *différents sanitizers (ASan, TSan et UBsan)* pour détecter des erreurs d'accès mémoire, de multi-threading et l'utilisation de comportements non définis en C/C++.
+
 ## Format des données
 
 Chaque base de données Goupile est chiffrée au repos ([SQLite3 Multiple Ciphers](https://github.com/utelle/SQLite3MultipleCiphers)). La clé de chiffrement de la base principale est communiquée à Goupile lors du lancement par un moyen à déterminer par la personne qui administre le serveur. Chaque autre base a une clé spécifique stockée dans la base principale.
@@ -151,7 +164,7 @@ La clé principale d'un enregistrement est au [format ULID](https://github.com/u
 
 Nos serveurs HDS sont déployés automatiquement à l'aide de scripts Ansible, qui sont exécutés par notre hébergeur GPLExpert (sois-traitant HDS et infogérance).
 
-Nous utilisons deux environnements de déploiement : un environnement de pré-production (qui gère les sous-domaines `*.test.goupile.fr`) et un environnement de production. L'environnement de pré-production est identique à la production et nous permet de tester nos scripts de déploiement. Il ne contient que des domaines et données de test.
+Nous utilisons deux environnements de déploiement : un environnement de pré-production (qui gère les sous-domaines `*.preprod.goupile.fr`) et un environnement de production. L'environnement de pré-production est identique à la production et nous permet de tester nos scripts de déploiement. Il ne contient que des domaines et données de test.
 
 Chaque environnement utilise deux serveurs : 
 * *Serveur proxy*, qui filtre les connexions via NGINX et nous permet de rapidement rediriger les requêtes (vers un autre back-end) en cas de problème.
