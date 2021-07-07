@@ -84,7 +84,7 @@ struct ArchiveIntro {
 
 static bool CheckInstanceKey(Span<const char> key)
 {
-    const auto test_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '_'; };
+    const auto test_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '-'; };
 
     // Skip master prefix
     bool slave;
