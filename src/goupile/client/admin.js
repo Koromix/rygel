@@ -423,7 +423,12 @@ function AdminController() {
 
     function runCreateInstanceDialog(e) {
         return ui.runDialog(e, 'Création d\'un projet', (d, resolve, reject) => {
-            let key = d.text('*key', 'Clé du projet');
+            let key = d.text('*key', 'Clé du projet', {
+                help: [
+                    'Longueur maximale : 24 caractères',
+                    'Caractères autorisés : a-z (minuscules), 0-9 et \'-\''
+                ]
+            });
             let name = d.text('name', 'Nom', {value: key.value});
             let demo = d.boolean('demo', 'Ajouter les pages par défaut', {value: true, untoggle: false});
 

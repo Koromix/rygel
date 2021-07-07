@@ -103,7 +103,7 @@ static bool CheckInstanceKey(Span<const char> key)
         LogError("Instance key cannot be empty");
         return false;
     }
-    if (key.len > 64) {
+    if (key.len > 24) {
         LogError("Instance key cannot have more than 64 characters");
         return false;
     }
