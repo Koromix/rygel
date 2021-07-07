@@ -634,7 +634,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     }
 }
 
-static void PruneTemporaryFiles(const char *dirname, const char *filter, int64_t max_age)
+static void PruneTemporaryFiles(const char *dirname, const char *filter, bool recursive, int64_t max_age)
 {
     BlockAllocator temp_alloc;
 
@@ -647,12 +647,25 @@ static void PruneTemporaryFiles(const char *dirname, const char *filter, int64_t
         FileInfo file_info;
         if (!StatFile(filename, &file_info))
             return true;
-        if (file_info.type != FileType::File)
-            return true;
 
-        if (file_info.modification_time < treshold) {
-            LogInfo("Delete leftover file '%1'", filename);
-            UnlinkFile(filename);
+        switch (file_info.type) {
+            case FileType::Directory: {
+                if (recursive) {
+                    PruneTemporaryFiles(filename, filter, true, max_age);
+                    if (!filter) {
+                        LogInfo("Delete leftover directory '%1'", filename);
+                        UnlinkDirectory(filename);
+                    }
+                }
+            } break;
+            case FileType::File: {
+                if (file_info.modification_time < treshold) {
+                    LogInfo("Delete leftover file '%1'", filename);
+                    UnlinkFile(filename);
+                }
+            } break;
+
+            case FileType::Unknown: {} break;
         }
 
         return true;
@@ -828,10 +841,10 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             // In theory, all temporary files are deleted. But if any remain behind (crash, etc.)
             // we need to make sure they get deleted eventually.
             LogDebug("Prune temporary files");
-            PruneTemporaryFiles(gp_domain.config.temp_directory, nullptr, first ? 0 : 7200 * 1000);
-            PruneTemporaryFiles(gp_domain.config.snapshot_directory, "*.tmp", first ? 0 : 7200 * 1000);
-            PruneTemporaryFiles(gp_domain.config.archive_directory, "*.tmp", first ? 0 : 7200 * 1000);
-            PruneTemporaryFiles(gp_domain.config.database_directory, "*.tmp", first ? 0 : 7200 * 1000);
+            PruneTemporaryFiles(gp_domain.config.temp_directory, nullptr, true, first ? 0 : 7200 * 1000);
+            PruneTemporaryFiles(gp_domain.config.snapshot_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
+            PruneTemporaryFiles(gp_domain.config.archive_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
+            PruneTemporaryFiles(gp_domain.config.database_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
 
             WaitForResult ret = WaitForInterrupt(timeout);
 
