@@ -1168,6 +1168,18 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
             return;
         }
 
+        // Copy filenames to avoid use-after-free
+        HeapArray<const char *> unlink_filenames;
+        {
+            for (const InstanceHolder *slave: instance->slaves) {
+                const char *filename = DuplicateString(sqlite3_db_filename(*slave->db, "main"), &io->allocator).ptr;
+                unlink_filenames.Append(filename);
+            }
+
+            const char *filename = DuplicateString(sqlite3_db_filename(*instance->db, "main"), &io->allocator).ptr;
+            unlink_filenames.Append(filename);
+        }
+
         bool success = gp_domain.db.Transaction([&]() {
             int64_t time = GetUnixTime();
 
@@ -1191,25 +1203,16 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
             if (!gp_domain.db.Run("DELETE FROM dom_instances WHERE instance = ?1", instance_key))
                 return false;
 
+            // Don't use instance after that!
+            instance->Unref();
+            instance = nullptr;
+            ref_guard.Disable();
+
             return true;
         });
         if (!success)
             return;
 
-        // Copy filenames to avoid use-after-free
-        HeapArray<const char *> unlink_filenames;
-        {
-            for (const InstanceHolder *slave: instance->slaves) {
-                const char *filename = DuplicateString(sqlite3_db_filename(*slave->db, "main"), &io->allocator).ptr;
-                unlink_filenames.Append(filename);
-            }
-
-            const char *filename = DuplicateString(sqlite3_db_filename(*instance->db, "main"), &io->allocator).ptr;
-            unlink_filenames.Append(filename);
-        }
-
-        instance->Unref();
-        ref_guard.Disable();
         if (!gp_domain.SyncInstance(instance_key))
             return;
 
@@ -1372,13 +1375,16 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
             if (!success)
                 return false;
 
+            // Don't use instance after that!
+            instance->Unref();
+            instance = nullptr;
+            ref_guard.Disable();
+
             return true;
         });
         if (!success)
             return;
 
-        instance->Unref();
-        ref_guard.Disable();
         if (!gp_domain.SyncInstance(instance_key))
             return;
 
@@ -2365,12 +2371,13 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
             tmp_filenames.RemoveFrom(2);
             tmp_directory = nullptr;
 
-            return gp_domain.SyncAll();
+            return true;
         });
-        if (!success) {
-            gp_domain.SyncAll(true);
+        if (!success)
             return;
-        }
+
+        if (!gp_domain.SyncAll(true))
+            return;
 
         io->AttachText(200, "Done!");
     });

@@ -434,7 +434,7 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
                         start.master_key = master_key ? DuplicateString(master_key, &temp_alloc).ptr : nullptr;
 
                         registry_start.Append(start);
-                    } else {
+                    } else if (instance) {
                         new_instances.Append(instance);
                         new_map.Set(instance);
                     }
