@@ -21,17 +21,19 @@ int Main(int argc, char **argv)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *src_filename = nullptr;
-    const char *dest_filename = nullptr;
+    HeapArray<const char *> src_filenames;
+    const char *dest_directory = nullptr;
     bool force = false;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 [options] <snapshot> -O <destination>%!0
+R"(Usage: %!..+%1 [options] <snapshot...>%!0
 
 Options:
-    %!..+-O, --output_file <file>%!0     Change final database filename
-    %!..+-f, --force%!0                  Allow automatic filename change and overwrite)", FelixTarget);
+    %!..+-O, --output_dir <dir>%!0       Restore inside this directory (instead of real path)
+    %!..+-f, --force%!0                  Overwrite exisiting databases
+
+As a precaution, you need to use %!..+--force%!0 if you don't use %!..+--output_dir%!0.)", FelixTarget);
     };
 
     // Handle version
@@ -48,8 +50,8 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
-                dest_filename = opt.current_value;
+            } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
+                dest_directory = opt.current_value;
             } else if (opt.Test("-f", "--force")) {
                 force = true;
             } else {
@@ -58,24 +60,44 @@ Options:
             }
         }
 
-        src_filename = opt.ConsumeNonOption();
+        opt.ConsumeNonOptions(&src_filenames);
     }
 
-    if (!src_filename) {
+    if (!src_filenames.len) {
         LogError("No snapshot filename provided");
         return 1;
     }
-    if (!dest_filename && !force) {
-        LogError("No destination filename provided");
+    if (!dest_directory && !force) {
+        LogError("No destination filename provided (and -f was not specified)");
         return 1;
     }
 
-    if (!sq_RestoreDatabase(src_filename, dest_filename, force)) {
-        UnlinkFile(dest_filename);
+    sq_SnapshotSet snapshot_set;
+    if (!sq_CollectSnapshots(src_filenames, &snapshot_set))
         return 1;
+
+    bool complete = true;
+    for (const sq_SnapshotInfo &snapshot: snapshot_set.snapshots) {
+        const char *dest_filename;
+        if (dest_directory) {
+            HeapArray<char> buf(&temp_alloc);
+
+            Fmt(&buf, "%1%/", dest_directory);
+            for (Size i = 0; snapshot.orig_filename[i]; i++) {
+                char c = snapshot.orig_filename[i];
+                buf.Append(IsAsciiAlphaOrDigit(c) || c == '.' ? c : '_');
+            }
+            buf.Append(0);
+
+            dest_filename = buf.TrimAndLeak().ptr;
+        } else {
+            dest_filename = snapshot.orig_filename;
+        }
+
+        complete &= sq_RestoreSnapshot(snapshot, dest_filename, force);
     }
 
-    return 0;
+    return !complete;
 }
 
 }
