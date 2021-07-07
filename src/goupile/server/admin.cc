@@ -2352,7 +2352,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
 #else
             if (true) {
 #endif
-                swap_directory = MakeTemporaryFileName(gp_domain.config.tmp_directory, "", "", &io->allocator);
+                swap_directory = Fmt(&io->allocator, "%1%/%2", gp_domain.config.tmp_directory, FmtRandom(24)).ptr;
 
                 // Non atomic swap but it is hard to do better here
                 if (!RenameFile(gp_domain.config.instances_directory, swap_directory, true))

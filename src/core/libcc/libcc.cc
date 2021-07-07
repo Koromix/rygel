@@ -1166,6 +1166,22 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 out = out_buf;
             } break;
 
+            case FmtType::Random: {
+                RG_ASSERT(arg.u.random_len <= RG_SIZE(out_buf.data));
+
+                for (Size i = 0; i < arg.u.random_len; i++) {
+                    static const char *chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+                    // We don't want to depend on libsodium here, so use C++ crap instead
+                    static std::default_random_engine rnd_generator((int)GetUnixTime());
+                    static std::uniform_int_distribution<int> rnd_distribution(0, (int)strlen(chars) - 1);
+
+                    out_buf.Append(chars[rnd_distribution(rnd_generator)]);
+                }
+
+                out = out_buf;
+            } break;
+
             case FmtType::FlagNames: {
                 if (arg.u.flags.flags) {
                     Span<const char> sep = arg.u.flags.separator;
@@ -1240,6 +1256,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                         case FmtType::MemorySize: { arg2.u.size = *(const Size *)ptr; } break;
                         case FmtType::DiskSize: { arg2.u.size = *(const Size *)ptr; } break;
                         case FmtType::Date: { arg2.u.date = *(const Date *)ptr; } break;
+                        case FmtType::Random: { RG_UNREACHABLE(); } break;
                         case FmtType::FlagNames: { RG_UNREACHABLE(); } break;
                         case FmtType::FlagOptions: { RG_UNREACHABLE(); } break;
                         case FmtType::Function: { arg2.u.func = *(FunctionRef<FmtFunction> *)ptr; } break;
@@ -2973,17 +2990,7 @@ static const char *CreateTemporaryPath(Span<const char> directory, const char *p
         }
 
         filename.RemoveFrom(change_offset);
-        for (Size j = 0; j < 24; j++) {
-            static const char *chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-
-            // We don't want to depend on libsodium here, so use C++ crap instead
-            static std::default_random_engine rnd_generator((int)GetUnixTime());
-            static std::uniform_int_distribution<int> rnd_distribution(0, (int)strlen(chars) - 1);
-
-            filename.Append(chars[rnd_distribution(rnd_generator)]);
-        }
-        filename.Append(extension);
-        filename.Append(0);
+        Fmt(&filename, "%1%2", FmtRandom(24), extension);
 
         if (create(filename.ptr)) {
             const char *ret = filename.TrimAndLeak(1).ptr;
@@ -3020,11 +3027,6 @@ const char *CreateTemporaryDirectory(Span<const char> directory, const char *pre
     return CreateTemporaryPath(directory, prefix, "", alloc, [&](const char *path) {
         return MakeDirectory(path);
     });
-}
-
-const char *MakeTemporaryFileName(Span<const char> directory, const char *prefix, const char *extension, Allocator *alloc)
-{
-    return CreateTemporaryPath(directory, prefix, "", alloc, [&](const char *path) { return true; });
 }
 
 bool EnsureDirectoryExists(const char *filename)

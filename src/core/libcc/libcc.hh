@@ -2882,6 +2882,7 @@ enum class FmtType {
     MemorySize,
     DiskSize,
     Date,
+    Random,
     FlagNames,
     FlagOptions,
     Function,
@@ -2914,6 +2915,7 @@ public:
         const void *ptr;
         Size size;
         Date date;
+        Size random_len;
         struct {
             uint64_t flags;
             union {
@@ -3012,6 +3014,17 @@ static inline FmtArg FmtDiskSize(Size size)
     FmtArg arg;
     arg.type = FmtType::DiskSize;
     arg.u.size = size;
+    return arg;
+}
+
+static inline FmtArg FmtRandom(Size len)
+{
+    RG_ASSERT(len < 256);
+    len = std::min(len, (Size)256);
+
+    FmtArg arg;
+    arg.type = FmtType::Random;
+    arg.u.random_len = len;
     return arg;
 }
 
@@ -3772,7 +3785,6 @@ bool FileIsVt100(FILE *fp);
 const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, const char *extension,
                                 Allocator *alloc, FILE **out_fp = nullptr);
 const char *CreateTemporaryDirectory(Span<const char> directory, const char *prefix, Allocator *alloc);
-const char *MakeTemporaryFileName(Span<const char> directory, const char *prefix, const char *extension, Allocator *alloc);
 
 bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
                         FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code);
