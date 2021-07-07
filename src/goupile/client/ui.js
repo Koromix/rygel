@@ -37,7 +37,8 @@ const ui = new function() {
 
         window.addEventListener('resize', () => {
             adaptToViewport();
-            ui.render();
+            if (!document.body.classList.contains('gp_loading'))
+                self.render();
         });
         adaptToViewport();
 
@@ -104,10 +105,7 @@ const ui = new function() {
             render('', document.querySelector('#ui_main'));
         }
 
-        // Adjust log z-index. We need to do it dynamically because we want it to show
-        // above screen and modal dialogs (which show up above eveyerthing else), but
-        // below menu bar dropdown menus.
-        log_el.style.zIndex = (dialogs.next != dialogs) ? 999999999 : 99999;
+        adjustLogLayer();
 
         document.body.classList.remove('gp_loading');
     };
@@ -204,8 +202,7 @@ const ui = new function() {
             }
 
             dialog.el.style.zIndex = 9999999;
-            if (type === 'modal' || type === 'screen')
-                log_el.style.zIndex = 999999999;
+            adjustLogLayer();
 
             // Show it!
             document.querySelector('#ui_root').appendChild(dialog.el);
@@ -256,6 +253,8 @@ const ui = new function() {
                     el.classList.remove('active');
             }
         }
+
+        adjustLogLayer();
     }
 
     function buildDialog(dialog, e, func) {
@@ -466,5 +465,12 @@ const ui = new function() {
                 </div>`;
             }
         }), log_el);
+    }
+
+    function adjustLogLayer() {
+        // Adjust log z-index. We need to do it dynamically because we want it to show
+        // above screen and modal dialogs (which show up above eveyerthing else), but
+        // below menu bar dropdown menus.
+        log_el.style.zIndex = (dialogs.next != dialogs) ? 999999999 : 99999;
     }
 };
