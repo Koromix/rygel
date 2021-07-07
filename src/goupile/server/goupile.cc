@@ -637,15 +637,15 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     }
 }
 
-static void PruneTemporaryFiles(const char *dirname, const char *filter, bool recursive, int64_t max_age)
+static bool PruneOldFiles(const char *dirname, const char *filter, bool recursive, int64_t max_age)
 {
     BlockAllocator temp_alloc;
 
     int64_t treshold = GetUnixTime() - max_age;
+    bool complete = true;
 
-    EnumerateDirectory(dirname, filter, -1,
-                       [&](const char *filename, FileType file_type) {
-        filename = Fmt(&temp_alloc, "%1%/%2", dirname, filename).ptr;
+    EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, FileType file_type) {
+        const char *filename = Fmt(&temp_alloc, "%1%/%2", dirname, basename).ptr;
 
         FileInfo file_info;
         if (!StatFile(filename, &file_info))
@@ -654,25 +654,34 @@ static void PruneTemporaryFiles(const char *dirname, const char *filter, bool re
         switch (file_info.type) {
             case FileType::Directory: {
                 if (recursive) {
-                    PruneTemporaryFiles(filename, filter, true, max_age);
-                    if (!filter) {
-                        LogInfo("Delete leftover directory '%1'", filename);
-                        UnlinkDirectory(filename);
+                    if (PruneOldFiles(filename, filter, true, max_age)) {
+                        LogInfo("Prune old directory '%1'", filename);
+                        complete &= UnlinkDirectory(filename);
                     }
+                } else {
+                    complete = false;
                 }
             } break;
             case FileType::File: {
-                if (file_info.modification_time < treshold) {
-                    LogInfo("Delete leftover file '%1'", filename);
-                    UnlinkFile(filename);
+                if (!filter || MatchPathName(basename, filter)) {
+                    if (file_info.modification_time < treshold) {
+                        LogInfo("Prune old file '%1'", filename);
+                        complete &= UnlinkFile(filename);
+                    } else {
+                        complete = false;
+                    }
+                } else {
+                    complete = false;
                 }
             } break;
 
-            case FileType::Unknown: {} break;
+            case FileType::Unknown: { complete = false; } break;
         }
 
         return true;
     });
+
+    return complete;
 }
 
 static int RunServe(Span<const char *> arguments)
@@ -840,10 +849,13 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             // In theory, all temporary files are deleted. But if any remain behind (crash, etc.)
             // we need to make sure they get deleted eventually.
             LogDebug("Prune temporary files");
-            PruneTemporaryFiles(gp_domain.config.tmp_directory, nullptr, true, first ? 0 : 7200 * 1000);
-            PruneTemporaryFiles(gp_domain.config.snapshot_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
-            PruneTemporaryFiles(gp_domain.config.archive_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
-            PruneTemporaryFiles(gp_domain.config.database_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
+            PruneOldFiles(gp_domain.config.database_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
+            PruneOldFiles(gp_domain.config.tmp_directory, nullptr, true, first ? 0 : 7200 * 1000);
+            PruneOldFiles(gp_domain.config.snapshot_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
+            PruneOldFiles(gp_domain.config.archive_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
+
+            LogDebug("Prune old snapshot files");
+            PruneOldFiles(gp_domain.config.snapshot_directory, nullptr, true, 3 * 86400 * 1000);
 
             WaitForResult ret = WaitForInterrupt(timeout);
 
