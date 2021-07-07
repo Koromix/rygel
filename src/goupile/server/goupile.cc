@@ -104,6 +104,8 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         {"readv", sec_FilterAction::Allow},
         {"write", sec_FilterAction::Allow},
         {"writev", sec_FilterAction::Allow},
+        {"pread64", sec_FilterAction::Allow},
+        {"pwrite64", sec_FilterAction::Allow},
         {"lseek", sec_FilterAction::Allow},
         {"ftruncate", sec_FilterAction::Allow},
         {"fsync", sec_FilterAction::Allow},
@@ -136,6 +138,7 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         {"rename", sec_FilterAction::Allow},
         {"renameat", sec_FilterAction::Allow},
         {"renameat2", sec_FilterAction::Allow},
+        {"rmdir", sec_FilterAction::Allow},
         {"chown", sec_FilterAction::Allow},
         {"chmod", sec_FilterAction::Allow},
         {"clone/thread", sec_FilterAction::Allow},
@@ -182,7 +185,8 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         {"sendfile64", sec_FilterAction::Allow},
         {"sendto", sec_FilterAction::Allow},
         {"shutdown", sec_FilterAction::Allow},
-        {"uname", sec_FilterAction::Allow}
+        {"uname", sec_FilterAction::Allow},
+        {"utime", sec_FilterAction::Allow}
     });
 #endif
 
