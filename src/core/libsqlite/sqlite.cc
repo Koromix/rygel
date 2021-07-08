@@ -89,6 +89,8 @@ bool sq_Database::Open(const char *filename, const uint8_t key[32], unsigned int
     char *error = nullptr;
     if (sqlite3_exec(db, sql, nullptr, nullptr, &error) != SQLITE_OK) {
         LogError("SQLite failed to open '%1': %2", filename, error);
+        sqlite3_free(error);
+
         return false;
     }
 
