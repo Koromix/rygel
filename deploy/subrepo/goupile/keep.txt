@@ -45,6 +45,14 @@ FelixBuild.ini
 FelixBuild.ini.presets
 LICENSE.txt
 
+deploy/ansible/roles
+deploy/ansible/inventories/pknet/vagrant
+deploy/ansible/vagrant/pknet
+deploy/ansible/roles==>deploy/roles
+deploy/ansible/inventories/pknet/vagrant==>deploy/inventories/pknet/vagrant
+deploy/ansible/vagrant/pknet==>deploy/vagrant/pknet
+src/goupile/doc/ansible.md==>deploy/README.md
+
 src/goupile/README.md==>README.md
 doc/goupile/README.md==>README.md
 doc/goupile/==>doc/
