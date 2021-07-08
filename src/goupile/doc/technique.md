@@ -261,13 +261,40 @@ Pour automiser le déploiement d'un serveur complet en production (avec plusieur
 
 Les scripts Ansible fournis sont adaptés à un déploiement sécurisé sur Debian 10+. Ils peuvent théoriquement être utilisés et/ou adaptés pour d'autres systèmes mais ceci n'est pas testé régulièrement.
 
-**[WIP]**
+Ce playbook PKnet est configuré pour installer les services suivants :
+
+* *Goupile*
+* *Nginx* : reverse proxy HTTP (avec auto-configuration Let's Encrypt optionelle)
+* *Borg* : backups quotidiens des bases de données SQLite utilisées par Goupile
+* *Prometheus et Grafana* : surveillance des machines
+
+Dans ce playbook, ces services sont répartis sur 3 machines :
+
+* *host2* (machine principale avec Goupile)
+* *backup* (stockage des backups)
+* *monitor* (collectionneur Prometheus et tableau de bord Grafana)
+
+Vous pouvez tester rapidement ce playbook à l'aide du script Vagrant qui est inclus dans le dépôt à l'aide des commandes suivantes :
+
+```bash
+cd deploy
+vagrant up --no-provision
+vagrant provision
+```
+
+Les domaines de test suivants seront alors configurés et accessibles sur la machine locale :
+
+* https://goupile1.pknet.local/ : domaine Goupile (HTTPS via certificat auto-signé)
+* https://goupile2.pknet.local/ : domaine Goupile (HTTPS via certificat auto-signé)
+* https://pknet-monitor.local/grafana : tableau de bord de surveillance préconfiguré
+
+Le playbook est défini par *deploy/pknet.yml* et l'inventaire Vagrant qui sert d'exemple est défini dans *deploy/inventories/vagrant/hosts.yml*. Vous pouvez copier l'inventaire et l'adapter pour configurer votre propre environnement de production, avec vos propres machines et vos propres domaines. Celui-ci contient des commentaires qui expliquent les différents réglages disponibles.
 
 # Configuration serveur HDS
 
 ## Environnements et serveurs
 
-Nos serveurs HDS sont déployés automatiquement à l'aide de scripts Ansible, qui sont exécutés par notre hébergeur GPLExpert (sois-traitant HDS et infogérance).
+Nos serveurs HDS sont déployés automatiquement à l'aide de scripts Ansible, qui sont exécutés par notre hébergeur GPLExpert (sous-traitant HDS et infogérance).
 
 Nous utilisons deux environnements de déploiement : un environnement de pré-production (qui gère les sous-domaines `*.preprod.goupile.fr`) et un environnement de production. L'environnement de pré-production est identique à la production et nous permet de tester nos scripts de déploiement. Il ne contient que des domaines et données de test.
 
