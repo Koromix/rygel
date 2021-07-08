@@ -42,8 +42,6 @@ namespace RG {
 static const char *DefaultConfig =
 R"([Paths]
 # DatabaseFile = goupile.db
-# InstanceDirectory = instances
-# TempDirectory = tmp
 # ArchiveDirectory = archives
 # SnapshotDirectory = snapshots
 
