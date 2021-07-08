@@ -20,7 +20,7 @@
 
 - name: Add LLVM-11 repository
   apt_repository:
-    repo: deb http://apt.llvm.org/buster/ llvm-toolchain-buster-11 main
+    repo: 'deb http://apt.llvm.org/{{ ansible_distribution_release }}/ llvm-toolchain-{{ ansible_distribution_release }}-11 main'
     state: present
   become: yes
 
