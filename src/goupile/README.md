@@ -21,3 +21,8 @@ build all projects defined in *FelixBuild.ini*: `felix` on Windows or `./felix` 
 The following compilers are supported: GCC, Clang and MSVC (on Windows).
 
 Use `./felix --help` for more information.
+
+# Documentation
+
+You can find more information on [the official website](https://goupile.fr/), only in French
+for the time being.
