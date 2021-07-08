@@ -67,13 +67,12 @@ Par défaut l'authentification des utilisateurs repose sur un couple identifiant
 Plusieurs modes d'authentification forte sont disponibles ou prévus : 
 
 * Fichier clé supplémentaire stocké sur clé USB (ce mode présente l'avantage d'être compatible avec une utilisation chiffrée hors ligne)
-* **[WIP]** Génération d'une clé de type OTP envoyée par mail
 * **[WIP]** Support de tokens TOTP
 * **[WIP]** Support de clés physiques type Yubikey (Webauthn)
 
 # Utilisation de Goupile
 
-Goupile est codé comme une application web de type SPA (Single Page Application).
+Goupile est codé comme une application web de type SPA (Single Page Application). Un bref aperçu des différentes facettes de Goupile est donné ci-après; référez-vous au manuel utilisateur pour des informations plus détaillées.
 
 ## Conception d'un eCRF
 
@@ -131,9 +130,9 @@ Ce service peut utiliser un seul (mode mono-processus) ou plusieurs processus (m
 
 Dans tous les cas, lorsque le serveur valide les données du formulaire (option non systématique selon les besoins de validation de données d'un formulaire), le code Javascript est exécuté par le moteur V8 (en mode jitless) dans un processus forké avec des droits complètement restreints (pas d'accès au système de fichier ou à la base de données).
 
-## Compilation du serveur
+## Options de compilation
 
-En plus de la containerisation, plusieurs options de compilation Clang sont utilisées pour mitiger la vulnérabilité du serveur en cas de faille.
+En plus de la containerisation, plusieurs options de compilation Clang sont utilisées pour mitiger la vulnérabilité du serveur en cas de faille. Lors de la compilation de Goupile décrite plus loin, il s'agit du *mode Paranoid*.
 
 Plusieurs mesures sont destinées à empêcher les attaques par corruption de la pile d'appels ou de détournement du flux d'exécution :
 
@@ -158,6 +157,112 @@ Les données saisies dans un projet sont stockées dans la base SQLite correspon
 
 La clé principale d'un enregistrement est au [format ULID](https://github.com/ulid/spec). Ceci permet de générer les identifiants d'enregistrement client (avec risque infinitésimal de collision) ce qui simplifie l'implémentation du mode hors ligne, tout en évitant les problèmes de performance posés par l'indexation des identifiants UUID.
 
+# Installation de Goupile
+
+## Compilation
+
+Le serveur Goupile est multi-plateforme, mais il est **recommandé de l'utiliser sur Linux** pour une sécurité maximale.
+
+En effet, sur Linux Goupile peut fonctionner en mode sandboxé grâce à seccomp et les espaces de noms Linux (appel système unshare). Le support du sandboxing est envisagé à long terme pour d'autres systèmes d'exploitation mais n'est pas disponible pour le moment. L'utilisation de la distribution Debian 10+ est recommandée.
+
+Goupile repose sur du C++ (côté serveur) et HTML/CSS/JS (côté client). La compilation de Goupile utilise un outil dédié qui est inclus directement dans le dépôt.
+
+Commencez par récupérer le code depuis le dépôt Git : https://framagit.org/interhop/goupile
+
+```bash
+git clone https://framagit.org/interhop/goupile
+cd goupile
+```
+
+### Linux
+
+Pour compiler une **version de développement** et de test procédez comme ceci depuis la racine du dépôt :
+
+```bash
+# Préparation de l'outil Felix utilisé pour compiler Goupile
+./bootstrap.sh
+
+# L'exécutable sera déposé dans le dossier bin/DebugSlow
+./felix
+```
+
+Pour une **utilisation en production**, il est recommandé de compiler Goupile [en mode Paranoid](#Options-de-compilation) à l'aide de Clang 11+ et le lieur LLD 11+. Sous Debian 10, vous pouvez faire comme ceci :
+
+```bash
+# Préparation de l'outil Felix utilisé pour compiler Goupile
+./bootstrap.sh
+
+# Installation de LLVM décrite ici et recopiée ci-dessous : https://apt.llvm.org/
+sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+sudo apt install clang-11 lld-11
+
+# L'exécutable sera déposé dans le dossier bin/Paranoid
+./felix -pParanoid --compiler=clang-11 --linker=lld-11
+```
+
+### Autres systèmes
+
+Pour compiler une **version de développement** et de test procédez comme ceci depuis la racine du dépôt :
+
+#### Systèmes POSIX (macOS, WSL, etc.)
+
+```bash
+# Préparation de l'outil Felix utilisé pour compiler Goupile
+./bootstrap.sh
+
+# L'exécutable sera déposé dans le dossier bin/DebugSlow
+./felix
+```
+
+#### Windows
+
+```bash
+# Préparation de l'outil Felix utilisé pour compiler Goupile
+# Il peut être nécessaires d'utiliser l'environnement console de
+# Visual Studio avant de continuer
+bootstrap.bat
+
+# L'exécutable sera déposé dans le dossier bin/DebugSlow
+felix
+```
+
+Il n'est pas recommandé d'utiliser Goupile en production sur un autre système, car le mode bac à sable (sandboxing) et la compilation en mode Paranoid n'y sont pas disponibles pour le moment.
+
+Cependant, vous pouvez utiliser la commande `./felix --help` (ou `felix --help` sur Windows) pour consulter les modes et options de compilations disponibles pour votre système.
+
+## Déploiement manuel
+
+Une fois l'exécutable Goupile compilé, il est possible de créer un domaine Goupile à l'aide de la commande suivante :
+
+```bash
+# Pour cet exemple, nous allons créer ce domaine dans un sous-dossier tmp
+# du dépôt, mais vous pouvez le créer où vous le souhaiter !
+mkdir tmp
+
+# L'exécution de cette commande vous demandera de créer un premier
+# compte administrateur et de définir son mot de passe.
+bin/Paranoid/goupile init tmp/domaine_test
+```
+
+L'initilisation de ce domaine va créer **une clé de récupération d'archive** que vous devez stocker afin de pouvoir restaurer une archive créée dans le panneau d'administration du domaine Goupile. Si elle est perdue, cette clé peut être modifiée mais les archives créées avec la clé précédente ne seront pas récupérables !
+
+Pour accéder à ce domaine via un navigateur web, vous pouvez le lancer à l'aide de la commande suivante :
+
+```bash
+# Avec cette commande, Goupile sera accessible via http://localhost:8888/
+bin/Paranoid/goupile -C tmp/domaine_test/goupile.ini
+```
+
+Pour un mise en production, il est *recommandé de faire fonctionner Goupile derrière un reverse proxy HTTPS* comme par exemple NGINX.
+
+Pour automiser le déploiement d'un serveur complet en production (avec plusieurs domaines Goupile et NGINX configuré automatiquement), nous *fournissons un playbook et des rôles Ansible* prêts à l'emploi que vous pouvez utiliser tel quel ou adapter à vos besoins.
+
+## Déploiement automatisé via Ansible (Debian 10+)
+
+Les scripts Ansible fournis sont adaptés à un déploiement sécurisé sur Debian 10+. Ils peuvent théoriquement être utilisés et/ou adaptés pour d'autres systèmes mais ceci n'est pas testé régulièrement.
+
+**[WIP]**
+
 # Configuration serveur HDS
 
 ## Environnements et serveurs
@@ -170,15 +275,14 @@ Chaque environnement utilise deux serveurs :
 * *Serveur proxy*, qui filtre les connexions via NGINX et nous permet de rapidement rediriger les requêtes (vers un autre back-end) en cas de problème.
 * *Serveur back-end*, qui contient les services et bases de données Goupile. Les serveurs Goupile sont accessibles derrière un deuxième service NGINX qui tourne sur le serveur back-end.
 
-La communication entre le serveur proxy et le serveur back-end a lieu via un canal sécurisé (IPSec et TLS 1.2+).
+La communication entre le serveur proxy et le serveur back-end a lieu via un canal sécurisé (IPSec et TLS 1.2+). Les échanges entre les deux services NGINX sont protégés par des certificats serveur et client signés par un certificat interne créé au moment du déploiement (et donc la clé privée est supprimée immédiatement).
 
 ## Plan de reprise d'activité **[WIP]**
 
-Plusieurs niveaux de sécurité sont en place ou en cours de discussion avec notre hébergeur sous-traitant GPLExpert.
-
 Les environnements serveur sont configurés intégralement par des scripts Ansible automatisés et peuvent être reproduits à l'identique en quelques minutes.
+
 La restauration des données après perte du serveur principal peut être effectuée à partir de plusieurs sources :
 
-1. Bases répliquées en continu sur un autre serveur à l'aide de LiteStream **[WIP]** 
-2. Backup nocturne chiffré des bases SQLite réalisé et copié sur un serveur à part dans un autre datacenter
+1. Bases répliquées en continu sur un autre serveur **[WIP]** 
+2. Backup nocturne chiffré des bases SQLite réalisé et copié sur un serveur à part dans un autre datacenter **[WIP]** 
 3. Snapshot des VPS réalisé chaque nuit et conservé 14 jours, qui peut être restauré en une heure par GPLExpert
