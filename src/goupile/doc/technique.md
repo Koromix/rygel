@@ -67,8 +67,8 @@ Par défaut l'authentification des utilisateurs repose sur un couple identifiant
 Plusieurs modes d'authentification forte sont disponibles ou prévus : 
 
 * Fichier clé supplémentaire stocké sur clé USB (ce mode présente l'avantage d'être compatible avec une utilisation chiffrée hors ligne)
-* **[WIP]** Support de tokens TOTP
-* **[WIP]** Support de clés physiques type Yubikey (Webauthn)
+* **[WIP]** Support de tokens TOTP avec applications d'authentification (Authy, FreeOTP, Google Authenticator, etc.)
+* **[WIP]** Support de clés physiques avec Webauthn (Yubikey, etc.)
 
 # Utilisation de Goupile
 
