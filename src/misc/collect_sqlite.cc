@@ -169,29 +169,33 @@ Options:
     for (Size i = 0; i < snapshot_set.snapshots.len; i++) {
         const sq_SnapshotInfo &snapshot = snapshot_set.snapshots[i];
 
-        PrintLn("%1Database: %!..+%2%!0", i ? "\n" : "", snapshot.orig_filename);
+        PrintLn("%1Database: %!..+%2%!0", verbosity && i ? "\n" : "", snapshot.orig_filename);
 
-        for (const sq_SnapshotInfo::Version &version: snapshot.versions) {
-            const char *basename = SplitStrReverseAny(version.base_filename, RG_PATH_SEPARATORS).ptr;
+        if (verbosity) {
+            for (const sq_SnapshotInfo::Version &version: snapshot.versions) {
+                const char *basename = SplitStrReverseAny(version.base_filename, RG_PATH_SEPARATORS).ptr;
 
-            if (verbosity) {
-                PrintLn("  %!y..- Generation '%1'%!0", basename);
+                if (verbosity >= 2) {
+                    PrintLn("  %!y..- Generation '%1'%!0", basename);
 
-                for (Size j = 0; j < version.frames; j++) {
-                    const sq_SnapshotInfo::Frame &frame = snapshot.frames[version.frame_idx + j];
+                    for (Size j = 0; j < version.frames; j++) {
+                        const sq_SnapshotInfo::Frame &frame = snapshot.frames[version.frame_idx + j];
 
-                    char sha256[65];
-                    FormatSha256(frame.sha256, sha256);
+                        char sha256[65];
+                        FormatSha256(frame.sha256, sha256);
 
-                    if (verbosity >= 2) {
-                        PrintLn("    %!D..+ Log:%!0 %1 (%2)", DecomposeTime(frame.mtime), sha256);
-                    } else {
-                        PrintLn("    %!D..+ Log:%!0 %1", DecomposeTime(frame.mtime));
+                        if (verbosity >= 3) {
+                            PrintLn("    %!D..+ Log:%!0 %1 (%2)", DecomposeTime(frame.mtime), sha256);
+                        } else {
+                            PrintLn("    %!D..+ Log:%!0 %1", DecomposeTime(frame.mtime));
+                        }
                     }
+                } else {
+                    PrintLn("  %!y..- Generation '%1':%!0 %2", basename, DecomposeTime(version.mtime));
                 }
-            } else {
-                PrintLn("  %!y..- Generation '%1':%!0 %2", basename, DecomposeTime(version.mtime));
             }
+        } else {
+            PrintLn("  - Time: %!B..%1%!0", DecomposeTime(snapshot.mtime));
         }
     }
 
