@@ -2093,7 +2093,7 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
 {
     RG_DEFER_NC(out_guard, len = out_files->len) { out_files->RemoveFrom(len); };
 
-    EnumStatus status = EnumerateDirectory(dirname, filter, max_files,
+    EnumStatus status = EnumerateDirectory(dirname, nullptr, max_files,
                                            [&](const char *filename, FileType file_type) {
         switch (file_type) {
             case FileType::Directory: {
@@ -2104,7 +2104,9 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
                 }
             } break;
             case FileType::File: {
-                out_files->Append(Fmt(str_alloc, "%1%/%2", dirname, filename).ptr);
+                if (!filter || MatchPathName(filename, filter)) {
+                    out_files->Append(Fmt(str_alloc, "%1%/%2", dirname, filename).ptr);
+                }
             } break;
 
             case FileType::Unknown: {} break;
