@@ -110,9 +110,9 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
         if (ParseInt(filename, &fs_version, 0, &remain) && remain.ptr[0] == '/') {
             filename = remain.Take(1, remain.len - 1);
-            fs_version = instance->fs_version.load(std::memory_order_relaxed);
             explicit_version = true;
         } else {
+            fs_version = instance->fs_version.load(std::memory_order_relaxed);
             explicit_version = false;
         }
     }
