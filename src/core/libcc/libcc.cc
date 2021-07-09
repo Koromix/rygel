@@ -49,6 +49,11 @@
         ADDRESS_FAMILY sun_family;
         char sun_path[UNIX_PATH_MAX];
     } SOCKADDR_UN, *PSOCKADDR_UN;
+
+    #ifdef __MINGW32__
+        // Some MinGW distributions set it to 0 by default
+        int _CRT_glob = 1;
+    #endif
 #else
     #include <dlfcn.h>
     #include <dirent.h>

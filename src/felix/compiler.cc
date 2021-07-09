@@ -410,7 +410,7 @@ public:
 
         // Platform flags
 #if defined(_WIN32)
-        Fmt(&buf, " --rtlib=compiler-rt");
+        Fmt(&buf, " --rtlib=compiler-rt -Wl,setargv.obj");
 #elif defined(__APPLE__)
         Fmt(&buf, " -ldl -pthread");
         if (link_type == LinkType::Executable) {
@@ -946,6 +946,7 @@ public:
         for (const char *lib: libraries) {
             Fmt(&buf, " %1.lib", lib);
         }
+        Fmt(&buf, " setargv.obj");
 
         // Features
         Fmt(&buf, (features & (int)CompileFeature::DebugInfo) ? " /DEBUG:FULL" : " /DEBUG:NONE");
