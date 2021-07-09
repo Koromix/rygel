@@ -106,7 +106,7 @@ static bool CheckInstanceKey(Span<const char> key)
         return false;
     }
     if (!std::all_of(key.begin(), key.end(), test_char)) {
-        LogError("Instance key must only contain lowercase alphanumeric or '_' characters");
+        LogError("Instance key must only contain lowercase alphanumeric or '-' characters");
         return false;
     }
 
