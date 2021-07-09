@@ -16,7 +16,7 @@
 
 namespace RG {
 
-int Main(int argc, char **argv)
+static int RunRestore(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
@@ -27,7 +27,7 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 [options] <snapshot...>%!0
+R"(Usage: %!..+%1 restore [options] <snapshot...>%!0
 
 Options:
     %!..+-O, --output_dir <dir>%!0       Restore inside this directory (instead of real path)
@@ -36,15 +36,9 @@ Options:
 As a precaution, you need to use %!..+--force%!0 if you don't use %!..+--output_dir%!0.)", FelixTarget);
     };
 
-    // Handle version
-    if (argc >= 2 && TestStr(argv[1], "--version")) {
-        PrintLn("%!R..%1%!0 %2", FelixTarget, FelixVersion);
-        return 0;
-    }
-
     // Parse arguments
     {
-        OptionParser opt(argc, argv);
+        OptionParser opt(arguments);
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
@@ -96,8 +90,127 @@ As a precaution, you need to use %!..+--force%!0 if you don't use %!..+--output_
 
         complete &= sq_RestoreSnapshot(snapshot, dest_filename, force);
     }
-
     return !complete;
+}
+
+static int RunList(Span<const char *> arguments)
+{
+    // Options
+    HeapArray<const char *> src_filenames;
+    int verbosity = 0;
+
+    const auto print_usage = [](FILE *fp) {
+        PrintLn(fp,
+R"(Usage: %!..+%1 list [options] <snapshot...>%!0
+
+Options:
+    %!..+-v, --verbose%!0                List all available logs per snapshot)", FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else if (opt.Test("-v", "--verbose")) {
+                verbosity++;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        opt.ConsumeNonOptions(&src_filenames);
+    }
+
+    if (!src_filenames.len) {
+        LogError("No snapshot filename provided");
+        return 1;
+    }
+
+    sq_SnapshotSet snapshot_set;
+    if (!sq_CollectSnapshots(src_filenames, &snapshot_set))
+        return 1;
+
+    for (Size i = 0; i < snapshot_set.snapshots.len; i++) {
+        const sq_SnapshotInfo &snapshot = snapshot_set.snapshots[i];
+
+        PrintLn("%1Database: %!..+%2%!0", i ? "\n" : "", snapshot.orig_filename);
+
+        for (const sq_SnapshotInfo::Version &version: snapshot.versions) {
+            const char *basename = SplitStrReverseAny(version.base_filename, RG_PATH_SEPARATORS).ptr;
+
+            if (verbosity) {
+                PrintLn("  %!y..- Generation '%1'%!0", basename);
+
+                for (Size j = 0; j < version.frames; j++) {
+                    const sq_SnapshotInfo::Frame &frame = snapshot.frames[version.frame_idx + j];
+
+                    char sha256[65];
+                    FormatSha256(frame.sha256, sha256);
+
+                    if (verbosity >= 2) {
+                        PrintLn("    %!D..+ Log:%!0 %1 (%2)", DecomposeTime(frame.mtime), sha256);
+                    } else {
+                        PrintLn("    %!D..+ Log:%!0 %1", DecomposeTime(frame.mtime));
+                    }
+                }
+            } else {
+                PrintLn("  %!y..- Generation '%1':%!0 %2", basename, DecomposeTime(version.mtime));
+            }
+        }
+    }
+
+    return 0;
+}
+
+int Main(int argc, char **argv)
+{
+    // Options
+    HeapArray<const char *> src_filenames;
+
+    const auto print_usage = [](FILE *fp) {
+        PrintLn(fp, R"(Usage: %!..+%1 <command> [args]%!0
+
+Commands:
+    %!..+restore%!0                      Restore databases from SQLite snapshots
+    %!..+list%!0                         List available databases in snapshot files)", FelixTarget);
+    };
+
+    if (argc < 2) {
+        LogError("No command provided");
+        return 1;
+    }
+
+    const char *cmd = argv[1];
+    Span<const char *> arguments((const char **)argv + 2, argc - 2);
+
+    // Handle help and version arguments
+    if (TestStr(cmd, "--help") || TestStr(cmd, "help")) {
+        if (arguments.len && arguments[0][0] != '-') {
+            cmd = arguments[0];
+            arguments[0] = (cmd[0] == '-') ? cmd : "--help";
+        } else {
+            print_usage(stdout);
+            return 0;
+        }
+    } else if (TestStr(cmd, "--version")) {
+        PrintLn("%!R..%1%!0 %2", FelixTarget, FelixVersion);
+        return 0;
+    }
+
+    // Execute relevant command
+    if (TestStr(cmd, "restore")) {
+        return RunRestore(arguments);
+    } else if (TestStr(cmd, "list")) {
+        return RunList(arguments);
+    } else {
+        LogError("Unknown command '%1'", cmd);
+        return 1;
+    }
 }
 
 }
