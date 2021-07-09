@@ -2822,7 +2822,6 @@ public:
 
     // For compressed streams, Flush may not be complete and only Close() can finalize the file.
     bool Flush();
-    bool Reset();
 
     const char *GetFileName() const { return filename; }
     CompressionType GetCompressionType() const { return compression.type; }
