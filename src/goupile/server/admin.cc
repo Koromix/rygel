@@ -85,17 +85,7 @@ static bool CheckInstanceKey(Span<const char> key)
     const auto test_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '-'; };
 
     // Skip master prefix
-    bool slave;
-    {
-        Span<const char> master = SplitStr(key, '/', &key);
-
-        if (key.ptr > master.end()) {
-            slave = true;
-        } else {
-            key = master;
-            slave = false;
-        }
-    }
+    key = SplitStrReverse(key, '/');
 
     if (!key.len) {
         LogError("Instance key cannot be empty");
