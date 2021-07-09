@@ -111,16 +111,10 @@ static bool CheckInstanceKey(Span<const char> key)
     }
 
     // Reserved names
-    if (slave) {
-        if (key == "main" || key == "static" || key == "files") {
-            LogError("The following keys are not allowed: main, static, files");
-            return false;
-        }
-    } else {
-        if (key == "admin" || key == "metrics") {
-            LogError("The following keys are not allowed: admin, metrics");
-            return false;
-        }
+    if (key == "admin" || key == "goupile" || key == "metrics" ||
+            key == "main" || key == "static" || key == "files") {
+        LogError("The following keys are not allowed: admin, goupile, metrics, main, static, files");
+        return false;
     }
 
     return true;
