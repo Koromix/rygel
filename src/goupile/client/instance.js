@@ -144,7 +144,7 @@ function InstanceController() {
         ui.setMenu(renderMenu);
         ui.createPanel('editor', 0, false, renderEditor);
         ui.createPanel('data', 0, !goupile.isLocked(), renderData);
-        ui.createPanel('page', 1, goupile.isLocked(), renderPage);
+        ui.createPanel('view', 1, goupile.isLocked(), renderPage);
     };
 
     this.hasUnsavedData = function() {
@@ -173,9 +173,9 @@ function InstanceController() {
                 <button class=${'icon' + (ui.isPanelEnabled('data') ? ' active' : '')}
                         style="background-position-y: calc(-274px + 1.2em);"
                         @click=${ui.wrapAction(e => togglePanel(e, 'data'))}>Liste</button>
-                <button class=${'icon' + (ui.isPanelEnabled('page') ? ' active' : '')}
+                <button class=${'icon' + (ui.isPanelEnabled('view') ? ' active' : '')}
                         style="background-position-y: calc(-318px + 1.2em);"
-                        @click=${ui.wrapAction(e => togglePanel(e, 'page'))}>Saisie</button>
+                        @click=${ui.wrapAction(e => togglePanel(e, 'view'))}>Saisie</button>
                 <div style="flex: 1; min-width: 15px;"></div>
             ` : ''}
             ${goupile.isLocked() && profile.lock.unlockable ? html`
@@ -338,7 +338,7 @@ function InstanceController() {
 
         await self.run();
 
-        if (enable && key === 'page') {
+        if (enable && key === 'view') {
             syncFormScroll();
             syncFormHighlight(true);
         } else if (key === 'editor') {
@@ -1180,7 +1180,7 @@ function InstanceController() {
             session.on('change', e => handleFileChange(editor_filename));
 
             session.on('changeScrollTop', () => {
-                if (ui.isPanelEnabled('page'))
+                if (ui.isPanelEnabled('view'))
                     setTimeout(syncFormScroll, 0);
             });
             session.selection.on('changeSelection', () => {
@@ -1233,7 +1233,7 @@ function InstanceController() {
     }
 
     function syncFormScroll() {
-        if (!ui.isPanelEnabled('editor') || !ui.isPanelEnabled('page'))
+        if (!ui.isPanelEnabled('editor') || !ui.isPanelEnabled('view'))
             return;
         if (ignore_editor_scroll) {
             ignore_editor_scroll = false;
@@ -1290,7 +1290,7 @@ function InstanceController() {
     }
 
     function syncFormHighlight(scroll) {
-        if (!ui.isPanelEnabled('page'))
+        if (!ui.isPanelEnabled('view'))
             return;
 
         try {
@@ -1361,7 +1361,7 @@ function InstanceController() {
     }
 
     function syncEditorScroll() {
-        if (!ui.isPanelEnabled('editor') || !ui.isPanelEnabled('page'))
+        if (!ui.isPanelEnabled('editor') || !ui.isPanelEnabled('view'))
             return;
         if (ignore_page_scroll) {
             ignore_page_scroll = false;
@@ -1422,11 +1422,12 @@ function InstanceController() {
 
         // Parse new URL
         if (url != null) {
-            if (!url.endsWith('/'))
-                url += '/';
             url = new URL(url, window.location.href);
             if (url.pathname === ENV.urls.instance)
                 url = new URL(app.home.url, window.location.href);
+
+            if (!url.pathname.endsWith('/'))
+                url.pathname += '/';
 
             // Goodbye!
             if (!url.pathname.startsWith(`${ENV.urls.instance}main/`)) {
@@ -1484,6 +1485,10 @@ function InstanceController() {
                     new_route.version = null;
                 }
             }
+
+            let panels = url.searchParams.get('p');
+            if (panels != null)
+                ui.restorePanelState(panels);
         }
 
         // Match requested page, record type, available page, etc.
@@ -1577,14 +1582,13 @@ function InstanceController() {
                     el.parentNode.scrollTop = 0;
             }, 0);
 
-            if (!ui.isPanelEnabled('page')) {
-                ui.setPanelState('page', true);
+            if (!ui.isPanelEnabled('view')) {
+                ui.setPanelState('view', true);
                 ui.setPanelState('data', false);
             }
-        } else if (form_record == null && (new_record.saved ||
-                                           new_record.parent != null)) {
-            if (!ui.isPanelEnabled('page')) {
-                ui.setPanelState('page', true);
+        } else if (form_record == null && new_record.chain[0].saved) {
+            if (!ui.isPanelEnabled('view')) {
+                ui.setPanelState('view', true);
                 ui.setPanelState('data', false);
             }
         }
@@ -1692,6 +1696,23 @@ function InstanceController() {
         // Update URL and title
         {
             let url = contextualizeURL(route.page.url, form_record);
+
+            let panels;
+            if (goupile.isLocked()) {
+                panels = '';
+            } else if (form_record == null || !form_record.saved) {
+                panels = ui.serializePanelState();
+
+                if (panels === 'data')
+                    panels = null;
+            } else {
+                panels = ui.serializePanelState();
+
+                if (panels === 'view')
+                    panels = null;
+            }
+
+            url = util.pasteURL(url, { p: panels });
             goupile.syncHistory(url, push_history);
 
             document.title = `${route.page.title} — ${ENV.title}`;

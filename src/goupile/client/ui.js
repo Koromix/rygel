@@ -142,6 +142,29 @@ const ui = new function() {
         }
     };
 
+    this.serializePanelState = function() {
+        let str = '';
+
+        for (let [key, panel] of panels.entries()) {
+            if (panel.active)
+                str += key + '|';
+        }
+
+        return str.substr(0, str.length - 1);
+    };
+
+    this.restorePanelState = function(str) {
+        let keys = str.split('|');
+
+        active_panels = 0;
+        for (let [key, panel] of panels.entries()) {
+            panel.active = keys.includes(key);
+            active_panels += panel.active;
+        }
+
+        adaptToViewport();
+    };
+
     this.runScreen = function(func) {
         render('', document.querySelector('#ui_main'));
         return runDialog(null, null, 'screen', false, func);

@@ -90,7 +90,7 @@ function AdminController() {
                                 </td>
                                 <td>${instance.master == null ?
                                         html`<a role="button" tabindex="0" @click=${ui.wrapAction(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a>` : ''}</td>
-                                <td><a role="button" tabindex="0" href=${makeURL(instance.key)} @click=${e => ui.setPanelState('users', true)}>Droits</a></td>
+                                <td><a role="button" tabindex="0" href=${util.pasteURL('/admin/', { select: instance.key })} @click=${e => ui.setPanelState('users', true)}>Droits</a></td>
                                 <td><a role="button" tabindex="0" @click=${ui.wrapAction(e => runConfigureInstanceDialog(e, instance))}>Configurer</a></td>
                             </tr>
                         `)}
@@ -98,14 +98,6 @@ function AdminController() {
                 </table>
             </div>
         `;
-    }
-
-    function makeURL(instance) {
-        let url = util.pasteURL('/admin/', {
-            select: instance
-        });
-
-        return url;
     }
 
     function renderUsers() {
@@ -366,13 +358,13 @@ function AdminController() {
             new_instances = await net.fetchJson('/admin/api/instances/list');
         if (new_users == null)
             new_users = await net.fetchJson('/admin/api/users/list');
-        if (ui.isPanelEnabled('archives') && new_archives == null) {
-            new_archives = await net.fetchJson('/admin/api/archives/list');
-            new_archives.sort(util.makeComparator(archive => archive.filename));
-        }
 
         if (url != null) {
             url = new URL(url, window.location.href);
+
+            let panels = url.searchParams.get('p');
+            if (panels != null)
+                ui.restorePanelState(panels);
 
             if (url.searchParams.has('select')) {
                 let select = url.searchParams.get('select');
@@ -383,6 +375,11 @@ function AdminController() {
             } else {
                 new_selected = null;
             }
+        }
+
+        if (ui.isPanelEnabled('archives') && new_archives == null) {
+            new_archives = await net.fetchJson('/admin/api/archives/list');
+            new_archives.sort(util.makeComparator(archive => archive.filename));
         }
 
         if (new_selected != null)
@@ -413,7 +410,13 @@ function AdminController() {
 
         // Update browser URL
         {
-            let url = makeURL(selected_instance != null ? selected_instance.key : null);
+            let params = {};
+
+            if (selected_instance != null)
+                params.select = selected_instance.key;
+            params.p = ui.serializePanelState() || null;
+
+            let url = util.pasteURL('/admin/', params);
             goupile.syncHistory(url, options.push_history);
         }
 
