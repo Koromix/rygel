@@ -79,42 +79,33 @@ function Sha256(data) {
 
     // Read the next chunk of data and update the SHA256 computation
     this.update = function(data) {
-        let get_byte;
-        let data_len;
         if (typeof data === 'string') {
-            get_byte = idx => data.charCodeAt(idx);
-            data_len = data.length;
+            data = (new TextEncoder()).encode(data);
         } else if (data instanceof ArrayBuffer) {
-            let arr = new Uint8Array(data);
-
-            get_byte = idx => arr[idx];
-            data_len = arr.length;
-        } else if (data instanceof Uint8Array || Array.isArray(data)) {
-            get_byte = idx => data[idx];
-            data_len = data.length;
+            data = new Uint8Array(data);
         }
 
         // Compute number of bytes mod 64
         let index = ((count[0] >> 3) & 0x3f);
-        let remainder = (data_len & 0x3f);
+        let remainder = (data.length & 0x3f);
         let curpos = 0;
 
         // Update number of bits
-        if ((count[0] += (data_len << 3)) < (data_len << 3))
+        if ((count[0] += (data.length << 3)) < (data.length << 3))
             count[1]++;
-        count[1] += (data_len >> 29);
+        count[1] += (data.length >> 29);
 
         // Transform as many times as possible
-        for (let i = 0; i < data_len - 63; i += 64) {
+        for (let i = 0; i < data.length - 63; i += 64) {
             for (let j = index; j < 64; j++)
-                buffer[j] = get_byte(curpos++);
+                buffer[j] = data[curpos++];
             transform();
             index = 0;
         }
 
         // Buffer remaining input
         for (let i = 0; i < remainder; i++)
-            buffer[i] = get_byte(curpos++);
+            buffer[i] = data[curpos++];
     };
 
     // Finish the computation by operations such as padding
