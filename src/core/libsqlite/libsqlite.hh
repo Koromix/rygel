@@ -14,4 +14,4 @@
 #pragma once
 
 #include "sqlite.hh"
-#include "collect.hh"
+#include "snapshots.hh"

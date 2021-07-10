@@ -31,7 +31,6 @@ struct sq_SnapshotInfo {
     };
 
     const char *orig_filename;
-    int64_t ctime;
     int64_t mtime;
 
     HeapArray<Version> versions;

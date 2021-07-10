@@ -12,7 +12,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "../libcc/libcc.hh"
-#include "collect.hh"
+#include "snapshots.hh"
 #include "sqlite.hh"
 
 namespace RG {
@@ -321,10 +321,9 @@ bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
     for (sq_SnapshotInfo &snapshot: out_set->snapshots) {
         std::sort(snapshot.versions.begin(), snapshot.versions.end(),
                   [](sq_SnapshotInfo::Version &version1, sq_SnapshotInfo::Version &version2) {
-            return version1.ctime < version2.ctime;
+            return version1.mtime < version2.mtime;
         });
 
-        snapshot.ctime = snapshot.versions[0].ctime;
         snapshot.mtime = snapshot.versions[snapshot.versions.len - 1].mtime;
     }
 
