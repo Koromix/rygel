@@ -367,6 +367,11 @@ function InstanceController() {
                 <div class="ui_toolbar">
                     ${tabs.map(tab => html`<button class=${editor_filename === tab.filename ? 'active' : ''}
                                                    @click=${ui.wrapAction(e => toggleEditorFile(tab.filename))}>${tab.title}</button>`)}
+                    ${editor_filename === 'main.js' ? html`
+                        <div style="flex: 1;"></div>
+                        <button ?disabled=${!fileHasChanged('main.js')}
+                                @click=${ui.wrapAction(applyMainScript)}>Appliquer</button>
+                    ` : ''}
                     <div style="flex: 1;"></div>
                     <button @click=${ui.wrapAction(runPublishDialog)}>Publier</button>
                 </div>
@@ -374,6 +379,37 @@ function InstanceController() {
                 ${editor_el}
             </div>
         `;
+    }
+
+    function fileHasChanged(filename) {
+        let buffer = code_buffers.get(filename);
+
+        if (buffer != null) {
+            return buffer.sha256 !== buffer.orig_sha256;
+        } else {
+            return false;
+        }
+    }
+
+    async function applyMainScript() {
+        let code = await fetchCode('main.js');
+
+        let new_app = new ApplicationInfo;
+        let builder = new ApplicationBuilder(new_app);
+
+        try {
+            await runCodeAsync('Application', code, {
+                app: builder
+            });
+            if (!new_app.pages.size)
+                throw new Error('Main script does not define any page');
+        } catch (err) {
+            // Don't log, because runCodeAsync does it already
+            return;
+        }
+
+        // It works! Refresh the page
+        document.location.reload();
     }
 
     function renderData() {
@@ -1185,7 +1221,7 @@ function InstanceController() {
             await db.saveWithKey('fs_files', key, {
                 filename: filename,
                 size: blob.size,
-                sha256: await goupile.computeSha256(blob),
+                sha256: sha256,
                 blob: blob
             });
 
@@ -1752,11 +1788,14 @@ function InstanceController() {
             let buffer = code_buffers.get(filename);
 
             if (buffer == null) {
+                let sha256 = Sha256(code);
+
                 buffer = {
                     code: code,
                     version: ENV.version,
-                    sha256: Sha256(code),
-                    session: null
+                    sha256: sha256,
+                    orig_sha256: sha256,
+                    session:null
                 };
                 code_buffers.set(filename, buffer);
             } else {
