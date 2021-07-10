@@ -2566,7 +2566,7 @@ static const char *const TimeModeNames[] = {
     "UTC"
 };
 
-void DecomposeUnixTime(int64_t time, TimeMode mode, TimeSpec *out_spec);
+TimeSpec DecomposeTime(int64_t time, TimeMode mode = TimeMode::Local);
 
 // ------------------------------------------------------------------------
 // Streams
@@ -2882,6 +2882,7 @@ enum class FmtType {
     MemorySize,
     DiskSize,
     Date,
+    Time,
     Random,
     FlagNames,
     FlagOptions,
@@ -2915,6 +2916,7 @@ public:
         const void *ptr;
         Size size;
         Date date;
+        TimeSpec time;
         Size random_len;
         struct {
             uint64_t flags;
@@ -2957,6 +2959,7 @@ public:
     FmtArg(double d) : type(FmtType::Double) { u.d = { d, 0, INT_MAX }; }
     FmtArg(const void *ptr) : type(FmtType::Hexadecimal) { u.u = (uint64_t)ptr; }
     FmtArg(const Date &date) : type(FmtType::Date) { u.date = date; }
+    FmtArg(const TimeSpec &spec) : type(FmtType::Time) { u.time = spec; }
 
     FmtArg &Repeat(int new_repeat) { repeat = new_repeat; return *this; }
     FmtArg &Pad(int len, char c = ' ') { pad_char = c; pad_len = len; return *this; }

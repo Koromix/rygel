@@ -334,14 +334,10 @@ bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
 
 static void LogFrameTime(const char *type, const char *filename, int64_t mtime)
 {
-    TimeSpec spec = {};
-    DecomposeUnixTime(mtime, TimeMode::UTC, &spec);
+    const char *basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
+    TimeSpec spec = DecomposeTime(mtime);
 
-    LogInfo("Restoring %1 '%2' (%3-%4-%5 %6:%7:%8.%9 UTC)",
-            type, SplitStrReverseAny(filename, RG_PATH_SEPARATORS),
-            FmtArg(spec.year).Pad0(-2), FmtArg(spec.month).Pad0(-2), FmtArg(spec.day).Pad0(-2),
-            FmtArg(spec.hour).Pad0(-2), FmtArg(spec.min).Pad0(-2), FmtArg(spec.sec).Pad0(-2),
-            FmtArg(spec.msec).Pad0(-3));
+    LogInfo("Restoring %1 '%2' (%3)", type, basename, spec);
 }
 
 bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, const char *dest_filename, bool overwrite)

@@ -600,8 +600,10 @@ int64_t GetMonotonicTime()
 #endif
 }
 
-void DecomposeUnixTime(int64_t time, TimeMode mode, TimeSpec *out_spec)
+TimeSpec DecomposeTime(int64_t time, TimeMode mode)
 {
+    TimeSpec spec = {};
+
 #ifdef _WIN32
     __time64_t time64 = time / 1000;
 
@@ -642,15 +644,17 @@ void DecomposeUnixTime(int64_t time, TimeMode mode, TimeSpec *out_spec)
     RG_ASSERT(offset != INT_MAX);
 #endif
 
-    out_spec->year = (int16_t)(1900 + ti.tm_year);
-    out_spec->month = (int8_t)ti.tm_mon + 1; // Whose idea was it to use 0-11? ...
-    out_spec->day = (int8_t)ti.tm_mday;
-    out_spec->week_day = ti.tm_wday ? (ti.tm_wday + 1) : 7;
-    out_spec->hour = (int8_t)ti.tm_hour;
-    out_spec->min = (int8_t)ti.tm_min;
-    out_spec->sec = (int8_t)ti.tm_sec;
-    out_spec->msec = time % 1000;
-    out_spec->offset = (int16_t)(offset / 60);
+    spec.year = (int16_t)(1900 + ti.tm_year);
+    spec.month = (int8_t)ti.tm_mon + 1; // Whose idea was it to use 0-11? ...
+    spec.day = (int8_t)ti.tm_mday;
+    spec.week_day = ti.tm_wday ? (ti.tm_wday + 1) : 7;
+    spec.hour = (int8_t)ti.tm_hour;
+    spec.min = (int8_t)ti.tm_min;
+    spec.sec = (int8_t)ti.tm_sec;
+    spec.msec = time % 1000;
+    spec.offset = (int16_t)(offset / 60);
+
+    return spec;
 }
 
 // ------------------------------------------------------------------------
@@ -1165,6 +1169,17 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 out_buf.Append(FormatUnsignedToDecimal((uint64_t)arg.u.date.st.day, num_buf));
                 out = out_buf;
             } break;
+            case FmtType::Time: {
+                int offset_h = arg.u.time.offset / 60;
+                int offset_m = arg.u.time.offset % 60;
+
+                out_buf.len = Fmt(out_buf.data, "%1-%2-%3 %4:%5:%6.%7 %8%9%10",
+                                  FmtArg(arg.u.time.year).Pad0(-2), FmtArg(arg.u.time.month).Pad0(-2),
+                                  FmtArg(arg.u.time.day).Pad0(-2), FmtArg(arg.u.time.hour).Pad0(-2),
+                                  FmtArg(arg.u.time.min).Pad0(-2), FmtArg(arg.u.time.sec).Pad0(-2), FmtArg(arg.u.time.msec).Pad0(-3),
+                                  offset_h >= 0 ? "+" : "", FmtArg(offset_h).Pad0(-2), FmtArg(offset_m).Pad0(-2)).len;
+                out = out_buf;
+            } break;
 
             case FmtType::Random: {
                 RG_ASSERT(arg.u.random_len <= RG_SIZE(out_buf.data));
@@ -1256,6 +1271,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                         case FmtType::MemorySize: { arg2.u.size = *(const Size *)ptr; } break;
                         case FmtType::DiskSize: { arg2.u.size = *(const Size *)ptr; } break;
                         case FmtType::Date: { arg2.u.date = *(const Date *)ptr; } break;
+                        case FmtType::Time: { arg2.u.time = *(const TimeSpec *)ptr; } break;
                         case FmtType::Random: { RG_UNREACHABLE(); } break;
                         case FmtType::FlagNames: { RG_UNREACHABLE(); } break;
                         case FmtType::FlagOptions: { RG_UNREACHABLE(); } break;
