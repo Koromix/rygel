@@ -33,10 +33,6 @@ bool DomainConfig::Validate() const
         valid = false;
     }
     valid &= http.Validate();
-    if (max_age < 0) {
-        LogError("HTTP MaxAge must be >= 0");
-        valid = false;
-    }
     valid &= !smtp.url || smtp.Validate();
     valid &= (sms.provider == sms_Provider::None) || sms.Validate();
 
@@ -149,8 +145,6 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                             LogError("Unknown client address mode '%1'", prop.value);
                             valid = false;
                         }
-                    } else if (prop.key == "MaxAge") {
-                        valid &= ParseInt(prop.value, &config.max_age);
                     } else if (prop.key == "RequireHost") {
                         config.require_host = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else {

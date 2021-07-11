@@ -537,7 +537,7 @@ bool MigrateInstance(sq_Database *db)
                     success &= db->Run(sql, "HTTP.Threads", fake1.http.threads);
                     success &= db->Run(sql, "HTTP.AsyncThreads", fake1.http.async_threads);
                     success &= db->Run(sql, "HTTP.BaseUrl", nullptr);
-                    success &= db->Run(sql, "HTTP.MaxAge", fake1.max_age);
+                    success &= db->Run(sql, "HTTP.MaxAge", 900);
                 }
 
                 // Convert INI settings (if any)

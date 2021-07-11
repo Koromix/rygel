@@ -199,6 +199,13 @@ static void InitAssets()
     assets_for_cache.Clear();
     assets_alloc.ReleaseAll();
 
+    // Update ETag
+    {
+        uint64_t buf;
+        randombytes_buf(&buf, RG_SIZE(buf));
+        Fmt(shared_etag, "%1", FmtHex(buf).Pad0(-16));
+    }
+
     for (const AssetInfo &asset: GetPackedAssets()) {
         if (TestStr(asset.name, "src/goupile/client/goupile.html")) {
             assets_map.Set("/", &asset);
@@ -212,25 +219,21 @@ static void InitAssets()
         } else if (TestStr(asset.name, "src/goupile/client/images/favicon.png")) {
             assets_map.Set("/favicon.png", &asset);
             assets_for_cache.Append("/favicon.png");
+        } else if (TestStr(asset.name, "src/goupile/client/images/admin.png")) {
+            assets_map.Set("/admin/favicon.png", &asset);
         } else if (StartsWith(asset.name, "src/goupile/client/") ||
                    StartsWith(asset.name, "vendor/")) {
             const char *name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
-            const char *url = Fmt(&assets_alloc, "/static/%1", name).ptr;
+            const char *url = Fmt(&assets_alloc, "/static/%1/%2", shared_etag, name).ptr;
 
             assets_map.Set(url, &asset);
             assets_for_cache.Append(url);
         }
     }
-
-    // Update ETag
-    {
-        uint64_t buf;
-        randombytes_buf(&buf, RG_SIZE(buf));
-        Fmt(shared_etag, "%1", FmtHex(buf).Pad0(-16));
-    }
 }
 
-static void AttachStatic(const AssetInfo &asset, const char *etag, const http_RequestInfo &request, http_IO *io)
+static void AttachStatic(const AssetInfo &asset, int max_age, const char *etag,
+                         const http_RequestInfo &request, http_IO *io)
 {
     const char *client_etag = request.GetHeaderValue("If-None-Match");
 
@@ -239,9 +242,10 @@ static void AttachStatic(const AssetInfo &asset, const char *etag, const http_Re
         io->AttachResponse(304, response);
     } else {
         const char *mimetype = http_GetMimeType(GetPathExtension(asset.name));
-        io->AttachBinary(200, asset.data, mimetype, asset.compression_type);
 
-        io->AddCachingHeaders(gp_domain.config.max_age, etag);
+        io->AttachBinary(200, asset.data, mimetype, asset.compression_type);
+        io->AddCachingHeaders(max_age, etag);
+
         if (asset.source_map) {
             // io->AddHeader("SourceMap", asset.source_map);
         }
@@ -324,19 +328,21 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     if (TestStr(request.url, "/")) {
         AssetInfo copy = *assets_root;
         copy.data = PatchAsset(copy, &io->allocator, [&](const char *key, StreamWriter *writer) {
-            if (TestStr(key, "VERSION")) {
+            if (TestStr(key, "STATIC_URL")) {
+                Print(writer, "/admin/static/%1/", shared_etag);
+            } else if (TestStr(key, "VERSION")) {
                 writer->Write(FelixVersion);
             } else {
                 Print(writer, "{%1}", key);
             }
         });
 
-        AttachStatic(copy, shared_etag, request, io);
+        AttachStatic(copy, 0, shared_etag, request, io);
     } else if (TestStr(request.url, "/favicon.png")) {
         const AssetInfo *asset = assets_map.FindValue("/favicon.png", nullptr);
         RG_ASSERT(asset);
 
-        AttachStatic(*asset, shared_etag, request, io);
+        AttachStatic(*asset, 0, shared_etag, request, io);
     } else if (StartsWith(request.url, "/admin/") || TestStr(request.url, "/admin")) {
         const char *admin_url = request.url + 6;
 
@@ -362,6 +368,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         writer->Write("Goupile Admin");
                     } else if (TestStr(key, "BASE_URL")) {
                         writer->Write("/admin/");
+                    } else if (TestStr(key, "STATIC_URL")) {
+                        Print(writer, "/admin/static/%1/", shared_etag);
+                    } else if (TestStr(key, "BUSTER")) {
+                        writer->Write(shared_etag);
                     } else if (TestStr(key, "ENV_JSON")) {
                         json_Writer json(writer);
                         char buf[128];
@@ -370,8 +380,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         json.Key("urls"); json.StartObject();
                             json.Key("base"); json.String("/admin/");
                             json.Key("instance"); json.String("/admin/");
+                            json.Key("static"); json.String(Fmt(buf, "/admin/static/%1/", shared_etag).ptr);
                         json.EndObject();
                         json.Key("title"); json.String("Admin");
+                        json.Key("buster"); json.String(shared_etag);
                         json.Key("permissions"); json.StartArray();
                         for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
                             Span<const char> str = ConvertToJsonName(UserPermissionNames[i], buf);
@@ -386,19 +398,21 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                     }
                 });
 
-                AttachStatic(copy, shared_etag, request, io);
+                AttachStatic(copy, 0, shared_etag, request, io);
                 return;
             } else if (TestStr(admin_url, "/favicon.png")) {
-                const AssetInfo *asset = assets_map.FindValue("/static/admin.png", nullptr);
+                const AssetInfo *asset = assets_map.FindValue("/admin/favicon.png", nullptr);
                 RG_ASSERT(asset);
 
-                AttachStatic(*asset, shared_etag, request, io);
+                AttachStatic(*asset, 0, shared_etag, request, io);
                 return;
             } else {
                 const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
 
                 if (asset) {
-                    AttachStatic(*asset, shared_etag, request, io);
+                    int max_age = StartsWith(admin_url, "/static/") ? 86400 : 0;
+                    AttachStatic(*asset, max_age, shared_etag, request, io);
+
                     return;
                 }
             }
@@ -537,7 +551,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 int64_t fs_version = master->fs_version.load(std::memory_order_relaxed);
 
                 char master_etag[64];
-                Fmt(master_etag, "%1/%2/%3", shared_etag, master->unique, fs_version);
+                Fmt(master_etag, "%1_%2_%3", shared_etag, master->unique, fs_version);
 
                 // XXX: Use some kind of dynamic cache to avoid doing this all the time
                 AssetInfo copy = *asset;
@@ -548,6 +562,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         writer->Write(master->title);
                     } else if (TestStr(key, "BASE_URL")) {
                         Print(writer, "/%1/", master->key);
+                    } else if (TestStr(key, "STATIC_URL")) {
+                        Print(writer, "/%1/static/%2/", master->key, shared_etag);
+                    } else if (TestStr(key, "BUSTER")) {
+                        writer->Write(master_etag);
                     } else if (TestStr(key, "ENV_JSON")) {
                         json_Writer json(writer);
                         char buf[512];
@@ -556,14 +574,13 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         json.Key("urls"); json.StartObject();
                             json.Key("base"); json.String(Fmt(buf, "/%1/", master->key).ptr);
                             json.Key("instance"); json.String(Fmt(buf, "/%1/", master->key).ptr);
+                            json.Key("static"); json.String(Fmt(buf, "/%1/static/%2/", master->key, shared_etag).ptr);
                             json.Key("files"); json.String(Fmt(buf, "/%1/files/%2/", master->key, fs_version).ptr);
                         json.EndObject();
-                        json.Key("version"); json.Int64(fs_version);
                         json.Key("title"); json.String(master->title);
+                        json.Key("version"); json.Int64(fs_version);
+                        json.Key("buster"); json.String(master_etag);
                         json.Key("cache_offline"); json.Bool(master->config.use_offline);
-                        if (master->config.use_offline) {
-                            json.Key("cache_key"); json.String(master_etag);
-                        }
                         {
                             Span<const char> str = ConvertToJsonName(SyncModeNames[(int)master->config.sync_mode], buf);
                             json.Key("sync_mode"); json.String(str.ptr, (size_t)str.len);
@@ -592,10 +609,12 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                     }
                 });
 
-                AttachStatic(copy, master_etag, request, io);
+                AttachStatic(copy, 0, master_etag, request, io);
                 return;
             } else if (asset) {
-                AttachStatic(*asset, shared_etag, request, io);
+                int max_age = StartsWith(instance_url, "/static/") ? 86400 : 0;
+                AttachStatic(*asset, max_age, shared_etag, request, io);
+
                 return;
             }
         }

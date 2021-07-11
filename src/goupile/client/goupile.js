@@ -215,7 +215,7 @@ const goupile = new function() {
     async function runLoginScreen(e) {
         return ui.runScreen((d, resolve, reject) => {
             d.output(html`
-                <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
+                <img id="gp_logo" src=${ENV.urls.base + 'favicon.png?' + ENV.buster} alt="" />
                 <div id="gp_title">${ENV.title}</div>
                 <br/>
             `);
@@ -260,7 +260,7 @@ const goupile = new function() {
     function runConfirmScreen() {
         return ui.runScreen((d, resolve, reject) => {
             d.output(html`
-                <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
+                <img id="gp_logo" src=${ENV.urls.base + 'favicon.png?' + ENV.buster} alt="" />
                 <br/><br/>
                 Veuillez entrer le code secret qui vous a été <b>envoyé par SMS</b>.
                 <br/>

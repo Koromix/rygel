@@ -18,7 +18,7 @@ self.addEventListener('install', e => {
         let [assets, list, cache] = await Promise.all([
             net.fetchJson(`${ENV.urls.base}api/files/static`),
             net.fetchJson(util.pasteURL(`${ENV.urls.base}api/files/list`, { version: ENV.version })),
-            caches.open(ENV.cache_key)
+            caches.open(ENV.buster)
         ]);
 
         await cache.addAll(assets.map(url => `${ENV.urls.base}${url}`));
@@ -33,7 +33,7 @@ self.addEventListener('activate', e => {
         let keys = await caches.keys();
 
         for (let key of keys) {
-            if (key !== ENV.cache_key)
+            if (key !== ENV.buster)
                 await caches.delete(key);
         }
     }());
