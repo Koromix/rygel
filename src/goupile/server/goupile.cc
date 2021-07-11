@@ -88,6 +88,7 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         {"mmap/anon", sec_FilterAction::Allow},
         {"mmap/shared", sec_FilterAction::Allow},
         {"munmap", sec_FilterAction::Allow},
+        {"mremap", sec_FilterAction::Allow},
         {"mprotect/noexec", sec_FilterAction::Allow},
         {"mlock", sec_FilterAction::Allow},
         {"mlock2", sec_FilterAction::Allow},
