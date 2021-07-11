@@ -445,10 +445,6 @@ function InstanceController() {
                         ${visible_rows.length} ${visible_rows.length < data_rows.length ? `/ ${data_rows.length} ` : ''} ${data_rows.length > 1 ? 'lignes' : 'ligne'}
                         ${ENV.sync_mode !== 'offline' ? html`(<a @click=${ui.wrapAction(e => syncRecords())}>synchroniser</a>)` : ''}
                     </p>
-                    ${ENV.backup_key != null ? html`
-                        <a @click=${ui.wrapAction(backupRecords)}>Faire une sauvegarde chiffrée</a>
-                        <div style="flex: 1;"></div>
-                    ` : ''}
                 </div>
 
                 <table class="ui_table fixed" id="ins_data"
@@ -523,6 +519,16 @@ function InstanceController() {
                         ${!visible_rows.length ? html`<tr><td colspan=${1 + data_form.menu.length}>Aucune ligne à afficher</td></tr>` : ''}
                     </tbody>
                 </table>
+
+                <div class="ui_quick">
+                    ${goupile.hasPermission('data_export') ? html`
+                        <a href=${ENV.urls.instance + 'api/records/export'} download>Exporter les données</a>
+                    ` : ''}
+                    <div style="flex: 1;"></div>
+                    ${ENV.backup_key != null ? html`
+                        <a @click=${ui.wrapAction(backupRecords)}>Faire une sauvegarde chiffrée</a>
+                    ` : ''}
+                </div>
             </div>
         `;
     }

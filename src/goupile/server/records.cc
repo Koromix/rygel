@@ -12,62 +12,18 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "../../core/libcc/libcc.hh"
+#include "domain.hh"
 #include "goupile.hh"
 #include "instance.hh"
 #include "session.hh"
 #include "../../core/libwrap/json.hh"
+#ifdef _WIN32
+    #include <io.h>
+#else
+    #include <unistd.h>
+#endif
 
 namespace RG {
-
-static void ExportRecord(sq_Statement *stmt, json_Writer *json)
-{
-    int64_t rowid = sqlite3_column_int64(*stmt, 0);
-
-    json->StartObject();
-
-    json->Key("ulid"); json->String((const char *)sqlite3_column_text(*stmt, 1));
-    json->Key("hid"); switch (sqlite3_column_type(*stmt, 2)) {
-        case SQLITE_NULL: { json->Null(); } break;
-        case SQLITE_INTEGER: { json->Int64(sqlite3_column_int64(*stmt, 2)); } break;
-        default: { json->String((const char *)sqlite3_column_text(*stmt, 2)); } break;
-    }
-    json->Key("form"); json->String((const char *)sqlite3_column_text(*stmt, 3));
-    json->Key("anchor"); json->Int64(sqlite3_column_int64(*stmt, 4));
-    if (sqlite3_column_type(*stmt, 5) != SQLITE_NULL) {
-        json->Key("parent"); json->StartObject();
-        json->Key("ulid"); json->String((const char *)sqlite3_column_text(*stmt, 5));
-        json->Key("version"); json->Int64(sqlite3_column_int64(*stmt, 6));
-        json->EndObject();
-    } else {
-        json->Key("parent"); json->Null();
-    }
-
-    json->Key("fragments"); json->StartArray();
-    if (sqlite3_column_type(*stmt, 7) != SQLITE_NULL) {
-        do {
-            json->StartObject();
-
-            const char *type = (const char *)sqlite3_column_text(*stmt, 9);
-
-            json->Key("anchor"); json->Int64(sqlite3_column_int64(*stmt, 7));
-            json->Key("version"); json->Int64(sqlite3_column_int64(*stmt, 8));
-            json->Key("type"); json->String(type);
-            json->Key("username"); json->String((const char *)sqlite3_column_text(*stmt, 10));
-            json->Key("mtime"); json->String((const char *)sqlite3_column_text(*stmt, 11));
-            if (TestStr(type, "save")) {
-                json->Key("page"); json->String((const char *)sqlite3_column_text(*stmt, 12));
-                json->Key("values"); json->Raw((const char *)sqlite3_column_text(*stmt, 13));
-            }
-
-            json->EndObject();
-        } while (stmt->Step() && sqlite3_column_int64(*stmt, 0) == rowid);
-    } else {
-        stmt->Step();
-    }
-    json->EndArray();
-
-    json->EndObject();
-}
 
 void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
@@ -134,7 +90,52 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
     json.StartArray();
     if (stmt.Step()) {
         do {
-            ExportRecord(&stmt, &json);
+            int64_t rowid = sqlite3_column_int64(stmt, 0);
+
+            json.StartObject();
+
+            json.Key("ulid"); json.String((const char *)sqlite3_column_text(stmt, 1));
+            json.Key("hid"); switch (sqlite3_column_type(stmt, 2)) {
+                case SQLITE_NULL: { json.Null(); } break;
+                case SQLITE_INTEGER: { json.Int64(sqlite3_column_int64(stmt, 2)); } break;
+                default: { json.String((const char *)sqlite3_column_text(stmt, 2)); } break;
+            }
+            json.Key("form"); json.String((const char *)sqlite3_column_text(stmt, 3));
+            json.Key("anchor"); json.Int64(sqlite3_column_int64(stmt, 4));
+            if (sqlite3_column_type(stmt, 5) != SQLITE_NULL) {
+                json.Key("parent"); json.StartObject();
+                json.Key("ulid"); json.String((const char *)sqlite3_column_text(stmt, 5));
+                json.Key("version"); json.Int64(sqlite3_column_int64(stmt, 6));
+                json.EndObject();
+            } else {
+                json.Key("parent"); json.Null();
+            }
+
+            json.Key("fragments"); json.StartArray();
+            if (sqlite3_column_type(stmt, 7) != SQLITE_NULL) {
+                do {
+                    json.StartObject();
+
+                    const char *type = (const char *)sqlite3_column_text(stmt, 9);
+
+                    json.Key("anchor"); json.Int64(sqlite3_column_int64(stmt, 7));
+                    json.Key("version"); json.Int64(sqlite3_column_int64(stmt, 8));
+                    json.Key("type"); json.String(type);
+                    json.Key("username"); json.String((const char *)sqlite3_column_text(stmt, 10));
+                    json.Key("mtime"); json.String((const char *)sqlite3_column_text(stmt, 11));
+                    if (TestStr(type, "save")) {
+                        json.Key("page"); json.String((const char *)sqlite3_column_text(stmt, 12));
+                        json.Key("values"); json.Raw((const char *)sqlite3_column_text(stmt, 13));
+                    }
+
+                    json.EndObject();
+                } while (stmt.Step() && sqlite3_column_int64(stmt, 0) == rowid);
+            } else {
+                stmt.Step();
+            }
+            json.EndArray();
+
+            json.EndObject();
         } while (stmt.IsRow());
     }
     if (!stmt.IsValid())
@@ -430,6 +431,432 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
             return;
 
         io->AttachText(200, "Done!");
+    });
+}
+
+struct ExportTable {
+    enum class Type {
+        Unknown,
+        Integer,
+        Double,
+        String
+    };
+
+    struct Row {
+        const char *ulid;
+        const char *hid;
+    };
+
+    struct Column {
+        const char *name;
+        const char *escaped_name;
+
+        Column *prev;
+        Column *next;
+        const char *prev_key;
+
+        Type type;
+        HeapArray<const char *> values;
+
+        RG_HASHTABLE_HANDLER(Column, name);
+    };
+
+    const char *name;
+    const char *escaped_name;
+
+    HeapArray<Row> rows;
+
+    BucketArray<Column> columns;
+    HashTable<const char *, Column *> columns_map;
+    Column *first_column;
+    HeapArray<const Column *> ordered_columns;
+
+    RG_HASHTABLE_HANDLER(ExportTable, name);
+};
+
+static const char *EscapeSqlName(const char *name, Allocator *alloc)
+{
+    HeapArray<char> buf(alloc);
+
+    buf.Append('"');
+    for (Size i = 0; name[i]; i++) {
+        char c = name[i];
+
+        if (c == '"') {
+            buf.Append("\"\"");
+        } else {
+            buf.Append(c);
+        }
+    }
+    buf.Append('"');
+    buf.Append(0);
+
+    return buf.TrimAndLeak().ptr;
+}
+
+static ExportTable::Column *GetColumn(ExportTable *table, const char *key, const char *suffix,
+                                      const char *prev_key, Allocator *alloc)
+{
+    const char *name = suffix ? Fmt(alloc, "%1_%2", key, suffix).ptr : key;
+    ExportTable::Column *col = table->columns_map.FindValue(name, nullptr);
+
+    if (!col) {
+        col = table->columns.AppendDefault();
+        col->name = name;
+
+        table->columns_map.Set(col);
+
+        if (table->columns.len > 1) {
+            if (prev_key) {
+                ExportTable::Column *it = table->columns_map.FindValue(prev_key, nullptr);
+
+                if (it) {
+                    ExportTable::Column *next = it->next;
+
+                    while (next) {
+                        if (!next->prev_key)
+                            break;
+                        if (!TestStr(next->prev_key, prev_key))
+                            break;
+                        if (CmpStr(next->name, name) > 0)
+                            break;
+
+                        it = next;
+                        next = it->next;
+                    }
+
+                    if (it->next) {
+                        it->next->prev = col;
+                    }
+                    col->next = it->next;
+                    it->next = col;
+                    col->prev = it;
+                }
+            } else {
+                ExportTable::Column *last = &table->columns[table->columns.len - 1];
+
+                col->prev = last;
+                last->next = col;
+            }
+        } else {
+            table->first_column = col;
+        }
+    }
+
+    col->name = name;
+    col->escaped_name = EscapeSqlName(name, alloc);
+    col->prev_key = prev_key;
+    col->values.AppendDefault(table->rows.len - col->values.len);
+
+    return col;
+}
+
+void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    if (instance->config.sync_mode == SyncMode::Offline) {
+        LogError("Records API is disabled in Offline mode");
+        io->AttachError(403);
+        return;
+    }
+
+    RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!session->HasPermission(instance, UserPermission::DataExport)) {
+        LogError("User is not allowed to export data");
+        io->AttachError(403);
+        return;
+    }
+
+    io->RunAsync([=]() {
+        sq_Statement stmt;
+        if (!instance->db->Prepare(R"(SELECT e.rowid, e.ulid, e.hid, e.form, e.anchor,
+                                             e.parent_ulid, e.parent_version, f.anchor, f.version,
+                                             f.type, f.username, f.mtime, f.page, f.json FROM rec_entries e
+                                      INNER JOIN rec_fragments f ON (f.ulid = e.ulid)
+                                      ORDER BY e.rowid, f.anchor)", &stmt))
+            return;
+
+        const char *export_filename = CreateTemporaryFile(gp_domain.config.tmp_directory, "", ".tmp", &io->allocator);
+        RG_DEFER { UnlinkFile(export_filename); };
+
+        // Prepare export file
+        sq_Database db;
+        if (!db.Open(export_filename, SQLITE_OPEN_READWRITE))
+            return;
+
+        BucketArray<ExportTable> tables;
+        HashTable<const char *, ExportTable *> tables_map;
+        HashSet<const char *> masked_columns;
+
+        if (stmt.Step()) {
+            do {
+                int64_t rowid = sqlite3_column_int64(stmt, 0);
+                const char *ulid = (const char *)sqlite3_column_text(stmt, 1);
+                const char *hid = (const char *)sqlite3_column_text(stmt, 2);
+                const char *form = (const char *)sqlite3_column_text(stmt, 3);
+                bool deleted = false;
+
+                // Create or find relevant table
+                ExportTable *table = tables_map.FindValue(form, nullptr);
+                if (!table) {
+                    table = tables.AppendDefault();
+                    table->name = DuplicateString(form, &io->allocator).ptr;
+                    table->escaped_name = EscapeSqlName(form, &io->allocator);
+
+                    tables_map.Set(table);
+                }
+
+                // Insert row metadata
+                {
+                    ExportTable::Row row = {};
+
+                    row.ulid = DuplicateString(ulid, &io->allocator).ptr;
+                    row.hid = DuplicateString(hid, &io->allocator).ptr;
+
+                    table->rows.Append(row);
+                }
+
+                do {
+                    const char *type = (const char *)sqlite3_column_text(stmt, 9);
+
+                    if (TestStr(type, "save")) {
+                        Span<const uint8_t> json = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 13),
+                                                            sqlite3_column_bytes(stmt, 13));
+                        StreamReader reader(json, "<json>");
+                        json_Parser parser(&reader, &io->allocator);
+
+                        const char *prev_key = nullptr;
+
+                        parser.ParseObject();
+                        while (parser.InObject()) {
+                            char buf[64];
+
+                            const char *key = "";
+                            parser.ParseKey(&key);
+
+                            switch (parser.PeekToken()) {
+                                case json_TokenType::Null: {
+                                    parser.ParseNull();
+
+                                    ExportTable::Column *col = GetColumn(table, key, nullptr, prev_key, &io->allocator);
+                                    col->values[col->values.len - 1] = nullptr;
+                                } break;
+                                case json_TokenType::Bool: {
+                                    bool value = false;
+                                    parser.ParseBool(&value);
+
+                                    ExportTable::Column *col = GetColumn(table, key, nullptr, prev_key, &io->allocator);
+                                    col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
+                                    col->values[col->values.len - 1] = value ? "1" : "0";
+                                } break;
+                                case json_TokenType::Integer: {
+                                    int64_t value = 0;
+                                    parser.ParseInt(&value);
+
+                                    ExportTable::Column *col = GetColumn(table, key, nullptr, prev_key, &io->allocator);
+                                    col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
+                                    col->values[col->values.len - 1] = Fmt(&io->allocator, "%1", value).ptr;
+                                } break;
+                                case json_TokenType::Double: {
+                                    double value = 0.0;
+                                    parser.ParseDouble(&value);
+
+                                    ExportTable::Column *col = GetColumn(table, key, nullptr, prev_key, &io->allocator);
+                                    col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Double);
+                                    col->values[col->values.len - 1] = Fmt(&io->allocator, "%1", value).ptr;
+                                } break;
+                                case json_TokenType::String: {
+                                    const char *str = nullptr;
+                                    parser.ParseString(&str);
+
+                                    ExportTable::Column *col = GetColumn(table, key, nullptr, prev_key, &io->allocator);
+                                    col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::String);
+                                    col->values[col->values.len - 1] = DuplicateString(str, &io->allocator).ptr;
+                                } break;
+
+                                case json_TokenType::StartArray: {
+                                    masked_columns.Set(key);
+
+                                    parser.ParseArray();
+                                    while (parser.InArray()) {
+                                        switch (parser.PeekToken()) {
+                                            case json_TokenType::Null: {
+                                                parser.ParseNull();
+
+                                                ExportTable::Column *col = GetColumn(table, key, "null", prev_key, &io->allocator);
+                                                col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
+                                                col->values[col->values.len - 1] = "1";
+                                            } break;
+                                            case json_TokenType::Bool: {
+                                                bool value = false;
+                                                parser.ParseBool(&value);
+
+                                                ExportTable::Column *col = GetColumn(table, key, value ? "1" : "0", prev_key, &io->allocator);
+                                                col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
+                                                col->values[col->values.len - 1] = "1";
+                                            } break;
+                                            case json_TokenType::Integer: {
+                                                int64_t value = 0;
+                                                parser.ParseInt(&value);
+
+                                                const char *str = Fmt(buf, "%1", value).ptr;
+
+                                                ExportTable::Column *col = GetColumn(table, key, str, prev_key, &io->allocator);
+                                                col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
+                                                col->values[col->values.len - 1] = "1";
+                                            } break;
+                                            case json_TokenType::Double: {
+                                                double value = 0.0;
+                                                parser.ParseDouble(&value);
+
+                                                const char *str = Fmt(buf, "%1", value).ptr;
+
+                                                ExportTable::Column *col = GetColumn(table, key, str, prev_key, &io->allocator);
+                                                col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
+                                                col->values[col->values.len - 1] = "1";
+                                            } break;
+                                            case json_TokenType::String: {
+                                                const char *str = nullptr;
+                                                parser.ParseString(&str);
+
+                                                ExportTable::Column *col = GetColumn(table, key, str, prev_key, &io->allocator);
+                                                col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::String);
+                                                col->values[col->values.len - 1] = "1";
+                                            } break;
+
+                                            default: {
+                                                LogError("The exporter does not support arrays of objects");
+                                                return;
+                                            } break;
+                                        }
+                                    }
+                                } break;
+
+                                default: {
+                                    LogError("Cannot yet export complex or nested values");
+                                    return;
+                                } break;
+                            }
+
+                            prev_key = key;
+                        }
+
+                        deleted = !parser.IsValid();
+                    } else if (TestStr(type, "delete")) {
+                        deleted = true;
+                    }
+                } while (stmt.Step() && sqlite3_column_int64(stmt, 0) == rowid);
+
+                if (!deleted) {
+                    for (ExportTable::Column &col: table->columns) {
+                        col.values.AppendDefault(table->rows.len - col.values.len);
+                    }
+                } else {
+                    table->rows.len--;
+
+                    for (ExportTable::Column &col: table->columns) {
+                        col.values.len = std::min(table->rows.len, col.values.len);
+                    }
+                }
+            } while (stmt.IsRow());
+        }
+        if (!stmt.IsValid())
+            return;
+
+        // Reorder columns
+        for (ExportTable &table: tables) {
+            const ExportTable::Column *it = table.first_column;
+
+            while (it) {
+                if (!masked_columns.Find(it->name)) {
+                    table.ordered_columns.Append(it);
+                }
+                it = it->next;
+            }
+        }
+
+        // Create tables
+        for (const ExportTable &table: tables) {
+            HeapArray<char> sql(&io->allocator);
+
+            Fmt(&sql, "CREATE TABLE %1 (__ulid TEXT, __hid TEXT, ", table.escaped_name);
+            for (const ExportTable::Column *col: table.ordered_columns) {
+                switch (col->type) {
+                    case ExportTable::Type::Unknown: { Fmt(&sql, "%1, ", col->escaped_name); } break;
+                    case ExportTable::Type::Integer: { Fmt(&sql, "%1 INTEGER, ", col->escaped_name); } break;
+                    case ExportTable::Type::Double: { Fmt(&sql, "%1 REAL, ", col->escaped_name); } break;
+                    case ExportTable::Type::String: { Fmt(&sql, "%1 TEXT, ", col->escaped_name); } break;
+                }
+            }
+            sql.len -= 2;
+            Fmt(&sql, ")");
+
+            if (!db.Run(sql.ptr))
+                return;
+        }
+
+        // Import data
+        for (const ExportTable &table: tables) {
+            HeapArray<char> sql(&io->allocator);
+
+            Fmt(&sql, "INSERT INTO %1 VALUES (?1, ?2, ", table.escaped_name);
+            for (Size i = 0; i < table.ordered_columns.len; i++) {
+                Fmt(&sql, "?%1, ", i + 3);
+            }
+            sql.len -= 2;
+            Fmt(&sql, ")");
+
+            sq_Statement stmt;
+            if (!db.Prepare(sql.ptr, &stmt))
+                return;
+
+            for (Size i = 0; i < table.rows.len; i++) {
+                stmt.Reset();
+
+                sqlite3_bind_text(stmt, 1, table.rows[i].ulid, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 2, table.rows[i].hid, -1, SQLITE_STATIC);
+                for (Size j = 0; j < table.ordered_columns.len; j++) {
+                    const ExportTable::Column *col = table.ordered_columns[j];
+                    sqlite3_bind_text(stmt, (int)j + 3, col->values[i], -1, SQLITE_STATIC);
+                }
+
+                if (!stmt.Run())
+                    return;
+            }
+        }
+
+        if (!db.Close())
+            return;
+
+        FileInfo file_info;
+        if (!StatFile(export_filename, &file_info)) {
+            LogError("File '%1' has disappeared", export_filename);
+            return;
+        }
+
+        int fd = OpenDescriptor(export_filename, (int)OpenFileFlag::Read | (int)OpenFileFlag::Unlinkable);
+        if (fd < 0)
+            return;
+        RG_DEFER_N(fd_guard) { close(fd); };
+
+        MHD_Response *response = MHD_create_response_from_fd((uint64_t)file_info.size, fd);
+        if (!response)
+            return;
+        fd_guard.Disable();
+        io->AttachResponse(200, response);
+
+        // Ask browser to download
+        {
+            int64_t time = GetUnixTime();
+            const char *disposition = Fmt(&io->allocator, "attachment; filename=\"%1_%2.db\"",
+                                                          instance->key, FmtTimeISO(DecomposeTime(time))).ptr;
+            io->AddHeader("Content-Disposition", disposition);
+        }
     });
 }
 
