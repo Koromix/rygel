@@ -370,8 +370,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         writer->Write("/admin/");
                     } else if (TestStr(key, "STATIC_URL")) {
                         Print(writer, "/admin/static/%1/", shared_etag);
-                    } else if (TestStr(key, "BUSTER")) {
-                        writer->Write(shared_etag);
                     } else if (TestStr(key, "ENV_JSON")) {
                         json_Writer json(writer);
                         char buf[128];
@@ -383,7 +381,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                             json.Key("static"); json.String(Fmt(buf, "/admin/static/%1/", shared_etag).ptr);
                         json.EndObject();
                         json.Key("title"); json.String("Admin");
-                        json.Key("buster"); json.String(shared_etag);
                         json.Key("permissions"); json.StartArray();
                         for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
                             Span<const char> str = ConvertToJsonName(UserPermissionNames[i], buf);
@@ -564,8 +561,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                         Print(writer, "/%1/", master->key);
                     } else if (TestStr(key, "STATIC_URL")) {
                         Print(writer, "/%1/static/%2/", master->key, shared_etag);
-                    } else if (TestStr(key, "BUSTER")) {
-                        writer->Write(master_etag);
                     } else if (TestStr(key, "ENV_JSON")) {
                         json_Writer json(writer);
                         char buf[512];
