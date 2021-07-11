@@ -145,7 +145,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
             return true;
         }
 
-        io->AddCachingHeaders(explicit_version ? 86400 : 0, sha256);
+        io->AddCachingHeaders(explicit_version ? (365 * 86400) : 0, sha256);
     }
 
     // Negociate content encoding
