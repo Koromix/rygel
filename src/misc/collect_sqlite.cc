@@ -185,17 +185,17 @@ Options:
                         FormatSha256(frame.sha256, sha256);
 
                         if (verbosity >= 3) {
-                            PrintLn("    %!D..+ Log:%!0 %1 (%2)", DecomposeTime(frame.mtime), sha256);
+                            PrintLn("    %!D..+ Log:%!0 %1 (%2)", FmtTimeNice(DecomposeTime(frame.mtime)), sha256);
                         } else {
-                            PrintLn("    %!D..+ Log:%!0 %1", DecomposeTime(frame.mtime));
+                            PrintLn("    %!D..+ Log:%!0 %1", FmtTimeNice(DecomposeTime(frame.mtime)));
                         }
                     }
                 } else {
-                    PrintLn("  %!y..- Generation '%1':%!0 %2", basename, DecomposeTime(version.mtime));
+                    PrintLn("  %!y..- Generation '%1':%!0 %2", basename, FmtTimeNice(DecomposeTime(version.mtime)));
                 }
             }
         } else {
-            PrintLn("  - Time: %!B..%1%!0", DecomposeTime(snapshot.mtime));
+            PrintLn("  - Time: %!B..%1%!0", FmtTimeNice(DecomposeTime(snapshot.mtime)));
         }
     }
 

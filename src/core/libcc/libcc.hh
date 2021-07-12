@@ -2881,7 +2881,8 @@ enum class FmtType {
     MemorySize,
     DiskSize,
     Date,
-    Time,
+    TimeISO,
+    TimeNice,
     Random,
     FlagNames,
     FlagOptions,
@@ -2958,7 +2959,6 @@ public:
     FmtArg(double d) : type(FmtType::Double) { u.d = { d, 0, INT_MAX }; }
     FmtArg(const void *ptr) : type(FmtType::Hexadecimal) { u.u = (uint64_t)ptr; }
     FmtArg(const Date &date) : type(FmtType::Date) { u.date = date; }
-    FmtArg(const TimeSpec &spec) : type(FmtType::Time) { u.time = spec; }
 
     FmtArg &Repeat(int new_repeat) { repeat = new_repeat; return *this; }
     FmtArg &Pad(int len, char c = ' ') { pad_char = c; pad_len = len; return *this; }
@@ -3016,6 +3016,22 @@ static inline FmtArg FmtDiskSize(Size size)
     FmtArg arg;
     arg.type = FmtType::DiskSize;
     arg.u.size = size;
+    return arg;
+}
+
+static inline FmtArg FmtTimeISO(TimeSpec spec)
+{
+    FmtArg arg;
+    arg.type = FmtType::TimeISO;
+    arg.u.time = spec;
+    return arg;
+}
+
+static inline FmtArg FmtTimeNice(TimeSpec spec)
+{
+    FmtArg arg;
+    arg.type = FmtType::TimeNice;
+    arg.u.time = spec;
     return arg;
 }
 

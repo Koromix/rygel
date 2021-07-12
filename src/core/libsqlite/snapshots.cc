@@ -336,7 +336,7 @@ static void LogFrameTime(const char *type, const char *filename, int64_t mtime)
     const char *basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
     TimeSpec spec = DecomposeTime(mtime);
 
-    LogInfo("Restoring %1 '%2' (%3)", type, basename, spec);
+    LogInfo("Restoring %1 '%2' (%3)", type, basename, FmtTimeNice(spec));
 }
 
 bool sq_RestoreSnapshot(const sq_SnapshotInfo &snapshot, const char *dest_filename, bool overwrite)

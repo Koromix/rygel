@@ -1174,7 +1174,26 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 out_buf.Append(FormatUnsignedToDecimal((uint64_t)arg.u.date.st.day, num_buf));
                 out = out_buf;
             } break;
-            case FmtType::Time: {
+
+            case FmtType::TimeISO: {
+                if (arg.u.time.offset) {
+                    int offset_h = arg.u.time.offset / 60;
+                    int offset_m = arg.u.time.offset % 60;
+
+                    out_buf.len = Fmt(out_buf.data, "%1%2%3T%4%5%6.%7%8%9%10",
+                                      FmtArg(arg.u.time.year).Pad0(-2), FmtArg(arg.u.time.month).Pad0(-2),
+                                      FmtArg(arg.u.time.day).Pad0(-2), FmtArg(arg.u.time.hour).Pad0(-2),
+                                      FmtArg(arg.u.time.min).Pad0(-2), FmtArg(arg.u.time.sec).Pad0(-2), FmtArg(arg.u.time.msec).Pad0(-3),
+                                      offset_h >= 0 ? "+" : "", FmtArg(offset_h).Pad0(-2), FmtArg(offset_m).Pad0(-2)).len;
+                } else {
+                    out_buf.len = Fmt(out_buf.data, "%1%2%3T%4%5%6.%7Z",
+                                      FmtArg(arg.u.time.year).Pad0(-2), FmtArg(arg.u.time.month).Pad0(-2),
+                                      FmtArg(arg.u.time.day).Pad0(-2), FmtArg(arg.u.time.hour).Pad0(-2),
+                                      FmtArg(arg.u.time.min).Pad0(-2), FmtArg(arg.u.time.sec).Pad0(-2), FmtArg(arg.u.time.msec).Pad0(-3)).len;
+                }
+                out = out_buf;
+            } break;
+            case FmtType::TimeNice: {
                 int offset_h = arg.u.time.offset / 60;
                 int offset_m = arg.u.time.offset % 60;
 
@@ -1276,7 +1295,8 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                         case FmtType::MemorySize: { arg2.u.size = *(const Size *)ptr; } break;
                         case FmtType::DiskSize: { arg2.u.size = *(const Size *)ptr; } break;
                         case FmtType::Date: { arg2.u.date = *(const Date *)ptr; } break;
-                        case FmtType::Time: { arg2.u.time = *(const TimeSpec *)ptr; } break;
+                        case FmtType::TimeISO:
+                        case FmtType::TimeNice: { arg2.u.time = *(const TimeSpec *)ptr; } break;
                         case FmtType::Random: { RG_UNREACHABLE(); } break;
                         case FmtType::FlagNames: { RG_UNREACHABLE(); } break;
                         case FmtType::FlagOptions: { RG_UNREACHABLE(); } break;
