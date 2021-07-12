@@ -195,7 +195,7 @@ Options:
                 }
             }
         } else {
-            PrintLn("  - Time: %!B..%1%!0", FmtTimeNice(DecomposeTime(snapshot.mtime)));
+            PrintLn("  - Time: %!y..%1%!0", FmtTimeNice(DecomposeTime(snapshot.mtime)));
         }
     }
 
