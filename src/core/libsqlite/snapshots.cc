@@ -216,7 +216,7 @@ bool sq_Database::CopyWAL()
             return false;
         crypto_hash_sha256_update(&snapshot_wal_state, buf.data, buf.len);
 
-        snapshot_data |= buf.len;
+        snapshot_data |= buf.len > 0;
     } while (!snapshot_wal_reader.IsEOF());
 
     return true;
