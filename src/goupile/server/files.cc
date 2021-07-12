@@ -124,7 +124,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
                                   WHERE i.version = ?1 AND i.filename = ?2)", &stmt))
         return true;
     sqlite3_bind_int64(stmt, 1, fs_version);
-    sqlite3_bind_text(stmt, 2, filename.ptr, filename.len, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, filename.ptr, (int)filename.len, SQLITE_STATIC);
     if (!stmt.Step())
         return !stmt.IsValid();
 
