@@ -2622,29 +2622,70 @@ int OpenDescriptor(const char *filename, unsigned int flags)
     if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
         return -1;
 
+    DWORD access = 0;
+    DWORD share = 0;
+    DWORD creation = 0;
     int oflags = -1;
     switch (flags & ((int)OpenFileFlag::Read |
                      (int)OpenFileFlag::Write |
                      (int)OpenFileFlag::Append)) {
-        case (int)OpenFileFlag::Read: { oflags = _O_RDONLY | _O_BINARY | _O_NOINHERIT; } break;
-        case (int)OpenFileFlag::Write: { oflags = _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT; } break;
-        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: { oflags = _O_RDWR | _O_CREAT | _O_TRUNC |
-                                                                            _O_BINARY | _O_NOINHERIT; } break;
-        case (int)OpenFileFlag::Append: { oflags = _O_WRONLY | _O_CREAT | _O_APPEND | _O_BINARY | _O_NOINHERIT; } break;
+        case (int)OpenFileFlag::Read: {
+            access = GENERIC_READ;
+            share = FILE_SHARE_READ | FILE_SHARE_WRITE;
+            creation = OPEN_EXISTING;
+
+            oflags = _O_RDONLY | _O_BINARY | _O_NOINHERIT;
+        } break;
+        case (int)OpenFileFlag::Write: {
+            access = GENERIC_WRITE;
+            share = FILE_SHARE_READ | FILE_SHARE_WRITE;
+            creation = (flags & (int)OpenFileFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
+
+            oflags = _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT;
+        } break;
+        case (int)OpenFileFlag::Read | (int)OpenFileFlag::Write: { 
+            access = GENERIC_READ | GENERIC_WRITE;
+            share = FILE_SHARE_READ | FILE_SHARE_WRITE;
+            creation = (flags & (int)OpenFileFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
+
+            oflags = _O_RDWR | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT; 
+        } break;
+        case (int)OpenFileFlag::Append: {
+            access = GENERIC_WRITE;
+            share = FILE_SHARE_READ | FILE_SHARE_WRITE;
+            creation = (flags & (int)OpenFileFlag::Exclusive) ? CREATE_NEW : CREATE_ALWAYS;
+
+            oflags = _O_WRONLY | _O_CREAT | _O_APPEND | _O_BINARY | _O_NOINHERIT;
+        } break;
     }
     RG_ASSERT(oflags >= 0);
 
     if (flags & (int)OpenFileFlag::Exclusive) {
         oflags |= (int)_O_EXCL;
     }
+    if (flags & (int)OpenFileFlag::Unlinkable) {
+        share |= FILE_SHARE_DELETE;
+    }
 
-    int fd = _wopen(filename_w, oflags, _S_IREAD | _S_IWRITE);
-    if (fd < 0) {
-        if (errno == EEXIST) {
+    HANDLE h = CreateFileW(filename_w, access, share, nullptr, creation,
+                           FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (h == INVALID_HANDLE_VALUE) {
+        DWORD err = GetLastError();
+
+        if (err == ERROR_FILE_EXISTS) {
             LogError("File '%1' already exists", filename);
         } else {
-            LogError("Cannot open '%1': %2", filename, strerror(errno));
+            LogError("Cannot open '%1': %2", filename, GetWin32ErrorString(err));
         }
+
+        return -1;
+    }
+
+    int fd = _open_osfhandle((intptr_t)h, oflags);
+    if (fd < 0) {
+        LogError("Cannot open '%1': %2", filename, strerror(errno));
+        CloseHandle(h);
+
         return -1;
     }
 
@@ -3044,8 +3085,10 @@ const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, 
                                 Allocator *alloc, FILE **out_fp)
 {
     return CreateTemporaryPath(directory, prefix, extension, alloc, [&](const char *path) {
-        FILE *fp = OpenFile(path, (int)OpenFileFlag::Read | (int)OpenFileFlag::Write |
-                                  (int)OpenFileFlag::Exclusive);
+        int flags = (int)OpenFileFlag::Read | (int)OpenFileFlag::Write |
+                    (int)OpenFileFlag::Exclusive | (int)OpenFileFlag::Unlinkable;
+
+        FILE *fp = OpenFile(path, flags);
 
         if (fp) {
             if (out_fp) {
