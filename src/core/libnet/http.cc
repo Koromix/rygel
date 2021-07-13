@@ -612,10 +612,27 @@ void http_IO::AttachError(int code, const char *details)
 
     Span<char> page = Fmt(&allocator, "Error %1: %2\n%3", code,
                           MHD_get_reason_phrase_for((unsigned int)code), details);
-    MHD_Response *response = MHD_create_response_from_buffer((size_t)page.len, page.ptr, MHD_RESPMEM_PERSISTENT);
 
+    MHD_Response *response = MHD_create_response_from_buffer((size_t)page.len, page.ptr, MHD_RESPMEM_PERSISTENT);
     AttachResponse(code, response);
+
     AddHeader("Content-Type", "text/plain");
+}
+
+bool http_IO::AttachFile(int code, const char *filename)
+{
+    FileInfo file_info;
+    if (!StatFile(filename, &file_info))
+        return false;
+
+    int fd = OpenDescriptor(filename, (int)OpenFileFlag::Read | (int)OpenFileFlag::Unlinkable);
+    if (fd < 0)
+        return false;
+
+    MHD_Response *response = MHD_create_response_from_fd((uint64_t)file_info.size, fd);
+    AttachResponse(code, response);
+
+    return true;
 }
 
 void http_IO::AttachNothing(int code)

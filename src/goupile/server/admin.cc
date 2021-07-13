@@ -1850,32 +1850,10 @@ void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io)
 
     const char *filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
 
-    FileInfo file_info;
-    if (!StatFile(filename, &file_info)) {
-        LogError("Cannot find archive '%1'", basename);
-        io->AttachError(404);
+    if (!io->AttachFile(200, filename)) {
+        io->AttachError(404, "Cannot find this archive");
         return;
     }
-    if (file_info.type != FileType::File) {
-        LogError("Path does not point to a file");
-        io->AttachError(403);
-        return;
-    }
-
-    int fd = OpenDescriptor(filename, (int)OpenFileFlag::Read);
-    if (fd < 0)
-        return;
-#ifdef _WIN32
-    RG_DEFER_N(fd_guard) { _close(fd); };
-#else
-    RG_DEFER_N(fd_guard) { close(fd); };
-#endif
-
-    MHD_Response *response = MHD_create_response_from_fd((uint64_t)file_info.size, fd);
-    if (!response)
-        return;
-    fd_guard.Disable();
-    io->AttachResponse(200, response);
 
     // Ask browser to download
     {

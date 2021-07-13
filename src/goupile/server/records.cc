@@ -833,22 +833,8 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
         if (!db.Close())
             return;
 
-        FileInfo file_info;
-        if (!StatFile(export_filename, &file_info)) {
-            LogError("File '%1' has disappeared", export_filename);
+        if (!io->AttachFile(200, export_filename))
             return;
-        }
-
-        int fd = OpenDescriptor(export_filename, (int)OpenFileFlag::Read | (int)OpenFileFlag::Unlinkable);
-        if (fd < 0)
-            return;
-        RG_DEFER_N(fd_guard) { close(fd); };
-
-        MHD_Response *response = MHD_create_response_from_fd((uint64_t)file_info.size, fd);
-        if (!response)
-            return;
-        fd_guard.Disable();
-        io->AttachResponse(200, response);
 
         // Ask browser to download
         {
