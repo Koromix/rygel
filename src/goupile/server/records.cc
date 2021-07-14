@@ -468,9 +468,12 @@ struct ExportTable {
 
     BucketArray<Column> columns;
     HashTable<const char *, Column *> columns_map;
+    HeapArray<const Column *> ordered_columns;
+    HashSet<const char *> masked_columns;
+
     Column *first_column;
     Column *last_column;
-    HeapArray<const Column *> ordered_columns;
+    const char *prev_key;
 
     RG_HASHTABLE_HANDLER(ExportTable, name);
 };
@@ -495,13 +498,17 @@ static const char *EscapeSqlName(const char *name, Allocator *alloc)
     return buf.TrimAndLeak().ptr;
 }
 
-static ExportTable::Column *GetColumn(ExportTable *table, const char *key, const char *suffix,
-                                      const char *prev_key, Allocator *alloc)
+static ExportTable::Column *GetColumn(ExportTable *table, const char *prefix, const char *key,
+                                      const char *suffix, Allocator *alloc)
 {
     const char *name;
     {
         HeapArray<char> buf(alloc);
 
+        for (Size i = 0; prefix[i]; i++) {
+            char c = LowerAscii(prefix[i]);
+            buf.Append(c);
+        }
         for (Size i = 0; key[i]; i++) {
             char c = LowerAscii(key[i]);
             buf.Append(c);
@@ -527,8 +534,8 @@ static ExportTable::Column *GetColumn(ExportTable *table, const char *key, const
         table->columns_map.Set(col);
 
         if (table->columns.len > 1) {
-            if (prev_key) {
-                ExportTable::Column *it = table->columns_map.FindValue(prev_key, nullptr);
+            if (table->prev_key) {
+                ExportTable::Column *it = table->columns_map.FindValue(table->prev_key, nullptr);
 
                 if (it) {
                     ExportTable::Column *next = it->next;
@@ -536,7 +543,7 @@ static ExportTable::Column *GetColumn(ExportTable *table, const char *key, const
                     while (next) {
                         if (!next->prev_key)
                             break;
-                        if (!TestStr(next->prev_key, prev_key))
+                        if (!TestStr(next->prev_key, table->prev_key))
                             break;
                         if (CmpStr(next->name, name) > 0)
                             break;
@@ -569,57 +576,139 @@ static ExportTable::Column *GetColumn(ExportTable *table, const char *key, const
 
     col->name = name;
     col->escaped_name = EscapeSqlName(name, alloc);
-    col->prev_key = prev_key;
+    col->prev_key = table->prev_key;
     col->values.AppendDefault(table->rows.len - col->values.len);
 
     return col;
 }
 
-static bool SkipObject(json_Parser *parser) {
+// XXX: Limit depth
+static bool ParseObject(json_Parser *parser, ExportTable *table, const char *prefix, Allocator *alloc)
+{
     parser->ParseObject();
-
-    int depth = 0;
-
-    while (parser->InObject() || (depth-- && parser->InObject())) {
+    while (parser->InObject()) {
         const char *key = "";
         parser->ParseKey(&key);
 
         switch (parser->PeekToken()) {
-            case json_TokenType::Null: { parser->ParseNull(); } break;
+            case json_TokenType::Null: {
+                parser->ParseNull();
+
+                ExportTable::Column *col = GetColumn(table, prefix, key, nullptr, alloc);
+                col->values[col->values.len - 1] = nullptr;
+            } break;
             case json_TokenType::Bool: {
                 bool value = false;
                 parser->ParseBool(&value);
+
+                ExportTable::Column *col = GetColumn(table, prefix, key, nullptr, alloc);
+                col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
+                col->values[col->values.len - 1] = value ? "1" : "0";
             } break;
             case json_TokenType::Integer: {
                 int64_t value = 0;
                 parser->ParseInt(&value);
+
+                ExportTable::Column *col = GetColumn(table, prefix, key, nullptr, alloc);
+                col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
+                col->values[col->values.len - 1] = Fmt(alloc, "%1", value).ptr;
             } break;
             case json_TokenType::Double: {
                 double value = 0.0;
                 parser->ParseDouble(&value);
+
+                ExportTable::Column *col = GetColumn(table, prefix, key, nullptr, alloc);
+                col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Double);
+                col->values[col->values.len - 1] = Fmt(alloc, "%1", value).ptr;
             } break;
             case json_TokenType::String: {
                 const char *str = nullptr;
                 parser->ParseString(&str);
+
+                ExportTable::Column *col = GetColumn(table, prefix, key, nullptr, alloc);
+                col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::String);
+                col->values[col->values.len - 1] = DuplicateString(str, alloc).ptr;
             } break;
 
-            case json_TokenType::StartObject: {
-                parser->ParseObject();
+            case json_TokenType::StartArray: {
+                table->masked_columns.Set(key);
 
-                if (depth++ > 32) {
-                    LogError("Excessive nesting of objects");
-                    return false;
+                parser->ParseArray();
+                while (parser->InArray()) {
+                    switch (parser->PeekToken()) {
+                        case json_TokenType::Null: {
+                            parser->ParseNull();
+
+                            ExportTable::Column *col = GetColumn(table, prefix, key, "null", alloc);
+                            col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
+                            col->values[col->values.len - 1] = "1";
+                        } break;
+                        case json_TokenType::Bool: {
+                            bool value = false;
+                            parser->ParseBool(&value);
+
+                            ExportTable::Column *col = GetColumn(table, prefix, key, value ? "1" : "0", alloc);
+                            col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
+                            col->values[col->values.len - 1] = "1";
+                        } break;
+                        case json_TokenType::Integer: {
+                            int64_t value = 0;
+                            parser->ParseInt(&value);
+
+                            char buf[64];
+                            Fmt(buf, "%1", value);
+
+                            ExportTable::Column *col = GetColumn(table, prefix, key, buf, alloc);
+                            col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
+                            col->values[col->values.len - 1] = "1";
+                        } break;
+                        case json_TokenType::Double: {
+                            double value = 0.0;
+                            parser->ParseDouble(&value);
+
+                            char buf[64];
+                            Fmt(buf, "%1", value);
+
+                            ExportTable::Column *col = GetColumn(table, prefix, key, buf, alloc);
+                            col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
+                            col->values[col->values.len - 1] = "1";
+                        } break;
+                        case json_TokenType::String: {
+                            const char *str = nullptr;
+                            parser->ParseString(&str);
+
+                            ExportTable::Column *col = GetColumn(table, prefix, key, str, alloc);
+                            col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::String);
+                            col->values[col->values.len - 1] = "1";
+                        } break;
+
+                        default: {
+                            LogError("The exporter does not support arrays of objects");
+                            return false;
+                        } break;
+                    }
                 }
             } break;
 
+            case json_TokenType::StartObject: {
+                const char *nested_prefix = prefix[0] ? Fmt(alloc, "%1.%2.", prefix, key).ptr : key;
+
+                if (!ParseObject(parser, table, nested_prefix, alloc))
+                    return false;
+            } break;
+
             default: {
-                LogError("Unexpected JSON token type for '%1'", key);
+                if (parser->IsValid()) {
+                    LogError("Unexpected JSON token type for '%1'", key);
+                }
                 return false;
             } break;
         }
+
+        table->prev_key = key;
     }
 
-    return true;
+    return parser->IsValid();
 }
 
 void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
@@ -662,7 +751,6 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
 
         BucketArray<ExportTable> tables;
         HashTable<const char *, ExportTable *> tables_map;
-        HashSet<const char *> masked_columns;
 
         if (stmt.Step()) {
             do {
@@ -701,131 +789,7 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
                         StreamReader reader(json, "<json>");
                         json_Parser parser(&reader, &io->allocator);
 
-                        const char *prev_key = nullptr;
-
-                        parser.ParseObject();
-                        while (parser.InObject()) {
-                            char buf[64];
-
-                            const char *key = "";
-                            parser.ParseKey(&key);
-
-                            switch (parser.PeekToken()) {
-                                case json_TokenType::Null: {
-                                    parser.ParseNull();
-
-                                    ExportTable::Column *col = GetColumn(table, key, nullptr, prev_key, &io->allocator);
-                                    col->values[col->values.len - 1] = nullptr;
-                                } break;
-                                case json_TokenType::Bool: {
-                                    bool value = false;
-                                    parser.ParseBool(&value);
-
-                                    ExportTable::Column *col = GetColumn(table, key, nullptr, prev_key, &io->allocator);
-                                    col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
-                                    col->values[col->values.len - 1] = value ? "1" : "0";
-                                } break;
-                                case json_TokenType::Integer: {
-                                    int64_t value = 0;
-                                    parser.ParseInt(&value);
-
-                                    ExportTable::Column *col = GetColumn(table, key, nullptr, prev_key, &io->allocator);
-                                    col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
-                                    col->values[col->values.len - 1] = Fmt(&io->allocator, "%1", value).ptr;
-                                } break;
-                                case json_TokenType::Double: {
-                                    double value = 0.0;
-                                    parser.ParseDouble(&value);
-
-                                    ExportTable::Column *col = GetColumn(table, key, nullptr, prev_key, &io->allocator);
-                                    col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Double);
-                                    col->values[col->values.len - 1] = Fmt(&io->allocator, "%1", value).ptr;
-                                } break;
-                                case json_TokenType::String: {
-                                    const char *str = nullptr;
-                                    parser.ParseString(&str);
-
-                                    ExportTable::Column *col = GetColumn(table, key, nullptr, prev_key, &io->allocator);
-                                    col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::String);
-                                    col->values[col->values.len - 1] = DuplicateString(str, &io->allocator).ptr;
-                                } break;
-
-                                case json_TokenType::StartArray: {
-                                    masked_columns.Set(key);
-
-                                    parser.ParseArray();
-                                    while (parser.InArray()) {
-                                        switch (parser.PeekToken()) {
-                                            case json_TokenType::Null: {
-                                                parser.ParseNull();
-
-                                                ExportTable::Column *col = GetColumn(table, key, "null", prev_key, &io->allocator);
-                                                col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
-                                                col->values[col->values.len - 1] = "1";
-                                            } break;
-                                            case json_TokenType::Bool: {
-                                                bool value = false;
-                                                parser.ParseBool(&value);
-
-                                                ExportTable::Column *col = GetColumn(table, key, value ? "1" : "0", prev_key, &io->allocator);
-                                                col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
-                                                col->values[col->values.len - 1] = "1";
-                                            } break;
-                                            case json_TokenType::Integer: {
-                                                int64_t value = 0;
-                                                parser.ParseInt(&value);
-
-                                                const char *str = Fmt(buf, "%1", value).ptr;
-
-                                                ExportTable::Column *col = GetColumn(table, key, str, prev_key, &io->allocator);
-                                                col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
-                                                col->values[col->values.len - 1] = "1";
-                                            } break;
-                                            case json_TokenType::Double: {
-                                                double value = 0.0;
-                                                parser.ParseDouble(&value);
-
-                                                const char *str = Fmt(buf, "%1", value).ptr;
-
-                                                ExportTable::Column *col = GetColumn(table, key, str, prev_key, &io->allocator);
-                                                col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
-                                                col->values[col->values.len - 1] = "1";
-                                            } break;
-                                            case json_TokenType::String: {
-                                                const char *str = nullptr;
-                                                parser.ParseString(&str);
-
-                                                ExportTable::Column *col = GetColumn(table, key, str, prev_key, &io->allocator);
-                                                col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::String);
-                                                col->values[col->values.len - 1] = "1";
-                                            } break;
-
-                                            default: {
-                                                LogError("The exporter does not support arrays of objects");
-                                                return;
-                                            } break;
-                                        }
-                                    }
-                                } break;
-
-                                case json_TokenType::StartObject: {
-                                    LogError("Skipping complex object '%1' in export", key);
-                                    if (!SkipObject(&parser))
-                                        return;
-                                } break;
-
-                                default: {
-                                    if (parser.IsValid()) {
-                                        LogError("Unexpected JSON token type for '%1'", key);
-                                    }
-                                    return;
-                                } break;
-                            }
-
-                            prev_key = key;
-                        }
-
-                        deleted = !parser.IsValid();
+                        deleted = !ParseObject(&parser, table, "", &io->allocator);
                     } else if (TestStr(type, "delete")) {
                         deleted = true;
                     }
@@ -852,7 +816,7 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
             const ExportTable::Column *it = table.first_column;
 
             while (it) {
-                if (!masked_columns.Find(it->name)) {
+                if (!table.masked_columns.Find(it->name)) {
                     table.ordered_columns.Append(it);
                 }
                 it = it->next;
