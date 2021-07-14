@@ -469,6 +469,7 @@ struct ExportTable {
     BucketArray<Column> columns;
     HashTable<const char *, Column *> columns_map;
     Column *first_column;
+    Column *last_column;
     HeapArray<const Column *> ordered_columns;
 
     RG_HASHTABLE_HANDLER(ExportTable, name);
@@ -531,15 +532,19 @@ static ExportTable::Column *GetColumn(ExportTable *table, const char *key, const
                     col->next = it->next;
                     it->next = col;
                     col->prev = it;
-                }
-            } else {
-                ExportTable::Column *last = &table->columns[table->columns.len - 1];
 
-                col->prev = last;
-                last->next = col;
+                    table->last_column = col->next ? table->last_column : col;
+                }
+            }
+
+            if (!col->prev) {
+                col->prev = table->last_column;
+                table->last_column->next = col;
+                table->last_column = col;
             }
         } else {
             table->first_column = col;
+            table->last_column = col;
         }
     }
 
@@ -549,6 +554,53 @@ static ExportTable::Column *GetColumn(ExportTable *table, const char *key, const
     col->values.AppendDefault(table->rows.len - col->values.len);
 
     return col;
+}
+
+static bool SkipObject(json_Parser *parser) {
+    parser->ParseObject();
+
+    int depth = 0;
+
+    while (parser->InObject() || (depth-- && parser->InObject())) {
+        const char *key = "";
+        parser->ParseKey(&key);
+
+        switch (parser->PeekToken()) {
+            case json_TokenType::Null: { parser->ParseNull(); } break;
+            case json_TokenType::Bool: {
+                bool value = false;
+                parser->ParseBool(&value);
+            } break;
+            case json_TokenType::Integer: {
+                int64_t value = 0;
+                parser->ParseInt(&value);
+            } break;
+            case json_TokenType::Double: {
+                double value = 0.0;
+                parser->ParseDouble(&value);
+            } break;
+            case json_TokenType::String: {
+                const char *str = nullptr;
+                parser->ParseString(&str);
+            } break;
+
+            case json_TokenType::StartObject: {
+                parser->ParseObject();
+
+                if (depth++ > 32) {
+                    LogError("Excessive nesting of objects");
+                    return false;
+                }
+            } break;
+
+            default: {
+                LogError("Unexpected JSON token type for '%1'", key);
+                return false;
+            } break;
+        }
+    }
+
+    return true;
 }
 
 void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
@@ -737,8 +789,16 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
                                     }
                                 } break;
 
+                                case json_TokenType::StartObject: {
+                                    LogError("Skipping complex object '%1' in export", key);
+                                    if (!SkipObject(&parser))
+                                        return;
+                                } break;
+
                                 default: {
-                                    LogError("Cannot yet export complex or nested values");
+                                    if (parser.IsValid()) {
+                                        LogError("Unexpected JSON token type for '%1'", key);
+                                    }
                                     return;
                                 } break;
                             }
