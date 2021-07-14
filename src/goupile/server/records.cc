@@ -498,7 +498,26 @@ static const char *EscapeSqlName(const char *name, Allocator *alloc)
 static ExportTable::Column *GetColumn(ExportTable *table, const char *key, const char *suffix,
                                       const char *prev_key, Allocator *alloc)
 {
-    const char *name = suffix ? Fmt(alloc, "%1_%2", key, suffix).ptr : key;
+    const char *name;
+    {
+        HeapArray<char> buf(alloc);
+
+        for (Size i = 0; key[i]; i++) {
+            char c = LowerAscii(key[i]);
+            buf.Append(c);
+        }
+        if (suffix) {
+            buf.Append('.');
+            for (Size i = 0; suffix[i]; i++) {
+                char c = LowerAscii(key[i]);
+                buf.Append(c);
+            }
+        }
+        buf.Append(0);
+
+        name = buf.TrimAndLeak().ptr;
+    }
+
     ExportTable::Column *col = table->columns_map.FindValue(name, nullptr);
 
     if (!col) {
