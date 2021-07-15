@@ -201,14 +201,14 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
 
                 parser.ParseObject();
                 while (parser.InObject()) {
-                    const char *key = "";
+                    Span<const char> key = {};
                     parser.ParseKey(&key);
 
-                    if (TestStr(key, "form")) {
+                    if (key == "form") {
                         parser.ParseString(&record->form);
-                    } else if (TestStr(key, "ulid")) {
+                    } else if (key == "ulid") {
                         parser.ParseString(&record->ulid);
-                    } else if (TestStr(key, "hid")) {
+                    } else if (key == "hid") {
                         switch (parser.PeekToken()) {
                             case json_TokenType::Null: {
                                 parser.ParseNull();
@@ -223,7 +223,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                                 parser.ParseString(&record->hid);
                             } break;
                         }
-                    } else if (TestStr(key, "parent")) {
+                    } else if (key == "parent") {
                         if (parser.PeekToken() == json_TokenType::Null) {
                             parser.ParseNull();
                             record->parent.ulid = nullptr;
@@ -231,12 +231,12 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                         } else {
                             parser.ParseObject();
                             while (parser.InObject()) {
-                                const char *key = "";
+                                Span<const char> key = {};
                                 parser.ParseKey(&key);
 
-                                if (TestStr(key, "ulid")) {
+                                if (key == "ulid") {
                                     parser.ParseString(&record->parent.ulid);
-                                } else if (TestStr(key, "version")) {
+                                } else if (key == "version") {
                                     parser.ParseInt(&record->parent.version);
                                 } else if (parser.IsValid()) {
                                     LogError("Unknown key '%1' in parent object", key);
@@ -251,28 +251,28 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                                 return;
                             }
                         }
-                    } else if (TestStr(key, "fragments")) {
+                    } else if (key == "fragments") {
                         parser.ParseArray();
                         while (parser.InArray()) {
                             SaveRecord::Fragment *fragment = record->fragments.AppendDefault();
 
                             parser.ParseObject();
                             while (parser.InObject()) {
-                                const char *key = "";
+                                Span<const char> key = {};
                                 parser.ParseKey(&key);
 
-                                if (TestStr(key, "type")) {
+                                if (key == "type") {
                                     parser.ParseString(&fragment->type);
-                                } else if (TestStr(key, "mtime")) {
+                                } else if (key == "mtime") {
                                     parser.ParseString(&fragment->mtime);
-                                } else if (TestStr(key, "page")) {
+                                } else if (key == "page") {
                                     if (parser.PeekToken() == json_TokenType::Null) {
                                         parser.ParseNull();
                                         fragment->page = nullptr;
                                     } else {
                                         parser.ParseString(&fragment->page);
                                     }
-                                } else if (TestStr(key, "json")) {
+                                } else if (key == "json") {
                                     parser.ParseString(&fragment->json);
                                 } else if (parser.IsValid()) {
                                     LogError("Unknown key '%1' in fragment object", key);
@@ -434,7 +434,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
     });
 }
 
-struct ExportTable {
+class RecordExporter {
     enum class Type {
         Unknown,
         Integer,
@@ -445,15 +445,17 @@ struct ExportTable {
     struct Row {
         const char *ulid;
         const char *hid;
+        Size idx;
+
+        RG_HASHTABLE_HANDLER(Row, ulid);
     };
 
     struct Column {
         const char *name;
-        const char *escaped_name;
 
         Column *prev;
         Column *next;
-        const char *prev_key;
+        const char *prev_name;
 
         Type type;
         HeapArray<const char *> values;
@@ -461,53 +463,327 @@ struct ExportTable {
         RG_HASHTABLE_HANDLER(Column, name);
     };
 
-    const char *name;
-    const char *escaped_name;
+    struct Table {
+        const char *name;
 
-    HeapArray<Row> rows;
+        BucketArray<Row> rows;
+        HashTable<const char *, Row *> rows_map;
 
-    BucketArray<Column> columns;
-    HashTable<const char *, Column *> columns_map;
-    HeapArray<const Column *> ordered_columns;
-    HashSet<const char *> masked_columns;
+        BucketArray<Column> columns;
+        HashTable<const char *, Column *> columns_map;
+        HeapArray<const Column *> ordered_columns;
+        HashSet<const char *> masked_columns;
 
-    Column *first_column;
-    Column *last_column;
-    const char *prev_key;
+        Column *first_column;
+        Column *last_column;
+        const char *prev_name;
 
-    RG_HASHTABLE_HANDLER(ExportTable, name);
+        Row *GetRow(const char *ulid);
+
+        RG_HASHTABLE_HANDLER(Table, name);
+    };
+
+    json_Parser *parser;
+
+    BucketArray<Table> tables;
+    HashTable<const char *, Table *> tables_map;
+    HashSet<const char *> deleted_ulids;
+
+    BlockAllocator str_alloc;
+
+public:
+    RecordExporter() {}
+
+    bool Parse(const char *ulid, const char *hid, const char *form, Span<const char> json);
+    void SetDeletedFlag(const char *ulid, bool deleted);
+
+    bool Export(const char *filename);
+
+private:
+    bool ParseObject(const char *form, const char *ulid, const char *hid, const char *prefix);
+
+    Table *GetTable(const char *name);
+    Row *GetRow(Table *table, const char *ulid, const char *hid);
+    Column *GetColumn(Table *table, const char *prefix, const char *key, const char *suffix);
 };
 
-static const char *EscapeSqlName(const char *name, Allocator *alloc)
+static void EncodeSqlName(const char *name, HeapArray<char> *out_buf)
 {
-    HeapArray<char> buf(alloc);
-
-    buf.Append('"');
+    out_buf->Append('"');
     for (Size i = 0; name[i]; i++) {
         char c = name[i];
 
         if (c == '"') {
-            buf.Append("\"\"");
+            out_buf->Append("\"\"");
         } else {
-            buf.Append(c);
+            out_buf->Append(c);
         }
     }
-    buf.Append('"');
-    buf.Append(0);
+    out_buf->Append('"');
 
-    return buf.TrimAndLeak().ptr;
+    out_buf->Grow(1);
+    out_buf->ptr[out_buf->len] = 0;
 }
 
-static ExportTable::Column *GetColumn(ExportTable *table, const char *prefix, const char *key,
-                                      const char *suffix, Allocator *alloc)
+bool RecordExporter::Parse(const char *ulid, const char *hid, const char *form, Span<const char> json)
+{
+    StreamReader reader(MakeSpan((const uint8_t *)json.ptr, json.len), "<json>");
+    json_Parser parser(&reader, &str_alloc);
+
+    this->parser = &parser;
+
+    if (!ParseObject(form, ulid, hid, nullptr))
+        return false;
+
+    return true;
+}
+
+void RecordExporter::SetDeletedFlag(const char *ulid, bool deleted)
+{
+    if (deleted) {
+        ulid = DuplicateString(ulid, &str_alloc).ptr;
+        deleted_ulids.Set(ulid);
+    } else {
+        deleted_ulids.Remove(ulid);
+    }
+}
+
+bool RecordExporter::Export(const char *filename)
+{
+    // Prepare export file
+    sq_Database db;
+    if (!db.Open(filename, SQLITE_OPEN_READWRITE))
+        return false;
+
+    // Reorder columns
+    for (Table &table: tables) {
+        const Column *it = table.first_column;
+
+        while (it) {
+            if (!table.masked_columns.Find(it->name)) {
+                table.ordered_columns.Append(it);
+            }
+            it = it->next;
+        }
+    }
+
+    // Create tables
+    for (const Table &table: tables) {
+        HeapArray<char> sql(&str_alloc);
+
+        Fmt(&sql, "CREATE TABLE "); EncodeSqlName(table.name, &sql); Fmt(&sql, " (__ULID TEXT, __HID, ");
+        for (const Column *col: table.ordered_columns) {
+            EncodeSqlName(col->name, &sql);
+            switch (col->type) {
+                case Type::Unknown: { Fmt(&sql, ", "); } break;
+                case Type::Integer: { Fmt(&sql, " INTEGER, "); } break;
+                case Type::Double: { Fmt(&sql, " REAL, "); } break;
+                case Type::String: { Fmt(&sql, " TEXT, "); } break;
+            }
+        }
+        sql.len -= 2;
+        Fmt(&sql, ")");
+
+        if (!db.Run(sql.ptr))
+            return false;
+    }
+
+    // Import data
+    for (const Table &table: tables) {
+        HeapArray<char> sql(&str_alloc);
+
+        Fmt(&sql, "INSERT INTO "); EncodeSqlName(table.name, &sql); Fmt(&sql, " VALUES (?1, ?2, ");
+        for (Size i = 0; i < table.ordered_columns.len; i++) {
+            Fmt(&sql, "?%1, ", i + 3);
+        }
+        sql.len -= 2;
+        Fmt(&sql, ")");
+
+        sq_Statement stmt;
+        if (!db.Prepare(sql.ptr, &stmt))
+            return false;
+
+        for (Size i = 0; i < table.rows.len; i++) {
+            if (deleted_ulids.Find(table.rows[i].ulid))
+                continue;
+
+            stmt.Reset();
+
+            sqlite3_bind_text(stmt, 1, table.rows[i].ulid, -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 2, table.rows[i].hid, -1, SQLITE_STATIC);
+            for (Size j = 0; j < table.ordered_columns.len; j++) {
+                const Column *col = table.ordered_columns[j];
+                sqlite3_bind_text(stmt, (int)j + 3, col->values[i], -1, SQLITE_STATIC);
+            }
+
+            if (!stmt.Run())
+                return false;
+        }
+    }
+
+    if (!db.Close())
+        return false;
+
+    return true;
+}
+
+// XXX: Limit depth
+bool RecordExporter::ParseObject(const char *form, const char *ulid, const char *hid, const char *prefix)
+{
+    Table *table = GetTable(form);
+    Row *row = GetRow(table, ulid, hid);
+
+    parser->ParseObject();
+    while (parser->InObject()) {
+        Span<const char> key = {};
+        parser->ParseKey(&key);
+
+        switch (parser->PeekToken()) {
+            case json_TokenType::Null: {
+                parser->ParseNull();
+
+                Column *col = GetColumn(table, prefix, key.ptr, nullptr);
+                col->values[row->idx] = nullptr;
+            } break;
+            case json_TokenType::Bool: {
+                bool value = false;
+                parser->ParseBool(&value);
+
+                Column *col = GetColumn(table, prefix, key.ptr, nullptr);
+                col->type = (Type)std::max((int)col->type, (int)Type::Integer);
+                col->values[row->idx] = value ? "1" : "0";
+            } break;
+            case json_TokenType::Integer: {
+                int64_t value = 0;
+                parser->ParseInt(&value);
+
+                Column *col = GetColumn(table, prefix, key.ptr, nullptr);
+                col->type = (Type)std::max((int)col->type, (int)Type::Integer);
+                col->values[row->idx] = Fmt(&str_alloc, "%1", value).ptr;
+            } break;
+            case json_TokenType::Double: {
+                double value = 0.0;
+                parser->ParseDouble(&value);
+
+                Column *col = GetColumn(table, prefix, key.ptr, nullptr);
+                col->type = (Type)std::max((int)col->type, (int)Type::Double);
+                col->values[row->idx] = Fmt(&str_alloc, "%1", value).ptr;
+            } break;
+            case json_TokenType::String: {
+                const char *str = nullptr;
+                parser->ParseString(&str);
+
+                Column *col = GetColumn(table, prefix, key.ptr, nullptr);
+                col->type = (Type)std::max((int)col->type, (int)Type::String);
+                col->values[row->idx] = DuplicateString(str, &str_alloc).ptr;
+            } break;
+
+            case json_TokenType::StartArray: {
+                table->masked_columns.Set(key.ptr);
+
+                parser->ParseArray();
+                while (parser->InArray()) {
+                    switch (parser->PeekToken()) {
+                        case json_TokenType::Null: {
+                            parser->ParseNull();
+
+                            Column *col = GetColumn(table, prefix, key.ptr, "null");
+                            col->type = (Type)std::max((int)col->type, (int)Type::Integer);
+                            col->values[row->idx] = "1";
+                        } break;
+                        case json_TokenType::Bool: {
+                            bool value = false;
+                            parser->ParseBool(&value);
+
+                            Column *col = GetColumn(table, prefix, key.ptr, value ? "1" : "0");
+                            col->type = (Type)std::max((int)col->type, (int)Type::Integer);
+                            col->values[row->idx] = "1";
+                        } break;
+                        case json_TokenType::Integer: {
+                            int64_t value = 0;
+                            parser->ParseInt(&value);
+
+                            char buf[64];
+                            Fmt(buf, "%1", value);
+
+                            Column *col = GetColumn(table, prefix, key.ptr, buf);
+                            col->type = (Type)std::max((int)col->type, (int)Type::Integer);
+                            col->values[row->idx] = "1";
+                        } break;
+                        case json_TokenType::Double: {
+                            double value = 0.0;
+                            parser->ParseDouble(&value);
+
+                            char buf[64];
+                            Fmt(buf, "%1", value);
+
+                            Column *col = GetColumn(table, prefix, key.ptr, buf);
+                            col->type = (Type)std::max((int)col->type, (int)Type::Integer);
+                            col->values[row->idx] = "1";
+                        } break;
+                        case json_TokenType::String: {
+                            const char *str = nullptr;
+                            parser->ParseString(&str);
+
+                            Column *col = GetColumn(table, prefix, key.ptr, str);
+                            col->type = (Type)std::max((int)col->type, (int)Type::String);
+                            col->values[row->idx] = "1";
+                        } break;
+
+                        default: {
+                            LogError("The exporter does not support arrays of objects");
+                            return false;
+                        } break;
+                    }
+                }
+            } break;
+
+            case json_TokenType::StartObject: {
+                if (std::all_of(key.begin(), key.end(), IsAsciiDigit)) {
+                    const char *form2 = Fmt(&str_alloc, "%1.%2", form, prefix).ptr;
+                    const char *ulid2 = Fmt(&str_alloc, "%1.%2", ulid, key).ptr;
+                    const char *prefix2 = nullptr;
+
+                    if (!ParseObject(form2, ulid2, key.ptr, prefix2))
+                        return false;
+                } else if (prefix) {
+                    const char *prefix2 = Fmt(&str_alloc, "%1.%2", prefix, key).ptr;
+
+                    if (!ParseObject(form, ulid, hid, prefix2))
+                        return false;
+                } else {
+                    if (!ParseObject(form, ulid, hid, key.ptr))
+                        return false;
+                }
+            } break;
+
+            default: {
+                if (parser->IsValid()) {
+                    LogError("Unexpected JSON token type for '%1'", key);
+                }
+                return false;
+            } break;
+        }
+    }
+    if (!parser->IsValid())
+        return false;
+
+    return true;
+}
+
+RecordExporter::Column *RecordExporter::GetColumn(RecordExporter::Table *table, const char *prefix,
+                                                  const char *key, const char *suffix)
 {
     const char *name;
     {
-        HeapArray<char> buf(alloc);
+        HeapArray<char> buf(&str_alloc);
 
-        for (Size i = 0; prefix[i]; i++) {
-            char c = LowerAscii(prefix[i]);
-            buf.Append(c);
+        if (prefix) {
+            for (Size i = 0; prefix[i]; i++) {
+                char c = LowerAscii(prefix[i]);
+                buf.Append(c);
+            }
+            buf.Append('.');
         }
         for (Size i = 0; key[i]; i++) {
             char c = LowerAscii(key[i]);
@@ -525,7 +801,7 @@ static ExportTable::Column *GetColumn(ExportTable *table, const char *prefix, co
         name = buf.TrimAndLeak().ptr;
     }
 
-    ExportTable::Column *col = table->columns_map.FindValue(name, nullptr);
+    Column *col = table->columns_map.FindValue(name, nullptr);
 
     if (!col) {
         col = table->columns.AppendDefault();
@@ -534,16 +810,16 @@ static ExportTable::Column *GetColumn(ExportTable *table, const char *prefix, co
         table->columns_map.Set(col);
 
         if (table->columns.len > 1) {
-            if (table->prev_key) {
-                ExportTable::Column *it = table->columns_map.FindValue(table->prev_key, nullptr);
+            if (table->prev_name) {
+                Column *it = table->columns_map.FindValue(table->prev_name, nullptr);
 
                 if (it) {
-                    ExportTable::Column *next = it->next;
+                    Column *next = it->next;
 
                     while (next) {
-                        if (!next->prev_key)
+                        if (!next->prev_name)
                             break;
-                        if (!TestStr(next->prev_key, table->prev_key))
+                        if (!TestStr(next->prev_name, table->prev_name))
                             break;
                         if (CmpStr(next->name, name) > 0)
                             break;
@@ -575,140 +851,46 @@ static ExportTable::Column *GetColumn(ExportTable *table, const char *prefix, co
     }
 
     col->name = name;
-    col->escaped_name = EscapeSqlName(name, alloc);
-    col->prev_key = table->prev_key;
+    col->prev_name = table->prev_name;
     col->values.AppendDefault(table->rows.len - col->values.len);
+
+    table->prev_name = name;
 
     return col;
 }
 
-// XXX: Limit depth
-static bool ParseObject(json_Parser *parser, ExportTable *table, const char *prefix, Allocator *alloc)
+RecordExporter::Table *RecordExporter::GetTable(const char *name)
 {
-    parser->ParseObject();
-    while (parser->InObject()) {
-        const char *key = "";
-        parser->ParseKey(&key);
+    Table *table = tables_map.FindValue(name, nullptr);
 
-        switch (parser->PeekToken()) {
-            case json_TokenType::Null: {
-                parser->ParseNull();
+    if (!table) {
+        table = tables.AppendDefault();
+        table->name = DuplicateString(name, &str_alloc).ptr;
 
-                ExportTable::Column *col = GetColumn(table, prefix, key, nullptr, alloc);
-                col->values[col->values.len - 1] = nullptr;
-            } break;
-            case json_TokenType::Bool: {
-                bool value = false;
-                parser->ParseBool(&value);
-
-                ExportTable::Column *col = GetColumn(table, prefix, key, nullptr, alloc);
-                col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
-                col->values[col->values.len - 1] = value ? "1" : "0";
-            } break;
-            case json_TokenType::Integer: {
-                int64_t value = 0;
-                parser->ParseInt(&value);
-
-                ExportTable::Column *col = GetColumn(table, prefix, key, nullptr, alloc);
-                col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
-                col->values[col->values.len - 1] = Fmt(alloc, "%1", value).ptr;
-            } break;
-            case json_TokenType::Double: {
-                double value = 0.0;
-                parser->ParseDouble(&value);
-
-                ExportTable::Column *col = GetColumn(table, prefix, key, nullptr, alloc);
-                col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Double);
-                col->values[col->values.len - 1] = Fmt(alloc, "%1", value).ptr;
-            } break;
-            case json_TokenType::String: {
-                const char *str = nullptr;
-                parser->ParseString(&str);
-
-                ExportTable::Column *col = GetColumn(table, prefix, key, nullptr, alloc);
-                col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::String);
-                col->values[col->values.len - 1] = DuplicateString(str, alloc).ptr;
-            } break;
-
-            case json_TokenType::StartArray: {
-                table->masked_columns.Set(key);
-
-                parser->ParseArray();
-                while (parser->InArray()) {
-                    switch (parser->PeekToken()) {
-                        case json_TokenType::Null: {
-                            parser->ParseNull();
-
-                            ExportTable::Column *col = GetColumn(table, prefix, key, "null", alloc);
-                            col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
-                            col->values[col->values.len - 1] = "1";
-                        } break;
-                        case json_TokenType::Bool: {
-                            bool value = false;
-                            parser->ParseBool(&value);
-
-                            ExportTable::Column *col = GetColumn(table, prefix, key, value ? "1" : "0", alloc);
-                            col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
-                            col->values[col->values.len - 1] = "1";
-                        } break;
-                        case json_TokenType::Integer: {
-                            int64_t value = 0;
-                            parser->ParseInt(&value);
-
-                            char buf[64];
-                            Fmt(buf, "%1", value);
-
-                            ExportTable::Column *col = GetColumn(table, prefix, key, buf, alloc);
-                            col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
-                            col->values[col->values.len - 1] = "1";
-                        } break;
-                        case json_TokenType::Double: {
-                            double value = 0.0;
-                            parser->ParseDouble(&value);
-
-                            char buf[64];
-                            Fmt(buf, "%1", value);
-
-                            ExportTable::Column *col = GetColumn(table, prefix, key, buf, alloc);
-                            col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::Integer);
-                            col->values[col->values.len - 1] = "1";
-                        } break;
-                        case json_TokenType::String: {
-                            const char *str = nullptr;
-                            parser->ParseString(&str);
-
-                            ExportTable::Column *col = GetColumn(table, prefix, key, str, alloc);
-                            col->type = (ExportTable::Type)std::max((int)col->type, (int)ExportTable::Type::String);
-                            col->values[col->values.len - 1] = "1";
-                        } break;
-
-                        default: {
-                            LogError("The exporter does not support arrays of objects");
-                            return false;
-                        } break;
-                    }
-                }
-            } break;
-
-            case json_TokenType::StartObject: {
-                const char *nested_prefix = prefix[0] ? Fmt(alloc, "%1.%2.", prefix, key).ptr : key;
-
-                if (!ParseObject(parser, table, nested_prefix, alloc))
-                    return false;
-            } break;
-
-            default: {
-                if (parser->IsValid()) {
-                    LogError("Unexpected JSON token type for '%1'", key);
-                }
-                return false;
-            } break;
-        }
-
-        table->prev_key = key;
+        tables_map.Set(table);
     }
 
-    return parser->IsValid();
+    return table;
+}
+
+RecordExporter::Row *RecordExporter::GetRow(RecordExporter::Table *table, const char *ulid, const char *hid)
+{
+    Row *row = table->rows_map.FindValue(ulid, nullptr);
+
+    if (!row) {
+        row = table->rows.AppendDefault();
+        row->ulid = DuplicateString(ulid, &str_alloc).ptr;
+        row->hid = DuplicateString(hid, &str_alloc).ptr;
+        row->idx = table->rows.len - 1;
+
+        table->rows_map.Set(row);
+
+        for (Column &col: table->columns) {
+            col.values.AppendDefault(table->rows.len - col.values.len);
+        }
+    }
+
+    return row;
 }
 
 void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
@@ -734,148 +916,38 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
 
     io->RunAsync([=]() {
         sq_Statement stmt;
-        if (!instance->db->Prepare(R"(SELECT e.rowid, e.ulid, e.hid, e.form, e.anchor,
-                                             e.parent_ulid, e.parent_version, f.anchor, f.version,
-                                             f.type, f.username, f.mtime, f.page, f.json FROM rec_entries e
+        if (!instance->db->Prepare(R"(SELECT e.ulid, e.hid, e.form, f.type, f.json FROM rec_entries e
                                       INNER JOIN rec_fragments f ON (f.ulid = e.ulid)
-                                      ORDER BY e.rowid, f.anchor)", &stmt))
+                                      ORDER BY f.anchor)", &stmt))
             return;
 
         const char *export_filename = CreateTemporaryFile(gp_domain.config.tmp_directory, "", ".tmp", &io->allocator);
         RG_DEFER { UnlinkFile(export_filename); };
 
-        // Prepare export file
-        sq_Database db;
-        if (!db.Open(export_filename, SQLITE_OPEN_READWRITE))
-            return;
+        RecordExporter exporter;
 
-        BucketArray<ExportTable> tables;
-        HashTable<const char *, ExportTable *> tables_map;
+        while (stmt.Step()) {
+            const char *ulid = (const char *)sqlite3_column_text(stmt, 0);
+            const char *hid = (const char *)sqlite3_column_text(stmt, 1);
+            const char *form = (const char *)sqlite3_column_text(stmt, 2);
+            const char *type = (const char *)sqlite3_column_text(stmt, 3);
 
-        if (stmt.Step()) {
-            do {
-                int64_t rowid = sqlite3_column_int64(stmt, 0);
-                const char *ulid = (const char *)sqlite3_column_text(stmt, 1);
-                const char *hid = (const char *)sqlite3_column_text(stmt, 2);
-                const char *form = (const char *)sqlite3_column_text(stmt, 3);
-                bool deleted = false;
+            if (TestStr(type, "save")) {
+                Span<const char> json = MakeSpan((const char *)sqlite3_column_blob(stmt, 4),
+                                                 sqlite3_column_bytes(stmt, 4));
+                if (!exporter.Parse(ulid, hid, form, json))
+                    return;
 
-                // Create or find relevant table
-                ExportTable *table = tables_map.FindValue(form, nullptr);
-                if (!table) {
-                    table = tables.AppendDefault();
-                    table->name = DuplicateString(form, &io->allocator).ptr;
-                    table->escaped_name = EscapeSqlName(form, &io->allocator);
-
-                    tables_map.Set(table);
-                }
-
-                // Insert row metadata
-                {
-                    ExportTable::Row row = {};
-
-                    row.ulid = DuplicateString(ulid, &io->allocator).ptr;
-                    row.hid = DuplicateString(hid, &io->allocator).ptr;
-
-                    table->rows.Append(row);
-                }
-
-                do {
-                    const char *type = (const char *)sqlite3_column_text(stmt, 9);
-
-                    if (TestStr(type, "save")) {
-                        Span<const uint8_t> json = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 13),
-                                                            sqlite3_column_bytes(stmt, 13));
-                        StreamReader reader(json, "<json>");
-                        json_Parser parser(&reader, &io->allocator);
-
-                        deleted = !ParseObject(&parser, table, "", &io->allocator);
-                    } else if (TestStr(type, "delete")) {
-                        deleted = true;
-                    }
-                } while (stmt.Step() && sqlite3_column_int64(stmt, 0) == rowid);
-
-                if (!deleted) {
-                    for (ExportTable::Column &col: table->columns) {
-                        col.values.AppendDefault(table->rows.len - col.values.len);
-                    }
-                } else {
-                    table->rows.len--;
-
-                    for (ExportTable::Column &col: table->columns) {
-                        col.values.len = std::min(table->rows.len, col.values.len);
-                    }
-                }
-            } while (stmt.IsRow());
+                exporter.SetDeletedFlag(ulid, false);
+            } else if (TestStr(type, "delete")) {
+                exporter.SetDeletedFlag(ulid, true);
+            }
         }
         if (!stmt.IsValid())
             return;
 
-        // Reorder columns
-        for (ExportTable &table: tables) {
-            const ExportTable::Column *it = table.first_column;
-
-            while (it) {
-                if (!table.masked_columns.Find(it->name)) {
-                    table.ordered_columns.Append(it);
-                }
-                it = it->next;
-            }
-        }
-
-        // Create tables
-        for (const ExportTable &table: tables) {
-            HeapArray<char> sql(&io->allocator);
-
-            Fmt(&sql, "CREATE TABLE %1 (__ulid TEXT, __hid TEXT, ", table.escaped_name);
-            for (const ExportTable::Column *col: table.ordered_columns) {
-                switch (col->type) {
-                    case ExportTable::Type::Unknown: { Fmt(&sql, "%1, ", col->escaped_name); } break;
-                    case ExportTable::Type::Integer: { Fmt(&sql, "%1 INTEGER, ", col->escaped_name); } break;
-                    case ExportTable::Type::Double: { Fmt(&sql, "%1 REAL, ", col->escaped_name); } break;
-                    case ExportTable::Type::String: { Fmt(&sql, "%1 TEXT, ", col->escaped_name); } break;
-                }
-            }
-            sql.len -= 2;
-            Fmt(&sql, ")");
-
-            if (!db.Run(sql.ptr))
-                return;
-        }
-
-        // Import data
-        for (const ExportTable &table: tables) {
-            HeapArray<char> sql(&io->allocator);
-
-            Fmt(&sql, "INSERT INTO %1 VALUES (?1, ?2, ", table.escaped_name);
-            for (Size i = 0; i < table.ordered_columns.len; i++) {
-                Fmt(&sql, "?%1, ", i + 3);
-            }
-            sql.len -= 2;
-            Fmt(&sql, ")");
-
-            sq_Statement stmt;
-            if (!db.Prepare(sql.ptr, &stmt))
-                return;
-
-            for (Size i = 0; i < table.rows.len; i++) {
-                stmt.Reset();
-
-                sqlite3_bind_text(stmt, 1, table.rows[i].ulid, -1, SQLITE_STATIC);
-                sqlite3_bind_text(stmt, 2, table.rows[i].hid, -1, SQLITE_STATIC);
-                for (Size j = 0; j < table.ordered_columns.len; j++) {
-                    const ExportTable::Column *col = table.ordered_columns[j];
-                    sqlite3_bind_text(stmt, (int)j + 3, col->values[i], -1, SQLITE_STATIC);
-                }
-
-                if (!stmt.Run())
-                    return;
-            }
-        }
-
-        if (!db.Close())
+        if (!exporter.Export(export_filename))
             return;
-
         if (!io->AttachFile(200, export_filename))
             return;
 
