@@ -739,7 +739,7 @@ bool RecordExporter::ParseObject(const char *form, const char *ulid, const char 
             } break;
 
             case json_TokenType::StartObject: {
-                if (std::all_of(key.begin(), key.end(), IsAsciiDigit)) {
+                if (key.len && std::all_of(key.begin(), key.end(), IsAsciiDigit)) {
                     const char *form2 = Fmt(&str_alloc, "%1.%2", form, prefix).ptr;
                     const char *ulid2 = Fmt(&str_alloc, "%1.%2", ulid, key).ptr;
                     const char *prefix2 = nullptr;
