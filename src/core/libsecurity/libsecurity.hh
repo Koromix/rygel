@@ -14,4 +14,5 @@
 #pragma once
 
 #include "password.hh"
+#include "otp.hh"
 #include "sandbox.hh"

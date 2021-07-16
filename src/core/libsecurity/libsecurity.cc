@@ -12,5 +12,6 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "password.cc"
+#include "otp.cc"
 #include "sandbox_linux.cc"
 #include "sandbox_null.cc"
