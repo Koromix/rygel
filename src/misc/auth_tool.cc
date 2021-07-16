@@ -197,22 +197,9 @@ Options:
             LogError("Empty secret is not allowed");
             return 1;
         }
-
-        uint8_t key[64];
-        if (sec_GetBase32DecodedLength(strlen(secret)) > RG_SIZE(key)) {
-            LogError("Secret is too long");
-            return 1;
-        }
-        if (sec_DecodeBase32(secret, key) < 0) {
-            LogError("Secret is not a valid Base32 string");
-            return 1;
-        }
     } else {
-        uint8_t buf[16];
-        randombytes_buf(buf, RG_SIZE(buf));
-
-        char *ptr = (char *)Allocator::Allocate(&temp_alloc, 64, 0);
-        sec_EncodeBase32(buf, false, MakeSpan(ptr, 64));
+        char *ptr = (char *)Allocator::Allocate(&temp_alloc, 25, 0);
+        sec_GenerateSecret(MakeSpan(ptr, 25));
 
         secret = ptr;
     }
@@ -305,17 +292,8 @@ Options:
         }
     }
 
-    LocalArray<uint8_t, 64> key;
-    if (sec_GetBase32DecodedLength(strlen(secret)) > RG_SIZE(key.data)) {
-        LogError("Secret is too long");
-        return 1;
-    }
-    key.len = sec_DecodeBase32(secret, key.data);
-    if (key.len < 0)
-        return 1;
-
     for (int i = -window; i <= window; i++) {
-        int code = sec_ComputeHotp(key, time / 30 + i, digits);
+        int code = sec_ComputeHotp(secret, time / 30 + i, digits);
         if (code < 0)
             return 1;
         PrintLn("%1", FmtArg(code).Pad0(-digits));
@@ -393,15 +371,6 @@ Options:
         }
     }
 
-    LocalArray<uint8_t, 64> key;
-    if (sec_GetBase32DecodedLength(strlen(secret)) > RG_SIZE(key.data)) {
-        LogError("Secret is too long");
-        return 1;
-    }
-    key.len = sec_DecodeBase32(secret, key.data);
-    if (key.len < 0)
-        return 1;
-
     if (!code) {
         code = Prompt("Code: ", &temp_alloc);
         if (!code)
@@ -412,7 +381,7 @@ Options:
         }
     }
 
-    if (sec_CheckHotp(key, time / 30, digits, window, code)) {
+    if (sec_CheckHotp(secret, time / 30, digits, window, code)) {
         LogInfo("Match!");
         return 0;
     } else {

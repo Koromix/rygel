@@ -13,55 +13,16 @@
 
 #include "../libcc/libcc.hh"
 #include "otp.hh"
+#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 #include "../../../vendor/mbedtls/include/mbedtls/sha1.h"
 #include "../../../vendor/qrcodegen/QrCode.hpp"
 #include "../../../vendor/miniz/miniz.h"
 
 namespace RG {
 
-Size sec_EncodeBase32(Span<const uint8_t> bytes, bool pad, Span<char> out_buf)
+static inline Size GetBase32DecodedLength(Size len)
 {
-    RG_ASSERT(out_buf.len >= sec_GetBase32EncodedLength(bytes.len));
-
-    static const char *chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-
-    Size len = 0;
-
-    for (Size i = 0, j = 0;; i += 5, j = (j + 1) & 0x7) {
-        Size offset = i / 8;
-
-        if (offset >= bytes.len) {
-            if (pad) {
-                Size pad_len = (8 - j) & 0x7;
-                for (Size k = 0; k < pad_len; k++) {
-                    out_buf[len++] = '=';
-                }
-            }
-
-            break;
-        }
-
-        int b0 = bytes[offset];
-        int b1 = (offset + 1) < bytes.len ? bytes[offset + 1] : 0;
-
-        int value;
-        switch (j) {
-            case 0: { value = ((b0 >> 3) & 0x1F); } break;
-            case 1: { value = ((b0 << 2) & 0x1C) | ((b1 >> 6) & 0x3); } break;
-            case 2: { value = ((b0 >> 1) & 0x1F); } break;
-            case 3: { value = ((b0 << 4) & 0x10) | ((b1 >> 4) & 0xF); } break;
-            case 4: { value = ((b0 << 1) & 0x1E) | ((b1 >> 7) & 0x1); } break;
-            case 5: { value = ((b0 >> 2) & 0x1F); } break;
-            case 6: { value = ((b0 << 3) & 0x18) | ((b1 >> 5) & 0x7); } break;
-            case 7: { value = b0 & 0x1F; } break;
-        }
-
-        RG_ASSERT(value >= 0 && value < 32);
-        out_buf[len++] = chars[value];
-    }
-    out_buf[len] = 0;
-
-    return len;
+    return (len + 7) / 8 * 5;
 }
 
 static inline uint8_t DecodeBase32Char(int c)
@@ -77,9 +38,12 @@ static inline uint8_t DecodeBase32Char(int c)
     }
 }
 
-Size sec_DecodeBase32(Span<const char> b32, Span<uint8_t> out_buf)
+static Size DecodeBase32(Span<const char> b32, Span<uint8_t> out_buf)
 {
-    RG_ASSERT(out_buf.len >= sec_GetBase32DecodedLength(b32.len));
+    if (GetBase32DecodedLength(b32.len) > out_buf.len) {
+        LogError("Secret is too long");
+        return -1;
+    }
 
     Size len = 0;
 
@@ -133,6 +97,19 @@ static void EncodeUrlSafe(const char *str, HeapArray<char> *out_buf)
 
     out_buf->Grow(1);
     out_buf->ptr[out_buf->len] = 0;
+}
+
+void sec_GenerateSecret(Span<char> out_buf)
+{
+    RG_ASSERT(out_buf.len > 0);
+
+    static const char *chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+    randombytes_buf(out_buf.ptr, out_buf.len);
+    for (Size i = 0; i < out_buf.len - 1; i++) {
+        out_buf[i] = chars[(uint8_t)out_buf[i] % 32];
+    }
+    out_buf[out_buf.len - 1] = 0;
 }
 
 const char *sec_GenerateHotpUrl(const char *label, const char *username, const char *issuer,
@@ -239,7 +216,7 @@ static void HmacSha1(Span<const uint8_t> key, Span<const uint8_t> message, uint8
     }
 }
 
-int sec_ComputeHotp(Span<const uint8_t> key, int64_t counter, int digits)
+static int ComputeHotp(Span<const uint8_t> key, int64_t counter, int digits)
 {
     union { int64_t i; uint8_t raw[8]; } message;
     message.i = BigEndian(counter);
@@ -268,10 +245,25 @@ int sec_ComputeHotp(Span<const uint8_t> key, int64_t counter, int digits)
     }
 }
 
-bool sec_CheckHotp(Span<const uint8_t> key, int64_t counter, int digits, int window, const char *code)
+int sec_ComputeHotp(const char *secret, int64_t counter, int digits)
 {
+    LocalArray<uint8_t, 128> key;
+    key.len = DecodeBase32(secret, key.data);
+    if (key.len < 0)
+        return -1;
+
+    return ComputeHotp(key, counter, digits);
+}
+
+bool sec_CheckHotp(const char *secret, int64_t counter, int digits, int window, const char *code)
+{
+    LocalArray<uint8_t, 128> key;
+    key.len = DecodeBase32(secret, key.data);
+    if (key.len < 0)
+        return false;
+
     for (int i = -window; i <= window; i++) {
-        int ret = sec_ComputeHotp(key, counter + i, digits);
+        int ret = ComputeHotp(key, counter + i, digits);
         if (ret < 0)
             return false;
 

@@ -17,24 +17,12 @@
 
 namespace RG {
 
-static inline Size sec_GetBase32EncodedLength(Size bytes)
-{
-    return (bytes + 4) * 8 / 5 + 8; // Account for (optional) padding and NUL byte
-}
-
-static inline Size sec_GetBase32DecodedLength(Size len)
-{
-    return (len + 7) / 8 * 5;
-}
-
-Size sec_EncodeBase32(Span<const uint8_t> bytes, bool pad, Span<char> out_buf);
-Size sec_DecodeBase32(Span<const char> b32, Span<uint8_t> out_buf);
-
+void sec_GenerateSecret(Span<char> out_buf);
 const char *sec_GenerateHotpUrl(const char *label, const char *username, const char *issuer,
                                 const char *secret, int digits, Allocator *alloc);
 bool sec_GenerateHotpPng(const char *url, HeapArray<uint8_t> *out_buf);
 
-int sec_ComputeHotp(Span<const uint8_t> key, int64_t counter, int digits);
-bool sec_CheckHotp(Span<const uint8_t> key, int64_t counter, int digits, int window, const char *code);
+int sec_ComputeHotp(const char *secret, int64_t counter, int digits);
+bool sec_CheckHotp(const char *secret, int64_t counter, int digits, int window, const char *code);
 
 }
