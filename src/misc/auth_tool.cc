@@ -197,10 +197,8 @@ Options:
     }
 
     if (secret) {
-        if (!secret[0]) {
-            LogError("Empty secret is not allowed");
+        if (!sec_CheckSecret(secret))
             return 1;
-        }
     } else {
         char *ptr = (char *)Allocator::Allocate(&temp_alloc, 25, 0);
         sec_GenerateSecret(MakeSpan(ptr, 25));
@@ -373,7 +371,10 @@ Options:
         }
     }
 
-    if (!secret) {
+    if (secret) {
+        if (!sec_CheckSecret(secret))
+            return 1;
+    } else {
         secret = Prompt("Secret: ", &temp_alloc);
         if (!secret)
             return 1;

@@ -18,6 +18,8 @@
 namespace RG {
 
 void sec_GenerateSecret(Span<char> out_buf);
+bool sec_CheckSecret(const char *secret);
+
 const char *sec_GenerateHotpUrl(const char *label, const char *username, const char *issuer,
                                 const char *secret, int digits, Allocator *alloc);
 bool sec_GenerateHotpPng(const char *url, HeapArray<uint8_t> *out_buf);

@@ -40,6 +40,10 @@ static inline uint8_t DecodeBase32Char(int c)
 
 static Size DecodeBase32(Span<const char> b32, Span<uint8_t> out_buf)
 {
+    if (!b32.len) {
+        LogError("Empty secret is not allowed");
+        return -1;
+    }
     if (GetBase32DecodedLength(b32.len) > out_buf.len) {
         LogError("Secret is too long");
         return -1;
@@ -112,10 +116,30 @@ void sec_GenerateSecret(Span<char> out_buf)
     out_buf[out_buf.len - 1] = 0;
 }
 
+bool sec_CheckSecret(const char *secret)
+{
+    if (!secret[0]) {
+        LogError("Empty secret is not allowed");
+        return false;
+    }
+
+    for (Size i = 0; secret[i]; i++) {
+        if (DecodeBase32Char(secret[i]) == 0xFF) {
+            LogError("Invalid Base32 secret");
+            return false;
+        }
+    }
+
+    return true;
+}
+
 const char *sec_GenerateHotpUrl(const char *label, const char *username, const char *issuer,
                                 const char *secret, int digits, Allocator *alloc)
 {
     HeapArray<char> buf(alloc);
+
+    if (!sec_CheckSecret(secret))
+        return nullptr;
 
     Fmt(&buf, "otpauth://totp/"); EncodeUrlSafe(label, &buf);
     Fmt(&buf, ":"); EncodeUrlSafe(username, &buf);
