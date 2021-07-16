@@ -159,6 +159,10 @@ Options:
             } else if (opt.Test("-d", "--digits", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &digits))
                     return 1;
+                if (digits < 6 || digits > 8) {
+                    LogError("Option --digits value must be between 6 and 8");
+                    return 1;
+                }
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 png_filename = opt.current_value;
             } else {
@@ -268,6 +272,10 @@ Options:
             } else if (opt.Test("-d", "--digits", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &digits))
                     return 1;
+                if (digits < 6 || digits > 8) {
+                    LogError("Option --digits value must be between 6 and 8");
+                    return 1;
+                }
             } else if (opt.Test("-w", "--window", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &window))
                     return 1;
@@ -347,6 +355,10 @@ Options:
             } else if (opt.Test("-d", "--digits", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &digits))
                     return 1;
+                if (digits < 6 || digits > 8) {
+                    LogError("Option --digits value must be between 6 and 8");
+                    return 1;
+                }
             } else if (opt.Test("-w", "--window", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &window))
                     return 1;
@@ -372,6 +384,8 @@ Options:
     }
 
     if (!code) {
+        PrintLn("Expecting %1 digits", digits);
+
         code = Prompt("Code: ", &temp_alloc);
         if (!code)
             return 1;
