@@ -22,7 +22,7 @@ namespace RG {
 
 static inline Size GetBase32DecodedLength(Size len)
 {
-    // This is may overestimate because of padding characters
+    // This may overestimate because of padding characters
     return 5 * (len / 8) + 5;
 }
 
