@@ -200,8 +200,8 @@ Options:
         if (!sec_CheckSecret(secret))
             return 1;
     } else {
-        char *ptr = (char *)Allocator::Allocate(&temp_alloc, 25, 0);
-        sec_GenerateSecret(MakeSpan(ptr, 25));
+        char *ptr = (char *)Allocator::Allocate(&temp_alloc, 33, 0);
+        sec_GenerateSecret(MakeSpan(ptr, 33));
 
         secret = ptr;
     }

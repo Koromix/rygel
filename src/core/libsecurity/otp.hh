@@ -17,6 +17,7 @@
 
 namespace RG {
 
+// Use 33 bytes or more (32 + NUL byte) for security, which translates to 160 bits
 void sec_GenerateSecret(Span<char> out_buf);
 bool sec_CheckSecret(const char *secret);
 
