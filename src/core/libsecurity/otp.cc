@@ -156,9 +156,9 @@ static void GeneratePNG(const qrcodegen::QrCode &qr, HeapArray<uint8_t> *out_png
     static const uint8_t header[] = { 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A };
     static const uint8_t footer[] = { 0, 0, 0, 0, 'I', 'E', 'N', 'D', 0xAE, 0x42, 0x60, 0x82};
 
-    int border = 4;
-    int size = qr.getSize() + 2 * border;
-    int size4 = qr.getSize() * 4 + 2 * border * 4;
+    int border = 12;
+    int size = qr.getSize() + 2 * border / 4;
+    int size4 = qr.getSize() * 4 + 2 * border;
 
     out_png->Append(header);
 
@@ -217,8 +217,8 @@ static void GeneratePNG(const qrcodegen::QrCode &qr, HeapArray<uint8_t> *out_png
             writer.Write((uint8_t)0); // Scanline filter
 
             for (int x = 0; x < size; x += 2) {
-                uint8_t byte = (qr.getModule(x + 0 - border, y / 4 - border) * 0xF0) |
-                               (qr.getModule(x + 1 - border, y / 4 - border) * 0x0F);
+                uint8_t byte = (qr.getModule(x + 0 - border / 4, y / 4 - border / 4) * 0xF0) |
+                               (qr.getModule(x + 1 - border / 4, y / 4 - border / 4) * 0x0F);
                 writer.Write(~byte);
             }
         }
