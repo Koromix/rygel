@@ -17,7 +17,7 @@
 
 namespace RG {
 
-const int DomainVersion = 22;
+const int DomainVersion = 23;
 const int MaxInstancesPerDomain = 1024;
 const int64_t FullSnapshotDelay = 86400 * 1000;
 
@@ -1168,7 +1168,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
-            } // [[fallthrough]];
+            } [[fallthrough]];
 
             case 21: {
                 bool success = db->RunMany(R"(
@@ -1176,9 +1176,48 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 22: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE dom_users RENAME TO dom_users_BAK;
+                    ALTER TABLE dom_permissions RENAME TO dom_permissions_BAK;
+                    DROP INDEX dom_users_u;
+                    DROP INDEX dom_permissions_ui;
+
+                    CREATE TABLE dom_users (
+                        userid INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT NOT NULL,
+                        password_hash TEXT NOT NULL,
+                        admin INTEGER CHECK(admin IN (0, 1)) NOT NULL,
+                        local_key TEXT NOT NULL,
+                        totp_required INTEGER CHECK(admin IN (0, 1)) NOT NULL,
+                        totp_secret TEXT,
+                        email TEXT,
+                        phone TEXT
+                    );
+                    CREATE UNIQUE INDEX dom_users_u ON dom_users (username);
+
+                    CREATE TABLE dom_permissions (
+                        userid INTEGER NOT NULL REFERENCES dom_users (userid),
+                        instance TEXT NOT NULL REFERENCES dom_instances (instance),
+                        permissions INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX dom_permissions_ui ON dom_permissions (userid, instance);
+
+                    INSERT INTO dom_users (userid, username, password_hash, admin, local_key, email, phone, totp_required)
+                        SELECT userid, username, password_hash, admin, local_key, email, phone, 0 FROM dom_users_BAK;
+                    INSERT INTO dom_permissions (userid, instance, permissions)
+                        SELECT userid, instance, permissions FROM dom_permissions_BAK;
+
+                    DROP TABLE dom_permissions_BAK;
+                    DROP TABLE dom_users_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(DomainVersion == 22);
+            RG_STATIC_ASSERT(DomainVersion == 23);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

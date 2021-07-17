@@ -63,6 +63,13 @@ struct SessionStamp {
     RG_HASHTABLE_HANDLER(SessionStamp, unique);
 };
 
+enum class SessionConfirm {
+    None,
+    SMS,
+    TOTP,
+    QRcode // Init TOTP
+};
+
 class SessionInfo: public RetainObject {
     mutable std::shared_mutex stamps_mutex;
     mutable BucketArray<SessionStamp> stamps;
@@ -76,7 +83,8 @@ public:
     int64_t admin_until;
     char local_key[45];
 
-    char confirm[9];
+    std::atomic<SessionConfirm> confirm;
+    const char *secret;
 
     bool IsAdmin() const;
     bool HasPermission(const InstanceHolder *instance, UserPermission perm) const;
@@ -100,6 +108,7 @@ bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
 void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleSessionLogout(const http_RequestInfo &request, http_IO *io);
 void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleSessionQRcode(const http_RequestInfo &request, http_IO *io);
 
 void HandlePasswordChange(const http_RequestInfo &request, http_IO *io);
 

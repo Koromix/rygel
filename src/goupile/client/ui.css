@@ -255,14 +255,17 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
 .ui_dialog.screen > div, .ui_dialog.modal > div {
     display: block;
     min-width: 260px;
-    max-width: 90%;
     max-height: calc(100% - 20px);
     box-sizing: border-box;
     overflow-y: auto;
     background: #f8f8f8;
 }
 .ui_dialog.modal > div > form, .ui_dialog.screen > div > form { padding: 16px; }
-.ui_dialog.modal > div { border: 1px solid #e6e6e6; }
+.ui_dialog.modal > div {
+    border: 1px solid #e6e6e6;
+    max-width: 90%;
+}
+.ui_dialog.screen > div { max-width: 300px; }
 
 .ui_dialog.popup {
     display: none;

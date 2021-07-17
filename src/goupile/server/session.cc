@@ -59,7 +59,7 @@ static HashTable<FloodInfo::Key, FloodInfo *> floods_map;
 
 bool SessionInfo::IsAdmin() const
 {
-    if (confirm[0])
+    if (confirm != SessionConfirm::None)
         return false;
     if (!admin_until || admin_until <= GetMonotonicTime())
         return false;
@@ -75,7 +75,7 @@ bool SessionInfo::HasPermission(const InstanceHolder *instance, UserPermission p
 
 const SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
 {
-    if (confirm[0])
+    if (confirm != SessionConfirm::None)
         return nullptr;
 
     SessionStamp *stamp = nullptr;
@@ -194,9 +194,18 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
         json.Key("userid"); json.Int64(session->userid);
         json.Key("username"); json.String(session->username);
 
-        if (session->confirm[0]) {
+        // Atomic load
+        SessionConfirm confirm = session->confirm;
+
+        if (confirm != SessionConfirm::None) {
             json.Key("authorized"); json.Bool(false);
-            json.Key("confirm"); json.String("SMS");
+
+            switch (confirm) {
+                case SessionConfirm::None: { RG_UNREACHABLE(); } break;
+                case SessionConfirm::SMS: { json.Key("confirm"); json.String("sms"); } break;
+                case SessionConfirm::TOTP: { json.Key("confirm"); json.String("totp"); } break;
+                case SessionConfirm::QRcode: { json.Key("confirm"); json.String("qrcode"); } break;
+            }
         } else if (instance) {
             const InstanceHolder *master = instance->master;
             const SessionStamp *stamp = nullptr;
@@ -283,10 +292,13 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
 }
 
 static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid,
-                                                const char *username, const char *local_key)
+                                                const char *username, const char *local_key,
+                                                SessionConfirm confirm, const char *secret)
 {
-    Size username_len = strlen(username);
-    Size len = RG_SIZE(SessionInfo) + username_len + 1;
+    Size username_bytes = strlen(username) + 1;
+    Size secret_bytes = secret ? strlen(secret) + 1 : 0;
+
+    Size len = RG_SIZE(SessionInfo) + username_bytes + secret_bytes;
     SessionInfo *session = (SessionInfo *)Allocator::Allocate(nullptr, len, (int)Allocator::Flag::Zero);
 
     new (session) SessionInfo;
@@ -298,11 +310,19 @@ static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid
     session->type = type;
     session->userid = userid;
     session->username = (char *)session + RG_SIZE(SessionInfo);
-    CopyString(username, MakeSpan((char *)session->username, username_len + 1));
+    CopyString(username, MakeSpan((char *)session->username, username_bytes));
     if (!CopyString(local_key, session->local_key)) {
         // Should never happen, but let's be careful
         LogError("User local key is too big");
         return {};
+    }
+
+    session->confirm = confirm;
+    if (confirm != SessionConfirm::None) {
+        RG_ASSERT(secret);
+
+        session->secret = (char *)session + RG_SIZE(SessionInfo) + username_bytes;
+        CopyString(secret, MakeSpan((char *)session->secret, secret_bytes));
     }
 
     return ptr;
@@ -334,7 +354,8 @@ RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const h
                     const char *username = (const char *)sqlite3_column_text(stmt, 1);
                     const char *local_key = (const char *)sqlite3_column_text(stmt, 2);
 
-                    RetainPtr<SessionInfo> session = CreateUserSession(SessionType::User, userid, username, local_key);
+                    RetainPtr<SessionInfo> session = CreateUserSession(SessionType::User, userid, username, local_key,
+                                                                       SessionConfirm::None, nullptr);
                     return session;
                 }();
                 instance->auto_init = true;
@@ -445,14 +466,18 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
         sq_Statement stmt;
         if (instance) {
             if (instance->slaves.len) {
-                if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.admin, u.local_key FROM dom_users u
+                if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.admin,
+                                                    u.local_key, u.totp_required, u.totp_secret
+                                             FROM dom_users u
                                              INNER JOIN dom_permissions p ON (p.userid = u.userid)
                                              INNER JOIN dom_instances i ON (i.instance = p.instance)
                                              WHERE u.username = ?1 AND i.master = ?2 AND
                                                    p.permissions > 0)", &stmt))
                     return;
             } else {
-                if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.admin, u.local_key FROM dom_users u
+                if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.admin,
+                                                    u.local_key, u.totp_required, u.totp_secret
+                                             FROM dom_users u
                                              INNER JOIN dom_permissions p ON (p.userid = u.userid)
                                              INNER JOIN dom_instances i ON (i.instance = p.instance)
                                              WHERE u.username = ?1 AND i.instance = ?2 AND
@@ -462,7 +487,9 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
             sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
         } else {
-            if (!gp_domain.db.Prepare(R"(SELECT userid, password_hash, admin, local_key FROM dom_users
+            if (!gp_domain.db.Prepare(R"(SELECT userid, password_hash, admin,
+                                                local_key, totp_required, totp_secret
+                                         FROM dom_users
                                          WHERE username = ?1 AND admin = 1)", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
@@ -473,6 +500,8 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
             bool admin = (sqlite3_column_int(stmt, 2) == 1);
             const char *local_key = (const char *)sqlite3_column_text(stmt, 3);
+            bool totp_required = (sqlite3_column_int(stmt, 4) == 1);
+            const char *totp_secret = (const char *)sqlite3_column_text(stmt, 5);
 
             if (IsUserBanned(request.client_addr, username)) {
                 LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
@@ -488,7 +517,22 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                                       time, request.client_addr, "login", username))
                     return;
 
-                RetainPtr<SessionInfo> session = CreateUserSession(SessionType::User, userid, username, local_key);
+                RetainPtr<SessionInfo> session;
+                if (totp_required) {
+                    if (totp_secret) {
+                        session = CreateUserSession(SessionType::User, userid, username, local_key,
+                                                    SessionConfirm::TOTP, totp_secret);
+                    } else {
+                        char secret[33];
+                        sec_GenerateSecret(secret);
+
+                        session = CreateUserSession(SessionType::User, userid, username, local_key,
+                                                    SessionConfirm::QRcode, secret);
+                    }
+                } else {
+                    session = CreateUserSession(SessionType::User, userid, username, local_key,
+                                                SessionConfirm::None, nullptr);
+                }
 
                 if (RG_LIKELY(session)) {
                     if (admin) {
@@ -626,23 +670,31 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
     RG_ASSERT(userid > 0);
     userid = -userid;
 
-    RetainPtr<SessionInfo> session = CreateUserSession(type, userid, key, local_key);
-    if (RG_UNLIKELY(!session))
-        return nullptr;
-
+    RetainPtr<SessionInfo> session;
     if (sms) {
-        char buf[128];
-
         if (RG_UNLIKELY(gp_domain.config.sms.provider == sms_Provider::None)) {
             LogError("This instance is not configured to send SMS messages");
             return nullptr;
         }
 
-        uint32_t code = 100000 + randombytes_uniform(900000); // 6 digits
-        Fmt(session->confirm, "%1", code);
+        char code[9];
+        {
+            uint32_t rnd = randombytes_uniform(1000000); // 6 digits
+            Fmt(code, "%1", FmtArg(rnd).Pad0(-6));
+        }
 
-        Fmt(buf, "Code: %1", session->confirm);
-        if (!SendSMS(sms, buf))
+        session = CreateUserSession(type, userid, key, local_key, SessionConfirm::SMS, code);
+        if (RG_UNLIKELY(!session))
+            return nullptr;
+
+        char message[128];
+        Fmt(message, "Code: %1", code);
+
+        if (!SendSMS(sms, message))
+            return nullptr;
+    } else {
+        session = CreateUserSession(type, userid, key, local_key, SessionConfirm::None, nullptr);
+        if (RG_UNLIKELY(!session))
             return nullptr;
     }
 
@@ -800,7 +852,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
 {
     RetainPtr<SessionInfo> session = sessions.Find(request, io);
 
-    if (!session || !session->confirm[0]) {
+    if (!session || session->confirm == SessionConfirm::None) {
         LogError("There is nothing to confirm");
         io->AttachError(403);
         return;
@@ -808,7 +860,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
 
     io->RunAsync([=]() {
         // Read POST values
-        Span<const char> code;
+        const char *code;
         {
             HashMap<const char *, const char *> values;
             if (!io->ReadPostValues(&io->allocator, &values)) {
@@ -817,7 +869,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
             }
 
             code = values.FindValue("code", nullptr);
-            if (!code.ptr) {
+            if (!code) {
                 LogError("Missing 'code' parameter");
                 io->AttachError(422);
                 return;
@@ -833,14 +885,41 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
         // Immediate confirmation looks weird
         WaitDelay(800);
 
-        if (TestStr(code, session->confirm)) {
-            session->confirm[0] = 0;
-            WriteProfileJson(session.GetRaw(), instance, request, io);
-        } else {
-            RegisterFloodEvent(request.client_addr, session->username);
+        switch (session->confirm) {
+            case SessionConfirm::None: { RG_UNREACHABLE(); } break;
 
-            LogError("Code is incorrect");
-            io->AttachError(403);
+            case SessionConfirm::SMS: {
+                if (TestStr(code, session->secret)) {
+                    session->confirm = SessionConfirm::None;
+                    WriteProfileJson(session.GetRaw(), instance, request, io);
+                } else {
+                    RegisterFloodEvent(request.client_addr, session->username);
+
+                    LogError("Code is incorrect");
+                    io->AttachError(403);
+                }
+            } break;
+
+            case SessionConfirm::TOTP:
+            case SessionConfirm::QRcode: {
+                int64_t time = GetUnixTime();
+
+                if (sec_CheckHotp(session->secret, time / 30000, 6, 1, code)) {
+                    if (session->confirm == SessionConfirm::QRcode) {
+                        if (!gp_domain.db.Run("UPDATE dom_users SET totp_secret = ?2 WHERE userid = ?1",
+                                              session->userid, session->secret))
+                            return;
+                    }
+
+                    session->confirm = SessionConfirm::None;
+                    WriteProfileJson(session.GetRaw(), instance, request, io);
+                } else {
+                    RegisterFloodEvent(request.client_addr, session->username);
+
+                    LogError("Code is incorrect");
+                    io->AttachError(403);
+                }
+            } break;
         }
     });
 }
@@ -855,6 +934,33 @@ void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &requ
 {
     RetainPtr<const SessionInfo> session = GetCheckedSession(instance, request, io);
     WriteProfileJson(session.GetRaw(), instance, request, io);
+}
+
+void HandleSessionQRcode(const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<SessionInfo> session = sessions.Find(request, io);
+
+    if (!session || session->confirm != SessionConfirm::QRcode) {
+        LogError("Session is not in TOTP init mode");
+        io->AttachError(403);
+        return;
+    }
+    RG_ASSERT(session->secret);
+
+    const char *url = sec_GenerateHotpUrl(gp_domain.config.title, session->username,
+                                          gp_domain.config.title, session->secret, 6, &io->allocator);
+    if (!url)
+        return;
+
+    Span<const uint8_t> png;
+    {
+        HeapArray<uint8_t> buf(&io->allocator);
+        if (!sec_GenerateHotpPng(url, 0, &buf))
+            return;
+        png = buf.Leak();
+    }
+
+    io->AttachBinary(200, png, "image/png");
 }
 
 void HandlePasswordChange(const http_RequestInfo &request, http_IO *io)

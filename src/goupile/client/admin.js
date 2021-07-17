@@ -661,6 +661,7 @@ function AdminController() {
                     password2.error('Mot de passe trop court', true);
                 }
             }
+            let totp = d.boolean('totp', 'Authentification 2FA (TOTP)', {value: true, untoggle: false});
 
             let email = d.text('email', 'Courriel');
             if (email.value != null && !email.value.includes('@'))
@@ -675,6 +676,7 @@ function AdminController() {
                 let query = new URLSearchParams;
                 query.set('username', username.value);
                 query.set('password', password.value);
+                query.set('totp', totp.value ? 1 : 0);
                 if (email.value != null)
                     query.set('email', email.value);
                 if (phone.value != null)
@@ -785,6 +787,9 @@ function AdminController() {
                             password2.error('Mot de passe trop court', true);
                         }
                     }
+                    let totp = d.boolean('totp', 'Authentification 2FA (TOTP)', {value: user.totp});
+                    let totp_reset = d.boolean('totp_reset', 'Réinitialiser le secret TOTP', {value: !user.totp, untoggle: false,
+                                                                                              disabled: !totp.value});
 
                     let email = d.text('email', 'Courriel', {value: user.email});
                     if (email.value != null && !email.value.includes('@'))
@@ -802,6 +807,10 @@ function AdminController() {
                             query.set('username', username.value);
                         if (password.value != null)
                             query.set('password', password.value);
+                        if (totp.value != null) {
+                            query.set('totp', 0 + totp.value);
+                            query.set('totp_reset', 0 + totp_reset.value);
+                        }
                         if (email.value != null)
                             query.set('email', email.value);
                         if (phone.value != null)

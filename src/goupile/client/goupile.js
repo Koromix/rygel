@@ -81,8 +81,8 @@ const goupile = new function() {
 
         if (profile.authorized) {
             await initAfterAuthorization();
-        } else if (profile.confirm == 'SMS') {
-            await runConfirmScreen();
+        } else if (profile.confirm != null) {
+            await runConfirmScreen(profile.confirm);
         } else {
             await runLoginScreen();
         }
@@ -228,7 +228,12 @@ const goupile = new function() {
                     let progress = log.progress('Connexion en cours');
 
                     await tryLogin(username.value, password.value, progress, net.isOnline());
-                    await initAfterAuthorization();
+
+                    if (profile.confirm != null) {
+                        await runConfirmScreen(profile.confirm);
+                    } else {
+                        await initAfterAuthorization();
+                    }
 
                     resolve();
                 } catch (err) {
@@ -257,12 +262,20 @@ const goupile = new function() {
         }
     }
 
-    function runConfirmScreen() {
+    function runConfirmScreen(method) {
         return ui.runScreen((d, resolve, reject) => {
             d.output(html`
                 <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
                 <br/><br/>
-                Veuillez entrer le code secret qui vous a été <b>envoyé par SMS</b>.
+                ${method == 'sms' ? html`Entrez le code secret à 6 chiffres qui vous a été <b>envoyé par SMS</b>.` : ''}
+                ${method == 'totp' ? html`Entrez le code secret à 6 chiffres affiché <b>par l'application d'authentification</b>.` : ''}
+                ${method == 'qrcode' ? html`
+                    <p>Scannez ce QR code avec votre <b>application mobile d'authentification</b>
+                    puis saississez le code donné par cette application.</p>
+                    <p><i>Applications : FreeOTP, Authy, etc.</i></p>
+
+                    <div style="text-align: center; margin-top: 2em;"><img src=${ENV.urls.instance + 'api/session/qrcode'} /></div>
+                ` : ''}
                 <br/>
             `);
             let code = d.password('*code', 'Code secret');
@@ -283,6 +296,7 @@ const goupile = new function() {
                         let new_profile = await response.json();
                         await updateProfile(new_profile, true);
 
+                        // XXX: Clean up this whole mess!
                         await initAfterAuthorization();
 
                         progress.success('Connexion réussie');

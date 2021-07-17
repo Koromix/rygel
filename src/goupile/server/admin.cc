@@ -574,8 +574,8 @@ retry:
             sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
         }
 
-        if (!domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash, admin, local_key)
-                              VALUES (1, ?1, ?2, 1, ?3))", username, hash, local_key))
+        if (!domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash, admin, local_key, totp_required)
+                              VALUES (1, ?1, ?2, 1, ?3, 1))", username, hash, local_key))
             return 1;
     }
 
@@ -2392,6 +2392,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
         // Read POST values
         const char *username;
         const char *password;
+        bool totp;
         const char *email;
         const char *phone;
         bool admin;
@@ -2412,6 +2413,13 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
             if (password && !sec_CheckPassword(password)) {
                 valid = false;
             }
+            if (const char *str = values.FindValue("totp", nullptr); str) {
+                valid &= ParseBool(str, &totp);
+            } else {
+                LogError("Missing 'totp' parameter");
+                valid = false;
+            }
+
             if (email && !strchr(email, '@')) {
                 LogError("Invalid email address format");
                 valid = false;
@@ -2468,9 +2476,10 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
                 return false;
 
             // Create user
-            if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, email, phone, admin, local_key)
-                                     VALUES (?1, ?2, ?3, ?4, ?5, ?6))",
-                                  username, hash, email, phone, 0 + admin, local_key))
+            if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, email, phone,
+                                                            admin, local_key, totp_required)
+                                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
+                                  username, hash, email, phone, 0 + admin, local_key, 0 + totp))
                 return false;
 
             io->AttachText(200, "Done!");
@@ -2510,6 +2519,8 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
         int64_t userid;
         const char *username;
         const char *password;
+        bool totp, set_totp = false;
+        bool totp_reset;
         const char *email;
         const char *phone;
         bool admin, set_admin = false;
@@ -2534,6 +2545,12 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
             if (password && !sec_CheckPassword(password)) {
                 valid = false;
             }
+            if (const char *str = values.FindValue("totp", nullptr); str) {
+                valid &= ParseBool(str, &totp);
+                valid &= ParseBool(values.FindValue("totp_reset", "0"), &totp_reset);
+                set_totp = true;
+            }
+
             if (email && !strchr(email, '@')) {
                 LogError("Invalid email address format");
                 valid = false;
@@ -2596,6 +2613,12 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
                 return false;
             if (password && !gp_domain.db.Run("UPDATE dom_users SET password_hash = ?2 WHERE userid = ?1", userid, hash))
                 return false;
+            if (set_totp) {
+                if (!gp_domain.db.Run("UPDATE dom_users SET totp_required = ?2 WHERE userid = ?1", userid, 0 + totp))
+                    return false;
+                if (totp_reset && !gp_domain.db.Run("UPDATE dom_users SET totp_secret = NULL WHERE userid = ?1", userid))
+                    return false;
+            }
             if (email && !gp_domain.db.Run("UPDATE dom_users SET email = ?2 WHERE userid = ?1", userid, email))
                 return false;
             if (phone && !gp_domain.db.Run("UPDATE dom_users SET phone = ?2 WHERE userid = ?1", userid, phone))
@@ -2717,7 +2740,8 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!gp_domain.db.Prepare(R"(SELECT userid, username, email, phone, admin FROM dom_users
+    if (!gp_domain.db.Prepare(R"(SELECT userid, username, email, phone, admin, totp_required
+                                 FROM dom_users
                                  ORDER BY username)", &stmt))
         return;
 
@@ -2742,6 +2766,7 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
             json.Key("phone"); json.Null();
         }
         json.Key("admin"); json.Bool(sqlite3_column_int(stmt, 4));
+        json.Key("totp"); json.Bool(sqlite3_column_int(stmt, 5));
         json.EndObject();
     }
     if (!stmt.IsValid())
