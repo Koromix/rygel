@@ -30,8 +30,6 @@ static inline uint8_t DecodeBase32Char(int c)
 {
     if (c >= 'A' && c <= 'Z') {
         return (uint8_t)(c - 'A');
-    } else if (c >= 'a' && c <= 'z') {
-        return (uint8_t)(c - 'a');
     } else if (c >= '2' && c <= '7') {
         return (uint8_t)(c - '2' + 26);
     } else {
