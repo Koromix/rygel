@@ -215,7 +215,7 @@ Options:
 
     if (png_filename) {
         HeapArray<uint8_t> png;
-        if (!sec_GenerateHotpPng(url, &png))
+        if (!sec_GenerateHotpPng(url, 12, &png))
             return 1;
 
         if (!WriteFile(png, png_filename))

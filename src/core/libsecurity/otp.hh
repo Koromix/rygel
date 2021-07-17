@@ -23,7 +23,7 @@ bool sec_CheckSecret(const char *secret);
 
 const char *sec_GenerateHotpUrl(const char *label, const char *username, const char *issuer,
                                 const char *secret, int digits, Allocator *alloc);
-bool sec_GenerateHotpPng(const char *url, HeapArray<uint8_t> *out_buf);
+bool sec_GenerateHotpPng(const char *url, int border, HeapArray<uint8_t> *out_buf);
 
 int sec_ComputeHotp(const char *secret, int64_t counter, int digits);
 bool sec_CheckHotp(const char *secret, int64_t counter, int digits, int window, const char *code);

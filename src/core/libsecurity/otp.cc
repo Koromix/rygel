@@ -151,12 +151,11 @@ const char *sec_GenerateHotpUrl(const char *label, const char *username, const c
     return url;
 }
 
-static void GeneratePNG(const qrcodegen::QrCode &qr, HeapArray<uint8_t> *out_png)
+static void GeneratePNG(const qrcodegen::QrCode &qr, int border, HeapArray<uint8_t> *out_png)
 {
     static const uint8_t header[] = { 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A };
     static const uint8_t footer[] = { 0, 0, 0, 0, 'I', 'E', 'N', 'D', 0xAE, 0x42, 0x60, 0x82};
 
-    int border = 12;
     int size = qr.getSize() + 2 * border / 4;
     int size4 = qr.getSize() * 4 + 2 * border;
 
@@ -238,13 +237,13 @@ static void GeneratePNG(const qrcodegen::QrCode &qr, HeapArray<uint8_t> *out_png
     out_png->Append(footer);
 }
 
-bool sec_GenerateHotpPng(const char *url, HeapArray<uint8_t> *out_buf)
+bool sec_GenerateHotpPng(const char *url, int border, HeapArray<uint8_t> *out_buf)
 {
     RG_ASSERT(!out_buf->len);
 
     try {
         qrcodegen::QrCode qr = qrcodegen::QrCode::encodeText(url, qrcodegen::QrCode::Ecc::MEDIUM);
-        GeneratePNG(qr, out_buf);
+        GeneratePNG(qr, border, out_buf);
     } catch (const std::exception &err) {
         LogError("QR code encoding failed: %1", err.what());
         return false;
