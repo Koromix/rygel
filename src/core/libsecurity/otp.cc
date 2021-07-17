@@ -153,42 +153,104 @@ const char *sec_GenerateHotpUrl(const char *label, const char *username, const c
     return url;
 }
 
-bool sec_GenerateHotpPng(const char *url, HeapArray<uint8_t> *out_buf)
+static void GeneratePNG(const qrcodegen::QrCode &qr, HeapArray<uint8_t> *out_png)
 {
-    RG_ASSERT(!out_buf->len);
-
-    qrcodegen::QrCode qr = qrcodegen::QrCode::encodeText(url, qrcodegen::QrCode::Ecc::MEDIUM);
+    static const uint8_t header[] = { 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A };
+    static const uint8_t footer[] = { 0, 0, 0, 0, 'I', 'E', 'N', 'D', 0xAE, 0x42, 0x60, 0x82};
 
     int border = 4;
     int resolution = 4;
     int size = qr.getSize() * resolution + 2 * border * resolution;
 
-    // Create uncompressed black and white 32-byte RGB image
-    HeapArray<uint32_t> buf;
-    buf.Reserve(size * size);
-    for (int y = 0; y < size; y++) {
-        for (int x = 0; x < size; x++) {
-            bool value = qr.getModule(x / resolution - border, y / resolution - border);
+    out_png->Append(header);
 
-#ifdef RG_ARCH_LITTLE_ENDIAN
-            buf.Append(value ? 0xFF000000u : 0xFFFFFFFFu);
-#else
-            buf.Append(value ? 0x000000FFu : 0xFFFFFFFFu);
-#endif
+#pragma pack(push, 1)
+    struct ChunkHeader {
+        uint32_t len;
+        uint8_t type[4];
+    };
+    struct IHDR {
+        uint32_t width;
+        uint32_t height;
+        uint8_t bit_depth;
+        uint8_t color_type;
+        uint8_t compression;
+        uint8_t filter;
+        uint8_t interlace;
+    };
+#pragma pack(pop)
+
+    // Write IHDR chunk
+    {
+        Size chunk_pos = out_png->len;
+
+        ChunkHeader chunk = {};
+        IHDR ihdr = {};
+
+        chunk.len = BigEndian((uint32_t)RG_SIZE(ihdr));
+        memcpy_safe(chunk.type, "IHDR", 4);
+        ihdr.width = BigEndian(size);
+        ihdr.height = BigEndian(size);
+        ihdr.bit_depth = 1;
+        ihdr.color_type = 0;
+        ihdr.compression = 0;
+        ihdr.filter = 0;
+        ihdr.interlace = 0;
+
+        out_png->Append(MakeSpan((const uint8_t *)&chunk, RG_SIZE(chunk)));
+        out_png->Append(MakeSpan((const uint8_t *)&ihdr, RG_SIZE(ihdr)));
+
+        // Chunk CRC-32
+        uint32_t crc = BigEndian((uint32_t)mz_crc32(MZ_CRC32_INIT, out_png->ptr + chunk_pos + 4, RG_SIZE(ihdr) + 4));
+        out_png->Append(MakeSpan((const uint8_t *)&crc, 4));
+    }
+
+    // Write image data (IDAT)
+    {
+        Size chunk_pos = out_png->len;
+
+        ChunkHeader chunk = {};
+        chunk.len = 0; // Unknown for now
+        memcpy_safe(chunk.type, "IDAT", 4);
+        out_png->Append(MakeSpan((const uint8_t *)&chunk, RG_SIZE(chunk)));
+
+        StreamWriter writer(out_png, "<png>", CompressionType::Zlib);
+        for (int y = 0; y < size; y++) {
+            writer.Write((uint8_t)0); // Scanline filter
+
+            for (int x = 0; x < size; x += 8) {
+                uint8_t byte = (qr.getModule((x + 0) / resolution - border, y / resolution - border) << 7) |
+                               (qr.getModule((x + 1) / resolution - border, y / resolution - border) << 6) |
+                               (qr.getModule((x + 2) / resolution - border, y / resolution - border) << 5) |
+                               (qr.getModule((x + 3) / resolution - border, y / resolution - border) << 4) |
+                               (qr.getModule((x + 4) / resolution - border, y / resolution - border) << 3) |
+                               (qr.getModule((x + 5) / resolution - border, y / resolution - border) << 2) |
+                               (qr.getModule((x + 6) / resolution - border, y / resolution - border) << 1) |
+                               (qr.getModule((x + 7) / resolution - border, y / resolution - border) << 0);
+                writer.Write(~byte);
+            }
         }
+        writer.Close();
+
+        // Fix length
+        uint32_t *len_ptr = (uint32_t *)(out_png->ptr + chunk_pos);
+        *len_ptr = BigEndian((uint32_t)(out_png->len - chunk_pos - 8));
+
+        // Chunk CRC-32
+        uint32_t crc = BigEndian((uint32_t)mz_crc32(MZ_CRC32_INIT, out_png->ptr + chunk_pos + 4, out_png->len - chunk_pos - 4));
+        out_png->Append(MakeSpan((const uint8_t *)&crc, 4));
     }
 
-    // Compress to PNG
-    size_t png_len;
-    uint8_t *png_buf = (uint8_t *)tdefl_write_image_to_png_file_in_memory((void *)buf.ptr, size, size, 4, &png_len);
-    if (!png_buf) {
-        LogError("Failed to encode PNG image");
-        return 1;
-    }
-    RG_DEFER { mz_free(png_buf); };
+    // End IMAGE (IEND)
+    out_png->Append(footer);
+}
 
-    // Copy... kind of sad but we're not in hotcode territory here
-    out_buf->Append(MakeSpan(png_buf, (Size)png_len));
+bool sec_GenerateHotpPng(const char *url, HeapArray<uint8_t> *out_buf)
+{
+    RG_ASSERT(!out_buf->len);
+
+    qrcodegen::QrCode qr = qrcodegen::QrCode::encodeText(url, qrcodegen::QrCode::Ecc::MEDIUM);
+    GeneratePNG(qr, out_buf);
 
     return true;
 }
