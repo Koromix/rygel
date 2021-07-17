@@ -249,8 +249,13 @@ bool sec_GenerateHotpPng(const char *url, HeapArray<uint8_t> *out_buf)
 {
     RG_ASSERT(!out_buf->len);
 
-    qrcodegen::QrCode qr = qrcodegen::QrCode::encodeText(url, qrcodegen::QrCode::Ecc::MEDIUM);
-    GeneratePNG(qr, out_buf);
+    try {
+        qrcodegen::QrCode qr = qrcodegen::QrCode::encodeText(url, qrcodegen::QrCode::Ecc::MEDIUM);
+        GeneratePNG(qr, out_buf);
+    } catch (const std::exception &err) {
+        LogError("QR code encoding failed: %1", err.what());
+        return false;
+    }
 
     return true;
 }
