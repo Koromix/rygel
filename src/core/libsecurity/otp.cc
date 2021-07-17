@@ -22,7 +22,8 @@ namespace RG {
 
 static inline Size GetBase32DecodedLength(Size len)
 {
-    return (len + 7) / 8 * 5;
+    // This is may overestimate because of padding characters
+    return 5 * (len / 8) + 5;
 }
 
 static inline uint8_t DecodeBase32Char(int c)
