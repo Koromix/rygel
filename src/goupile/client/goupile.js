@@ -61,22 +61,10 @@ const goupile = new function() {
         await registerSW();
         initNavigation();
 
-        {
-            let login = url.searchParams.get('login');
-            let token = url.searchParams.get('token');
-
-            if (login) {
-                self.syncHistory(url.pathname, false);
-            } else if (token) {
-                try {
-                    await sendToken(token);
-                } catch (err) {
-                    log.error(err);
-                }
-                self.syncHistory(url.pathname, false);
-            } else {
-                await syncProfile();
-            }
+        if (url.searchParams.get('login')) {
+            self.syncHistory(url.pathname, false);
+        } else {
+            await syncProfile();
         }
 
         if (profile.authorized) {
@@ -242,24 +230,6 @@ const goupile = new function() {
                 }
             });
         });
-    }
-
-    async function sendToken(token) {
-        let query = new URLSearchParams();
-        query.set('token', token);
-
-        let response = await net.fetch(`${ENV.urls.instance}api/session/token`, {
-            method: 'POST',
-            body: query
-        })
-
-        if (response.ok) {
-            let new_profile = await response.json();
-            await updateProfile(new_profile, true);
-        } else {
-            let err = (await response.text()).trim();
-            throw new Error(err);
-        }
     }
 
     function runConfirmScreen(method) {

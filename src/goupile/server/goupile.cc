@@ -526,8 +526,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         }
 
         // Handle sessions triggered by query parameters
-        if (request.method == http_RequestMethod::Get && instance->config.auto_key) {
-            if (!HandleSessionKey(instance, request, io))
+        if (request.method == http_RequestMethod::Get) {
+            if (instance->config.auto_key && !HandleSessionKey(instance, request, io))
+                return;
+            if (!HandleSessionToken(instance, request, io))
                 return;
         }
 
@@ -624,8 +626,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleSessionProfile(instance, request, io);
         } else if (TestStr(instance_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
             HandleSessionLogin(instance, request, io);
-        } else if (TestStr(instance_url, "/api/session/token") && request.method == http_RequestMethod::Post) {
-            HandleSessionToken(instance, request, io);
         } else if (TestStr(instance_url, "/api/session/confirm") && request.method == http_RequestMethod::Post) {
             HandleSessionConfirm(instance, request, io);
         } else if (TestStr(instance_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {

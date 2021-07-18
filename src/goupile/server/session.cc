@@ -705,132 +705,119 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
     return session;
 }
 
-void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+// Returns true if not handled or not relevant, false if an error has occured
+bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
+    Span<const char> token = request.GetQueryValue("token");
+    if (!token.len)
+        return true;
+
     if (!instance->config.token_key) {
         LogError("This instance does not use tokens");
         io->AttachError(403);
-        return;
+        return false;
     }
 
-    io->RunAsync([=]() {
-        // Read POST values
-        Span<const char> token;
-        {
-            HashMap<const char *, const char *> values;
-            if (!io->ReadPostValues(&io->allocator, &values)) {
-                io->AttachError(422);
-                return;
-            }
+    // Decode Base64
+    Span<uint8_t> cypher;
+    {
+        cypher.len = token.len / 2 + 1;
+        cypher.ptr = (uint8_t *)Allocator::Allocate(&io->allocator, token.len);
 
-            token = values.FindValue("token", nullptr);
-            if (!token.ptr) {
-                LogError("Missing 'token' parameter");
-                io->AttachError(422);
-                return;
-            }
-        }
-
-        // Decode Base64
-        Span<uint8_t> cypher;
-        {
-            cypher.len = token.len / 2 + 1;
-            cypher.ptr = (uint8_t *)Allocator::Allocate(&io->allocator, token.len);
-
-            size_t cypher_len;
-            if (sodium_hex2bin(cypher.ptr, cypher.len, token.ptr, (size_t)token.len,
-                               nullptr, &cypher_len, nullptr) != 0) {
-                LogError("Failed to unseal token");
-                io->AttachError(403);
-                return;
-            }
-            if (cypher_len < crypto_box_SEALBYTES) {
-                LogError("Failed to unseal token");
-                io->AttachError(403);
-                return;
-            }
-
-            cypher.len = (Size)cypher_len;
-        }
-
-        // Decode token
-        Span<uint8_t> json;
-        {
-            json.len = cypher.len - crypto_box_SEALBYTES;
-            json.ptr = (uint8_t *)Allocator::Allocate(&io->allocator, json.len);
-
-            if (crypto_box_seal_open((uint8_t *)json.ptr, cypher.ptr, cypher.len,
-                                     instance->config.token_pkey, instance->config.token_skey) != 0) {
-                LogError("Failed to unseal token");
-                io->AttachError(403);
-                return;
-            }
-        }
-
-        // Parse JSON
-        const char *sms = nullptr;
-        const char *tid = nullptr;
-        {
-            StreamReader st(json);
-            json_Parser parser(&st, &io->allocator);
-
-            parser.ParseObject();
-            while (parser.InObject()) {
-                const char *key = "";
-                parser.ParseKey(&key);
-
-                if (TestStr(key, "sms")) {
-                    parser.ParseString(&sms);
-                } else if (TestStr(key, "id")) {
-                    parser.ParseString(&tid);
-                } else if (parser.IsValid()) {
-                    LogError("Unknown key '%1' in token JSON", key);
-                    io->AttachError(422);
-                    return;
-                }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
-                return;
-            }
-        }
-
-        // Check token values
-        {
-            bool valid = true;
-
-            if (sms && !sms[0]) {
-                LogError("Empty SMS");
-                valid = false;
-            }
-            if (!tid || !tid[0]) {
-                LogError("Missing or empty token id");
-                valid = false;
-            }
-
-            if (!valid) {
-                io->AttachError(422);
-                return;
-            }
-        }
-
-        if (sms) {
-            // Avoid confirmation flood (SMS are costly)
-            RegisterFloodEvent(request.client_addr, tid);
-        }
-
-        if (IsUserBanned(request.client_addr, tid)) {
-            LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
+        size_t cypher_len;
+        if (sodium_hex2bin(cypher.ptr, cypher.len, token.ptr, (size_t)token.len,
+                           nullptr, &cypher_len, nullptr) != 0) {
+            LogError("Failed to unseal token");
             io->AttachError(403);
+            return false;
+        }
+        if (cypher_len < crypto_box_SEALBYTES) {
+            LogError("Failed to unseal token");
+            io->AttachError(403);
+            return false;
         }
 
-        RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Token, tid, sms);
-        if (!session)
-            return;
-        sessions.Open(request, io, session);
+        cypher.len = (Size)cypher_len;
+    }
 
-        WriteProfileJson(session.GetRaw(), instance, request, io);
-    });
+    // Decode token
+    Span<uint8_t> json;
+    {
+        json.len = cypher.len - crypto_box_SEALBYTES;
+        json.ptr = (uint8_t *)Allocator::Allocate(&io->allocator, json.len);
+
+        if (crypto_box_seal_open((uint8_t *)json.ptr, cypher.ptr, cypher.len,
+                                 instance->config.token_pkey, instance->config.token_skey) != 0) {
+            LogError("Failed to unseal token");
+            io->AttachError(403);
+            return false;
+        }
+    }
+
+    // Parse JSON
+    const char *sms = nullptr;
+    const char *tid = nullptr;
+    {
+        StreamReader st(json);
+        json_Parser parser(&st, &io->allocator);
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            const char *key = "";
+            parser.ParseKey(&key);
+
+            if (TestStr(key, "sms")) {
+                parser.ParseString(&sms);
+            } else if (TestStr(key, "id")) {
+                parser.ParseString(&tid);
+            } else if (parser.IsValid()) {
+                LogError("Unknown key '%1' in token JSON", key);
+                io->AttachError(422);
+                return false;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->AttachError(422);
+            return false;
+        }
+    }
+
+    // Check token values
+    {
+        bool valid = true;
+
+        if (sms && !sms[0]) {
+            LogError("Empty SMS");
+            valid = false;
+        }
+        if (!tid || !tid[0]) {
+            LogError("Missing or empty token id");
+            valid = false;
+        }
+
+        if (!valid) {
+            io->AttachError(422);
+            return false;
+        }
+    }
+
+    if (sms) {
+        // Avoid confirmation flood (SMS are costly)
+        RegisterFloodEvent(request.client_addr, tid);
+    }
+
+    if (IsUserBanned(request.client_addr, tid)) {
+        LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
+        io->AttachError(403);
+        return false;
+    }
+
+    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Token, tid, sms);
+    if (!session)
+        return false;
+    sessions.Open(request, io, session);
+
+    return true;
 }
 
 // Returns true if not handled or not relevant, false if an error has occured
