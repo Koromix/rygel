@@ -418,7 +418,7 @@ static bool IsUserBanned(const char *address, const char *context)
     return flood && flood->banned;
 }
 
-static void RegisterFloodEvent(const char *address, const char *context)
+static bool RegisterFloodEvent(const char *address, const char *context)
 {
     std::lock_guard<std::shared_mutex> lock_excl(floods_mutex);
 
@@ -436,6 +436,8 @@ static void RegisterFloodEvent(const char *address, const char *context)
     if (++flood->events >= BanTreshold) {
         flood->banned = true;
     }
+
+    return flood->banned;
 }
 
 void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
@@ -852,8 +854,12 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
 {
     RetainPtr<SessionInfo> session = sessions.Find(request, io);
 
-    if (!session || session->confirm == SessionConfirm::None) {
-        LogError("There is nothing to confirm");
+    if (!session) {
+        LogError("Session is closed");
+        io->AttachError(403);
+        return;
+    } else if (session->confirm == SessionConfirm::None) {
+        LogError("Session does not need confirmation");
         io->AttachError(403);
         return;
     }
@@ -893,9 +899,12 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
                     session->confirm = SessionConfirm::None;
                     WriteProfileJson(session.GetRaw(), instance, request, io);
                 } else {
-                    RegisterFloodEvent(request.client_addr, session->username);
-
-                    LogError("Code is incorrect");
+                    if (RegisterFloodEvent(request.client_addr, session->username)) {
+                        sessions.Close(request, io);
+                        LogError("Code is incorrect; you are now blocked for %1 minutes", (BanTime + 59000) / 60000);
+                    } else {
+                        LogError("Code is incorrect");
+                    }
                     io->AttachError(403);
                 }
             } break;
@@ -914,9 +923,12 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
                     session->confirm = SessionConfirm::None;
                     WriteProfileJson(session.GetRaw(), instance, request, io);
                 } else {
-                    RegisterFloodEvent(request.client_addr, session->username);
-
-                    LogError("Code is incorrect");
+                    if (RegisterFloodEvent(request.client_addr, session->username)) {
+                        sessions.Close(request, io);
+                        LogError("Code is incorrect; you are now blocked for %1 minutes", (BanTime + 59000) / 60000);
+                    } else {
+                        LogError("Code is incorrect");
+                    }
                     io->AttachError(403);
                 }
             } break;
