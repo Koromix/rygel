@@ -437,6 +437,8 @@ Options:
     HeapArray<const char *> directories;
     HeapArray<const char *> files;
     RG_DEFER_N(root_guard) {
+        domain.db.Close();
+
         for (const char *filename: files) {
             UnlinkFile(filename);
         }
