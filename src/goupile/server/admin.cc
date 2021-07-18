@@ -43,12 +43,10 @@ static const char *DefaultConfig =
 R"([Domain]
 Title = %1
 
-[Paths]
+[Data]
 # DatabaseFile = goupile.db
 # ArchiveDirectory = archives
 # SnapshotDirectory = snapshots
-
-[Data]
 ArchiveKey = %2
 # SynchronousFull = Off
 

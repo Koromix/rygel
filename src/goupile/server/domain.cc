@@ -83,7 +83,7 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         valid = false;
                     }
                 } while (ini.NextInSection(&prop));
-            } else if (prop.section == "Paths" || prop.section == "Resources") {
+            } else if (prop.section == "Data" || prop.section == "Paths") {
                 do {
                     if (prop.key == "DatabaseFile") {
                         config.database_filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
@@ -91,14 +91,7 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         config.archive_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "SnapshotDirectory") {
                         config.snapshot_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
-                } while (ini.NextInSection(&prop));
-            } else if (prop.section == "Data" || prop.section == "SQLite") {
-                do {
-                    if (prop.key == "ArchiveKey" || prop.key == "BackupKey") {
+                    } else if (prop.key == "ArchiveKey" || prop.key == "BackupKey") {
                         RG_STATIC_ASSERT(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
 
                         size_t key_len;

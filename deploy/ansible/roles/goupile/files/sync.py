@@ -161,9 +161,8 @@ def update_domain_config(domain, info, archive_key, backup, smtp, sms):
         ini.add_section('Domain')
     ini.set('Domain', 'Title', domain)
 
-    ini.remove_option('Paths', 'BackupDirectory')
-    ini.set('Paths', 'SnapshotDirectory', info.snapshot_directory)
-
+    ini.remove_section('Paths')
+    ini.set('Data', 'SnapshotDirectory', info.snapshot_directory)
     ini.set('Data', 'ArchiveKey', archive_key)
     ini.set('Data', 'SnapshotHour', backup['SnapshotHour'])
     ini.set('Data', 'SnapshotZone', backup['SnapshotZone'])
