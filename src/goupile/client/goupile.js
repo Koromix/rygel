@@ -22,7 +22,7 @@ const goupile = new function() {
                     !!process.versions.electron);
 
     let profile_keys = {};
-    let online = true;
+    let confirm_promise;
 
     let controller;
     let current_url;
@@ -30,6 +30,7 @@ const goupile = new function() {
     this.start = async function() {
         let url = new URL(window.location.href);
 
+        // Select relevant controller
         if (ENV.urls.base === '/admin/') {
             controller = new AdminController;
             document.documentElement.className = 'admin';
@@ -57,28 +58,32 @@ const goupile = new function() {
             req.onupgradeneeded = () => { console.log('Safari IDB workaround: upgrade needed'); };
         }
 
+        // Initialize base subsystems
         ui.init();
         await registerSW();
         initNavigation();
 
+        // Get current session profile (unless ?login=1 is present)
         if (url.searchParams.get('login')) {
             self.syncHistory(url.pathname, false);
+            url = new URL(window.location.href);
         } else {
             await syncProfile();
         }
 
-        if (profile.authorized) {
-            await initAfterAuthorization();
-        } else if (profile.confirm != null) {
-            await runConfirmScreen(profile.confirm);
-        } else {
-            await runLoginScreen();
+        // Run login dialogs
+        while (!profile.authorized) {
+            try {
+                if (profile.confirm == null)
+                    await runLoginScreen();
+                if (profile.confirm != null)
+                    await runConfirmScreen(profile.confirm);
+            } catch (err) {
+                log.error(err);
+            }
         }
-    };
 
-    async function initAfterAuthorization() {
-        let url = new URL(window.location.href);
-
+        // Adjust URLs abused on user permissions
         if (profile.instances != null) {
             let instance = profile.instances.find(instance => url.pathname.startsWith(instance.url)) ||
                            profile.instances[0];
@@ -90,67 +95,20 @@ const goupile = new function() {
                 url = new URL(instance.url, window.location.href);
         }
 
+        // Initialize controller
         await controller.init();
         await initTasks();
 
+        // Run page
         controller.go(null, url.href).catch(err => {
             log.error(err);
 
-            // Now try home page... If that fails too, show login screen.
-            // This will solve some situations such as overly restrictive locks.
+            // Now try home page... If that fails too, show error to user
             controller.go(null, ENV.urls.base).catch(async err => {
-                runLoginScreen();
+                throw err;
             });
         });
     };
-
-    async function registerSW() {
-        try {
-            if (navigator.serviceWorker != null) {
-                if (ENV.cache_offline) {
-                    let registration = await navigator.serviceWorker.register(`${ENV.urls.base}sw.pk.js`);
-                    let progress = new log.Entry;
-
-                    if (registration.waiting) {
-                        progress.error('Fermez tous les onglets pour terminer la mise à jour puis rafraichissez la page');
-                        document.querySelector('#ui_root').classList.add('disabled');
-                    } else {
-                        registration.addEventListener('updatefound', () => {
-                            if (registration.active) {
-                                progress.progress('Mise à jour en cours, veuillez patienter');
-                                document.querySelector('#ui_root').classList.add('disabled');
-
-                                registration.installing.addEventListener('statechange', e => {
-                                    if (e.target.state === 'installed') {
-                                        progress.success('Mise à jour effectuée, l\'application va redémarrer');
-                                        setTimeout(() => document.location.reload(), 3000);
-                                    }
-                                });
-                            }
-                        });
-                    }
-                } else {
-                    let registration = await navigator.serviceWorker.getRegistration();
-                    let progress = new log.Entry;
-
-                    if (registration != null) {
-                        progress.progress('Nettoyage de l\'instance en cache, veuillez patienter');
-                        document.querySelector('#ui_root').classList.add('disabled');
-
-                        await registration.unregister();
-
-                        progress.success('Nettoyage effectué, l\'application va redémarrer');
-                        setTimeout(() => document.location.reload(), 3000);
-                    }
-                }
-            }
-        } catch (err) {
-            if (ENV.cache_offline) {
-                console.log(err);
-                console.log("Service worker API is not available");
-            }
-        }
-    }
 
     async function syncProfile() {
         let session_rnd = util.getCookie('session_rnd');
@@ -200,6 +158,54 @@ const goupile = new function() {
         }
     }
 
+    async function registerSW() {
+        try {
+            if (navigator.serviceWorker != null) {
+                if (ENV.cache_offline) {
+                    let registration = await navigator.serviceWorker.register(`${ENV.urls.base}sw.pk.js`);
+                    let progress = new log.Entry;
+
+                    if (registration.waiting) {
+                        progress.error('Fermez tous les onglets pour terminer la mise à jour puis rafraichissez la page');
+                        document.querySelector('#ui_root').classList.add('disabled');
+                    } else {
+                        registration.addEventListener('updatefound', () => {
+                            if (registration.active) {
+                                progress.progress('Mise à jour en cours, veuillez patienter');
+                                document.querySelector('#ui_root').classList.add('disabled');
+
+                                registration.installing.addEventListener('statechange', e => {
+                                    if (e.target.state === 'installed') {
+                                        progress.success('Mise à jour effectuée, l\'application va redémarrer');
+                                        setTimeout(() => document.location.reload(), 3000);
+                                    }
+                                });
+                            }
+                        });
+                    }
+                } else {
+                    let registration = await navigator.serviceWorker.getRegistration();
+                    let progress = new log.Entry;
+
+                    if (registration != null) {
+                        progress.progress('Nettoyage de l\'instance en cache, veuillez patienter');
+                        document.querySelector('#ui_root').classList.add('disabled');
+
+                        await registration.unregister();
+
+                        progress.success('Nettoyage effectué, l\'application va redémarrer');
+                        setTimeout(() => document.location.reload(), 3000);
+                    }
+                }
+            }
+        } catch (err) {
+            if (ENV.cache_offline) {
+                console.log(err);
+                console.log("Service worker API is not available");
+            }
+        }
+    }
+
     async function runLoginScreen(e) {
         return ui.runScreen((d, resolve, reject) => {
             d.output(html`
@@ -213,16 +219,7 @@ const goupile = new function() {
 
             d.action('Se connecter', {disabled: !d.isValid()}, async () => {
                 try {
-                    let progress = log.progress('Connexion en cours');
-
-                    await tryLogin(username.value, password.value, progress, net.isOnline());
-
-                    if (profile.confirm != null) {
-                        await runConfirmScreen(profile.confirm);
-                    } else {
-                        await initAfterAuthorization();
-                    }
-
+                    await tryLogin(username.value, password.value, net.isOnline());
                     resolve();
                 } catch (err) {
                     log.error(err);
@@ -251,35 +248,22 @@ const goupile = new function() {
             let code = d.password('*code', 'Code secret');
 
             d.action('Continuer', {disabled: !d.isValid()}, async () => {
-                let progress = log.progress('Connexion en cours');
+                let query = new URLSearchParams;
+                query.set('code', code.value);
 
-                try {
-                    let query = new URLSearchParams;
-                    query.set('code', code.value);
+                let response = await net.fetch(`${ENV.urls.instance}api/session/confirm`, {
+                    method: 'POST',
+                    body: query
+                });
 
-                    let response = await net.fetch(`${ENV.urls.instance}api/session/confirm`, {
-                        method: 'POST',
-                        body: query
-                    });
+                if (response.ok) {
+                    let new_profile = await response.json();
+                    await updateProfile(new_profile, true);
 
-                    if (response.ok) {
-                        let new_profile = await response.json();
-                        await updateProfile(new_profile, true);
-
-                        // XXX: Clean up this whole mess!
-                        await initAfterAuthorization();
-
-                        progress.success('Connexion réussie');
-                        resolve();
-                    } else {
-                        let err = (await response.text()).trim();
-                        throw new Error(err);
-                    }
-                } catch (err) {
-                    progress.close();
-
-                    log.error(err);
-                    d.refresh();
+                    resolve();
+                } else {
+                    let err = (await response.text()).trim();
+                    throw new Error(err);
                 }
             });
         });
@@ -382,7 +366,7 @@ const goupile = new function() {
         net.retryHandler = async response => {
             if (response.status === 401) {
                 try {
-                    await self.confirmIdentity();
+                    await confirmIdentity();
                     return true;
                 } catch (err) {
                     return false;
@@ -441,7 +425,7 @@ const goupile = new function() {
         }
     }
 
-    async function tryLogin(username, password, progress, online) {
+    async function tryLogin(username, password, online) {
         try {
             if (online || !ENV.cache_offline) {
                 let query = new URLSearchParams;
@@ -473,9 +457,6 @@ const goupile = new function() {
 
                     await updateProfile(new_profile, true);
                     await deleteSessionValue('lock');
-
-                    if (progress != null)
-                        progress.success('Connexion réussie');
                 } else {
                     if (response.status === 403) {
                         let db = await openProfileDB();
@@ -506,9 +487,6 @@ const goupile = new function() {
                         obj.errors = 0;
                         await db.saveWithKey('usr_profiles', username, obj);
                     }
-
-                    if (progress != null)
-                        progress.success('Connexion réussie (hors ligne)');
                 } catch (err) {
                     obj.errors = (obj.errors || 0) + 1;
 
@@ -526,10 +504,8 @@ const goupile = new function() {
             }
         } catch (err) {
             if ((err instanceof NetworkError) && online && ENV.cache_offline) {
-                return tryLogin(username, password, progress, false);
+                return tryLogin(username, password, false);
             } else {
-                if (progress != null)
-                    progress.close();
                 throw err;
             }
         }
@@ -746,12 +722,11 @@ const goupile = new function() {
         await util.waitFor(2000);
     };
 
-    this.confirmIdentity = async function(e) {
-        let session_rnd = util.getCookie('session_rnd');
-
-        // We're OK!
-        if (session_rnd != null)
+    async function confirmIdentity(e) {
+        if (confirm_promise != null) {
+            await confirm_promise;
             return;
+        }
 
         if (profile.restore != null) {
             let url = util.pasteURL(`${ENV.urls.instance}api/session/profile`, profile.restore);
@@ -762,15 +737,13 @@ const goupile = new function() {
                 throw new Error(err);
             }
         } else if (profile.userid >= 0) {
-            return ui.runDialog(e, 'Confirmation d\'identité', (d, resolve, reject) => {
+            confirm_promise = ui.runDialog(e, 'Confirmation d\'identité', (d, resolve, reject) => {
                 d.calc('username', 'Nom d\'utilisateur', profile.username);
                 let password = d.password('*password', 'Mot de passe');
 
                 d.action('Confirmer', {disabled: !d.isValid()}, async e => {
-                    let progress = log.progress('Confirmation en cours');
-
                     try {
-                        await tryLogin(profile.username, password.value, progress, true);
+                        await tryLogin(profile.username, password.value, true);
                         resolve();
                     } catch (err) {
                         log.error(err);
@@ -778,11 +751,11 @@ const goupile = new function() {
                     }
                 });
             });
-        } else {
-            throw new Error('Cette session n\'est plus valide veuillez vous reconnecter');
+            confirm_promise.finally(() => confirm_promise = null);
+
+            return confirm_promise;
         }
     };
-    this.confirmIdentity = util.serialize(this.confirmIdentity);
 
     this.confirmDangerousAction = function(e) {
         if (controller == null)
