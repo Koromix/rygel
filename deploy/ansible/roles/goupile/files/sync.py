@@ -106,7 +106,8 @@ def create_domain(binary, root_dir, domain, archive_key,
     print(f'  + Create domain {domain} ({directory})', file = sys.stderr)
 
     execute_command([binary, 'init', '-o', owner_user, '--archive_key', archive_key,
-                     '--username', admin_username, '--password', admin_password, directory])
+                     '--title', domain, '--username', admin_username,
+                     '--password', admin_password, directory])
 
 def migrate_domain(binary, domain, info):
     print(f'  + Migrate domain {domain} ({info.main_directory})', file = sys.stderr)
@@ -152,9 +153,13 @@ def run_service_command(domain, cmd):
     print(f'  + {cmd.capitalize()} {service}', file = sys.stderr)
     execute_command(['systemctl', cmd, '--quiet', service])
 
-def update_domain_config(info, archive_key, backup, smtp, sms):
+def update_domain_config(domain, info, archive_key, backup, smtp, sms):
     filename = os.path.join(info.main_directory, 'goupile.ini')
     ini = parse_ini(filename)
+
+    if not ini.has_section('Domain'):
+        ini.add_section('Domain')
+    ini.set('Domain', 'Title', domain)
 
     ini.remove_option('Paths', 'BackupDirectory')
     ini.set('Paths', 'SnapshotDirectory', info.snapshot_directory)
@@ -232,7 +237,7 @@ def run_sync(config):
         backup = config.get('Backup')
         smtp = config.get('SMTP')
         sms = config.get('SMS')
-        if update_domain_config(info, archive_key, backup, smtp, sms):
+        if update_domain_config(domain, info, archive_key, backup, smtp, sms):
             info.mismatch = True
             changed = True
 

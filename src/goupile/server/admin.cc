@@ -40,13 +40,16 @@
 namespace RG {
 
 static const char *DefaultConfig =
-R"([Paths]
+R"([Domain]
+Title = %1
+
+[Paths]
 # DatabaseFile = goupile.db
 # ArchiveDirectory = archives
 # SnapshotDirectory = snapshots
 
 [Data]
-ArchiveKey = %1
+ArchiveKey = %2
 # SynchronousFull = Off
 
 [SMS]
@@ -354,6 +357,7 @@ int RunInit(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
+    const char *title = nullptr;
     const char *username = nullptr;
     const char *password = nullptr;
     char archive_key[45] = {};
@@ -368,6 +372,8 @@ int RunInit(Span<const char *> arguments)
         PrintLn(fp, R"(Usage: %!..+%1 init [options] [directory]%!0
 
 Options:
+    %!..+-t, --title <title>%!0          Set domain title
+
     %!..+-u, --username <username>%!0    Name of default user
         %!..+--password <pwd>%!0         Password of default user
         %!..+--archive_key <key>%!0      Set domain public archive key
@@ -388,6 +394,8 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
+            } else if (opt.Test("-t", "--title", OptionType::Value)) {
+                title = opt.current_value;
             } else if (opt.Test("-u", "--username", OptionType::Value)) {
                 username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
@@ -462,8 +470,17 @@ Options:
         return 1;
 
     // Gather missing information
+    if (!title) {
+        title = Prompt("Domain title: ", &temp_alloc);
+        if (!title)
+            return 1;
+    }
+    if (!title[0]) {
+        LogError("Empty domain title is now allowed");
+        return 1;
+    }
     if (!username) {
-        username = Prompt("Admin: ", &temp_alloc);
+        username = Prompt("Admin user: ", &temp_alloc);
         if (!username)
             return 1;
     }
@@ -474,7 +491,7 @@ Options:
             return 1;
     } else {
 retry:
-        password = Prompt("Password: ", "*", &temp_alloc);
+        password = Prompt("Admin password: ", "*", &temp_alloc);
         if (!password)
             return 1;
 
@@ -502,7 +519,7 @@ retry:
         files.Append(filename);
 
         StreamWriter writer(filename);
-        Print(&writer, DefaultConfig, archive_key);
+        Print(&writer, DefaultConfig, title, archive_key);
         if (!writer.Close())
             return 1;
 

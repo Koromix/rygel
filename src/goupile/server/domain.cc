@@ -28,6 +28,10 @@ bool DomainConfig::Validate() const
 {
     bool valid = true;
 
+    if (!title || !title[0]) {
+        LogError("Missing domain title");
+        valid = false;
+    }
     if (!enable_archives) {
         LogError("Domain archive key is not set");
         valid = false;
@@ -70,7 +74,16 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
     {
         IniProperty prop;
         while (ini.Next(&prop)) {
-            if (prop.section == "Paths" || prop.section == "Resources") {
+            if (prop.section == "Domain") {
+                do {
+                    if (prop.key == "Title") {
+                        config.title = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
+            } else if (prop.section == "Paths" || prop.section == "Resources") {
                 do {
                     if (prop.key == "DatabaseFile") {
                         config.database_filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
