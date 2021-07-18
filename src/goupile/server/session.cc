@@ -83,16 +83,18 @@ const SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
     // Fast path
     {
         std::shared_lock<std::shared_mutex> lock_shr(stamps_mutex);
-        stamp = stamps_map.Find(instance->unique);
+        stamp = stamps_map.FindValue(instance->unique, nullptr);
     }
 
     if (!stamp) {
         std::lock_guard<std::shared_mutex> lock_excl(stamps_mutex);
-        stamp = stamps_map.Find(instance->unique);
+        stamp = stamps_map.FindValue(instance->unique, nullptr);
 
         if (!stamp) {
-            stamp = stamps_map.SetDefault(instance->unique);
+            stamp = stamps.AppendDefault();
             stamp->unique = instance->unique;
+
+            stamps_map.Set(stamp);
 
             if (type == SessionType::User) {
                 sq_Statement stmt;
@@ -137,21 +139,24 @@ const SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
 void SessionInfo::InvalidateStamps()
 {
     std::lock_guard<std::shared_mutex> lock_excl(stamps_mutex);
-
     stamps_map.Clear();
-    stamps_alloc.ReleaseAll();
+
+    // We can't clear the array or the allocator because the stamps may
+    // be in use so they will waste memory until the session ends.
 }
 
 void SessionInfo::AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions, const char *ulid)
 {
     std::lock_guard<std::shared_mutex> lock_excl(stamps_mutex);
 
-    SessionStamp *stamp = stamps_map.SetDefault(instance->unique);
+    SessionStamp *stamp = stamps.AppendDefault();
 
     stamp->unique = instance->unique;
     stamp->authorized = true;
     stamp->permissions = permissions;
     stamp->ulid = ulid ? DuplicateString(ulid, &stamps_alloc).ptr : nullptr;
+
+    stamps_map.Set(stamp);
 }
 
 void InvalidateUserStamps(int64_t userid)

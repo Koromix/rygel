@@ -65,7 +65,8 @@ struct SessionStamp {
 
 class SessionInfo: public RetainObject {
     mutable std::shared_mutex stamps_mutex;
-    mutable HashTable<int64_t, SessionStamp> stamps_map;
+    mutable BucketArray<SessionStamp> stamps;
+    mutable HashTable<int64_t, SessionStamp *> stamps_map;
     mutable BlockAllocator stamps_alloc;
 
 public:
