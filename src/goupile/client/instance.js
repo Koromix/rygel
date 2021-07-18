@@ -437,7 +437,7 @@ function InstanceController() {
                     <button @click=${ui.wrapAction(e => self.go(e, route.form.chain[0].url + '/new'))}>Ajouter un ${data_form.title.toLowerCase()}</button>
                 </div>
 
-                <div class="ui_quick" style="margin-right: 2.2em;">
+                <div class="ui_quick" style=${visible_rows.length ? 'margin-right: 2.2em;' : ''}>
                     <input type="text" placeholder="Filtrer..." .value=${data_filter || ''}
                            @input=${e => { data_filter = e.target.value || null; self.run(); }} />
                     <div style="flex: 1;"></div>
