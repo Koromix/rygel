@@ -19,7 +19,7 @@ function InstancePublisher(instance, db) {
     this.runDialog = async function(e) {
         await computeActions();
 
-        return ui.runDialog(e, 'Publication', (d, resolve, reject) => {
+        return ui.runDialog(e, 'Publication', {}, (d, resolve, reject) => {
             dialog = d;
 
             d.output(html`
@@ -152,7 +152,7 @@ function InstancePublisher(instance, db) {
     }
 
     function runAddFileDialog(e) {
-        return ui.runDialog(e, 'Ajout de fichier', (d, resolve, reject) => {
+        return ui.runDialog(e, 'Ajout de fichier', {}, (d, resolve, reject) => {
             let file = d.file('*file', 'Fichier :');
             let filename = d.text('*filename', 'Chemin :', {value: file.value ? file.value.name : null});
 

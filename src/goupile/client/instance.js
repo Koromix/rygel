@@ -918,7 +918,7 @@ function InstanceController() {
     }
 
     function runTrailDialog(e, ulid) {
-        return ui.runDialog(e, 'Historique', (d, resolve, reject) => {
+        return ui.runDialog(e, 'Historique', {}, (d, resolve, reject) => {
             d.output(html`
                 <table class="ui_table">
                     <colgroup>

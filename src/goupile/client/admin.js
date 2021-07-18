@@ -245,7 +245,7 @@ function AdminController() {
     }
 
     async function runUploadBackupDialog(e) {
-        return ui.runDialog(e, 'Envoi d\'archive', (d, resolve, reject) => {
+        return ui.runDialog(e, 'Envoi d\'archive', {}, (d, resolve, reject) => {
             let archive = d.file('*archive', 'Archive');
 
             d.action('Envoyer', {disabled: !d.isValid()}, async () => {
@@ -280,7 +280,7 @@ function AdminController() {
     }
 
     async function runRestoreBackupDialog(e, filename) {
-        return ui.runDialog(e, `Restauration de '${filename}'`, (d, resolve, reject) => {
+        return ui.runDialog(e, `Restauration de '${filename}'`, {}, (d, resolve, reject) => {
             let key = d.password('*key', 'Clé de restauration');
             let restore_users = d.boolean('*restore_users', 'Restaurer les utilisateurs et leurs droits', { value: false, untoggle: false });
 
@@ -425,7 +425,7 @@ function AdminController() {
     this.go = util.serialize(this.go);
 
     function runCreateInstanceDialog(e) {
-        return ui.runDialog(e, 'Création d\'un projet', (d, resolve, reject) => {
+        return ui.runDialog(e, 'Création d\'un projet', {}, (d, resolve, reject) => {
             let key = d.text('*key', 'Clé du projet', {
                 help: [
                     'Longueur maximale : 24 caractères',
@@ -465,7 +465,7 @@ function AdminController() {
     }
 
     function runConfigureInstanceDialog(e, instance) {
-        return ui.runDialog(e, `Configuration de ${instance.key}`, (d, resolve, reject) => {
+        return ui.runDialog(e, `Configuration de ${instance.key}`, {}, (d, resolve, reject) => {
             d.pushOptions({untoggle: false});
 
             d.tabs('actions', () => {
@@ -610,7 +610,7 @@ function AdminController() {
     }
 
     function runSplitInstanceDialog(e, master) {
-        return ui.runDialog(e, `Division de ${master}`, (d, resolve, reject) => {
+        return ui.runDialog(e, `Division de ${master}`, {}, (d, resolve, reject) => {
             d.calc('instance', 'Projet', master);
             let key = d.text('*key', 'Clé du sous-projet');
             let name = d.text('name', 'Nom', {value: key.value});
@@ -646,7 +646,7 @@ function AdminController() {
     }
 
     function runCreateUserDialog(e) {
-        return ui.runDialog(e, 'Création d\'un utilisateur', (d, resolve, reject) => {
+        return ui.runDialog(e, 'Création d\'un utilisateur', {}, (d, resolve, reject) => {
             let username = d.text('*username', 'Nom d\'utilisateur');
 
             let password = d.password('*password', 'Mot de passe');
@@ -707,7 +707,7 @@ function AdminController() {
     }
 
     function runAssignUserDialog(e, instance, user, prev_permissions) {
-        return ui.runDialog(e, `Droits de ${user.username} sur ${instance.key}`, (d, resolve, reject) => {
+        return ui.runDialog(e, `Droits de ${user.username} sur ${instance.key}`, {}, (d, resolve, reject) => {
             d.section("Développement", () => {
                 let props = ENV.permissions.filter(perm => perm.startsWith('admin_')).map(makePermissionProp);
                 let value = (instance.master == null) ? prev_permissions.filter(perm => perm.startsWith('admin_')) : null;
@@ -764,7 +764,7 @@ function AdminController() {
     }
 
     function runEditUserDialog(e, user) {
-        return ui.runDialog(e, `Modification de ${user.username}`, (d, resolve, reject) => {
+        return ui.runDialog(e, `Modification de ${user.username}`, {}, (d, resolve, reject) => {
             d.pushOptions({untoggle: false});
 
             d.tabs('actions', () => {

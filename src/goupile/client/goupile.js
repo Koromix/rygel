@@ -72,16 +72,8 @@ const goupile = new function() {
         }
 
         // Run login dialogs
-        while (!profile.authorized) {
-            try {
-                if (profile.confirm == null)
-                    await runLoginScreen();
-                if (profile.confirm != null)
-                    await runConfirmScreen(profile.confirm);
-            } catch (err) {
-                log.error(err);
-            }
-        }
+        if (!profile.authorized)
+            await runLogin(null, true);
 
         // Adjust URLs abused on user permissions
         if (profile.instances != null) {
@@ -109,54 +101,6 @@ const goupile = new function() {
             });
         });
     };
-
-    async function syncProfile() {
-        let session_rnd = util.getCookie('session_rnd');
-
-        if (session_rnd != null) {
-            try {
-                let response = await net.fetch(`${ENV.urls.instance}api/session/profile`);
-
-                let new_profile = await response.json();
-                await updateProfile(new_profile, true);
-            } catch (err) {
-                if (ENV.cache_offline) {
-                    if (!(err instanceof NetworkError))
-                        log.error(err);
-                } else {
-                    throw err;
-                }
-            }
-        }
-
-        // Client-side lock?
-        {
-            let lock = await loadSessionValue('lock');
-
-            if (lock != null) {
-                util.deleteCookie('session_rnd', '/');
-
-                let new_profile = {
-                    userid: lock.userid,
-                    username: lock.username,
-                    authorized: true,
-                    permissions: {
-                        data_load: true,
-                        data_save: true
-                    },
-                    namespaces: lock.namespaces,
-                    keys: lock.keys,
-                    lock: {
-                        unlockable: true,
-                        ctx: lock.ctx
-                    }
-                };
-                await updateProfile(new_profile, false);
-
-                return;
-            }
-        }
-    }
 
     async function registerSW() {
         try {
@@ -206,15 +150,90 @@ const goupile = new function() {
         }
     }
 
-    async function runLoginScreen(e) {
-        return ui.runScreen((d, resolve, reject) => {
-            d.output(html`
-                <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
-                <div id="gp_title">${ENV.title}</div>
-                <br/>
-            `);
+    async function syncProfile() {
+        let session_rnd = util.getCookie('session_rnd');
 
-            let username = d.text('*username', 'Nom d\'utilisateur');
+        if (session_rnd != null) {
+            try {
+                let response = await net.fetch(`${ENV.urls.instance}api/session/profile`);
+
+                let new_profile = await response.json();
+                await updateProfile(new_profile, true);
+            } catch (err) {
+                if (ENV.cache_offline) {
+                    if (!(err instanceof NetworkError))
+                        log.error(err);
+                } else {
+                    throw err;
+                }
+            }
+        }
+
+        // Client-side lock?
+        {
+            let lock = await loadSessionValue('lock');
+
+            if (lock != null) {
+                util.deleteCookie('session_rnd', '/');
+
+                let new_profile = {
+                    userid: lock.userid,
+                    username: lock.username,
+                    authorized: true,
+                    permissions: {
+                        data_load: true,
+                        data_save: true
+                    },
+                    namespaces: lock.namespaces,
+                    keys: lock.keys,
+                    lock: {
+                        unlockable: true,
+                        ctx: lock.ctx
+                    }
+                };
+                await updateProfile(new_profile, false);
+
+                return;
+            }
+        }
+    }
+
+    async function runLogin(e, initial) {
+        initial |= (profile.username == null);
+
+        do {
+            try {
+                if (profile.confirm == null)
+                    await runLoginScreen(e, initial);
+                if (profile.confirm != null)
+                    await runConfirmScreen(e, initial, profile.confirm);
+            } catch (err) {
+                if (!err)
+                    throw err;
+                log.error(err);
+            }
+        } while (!profile.authorized);
+    }
+
+    async function runLoginScreen(e, initial) {
+        let title = initial ? null : 'Confirmation d\'identité';
+
+        return ui.runDialog(e, title, { fixed: true }, (d, resolve, reject) => {
+            let username;
+            if (initial) {
+                d.output(html`
+                    <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
+                    <div id="gp_title">${ENV.title}</div>
+                    <br/>
+                `);
+
+                username = d.text('*username', 'Nom d\'utilisateur');
+            } else {
+                d.output(html`Veuillez <b>confirmer votre identité</b> pour continuer.`);
+
+                username = d.calc('*username', 'Nom d\'utilisateur', profile.username);
+            }
+
             let password = d.password('*password', 'Mot de passe');
 
             d.action('Se connecter', {disabled: !d.isValid()}, async () => {
@@ -229,13 +248,18 @@ const goupile = new function() {
         });
     }
 
-    function runConfirmScreen(method) {
-        return ui.runScreen((d, resolve, reject) => {
+    function runConfirmScreen(e, initial, method) {
+        let title = initial ? null : 'Confirmation d\'identité';
+
+        return ui.runDialog(e, title, { fixed: true }, (d, resolve, reject) => {
             d.output(html`
-                <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
-                <br/><br/>
-                ${method == 'sms' ? html`Entrez le code secret à 6 chiffres qui vous a été <b>envoyé par SMS</b>.` : ''}
-                ${method == 'totp' ? html`Entrez le code secret à 6 chiffres affiché <b>par l'application d'authentification</b>.` : ''}
+                ${initial ? html`
+                    <img id="gp_logo" src=${ENV.urls.base + 'favicon.png'} alt="" />
+                    <div id="gp_title">${ENV.title}</div>
+                    <br/><br/>
+                ` : ''}
+                ${method == 'sms' ? html`Entrez le code secret qui vous a été <b>envoyé par SMS</b>.` : ''}
+                ${method == 'totp' ? html`Entrez le code secret affiché <b>par l'application d'authentification</b>.` : ''}
                 ${method == 'qrcode' ? html`
                     <p>Scannez ce QR code avec votre <b>application mobile d'authentification</b>
                     puis saississez le code donné par cette application.</p>
@@ -245,7 +269,7 @@ const goupile = new function() {
                 ` : ''}
                 <br/>
             `);
-            let code = d.password('*code', 'Code secret');
+            let code = d.password('*code', 'Code secret', { help : '6 chiffres' });
 
             d.action('Continuer', {disabled: !d.isValid()}, async () => {
                 let query = new URLSearchParams;
@@ -270,7 +294,7 @@ const goupile = new function() {
     }
 
     this.runChangePasswordDialog = function(e) {
-        return ui.runDialog(e, 'Changement de mot de passe', (d, resolve, reject) => {
+        return ui.runDialog(e, 'Changement de mot de passe', {}, (d, resolve, reject) => {
             let old_password = d.password('*old_password', 'Ancien mot de passe');
             let new_password = d.password('*new_password', 'Nouveau mot de passe');
             let new_password2 = d.password('*new_password2', null, {
@@ -623,7 +647,7 @@ const goupile = new function() {
     }
 
     this.runLockDialog = function(e, ctx) {
-        return ui.runDialog(e, 'Verrouillage', (d, resolve, reject) => {
+        return ui.runDialog(e, 'Verrouillage', {}, (d, resolve, reject) => {
             let pin = d.pin('*pin', 'Code de déverrouillage');
             if (pin.value != null && pin.value.length < 4)
                 pin.error('Ce code est trop court', true);
@@ -633,7 +657,7 @@ const goupile = new function() {
     };
 
     this.runUnlockDialog = function(e) {
-        return ui.runDialog(e, 'Déverrouillage', (d, resolve, reject) => {
+        return ui.runDialog(e, 'Déverrouillage', {}, (d, resolve, reject) => {
             let pin = d.pin('*pin', 'Code de déverrouillage');
             d.action('Déverrouiller', {disabled: !d.isValid()}, e => goupile.unlock(e, pin.value));
         });
@@ -737,20 +761,7 @@ const goupile = new function() {
                 throw new Error(err);
             }
         } else if (profile.userid >= 0) {
-            confirm_promise = ui.runDialog(e, 'Confirmation d\'identité', (d, resolve, reject) => {
-                d.calc('username', 'Nom d\'utilisateur', profile.username);
-                let password = d.password('*password', 'Mot de passe');
-
-                d.action('Confirmer', {disabled: !d.isValid()}, async e => {
-                    try {
-                        await tryLogin(profile.username, password.value, true);
-                        resolve();
-                    } catch (err) {
-                        log.error(err);
-                        d.refresh();
-                    }
-                });
-            });
+            confirm_promise = runLogin(e, false);
             confirm_promise.finally(() => confirm_promise = null);
 
             return confirm_promise;

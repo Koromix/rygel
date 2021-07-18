@@ -165,22 +165,25 @@ const ui = new function() {
         adaptToViewport();
     };
 
-    this.runScreen = function(func) {
-        render('', document.querySelector('#ui_main'));
-        return runDialog(null, null, 'screen', false, func);
-    };
-
-    this.runDialog = function(e, title, func) {
+    this.runDialog = function(e, title, options, func) {
         if (e != null) {
             e.stopPropagation();
-            if (document.documentElement.classList.contains('small'))
-                e = null;
+
+            if (options.type == null) {
+                if (document.documentElement.classList.contains('small')) {
+                    options.type = 'modal';
+                } else {
+                    options.type = 'popup';
+                }
+            }
+        } else if (options.type == null) {
+            options.type = (title != null) ? 'modal' : 'screen';
         }
 
-        return runDialog(e, title, e ? 'popup' : 'modal', true, func);
+        return runDialog(e, title, options, func);
     };
 
-    function runDialog(e, title, type, closeable, func) {
+    function runDialog(e, title, options, func) {
         if (e != null)
             closeOldDialogs(e);
 
@@ -190,11 +193,12 @@ const ui = new function() {
                 next: dialogs,
 
                 title: title,
-                type: type,
+                type: options.type,
+                fixed: !!options.fixed,
                 el: document.createElement('div'),
                 state: new FormState,
                 render: () => buildDialog(dialog, e, func),
-                closeable: closeable,
+                closeable: options.type !== 'screen',
 
                 resolve: value => {
                     if (dialog.el != null) {
@@ -216,8 +220,8 @@ const ui = new function() {
             dialogs.prev = dialog;
 
             // Modal or popup?
-            dialog.el.className = `ui_dialog ${type}`;
-            if (closeable) {
+            dialog.el.className = `ui_dialog ${options.type}`;
+            if (options.type !== 'screen') {
                 dialog.el.addEventListener('keydown', e => {
                     if (e.keyCode == 27)
                         dialog.reject(null);
@@ -230,6 +234,9 @@ const ui = new function() {
             // Show it!
             document.querySelector('#ui_root').appendChild(dialog.el);
             dialog.render();
+
+            if (options.type === 'screen')
+                render('', document.querySelector('#ui_main'));
 
             document.body.classList.remove('gp_loading');
         });
@@ -305,9 +312,11 @@ const ui = new function() {
         let give_focus = !dialog.el.classList.contains('active');
         dialog.el.style.visibility = 'hidden';
         dialog.el.classList.add('active');
+        if (dialog.fixed)
+            dialog.el.classList.add('fixed');
 
         // Try different popup positions
-        if (e != null) {
+        if (dialog.type === 'popup' && e != null) {
             let origin;
             if (e.clientX && e.clientY) {
                 origin = {
@@ -365,7 +374,7 @@ const ui = new function() {
     this.runConfirm = function(e, msg, action, func) {
         let title = action + ' (confirmation)';
 
-        return self.runDialog(e, title, (d, resolve, reject) => {
+        return self.runDialog(e, title, {}, (d, resolve, reject) => {
             d.output(msg);
 
             d.action(action, {disabled: !d.isValid()}, async e => {
