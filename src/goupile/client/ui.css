@@ -411,7 +411,7 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
     box-sizing: border-box;
     width: 20px;
     height: 20px;
-    margin: -2px 0 0 -2px;
+    margin: -1px 0 0 -1px;
 }
 .ui_log_spin::after {
     content: ' ';
