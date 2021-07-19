@@ -254,7 +254,7 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
 .ui_dialog.screen.active, .ui_dialog.modal.active { display: flex; }
 .ui_dialog.screen > div, .ui_dialog.modal > div {
     display: block;
-    min-width: 260px;
+    min-width: 280px;
     max-height: calc(100% - 20px);
     box-sizing: border-box;
     overflow-y: auto;
@@ -262,14 +262,14 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
 }
 .ui_dialog.modal > div > form, .ui_dialog.screen > div > form { padding: 16px; }
 .ui_dialog.modal > div { border: 1px solid #e6e6e6; }
-.ui_dialog.fixed > div { max-width: 260px; }
+.ui_dialog.fixed > div { max-width: 280px; }
 
 .ui_dialog.popup {
     display: none;
     position: fixed;
     box-sizing: border-box;
     max-height: calc(100% - 20px);
-    min-width: 260px;
+    min-width: 280px;
     box-sizing: border-box;
     overflow-y: auto;
     background: #f8f8f8;
