@@ -269,7 +269,7 @@ const goupile = new function() {
                 ` : ''}
                 <br/>
             `);
-            let code = d.password('*code', 'Code secret', { help : '6 chiffres' });
+            let code = d.text('*code', 'Code secret', { help : '6 chiffres' });
 
             d.action('Continuer', {disabled: !d.isValid()}, async () => {
                 let query = new URLSearchParams;
