@@ -250,6 +250,7 @@ const goupile = new function() {
 
     function runConfirmScreen(e, initial, method) {
         let title = initial ? null : 'Confirmation d\'identité';
+        let errors = 0;
 
         return ui.runDialog(e, title, { fixed: true }, (d, resolve, reject) => {
             d.output(html`
@@ -271,6 +272,16 @@ const goupile = new function() {
             `);
             let code = d.text('*code', 'Code secret', { help : '6 chiffres' });
 
+            if (errors >= 2) {
+                d.output(html`
+                    <span style="color: red; font-style: italic">
+                        En cas de difficulté, vérifiez que l'heure de votre téléphone
+                        est précisément réglée, que le fuseau horaire paramétré est
+                        le bon ainsi que l'heure d'été.
+                    </span>
+                `)
+            }
+
             d.action('Continuer', {disabled: !d.isValid()}, async () => {
                 let query = new URLSearchParams;
                 query.set('code', code.value);
@@ -286,6 +297,9 @@ const goupile = new function() {
 
                     resolve();
                 } else {
+                    errors++;
+                    d.refresh();
+
                     let err = (await response.text()).trim();
                     throw new Error(err);
                 }
