@@ -193,6 +193,7 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
     if (session) {
         json.Key("userid"); json.Int64(session->userid);
         json.Key("username"); json.String(session->username);
+        json.Key("online"); json.Bool(true);
 
         // Atomic load
         SessionConfirm confirm = session->confirm;

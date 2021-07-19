@@ -73,9 +73,9 @@ const goupile = new function() {
 
         // Run login dialogs
         if (!profile.authorized)
-            await runLogin(null, true);
+            await runLoginScreen(null, true);
 
-        // Adjust URLs abused on user permissions
+        // Adjust URLs based on user permissions
         if (profile.instances != null) {
             let instance = profile.instances.find(instance => url.pathname.startsWith(instance.url)) ||
                            profile.instances[0];
@@ -151,9 +151,8 @@ const goupile = new function() {
     }
 
     async function syncProfile() {
-        let session_rnd = util.getCookie('session_rnd');
-
-        if (session_rnd != null) {
+        // Ask server (if needed)
+        if (util.getCookie('session_rnd') != null) {
             try {
                 let response = await net.fetch(`${ENV.urls.instance}api/session/profile`);
 
@@ -179,6 +178,7 @@ const goupile = new function() {
                 let new_profile = {
                     userid: lock.userid,
                     username: lock.username,
+                    online: false,
                     authorized: true,
                     permissions: {
                         data_load: true,
@@ -191,31 +191,51 @@ const goupile = new function() {
                         ctx: lock.ctx
                     }
                 };
-                await updateProfile(new_profile, false);
+                await updateProfile(new_profile);
 
                 return;
             }
         }
     }
 
-    async function runLogin(e, initial) {
+    async function runLoginScreen(e, initial) {
         initial |= (profile.username == null);
+
+        let new_profile = profile;
+        let password;
 
         do {
             try {
-                if (profile.confirm == null)
-                    await runLoginScreen(e, initial);
-                if (profile.confirm != null)
-                    await runConfirmScreen(e, initial, profile.confirm);
+                if (new_profile.confirm == null)
+                    [new_profile, password] = await runPasswordScreen(e, initial);
+                if (new_profile.confirm != null)
+                    new_profile = await runConfirmScreen(e, initial, new_profile.confirm);
             } catch (err) {
                 if (!err)
                     throw err;
                 log.error(err);
             }
-        } while (!profile.authorized);
+        } while (!new_profile.authorized);
+
+        // Save for offline login
+        if (ENV.cache_offline) {
+            let db = await openProfileDB();
+
+            let salt = nacl.randomBytes(24);
+            let key = await deriveKey(password, salt);
+            let enc = await encryptSecretBox(new_profile, key);
+
+            await db.saveWithKey('usr_profiles', new_profile.username, {
+                salt: bytesToBase64(salt),
+                errors: 0,
+                profile: enc
+            });
+        }
+
+        await updateProfile(new_profile);
     }
 
-    async function runLoginScreen(e, initial) {
+    async function runPasswordScreen(e, initial) {
         let title = initial ? null : 'Confirmation d\'identité';
 
         return ui.runDialog(e, title, { fixed: true }, (d, resolve, reject) => {
@@ -238,8 +258,8 @@ const goupile = new function() {
 
             d.action('Se connecter', {disabled: !d.isValid()}, async () => {
                 try {
-                    await tryLogin(username.value, password.value, net.isOnline());
-                    resolve();
+                    let new_profile = await login(username.value, password.value);
+                    resolve([new_profile, password.value]);
                 } catch (err) {
                     log.error(err);
                     d.refresh();
@@ -293,9 +313,7 @@ const goupile = new function() {
 
                 if (response.ok) {
                     let new_profile = await response.json();
-                    await updateProfile(new_profile, true);
-
-                    resolve();
+                    resolve(new_profile);
                 } else {
                     errors++;
                     d.refresh();
@@ -305,6 +323,28 @@ const goupile = new function() {
                 }
             });
         });
+    }
+
+    async function runConfirmIdentity(e) {
+        if (confirm_promise != null) {
+            await confirm_promise;
+            return;
+        }
+
+        if (profile.restore != null) {
+            let url = util.pasteURL(`${ENV.urls.instance}api/session/profile`, profile.restore);
+            let response = await net.fetch(url);
+
+            if (!response.ok) {
+                let err = (await response.text()).trim();
+                throw new Error(err);
+            }
+        } else if (profile.userid >= 0) {
+            confirm_promise = runLoginScreen(e, false);
+            confirm_promise.finally(() => confirm_promise = null);
+
+            return confirm_promise;
+        }
     }
 
     this.runChangePasswordDialog = function(e) {
@@ -404,7 +444,7 @@ const goupile = new function() {
         net.retryHandler = async response => {
             if (response.status === 401) {
                 try {
-                    await confirmIdentity();
+                    await runConfirmIdentity();
                     return true;
                 } catch (err) {
                     return false;
@@ -463,90 +503,95 @@ const goupile = new function() {
         }
     }
 
-    async function tryLogin(username, password, online) {
+    async function login(username, password) {
+        let online = net.isOnline();
+
         try {
             if (online || !ENV.cache_offline) {
-                let query = new URLSearchParams;
-                query.set('username', username.toLowerCase());
-                query.set('password', password);
+                let new_profile = await loginOnline(username, password);
+                return new_profile;
+            } else {
+                online = false;
 
-                let response = await net.fetch(`${ENV.urls.instance}api/session/login`, {
-                    method: 'POST',
-                    body: query
-                });
-
-                if (response.ok) {
-                    let new_profile = await response.json();
-
-                    // Save for offline login
-                    if (ENV.cache_offline) {
-                        let db = await openProfileDB();
-
-                        let salt = nacl.randomBytes(24);
-                        let key = await deriveKey(password, salt);
-                        let enc = await encryptSecretBox(new_profile, key);
-
-                        await db.saveWithKey('usr_profiles', username, {
-                            salt: bytesToBase64(salt),
-                            errors: 0,
-                            profile: enc
-                        });
-                    }
-
-                    await updateProfile(new_profile, true);
-                    await deleteSessionValue('lock');
-                } else {
-                    if (response.status === 403) {
-                        let db = await openProfileDB();
-                        await db.delete('usr_profiles', username);
-                    }
-
-                    let err = (await response.text()).trim();
-                    throw new Error(err);
-                }
-            } else if (ENV.cache_offline) {
-                let db = await openProfileDB();
-
-                // Instantaneous login feels weird
-                await util.waitFor(800);
-
-                let obj = await db.load('usr_profiles', username);
-                if (obj == null)
-                    throw new Error('Profil hors ligne inconnu');
-
-                let key = await deriveKey(password, base64ToBytes(obj.salt));
-                let new_profile;
-
-                try {
-                    new_profile = await decryptSecretBox(obj.profile, key);
-
-                    // Reset errors after successful offline login
-                    if (obj.errors) {
-                        obj.errors = 0;
-                        await db.saveWithKey('usr_profiles', username, obj);
-                    }
-                } catch (err) {
-                    obj.errors = (obj.errors || 0) + 1;
-
-                    if (obj.errors >= 5) {
-                        await db.delete('usr_profiles', username);
-                        throw new Error('Mot de passe non reconnu, connexion hors ligne désactivée');
-                    } else {
-                        await db.saveWithKey('usr_profiles', username, obj);
-                        throw new Error('Mot de passe non reconnu');
-                    }
-                }
-
-                await updateProfile(new_profile, false);
-                await deleteSessionValue('lock');
+                let new_profile = await loginOffline(username, password);
+                return new_profile;
             }
         } catch (err) {
             if ((err instanceof NetworkError) && online && ENV.cache_offline) {
-                return tryLogin(username, password, false);
+                let new_profile = await loginOffline(username, password);
+                return new_profile;
             } else {
                 throw err;
             }
         }
+    }
+
+    async function loginOnline(username, password) {
+        let query = new URLSearchParams;
+        query.set('username', username.toLowerCase());
+        query.set('password', password);
+
+        let response = await net.fetch(`${ENV.urls.instance}api/session/login`, {
+            method: 'POST',
+            body: query
+        });
+
+        if (response.ok) {
+            let new_profile = await response.json();
+
+            // Release client-side lock
+            await deleteSessionValue('lock');
+
+            return new_profile;
+        } else {
+            if (response.status === 403) {
+                let db = await openProfileDB();
+                await db.delete('usr_profiles', username);
+            }
+
+            let err = (await response.text()).trim();
+            throw new Error(err);
+        }
+    }
+
+    async function loginOffline(username, password) {
+        let db = await openProfileDB();
+
+        // Instantaneous login feels weird
+        await util.waitFor(800);
+
+        let obj = await db.load('usr_profiles', username);
+        if (obj == null)
+            throw new Error('Profil hors ligne inconnu');
+
+        let key = await deriveKey(password, base64ToBytes(obj.salt));
+        let new_profile;
+
+        try {
+            new_profile = await decryptSecretBox(obj.profile, key);
+            new_profile.online = false;
+
+            // Reset errors after successful offline login
+            if (obj.errors) {
+                obj.errors = 0;
+                await db.saveWithKey('usr_profiles', username, obj);
+            }
+        } catch (err) {
+            obj.errors = (obj.errors || 0) + 1;
+
+            if (obj.errors >= 5) {
+                await db.delete('usr_profiles', username);
+                throw new Error('Mot de passe non reconnu, connexion hors ligne désactivée');
+            } else {
+                await db.saveWithKey('usr_profiles', username, obj);
+                throw new Error('Mot de passe non reconnu');
+            }
+        }
+
+        // Release client-side lock
+        await deleteSessionValue('lock');
+
+        return new_profile;
     }
 
     async function openProfileDB() {
@@ -574,7 +619,7 @@ const goupile = new function() {
         });
     }
 
-    async function updateProfile(new_profile, online) {
+    async function updateProfile(new_profile) {
         let usb_key;
         if (new_profile.encrypt_usb) {
             if (!electron)
@@ -599,7 +644,6 @@ const goupile = new function() {
         }
 
         profile = Object.assign({}, new_profile);
-        profile.online = online;
 
         // Keep keys local to "hide" (as much as JS allows..) them
         if (profile.keys != null) {
@@ -631,7 +675,7 @@ const goupile = new function() {
             let response = await net.fetch(`${ENV.urls.instance}api/session/logout`, {method: 'POST'})
 
             if (response.ok) {
-                await updateProfile({}, false);
+                await updateProfile({});
                 await deleteSessionValue('lock');
 
                 // Clear state and start from fresh as a precaution
@@ -758,28 +802,6 @@ const goupile = new function() {
         window.onbeforeunload = null;
         document.location.reload();
         await util.waitFor(2000);
-    };
-
-    async function confirmIdentity(e) {
-        if (confirm_promise != null) {
-            await confirm_promise;
-            return;
-        }
-
-        if (profile.restore != null) {
-            let url = util.pasteURL(`${ENV.urls.instance}api/session/profile`, profile.restore);
-            let response = await net.fetch(url);
-
-            if (!response.ok) {
-                let err = (await response.text()).trim();
-                throw new Error(err);
-            }
-        } else if (profile.userid >= 0) {
-            confirm_promise = runLogin(e, false);
-            confirm_promise.finally(() => confirm_promise = null);
-
-            return confirm_promise;
-        }
     };
 
     this.confirmDangerousAction = function(e) {
