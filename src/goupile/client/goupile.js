@@ -299,7 +299,7 @@ const goupile = new function() {
                         est précisément réglée, que le fuseau horaire paramétré est
                         le bon ainsi que l'heure d'été.
                     </span>
-                `)
+                `);
             }
 
             d.action('Continuer', {disabled: !d.isValid()}, async () => {
@@ -864,7 +864,7 @@ const goupile = new function() {
 
         let backup_key = base64ToBytes(ENV.backup_key);
         return encryptBox(obj, backup_key, key);
-    }
+    };
 
     async function encryptSecretBox(obj, key) {
         let nonce = new Uint8Array(24);
@@ -961,5 +961,5 @@ const goupile = new function() {
         }
 
         return sha256.finalize();
-    }
+    };
 };
