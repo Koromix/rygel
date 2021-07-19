@@ -261,8 +261,8 @@ const goupile = new function() {
                 ${method == 'sms' ? html`Entrez le code secret qui vous a été <b>envoyé par SMS</b>.` : ''}
                 ${method == 'totp' ? html`Entrez le code secret affiché <b>par l'application d'authentification</b>.` : ''}
                 ${method == 'qrcode' ? html`
-                    <p>Scannez ce QR code avec votre <b>application mobile d'authentification</b>
-                    puis saississez le code donné par cette application.</p>
+                    <p>Scannez ce QR code avec une <b>application d'authentification
+                    pour mobile</b> puis saississez le code donné par cette application.</p>
                     <p><i>Applications : FreeOTP, Authy, etc.</i></p>
 
                     <div style="text-align: center; margin-top: 2em;"><img src=${ENV.urls.instance + 'api/session/qrcode'} /></div>
