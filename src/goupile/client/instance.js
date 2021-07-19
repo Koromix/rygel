@@ -551,8 +551,8 @@ function InstanceController() {
             computeHidWidth.ctx = ctx;
         }
 
-        let metrics = ctx.measureText(hid);
-        return Math.ceil(metrics.width * 1.1) + 20; // `width: ${Math.ceil(metrics.width * 1.1) + 20}px;`;
+        let metrics = ctx.measureText(hid != null ? hid : 'NA');
+        return Math.ceil(metrics.width * 1.15) + 20;
     }
 
     function makeFilterFunction(filter) {
