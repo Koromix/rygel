@@ -52,6 +52,8 @@ function InstanceController() {
     let data_rows;
     let data_filter;
 
+    let prev_anchor;
+
     this.init = async function() {
         initUI();
         await openInstanceDB();
@@ -2311,14 +2313,19 @@ function InstanceController() {
                             hid: download.hid,
                             form: download.form,
                             parent: download.parent,
-                            fragments: download.fragments.map(fragment => ({
-                                anchor: fragment.anchor,
-                                type: fragment.type,
-                                user: fragment.username,
-                                mtime: new Date(fragment.mtime),
-                                page: fragment.page,
-                                values: fragment.values
-                            }))
+                            fragments: download.fragments.map(fragment => {
+                                anchor = Math.max(anchor, fragment.anchor + 1);
+
+                                let frag = {
+                                    anchor: fragment.anchor,
+                                    type: fragment.type,
+                                    user: fragment.username,
+                                    mtime: new Date(fragment.mtime),
+                                    page: fragment.page,
+                                    values: fragment.values
+                                };
+                                return frag;
+                            })
                         };
 
                         obj.enc = await goupile.encryptSymmetric(entry, 'records');
@@ -2326,6 +2333,11 @@ function InstanceController() {
 
                         changed = true;
                     }
+
+                    // Detect changes from other tabs
+                    if (prev_anchor != null && anchor !== prev_anchor)
+                        changed = true;
+                    prev_anchor = anchor;
                 }
 
                 if (changed && standalone) {
