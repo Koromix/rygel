@@ -279,11 +279,14 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
                         json.Key("ctx"); json.String(stamp->ulid);
                     json.EndObject();
                 }
+
+                json.Key("admin"); json.Bool(session->admin_until != 0);
             } else {
                 json.Key("authorized"); json.Bool(false);
             }
         } else {
             json.Key("authorized"); json.Bool(session->IsAdmin());
+            json.Key("admin"); json.Bool(session->admin_until != 0);
         }
     }
     json.EndObject();

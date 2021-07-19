@@ -236,7 +236,11 @@ function InstanceController() {
                             <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Changer le mot de passe</button>
                             <hr/>
                             ${app.lockable ? html`<button @click=${ui.wrapAction(e => goupile.runLockDialog(e, form_record.chain[0].ulid))}>Verrouiller</button>` : ''}
-                            ` : ''}
+                        ` : ''}
+                        ${profile.admin ? html`
+                            <button @click=${e => window.open('/admin/')}>Administration</button>
+                            <hr/>
+                        ` : ''}
                         <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
                     </div>
                 </div>
