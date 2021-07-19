@@ -101,10 +101,20 @@ static bool CheckInstanceKey(Span<const char> key)
         return false;
     }
 
+    static const char *const reserved_names[] = {
+        "admin",
+        "goupile",
+        "metrics",
+        "main",
+        "static",
+        "files",
+        "help"
+    };
+
     // Reserved names
-    if (key == "admin" || key == "goupile" || key == "metrics" ||
-            key == "main" || key == "static" || key == "files") {
-        LogError("The following keys are not allowed: admin, goupile, metrics, main, static, files");
+    if (std::find(std::begin(reserved_names),
+                  std::end(reserved_names), key) != std::end(reserved_names)) {
+        LogError("The following keys are not allowed: %1", FmtSpan(reserved_names));
         return false;
     }
 
