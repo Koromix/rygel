@@ -500,7 +500,7 @@ public:
     bool Export(const char *filename);
 
 private:
-    bool ParseObject(const char *form, const char *ulid, const char *hid, const char *prefix);
+    bool ParseObject(const char *form, const char *ulid, const char *hid, const char *prefix, int depth);
 
     Table *GetTable(const char *name);
     Row *GetRow(Table *table, const char *ulid, const char *hid);
@@ -532,7 +532,7 @@ bool RecordExporter::Parse(const char *ulid, const char *hid, const char *form, 
 
     this->parser = &parser;
 
-    if (!ParseObject(form, ulid, hid, nullptr))
+    if (!ParseObject(form, ulid, hid, nullptr, 0))
         return false;
 
     return true;
@@ -627,8 +627,7 @@ bool RecordExporter::Export(const char *filename)
     return true;
 }
 
-// XXX: Limit depth
-bool RecordExporter::ParseObject(const char *form, const char *ulid, const char *hid, const char *prefix)
+bool RecordExporter::ParseObject(const char *form, const char *ulid, const char *hid, const char *prefix, int depth)
 {
     Table *table = GetTable(form);
     Row *row = GetRow(table, ulid, hid);
@@ -739,20 +738,25 @@ bool RecordExporter::ParseObject(const char *form, const char *ulid, const char 
             } break;
 
             case json_TokenType::StartObject: {
+                if (RG_UNLIKELY(depth >= 8)) {
+                    LogError("Excessive nesting of objects");
+                    return false;
+                }
+
                 if (key.len && std::all_of(key.begin(), key.end(), IsAsciiDigit)) {
                     const char *form2 = Fmt(&str_alloc, "%1.%2", form, prefix).ptr;
                     const char *ulid2 = Fmt(&str_alloc, "%1.%2", ulid, key).ptr;
                     const char *prefix2 = nullptr;
 
-                    if (!ParseObject(form2, ulid2, key.ptr, prefix2))
+                    if (!ParseObject(form2, ulid2, key.ptr, prefix2, depth + 1))
                         return false;
                 } else if (prefix) {
                     const char *prefix2 = Fmt(&str_alloc, "%1.%2", prefix, key).ptr;
 
-                    if (!ParseObject(form, ulid, hid, prefix2))
+                    if (!ParseObject(form, ulid, hid, prefix2, depth + 1))
                         return false;
                 } else {
-                    if (!ParseObject(form, ulid, hid, key.ptr))
+                    if (!ParseObject(form, ulid, hid, key.ptr, depth + 1))
                         return false;
                 }
             } break;
