@@ -488,7 +488,6 @@ class RecordExporter {
 
     BucketArray<Table> tables;
     HashTable<const char *, Table *> tables_map;
-    HashSet<const char *> deleted_ulids;
 
     BlockAllocator str_alloc;
 
@@ -496,8 +495,6 @@ public:
     RecordExporter() {}
 
     bool Parse(const char *ulid, const char *hid, const char *form, Span<const char> json);
-    void SetDeletedFlag(const char *ulid, bool deleted);
-
     bool Export(const char *filename);
 
 private:
@@ -537,16 +534,6 @@ bool RecordExporter::Parse(const char *ulid, const char *hid, const char *form, 
         return false;
 
     return true;
-}
-
-void RecordExporter::SetDeletedFlag(const char *ulid, bool deleted)
-{
-    if (deleted) {
-        ulid = DuplicateString(ulid, &str_alloc).ptr;
-        deleted_ulids.Set(ulid);
-    } else {
-        deleted_ulids.Remove(ulid);
-    }
 }
 
 bool RecordExporter::Export(const char *filename)
@@ -605,9 +592,6 @@ bool RecordExporter::Export(const char *filename)
             return false;
 
         for (Size i = 0; i < table.rows.len; i++) {
-            if (deleted_ulids.Find(table.rows[i].ulid))
-                continue;
-
             stmt.Reset();
 
             sqlite3_bind_text(stmt, 1, table.rows[i].ulid, -1, SQLITE_STATIC);
@@ -931,6 +915,8 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
         sq_Statement stmt;
         if (!instance->db->Prepare(R"(SELECT e.ulid, e.hid, e.form, f.type, f.json FROM rec_entries e
                                       INNER JOIN rec_fragments f ON (f.ulid = e.ulid)
+                                      INNER JOIN rec_fragments fl ON (fl.anchor = e.anchor)
+                                      WHERE fl.type <> 'deleted'
                                       ORDER BY f.anchor)", &stmt))
             return;
 
@@ -950,10 +936,6 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
                                                  sqlite3_column_bytes(stmt, 4));
                 if (!exporter.Parse(ulid, hid, form, json))
                     return;
-
-                exporter.SetDeletedFlag(ulid, false);
-            } else if (TestStr(type, "delete")) {
-                exporter.SetDeletedFlag(ulid, true);
             }
         }
         if (!stmt.IsValid())
