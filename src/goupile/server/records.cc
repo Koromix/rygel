@@ -479,8 +479,6 @@ class RecordExporter {
         Column *last_column;
         const char *prev_name;
 
-        Row *GetRow(const char *ulid);
-
         RG_HASHTABLE_HANDLER(Table, name);
     };
 
