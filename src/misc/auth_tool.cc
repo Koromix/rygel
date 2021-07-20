@@ -390,7 +390,7 @@ Options:
         code = Prompt("Code: ", &temp_alloc);
         if (!code)
             return 1;
-        if (strlen(code) != digits) {
+        if (strlen(code) != (size_t)digits) {
             LogError("Code length does not match specified number of digits");
             return 1;
         }
