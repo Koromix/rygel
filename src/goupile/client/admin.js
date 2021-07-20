@@ -363,7 +363,7 @@ function AdminController() {
             url = new URL(url, window.location.href);
 
             let panels = url.searchParams.get('p');
-            if (panels != null)
+            if (panels)
                 ui.restorePanelState(panels);
 
             if (url.searchParams.has('select')) {

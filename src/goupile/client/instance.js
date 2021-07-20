@@ -1499,7 +1499,7 @@ function InstanceController() {
             }
 
             let panels = url.searchParams.get('p');
-            if (panels != null)
+            if (panels)
                 ui.restorePanelState(panels);
         }
 
@@ -1711,7 +1711,7 @@ function InstanceController() {
 
             let panels;
             if (goupile.isLocked()) {
-                panels = '';
+                panels = null;
             } else if (form_record == null || !form_record.saved) {
                 panels = ui.serializePanelState();
 

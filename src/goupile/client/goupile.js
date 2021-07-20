@@ -822,14 +822,19 @@ const goupile = new function() {
     this.isLoggedOnline = function() { return net.isOnline() && profile.online; };
 
     this.syncHistory = function(url, push = true) {
+        push &= (current_url != null && url !== current_url);
+
         if (profile.restore != null) {
-            let query = new URLSearchParams;
+            url = new URL(url, window.location.href);
+
+            let query = url.searchParams;
             for (let key in profile.restore)
                 query.set(key, profile.restore[key]);
-            url += '?' + query;
+
+            url = url.toString();
         }
 
-        if (push && current_url != null && url !== current_url) {
+        if (push) {
             window.history.pushState(null, null, url);
         } else {
             window.history.replaceState(null, null, url);
