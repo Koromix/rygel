@@ -578,11 +578,10 @@ bool RecordExporter::Export(const char *filename)
     for (const Table &table: tables) {
         HeapArray<char> sql(&str_alloc);
 
-        Fmt(&sql, "INSERT INTO "); EncodeSqlName(table.name, &sql); Fmt(&sql, " VALUES (?1, ?2, ");
+        Fmt(&sql, "INSERT INTO "); EncodeSqlName(table.name, &sql); Fmt(&sql, " VALUES (?1, ?2");
         for (Size i = 0; i < table.ordered_columns.len; i++) {
-            Fmt(&sql, "?%1, ", i + 3);
+            Fmt(&sql, ", ?%1", i + 3);
         }
-        sql.len -= 2;
         Fmt(&sql, ")");
 
         sq_Statement stmt;
