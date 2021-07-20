@@ -459,6 +459,7 @@ class RecordExporter {
 
         Type type;
         HeapArray<const char *> values;
+        bool valued;
 
         RG_HASHTABLE_HANDLER(Column, name);
     };
@@ -560,7 +561,7 @@ bool RecordExporter::Export(const char *filename)
         const Column *it = table.first_column;
 
         while (it) {
-            if (!table.masked_columns.Find(it->name)) {
+            if (it->valued && !table.masked_columns.Find(it->name)) {
                 table.ordered_columns.Append(it);
             }
             it = it->next;
@@ -651,6 +652,7 @@ bool RecordExporter::ParseObject(const char *form, const char *ulid, const char 
                 Column *col = GetColumn(table, prefix, key.ptr, nullptr);
                 col->type = (Type)std::max((int)col->type, (int)Type::Integer);
                 col->values[row->idx] = value ? "1" : "0";
+                col->valued = true;
             } break;
             case json_TokenType::Integer: {
                 int64_t value = 0;
@@ -659,6 +661,7 @@ bool RecordExporter::ParseObject(const char *form, const char *ulid, const char 
                 Column *col = GetColumn(table, prefix, key.ptr, nullptr);
                 col->type = (Type)std::max((int)col->type, (int)Type::Integer);
                 col->values[row->idx] = Fmt(&str_alloc, "%1", value).ptr;
+                col->valued = true;
             } break;
             case json_TokenType::Double: {
                 double value = 0.0;
@@ -667,6 +670,7 @@ bool RecordExporter::ParseObject(const char *form, const char *ulid, const char 
                 Column *col = GetColumn(table, prefix, key.ptr, nullptr);
                 col->type = (Type)std::max((int)col->type, (int)Type::Double);
                 col->values[row->idx] = Fmt(&str_alloc, "%1", value).ptr;
+                col->valued = true;
             } break;
             case json_TokenType::String: {
                 const char *str = nullptr;
@@ -675,6 +679,7 @@ bool RecordExporter::ParseObject(const char *form, const char *ulid, const char 
                 Column *col = GetColumn(table, prefix, key.ptr, nullptr);
                 col->type = (Type)std::max((int)col->type, (int)Type::String);
                 col->values[row->idx] = DuplicateString(str, &str_alloc).ptr;
+                col->valued = true;
             } break;
 
             case json_TokenType::StartArray: {
@@ -697,6 +702,7 @@ bool RecordExporter::ParseObject(const char *form, const char *ulid, const char 
                             Column *col = GetColumn(table, prefix, key.ptr, value ? "1" : "0");
                             col->type = (Type)std::max((int)col->type, (int)Type::Integer);
                             col->values[row->idx] = "1";
+                            col->valued = true;
                         } break;
                         case json_TokenType::Integer: {
                             int64_t value = 0;
@@ -708,6 +714,7 @@ bool RecordExporter::ParseObject(const char *form, const char *ulid, const char 
                             Column *col = GetColumn(table, prefix, key.ptr, buf);
                             col->type = (Type)std::max((int)col->type, (int)Type::Integer);
                             col->values[row->idx] = "1";
+                            col->valued = true;
                         } break;
                         case json_TokenType::Double: {
                             double value = 0.0;
@@ -719,6 +726,7 @@ bool RecordExporter::ParseObject(const char *form, const char *ulid, const char 
                             Column *col = GetColumn(table, prefix, key.ptr, buf);
                             col->type = (Type)std::max((int)col->type, (int)Type::Integer);
                             col->values[row->idx] = "1";
+                            col->valued = true;
                         } break;
                         case json_TokenType::String: {
                             const char *str = nullptr;
@@ -727,6 +735,7 @@ bool RecordExporter::ParseObject(const char *form, const char *ulid, const char 
                             Column *col = GetColumn(table, prefix, key.ptr, str);
                             col->type = (Type)std::max((int)col->type, (int)Type::String);
                             col->values[row->idx] = "1";
+                            col->valued = true;
                         } break;
 
                         default: {
