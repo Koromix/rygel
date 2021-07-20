@@ -112,8 +112,8 @@ static bool CheckInstanceKey(Span<const char> key)
     };
 
     // Reserved names
-    if (std::find(std::begin(reserved_names),
-                  std::end(reserved_names), key) != std::end(reserved_names)) {
+    if (std::find_if(std::begin(reserved_names), std::end(reserved_names),
+                     [&](const char *name) { return key == name; }) != std::end(reserved_names)) {
         LogError("The following keys are not allowed: %1", FmtSpan(reserved_names));
         return false;
     }
