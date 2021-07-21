@@ -905,7 +905,6 @@ NROFF
 PERL
 FISH_FUNCTIONS_DIR
 ZSH_FUNCTIONS_DIR
-USE_HYPER
 USE_QUICHE
 USE_NGHTTP3
 USE_NGTCP2_CRYPTO_GNUTLS
@@ -920,9 +919,6 @@ USE_LIBRTMP
 USE_WOLFSSH
 USE_LIBSSH
 USE_LIBSSH2
-LIBMETALINK_CPPFLAGS
-LIBMETALINK_LDFLAGS
-LIBMETALINK_LIBS
 USE_GSASL_FALSE
 USE_GSASL_TRUE
 USE_LIBPSL_FALSE
@@ -956,7 +952,6 @@ ZLIB_LIBS
 HAVE_LIBZ_FALSE
 HAVE_LIBZ_TRUE
 HAVE_LIBZ
-PKGCONFIG
 HAVE_PROTO_BSDSOCKET_H
 CURL_DISABLE_MQTT
 CURL_DISABLE_GOPHER
@@ -968,6 +963,8 @@ CURL_DISABLE_TFTP
 CURL_DISABLE_TELNET
 CURL_DISABLE_DICT
 CURL_DISABLE_PROXY
+USE_HYPER
+PKGCONFIG
 HAVE_LDAP_SSL
 CURL_DISABLE_LDAPS
 CURL_DISABLE_LDAP
@@ -1154,6 +1151,7 @@ with_mesalink
 with_bearssl
 with_rustls
 with_nss
+with_darwinssl
 enable_largefile
 enable_shared
 enable_static
@@ -1168,6 +1166,7 @@ enable_ftp
 enable_file
 enable_ldap
 enable_ldaps
+with_hyper
 enable_rtsp
 enable_proxy
 enable_dict
@@ -1212,7 +1211,6 @@ with_nghttp2
 with_ngtcp2
 with_nghttp3
 with_quiche
-with_hyper
 with_zsh_functions_dir
 with_fish_functions_dir
 enable_threaded_resolver
@@ -1220,6 +1218,7 @@ enable_pthreads
 enable_verbose
 enable_sspi
 enable_crypto_auth
+enable_ntlm
 enable_ntlm_wb
 enable_tls_srp
 enable_unix_sockets
@@ -1232,7 +1231,7 @@ enable_dateparse
 enable_netrc
 enable_progress_meter
 enable_dnsshuffle
-enable_get_easy_option
+enable_get_easy_options
 enable_alt_svc
 enable_hsts
 '
@@ -1922,7 +1921,7 @@ Optional Features:
   --enable-ldaps          Enable LDAPS support
   --disable-ldaps         Disable LDAPS support
   --enable-rtsp           Enable RTSP support
-  --disable-rtsp          Disable RTSP support
+    --disable-rtsp          Disable RTSP support
   --enable-proxy          Enable proxy support
   --disable-proxy         Disable proxy support
   --enable-dict           Enable DICT support
@@ -1971,6 +1970,8 @@ Optional Features:
   --disable-sspi          Disable SSPI
   --enable-crypto-auth    Enable cryptographic authentication
   --disable-crypto-auth   Disable cryptographic authentication
+  --enable-ntlm           Enable NTLM support
+  --disable-ntlm          Disable NTLM support
   --enable-ntlm-wb[=FILE] Enable NTLM delegation to winbind's ntlm_auth
                           helper, where FILE is ntlm_auth's absolute filename
                           (default: /usr/bin/ntlm_auth)
@@ -2034,6 +2035,7 @@ Optional Packages:
                           installation root
   --with-nss=PATH         where to look for NSS, PATH points to the
                           installation root
+
   --with-pic[=PKGS]       try to use only PIC/non-PIC objects [default=use
                           both]
   --with-aix-soname=aix|svr4|both
@@ -2042,6 +2044,8 @@ Optional Packages:
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
   --with-sysroot[=DIR]    Search for dependent libraries within DIR (or the
                           compiler's sysroot if not specified).
+  --with-hyper=PATH       Enable hyper usage
+  --without-hyper         Disable hyper usage
   --with-zlib=PATH        search for zlib in PATH
   --without-zlib          disable use of zlib
   --with-brotli=PATH      Where to look for brotli, PATH points to the BROTLI
@@ -2079,9 +2083,6 @@ Optional Packages:
   --without-ca-fallback   Don't use the built in CA store of the SSL library
   --without-libpsl        disable support for libpsl cookie checking
   --without-libgsasl      disable libgsasl support for SCRAM
-  --with-libmetalink=PATH where to look for libmetalink, PATH points to the
-                          installation root
-  --without-libmetalink   disable libmetalink detection
   --with-libssh2=PATH     Where to look for libssh2, PATH points to the
                           libssh2 installation; when possible, set the
                           PKG_CONFIG_PATH environment variable instead of
@@ -2113,8 +2114,6 @@ Optional Packages:
   --without-nghttp3       Disable nghttp3 usage
   --with-quiche=PATH      Enable quiche usage
   --without-quiche        Disable quiche usage
-  --with-hyper=PATH       Enable hyper usage
-  --without-hyper         Disable hyper usage
   --with-zsh-functions-dir=PATH
                           Install zsh completions to PATH
   --without-zsh-functions-dir
@@ -5897,7 +5896,6 @@ curl_verbose_msg="enabled (--disable-verbose)"
   curl_ldaps_msg="no      (--enable-ldaps)"
    curl_rtsp_msg="no      (--enable-rtsp)"
    curl_rtmp_msg="no      (--with-librtmp)"
-  curl_mtlnk_msg="no      (--with-libmetalink)"
     curl_psl_msg="no      (--with-libpsl)"
  curl_altsvc_msg="enabled (--disable-alt-svc)"
    curl_hsts_msg="enabled (--disable-hsts)"
@@ -6064,6 +6062,13 @@ Select from these:
 " "$LINENO" 5
   fi
 fi
+
+
+# Check whether --with-darwinssl was given.
+if test "${with_darwinssl+set}" = set; then :
+  withval=$with_darwinssl; as_fn_error $? "--with-darwin-ssl no longer works!" "$LINENO" 5
+fi
+
 
 
 # Make sure we can run config.sub.
@@ -6859,168 +6864,6 @@ rm -f conftest*
 /* end confdefs.h.  */
 
 
-#define inet_ntoa_r innocuous_inet_ntoa_r
-#ifdef __STDC__
-# include <limits.h>
-#else
-# include <assert.h>
-#endif
-#undef inet_ntoa_r
-#ifdef __cplusplus
-extern "C"
-#endif
-char inet_ntoa_r ();
-#if defined __stub_inet_ntoa_r || defined __stub___inet_ntoa_r
-choke me
-#endif
-
-int main (void)
-{
-return inet_ntoa_r ();
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-
-    tmp_inet_ntoa_r="yes"
-
-else
-
-    tmp_inet_ntoa_r="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-  if test "$tmp_inet_ntoa_r" = "yes"; then
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
-_ACEOF
-if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
-  $EGREP "inet_ntoa_r" >/dev/null 2>&1; then :
-
-      tmp_inet_ntoa_r="proto_declared"
-
-else
-
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#define _REENTRANT
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
-_ACEOF
-if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
-  $EGREP "inet_ntoa_r" >/dev/null 2>&1; then :
-
-        tmp_inet_ntoa_r="proto_needs_reentrant"
-        tmp_need_reentrant="yes"
-
-fi
-rm -f conftest*
-
-
-fi
-rm -f conftest*
-
-  fi
-
-  fi
-  if test "$tmp_need_reentrant" = "no"; then
-
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#define gethostbyaddr_r innocuous_gethostbyaddr_r
-#ifdef __STDC__
-# include <limits.h>
-#else
-# include <assert.h>
-#endif
-#undef gethostbyaddr_r
-#ifdef __cplusplus
-extern "C"
-#endif
-char gethostbyaddr_r ();
-#if defined __stub_gethostbyaddr_r || defined __stub___gethostbyaddr_r
-choke me
-#endif
-
-int main (void)
-{
-return gethostbyaddr_r ();
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-
-    tmp_gethostbyaddr_r="yes"
-
-else
-
-    tmp_gethostbyaddr_r="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-  if test "$tmp_gethostbyaddr_r" = "yes"; then
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#include <sys/types.h>
-#include <netdb.h>
-
-_ACEOF
-if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
-  $EGREP "gethostbyaddr_r" >/dev/null 2>&1; then :
-
-      tmp_gethostbyaddr_r="proto_declared"
-
-else
-
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#define _REENTRANT
-#include <sys/types.h>
-#include <netdb.h>
-
-_ACEOF
-if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
-  $EGREP "gethostbyaddr_r" >/dev/null 2>&1; then :
-
-        tmp_gethostbyaddr_r="proto_needs_reentrant"
-        tmp_need_reentrant="yes"
-
-fi
-rm -f conftest*
-
-
-fi
-rm -f conftest*
-
-  fi
-
-  fi
-  if test "$tmp_need_reentrant" = "no"; then
-
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
 #define gethostbyname_r innocuous_gethostbyname_r
 #ifdef __STDC__
 # include <limits.h>
@@ -7161,85 +7004,6 @@ if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
   $EGREP "getprotobyname_r" >/dev/null 2>&1; then :
 
         tmp_getprotobyname_r="proto_needs_reentrant"
-        tmp_need_reentrant="yes"
-
-fi
-rm -f conftest*
-
-
-fi
-rm -f conftest*
-
-  fi
-
-  fi
-  if test "$tmp_need_reentrant" = "no"; then
-
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#define getservbyport_r innocuous_getservbyport_r
-#ifdef __STDC__
-# include <limits.h>
-#else
-# include <assert.h>
-#endif
-#undef getservbyport_r
-#ifdef __cplusplus
-extern "C"
-#endif
-char getservbyport_r ();
-#if defined __stub_getservbyport_r || defined __stub___getservbyport_r
-choke me
-#endif
-
-int main (void)
-{
-return getservbyport_r ();
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-
-    tmp_getservbyport_r="yes"
-
-else
-
-    tmp_getservbyport_r="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-  if test "$tmp_getservbyport_r" = "yes"; then
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#include <sys/types.h>
-#include <netdb.h>
-
-_ACEOF
-if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
-  $EGREP "getservbyport_r" >/dev/null 2>&1; then :
-
-      tmp_getservbyport_r="proto_declared"
-
-else
-
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#define _REENTRANT
-#include <sys/types.h>
-#include <netdb.h>
-
-_ACEOF
-if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
-  $EGREP "getservbyport_r" >/dev/null 2>&1; then :
-
-        tmp_getservbyport_r="proto_needs_reentrant"
         tmp_need_reentrant="yes"
 
 fi
@@ -15950,9 +15714,7 @@ $as_echo "$as_me: WARNING: failed to figure out cpp -P alternative" >&2;}
   compiler_id="unknown"
   compiler_num="0"
   #
-  flags_dbg_all="unknown"
   flags_dbg_yes="unknown"
-  flags_dbg_off="unknown"
   flags_opt_all="unknown"
   flags_opt_yes="unknown"
   flags_opt_off="unknown"
@@ -16055,9 +15817,7 @@ rm -f conftest.err conftest.i conftest.$ac_ext
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
     compiler_id="DEC_C"
-    flags_dbg_all="-g -g0 -g1 -g2 -g3"
     flags_dbg_yes="-g2"
-    flags_dbg_off=""
     flags_opt_all="-O -O0 -O1 -O2 -O3 -O4"
     flags_opt_yes="-O1"
     flags_opt_off="-O0"
@@ -16117,9 +15877,7 @@ rm -f conftest.err conftest.i conftest.$ac_ext
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
     compiler_id="HP_UX_C"
-    flags_dbg_all="-g -s"
     flags_dbg_yes="-g"
-    flags_dbg_off="-s"
     flags_opt_all="-O +O0 +O1 +O2 +O3 +O4"
     flags_opt_yes="+O2"
     flags_opt_off="+O0"
@@ -16179,9 +15937,7 @@ rm -f conftest.err conftest.i conftest.$ac_ext
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
     compiler_id="IBM_C"
-    flags_dbg_all="-g -g0 -g1 -g2 -g3"
     flags_dbg_yes="-g"
-    flags_dbg_off=""
     flags_opt_all="-O -O0 -O1 -O2 -O3 -O4 -O5"
     flags_opt_all="$flags_opt_all -qnooptimize"
     flags_opt_all="$flags_opt_all -qoptimize=0"
@@ -16295,24 +16051,13 @@ rm -f conftest.err conftest.i conftest.$ac_ext
 
     if test "$curl_cv_have_def___unix__" = "yes"; then
       compiler_id="INTEL_UNIX_C"
-      flags_dbg_all="-g -g0"
       flags_dbg_yes="-g"
-      flags_dbg_off=""
       flags_opt_all="-O -O0 -O1 -O2 -O3 -Os"
       flags_opt_yes="-O2"
       flags_opt_off="-O0"
     else
       compiler_id="INTEL_WINDOWS_C"
-      flags_dbg_all="/ZI /Zi /zI /zi /ZD /Zd /zD /zd /Z7 /z7 /Oy /Oy-"
-      flags_dbg_all="$flags_dbg_all /debug"
-      flags_dbg_all="$flags_dbg_all /debug:none"
-      flags_dbg_all="$flags_dbg_all /debug:minimal"
-      flags_dbg_all="$flags_dbg_all /debug:partial"
-      flags_dbg_all="$flags_dbg_all /debug:full"
-      flags_dbg_all="$flags_dbg_all /debug:semantic_stepping"
-      flags_dbg_all="$flags_dbg_all /debug:extended"
       flags_dbg_yes="/Zi /Oy-"
-      flags_dbg_off="/debug:none /Oy-"
       flags_opt_all="/O /O0 /O1 /O2 /O3 /Od /Og /Og- /Oi /Oi-"
       flags_opt_yes="/O2"
       flags_opt_off="/Od"
@@ -16439,16 +16184,7 @@ $as_echo "no" >&6; }
     clangvhi=`echo $clangver | cut -d . -f1`
     clangvlo=`echo $clangver | cut -d . -f2`
     compiler_num=`(expr $clangvhi "*" 100 + $clangvlo) 2>/dev/null`
-    flags_dbg_all="-g -g0 -g1 -g2 -g3"
-    flags_dbg_all="$flags_dbg_all -ggdb"
-    flags_dbg_all="$flags_dbg_all -gstabs"
-    flags_dbg_all="$flags_dbg_all -gstabs+"
-    flags_dbg_all="$flags_dbg_all -gcoff"
-    flags_dbg_all="$flags_dbg_all -gxcoff"
-    flags_dbg_all="$flags_dbg_all -gdwarf-2"
-    flags_dbg_all="$flags_dbg_all -gvms"
     flags_dbg_yes="-g"
-    flags_dbg_off=""
     flags_opt_all="-O -O0 -O1 -O2 -Os -O3 -O4"
     flags_opt_yes="-Os"
     flags_opt_off="-O0"
@@ -16513,16 +16249,7 @@ $as_echo "yes" >&6; }
     gccvhi=`echo $gccver | cut -d . -f1`
     gccvlo=`echo $gccver | cut -d . -f2`
     compiler_num=`(expr $gccvhi "*" 100 + $gccvlo) 2>/dev/null`
-    flags_dbg_all="-g -g0 -g1 -g2 -g3"
-    flags_dbg_all="$flags_dbg_all -ggdb"
-    flags_dbg_all="$flags_dbg_all -gstabs"
-    flags_dbg_all="$flags_dbg_all -gstabs+"
-    flags_dbg_all="$flags_dbg_all -gcoff"
-    flags_dbg_all="$flags_dbg_all -gxcoff"
-    flags_dbg_all="$flags_dbg_all -gdwarf-2"
-    flags_dbg_all="$flags_dbg_all -gvms"
     flags_dbg_yes="-g"
-    flags_dbg_off=""
     flags_opt_all="-O -O0 -O1 -O2 -O3 -Os -Og -Ofast"
     flags_opt_yes="-O2"
     flags_opt_off="-O0"
@@ -16626,9 +16353,7 @@ rm -f conftest.err conftest.i conftest.$ac_ext
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
     compiler_id="LCC"
-    flags_dbg_all="-g"
     flags_dbg_yes="-g"
-    flags_dbg_off=""
     flags_opt_all=""
     flags_opt_yes=""
     flags_opt_off=""
@@ -16778,9 +16503,7 @@ rm -f conftest.err conftest.i conftest.$ac_ext
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
     compiler_id="SGI_MIPSPRO_C"
-    flags_dbg_all="-g -g0 -g1 -g2 -g3"
     flags_dbg_yes="-g"
-    flags_dbg_off=""
     flags_opt_all="-O -O0 -O1 -O2 -O3 -Ofast"
     flags_opt_yes="-O2"
     flags_opt_off="-O0"
@@ -16886,9 +16609,7 @@ rm -f conftest.err conftest.i conftest.$ac_ext
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
     compiler_id="SGI_MIPS_C"
-    flags_dbg_all="-g -g0 -g1 -g2 -g3"
     flags_dbg_yes="-g"
-    flags_dbg_off=""
     flags_opt_all="-O -O0 -O1 -O2 -O3 -Ofast"
     flags_opt_yes="-O2"
     flags_opt_off="-O0"
@@ -16948,9 +16669,7 @@ rm -f conftest.err conftest.i conftest.$ac_ext
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
     compiler_id="SUNPRO_C"
-    flags_dbg_all="-g -s"
     flags_dbg_yes="-g"
-    flags_dbg_off="-s"
     flags_opt_all="-O -xO -xO1 -xO2 -xO3 -xO4 -xO5"
     flags_opt_yes="-xO2"
     flags_opt_off=""
@@ -17010,9 +16729,7 @@ rm -f conftest.err conftest.i conftest.$ac_ext
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
     compiler_id="TINY_C"
-    flags_dbg_all="-g -b"
     flags_dbg_yes="-g"
-    flags_dbg_off=""
     flags_opt_all=""
     flags_opt_yes=""
     flags_opt_off=""
@@ -17117,17 +16834,13 @@ rm -f conftest.err conftest.i conftest.$ac_ext
 
     if test "$curl_cv_have_def___UNIX__" = "yes"; then
       compiler_id="WATCOM_UNIX_C"
-      flags_dbg_all="-g1 -g1+ -g2 -g3"
       flags_dbg_yes="-g2"
-      flags_dbg_off=""
       flags_opt_all="-O0 -O1 -O2 -O3"
       flags_opt_yes="-O2"
       flags_opt_off="-O0"
     else
       compiler_id="WATCOM_WINDOWS_C"
-      flags_dbg_all=""
       flags_dbg_yes=""
-      flags_dbg_off=""
       flags_opt_all=""
       flags_opt_yes=""
       flags_opt_off=""
@@ -17415,48 +17128,11 @@ $as_echo "$as_me: WARNING: compiler options rejected: $tmp_CFLAGS $tmp_CPPFLAGS"
     tmp_options=""
     tmp_CFLAGS="$CFLAGS"
     tmp_CPPFLAGS="$CPPFLAGS"
-
-    ac_var_stripped=""
-  for word1 in $tmp_CFLAGS; do
-    ac_var_strip_word="no"
-    for word2 in $flags_dbg_all; do
-      if test "$word1" = "$word2"; then
-        ac_var_strip_word="yes"
-      fi
-    done
-    if test "$ac_var_strip_word" = "no"; then
-      ac_var_stripped="$ac_var_stripped $word1"
-    fi
-  done
-    tmp_CFLAGS="$ac_var_stripped"
-  squeeze tmp_CFLAGS
-
-
-    ac_var_stripped=""
-  for word1 in $tmp_CPPFLAGS; do
-    ac_var_strip_word="no"
-    for word2 in $flags_dbg_all; do
-      if test "$word1" = "$word2"; then
-        ac_var_strip_word="yes"
-      fi
-    done
-    if test "$ac_var_strip_word" = "no"; then
-      ac_var_stripped="$ac_var_stripped $word1"
-    fi
-  done
-    tmp_CPPFLAGS="$ac_var_stripped"
-  squeeze tmp_CPPFLAGS
-
     #
     if test "$want_debug" = "yes"; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking if compiler accepts debug enabling options" >&5
 $as_echo_n "checking if compiler accepts debug enabling options... " >&6; }
       tmp_options="$flags_dbg_yes"
-    fi
-    if test "$want_debug" = "no"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking if compiler accepts debug disabling options" >&5
-$as_echo_n "checking if compiler accepts debug disabling options... " >&6; }
-      tmp_options="$flags_dbg_off"
     fi
     #
     if test "$flags_prefer_cppflags" = "yes"; then
@@ -17468,136 +17144,6 @@ $as_echo_n "checking if compiler accepts debug disabling options... " >&6; }
     fi
     squeeze CPPFLAGS
     squeeze CFLAGS
-
-    tmp_compiler_works="unknown"
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-
-int main (void)
-{
-
-      int i = 1;
-      return i;
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-
-    tmp_compiler_works="yes"
-
-else
-
-    tmp_compiler_works="no"
-    echo " " >&6
-    sed 's/^/cc-fail: /' conftest.err >&6
-    echo " " >&6
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-    if test "$tmp_compiler_works" = "yes"; then
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-
-int main (void)
-{
-
-        int i = 1;
-        return i;
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-
-      tmp_compiler_works="yes"
-
-else
-
-      tmp_compiler_works="no"
-      echo " " >&6
-      sed 's/^/link-fail: /' conftest.err >&6
-      echo " " >&6
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-  fi
-    if test "x$cross_compiling" != "xyes" &&
-    test "$tmp_compiler_works" = "yes"; then
-
-   old=$LD_LIBRARY_PATH
-   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH:$old
-   export LD_LIBRARY_PATH
-   if test "$cross_compiling" = yes; then :
-  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "cannot run test program while cross compiling
-See \`config.log' for more details" "$LINENO" 5; }
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#       ifdef __STDC__
-#         include <stdlib.h>
-#       endif
-
-int main (void)
-{
-
-        int i = 0;
-        exit(i);
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_run "$LINENO"; then :
-  tmp_compiler_works="yes"
-
-else
-  tmp_compiler_works="no"
-      echo " " >&6
-      echo "run-fail: test program exited with status $ac_status" >&6
-      echo " " >&6
-
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-   LD_LIBRARY_PATH=$old # restore
-
-  fi
-    if test "$tmp_compiler_works" = "yes"; then
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-      { $as_echo "$as_me:${as_lineno-$LINENO}: compiler options added: $tmp_options" >&5
-$as_echo "$as_me: compiler options added: $tmp_options" >&6;}
-
-  else
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: compiler options rejected: $tmp_options" >&5
-$as_echo "$as_me: WARNING: compiler options rejected: $tmp_options" >&2;}
-            CPPFLAGS="$tmp_save_CPPFLAGS"
-      CFLAGS="$tmp_save_CFLAGS"
-
-  fi
-
-    #
   fi
 
 
@@ -18951,7 +18497,9 @@ $as_echo "$as_me: WARNING: compiler options rejected: $tmp_options" >&2;}
 
             tmp_CFLAGS="$tmp_CFLAGS -Wformat-overflow=2"
             tmp_CFLAGS="$tmp_CFLAGS -Wformat-truncation=2"
-            tmp_CFLAGS="$tmp_CFLAGS -Wimplicit-fallthrough=4"
+            if test "$compiler_num" -lt "1200"; then
+                            tmp_CFLAGS="$tmp_CFLAGS -Wimplicit-fallthrough=4"
+            fi
           fi
           #
         fi
@@ -20287,8 +19835,8 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to link macOS SystemConfiguration framework" >&5
-$as_echo_n "checking whether to link macOS SystemConfiguration framework... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to link macOS CoreFoundation and SystemConfiguration framework" >&5
+$as_echo_n "checking whether to link macOS CoreFoundation and SystemConfiguration framework... " >&6; }
 case $host_os in
   darwin*)
     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -20324,7 +19872,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
     if test "x$build_for_macos" != xno; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-      LDFLAGS="$LDFLAGS -framework SystemConfiguration"
+      LDFLAGS="$LDFLAGS -framework CoreFoundation -framework SystemConfiguration"
     else
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
@@ -20552,12 +20100,296 @@ $as_echo "#define HAVE_LDAP_SSL 1" >>confdefs.h
 fi
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to support rtsp" >&5
+
+OPT_HYPER="no"
+
+
+# Check whether --with-hyper was given.
+if test "${with_hyper+set}" = set; then :
+  withval=$with_hyper; OPT_HYPER=$withval
+fi
+
+case "$OPT_HYPER" in
+  no)
+        want_hyper="no"
+    ;;
+  yes)
+        want_hyper="default"
+    want_hyper_path=""
+    ;;
+  *)
+        want_hyper="yes"
+    want_hyper_path="$withval"
+    ;;
+esac
+
+if test X"$want_hyper" != Xno; then
+  if test "x$disable_http" = "xyes"; then
+    as_fn_error $? "--with-hyper is not compatible with --disable-http" "$LINENO" 5
+  fi
+
+    CLEANLDFLAGS="$LDFLAGS"
+  CLEANCPPFLAGS="$CPPFLAGS"
+  CLEANLIBS="$LIBS"
+
+
+    if test -n "$PKG_CONFIG"; then
+      PKGCONFIG="$PKG_CONFIG"
+    else
+      if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
+set dummy ${ac_tool_prefix}pkg-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_PKGCONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $PKGCONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PKGCONFIG="$PKGCONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+as_dummy="$PATH:/usr/bin:/usr/local/bin"
+for as_dir in $as_dummy
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_PKGCONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+PKGCONFIG=$ac_cv_path_PKGCONFIG
+if test -n "$PKGCONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PKGCONFIG" >&5
+$as_echo "$PKGCONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_path_PKGCONFIG"; then
+  ac_pt_PKGCONFIG=$PKGCONFIG
+  # Extract the first word of "pkg-config", so it can be a program name with args.
+set dummy pkg-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_ac_pt_PKGCONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ac_pt_PKGCONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_PKGCONFIG="$ac_pt_PKGCONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+as_dummy="$PATH:/usr/bin:/usr/local/bin"
+for as_dir in $as_dummy
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_PKGCONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_PKGCONFIG=$ac_cv_path_ac_pt_PKGCONFIG
+if test -n "$ac_pt_PKGCONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_PKGCONFIG" >&5
+$as_echo "$ac_pt_PKGCONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_pt_PKGCONFIG" = x; then
+    PKGCONFIG="no"
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    PKGCONFIG=$ac_pt_PKGCONFIG
+  fi
+else
+  PKGCONFIG="$ac_cv_path_PKGCONFIG"
+fi
+
+    fi
+
+    if test "x$PKGCONFIG" != "xno"; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for hyper options with pkg-config" >&5
+$as_echo_n "checking for hyper options with pkg-config... " >&6; }
+            itexists=`
+    if test -n "$want_hyper_path"; then
+      PKG_CONFIG_LIBDIR="$want_hyper_path"
+      export PKG_CONFIG_LIBDIR
+    fi
+         $PKGCONFIG --exists hyper >/dev/null 2>&1 && echo 1`
+
+      if test -z "$itexists"; then
+                        PKGCONFIG="no"
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+      else
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      fi
+    fi
+
+
+  if test "$PKGCONFIG" != "no" ; then
+    LIB_HYPER=`
+    if test -n "$want_hyper_path"; then
+      PKG_CONFIG_LIBDIR="$want_hyper_path"
+      export PKG_CONFIG_LIBDIR
+    fi
+
+      $PKGCONFIG --libs-only-l hyper`
+    CPP_HYPER=`
+    if test -n "$want_hyper_path"; then
+      PKG_CONFIG_LIBDIR="$want_hyper_path"
+      export PKG_CONFIG_LIBDIR
+    fi
+       $PKGCONFIG --cflags-only-I hyper`
+    LD_HYPER=`
+    if test -n "$want_hyper_path"; then
+      PKG_CONFIG_LIBDIR="$want_hyper_path"
+      export PKG_CONFIG_LIBDIR
+    fi
+
+      $PKGCONFIG --libs-only-L hyper`
+  else
+        LIB_HYPER="-lhyper -ldl -lpthread -lm"
+    if test X"$want_hyper" != Xdefault; then
+      CPP_HYPER=-I"$want_hyper_path/capi/include"
+      LD_HYPER="-L$want_hyper_path/target/debug"
+    fi
+  fi
+  if test -n "$LIB_HYPER"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: -l is $LIB_HYPER" >&5
+$as_echo "$as_me: -l is $LIB_HYPER" >&6;}
+    { $as_echo "$as_me:${as_lineno-$LINENO}: -I is $CPP_HYPER" >&5
+$as_echo "$as_me: -I is $CPP_HYPER" >&6;}
+    { $as_echo "$as_me:${as_lineno-$LINENO}: -L is $LD_HYPER" >&5
+$as_echo "$as_me: -L is $LD_HYPER" >&6;}
+
+    LDFLAGS="$LDFLAGS $LD_HYPER"
+    CPPFLAGS="$CPPFLAGS $CPP_HYPER"
+    LIBS="$LIB_HYPER $LIBS"
+
+    if test "x$cross_compiling" != "xyes"; then
+      DIR_HYPER=`echo $LD_HYPER | $SED -e 's/^-L//'`
+    fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for hyper_io_new in -lhyper" >&5
+$as_echo_n "checking for hyper_io_new in -lhyper... " >&6; }
+if ${ac_cv_lib_hyper_hyper_io_new+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lhyper  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+#ifdef __cplusplus
+extern "C"
+#endif
+char hyper_io_new ();
+int main (void)
+{
+return hyper_io_new ();
+ ;
+ return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_hyper_hyper_io_new=yes
+else
+  ac_cv_lib_hyper_hyper_io_new=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_hyper_hyper_io_new" >&5
+$as_echo "$ac_cv_lib_hyper_hyper_io_new" >&6; }
+if test "x$ac_cv_lib_hyper_hyper_io_new" = xyes; then :
+
+       for ac_header in hyper.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "hyper.h" "ac_cv_header_hyper_h" "$ac_includes_default"
+if test "x$ac_cv_header_hyper_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_HYPER_H 1
+_ACEOF
+ experimental="$experimental Hyper"
+          { $as_echo "$as_me:${as_lineno-$LINENO}: Hyper support is experimental" >&5
+$as_echo "$as_me: Hyper support is experimental" >&6;}
+          curl_h1_msg="enabled (Hyper)"
+          curl_h2_msg=$curl_h1_msg
+          HYPER_ENABLED=1
+
+$as_echo "#define USE_HYPER 1" >>confdefs.h
+
+          USE_HYPER=1
+
+          CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$DIR_HYPER"
+          export CURL_LIBRARY_PATH
+          { $as_echo "$as_me:${as_lineno-$LINENO}: Added $DIR_HYPER to CURL_LIBRARY_PATH" >&5
+$as_echo "$as_me: Added $DIR_HYPER to CURL_LIBRARY_PATH" >&6;}
+fi
+
+done
+
+
+else
+  as_fn_error $? "--with-hyper but hyper was not found. See docs/HYPER.md." "$LINENO" 5
+
+fi
+
+  fi
+fi
+
+if test X"$want_hyper" != Xno; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: Disable RTSP support with hyper" >&5
+$as_echo "$as_me: Disable RTSP support with hyper" >&6;}
+
+$as_echo "#define CURL_DISABLE_RTSP 1" >>confdefs.h
+
+  CURL_DISABLE_RTSP=1
+
+
+else
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to support rtsp" >&5
 $as_echo_n "checking whether to support rtsp... " >&6; }
-# Check whether --enable-rtsp was given.
+  # Check whether --enable-rtsp was given.
 if test "${enable_rtsp+set}" = set; then :
   enableval=$enable_rtsp;  case "$enableval" in
-  no)
+    no)
        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 
@@ -20566,15 +20398,16 @@ $as_echo "#define CURL_DISABLE_RTSP 1" >>confdefs.h
        CURL_DISABLE_RTSP=1
 
        ;;
-  *)   if test x$CURL_DISABLE_HTTP = x1 ; then
-          as_fn_error $? "HTTP support needs to be enabled in order to enable RTSP support!" "$LINENO" 5
+    *)
+       if test x$CURL_DISABLE_HTTP = x1 ; then
+         as_fn_error $? "HTTP support needs to be enabled in order to enable RTSP support!" "$LINENO" 5
        else
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-          curl_rtsp_msg="enabled"
+         curl_rtsp_msg="enabled"
        fi
        ;;
-  esac
+    esac
 else
   if test "x$CURL_DISABLE_HTTP" != "x1"; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
@@ -20587,6 +20420,7 @@ $as_echo "no" >&6; }
 
 fi
 
+fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to support proxies" >&5
 $as_echo_n "checking whether to support proxies... " >&6; }
@@ -26663,9 +26497,6 @@ fi
       rustlslib=$OPT_RUSTLS/lib$libsuff
 
       LDFLAGS="$LDFLAGS $addld"
-      if (test -d "/System/Library/Frameworks/Security.framework" && test "x$cross_compiling" != "xyes"); then
-        LDFLAGS="$LDFLAGS -framework CoreFoundation -framework Security"
-      fi
       if test "$addcflags" != "-I/usr/include"; then
          CPPFLAGS="$CPPFLAGS $addcflags"
       fi
@@ -27557,384 +27388,11 @@ fi
 
 
 
-OPT_LIBMETALINK=no
-
-
 # Check whether --with-libmetalink was given.
 if test "${with_libmetalink+set}" = set; then :
-  withval=$with_libmetalink; OPT_LIBMETALINK=$withval
+  withval=$with_libmetalink; as_fn_error $? "--with-libmetalink no longer works!" "$LINENO" 5
 fi
 
-
-if test X"$OPT_LIBMETALINK" != Xno; then
-
-  addld=""
-  addlib=""
-  addcflags=""
-  version=""
-  libmetalinklib=""
-
-  PKGTEST="no"
-  if test "x$OPT_LIBMETALINK" = "xyes"; then
-        PKGTEST="yes"
-
-    if test -n "$PKG_CONFIG"; then
-      PKGCONFIG="$PKG_CONFIG"
-    else
-      if test -n "$ac_tool_prefix"; then
-  # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
-set dummy ${ac_tool_prefix}pkg-config; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_PKGCONFIG+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $PKGCONFIG in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_PKGCONFIG="$PKGCONFIG" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-as_dummy="$PATH:/usr/bin:/usr/local/bin"
-for as_dir in $as_dummy
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_path_PKGCONFIG="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-PKGCONFIG=$ac_cv_path_PKGCONFIG
-if test -n "$PKGCONFIG"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PKGCONFIG" >&5
-$as_echo "$PKGCONFIG" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-fi
-if test -z "$ac_cv_path_PKGCONFIG"; then
-  ac_pt_PKGCONFIG=$PKGCONFIG
-  # Extract the first word of "pkg-config", so it can be a program name with args.
-set dummy pkg-config; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_ac_pt_PKGCONFIG+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $ac_pt_PKGCONFIG in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_ac_pt_PKGCONFIG="$ac_pt_PKGCONFIG" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-as_dummy="$PATH:/usr/bin:/usr/local/bin"
-for as_dir in $as_dummy
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_path_ac_pt_PKGCONFIG="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-ac_pt_PKGCONFIG=$ac_cv_path_ac_pt_PKGCONFIG
-if test -n "$ac_pt_PKGCONFIG"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_PKGCONFIG" >&5
-$as_echo "$ac_pt_PKGCONFIG" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-  if test "x$ac_pt_PKGCONFIG" = x; then
-    PKGCONFIG="no"
-  else
-    case $cross_compiling:$ac_tool_warned in
-yes:)
-{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
-$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
-ac_tool_warned=yes ;;
-esac
-    PKGCONFIG=$ac_pt_PKGCONFIG
-  fi
-else
-  PKGCONFIG="$ac_cv_path_PKGCONFIG"
-fi
-
-    fi
-
-    if test "x$PKGCONFIG" != "xno"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libmetalink options with pkg-config" >&5
-$as_echo_n "checking for libmetalink options with pkg-config... " >&6; }
-            itexists=`
-    if test -n ""; then
-      PKG_CONFIG_LIBDIR=""
-      export PKG_CONFIG_LIBDIR
-    fi
-         $PKGCONFIG --exists libmetalink >/dev/null 2>&1 && echo 1`
-
-      if test -z "$itexists"; then
-                        PKGCONFIG="no"
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      else
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-      fi
-    fi
-
-  else
-        LIBMETALINK_PCDIR="$OPT_LIBMETALINK/lib/pkgconfig"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: PKG_CONFIG_LIBDIR will be set to \"$LIBMETALINK_PCDIR\"" >&5
-$as_echo "$as_me: PKG_CONFIG_LIBDIR will be set to \"$LIBMETALINK_PCDIR\"" >&6;}
-    if test -f "$LIBMETALINK_PCDIR/libmetalink.pc"; then
-      PKGTEST="yes"
-    fi
-    if test "$PKGTEST" = "yes"; then
-
-    if test -n "$PKG_CONFIG"; then
-      PKGCONFIG="$PKG_CONFIG"
-    else
-      if test -n "$ac_tool_prefix"; then
-  # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
-set dummy ${ac_tool_prefix}pkg-config; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_PKGCONFIG+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $PKGCONFIG in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_PKGCONFIG="$PKGCONFIG" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-as_dummy="$PATH:/usr/bin:/usr/local/bin"
-for as_dir in $as_dummy
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_path_PKGCONFIG="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-PKGCONFIG=$ac_cv_path_PKGCONFIG
-if test -n "$PKGCONFIG"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PKGCONFIG" >&5
-$as_echo "$PKGCONFIG" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-fi
-if test -z "$ac_cv_path_PKGCONFIG"; then
-  ac_pt_PKGCONFIG=$PKGCONFIG
-  # Extract the first word of "pkg-config", so it can be a program name with args.
-set dummy pkg-config; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_ac_pt_PKGCONFIG+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $ac_pt_PKGCONFIG in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_ac_pt_PKGCONFIG="$ac_pt_PKGCONFIG" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-as_dummy="$PATH:/usr/bin:/usr/local/bin"
-for as_dir in $as_dummy
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_path_ac_pt_PKGCONFIG="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-ac_pt_PKGCONFIG=$ac_cv_path_ac_pt_PKGCONFIG
-if test -n "$ac_pt_PKGCONFIG"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_PKGCONFIG" >&5
-$as_echo "$ac_pt_PKGCONFIG" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-  if test "x$ac_pt_PKGCONFIG" = x; then
-    PKGCONFIG="no"
-  else
-    case $cross_compiling:$ac_tool_warned in
-yes:)
-{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
-$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
-ac_tool_warned=yes ;;
-esac
-    PKGCONFIG=$ac_pt_PKGCONFIG
-  fi
-else
-  PKGCONFIG="$ac_cv_path_PKGCONFIG"
-fi
-
-    fi
-
-    if test "x$PKGCONFIG" != "xno"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libmetalink options with pkg-config" >&5
-$as_echo_n "checking for libmetalink options with pkg-config... " >&6; }
-            itexists=`
-    if test -n "$LIBMETALINK_PCDIR"; then
-      PKG_CONFIG_LIBDIR="$LIBMETALINK_PCDIR"
-      export PKG_CONFIG_LIBDIR
-    fi
-         $PKGCONFIG --exists libmetalink >/dev/null 2>&1 && echo 1`
-
-      if test -z "$itexists"; then
-                        PKGCONFIG="no"
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      else
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-      fi
-    fi
-
-    fi
-  fi
-  if test "$PKGTEST" = "yes" && test "$PKGCONFIG" != "no"; then
-    addlib=`
-    if test -n "$LIBMETALINK_PCDIR"; then
-      PKG_CONFIG_LIBDIR="$LIBMETALINK_PCDIR"
-      export PKG_CONFIG_LIBDIR
-    fi
-       $PKGCONFIG --libs-only-l libmetalink`
-    addld=`
-    if test -n "$LIBMETALINK_PCDIR"; then
-      PKG_CONFIG_LIBDIR="$LIBMETALINK_PCDIR"
-      export PKG_CONFIG_LIBDIR
-    fi
-       $PKGCONFIG --libs-only-L libmetalink`
-    addcflags=`
-    if test -n "$LIBMETALINK_PCDIR"; then
-      PKG_CONFIG_LIBDIR="$LIBMETALINK_PCDIR"
-      export PKG_CONFIG_LIBDIR
-    fi
-       $PKGCONFIG --cflags-only-I libmetalink`
-    version=`
-    if test -n "$LIBMETALINK_PCDIR"; then
-      PKG_CONFIG_LIBDIR="$LIBMETALINK_PCDIR"
-      export PKG_CONFIG_LIBDIR
-    fi
-       $PKGCONFIG --modversion libmetalink`
-    libmetalinklib=`echo $addld | $SED -e 's/^-L//'`
-  fi
-  if test -n "$addlib"; then
-
-    clean_CPPFLAGS="$CPPFLAGS"
-    clean_LDFLAGS="$LDFLAGS"
-    clean_LIBS="$LIBS"
-    CPPFLAGS="$clean_CPPFLAGS $addcflags"
-    LDFLAGS="$clean_LDFLAGS $addld"
-    LIBS="$addlib $clean_LIBS"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if libmetalink is recent enough" >&5
-$as_echo_n "checking if libmetalink is recent enough... " >&6; }
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#       include <metalink/metalink.h>
-
-int main (void)
-{
-
-        if(0 != metalink_strerror(0)) /* added in 0.1.0 */
-          return 1;
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes ($version)" >&5
-$as_echo "yes ($version)" >&6; }
-      want_metalink="yes"
-
-else
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no ($version)" >&5
-$as_echo "no ($version)" >&6; }
-      { $as_echo "$as_me:${as_lineno-$LINENO}: libmetalink library defective or too old" >&5
-$as_echo "$as_me: libmetalink library defective or too old" >&6;}
-      want_metalink="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-    if test "x$OPENSSL_ENABLED" != "x1" -a "x$USE_WINDOWS_SSPI" != "x1" \
-        -a "x$GNUTLS_ENABLED" != "x1" -a "x$NSS_ENABLED" != "x1" \
-        -a "x$SECURETRANSPORT_ENABLED" != "x1"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: metalink support requires a compatible SSL/TLS backend" >&5
-$as_echo "$as_me: WARNING: metalink support requires a compatible SSL/TLS backend" >&2;}
-      want_metalink="no"
-    fi
-    CPPFLAGS="$clean_CPPFLAGS"
-    LDFLAGS="$clean_LDFLAGS"
-    LIBS="$clean_LIBS"
-    if test "$want_metalink" = "yes"; then
-
-$as_echo "#define USE_METALINK 1" >>confdefs.h
-
-      LIBMETALINK_LIBS=$addlib
-      LIBMETALINK_LDFLAGS=$addld
-      LIBMETALINK_CPPFLAGS=$addcflags
-
-
-
-      curl_mtlnk_msg="enabled"
-    fi
-
-  fi
-fi
 
 
 OPT_LIBSSH2=off
@@ -29577,16 +29035,18 @@ $as_echo "$as_me: -L is $LD_H2" >&6;}
     LDFLAGS="$LDFLAGS $LD_H2"
     CPPFLAGS="$CPPFLAGS $CPP_H2"
     LIBS="$LIB_H2 $LIBS"
+    LIB_H2_NAME=${LIB_H2#"-l"}
 
     # use nghttp2_session_set_local_window_size to require nghttp2
     # >= 1.12.0
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for nghttp2_session_set_local_window_size in -lnghttp2" >&5
-$as_echo_n "checking for nghttp2_session_set_local_window_size in -lnghttp2... " >&6; }
-if ${ac_cv_lib_nghttp2_nghttp2_session_set_local_window_size+:} false; then :
+    as_ac_Lib=`$as_echo "ac_cv_lib_$LIB_H2_NAME''_nghttp2_session_set_local_window_size" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for nghttp2_session_set_local_window_size in -l$LIB_H2_NAME" >&5
+$as_echo_n "checking for nghttp2_session_set_local_window_size in -l$LIB_H2_NAME... " >&6; }
+if eval \${$as_ac_Lib+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lnghttp2  $LIBS"
+LIBS="-l$LIB_H2_NAME  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -29603,17 +29063,18 @@ return nghttp2_session_set_local_window_size ();
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_nghttp2_nghttp2_session_set_local_window_size=yes
+  eval "$as_ac_Lib=yes"
 else
-  ac_cv_lib_nghttp2_nghttp2_session_set_local_window_size=no
+  eval "$as_ac_Lib=no"
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_nghttp2_nghttp2_session_set_local_window_size" >&5
-$as_echo "$ac_cv_lib_nghttp2_nghttp2_session_set_local_window_size" >&6; }
-if test "x$ac_cv_lib_nghttp2_nghttp2_session_set_local_window_size" = xyes; then :
+eval ac_res=\$$as_ac_Lib
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_Lib"\" = x"yes"; then :
 
        for ac_header in nghttp2/nghttp2.h
 do :
@@ -30968,280 +30429,6 @@ fi
 fi
 
 
-OPT_HYPER="no"
-
-
-# Check whether --with-hyper was given.
-if test "${with_hyper+set}" = set; then :
-  withval=$with_hyper; OPT_HYPER=$withval
-fi
-
-case "$OPT_HYPER" in
-  no)
-        want_hyper="no"
-    ;;
-  yes)
-        want_hyper="default"
-    want_hyper_path=""
-    ;;
-  *)
-        want_hyper="yes"
-    want_hyper_path="$withval"
-    ;;
-esac
-
-if test X"$want_hyper" != Xno; then
-  if test "x$disable_http" = "xyes"; then
-    as_fn_error $? "--with-hyper is not compatible with --disable-http" "$LINENO" 5
-  fi
-
-    CLEANLDFLAGS="$LDFLAGS"
-  CLEANCPPFLAGS="$CPPFLAGS"
-  CLEANLIBS="$LIBS"
-
-
-    if test -n "$PKG_CONFIG"; then
-      PKGCONFIG="$PKG_CONFIG"
-    else
-      if test -n "$ac_tool_prefix"; then
-  # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
-set dummy ${ac_tool_prefix}pkg-config; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_PKGCONFIG+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $PKGCONFIG in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_PKGCONFIG="$PKGCONFIG" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-as_dummy="$PATH:/usr/bin:/usr/local/bin"
-for as_dir in $as_dummy
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_path_PKGCONFIG="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-PKGCONFIG=$ac_cv_path_PKGCONFIG
-if test -n "$PKGCONFIG"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PKGCONFIG" >&5
-$as_echo "$PKGCONFIG" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-fi
-if test -z "$ac_cv_path_PKGCONFIG"; then
-  ac_pt_PKGCONFIG=$PKGCONFIG
-  # Extract the first word of "pkg-config", so it can be a program name with args.
-set dummy pkg-config; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_ac_pt_PKGCONFIG+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $ac_pt_PKGCONFIG in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_ac_pt_PKGCONFIG="$ac_pt_PKGCONFIG" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-as_dummy="$PATH:/usr/bin:/usr/local/bin"
-for as_dir in $as_dummy
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_path_ac_pt_PKGCONFIG="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-ac_pt_PKGCONFIG=$ac_cv_path_ac_pt_PKGCONFIG
-if test -n "$ac_pt_PKGCONFIG"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_PKGCONFIG" >&5
-$as_echo "$ac_pt_PKGCONFIG" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-  if test "x$ac_pt_PKGCONFIG" = x; then
-    PKGCONFIG="no"
-  else
-    case $cross_compiling:$ac_tool_warned in
-yes:)
-{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
-$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
-ac_tool_warned=yes ;;
-esac
-    PKGCONFIG=$ac_pt_PKGCONFIG
-  fi
-else
-  PKGCONFIG="$ac_cv_path_PKGCONFIG"
-fi
-
-    fi
-
-    if test "x$PKGCONFIG" != "xno"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for hyper options with pkg-config" >&5
-$as_echo_n "checking for hyper options with pkg-config... " >&6; }
-            itexists=`
-    if test -n "$want_hyper_path"; then
-      PKG_CONFIG_LIBDIR="$want_hyper_path"
-      export PKG_CONFIG_LIBDIR
-    fi
-         $PKGCONFIG --exists hyper >/dev/null 2>&1 && echo 1`
-
-      if test -z "$itexists"; then
-                        PKGCONFIG="no"
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      else
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-      fi
-    fi
-
-
-  if test "$PKGCONFIG" != "no" ; then
-    LIB_HYPER=`
-    if test -n "$want_hyper_path"; then
-      PKG_CONFIG_LIBDIR="$want_hyper_path"
-      export PKG_CONFIG_LIBDIR
-    fi
-
-      $PKGCONFIG --libs-only-l hyper`
-    CPP_HYPER=`
-    if test -n "$want_hyper_path"; then
-      PKG_CONFIG_LIBDIR="$want_hyper_path"
-      export PKG_CONFIG_LIBDIR
-    fi
-       $PKGCONFIG --cflags-only-I hyper`
-    LD_HYPER=`
-    if test -n "$want_hyper_path"; then
-      PKG_CONFIG_LIBDIR="$want_hyper_path"
-      export PKG_CONFIG_LIBDIR
-    fi
-
-      $PKGCONFIG --libs-only-L hyper`
-  else
-        LIB_HYPER="-lhyper -ldl -lpthread -lm"
-    if test X"$want_hyper" != Xdefault; then
-      CPP_HYPER=-I"$want_hyper_path/capi/include"
-      LD_HYPER="-L$want_hyper_path/target/debug"
-    fi
-  fi
-  if test -n "$LIB_HYPER"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: -l is $LIB_HYPER" >&5
-$as_echo "$as_me: -l is $LIB_HYPER" >&6;}
-    { $as_echo "$as_me:${as_lineno-$LINENO}: -I is $CPP_HYPER" >&5
-$as_echo "$as_me: -I is $CPP_HYPER" >&6;}
-    { $as_echo "$as_me:${as_lineno-$LINENO}: -L is $LD_HYPER" >&5
-$as_echo "$as_me: -L is $LD_HYPER" >&6;}
-
-    LDFLAGS="$LDFLAGS $LD_HYPER"
-    CPPFLAGS="$CPPFLAGS $CPP_HYPER"
-    LIBS="$LIB_HYPER $LIBS"
-
-    if test "x$cross_compiling" != "xyes"; then
-      DIR_HYPER=`echo $LD_HYPER | $SED -e 's/^-L//'`
-    fi
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for hyper_io_new in -lhyper" >&5
-$as_echo_n "checking for hyper_io_new in -lhyper... " >&6; }
-if ${ac_cv_lib_hyper_hyper_io_new+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lhyper  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#ifdef __cplusplus
-extern "C"
-#endif
-char hyper_io_new ();
-int main (void)
-{
-return hyper_io_new ();
- ;
- return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_hyper_hyper_io_new=yes
-else
-  ac_cv_lib_hyper_hyper_io_new=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_hyper_hyper_io_new" >&5
-$as_echo "$ac_cv_lib_hyper_hyper_io_new" >&6; }
-if test "x$ac_cv_lib_hyper_hyper_io_new" = xyes; then :
-
-       for ac_header in hyper.h
-do :
-  ac_fn_c_check_header_mongrel "$LINENO" "hyper.h" "ac_cv_header_hyper_h" "$ac_includes_default"
-if test "x$ac_cv_header_hyper_h" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_HYPER_H 1
-_ACEOF
- experimental="$experimental Hyper"
-          { $as_echo "$as_me:${as_lineno-$LINENO}: Hyper support is experimental" >&5
-$as_echo "$as_me: Hyper support is experimental" >&6;}
-          curl_h1_msg="enabled (Hyper)"
-          curl_h2_msg=$curl_h1_msg
-          HYPER_ENABLED=1
-
-$as_echo "#define USE_HYPER 1" >>confdefs.h
-
-          USE_HYPER=1
-
-          CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$DIR_HYPER"
-          export CURL_LIBRARY_PATH
-          { $as_echo "$as_me:${as_lineno-$LINENO}: Added $DIR_HYPER to CURL_LIBRARY_PATH" >&5
-$as_echo "$as_me: Added $DIR_HYPER to CURL_LIBRARY_PATH" >&6;}
-fi
-
-done
-
-
-else
-  as_fn_error $? "--with-hyper but hyper was not found. See docs/HYPER.md." "$LINENO" 5
-
-fi
-
-  fi
-fi
-
-
-
 OPT_ZSH_FPATH=default
 
 # Check whether --with-zsh-functions-dir was given.
@@ -31612,7 +30799,6 @@ for ac_header in sys/types.h \
         sys/param.h \
         termios.h \
         termio.h \
-        sgtty.h \
         fcntl.h \
         alloca.h \
         io.h \
@@ -35001,185 +34187,6 @@ $as_echo "no" >&6; }
   fi
 
 
-curl_includes_ifaddrs="\
-/* includes start */
-#ifdef HAVE_SYS_TYPES_H
-#  include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-#  include <sys/socket.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
-#  include <netinet/in.h>
-#endif
-#ifdef HAVE_IFADDRS_H
-#  include <ifaddrs.h>
-#endif
-/* includes end */"
-  for ac_header in sys/types.h sys/socket.h netinet/in.h ifaddrs.h
-do :
-  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
-ac_fn_c_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "$curl_includes_ifaddrs
-"
-if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
-  cat >>confdefs.h <<_ACEOF
-#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
-_ACEOF
-
-fi
-
-done
-
-
-
-    #
-  tst_links_freeifaddrs="unknown"
-  tst_proto_freeifaddrs="unknown"
-  tst_compi_freeifaddrs="unknown"
-  tst_allow_freeifaddrs="unknown"
-  #
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if freeifaddrs can be linked" >&5
-$as_echo_n "checking if freeifaddrs can be linked... " >&6; }
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#define freeifaddrs innocuous_freeifaddrs
-#ifdef __STDC__
-# include <limits.h>
-#else
-# include <assert.h>
-#endif
-#undef freeifaddrs
-#ifdef __cplusplus
-extern "C"
-#endif
-char freeifaddrs ();
-#if defined __stub_freeifaddrs || defined __stub___freeifaddrs
-choke me
-#endif
-
-int main (void)
-{
-return freeifaddrs ();
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-    tst_links_freeifaddrs="yes"
-
-else
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    tst_links_freeifaddrs="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-  #
-  if test "$tst_links_freeifaddrs" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if freeifaddrs is prototyped" >&5
-$as_echo_n "checking if freeifaddrs is prototyped... " >&6; }
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-      $curl_includes_ifaddrs
-
-_ACEOF
-if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
-  $EGREP "freeifaddrs" >/dev/null 2>&1; then :
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-      tst_proto_freeifaddrs="yes"
-
-else
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      tst_proto_freeifaddrs="no"
-
-fi
-rm -f conftest*
-
-  fi
-  #
-  if test "$tst_proto_freeifaddrs" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if freeifaddrs is compilable" >&5
-$as_echo_n "checking if freeifaddrs is compilable... " >&6; }
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-        $curl_includes_ifaddrs
-
-int main (void)
-{
-
-        freeifaddrs(0);
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-      tst_compi_freeifaddrs="yes"
-
-else
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      tst_compi_freeifaddrs="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-  fi
-  #
-  if test "$tst_compi_freeifaddrs" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if freeifaddrs usage allowed" >&5
-$as_echo_n "checking if freeifaddrs usage allowed... " >&6; }
-    if test "x$curl_disallow_freeifaddrs" != "xyes"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-      tst_allow_freeifaddrs="yes"
-    else
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      tst_allow_freeifaddrs="no"
-    fi
-  fi
-  #
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if freeifaddrs might be used" >&5
-$as_echo_n "checking if freeifaddrs might be used... " >&6; }
-  if test "$tst_links_freeifaddrs" = "yes" &&
-     test "$tst_proto_freeifaddrs" = "yes" &&
-     test "$tst_compi_freeifaddrs" = "yes" &&
-     test "$tst_allow_freeifaddrs" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_FREEIFADDRS 1
-_ACEOF
-
-    curl_cv_func_freeifaddrs="yes"
-  else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    curl_cv_func_freeifaddrs="no"
-  fi
-
-
 curl_includes_sys_xattr="\
 /* includes start */
 #ifdef HAVE_SYS_TYPES_H
@@ -35977,545 +34984,6 @@ _ACEOF
     else
       curl_cv_func_getaddrinfo_threadsafe="no"
     fi
-  fi
-
-
-      #
-  tst_links_gai_strerror="unknown"
-  tst_proto_gai_strerror="unknown"
-  tst_compi_gai_strerror="unknown"
-  tst_allow_gai_strerror="unknown"
-  #
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if gai_strerror can be linked" >&5
-$as_echo_n "checking if gai_strerror can be linked... " >&6; }
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-      $curl_includes_winsock2
-      $curl_includes_bsdsocket
-      $curl_includes_netdb
-
-int main (void)
-{
-
-      if(0 != gai_strerror(0))
-        return 1;
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-    tst_links_gai_strerror="yes"
-
-else
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    tst_links_gai_strerror="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-  #
-  if test "$tst_links_gai_strerror" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if gai_strerror is prototyped" >&5
-$as_echo_n "checking if gai_strerror is prototyped... " >&6; }
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-      $curl_includes_winsock2
-      $curl_includes_bsdsocket
-      $curl_includes_netdb
-
-_ACEOF
-if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
-  $EGREP "gai_strerror" >/dev/null 2>&1; then :
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-      tst_proto_gai_strerror="yes"
-
-else
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      tst_proto_gai_strerror="no"
-
-fi
-rm -f conftest*
-
-  fi
-  #
-  if test "$tst_proto_gai_strerror" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if gai_strerror is compilable" >&5
-$as_echo_n "checking if gai_strerror is compilable... " >&6; }
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-        $curl_includes_winsock2
-      $curl_includes_bsdsocket
-        $curl_includes_netdb
-
-int main (void)
-{
-
-        if(0 != gai_strerror(0))
-          return 1;
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-      tst_compi_gai_strerror="yes"
-
-else
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      tst_compi_gai_strerror="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-  fi
-  #
-  if test "$tst_compi_gai_strerror" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if gai_strerror usage allowed" >&5
-$as_echo_n "checking if gai_strerror usage allowed... " >&6; }
-    if test "x$curl_disallow_gai_strerror" != "xyes"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-      tst_allow_gai_strerror="yes"
-    else
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      tst_allow_gai_strerror="no"
-    fi
-  fi
-  #
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if gai_strerror might be used" >&5
-$as_echo_n "checking if gai_strerror might be used... " >&6; }
-  if test "$tst_links_gai_strerror" = "yes" &&
-     test "$tst_proto_gai_strerror" = "yes" &&
-     test "$tst_compi_gai_strerror" = "yes" &&
-     test "$tst_allow_gai_strerror" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_GAI_STRERROR 1
-_ACEOF
-
-    curl_cv_func_gai_strerror="yes"
-  else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    curl_cv_func_gai_strerror="no"
-  fi
-
-
-      #
-  tst_links_gethostbyaddr="unknown"
-  tst_proto_gethostbyaddr="unknown"
-  tst_compi_gethostbyaddr="unknown"
-  tst_allow_gethostbyaddr="unknown"
-  #
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if gethostbyaddr can be linked" >&5
-$as_echo_n "checking if gethostbyaddr can be linked... " >&6; }
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-      $curl_includes_winsock2
-      $curl_includes_bsdsocket
-      $curl_includes_netdb
-
-int main (void)
-{
-
-      if(0 != gethostbyaddr(0, 0, 0))
-        return 1;
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-    tst_links_gethostbyaddr="yes"
-
-else
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    tst_links_gethostbyaddr="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-  #
-  if test "$tst_links_gethostbyaddr" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if gethostbyaddr is prototyped" >&5
-$as_echo_n "checking if gethostbyaddr is prototyped... " >&6; }
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-      $curl_includes_winsock2
-      $curl_includes_bsdsocket
-      $curl_includes_netdb
-
-_ACEOF
-if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
-  $EGREP "gethostbyaddr" >/dev/null 2>&1; then :
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-      tst_proto_gethostbyaddr="yes"
-
-else
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      tst_proto_gethostbyaddr="no"
-
-fi
-rm -f conftest*
-
-  fi
-  #
-  if test "$tst_proto_gethostbyaddr" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if gethostbyaddr is compilable" >&5
-$as_echo_n "checking if gethostbyaddr is compilable... " >&6; }
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-        $curl_includes_winsock2
-      $curl_includes_bsdsocket
-        $curl_includes_netdb
-
-int main (void)
-{
-
-        if(0 != gethostbyaddr(0, 0, 0))
-          return 1;
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-      tst_compi_gethostbyaddr="yes"
-
-else
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      tst_compi_gethostbyaddr="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-  fi
-  #
-  if test "$tst_compi_gethostbyaddr" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if gethostbyaddr usage allowed" >&5
-$as_echo_n "checking if gethostbyaddr usage allowed... " >&6; }
-    if test "x$curl_disallow_gethostbyaddr" != "xyes"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-      tst_allow_gethostbyaddr="yes"
-    else
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      tst_allow_gethostbyaddr="no"
-    fi
-  fi
-  #
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if gethostbyaddr might be used" >&5
-$as_echo_n "checking if gethostbyaddr might be used... " >&6; }
-  if test "$tst_links_gethostbyaddr" = "yes" &&
-     test "$tst_proto_gethostbyaddr" = "yes" &&
-     test "$tst_compi_gethostbyaddr" = "yes" &&
-     test "$tst_allow_gethostbyaddr" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_GETHOSTBYADDR 1
-_ACEOF
-
-    curl_cv_func_gethostbyaddr="yes"
-  else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    curl_cv_func_gethostbyaddr="no"
-  fi
-
-
-    #
-  tst_links_gethostbyaddr_r="unknown"
-  tst_proto_gethostbyaddr_r="unknown"
-  tst_compi_gethostbyaddr_r="unknown"
-  tst_allow_gethostbyaddr_r="unknown"
-  tst_nargs_gethostbyaddr_r="unknown"
-  #
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if gethostbyaddr_r can be linked" >&5
-$as_echo_n "checking if gethostbyaddr_r can be linked... " >&6; }
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#define gethostbyaddr_r innocuous_gethostbyaddr_r
-#ifdef __STDC__
-# include <limits.h>
-#else
-# include <assert.h>
-#endif
-#undef gethostbyaddr_r
-#ifdef __cplusplus
-extern "C"
-#endif
-char gethostbyaddr_r ();
-#if defined __stub_gethostbyaddr_r || defined __stub___gethostbyaddr_r
-choke me
-#endif
-
-int main (void)
-{
-return gethostbyaddr_r ();
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-    tst_links_gethostbyaddr_r="yes"
-
-else
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    tst_links_gethostbyaddr_r="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-  #
-  if test "$tst_links_gethostbyaddr_r" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if gethostbyaddr_r is prototyped" >&5
-$as_echo_n "checking if gethostbyaddr_r is prototyped... " >&6; }
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-      $curl_includes_netdb
-
-_ACEOF
-if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
-  $EGREP "gethostbyaddr_r" >/dev/null 2>&1; then :
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-      tst_proto_gethostbyaddr_r="yes"
-
-else
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      tst_proto_gethostbyaddr_r="no"
-
-fi
-rm -f conftest*
-
-  fi
-  #
-  if test "$tst_proto_gethostbyaddr_r" = "yes"; then
-    if test "$tst_nargs_gethostbyaddr_r" = "unknown"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking if gethostbyaddr_r takes 5 args." >&5
-$as_echo_n "checking if gethostbyaddr_r takes 5 args.... " >&6; }
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-          $curl_includes_netdb
-
-int main (void)
-{
-
-          if(0 != gethostbyaddr_r(0, 0, 0, 0, 0))
-            return 1;
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-        tst_compi_gethostbyaddr_r="yes"
-        tst_nargs_gethostbyaddr_r="5"
-
-else
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-        tst_compi_gethostbyaddr_r="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-    fi
-    if test "$tst_nargs_gethostbyaddr_r" = "unknown"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking if gethostbyaddr_r takes 7 args." >&5
-$as_echo_n "checking if gethostbyaddr_r takes 7 args.... " >&6; }
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-          $curl_includes_netdb
-
-int main (void)
-{
-
-          if(0 != gethostbyaddr_r(0, 0, 0, 0, 0, 0, 0))
-            return 1;
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-        tst_compi_gethostbyaddr_r="yes"
-        tst_nargs_gethostbyaddr_r="7"
-
-else
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-        tst_compi_gethostbyaddr_r="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-    fi
-    if test "$tst_nargs_gethostbyaddr_r" = "unknown"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking if gethostbyaddr_r takes 8 args." >&5
-$as_echo_n "checking if gethostbyaddr_r takes 8 args.... " >&6; }
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-          $curl_includes_netdb
-
-int main (void)
-{
-
-          if(0 != gethostbyaddr_r(0, 0, 0, 0, 0, 0, 0, 0))
-            return 1;
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-        tst_compi_gethostbyaddr_r="yes"
-        tst_nargs_gethostbyaddr_r="8"
-
-else
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-        tst_compi_gethostbyaddr_r="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-    fi
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if gethostbyaddr_r is compilable" >&5
-$as_echo_n "checking if gethostbyaddr_r is compilable... " >&6; }
-    if test "$tst_compi_gethostbyaddr_r" = "yes"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-    else
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    fi
-  fi
-  #
-  if test "$tst_compi_gethostbyaddr_r" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if gethostbyaddr_r usage allowed" >&5
-$as_echo_n "checking if gethostbyaddr_r usage allowed... " >&6; }
-    if test "x$curl_disallow_gethostbyaddr_r" != "xyes"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-      tst_allow_gethostbyaddr_r="yes"
-    else
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      tst_allow_gethostbyaddr_r="no"
-    fi
-  fi
-  #
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if gethostbyaddr_r might be used" >&5
-$as_echo_n "checking if gethostbyaddr_r might be used... " >&6; }
-  if test "$tst_links_gethostbyaddr_r" = "yes" &&
-     test "$tst_proto_gethostbyaddr_r" = "yes" &&
-     test "$tst_compi_gethostbyaddr_r" = "yes" &&
-     test "$tst_allow_gethostbyaddr_r" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_GETHOSTBYADDR_R 1
-_ACEOF
-
-            #
-    if test "$tst_nargs_gethostbyaddr_r" -eq "5"; then
-
-$as_echo "#define HAVE_GETHOSTBYADDR_R_5 1" >>confdefs.h
-
-    elif test "$tst_nargs_gethostbyaddr_r" -eq "7"; then
-
-$as_echo "#define HAVE_GETHOSTBYADDR_R_7 1" >>confdefs.h
-
-    elif test "$tst_nargs_gethostbyaddr_r" -eq "8"; then
-
-$as_echo "#define HAVE_GETHOSTBYADDR_R_8 1" >>confdefs.h
-
-    fi
-    #
-    curl_cv_func_gethostbyaddr_r="yes"
-  else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    curl_cv_func_gethostbyaddr_r="no"
   fi
 
 
@@ -37570,6 +36038,37 @@ $as_echo "no" >&6; }
   fi
 
 
+curl_includes_ifaddrs="\
+/* includes start */
+#ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#  include <sys/socket.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#  include <netinet/in.h>
+#endif
+#ifdef HAVE_IFADDRS_H
+#  include <ifaddrs.h>
+#endif
+/* includes end */"
+  for ac_header in sys/types.h sys/socket.h netinet/in.h ifaddrs.h
+do :
+  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_c_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "$curl_includes_ifaddrs
+"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+
+done
+
+
+
       #
   tst_links_getifaddrs="unknown"
   tst_proto_getifaddrs="unknown"
@@ -37776,254 +36275,6 @@ _ACEOF
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
     curl_cv_func_getifaddrs="no"
-  fi
-
-
-    #
-  tst_links_getservbyport_r="unknown"
-  tst_proto_getservbyport_r="unknown"
-  tst_compi_getservbyport_r="unknown"
-  tst_allow_getservbyport_r="unknown"
-  tst_nargs_getservbyport_r="unknown"
-  #
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if getservbyport_r can be linked" >&5
-$as_echo_n "checking if getservbyport_r can be linked... " >&6; }
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#define getservbyport_r innocuous_getservbyport_r
-#ifdef __STDC__
-# include <limits.h>
-#else
-# include <assert.h>
-#endif
-#undef getservbyport_r
-#ifdef __cplusplus
-extern "C"
-#endif
-char getservbyport_r ();
-#if defined __stub_getservbyport_r || defined __stub___getservbyport_r
-choke me
-#endif
-
-int main (void)
-{
-return getservbyport_r ();
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-    tst_links_getservbyport_r="yes"
-
-else
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    tst_links_getservbyport_r="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-  #
-  if test "$tst_links_getservbyport_r" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if getservbyport_r is prototyped" >&5
-$as_echo_n "checking if getservbyport_r is prototyped... " >&6; }
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-      $curl_includes_netdb
-
-_ACEOF
-if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
-  $EGREP "getservbyport_r" >/dev/null 2>&1; then :
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-      tst_proto_getservbyport_r="yes"
-
-else
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      tst_proto_getservbyport_r="no"
-
-fi
-rm -f conftest*
-
-  fi
-  #
-  if test "$tst_proto_getservbyport_r" = "yes"; then
-    if test "$tst_nargs_getservbyport_r" = "unknown"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking if getservbyport_r takes 4 args." >&5
-$as_echo_n "checking if getservbyport_r takes 4 args.... " >&6; }
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-          $curl_includes_netdb
-
-int main (void)
-{
-
-          if(0 != getservbyport_r(0, 0, 0, 0))
-            return 1;
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-        tst_compi_getservbyport_r="yes"
-        tst_nargs_getservbyport_r="4"
-
-else
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-        tst_compi_getservbyport_r="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-    fi
-    if test "$tst_nargs_getservbyport_r" = "unknown"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking if getservbyport_r takes 5 args." >&5
-$as_echo_n "checking if getservbyport_r takes 5 args.... " >&6; }
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-          $curl_includes_netdb
-
-int main (void)
-{
-
-          if(0 != getservbyport_r(0, 0, 0, 0, 0))
-            return 1;
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-        tst_compi_getservbyport_r="yes"
-        tst_nargs_getservbyport_r="5"
-
-else
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-        tst_compi_getservbyport_r="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-    fi
-    if test "$tst_nargs_getservbyport_r" = "unknown"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking if getservbyport_r takes 6 args." >&5
-$as_echo_n "checking if getservbyport_r takes 6 args.... " >&6; }
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-          $curl_includes_netdb
-
-int main (void)
-{
-
-          if(0 != getservbyport_r(0, 0, 0, 0, 0, 0))
-            return 1;
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-        tst_compi_getservbyport_r="yes"
-        tst_nargs_getservbyport_r="6"
-
-else
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-        tst_compi_getservbyport_r="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-    fi
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if getservbyport_r is compilable" >&5
-$as_echo_n "checking if getservbyport_r is compilable... " >&6; }
-    if test "$tst_compi_getservbyport_r" = "yes"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-    else
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    fi
-  fi
-  #
-  if test "$tst_compi_getservbyport_r" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if getservbyport_r usage allowed" >&5
-$as_echo_n "checking if getservbyport_r usage allowed... " >&6; }
-    if test "x$curl_disallow_getservbyport_r" != "xyes"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-      tst_allow_getservbyport_r="yes"
-    else
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      tst_allow_getservbyport_r="no"
-    fi
-  fi
-  #
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if getservbyport_r might be used" >&5
-$as_echo_n "checking if getservbyport_r might be used... " >&6; }
-  if test "$tst_links_getservbyport_r" = "yes" &&
-     test "$tst_proto_getservbyport_r" = "yes" &&
-     test "$tst_compi_getservbyport_r" = "yes" &&
-     test "$tst_allow_getservbyport_r" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_GETSERVBYPORT_R 1
-_ACEOF
-
-
-cat >>confdefs.h <<_ACEOF
-#define GETSERVBYPORT_R_ARGS $tst_nargs_getservbyport_r
-_ACEOF
-
-    if test "$tst_nargs_getservbyport_r" -eq "4"; then
-
-$as_echo "#define GETSERVBYPORT_R_BUFSIZE sizeof(struct servent_data)" >>confdefs.h
-
-    else
-
-$as_echo "#define GETSERVBYPORT_R_BUFSIZE 4096" >>confdefs.h
-
-    fi
-    curl_cv_func_getservbyport_r="yes"
-  else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    curl_cv_func_getservbyport_r="no"
   fi
 
 
@@ -38295,217 +36546,6 @@ fi
 
 done
 
-
-
-    #
-  tst_links_inet_ntoa_r="unknown"
-  tst_proto_inet_ntoa_r="unknown"
-  tst_compi_inet_ntoa_r="unknown"
-  tst_allow_inet_ntoa_r="unknown"
-  tst_nargs_inet_ntoa_r="unknown"
-  #
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if inet_ntoa_r can be linked" >&5
-$as_echo_n "checking if inet_ntoa_r can be linked... " >&6; }
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#define inet_ntoa_r innocuous_inet_ntoa_r
-#ifdef __STDC__
-# include <limits.h>
-#else
-# include <assert.h>
-#endif
-#undef inet_ntoa_r
-#ifdef __cplusplus
-extern "C"
-#endif
-char inet_ntoa_r ();
-#if defined __stub_inet_ntoa_r || defined __stub___inet_ntoa_r
-choke me
-#endif
-
-int main (void)
-{
-return inet_ntoa_r ();
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-    tst_links_inet_ntoa_r="yes"
-
-else
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    tst_links_inet_ntoa_r="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-  #
-  if test "$tst_links_inet_ntoa_r" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if inet_ntoa_r is prototyped" >&5
-$as_echo_n "checking if inet_ntoa_r is prototyped... " >&6; }
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-      $curl_includes_arpa_inet
-
-_ACEOF
-if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
-  $EGREP "inet_ntoa_r" >/dev/null 2>&1; then :
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-      tst_proto_inet_ntoa_r="yes"
-
-else
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      tst_proto_inet_ntoa_r="no"
-
-fi
-rm -f conftest*
-
-  fi
-  #
-  if test "$tst_proto_inet_ntoa_r" = "yes"; then
-    if test "$tst_nargs_inet_ntoa_r" = "unknown"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking if inet_ntoa_r takes 2 args." >&5
-$as_echo_n "checking if inet_ntoa_r takes 2 args.... " >&6; }
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-          $curl_includes_arpa_inet
-
-int main (void)
-{
-
-          struct in_addr addr;
-          if(0 != inet_ntoa_r(addr, 0))
-            return 1;
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-        tst_compi_inet_ntoa_r="yes"
-        tst_nargs_inet_ntoa_r="2"
-
-else
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-        tst_compi_inet_ntoa_r="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-    fi
-    if test "$tst_nargs_inet_ntoa_r" = "unknown"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking if inet_ntoa_r takes 3 args." >&5
-$as_echo_n "checking if inet_ntoa_r takes 3 args.... " >&6; }
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-          $curl_includes_arpa_inet
-
-int main (void)
-{
-
-          struct in_addr addr;
-          if(0 != inet_ntoa_r(addr, 0, 0))
-            return 1;
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-        tst_compi_inet_ntoa_r="yes"
-        tst_nargs_inet_ntoa_r="3"
-
-else
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-        tst_compi_inet_ntoa_r="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-    fi
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if inet_ntoa_r is compilable" >&5
-$as_echo_n "checking if inet_ntoa_r is compilable... " >&6; }
-    if test "$tst_compi_inet_ntoa_r" = "yes"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-    else
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    fi
-  fi
-  #
-  if test "$tst_compi_inet_ntoa_r" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if inet_ntoa_r usage allowed" >&5
-$as_echo_n "checking if inet_ntoa_r usage allowed... " >&6; }
-    if test "x$curl_disallow_inet_ntoa_r" != "xyes"; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-      tst_allow_inet_ntoa_r="yes"
-    else
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      tst_allow_inet_ntoa_r="no"
-    fi
-  fi
-  #
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if inet_ntoa_r might be used" >&5
-$as_echo_n "checking if inet_ntoa_r might be used... " >&6; }
-  if test "$tst_links_inet_ntoa_r" = "yes" &&
-     test "$tst_proto_inet_ntoa_r" = "yes" &&
-     test "$tst_compi_inet_ntoa_r" = "yes" &&
-     test "$tst_allow_inet_ntoa_r" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_INET_NTOA_R 1
-_ACEOF
-
-            #
-    if test "$tst_nargs_inet_ntoa_r" -eq "2"; then
-
-$as_echo "#define HAVE_INET_NTOA_R_2 1" >>confdefs.h
-
-    elif test "$tst_nargs_inet_ntoa_r" -eq "3"; then
-
-$as_echo "#define HAVE_INET_NTOA_R_3 1" >>confdefs.h
-
-    fi
-    #
-    curl_cv_func_inet_ntoa_r="yes"
-  else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    curl_cv_func_inet_ntoa_r="no"
-  fi
 
 
         #
@@ -39712,7 +37752,7 @@ int main (void)
 {
 
         long flags = 0;
-        if(0 != ioctlsocket(0, FIONBIO, &flags))
+        if(0 != IoctlSocket(0, FIONBIO, &flags))
           return 1;
 
  ;
@@ -44520,6 +42560,30 @@ $as_echo "yes" >&6; }
 fi
 
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to support NTLM" >&5
+$as_echo_n "checking whether to support NTLM... " >&6; }
+# Check whether --enable-ntlm was given.
+if test "${enable_ntlm+set}" = set; then :
+  enableval=$enable_ntlm;  case "$enableval" in
+  no)
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+$as_echo "#define CURL_DISABLE_NTLM 1" >>confdefs.h
+
+       CURL_DISABLE_NTLM=1
+       ;;
+  *)   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+       ;;
+  esac
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+fi
+
+
 
     OPT_NTLM_WB="default"
   # Check whether --enable-ntlm-wb was given.
@@ -44854,9 +42918,9 @@ fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to support curl_easy_option*" >&5
 $as_echo_n "checking whether to support curl_easy_option*... " >&6; }
-# Check whether --enable-get-easy-option was given.
-if test "${enable_get_easy_option+set}" = set; then :
-  enableval=$enable_get_easy_option;  case "$enableval" in
+# Check whether --enable-get-easy-options was given.
+if test "${enable_get_easy_options+set}" = set; then :
+  enableval=$enable_get_easy_options;  case "$enableval" in
   no)
        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
@@ -45096,7 +43160,8 @@ fi
 
 use_curl_ntlm_core=no
 
-if test "x$CURL_DISABLE_CRYPTO_AUTH" != "x1"; then
+if test "x$CURL_DISABLE_CRYPTO_AUTH" != "x1" -a \
+    "x$CURL_DISABLE_NTLM" != "x1"; then
   if test "x$OPENSSL_ENABLED" = "x1" -o "x$MBEDTLS_ENABLED" = "x1" \
       -o "x$GNUTLS_ENABLED" = "x1" -o "x$NSS_ENABLED" = "x1" \
       -o "x$SECURETRANSPORT_ENABLED" = "x1" \
@@ -48131,7 +46196,6 @@ done
   LDAPS:            ${curl_ldaps_msg}
   RTSP:             ${curl_rtsp_msg}
   RTMP:             ${curl_rtmp_msg}
-  Metalink:         ${curl_mtlnk_msg}
   PSL:              ${curl_psl_msg}
   Alt-svc:          ${curl_altsvc_msg}
   HSTS:             ${curl_hsts_msg}
@@ -48178,7 +46242,6 @@ $as_echo "$as_me: Configured to build curl/libcurl:
   LDAPS:            ${curl_ldaps_msg}
   RTSP:             ${curl_rtsp_msg}
   RTMP:             ${curl_rtmp_msg}
-  Metalink:         ${curl_mtlnk_msg}
   PSL:              ${curl_psl_msg}
   Alt-svc:          ${curl_altsvc_msg}
   HSTS:             ${curl_hsts_msg}

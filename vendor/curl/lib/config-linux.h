@@ -171,9 +171,6 @@
 /* Define to 1 if you have the connect function. */
 #define HAVE_CONNECT 1
 
-/* Define to 1 if you have the <crypto.h> header file. */
-/* #undef HAVE_CRYPTO_H */
-
 /* Define to 1 if you have the declaration of `getpwuid_r', and to 0 if you
    don't. */
 #define HAVE_DECL_GETPWUID_R 1
@@ -186,9 +183,6 @@
 
 /* Define to 1 if you have the <errno.h> header file. */
 #define HAVE_ERRNO_H 1
-
-/* Define to 1 if you have the <err.h> header file. */
-/* #undef HAVE_ERR_H */
 
 /* Define to 1 if you have the fcntl function. */
 #define HAVE_FCNTL 1
@@ -204,9 +198,6 @@
 
 /* Define to 1 if you have the freeaddrinfo function. */
 #define HAVE_FREEADDRINFO 1
-
-/* Define to 1 if you have the freeifaddrs function. */
-#define HAVE_FREEIFADDRS 1
 
 /* Define to 1 if you have the fsetxattr function. */
 #define HAVE_FSETXATTR 1
@@ -231,21 +222,6 @@
 
 /* Define to 1 if you have the `geteuid' function. */
 #define HAVE_GETEUID 1
-
-/* Define to 1 if you have the gethostbyaddr function. */
-#define HAVE_GETHOSTBYADDR 1
-
-/* Define to 1 if you have the gethostbyaddr_r function. */
-#define HAVE_GETHOSTBYADDR_R 1
-
-/* gethostbyaddr_r() takes 5 args */
-/* #undef HAVE_GETHOSTBYADDR_R_5 */
-
-/* gethostbyaddr_r() takes 7 args */
-/* #undef HAVE_GETHOSTBYADDR_R_7 */
-
-/* gethostbyaddr_r() takes 8 args */
-#define HAVE_GETHOSTBYADDR_R_8 1
 
 /* Define to 1 if you have the gethostbyname function. */
 #define HAVE_GETHOSTBYNAME 1
@@ -553,9 +529,6 @@
 /* Define to 1 if you have the recv function. */
 #define HAVE_RECV 1
 
-/* Define to 1 if you have the <rsa.h> header file. */
-/* #undef HAVE_RSA_H */
-
 /* Define to 1 if you have the select function. */
 #define HAVE_SELECT 1
 
@@ -579,9 +552,6 @@
 
 /* Define to 1 if you have a working setsockopt SO_NONBLOCK function. */
 /* #undef HAVE_SETSOCKOPT_SO_NONBLOCK */
-
-/* Define to 1 if you have the <sgtty.h> header file. */
-/* #undef HAVE_SGTTY_H */
 
 /* Define to 1 if you have the sigaction function. */
 #define HAVE_SIGACTION 1
