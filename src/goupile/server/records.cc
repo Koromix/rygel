@@ -915,7 +915,7 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
         if (!instance->db->Prepare(R"(SELECT e.ulid, e.hid, e.form, f.type, f.json FROM rec_entries e
                                       INNER JOIN rec_fragments f ON (f.ulid = e.ulid)
                                       INNER JOIN rec_fragments fl ON (fl.anchor = e.anchor)
-                                      WHERE fl.type <> 'deleted'
+                                      WHERE fl.type <> 'delete'
                                       ORDER BY f.anchor)", &stmt))
             return;
 
