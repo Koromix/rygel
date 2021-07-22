@@ -37,7 +37,7 @@ nginx_domains:
       location / {
           proxy_http_version 1.1;
           proxy_request_buffering off;
-          proxy_buffering off;
+          proxy_buffering on;
 
           proxy_set_header Host $host;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -50,7 +50,7 @@ nginx_domains:
       location / {
           proxy_http_version 1.1;
           proxy_request_buffering off;
-          proxy_buffering off;
+          proxy_buffering on;
 
           proxy_set_header Host $host;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -63,7 +63,7 @@ nginx_domains:
       location / {
           proxy_http_version 1.1;
           proxy_request_buffering off;
-          proxy_buffering off;
+          proxy_buffering on;
 
           proxy_set_header Host $host;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -76,7 +76,7 @@ nginx_domains:
       location / {
           proxy_http_version 1.1;
           proxy_request_buffering off;
-          proxy_buffering off;
+          proxy_buffering on;
 
           proxy_set_header Host $host;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
