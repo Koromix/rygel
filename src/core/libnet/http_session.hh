@@ -31,7 +31,6 @@ class http_SessionManager {
     struct SessionHandle {
         char session_key[65];
         char session_rnd[33];
-        char user_agent[134];
 
         int64_t login_time;
         int64_t register_time;
@@ -169,13 +168,6 @@ public:
 private:
     SessionHandle *CreateHandle(const http_RequestInfo &request, http_IO *io, const char *session_rnd = nullptr)
     {
-        const char *user_agent = request.GetHeaderValue("User-Agent");
-        if (!user_agent) {
-            LogError("Missing User-Agent header");
-            io->AttachError(422);
-            return nullptr;
-        }
-
         SessionHandle *handle = sessions.AppendDefault();
 
         // Register handle with unique key
@@ -206,9 +198,6 @@ private:
             Fmt(handle->session_rnd, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
         }
 
-        // Fill extra security values
-        CopyString(user_agent, handle->user_agent);
-
         return handle;
     }
 
@@ -218,9 +207,8 @@ private:
 
         const char *session_key = request.GetCookieValue("session_key");
         const char *session_rnd = request.GetCookieValue("session_rnd");
-        const char *user_agent = request.GetHeaderValue("User-Agent");
-        if (!session_key || !user_agent) {
-            *out_mismatch = session_key;
+        if (!session_key) {
+            *out_mismatch = false;
             return nullptr;
         }
 
@@ -238,10 +226,6 @@ private:
         if (now - handle->login_time >= MaxSessionDelay ||
                 now - handle->register_time >= MaxKeyDelay ||
                 now - handle->lock_time >= MaxLockDelay ||
-                (session_rnd && !TestStr(handle->session_rnd, session_rnd)) ||
-#ifdef NDEBUG
-                strncmp(handle->user_agent, user_agent, RG_SIZE(handle->user_agent) - 1) != 0 ||
-#endif
                 (session_rnd && !TestStr(handle->session_rnd, session_rnd))) {
             *out_mismatch = true;
             return nullptr;
