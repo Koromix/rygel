@@ -755,14 +755,17 @@ function FormBuilder(state, model, readonly = false) {
         props = normalizePropositions(props);
 
         let value = readValue(key, options, value => {
-            if (!Array.isArray(value)) {
-                if (value != null) {
+            let nullable = props.some(p => p.value == null);
+
+            if (Array.isArray(value)) {
+                if (!value.length)
+                    value = null;
+            } else {
+                if (value != null)
                     value = [value];
-                } else {
-                    let nullable = props.some(p => p.value == null);
-                    value = nullable ? undefined : [];
-                }
             }
+            if (value == null)
+                value = nullable ? undefined : [];
 
             return value;
         });
