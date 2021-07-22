@@ -97,9 +97,6 @@
                     if (typeof goupile !== 'undefined') {
                         let p = goupile.start();
 
-                        p.then(function() {
-                            document.body.classList.remove('gp_loading');
-                        })
                         p.catch(function(err) {
                             document.querySelector('#ui_main').innerHTML =
                                 '<div class="ui_wip">' +
