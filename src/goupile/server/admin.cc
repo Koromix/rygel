@@ -368,6 +368,7 @@ int RunInit(Span<const char *> arguments)
     const char *title = nullptr;
     const char *username = nullptr;
     const char *password = nullptr;
+    bool totp = true;
     char archive_key[45] = {};
     char decrypt_key[45] = {};
     const char *demo = nullptr;
@@ -384,6 +385,8 @@ Options:
 
     %!..+-u, --username <username>%!0    Name of default user
         %!..+--password <pwd>%!0         Password of default user
+        %!..+--no_totp%!0                Disable TOTP for admin user
+
         %!..+--archive_key <key>%!0      Set domain public archive key
 
         %!..+--demo [<name>]%!0          Create default instance)", FelixTarget);
@@ -408,6 +411,8 @@ Options:
                 username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 password = opt.current_value;
+            } else if (opt.Test("--no_totp")) {
+                totp = false;
             } else if (opt.Test("--archive_key", OptionType::Value)) {
                 RG_STATIC_ASSERT(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
 
@@ -583,7 +588,7 @@ retry:
         }
 
         if (!domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash, admin, local_key, totp_required)
-                              VALUES (1, ?1, ?2, 1, ?3, 1))", username, hash, local_key))
+                              VALUES (1, ?1, ?2, 1, ?3, ?4))", username, hash, local_key, 0 + totp))
             return 1;
     }
 
