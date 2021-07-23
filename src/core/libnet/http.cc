@@ -807,7 +807,7 @@ Size http_IO::Read(Span<uint8_t> out_buf)
         read_cv.wait(lock);
     }
     if (state == State::Zombie) {
-        LogError("Connection aborted");
+        LogError("Connection aborted while reading");
         return -1;
     }
 
@@ -847,7 +847,7 @@ bool http_IO::Write(Span<const uint8_t> buf)
     write_buf.Append(buf);
 
     if (state == State::Zombie) {
-        LogError("Connection aborted");
+        LogError("Connection aborted while writing");
         return false;
     }
 
