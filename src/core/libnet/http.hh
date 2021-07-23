@@ -42,7 +42,7 @@ struct http_Config {
     int port = 8888;
     const char *unix_path = nullptr;
 
-    int max_connections = 512;
+    int max_connections = 1024;
     int idle_timeout = 60;
     int threads = std::max(GetCoreCount(), 4);
     int async_threads = std::max(GetCoreCount() * 2, 8);
