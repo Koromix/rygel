@@ -270,6 +270,7 @@ const goupile = new function() {
 
     function runConfirmScreen(e, initial, method) {
         let title = initial ? null : 'Confirmation d\'identité';
+        let url = util.pasteURL(ENV.urls.instance + 'api/session/qrcode', { buster: util.getRandomInt(0, Number.MAX_SAFE_INTEGER) });
         let errors = 0;
 
         return ui.runDialog(e, title, { fixed: true }, (d, resolve, reject) => {
@@ -286,7 +287,7 @@ const goupile = new function() {
                     pour mobile</b> puis saississez le code donné par cette application.</p>
                     <p><i>Applications : FreeOTP, Authy, etc.</i></p>
 
-                    <div style="text-align: center; margin-top: 2em;"><img src=${ENV.urls.instance + 'api/session/qrcode'} /></div>
+                    <div style="text-align: center; margin-top: 2em;"><img src=${url} /></div>
                 ` : ''}
                 <br/>
             `);
@@ -366,7 +367,7 @@ const goupile = new function() {
                     query.set('old_password', old_password.value);
                     query.set('new_password', new_password.value);
 
-                    let response = await net.fetch(`${ENV.urls.instance}api/password/change`, {
+                    let response = await net.fetch(`${ENV.urls.instance}api/change/password`, {
                         method: 'POST',
                         body: query
                     });
@@ -374,6 +375,73 @@ const goupile = new function() {
                     if (response.ok) {
                         resolve();
                         progress.success('Mot de passe modifié');
+                    } else {
+                        let err = (await response.text()).trim();
+                        throw new Error(err);
+                    }
+                } catch (err) {
+                    progress.close();
+
+                    log.error(err);
+                    d.refresh();
+                }
+            });
+        });
+    };
+
+    this.runResetTOTP = async function(e) {
+        // Create new temporary TOTP secret first
+        {
+            let response = await net.fetch(ENV.urls.instance + 'api/change/totp1', { method: 'POST' });
+
+            if (!response.ok) {
+                let err = (await response.text()).trim();
+                throw new Error(err);
+            }
+        }
+
+        let url = util.pasteURL(ENV.urls.instance + 'api/session/qrcode', { buster: util.getRandomInt(0, Number.MAX_SAFE_INTEGER) });
+        let errors = 0;
+
+        return ui.runDialog(e, 'Changement de codes TOTP', { fixed: true }, (d, resolve, reject) => {
+            d.output(html`
+                <p>Scannez ce QR code avec une <b>application d'authentification
+                pour mobile</b> puis saississez le code donné par cette application.</p>
+                <p><i>Applications : FreeOTP, Authy, etc.</i></p>
+
+                <div style="text-align: center; margin-top: 2em;"><img src=${url} /></div>
+                <br/>
+            `);
+
+            let code = d.text('*code', 'Code secret', { help : '6 chiffres' });
+            let password = d.password('*password', 'Mot de passe du compte');
+
+            if (errors >= 2) {
+                d.output(html`
+                    <span style="color: red; font-style: italic">
+                        En cas de difficulté, vérifiez que l'heure de votre téléphone
+                        est précisément réglée, que le fuseau horaire paramétré est
+                        le bon ainsi que l'heure d'été.
+                    </span>
+                `);
+            }
+
+            d.action('Modifier', {disabled: !d.isValid()}, async () => {
+                let progress = log.progress('Modification des codes TOTP');
+
+                try {
+                    let query = new URLSearchParams;
+                    query.set('password', password.value);
+                    query.set('code', code.value);
+
+                    let response = await net.fetch(`${ENV.urls.instance}api/change/totp2`, {
+                        method: 'POST',
+                        body: query
+                    });
+
+                    if (response.ok) {
+                        resolve();
+                        progress.success('Codes TOTP modifiés');
                     } else {
                         let err = (await response.text()).trim();
                         throw new Error(err);

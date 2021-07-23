@@ -82,12 +82,12 @@ const SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
 
     // Fast path
     {
-        std::shared_lock<std::shared_mutex> lock_shr(stamps_mutex);
+        std::shared_lock<std::shared_mutex> lock_shr(mutex);
         stamp = stamps_map.FindValue(instance->unique, nullptr);
     }
 
     if (!stamp) {
-        std::lock_guard<std::shared_mutex> lock_excl(stamps_mutex);
+        std::lock_guard<std::shared_mutex> lock_excl(mutex);
         stamp = stamps_map.FindValue(instance->unique, nullptr);
 
         if (!stamp) {
@@ -138,7 +138,7 @@ const SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
 
 void SessionInfo::InvalidateStamps()
 {
-    std::lock_guard<std::shared_mutex> lock_excl(stamps_mutex);
+    std::lock_guard<std::shared_mutex> lock_excl(mutex);
     stamps_map.Clear();
 
     // We can't clear the array or the allocator because the stamps may
@@ -147,16 +147,26 @@ void SessionInfo::InvalidateStamps()
 
 void SessionInfo::AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions, const char *ulid)
 {
-    std::lock_guard<std::shared_mutex> lock_excl(stamps_mutex);
+    std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
     SessionStamp *stamp = stamps.AppendDefault();
 
     stamp->unique = instance->unique;
     stamp->authorized = true;
     stamp->permissions = permissions;
-    stamp->ulid = ulid ? DuplicateString(ulid, &stamps_alloc).ptr : nullptr;
+    stamp->ulid = ulid ? DuplicateString(ulid, &str_alloc).ptr : nullptr;
 
     stamps_map.Set(stamp);
+}
+
+void SessionInfo::UpdateSecret()
+{
+    std::lock_guard<std::shared_mutex> lock(mutex);
+
+    char *ptr = (char *)Allocator::Allocate(&str_alloc, 33);
+    sec_GenerateSecret(MakeSpan(ptr, 33));
+
+    secret = ptr;
 }
 
 void InvalidateUserStamps(int64_t userid)
@@ -325,8 +335,10 @@ static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid
     if (confirm != SessionConfirm::None) {
         RG_ASSERT(secret);
 
-        session->secret = (char *)session + RG_SIZE(SessionInfo) + username_bytes;
-        CopyString(secret, MakeSpan((char *)session->secret, secret_bytes));
+        char *ptr = (char *)session + RG_SIZE(SessionInfo) + username_bytes;
+        CopyString(secret, MakeSpan(ptr, secret_bytes));
+
+        session->secret = ptr;
     }
 
     return ptr;
@@ -529,11 +541,8 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                         session = CreateUserSession(SessionType::User, userid, username, local_key,
                                                     SessionConfirm::TOTP, totp_secret);
                     } else {
-                        char secret[33];
-                        sec_GenerateSecret(secret);
-
                         session = CreateUserSession(SessionType::User, userid, username, local_key,
-                                                    SessionConfirm::QRcode, secret);
+                                                    SessionConfirm::QRcode, nullptr);
                     }
                 } else {
                     session = CreateUserSession(SessionType::User, userid, username, local_key,
@@ -886,8 +895,13 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
             case SessionConfirm::None: { RG_UNREACHABLE(); } break;
 
             case SessionConfirm::SMS: {
-                if (TestStr(code, session->secret)) {
+                const char *secret = session->secret;
+
+                if (TestStr(code, secret)) {
                     session->confirm = SessionConfirm::None;
+                    sodium_memzero((void *)secret, strlen(secret));
+                    session->secret.compare_exchange_strong(secret, nullptr);
+
                     WriteProfileJson(session.GetRaw(), instance, request, io);
                 } else {
                     if (RegisterFloodEvent(request.client_addr, session->username)) {
@@ -902,16 +916,20 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
 
             case SessionConfirm::TOTP:
             case SessionConfirm::QRcode: {
+                const char *secret = session->secret;
                 int64_t time = GetUnixTime();
 
-                if (sec_CheckHotp(session->secret, time / 30000, 6, 1, code)) {
+                if (sec_CheckHotp(secret, time / 30000, 6, 1, code)) {
                     if (session->confirm == SessionConfirm::QRcode) {
                         if (!gp_domain.db.Run("UPDATE dom_users SET totp_secret = ?2 WHERE userid = ?1",
-                                              session->userid, session->secret))
+                                              session->userid, secret))
                             return;
                     }
 
                     session->confirm = SessionConfirm::None;
+                    sodium_memzero((void *)secret, strlen(secret));
+                    session->secret.compare_exchange_strong(secret, nullptr);
+
                     WriteProfileJson(session.GetRaw(), instance, request, io);
                 } else {
                     if (RegisterFloodEvent(request.client_addr, session->username)) {
@@ -943,15 +961,22 @@ void HandleSessionQRcode(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<SessionInfo> session = sessions.Find(request, io);
 
-    if (!session || session->confirm != SessionConfirm::QRcode) {
-        LogError("Session is not in TOTP init mode");
+    if (!session) {
+        LogError("Session is closed");
         io->AttachError(403);
         return;
     }
-    RG_ASSERT(session->secret);
+
+    const char *secret = session->secret;
+
+    if (!secret) {
+        LogError("TOTP secret has not been generated");
+        io->AttachError(404);
+        return;
+    }
 
     const char *url = sec_GenerateHotpUrl(gp_domain.config.title, session->username,
-                                          gp_domain.config.title, session->secret, 6, &io->allocator);
+                                          gp_domain.config.title, secret, 6, &io->allocator);
     if (!url)
         return;
 
@@ -964,9 +989,10 @@ void HandleSessionQRcode(const http_RequestInfo &request, http_IO *io)
     }
 
     io->AttachBinary(200, png, "image/png");
+    io->AddCachingHeaders(0, nullptr);
 }
 
-void HandlePasswordChange(const http_RequestInfo &request, http_IO *io)
+void HandleChangePassword(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<SessionInfo> session = sessions.Find(request, io);
 
@@ -1069,6 +1095,145 @@ void HandlePasswordChange(const http_RequestInfo &request, http_IO *io)
                 return false;
             if (!gp_domain.db.Run("UPDATE dom_users SET password_hash = ?2 WHERE userid = ?1",
                                   session->userid, new_hash))
+                return false;
+
+            return true;
+        });
+        if (!success)
+            return;
+
+        io->AttachText(200, "Done!");
+    });
+}
+
+void HandleChangeTOTP1(const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<SessionInfo> session = sessions.Find(request, io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (session->type != SessionType::User) {
+        LogError("This account does not use passwords");
+        io->AttachError(403);
+        return;
+    }
+    if (session->confirm != SessionConfirm::None) {
+        LogError("You must be fully logged in before you do that");
+        io->AttachError(403);
+        return;
+    }
+
+    session->UpdateSecret();
+
+    io->AttachText(200, "Done!");
+}
+
+void HandleChangeTOTP2(const http_RequestInfo &request, http_IO *io)
+{
+    RetainPtr<SessionInfo> session = sessions.Find(request, io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (session->type != SessionType::User) {
+        LogError("This account does not use passwords");
+        io->AttachError(403);
+        return;
+    }
+    if (session->confirm != SessionConfirm::None) {
+        LogError("You must be fully logged in before you do that");
+        io->AttachError(403);
+        return;
+    }
+
+    io->RunAsync([=]() {
+        // Read POST values
+        const char *password;
+        const char *code;
+        {
+            HashMap<const char *, const char *> values;
+            if (!io->ReadPostValues(&io->allocator, &values)) {
+                io->AttachError(422);
+                return;
+            }
+
+            bool valid = true;
+
+            password = values.FindValue("password", nullptr);
+            if (!password) {
+                LogError("Missing 'password' parameter");
+                valid = false;
+            }
+
+            code = values.FindValue("code", nullptr);
+            if (!code) {
+                LogError("Missing 'code' parameter");
+                valid = false;
+            }
+
+            if (!valid) {
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        int64_t time = GetUnixTime();
+
+        // Authenticate with password
+        {
+            // We use this to extend/fix the response delay in case of error
+            int64_t now = GetMonotonicTime();
+
+            sq_Statement stmt;
+            if (!gp_domain.db.Prepare(R"(SELECT password_hash FROM dom_users
+                                         WHERE userid = ?1)", &stmt))
+                return;
+            sqlite3_bind_int64(stmt, 1, session->userid);
+
+            if (!stmt.Step()) {
+                if (stmt.IsValid()) {
+                    LogError("User does not exist");
+                    io->AttachError(404);
+                }
+                return;
+            }
+
+            const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
+
+            if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) < 0) {
+                // Enforce constant delay if authentification fails
+                int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
+                WaitDelay(safety_delay);
+
+                LogError("Invalid password");
+                io->AttachError(403);
+                return;
+            }
+        }
+
+        const char *secret = session->secret;
+
+        // Check user knows secret
+        if (!sec_CheckHotp(secret, time / 30000, 6, 1, code)) {
+            LogError("Code is incorrect");
+            io->AttachError(403);
+            return;
+        }
+
+        bool success = gp_domain.db.Transaction([&]() {
+            int64_t time = GetUnixTime();
+
+            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username)
+                                     VALUES (?1, ?2, ?3, ?4))",
+                                  time, request.client_addr, "change_totp", session->username))
+                return false;
+            if (!gp_domain.db.Run("UPDATE dom_users SET totp_required = 1, totp_secret = ?2 WHERE userid = ?1",
+                                  session->userid, secret))
                 return false;
 
             return true;

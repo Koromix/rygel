@@ -236,6 +236,7 @@ function InstanceController() {
                     <div>
                         ${profile.userid >= 0 ? html`
                             <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Changer le mot de passe</button>
+                            <button @click=${ui.wrapAction(goupile.runResetTOTP)}>Changer les codes TOTP</button>
                             <hr/>
                             ${app.lockable ? html`<button @click=${ui.wrapAction(e => goupile.runLockDialog(e, form_record.chain[0].ulid))}>Verrouiller</button>` : ''}
                         ` : ''}

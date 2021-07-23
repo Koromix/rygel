@@ -71,10 +71,12 @@ enum class SessionConfirm {
 };
 
 class SessionInfo: public RetainObject {
-    mutable std::shared_mutex stamps_mutex;
+    mutable std::shared_mutex mutex;
+
     mutable BucketArray<SessionStamp> stamps;
     mutable HashTable<int64_t, SessionStamp *> stamps_map;
-    mutable BlockAllocator stamps_alloc;
+
+    mutable BlockAllocator str_alloc;
 
 public:
     SessionType type;
@@ -84,7 +86,7 @@ public:
     char local_key[45];
 
     std::atomic<SessionConfirm> confirm;
-    const char *secret;
+    std::atomic<const char *> secret;
 
     bool IsAdmin() const;
     bool HasPermission(const InstanceHolder *instance, UserPermission perm) const;
@@ -93,6 +95,8 @@ public:
     void InvalidateStamps();
 
     void AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions, const char *ulid = nullptr);
+
+    void UpdateSecret();
 };
 
 void InvalidateUserStamps(int64_t userid);
@@ -110,6 +114,8 @@ void HandleSessionLogout(const http_RequestInfo &request, http_IO *io);
 void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleSessionQRcode(const http_RequestInfo &request, http_IO *io);
 
-void HandlePasswordChange(const http_RequestInfo &request, http_IO *io);
+void HandleChangePassword(const http_RequestInfo &request, http_IO *io);
+void HandleChangeTOTP1(const http_RequestInfo &request, http_IO *io);
+void HandleChangeTOTP2(const http_RequestInfo &request, http_IO *io);
 
 }

@@ -50,6 +50,7 @@ function AdminController() {
                 <button class="icon" style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}>${profile.username}</button>
                 <div>
                     <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Changer le mot de passe</button>
+                    <button @click=${ui.wrapAction(goupile.runResetTOTP)}>Changer les codes TOTP</button>
                     <hr/>
                     <button @click=${ui.wrapAction(goupile.logout)}>Se déconnecter</button>
                 </div>
