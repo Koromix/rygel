@@ -43,6 +43,7 @@
                 align-items: center;
                 justify-content: center;
                 visibility: hidden;
+                background: white;
                 animation: gp_loading_wait 0.2s 1 linear;
                 animation-fill-mode: forwards;
             }
@@ -59,10 +60,8 @@
             }
             .gp_loading > * { display: none !important; }
             @keyframes gp_loading_wait {
-                100% {
-                    visibility: visible;
-                    background: white;
-                }
+                99% { visibility: hidden; }
+                100% { visibility: visible; }
             }
             @keyframes gp_loading_spinner {
                 0% { transform: rotate(0deg); }
