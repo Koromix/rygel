@@ -92,11 +92,11 @@ const goupile = new function() {
         await initTasks();
 
         // Run page
-        controller.go(null, url.href).catch(err => {
+        return controller.go(null, url.href).catch(err => {
             log.error(err);
 
             // Now try home page... If that fails too, show error to user
-            controller.go(null, ENV.urls.base).catch(async err => {
+            return controller.go(null, ENV.urls.base).catch(async err => {
                 throw err;
             });
         });
