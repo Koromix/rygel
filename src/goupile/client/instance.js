@@ -1431,6 +1431,7 @@ function InstanceController() {
         let new_record;
         let new_dictionaries;
         let new_code;
+        let explicit_panels = false;
 
         // Parse new URL
         if (url != null) {
@@ -1499,8 +1500,10 @@ function InstanceController() {
             }
 
             let panels = url.searchParams.get('p');
-            if (panels)
+            if (panels) {
                 ui.restorePanelState(panels);
+                explicit_panels = true;
+            }
         }
 
         // Match requested page, record type, available page, etc.
@@ -1594,12 +1597,12 @@ function InstanceController() {
                     el.parentNode.scrollTop = 0;
             }, 0);
 
-            if (!ui.isPanelEnabled('view')) {
+            if (!explicit_panels && !ui.isPanelEnabled('view')) {
                 ui.setPanelState('view', true);
                 ui.setPanelState('data', false);
             }
         } else if (form_record == null && new_record.chain[0].saved) {
-            if (!ui.isPanelEnabled('view')) {
+            if (!explicit_panels && !ui.isPanelEnabled('view')) {
                 ui.setPanelState('view', true);
                 ui.setPanelState('data', false);
             }

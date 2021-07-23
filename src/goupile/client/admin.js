@@ -353,6 +353,7 @@ function AdminController() {
         let new_archives = archives;
         let new_selected = selected_instance;
         let new_permissions = selected_permissions;
+        let explicit_panels = false;
 
         if (new_instances == null)
             new_instances = await net.fetchJson('/admin/api/instances/list');
@@ -363,8 +364,10 @@ function AdminController() {
             url = new URL(url, window.location.href);
 
             let panels = url.searchParams.get('p');
-            if (panels)
+            if (panels) {
                 ui.restorePanelState(panels);
+                explicit_panels = true;
+            }
 
             if (url.searchParams.has('select')) {
                 let select = url.searchParams.get('select');
@@ -395,7 +398,8 @@ function AdminController() {
                 };
             }
 
-            if (selected_instance == null || new_selected.key !== selected_instance.key)
+            if (!explicit_panels && (selected_instance == null ||
+                                     new_selected.key !== selected_instance.key))
                 ui.setPanelState('users', true);
         } else {
             new_permissions = null;
