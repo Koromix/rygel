@@ -106,8 +106,7 @@ const ui = new function() {
         }
 
         adjustLogLayer();
-
-        document.body.classList.remove('gp_loading');
+        adjustLoadingSpinner();
     };
 
     this.setMenu = function(func) {
@@ -369,6 +368,13 @@ const ui = new function() {
 
         document.querySelector('#ui_root').removeChild(dialog.el);
         dialog.el = null;
+
+        adjustLoadingSpinner();
+    }
+
+    function adjustLoadingSpinner() {
+        let empty = (dialogs.next === dialogs) && !active_panels;
+        document.body.classList.toggle('gp_loading', empty);
     }
 
     this.runConfirm = function(e, msg, action, func) {
