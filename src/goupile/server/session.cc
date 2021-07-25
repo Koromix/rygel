@@ -1051,6 +1051,7 @@ void HandlePasswordChange(const http_RequestInfo &request, http_IO *io)
 
                 LogError("Invalid password");
                 io->AttachError(403);
+                return;
             }
         }
 
