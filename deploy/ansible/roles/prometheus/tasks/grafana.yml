@@ -20,7 +20,7 @@
 
 - name: Add Grafana repository
   apt_repository:
-    repo: deb https://packages.grafana.com/oss/deb stable main
+    repo: deb https://packages.grafana.com/oss/deb beta main
     state: present
   become: yes
 
