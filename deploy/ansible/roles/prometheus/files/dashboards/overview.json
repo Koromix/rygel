@@ -16,8 +16,7 @@
   "editable": true,
   "gnetId": 1617,
   "graphTooltip": 0,
-  "id": 2,
-  "iteration": 1624043943200,
+  "iteration": 1627299904237,
   "links": [],
   "panels": [
     {
@@ -94,7 +93,7 @@
         "text": {},
         "textMode": "value_and_name"
       },
-      "pluginVersion": "8.0.3",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": true,
@@ -168,7 +167,7 @@
             }
           },
           "mappings": [],
-          "max": 1,
+          "max": 2,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -206,7 +205,8 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(systemd_process_cpu_seconds_total{ name=~\"goupile@.*\" }[$__rate_interval]) ",
+          "expr": "rate(systemd_process_cpu_seconds_total{ name=~\"goupile@.*\" }[$__rate_interval])",
+          "format": "time_series",
           "instant": false,
           "interval": "",
           "legendFormat": "{{ name }}",
@@ -396,7 +396,7 @@
         "text": {},
         "textMode": "value_and_name"
       },
-      "pluginVersion": "8.0.3",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": true,
@@ -678,7 +678,7 @@
         "text": {},
         "textMode": "value_and_name"
       },
-      "pluginVersion": "8.0.3",
+      "pluginVersion": "8.0.6",
       "targets": [
         {
           "exemplar": true,
@@ -760,7 +760,7 @@
           },
           "links": [],
           "mappings": [],
-          "max": 100,
+          "max": 2,
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -775,7 +775,7 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "percentunit"
         },
         "overrides": [
           {
@@ -1087,7 +1087,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode=\"system\",instance=\"$Node\"}[$__rate_interval])) * 100",
+          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode=\"system\",instance=\"$Node\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1098,7 +1098,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode=\"user\",instance=\"$Node\"}[$__rate_interval])) * 100",
+          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode=\"user\",instance=\"$Node\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1109,7 +1109,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode=\"iowait\",instance=\"$Node\"}[$__rate_interval])) * 100",
+          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode=\"iowait\",instance=\"$Node\"}[$__rate_interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1119,7 +1119,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode=~\".*irq\",instance=\"$Node\"}[$__rate_interval])) * 100",
+          "expr": "sum by (instance)(rate(node_cpu_seconds_total{mode=~\".*irq\",instance=\"$Node\"}[$__rate_interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1129,7 +1129,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum (rate(node_cpu_seconds_total{mode!=\"idle\",mode!=\"user\",mode!=\"system\",mode!=\"iowait\",mode!=\"irq\",mode!=\"softirq\",instance=\"$Node\"}[$__rate_interval])) * 100",
+          "expr": "sum (rate(node_cpu_seconds_total{mode!=\"idle\",mode!=\"user\",mode!=\"system\",mode!=\"iowait\",mode!=\"irq\",mode!=\"softirq\",instance=\"$Node\"}[$__rate_interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1139,7 +1139,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode=\"idle\",instance=\"$Node\"}[$__rate_interval])) * 100",
+          "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode=\"idle\",instance=\"$Node\"}[$__rate_interval])) * 2",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1218,7 +1218,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.0.3",
+      "pluginVersion": "8.0.6",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1412,7 +1412,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.0.3",
+      "pluginVersion": "8.0.6",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1535,7 +1535,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.0.3",
+      "pluginVersion": "8.0.6",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1668,5 +1668,5 @@
   "timezone": "browser",
   "title": "Overview",
   "uid": "ulfnwbRnz",
-  "version": 18
+  "version": 5
 }
