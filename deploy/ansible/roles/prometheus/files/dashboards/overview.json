@@ -8,6 +8,12 @@
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
         "type": "dashboard"
       }
     ]
@@ -16,7 +22,7 @@
   "editable": true,
   "gnetId": 1617,
   "graphTooltip": 0,
-  "iteration": 1627299904237,
+  "iteration": 1627312309641,
   "links": [],
   "panels": [
     {
@@ -93,7 +99,7 @@
         "text": {},
         "textMode": "value_and_name"
       },
-      "pluginVersion": "8.0.6",
+      "pluginVersion": "8.1.0-beta2",
       "targets": [
         {
           "exemplar": true,
@@ -167,7 +173,7 @@
             }
           },
           "mappings": [],
-          "max": 2,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -211,6 +217,14 @@
           "interval": "",
           "legendFormat": "{{ name }}",
           "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "count without(cpu, mode) (node_cpu_seconds_total{mode=\"idle\",instance=\"host2\"})",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Max",
+          "refId": "B"
         }
       ],
       "title": "CPU",
@@ -220,6 +234,18 @@
           "options": {
             "regex": "goupile@(.*)\\.service",
             "renamePattern": "$1"
+          }
+        },
+        {
+          "id": "configFromData",
+          "options": {
+            "configRefId": "B",
+            "mappings": [
+              {
+                "fieldName": "Max",
+                "handlerKey": "max"
+              }
+            ]
           }
         }
       ],
@@ -396,7 +422,7 @@
         "text": {},
         "textMode": "value_and_name"
       },
-      "pluginVersion": "8.0.6",
+      "pluginVersion": "8.1.0-beta2",
       "targets": [
         {
           "exemplar": true,
@@ -678,7 +704,7 @@
         "text": {},
         "textMode": "value_and_name"
       },
-      "pluginVersion": "8.0.6",
+      "pluginVersion": "8.1.0-beta2",
       "targets": [
         {
           "exemplar": true,
@@ -760,7 +786,6 @@
           },
           "links": [],
           "mappings": [],
-          "max": 2,
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -1136,11 +1161,33 @@
           "legendFormat": "Busy Other",
           "refId": "E",
           "step": 240
+        },
+        {
+          "exemplar": true,
+          "expr": "count without(cpu, mode) (node_cpu_seconds_total{mode=\"idle\",instance=\"$Node\"})",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Max",
+          "refId": "F"
         }
       ],
       "timeFrom": null,
       "timeShift": null,
       "title": "CPU",
+      "transformations": [
+        {
+          "id": "configFromData",
+          "options": {
+            "configRefId": "F",
+            "mappings": [
+              {
+                "fieldName": "Max",
+                "handlerKey": "max"
+              }
+            ]
+          }
+        }
+      ],
       "type": "timeseries"
     },
     {
@@ -1208,7 +1255,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.0.6",
+      "pluginVersion": "8.1.0-beta2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1402,7 +1449,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.0.6",
+      "pluginVersion": "8.1.0-beta2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1525,7 +1572,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.0.6",
+      "pluginVersion": "8.1.0-beta2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1658,5 +1705,5 @@
   "timezone": "browser",
   "title": "Overview",
   "uid": "ulfnwbRnz",
-  "version": 7
+  "version": 9
 }
