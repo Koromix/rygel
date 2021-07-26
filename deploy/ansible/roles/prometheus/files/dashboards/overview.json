@@ -1136,16 +1136,6 @@
           "legendFormat": "Busy Other",
           "refId": "E",
           "step": 240
-        },
-        {
-          "exemplar": true,
-          "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode=\"idle\",instance=\"$Node\"}[$__rate_interval])) * 2",
-          "format": "time_series",
-          "interval": "",
-          "intervalFactor": 2,
-          "legendFormat": "Idle",
-          "refId": "F",
-          "step": 240
         }
       ],
       "timeFrom": null,
@@ -1668,5 +1658,5 @@
   "timezone": "browser",
   "title": "Overview",
   "uid": "ulfnwbRnz",
-  "version": 5
+  "version": 7
 }
