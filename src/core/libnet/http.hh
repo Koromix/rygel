@@ -42,10 +42,10 @@ struct http_Config {
     int port = 8888;
     const char *unix_path = nullptr;
 
-    int max_connections = 1024;
+    int max_connections = 2048;
     int idle_timeout = 60;
     int threads = std::max(GetCoreCount(), 4);
-    int async_threads = std::max(GetCoreCount() * 2, 8);
+    int async_threads = std::max(GetCoreCount() * 4, 16);
     http_ClientAddressMode client_addr_mode = http_ClientAddressMode::Socket;
 
     bool Validate() const;
