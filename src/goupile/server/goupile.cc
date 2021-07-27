@@ -351,7 +351,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         if (!admin_url[0]) {
             const char *redirect = Fmt(&io->allocator, "%1/", request.url).ptr;
             io->AddHeader("Location", redirect);
-            io->AttachNothing(301);
+            io->AttachNothing(302);
             return;
         }
 
