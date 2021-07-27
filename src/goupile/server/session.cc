@@ -407,6 +407,8 @@ void PruneSessions()
             expired++;
         }
         floods.RemoveFirst(expired);
+
+        floods.Trim();
         floods_map.Trim();
     }
 }

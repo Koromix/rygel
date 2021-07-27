@@ -4145,7 +4145,9 @@ void AsyncPool::RunTasks(int queue_idx)
         std::unique_lock<std::mutex> lock_queue(queue->queue_mutex, std::try_to_lock);
         if (lock_queue.owns_lock() && queue->tasks.len) {
             Task task = std::move(queue->tasks[0]);
+
             queue->tasks.RemoveFirst();
+            queue->tasks.Trim();
 
             lock_queue.unlock();
             RunTask(&task);

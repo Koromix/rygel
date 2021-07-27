@@ -157,6 +157,8 @@ public:
         }
 
         sessions.RemoveFirst(expired);
+
+        sessions.Trim();
         sessions_map.Trim();
     }
 

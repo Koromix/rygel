@@ -1588,6 +1588,11 @@ public:
         len -= count;
     }
 
+    void Trim()
+    {
+        buckets.Trim();
+    }
+
 private:
     void ClearBucketsAndValues()
     {
