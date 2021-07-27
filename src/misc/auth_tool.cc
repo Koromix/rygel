@@ -122,7 +122,7 @@ static int RunGenerateTOTP(Span<const char *> arguments)
     const char *issuer = nullptr;
     const char *username = nullptr;
     const char *secret = nullptr;
-    int digits = 8;
+    int digits = 6;
     const char *png_filename = nullptr;
 
     const auto print_usage = [](FILE *fp) {
@@ -233,7 +233,7 @@ static int RunComputeTOTP(Span<const char *> arguments)
     // Options
     const char *secret = nullptr;
     int64_t time = GetUnixTime() / 1000;
-    int digits = 8;
+    int digits = 6;
     int window = 0;
 
     const auto print_usage = [&](FILE *fp) {
@@ -315,7 +315,7 @@ static int RunCheckTOTP(Span<const char *> arguments)
     // Options
     const char *secret = nullptr;
     int64_t time = GetUnixTime() / 1000;
-    int digits = 8;
+    int digits = 6;
     int window = 0;
     const char *code = nullptr;
 
