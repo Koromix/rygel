@@ -73,7 +73,7 @@ enum class SessionConfirm {
 class SessionInfo: public RetainObject {
     mutable std::shared_mutex mutex;
 
-    mutable BucketArray<SessionStamp> stamps;
+    mutable BucketArray<SessionStamp, 8> stamps;
     mutable HashTable<int64_t, SessionStamp *> stamps_map;
 
     mutable BlockAllocator str_alloc;
