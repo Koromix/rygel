@@ -95,16 +95,18 @@ public:
 
         if (ptr) {
             SessionHandle *handle = *ptr;
-            T *udata = handle->udata.GetRaw();
+            RetainPtr<T> udata = handle->udata;
             int64_t now = GetMonotonicTime();
 
             // Regenerate session if needed
             if (now - handle->register_time >= RegenerateDelay) {
-                const char *session_rnd = handle->session_rnd;
+                char session_rnd[33];
+                CopyString(handle->session_rnd, session_rnd);
                 int64_t login_time = handle->login_time;
                 int64_t lock_time = handle->lock_time;
 
                 lock_shr.unlock();
+                std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
                 handle = CreateHandle(request, io, locked ? session_rnd : nullptr);
                 if (!handle) {
