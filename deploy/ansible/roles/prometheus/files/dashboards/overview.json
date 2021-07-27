@@ -220,7 +220,7 @@
         },
         {
           "exemplar": true,
-          "expr": "count without(cpu, mode) (node_cpu_seconds_total{mode=\"idle\",instance=\"host2\"})",
+          "expr": "count without(cpu, mode) (node_cpu_seconds_total{mode=\"idle\",instance=\"host1\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "Max",
