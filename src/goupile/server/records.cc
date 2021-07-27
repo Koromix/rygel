@@ -593,7 +593,7 @@ bool RecordExporter::Export(const char *filename)
 
             Span<const char> ulid = SplitStr(table.rows[i].ulid, '.');
 
-            sqlite3_bind_text(stmt, 1, ulid.ptr, (size_t)ulid.len, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 1, ulid.ptr, (int)ulid.len, SQLITE_STATIC);
             sqlite3_bind_text(stmt, 2, table.rows[i].hid, -1, SQLITE_STATIC);
             for (Size j = 0; j < table.ordered_columns.len; j++) {
                 const Column *col = table.ordered_columns[j];
