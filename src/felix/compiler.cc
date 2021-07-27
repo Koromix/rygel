@@ -862,8 +862,8 @@ public:
         // Build options
         Fmt(&buf, " /EHsc %1", warnings ? "/W3 /wd4200" : "/w");
         switch (compile_opt) {
-            case CompileOptimization::None: { Fmt(&buf, " /Od"); } break;
-            case CompileOptimization::Debug: { Fmt(&buf, " /O2"); } break;
+            case CompileOptimization::None: { Fmt(&buf, " /Od /RTCsu"); } break;
+            case CompileOptimization::Debug: { Fmt(&buf, " /O2 /RTCsu"); } break;
             case CompileOptimization::Fast: { Fmt(&buf, " /O2 /DNDEBUG"); } break;
             case CompileOptimization::LTO: { Fmt(&buf, " /O2 /GL /DNDEBUG"); } break;
         }
