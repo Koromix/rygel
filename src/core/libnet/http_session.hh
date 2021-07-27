@@ -100,6 +100,8 @@ public:
 
             // Regenerate session if needed
             if (now - handle->register_time >= RegenerateDelay) {
+                RG_STATIC_ASSERT(RG_SIZE(handle->session_rnd) == 33);
+
                 char session_rnd[33];
                 CopyString(handle->session_rnd, session_rnd);
                 int64_t login_time = handle->login_time;
