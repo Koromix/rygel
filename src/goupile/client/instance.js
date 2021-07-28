@@ -143,10 +143,12 @@ function InstanceController() {
     }
 
     function initUI() {
+        let restricted = goupile.isLocked() || !goupile.hasPermission('data_load');
+
         ui.setMenu(renderMenu);
         ui.createPanel('editor', 0, false, renderEditor);
-        ui.createPanel('data', 0, !goupile.isLocked(), renderData);
-        ui.createPanel('view', 1, goupile.isLocked(), renderPage);
+        ui.createPanel('data', 0, !restricted, renderData);
+        ui.createPanel('view', 1, restricted, renderPage);
     };
 
     this.hasUnsavedData = function() {
@@ -2272,11 +2274,13 @@ function InstanceController() {
                             let err = (await response.text()).trim();
                             throw new Error(err);
                         }
+
+                        changed = true;
                     }
                 }
 
                 // Download new fragments
-                {
+                if (goupile.hasPermission('data_load') || profile.lock != null) {
                     let range = IDBKeyRange.bound(profile.namespaces.records + '@',
                                                   profile.namespaces.records + '`', false, true);
                     let [, anchor] = await db.limits('rec_records/anchor', range);
