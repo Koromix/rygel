@@ -2296,7 +2296,9 @@ function InstanceController() {
                     let url = util.pasteURL(`${ENV.urls.instance}api/records/load`, {
                         anchor: anchor
                     });
-                    let downloads = await net.fetchJson(url);
+                    let downloads = await net.fetchJson(url, {
+                        timeout: 30000
+                    });
 
                     for (let download of downloads) {
                         let key = profile.namespaces.records + `:${download.ulid}`;

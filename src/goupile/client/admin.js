@@ -227,7 +227,10 @@ function AdminController() {
         let progress = log.progress('Archivage en cours');
 
         try {
-            let response = await net.fetch('/admin/api/archives/create', {method: 'POST'});
+            let response = await net.fetch('/admin/api/archives/create', {
+                method: 'POST',
+                timeout: 120000
+            });
 
             if (response.ok) {
                 progress.success('Archivage complété');
