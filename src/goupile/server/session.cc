@@ -980,9 +980,8 @@ void HandleSessionQRcode(const http_RequestInfo &request, http_IO *io)
     const char *secret = session->secret;
 
     if (!secret) {
-        LogError("TOTP secret has not been generated");
-        io->AttachError(404);
-        return;
+        session->UpdateSecret();
+        secret = session->secret;
     }
 
     const char *url = sec_GenerateHotpUrl(gp_domain.config.title, session->username,
