@@ -56,13 +56,13 @@ public:
         uint8_t token_skey[32];
         uint8_t token_pkey[32];
         const char *backup_key = nullptr;
-        int64_t auto_userid = 0;
+        int64_t default_userid = 0;
         const char *auto_key = nullptr;
     } config;
 
     // Lazily initialized
-    bool auto_init = false;
-    RetainPtr<SessionInfo> auto_session;
+    bool default_init = false;
+    RetainPtr<SessionInfo> default_session;
 
     std::atomic_int64_t fs_version { 0 };
 

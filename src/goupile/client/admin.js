@@ -155,7 +155,7 @@ function AdminController() {
                                     ${selected_instance != null ? html`
                                         <td class=${selected_instance.master != null ? 'missing' : ''}
                                             style="white-space: normal;">
-                                            ${selected_instance.config.auto_userid === user.userid ?
+                                            ${selected_instance.config.default_userid === user.userid ?
                                                 html`<span class="ui_tag" style="background: #db0a0a;">Défaut</span>` : ''}
                                             ${selected_instance.master == null ? makePermissionsTag(permissions, 'admin_', '#b518bf') : ''}
                                             ${!selected_instance.slaves ? makePermissionsTag(permissions, 'data_', '#258264') : ''}
@@ -502,9 +502,9 @@ function AdminController() {
                         if (token_key.value != null && !checkCryptoKey(token_key.value))
                             token_key.error('Format de clé non valide');
                         let auto_key = d.text('auto_key', 'Session de requête', {value: instance.config.auto_key});
-                        let auto_userid = d.enumDrop('auto_userid', 'Session par défaut',
-                                                     users.map(user => [user.userid, user.username]), {
-                            value: instance.config.auto_userid,
+                        let default_userid = d.enumDrop('default_userid', 'Session par défaut',
+                                                        users.map(user => [user.userid, user.username]), {
+                            value: instance.config.default_userid,
                             untoggle: true
                         });
 
@@ -520,7 +520,7 @@ function AdminController() {
                                 query.set('shared_key', shared_key.value || '');
                             query.set('token_key', token_key.value || '');
                             query.set('auto_key', auto_key.value || '');
-                            query.set('auto_userid', auto_userid.value || '');
+                            query.set('default_userid', default_userid.value || '');
 
                             let response = await net.fetch('/admin/api/instances/configure', {
                                 method: 'POST',

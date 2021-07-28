@@ -1342,16 +1342,16 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
             config.auto_key = values.FindValue("auto_key", config.auto_key);
             if (config.auto_key && !config.auto_key[0])
                 config.auto_key = nullptr;
-            if (const char *str = values.FindValue("auto_userid", nullptr); str) {
+            if (const char *str = values.FindValue("default_userid", nullptr); str) {
                 if (str[0]) {
-                    valid &= ParseInt(str, &config.auto_userid);
+                    valid &= ParseInt(str, &config.default_userid);
 
-                    if (config.auto_userid <= 0) {
+                    if (config.default_userid <= 0) {
                         LogError("Invalid automatic user ID");
                         valid = false;
                     }
                 } else {
-                    config.auto_userid = 0;
+                    config.default_userid = 0;
                 }
             }
 
@@ -1381,7 +1381,8 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
                 success &= instance->db->Run(sql, "BackupKey", config.backup_key);
                 success &= instance->db->Run(sql, "TokenKey", config.token_key);
                 success &= instance->db->Run(sql, "AutoKey", config.auto_key);
-                success &= instance->db->Run(sql, "AutoUser", config.auto_userid ? sq_Binding(config.auto_userid) : sq_Binding());
+                success &= instance->db->Run(sql, "DefaultUser",
+                                             config.default_userid ? sq_Binding(config.default_userid) : sq_Binding());
             }
             if (!instance->slaves.len) {
                 success &= instance->db->Run(sql, "SharedKey", config.shared_key);
@@ -1464,8 +1465,8 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
             if (instance->config.auto_key) {
                 json.Key("auto_key"); json.String(instance->config.auto_key);
             }
-            if (instance->config.auto_userid > 0) {
-                json.Key("auto_userid"); json.Int64(instance->config.auto_userid);
+            if (instance->config.default_userid > 0) {
+                json.Key("default_userid"); json.Int64(instance->config.default_userid);
             }
         json.EndObject();
 

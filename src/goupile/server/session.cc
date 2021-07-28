@@ -184,8 +184,8 @@ void InvalidateUserStamps(int64_t userid)
         RG_DEFER { gp_domain.UnlockInstances(); };
 
         for (const InstanceHolder *instance: instances) {
-            if (instance->auto_init && instance->auto_session->userid == userid) {
-                instance->auto_session->InvalidateStamps();
+            if (instance->default_init && instance->default_session->userid == userid) {
+                instance->default_session->InvalidateStamps();
             }
         }
     }
@@ -356,19 +356,19 @@ RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const h
     RetainPtr<SessionInfo> session = sessions.Find(request, io);
 
     if (!session && instance) {
-        int64_t auto_userid = instance->master->config.auto_userid;
+        int64_t default_userid = instance->master->config.default_userid;
 
-        if (auto_userid > 0) {
-            if (RG_UNLIKELY(!instance->auto_init)) {
-                instance->auto_session = [&]() {
+        if (default_userid > 0) {
+            if (RG_UNLIKELY(!instance->default_init)) {
+                instance->default_session = [&]() {
                     sq_Statement stmt;
                     if (!gp_domain.db.Prepare("SELECT userid, username, local_key FROM dom_users WHERE userid = ?1", &stmt))
                         return RetainPtr<SessionInfo>(nullptr);
-                    sqlite3_bind_int64(stmt, 1, auto_userid);
+                    sqlite3_bind_int64(stmt, 1, default_userid);
 
                     if (!stmt.Step()) {
                         if (stmt.IsValid()) {
-                            LogError("Automatic user ID %1 does not exist", auto_userid);
+                            LogError("Automatic user ID %1 does not exist", default_userid);
                         }
                         return RetainPtr<SessionInfo>(nullptr);
                     }
@@ -382,10 +382,10 @@ RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const h
 
                     return session;
                 }();
-                instance->auto_init = true;
+                instance->default_init = true;
             }
 
-            session = instance->auto_session;
+            session = instance->default_session;
         }
     }
 
