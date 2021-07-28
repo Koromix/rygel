@@ -434,8 +434,7 @@ function InstanceController() {
             for (let key of data_form.forms.keys())
                 column_stats[key] = (column_stats[key] || 0) + (row.status[key] != null);
 
-            if (row.hid != null)
-                hid_width = Math.max(hid_width, computeHidWidth(row.hid));
+            hid_width = Math.max(hid_width, computeHidWidth(row.hid));
         }
 
         return html`
