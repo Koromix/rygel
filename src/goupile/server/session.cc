@@ -339,8 +339,8 @@ static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid
     }
 
     session->confirm = confirm;
-    if (confirm != SessionConfirm::None) {
-        RG_ASSERT(secret);
+    if (secret) {
+        RG_ASSERT(confirm != SessionConfirm::None);
 
         char *ptr = (char *)session + RG_SIZE(SessionInfo) + username_bytes;
         CopyString(secret, MakeSpan(ptr, secret_bytes));
