@@ -269,8 +269,10 @@ const goupile = new function() {
     }
 
     function runConfirmScreen(e, initial, method) {
+        let img = document.createElement('img');
+        img.src = util.pasteURL(ENV.urls.instance + 'api/change/qrcode', { buster: util.getRandomInt(0, Number.MAX_SAFE_INTEGER) });
+
         let title = initial ? null : 'Confirmation d\'identité';
-        let url = util.pasteURL(ENV.urls.instance + 'api/session/qrcode', { buster: util.getRandomInt(0, Number.MAX_SAFE_INTEGER) });
         let errors = 0;
 
         return ui.runDialog(e, title, { fixed: true }, (d, resolve, reject) => {
@@ -287,7 +289,7 @@ const goupile = new function() {
                     pour mobile</b> puis saississez le code donné par cette application.</p>
                     <p><i>Applications : FreeOTP, Authy, etc.</i></p>
 
-                    <div style="text-align: center; margin-top: 2em;"><img src=${url} /></div>
+                    <div style="text-align: center; margin-top: 2em;">${img}</div>
                 ` : ''}
                 <br/>
             `);
@@ -390,17 +392,9 @@ const goupile = new function() {
     };
 
     this.runResetTOTP = async function(e) {
-        // Create new temporary TOTP secret first
-        {
-            let response = await net.fetch(ENV.urls.instance + 'api/change/totp1', { method: 'POST' });
+        let img = document.createElement('img');
+        img.src = util.pasteURL(ENV.urls.instance + 'api/change/qrcode', { buster: util.getRandomInt(0, Number.MAX_SAFE_INTEGER) });
 
-            if (!response.ok) {
-                let err = (await response.text()).trim();
-                throw new Error(err);
-            }
-        }
-
-        let url = util.pasteURL(ENV.urls.instance + 'api/session/qrcode', { buster: util.getRandomInt(0, Number.MAX_SAFE_INTEGER) });
         let errors = 0;
 
         return ui.runDialog(e, 'Changement de codes TOTP', { fixed: true }, (d, resolve, reject) => {
@@ -409,7 +403,7 @@ const goupile = new function() {
                 pour mobile</b> puis saississez le code donné par cette application.</p>
                 <p><i>Applications : FreeOTP, Authy, etc.</i></p>
 
-                <div style="text-align: center; margin-top: 2em;"><img src=${url} /></div>
+                <div style="text-align: center; margin-top: 2em;">${img}</div>
                 <br/>
             `);
 
@@ -434,7 +428,7 @@ const goupile = new function() {
                     query.set('password', password.value);
                     query.set('code', code.value);
 
-                    let response = await net.fetch(`${ENV.urls.instance}api/change/totp2`, {
+                    let response = await net.fetch(`${ENV.urls.instance}api/change/totp`, {
                         method: 'POST',
                         body: query
                     });

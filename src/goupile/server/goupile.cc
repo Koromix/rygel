@@ -427,14 +427,12 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleSessionConfirm(nullptr, request, io);
         } else if (TestStr(admin_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
             HandleSessionLogout(request, io);
-        } else if (TestStr(admin_url, "/api/session/qrcode") && request.method == http_RequestMethod::Get) {
-            HandleSessionQRcode(request, io);
         } else if (TestStr(admin_url, "/api/change/password") && request.method == http_RequestMethod::Post) {
             HandleChangePassword(request, io);
-        } else if (TestStr(admin_url, "/api/change/totp1") && request.method == http_RequestMethod::Post) {
-            HandleChangeTOTP1(request, io);
-        } else if (TestStr(admin_url, "/api/change/totp2") && request.method == http_RequestMethod::Post) {
-            HandleChangeTOTP2(request, io);
+        } else if (TestStr(admin_url, "/api/change/qrcode") && request.method == http_RequestMethod::Get) {
+            HandleChangeQRcode(request, io);
+        } else if (TestStr(admin_url, "/api/change/totp") && request.method == http_RequestMethod::Post) {
+            HandleChangeTOTP(request, io);
         } else if (TestStr(admin_url, "/api/instances/create") && request.method == http_RequestMethod::Post) {
             HandleInstanceCreate(request, io);
         } else if (TestStr(admin_url, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
@@ -634,14 +632,12 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             HandleSessionConfirm(instance, request, io);
         } else if (TestStr(instance_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
             HandleSessionLogout(request, io);
-        } else if (TestStr(instance_url, "/api/session/qrcode") && request.method == http_RequestMethod::Get) {
-            HandleSessionQRcode(request, io);
         } else if (TestStr(instance_url, "/api/change/password") && request.method == http_RequestMethod::Post) {
             HandleChangePassword(request, io);
-        } else if (TestStr(instance_url, "/api/change/totp1") && request.method == http_RequestMethod::Post) {
-            HandleChangeTOTP1(request, io);
-        } else if (TestStr(instance_url, "/api/change/totp2") && request.method == http_RequestMethod::Post) {
-            HandleChangeTOTP2(request, io);
+        } else if (TestStr(instance_url, "/api/change/qrcode") && request.method == http_RequestMethod::Get) {
+            HandleChangeQRcode(request, io);
+        } else if (TestStr(instance_url, "/api/change/totp") && request.method == http_RequestMethod::Post) {
+            HandleChangeTOTP(request, io);
         } else if (TestStr(instance_url, "/api/files/static") && request.method == http_RequestMethod::Get) {
              HandleFileStatic(instance, request, io);
         } else if (TestStr(instance_url, "/api/files/list") && request.method == http_RequestMethod::Get) {

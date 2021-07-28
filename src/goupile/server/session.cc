@@ -967,40 +967,6 @@ void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &requ
     WriteProfileJson(session.GetRaw(), instance, request, io);
 }
 
-void HandleSessionQRcode(const http_RequestInfo &request, http_IO *io)
-{
-    RetainPtr<SessionInfo> session = sessions.Find(request, io);
-
-    if (!session) {
-        LogError("Session is closed");
-        io->AttachError(403);
-        return;
-    }
-
-    const char *secret = session->secret;
-
-    if (!secret) {
-        session->UpdateSecret();
-        secret = session->secret;
-    }
-
-    const char *url = sec_GenerateHotpUrl(gp_domain.config.title, session->username,
-                                          gp_domain.config.title, secret, 6, &io->allocator);
-    if (!url)
-        return;
-
-    Span<const uint8_t> png;
-    {
-        HeapArray<uint8_t> buf(&io->allocator);
-        if (!sec_GenerateHotpPng(url, 0, &buf))
-            return;
-        png = buf.Leak();
-    }
-
-    io->AttachBinary(200, png, "image/png");
-    io->AddCachingHeaders(0, nullptr);
-}
-
 void HandleChangePassword(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<SessionInfo> session = sessions.Find(request, io);
@@ -1012,6 +978,11 @@ void HandleChangePassword(const http_RequestInfo &request, http_IO *io)
     }
     if (session->type != SessionType::Login) {
         LogError("This account does not use passwords");
+        io->AttachError(403);
+        return;
+    }
+    if (session->confirm != SessionConfirm::None) {
+        LogError("You must be fully logged in before you do that");
         io->AttachError(403);
         return;
     }
@@ -1115,13 +1086,15 @@ void HandleChangePassword(const http_RequestInfo &request, http_IO *io)
     });
 }
 
-void HandleChangeTOTP1(const http_RequestInfo &request, http_IO *io)
+// This does not make any persistent change and it needs to return an image
+// so it is a GET even though it performs an action.
+void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<SessionInfo> session = sessions.Find(request, io);
 
     if (!session) {
-        LogError("User is not logged in");
-        io->AttachError(401);
+        LogError("Session is closed");
+        io->AttachError(403);
         return;
     }
     if (session->type != SessionType::Login) {
@@ -1129,18 +1102,32 @@ void HandleChangeTOTP1(const http_RequestInfo &request, http_IO *io)
         io->AttachError(403);
         return;
     }
-    if (session->confirm != SessionConfirm::None) {
-        LogError("You must be fully logged in before you do that");
+    if (session->confirm != SessionConfirm::None && session->confirm != SessionConfirm::QRcode) {
+        LogError("Cannot generate QR code in this situation");
         io->AttachError(403);
         return;
     }
 
     session->UpdateSecret();
 
-    io->AttachText(200, "Done!");
+    const char *url = sec_GenerateHotpUrl(gp_domain.config.title, session->username,
+                                          gp_domain.config.title, session->secret, 6, &io->allocator);
+    if (!url)
+        return;
+
+    Span<const uint8_t> png;
+    {
+        HeapArray<uint8_t> buf(&io->allocator);
+        if (!sec_GenerateHotpPng(url, 0, &buf))
+            return;
+        png = buf.Leak();
+    }
+
+    io->AttachBinary(200, png, "image/png");
+    io->AddCachingHeaders(0, nullptr);
 }
 
-void HandleChangeTOTP2(const http_RequestInfo &request, http_IO *io)
+void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<SessionInfo> session = sessions.Find(request, io);
 

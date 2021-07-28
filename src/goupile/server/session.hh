@@ -113,10 +113,9 @@ bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
 void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleSessionLogout(const http_RequestInfo &request, http_IO *io);
 void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleSessionQRcode(const http_RequestInfo &request, http_IO *io);
 
 void HandleChangePassword(const http_RequestInfo &request, http_IO *io);
-void HandleChangeTOTP1(const http_RequestInfo &request, http_IO *io);
-void HandleChangeTOTP2(const http_RequestInfo &request, http_IO *io);
+void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io);
+void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io);
 
 }
