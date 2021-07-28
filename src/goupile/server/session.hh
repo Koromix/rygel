@@ -46,9 +46,10 @@ static const uint32_t UserPermissionMasterMask = 0b000001111u;
 static const uint32_t UserPermissionSlaveMask =  0b111110000u;
 
 enum class SessionType {
-    User,
+    Login,
     Token,
-    Key
+    Key,
+    Auto
 };
 
 struct SessionStamp {

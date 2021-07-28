@@ -96,7 +96,7 @@ const SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
 
             stamps_map.Set(stamp);
 
-            if (type == SessionType::User) {
+            if (userid > 0) {
                 sq_Statement stmt;
                 if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
                                              WHERE userid = ?1 AND instance = ?2)", &stmt))
@@ -237,12 +237,19 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
             if (stamp) {
                 json.Key("authorized"); json.Bool(true);
 
-                if (session->type == SessionType::Key) {
-                    RG_ASSERT(instance->config.auto_key);
+                switch (session->type) {
+                    case SessionType::Login: { json.Key("type"); json.String("login"); } break;
+                    case SessionType::Token: { json.Key("type"); json.String("token"); } break;
+                    case SessionType::Key: {
+                        json.Key("type"); json.String("key");
 
-                    json.Key("restore"); json.StartObject();
-                        json.Key(instance->config.auto_key); json.String(session->username);
-                    json.EndObject();
+                        RG_ASSERT(instance->config.auto_key);
+
+                        json.Key("restore"); json.StartObject();
+                            json.Key(instance->config.auto_key); json.String(session->username);
+                        json.EndObject();
+                    } break;
+                    case SessionType::Auto: { json.Key("type"); json.String("auto"); } break;
                 }
 
                 json.Key("namespaces"); json.StartObject();
@@ -370,8 +377,9 @@ RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const h
                     const char *username = (const char *)sqlite3_column_text(stmt, 1);
                     const char *local_key = (const char *)sqlite3_column_text(stmt, 2);
 
-                    RetainPtr<SessionInfo> session = CreateUserSession(SessionType::User, userid, username, local_key,
+                    RetainPtr<SessionInfo> session = CreateUserSession(SessionType::Auto, userid, username, local_key,
                                                                        SessionConfirm::None, nullptr);
+
                     return session;
                 }();
                 instance->auto_init = true;
@@ -540,14 +548,14 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                 RetainPtr<SessionInfo> session;
                 if (totp_required) {
                     if (totp_secret) {
-                        session = CreateUserSession(SessionType::User, userid, username, local_key,
+                        session = CreateUserSession(SessionType::Login, userid, username, local_key,
                                                     SessionConfirm::TOTP, totp_secret);
                     } else {
-                        session = CreateUserSession(SessionType::User, userid, username, local_key,
+                        session = CreateUserSession(SessionType::Login, userid, username, local_key,
                                                     SessionConfirm::QRcode, nullptr);
                     }
                 } else {
-                    session = CreateUserSession(SessionType::User, userid, username, local_key,
+                    session = CreateUserSession(SessionType::Login, userid, username, local_key,
                                                 SessionConfirm::None, nullptr);
                 }
 
@@ -1003,7 +1011,7 @@ void HandleChangePassword(const http_RequestInfo &request, http_IO *io)
         io->AttachError(401);
         return;
     }
-    if (session->type != SessionType::User) {
+    if (session->type != SessionType::Login) {
         LogError("This account does not use passwords");
         io->AttachError(403);
         return;
@@ -1117,7 +1125,7 @@ void HandleChangeTOTP1(const http_RequestInfo &request, http_IO *io)
         io->AttachError(401);
         return;
     }
-    if (session->type != SessionType::User) {
+    if (session->type != SessionType::Login) {
         LogError("This account does not use passwords");
         io->AttachError(403);
         return;
@@ -1142,7 +1150,7 @@ void HandleChangeTOTP2(const http_RequestInfo &request, http_IO *io)
         io->AttachError(401);
         return;
     }
-    if (session->type != SessionType::User) {
+    if (session->type != SessionType::Login) {
         LogError("This account does not use passwords");
         io->AttachError(403);
         return;

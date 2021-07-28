@@ -152,7 +152,7 @@ const goupile = new function() {
 
     async function syncProfile() {
         // Ask server (if needed)
-        if (util.getCookie('session_rnd') != null) {
+        {
             try {
                 let response = await net.fetch(`${ENV.urls.instance}api/session/profile`);
 

@@ -234,7 +234,7 @@ function InstanceController() {
                     <button class="icon" style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}
                             @click=${ui.deployMenu}>${profile.username}</button>
                     <div>
-                        ${profile.userid >= 0 ? html`
+                        ${profile.type === 'login' ? html`
                             <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Changer le mot de passe</button>
                             <button @click=${ui.wrapAction(goupile.runResetTOTP)}>Changer les codes TOTP</button>
                             <hr/>
