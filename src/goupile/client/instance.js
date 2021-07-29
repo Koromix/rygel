@@ -147,8 +147,8 @@ function InstanceController() {
 
         ui.setMenu(renderMenu);
         ui.createPanel('editor', 0, false, renderEditor);
-        ui.createPanel('data', 0, app.panels.data && !restricted, renderData);
-        ui.createPanel('view', 1, app.panels.view && restricted, renderPage);
+        ui.createPanel('data', 0, app.panels.data, renderData);
+        ui.createPanel('view', 1, app.panels.view && !app.panels.data, renderPage);
     };
 
     this.hasUnsavedData = function() {
@@ -1478,8 +1478,21 @@ function InstanceController() {
             // Popping history
             if (!ulid && !options.push_history)
                 ulid = 'new';
-            if (!ulid && goupile.isLocked())
-                ulid = profile.lock.ctx;
+
+            // Go to default record?
+            if (!ulid && !app.panels.data) {
+                if (profile.lock != null) {
+                    ulid = profile.lock.ctx;
+                } else {
+                    let range = IDBKeyRange.only(profile.namespaces.records + `/${new_route.form.key}`);
+                    let keys = await db.list('rec_records/form', range);
+
+                    if (keys.length) {
+                        let key = keys[0];
+                        ulid = key.primary.substr(key.primary.indexOf(':') + 1);
+                    }
+                }
+            }
 
             // Deal with ULID
             if (ulid && ulid !== new_route.ulid) {
@@ -2284,7 +2297,7 @@ function InstanceController() {
                 }
 
                 // Download new fragments
-                if (goupile.hasPermission('data_load') || profile.lock != null) {
+                {
                     let range = IDBKeyRange.bound(profile.namespaces.records + '@',
                                                   profile.namespaces.records + '`', false, true);
                     let [, anchor] = await db.limits('rec_records/anchor', range);

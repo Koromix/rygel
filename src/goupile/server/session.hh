@@ -57,7 +57,6 @@ struct SessionStamp {
 
     bool authorized;
     uint32_t permissions;
-    const char *ulid;
 
     bool HasPermission(UserPermission perm) const { return permissions & (int)perm; };
 
@@ -95,7 +94,7 @@ public:
     const SessionStamp *GetStamp(const InstanceHolder *instance) const;
     void InvalidateStamps();
 
-    void AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions, const char *ulid = nullptr);
+    void AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions);
 
     void UpdateSecret();
 };

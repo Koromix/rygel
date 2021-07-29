@@ -41,7 +41,7 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
         io->AttachError(401);
         return;
     }
-    if (!stamp || (!stamp->HasPermission(UserPermission::DataLoad) && !stamp->ulid)) {
+    if (!stamp) {
         LogError("User is not allowed to load data");
         io->AttachError(403);
         return;
@@ -68,8 +68,8 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
                                                       f.type, f.username, f.mtime, f.page, f.json FROM rec_entries e
                                                LEFT JOIN rec_fragments f ON (f.ulid = e.ulid)
                                                WHERE e.anchor >= ?1)").len;
-        if (stamp->ulid) {
-            sql.len += Fmt(sql.TakeAvailable(), " AND e.root_ulid = ?2").len;
+        if (!stamp->HasPermission(UserPermission::DataLoad)) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND e.root_ulid IN (SELECT ulid FROM ins_claims WHERE userid = ?2)").len;
         }
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY e.rowid, f.anchor").len;
 
@@ -77,9 +77,7 @@ void HandleRecordLoad(InstanceHolder *instance, const http_RequestInfo &request,
             return;
 
         sqlite3_bind_int64(stmt, 1, anchor);
-        if (stamp->ulid) {
-            sqlite3_bind_text(stmt, 2, stamp->ulid, -1, SQLITE_STATIC);
-        }
+        sqlite3_bind_int64(stmt, 2, -session->userid);
     }
 
     // Export data
@@ -179,7 +177,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
         io->AttachError(401);
         return;
     }
-    if (!stamp || (!stamp->HasPermission(UserPermission::DataSave) && !stamp->ulid)) {
+    if (!stamp || !stamp->HasPermission(UserPermission::DataSave)) {
         LogError("User is not allowed to save data");
         io->AttachError(403);
         return;
@@ -342,9 +340,27 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                 }
 
                 // Reject restricted users
-                if (stamp->ulid && !TestStr(root_ulid, stamp->ulid)) {
-                    LogError("You are not allowed to alter this record");
-                    return false;
+                if (!stamp->HasPermission(UserPermission::DataLoad)) {
+                    sq_Statement stmt;
+                    if (!instance->db->Prepare(R"(SELECT e.rowid, c.rowid FROM rec_entries e
+                                                  LEFT JOIN ins_claims c ON (c.userid = ?1 AND c.ulid = e.ulid)
+                                                  WHERE e.ulid = ?2)", &stmt))
+                        return false;
+                    sqlite3_bind_int64(stmt, 1, -session->userid);
+                    sqlite3_bind_text(stmt, 2, root_ulid, -1, SQLITE_STATIC);
+
+                    if (stmt.Step()) {
+                        if (sqlite3_column_type(stmt, 1) != SQLITE_INTEGER) {
+                            LogError("You are not allowed to alter this record");
+                            return false;
+                        }
+                    } else if (stmt.IsValid()) {
+                        if (!instance->db->Run("INSERT INTO ins_claims (userid, ulid) VALUES (?1, ?2)",
+                                               -session->userid, root_ulid))
+                            return false;
+                    } else {
+                        return false;
+                    }
                 }
 
                 // Save record fragments

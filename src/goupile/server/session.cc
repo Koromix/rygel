@@ -145,7 +145,7 @@ void SessionInfo::InvalidateStamps()
     // be in use so they will waste memory until the session ends.
 }
 
-void SessionInfo::AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions, const char *ulid)
+void SessionInfo::AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions)
 {
     std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
@@ -154,7 +154,6 @@ void SessionInfo::AuthorizeInstance(const InstanceHolder *instance, uint32_t per
     stamp->unique = instance->unique;
     stamp->authorized = true;
     stamp->permissions = permissions;
-    stamp->ulid = ulid ? DuplicateString(ulid, &str_alloc).ptr : nullptr;
 
     stamps_map.Set(stamp);
 }
@@ -290,13 +289,6 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
                     json.Key(key.ptr, (size_t)key.len); json.Bool(stamp->permissions & (1 << i));
                 }
                 json.EndObject();
-
-                if (stamp->ulid) {
-                    json.Key("lock"); json.StartObject();
-                        json.Key("unlockable"); json.Bool(false);
-                        json.Key("ctx"); json.String(stamp->ulid);
-                    json.EndObject();
-                }
 
                 json.Key("admin"); json.Bool(session->admin_until != 0);
             } else {
@@ -592,45 +584,6 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
     });
 }
 
-static void Encode30Bits(uint32_t value, char out_buf[6])
-{
-    static const char *characters = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-
-    out_buf[0] = characters[(value >> 25) & 0x1F];
-    out_buf[1] = characters[(value >> 20) & 0x1F];
-    out_buf[2] = characters[(value >> 15) & 0x1F];
-    out_buf[3] = characters[(value >> 10) & 0x1F];
-    out_buf[4] = characters[(value >> 5) & 0x1F];
-    out_buf[5] = characters[value & 0x1F];
-}
-
-static bool MakeULID(char out_buf[27])
-{
-    // Generate time part
-    {
-        int64_t now = GetUnixTime();
-        if (RG_UNLIKELY(now < 0 || now >= 0x1000000000000ll)) {
-            LogError("Cannot generate ULID with current UTC time");
-            return false;
-        }
-
-        Encode30Bits((uint32_t)(now % 0x100000), out_buf + 4);
-        Encode30Bits((uint32_t)(now / 0x100000), out_buf + 0);
-    }
-
-    // Generate random part
-    {
-        uint32_t buf[3];
-        randombytes_buf(buf, RG_SIZE(buf));
-
-        Encode30Bits(buf[0], out_buf + 10);
-        Encode30Bits(buf[1], out_buf + 16);
-        Encode30Bits(buf[2], out_buf + 20);
-    }
-
-    return true;
-}
-
 static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, SessionType type,
                                                 const char *key, const char *sms)
 {
@@ -638,32 +591,28 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
 
     int64_t userid = 0;
     const char *local_key = nullptr;
-    const char *ulid = nullptr;
 
     sq_Statement stmt;
-    if (!instance->db->Prepare("SELECT userid, local_key, ulid FROM usr_auto WHERE key = ?1", &stmt))
+    if (!instance->db->Prepare("SELECT userid, local_key FROM ins_users WHERE key = ?1", &stmt))
         return nullptr;
     sqlite3_bind_text(stmt, 1, key, -1, SQLITE_STATIC);
 
     if (stmt.Step()) {
         userid = sqlite3_column_int64(stmt, 0);
         local_key = (const char *)sqlite3_column_text(stmt, 1);
-        ulid = (const char *)sqlite3_column_text(stmt, 2);
     } else if (stmt.IsValid()) {
         stmt.Finalize();
 
         bool success = instance->db->Transaction([&]() {
-            if (!instance->db->Prepare("SELECT userid, local_key, ulid FROM usr_auto WHERE key = ?1", &stmt))
+            if (!instance->db->Prepare("SELECT userid, local_key FROM ins_users WHERE key = ?1", &stmt))
                 return false;
             sqlite3_bind_text(stmt, 1, key, -1, SQLITE_STATIC);
 
             if (stmt.Step()) {
                 userid = sqlite3_column_int64(stmt, 0);
                 local_key = (const char *)sqlite3_column_text(stmt, 1);
-                ulid = (const char *)sqlite3_column_text(stmt, 2);
             } else if (stmt.IsValid()) {
                 local_key = tmp;
-                ulid = tmp + 45;
 
                 // Create random local key
                 {
@@ -672,11 +621,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
                     sodium_bin2base64((char *)local_key, 45, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
                 }
 
-                if (RG_UNLIKELY(!MakeULID((char *)ulid)))
-                    return false;
-
-                if (!instance->db->Run("INSERT INTO usr_auto (key, local_key, ulid) VALUES (?1, ?2, ?3)",
-                                       key, local_key, ulid))
+                if (!instance->db->Run("INSERT INTO ins_users (key, local_key) VALUES (?1, ?2)", key, local_key))
                     return false;
 
                 userid = sqlite3_last_insert_rowid(*instance->db);
@@ -723,7 +668,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
             return nullptr;
     }
 
-    session->AuthorizeInstance(instance, 0, ulid);
+    session->AuthorizeInstance(instance, (int)UserPermission::DataSave);
 
     return session;
 }
