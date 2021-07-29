@@ -269,8 +269,11 @@ const goupile = new function() {
     }
 
     function runConfirmScreen(e, initial, method) {
-        let img = document.createElement('img');
-        img.src = util.pasteURL(ENV.urls.instance + 'api/change/qrcode', { buster: util.getRandomInt(0, Number.MAX_SAFE_INTEGER) });
+        let qrcode;
+        if (method === 'qrcode') {
+            qrcode = document.createElement('img');
+            qrcode.src = util.pasteURL(ENV.urls.instance + 'api/change/qrcode', { buster: util.getRandomInt(0, Number.MAX_SAFE_INTEGER) });
+        }
 
         let title = initial ? null : 'Confirmation d\'identité';
         let errors = 0;
@@ -289,7 +292,7 @@ const goupile = new function() {
                     pour mobile</b> puis saississez le code donné par cette application.</p>
                     <p><i>Applications : FreeOTP, Authy, etc.</i></p>
 
-                    <div style="text-align: center; margin-top: 2em;">${img}</div>
+                    <div style="text-align: center; margin-top: 2em;">${qrcode}</div>
                 ` : ''}
                 <br/>
             `);
@@ -392,8 +395,8 @@ const goupile = new function() {
     };
 
     this.runResetTOTP = async function(e) {
-        let img = document.createElement('img');
-        img.src = util.pasteURL(ENV.urls.instance + 'api/change/qrcode', { buster: util.getRandomInt(0, Number.MAX_SAFE_INTEGER) });
+        let qrcode = document.createElement('img');
+        qrcode.src = util.pasteURL(ENV.urls.instance + 'api/change/qrcode', { buster: util.getRandomInt(0, Number.MAX_SAFE_INTEGER) });
 
         let errors = 0;
 
@@ -403,7 +406,7 @@ const goupile = new function() {
                 pour mobile</b> puis saississez le code donné par cette application.</p>
                 <p><i>Applications : FreeOTP, Authy, etc.</i></p>
 
-                <div style="text-align: center; margin-top: 2em;">${img}</div>
+                <div style="text-align: center; margin-top: 2em;">${qrcode}</div>
                 <br/>
             `);
 
