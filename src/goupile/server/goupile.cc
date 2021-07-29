@@ -603,6 +603,9 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
 #ifndef NDEBUG
+    // This is not actually thread safe, because it may release memory from an asset
+    // that is being used by another thread. This code only runs in development builds
+    // and it pretty much never goes wrong so it is kind of OK.
     {
         static std::mutex mutex;
         std::lock_guard<std::mutex> lock(mutex);
