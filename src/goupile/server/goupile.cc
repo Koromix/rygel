@@ -634,10 +634,17 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
     // CSRF protection
     if (request.method != http_RequestMethod::Get) {
-        const char *str = request.GetHeaderValue("X-Requested-With");
+        const char *str1 = request.GetHeaderValue("X-Requested-With");
+        const char *str2 = request.GetHeaderValue("Sec-Fetch-Site");
 
-        if (!str || !TestStr(str, "XMLHTTPRequest")) {
+        if (!str1 || !TestStr(str1, "XMLHTTPRequest")) {
             LogError("Anti-CSRF header is missing");
+            io->AttachError(403);
+            return;
+        }
+
+        if (str2 && !TestStr(str2, "same-origin")) {
+            LogError("Deniyng cross-origin request");
             io->AttachError(403);
             return;
         }
