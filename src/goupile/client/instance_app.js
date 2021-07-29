@@ -16,6 +16,11 @@ function ApplicationInfo() {
     this.forms = new Map;
     this.pages = new Map;
     this.home = null;
+    this.panels = {
+        editor: goupile.hasPermission('admin_code'),
+        data: !goupile.isLocked() && goupile.hasPermission('data_load'),
+        view: true
+    };
     this.lockable = false;
 }
 
@@ -52,6 +57,9 @@ function ApplicationBuilder(app) {
     }];
     let form_ref = null;
 
+    this.home = function(home) { app.home = home; };
+    this.panel = function(panel, enable) { app.panels[panel] = enable; };
+
     this.pushOptions = function(options = {}) {
         options = expandOptions(options);
         options_stack.push(options);
@@ -63,9 +71,7 @@ function ApplicationBuilder(app) {
         options_stack.pop();
     };
 
-    this.head = function(head) {
-        app.head = head;
-    };
+    this.head = function(head) { app.head = head; };
 
     this.form = function(key, title, func = null, options = {}) {
         checkKey(key);

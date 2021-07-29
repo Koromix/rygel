@@ -141,20 +141,18 @@ const ui = new function() {
         }
     };
 
-    this.serializePanelState = function() {
-        let str = '';
+    this.getEnabledPanels = function() {
+        let keys = [];
 
         for (let [key, panel] of panels.entries()) {
             if (panel.active)
-                str += key + '|';
+                keys.push(key);
         }
 
-        return str.substr(0, str.length - 1);
+        return keys;
     };
 
-    this.restorePanelState = function(str) {
-        let keys = str.split('|');
-
+    this.setEnabledPanels = function(keys) {
         active_panels = 0;
         for (let [key, panel] of panels.entries()) {
             panel.active = keys.includes(key);

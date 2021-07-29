@@ -55,9 +55,9 @@ function InstanceController() {
     let prev_anchor;
 
     this.init = async function() {
-        initUI();
         await openInstanceDB();
         await initApp();
+        initUI();
     };
 
     async function openInstanceDB() {
@@ -147,8 +147,8 @@ function InstanceController() {
 
         ui.setMenu(renderMenu);
         ui.createPanel('editor', 0, false, renderEditor);
-        ui.createPanel('data', 0, !restricted, renderData);
-        ui.createPanel('view', 1, restricted, renderPage);
+        ui.createPanel('data', 0, app.panels.data && !restricted, renderData);
+        ui.createPanel('view', 1, app.panels.view && restricted, renderPage);
     };
 
     this.hasUnsavedData = function() {
@@ -168,27 +168,28 @@ function InstanceController() {
         let historical = (route.version < form_record.fragments.length);
 
         return html`
-            ${!goupile.isLocked() ? html`
-                ${goupile.hasPermission('admin_code') ? html`
-                    <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
-                            style="background-position-y: calc(-230px + 1.2em);"
-                            @click=${ui.wrapAction(e => togglePanel(e, 'editor'))}>Code</button>
-                ` : ''}
+            ${app.panels.editor ? html`
+                <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
+                        style="background-position-y: calc(-230px + 1.2em);"
+                        @click=${ui.wrapAction(e => togglePanel(e, 'editor'))}>Code</button>
+            ` : ''}
+            ${app.panels.data ? html`
                 <button class=${'icon' + (ui.isPanelEnabled('data') ? ' active' : '')}
                         style="background-position-y: calc(-274px + 1.2em);"
                         @click=${ui.wrapAction(e => togglePanel(e, 'data'))}>Liste</button>
+            ` : ''}
+            ${app.panels.view ? html`
                 <button class=${'icon' + (ui.isPanelEnabled('view') ? ' active' : '')}
                         style="background-position-y: calc(-318px + 1.2em);"
                         @click=${ui.wrapAction(e => togglePanel(e, 'view'))}>Saisie</button>
-                <div style="flex: 1; min-width: 15px;"></div>
             ` : ''}
             ${goupile.isLocked() && profile.lock.unlockable ? html`
                 <button class="icon" style="background-position-y: calc(-186px + 1.2em)"
                         @click=${ui.wrapAction(goupile.runUnlockDialog)}>Déverrouiller</button>
-                <div style="flex: 1; min-width: 15px;"></div>
             ` : ''}
+            <div style="flex: 1; min-width: 15px;"></div>
 
-            ${!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null ? html`
+            ${app.panels.data && form_record.chain[0].saved && form_record.chain[0].hid != null ? html`
                 <button class="ins_hid" @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
                     ${form_record.chain[0].form.title} <span style="font-weight: bold;">#${form_record.chain[0].hid}</span>
                     ${historical ? html`<br/><span style="font-size: 0.7em;">${form_record.ctime.toLocaleString()}</span>` : ''}
@@ -1503,7 +1504,10 @@ function InstanceController() {
 
             let panels = url.searchParams.get('p');
             if (panels) {
-                ui.restorePanelState(panels);
+                panels = panels.split('|');
+                panels = panels.filter(key => app.panels[key]);
+
+                ui.setEnabledPanels(panels);
                 explicit_panels = true;
             }
         }
@@ -1599,12 +1603,12 @@ function InstanceController() {
                     el.parentNode.scrollTop = 0;
             }, 0);
 
-            if (!explicit_panels && !ui.isPanelEnabled('view')) {
+            if (!explicit_panels && !ui.isPanelEnabled('view') && app.panels.view) {
                 ui.setPanelState('view', true);
                 ui.setPanelState('data', false);
             }
         } else if (form_record == null && new_record.chain[0].saved) {
-            if (!explicit_panels && !ui.isPanelEnabled('view')) {
+            if (!explicit_panels && !ui.isPanelEnabled('view') && app.panels.view) {
                 ui.setPanelState('view', true);
                 ui.setPanelState('data', false);
             }
@@ -1718,12 +1722,12 @@ function InstanceController() {
             if (goupile.isLocked()) {
                 panels = null;
             } else if (form_record == null || !form_record.saved) {
-                panels = ui.serializePanelState();
+                panels = ui.getEnabledPanels().join('|');
 
                 if (panels === 'data')
                     panels = null;
             } else {
-                panels = ui.serializePanelState();
+                panels = ui.getEnabledPanels().join('|');
 
                 if (panels === 'view')
                     panels = null;

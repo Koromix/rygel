@@ -369,7 +369,9 @@ function AdminController() {
 
             let panels = url.searchParams.get('p');
             if (panels) {
-                ui.restorePanelState(panels);
+                panels = panels.split('|');
+
+                ui.setEnabledPanels(panels);
                 explicit_panels = true;
             }
 
@@ -422,7 +424,7 @@ function AdminController() {
 
             if (selected_instance != null)
                 params.select = selected_instance.key;
-            params.p = ui.serializePanelState() || null;
+            params.p = ui.getEnabledPanels().join('|') || null;
 
             let url = util.pasteURL('/admin/', params);
             goupile.syncHistory(url, options.push_history);
