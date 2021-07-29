@@ -219,10 +219,6 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
         success &= !curl_easy_setopt(curl, CURLOPT_MAIL_FROM, config.from);
         success &= !curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, &recipients);
 
-#ifndef NDEBUG
-        success &= !curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-#endif
-
         // curl_easy_setopt is variadic, so we need the + lambda operator to force the
         // conversion to a C-style function pointer.
         success &= !curl_easy_setopt(curl, CURLOPT_SSL_CTX_FUNCTION, +[](CURL *, void *ctx, void *) {
