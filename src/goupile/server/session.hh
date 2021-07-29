@@ -71,14 +71,12 @@ enum class SessionConfirm {
 };
 
 class SessionInfo: public RetainObject {
-    mutable std::shared_mutex mutex;
-
     mutable BucketArray<SessionStamp, 8> stamps;
     mutable HashTable<int64_t, SessionStamp *> stamps_map;
 
-    mutable BlockAllocator str_alloc;
-
 public:
+    mutable std::shared_mutex mutex;
+
     SessionType type;
     int64_t userid;
     const char *username;
@@ -86,7 +84,7 @@ public:
     char local_key[45];
 
     std::atomic<SessionConfirm> confirm;
-    std::atomic<const char *> secret;
+    char secret[33]; // Lock mutex to change
 
     bool IsAdmin() const;
     bool HasPermission(const InstanceHolder *instance, UserPermission perm) const;
@@ -95,8 +93,6 @@ public:
     void InvalidateStamps();
 
     void AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions);
-
-    void UpdateSecret();
 };
 
 void InvalidateUserStamps(int64_t userid);

@@ -158,16 +158,6 @@ void SessionInfo::AuthorizeInstance(const InstanceHolder *instance, uint32_t per
     stamps_map.Set(stamp);
 }
 
-void SessionInfo::UpdateSecret()
-{
-    std::lock_guard<std::shared_mutex> lock(mutex);
-
-    char *ptr = (char *)Allocator::Allocate(&str_alloc, 33);
-    sec_GenerateSecret(MakeSpan(ptr, 33));
-
-    secret = ptr;
-}
-
 void InvalidateUserStamps(int64_t userid)
 {
     // Deal with real sessions
@@ -309,10 +299,9 @@ static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid
                                                 SessionConfirm confirm, const char *secret)
 {
     Size username_bytes = strlen(username) + 1;
-    Size secret_bytes = secret ? strlen(secret) + 1 : 0;
+    Size session_bytes = RG_SIZE(SessionInfo) + username_bytes;
 
-    Size len = RG_SIZE(SessionInfo) + username_bytes + secret_bytes;
-    SessionInfo *session = (SessionInfo *)Allocator::Allocate(nullptr, len, (int)Allocator::Flag::Zero);
+    SessionInfo *session = (SessionInfo *)Allocator::Allocate(nullptr, session_bytes, (int)Allocator::Flag::Zero);
 
     new (session) SessionInfo;
     RetainPtr<SessionInfo> ptr(session, [](SessionInfo *session) {
@@ -334,10 +323,11 @@ static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid
     if (secret) {
         RG_ASSERT(confirm != SessionConfirm::None);
 
-        char *ptr = (char *)session + RG_SIZE(SessionInfo) + username_bytes;
-        CopyString(secret, MakeSpan(ptr, secret_bytes));
-
-        session->secret = ptr;
+        if (!CopyString(secret, session->secret)) {
+            // Should never happen, but let's be careful
+            LogError("Session secret is too big");
+            return {};
+        }
     }
 
     return ptr;
@@ -813,7 +803,11 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
         LogError("Session is closed");
         io->AttachError(403);
         return;
-    } else if (session->confirm == SessionConfirm::None) {
+    }
+
+    std::lock_guard<std::shared_mutex> lock_excl(session->mutex);
+
+    if (session->confirm == SessionConfirm::None) {
         LogError("Session does not need confirmation");
         io->AttachError(403);
         return;
@@ -850,12 +844,9 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
             case SessionConfirm::None: { RG_UNREACHABLE(); } break;
 
             case SessionConfirm::SMS: {
-                const char *secret = session->secret;
-
-                if (TestStr(code, secret)) {
+                if (TestStr(code, session->secret)) {
                     session->confirm = SessionConfirm::None;
-                    sodium_memzero((void *)secret, strlen(secret));
-                    session->secret.compare_exchange_strong(secret, nullptr);
+                    sodium_memzero(session->secret, RG_SIZE(session->secret));
 
                     WriteProfileJson(session.GetRaw(), instance, request, io);
                 } else {
@@ -871,19 +862,17 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
 
             case SessionConfirm::TOTP:
             case SessionConfirm::QRcode: {
-                const char *secret = session->secret;
                 int64_t time = GetUnixTime();
 
-                if (sec_CheckHotp(secret, time / 30000, 6, 1, code)) {
+                if (sec_CheckHotp(session->secret, time / 30000, 6, 1, code)) {
                     if (session->confirm == SessionConfirm::QRcode) {
                         if (!gp_domain.db.Run("UPDATE dom_users SET totp_secret = ?2 WHERE userid = ?1",
-                                              session->userid, secret))
+                                              session->userid, session->secret))
                             return;
                     }
 
                     session->confirm = SessionConfirm::None;
-                    sodium_memzero((void *)secret, strlen(secret));
-                    session->secret.compare_exchange_strong(secret, nullptr);
+                    sodium_memzero(session->secret, RG_SIZE(session->secret));
 
                     WriteProfileJson(session.GetRaw(), instance, request, io);
                 } else {
@@ -921,6 +910,9 @@ void HandleChangePassword(const http_RequestInfo &request, http_IO *io)
         io->AttachError(401);
         return;
     }
+
+    std::lock_guard<std::shared_mutex> lock_excl(session->mutex);
+
     if (session->type != SessionType::Login) {
         LogError("This account does not use passwords");
         io->AttachError(403);
@@ -1032,7 +1024,7 @@ void HandleChangePassword(const http_RequestInfo &request, http_IO *io)
 }
 
 // This does not make any persistent change and it needs to return an image
-// so it is a GET even though it performs an action.
+// so it is a GET even though it performs an action (change the secret).
 void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io)
 {
     RetainPtr<SessionInfo> session = sessions.Find(request, io);
@@ -1042,6 +1034,9 @@ void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io)
         io->AttachError(403);
         return;
     }
+
+    std::lock_guard<std::shared_mutex> lock_excl(session->mutex);
+
     if (session->type != SessionType::Login) {
         LogError("This account does not use passwords");
         io->AttachError(403);
@@ -1053,7 +1048,7 @@ void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
-    session->UpdateSecret();
+    sec_GenerateSecret(session->secret);
 
     const char *url = sec_GenerateHotpUrl(gp_domain.config.title, session->username,
                                           gp_domain.config.title, session->secret, 6, &io->allocator);
@@ -1081,6 +1076,9 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
         io->AttachError(401);
         return;
     }
+
+    std::lock_guard<std::shared_mutex> lock_excl(session->mutex);
+
     if (session->type != SessionType::Login) {
         LogError("This account does not use passwords");
         io->AttachError(403);
@@ -1157,10 +1155,8 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
             }
         }
 
-        const char *secret = session->secret;
-
         // Check user knows secret
-        if (!sec_CheckHotp(secret, time / 30000, 6, 1, code)) {
+        if (!sec_CheckHotp(session->secret, time / 30000, 6, 1, code)) {
             LogError("Code is incorrect");
             io->AttachError(403);
             return;
@@ -1174,7 +1170,7 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
                                   time, request.client_addr, "change_totp", session->username))
                 return false;
             if (!gp_domain.db.Run("UPDATE dom_users SET totp_required = 1, totp_secret = ?2 WHERE userid = ?1",
-                                  session->userid, secret))
+                                  session->userid, session->secret))
                 return false;
 
             return true;
