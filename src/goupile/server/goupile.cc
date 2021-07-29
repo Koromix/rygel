@@ -278,6 +278,328 @@ static void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &r
     json.Finish();
 }
 
+static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
+{
+    RG_ASSERT(StartsWith(request.url, "/admin/") || TestStr(request.url, "/admin"));
+    const char *admin_url = request.url + 6;
+
+    // Missing trailing slash, redirect
+    if (!admin_url[0]) {
+        const char *redirect = Fmt(&io->allocator, "%1/", request.url).ptr;
+        io->AddHeader("Location", redirect);
+        io->AttachNothing(302);
+        return;
+    }
+
+    // Try static assets
+    {
+        if (TestStr(admin_url, "/")) {
+            const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
+            RG_ASSERT(asset);
+
+            AssetInfo copy = *asset;
+            copy.data = PatchAsset(copy, &io->allocator, [&](const char *key, StreamWriter *writer) {
+                if (TestStr(key, "VERSION")) {
+                    writer->Write(FelixVersion);
+                } else if (TestStr(key, "TITLE")) {
+                    writer->Write("Goupile Admin");
+                } else if (TestStr(key, "BASE_URL")) {
+                    writer->Write("/admin/");
+                } else if (TestStr(key, "STATIC_URL")) {
+                    Print(writer, "/admin/static/%1/", shared_etag);
+                } else if (TestStr(key, "ENV_JSON")) {
+                    json_Writer json(writer);
+                    char buf[128];
+
+                    json.StartObject();
+                    json.Key("urls"); json.StartObject();
+                        json.Key("base"); json.String("/admin/");
+                        json.Key("instance"); json.String("/admin/");
+                        json.Key("static"); json.String(Fmt(buf, "/admin/static/%1/", shared_etag).ptr);
+                    json.EndObject();
+                    json.Key("title"); json.String("Admin");
+                    json.Key("permissions"); json.StartArray();
+                    for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
+                        Span<const char> str = ConvertToJsonName(UserPermissionNames[i], buf);
+                        json.String(str.ptr, (size_t)str.len);
+                    }
+                    json.EndArray();
+                    json.EndObject();
+                } else if (TestStr(key, "HEAD_TAGS")) {
+                    // Nothing to add
+                } else {
+                    Print(writer, "{%1}", key);
+                }
+            });
+
+            AttachStatic(copy, 0, shared_etag, request, io);
+            return;
+        } else if (TestStr(admin_url, "/favicon.png")) {
+            const AssetInfo *asset = assets_map.FindValue("/admin/favicon.png", nullptr);
+            RG_ASSERT(asset);
+
+            AttachStatic(*asset, 0, shared_etag, request, io);
+            return;
+        } else {
+            const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
+
+            if (asset) {
+                int max_age = StartsWith(admin_url, "/static/") ? (365 * 86400) : 0;
+                AttachStatic(*asset, max_age, shared_etag, request, io);
+
+                return;
+            }
+        }
+    }
+
+    // And now, API endpoints
+    if (TestStr(admin_url, "/api/session/ping") && request.method == http_RequestMethod::Get) {
+        HandlePing(nullptr, request, io);
+    } else if (TestStr(admin_url, "/api/session/profile") && request.method == http_RequestMethod::Get) {
+        HandleSessionProfile(nullptr, request, io);
+    } else if (TestStr(admin_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
+        HandleSessionLogin(nullptr, request, io);
+    } else if (TestStr(admin_url, "/api/session/confirm") && request.method == http_RequestMethod::Post) {
+        HandleSessionConfirm(nullptr, request, io);
+    } else if (TestStr(admin_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
+        HandleSessionLogout(request, io);
+    } else if (TestStr(admin_url, "/api/change/password") && request.method == http_RequestMethod::Post) {
+        HandleChangePassword(request, io);
+    } else if (TestStr(admin_url, "/api/change/qrcode") && request.method == http_RequestMethod::Get) {
+        HandleChangeQRcode(request, io);
+    } else if (TestStr(admin_url, "/api/change/totp") && request.method == http_RequestMethod::Post) {
+        HandleChangeTOTP(request, io);
+    } else if (TestStr(admin_url, "/api/instances/create") && request.method == http_RequestMethod::Post) {
+        HandleInstanceCreate(request, io);
+    } else if (TestStr(admin_url, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
+        HandleInstanceDelete(request, io);
+    } else if (TestStr(admin_url, "/api/instances/configure") && request.method == http_RequestMethod::Post) {
+        HandleInstanceConfigure(request, io);
+    } else if (TestStr(admin_url, "/api/instances/list") && request.method == http_RequestMethod::Get) {
+        HandleInstanceList(request, io);
+    } else if (TestStr(admin_url, "/api/instances/assign") && request.method == http_RequestMethod::Post) {
+        HandleInstanceAssign(request, io);
+    } else if (TestStr(admin_url, "/api/instances/permissions") && request.method == http_RequestMethod::Get) {
+        HandleInstancePermissions(request, io);
+    } else if (TestStr(admin_url, "/api/archives/create") && request.method == http_RequestMethod::Post) {
+        HandleArchiveCreate(request, io);
+    } else if (TestStr(admin_url, "/api/archives/delete") && request.method == http_RequestMethod::Post) {
+        HandleArchiveDelete(request, io);
+    } else if (TestStr(admin_url, "/api/archives/list") && request.method == http_RequestMethod::Get) {
+        HandleArchiveList(request, io);
+    } else if (TestStr(admin_url, "/api/archives/download") && request.method == http_RequestMethod::Get) {
+        HandleArchiveDownload(request, io);
+    } else if (TestStr(admin_url, "/api/archives/upload") && request.method == http_RequestMethod::Put) {
+        HandleArchiveUpload(request, io);
+    } else if (TestStr(admin_url, "/api/archives/restore") && request.method == http_RequestMethod::Post) {
+        HandleArchiveRestore(request, io);
+    } else if (TestStr(admin_url, "/api/users/create") && request.method == http_RequestMethod::Post) {
+        HandleUserCreate(request, io);
+    } else if (TestStr(admin_url, "/api/users/edit") && request.method == http_RequestMethod::Post) {
+        HandleUserEdit(request, io);
+    } else if (TestStr(admin_url, "/api/users/delete") && request.method == http_RequestMethod::Post) {
+        HandleUserDelete(request, io);
+    } else if (TestStr(admin_url, "/api/users/list") && request.method == http_RequestMethod::Get) {
+        HandleUserList(request, io);
+    } else if (TestStr(admin_url, "/api/send/mail") && request.method == http_RequestMethod::Post) {
+        HandleSendMail(nullptr, request, io);
+    } else if (TestStr(admin_url, "/api/send/sms") && request.method == http_RequestMethod::Post) {
+        HandleSendSMS(nullptr, request, io);
+    } else {
+        io->AttachError(404);
+    }
+}
+
+static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
+{
+    InstanceHolder *instance = nullptr;
+    const char *instance_url = request.url;
+
+    // Find relevant instance
+    for (int i = 0; i < 2 && instance_url[0]; i++) {
+        Size offset = SplitStr(instance_url + 1, '/').len + 1;
+
+        const char *new_url = instance_url + offset;
+        Span<const char> new_key = MakeSpan(request.url + 1, new_url - request.url - 1);
+
+        InstanceHolder *ref = gp_domain.Ref(new_key);
+        if (!ref)
+            break;
+
+        if (instance) {
+            instance->Unref();
+        }
+        instance = ref;
+        instance_url = new_url;
+
+        // No need to look further
+        if (!instance->slaves.len)
+            break;
+    }
+    if (!instance) {
+        io->AttachError(404);
+        return;
+    }
+    io->AddFinalizer([=]() { instance->Unref(); });
+
+    // Enforce trailing slash on base URLs. Use 302 instead of 301 to avoid
+    // problems with query strings being erased without question.
+    if (!instance_url[0]) {
+        HeapArray<char> buf(&io->allocator);
+
+        Fmt(&buf, "%1/?", request.url);
+        MHD_get_connection_values(request.conn, MHD_GET_ARGUMENT_KIND, [](void *udata, enum MHD_ValueKind,
+                                                                     const char *key, const char *value) {
+            HeapArray<char> *buf = (HeapArray<char> *)udata;
+
+            http_EncodeUrlSafe(key, buf);
+            buf->Append('=');
+            http_EncodeUrlSafe(value, buf);
+            buf->Append('&');
+
+            return MHD_YES;
+        }, &buf);
+        buf.ptr[buf.len - 1] = 0;
+
+        io->AddHeader("Location", buf.ptr);
+        io->AttachNothing(302);
+        return;
+    }
+
+    // Handle sessions triggered by query parameters
+    if (request.method == http_RequestMethod::Get) {
+        if (instance->config.auto_key && !HandleSessionKey(instance, request, io))
+            return;
+        if (!HandleSessionToken(instance, request, io))
+            return;
+    }
+
+    // Try application files
+    if (request.method == http_RequestMethod::Get && HandleFileGet(instance, request, io))
+        return;
+
+    // Try static assets
+    if (request.method == http_RequestMethod::Get) {
+        if (StartsWith(instance_url, "/main/")) {
+            instance_url = "/";
+        }
+
+        const AssetInfo *asset = assets_map.FindValue(instance_url, nullptr);
+
+        if (TestStr(instance_url, "/") || TestStr(instance_url, "/sw.pk.js") ||
+                                          TestStr(instance_url, "/manifest.json")) {
+            RG_ASSERT(asset);
+
+            const InstanceHolder *master = instance->master;
+            int64_t fs_version = master->fs_version.load(std::memory_order_relaxed);
+
+            char master_etag[64];
+            Fmt(master_etag, "%1_%2_%3", shared_etag, master->unique, fs_version);
+
+            // XXX: Use some kind of dynamic cache to avoid doing this all the time
+            AssetInfo copy = *asset;
+            copy.data = PatchAsset(copy, &io->allocator, [&](const char *key, StreamWriter *writer) {
+                if (TestStr(key, "VERSION")) {
+                    writer->Write(FelixVersion);
+                } else if (TestStr(key, "TITLE")) {
+                    writer->Write(master->title);
+                } else if (TestStr(key, "BASE_URL")) {
+                    Print(writer, "/%1/", master->key);
+                } else if (TestStr(key, "STATIC_URL")) {
+                    Print(writer, "/%1/static/%2/", master->key, shared_etag);
+                } else if (TestStr(key, "ENV_JSON")) {
+                    json_Writer json(writer);
+                    char buf[512];
+
+                    json.StartObject();
+                    json.Key("urls"); json.StartObject();
+                        json.Key("base"); json.String(Fmt(buf, "/%1/", master->key).ptr);
+                        json.Key("instance"); json.String(Fmt(buf, "/%1/", master->key).ptr);
+                        json.Key("static"); json.String(Fmt(buf, "/%1/static/%2/", master->key, shared_etag).ptr);
+                        json.Key("files"); json.String(Fmt(buf, "/%1/files/%2/", master->key, fs_version).ptr);
+                    json.EndObject();
+                    json.Key("title"); json.String(master->title);
+                    json.Key("version"); json.Int64(fs_version);
+                    json.Key("buster"); json.String(master_etag);
+                    json.Key("cache_offline"); json.Bool(master->config.use_offline);
+                    {
+                        Span<const char> str = ConvertToJsonName(SyncModeNames[(int)master->config.sync_mode], buf);
+                        json.Key("sync_mode"); json.String(str.ptr, (size_t)str.len);
+                    }
+                    if (master->config.backup_key) {
+                        json.Key("backup_key"); json.String(master->config.backup_key);
+                    }
+                    if (master->slaves.len) {
+                        json.Key("instances"); json.StartArray();
+                        for (const InstanceHolder *slave: master->slaves) {
+                            json.StartObject();
+                            json.Key("title"); json.String(slave->title);
+                            json.Key("name"); json.String(slave->config.name);
+                            json.Key("url"); json.String(Fmt(buf, "/%1/", slave->key).ptr);
+                            json.EndObject();
+                        }
+                        json.EndArray();
+                    }
+                    json.EndObject();
+                } else if (TestStr(key, "HEAD_TAGS")) {
+                    if (master->config.use_offline) {
+                        Print(writer, "<link rel=\"manifest\" href=\"/%1/manifest.json\"/>", master->key);
+                    }
+                } else {
+                    Print(writer, "{%1}", key);
+                }
+            });
+
+            AttachStatic(copy, 0, master_etag, request, io);
+            return;
+        } else if (asset) {
+            int max_age = StartsWith(instance_url, "/static/") ? (365 * 86400) : 0;
+            AttachStatic(*asset, max_age, shared_etag, request, io);
+
+            return;
+        }
+    }
+
+    // And now, API endpoints
+    if (TestStr(instance_url, "/api/session/ping") && request.method == http_RequestMethod::Get) {
+        HandlePing(instance, request, io);
+    } else if (TestStr(instance_url, "/api/session/profile") && request.method == http_RequestMethod::Get) {
+        HandleSessionProfile(instance, request, io);
+    } else if (TestStr(instance_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
+        HandleSessionLogin(instance, request, io);
+    } else if (TestStr(instance_url, "/api/session/confirm") && request.method == http_RequestMethod::Post) {
+        HandleSessionConfirm(instance, request, io);
+    } else if (TestStr(instance_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
+        HandleSessionLogout(request, io);
+    } else if (TestStr(instance_url, "/api/change/password") && request.method == http_RequestMethod::Post) {
+        HandleChangePassword(request, io);
+    } else if (TestStr(instance_url, "/api/change/qrcode") && request.method == http_RequestMethod::Get) {
+        HandleChangeQRcode(request, io);
+    } else if (TestStr(instance_url, "/api/change/totp") && request.method == http_RequestMethod::Post) {
+        HandleChangeTOTP(request, io);
+    } else if (TestStr(instance_url, "/api/files/static") && request.method == http_RequestMethod::Get) {
+         HandleFileStatic(instance, request, io);
+    } else if (TestStr(instance_url, "/api/files/list") && request.method == http_RequestMethod::Get) {
+         HandleFileList(instance, request, io);
+    } else if (StartsWith(instance_url, "/api/files/objects/") && request.method == http_RequestMethod::Put) {
+        HandleFilePut(instance, request, io);
+    } else if (StartsWith(instance_url, "/api/files/publish") && request.method == http_RequestMethod::Post) {
+        HandleFilePublish(instance, request, io);
+    } else if (TestStr(instance_url, "/api/records/load") && request.method == http_RequestMethod::Get) {
+        HandleRecordLoad(instance, request, io);
+    } else if (TestStr(instance_url, "/api/records/save") && request.method == http_RequestMethod::Post) {
+        HandleRecordSave(instance, request, io);
+    } else if (TestStr(instance_url, "/api/records/export") && request.method == http_RequestMethod::Get) {
+        HandleRecordExport(instance, request, io);
+    } else if (TestStr(instance_url, "/api/send/mail") && request.method == http_RequestMethod::Post) {
+        HandleSendMail(instance, request, io);
+    } else if (TestStr(instance_url, "/api/send/sms") && request.method == http_RequestMethod::Post) {
+        HandleSendSMS(instance, request, io);
+    } else {
+        io->AttachError(404);
+    }
+}
+
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
 #ifndef NDEBUG
@@ -345,320 +667,9 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
         AttachStatic(*asset, 0, shared_etag, request, io);
     } else if (StartsWith(request.url, "/admin/") || TestStr(request.url, "/admin")) {
-        const char *admin_url = request.url + 6;
-
-        // Missing trailing slash, redirect
-        if (!admin_url[0]) {
-            const char *redirect = Fmt(&io->allocator, "%1/", request.url).ptr;
-            io->AddHeader("Location", redirect);
-            io->AttachNothing(302);
-            return;
-        }
-
-        // Try static assets
-        {
-            if (TestStr(admin_url, "/")) {
-                const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
-                RG_ASSERT(asset);
-
-                AssetInfo copy = *asset;
-                copy.data = PatchAsset(copy, &io->allocator, [&](const char *key, StreamWriter *writer) {
-                    if (TestStr(key, "VERSION")) {
-                        writer->Write(FelixVersion);
-                    } else if (TestStr(key, "TITLE")) {
-                        writer->Write("Goupile Admin");
-                    } else if (TestStr(key, "BASE_URL")) {
-                        writer->Write("/admin/");
-                    } else if (TestStr(key, "STATIC_URL")) {
-                        Print(writer, "/admin/static/%1/", shared_etag);
-                    } else if (TestStr(key, "ENV_JSON")) {
-                        json_Writer json(writer);
-                        char buf[128];
-
-                        json.StartObject();
-                        json.Key("urls"); json.StartObject();
-                            json.Key("base"); json.String("/admin/");
-                            json.Key("instance"); json.String("/admin/");
-                            json.Key("static"); json.String(Fmt(buf, "/admin/static/%1/", shared_etag).ptr);
-                        json.EndObject();
-                        json.Key("title"); json.String("Admin");
-                        json.Key("permissions"); json.StartArray();
-                        for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
-                            Span<const char> str = ConvertToJsonName(UserPermissionNames[i], buf);
-                            json.String(str.ptr, (size_t)str.len);
-                        }
-                        json.EndArray();
-                        json.EndObject();
-                    } else if (TestStr(key, "HEAD_TAGS")) {
-                        // Nothing to add
-                    } else {
-                        Print(writer, "{%1}", key);
-                    }
-                });
-
-                AttachStatic(copy, 0, shared_etag, request, io);
-                return;
-            } else if (TestStr(admin_url, "/favicon.png")) {
-                const AssetInfo *asset = assets_map.FindValue("/admin/favicon.png", nullptr);
-                RG_ASSERT(asset);
-
-                AttachStatic(*asset, 0, shared_etag, request, io);
-                return;
-            } else {
-                const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
-
-                if (asset) {
-                    int max_age = StartsWith(admin_url, "/static/") ? (365 * 86400) : 0;
-                    AttachStatic(*asset, max_age, shared_etag, request, io);
-
-                    return;
-                }
-            }
-        }
-
-        // And now, API endpoints
-        if (TestStr(admin_url, "/api/session/ping") && request.method == http_RequestMethod::Get) {
-            HandlePing(nullptr, request, io);
-        } else if (TestStr(admin_url, "/api/session/profile") && request.method == http_RequestMethod::Get) {
-            HandleSessionProfile(nullptr, request, io);
-        } else if (TestStr(admin_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
-            HandleSessionLogin(nullptr, request, io);
-        } else if (TestStr(admin_url, "/api/session/confirm") && request.method == http_RequestMethod::Post) {
-            HandleSessionConfirm(nullptr, request, io);
-        } else if (TestStr(admin_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
-            HandleSessionLogout(request, io);
-        } else if (TestStr(admin_url, "/api/change/password") && request.method == http_RequestMethod::Post) {
-            HandleChangePassword(request, io);
-        } else if (TestStr(admin_url, "/api/change/qrcode") && request.method == http_RequestMethod::Get) {
-            HandleChangeQRcode(request, io);
-        } else if (TestStr(admin_url, "/api/change/totp") && request.method == http_RequestMethod::Post) {
-            HandleChangeTOTP(request, io);
-        } else if (TestStr(admin_url, "/api/instances/create") && request.method == http_RequestMethod::Post) {
-            HandleInstanceCreate(request, io);
-        } else if (TestStr(admin_url, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
-            HandleInstanceDelete(request, io);
-        } else if (TestStr(admin_url, "/api/instances/configure") && request.method == http_RequestMethod::Post) {
-            HandleInstanceConfigure(request, io);
-        } else if (TestStr(admin_url, "/api/instances/list") && request.method == http_RequestMethod::Get) {
-            HandleInstanceList(request, io);
-        } else if (TestStr(admin_url, "/api/instances/assign") && request.method == http_RequestMethod::Post) {
-            HandleInstanceAssign(request, io);
-        } else if (TestStr(admin_url, "/api/instances/permissions") && request.method == http_RequestMethod::Get) {
-            HandleInstancePermissions(request, io);
-        } else if (TestStr(admin_url, "/api/archives/create") && request.method == http_RequestMethod::Post) {
-            HandleArchiveCreate(request, io);
-        } else if (TestStr(admin_url, "/api/archives/delete") && request.method == http_RequestMethod::Post) {
-            HandleArchiveDelete(request, io);
-        } else if (TestStr(admin_url, "/api/archives/list") && request.method == http_RequestMethod::Get) {
-            HandleArchiveList(request, io);
-        } else if (TestStr(admin_url, "/api/archives/download") && request.method == http_RequestMethod::Get) {
-            HandleArchiveDownload(request, io);
-        } else if (TestStr(admin_url, "/api/archives/upload") && request.method == http_RequestMethod::Put) {
-            HandleArchiveUpload(request, io);
-        } else if (TestStr(admin_url, "/api/archives/restore") && request.method == http_RequestMethod::Post) {
-            HandleArchiveRestore(request, io);
-        } else if (TestStr(admin_url, "/api/users/create") && request.method == http_RequestMethod::Post) {
-            HandleUserCreate(request, io);
-        } else if (TestStr(admin_url, "/api/users/edit") && request.method == http_RequestMethod::Post) {
-            HandleUserEdit(request, io);
-        } else if (TestStr(admin_url, "/api/users/delete") && request.method == http_RequestMethod::Post) {
-            HandleUserDelete(request, io);
-        } else if (TestStr(admin_url, "/api/users/list") && request.method == http_RequestMethod::Get) {
-            HandleUserList(request, io);
-        } else if (TestStr(admin_url, "/api/send/mail") && request.method == http_RequestMethod::Post) {
-            HandleSendMail(nullptr, request, io);
-        } else if (TestStr(admin_url, "/api/send/sms") && request.method == http_RequestMethod::Post) {
-            HandleSendSMS(nullptr, request, io);
-        } else {
-            io->AttachError(404);
-        }
+        HandleAdminRequest(request, io);
     } else {
-        InstanceHolder *instance = nullptr;
-        const char *instance_url = request.url;
-
-        // Find relevant instance
-        for (int i = 0; i < 2 && instance_url[0]; i++) {
-            Size offset = SplitStr(instance_url + 1, '/').len + 1;
-
-            const char *new_url = instance_url + offset;
-            Span<const char> new_key = MakeSpan(request.url + 1, new_url - request.url - 1);
-
-            InstanceHolder *ref = gp_domain.Ref(new_key);
-            if (!ref)
-                break;
-
-            if (instance) {
-                instance->Unref();
-            }
-            instance = ref;
-            instance_url = new_url;
-
-            // No need to look further
-            if (!instance->slaves.len)
-                break;
-        }
-        if (!instance) {
-            io->AttachError(404);
-            return;
-        }
-        io->AddFinalizer([=]() { instance->Unref(); });
-
-        // Enforce trailing slash on base URLs. Use 302 instead of 301 to avoid
-        // problems with query strings being erased without question.
-        if (!instance_url[0]) {
-            HeapArray<char> buf(&io->allocator);
-
-            Fmt(&buf, "%1/?", request.url);
-            MHD_get_connection_values(request.conn, MHD_GET_ARGUMENT_KIND, [](void *udata, enum MHD_ValueKind,
-                                                                         const char *key, const char *value) {
-                HeapArray<char> *buf = (HeapArray<char> *)udata;
-
-                http_EncodeUrlSafe(key, buf);
-                buf->Append('=');
-                http_EncodeUrlSafe(value, buf);
-                buf->Append('&');
-
-                return MHD_YES;
-            }, &buf);
-            buf.ptr[buf.len - 1] = 0;
-
-            io->AddHeader("Location", buf.ptr);
-            io->AttachNothing(302);
-            return;
-        }
-
-        // Handle sessions triggered by query parameters
-        if (request.method == http_RequestMethod::Get) {
-            if (instance->config.auto_key && !HandleSessionKey(instance, request, io))
-                return;
-            if (!HandleSessionToken(instance, request, io))
-                return;
-        }
-
-        // Try application files
-        if (request.method == http_RequestMethod::Get && HandleFileGet(instance, request, io))
-            return;
-
-        // Try static assets
-        if (request.method == http_RequestMethod::Get) {
-            if (StartsWith(instance_url, "/main/")) {
-                instance_url = "/";
-            }
-
-            const AssetInfo *asset = assets_map.FindValue(instance_url, nullptr);
-
-            if (TestStr(instance_url, "/") || TestStr(instance_url, "/sw.pk.js") ||
-                                              TestStr(instance_url, "/manifest.json")) {
-                RG_ASSERT(asset);
-
-                const InstanceHolder *master = instance->master;
-                int64_t fs_version = master->fs_version.load(std::memory_order_relaxed);
-
-                char master_etag[64];
-                Fmt(master_etag, "%1_%2_%3", shared_etag, master->unique, fs_version);
-
-                // XXX: Use some kind of dynamic cache to avoid doing this all the time
-                AssetInfo copy = *asset;
-                copy.data = PatchAsset(copy, &io->allocator, [&](const char *key, StreamWriter *writer) {
-                    if (TestStr(key, "VERSION")) {
-                        writer->Write(FelixVersion);
-                    } else if (TestStr(key, "TITLE")) {
-                        writer->Write(master->title);
-                    } else if (TestStr(key, "BASE_URL")) {
-                        Print(writer, "/%1/", master->key);
-                    } else if (TestStr(key, "STATIC_URL")) {
-                        Print(writer, "/%1/static/%2/", master->key, shared_etag);
-                    } else if (TestStr(key, "ENV_JSON")) {
-                        json_Writer json(writer);
-                        char buf[512];
-
-                        json.StartObject();
-                        json.Key("urls"); json.StartObject();
-                            json.Key("base"); json.String(Fmt(buf, "/%1/", master->key).ptr);
-                            json.Key("instance"); json.String(Fmt(buf, "/%1/", master->key).ptr);
-                            json.Key("static"); json.String(Fmt(buf, "/%1/static/%2/", master->key, shared_etag).ptr);
-                            json.Key("files"); json.String(Fmt(buf, "/%1/files/%2/", master->key, fs_version).ptr);
-                        json.EndObject();
-                        json.Key("title"); json.String(master->title);
-                        json.Key("version"); json.Int64(fs_version);
-                        json.Key("buster"); json.String(master_etag);
-                        json.Key("cache_offline"); json.Bool(master->config.use_offline);
-                        {
-                            Span<const char> str = ConvertToJsonName(SyncModeNames[(int)master->config.sync_mode], buf);
-                            json.Key("sync_mode"); json.String(str.ptr, (size_t)str.len);
-                        }
-                        if (master->config.backup_key) {
-                            json.Key("backup_key"); json.String(master->config.backup_key);
-                        }
-                        if (master->slaves.len) {
-                            json.Key("instances"); json.StartArray();
-                            for (const InstanceHolder *slave: master->slaves) {
-                                json.StartObject();
-                                json.Key("title"); json.String(slave->title);
-                                json.Key("name"); json.String(slave->config.name);
-                                json.Key("url"); json.String(Fmt(buf, "/%1/", slave->key).ptr);
-                                json.EndObject();
-                            }
-                            json.EndArray();
-                        }
-                        json.EndObject();
-                    } else if (TestStr(key, "HEAD_TAGS")) {
-                        if (master->config.use_offline) {
-                            Print(writer, "<link rel=\"manifest\" href=\"/%1/manifest.json\"/>", master->key);
-                        }
-                    } else {
-                        Print(writer, "{%1}", key);
-                    }
-                });
-
-                AttachStatic(copy, 0, master_etag, request, io);
-                return;
-            } else if (asset) {
-                int max_age = StartsWith(instance_url, "/static/") ? (365 * 86400) : 0;
-                AttachStatic(*asset, max_age, shared_etag, request, io);
-
-                return;
-            }
-        }
-
-        // And now, API endpoints
-        if (TestStr(instance_url, "/api/session/ping") && request.method == http_RequestMethod::Get) {
-            HandlePing(instance, request, io);
-        } else if (TestStr(instance_url, "/api/session/profile") && request.method == http_RequestMethod::Get) {
-            HandleSessionProfile(instance, request, io);
-        } else if (TestStr(instance_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
-            HandleSessionLogin(instance, request, io);
-        } else if (TestStr(instance_url, "/api/session/confirm") && request.method == http_RequestMethod::Post) {
-            HandleSessionConfirm(instance, request, io);
-        } else if (TestStr(instance_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
-            HandleSessionLogout(request, io);
-        } else if (TestStr(instance_url, "/api/change/password") && request.method == http_RequestMethod::Post) {
-            HandleChangePassword(request, io);
-        } else if (TestStr(instance_url, "/api/change/qrcode") && request.method == http_RequestMethod::Get) {
-            HandleChangeQRcode(request, io);
-        } else if (TestStr(instance_url, "/api/change/totp") && request.method == http_RequestMethod::Post) {
-            HandleChangeTOTP(request, io);
-        } else if (TestStr(instance_url, "/api/files/static") && request.method == http_RequestMethod::Get) {
-             HandleFileStatic(instance, request, io);
-        } else if (TestStr(instance_url, "/api/files/list") && request.method == http_RequestMethod::Get) {
-             HandleFileList(instance, request, io);
-        } else if (StartsWith(instance_url, "/api/files/objects/") && request.method == http_RequestMethod::Put) {
-            HandleFilePut(instance, request, io);
-        } else if (StartsWith(instance_url, "/api/files/publish") && request.method == http_RequestMethod::Post) {
-            HandleFilePublish(instance, request, io);
-        } else if (TestStr(instance_url, "/api/records/load") && request.method == http_RequestMethod::Get) {
-            HandleRecordLoad(instance, request, io);
-        } else if (TestStr(instance_url, "/api/records/save") && request.method == http_RequestMethod::Post) {
-            HandleRecordSave(instance, request, io);
-        } else if (TestStr(instance_url, "/api/records/export") && request.method == http_RequestMethod::Get) {
-            HandleRecordExport(instance, request, io);
-        } else if (TestStr(instance_url, "/api/send/mail") && request.method == http_RequestMethod::Post) {
-            HandleSendMail(instance, request, io);
-        } else if (TestStr(instance_url, "/api/send/sms") && request.method == http_RequestMethod::Post) {
-            HandleSendSMS(instance, request, io);
-        } else {
-            io->AttachError(404);
-        }
+        HandleInstanceRequest(request, io);
     }
 }
 
