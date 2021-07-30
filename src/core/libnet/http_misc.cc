@@ -196,7 +196,7 @@ bool http_JsonPageBuilder::Init(http_IO *io)
     RG_ASSERT(!this->io);
 
     CompressionType encoding;
-    if (!io->NegociateEncoding(CompressionType::Gzip, &encoding))
+    if (!io->NegociateEncoding(CompressionType::Brotli, CompressionType::Gzip, &encoding))
         return false;
     if (!st.Open(&buf, nullptr, encoding))
         return false;

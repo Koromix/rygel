@@ -474,6 +474,26 @@ bool http_IO::NegociateEncoding(CompressionType preferred, CompressionType *out_
     }
 }
 
+bool http_IO::NegociateEncoding(CompressionType preferred1, CompressionType preferred2, CompressionType *out_encoding)
+{
+    const char *accept_str = request.GetHeaderValue("Accept-Encoding");
+    uint32_t acceptable_encodings = http_ParseAcceptableEncodings(accept_str);
+
+    if (acceptable_encodings & (1 << (int)preferred1)) {
+        *out_encoding = preferred1;
+        return true;
+    } else if (acceptable_encodings & (1 << (int)preferred2)) {
+        *out_encoding = preferred2;
+        return true;
+    } else if (acceptable_encodings) {
+        *out_encoding = (CompressionType)CountTrailingZeros(acceptable_encodings);
+        return true;
+    } else {
+        AttachError(406);
+        return false;
+    }
+}
+
 void http_IO::RunAsync(std::function<void()> func)
 {
     async_func = func;

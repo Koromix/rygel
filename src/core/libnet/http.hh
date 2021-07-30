@@ -171,6 +171,7 @@ public:
     ~http_IO();
 
     bool NegociateEncoding(CompressionType preferred, CompressionType *out_encoding);
+    bool NegociateEncoding(CompressionType preferred1, CompressionType preferred2, CompressionType *out_encoding);
 
     void RunAsync(std::function<void()> func);
 
