@@ -4214,6 +4214,7 @@ struct MinizInflateContext {
 RG_STATIC_ASSERT(RG_SIZE(MinizInflateContext::out) >= TINFL_LZ_DICT_SIZE);
 #endif
 
+#ifdef BROTLI_DEFAULT_MODE
 struct BrotliDecompressContext {
     BrotliDecoderState *state;
     bool done;
@@ -4224,6 +4225,7 @@ struct BrotliDecompressContext {
     uint8_t out[256 * 1024];
     Size out_len;
 };
+#endif
 
 bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
                         CompressionType compression_type)
@@ -4321,10 +4323,13 @@ bool StreamReader::Close()
 #ifdef MZ_VERSION
             Allocator::Release(nullptr, compression.u.miniz, RG_SIZE(*compression.u.miniz));
             compression.u.miniz = nullptr;
+#else
+            RG_UNREACHABLE();
 #endif
         } break;
 
         case CompressionType::Brotli: {
+#ifdef BROTLI_DEFAULT_MODE
             BrotliDecompressContext *ctx = compression.u.brotli;
 
             if (ctx) {
@@ -4335,6 +4340,9 @@ bool StreamReader::Close()
                 Allocator::Release(nullptr, ctx, RG_SIZE(*ctx));
                 compression.u.brotli = nullptr;
             }
+#else
+            RG_UNREACHABLE();
+#endif
         } break;
     }
 
@@ -4392,17 +4400,25 @@ bool StreamReader::Rewind()
 
         case CompressionType::Gzip:
         case CompressionType::Zlib: {
+#ifdef MZ_VERSION
             memset(compression.u.miniz, 0, sizeof(*compression.u.miniz));
             tinfl_init(&compression.u.miniz->inflator);
             compression.u.miniz->crc32 = MZ_CRC32_INIT;
+#else
+            RG_UNREACHABLE();
+#endif
         } break;
 
         case CompressionType::Brotli: {
+#ifdef BROTLI_DEFAULT_MODE
             if (compression.u.brotli->state) {
                 BrotliDecoderDestroyInstance(compression.u.brotli->state);
                 compression.u.brotli->state = nullptr;
             }
             compression.u.brotli->state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
+#else
+            RG_UNREACHABLE();
+#endif
         } break;
     }
 
@@ -4426,11 +4442,19 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
 
         case CompressionType::Gzip:
         case CompressionType::Zlib: {
+#ifdef MZ_VERSION
             read_len = ReadInflate(out_buf.len, out_buf.ptr);
+#else
+            RG_UNREACHABLE();
+#endif
         } break;
 
         case CompressionType::Brotli: {
+#ifdef BROTLI_DEFAULT_MODE
             read_len = ReadBrotli(out_buf.len, out_buf.ptr);
+#else
+            RG_UNREACHABLE();
+#endif
         } break;
     }
 
@@ -4538,17 +4562,23 @@ bool StreamReader::InitDecompressor(CompressionType type)
             tinfl_init(&compression.u.miniz->inflator);
             compression.u.miniz->crc32 = MZ_CRC32_INIT;
 #else
-            LogError("Deflate compression not available for '%1'", filename);
+            LogError("Deflate decompression not available for '%1'", filename);
             error = true;
             return false;
 #endif
         } break;
 
         case CompressionType::Brotli: {
+#ifdef BROTLI_DEFAULT_MODE
             compression.u.brotli =
                 (BrotliDecompressContext *)Allocator::Allocate(nullptr, RG_SIZE(BrotliDecompressContext),
                                                                (int)Allocator::Flag::Zero);
             compression.u.brotli->state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
+#else
+            LogError("Brotli decompression not available for '%1'", filename);
+            error = true;
+            return false;
+#endif
         } break;
     }
     compression.type = type;
@@ -4556,9 +4586,9 @@ bool StreamReader::InitDecompressor(CompressionType type)
     return true;
 }
 
+#ifdef MZ_VERSION
 Size StreamReader::ReadInflate(Size max_len, void *out_buf)
 {
-#ifdef MZ_VERSION
     MinizInflateContext *ctx = compression.u.miniz;
 
     // Gzip header is not directly supported by miniz. Currently this
@@ -4718,11 +4748,10 @@ truncated_error:
     LogError("Truncated Gzip header in '%1'", filename);
     error = true;
     return -1;
-#else
-    RG_UNREACHABLE();
-#endif
 }
+#endif
 
+#ifdef BROTLI_DEFAULT_MODE
 Size StreamReader::ReadBrotli(Size max_len, void *out_buf)
 {
     BrotliDecompressContext *ctx = compression.u.brotli;
@@ -4771,6 +4800,7 @@ Size StreamReader::ReadBrotli(Size max_len, void *out_buf)
 
     RG_UNREACHABLE();
 }
+#endif
 
 Size StreamReader::ReadRaw(Size max_len, void *out_buf)
 {
@@ -5039,6 +5069,7 @@ bool StreamWriter::Close()
         } break;
 
         case CompressionType::Brotli: {
+#ifdef BROTLI_DEFAULT_MODE
             BrotliEncoderState *state = compression.u.brotli;
             uint8_t output_buf[2048];
 
@@ -5066,6 +5097,7 @@ bool StreamWriter::Close()
                     }
                 } while (BrotliEncoderHasMoreOutput(state));
             }
+#endif
         } break;
     }
 
@@ -5182,7 +5214,9 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
         } break;
 
         case CompressionType::Brotli: {
+#ifdef BROTLI_DEFAULT_MODE
             return WriteBrotli(buf);
+#endif
         } break;
     }
 
@@ -5242,6 +5276,7 @@ bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
         } break;
 
         case CompressionType::Brotli: {
+#ifdef BROTLI_DEFAULT_MODE
             BrotliEncoderState *state = BrotliEncoderCreateInstance(nullptr, nullptr, nullptr);
             compression.u.brotli = state;
 
@@ -5252,6 +5287,11 @@ bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
                 case CompressionSpeed::Slow: { BrotliEncoderSetParameter(state, BROTLI_PARAM_QUALITY, 11); } break;
                 case CompressionSpeed::Fast: { BrotliEncoderSetParameter(state, BROTLI_PARAM_QUALITY, 0); } break;
             }
+#else
+            LogError("Brotli compression not available for '%1'", filename);
+            error = true;
+            return false;
+#endif
         } break;
     }
 
@@ -5285,6 +5325,7 @@ bool StreamWriter::WriteDeflate(Span<const uint8_t> buf)
 }
 #endif
 
+#ifdef BROTLI_DEFAULT_MODE
 bool StreamWriter::WriteBrotli(Span<const uint8_t> buf)
 {
     BrotliEncoderState *state = compression.u.brotli;
@@ -5312,6 +5353,7 @@ bool StreamWriter::WriteBrotli(Span<const uint8_t> buf)
 
     return true;
 }
+#endif
 
 bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 {
