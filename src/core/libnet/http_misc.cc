@@ -61,6 +61,9 @@ uint32_t http_ParseAcceptableEncodings(Span<const char> encodings)
             } else if (encoding == "deflate") {
                 high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::Zlib, quality != "q=0");
                 low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::Zlib, quality != "q=0");
+            } else if (encoding == "br") {
+                high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::Brotli, quality != "q=0");
+                low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::Brotli, quality != "q=0");
             } else if (encoding == "*") {
                 low_priority = ApplyMask(low_priority, UINT32_MAX, quality != "q=0");
             }

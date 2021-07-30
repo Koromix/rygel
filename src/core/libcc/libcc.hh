@@ -49,6 +49,8 @@
     #pragma intrinsic(__rdtsc)
 #endif
 
+struct BrotliEncoderStateStruct;
+
 namespace RG {
 
 // ------------------------------------------------------------------------
@@ -2580,12 +2582,14 @@ TimeSpec DecomposeTime(int64_t time, TimeMode mode = TimeMode::Local);
 enum class CompressionType {
     None,
     Zlib,
-    Gzip
+    Gzip,
+    Brotli
 };
 static const char *const CompressionTypeNames[] = {
     "None",
     "Zlib",
-    "Gzip"
+    "Gzip",
+    "Brotli"
 };
 
 enum class CompressionSpeed {
@@ -2631,6 +2635,7 @@ class StreamReader {
         CompressionType type = CompressionType::None;
         union {
             struct MinizInflateContext *miniz;
+            struct BrotliDecompressContext *brotli;
         } u;
     } compression;
 
@@ -2684,7 +2689,9 @@ public:
     Size ComputeStreamLen();
 private:
     bool InitDecompressor(CompressionType type);
-    Size Inflate(Size max_len, void *out_buf);
+
+    Size ReadInflate(Size max_len, void *out_buf);
+    Size ReadBrotli(Size max_len, void *out_buf);
 
     Size ReadRaw(Size max_len, void *out_buf);
 };
@@ -2786,6 +2793,7 @@ class StreamWriter {
         CompressionSpeed speed = CompressionSpeed::Default;
         union {
             struct MinizDeflateContext *miniz;
+            struct BrotliEncoderStateStruct *brotli;
         } u;
     } compression;
 
@@ -2840,7 +2848,9 @@ public:
 
 private:
     bool InitCompressor(CompressionType type, CompressionSpeed speed);
-    bool Deflate(Span<const uint8_t> buf);
+
+    bool WriteDeflate(Span<const uint8_t> buf);
+    bool WriteBrotli(Span<const uint8_t> buf);
 
     bool WriteRaw(Span<const uint8_t> buf);
 };

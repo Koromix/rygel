@@ -488,12 +488,9 @@ void http_IO::AddEncodingHeader(CompressionType encoding)
 {
     switch (encoding) {
         case CompressionType::None: {} break;
-        case CompressionType::Zlib: {
-            AddHeader("Content-Encoding", "deflate");
-        } break;
-        case CompressionType::Gzip: {
-            AddHeader("Content-Encoding", "gzip");
-        } break;
+        case CompressionType::Zlib: { AddHeader("Content-Encoding", "deflate"); } break;
+        case CompressionType::Gzip: { AddHeader("Content-Encoding", "gzip"); } break;
+        case CompressionType::Brotli: { AddHeader("Content-Encoding", "br"); } break;
     }
 }
 

@@ -22,6 +22,10 @@
     #define MINIZ_NO_MALLOC
     #include "../../../vendor/miniz/miniz.h"
 #endif
+#if !defined(LIBCC_NO_BROTLI) && __has_include("../../../vendor/brotli/c/include/brotli/decode.h")
+    #include "../../../vendor/brotli/c/include/brotli/decode.h"
+    #include "../../../vendor/brotli/c/include/brotli/encode.h"
+#endif
 #include "../../../vendor/dragonbox/include/dragonbox/dragonbox.h"
 
 #ifdef _WIN32
@@ -4210,6 +4214,17 @@ struct MinizInflateContext {
 RG_STATIC_ASSERT(RG_SIZE(MinizInflateContext::out) >= TINFL_LZ_DICT_SIZE);
 #endif
 
+struct BrotliDecompressContext {
+    BrotliDecoderState *state;
+    bool done;
+
+    uint8_t in[256 * 1024];
+    Size in_len;
+
+    uint8_t out[256 * 1024];
+    Size out_len;
+};
+
 bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
                         CompressionType compression_type)
 {
@@ -4308,6 +4323,19 @@ bool StreamReader::Close()
             compression.u.miniz = nullptr;
 #endif
         } break;
+
+        case CompressionType::Brotli: {
+            BrotliDecompressContext *ctx = compression.u.brotli;
+
+            if (ctx) {
+                if (ctx->state) {
+                    BrotliDecoderDestroyInstance(ctx->state);
+                }
+
+                Allocator::Release(nullptr, ctx, RG_SIZE(*ctx));
+                compression.u.brotli = nullptr;
+            }
+        } break;
     }
 
     switch (source.type) {
@@ -4368,6 +4396,14 @@ bool StreamReader::Rewind()
             tinfl_init(&compression.u.miniz->inflator);
             compression.u.miniz->crc32 = MZ_CRC32_INIT;
         } break;
+
+        case CompressionType::Brotli: {
+            if (compression.u.brotli->state) {
+                BrotliDecoderDestroyInstance(compression.u.brotli->state);
+                compression.u.brotli->state = nullptr;
+            }
+            compression.u.brotli->state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
+        } break;
     }
 
     source.eof = false;
@@ -4390,7 +4426,11 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
 
         case CompressionType::Gzip:
         case CompressionType::Zlib: {
-            read_len = Inflate(out_buf.len, out_buf.ptr);
+            read_len = ReadInflate(out_buf.len, out_buf.ptr);
+        } break;
+
+        case CompressionType::Brotli: {
+            read_len = ReadBrotli(out_buf.len, out_buf.ptr);
         } break;
     }
 
@@ -4503,13 +4543,20 @@ bool StreamReader::InitDecompressor(CompressionType type)
             return false;
 #endif
         } break;
+
+        case CompressionType::Brotli: {
+            compression.u.brotli =
+                (BrotliDecompressContext *)Allocator::Allocate(nullptr, RG_SIZE(BrotliDecompressContext),
+                                                               (int)Allocator::Flag::Zero);
+            compression.u.brotli->state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
+        } break;
     }
     compression.type = type;
 
     return true;
 }
 
-Size StreamReader::Inflate(Size max_len, void *out_buf)
+Size StreamReader::ReadInflate(Size max_len, void *out_buf)
 {
 #ifdef MZ_VERSION
     MinizInflateContext *ctx = compression.u.miniz;
@@ -4674,6 +4721,55 @@ truncated_error:
 #else
     RG_UNREACHABLE();
 #endif
+}
+
+Size StreamReader::ReadBrotli(Size max_len, void *out_buf)
+{
+    BrotliDecompressContext *ctx = compression.u.brotli;
+
+    for (;;) {
+        if (ctx->out_len || ctx->done) {
+            Size copy_len = std::min(max_len, ctx->out_len);
+
+            ctx->out_len -= copy_len;
+            memcpy(out_buf, ctx->out, copy_len);
+            memmove(ctx->out, ctx->out + copy_len, ctx->out_len);
+
+            eof = ctx->done;
+            return copy_len;
+        }
+
+        if (ctx->in_len < RG_SIZE(ctx->in)) {
+            Size raw_len = ReadRaw(RG_SIZE(ctx->in) - ctx->in_len, ctx->in + ctx->in_len);
+            if (raw_len < 0)
+                return -1;
+            ctx->in_len += raw_len;
+        }
+
+        const uint8_t *next_in = ctx->in;
+        uint8_t *next_out = ctx->out + ctx->out_len;
+        size_t avail_in = (size_t)ctx->in_len;
+        size_t avail_out = (size_t)(RG_SIZE(ctx->out) - ctx->out_len);
+
+        BrotliDecoderResult ret = BrotliDecoderDecompressStream(ctx->state, &avail_in, &next_in,
+                                                                &avail_out, &next_out, nullptr);
+
+        if (ret == BROTLI_DECODER_RESULT_SUCCESS) {
+            ctx->done = true;
+        } else if (ret == BROTLI_DECODER_RESULT_ERROR) {
+            LogError("Malformed Brotli stream in '%1'", filename);
+            error = true;
+            return -1;
+        } else if (ret == BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT) {
+            LogError("Truncated Brotli stream in '%1'", filename);
+            error = true;
+            return -1;
+        }
+
+        ctx->out_len = next_out - ctx->out - ctx->out_len;
+    }
+
+    RG_UNREACHABLE();
 }
 
 Size StreamReader::ReadRaw(Size max_len, void *out_buf)
@@ -4906,12 +5002,12 @@ bool StreamWriter::Close()
             MinizDeflateContext *ctx = compression.u.miniz;
 
             RG_DEFER { 
-                Allocator::Release(nullptr, ctx, RG_SIZE(*ctx)); 
+                Allocator::Release(nullptr, ctx, RG_SIZE(*ctx));
                 compression.u.miniz = nullptr;
             };
 
             if (IsValid() && ctx) {
-                if (ctx->buf.len && !Deflate(ctx->buf)) {
+                if (ctx->buf.len && !WriteDeflate(ctx->buf)) {
                     error = true;
                     break;
                 }
@@ -4940,6 +5036,36 @@ bool StreamWriter::Close()
                 }
             }
 #endif
+        } break;
+
+        case CompressionType::Brotli: {
+            BrotliEncoderState *state = compression.u.brotli;
+            uint8_t output_buf[2048];
+
+            if (state) {
+                RG_DEFER {
+                    BrotliEncoderDestroyInstance(state);
+                    compression.u.brotli = nullptr;
+                };
+
+                do {
+                    const uint8_t *next_in = nullptr;
+                    uint8_t *next_out = output_buf;
+                    size_t avail_in = 0;
+                    size_t avail_out = RG_SIZE(output_buf);
+
+                    if (!BrotliEncoderCompressStream(state, BROTLI_OPERATION_FINISH,
+                                                     &avail_in, &next_in, &avail_out, &next_out, nullptr)) {
+                        LogError("Failed to compress '%1' with Brotli", filename);
+                        error = true;
+                        break;
+                    }
+                    if (!WriteRaw(MakeSpan(output_buf, next_out - output_buf))) {
+                        error = true;
+                        break;
+                    }
+                } while (BrotliEncoderHasMoreOutput(state));
+            }
         } break;
     }
 
@@ -5038,12 +5164,12 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
             }
 
             if (buf.len) {
-                if (ctx->buf.len && !Deflate(ctx->buf))
+                if (ctx->buf.len && !WriteDeflate(ctx->buf))
                     return false;
                 ctx->buf.Clear();
 
                 if (buf.len >= RG_SIZE(ctx->buf.data) / 2) {
-                    if (!Deflate(buf))
+                    if (!WriteDeflate(buf))
                         return false;
                 } else {
                     memcpy_safe(ctx->buf.data, buf.ptr, buf.len);
@@ -5053,6 +5179,10 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
 
             return true;
 #endif
+        } break;
+
+        case CompressionType::Brotli: {
+            return WriteBrotli(buf);
         } break;
     }
 
@@ -5110,6 +5240,19 @@ bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
             return false;
 #endif
         } break;
+
+        case CompressionType::Brotli: {
+            BrotliEncoderState *state = BrotliEncoderCreateInstance(nullptr, nullptr, nullptr);
+            compression.u.brotli = state;
+
+            RG_STATIC_ASSERT(BROTLI_MIN_QUALITY == 0 && BROTLI_MAX_QUALITY == 11);
+
+            switch (speed) {
+                case CompressionSpeed::Default: { BrotliEncoderSetParameter(state, BROTLI_PARAM_QUALITY, 6); } break;
+                case CompressionSpeed::Slow: { BrotliEncoderSetParameter(state, BROTLI_PARAM_QUALITY, 11); } break;
+                case CompressionSpeed::Fast: { BrotliEncoderSetParameter(state, BROTLI_PARAM_QUALITY, 0); } break;
+            }
+        } break;
     }
 
     compression.type = type;
@@ -5119,7 +5262,7 @@ bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
 }
 
 #ifdef MZ_VERSION
-bool StreamWriter::Deflate(Span<const uint8_t> buf)
+bool StreamWriter::WriteDeflate(Span<const uint8_t> buf)
 {
     MinizDeflateContext *ctx = compression.u.miniz;
 
@@ -5141,6 +5284,34 @@ bool StreamWriter::Deflate(Span<const uint8_t> buf)
     return true;
 }
 #endif
+
+bool StreamWriter::WriteBrotli(Span<const uint8_t> buf)
+{
+    BrotliEncoderState *state = compression.u.brotli;
+    uint8_t output_buf[2048];
+
+    while (buf.len || BrotliEncoderHasMoreOutput(state)) {
+        const uint8_t *next_in = buf.ptr;
+        uint8_t *next_out = output_buf;
+        size_t avail_in = (size_t)buf.len;
+        size_t avail_out = RG_SIZE(output_buf);
+
+        if (!BrotliEncoderCompressStream(state, BROTLI_OPERATION_PROCESS,
+                                         &avail_in, &next_in, &avail_out, &next_out, nullptr)) {
+            error = true;
+            return false;
+        }
+        if (!WriteRaw(MakeSpan(output_buf, next_out - output_buf))) {
+            error = true;
+            return false;
+        }
+
+        buf.len -= next_in - buf.ptr;
+        buf.ptr = next_in;
+    }
+
+    return true;
+}
 
 bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 {
