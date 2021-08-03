@@ -864,7 +864,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
             case SessionConfirm::QRcode: {
                 int64_t time = GetUnixTime();
 
-                if (sec_CheckHotp(session->secret, time / 30000, 6, 1, code)) {
+                if (sec_CheckHotp(session->secret, sec_HotpAlgorithm::SHA1, time / 30000, 6, 1, code)) {
                     if (session->confirm == SessionConfirm::QRcode) {
                         if (!gp_domain.db.Run("UPDATE dom_users SET totp_secret = ?2 WHERE userid = ?1",
                                               session->userid, session->secret))
@@ -1050,8 +1050,8 @@ void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io)
 
     sec_GenerateSecret(session->secret);
 
-    const char *url = sec_GenerateHotpUrl(gp_domain.config.title, session->username,
-                                          gp_domain.config.title, session->secret, 6, &io->allocator);
+    const char *url = sec_GenerateHotpUrl(gp_domain.config.title, session->username, gp_domain.config.title,
+                                          sec_HotpAlgorithm::SHA1, session->secret, 6, &io->allocator);
     if (!url)
         return;
 
@@ -1156,7 +1156,7 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
         }
 
         // Check user knows secret
-        if (!sec_CheckHotp(session->secret, time / 30000, 6, 1, code)) {
+        if (!sec_CheckHotp(session->secret, sec_HotpAlgorithm::SHA1, time / 30000, 6, 1, code)) {
             LogError("Code is incorrect");
             io->AttachError(403);
             return;

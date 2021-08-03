@@ -17,15 +17,26 @@
 
 namespace RG {
 
+enum sec_HotpAlgorithm {
+    SHA1, // Only choice supported by Google Authenticator
+    SHA256,
+    SHA512
+};
+static const char *const sec_HotpAlgorithmNames[] = {
+    "SHA1",
+    "SHA256",
+    "SHA512"
+};
+
 // Use 33 bytes or more (32 + NUL byte) for security, which translates to 160 bits
 void sec_GenerateSecret(Span<char> out_buf);
 bool sec_CheckSecret(const char *secret);
 
 const char *sec_GenerateHotpUrl(const char *label, const char *username, const char *issuer,
-                                const char *secret, int digits, Allocator *alloc);
+                                sec_HotpAlgorithm algo, const char *secret, int digits, Allocator *alloc);
 bool sec_GenerateHotpPng(const char *url, int border, HeapArray<uint8_t> *out_buf);
 
-int sec_ComputeHotp(const char *secret, int64_t counter, int digits);
-bool sec_CheckHotp(const char *secret, int64_t counter, int digits, int window, const char *code);
+int sec_ComputeHotp(const char *secret, sec_HotpAlgorithm algo, int64_t counter, int digits);
+bool sec_CheckHotp(const char *secret, sec_HotpAlgorithm algo, int64_t counter, int digits, int window, const char *code);
 
 }

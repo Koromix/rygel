@@ -133,7 +133,7 @@ bool sec_CheckSecret(const char *secret)
 }
 
 const char *sec_GenerateHotpUrl(const char *label, const char *username, const char *issuer,
-                                const char *secret, int digits, Allocator *alloc)
+                                sec_HotpAlgorithm algo, const char *secret, int digits, Allocator *alloc)
 {
     HeapArray<char> buf(alloc);
 
@@ -142,7 +142,7 @@ const char *sec_GenerateHotpUrl(const char *label, const char *username, const c
 
     Fmt(&buf, "otpauth://totp/"); EncodeUrlSafe(label, &buf);
     Fmt(&buf, ":"); EncodeUrlSafe(username, &buf);
-    Fmt(&buf, "?secret=%1&digits=%2", secret, digits);
+    Fmt(&buf, "?algorithm=%1&secret=%2&digits=%3", sec_HotpAlgorithmNames[(int)algo], secret, digits);
     if (issuer) {
         Fmt(&buf, "&issuer="); EncodeUrlSafe(issuer, &buf);
     }
@@ -252,7 +252,7 @@ bool sec_GenerateHotpPng(const char *url, int border, HeapArray<uint8_t> *out_bu
     return true;
 }
 
-static void HmacSha1(Span<const uint8_t> key, Span<const uint8_t> message, uint8_t out_digest[20])
+static Size HmacSha1(Span<const uint8_t> key, Span<const uint8_t> message, uint8_t out_digest[20])
 {
     uint8_t padded_key[64];
 
@@ -298,19 +298,121 @@ static void HmacSha1(Span<const uint8_t> key, Span<const uint8_t> message, uint8
         mbedtls_sha1_update_ret(&ctx, inner_hash, RG_SIZE(inner_hash));
         mbedtls_sha1_finish_ret(&ctx, (unsigned char *)out_digest);
     }
+
+    return 20;
 }
 
-static int ComputeHotp(Span<const uint8_t> key, int64_t counter, int digits)
+static Size HmacSha256(Span<const uint8_t> key, Span<const uint8_t> message, uint8_t out_digest[32])
+{
+    RG_STATIC_ASSERT(crypto_hash_sha256_BYTES == 32);
+
+    uint8_t padded_key[64];
+
+    // Hash and/or pad key
+    if (key.len > RG_SIZE(padded_key)) {
+        crypto_hash_sha256(padded_key, key.ptr, (size_t)key.len);
+        memset_safe(padded_key + 32, 0, RG_SIZE(padded_key) - 32);
+    } else {
+        memcpy_safe(padded_key, key.ptr, (size_t)key.len);
+        memset_safe(padded_key + key.len, 0, (size_t)(RG_SIZE(padded_key) - key.len));
+    }
+
+    // Inner hash
+    uint8_t inner_hash[32];
+    {
+        crypto_hash_sha256_state state;
+        crypto_hash_sha256_init(&state);
+
+        for (Size i = 0; i < RG_SIZE(padded_key); i++) {
+            padded_key[i] ^= 0x36;
+        }
+
+        crypto_hash_sha256_update(&state, padded_key, RG_SIZE(padded_key));
+        crypto_hash_sha256_update(&state, message.ptr, (size_t)message.len);
+        crypto_hash_sha256_final(&state, inner_hash);
+    }
+
+    // Outer hash
+    {
+        crypto_hash_sha256_state state;
+        crypto_hash_sha256_init(&state);
+
+        for (Size i = 0; i < RG_SIZE(padded_key); i++) {
+            padded_key[i] ^= 0x36; // IPAD is still there
+            padded_key[i] ^= 0x5C;
+        }
+
+        crypto_hash_sha256_update(&state, padded_key, RG_SIZE(padded_key));
+        crypto_hash_sha256_update(&state, inner_hash, RG_SIZE(inner_hash));
+        crypto_hash_sha256_final(&state, out_digest);
+    }
+
+    return 32;
+}
+
+static Size HmacSha512(Span<const uint8_t> key, Span<const uint8_t> message, uint8_t out_digest[64])
+{
+    RG_STATIC_ASSERT(crypto_hash_sha512_BYTES == 64);
+
+    uint8_t padded_key[128];
+
+    // Hash and/or pad key
+    if (key.len > RG_SIZE(padded_key)) {
+        crypto_hash_sha512(padded_key, key.ptr, (size_t)key.len);
+        memset_safe(padded_key + 64, 0, RG_SIZE(padded_key) - 64);
+    } else {
+        memcpy_safe(padded_key, key.ptr, (size_t)key.len);
+        memset_safe(padded_key + key.len, 0, (size_t)(RG_SIZE(padded_key) - key.len));
+    }
+
+    // Inner hash
+    uint8_t inner_hash[64];
+    {
+        crypto_hash_sha512_state state;
+        crypto_hash_sha512_init(&state);
+
+        for (Size i = 0; i < RG_SIZE(padded_key); i++) {
+            padded_key[i] ^= 0x36;
+        }
+
+        crypto_hash_sha512_update(&state, padded_key, RG_SIZE(padded_key));
+        crypto_hash_sha512_update(&state, message.ptr, (size_t)message.len);
+        crypto_hash_sha512_final(&state, inner_hash);
+    }
+
+    // Outer hash
+    {
+        crypto_hash_sha512_state state;
+        crypto_hash_sha512_init(&state);
+
+        for (Size i = 0; i < RG_SIZE(padded_key); i++) {
+            padded_key[i] ^= 0x36; // IPAD is still there
+            padded_key[i] ^= 0x5C;
+        }
+
+        crypto_hash_sha512_update(&state, padded_key, RG_SIZE(padded_key));
+        crypto_hash_sha512_update(&state, inner_hash, RG_SIZE(inner_hash));
+        crypto_hash_sha512_final(&state, out_digest);
+    }
+
+    return 64;
+}
+
+static int ComputeHotp(Span<const uint8_t> key, sec_HotpAlgorithm algo, int64_t counter, int digits)
 {
     union { int64_t i; uint8_t raw[8]; } message;
     message.i = BigEndian(counter);
 
     // HMAC-SHA1
-    uint8_t digest[20];
-    HmacSha1(key, message.raw, digest);
+    LocalArray<uint8_t, 64> digest;
+    switch (algo) {
+        case sec_HotpAlgorithm::SHA1: { digest.len = HmacSha1(key, message.raw, digest.data); } break;
+        case sec_HotpAlgorithm::SHA256: { digest.len = HmacSha256(key, message.raw, digest.data); } break;
+        case sec_HotpAlgorithm::SHA512: { digest.len = HmacSha512(key, message.raw, digest.data); } break;
+    }
 
     // Dynamic truncation
-    int offset = digest[19] & 0xF;
+    int offset = digest[digest.len - 1] & 0xF;
     uint32_t sbits = (((uint32_t)digest[offset + 0] & 0x7F) << 24) |
                      (((uint32_t)digest[offset + 1] & 0xFF) << 16) |
                      (((uint32_t)digest[offset + 2] & 0xFF) << 8) |
@@ -329,17 +431,17 @@ static int ComputeHotp(Span<const uint8_t> key, int64_t counter, int digits)
     }
 }
 
-int sec_ComputeHotp(const char *secret, int64_t counter, int digits)
+int sec_ComputeHotp(const char *secret, sec_HotpAlgorithm algo, int64_t counter, int digits)
 {
     LocalArray<uint8_t, 128> key;
     key.len = DecodeBase32(secret, key.data);
     if (key.len < 0)
         return -1;
 
-    return ComputeHotp(key, counter, digits);
+    return ComputeHotp(key, algo, counter, digits);
 }
 
-bool sec_CheckHotp(const char *secret, int64_t counter, int digits, int window, const char *code)
+bool sec_CheckHotp(const char *secret, sec_HotpAlgorithm algo, int64_t counter, int digits, int window, const char *code)
 {
     LocalArray<uint8_t, 128> key;
     key.len = DecodeBase32(secret, key.data);
@@ -347,7 +449,7 @@ bool sec_CheckHotp(const char *secret, int64_t counter, int digits, int window, 
         return false;
 
     for (int i = -window; i <= window; i++) {
-        int ret = ComputeHotp(key, counter + i, digits);
+        int ret = ComputeHotp(key, algo, counter + i, digits);
         if (ret < 0)
             return false;
 

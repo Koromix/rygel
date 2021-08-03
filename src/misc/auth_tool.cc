@@ -121,11 +121,12 @@ static int RunGenerateTOTP(Span<const char *> arguments)
     const char *label = nullptr;
     const char *issuer = nullptr;
     const char *username = nullptr;
+    sec_HotpAlgorithm algorithm = sec_HotpAlgorithm::SHA1;
     const char *secret = nullptr;
     int digits = 6;
     const char *png_filename = nullptr;
 
-    const auto print_usage = [](FILE *fp) {
+    const auto print_usage = [&](FILE *fp) {
         PrintLn(fp,
 R"(Usage: %!..+%1 generate_totp [options]%!0
 
@@ -134,10 +135,14 @@ Options:
     %!..+-u, --username <username>%!0    Set TOTP username
     %!..+-i, --issuer <issuer>%!0        Set TOTP issuer
 
+    %!..+-a, --algorithm <algorithm>%!0  Change HMAC algorithm
+                                 %!D..(default: %2)%!0
     %!..+-s, --secret <secret>%!0        Set secret in Base32 encoding
+
     %!..+-d, --digits <digits>%!0        Use specified number of digits
 
-    %!..+-O, --output_file <file>%!0     Write QR code PNG image to disk)", FelixTarget);
+    %!..+-O, --output_file <file>%!0     Write QR code PNG image to disk)",
+                FelixTarget, sec_HotpAlgorithmNames[(int)algorithm]);
     };
 
     // Parse arguments
@@ -154,6 +159,11 @@ Options:
                 username = opt.current_value;
             } else if (opt.Test("-i", "--issuer", OptionType::Value)) {
                 issuer = opt.current_value;
+            } else if (opt.Test("-a", "--algorithm", OptionType::Value)) {
+                if (!OptionToEnum(sec_HotpAlgorithmNames, opt.current_value, &algorithm)) {
+                    LogError("Unknown HMAC algorithm '%1'", opt.current_value);
+                    return 1;
+                }
             } else if (opt.Test("-s", "--secret", OptionType::Value)) {
                 secret = opt.current_value;
             } else if (opt.Test("-d", "--digits", OptionType::Value)) {
@@ -210,7 +220,7 @@ Options:
     LogInfo();
 
     // Generate URL
-    const char *url = sec_GenerateHotpUrl(label, username, issuer, secret, digits, &temp_alloc);
+    const char *url = sec_GenerateHotpUrl(label, username, issuer, algorithm, secret, digits, &temp_alloc);
     LogInfo("URL: %!..+%1%!0", url);
 
     if (png_filename) {
@@ -231,6 +241,7 @@ static int RunComputeTOTP(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
+    sec_HotpAlgorithm algorithm = sec_HotpAlgorithm::SHA1;
     const char *secret = nullptr;
     int64_t time = GetUnixTime() / 1000;
     int digits = 6;
@@ -241,13 +252,16 @@ static int RunComputeTOTP(Span<const char *> arguments)
 R"(Usage: %!..+%1 compute_totp [options] <secret>%!0
 
 Options:
+    %!..+-a, --algorithm <algorithm>%!0  Change HMAC algorithm
+                                 %!D..(default: %2)%!0
     %!..+-s, --secret <secret>%!0        Set secret in Base32 encoding
 
     %!..+-t, --time <time>%!0            Use specified Unix time instead of current time
     %!..+-d, --digits <digits>%!0        Generate specified number of digits
-                                 %!D..(default: %2)%!0
+                                 %!D..(default: %3)%!0
     %!..+-w, --window <window>%!0        Generate multiple codes around current time
-                                 %!D..(default: %3)%!0)", FelixTarget, digits, window);
+                                 %!D..(default: %4)%!0)",
+                FelixTarget, sec_HotpAlgorithmNames[(int)algorithm], digits, window);
     };
 
     // Parse arguments
@@ -258,6 +272,11 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
+            } else if (opt.Test("-a", "--algorithm", OptionType::Value)) {
+                if (!OptionToEnum(sec_HotpAlgorithmNames, opt.current_value, &algorithm)) {
+                    LogError("Unknown HMAC algorithm '%1'", opt.current_value);
+                    return 1;
+                }
             } else if (opt.Test("-s", "--secret", OptionType::Value)) {
                 secret = opt.current_value;
             } else if (opt.Test("-t", "--time", OptionType::Value)) {
@@ -299,7 +318,7 @@ Options:
     }
 
     for (int i = -window; i <= window; i++) {
-        int code = sec_ComputeHotp(secret, time / 30 + i, digits);
+        int code = sec_ComputeHotp(secret, algorithm, time / 30 + i, digits);
         if (code < 0)
             return 1;
         PrintLn("%1", FmtArg(code).Pad0(-digits));
@@ -313,6 +332,7 @@ static int RunCheckTOTP(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
+    sec_HotpAlgorithm algorithm = sec_HotpAlgorithm::SHA1;
     const char *secret = nullptr;
     int64_t time = GetUnixTime() / 1000;
     int digits = 6;
@@ -324,13 +344,16 @@ static int RunCheckTOTP(Span<const char *> arguments)
 R"(Usage: %!..+%1 check_totp [options] <secret>%!0
 
 Options:
+    %!..+-a, --algorithm <algorithm>%!0  Change HMAC algorithm
+                                 %!D..(default: %2)%!0
     %!..+-s, --secret <secret>%!0        Set secret in Base32 encoding
 
     %!..+-t, --time <time>%!0            Use specified Unix time instead of current time
     %!..+-d, --digits <digits>%!0        Generate specified number of digits
-                                 %!D..(default: %2)%!0
+                                 %!D..(default: %3)%!0
     %!..+-w, --window <window>%!0        Generate multiple codes around current time
-                                 %!D..(default: %3)%!0)", FelixTarget, digits, window);
+                                 %!D..(default: %4)%!0)",
+                FelixTarget, sec_HotpAlgorithmNames[(int)algorithm], digits, window);
     };
 
     // Parse arguments
@@ -341,6 +364,11 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
+            } else if (opt.Test("-a", "--algorithm", OptionType::Value)) {
+                if (!OptionToEnum(sec_HotpAlgorithmNames, opt.current_value, &algorithm)) {
+                    LogError("Unknown HMAC algorithm '%1'", opt.current_value);
+                    return 1;
+                }
             } else if (opt.Test("-s", "--secret", OptionType::Value)) {
                 secret = opt.current_value;
             } else if (opt.Test("-t", "--time", OptionType::Value)) {
@@ -396,7 +424,7 @@ Options:
         }
     }
 
-    if (sec_CheckHotp(secret, time / 30, digits, window, code)) {
+    if (sec_CheckHotp(secret, algorithm, time / 30, digits, window, code)) {
         LogInfo("Match!");
         return 0;
     } else {
