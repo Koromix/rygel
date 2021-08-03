@@ -15,6 +15,7 @@ src/libweb
 src/web
 src/wrappers
 vendor/ace
+vendor/brotli
 vendor/cacert
 vendor/chartjs
 vendor/curl
