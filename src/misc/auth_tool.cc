@@ -126,7 +126,7 @@ static int RunGenerateTOTP(Span<const char *> arguments)
     int digits = 6;
     const char *png_filename = nullptr;
 
-    const auto print_usage = [&](FILE *fp) {
+    const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
 R"(Usage: %!..+%1 generate_totp [options]%!0
 
@@ -247,7 +247,7 @@ static int RunComputeTOTP(Span<const char *> arguments)
     int digits = 6;
     int window = 0;
 
-    const auto print_usage = [&](FILE *fp) {
+    const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
 R"(Usage: %!..+%1 compute_totp [options] <secret>%!0
 
@@ -339,7 +339,7 @@ static int RunCheckTOTP(Span<const char *> arguments)
     int window = 0;
     const char *code = nullptr;
 
-    const auto print_usage = [&](FILE *fp) {
+    const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
 R"(Usage: %!..+%1 check_totp [options] <secret>%!0
 

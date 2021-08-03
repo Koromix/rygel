@@ -466,7 +466,7 @@ int Main(int argc, char **argv)
     // Options
     const char *config_filename = "thop.ini";
 
-    const auto print_usage = [&](FILE *fp) {
+    const auto print_usage = [=](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 [options] [stay_file ..]%!0
 
 Options:

@@ -621,7 +621,7 @@ int RunMigrate(Span<const char *> arguments)
     // Options
     const char *config_filename = "goupile.ini";
 
-    const auto print_usage = [&](FILE *fp) {
+    const auto print_usage = [=](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 migrate [options]%!0
 
 Options:
@@ -693,7 +693,7 @@ int RunUnseal(Span<const char *> arguments)
     const char *output_filename = nullptr;
     const char *decrypt_key = nullptr;
 
-    const auto print_usage = [&](FILE *fp) {
+    const auto print_usage = [=](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 unseal [options] <archive_file>%!0
 
 Options:
