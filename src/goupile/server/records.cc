@@ -355,7 +355,8 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                             return false;
                         }
                     } else if (stmt.IsValid()) {
-                        if (!instance->db->Run("INSERT INTO ins_claims (userid, ulid) VALUES (?1, ?2)",
+                        if (!instance->db->Run(R"(INSERT INTO ins_claims (userid, ulid) VALUES (?1, ?2)
+                                                  ON CONFLICT DO NOTHING)",
                                                -session->userid, root_ulid))
                             return false;
                     } else {
