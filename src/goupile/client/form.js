@@ -38,6 +38,7 @@ function FormState(values = {}) {
     this.values = proxyObject(values);
 
     this.hasChanged = function() { return !!changes.size && self.explicitly_changed; };
+    this.markInteraction = function() { self.explicitly_changed = true; };
 
     function proxyObject(obj) {
         if (obj == null)
@@ -151,6 +152,8 @@ function FormBuilder(state, model, readonly = false) {
     this.variables = model.variables;
 
     this.hasChanged = function() { return state.hasChanged(); };
+    this.markInteraction = function() { state.markInteraction(); };
+
     this.isValid = function() { return model.isValid(); };
     this.hasErrors = function() { return model.hasErrors(); };
 
@@ -1751,7 +1754,7 @@ instead of:
         state.follow_default.delete(key.toString());
 
         if (refresh) {
-            state.explicitly_changed = true;
+            state.markInteraction();
             self.restart();
         }
     }
