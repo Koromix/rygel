@@ -408,9 +408,8 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     if (!instance->db->Run(R"(INSERT INTO rec_entries (ulid, hid, form, parent_ulid,
                                                                        parent_version, root_ulid, anchor)
                                               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-                                              ON CONFLICT (ulid)
-                                                  DO UPDATE SET hid = IFNULL(excluded.hid, hid),
-                                                                anchor = excluded.anchor)",
+                                              ON CONFLICT (ulid) DO UPDATE SET hid = IFNULL(excluded.hid, hid),
+                                                                               anchor = excluded.anchor)",
                                           record.ulid, record.hid, record.form, record.parent.ulid,
                                           record.parent.version >= 0 ? sq_Binding(record.parent.version) : sq_Binding(),
                                           root_ulid, anchor))
@@ -422,8 +421,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                         sq_Statement stmt;
                         if (!instance->db->Prepare(R"(INSERT INTO rec_sequences (form, counter)
                                                       VALUES (?1, 1)
-                                                      ON CONFLICT (form)
-                                                          DO UPDATE SET counter = counter + 1
+                                                      ON CONFLICT (form) DO UPDATE SET counter = counter + 1
                                                       RETURNING counter)", &stmt))
                             return false;
                         sqlite3_bind_text(stmt, 1, record.form, -1, SQLITE_STATIC);

@@ -1611,8 +1611,7 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
             if (permissions) {
                 if (!gp_domain.db.Run(R"(INSERT INTO dom_permissions (instance, userid, permissions)
                                          VALUES (?1, ?2, ?3)
-                                         ON CONFLICT(instance, userid)
-                                             DO UPDATE SET permissions = excluded.permissions)",
+                                         ON CONFLICT (instance, userid) DO UPDATE SET permissions = excluded.permissions)",
                                       instance, userid, permissions))
                     return false;
             } else {
