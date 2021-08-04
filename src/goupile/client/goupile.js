@@ -350,6 +350,10 @@ const goupile = new function() {
             confirm_promise.finally(() => confirm_promise = null);
 
             return confirm_promise;
+        } else if (profile.type === 'token') {
+            throw new Error('Veuillez vous reconnecter à l\'aide du lien fourni par mail pour continuer');
+        } else {
+            throw new Error('Vous devez vous reconnecter pour continuer');
         }
     }
 
@@ -512,6 +516,8 @@ const goupile = new function() {
                     await runConfirmIdentity();
                     return true;
                 } catch (err) {
+                    if (err != null)
+                        log.error(err);
                     return false;
                 }
             } else {
