@@ -1732,17 +1732,17 @@ function InstanceController() {
             let url = contextualizeURL(route.page.url, form_record);
 
             let panels;
-            if (goupile.isLocked()) {
+            if (app.panels.editor + app.panels.data + app.panels.view < 2) {
                 panels = null;
-            } else if (form_record == null || !form_record.saved) {
+            } else if (url.match(/\/[A-Z0-9]{26}(@[0-9]+)?$/)) {
                 panels = ui.getEnabledPanels().join('|');
 
-                if (panels === 'data')
+                if (panels === 'view')
                     panels = null;
             } else {
                 panels = ui.getEnabledPanels().join('|');
 
-                if (panels === 'view')
+                if (panels === 'data')
                     panels = null;
             }
 
