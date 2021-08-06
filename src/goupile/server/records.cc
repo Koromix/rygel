@@ -415,7 +415,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                                           root_ulid, anchor))
                         return false;
 
-                    if (sqlite3_changes(*instance->db) && !record.hid && !record.parent.ulid) {
+                    if (sqlite3_changes(*instance->db) && !record.hid) {
                         int64_t rowid = sqlite3_last_insert_rowid(*instance->db);
 
                         sq_Statement stmt;
