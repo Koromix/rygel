@@ -497,6 +497,7 @@ bool http_IO::NegociateEncoding(CompressionType preferred1, CompressionType pref
 void http_IO::RunAsync(std::function<void()> func)
 {
     async_func = func;
+    async_func_response = false;
 }
 
 void http_IO::AddHeader(const char *key, const char *value)
@@ -568,6 +569,11 @@ void http_IO::AttachResponse(int new_code, MHD_Response *new_response)
     MHD_move_response_headers(response, new_response);
     MHD_destroy_response(response);
     response = new_response;
+
+    if (async_func_response) {
+        async_func = {};
+        async_func_response = false;
+    }
 }
 
 void http_IO::AttachText(int code, Span<const char> str, const char *mime_type)
@@ -591,9 +597,6 @@ bool http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_
             AttachNothing(code);
             AddEncodingHeader(dest_encoding);
         } else {
-            // XXX: This might cause problem if the caller tries to attach
-            // another response instead after this call.
-
             RunAsync([=, this]() {
                 StreamReader reader(data, nullptr, src_encoding);
 
@@ -606,6 +609,7 @@ bool http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_
                     return;
                 writer.Close();
             });
+            async_func_response = true;
         }
     } else {
         MHD_Response *response =

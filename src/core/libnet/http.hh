@@ -145,6 +145,7 @@ class http_IO {
     bool suspended = false;
 
     std::function<void()> async_func;
+    bool async_func_response = false;
     const char *last_err = nullptr;
 
     std::condition_variable read_cv;
