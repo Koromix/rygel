@@ -65,6 +65,7 @@ struct SessionStamp {
 
 enum class SessionConfirm {
     None,
+    Mail,
     SMS,
     TOTP,
     QRcode // Init TOTP

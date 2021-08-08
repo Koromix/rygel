@@ -202,6 +202,7 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
 
             switch (confirm) {
                 case SessionConfirm::None: { RG_UNREACHABLE(); } break;
+                case SessionConfirm::Mail: { json.Key("confirm"); json.String("mail"); } break;
                 case SessionConfirm::SMS: { json.Key("confirm"); json.String("sms"); } break;
                 case SessionConfirm::TOTP: { json.Key("confirm"); json.String("totp"); } break;
                 case SessionConfirm::QRcode: { json.Key("confirm"); json.String("qrcode"); } break;
@@ -574,9 +575,11 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
     });
 }
 
-static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, SessionType type,
-                                                const char *key, const char *sms)
+static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, SessionType type, const char *key,
+                                                const char *email, const char *sms, Allocator *alloc)
 {
+    RG_ASSERT(!email || !sms);
+
     char tmp[128];
 
     int64_t userid = 0;
@@ -631,7 +634,29 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
     userid = -userid;
 
     RetainPtr<SessionInfo> session;
-    if (sms) {
+    if (email) {
+        if (RG_UNLIKELY(!gp_domain.config.smtp.url)) {
+            LogError("This instance is not configured to send mails");
+            return nullptr;
+        }
+
+        char code[9];
+        {
+            uint32_t rnd = randombytes_uniform(1000000); // 6 digits
+            Fmt(code, "%1", FmtArg(rnd).Pad0(-6));
+        }
+
+        session = CreateUserSession(type, userid, key, local_key, SessionConfirm::Mail, code);
+        if (RG_UNLIKELY(!session))
+            return nullptr;
+
+        smtp_MailContent content;
+        content.subject = Fmt(alloc, "Vérifiation %1", instance->title).ptr;
+        content.text = Fmt(alloc, "Code: %1", code).ptr;
+
+        if (!SendMail(email, content))
+            return nullptr;
+    } else if (sms) {
         if (RG_UNLIKELY(gp_domain.config.sms.provider == sms_Provider::None)) {
             LogError("This instance is not configured to send SMS messages");
             return nullptr;
@@ -647,8 +672,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
         if (RG_UNLIKELY(!session))
             return nullptr;
 
-        char message[128];
-        Fmt(message, "Code: %1", code);
+        const char *message = Fmt(alloc, "Code: %1", code).ptr;
 
         if (!SendSMS(sms, message))
             return nullptr;
@@ -713,6 +737,7 @@ bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
     }
 
     // Parse JSON
+    const char *email = nullptr;
     const char *sms = nullptr;
     const char *tid = nullptr;
     {
@@ -724,7 +749,10 @@ bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
             const char *key = "";
             parser.ParseKey(&key);
 
-            if (TestStr(key, "sms")) {
+
+            if (TestStr(key, "email")) {
+                parser.ParseString(&email);
+            } else if (TestStr(key, "sms")) {
                 parser.ParseString(&sms);
             } else if (TestStr(key, "id")) {
                 parser.ParseString(&tid);
@@ -744,8 +772,12 @@ bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
     {
         bool valid = true;
 
+        if (email && !email[0]) {
+            LogError("Empty email address");
+            valid = false;
+        }
         if (sms && !sms[0]) {
-            LogError("Empty SMS");
+            LogError("Empty SMS phone number");
             valid = false;
         }
         if (!tid || !tid[0]) {
@@ -759,8 +791,8 @@ bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
         }
     }
 
-    if (sms) {
-        // Avoid confirmation flood (SMS are costly)
+    if (email || sms) {
+        // Avoid confirmation flood (spam for mails, and SMS are costly)
         RegisterFloodEvent(request.client_addr, tid);
     }
 
@@ -770,7 +802,7 @@ bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
         return false;
     }
 
-    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Token, tid, sms);
+    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Token, tid, email, sms, &io->allocator);
     if (!session)
         return false;
     sessions.Open(request, io, session);
@@ -787,7 +819,7 @@ bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
     if (!key || !key[0])
         return true;
 
-    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, key, nullptr);
+    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, key, nullptr, nullptr, &io->allocator);
     if (!session)
         return false;
     sessions.Open(request, io, session);
@@ -843,6 +875,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
         switch (session->confirm) {
             case SessionConfirm::None: { RG_UNREACHABLE(); } break;
 
+            case SessionConfirm::Mail:
             case SessionConfirm::SMS: {
                 if (TestStr(code, session->secret)) {
                     session->confirm = SessionConfirm::None;

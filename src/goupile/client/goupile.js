@@ -285,6 +285,7 @@ const goupile = new function() {
                     <div id="gp_title">${ENV.title}</div>
                     <br/><br/>
                 ` : ''}
+                ${method == 'mail' ? html`Entrez le code secret qui vous a été <b>envoyé par mail</b>.` : ''}
                 ${method == 'sms' ? html`Entrez le code secret qui vous a été <b>envoyé par SMS</b>.` : ''}
                 ${method == 'totp' ? html`Entrez le code secret affiché <b>par l'application d'authentification</b>.` : ''}
                 ${method == 'qrcode' ? html`
