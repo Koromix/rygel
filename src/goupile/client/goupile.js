@@ -297,7 +297,7 @@ const goupile = new function() {
                 ` : ''}
                 <br/>
             `);
-            let code = d.text('*code', 'Code secret', { help : '6 chiffres' });
+            let code = d.text('*code', 'Code secret', { help : '6 à 8 chiffres' });
 
             if (errors >= 2) {
                 d.output(html`
