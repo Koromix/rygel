@@ -653,6 +653,12 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
         smtp_MailContent content;
         content.subject = Fmt(alloc, "Vérifiation %1", instance->title).ptr;
         content.text = Fmt(alloc, "Code: %1", code).ptr;
+        content.html = Fmt(alloc, R"(
+            <div style="text-align: center;">
+                <p style="font-size: 1.3em;">Code de vérification</p>
+                <p style="font-size: 3em; font-weight: bold;">%1</p>
+            </div>
+        )", code).ptr;
 
         if (!SendMail(email, content))
             return nullptr;
