@@ -463,7 +463,8 @@ function AdminController() {
                     instances = null;
                     selected_permissions = null;
 
-                    self.go();
+                    let url = util.pasteURL('/admin/', { select: key.value });
+                    self.go(null, url);
                 } else {
                     let err = (await response.text()).trim();
 
@@ -644,7 +645,8 @@ function AdminController() {
                     instances = null;
                     selected_permissions = null;
 
-                    self.go();
+                    let url = util.pasteURL('/admin/', { select: full_key });
+                    self.go(null, url);
                 } else {
                     let err = (await response.text()).trim();
 
