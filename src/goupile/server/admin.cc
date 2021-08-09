@@ -511,6 +511,16 @@ retry:
 
         if (!sec_CheckPassword(password, username))
             goto retry;
+
+reconfirm:
+        const char *confirm = Prompt("Confirm: ", "*", &temp_alloc);
+        if (!confirm)
+            return 1;
+
+        if (!TestStr(password, confirm)) {
+            LogError("Password mismatch");
+            goto reconfirm;
+        }
     }
     LogInfo();
 
