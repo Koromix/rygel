@@ -73,10 +73,6 @@ retry:
         password = Prompt("Password: ", mask ? "*" : nullptr, &temp_alloc);
         if (!password)
             return 1;
-        if (!password[0]) {
-            LogError("Password must not be empty");
-            return 1;
-        }
 
         if (check && !sec_CheckPassword(password))
             goto retry;
