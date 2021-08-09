@@ -23,7 +23,7 @@ namespace RG {
 // If you change InstanceVersion, don't forget to update the migration switch!
 const int InstanceVersion = 43;
 
-bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db)
+bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
     master = master ? master : this;
 
@@ -44,10 +44,15 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
 
             return false;
         } else if (version < InstanceVersion) {
-            const char *filename = sqlite3_db_filename(*db, "main");
-            LogError("Schema of '%1' is outdated", filename);
+            if (migrate) {
+                if (!MigrateInstance(db))
+                    return false;
+            } else {
+                const char *filename = sqlite3_db_filename(*db, "main");
 
-            return false;
+                LogError("Schema of '%1' is outdated", filename);
+                return false;
+            }
         }
     }
 

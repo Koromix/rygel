@@ -78,7 +78,7 @@ public:
 private:
     InstanceHolder() {};
 
-    bool Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db);
+    bool Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate);
 
     friend class DomainHolder;
 };

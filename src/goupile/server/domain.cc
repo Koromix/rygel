@@ -106,6 +106,8 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         }
                     } else if (prop.key == "SynchronousFull") {
                         valid &= ParseBool(prop.value, &config.sync_full);
+                    } else if (prop.key == "AutoMigrate") {
+                        valid &= ParseBool(prop.value, &config.auto_migrate);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -214,26 +216,9 @@ bool DomainHolder::Open(const char *filename)
     RG_DEFER_N(err_guard) { Close(); };
     Close();
 
-    // Load config and database
+    // Load config file
     if (!LoadConfig(filename, &config))
         return false;
-    if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))
-        return false;
-
-    // Check schema version
-    {
-        int version;
-        if (!db.GetUserVersion(&version))
-            return false;
-
-        if (version > DomainVersion) {
-            LogError("Domain schema is too recent (%1, expected %2)", version, DomainVersion);
-            return false;
-        } else if (version < DomainVersion) {
-            LogError("Domain schema is outdated");
-            return false;
-        }
-    }
 
     // Make sure directories exist
     if (!MakeDirectory(config.tmp_directory, false))
@@ -241,6 +226,16 @@ bool DomainHolder::Open(const char *filename)
     if (!MakeDirectory(config.archive_directory, false))
         return false;
     if (!MakeDirectory(config.snapshot_directory, false))
+        return false;
+
+    // Open and configure main database
+    if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))
+        return false;
+    if (!db.SetWAL(true))
+        return false;
+    if (!db.SetSynchronousFull(config.sync_full))
+        return false;
+    if (!db.SetSnapshotDirectory(config.snapshot_directory, FullSnapshotDelay))
         return false;
 
     // Make sure tmp and instances live on the same volume, because we need to
@@ -256,13 +251,25 @@ bool DomainHolder::Open(const char *filename)
         }
     }
 
-    // Properly configure database
-    if (!db.SetWAL(true))
-        return false;
-    if (!db.SetSynchronousFull(config.sync_full))
-        return false;
-    if (!db.SetSnapshotDirectory(config.snapshot_directory, FullSnapshotDelay))
-        return false;
+    // Check schema version
+    {
+        int version;
+        if (!db.GetUserVersion(&version))
+            return false;
+
+        if (version > DomainVersion) {
+            LogError("Domain schema is too recent (%1, expected %2)", version, DomainVersion);
+            return false;
+        } else if (version < DomainVersion) {
+            if (config.auto_migrate) {
+                if (!MigrateDomain(&db, config.instances_directory))
+                    return false;
+            } else {
+                LogError("Domain schema is outdated");
+                return false;
+            }
+        }
+    }
 
     err_guard.Disable();
     return true;
@@ -525,7 +532,7 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
 
             LogDebug("Reconfigure instance '%1' @%2", start.instance_key, unique);
 
-            if (!instance->Open(unique, master, start.instance_key, prev_instance->db)) {
+            if (!instance->Open(unique, master, start.instance_key, prev_instance->db, false)) {
                 complete = false;
                 continue;
             }
@@ -555,7 +562,7 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
 
             LogDebug("Open instance '%1' @%2", start.instance_key, unique);
 
-            if (!instance->Open(unique, master, start.instance_key, db)) {
+            if (!instance->Open(unique, master, start.instance_key, db, config.auto_migrate)) {
                 complete = false;
                 continue;
             }

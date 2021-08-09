@@ -109,14 +109,6 @@ def create_domain(binary, root_dir, domain, archive_key,
                      '--title', domain, '--username', admin_username,
                      '--password', admin_password, directory])
 
-def migrate_domain(binary, domain, info):
-    print(f'  + Migrate domain {domain} ({info.main_directory})', file = sys.stderr)
-    filename = os.path.join(info.main_directory, 'goupile.ini')
-    execute_command([binary, 'migrate', '-C', filename])
-
-    # Does not hurt safety
-    os.chmod(info.main_directory, 0o700)
-
 def list_services():
     services = {}
 
@@ -252,9 +244,7 @@ def run_sync(config):
         if status is None:
             run_service_command(domain, 'enable')
         if status is None or info.mismatch or not status.running:
-            run_service_command(domain, 'stop')
-            migrate_domain(binary, domain, info)
-            run_service_command(domain, 'start')
+            run_service_command(domain, 'restart')
             changed = True
 
     # Nothing changed!

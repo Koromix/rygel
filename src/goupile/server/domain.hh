@@ -36,6 +36,7 @@ struct DomainConfig {
     uint8_t archive_key[32] = {}; // crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES
     bool enable_archives = false;
     bool sync_full = false;
+    bool auto_migrate = true;
 
     // XXX: Restore http_Config designated initializers when MSVC ICE is fixed
     // https://developercommunity.visualstudio.com/content/problem/1238876/fatal-error-c1001-ice-with-ehsc.html
