@@ -52,7 +52,7 @@ public:
     sq_Binding(long i) : type(Type::Integer) { u.i = i; }
     sq_Binding(long long i) : type(Type::Integer) { u.i = i; }
     sq_Binding(double d) : type(Type::Double) { u.d = d; };
-    sq_Binding(const char *str) : type(Type::String) { u.str = str; };
+    sq_Binding(const char *str) : type(Type::String) { u.str = str; }; // nullptr results in NULL binding
     sq_Binding(Span<const char> str) : type(Type::String) { u.str = str; };
     sq_Binding(Span<const uint8_t> blob) : type(Type::Blob) { u.blob = blob; };
 
