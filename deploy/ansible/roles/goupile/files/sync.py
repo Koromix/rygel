@@ -153,7 +153,7 @@ def run_service_command(domain, cmd):
     print(f'  + {cmd.capitalize()} {service}', file = sys.stderr)
     execute_command(['systemctl', cmd, '--quiet', service])
 
-def update_domain_config(domain, info, archive_key, backup, smtp, sms):
+def update_domain_config(domain, info, archive_key, smtp, sms):
     filename = os.path.join(info.main_directory, 'goupile.ini')
     ini = parse_ini(filename)
 
@@ -164,8 +164,8 @@ def update_domain_config(domain, info, archive_key, backup, smtp, sms):
     ini.remove_section('Paths')
     ini.set('Data', 'SnapshotDirectory', info.snapshot_directory)
     ini.set('Data', 'ArchiveKey', archive_key)
-    ini.set('Data', 'SnapshotHour', backup['SnapshotHour'])
-    ini.set('Data', 'SnapshotZone', backup['SnapshotZone'])
+    ini.remove_option('Data', 'SnapshotHour')
+    ini.remove_option('Data', 'SnapshotZone')
 
     if not ini.has_section('HTTP'):
         ini.add_section('HTTP')
@@ -204,7 +204,7 @@ def run_sync(config):
                           config['Goupile.DefaultAdmin'], config['Goupile.DefaultPassword'])
 
     # List existing domains and services
-    domains = list_domains(config['Goupile.DomainDirectory'], config['Backup.SnapshotDirectory'], config['Domains'].keys())
+    domains = list_domains(config['Goupile.DomainDirectory'], config['Goupile.SnapshotDirectory'], config['Domains'].keys())
     services = list_services()
 
     # Detect binary mismatches
@@ -233,10 +233,9 @@ def run_sync(config):
     print('>>> Update Goupile configuration files', file = sys.stderr)
     for domain, info in domains.items():
         archive_key = config['Domains'][domain]
-        backup = config.get('Backup')
         smtp = config.get('SMTP')
         sms = config.get('SMS')
-        if update_domain_config(domain, info, archive_key, backup, smtp, sms):
+        if update_domain_config(domain, info, archive_key, smtp, sms):
             info.mismatch = True
             changed = True
 
@@ -273,6 +272,6 @@ if __name__ == '__main__':
     config = load_config('sync.ini')
     config['Goupile.BinaryFile'] = os.path.abspath(config['Goupile.BinaryFile'])
     config['Goupile.DomainDirectory'] = os.path.abspath(config['Goupile.DomainDirectory'])
-    config['Backup.SnapshotDirectory'] = os.path.abspath(config['Backup.SnapshotDirectory'])
+    config['Goupile.SnapshotDirectory'] = os.path.abspath(config['Goupile.SnapshotDirectory'])
 
     run_sync(config)

@@ -106,22 +106,6 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         }
                     } else if (prop.key == "SynchronousFull") {
                         valid &= ParseBool(prop.value, &config.sync_full);
-                    } else if (prop.key == "SnapshotHour") {
-                        valid &= ParseInt(prop.value, &config.snapshot_hour);
-
-                        if (ParseInt(prop.value, &config.snapshot_hour)) {
-                            if (config.snapshot_hour < 0 || config.snapshot_hour > 23) {
-                                LogError("SnapshotHour is outside of 0-23 (inclusive) range");
-                                valid = false;
-                            }
-                        } else {
-                            valid = false;
-                        }
-                    } else if (prop.key == "SnapshotZone") {
-                        if (!OptionToEnum(TimeModeNames, prop.value, &config.snapshot_zone)) {
-                            LogError("Unknown time mode '%1'", prop.value);
-                            valid = false;
-                        }
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
