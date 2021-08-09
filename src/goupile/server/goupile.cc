@@ -816,7 +816,7 @@ Options:
 Other commands:
     %!..+init%!0                         Create new domain
     %!..+migrate%!0                      Migrate existing domain
-    %!..+unreal%!0                       Unseal domain archive
+    %!..+unseal%!0                       Unseal domain archive
 
 For help about those commands, type: %!..+%1 <command> --help%!0)",
                 FelixTarget, config_filename, gp_domain.config.http.port);
