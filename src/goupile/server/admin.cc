@@ -49,6 +49,7 @@ Title = %1
 # SnapshotDirectory = snapshots
 ArchiveKey = %2
 # SynchronousFull = Off
+# AutoMigrate = On
 
 [SMS]
 # Provider = Twilio
