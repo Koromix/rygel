@@ -292,7 +292,10 @@ bool sec_CheckPassword(Span<const char> password, Span<const char *const> blackl
     password = buf;
 
     // Minimal length
-    if (password.len < 8) {
+    if (!password.len) {
+        LogError("Password is empty");
+        return false;
+    } else if (password.len < 8) {
         LogError("Password is too short");
         return false;
     }
