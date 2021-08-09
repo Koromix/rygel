@@ -4230,7 +4230,7 @@ struct BrotliDecompressContext {
 bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
                         CompressionType compression_type)
 {
-    RG_ASSERT(!this->filename);
+    Close();
 
     RG_DEFER_N(error_guard) { error = true; };
     error = false;
@@ -4250,7 +4250,7 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
 
 bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compression_type)
 {
-    RG_ASSERT(!this->filename);
+    Close();
 
     RG_DEFER_N(error_guard) { error = true; };
     error = false;
@@ -4272,7 +4272,7 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
 
 bool StreamReader::Open(const char *filename, CompressionType compression_type)
 {
-    RG_ASSERT(!this->filename);
+    Close();
 
     RG_DEFER_N(error_guard) { error = true; };
     error = false;
@@ -4296,7 +4296,7 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
 bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename,
                         CompressionType compression_type)
 {
-    RG_ASSERT(!this->filename);
+    Close();
 
     RG_DEFER_N(error_guard) { error = true; };
     error = false;
@@ -4908,7 +4908,7 @@ struct MinizDeflateContext {
 bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
                         CompressionType compression_type, CompressionSpeed compression_speed)
 {
-    RG_ASSERT(!this->filename);
+    Close();
 
     RG_DEFER_N(error_guard) { error = true; };
     error = false;
@@ -4930,7 +4930,7 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
 bool StreamWriter::Open(FILE *fp, const char *filename,
                         CompressionType compression_type, CompressionSpeed compression_speed)
 {
-    RG_ASSERT(!this->filename);
+    Close();
 
     RG_DEFER_N(error_guard) { error = true; };
     error = false;
@@ -4954,7 +4954,7 @@ bool StreamWriter::Open(FILE *fp, const char *filename,
 bool StreamWriter::Open(const char *filename, unsigned int flags,
                         CompressionType compression_type, CompressionSpeed compression_speed)
 {
-    RG_ASSERT(!this->filename);
+    Close();
 
     RG_DEFER_N(error_guard) { error = true; };
     error = false;
@@ -5003,7 +5003,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
 bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename,
                         CompressionType compression_type, CompressionSpeed compression_speed)
 {
-    RG_ASSERT(!this->filename);
+    Close();
 
     RG_DEFER_N(error_guard) { error = true; };
     error = false;
