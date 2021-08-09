@@ -28,10 +28,6 @@ bool DomainConfig::Validate() const
 {
     bool valid = true;
 
-    if (!title || !title[0]) {
-        LogError("Missing domain title");
-        valid = false;
-    }
     if (!enable_archives) {
         LogError("Domain archive key is not set");
         valid = false;
@@ -188,6 +184,12 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
         return false;
 
     // Default values
+    if (!config.title) {
+        Span<const char> basename = SplitStrReverseAny(root_directory, RG_PATH_SEPARATORS);
+        config.title = DuplicateString(basename, &config.str_alloc).ptr;
+
+        LogError("Domain title is not set, using '%1'", config.title);
+    }
     if (!config.database_filename) {
         config.database_filename = NormalizePath("goupile.db", root_directory, &config.str_alloc).ptr;
     }
