@@ -1522,9 +1522,9 @@ public:
         return first;
     }
 
-    T *Append(const T &value)
+    T *Append(const T &value, Allocator **out_alloc = nullptr)
     {
-        T *it = AppendDefault();
+        T *it = AppendDefault(out_alloc);
         *it = value;
         return it;
     }
