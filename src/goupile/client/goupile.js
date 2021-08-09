@@ -285,10 +285,10 @@ const goupile = new function() {
                     <div id="gp_title">${ENV.title}</div>
                     <br/><br/>
                 ` : ''}
-                ${method == 'mail' ? html`Entrez le code secret qui vous a été <b>envoyé par mail</b>.` : ''}
-                ${method == 'sms' ? html`Entrez le code secret qui vous a été <b>envoyé par SMS</b>.` : ''}
-                ${method == 'totp' ? html`Entrez le code secret affiché <b>par l'application d'authentification</b>.` : ''}
-                ${method == 'qrcode' ? html`
+                ${method === 'mail' ? html`Entrez le code secret qui vous a été <b>envoyé par mail</b>.` : ''}
+                ${method === 'sms' ? html`Entrez le code secret qui vous a été <b>envoyé par SMS</b>.` : ''}
+                ${method === 'totp' ? html`Entrez le code secret affiché <b>par l'application d'authentification</b>.` : ''}
+                ${method === 'qrcode' ? html`
                     <p>Scannez ce QR code avec une <b>application d'authentification
                     pour mobile</b> puis saississez le code donné par cette application.</p>
                     <p><i>Applications : FreeOTP, Authy, etc.</i></p>
@@ -297,7 +297,13 @@ const goupile = new function() {
                 ` : ''}
                 <br/>
             `);
-            let code = d.text('*code', 'Code secret', { help : '6 à 8 chiffres' });
+            let code = d.text('*code', 'Code secret', {
+                help: 'Le code comporte 6 à 8 chiffres'
+            });
+
+            if (method === 'mail' || method === 'sms') {
+                d.output(html`<i>Si vous ne trouvez pas ce message, pensez à vérifiez vos spams.</i>`);
+            }
 
             if (errors >= 2) {
                 d.output(html`
