@@ -478,7 +478,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
         if (instance) {
             if (instance->slaves.len) {
                 if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.admin,
-                                                    u.local_key, u.totp_required, u.totp_secret
+                                                    u.local_key, u.confirm, u.secret
                                              FROM dom_users u
                                              INNER JOIN dom_permissions p ON (p.userid = u.userid)
                                              INNER JOIN dom_instances i ON (i.instance = p.instance)
@@ -487,7 +487,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                     return;
             } else {
                 if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.admin,
-                                                    u.local_key, u.totp_required, u.totp_secret
+                                                    u.local_key, u.confirm, u.secret
                                              FROM dom_users u
                                              INNER JOIN dom_permissions p ON (p.userid = u.userid)
                                              INNER JOIN dom_instances i ON (i.instance = p.instance)
@@ -499,7 +499,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
             sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
         } else {
             if (!gp_domain.db.Prepare(R"(SELECT userid, password_hash, admin,
-                                                local_key, totp_required, totp_secret
+                                                local_key, confirm, secret
                                          FROM dom_users
                                          WHERE username = ?1 AND admin = 1)", &stmt))
                 return;
@@ -511,8 +511,8 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
             bool admin = (sqlite3_column_int(stmt, 2) == 1);
             const char *local_key = (const char *)sqlite3_column_text(stmt, 3);
-            bool totp_required = (sqlite3_column_int(stmt, 4) == 1);
-            const char *totp_secret = (const char *)sqlite3_column_text(stmt, 5);
+            const char *confirm = (const char *)sqlite3_column_text(stmt, 4);
+            const char *secret = (const char *)sqlite3_column_text(stmt, 5);
 
             if (IsUserBanned(request.client_addr, username)) {
                 LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
@@ -529,17 +529,20 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                     return;
 
                 RetainPtr<SessionInfo> session;
-                if (totp_required) {
-                    if (totp_secret) {
+                if (!confirm) {
+                    session = CreateUserSession(SessionType::Login, userid, username, local_key,
+                                                SessionConfirm::None, nullptr);
+                } else if (TestStr(confirm, "TOTP")) {
+                    if (secret) {
                         session = CreateUserSession(SessionType::Login, userid, username, local_key,
-                                                    SessionConfirm::TOTP, totp_secret);
+                                                    SessionConfirm::TOTP, secret);
                     } else {
                         session = CreateUserSession(SessionType::Login, userid, username, local_key,
                                                     SessionConfirm::QRcode, nullptr);
                     }
                 } else {
-                    session = CreateUserSession(SessionType::Login, userid, username, local_key,
-                                                SessionConfirm::None, nullptr);
+                    LogError("Invalid confirmation method '%1'", confirm);
+                    return;
                 }
 
                 if (RG_LIKELY(session)) {
@@ -905,7 +908,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
 
                 if (sec_CheckHotp(session->secret, sec_HotpAlgorithm::SHA1, time / 30000, 6, 1, code)) {
                     if (session->confirm == SessionConfirm::QRcode) {
-                        if (!gp_domain.db.Run("UPDATE dom_users SET totp_secret = ?2 WHERE userid = ?1",
+                        if (!gp_domain.db.Run("UPDATE dom_users SET secret = ?2 WHERE userid = ?1",
                                               session->userid, session->secret))
                             return;
                     }
@@ -1208,7 +1211,7 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
                                      VALUES (?1, ?2, ?3, ?4))",
                                   time, request.client_addr, "change_totp", session->username))
                 return false;
-            if (!gp_domain.db.Run("UPDATE dom_users SET totp_required = 1, totp_secret = ?2 WHERE userid = ?1",
+            if (!gp_domain.db.Run("UPDATE dom_users SET confirm = 'TOTP', secret = ?2 WHERE userid = ?1",
                                   session->userid, session->secret))
                 return false;
 

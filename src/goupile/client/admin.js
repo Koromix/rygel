@@ -671,7 +671,9 @@ function AdminController() {
                     password2.error('Mot de passe trop court', true);
                 }
             }
-            let totp = d.boolean('totp', 'Authentification 2FA (TOTP)', {value: true, untoggle: false});
+            let confirm = d.enumDrop('confirm', 'Méthode de confirmation', [
+                ['totp', 'TOTP'],
+            ]);
 
             let email = d.text('email', 'Courriel');
             if (email.value != null && !email.value.includes('@'))
@@ -686,7 +688,7 @@ function AdminController() {
                 let query = new URLSearchParams;
                 query.set('username', username.value);
                 query.set('password', password.value);
-                query.set('totp', totp.value ? 1 : 0);
+                query.set('confirm', confirm.value || '');
                 if (email.value != null)
                     query.set('email', email.value);
                 if (phone.value != null)
@@ -797,9 +799,14 @@ function AdminController() {
                             password2.error('Mot de passe trop court', true);
                         }
                     }
-                    let totp = d.boolean('totp', 'Authentification 2FA (TOTP)', {value: user.totp});
-                    let totp_reset = d.boolean('totp_reset', 'Réinitialiser le secret TOTP', {value: !user.totp, untoggle: false,
-                                                                                              disabled: !totp.value});
+                    let confirm = d.enumDrop('confirm', 'Méthode de confirmation', [
+                        ['totp', 'TOTP'],
+                    ], { value: user.confirm, untoggle: true });
+                    let reset_secret = d.boolean('reset_secret', 'Réinitialiser le secret TOTP', {
+                        value: user.confirm == null,
+                        disabled: confirm.value == null,
+                        untoggle: false
+                    });
 
                     let email = d.text('email', 'Courriel', {value: user.email});
                     if (email.value != null && !email.value.includes('@'))
@@ -817,10 +824,8 @@ function AdminController() {
                             query.set('username', username.value);
                         if (password.value != null)
                             query.set('password', password.value);
-                        if (totp.value != null) {
-                            query.set('totp', 0 + totp.value);
-                            query.set('totp_reset', 0 + totp_reset.value);
-                        }
+                        query.set('confirm', confirm.value || '');
+                        query.set('reset_secret', 0 + reset_secret.value);
                         if (email.value != null)
                             query.set('email', email.value);
                         if (phone.value != null)

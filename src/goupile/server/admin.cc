@@ -368,7 +368,7 @@ int RunInit(Span<const char *> arguments)
     const char *title = nullptr;
     const char *username = nullptr;
     const char *password = nullptr;
-    bool totp = true;
+    bool totp = false;
     char archive_key[45] = {};
     char decrypt_key[45] = {};
     const char *demo = nullptr;
@@ -385,7 +385,7 @@ Options:
 
     %!..+-u, --username <username>%!0    Name of default user
         %!..+--password <pwd>%!0         Password of default user
-        %!..+--no_totp%!0                Disable TOTP for admin user
+        %!..+--totp%!0                   Enable TOTP for admin user
 
         %!..+--archive_key <key>%!0      Set domain public archive key
 
@@ -411,8 +411,8 @@ Options:
                 username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 password = opt.current_value;
-            } else if (opt.Test("--no_totp")) {
-                totp = false;
+            } else if (opt.Test("--totp")) {
+                totp = true;
             } else if (opt.Test("--archive_key", OptionType::Value)) {
                 RG_STATIC_ASSERT(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
 
@@ -587,8 +587,8 @@ retry:
             sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
         }
 
-        if (!domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash, admin, local_key, totp_required)
-                              VALUES (1, ?1, ?2, 1, ?3, ?4))", username, hash, local_key, 0 + totp))
+        if (!domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash, admin, local_key, confirm)
+                              VALUES (1, ?1, ?2, 1, ?3, ?4))", username, hash, local_key, totp ? "TOTP" : nullptr))
             return 1;
     }
 
@@ -2405,7 +2405,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
         // Read POST values
         const char *username;
         const char *password;
-        bool totp;
+        const char *confirm;
         const char *email;
         const char *phone;
         bool admin;
@@ -2414,6 +2414,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
 
             username = values.FindValue("username", nullptr);
             password = values.FindValue("password", nullptr);
+            confirm = values.FindValue("confirm", nullptr);
             email = values.FindValue("email", nullptr);
             phone = values.FindValue("phone", nullptr);
             if (!username || !password) {
@@ -2426,11 +2427,17 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
             if (password && !sec_CheckPassword(password)) {
                 valid = false;
             }
-            if (const char *str = values.FindValue("totp", nullptr); str) {
-                valid &= ParseBool(str, &totp);
-            } else {
-                LogError("Missing 'totp' parameter");
-                valid = false;
+            if (confirm) {
+                if (confirm[0]) {
+                    if (TestStr(confirm, "totp")) {
+                        confirm = "TOTP";
+                    } else {
+                        LogError("Invalid confirmation method '%1'", confirm);
+                        valid = false;
+                    }
+                } else {
+                    confirm = nullptr;
+                }
             }
 
             if (email && !strchr(email, '@')) {
@@ -2490,9 +2497,9 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
 
             // Create user
             if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, email, phone,
-                                                            admin, local_key, totp_required)
+                                                            admin, local_key, confirm)
                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
-                                  username, hash, email, phone, 0 + admin, local_key, 0 + totp))
+                                  username, hash, email, phone, 0 + admin, local_key, confirm))
                 return false;
 
             io->AttachText(200, "Done!");
@@ -2532,8 +2539,9 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
         int64_t userid;
         const char *username;
         const char *password;
-        bool totp, set_totp = false;
-        bool totp_reset;
+        const char *confirm;
+        bool set_confirm = false;
+        bool reset_secret = false;
         const char *email;
         const char *phone;
         bool admin, set_admin = false;
@@ -2550,6 +2558,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
 
             username = values.FindValue("username", nullptr);
             password = values.FindValue("password", nullptr);
+            confirm = values.FindValue("confirm", nullptr);
             email = values.FindValue("email", nullptr);
             phone = values.FindValue("phone", nullptr);
             if (username && !CheckUserName(username)) {
@@ -2558,10 +2567,22 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
             if (password && !sec_CheckPassword(password)) {
                 valid = false;
             }
-            if (const char *str = values.FindValue("totp", nullptr); str) {
-                valid &= ParseBool(str, &totp);
-                valid &= ParseBool(values.FindValue("totp_reset", "0"), &totp_reset);
-                set_totp = true;
+            if (confirm) {
+                if (confirm[0]) {
+                    if (TestStr(confirm, "totp")) {
+                        confirm = "TOTP";
+                    } else {
+                        LogError("Invalid confirmation method '%1'", confirm);
+                        valid = false;
+                    }
+                } else {
+                    confirm = nullptr;
+                }
+
+                set_confirm = true;
+            }
+            if (const char *str = values.FindValue("reset_secret", nullptr); str) {
+                valid &= ParseBool(str, &reset_secret);
             }
 
             if (email && !strchr(email, '@')) {
@@ -2626,12 +2647,10 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
                 return false;
             if (password && !gp_domain.db.Run("UPDATE dom_users SET password_hash = ?2 WHERE userid = ?1", userid, hash))
                 return false;
-            if (set_totp) {
-                if (!gp_domain.db.Run("UPDATE dom_users SET totp_required = ?2 WHERE userid = ?1", userid, 0 + totp))
-                    return false;
-                if (totp_reset && !gp_domain.db.Run("UPDATE dom_users SET totp_secret = NULL WHERE userid = ?1", userid))
-                    return false;
-            }
+            if (set_confirm && !gp_domain.db.Run("UPDATE dom_users SET confirm = ?2 WHERE userid = ?1", userid, confirm))
+                return false;
+            if (reset_secret && !gp_domain.db.Run("UPDATE dom_users SET secret = NULL WHERE userid = ?1", userid))
+                return false;
             if (email && !gp_domain.db.Run("UPDATE dom_users SET email = ?2 WHERE userid = ?1", userid, email))
                 return false;
             if (phone && !gp_domain.db.Run("UPDATE dom_users SET phone = ?2 WHERE userid = ?1", userid, phone))
@@ -2753,7 +2772,7 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!gp_domain.db.Prepare(R"(SELECT userid, username, email, phone, admin, totp_required
+    if (!gp_domain.db.Prepare(R"(SELECT userid, username, email, phone, admin, LOWER(confirm)
                                  FROM dom_users
                                  ORDER BY username)", &stmt))
         return;
@@ -2779,7 +2798,11 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
             json.Key("phone"); json.Null();
         }
         json.Key("admin"); json.Bool(sqlite3_column_int(stmt, 4));
-        json.Key("totp"); json.Bool(sqlite3_column_int(stmt, 5));
+        if (sqlite3_column_type(stmt, 5) != SQLITE_NULL) {
+            json.Key("confirm"); json.String((const char *)sqlite3_column_text(stmt, 5));
+        } else {
+            json.Key("confirm"); json.Null();
+        }
         json.EndObject();
     }
     if (!stmt.IsValid())
