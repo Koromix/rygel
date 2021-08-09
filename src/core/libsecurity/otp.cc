@@ -15,7 +15,7 @@
 #include "otp.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 #include "../../../vendor/mbedtls/include/mbedtls/sha1.h"
-#include "../../../vendor/qrcodegen/QrCode.hpp"
+#include "../../../vendor/qrcodegen/qrcodegen.hpp"
 #include "../../../vendor/miniz/miniz.h"
 
 namespace RG {
