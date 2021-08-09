@@ -37,6 +37,14 @@
 
 namespace RG {
 
+struct RenderInfo {
+    const char *url;
+    AssetInfo asset;
+    int64_t time;
+
+    RG_HASHTABLE_HANDLER(RenderInfo, url);
+};
+
 DomainHolder gp_domain;
 
 static HashMap<const char *, const AssetInfo *> assets_map;
@@ -44,6 +52,12 @@ static const AssetInfo *assets_root;
 static HeapArray<const char *> assets_for_cache;
 static LinkedAllocator assets_alloc;
 static char shared_etag[17];
+
+static std::shared_mutex render_mutex;
+static BucketArray<RenderInfo, 8> render_cache;
+static HashTable<const char *, RenderInfo *> render_map;
+
+static const int64_t MaxRenderDelay = 20 * 60000;
 
 static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *const> mask_files)
 {
@@ -278,6 +292,58 @@ static void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &r
     json.Finish();
 }
 
+static const AssetInfo *RenderTemplate(const char *url, const AssetInfo &asset,
+                                       FunctionRef<void(const char *, StreamWriter *)> func)
+{
+    RenderInfo *render;
+    {
+        std::shared_lock<std::shared_mutex> lock_shr(render_mutex);
+        render = render_map.FindValue(url, nullptr);
+    }
+
+    if (!render) {
+        std::lock_guard<std::shared_mutex> lock_excl(render_mutex);
+        render = render_map.FindValue(url, nullptr);
+
+        if (!render) {
+            Allocator *alloc;
+            render = render_cache.AppendDefault(&alloc);
+
+            render->url = DuplicateString(url, alloc).ptr;
+            render->asset = asset;
+            render->asset.data = PatchAsset(asset, alloc, func);
+            render->time = GetMonotonicTime();
+
+            render_map.Set(render);
+
+            LogDebug("Rendered '%1' with '%2'", url, asset.name);
+        }
+    }
+
+    return &render->asset;
+}
+
+static void PruneRenders()
+{
+    std::lock_guard lock_excl(render_mutex);
+
+    int64_t now = GetMonotonicTime();
+
+    Size expired = 0;
+    for (const RenderInfo &render: render_cache) {
+        if (now - render.time < MaxRenderDelay)
+            break;
+
+        render_map.Remove(render.url);
+        expired++;
+    }
+
+    render_cache.RemoveFirst(expired);
+
+    render_cache.Trim();
+    render_map.Trim();
+}
+
 static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
 {
     RG_ASSERT(StartsWith(request.url, "/admin/") || TestStr(request.url, "/admin"));
@@ -297,8 +363,7 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
             const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
             RG_ASSERT(asset);
 
-            AssetInfo copy = *asset;
-            copy.data = PatchAsset(copy, &io->allocator, [&](const char *key, StreamWriter *writer) {
+            const AssetInfo *render = RenderTemplate(request.url, *asset, [&](const char *key, StreamWriter *writer) {
                 if (TestStr(key, "VERSION")) {
                     writer->Write(FelixVersion);
                 } else if (TestStr(key, "TITLE")) {
@@ -331,14 +396,15 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
                     Print(writer, "{%1}", key);
                 }
             });
+            AttachStatic(*render, 0, shared_etag, request, io);
 
-            AttachStatic(copy, 0, shared_etag, request, io);
             return;
         } else if (TestStr(admin_url, "/favicon.png")) {
             const AssetInfo *asset = assets_map.FindValue("/admin/favicon.png", nullptr);
             RG_ASSERT(asset);
 
             AttachStatic(*asset, 0, shared_etag, request, io);
+
             return;
         } else {
             const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
@@ -494,11 +560,9 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
             int64_t fs_version = master->fs_version.load(std::memory_order_relaxed);
 
             char master_etag[64];
-            Fmt(master_etag, "%1_%2_%3", shared_etag, master->unique, fs_version);
+            Fmt(master_etag, "%1_%2_%3_%4", shared_etag, (const void *)asset, master->unique, fs_version);
 
-            // XXX: Use some kind of dynamic cache to avoid doing this all the time
-            AssetInfo copy = *asset;
-            copy.data = PatchAsset(copy, &io->allocator, [&](const char *key, StreamWriter *writer) {
+            const AssetInfo *render = RenderTemplate(master_etag, *asset, [&](const char *key, StreamWriter *writer) {
                 if (TestStr(key, "VERSION")) {
                     writer->Write(FelixVersion);
                 } else if (TestStr(key, "TITLE")) {
@@ -549,8 +613,8 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
                     Print(writer, "{%1}", key);
                 }
             });
+            AttachStatic(*render, 0, master_etag, request, io);
 
-            AttachStatic(copy, 0, master_etag, request, io);
             return;
         } else if (asset) {
             int max_age = StartsWith(instance_url, "/static/") ? (365 * 86400) : 0;
@@ -613,6 +677,9 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         if (ReloadAssets()) {
             LogInfo("Reload assets");
             InitAssets();
+
+            render_cache.Clear();
+            render_map.Clear();
         }
     }
 #endif
@@ -659,8 +726,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     // If new base URLs are added besides "/admin", RunCreateInstance() must be modified
     // to forbid the instance key.
     if (TestStr(request.url, "/")) {
-        AssetInfo copy = *assets_root;
-        copy.data = PatchAsset(copy, &io->allocator, [&](const char *key, StreamWriter *writer) {
+        const AssetInfo *render = RenderTemplate("/", *assets_root, [&](const char *key, StreamWriter *writer) {
             if (TestStr(key, "STATIC_URL")) {
                 Print(writer, "/admin/static/%1/", shared_etag);
             } else if (TestStr(key, "VERSION")) {
@@ -669,8 +735,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 Print(writer, "{%1}", key);
             }
         });
-
-        AttachStatic(copy, 0, shared_etag, request, io);
+        AttachStatic(*render, 0, shared_etag, request, io);
     } else if (TestStr(request.url, "/favicon.png")) {
         const AssetInfo *asset = assets_map.FindValue("/favicon.png", nullptr);
         RG_ASSERT(asset);
@@ -925,6 +990,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
 
             LogDebug("Prune sessions");
             PruneSessions();
+
+            LogDebug("Prune template renders");
+            PruneRenders();
 
 #ifdef __GLIBC__
             // Actually release memory to the OS, because for some reason glibc doesn't want to
