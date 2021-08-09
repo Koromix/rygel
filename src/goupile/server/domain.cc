@@ -397,12 +397,12 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
 
             for (;;) {
                 InstanceHolder *instance = (offset < instances.len) ? instances[offset] : nullptr;
-
                 int cmp = instance ? CmpStr(instance->key, instance_key) : 1;
-                bool match = !filter_key || TestStr(filter_key, instance_key) ||
-                                            (master_key && TestStr(filter_key, master_key));
 
                 if (cmp < 0) {
+                    bool match = !filter_key || TestStr(filter_key, instance->key) ||
+                                                TestStr(filter_key, instance->master->key);
+
                     if (match) {
                         registry_unload.Append(instance);
                     } else {
@@ -412,6 +412,9 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
 
                     offset++;
                 } else if (!cmp) {
+                    bool match = !filter_key || TestStr(filter_key, instance->key) ||
+                                                TestStr(filter_key, instance->master->key);
+
                     // Reload instance for thorough syncs or if the master instance is being
                     // reconfigured itself for some reason.
                     match &= thorough | (master_key && !new_map.Find(master_key));
@@ -432,6 +435,9 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
                     offset++;
                     break;
                 } else {
+                    bool match = !filter_key || TestStr(filter_key, instance_key) ||
+                                                TestStr(filter_key, master_key);
+
                     if (match) {
                         StartInfo start = {};
 
