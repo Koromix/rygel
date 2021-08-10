@@ -711,7 +711,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         }
 
         if (str2 && !TestStr(str2, "same-origin")) {
-            LogError("Deniyng cross-origin request");
+            LogError("Denying cross-origin request");
             io->AttachError(403);
             return;
         }
