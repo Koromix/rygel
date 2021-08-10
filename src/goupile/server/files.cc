@@ -615,19 +615,19 @@ bool ShouldCompressFile(const char *filename)
         extension[i] = 0;
     }
 
-    if (TestStr(extension, ".zip"))
+    if (TestStrI(extension, ".zip"))
         return false;
-    if (TestStr(extension, ".rar"))
+    if (TestStrI(extension, ".rar"))
         return false;
-    if (TestStr(extension, ".7z"))
+    if (TestStrI(extension, ".7z"))
         return false;
-    if (TestStr(extension, ".gz") || TestStr(extension, ".tgz"))
+    if (TestStrI(extension, ".gz") || TestStrI(extension, ".tgz"))
         return false;
-    if (TestStr(extension, ".bz2") || TestStr(extension, ".tbz2"))
+    if (TestStrI(extension, ".bz2") || TestStrI(extension, ".tbz2"))
         return false;
-    if (TestStr(extension, ".xz") || TestStr(extension, ".txz"))
+    if (TestStrI(extension, ".xz") || TestStrI(extension, ".txz"))
         return false;
-    if (TestStr(extension, ".zst") || TestStr(extension, ".tzst"))
+    if (TestStrI(extension, ".zst") || TestStrI(extension, ".tzst"))
         return false;
 
     const char *mime_type = http_GetMimeType(extension);
