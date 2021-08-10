@@ -3154,7 +3154,7 @@ static void CloseHandleSafe(HANDLE *handle_ptr)
     *handle_ptr = nullptr;
 }
 
-static bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE *out_h0, HANDLE *out_h1)
+static bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE out_handles[2])
 {
     static LONG pipe_idx;
 
@@ -3169,9 +3169,10 @@ static bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE *out_h0, H
         Fmt(pipe_name, "\\\\.\\Pipe\\libcc.%1.%2",
             GetCurrentProcessId(), InterlockedIncrement(&pipe_idx));
 
-        handles[0] = CreateNamedPipeA(pipe_name,
-                                      PIPE_ACCESS_INBOUND | (overlap0 ? FILE_FLAG_OVERLAPPED : 0),
-                                      PIPE_TYPE_BYTE | PIPE_WAIT, 1, 8192, 8192, 0, nullptr);
+        DWORD open_mode = PIPE_ACCESS_INBOUND | FILE_FLAG_FIRST_PIPE_INSTANCE | (overlap0 ? FILE_FLAG_OVERLAPPED : 0);
+        DWORD pipe_mode = PIPE_TYPE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS;
+
+        handles[0] = CreateNamedPipeA(pipe_name, open_mode, pipe_mode, 1, 8192, 8192, 0, nullptr);
         if (!handles[0] && GetLastError() != ERROR_ACCESS_DENIED) {
             LogError("Failed to create pipe: %1", GetWin32ErrorString());
             return false;
@@ -3186,8 +3187,8 @@ static bool CreateOverlappedPipe(bool overlap0, bool overlap1, HANDLE *out_h0, H
     }
 
     handle_guard.Disable();
-    *out_h0 = handles[0];
-    *out_h1 = handles[1];
+    out_handles[0] = handles[0];
+    out_handles[1] = handles[1];
     return true;
 }
 
@@ -3227,8 +3228,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
         CloseHandleSafe(&out_pipe[0]);
         CloseHandleSafe(&out_pipe[1]);
     };
-    if (!CreateOverlappedPipe(false, true, &in_pipe[0], &in_pipe[1]) ||
-            !CreateOverlappedPipe(true, false, &out_pipe[0], &out_pipe[1]))
+    if (!CreateOverlappedPipe(false, true, in_pipe) || !CreateOverlappedPipe(true, false, out_pipe))
         return false;
 
     // Start process
