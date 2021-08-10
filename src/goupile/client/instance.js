@@ -557,7 +557,7 @@ function InstanceController() {
         }
 
         let metrics = ctx.measureText(hid != null ? hid : 'NA');
-        return Math.ceil(metrics.width * 1.15) + 20;
+        return Math.ceil(metrics.width * 1.04) + 20;
     }
 
     function makeFilterFunction(filter) {
