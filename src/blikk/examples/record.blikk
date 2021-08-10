@@ -1,0 +1,16 @@
+# Tests pour le support des record types en cours de développement
+
+record A (m1: Int, m2: String)
+record B (dummy: String, c: [3] Int, a: A)
+
+let mut var: B
+
+for i in 0:3
+    printLn(var.a.m1 - 1, " -- ", var.a.m1 += 1)
+    var.c[i] := i + 1
+    printLn(var)
+end
+
+printLn(var.a)
+(var.a).m2 := "Hello!"
+printLn(var)

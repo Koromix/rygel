@@ -99,6 +99,7 @@ private:
     bool ParseDo();
 
     void ParseFunction(const PrototypeInfo *proto);
+    void ParseRecord();
     void ParseReturn();
     void ParseLet();
     void PushDefaultValue(Size var_pos, const bk_VariableInfo &var, const bk_TypeInfo *type);
@@ -117,6 +118,7 @@ private:
     const bk_FunctionTypeInfo *ParseFunctionType();
     const bk_ArrayTypeInfo *ParseArrayType();
     void ParseArraySubscript();
+    void ParseRecordDot();
     bool ParseCall(const bk_FunctionTypeInfo *func_type, const bk_FunctionInfo *func, bool overload);
     void EmitIntrinsic(const char *name, Size call_pos, Size call_addr, Span<const bk_TypeInfo *const> args);
     void EmitLoad(const bk_VariableInfo &var);
@@ -145,7 +147,7 @@ private:
 
     const char *InternString(const char *str);
     template<typename T>
-    const bk_TypeInfo *InsertType(const T &type_buf, BucketArray<T> *out_types);
+    bk_TypeInfo *InsertType(const T &type_buf, BucketArray<T> *out_types);
 
     template <typename... Args>
     void MarkError(Size pos, const char *fmt, Args... args)
@@ -527,6 +529,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
         prototype_buf.RemoveFrom(0);
         Fmt(&prototype_buf, "%1(", func->name);
         type_buf.primitive = bk_PrimitiveKind::Function;
+        type_buf.size = 1;
         type_buf.params.RemoveFrom(0);
 
         // Parameters
@@ -649,16 +652,16 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
 }
 
 template<typename T>
-const bk_TypeInfo *bk_Parser::InsertType(const T &type_buf, BucketArray<T> *out_types)
+bk_TypeInfo *bk_Parser::InsertType(const T &type_buf, BucketArray<T> *out_types)
 {
     std::pair<const bk_TypeInfo **, bool> ret = program->types_map.TrySetDefault(type_buf.signature);
 
-    const bk_TypeInfo *type;
+    bk_TypeInfo *type;
     if (ret.second) {
         type = out_types->Append(type_buf);
         *ret.first = type;
     } else {
-        type = *ret.first;
+        type = (bk_TypeInfo *)*ret.first;
     }
 
     return type;
@@ -722,6 +725,10 @@ bool bk_Parser::ParseStatement()
                 DiscardResult();
             }
 
+            EndStatement();
+        } break;
+        case bk_TokenKind::Record: {
+            ParseRecord();
             EndStatement();
         } break;
         case bk_TokenKind::Return: {
@@ -931,6 +938,51 @@ void bk_Parser::ParseReturn()
     EmitReturn();
 }
 
+void bk_Parser::ParseRecord()
+{
+    Size record_pos = pos++;
+
+    HeapArray<char> signature_buf;
+    bk_RecordTypeInfo type_buf = {};
+
+    const char *name = ConsumeIdentifier();
+
+    Fmt(&signature_buf, "struct %1", name);
+    type_buf.primitive = bk_PrimitiveKind::Record;
+
+    ConsumeToken(bk_TokenKind::LeftParenthesis);
+    if (!MatchToken(bk_TokenKind::RightParenthesis)) {
+        do {
+            SkipNewLines();
+
+            bk_RecordTypeInfo::Member member = {};
+
+            member.name = ConsumeIdentifier();
+            ConsumeToken(bk_TokenKind::Colon);
+            member.type = ParseTypeExpression();
+            member.offset = type_buf.size;
+
+            type_buf.members.Append(member);
+            type_buf.size += member.type->size;
+        } while (MatchToken(bk_TokenKind::Comma));
+
+        SkipNewLines();
+        ConsumeToken(bk_TokenKind::RightParenthesis);
+    }
+
+    type_buf.signature = InternString(signature_buf.ptr);
+
+    // Publish type and symbol
+    bk_RecordTypeInfo *type = InsertType(type_buf, &program->record_types)->AsRecordType();
+    const bk_VariableInfo *var = AddGlobal(name, bk_TypeType, {{.type = type}}, false, bk_VariableInfo::Scope::Module);
+    definitions_map.Set(var, record_pos);
+
+    // Can't do it before because the members move (dynamic array)
+    for (const bk_RecordTypeInfo::Member &member: type->members) {
+        type->members_map.Set(&member);
+    }
+}
+
 void bk_Parser::ParseLet()
 {
     Size var_pos = ++pos;
@@ -1038,7 +1090,15 @@ void bk_Parser::PushDefaultValue(Size var_pos, const bk_VariableInfo &var, const
 
             for (Size i = 0; i < array_type->len; i++) {
                 PushDefaultValue(var_pos, var, array_type->unit_type);
-                var_offset += (array_type->unit_type->primitive != bk_PrimitiveKind::Array);
+                var_offset += !array_type->unit_type->PassByReference();
+            }
+        } break;
+        case bk_PrimitiveKind::Record: {
+            const bk_RecordTypeInfo *record_type = type->AsRecordType();
+
+            for (const bk_RecordTypeInfo::Member &member: record_type->members) {
+                PushDefaultValue(var_pos, var, member.type);
+                var_offset += !member.type->PassByReference();
             }
         } break;
     }
@@ -1451,6 +1511,15 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                 }
             } break;
 
+            case bk_TokenKind::Dot: {
+                if (!expect_value && stack[stack.len - 1].type->primitive == bk_PrimitiveKind::Record) {
+                    ParseRecordDot();
+                } else {
+                    MarkError(pos - 1, "Cannot use dot operator on non-struct value");
+                    goto error;
+                }
+            } break;
+
             case bk_TokenKind::Identifier: {
                 if (RG_UNLIKELY(!expect_value))
                     goto unexpected;
@@ -1769,9 +1838,9 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
 
         if (dest.indirect_addr) {
             // In order for CopyArray to work, the array reference and offset must remain on the stack.
-            // To do so, replace LoadArray (which removes them) with LoadIndirect.
+            // To do so, replace LoadRef (which removes them) with LoadIndirect.
             if (op.kind != bk_TokenKind::Reassign) {
-                RG_ASSERT(ir[dest.indirect_addr].code == bk_Opcode::LoadArray);
+                RG_ASSERT(ir[dest.indirect_addr].code == bk_Opcode::LoadRef);
                 ir[dest.indirect_addr].code = bk_Opcode::LoadIndirect;
             }
 
@@ -1972,6 +2041,7 @@ const bk_FunctionTypeInfo *bk_Parser::ParseFunctionType()
     HeapArray<char> signature_buf;
 
     type_buf.primitive = bk_PrimitiveKind::Function;
+    type_buf.size = 1;
     signature_buf.Append("func (");
 
     // Parameters
@@ -2052,24 +2122,16 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
         }
     }
 
-    // Unit type and size
-    {
-        type_buf.unit_type = ParseTypeExpression();
-
-        if (type_buf.unit_type->primitive == bk_PrimitiveKind::Array) {
-            const bk_ArrayTypeInfo *array_type = type_buf.unit_type->AsArrayType();
-            type_buf.unit_size = array_type->len * array_type->unit_size;
-        } else {
-            type_buf.unit_size = 1;
-        }
-    }
+    // Unit type
+    type_buf.unit_type = ParseTypeExpression();
+    type_buf.size = type_buf.len * type_buf.unit_type->size;
 
     // Safety checks
     if (RG_UNLIKELY(type_buf.len < 0)) {
         MarkError(def_pos, "Negative array size is not valid");
     }
-    if (RG_UNLIKELY(type_buf.len > UINT16_MAX || type_buf.unit_size > UINT16_MAX ||
-                    type_buf.len * type_buf.unit_size > UINT16_MAX)) {
+    if (RG_UNLIKELY(type_buf.len > UINT16_MAX || type_buf.unit_type->size > UINT16_MAX ||
+                    type_buf.size > UINT16_MAX)) {
         MarkError(def_pos, "Fixed array size is too big");
     }
 
@@ -2103,8 +2165,8 @@ void bk_Parser::ParseArraySubscript()
 
         // Compute array index
         ir.Append({bk_Opcode::CheckIndex, {}, {.i = array_type->len}});
-        if (array_type->unit_size != 1) {
-            ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = array_type->unit_size}});
+        if (array_type->unit_type->size != 1) {
+            ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = array_type->unit_type->size}});
             ir.Append({bk_Opcode::MultiplyInt});
         }
         if (stack[stack.len - 1].indirect_addr) {
@@ -2115,7 +2177,7 @@ void bk_Parser::ParseArraySubscript()
         if (array_type->unit_type->PassByReference()) {
             ir.Append({bk_Opcode::AddInt});
         } else {
-            ir.Append({bk_Opcode::LoadArray});
+            ir.Append({bk_Opcode::LoadRef});
         }
 
         stack[stack.len - 1].type = array_type->unit_type;
@@ -2124,6 +2186,33 @@ void bk_Parser::ParseArraySubscript()
              MatchToken(bk_TokenKind::Comma));
 
     ConsumeToken(bk_TokenKind::RightBracket);
+}
+
+void bk_Parser::ParseRecordDot()
+{
+    const bk_RecordTypeInfo *record_type = stack[stack.len - 1].type->AsRecordType();
+
+    const char *name = ConsumeIdentifier();
+    const bk_RecordTypeInfo::Member *member = record_type->members_map.FindValue(name, nullptr);
+
+    if (RG_UNLIKELY(!member)) {
+        MarkError(pos, "Type '%1' does not contain member called '%2'", record_type->signature, name);
+        return;
+    }
+
+    // Resolve member
+    if (member->type->PassByReference()) {
+        if (member->offset) {
+            ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = member->offset}});
+            ir.Append({bk_Opcode::AddInt});
+        }
+    } else {
+        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = member->offset}});
+        ir.Append({bk_Opcode::LoadRef});
+    }
+
+    stack[stack.len - 1].type = member->type;
+    stack[stack.len - 1].indirect_addr = ir.len - 1;
 }
 
 // Don't try to call from outside ParseExpression()!
@@ -2301,7 +2390,7 @@ void bk_Parser::DiscardResult()
         case bk_Opcode::Load:
         case bk_Opcode::LoadLocal: { TrimInstructions(1); } break;
 
-        case bk_Opcode::LoadArray:
+        case bk_Opcode::LoadRef:
         case bk_Opcode::LoadIndirect: {
             TrimInstructions(1);
             EmitPop(2);

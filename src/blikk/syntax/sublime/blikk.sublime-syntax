@@ -8,7 +8,7 @@ contexts:
   main:
     - match: \#.*
       scope: comment.line.blikk
-    - match: \b(if|else|while|begin|end|return|in|do|mut|break|continue)\b
+    - match: \b(if|else|while|begin|end|return|in|do|mut|break|continue|record)\b
       scope: keyword.control.blikk
     - match: \bfunc\b
       scope: keyword.control.blikk

@@ -90,7 +90,7 @@ bool bk_VirtualMachine::Run()
             stack.Append({.i = stack[bp + inst->u.i].i});
             DISPATCH(++pc);
         }
-        CASE(LoadArray): {
+        CASE(LoadRef): {
             Size ptr = stack[stack.len - 2].i;
             Size idx = stack[stack.len - 1].i;
             stack.len -= 2;
@@ -618,6 +618,7 @@ void bk_VirtualMachine::DumpInstruction(Size pc) const
                 case bk_PrimitiveKind::Type: { LogDebug("[0x%1] Push %2", FmtHex(pc).Pad0(-5), inst.u.type->signature); } break;
                 case bk_PrimitiveKind::Function: { LogDebug("[0x%1] Push %2", FmtHex(pc).Pad0(-5), inst.u.func->prototype); } break;
                 case bk_PrimitiveKind::Array: { LogDebug("[0x%1] Push @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+                case bk_PrimitiveKind::Record: { LogDebug("[0x%1] Push @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
             }
         } break;
         case bk_Opcode::Pop: { LogDebug("[0x%1] Pop %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;

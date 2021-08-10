@@ -77,7 +77,22 @@ static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offs
                 }
             }
             fputc(']', stdout);
-        }
+        } break;
+        case bk_PrimitiveKind::Record: {
+            const bk_RecordTypeInfo *record_type = type->AsRecordType();
+
+            fputc('{', stdout);
+            if (record_type->members.len) {
+                Print("%1 = ", record_type->members[0].name);
+                offset = PrintValue(vm, record_type->members[0].type, offset, true);
+                for (Size i = 1; i < record_type->members.len; i++) {
+                    fputs(", ", stdout);
+                    Print("%1 = ", record_type->members[i].name);
+                    offset = PrintValue(vm, record_type->members[i].type, offset, true);
+                }
+            }
+            fputc('}', stdout);
+        } break;
     }
 
     return offset;

@@ -30,6 +30,7 @@ TOKEN(In, "in")
 TOKEN(Break, "break")
 TOKEN(Continue, "continue")
 TOKEN(Do, "do")
+TOKEN(Record, "record")
 
 // Immediate values
 TOKEN(Null, "null")

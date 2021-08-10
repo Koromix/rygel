@@ -29,7 +29,8 @@ enum class bk_PrimitiveKind {
     String,
     Type,
     Function,
-    Array
+    Array,
+    Record
 };
 static const char *const bk_PrimitiveKindNames[] = {
     "Null",
@@ -39,7 +40,8 @@ static const char *const bk_PrimitiveKindNames[] = {
     "String",
     "Type",
     "Function",
-    "Array"
+    "Array",
+    "Record"
 };
 
 union bk_PrimitiveValue {
@@ -54,18 +56,40 @@ union bk_PrimitiveValue {
 struct bk_TypeInfo {
     const char *signature;
     bk_PrimitiveKind primitive;
+    Size size;
 
-    bool PassByReference() const { return primitive == bk_PrimitiveKind::Array; }
+    bool PassByReference() const { return primitive == bk_PrimitiveKind::Array ||
+                                          primitive == bk_PrimitiveKind::Record; }
 
+    struct bk_FunctionTypeInfo *AsFunctionType()
+    {
+        RG_ASSERT(primitive == bk_PrimitiveKind::Function);
+        return (bk_FunctionTypeInfo *)this;
+    }
     const struct bk_FunctionTypeInfo *AsFunctionType() const
     {
         RG_ASSERT(primitive == bk_PrimitiveKind::Function);
         return (const bk_FunctionTypeInfo *)this;
     }
+    struct bk_ArrayTypeInfo *AsArrayType()
+    {
+        RG_ASSERT(primitive == bk_PrimitiveKind::Array);
+        return (bk_ArrayTypeInfo *)this;
+    }
     const struct bk_ArrayTypeInfo *AsArrayType() const
     {
         RG_ASSERT(primitive == bk_PrimitiveKind::Array);
         return (const bk_ArrayTypeInfo *)this;
+    }
+    struct bk_RecordTypeInfo *AsRecordType()
+    {
+        RG_ASSERT(primitive == bk_PrimitiveKind::Record);
+        return (bk_RecordTypeInfo *)this;
+    }
+    const struct bk_RecordTypeInfo *AsRecordType() const
+    {
+        RG_ASSERT(primitive == bk_PrimitiveKind::Record);
+        return (const bk_RecordTypeInfo *)this;
     }
 
     RG_HASHTABLE_HANDLER(bk_TypeInfo, signature);
@@ -77,8 +101,19 @@ struct bk_FunctionTypeInfo: public bk_TypeInfo {
 };
 struct bk_ArrayTypeInfo: public bk_TypeInfo {
     const bk_TypeInfo *unit_type;
-    Size unit_size;
     Size len;
+};
+struct bk_RecordTypeInfo: public bk_TypeInfo {
+    struct Member {
+        const char *name;
+        const bk_TypeInfo *type;
+        Size offset;
+
+        RG_HASHTABLE_HANDLER(Member, name);
+    };
+
+    HeapArray<Member> members;
+    HashTable<const char *, const Member *> members_map;
 };
 
 extern Span<const bk_TypeInfo> bk_BaseTypes;
@@ -186,6 +221,7 @@ struct bk_Program {
 
     BucketArray<bk_FunctionTypeInfo> function_types;
     BucketArray<bk_ArrayTypeInfo> array_types;
+    BucketArray<bk_RecordTypeInfo> record_types;
     BucketArray<bk_FunctionInfo> functions;
     BucketArray<bk_VariableInfo> variables;
     HashTable<const char *, const bk_TypeInfo *> types_map;

@@ -24,7 +24,7 @@ OPCODE(Pop)
 // Load/store
 OPCODE(Load)
 OPCODE(LoadLocal)
-OPCODE(LoadArray)
+OPCODE(LoadRef)
 OPCODE(LoadIndirect)
 OPCODE(Lea)
 OPCODE(LeaLocal)
