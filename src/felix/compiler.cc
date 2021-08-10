@@ -139,16 +139,19 @@ public:
             compiler->ld = ld ? DuplicateString(ld, &compiler->str_alloc).ptr : nullptr;
         }
 
+        Async async;
+
         // Determine Clang version
-        {
+        async.Run([&]() {
             char cmd[2048];
             Fmt(cmd, "%1 --version", compiler->cc);
 
             compiler->clang11 = ParseClangMajorVersion(cmd, "version") >= 11;
-        }
+            return true;
+        });
 
         // Determine LLD version
-        {
+        async.Run([&]() {
             char cmd[2048];
             if (compiler->ld) {
                 Fmt(cmd, "%1 -fuse-ld=%2 -Wl,--version", compiler->cc, compiler->ld);
@@ -157,7 +160,10 @@ public:
             }
 
             compiler->lld11 = ParseClangMajorVersion(cmd, "LLD") >= 11;
-        }
+            return true;
+        });
+
+        async.Sync();
 
         return compiler;
     }
