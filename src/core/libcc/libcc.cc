@@ -4764,7 +4764,7 @@ Size StreamReader::ReadBrotli(Size max_len, void *out_buf)
             memcpy(out_buf, ctx->out, copy_len);
             memmove(ctx->out, ctx->out + copy_len, ctx->out_len);
 
-            eof = ctx->done;
+            eof = !ctx->out_len && ctx->done;
             return copy_len;
         }
 
