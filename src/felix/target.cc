@@ -127,35 +127,35 @@ static bool ResolveFileSet(const FileSet &file_set,
 
 static bool MatchPlatform(Span<const char> name, bool *out_match)
 {
+    int flags;
     if (name == "Desktop") {
-#if defined(_WIN32) || defined(__APPLE__) || defined(__linux__)
-        *out_match = true;
-#endif
-        return true;
-    } else if (name == "Win32") {
-#ifdef _WIN32
-        *out_match = true;
-#endif
-        return true;
+        flags = (int)TargetPlatform::Windows |
+                (int)TargetPlatform::Linux |
+                (int)TargetPlatform::macOS;
     } else if (name == "POSIX") {
-#ifndef _WIN32
-        *out_match = true;
-#endif
-        return true;
-    } else if (name == "macOS") {
-#ifdef __APPLE__
-        *out_match = true;
-#endif
-        return true;
-    } else if (name == "Linux") {
-#ifdef __linux__
-        *out_match = true;
-#endif
-        return true;
+        flags = (int)TargetPlatform::Linux |
+                (int)TargetPlatform::macOS;
     } else {
-        LogError("Unknown platform '%1'", name);
-        return false;
+        TargetPlatform platform;
+        if (!OptionToEnum(TargetPlatformNames, name, &platform)) {
+            LogError("Unknown platform '%1'", name);
+            return false;
+        }
+
+        flags = 1 << (int)platform;
     }
+
+#if defined(_WIN32)
+    *out_match = flags & (int)TargetPlatform::Windows;
+#elif defined(__linux__)
+    *out_match = flags & (int)TargetPlatform::Linux;
+#elif defined(__APPLE__)
+    *out_match = flags & (int)TargetPlatform::macOS;
+#else
+    #error Unsupported platform
+#endif
+
+    return true;
 }
 
 static bool CheckTargetName(Span<const char> name)

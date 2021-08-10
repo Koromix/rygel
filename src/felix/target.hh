@@ -27,6 +27,17 @@ enum class TargetType {
     ExternalLibrary
 };
 
+enum class TargetPlatform {
+    Windows = 1 << 0,
+    Linux = 1 << 1,
+    macOS = 1 << 2
+};
+static const char *const TargetPlatformNames[] = {
+    "Windows",
+    "Linux",
+    "macOS"
+};
+
 struct SourceFileInfo {
     // In order to build source files with the correct definitions (and include directories, etc.),
     // we need to use the options from the target that first found this source file!
