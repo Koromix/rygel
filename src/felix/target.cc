@@ -127,7 +127,12 @@ static bool ResolveFileSet(const FileSet &file_set,
 
 static bool MatchPlatform(Span<const char> name, bool *out_match)
 {
-    if (name == "Win32") {
+    if (name == "Desktop") {
+#if defined(_WIN32) || defined(__APPLE__) || defined(__linux__)
+        *out_match = true;
+#endif
+        return true;
+    } else if (name == "Win32") {
 #ifdef _WIN32
         *out_match = true;
 #endif
