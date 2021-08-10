@@ -466,7 +466,9 @@ bool http_IO::NegociateEncoding(CompressionType preferred, CompressionType *out_
         *out_encoding = preferred;
         return true;
     } else if (acceptable_encodings) {
-        *out_encoding = (CompressionType)CountTrailingZeros(acceptable_encodings);
+        int clz = 31 - CountLeadingZeros(acceptable_encodings);
+        *out_encoding = (CompressionType)clz;
+
         return true;
     } else {
         AttachError(406);
@@ -486,7 +488,9 @@ bool http_IO::NegociateEncoding(CompressionType preferred1, CompressionType pref
         *out_encoding = preferred2;
         return true;
     } else if (acceptable_encodings) {
-        *out_encoding = (CompressionType)CountTrailingZeros(acceptable_encodings);
+        int clz = 31 - CountLeadingZeros(acceptable_encodings);
+        *out_encoding = (CompressionType)clz;
+
         return true;
     } else {
         AttachError(406);
