@@ -499,7 +499,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
     HeapArray<char> prototype_buf;
     bk_FunctionTypeInfo type_buf = {};
 
-    HeapArray<const PrototypeInfo *> prototypes;
+    HeapArray<PrototypeInfo> prototypes;
 
     for (Size i = 0; i < funcs.len; i++) {
         pos = funcs[i] + 1;
@@ -511,12 +511,14 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
         PrototypeInfo *proto = prototypes_map.SetDefault(funcs[i]);
         bk_FunctionInfo *func = program->functions.AppendDefault();
         definitions_map.Set(func, pos);
-        prototypes.Append(proto);
 
         proto->pos = funcs[i];
         proto->func = func;
         func->name = ConsumeIdentifier();
         func->mode = bk_FunctionInfo::Mode::blikk;
+
+        // Temporary array that only cares about pos and func
+        prototypes.Append(*proto);
 
         // Clean up parameter variables once we're done
         RG_DEFER_C(variables_len = program->variables.len) {
@@ -644,10 +646,10 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
     src->lines.RemoveFrom(prev_lines_len);
 
     // Publish function symbols
-    for (const PrototypeInfo *proto: prototypes) {
-        const bk_FunctionInfo &func = *proto->func;
+    for (const PrototypeInfo &proto: prototypes) {
+        const bk_FunctionInfo &func = *proto.func;
         const bk_VariableInfo *var = AddGlobal(func.name, func.type, {{.func = &func}}, false, bk_VariableInfo::Scope::Module);
-        definitions_map.Set(var, proto->pos);
+        definitions_map.Set(var, proto.pos);
     }
 }
 
