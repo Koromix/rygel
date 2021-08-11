@@ -954,15 +954,29 @@ void bk_Parser::ParseRecord()
 
     ConsumeToken(bk_TokenKind::LeftParenthesis);
     if (!MatchToken(bk_TokenKind::RightParenthesis)) {
+        HashMap<const char *, Size> used_names;
+
         do {
             SkipNewLines();
 
             bk_RecordTypeInfo::Member member = {};
+            Size name_pos = pos;
 
             member.name = ConsumeIdentifier();
             ConsumeToken(bk_TokenKind::Colon);
             member.type = ParseTypeExpression();
             member.offset = type_buf.size;
+
+            // Check for existing member with same name
+            {
+                std::pair<Size *, bool> ret = used_names.TrySet(member.name, name_pos);
+
+                if (RG_UNLIKELY(!ret.second)) {
+                    MarkError(name_pos, "Member name '%1' is already used", member.name);
+                    HintError(*ret.first, "Previous member was defined here");
+                    return;
+                }
+            }
 
             type_buf.members.Append(member);
             type_buf.size += member.type->size;
