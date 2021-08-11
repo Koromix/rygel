@@ -135,6 +135,9 @@ static bool MatchPlatform(Span<const char> name, bool *out_match)
     } else if (name == "POSIX") {
         flags = (int)TargetPlatform::Linux |
                 (int)TargetPlatform::macOS;
+    } else if (name == "Win32") {
+        // Old name, supported for compatibility (easier bisect)
+        flags = (int)TargetPlatform::Windows;
     } else {
         TargetPlatform platform;
         if (!OptionToEnum(TargetPlatformNames, name, &platform)) {
