@@ -79,11 +79,11 @@ retry:
 
         if (confirm) {
 reconfirm:
-            const char *confirm = Prompt("Confirm: ", mask ? "*" : nullptr, &temp_alloc);
-            if (!confirm)
+            const char *password2 = Prompt("Confirm: ", mask ? "*" : nullptr, &temp_alloc);
+            if (!password2)
                 return 1;
 
-            if (!TestStr(password, confirm)) {
+            if (!TestStr(password, password2)) {
                 LogError("Password mismatch");
                 goto reconfirm;
             }

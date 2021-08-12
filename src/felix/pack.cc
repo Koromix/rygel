@@ -302,7 +302,7 @@ static void PrintAsC(Span<const uint8_t> bytes, bool use_literals, StreamWriter 
     }
 }
 
-static const char *MakeVariableName(const char *name, bool short_name, Allocator *alloc)
+static const char *MakeVariableName(const char *name, Allocator *alloc)
 {
     HeapArray<char> buf(alloc);
     bool up = true;
@@ -311,7 +311,7 @@ static const char *MakeVariableName(const char *name, bool short_name, Allocator
         int c = name[i];
 
         if (IsAsciiAlphaOrDigit(c)) {
-            buf.Append(up ? UpperAscii(c) : c);
+            buf.Append(up ? UpperAscii(c) : (char)c);
             up = false;
         } else {
             up = true;
@@ -423,7 +423,7 @@ static const uint8_t raw_data[] = {)");
 
         for (Size i = 0, raw_offset = 0; i < blobs.len; i++) {
             const BlobInfo &blob = blobs[i];
-            const char *var = MakeVariableName(blob.name, false, &temp_alloc);
+            const char *var = MakeVariableName(blob.name, &temp_alloc);
 
             if (blob.source_map) {
                 PrintLn(&st, "EXPORT_SYMBOL extern const AssetInfo %1;", var);

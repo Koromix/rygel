@@ -656,7 +656,7 @@ TimeSpec DecomposeTime(int64_t time, TimeMode mode)
     spec.year = (int16_t)(1900 + ti.tm_year);
     spec.month = (int8_t)ti.tm_mon + 1; // Whose idea was it to use 0-11? ...
     spec.day = (int8_t)ti.tm_mday;
-    spec.week_day = ti.tm_wday ? (ti.tm_wday + 1) : 7;
+    spec.week_day = (int8_t)(ti.tm_wday ? (ti.tm_wday + 1) : 7);
     spec.hour = (int8_t)ti.tm_hour;
     spec.min = (int8_t)ti.tm_min;
     spec.sec = (int8_t)ti.tm_sec;
@@ -969,7 +969,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
     for (int i = 0; i < arg.repeat; i++) {
         LocalArray<char, 2048> out_buf;
         char num_buf[128];
-        Span<const char> out;
+        Span<const char> out = {};
 
         Size pad_len = arg.pad_len;
 
@@ -1212,7 +1212,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             case FmtType::Random: {
                 RG_ASSERT(arg.u.random_len <= RG_SIZE(out_buf.data));
 
-                for (Size i = 0; i < arg.u.random_len; i++) {
+                for (Size j = 0; j < arg.u.random_len; j++) {
                     static const char *chars = "abcdefghijklmnopqrstuvwxyz0123456789";
 
                     // We don't want to depend on libsodium here, so use C++ crap instead
@@ -1228,9 +1228,9 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             case FmtType::FlagNames: {
                 if (arg.u.flags.flags) {
                     Span<const char> sep = arg.u.flags.separator;
-                    for (Size i = 0; i < arg.u.flags.u.names.len; i++) {
-                        if (arg.u.flags.flags & (1ull << i)) {
-                            out_buf.Append(arg.u.flags.u.names[i]);
+                    for (Size j = 0; j < arg.u.flags.u.names.len; j++) {
+                        if (arg.u.flags.flags & (1ull << j)) {
+                            out_buf.Append(arg.u.flags.u.names[j]);
                             out_buf.Append(sep);
                         }
                     }
@@ -1242,9 +1242,9 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             case FmtType::FlagOptions: {
                 if (arg.u.flags.flags) {
                     Span<const char> sep = arg.u.flags.separator;
-                    for (Size i = 0; i < arg.u.flags.u.options.len; i++) {
-                        if (arg.u.flags.flags & (1ull << i)) {
-                            out_buf.Append(arg.u.flags.u.options[i].name);
+                    for (Size j = 0; j < arg.u.flags.u.options.len; j++) {
+                        if (arg.u.flags.flags & (1ull << j)) {
+                            out_buf.Append(arg.u.flags.u.options[j].name);
                             out_buf.Append(sep);
                         }
                     }
@@ -1321,14 +1321,14 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 
         if (pad_len < 0) {
             pad_len = (-pad_len) - out.len;
-            for (Size i = 0; i < pad_len; i++) {
+            for (Size j = 0; j < pad_len; j++) {
                 append(arg.pad_char);
             }
             append(out);
         } else if (pad_len > 0) {
             append(out);
             pad_len -= out.len;
-            for (Size i = 0; i < pad_len; i++) {
+            for (Size j = 0; j < pad_len; j++) {
                 append(arg.pad_char);
             }
         } else {
@@ -3843,7 +3843,7 @@ int OpenIPSocket(SocketType type, int port)
         struct sockaddr_in addr = {};
 
         addr.sin_family = AF_INET;
-        addr.sin_port = htons(port);
+        addr.sin_port = htons((uint16_t)port);
         addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
         if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
@@ -3854,7 +3854,7 @@ int OpenIPSocket(SocketType type, int port)
         struct sockaddr_in6 addr = {};
 
         addr.sin6_family = AF_INET6;
-        addr.sin6_port = htons(port);
+        addr.sin6_port = htons((uint16_t)port);
         addr.sin6_addr = IN6ADDR_ANY_INIT;
 
         int v6only = (type == SocketType::IPv6);
@@ -5977,7 +5977,7 @@ bool ConsolePrompter::Read()
                 EnsureNulTermination();
                 return true;
             } else if (c >= 32 || c == '\t') {
-                str.Append(c);
+                str.Append((char)c);
             }
         }
 

@@ -211,7 +211,7 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
         } while (false)
 #elif defined(__GNUC__)
     #define RG_UNREACHABLE() __builtin_unreachable()
-#elif defined(_MSC_VER)
+#else
     #define RG_UNREACHABLE() __assume(0)
 #endif
 
@@ -2059,15 +2059,15 @@ private:
                 *idx = (*idx + 1) & (capacity - 1);
             }
             return nullptr;
+        } else {
+            while (!IsEmpty(*idx)) {
+                const KeyType &it_key = Handler::GetKey(data[*idx]);
+                if (Handler::TestKeys(it_key, key))
+                    return &data[*idx];
+                *idx = (*idx + 1) & (capacity - 1);
+            }
+            return nullptr;
         }
-
-        while (!IsEmpty(*idx)) {
-            const KeyType &it_key = Handler::GetKey(data[*idx]);
-            if (Handler::TestKeys(it_key, key))
-                return &data[*idx];
-            *idx = (*idx + 1) & (capacity - 1);
-        }
-        return nullptr;
     }
 
     std::pair<ValueType *, bool> Insert(const KeyType &key)
@@ -3215,38 +3215,38 @@ bool CopyString(const char *str, Span<char> buf);
 bool CopyString(Span<const char> str, Span<char> buf);
 Span<char> DuplicateString(Span<const char> str, Allocator *alloc);
 
-static inline bool IsAsciiAlpha(char c)
+static inline bool IsAsciiAlpha(int c)
 {
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
-static inline bool IsAsciiDigit(char c)
+static inline bool IsAsciiDigit(int c)
 {
     return (c >= '0' && c <= '9');
 }
-static inline bool IsAsciiAlphaOrDigit(char c)
+static inline bool IsAsciiAlphaOrDigit(int c)
 {
     return IsAsciiAlpha(c) || IsAsciiDigit(c);
 }
-static inline bool IsAsciiWhite(char c)
+static inline bool IsAsciiWhite(int c)
 {
     return c == ' ' || c == '\t' || c == '\v' ||
            c == '\n' || c == '\r' || c == '\f';
 }
 
-static inline char UpperAscii(char c)
+static inline char UpperAscii(int c)
 {
     if (c >= 'a' && c <= 'z') {
         return (char)(c - 32);
     } else {
-        return c;
+        return (char)c;
     }
 }
-static inline char LowerAscii(char c)
+static inline char LowerAscii(int c)
 {
     if (c >= 'A' && c <= 'Z') {
         return (char)(c + 32);
     } else {
-        return c;
+        return (char)c;
     }
 }
 

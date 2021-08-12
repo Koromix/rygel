@@ -50,7 +50,7 @@ Span<const char> mco_ProcedureInfo::ActivitiesToStr(Span<char> out_buf) const
         uint8_t value = activities;
 
         for (int i = 0; value && offset < out_buf.len - 1; i++) {
-            out_buf[offset] = '0' + i;
+            out_buf[offset] = (char)('0' + i);
             offset += (value & 0x1);
             value >>= 1;
         }

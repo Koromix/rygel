@@ -205,8 +205,8 @@ static bool CheckComplexity(Span<const char> password)
             LocalArray<char, 32> word_buf;
             char reverse_buf[RG_SIZE(word_buf.data)];
 
-            word_buf.Append(c);
-            reverse_buf[RG_SIZE(reverse_buf) - 2] = c;
+            word_buf.Append((char)c);
+            reverse_buf[RG_SIZE(reverse_buf) - 2] = (char)c;
             while (++i < password.len && IsAsciiAlpha(password[i])) {
                 int next = (uint8_t)password[i];
                 int diff = c - next;
@@ -216,8 +216,8 @@ static bool CheckComplexity(Span<const char> password)
                 c = next;
 
                 if (RG_LIKELY(word_buf.Available() > 1)) {
-                    word_buf.Append(c);
-                    reverse_buf[RG_SIZE(reverse_buf) - word_buf.len - 1] = c;
+                    word_buf.Append((char)c);
+                    reverse_buf[RG_SIZE(reverse_buf) - word_buf.len - 1] = (char)c;
                 }
             }
             word_buf.data[word_buf.len] = 0;
@@ -302,12 +302,12 @@ bool sec_CheckPassword(Span<const char> password, Span<const char *const> blackl
 
     // Check for blacklisted words
     for (const char *needle: blacklist) {
-        LocalArray<char, 129> buf;
-        buf.len = SimplifyText(needle, buf.data);
-        if (buf.len < 0)
+        LocalArray<char, 129> buf2;
+        buf2.len = SimplifyText(needle, buf2.data);
+        if (buf2.len < 0)
             continue;
 
-        Span<char> remain = buf;
+        Span<char> remain = buf2;
 
         do {
             Span<char> frag = SplitStrAny(remain, " _-./", &remain);

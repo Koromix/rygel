@@ -1064,10 +1064,10 @@ static void DrawEntities(ImRect bb, double tree_width, double time_offset,
             if (!line.draw)
                 continue;
 
-            ImRect bb(win->ClipRect.Min.x, (float)y + style.ItemSpacing.y + 0.5f,
-                      win->ClipRect.Max.x, (float)y + style.ItemSpacing.y + (float)line.height + 0.5f);
-            DrawLineElements(bb, tree_width, state, time_offset + line.align_offset, line);
-            y = bb.Max.y - 0.5f;
+            ImRect bb2(win->ClipRect.Min.x, (float)y + style.ItemSpacing.y + 0.5f,
+                       win->ClipRect.Max.x, (float)y + style.ItemSpacing.y + (float)line.height + 0.5f);
+            DrawLineElements(bb2, tree_width, state, time_offset + line.align_offset, line);
+            y = bb2.Max.y - 0.5f;
         }
     }
 

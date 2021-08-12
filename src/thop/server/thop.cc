@@ -98,8 +98,6 @@ static void ProduceSettings(const http_RequestInfo &request, const User *user, h
             if (!index.valid)
                 continue;
 
-            char buf[32];
-
             json.StartObject();
             json.Key("begin_date"); json.String(Fmt(buf, "%1", index.limit_dates[0]).ptr);
             json.Key("end_date"); json.String(Fmt(buf, "%1", index.limit_dates[1]).ptr);

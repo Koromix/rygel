@@ -276,7 +276,7 @@ static void HandlePing(InstanceHolder *instance, const http_RequestInfo &request
     io->AttachText(200, "Pong!");
 }
 
-static void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+static void HandleFileStatic(const http_RequestInfo &, http_IO *io)
 {
     http_JsonPageBuilder json;
     if (!json.Init(io))
@@ -642,7 +642,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
     } else if (TestStr(instance_url, "/api/change/totp") && request.method == http_RequestMethod::Post) {
         HandleChangeTOTP(request, io);
     } else if (TestStr(instance_url, "/api/files/static") && request.method == http_RequestMethod::Get) {
-         HandleFileStatic(instance, request, io);
+         HandleFileStatic(request, io);
     } else if (TestStr(instance_url, "/api/files/list") && request.method == http_RequestMethod::Get) {
          HandleFileList(instance, request, io);
     } else if (StartsWith(instance_url, "/api/files/objects/") && request.method == http_RequestMethod::Put) {

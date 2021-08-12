@@ -97,16 +97,19 @@ const SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
             stamps_map.Set(stamp);
 
             if (userid > 0) {
-                sq_Statement stmt;
-                if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
-                                             WHERE userid = ?1 AND instance = ?2)", &stmt))
-                    return nullptr;
-                sqlite3_bind_int64(stmt, 1, userid);
-                sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
-                if (!stmt.Step())
-                    return nullptr;
+                uint32_t permissions;
+                {
+                    sq_Statement stmt;
+                    if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
+                                                 WHERE userid = ?1 AND instance = ?2)", &stmt))
+                        return nullptr;
+                    sqlite3_bind_int64(stmt, 1, userid);
+                    sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
+                    if (!stmt.Step())
+                        return nullptr;
 
-                uint32_t permissions = (uint32_t)sqlite3_column_int(stmt, 0);
+                    permissions = (uint32_t)sqlite3_column_int(stmt, 0);
+                }
 
                 if (instance->master != instance) {
                     InstanceHolder *master = instance->master;

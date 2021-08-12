@@ -652,7 +652,7 @@ static WrenForeignMethodFn BindProcedureArrayMethod(const char *signature)
         Date date = GetSlotDateSafe(vm, 2);
         int8_t phase = GetSlotIntegerSafe<int8_t>(vm, 3);
         int activities_dec = GetSlotIntegerSafe<int>(vm, 4);
-        int8_t extension = GetSlotIntegerSafe<int>(vm, 5);
+        int8_t extension = GetSlotIntegerSafe<int8_t>(vm, 5);
 
         mco_ProcedureRealisation new_proc = {};
 

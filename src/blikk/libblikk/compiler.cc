@@ -389,8 +389,8 @@ void bk_Parser::AddFunction(const char *prototype, std::function<bk_NativeFuncti
         if (type) {
             func->type = type->AsFunctionType();
 
-            for (const bk_TypeInfo *type: func->type->params) {
-                func->params.Append({"", type});
+            for (const bk_TypeInfo *type2: func->type->params) {
+                func->params.Append({"", type2});
             }
         } else {
             bk_FunctionTypeInfo *func_type = program->function_types.AppendDefault();
@@ -410,11 +410,11 @@ void bk_Parser::AddFunction(const char *prototype, std::function<bk_NativeFuncti
                         RG_ASSERT(c == ')');
                         func_type->variadic = true;
                     } else {
-                        const bk_TypeInfo *type = program->types_map.FindValue(ptr, nullptr);
-                        RG_ASSERT(type);
+                        const bk_TypeInfo *type2 = program->types_map.FindValue(ptr, nullptr);
+                        RG_ASSERT(type2);
 
-                        func->params.Append({"", type});
-                        func_type->params.Append(type);
+                        func->params.Append({"", type2});
+                        func_type->params.Append(type2);
                     }
 
                     ptr[len] = c;

@@ -94,7 +94,7 @@ static void EncodeRfc2047(const char *str, HeapArray<char> *out_buf)
         if (c == ' ') {
             out_buf->Append('_');
         } else if (c >= 32 && c < 128 && c != '=' && c != '?' && c != '_') {
-            out_buf->Append(c);
+            out_buf->Append((char)c);
         } else {
             Fmt(out_buf, "=%1", FmtHex((uint8_t)c).Pad0(-2));
         }
@@ -161,9 +161,9 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
         char id[33];
         const char *domain;
         {
-            uint64_t buf[2];
-            randombytes_buf(&buf, RG_SIZE(buf));
-            Fmt(id, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
+            uint64_t buf2[2];
+            randombytes_buf(&buf2, RG_SIZE(buf2));
+            Fmt(id, "%1%2", FmtHex(buf2[0]).Pad0(-16), FmtHex(buf2[1]).Pad0(-16));
 
             SplitStr(config.from, '@', &domain);
         }
@@ -179,9 +179,9 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
         if (content.text && content.html) {
             char boundary[17];
             {
-                uint64_t buf;
-                randombytes_buf(&buf, RG_SIZE(buf));
-                Fmt(boundary, "%1", FmtHex(buf).Pad0(-16));
+                uint64_t buf2;
+                randombytes_buf(&buf2, RG_SIZE(buf2));
+                Fmt(boundary, "%1", FmtHex(buf2).Pad0(-16));
             }
 
             Fmt(&buf, "Content-Type: multipart/alternative; boundary=\"%1\";\r\n", boundary);

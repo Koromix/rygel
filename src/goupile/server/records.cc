@@ -229,15 +229,15 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                         } else {
                             parser.ParseObject();
                             while (parser.InObject()) {
-                                Span<const char> key = {};
-                                parser.ParseKey(&key);
+                                Span<const char> key2 = {};
+                                parser.ParseKey(&key2);
 
-                                if (key == "ulid") {
+                                if (key2 == "ulid") {
                                     parser.ParseString(&record->parent.ulid);
-                                } else if (key == "version") {
+                                } else if (key2 == "version") {
                                     parser.ParseInt(&record->parent.version);
                                 } else if (parser.IsValid()) {
-                                    LogError("Unknown key '%1' in parent object", key);
+                                    LogError("Unknown key '%1' in parent object", key2);
                                     io->AttachError(422);
                                     return;
                                 }
@@ -256,24 +256,24 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
 
                             parser.ParseObject();
                             while (parser.InObject()) {
-                                Span<const char> key = {};
-                                parser.ParseKey(&key);
+                                Span<const char> key2 = {};
+                                parser.ParseKey(&key2);
 
-                                if (key == "type") {
+                                if (key2 == "type") {
                                     parser.ParseString(&fragment->type);
-                                } else if (key == "mtime") {
+                                } else if (key2 == "mtime") {
                                     parser.ParseString(&fragment->mtime);
-                                } else if (key == "page") {
+                                } else if (key2 == "page") {
                                     if (parser.PeekToken() == json_TokenType::Null) {
                                         parser.ParseNull();
                                         fragment->page = nullptr;
                                     } else {
                                         parser.ParseString(&fragment->page);
                                     }
-                                } else if (key == "json") {
+                                } else if (key2 == "json") {
                                     parser.ParseString(&fragment->json);
                                 } else if (parser.IsValid()) {
-                                    LogError("Unknown key '%1' in fragment object", key);
+                                    LogError("Unknown key '%1' in fragment object", key2);
                                     io->AttachError(422);
                                     return;
                                 }

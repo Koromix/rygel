@@ -200,12 +200,12 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
             if (test->supplement_days != result.supplement_days) {
                 failed_supplements++;
                 if (verbose) {
-                    for (Size i = 0; i < RG_LEN(mco_SupplementTypeNames); i++) {
-                        if (test->supplement_days.values[i] != result.supplement_days.values[i]) {
+                    for (Size k = 0; k < RG_LEN(mco_SupplementTypeNames); k++) {
+                        if (test->supplement_days.values[k] != result.supplement_days.values[k]) {
                             PrintLn("    %1 [%2 *%3] has inadequate %4 %5 != %6",
                                     test->bill_id, result.stays[result.stays.len - 1].exit.date,
-                                    result.stays.len, mco_SupplementTypeNames[i],
-                                    result.supplement_days.values[i], test->supplement_days.values[i]);
+                                    result.stays.len, mco_SupplementTypeNames[k],
+                                    result.supplement_days.values[k], test->supplement_days.values[k]);
                         }
                     }
                 }
@@ -222,8 +222,8 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
                 max_auth_tests = RG_LEN(mco_Test::auth_supplements);
             }
 
-            for (Size i = 0; i < max_auth_tests; i++) {
-                const mco_Result &mono_result = sub_mono_results[i];
+            for (Size k = 0; k < max_auth_tests; k++) {
+                const mco_Result &mono_result = sub_mono_results[k];
 
                 int8_t type;
                 int16_t days;
@@ -248,14 +248,14 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
                 }
                 days = mono_result.supplement_days.values[type];
 
-                if (type != test->auth_supplements[i].type ||
-                        days != test->auth_supplements[i].days) {
+                if (type != test->auth_supplements[k].type ||
+                        days != test->auth_supplements[k].days) {
                     failed_auth_supplements++;
                     if (verbose) {
                         PrintLn("    %1/%2 has inadequate %3 %4 != %5 %6",
-                                test->bill_id, i, mco_SupplementTypeNames[type], days,
-                                mco_SupplementTypeNames[test->auth_supplements[i].type],
-                                test->auth_supplements[i].days);
+                                test->bill_id, k, mco_SupplementTypeNames[type], days,
+                                mco_SupplementTypeNames[test->auth_supplements[k].type],
+                                test->auth_supplements[k].days);
                     }
                 }
             }

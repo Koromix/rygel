@@ -231,7 +231,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
     const char *pch_filename = nullptr;
     if (build.features & (int)CompileFeature::PCH) {
         const SourceFileInfo *pch = nullptr;
-        const char *pch_ext;
+        const char *pch_ext = nullptr;
         switch (src.type) {
             case SourceType::C: {
                 pch = src.target->c_pch_src;

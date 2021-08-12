@@ -490,9 +490,9 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
                 int8_t activity = (uintptr_t)mono_prep.procedures[i] & 0x7;
 
                 if (activity) {
-                    for (Size i = 0; additions_mismatch && i < proc_info->addition_list.len; i++) {
+                    for (Size j = 0; additions_mismatch && j < proc_info->addition_list.len; j++) {
                         const mco_ProcedureLink &link =
-                            index.procedure_links[proc_info->addition_list.offset + i];
+                            index.procedure_links[proc_info->addition_list.offset + j];
 
                         if (activity == link.activity) {
                             additions_mismatch -= additions.TestAndSet(link.addition_idx, false);
@@ -1742,11 +1742,11 @@ mco_GhmCode mco_PickGhm(const mco_TableIndex &index,
 
 #define RETURN_ERROR_GHM(GhmStr) \
         do { \
-            mco_GhmCode ghm = mco_GhmCode::Parse(GhmStr); \
+            mco_GhmCode ret = mco_GhmCode::Parse(GhmStr); \
             if (out_ghm_for_ghs) { \
-                *out_ghm_for_ghs = ghm; \
+                *out_ghm_for_ghs = ret; \
             } \
-            return ghm; \
+            return ret; \
         } while (false)
 
     const mco_GhmRootInfo *ghm_root_info = index.FindGhmRoot(ghm.Root());
@@ -1860,11 +1860,11 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
 
         case mco_GhmToGhsInfo::SpecialMode::Diabetes2:
         case mco_GhmToGhsInfo::SpecialMode::Diabetes3: {
-            int duration = 2 + (int)ghm_to_ghs_info.special_mode - (int)mco_GhmToGhsInfo::SpecialMode::Diabetes2;
+            int special_duration = 2 + (int)ghm_to_ghs_info.special_mode - (int)mco_GhmToGhsInfo::SpecialMode::Diabetes2;
 
             if (!authorization_set.TestFacilityAuthorization(62, stay.exit.date))
                 return false;
-            if (prep.duration >= duration)
+            if (prep.duration >= special_duration)
                 return false;
             if (stay.entry.mode != '8' || stay.entry.origin == '5' || stay.exit.mode != '8')
                 return false;
@@ -1954,7 +1954,7 @@ mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet 
     }
 
     if (out_ghs_duration) {
-        *out_ghs_duration = ghs_duration;
+        *out_ghs_duration = (int16_t)ghs_duration;
     }
     return ghs;
 }
@@ -2078,12 +2078,12 @@ void mco_CountSupplements(const mco_TableIndex &index,
 
     Size ambu_stay_idx = -1;
     int ambu_priority = 0;
-    int16_t ambu_type = -1;
+    int ambu_type = -1;
 
     const auto add_to_counter = [&](Size stay_idx, int type, int count) {
-        out_counters->values[type] += count;
+        out_counters->values[type] = (int16_t)(out_counters->values[type] + count);
         if (out_mono_counters.ptr) {
-            out_mono_counters[stay_idx].values[type] += count;
+            out_mono_counters[stay_idx].values[type] += (int16_t)(out_mono_counters[stay_idx].values[type] + count);
         }
     };
 
@@ -2225,9 +2225,10 @@ void mco_CountSupplements(const mco_TableIndex &index,
         });
 
         if (ant_diag) {
-            int16_t ant_days = prep.childbirth_date - stay.entry.date - 2;
+            int ant_days = prep.childbirth_date - stay.entry.date - 2;
+
             for (Size i = 0; ant_days > 0; i++) {
-                int mono_ant_days = std::min(mono_preps[i].duration, ant_days);
+                int mono_ant_days = std::min((int)mono_preps[i].duration, ant_days);
                 add_to_counter(i, (int)mco_SupplementType::Ant, mono_ant_days);
                 ant_days -= mono_ant_days;
             }

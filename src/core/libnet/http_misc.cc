@@ -176,7 +176,7 @@ void http_EncodeUrlSafe(const char *str, HeapArray<char> *out_buf)
         int c = str[i];
 
         if (IsAsciiAlphaOrDigit(c) || c == '-' || c == '.' || c == '_' || c == '~') {
-            out_buf->Append(c);
+            out_buf->Append((char)c);
         } else {
             Fmt(out_buf, "%%%1", FmtHex((uint8_t)c).Pad0(-2));
         }

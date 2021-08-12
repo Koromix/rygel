@@ -513,11 +513,11 @@ retry:
             goto retry;
 
 reconfirm:
-        const char *confirm = Prompt("Confirm: ", "*", &temp_alloc);
-        if (!confirm)
+        const char *password2 = Prompt("Confirm: ", "*", &temp_alloc);
+        if (!password2)
             return 1;
 
-        if (!TestStr(password, confirm)) {
+        if (!TestStr(password, password2)) {
             LogError("Password mismatch");
             goto reconfirm;
         }
@@ -2220,7 +2220,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                     char *ptr = (char *)entry.basename;
                     int c = entry.basename[i];
 
-                    ptr[i] = (c == '\\' ? '/' : c);
+                    ptr[i] = (char)(c == '\\' ? '/' : c);
                 }
 #endif
                 entry.filename = MakeInstanceFileName(tmp_directory, instance_key, &io->allocator);
@@ -2547,7 +2547,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
         }
 
         // Read POST values
-        int64_t userid;
+        int64_t userid = 0;
         const char *username;
         const char *password;
         const char *confirm;
@@ -2555,7 +2555,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
         bool reset_secret = false;
         const char *email;
         const char *phone;
-        bool admin, set_admin = false;
+        bool admin = false, set_admin = false;
         {
             bool valid = true;
 
@@ -2703,7 +2703,7 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
         }
 
         // Read POST values
-        int64_t userid;
+        int64_t userid = 0;
         {
             bool valid = true;
 

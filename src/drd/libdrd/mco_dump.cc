@@ -311,7 +311,7 @@ static bool ProcessGhmNode(BuildReadableTreeContext &ctx, Size node_idx)
         }
     }
 
-    return true;
+    RG_UNREACHABLE();
 }
 
 // XXX: Add classifier_tree export to drdR

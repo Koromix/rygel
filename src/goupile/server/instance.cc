@@ -65,20 +65,20 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
         bool valid = true;
 
         while (stmt.Step()) {
-            const char *key = (const char *)sqlite3_column_text(stmt, 0);
+            const char *setting = (const char *)sqlite3_column_text(stmt, 0);
             const char *value = (const char *)sqlite3_column_text(stmt, 1);
 
             if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
-                if (TestStr(key, "UseOffline")) {
+                if (TestStr(setting, "UseOffline")) {
                     valid &= ParseBool(value, &config.use_offline);
-                } else if (TestStr(key, "SyncMode")) {
+                } else if (TestStr(setting, "SyncMode")) {
                     if (!OptionToEnum(SyncModeNames, value, &config.sync_mode)) {
                         LogError("Unknown sync mode '%1'", value);
                         valid = false;
                     }
-                } else if (TestStr(key, "MaxFileSize")) {
+                } else if (TestStr(setting, "MaxFileSize")) {
                     valid &= ParseInt(value, &config.max_file_size);
-                } else if (TestStr(key, "TokenKey")) {
+                } else if (TestStr(setting, "TokenKey")) {
                     size_t key_len;
                     int ret = sodium_base642bin(config.token_skey, RG_SIZE(config.token_skey),
                                                 value, strlen(value), nullptr, &key_len,
@@ -92,13 +92,13 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                         LogError("Malformed TokenKey value");
                         valid = false;
                     }
-                } else if (TestStr(key, "BackupKey")) {
+                } else if (TestStr(setting, "BackupKey")) {
                     config.backup_key = DuplicateString(value, &str_alloc).ptr;
-                } else if (TestStr(key, "AutoKey")) {
+                } else if (TestStr(setting, "AutoKey")) {
                     config.auto_key = DuplicateString(value, &str_alloc).ptr;
-                } else if (TestStr(key, "DefaultUser")) {
+                } else if (TestStr(setting, "DefaultUser")) {
                     valid &= ParseInt(value, &config.default_userid);
-                } else if (TestStr(key, "FsVersion")) {
+                } else if (TestStr(setting, "FsVersion")) {
                     int version = -1;
                     valid &= ParseInt(value, &version);
                     fs_version = version;
@@ -118,13 +118,13 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
         bool valid = true;
 
         while (stmt.Step()) {
-            const char *key = (const char *)sqlite3_column_text(stmt, 0);
+            const char *setting = (const char *)sqlite3_column_text(stmt, 0);
             const char *value = (const char *)sqlite3_column_text(stmt, 1);
 
             if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
-                if (TestStr(key, "Name")) {
+                if (TestStr(setting, "Name")) {
                     config.name = DuplicateString(value, &str_alloc).ptr;
-                } else if (TestStr(key, "SharedKey")) {
+                } else if (TestStr(setting, "SharedKey")) {
                     config.shared_key = DuplicateString(value, &str_alloc).ptr;
                 }
             }
@@ -491,8 +491,8 @@ bool MigrateInstance(sq_Database *db)
                                 crypto_hash_sha256_update(&state, buf.data, buf.len);
                             } while (!reader.IsEOF());
 
-                            bool success = writer.Close();
-                            RG_ASSERT(success);
+                            bool success2 = writer.Close();
+                            RG_ASSERT(success2);
 
                             uint8_t hash[crypto_hash_sha256_BYTES];
                             crypto_hash_sha256_final(&state, hash);
