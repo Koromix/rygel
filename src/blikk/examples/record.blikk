@@ -14,3 +14,8 @@ end
 printLn(var.a)
 (var.a).m2 := "Hello!"
 printLn(var)
+
+let mut tab: [5] B
+tab[2].dummy := "Le 2!"
+tab[3].c[2] := 9999999999
+printLn(tab)
