@@ -274,7 +274,8 @@ public:
             case CompileOptimization::LTO: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
         }
         Fmt(&buf, " -fvisibility=hidden");
-        Fmt(&buf, warnings ? " -Wall" : " -Wno-everything");
+        Fmt(&buf, warnings ? " -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter"
+                           : " -Wno-everything");
 
         // Platform flags
 #if defined(_WIN32)
@@ -598,7 +599,7 @@ public:
             case CompileOptimization::LTO: { Fmt(&buf, " -O2 -flto -DNDEBUG"); } break;
         }
         if (warnings) {
-            Fmt(&buf, " -Wall");
+            Fmt(&buf, " -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-cast-function-type");
             if (src_type == SourceType::CXX) {
                 Fmt(&buf, " -Wno-class-memaccess -Wno-init-list-lifetime");
             }
@@ -866,7 +867,7 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        Fmt(&buf, " /EHsc %1", warnings ? "/W3 /wd4200" : "/w");
+        Fmt(&buf, " /EHsc %1", warnings ? "/W4 /wd4200 /wd4458 /wd4706 /wd4100 /wd4127 /wd4702" : "/w");
         switch (compile_opt) {
             case CompileOptimization::None: { Fmt(&buf, " /Od /RTCsu"); } break;
             case CompileOptimization::Debug: { Fmt(&buf, " /O2 /RTCsu"); } break;
