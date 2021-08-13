@@ -947,9 +947,7 @@ void bk_Parser::ParseRecord()
     HeapArray<char> signature_buf;
     bk_RecordTypeInfo type_buf = {};
 
-    const char *name = ConsumeIdentifier();
-
-    Fmt(&signature_buf, "struct %1", name);
+    type_buf.signature = ConsumeIdentifier();
     type_buf.primitive = bk_PrimitiveKind::Record;
 
     ConsumeToken(bk_TokenKind::LeftParenthesis);
@@ -986,11 +984,9 @@ void bk_Parser::ParseRecord()
         ConsumeToken(bk_TokenKind::RightParenthesis);
     }
 
-    type_buf.signature = InternString(signature_buf.ptr);
-
     // Publish type and symbol
     bk_RecordTypeInfo *type = InsertType(type_buf, &program->record_types)->AsRecordType();
-    const bk_VariableInfo *var = AddGlobal(name, bk_TypeType, {{.type = type}}, false, bk_VariableInfo::Scope::Module);
+    const bk_VariableInfo *var = AddGlobal(type_buf.signature, bk_TypeType, {{.type = type}}, false, bk_VariableInfo::Scope::Module);
     definitions_map.Set(var, record_pos);
 
     // Can't do it before because the members move (dynamic array)
