@@ -127,7 +127,7 @@ static bool ResolveFileSet(const FileSet &file_set,
 
 static bool MatchPlatform(Span<const char> name, bool *out_match)
 {
-    int flags;
+    int flags = 0;
     if (name == "Desktop") {
         flags = (int)TargetPlatform::Windows |
                 (int)TargetPlatform::Linux |
