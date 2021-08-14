@@ -107,7 +107,7 @@ def create_domain(binary, root_dir, domain, archive_key,
 
     execute_command([binary, 'init', '-o', owner_user, '--archive_key', archive_key,
                      '--title', domain, '--username', admin_username,
-                     '--password', admin_password, directory])
+                     '--password', admin_password, '--totp', directory])
 
 def list_services():
     services = {}
