@@ -149,11 +149,11 @@ static bool MatchPlatform(Span<const char> name, bool *out_match)
     }
 
 #if defined(_WIN32)
-    *out_match = flags & (int)TargetPlatform::Windows;
+    *out_match |= (bool)(flags & (int)TargetPlatform::Windows);
 #elif defined(__linux__)
-    *out_match = flags & (int)TargetPlatform::Linux;
+    *out_match |= (bool)(flags & (int)TargetPlatform::Linux);
 #elif defined(__APPLE__)
-    *out_match = flags & (int)TargetPlatform::macOS;
+    *out_match |= (bool)(flags & (int)TargetPlatform::macOS);
 #else
     #error Unsupported platform
 #endif
