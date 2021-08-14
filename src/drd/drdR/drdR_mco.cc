@@ -524,13 +524,10 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
 
     unsigned int flags = 0;
     for (const char *opt: options_vec) {
-        mco_ClassifyFlag flag;
-        if (!OptionToEnum(mco_ClassifyFlagOptions, opt, &flag)) {
+        if (!OptionToFlag(mco_ClassifyFlagOptions, opt, &flags)) {
             LogError("Unknown classifier option '%1'", opt);
             rcc_StopWithLastError();
         }
-
-        flags |= 1u << (int)flag;
     }
 
     int dispense_mode = -1;

@@ -4096,6 +4096,36 @@ bool OptionToEnum(Span<const OptionDesc> options, Span<const char> str, T *out_v
     return false;
 }
 
+template <typename T>
+bool OptionToFlag(Span<const char *const> options, Span<const char> str, T *out_flags, bool enable = true)
+{
+    for (Size i = 0; i < options.len; i++) {
+        const char *opt = options[i];
+
+        if (TestStr(opt, str)) {
+            *out_flags = ApplyMask(*out_flags, 1u << i, enable);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+template <typename T>
+bool OptionToFlag(Span<const OptionDesc> options, Span<const char> str, T *out_flags, bool enable = true)
+{
+    for (Size i = 0; i < options.len; i++) {
+        const OptionDesc &desc = options[i];
+
+        if (TestStr(desc.name, str)) {
+            *out_flags = ApplyMask(*out_flags, 1u << i, enable);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // ------------------------------------------------------------------------
 // Console prompter (simplified readline)
 // ------------------------------------------------------------------------

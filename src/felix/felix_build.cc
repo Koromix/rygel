@@ -126,14 +126,9 @@ static bool ParseFeatureString(Span<const char> str, uint32_t *out_features)
     while (str.len) {
         Span<const char> part = TrimStr(SplitStrAny(str, " ,", &str), " ");
 
-        if (part.len) {
-            CompileFeature feature;
-            if (!OptionToEnum(CompileFeatureOptions, part, &feature)) {
-                LogError("Unknown target feature '%1'", part);
-                return false;
-            }
-
-            *out_features |= 1u << (int)feature;
+        if (part.len && !OptionToFlag(CompileFeatureOptions, part, out_features)) {
+            LogError("Unknown target feature '%1'", part);
+            return false;
         }
     }
 

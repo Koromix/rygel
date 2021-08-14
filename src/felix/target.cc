@@ -139,13 +139,10 @@ static bool MatchPlatform(Span<const char> name, bool *out_match)
         // Old name, supported for compatibility (easier bisect)
         flags = (int)TargetPlatform::Windows;
     } else {
-        TargetPlatform platform;
-        if (!OptionToEnum(TargetPlatformNames, name, &platform)) {
+        if (!OptionToFlag(TargetPlatformNames, name, &flags)) {
             LogError("Unknown platform '%1'", name);
             return false;
         }
-
-        flags = 1 << (int)platform;
     }
 
 #if defined(_WIN32)
@@ -304,16 +301,16 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                             }
 
                             if (part.len) {
-                                CompileFeature feature;
-                                if (OptionToEnum(CompileFeatureOptions, part, &feature)) {
-                                    if (enable) {
-                                        target_config.enable_features |= 1u << (int)feature;
-                                    } else {
-                                        target_config.disable_features |= 1u << (int)feature;
+                                if (enable) {
+                                    if (!OptionToFlag(CompileFeatureOptions, part, &target_config.enable_features)) {
+                                        LogError("Unknown target feature '%1'", part);
+                                        valid = false;
                                     }
                                 } else {
-                                    LogError("Unknown target feature '%1'", part);
-                                    valid = false;
+                                    if (!OptionToFlag(CompileFeatureOptions, part, &target_config.disable_features)) {
+                                        LogError("Unknown target feature '%1'", part);
+                                        valid = false;
+                                    }
                                 }
                             }
                         }

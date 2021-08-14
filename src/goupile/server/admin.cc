@@ -1497,16 +1497,12 @@ static bool ParsePermissionList(Span<const char> remain, uint32_t *out_permissio
 
         if (js_perm.len) {
             char buf[128];
-
             js_perm = ConvertFromJsonName(js_perm, buf);
 
-            UserPermission perm;
-            if (!OptionToEnum(UserPermissionNames, ConvertFromJsonName(js_perm, buf), &perm)) {
+            if (!OptionToFlag(UserPermissionNames, js_perm, &permissions)) {
                 LogError("Unknown permission '%1'", js_perm);
                 return false;
             }
-
-            permissions |= 1 << (int)perm;
         }
     }
 

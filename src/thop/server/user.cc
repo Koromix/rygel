@@ -158,14 +158,9 @@ bool UserSetBuilder::LoadIni(StreamReader *st)
 
                         if (part == "All") {
                             user->permissions = enable ? UINT_MAX : 0;
-                        } else if (part.len) {
-                            UserPermission perm;
-                            if (OptionToEnum(UserPermissionNames, part, &perm)) {
-                                user->permissions = ApplyMask(user->permissions, 1u << (int)perm, enable);
-                            } else {
-                                LogError("Unknown permission '%1'", part);
-                                valid = false;
-                            }
+                        } else if (part.len && !OptionToFlag(UserPermissionNames, part, &user->permissions, enable)) {
+                            LogError("Unknown permission '%1'", part);
+                            valid = false;
                         }
                     }
                 } else if (prop.key == "McoDefault") {
@@ -188,14 +183,9 @@ bool UserSetBuilder::LoadIni(StreamReader *st)
 
                         if (part == "All") {
                             user->mco_dispense_modes = enable ? UINT_MAX : 0;
-                        } else if (part.len) {
-                            mco_DispenseMode dispense_mode;
-                            if (OptionToEnum(mco_DispenseModeOptions, part, &dispense_mode)) {
-                                user->mco_dispense_modes = ApplyMask(user->mco_dispense_modes, 1u << (int)dispense_mode, enable);
-                            } else {
-                                LogError("Unknown dispensation mode '%1'", part);
-                                valid = false;
-                            }
+                        } else if (part.len && !OptionToFlag(mco_DispenseModeOptions, part, &user->mco_dispense_modes, enable)) {
+                            LogError("Unknown dispensation mode '%1'", part);
+                            valid = false;
                         }
                     }
                 } else {

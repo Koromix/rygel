@@ -67,14 +67,9 @@ Available merge options: %!..+%5%!0)", FelixTarget, CompressionTypeNames[(int)co
                 while (flags_str[0]) {
                     Span<const char> part = TrimStr(SplitStrAny(flags_str, " ,", &flags_str), " ");
 
-                    if (part.len) {
-                        PackFlag flag;
-                        if (!OptionToEnum(PackFlagNames, part, &flag)) {
-                            LogError("Unknown packing flag '%1'", part);
-                            return 1;
-                        }
-
-                        flags |= 1u << (int)flag;
+                    if (part.len && !OptionToFlag(PackFlagNames, part, &flags)) {
+                        LogError("Unknown packing flag '%1'", part);
+                        return 1;
                     }
                 }
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
