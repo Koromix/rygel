@@ -1526,6 +1526,8 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
             case bk_TokenKind::Dot: {
                 if (!expect_value && stack[stack.len - 1].type->primitive == bk_PrimitiveKind::Record) {
                     ParseRecordDot();
+                } else if (expect_value) {
+                    goto unexpected;
                 } else {
                     MarkError(pos - 1, "Cannot use dot operator on non-struct value");
                     goto error;
