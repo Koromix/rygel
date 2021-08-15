@@ -46,8 +46,8 @@ struct bk_TokenizedFile {
 
     HeapArray<bk_Token> tokens;
 
-    // Used to parse function declarations in first pass
-    HeapArray<Size> funcs;
+    // Used to parse function and record declarations in prepass
+    HeapArray<Size> prototypes;
 
     BlockAllocator str_alloc;
 };

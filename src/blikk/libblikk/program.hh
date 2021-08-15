@@ -112,8 +112,8 @@ struct bk_RecordTypeInfo: public bk_TypeInfo {
         RG_HASHTABLE_HANDLER(Member, name);
     };
 
-    HeapArray<Member> members;
-    HashTable<const char *, const Member *> members_map;
+    LocalArray<Member, RG_LEN(bk_FunctionTypeInfo::params.data)> members;
+    const bk_FunctionInfo *func;
 };
 
 extern Span<const bk_TypeInfo> bk_BaseTypes;
@@ -130,7 +130,8 @@ struct bk_FunctionInfo {
     enum class Mode {
         Intrinsic,
         Native,
-        Blikk
+        Blikk,
+        Record
     };
 
     struct Parameter {

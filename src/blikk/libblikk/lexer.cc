@@ -119,9 +119,9 @@ static bool TestUnicodeTable(Span<const int32_t> table, int32_t uc)
 bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
 {
     RG_DEFER_NC(err_guard, tokens_len = tokens.len,
-                           funcs_len = file->funcs.len) {
+                           prototypes_len = file->prototypes.len) {
         tokens.RemoveFrom(tokens_len);
-        file->funcs.RemoveFrom(funcs_len);
+        file->prototypes.RemoveFrom(prototypes_len);
     };
 
     // Skip UTF-8 BOM... Who invented this crap?
@@ -481,10 +481,10 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                 const bk_Token *keyword = KeywordsMap.Find(ident);
 
                 if (keyword) {
-                    // In order to have order-independent top-level functions, we need to parse
-                    // their declarations first! Tell the parser where to look to help it.
-                    if (keyword->kind == bk_TokenKind::Func) {
-                        file->funcs.Append(tokens.len);
+                    // In order to have order-independent top-level records and functions, we need
+                    // to parse their declarations first! Tell the parser where to look to help it.
+                    if (keyword->kind == bk_TokenKind::Func || keyword->kind == bk_TokenKind::Record) {
+                        file->prototypes.Append(tokens.len);
                     }
 
                     tokens.Append({keyword->kind, line, offset, keyword->u});
@@ -507,7 +507,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
         file->filename = DuplicateString(filename, &file->str_alloc).ptr;
         file->code = code;
         tokens.Trim();
-        file->funcs.Trim();
+        file->prototypes.Trim();
 
         err_guard.Disable();
     }

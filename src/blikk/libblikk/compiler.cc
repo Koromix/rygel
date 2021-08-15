@@ -90,7 +90,7 @@ public:
                                Span<const bk_PrimitiveValue> values, bool mut, bk_VariableInfo::Scope scope);
 
 private:
-    void ParsePrototypes(Span<const Size> funcs);
+    void ParsePrototypes(Span<const Size> positions);
 
     // These 3 functions return true if (and only if) all code paths have a return statement.
     // For simplicity, return statements inside loops are not considered.
@@ -99,7 +99,6 @@ private:
     bool ParseDo();
 
     void ParseFunction(const PrototypeInfo *proto);
-    void ParseRecord();
     void ParseReturn();
     void ParseLet();
     void PushDefaultValue(Size var_pos, const bk_VariableInfo &var, const bk_TypeInfo *type);
@@ -324,7 +323,7 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
 
     // Preparse (top-level order-independence)
     preparse = true;
-    ParsePrototypes(file.funcs);
+    ParsePrototypes(file.prototypes);
 
     // Do the actual parsing!
     preparse = false;
@@ -486,7 +485,7 @@ bk_VariableInfo *bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type,
     return var;
 }
 
-void bk_Parser::ParsePrototypes(Span<const Size> funcs)
+void bk_Parser::ParsePrototypes(Span<const Size> positions)
 {
     RG_ASSERT(!prototypes_map.count);
     RG_ASSERT(pos == 0);
@@ -499,26 +498,37 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
     HeapArray<char> prototype_buf;
     bk_FunctionTypeInfo type_buf = {};
 
-    HeapArray<PrototypeInfo> prototypes;
+    HeapArray<PrototypeInfo> func_prototypes;
+    HeapArray<PrototypeInfo> record_prototypes;
 
-    for (Size i = 0; i < funcs.len; i++) {
-        pos = funcs[i] + 1;
+    for (Size i = 0; i < positions.len; i++) {
+        Size proto_pos = positions[i];
+
+        pos = proto_pos;
         show_errors = true;
 
+        RG_ASSERT(tokens[pos].kind == bk_TokenKind::Func || tokens[pos].kind == bk_TokenKind::Record);
+        bool record = (tokens[pos].kind == bk_TokenKind::Record);
+
+        pos++;
         if (!PeekToken(bk_TokenKind::Identifier))
             continue;
 
-        PrototypeInfo *proto = prototypes_map.SetDefault(funcs[i]);
+        PrototypeInfo *proto = prototypes_map.SetDefault(proto_pos);
         bk_FunctionInfo *func = program->functions.AppendDefault();
         definitions_map.Set(func, pos);
 
-        proto->pos = funcs[i];
+        proto->pos = proto_pos;
         proto->func = func;
         func->name = ConsumeIdentifier();
-        func->mode = bk_FunctionInfo::Mode::Blikk;
+        func->mode = record ? bk_FunctionInfo::Mode::Record : bk_FunctionInfo::Mode::Blikk;
 
         // Temporary array that only cares about pos and func
-        prototypes.Append(*proto);
+        if (record) {
+            record_prototypes.Append(*proto);
+        } else {
+            func_prototypes.Append(*proto);
+        }
 
         // Clean up parameter variables once we're done
         RG_DEFER_C(variables_len = program->variables.len) {
@@ -543,7 +553,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
                 bk_VariableInfo *var = program->variables.AppendDefault();
                 Size param_pos = pos;
 
-                var->mut = MatchToken(bk_TokenKind::Mut);
+                var->mut = !record && MatchToken(bk_TokenKind::Mut);
                 var->name = ConsumeIdentifier();
                 var->scope = bk_VariableInfo::Scope::Local;
 
@@ -594,7 +604,32 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
         prototype_buf.Append(')');
 
         // Return type
-        if (MatchToken(bk_TokenKind::Colon)) {
+        if (record) {
+            bk_RecordTypeInfo *record_type = program->record_types.AppendDefault();
+
+            record_type->signature = func->name;
+            record_type->primitive = bk_PrimitiveKind::Record;
+            record_type->func = func;
+
+            for (const bk_FunctionInfo::Parameter &param: func->params) {
+                bk_RecordTypeInfo::Member member = {};
+
+                member.name = param.name;
+                member.type = param.type;
+                member.offset = record_type->size;
+
+                record_type->members.Append(member);
+                record_type->size += param.type->size;
+            }
+
+            // We don't need to check for uniqueness
+            program->types_map.TrySet(record_type);
+
+            type_buf.ret_type = record_type;
+
+            Fmt(&signature_buf, ": %1", record_type->signature);
+            Fmt(&prototype_buf, ": %1", record_type->signature);
+        } else if (MatchToken(bk_TokenKind::Colon)) {
             type_buf.ret_type = ParseTypeExpression();
 
             if (type_buf.ret_type != bk_NullType) {
@@ -631,11 +666,16 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
             if (ret.second) {
                 proto0->overload_prev = proto0;
                 proto0->overload_next = proto0;
-            } else {
+            } else if (!record) {
                 proto0->overload_prev->overload_next = func;
                 func->overload_next = proto0;
                 func->overload_prev = proto0->overload_prev;
                 proto0->overload_prev = func;
+            } else {
+                MarkError(proto->pos, "Duplicate type '%1'", func->name);
+
+                func->overload_prev = func;
+                func->overload_next = func;
             }
         }
     }
@@ -646,8 +686,16 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
     src->lines.RemoveFrom(prev_lines_len);
 
     // Publish function symbols
-    for (const PrototypeInfo &proto: prototypes) {
+    for (const PrototypeInfo &proto: record_prototypes) {
         const bk_FunctionInfo &func = *proto.func;
+        const bk_FunctionTypeInfo *type = func.type;
+
+        const bk_VariableInfo *var = AddGlobal(func.name, bk_TypeType, {{.type = type->ret_type}}, false, bk_VariableInfo::Scope::Module);
+        definitions_map.Set(var, proto.pos);
+    }
+    for (const PrototypeInfo &proto: func_prototypes) {
+        const bk_FunctionInfo &func = *proto.func;
+
         const bk_VariableInfo *var = AddGlobal(func.name, func.type, {{.func = &func}}, false, bk_VariableInfo::Scope::Module);
         definitions_map.Set(var, proto.pos);
     }
@@ -730,7 +778,17 @@ bool bk_Parser::ParseStatement()
             EndStatement();
         } break;
         case bk_TokenKind::Record: {
-            ParseRecord();
+            const PrototypeInfo *proto = prototypes_map.Find(pos);
+
+            if (RG_LIKELY(proto)) {
+                pos = proto->body_pos;
+            } else {
+                pos++;
+
+                ConsumeToken(bk_TokenKind::Identifier);
+                RG_ASSERT(!valid);
+            }
+
             EndStatement();
         } break;
         case bk_TokenKind::Return: {
@@ -931,68 +989,17 @@ void bk_Parser::ParseReturn()
                   slot.type->signature, current_func->type->ret_type->signature);
         return;
     }
-    if (RG_UNLIKELY(slot.type->PassByReference() && slot.var &&
-                    slot.var->scope == bk_VariableInfo::Scope::Local)) {
-        MarkError(return_pos, "Cannot return reference to local '%1' value", slot.type->signature);
-        return;
+    if (RG_UNLIKELY(slot.type->PassByReference())) {
+        if (slot.var && slot.var->scope == bk_VariableInfo::Scope::Local) {
+            MarkError(return_pos, "Cannot return reference to local '%1' variable", slot.var->name);
+            return;
+        } else if (!slot.var) {
+            MarkError(return_pos, "Cannot return reference to temporary value of type '%1'", slot.type->signature);
+            return;
+        }
     }
 
     EmitReturn();
-}
-
-void bk_Parser::ParseRecord()
-{
-    Size record_pos = pos++;
-
-    HeapArray<char> signature_buf;
-    bk_RecordTypeInfo type_buf = {};
-
-    type_buf.signature = ConsumeIdentifier();
-    type_buf.primitive = bk_PrimitiveKind::Record;
-
-    ConsumeToken(bk_TokenKind::LeftParenthesis);
-    if (!MatchToken(bk_TokenKind::RightParenthesis)) {
-        HashMap<const char *, Size> used_names;
-
-        do {
-            SkipNewLines();
-
-            bk_RecordTypeInfo::Member member = {};
-            Size name_pos = pos;
-
-            member.name = ConsumeIdentifier();
-            ConsumeToken(bk_TokenKind::Colon);
-            member.type = ParseTypeExpression();
-            member.offset = type_buf.size;
-
-            // Check for existing member with same name
-            {
-                std::pair<Size *, bool> ret = used_names.TrySet(member.name, name_pos);
-
-                if (RG_UNLIKELY(!ret.second)) {
-                    MarkError(name_pos, "Member name '%1' is already used", member.name);
-                    HintError(*ret.first, "Previous member was defined here");
-                    return;
-                }
-            }
-
-            type_buf.members.Append(member);
-            type_buf.size += member.type->size;
-        } while (MatchToken(bk_TokenKind::Comma));
-
-        SkipNewLines();
-        ConsumeToken(bk_TokenKind::RightParenthesis);
-    }
-
-    // Publish type and symbol
-    bk_RecordTypeInfo *type = InsertType(type_buf, &program->record_types)->AsRecordType();
-    const bk_VariableInfo *var = AddGlobal(type_buf.signature, bk_TypeType, {{.type = type}}, false, bk_VariableInfo::Scope::Module);
-    definitions_map.Set(var, record_pos);
-
-    // Can't do it before because the members move (dynamic array)
-    for (const bk_RecordTypeInfo::Member &member: type->members) {
-        type->members_map.Set(&member);
-    }
 }
 
 void bk_Parser::ParseLet()
@@ -1588,7 +1595,9 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                         }
 
                         if (call) {
-                            if (RG_LIKELY(var->type->primitive == bk_PrimitiveKind::Function)) {
+                            bk_PrimitiveKind primitive = var->type->primitive;
+
+                            if (primitive == bk_PrimitiveKind::Function) {
                                 if (ir[ir.len - 1].code == bk_Opcode::Push) {
                                     RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Function);
 
@@ -1602,6 +1611,29 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                                         goto error;
                                 } else {
                                     if (!ParseCall(var->type->AsFunctionType(), nullptr, false))
+                                        goto error;
+                                }
+                            } else if (primitive == bk_PrimitiveKind::Type) {
+                                if (ir[ir.len - 1].code == bk_Opcode::Push) {
+                                    RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Type);
+
+                                    const bk_TypeInfo *type = ir[ir.len - 1].u.type;
+
+                                    if (RG_LIKELY(type->primitive == bk_PrimitiveKind::Record)) {
+                                        const bk_RecordTypeInfo *record_type = type->AsRecordType();
+                                        bk_FunctionInfo *func = (bk_FunctionInfo *)record_type->func;
+
+                                        TrimInstructions(1);
+                                        stack.len--;
+
+                                        if (!ParseCall(func->type, func, false))
+                                            goto error;
+                                    } else {
+                                        MarkError(var_pos, "Variable '%1' is not a function and cannot be called", var->name);
+                                        goto error;
+                                    }
+                                } else {
+                                        MarkError(var_pos, "Record constructors can only be called directly");
                                         goto error;
                                 }
                             } else {
@@ -2207,9 +2239,11 @@ void bk_Parser::ParseRecordDot()
     const bk_RecordTypeInfo *record_type = stack[stack.len - 1].type->AsRecordType();
 
     const char *name = ConsumeIdentifier();
-    const bk_RecordTypeInfo::Member *member = record_type->members_map.FindValue(name, nullptr);
+    const bk_RecordTypeInfo::Member *member =
+        std::find_if(record_type->members.begin(), record_type->members.end(), 
+                     [&](const bk_RecordTypeInfo::Member &member) { return TestStr(member.name, name); });
 
-    if (RG_UNLIKELY(!member)) {
+    if (RG_UNLIKELY(member == record_type->members.end())) {
         MarkError(pos, "Type '%1' does not contain member called '%2'", record_type->signature, name);
         return;
     }
@@ -2316,6 +2350,11 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
         stack.len--;
     } else if (func->mode == bk_FunctionInfo::Mode::Intrinsic) {
         EmitIntrinsic(func->name, call_pos, call_addr, args);
+    } else if (func->mode == bk_FunctionInfo::Mode::Record) {
+        bk_Opcode code = current_func ? bk_Opcode::LeaLocal : bk_Opcode::Lea;
+        ir.Append({code, bk_PrimitiveKind::Record, {.i = var_offset}});
+
+        var_offset += args_size;
     } else {
         ir.Append({bk_Opcode::CallDirect, {}, {.func = func}});
     }
