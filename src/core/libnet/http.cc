@@ -871,7 +871,7 @@ bool http_IO::Write(Span<const uint8_t> buf)
     }
     write_buf.Append(buf);
 
-    if (state == State::Zombie) {
+    if (!write_eof && state == State::Zombie) {
         LogError("Connection aborted while writing");
         return false;
     }
