@@ -515,7 +515,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> funcs)
         proto->pos = funcs[i];
         proto->func = func;
         func->name = ConsumeIdentifier();
-        func->mode = bk_FunctionInfo::Mode::blikk;
+        func->mode = bk_FunctionInfo::Mode::Blikk;
 
         // Temporary array that only cares about pos and func
         prototypes.Append(*proto);
