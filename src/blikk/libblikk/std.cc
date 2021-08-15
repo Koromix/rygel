@@ -129,6 +129,7 @@ void bk_ImportPrint(bk_Compiler *out_compiler)
     out_compiler->AddFunction("debug(...)", [](bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args) {
         DoPrint(vm, args, true);
         PrintLn();
+
         return bk_PrimitiveValue();
     });
 }
