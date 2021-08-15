@@ -1606,7 +1606,8 @@ private:
         buckets.Clear();
     }
 
-    void DeleteValues(iterator_type begin, iterator_type end)
+    void DeleteValues([[maybe_unused]] iterator_type begin,
+                      [[maybe_unused]] iterator_type end)
     {
         if constexpr(!std::is_trivial<T>::value) {
             for (iterator_type it = begin; it != end; ++it) {
