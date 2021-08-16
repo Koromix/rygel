@@ -672,12 +672,17 @@ void bk_Parser::ParsePrototypes(Span<const Size> positions)
         src->lines.RemoveFrom(prev_lines_len);
 
         // Publish symbol
+        const bk_VariableInfo *var;
         if (record) {
-            bk_VariableInfo *var = AddGlobal(func->name, bk_TypeType, {{.type = type_buf.ret_type}}, false, bk_VariableInfo::Scope::Module);
-            definitions_map.Set(var, proto->pos);
+            var = AddGlobal(func->name, bk_TypeType, {{.type = type_buf.ret_type}}, false, bk_VariableInfo::Scope::Module);
         } else {
-            bk_VariableInfo *var = AddGlobal(func->name, func->type, {{.func = func}}, false, bk_VariableInfo::Scope::Module);
-            definitions_map.Set(var, proto->pos);
+            var = AddGlobal(func->name, func->type, {{.func = func}}, false, bk_VariableInfo::Scope::Module);
+        }
+        definitions_map.Set(var, proto->pos);
+
+        // Expressions involving this prototype (function or record) won't issue (visible) errors
+        if (RG_UNLIKELY(!show_errors)) {
+            poisoned_set.Set(var);
         }
     }
 
@@ -1760,11 +1765,21 @@ error:
     // e.g. if expressions). This way, the parent can differenciate single-line constructs
     // and block constructs, and prevent generation of garbage errors (such as "functions
     // must be defined in top-level scope") caused by undetected block and/or do statement.
-    while (pos < tokens.len && tokens[pos].kind != bk_TokenKind::Do &&
-                               tokens[pos].kind != bk_TokenKind::EndOfLine &&
-                               tokens[pos].kind != bk_TokenKind::Semicolon) {
+    while (RG_LIKELY(pos < tokens.len)) {
+        if (tokens[pos].kind == bk_TokenKind::Do)
+            break;
+        if (tokens[pos].kind == bk_TokenKind::EndOfLine)
+            break;
+        if (tokens[pos].kind == bk_TokenKind::Semicolon)
+            break;
+
+        parentheses += (tokens[pos].kind == bk_TokenKind::LeftParenthesis);
+        if (tokens[pos].kind == bk_TokenKind::RightParenthesis && --parentheses < 0)
+            break;
+
         pos++;
     };
+
     return {bk_NullType};
 }
 
@@ -2554,14 +2569,13 @@ bool bk_Parser::ConsumeToken(bk_TokenKind kind)
         return false;
     }
 
-    Size prev_pos = pos++;
-
-    if (RG_UNLIKELY(tokens[prev_pos].kind != kind)) {
-        MarkError(prev_pos, "Unexpected token '%1', expected '%2'",
-                  bk_TokenKindNames[(int)tokens[prev_pos].kind], bk_TokenKindNames[(int)kind]);
+    if (RG_UNLIKELY(tokens[pos].kind != kind)) {
+        MarkError(pos, "Unexpected token '%1', expected '%2'",
+                  bk_TokenKindNames[(int)tokens[pos].kind], bk_TokenKindNames[(int)kind]);
         return false;
     }
 
+    pos++;
     return true;
 }
 
