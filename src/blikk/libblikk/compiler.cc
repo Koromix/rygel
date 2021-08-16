@@ -130,6 +130,8 @@ private:
     void EmitReturn();
 
     void DestroyVariables(Size count);
+    template<typename T>
+    void DestroyTypes(BucketArray<T> *types, Size count);
 
     void FixJumps(Size jump_addr, Size target_addr);
     void TrimInstructions(Size count);
@@ -265,7 +267,9 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
                            prev_var_offset = var_offset,
                            variables_len = program->variables.len,
                            functions_len = program->functions.len,
-                           function_types_len = program->function_types.len) {
+                           function_types_len = program->function_types.len,
+                           array_types_len = program->array_types.len,
+                           record_types_len = program->record_types.len) {
         ir.RemoveFrom(prev_ir_len);
         program->sources.RemoveFrom(sources_len);
 
@@ -289,10 +293,9 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
         }
         program->functions.RemoveFrom(functions_len);
 
-        for (Size i = function_types_len; i < program->function_types.len; i++) {
-            const bk_TypeInfo &type = program->function_types[i];
-            program->types_map.Remove(type.signature);
-        }
+        DestroyTypes(&program->function_types, program->function_types.len - function_types_len);
+        DestroyTypes(&program->array_types, program->array_types.len - array_types_len);
+        DestroyTypes(&program->record_types, program->record_types.len - record_types_len);
     };
 
     this->file = &file;
@@ -2518,6 +2521,21 @@ void bk_Parser::DestroyVariables(Size count)
     }
 
     program->variables.RemoveLast(count);
+}
+
+template <typename T>
+void bk_Parser::DestroyTypes(BucketArray<T> *types, Size count)
+{
+    Size first_idx = types->len - count;
+
+    for (Size i = types->len - 1; i >= first_idx; i--) {
+        const bk_TypeInfo &type = (*types)[i];
+        const bk_TypeInfo **ptr = program->types_map.Find(type.signature);
+
+        if (ptr && *ptr == &type) {
+            program->types_map.Remove(ptr);
+        }
+    }
 }
 
 void bk_Parser::FixJumps(Size jump_addr, Size target_addr)
