@@ -481,7 +481,12 @@ bk_VariableInfo *bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type,
     }
     var->ready_addr = ir.len;
 
-    program->variables_map.TrySet(var);
+    std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySet(var);
+    if (RG_UNLIKELY(!ret.second)) {
+        const bk_VariableInfo *prev_var = *ret.first;
+        var->shadow = prev_var;
+    }
+
     return var;
 }
 
