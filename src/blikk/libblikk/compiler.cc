@@ -778,6 +778,11 @@ bool bk_Parser::ParseStatement()
             EndStatement();
         } break;
         case bk_TokenKind::Record: {
+            if (RG_UNLIKELY(current_func)) {
+                MarkError(pos, "Record types cannot be defined inside functions");
+                HintError(definitions_map.FindValue(current_func, -1), "Previous function was started here and is still open");
+            }
+
             const PrototypeInfo *proto = prototypes_map.Find(pos);
 
             if (RG_LIKELY(proto)) {
