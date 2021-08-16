@@ -490,19 +490,15 @@ void bk_Parser::ParsePrototypes(Span<const Size> positions)
     RG_ASSERT(!prototypes_map.count);
     RG_ASSERT(pos == 0);
 
-    Size prev_ir_len = ir.len;
-    Size prev_lines_len = src->lines.len;
-
     // Reuse for performance
     HeapArray<char> signature_buf;
     HeapArray<char> prototype_buf;
     bk_FunctionTypeInfo type_buf = {};
 
-    HeapArray<PrototypeInfo> func_prototypes;
-    HeapArray<PrototypeInfo> record_prototypes;
-
     for (Size i = 0; i < positions.len; i++) {
         Size proto_pos = positions[i];
+        Size prev_ir_len = ir.len;
+        Size prev_lines_len = src->lines.len;
 
         pos = proto_pos;
         show_errors = true;
@@ -523,18 +519,6 @@ void bk_Parser::ParsePrototypes(Span<const Size> positions)
         func->name = ConsumeIdentifier();
         func->mode = record ? bk_FunctionInfo::Mode::Record : bk_FunctionInfo::Mode::Blikk;
 
-        // Temporary array that only cares about pos and func
-        if (record) {
-            record_prototypes.Append(*proto);
-        } else {
-            func_prototypes.Append(*proto);
-        }
-
-        // Clean up parameter variables once we're done
-        RG_DEFER_C(variables_len = program->variables.len) {
-            DestroyVariables(program->variables.len - variables_len);
-        };
-
         // Reset buffers
         signature_buf.RemoveFrom(0);
         signature_buf.Append("func (");
@@ -547,6 +531,10 @@ void bk_Parser::ParsePrototypes(Span<const Size> positions)
         // Parameters
         ConsumeToken(bk_TokenKind::LeftParenthesis);
         if (!MatchToken(bk_TokenKind::RightParenthesis)) {
+            RG_DEFER_C(variables_len = program->variables.len) {
+                DestroyVariables(program->variables.len - variables_len);
+            };
+
             for (;;) {
                 SkipNewLines();
 
@@ -658,7 +646,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> positions)
         func->earliest_ref_pos = RG_SIZE_MAX;
         func->earliest_ref_addr = RG_SIZE_MAX;
 
-        // Publish it!
+        // Publish function
         {
             std::pair<bk_FunctionInfo **, bool> ret = program->functions_map.TrySet(func);
             bk_FunctionInfo *proto0 = *ret.first;
@@ -678,27 +666,22 @@ void bk_Parser::ParsePrototypes(Span<const Size> positions)
                 func->overload_next = func;
             }
         }
+
+        // This is a preparse step, clean up accidental side effets
+        ir.RemoveFrom(prev_ir_len);
+        src->lines.RemoveFrom(prev_lines_len);
+
+        // Publish symbol
+        if (record) {
+            bk_VariableInfo *var = AddGlobal(func->name, bk_TypeType, {{.type = type_buf.ret_type}}, false, bk_VariableInfo::Scope::Module);
+            definitions_map.Set(var, proto->pos);
+        } else {
+            bk_VariableInfo *var = AddGlobal(func->name, func->type, {{.func = func}}, false, bk_VariableInfo::Scope::Module);
+            definitions_map.Set(var, proto->pos);
+        }
     }
 
-    // This is a preparse step, clean up main side effets
     pos = 0;
-    ir.RemoveFrom(prev_ir_len);
-    src->lines.RemoveFrom(prev_lines_len);
-
-    // Publish function symbols
-    for (const PrototypeInfo &proto: record_prototypes) {
-        const bk_FunctionInfo &func = *proto.func;
-        const bk_FunctionTypeInfo *type = func.type;
-
-        const bk_VariableInfo *var = AddGlobal(func.name, bk_TypeType, {{.type = type->ret_type}}, false, bk_VariableInfo::Scope::Module);
-        definitions_map.Set(var, proto.pos);
-    }
-    for (const PrototypeInfo &proto: func_prototypes) {
-        const bk_FunctionInfo &func = *proto.func;
-
-        const bk_VariableInfo *var = AddGlobal(func.name, func.type, {{.func = &func}}, false, bk_VariableInfo::Scope::Module);
-        definitions_map.Set(var, proto.pos);
-    }
 }
 
 template<typename T>
@@ -1653,7 +1636,7 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                 } else {
                     MarkError(var_pos, "Reference to unknown identifier '%1'", tok.u.str);
                     if (preparse) {
-                        HintError(-1, "Top-level declaration (prototype) cannot reference variables");
+                        HintError(-1, "Top-level declarations (prototypes) cannot reference variables");
                     }
                     goto error;
                 }
