@@ -129,9 +129,9 @@ private:
     void EmitPop(int64_t count);
     void EmitReturn();
 
-    void DestroyVariables(Size count);
+    void DestroyVariables(Size first_idx);
     template<typename T>
-    void DestroyTypes(BucketArray<T> *types, Size count);
+    void DestroyTypes(BucketArray<T> *types, Size first_idx);
 
     void FixJumps(Size jump_addr, Size target_addr);
     void TrimInstructions(Size count);
@@ -274,7 +274,7 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
         program->sources.RemoveFrom(sources_len);
 
         var_offset = prev_var_offset;
-        DestroyVariables(program->variables.len - variables_len);
+        DestroyVariables(variables_len);
 
         for (Size i = functions_len; i < program->functions.len; i++) {
             bk_FunctionInfo *func = &program->functions[i];
@@ -293,9 +293,9 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
         }
         program->functions.RemoveFrom(functions_len);
 
-        DestroyTypes(&program->function_types, program->function_types.len - function_types_len);
-        DestroyTypes(&program->array_types, program->array_types.len - array_types_len);
-        DestroyTypes(&program->record_types, program->record_types.len - record_types_len);
+        DestroyTypes(&program->function_types, function_types_len);
+        DestroyTypes(&program->array_types, array_types_len);
+        DestroyTypes(&program->record_types, record_types_len);
     };
 
     this->file = &file;
@@ -540,7 +540,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> positions)
         ConsumeToken(bk_TokenKind::LeftParenthesis);
         if (!MatchToken(bk_TokenKind::RightParenthesis)) {
             RG_DEFER_C(variables_len = program->variables.len) {
-                DestroyVariables(program->variables.len - variables_len);
+                DestroyVariables(variables_len);
             };
 
             for (;;) {
@@ -723,7 +723,7 @@ bool bk_Parser::ParseBlock(bool end_with_else)
         depth--;
 
         EmitPop(var_offset - prev_offset);
-        DestroyVariables(program->variables.len - variables_len);
+        DestroyVariables(variables_len);
         var_offset = prev_offset;
     };
 
@@ -868,7 +868,7 @@ void bk_Parser::ParseFunction(const PrototypeInfo *proto)
                prev_offset = var_offset) {
         // Variables inside the function are destroyed at the end of the block.
         // This destroys the parameters.
-        DestroyVariables(func->params.len);
+        DestroyVariables(program->variables.len - func->params.len);
         var_offset = prev_offset;
 
         current_func = prev_func;
@@ -1316,7 +1316,7 @@ void bk_Parser::ParseFor()
 
     // Destroy iterator and range values
     EmitPop(3);
-    DestroyVariables(1);
+    DestroyVariables(program->variables.len - 1);
     var_offset -= 3;
 }
 
@@ -2503,10 +2503,8 @@ void bk_Parser::EmitReturn()
     }
 }
 
-void bk_Parser::DestroyVariables(Size count)
+void bk_Parser::DestroyVariables(Size first_idx)
 {
-    Size first_idx = program->variables.len - count;
-
     for (Size i = program->variables.len - 1; i >= first_idx; i--) {
         const bk_VariableInfo &var = program->variables[i];
         bk_VariableInfo **ptr = program->variables_map.Find(var.name);
@@ -2520,14 +2518,12 @@ void bk_Parser::DestroyVariables(Size count)
         poisoned_set.Remove(&var);
     }
 
-    program->variables.RemoveLast(count);
+    program->variables.RemoveFrom(first_idx);
 }
 
 template <typename T>
-void bk_Parser::DestroyTypes(BucketArray<T> *types, Size count)
+void bk_Parser::DestroyTypes(BucketArray<T> *types, Size first_idx)
 {
-    Size first_idx = types->len - count;
-
     for (Size i = types->len - 1; i >= first_idx; i--) {
         const bk_TypeInfo &type = (*types)[i];
         const bk_TypeInfo **ptr = program->types_map.Find(type.signature);
