@@ -94,7 +94,7 @@ private:
 
     // These 3 functions return true if (and only if) all code paths have a return statement.
     // For simplicity, return statements inside loops are not considered.
-    bool ParseBlock();
+    bool ParseBlock(bool end_with_else);
     bool ParseStatement();
     bool ParseDo();
 
@@ -705,7 +705,7 @@ bk_TypeInfo *bk_Parser::InsertType(const T &type_buf, BucketArray<T> *out_types)
     return type;
 }
 
-bool bk_Parser::ParseBlock()
+bool bk_Parser::ParseBlock(bool end_with_else)
 {
     show_errors = true;
     depth++;
@@ -721,8 +721,12 @@ bool bk_Parser::ParseBlock()
 
     bool has_return = false;
 
-    while (RG_LIKELY(pos < tokens.len) && tokens[pos].kind != bk_TokenKind::Else &&
-                                          tokens[pos].kind != bk_TokenKind::End) {
+    while (RG_LIKELY(pos < tokens.len)) {
+        if (tokens[pos].kind == bk_TokenKind::End)
+            break;
+        if (end_with_else && tokens[pos].kind == bk_TokenKind::Else)
+            break;
+
         has_return |= ParseStatement();
     }
 
@@ -747,7 +751,7 @@ bool bk_Parser::ParseStatement()
             pos++;
 
             if (RG_LIKELY(EndStatement())) {
-                has_return = ParseBlock();
+                has_return = ParseBlock(false);
                 ConsumeToken(bk_TokenKind::End);
 
                 EndStatement();
@@ -944,7 +948,7 @@ void bk_Parser::ParseFunction(const PrototypeInfo *proto)
     if (PeekToken(bk_TokenKind::Do)) {
         has_return = ParseDo();
     } else if (RG_LIKELY(EndStatement())) {
-        has_return = ParseBlock();
+        has_return = ParseBlock(false);
         ConsumeToken(bk_TokenKind::End);
     }
 
@@ -1132,7 +1136,7 @@ bool bk_Parser::ParseIf()
         has_return &= ParseDo();
         ir[branch_addr].u.i = ir.len - branch_addr;
     } else if (RG_LIKELY(EndStatement())) {
-        has_return &= ParseBlock();
+        has_return &= ParseBlock(true);
 
         if (MatchToken(bk_TokenKind::Else)) {
             Size jump_addr = ir.len;
@@ -1148,13 +1152,13 @@ bool bk_Parser::ParseIf()
                         branch_addr = ir.len;
                         ir.Append({bk_Opcode::BranchIfFalse});
 
-                        has_return &= ParseBlock();
+                        has_return &= ParseBlock(true);
 
                         ir.Append({bk_Opcode::Jump, {}, {.i = jump_addr}});
                         jump_addr = ir.len - 1;
                     }
                 } else if (RG_LIKELY(EndStatement())) {
-                    has_return &= ParseBlock();
+                    has_return &= ParseBlock(false);
                     has_else = true;
 
                     break;
@@ -1201,7 +1205,7 @@ void bk_Parser::ParseWhile()
     if (PeekToken(bk_TokenKind::Do)) {
         ParseDo();
     } else if (RG_LIKELY(EndStatement())) {
-        ParseBlock();
+        ParseBlock(false);
         ConsumeToken(bk_TokenKind::End);
     }
 
@@ -1289,7 +1293,7 @@ void bk_Parser::ParseFor()
     if (PeekToken(bk_TokenKind::Do)) {
         ParseDo();
     } else if (RG_LIKELY(EndStatement())) {
-        ParseBlock();
+        ParseBlock(false);
         ConsumeToken(bk_TokenKind::End);
     }
 
