@@ -604,7 +604,12 @@ bool bk_VirtualMachine::Run()
 
 void bk_VirtualMachine::DumpInstruction(Size pc) const
 {
-#if 0
+#ifndef NDEBUG
+    static bool debug = GetDebugFlag("DEBUG_VM");
+
+    if (!debug)
+        return;
+
     const bk_Instruction &inst = ir[pc];
 
     switch (inst.code) {
