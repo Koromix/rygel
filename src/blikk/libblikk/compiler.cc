@@ -608,14 +608,15 @@ void bk_Parser::ParsePrototypes(Span<const Size> positions)
             record_type->func = func;
 
             for (const bk_FunctionInfo::Parameter &param: func->params) {
-                bk_RecordTypeInfo::Member member = {};
+                bk_RecordTypeInfo::Member *member = record_type->members.AppendDefault();
 
-                member.name = param.name;
-                member.type = param.type;
-                member.offset = record_type->size;
-
-                record_type->members.Append(member);
+                member->name = param.name;
+                member->type = param.type;
+                member->offset = record_type->size;
                 record_type->size += param.type->size;
+
+                Size param_pos = definitions_map.FindValue(&param, -1);
+                definitions_map.Set(member, param_pos);
             }
 
             // We don't need to check for uniqueness
@@ -2249,8 +2250,44 @@ void bk_Parser::ParseArraySubscript()
     ConsumeToken(bk_TokenKind::RightBracket);
 }
 
+// Copied almost as-is from Wikipedia:
+// https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance
+static Size LevenshteinDistance(Span<const char> str1, Span<const char> str2)
+{
+    if (str1.len > str2.len)
+        return LevenshteinDistance(str2, str1);
+
+    HeapArray<Size> distances;
+    distances.AppendDefault(str1.len + 1);
+
+    for (Size i = 0; i <= str1.len; ++i) {
+        distances[i] = i;
+    }
+
+    for (Size j = 1; j <= str2.len; ++j) {
+        Size prev_diagonal = distances[0]++;
+        Size prev_diagonal_save;
+
+        for (Size i = 1; i <= str1.len; ++i) {
+            prev_diagonal_save = distances[i];
+
+            if (str1[i - 1] == str2[j - 1]) {
+                distances[i] = prev_diagonal;
+            } else {
+                distances[i] = std::min(std::min(distances[i - 1], distances[i]), prev_diagonal) + 1;
+            }
+
+            prev_diagonal = prev_diagonal_save;
+        }
+    }
+
+    return distances[str1.len];
+}
+
 void bk_Parser::ParseRecordDot()
 {
+    Size member_pos = pos;
+
     const bk_RecordTypeInfo *record_type = stack[stack.len - 1].type->AsRecordType();
 
     const char *name = ConsumeIdentifier();
@@ -2259,7 +2296,16 @@ void bk_Parser::ParseRecordDot()
                      [&](const bk_RecordTypeInfo::Member &member) { return TestStr(member.name, name); });
 
     if (RG_UNLIKELY(member == record_type->members.end())) {
-        MarkError(pos, "Type '%1' does not contain member called '%2'", record_type->signature, name);
+        MarkError(member_pos, "Type '%1' does not contain member called '%2'", record_type->signature, name);
+
+        for (const bk_RecordTypeInfo::Member &member: record_type->members) {
+            Size dist = LevenshteinDistance(name, member.name);
+
+            if (dist <= 3) {
+                HintError(definitions_map.FindValue(&member, -1), "Suggested member: %1", member.name);
+            }
+        }
+
         return;
     }
 
