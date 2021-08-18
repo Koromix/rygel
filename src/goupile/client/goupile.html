@@ -67,6 +67,18 @@
                 0% { transform: rotate(0deg); }
                 100% { transform: rotate(360deg); }
             }
+
+            .gp_fatal {
+                display: flex;
+                height: 100%;
+                align-items: center;
+                justify-content: center;
+            }
+            .gp_fatal > div {
+                padding: 5px;
+                font-size: 1.4em;
+                text-align: center;
+            }
         </style>
 
         {HEAD_TAGS}
@@ -76,10 +88,10 @@
         <div id="ui_root">
             <div id="ui_main">
                 <noscript>
-                    <div class="ui_wip">
-                        <b>Cette application nécessite un support Javascript et un navigateur récent</b><br/>
+                    <div class="gp_fatal"><div>
+                        <span style="color: red;">⚠&#xFE0E; <b>Cette application nécessite un navigateur récent et Javascript</b></span><br/>
                         Vous pouvez utiliser Chrome (version ≥ 55), Firefox (version ≥ 60), Edge (version ≥ 17), Safari (≥ 11)
-                    </div>
+                    </div></div>
                 </noscript>
             </div>
         </div>
@@ -105,10 +117,10 @@
 
                         p.catch(function(err) {
                             document.querySelector('#ui_main').innerHTML =
-                                '<div class="ui_wip">' +
-                                    '<b>Une erreur est survenue pendant le chargement</b><br/>' +
+                                '<div class="gp_fatal"><div>' +
+                                    '<span style="color: red;">⚠\uFE0E <b>Une erreur est survenue pendant le chargement</b></span><br/>' +
                                     err.message +
-                                '</div>';
+                                '</div></div>';
                             document.body.classList.remove('gp_loading');
                         });
                     } else {
@@ -121,10 +133,10 @@
 
             function proposeBrowsers() {
                 document.querySelector('#ui_main').innerHTML =
-                    '<div class="ui_wip">' +
-                        '<b>Ce navigateur ne semble pas être supporté, ou il s\'agit d\'une version trop ancienne</b><br/>' +
+                    '<div class="gp_fatal"><div>' +
+                        '<span style="color: red;">⚠\uFE0E <b>Ce navigateur ne semble pas être supporté, ou il s\'agit d\'une version trop ancienne</b></span><br/>' +
                         'Vous pouvez utiliser Chrome (version ≥ 55), Firefox (version ≥ 60), Edge (version ≥ 17), Safari (≥ 11)' +
-                    '</div>';
+                    '</div></div>';
                 document.body.classList.remove('gp_loading');
             }
         </script>
