@@ -471,7 +471,6 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
     padding: 5px;
     font-size: 1.4em;
     text-align: center;
-    white-space: pre;
 }
 .ui_wip::before {
     content: '⚠\FE0E';

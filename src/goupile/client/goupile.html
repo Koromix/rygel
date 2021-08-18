@@ -75,47 +75,54 @@
     <body>
         <div id="ui_root">
             <div id="ui_main">
-                <noscript><div class="ui_wip">Cette application nécessite un support Javascript</div></noscript>
+                <noscript>
+                    <div class="ui_wip">
+                        <b>Cette application nécessite un support Javascript et un navigateur récent</b><br/>
+                        Vous pouvez utiliser Chrome (version ≥ 55), Firefox (version ≥ 60), Edge (version ≥ 17), Safari (≥ 11)
+                    </div>
+                </noscript>
             </div>
         </div>
 
         <script>
             try {
-                eval('let test = async function() {}');
+                // Quick way to check for recent browser
+                eval('let test = async () => {}');
+                eval('let test = function () { if (!new.target) {} }');
 
                 // See here: https://github.com/dfahlander/Dexie.js/issues/317
-                let m = navigator.userAgent.match('Firefox/([0-9]+)');
+                var m = navigator.userAgent.match('Firefox/([0-9]+)');
                 if (m != null) {
-                    let version = parseInt(m[1], 10);
+                    var version = parseInt(m[1], 10);
                     if (version < 60)
-                        throw new Error('Cannot work with broken async in IndexedDB');
+                        throw new Error('Cannot work with broken async support in IndexedDB');
                 }
 
                 document.body.classList.add('gp_loading');
                 window.addEventListener('load', function(e) {
                     if (typeof goupile !== 'undefined') {
-                        let p = goupile.start();
+                        var p = goupile.start();
 
                         p.catch(function(err) {
                             document.querySelector('#ui_main').innerHTML =
                                 '<div class="ui_wip">' +
-                                    '<b>Une erreur est survenue pendant le chargement</b>\n' +
+                                    '<b>Une erreur est survenue pendant le chargement</b><br/>' +
                                     err.message +
                                 '</div>';
                             document.body.classList.remove('gp_loading');
                         });
                     } else {
-                        document.querySelector('#ui_main').innerHTML =
-                            '<div class="ui_wip">' +
-                                '<b>Échec de chargement du code javascript</b>\n' +
-                            '</div>';
-                        document.body.classList.remove('gp_loading');
+                        proposeBrowsers();
                     }
                 });
             } catch (err) {
+                proposeBrowsers();
+            }
+
+            function proposeBrowsers() {
                 document.querySelector('#ui_main').innerHTML =
                     '<div class="ui_wip">' +
-                        '<b>Ce navigateur n\'est pas supporté, ou il s\'agit d\'une version trop ancienne</b>\n' +
+                        '<b>Ce navigateur ne semble pas être supporté, ou il s\'agit d\'une version trop ancienne</b><br/>' +
                         'Vous pouvez utiliser Chrome (version ≥ 55), Firefox (version ≥ 60), Edge (version ≥ 17), Safari (≥ 11)' +
                     '</div>';
                 document.body.classList.remove('gp_loading');
