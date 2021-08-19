@@ -2298,10 +2298,11 @@ void bk_Parser::ParseRecordDot()
     if (RG_UNLIKELY(member == record_type->members.end())) {
         MarkError(member_pos, "Type '%1' does not contain member called '%2'", record_type->signature, name);
 
+        Size treshold = strlen(name) / 2;
         for (const bk_RecordTypeInfo::Member &member: record_type->members) {
             Size dist = LevenshteinDistance(name, member.name);
 
-            if (dist <= 3) {
+            if (dist <= treshold) {
                 HintError(definitions_map.FindValue(&member, -1), "Suggested member: %1", member.name);
             }
         }
