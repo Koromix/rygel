@@ -101,6 +101,7 @@
                 // Quick way to check for recent browser
                 eval('let test = async () => {}');
                 eval('let test = function () { if (!new.target) {} }');
+                eval('let test = new URLSearchParams');
 
                 // See here: https://github.com/dfahlander/Dexie.js/issues/317
                 var m = navigator.userAgent.match('Firefox/([0-9]+)');
