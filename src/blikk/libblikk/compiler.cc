@@ -1404,7 +1404,7 @@ static int GetOperatorPrecedence(bk_TokenKind kind, bool expect_unary)
     }
 }
 
-// Copied almost as-is from Wikipedia:
+// Copied almost as-is (but made case insensitive within ASCII range) from Wikipedia:
 // https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance
 static Size LevenshteinDistance(Span<const char> str1, Span<const char> str2)
 {
@@ -1425,7 +1425,10 @@ static Size LevenshteinDistance(Span<const char> str1, Span<const char> str2)
         for (Size i = 1; i <= str1.len; ++i) {
             prev_diagonal_save = distances[i];
 
-            if (str1[i - 1] == str2[j - 1]) {
+            char c1 = LowerAscii(str1[i - 1]);
+            char c2 = LowerAscii(str2[i - 1]);
+
+            if (c1 == c2) {
                 distances[i] = prev_diagonal;
             } else {
                 distances[i] = std::min(std::min(distances[i - 1], distances[i]), prev_diagonal) + 1;
