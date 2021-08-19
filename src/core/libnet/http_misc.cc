@@ -186,6 +186,26 @@ void http_EncodeUrlSafe(const char *str, HeapArray<char> *out_buf)
     out_buf->ptr[out_buf->len] = 0;
 }
 
+bool http_PreventCSRF(const http_RequestInfo &request, http_IO *io)
+{
+    const char *str1 = request.GetHeaderValue("X-Requested-With");
+    const char *str2 = request.GetHeaderValue("Sec-Fetch-Site");
+
+    if (!str1 || !TestStr(str1, "XMLHTTPRequest")) {
+        LogError("Anti-CSRF header is missing");
+        io->AttachError(403);
+        return false;
+    }
+
+    if (str2 && !TestStr(str2, "same-origin")) {
+        LogError("Denying cross-origin request");
+        io->AttachError(403);
+        return false;
+    }
+
+    return true;
+}
+
 static void ReleaseDataCallback(void *ptr)
 {
     Allocator::Release(nullptr, ptr, -1);

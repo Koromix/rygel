@@ -418,6 +418,10 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
         }
     }
 
+    // CSRF protection
+    if (!http_PreventCSRF(request, io))
+        return;
+
     // And now, API endpoints
     if (TestStr(admin_url, "/api/session/ping") && request.method == http_RequestMethod::Get) {
         HandlePing(nullptr, request, io);
@@ -624,6 +628,10 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
         }
     }
 
+    // CSRF protection
+    if (!http_PreventCSRF(request, io))
+        return;
+
     // And now, API endpoints
     if (TestStr(instance_url, "/api/session/ping") && request.method == http_RequestMethod::Get) {
         HandlePing(instance, request, io);
@@ -694,24 +702,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         }
         if (!TestStr(host, gp_domain.config.require_host)) {
             LogError("Unexpected Host header '%1'", host);
-            io->AttachError(403);
-            return;
-        }
-    }
-
-    // CSRF protection
-    if (request.method != http_RequestMethod::Get) {
-        const char *str1 = request.GetHeaderValue("X-Requested-With");
-        const char *str2 = request.GetHeaderValue("Sec-Fetch-Site");
-
-        if (!str1 || !TestStr(str1, "XMLHTTPRequest")) {
-            LogError("Anti-CSRF header is missing");
-            io->AttachError(403);
-            return;
-        }
-
-        if (str2 && !TestStr(str2, "same-origin")) {
-            LogError("Denying cross-origin request");
             io->AttachError(403);
             return;
         }

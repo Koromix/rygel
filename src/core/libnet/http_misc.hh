@@ -18,6 +18,7 @@
 
 namespace RG {
 
+struct http_RequestInfo;
 class http_IO;
 
 struct http_ByteRange {
@@ -32,6 +33,8 @@ uint32_t http_ParseAcceptableEncodings(Span<const char> encodings);
 bool http_ParseRange(Span<const char> str, Size len, LocalArray<http_ByteRange, 16> *out_ranges);
 
 void http_EncodeUrlSafe(const char *str, HeapArray<char> *out_buf);
+
+bool http_PreventCSRF(const http_RequestInfo &request, http_IO *io);
 
 class http_JsonPageBuilder: public json_Writer {
     http_IO *io = nullptr;
