@@ -1701,7 +1701,7 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                         Size dist = LevenshteinDistance(name, var.name);
 
                         if (dist <= treshold) {
-                            HintError(definitions_map.FindValue(&var, -1), "Suggested variable: %1 (%2)",
+                            HintError(definitions_map.FindValue(&var, -1), "Suggestion: %1 (%2)",
                                       var.name, var.type->signature);
                         }
                     }
@@ -2319,7 +2319,7 @@ void bk_Parser::ParseRecordDot()
             Size dist = LevenshteinDistance(name, member.name);
 
             if (dist <= treshold) {
-                HintError(definitions_map.FindValue(&member, -1), "Suggested member: %1",
+                HintError(definitions_map.FindValue(&member, -1), "Suggestion: %1",
                           member.name, member.type->signature);
             }
         }
