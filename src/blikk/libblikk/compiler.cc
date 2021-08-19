@@ -203,14 +203,19 @@ private:
     void HintSuggestions(const char *name, const T &symbols)
     {
         Size treshold = strlen(name) / 2;
+        bool warn_case = false;
 
         for (const auto &it: symbols) {
             Size dist = LevenshteinDistance(name, it.name);
 
             if (dist <= treshold) {
-                HintError(definitions_map.FindValue(&it, -1), "Suggestion: %1 (%2)",
-                          it.name, it.type->signature);
+                HintError(definitions_map.FindValue(&it, -1), "Suggestion: %1 (%2)", it.name, it.type->signature);
+                warn_case |= !dist;
             }
+        }
+
+        if (warn_case) {
+            HintError(-1, "Identifiers are case-sensitive");
         }
     }
 };
