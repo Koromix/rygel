@@ -1404,6 +1404,40 @@ static int GetOperatorPrecedence(bk_TokenKind kind, bool expect_unary)
     }
 }
 
+// Copied almost as-is from Wikipedia:
+// https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance
+static Size LevenshteinDistance(Span<const char> str1, Span<const char> str2)
+{
+    if (str1.len > str2.len)
+        return LevenshteinDistance(str2, str1);
+
+    HeapArray<Size> distances;
+    distances.AppendDefault(str1.len + 1);
+
+    for (Size i = 0; i <= str1.len; ++i) {
+        distances[i] = i;
+    }
+
+    for (Size j = 1; j <= str2.len; ++j) {
+        Size prev_diagonal = distances[0]++;
+        Size prev_diagonal_save;
+
+        for (Size i = 1; i <= str1.len; ++i) {
+            prev_diagonal_save = distances[i];
+
+            if (str1[i - 1] == str2[j - 1]) {
+                distances[i] = prev_diagonal;
+            } else {
+                distances[i] = std::min(std::min(distances[i - 1], distances[i]), prev_diagonal) + 1;
+            }
+
+            prev_diagonal = prev_diagonal_save;
+        }
+    }
+
+    return distances[str1.len];
+}
+
 StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
 {
     Size start_stack_len = stack.len;
@@ -1552,7 +1586,8 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                     goto unexpected;
                 expect_value = false;
 
-                const bk_VariableInfo *var = program->variables_map.FindValue(tok.u.str, nullptr);
+                const char *name = tok.u.str;
+                const bk_VariableInfo *var = program->variables_map.FindValue(name, nullptr);
                 Size var_pos = pos - 1;
                 bool call = MatchToken(bk_TokenKind::LeftParenthesis);
 
@@ -1652,10 +1687,21 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                         goto error;
                     }
                 } else {
-                    MarkError(var_pos, "Reference to unknown identifier '%1'", tok.u.str);
+                    MarkError(var_pos, "Reference to unknown identifier '%1'", name);
+
                     if (preparse) {
                         HintError(-1, "Top-level declarations (prototypes) cannot reference variables");
                     }
+
+                    Size treshold = strlen(name) / 2;
+                    for (const bk_VariableInfo &var: program->variables) {
+                        Size dist = LevenshteinDistance(name, var.name);
+
+                        if (dist <= treshold) {
+                            HintError(definitions_map.FindValue(&var, -1), "Suggested variable: %1", var.name);
+                        }
+                    }
+
                     goto error;
                 }
             } break;
@@ -2248,40 +2294,6 @@ void bk_Parser::ParseArraySubscript()
              MatchToken(bk_TokenKind::Comma));
 
     ConsumeToken(bk_TokenKind::RightBracket);
-}
-
-// Copied almost as-is from Wikipedia:
-// https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance
-static Size LevenshteinDistance(Span<const char> str1, Span<const char> str2)
-{
-    if (str1.len > str2.len)
-        return LevenshteinDistance(str2, str1);
-
-    HeapArray<Size> distances;
-    distances.AppendDefault(str1.len + 1);
-
-    for (Size i = 0; i <= str1.len; ++i) {
-        distances[i] = i;
-    }
-
-    for (Size j = 1; j <= str2.len; ++j) {
-        Size prev_diagonal = distances[0]++;
-        Size prev_diagonal_save;
-
-        for (Size i = 1; i <= str1.len; ++i) {
-            prev_diagonal_save = distances[i];
-
-            if (str1[i - 1] == str2[j - 1]) {
-                distances[i] = prev_diagonal;
-            } else {
-                distances[i] = std::min(std::min(distances[i - 1], distances[i]), prev_diagonal) + 1;
-            }
-
-            prev_diagonal = prev_diagonal_save;
-        }
-    }
-
-    return distances[str1.len];
 }
 
 void bk_Parser::ParseRecordDot()
