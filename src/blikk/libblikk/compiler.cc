@@ -43,6 +43,8 @@ struct StackSlot {
     Size indirect_addr;
 };
 
+static Size LevenshteinDistance(Span<const char> str1, Span<const char> str2);
+
 class bk_Parser {
     RG_DELETE_COPY(bk_Parser)
 
@@ -196,7 +198,59 @@ private:
             HintError(defn_pos, fmt, args...);
         }
     }
+
+    template <typename T>
+    void HintSuggestions(const char *name, const T &symbols)
+    {
+        Size treshold = strlen(name) / 2;
+
+        for (const auto &it: symbols) {
+            Size dist = LevenshteinDistance(name, it.name);
+
+            if (dist <= treshold) {
+                HintError(definitions_map.FindValue(&it, -1), "Suggestion: %1 (%2)",
+                          it.name, it.type->signature);
+            }
+        }
+    }
 };
+
+// Copied almost as-is (but made case insensitive within ASCII range) from Wikipedia:
+// https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance
+static Size LevenshteinDistance(Span<const char> str1, Span<const char> str2)
+{
+    if (str1.len > str2.len)
+        return LevenshteinDistance(str2, str1);
+
+    HeapArray<Size> distances;
+    distances.AppendDefault(str1.len + 1);
+
+    for (Size i = 0; i <= str1.len; ++i) {
+        distances[i] = i;
+    }
+
+    for (Size j = 1; j <= str2.len; ++j) {
+        Size prev_diagonal = distances[0]++;
+        Size prev_diagonal_save;
+
+        for (Size i = 1; i <= str1.len; ++i) {
+            prev_diagonal_save = distances[i];
+
+            char c1 = LowerAscii(str1[i - 1]);
+            char c2 = LowerAscii(str2[i - 1]);
+
+            if (c1 == c2) {
+                distances[i] = prev_diagonal;
+            } else {
+                distances[i] = std::min(std::min(distances[i - 1], distances[i]), prev_diagonal) + 1;
+            }
+
+            prev_diagonal = prev_diagonal_save;
+        }
+    }
+
+    return distances[str1.len];
+}
 
 bk_Compiler::bk_Compiler(bk_Program *program)
 {
@@ -1404,43 +1458,6 @@ static int GetOperatorPrecedence(bk_TokenKind kind, bool expect_unary)
     }
 }
 
-// Copied almost as-is (but made case insensitive within ASCII range) from Wikipedia:
-// https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance
-static Size LevenshteinDistance(Span<const char> str1, Span<const char> str2)
-{
-    if (str1.len > str2.len)
-        return LevenshteinDistance(str2, str1);
-
-    HeapArray<Size> distances;
-    distances.AppendDefault(str1.len + 1);
-
-    for (Size i = 0; i <= str1.len; ++i) {
-        distances[i] = i;
-    }
-
-    for (Size j = 1; j <= str2.len; ++j) {
-        Size prev_diagonal = distances[0]++;
-        Size prev_diagonal_save;
-
-        for (Size i = 1; i <= str1.len; ++i) {
-            prev_diagonal_save = distances[i];
-
-            char c1 = LowerAscii(str1[i - 1]);
-            char c2 = LowerAscii(str2[i - 1]);
-
-            if (c1 == c2) {
-                distances[i] = prev_diagonal;
-            } else {
-                distances[i] = std::min(std::min(distances[i - 1], distances[i]), prev_diagonal) + 1;
-            }
-
-            prev_diagonal = prev_diagonal_save;
-        }
-    }
-
-    return distances[str1.len];
-}
-
 StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
 {
     Size start_stack_len = stack.len;
@@ -1691,20 +1708,10 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                     }
                 } else {
                     MarkError(var_pos, "Reference to unknown identifier '%1'", name);
-
                     if (preparse) {
                         HintError(-1, "Top-level declarations (prototypes) cannot reference variables");
                     }
-
-                    Size treshold = strlen(name) / 2;
-                    for (const bk_VariableInfo &var: program->variables) {
-                        Size dist = LevenshteinDistance(name, var.name);
-
-                        if (dist <= treshold) {
-                            HintError(definitions_map.FindValue(&var, -1), "Suggestion: %1 (%2)",
-                                      var.name, var.type->signature);
-                        }
-                    }
+                    HintSuggestions(name, program->variables);
 
                     goto error;
                 }
@@ -2313,16 +2320,7 @@ void bk_Parser::ParseRecordDot()
 
     if (RG_UNLIKELY(member == record_type->members.end())) {
         MarkError(member_pos, "Type '%1' does not contain member called '%2'", record_type->signature, name);
-
-        Size treshold = strlen(name) / 2;
-        for (const bk_RecordTypeInfo::Member &member: record_type->members) {
-            Size dist = LevenshteinDistance(name, member.name);
-
-            if (dist <= treshold) {
-                HintError(definitions_map.FindValue(&member, -1), "Suggestion: %1",
-                          member.name, member.type->signature);
-            }
-        }
+        HintSuggestions(name, record_type->members);
 
         return;
     }
