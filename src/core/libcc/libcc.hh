@@ -915,7 +915,11 @@ struct Span<const char> {
     Span() = default;
     constexpr Span(const char &ch) : ptr(&ch), len(1) {}
     constexpr Span(const char *ptr_, Size len_) : ptr(ptr_), len(len_) {}
-    Span(const char *const &str) : ptr(str), len(str ? (Size)strlen(str) : 0) {}
+#ifdef __clang__
+    constexpr Span(const char *const &str) : ptr(str), len(str ? (Size)__builtin_strlen(str) : 0) {}
+#else
+    constexpr Span(const char *const &str) : ptr(str), len(str ? (Size)strlen(str) : 0) {}
+#endif
 
     void Reset()
     {
