@@ -1545,10 +1545,11 @@ bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSe
             state.autozoom = true;
         }
         ImGui::Separator();
-        if (ImGui::ButtonEx("Remove alignement", ImVec2(0, 0),
-                            state.align_concepts.table.count ? 0 : ImGuiButtonFlags_Disabled)) {
+        ImGui::BeginDisabled(!state.align_concepts.table.count);
+        if (ImGui::ButtonEx("Remove alignement", ImVec2(0, 0))) {
             ToggleAlign(state);
         }
+        ImGui::EndDisabled();
         if (ImGui::Button("Reset time zoom")) {
             state.time_zoom = NAN;
         }
