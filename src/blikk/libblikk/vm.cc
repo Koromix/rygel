@@ -87,6 +87,10 @@ bool bk_VirtualMachine::Run(bool debug)
             stack.RemoveLast(inst->u.i);
             DISPATCH(++pc);
         }
+        CASE(Dup): {
+            stack.Append(stack[stack.len - 1]);
+            DISPATCH(++pc);
+        }
 
         CASE(Lea): {
             stack.Append({.i = inst->u.i});
@@ -94,6 +98,10 @@ bool bk_VirtualMachine::Run(bool debug)
         }
         CASE(LeaLocal): {
             stack.Append({.i = bp + inst->u.i});
+            DISPATCH(++pc);
+        }
+        CASE(LeaRel): {
+            stack.Append({.i = stack.len + inst->u.i});
             DISPATCH(++pc);
         }
         CASE(Load): {
@@ -104,48 +112,55 @@ bool bk_VirtualMachine::Run(bool debug)
             stack.Append({.i = stack[bp + inst->u.i].i});
             DISPATCH(++pc);
         }
-        CASE(LoadRef): {
-            Size ptr = stack[stack.len - 2].i;
-            Size idx = stack[stack.len - 1].i;
-            stack.len -= 2;
-            stack.Append({.i = stack[ptr + idx].i});
+        CASE(LoadBig): {
+            Size ptr = stack[stack.len - 1].i;
+            stack.len -= 1;
+            for (Size i = 0; i < inst->u.i; i++) {
+                stack.Append({.i = stack[ptr + i].i});
+            }
             DISPATCH(++pc);
         }
-        CASE(LoadIndirect): {
-            Size ptr = stack[stack.len - 2].i;
-            Size idx = stack[stack.len - 1].i;
-            stack.Append({.i = stack[ptr + idx].i});
+        CASE(LoadBigKeep): {
+            Size ptr = stack[stack.len - 1].i;
+            for (Size i = 0; i < inst->u.i; i++) {
+                stack.Append({.i = stack[ptr + i].i});
+            }
             DISPATCH(++pc);
         }
         CASE(Store): {
             stack[inst->u.i].i = stack.ptr[--stack.len].i;
             DISPATCH(++pc);
         }
+        CASE(StoreKeep): {
+            stack[inst->u.i].i = stack[stack.len - 1].i;
+            DISPATCH(++pc);
+        }
         CASE(StoreLocal): {
             stack[bp + inst->u.i].i = stack.ptr[--stack.len].i;
             DISPATCH(++pc);
         }
-        CASE(StoreArray): {
-            Size ptr = stack[stack.len - 3].i;
-            Size idx = stack[stack.len - 2].i;
-            stack[ptr + idx].i = stack[stack.len - 1].i;
-            stack.len -= 3;
-            DISPATCH(++pc);
-        }
-        CASE(Copy): {
-            stack[inst->u.i].i = stack[stack.len - 1].i;
-            DISPATCH(++pc);
-        }
-        CASE(CopyLocal): {
+        CASE(StoreLocalKeep): {
             stack[bp + inst->u.i].i = stack.ptr[stack.len - 1].i;
             DISPATCH(++pc);
         }
-        CASE(CopyArray): {
-            Size ptr = stack[stack.len - 3].i;
-            Size idx = stack[stack.len - 2].i;
-            stack[ptr + idx].i = stack[stack.len - 1].i;
-            stack[stack.len - 3] = stack[stack.len - 1];
-            stack.len -= 2;
+        CASE(StoreBig): {
+            Size ptr = stack[stack.len - inst->u.i - 1].i;
+            Size src = stack.len - inst->u.i;
+            for (Size i = 0; i < inst->u.i; i++) {
+                stack[ptr + i].i = stack[src + i].i;
+            }
+            stack.len -= inst->u.i + 1;
+            DISPATCH(++pc);
+        }
+        CASE(StoreBigKeep): {
+            Size ptr = stack[stack.len - inst->u.i - 1].i;
+            Size src = stack.len - inst->u.i;
+            for (Size i = 0; i < inst->u.i; i++) {
+                int64_t value = stack[src + i].i;
+                stack[ptr + i].i = stack[src + i].i;
+                stack[src + i - 1].i = value;
+            }
+            stack.len -= inst->u.i;
             DISPATCH(++pc);
         }
         CASE(CheckIndex): {
@@ -637,13 +652,18 @@ void bk_VirtualMachine::DumpInstruction(Size pc) const
 
         case bk_Opcode::Lea: { PrintLn(stderr, "%!D..[0x%1]%!0 Lea @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
         case bk_Opcode::LeaLocal: { PrintLn(stderr, "%!D..[0x%1]%!0 LeaLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::LeaRel: { PrintLn(stderr, "%!D..[0x%1]%!0 LeaRel @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
         case bk_Opcode::Load: { PrintLn(stderr, "%!D..[0x%1]%!0 Load @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
         case bk_Opcode::LoadLocal: { PrintLn(stderr, "%!D..[0x%1]%!0 LoadLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::LoadBig: { PrintLn(stderr, "%!D..[0x%1]%!0 LoadBig |%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::LoadBigKeep: { PrintLn(stderr, "%!D..[0x%1]%!0 LoadBigKeep |%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
         case bk_Opcode::Store: { PrintLn(stderr, "%!D..[0x%1]%!0 Store @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::StoreKeep: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreKeep @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
         case bk_Opcode::StoreLocal: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::Copy: { PrintLn(stderr, "%!D..[0x%1]%!0 Copy @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::CopyLocal: { PrintLn(stderr, "%!D..[0x%1]%!0 CopyLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::CheckIndex: { PrintLn(stderr, "%!D..[0x%1]%!0 CheckIndex (%2)", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::StoreLocalKeep: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreLocalKeep @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::StoreBig: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreBig |%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::StoreBigKeep: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreBigKeep |%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::CheckIndex: { PrintLn(stderr, "%!D..[0x%1]%!0 CheckIndex < %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
         case bk_Opcode::Jump: { PrintLn(stderr, "%!D..[0x%1]%!0 Jump 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
         case bk_Opcode::BranchIfTrue: { PrintLn(stderr, "%!D..[0x%1]%!0 BranchIfTrue 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;

@@ -58,8 +58,8 @@ struct bk_TypeInfo {
     bk_PrimitiveKind primitive;
     Size size;
 
-    bool PassByReference() const { return primitive == bk_PrimitiveKind::Array ||
-                                          primitive == bk_PrimitiveKind::Record; }
+    // Reference types will come later (maybe)
+    bool PassByReference() const { return false; }
 
     struct bk_FunctionTypeInfo *AsFunctionType()
     {
@@ -195,7 +195,7 @@ static const char *const bk_OpcodeNames[] = {
 
 struct bk_Instruction {
     bk_Opcode code;
-    bk_PrimitiveKind primitive; // Only set for Push/Load/Store/Copy
+    bk_PrimitiveKind primitive; // Only set for Push/Load/Store
     bk_PrimitiveValue u;
 };
 

@@ -100,9 +100,7 @@ static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offs
 
 static void DoPrint(bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args, bool quote)
 {
-    RG_ASSERT(args.len % 2 == 0);
-
-    for (Size i = 0; i < args.len; i++) {
+    for (Size i = 0; i < args.len;) {
         const bk_TypeInfo *type = args[i++].type;
 
         if (type->PassByReference()) {
@@ -110,6 +108,8 @@ static void DoPrint(bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args, b
         } else {
             PrintValue(vm, type, args.ptr - vm->stack.ptr + i, quote);
         }
+
+        i += type->size;
     }
 }
 

@@ -20,20 +20,22 @@ OPCODE(Nop)
 // Immediate values
 OPCODE(Push)
 OPCODE(Pop)
+OPCODE(Dup)
 
 // Load/store
 OPCODE(Lea)
 OPCODE(LeaLocal)
+OPCODE(LeaRel)
 OPCODE(Load)
 OPCODE(LoadLocal)
-OPCODE(LoadRef)
-OPCODE(LoadIndirect)
+OPCODE(LoadBig)
+OPCODE(LoadBigKeep)
 OPCODE(Store)
+OPCODE(StoreKeep)
 OPCODE(StoreLocal)
-OPCODE(StoreArray)
-OPCODE(Copy)
-OPCODE(CopyLocal)
-OPCODE(CopyArray)
+OPCODE(StoreLocalKeep)
+OPCODE(StoreBig)
+OPCODE(StoreBigKeep)
 OPCODE(CheckIndex)
 
 // Integer operators

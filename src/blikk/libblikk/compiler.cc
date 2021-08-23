@@ -41,6 +41,7 @@ struct StackSlot {
     const bk_TypeInfo *type;
     const bk_VariableInfo *var;
     Size indirect_addr;
+    Size indirect_imbalance;
 };
 
 static Size LevenshteinDistance(Span<const char> str1, Span<const char> str2);
@@ -127,7 +128,7 @@ private:
 
     const bk_TypeInfo *ParseTypeExpression();
 
-    void DiscardResult();
+    void DiscardResult(Size discard);
 
     void EmitPop(int64_t count);
     void EmitReturn();
@@ -542,8 +543,8 @@ bk_VariableInfo *bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type,
     var->mut = mut;
     var->scope = scope;
 
+    var->offset = var_offset;
     var_offset += values.len;
-    var->offset = var_offset - 1;
 
     for (const bk_PrimitiveValue &value: values) {
         ir.Append({bk_Opcode::Push, type->primitive, value});
@@ -605,9 +606,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> positions)
         // Parameters
         ConsumeToken(bk_TokenKind::LeftParenthesis);
         if (!MatchToken(bk_TokenKind::RightParenthesis)) {
-            RG_DEFER_C(variables_len = program->variables.len) {
-                DestroyVariables(variables_len);
-            };
+            RG_DEFER_C(variables_len = program->variables.len) { DestroyVariables(variables_len); };
 
             for (;;) {
                 SkipNewLines();
@@ -848,8 +847,8 @@ bool bk_Parser::ParseStatement()
             if (proto) {
                 ParseFunction(proto);
             } else {
-                ParseExpression(true);
-                DiscardResult();
+                StackSlot slot = ParseExpression(true);
+                DiscardResult(slot.type->size);
             }
 
             EndStatement();
@@ -904,8 +903,8 @@ bool bk_Parser::ParseStatement()
         } break;
 
         default: {
-            ParseExpression(true);
-            DiscardResult();
+            StackSlot slot = ParseExpression(true);
+            DiscardResult(slot.type->size);
 
             EndStatement();
         } break;
@@ -928,8 +927,8 @@ bool bk_Parser::ParseDo()
         ParseContinue();
         return false;
     } else {
-        ParseExpression(true);
-        DiscardResult();
+        StackSlot slot = ParseExpression(true);
+        DiscardResult(slot.type->size);
 
         return false;
     }
@@ -1071,12 +1070,12 @@ void bk_Parser::ParseReturn()
                   slot.type->signature, current_func->type->ret_type->signature);
         return;
     }
-    if (RG_UNLIKELY(slot.type->PassByReference())) {
+    if (RG_UNLIKELY(slot.type->size > 1)) {
         if (slot.var && slot.var->scope == bk_VariableInfo::Scope::Local) {
-            MarkError(return_pos, "Cannot return reference to local '%1' variable", slot.var->name);
+            MarkError(return_pos, "Cannot return heavy variable '%1'", slot.var->name);
             return;
         } else if (!slot.var) {
-            MarkError(return_pos, "Cannot return reference to temporary value of type '%1'", slot.type->signature);
+            MarkError(return_pos, "Cannot return heavy value of type '%1'", slot.type->signature);
             return;
         }
     }
@@ -1137,23 +1136,16 @@ void bk_Parser::ParseLet()
                           slot.type->signature, var->name, type->signature);
             }
         } else {
-            Size offset = var_offset;
-
             PushDefaultValue(var_pos, *var, type);
-            if (type->PassByReference()) {
-                bk_Opcode code = (var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Lea : bk_Opcode::LeaLocal;
-                ir.Append({code, type->primitive, {.i = offset}});
-            }
-
             slot = {type};
         }
     }
 
     var->type = slot.type;
-    if (slot.var && !slot.var->mut && !var->mut && var->ready_addr > 0) {
-        // We're about to alias var to slot.var... we need to drop the load instruction.
+    if (slot.var && !slot.var->mut && !slot.indirect_addr && !var->mut && var->ready_addr > 0) {
+        // We're about to alias var to slot.var... we need to drop the load instructions.
         // Is it enough, and is it safe?
-        TrimInstructions(1);
+        TrimInstructions(1 + slot.type->size > 1);
 
         var->scope = slot.var->scope;
         var->ready_addr = slot.var->ready_addr;
@@ -1163,7 +1155,7 @@ void bk_Parser::ParseLet()
         var->ready_addr = ir.len;
 
         var->offset = var_offset;
-        var_offset++;
+        var_offset += slot.type->size;
     }
 
     // Expressions involving this variable won't issue (visible) errors
@@ -1191,7 +1183,6 @@ void bk_Parser::PushDefaultValue(Size var_pos, const bk_VariableInfo &var, const
 
             for (Size i = 0; i < array_type->len; i++) {
                 PushDefaultValue(var_pos, var, array_type->unit_type);
-                var_offset += !array_type->unit_type->PassByReference();
             }
         } break;
         case bk_PrimitiveKind::Record: {
@@ -1199,7 +1190,6 @@ void bk_Parser::PushDefaultValue(Size var_pos, const bk_VariableInfo &var, const
 
             for (const bk_RecordTypeInfo::Member &member: record_type->members) {
                 PushDefaultValue(var_pos, var, member.type);
-                var_offset += !member.type->PassByReference();
             }
         } break;
     }
@@ -1938,7 +1928,7 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
 
         switch (op.kind) {
             case bk_TokenKind::Reassign: {
-                if (RG_LIKELY(!dest.type->PassByReference())) {
+                if (RG_LIKELY(dest.type->size == 1)) {
                     stack[--stack.len - 1].var = nullptr;
                     success = true;
                 } else {
@@ -1994,17 +1984,19 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
         }
 
         if (dest.indirect_addr) {
-            // In order for CopyArray to work, the array reference and offset must remain on the stack.
-            // To do so, replace LoadRef (which removes them) with LoadIndirect.
+            // In order for StoreBigKeep to work, the variable address must remain on the stack.
+            // To do so, replace LoadBig (which removes them) with LoadBigKeep.
             if (op.kind != bk_TokenKind::Reassign) {
-                RG_ASSERT(ir[dest.indirect_addr].code == bk_Opcode::LoadRef);
-                ir[dest.indirect_addr].code = bk_Opcode::LoadIndirect;
+                RG_ASSERT(ir[dest.indirect_addr].code == bk_Opcode::LoadBig);
+                ir[dest.indirect_addr].code = bk_Opcode::LoadBigKeep;
             }
 
-            ir.Append({bk_Opcode::CopyArray, dest.type->primitive});
-        } else {
-            bk_Opcode code = (dest.var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Copy : bk_Opcode::CopyLocal;
+            ir.Append({bk_Opcode::StoreBigKeep, dest.type->primitive, {.i = dest.type->size}});
+        } else if (dest.type->size == 1) {
+            bk_Opcode code = (dest.var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::StoreKeep : bk_Opcode::StoreLocalKeep;
             ir.Append({code, dest.type->primitive, {.i = dest.var->offset}});
+        } else {
+            RG_ASSERT(!success);
         }
     } else { // Other operators
         switch (op.kind) {
@@ -2326,39 +2318,60 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
 
 void bk_Parser::ParseArraySubscript()
 {
+    if (!stack[stack.len - 1].indirect_addr) {
+        if (!stack[stack.len - 1].var) {
+            // If a record gets loaded, its address is already on the stack because of EmitLoad.
+            // But if its a temporary value, it is not. And because we'll have to clean up the
+            // record at the end, we need to prepare the address for the store instruction,
+            // hence the Dup instruction.
+
+            ir.Append({bk_Opcode::LeaRel, bk_PrimitiveKind::Array, {.i = -stack[stack.len - 1].type->size}});
+            ir.Append({bk_Opcode::Dup});
+
+            stack[stack.len - 1].indirect_addr = ir.len;
+        } else {
+            stack[stack.len - 1].indirect_addr = ir.len - 1;
+        }
+    }
+
     do {
         const bk_ArrayTypeInfo *array_type = stack[stack.len - 1].type->AsArrayType();
+        const bk_TypeInfo *unit_type = array_type->unit_type;
 
-        if (stack[stack.len - 1].indirect_addr) {
-            RG_ASSERT(stack[stack.len - 1].indirect_addr == ir.len - 1);
-            TrimInstructions(1);
-        }
+        // Kill the load instructions, we need to adjust the index
+        TrimInstructions(ir.len - stack[stack.len - 1].indirect_addr);
 
-        Size idx_pos = pos;
-        const bk_TypeInfo *type = ParseExpression(false).type;
-        if (RG_UNLIKELY(type != bk_IntType)) {
-            MarkError(idx_pos, "Expected an 'Int' expression, not '%1'", type->signature);
+        // Parse index expression
+        {
+            Size idx_pos = pos;
+            const bk_TypeInfo *type = ParseExpression(false).type;
+
+            if (RG_UNLIKELY(type != bk_IntType)) {
+                MarkError(idx_pos, "Expected an 'Int' expression, not '%1'", type->signature);
+            }
         }
 
         // Compute array index
         ir.Append({bk_Opcode::CheckIndex, {}, {.i = array_type->len}});
-        if (array_type->unit_type->size != 1) {
-            ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = array_type->unit_type->size}});
+        if (unit_type->size != 1) {
+            ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = unit_type->size}});
             ir.Append({bk_Opcode::MultiplyInt});
         }
-        if (stack[stack.len - 1].indirect_addr) {
-            ir.Append({bk_Opcode::AddInt});
+        ir.Append({bk_Opcode::AddInt});
+
+        // Load value
+        stack[stack.len - 1].indirect_addr = ir.len;
+        ir.Append({bk_Opcode::LoadBig, unit_type->primitive, {.i = unit_type->size}});
+
+        // Clean up temporary value (if any)
+        if (!stack[stack.len - 1].var) {
+            ir.Append({bk_Opcode::StoreBig, unit_type->primitive, {.i = unit_type->size}});
+
+            stack[stack.len - 1].indirect_imbalance += array_type->size - unit_type->size;
+            EmitPop(stack[stack.len - 1].indirect_imbalance);
         }
 
-        // Resolve subscript
-        if (array_type->unit_type->PassByReference()) {
-            ir.Append({bk_Opcode::AddInt});
-        } else {
-            ir.Append({bk_Opcode::LoadRef});
-        }
-
-        stack[stack.len - 1].type = array_type->unit_type;
-        stack[stack.len - 1].indirect_addr = ir.len - 1;
+        stack[stack.len - 1].type = unit_type;
     } while (stack[stack.len - 1].type->primitive == bk_PrimitiveKind::Array &&
              MatchToken(bk_TokenKind::Comma));
 
@@ -2370,6 +2383,25 @@ void bk_Parser::ParseRecordDot()
     Size member_pos = pos;
 
     const bk_RecordTypeInfo *record_type = stack[stack.len - 1].type->AsRecordType();
+
+    if (!stack[stack.len - 1].indirect_addr) {
+        if (!stack[stack.len - 1].var) {
+            // If an array gets loaded, its address is already on the stack because of EmitLoad.
+            // But if its a temporary value, it is not. And because we'll have to clean up the
+            // array at the end, we need to prepare the address for the store instruction,
+            // hence the Dup instruction.
+
+            ir.Append({bk_Opcode::LeaRel, bk_PrimitiveKind::Record, {.i = -record_type->size}});
+            ir.Append({bk_Opcode::Dup});
+
+            stack[stack.len - 1].indirect_addr = ir.len;
+        } else {
+            stack[stack.len - 1].indirect_addr = ir.len - 1;
+        }
+    }
+
+    // Kill the load instructions, we need to adjust the index
+    TrimInstructions(ir.len - stack[stack.len - 1].indirect_addr);
 
     const char *name = ConsumeIdentifier();
     const bk_RecordTypeInfo::Member *member =
@@ -2384,18 +2416,24 @@ void bk_Parser::ParseRecordDot()
     }
 
     // Resolve member
-    if (member->type->PassByReference()) {
-        if (member->offset) {
-            ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = member->offset}});
-            ir.Append({bk_Opcode::AddInt});
-        }
-    } else {
+    if (member->offset) {
         ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = member->offset}});
-        ir.Append({bk_Opcode::LoadRef});
+        ir.Append({bk_Opcode::AddInt});
+    }
+
+    // Load value
+    stack[stack.len - 1].indirect_addr = ir.len;
+    ir.Append({bk_Opcode::LoadBig, member->type->primitive, {.i = member->type->size}});
+
+    // Clean up temporary value (if any)
+    if (!stack[stack.len - 1].var) {
+        ir.Append({bk_Opcode::StoreBig, member->type->primitive, {.i = member->type->size}});
+
+        stack[stack.len - 1].indirect_imbalance += record_type->size - member->type->size;
+        EmitPop(stack[stack.len - 1].indirect_imbalance);
     }
 
     stack[stack.len - 1].type = member->type;
-    stack[stack.len - 1].indirect_addr = ir.len - 1;
 }
 
 // Don't try to call from outside ParseExpression()!
@@ -2423,13 +2461,13 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
 
                 const bk_TypeInfo *type = ParseExpression(true).type;
                 args.Append(type);
-                args_size += 2;
+                args_size += 1 + type->size;
 
                 ir[type_addr].u.type = type;
             } else {
                 const bk_TypeInfo *type = ParseExpression(true).type;
                 args.Append(type);
-                args_size++;
+                args_size += type->size;
             }
         } while (MatchToken(bk_TokenKind::Comma));
 
@@ -2486,10 +2524,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
     } else if (func->mode == bk_FunctionInfo::Mode::Intrinsic) {
         EmitIntrinsic(func->name, call_pos, call_addr, args);
     } else if (func->mode == bk_FunctionInfo::Mode::Record) {
-        bk_Opcode code = current_func ? bk_Opcode::LeaLocal : bk_Opcode::Lea;
-        ir.Append({code, bk_PrimitiveKind::Record, {.i = var_offset}});
-
-        var_offset += args_size;
+        // Nothing to do, the object stack
     } else {
         ir.Append({bk_Opcode::CallDirect, {}, {.func = func}});
     }
@@ -2535,12 +2570,18 @@ void bk_Parser::EmitLoad(const bk_VariableInfo &var)
         HintDefinition(&var, "Variable '%1' is defined here", var.name);
     }
 
-    if (!var.mut && var.ready_addr > 0 && ir[var.ready_addr - 1].code == bk_Opcode::Push) {
-        bk_Instruction inst = ir[var.ready_addr - 1];
-        ir.Append(inst);
+    if (var.type->size == 1) {
+        if (!var.mut && var.ready_addr > 0 && ir[var.ready_addr - 1].code == bk_Opcode::Push) {
+            bk_Instruction inst = ir[var.ready_addr - 1];
+            ir.Append(inst);
+        } else {
+            bk_Opcode code = (var.scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Load : bk_Opcode::LoadLocal;
+            ir.Append({code, var.type->primitive, {.i = var.offset}});
+        }
     } else {
-        bk_Opcode code = (var.scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Load : bk_Opcode::LoadLocal;
+        bk_Opcode code = (var.scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Lea : bk_Opcode::LeaLocal;
         ir.Append({code, var.type->primitive, {.i = var.offset}});
+        ir.Append({bk_Opcode::LoadBig, var.type->primitive, {.i = var.type->size}});
     }
 
     stack.Append({var.type, &var});
@@ -2571,24 +2612,26 @@ const bk_TypeInfo *bk_Parser::ParseTypeExpression()
     return type;
 }
 
-void bk_Parser::DiscardResult()
+void bk_Parser::DiscardResult(Size size)
 {
-    switch (ir[ir.len - 1].code) {
-        case bk_Opcode::Push:
-        case bk_Opcode::Load:
-        case bk_Opcode::LoadLocal: { TrimInstructions(1); } break;
+    if (size == 1) {
+        switch (ir[ir.len - 1].code) {
+            case bk_Opcode::Push:
+            case bk_Opcode::Dup:
+            case bk_Opcode::Lea:
+            case bk_Opcode::LeaLocal:
+            case bk_Opcode::LeaRel:
+            case bk_Opcode::Load:
+            case bk_Opcode::LoadLocal: { TrimInstructions(1); } break;
 
-        case bk_Opcode::LoadRef:
-        case bk_Opcode::LoadIndirect: {
-            TrimInstructions(1);
-            EmitPop(2);
-        } break;
+            case bk_Opcode::StoreKeep: { ir[ir.len - 1].code = bk_Opcode::Store; } break;
+            case bk_Opcode::StoreLocalKeep: { ir[ir.len - 1].code = bk_Opcode::StoreLocal; } break;
+            case bk_Opcode::StoreBigKeep: { ir[ir.len - 1].code = bk_Opcode::StoreBig; } break;
 
-        case bk_Opcode::Copy: { ir[ir.len - 1].code = bk_Opcode::Store; } break;
-        case bk_Opcode::CopyLocal: { ir[ir.len - 1].code = bk_Opcode::StoreLocal; } break;
-        case bk_Opcode::CopyArray: { ir[ir.len - 1].code = bk_Opcode::StoreArray; } break;
-
-        default: { EmitPop(1); } break;
+            default: { EmitPop(1); } break;
+        }
+    } else {
+        EmitPop(size);
     }
 }
 

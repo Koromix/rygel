@@ -19,3 +19,14 @@ let mut tab: [5] B
 tab[2].dummy := "Le 2!"
 tab[3].c[2] := 9999999999
 printLn(tab)
+
+let mut arr : [3] Int
+arr[1] := 1
+arr[2] += 2
+printLn("At 0 + 1 = ", arr[0 + 1])
+
+record C (i: Int, j: [3] Int)
+let rec = C(12, arr)
+printLn("Simple accessor = ", rec.i)
+printLn("Temporary object = ", C(2, arr))
+printLn("----- ", C(987, arr).i, " ! ", C(2, arr).j[2])
