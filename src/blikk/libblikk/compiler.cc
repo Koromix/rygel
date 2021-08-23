@@ -458,6 +458,7 @@ void bk_Parser::AddFunction(const char *prototype, std::function<bk_NativeFuncti
 
             func_type->primitive = bk_PrimitiveKind::Function;
             func_type->signature = signature;
+            func_type->size = 1;
 
             if (ptr[1] != ')') {
                 do {
