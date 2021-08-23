@@ -13,6 +13,7 @@
 
 #include "../../core/libcc/libcc.hh"
 #include "../libheimdall/libheimdall.hh"
+#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 #include "../../../vendor/imgui/imgui.h"
 
 namespace RG {

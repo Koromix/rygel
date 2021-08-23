@@ -17,6 +17,7 @@
 #include "../../core/libwrap/opengl.hh"
 #include "../../core/libgui/libgui.hh"
 RG_PUSH_NO_WARNINGS()
+#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 #include "../../../vendor/imgui/imgui.h"
 #include "../../../vendor/imgui/imgui_internal.h"
 #include "../../../vendor/tkspline/src/spline.h"
@@ -556,12 +557,9 @@ static LineInteraction DrawLineFrame(ImRect bb, double tree_width, const LineDat
             text_color = ImGui::GetColorU32(ImGuiCol_Text, line.text_alpha);
         }
 
-        ImGui::PushStyleColor(ImGuiCol_Text, text_color);
-        RG_DEFER { ImGui::PopStyleColor(1); };
-
         if (!line.leaf) {
-            ImGui::RenderArrow(ImVec2(bb.Min.x + (float)line.depth * 16.0f, (float)y),
-                               line.deployed ? ImGuiDir_Down : ImGuiDir_Right);
+            ImGui::RenderArrow(draw, ImVec2(bb.Min.x + (float)line.depth * 16.0f, (float)y),
+                               text_color, line.deployed ? ImGuiDir_Down : ImGuiDir_Right);
         }
 
         ImVec4 text_rect {
@@ -569,8 +567,7 @@ static LineInteraction DrawLineFrame(ImRect bb, double tree_width, const LineDat
             (float)(bb.Min.x + tree_width), bb.Max.y
         };
         draw->AddText(nullptr, 0.0f, ImVec2(text_rect.x, (float)y),
-                      ImGui::GetColorU32(ImGuiCol_Text),
-                      line.title.ptr, line.title.end(), 0.0f, &text_rect);
+                      text_color, line.title.ptr, line.title.end(), 0.0f, &text_rect);
     }
     if (!line.leaf && ImGui::IsItemClicked()) {
         interaction = LineInteraction::Click;

@@ -12,6 +12,7 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "../../core/libcc/libcc.hh"
+#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 #include "../../../vendor/imgui/imgui.h"
 #include "../libheimdall/libheimdall.hh"
 #include "../../core/libwrap/Rcc.hh"
