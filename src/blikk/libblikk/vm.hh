@@ -35,7 +35,7 @@ public:
 
     bk_VirtualMachine(const bk_Program *const program);
 
-    bool Run();
+    bool Run(bool debug = false);
 
     void SetInterrupt() { run = false; }
     template <typename... Args>
@@ -51,6 +51,6 @@ private:
     void DumpInstruction(Size pc) const;
 };
 
-bool bk_Run(const bk_Program &program);
+bool bk_Run(const bk_Program &program, bool debug = false);
 
 }

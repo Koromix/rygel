@@ -17,8 +17,8 @@
 
 namespace RG {
 
-int RunCommand(Span<const char> code, bool execute, bool try_expr);
-int RunInteractive(bool execute, bool try_expr);
+int RunCommand(Span<const char> code, bool execute, bool try_expr, bool debug);
+int RunInteractive(bool execute, bool try_expr, bool debug);
 
 static bool ApplySandbox()
 {
@@ -54,7 +54,7 @@ static bool ApplySandbox()
     return sb.Apply();
 }
 
-static int RunFile(const char *filename, bool sandbox, bool execute)
+static int RunFile(const char *filename, bool sandbox, bool execute, bool debug)
 {
     bk_Program program;
     {
@@ -72,7 +72,7 @@ static int RunFile(const char *filename, bool sandbox, bool execute)
             return 1;
     }
 
-    return execute ? !bk_Run(program) : 0;
+    return execute ? !bk_Run(program, debug) : 0;
 }
 
 int Main(int argc, char **argv)
@@ -89,6 +89,7 @@ int Main(int argc, char **argv)
     bool sandbox = false;
     bool execute = true;
     bool try_expr = true;
+    bool debug = false;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 [options] <file>
@@ -103,7 +104,8 @@ Options:
 
         %!..+--no_execute%!0             Parse code but don't run it
         %!..+--no_expr%!0                Don't try to run code as expression
-                                 %!D..(works only with -c or -i)%!0)", FelixTarget);
+                                 %!D..(works only with -c or -i)%!0
+        %!..+--debug%!0                  Dump executed VM instructions)", FelixTarget);
     };
 
     // Handle version
@@ -140,6 +142,8 @@ Options:
                 execute = false;
             } else if (opt.Test("--no_expr")) {
                 try_expr = false;
+            } else if (opt.Test("--debug")) {
+                debug = true;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -154,7 +158,7 @@ Options:
             if (sandbox && !ApplySandbox())
                 return 1;
 
-            return RunInteractive(execute, try_expr);
+            return RunInteractive(execute, try_expr, debug);
         } break;
 
         case RunMode::File: {
@@ -163,7 +167,7 @@ Options:
                 return 1;
             }
 
-            return RunFile(filename_or_code, sandbox, execute);
+            return RunFile(filename_or_code, sandbox, execute, debug);
         } break;
         case RunMode::Command: {
             if (!filename_or_code) {
@@ -174,7 +178,7 @@ Options:
             if (sandbox && !ApplySandbox())
                 return 1;
 
-            return RunCommand(filename_or_code, execute, try_expr);
+            return RunCommand(filename_or_code, execute, try_expr, debug);
         } break;
     }
 
