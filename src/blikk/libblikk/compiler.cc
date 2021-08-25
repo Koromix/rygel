@@ -1700,8 +1700,8 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                                         goto error;
                                     }
                                 } else {
-                                        MarkError(var_pos, "Record constructors can only be called directly");
-                                        goto error;
+                                    MarkError(var_pos, "Record constructors can only be called directly");
+                                    goto error;
                                 }
                             } else {
                                 MarkError(var_pos, "Variable '%1' is not a function and cannot be called", var->name);
