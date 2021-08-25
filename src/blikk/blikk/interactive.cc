@@ -81,7 +81,7 @@ end
     return true;
 }
 
-int RunCommand(Span<const char> code, bool execute)
+int RunCommand(Span<const char> code, bool execute, bool try_expr)
 {
     bk_Program program;
 
@@ -90,7 +90,7 @@ int RunCommand(Span<const char> code, bool execute)
 
     // Try to parse with fake print first...
     bool valid_with_fake_print;
-    {
+    if (try_expr) {
         bk_TokenizedFile file;
         if (!TokenizeWithFakePrint(code, "<inline>", &file))
             return 1;
@@ -100,6 +100,8 @@ int RunCommand(Span<const char> code, bool execute)
         RG_DEFER { SetLogHandler(DefaultLogHandler); };
 
         valid_with_fake_print = compiler.Compile(file);
+    } else {
+        valid_with_fake_print = false;
     }
 
     // If the fake print has failed, reparse the code without the fake print
@@ -115,7 +117,7 @@ int RunCommand(Span<const char> code, bool execute)
     return execute ? !bk_Run(program) : 0;
 }
 
-int RunInteractive(bool execute)
+int RunInteractive(bool execute, bool try_expr)
 {
     LogInfo("%!R..blikk%!0 %1", FelixVersion);
 
@@ -168,12 +170,14 @@ int RunInteractive(bool execute)
         Size prev_stack_len = vm.stack.len;
 
         bool valid_with_fake_print;
-        {
+        if (try_expr) {
             bk_TokenizedFile file;
             if (!TokenizeWithFakePrint(code, "<inline>", &file))
                 continue;
 
             valid_with_fake_print = compiler.Compile(file);
+        } else {
+            valid_with_fake_print = false;
         }
 
         if (!valid_with_fake_print) {

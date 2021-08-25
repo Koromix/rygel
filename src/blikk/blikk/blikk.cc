@@ -17,8 +17,8 @@
 
 namespace RG {
 
-int RunCommand(Span<const char> code, bool execute);
-int RunInteractive(bool execute);
+int RunCommand(Span<const char> code, bool execute, bool try_expr);
+int RunInteractive(bool execute, bool try_expr);
 
 static bool ApplySandbox()
 {
@@ -88,6 +88,7 @@ int Main(int argc, char **argv)
     const char *filename_or_code = nullptr;
     bool sandbox = false;
     bool execute = true;
+    bool try_expr = true;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 [options] <file>
@@ -100,7 +101,9 @@ Options:
 
         %!..+--sandbox%!0                Run in strict OS sandbox (if supported)
 
-        %!..+--no_execute%!0             Parse code but don't run it)", FelixTarget);
+        %!..+--no_execute%!0             Parse code but don't run it
+        %!..+--no_expr%!0                Don't try to run code as expression
+                                 %!D..(works only with -c or -i)%!0)", FelixTarget);
     };
 
     // Handle version
@@ -135,6 +138,8 @@ Options:
                 sandbox = true;
             } else if (opt.Test("--no_execute")) {
                 execute = false;
+            } else if (opt.Test("--no_expr")) {
+                try_expr = false;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -149,7 +154,7 @@ Options:
             if (sandbox && !ApplySandbox())
                 return 1;
 
-            return RunInteractive(execute);
+            return RunInteractive(execute, try_expr);
         } break;
 
         case RunMode::File: {
@@ -169,7 +174,7 @@ Options:
             if (sandbox && !ApplySandbox())
                 return 1;
 
-            return RunCommand(filename_or_code, execute);
+            return RunCommand(filename_or_code, execute, try_expr);
         } break;
     }
 
