@@ -472,49 +472,56 @@ bool bk_VirtualMachine::Run(bool debug)
         CASE(Call): {
             const bk_FunctionInfo *func = stack[stack.len + inst->u.i].func;
 
-            // Save current PC
-            frame->pc = pc;
-
-            frame = frames.AppendDefault();
-            frame->func = func;
-            frame->pc = func->addr;
-            frame->direct = false;
-
-            if (func->mode == bk_FunctionInfo::Mode::Blikk) {
-                frame->bp = stack.len - func->params.len;
-
-                bp = frame->bp;
-                DISPATCH(pc = frame->pc);
-            } else {
-                RG_ASSERT(func->mode == bk_FunctionInfo::Mode::Native);
-
-                if (func->type->variadic) {
-                    Span<const bk_PrimitiveValue> args;
-                    args.len = func->params.len + stack[stack.len - 1].i;
-                    args.ptr = stack.end() - args.len - 1;
-
-                    bk_PrimitiveValue ret = func->native(this, args);
-
-                    stack.len -= args.len + 1;
-                    stack[stack.len - 1] = ret;
-                } else {
-                    Span<const bk_PrimitiveValue> args;
-                    args.len = func->params.len;
-                    args.ptr = stack.end() - args.len;
-
-                    bk_PrimitiveValue ret = func->native(this, args);
-
-                    stack.len -= args.len;
-                    stack[stack.len - 1] = ret;
-                }
-
-                frames.RemoveLast(1);
-                frame = &frames[frames.len - 1];
-
-                if (RG_UNLIKELY(!run))
-                    return !error;
+            if (func->mode == bk_FunctionInfo::Mode::Record) {
+                // Nothing to do, the arguments build the object and that's it!
+                // We just need to leave everything as-is on the stack
 
                 DISPATCH(++pc);
+            } else {
+                // Save current PC
+                frame->pc = pc;
+
+                frame = frames.AppendDefault();
+                frame->func = func;
+                frame->pc = func->addr;
+                frame->direct = false;
+
+                if (func->mode == bk_FunctionInfo::Mode::Blikk) {
+                    frame->bp = stack.len - func->params.len;
+
+                    bp = frame->bp;
+                    DISPATCH(pc = frame->pc);
+                } else {
+                    RG_ASSERT(func->mode == bk_FunctionInfo::Mode::Native);
+
+                    if (func->type->variadic) {
+                        Span<const bk_PrimitiveValue> args;
+                        args.len = func->params.len + stack[stack.len - 1].i;
+                        args.ptr = stack.end() - args.len - 1;
+
+                        bk_PrimitiveValue ret = func->native(this, args);
+
+                        stack.len -= args.len + 1;
+                        stack[stack.len - 1] = ret;
+                    } else {
+                        Span<const bk_PrimitiveValue> args;
+                        args.len = func->params.len;
+                        args.ptr = stack.end() - args.len;
+
+                        bk_PrimitiveValue ret = func->native(this, args);
+
+                        stack.len -= args.len;
+                        stack[stack.len - 1] = ret;
+                    }
+
+                    frames.RemoveLast(1);
+                    frame = &frames[frames.len - 1];
+
+                    if (RG_UNLIKELY(!run))
+                        return !error;
+
+                    DISPATCH(++pc);
+                }
             }
         }
         CASE(CallDirect): {
