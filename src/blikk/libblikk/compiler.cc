@@ -2222,6 +2222,7 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
     Size def_pos = pos;
 
     bk_ArrayTypeInfo type_buf = {};
+    bool multi = false;
 
     type_buf.primitive = bk_PrimitiveKind::Array;
 
@@ -2229,7 +2230,12 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
     {
         const bk_TypeInfo *type = ParseExpression(false).type;
 
-        ConsumeToken(bk_TokenKind::RightBracket);
+        if (MatchToken(bk_TokenKind::Comma)) {
+            multi = true;
+        } else {
+            ConsumeToken(bk_TokenKind::RightBracket);
+            multi = false;
+        }
 
         if (RG_LIKELY(type == bk_IntType)) {
             // Once we start to implement constant folding and CTFE, more complex expressions
@@ -2248,7 +2254,7 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
     }
 
     // Unit type
-    type_buf.unit_type = ParseTypeExpression();
+    type_buf.unit_type = multi ? ParseArrayType() : ParseTypeExpression();
     type_buf.size = type_buf.len * type_buf.unit_type->size;
 
     // Safety checks
