@@ -68,6 +68,7 @@ class bk_Parser {
     Size func_jump_addr = -1;
     bk_FunctionInfo *current_func = nullptr;
     int depth = 0;
+    int recursion = 0;
 
     Size var_offset = 0;
     Size loop_offset = -1;
@@ -151,6 +152,9 @@ private:
     const char *InternString(const char *str);
     template<typename T>
     bk_TypeInfo *InsertType(const T &type_buf, BucketArray<T> *out_types);
+
+    bool RecurseInc();
+    void RecurseDec();
 
     template <typename... Args>
     void MarkError(Size pos, const char *fmt, Args... args)
@@ -788,6 +792,7 @@ bool bk_Parser::ParseBlock(bool end_with_else)
         var_offset = prev_offset;
     };
 
+    bool recurse = RecurseInc();
     bool has_return = false;
 
     while (RG_LIKELY(pos < tokens.len)) {
@@ -796,7 +801,16 @@ bool bk_Parser::ParseBlock(bool end_with_else)
         if (end_with_else && tokens[pos].kind == bk_TokenKind::Else)
             break;
 
-        has_return |= ParseStatement();
+        if (RG_LIKELY(recurse)) {
+            has_return |= ParseStatement();
+        } else {
+            if (!has_return) {
+                MarkError(pos, "Excessive parsing depth (compiler limit)");
+                HintError(-1, "Simplify surrounding code");
+            }
+            pos++;
+            has_return = true;
+        }
     }
 
     return has_return;
@@ -1479,6 +1493,16 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
     // Used to detect "empty" expressions
     Size prev_offset = pos;
 
+    bool recurse = RecurseInc();
+    RG_DEFER { RecurseDec(); };
+
+    if (RG_UNLIKELY(!recurse)) {
+        MarkError(pos, "Excessive parsing depth (compiler limit)");
+        HintError(-1, "Simplify surrounding code");
+
+        goto error;
+    }
+
     while (RG_LIKELY(pos < tokens.len)) {
         const bk_Token &tok = tokens[pos++];
 
@@ -1794,6 +1818,12 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                 }
                 operators.Append(op);
             } break;
+        }
+
+        if (RG_UNLIKELY(stack.len >= 64)) {
+            MarkError(pos, "Excessive complexity while parsing expression (compiler limit)");
+            HintError(-1, "Simplify expression");
+            goto error;
         }
     }
 
@@ -2254,7 +2284,21 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
     }
 
     // Unit type
-    type_buf.unit_type = multi ? ParseArrayType() : ParseTypeExpression();
+    if (multi) {
+        bool recurse = RecurseInc();
+        RG_DEFER { RecurseDec(); };
+
+        if (RG_LIKELY(recurse)) {
+            type_buf.unit_type = recurse ? ParseArrayType() : bk_NullType;
+        } else {
+            MarkError(pos, "Excessive parsing depth (compiler limit)");
+            HintError(-1, "Simplify surrounding code");
+
+            type_buf.unit_type = bk_NullType;
+        }
+    } else {
+        type_buf.unit_type = ParseTypeExpression();
+    }
     type_buf.size = type_buf.len * type_buf.unit_type->size;
 
     // Safety checks
@@ -2752,6 +2796,17 @@ const char *bk_Parser::InternString(const char *str)
         *ret.first = DuplicateString(str, &program->str_alloc).ptr;
     }
     return *ret.first;
+}
+
+bool bk_Parser::RecurseInc()
+{
+    bool accept = ++recursion < 64;
+    return accept;
+}
+
+void bk_Parser::RecurseDec()
+{
+    recursion--;
 }
 
 }
