@@ -88,6 +88,14 @@ bool bk_VirtualMachine::Run(bool debug)
             DISPATCH(++pc);
         }
 
+        CASE(Lea): {
+            stack.Append({.i = inst->u.i});
+            DISPATCH(++pc);
+        }
+        CASE(LeaLocal): {
+            stack.Append({.i = bp + inst->u.i});
+            DISPATCH(++pc);
+        }
         CASE(Load): {
             stack.Append({.i = stack[inst->u.i].i});
             DISPATCH(++pc);
@@ -107,14 +115,6 @@ bool bk_VirtualMachine::Run(bool debug)
             Size ptr = stack[stack.len - 2].i;
             Size idx = stack[stack.len - 1].i;
             stack.Append({.i = stack[ptr + idx].i});
-            DISPATCH(++pc);
-        }
-        CASE(Lea): {
-            stack.Append({.i = inst->u.i});
-            DISPATCH(++pc);
-        }
-        CASE(LeaLocal): {
-            stack.Append({.i = bp + inst->u.i});
             DISPATCH(++pc);
         }
         CASE(Store): {
@@ -635,10 +635,10 @@ void bk_VirtualMachine::DumpInstruction(Size pc) const
         } break;
         case bk_Opcode::Pop: { PrintLn(stderr, "%!D..[0x%1]%!0 Pop %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
-        case bk_Opcode::Load: { PrintLn(stderr, "%!D..[0x%1]%!0 Load @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::LoadLocal: { PrintLn(stderr, "%!D..[0x%1]%!0 LoadLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
         case bk_Opcode::Lea: { PrintLn(stderr, "%!D..[0x%1]%!0 Lea @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
         case bk_Opcode::LeaLocal: { PrintLn(stderr, "%!D..[0x%1]%!0 LeaLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::Load: { PrintLn(stderr, "%!D..[0x%1]%!0 Load @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::LoadLocal: { PrintLn(stderr, "%!D..[0x%1]%!0 LoadLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
         case bk_Opcode::Store: { PrintLn(stderr, "%!D..[0x%1]%!0 Store @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
         case bk_Opcode::StoreLocal: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
         case bk_Opcode::Copy: { PrintLn(stderr, "%!D..[0x%1]%!0 Copy @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
