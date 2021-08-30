@@ -81,7 +81,7 @@ static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offs
         case bk_PrimitiveKind::Record: {
             const bk_RecordTypeInfo *record_type = type->AsRecordType();
 
-            fputc('{', stdout);
+            Print("%1(", record_type->signature);
             if (record_type->members.len) {
                 Print("%1 = ", record_type->members[0].name);
                 offset = PrintValue(vm, record_type->members[0].type, offset, true);
@@ -91,7 +91,7 @@ static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offs
                     offset = PrintValue(vm, record_type->members[i].type, offset, true);
                 }
             }
-            fputc('}', stdout);
+            fputc(')', stdout);
         } break;
     }
 
