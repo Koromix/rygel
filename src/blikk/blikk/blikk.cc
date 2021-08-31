@@ -103,7 +103,7 @@ Options:
         %!..+--sandbox%!0                Run in strict OS sandbox (if supported)
 
         %!..+--no_execute%!0             Parse code but don't run it
-        %!..+--no_expr%!0                Don't try to run code as expression
+        %!..+--no_expression%!0          Don't try to run code as expression
                                  %!D..(works only with -c or -i)%!0
         %!..+--debug%!0                  Dump executed VM instructions)", FelixTarget);
     };
@@ -140,7 +140,7 @@ Options:
                 sandbox = true;
             } else if (opt.Test("--no_execute")) {
                 execute = false;
-            } else if (opt.Test("--no_expr")) {
+            } else if (opt.Test("--no_expression")) {
                 try_expr = false;
             } else if (opt.Test("--debug")) {
                 debug = true;
