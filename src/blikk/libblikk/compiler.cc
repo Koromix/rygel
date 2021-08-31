@@ -343,15 +343,17 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
             bk_FunctionInfo *func = &program->functions[i];
             bk_FunctionInfo **it = program->functions_map.Find(func->name);
 
-            if (*it == func && func->overload_next == func) {
-                program->functions_map.Remove(it);
-            } else {
-                if (*it == func) {
-                    *it = func->overload_next;
-                }
+            if (it) {
+                if (*it == func && func->overload_next == func) {
+                    program->functions_map.Remove(it);
+                } else {
+                    if (*it == func) {
+                        *it = func->overload_next;
+                    }
 
-                func->overload_next->overload_prev = func->overload_prev;
-                func->overload_prev->overload_next = func->overload_next;
+                    func->overload_next->overload_prev = func->overload_prev;
+                    func->overload_prev->overload_next = func->overload_next;
+                }
             }
         }
         program->functions.RemoveFrom(functions_len);
