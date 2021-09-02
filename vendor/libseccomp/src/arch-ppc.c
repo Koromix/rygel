@@ -20,18 +20,31 @@
  * along with this library; if not, see <http://www.gnu.org/licenses>.
  */
 
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
 #include <linux/audit.h>
 
+#include "db.h"
+#include "syscalls.h"
 #include "arch.h"
 #include "arch-ppc.h"
+
+/* ppc syscall numbers */
+#define __ppc_NR_socketcall		102
+#define __ppc_NR_ipc			117
 
 const struct arch_def arch_def_ppc = {
 	.token = SCMP_ARCH_PPC,
 	.token_bpf = AUDIT_ARCH_PPC,
 	.size = ARCH_SIZE_32,
 	.endian = ARCH_ENDIAN_BIG,
-	.syscall_resolve_name = ppc_syscall_resolve_name,
-	.syscall_resolve_num = ppc_syscall_resolve_num,
-	.syscall_rewrite = NULL,
-	.rule_add = NULL,
+	.sys_socketcall = __ppc_NR_socketcall,
+	.sys_ipc = __ppc_NR_ipc,
+	.syscall_resolve_name = abi_syscall_resolve_name_munge,
+	.syscall_resolve_name_raw = ppc_syscall_resolve_name,
+	.syscall_resolve_num = abi_syscall_resolve_num_munge,
+	.syscall_resolve_num_raw = ppc_syscall_resolve_num,
+	.syscall_rewrite = abi_syscall_rewrite,
+	.rule_add = abi_rule_add,
 };

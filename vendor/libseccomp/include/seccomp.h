@@ -40,7 +40,7 @@ extern "C" {
 
 #define SCMP_VER_MAJOR		2
 #define SCMP_VER_MINOR		5
-#define SCMP_VER_MICRO		1
+#define SCMP_VER_MICRO		2
 
 struct scmp_version {
 	unsigned int major;

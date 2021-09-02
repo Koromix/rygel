@@ -16,6 +16,15 @@
 # along with this library; if not, see <http://www.gnu.org/licenses>.
 #
 
+@CODE_COVERAGE_RULES@
+
+CODE_COVERAGE_OUTPUT_FILE = libseccomp.lcov.info
+CODE_COVERAGE_OUTPUT_DIRECTORY = libseccomp.lcov.html.d
+CODE_COVERAGE_IGNORE_PATTERN = \
+	*/usr/include/* \
+	*/src/arch-syscall-check.c \
+	*/src/syscalls.perf
+
 ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = include src tools tests doc
 
@@ -43,16 +52,8 @@ check-syntax:
 	@./tools/check-syntax
 
 if CODE_COVERAGE_ENABLED
-check-code-coverage: check-build
-	${MAKE} ${AM_MAKEFLAGS} -C tests check-code-coverage
-endif
-
-if CODE_COVERAGE_ENABLED
-test-code-coverage: check-build
-	${MAKE} ${AM_MAKEFLAGS} -C src check-code-coverage
-	LIBSECCOMP_TSTCFG_TYPE=basic \
-		${MAKE} ${AM_MAKEFLAGS} check-code-coverage
-	LIBSECCOMP_TSTCFG_TYPE=bpf-sim \
+test-code-coverage:
+	LIBSECCOMP_TSTCFG_TYPE=basic,bpf-sim \
 		${MAKE} ${AM_MAKEFLAGS} check-code-coverage
 endif
 

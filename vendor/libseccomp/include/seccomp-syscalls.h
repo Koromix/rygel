@@ -275,6 +275,7 @@
 #define __PNR_ppoll				-10241
 #define __PNR_renameat				-10242
 #define __PNR_riscv_flush_icache		-10243
+#define __PNR_memfd_secret			-10244
 
 /*
  * libseccomp syscall definitions
@@ -476,6 +477,8 @@
 
 #define __SNR_close			__NR_close
 
+#define __SNR_close_range		__NR_close_range
+
 #ifdef __NR_connect
 #define __SNR_connect			__NR_connect
 #else
@@ -563,6 +566,8 @@
 #define __SNR_exit_group		__NR_exit_group
 
 #define __SNR_faccessat			__NR_faccessat
+
+#define __SNR_faccessat2		__NR_faccessat2
 
 #ifdef __NR_fadvise64
 #define __SNR_fadvise64			__NR_fadvise64
@@ -1078,6 +1083,12 @@
 #define __SNR_memfd_create		__NR_memfd_create
 #else
 #define __SNR_memfd_create		__PNR_memfd_create
+#endif
+
+#ifdef __NR_memfd_secret
+#define __SNR_memfd_secret		__NR_memfd_secret
+#else
+#define __SNR_memfd_secret		__PNR_memfd_secret
 #endif
 
 #ifdef __NR_migrate_pages
