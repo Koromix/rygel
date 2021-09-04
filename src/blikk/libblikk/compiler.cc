@@ -2608,25 +2608,33 @@ const bk_TypeInfo *bk_Parser::ParseTypeExpression()
 
 void bk_Parser::DiscardResult(Size size)
 {
-    if (size == 1) {
-        switch (ir[ir.len - 1].code) {
-            case bk_Opcode::Push:
-            case bk_Opcode::Lea:
-            case bk_Opcode::LeaLocal:
-            case bk_Opcode::LeaRel:
-            case bk_Opcode::Load:
-            case bk_Opcode::LoadLocal: { TrimInstructions(1); } break;
+    switch (ir[ir.len - 1].code) {
+        case bk_Opcode::Push:
+        case bk_Opcode::Lea:
+        case bk_Opcode::LeaLocal:
+        case bk_Opcode::LeaRel:
+        case bk_Opcode::Load:
+        case bk_Opcode::LoadLocal: {
+            if (size == 1) {
+                TrimInstructions(1);
+                return;
+            }
+        } break;
 
-            case bk_Opcode::StoreK: { ir[ir.len - 1].code = bk_Opcode::Store; } break;
-            case bk_Opcode::StoreLocalK: { ir[ir.len - 1].code = bk_Opcode::StoreLocal; } break;
-            case bk_Opcode::StoreIndirectK: { ir[ir.len - 1].code = bk_Opcode::StoreIndirect; } break;
-            case bk_Opcode::StoreRevK: { ir[ir.len - 1].code = bk_Opcode::StoreRev; } break;
+        case bk_Opcode::StoreK:
+        case bk_Opcode::StoreLocalK:
+        case bk_Opcode::StoreIndirectK:
+        case bk_Opcode::StoreRevK: {
+            if (size == ir[ir.len - 1].u.i) {
+                ir[ir.len - 1].code = (bk_Opcode)((int)ir[ir.len - 1].code - 1);
+                return;
+            }
+        } break;
 
-            default: { EmitPop(1); } break;
-        }
-    } else {
-        EmitPop(size);
+        default: {} break;
     }
+
+    EmitPop(size);
 }
 
 void bk_Parser::EmitPop(int64_t count)
