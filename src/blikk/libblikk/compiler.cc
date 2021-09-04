@@ -1145,7 +1145,8 @@ void bk_Parser::ParseLet()
     if (slot.var && !slot.var->mut && !slot.indirect_addr && !var->mut && var->ready_addr > 0) {
         // We're about to alias var to slot.var... we need to drop the load instructions.
         // Is it enough, and is it safe?
-        TrimInstructions(1 + slot.type->size > 1);
+        Size trim = 1 + (slot.type->size > 1);
+        TrimInstructions(trim);
 
         var->scope = slot.var->scope;
         var->ready_addr = slot.var->ready_addr;
