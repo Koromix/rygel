@@ -1984,16 +1984,16 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
         }
 
         if (dest.indirect_addr) {
-            // In order for StoreBigKeep to work, the variable address must remain on the stack.
-            // To do so, replace LoadBig (which removes them) with LoadBigKeep.
+            // In order for StoreIndirectK to work, the variable address must remain on the stack.
+            // To do so, replace LoadIndirect (which removes them) with LoadIndirectK.
             if (op.kind != bk_TokenKind::Reassign) {
-                RG_ASSERT(ir[dest.indirect_addr].code == bk_Opcode::LoadBig);
-                ir[dest.indirect_addr].code = bk_Opcode::LoadBigKeep;
+                RG_ASSERT(ir[dest.indirect_addr].code == bk_Opcode::LoadIndirect);
+                ir[dest.indirect_addr].code = bk_Opcode::LoadIndirectK;
             }
 
-            ir.Append({bk_Opcode::StoreBigKeep, dest.type->primitive, {.i = dest.type->size}});
+            ir.Append({bk_Opcode::StoreIndirectK, dest.type->primitive, {.i = dest.type->size}});
         } else if (dest.type->size == 1) {
-            bk_Opcode code = (dest.var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::StoreKeep : bk_Opcode::StoreLocalKeep;
+            bk_Opcode code = (dest.var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::StoreK : bk_Opcode::StoreLocalK;
             ir.Append({code, dest.type->primitive, {.i = dest.var->offset}});
         } else {
             RG_ASSERT(!success);
@@ -2361,11 +2361,11 @@ void bk_Parser::ParseArraySubscript()
 
         // Load value
         stack[stack.len - 1].indirect_addr = ir.len;
-        ir.Append({bk_Opcode::LoadBig, unit_type->primitive, {.i = unit_type->size}});
+        ir.Append({bk_Opcode::LoadIndirect, unit_type->primitive, {.i = unit_type->size}});
 
         // Clean up temporary value (if any)
         if (!stack[stack.len - 1].var) {
-            ir.Append({bk_Opcode::StoreBig, unit_type->primitive, {.i = unit_type->size}});
+            ir.Append({bk_Opcode::StoreIndirect, unit_type->primitive, {.i = unit_type->size}});
 
             stack[stack.len - 1].indirect_imbalance += array_type->size - unit_type->size;
             EmitPop(stack[stack.len - 1].indirect_imbalance);
@@ -2423,11 +2423,11 @@ void bk_Parser::ParseRecordDot()
 
     // Load value
     stack[stack.len - 1].indirect_addr = ir.len;
-    ir.Append({bk_Opcode::LoadBig, member->type->primitive, {.i = member->type->size}});
+    ir.Append({bk_Opcode::LoadIndirect, member->type->primitive, {.i = member->type->size}});
 
     // Clean up temporary value (if any)
     if (!stack[stack.len - 1].var) {
-        ir.Append({bk_Opcode::StoreBig, member->type->primitive, {.i = member->type->size}});
+        ir.Append({bk_Opcode::StoreIndirect, member->type->primitive, {.i = member->type->size}});
 
         stack[stack.len - 1].indirect_imbalance += record_type->size - member->type->size;
         EmitPop(stack[stack.len - 1].indirect_imbalance);
@@ -2581,7 +2581,7 @@ void bk_Parser::EmitLoad(const bk_VariableInfo &var)
     } else {
         bk_Opcode code = (var.scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Lea : bk_Opcode::LeaLocal;
         ir.Append({code, var.type->primitive, {.i = var.offset}});
-        ir.Append({bk_Opcode::LoadBig, var.type->primitive, {.i = var.type->size}});
+        ir.Append({bk_Opcode::LoadIndirect, var.type->primitive, {.i = var.type->size}});
     }
 
     stack.Append({var.type, &var});
@@ -2624,9 +2624,9 @@ void bk_Parser::DiscardResult(Size size)
             case bk_Opcode::Load:
             case bk_Opcode::LoadLocal: { TrimInstructions(1); } break;
 
-            case bk_Opcode::StoreKeep: { ir[ir.len - 1].code = bk_Opcode::Store; } break;
-            case bk_Opcode::StoreLocalKeep: { ir[ir.len - 1].code = bk_Opcode::StoreLocal; } break;
-            case bk_Opcode::StoreBigKeep: { ir[ir.len - 1].code = bk_Opcode::StoreBig; } break;
+            case bk_Opcode::StoreK: { ir[ir.len - 1].code = bk_Opcode::Store; } break;
+            case bk_Opcode::StoreLocalK: { ir[ir.len - 1].code = bk_Opcode::StoreLocal; } break;
+            case bk_Opcode::StoreIndirectK: { ir[ir.len - 1].code = bk_Opcode::StoreIndirect; } break;
 
             default: { EmitPop(1); } break;
         }
