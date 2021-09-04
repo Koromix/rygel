@@ -157,10 +157,10 @@ bool bk_VirtualMachine::Run(bool debug)
             Size src = stack.len - inst->u.i;
             for (Size i = 0; i < inst->u.i; i++) {
                 int64_t value = stack[src + i].i;
-                stack[ptr + i].i = stack[src + i].i;
+                stack[ptr + i].i = value;
                 stack[src + i - 1].i = value;
             }
-            stack.len -= inst->u.i;
+            stack.len--;
             DISPATCH(++pc);
         }
         CASE(CheckIndex): {
