@@ -20,7 +20,6 @@ OPCODE(Nop)
 // Immediate values
 OPCODE(Push)
 OPCODE(Pop)
-OPCODE(Dup)
 
 // Load/store
 OPCODE(Lea)
@@ -36,6 +35,8 @@ OPCODE(StoreLocal)
 OPCODE(StoreLocalK)
 OPCODE(StoreIndirect)
 OPCODE(StoreIndirectK)
+OPCODE(StoreRev)
+OPCODE(StoreRevK)
 OPCODE(CheckIndex)
 
 // Integer operators

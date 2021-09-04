@@ -1794,9 +1794,10 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
 
                 if (tok.kind == bk_TokenKind::Reassign) {
                     // Remove useless load instruction. We don't remove the variable from
-                    // stack slots,  because it will be needed when we emit the store instruction
+                    // stack slots, because it will be needed when we emit the store instruction
                     // and will be removed then.
-                    TrimInstructions(1);
+                    Size trim = 1 + (stack[stack.len - 1].type->size > 1);
+                    TrimInstructions(trim);
                 } else if (tok.kind == bk_TokenKind::AndAnd) {
                     op.branch_addr = ir.len;
                     ir.Append({bk_Opcode::SkipIfFalse});
@@ -1929,12 +1930,8 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
 
         switch (op.kind) {
             case bk_TokenKind::Reassign: {
-                if (RG_LIKELY(dest.type->size == 1)) {
-                    stack[--stack.len - 1].var = nullptr;
-                    success = true;
-                } else {
-                    success = false;
-                }
+                stack[--stack.len - 1].var = nullptr;
+                success = true;
             } break;
 
             case bk_TokenKind::PlusAssign: {
@@ -1997,7 +1994,9 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
             bk_Opcode code = (dest.var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::StoreK : bk_Opcode::StoreLocalK;
             ir.Append({code, dest.type->primitive, {.i = dest.var->offset}});
         } else {
-            RG_ASSERT(!success);
+            bk_Opcode code = (dest.var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Lea : bk_Opcode::LeaLocal;
+            ir.Append({code, dest.type->primitive, {.i = dest.var->offset}});
+            ir.Append({bk_Opcode::StoreRevK, dest.type->primitive, {.i = dest.type->size}});
         }
     } else { // Other operators
         switch (op.kind) {
@@ -2321,14 +2320,10 @@ void bk_Parser::ParseArraySubscript()
 {
     if (!stack[stack.len - 1].indirect_addr) {
         if (!stack[stack.len - 1].var) {
-            // If a record gets loaded, its address is already on the stack because of EmitLoad.
-            // But if its a temporary value, it is not. And because we'll have to clean up the
-            // record at the end, we need to prepare the address for the store instruction,
-            // hence the Dup instruction.
+            // If an array gets loaded from a variable, its address is already on the stack
+            // because of EmitLoad. But if it is a temporary value, we need to do it now.
 
             ir.Append({bk_Opcode::LeaRel, bk_PrimitiveKind::Array, {.i = -stack[stack.len - 1].type->size}});
-            ir.Append({bk_Opcode::Dup});
-
             stack[stack.len - 1].indirect_addr = ir.len;
         } else {
             stack[stack.len - 1].indirect_addr = ir.len - 1;
@@ -2366,7 +2361,8 @@ void bk_Parser::ParseArraySubscript()
 
         // Clean up temporary value (if any)
         if (!stack[stack.len - 1].var) {
-            ir.Append({bk_Opcode::StoreIndirect, unit_type->primitive, {.i = unit_type->size}});
+            ir.Append({bk_Opcode::LeaRel, bk_PrimitiveKind::Array, {.i = -unit_type->size - array_type->size}});
+            ir.Append({bk_Opcode::StoreRev, unit_type->primitive, {.i = unit_type->size}});
 
             stack[stack.len - 1].indirect_imbalance += array_type->size - unit_type->size;
             EmitPop(stack[stack.len - 1].indirect_imbalance);
@@ -2387,14 +2383,10 @@ void bk_Parser::ParseRecordDot()
 
     if (!stack[stack.len - 1].indirect_addr) {
         if (!stack[stack.len - 1].var) {
-            // If an array gets loaded, its address is already on the stack because of EmitLoad.
-            // But if its a temporary value, it is not. And because we'll have to clean up the
-            // array at the end, we need to prepare the address for the store instruction,
-            // hence the Dup instruction.
+            // If a record gets loaded from a variable, its address is already on the stack
+            // because of EmitLoad. But if it is a temporary value, we need to do it now.
 
             ir.Append({bk_Opcode::LeaRel, bk_PrimitiveKind::Record, {.i = -record_type->size}});
-            ir.Append({bk_Opcode::Dup});
-
             stack[stack.len - 1].indirect_addr = ir.len;
         } else {
             stack[stack.len - 1].indirect_addr = ir.len - 1;
@@ -2428,7 +2420,8 @@ void bk_Parser::ParseRecordDot()
 
     // Clean up temporary value (if any)
     if (!stack[stack.len - 1].var) {
-        ir.Append({bk_Opcode::StoreIndirect, member->type->primitive, {.i = member->type->size}});
+        ir.Append({bk_Opcode::LeaRel, bk_PrimitiveKind::Record, {.i = -member->type->size - record_type->size}});
+        ir.Append({bk_Opcode::StoreRev, member->type->primitive, {.i = member->type->size}});
 
         stack[stack.len - 1].indirect_imbalance += record_type->size - member->type->size;
         EmitPop(stack[stack.len - 1].indirect_imbalance);
@@ -2618,7 +2611,6 @@ void bk_Parser::DiscardResult(Size size)
     if (size == 1) {
         switch (ir[ir.len - 1].code) {
             case bk_Opcode::Push:
-            case bk_Opcode::Dup:
             case bk_Opcode::Lea:
             case bk_Opcode::LeaLocal:
             case bk_Opcode::LeaRel:
@@ -2628,6 +2620,7 @@ void bk_Parser::DiscardResult(Size size)
             case bk_Opcode::StoreK: { ir[ir.len - 1].code = bk_Opcode::Store; } break;
             case bk_Opcode::StoreLocalK: { ir[ir.len - 1].code = bk_Opcode::StoreLocal; } break;
             case bk_Opcode::StoreIndirectK: { ir[ir.len - 1].code = bk_Opcode::StoreIndirect; } break;
+            case bk_Opcode::StoreRevK: { ir[ir.len - 1].code = bk_Opcode::StoreRev; } break;
 
             default: { EmitPop(1); } break;
         }

@@ -30,3 +30,13 @@ let rec = C(12, arr)
 printLn("Simple accessor = ", rec.i)
 printLn("Temporary object = ", C(2, arr))
 printLn("----- ", C(987, arr).i, " ! ", C(2, arr).j[2])
+
+record D (i: Int, j: Int)
+let a: D;
+let mut b: D
+b := a
+b := D(5, 6 + 111)
+printLn(b)
+let mut c: Int
+b.j := 11
+printLn(b)

@@ -87,10 +87,6 @@ bool bk_VirtualMachine::Run(bool debug)
             stack.RemoveLast(inst->u.i);
             DISPATCH(++pc);
         }
-        CASE(Dup): {
-            stack.Append(stack[stack.len - 1]);
-            DISPATCH(++pc);
-        }
 
         CASE(Lea): {
             stack.Append({.i = inst->u.i});
@@ -161,6 +157,23 @@ bool bk_VirtualMachine::Run(bool debug)
                 stack[src + i - 1].i = value;
             }
             stack.len--;
+            DISPATCH(++pc);
+        }
+        CASE(StoreRev): {
+            Size ptr = stack.ptr[--stack.len].i;
+            Size src = stack.len - inst->u.i;
+            for (Size i = 0; i < inst->u.i; i++) {
+                stack[ptr + i].i = stack[src + i].i;
+            }
+            stack.len -= inst->u.i;
+            DISPATCH(++pc);
+        }
+        CASE(StoreRevK): {
+            Size ptr = stack.ptr[--stack.len].i;
+            Size src = stack.len - inst->u.i;
+            for (Size i = 0; i < inst->u.i; i++) {
+                stack[ptr + i].i = stack[src + i].i;
+            }
             DISPATCH(++pc);
         }
         CASE(CheckIndex): {
@@ -663,6 +676,8 @@ void bk_VirtualMachine::DumpInstruction(Size pc) const
         case bk_Opcode::StoreLocalK: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreLocalK @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
         case bk_Opcode::StoreIndirect: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreIndirect |%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
         case bk_Opcode::StoreIndirectK: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreIndirectK |%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::StoreRev: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreRev |%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::StoreRevK: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreRevK |%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
         case bk_Opcode::CheckIndex: { PrintLn(stderr, "%!D..[0x%1]%!0 CheckIndex < %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
         case bk_Opcode::Jump: { PrintLn(stderr, "%!D..[0x%1]%!0 Jump 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;
