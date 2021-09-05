@@ -499,6 +499,8 @@ bool bk_VirtualMachine::Run(bool debug)
 
         CASE(Call): {
             const bk_FunctionInfo *func = stack[stack.len + inst->u.i].func;
+            const bk_FunctionTypeInfo *func_type = func->type;
+            const bk_TypeInfo *ret_type = func_type->ret_type;
 
             if (func->mode == bk_FunctionInfo::Mode::Record) {
                 // Nothing to do, the arguments build the object and that's it!
@@ -515,31 +517,35 @@ bool bk_VirtualMachine::Run(bool debug)
                 frame->direct = false;
 
                 if (func->mode == bk_FunctionInfo::Mode::Blikk) {
-                    frame->bp = stack.len - func->params.len;
+                    frame->bp = stack.len - func->type->params_size;
 
                     bp = frame->bp;
                     DISPATCH(pc = frame->pc);
                 } else {
                     RG_ASSERT(func->mode == bk_FunctionInfo::Mode::Native);
 
-                    if (func->type->variadic) {
-                        Span<const bk_PrimitiveValue> args;
-                        args.len = func->params.len + stack[stack.len - 1].i;
-                        args.ptr = stack.end() - args.len - 1;
+                    stack.Grow(ret_type->size);
 
-                        bk_PrimitiveValue ret = func->native(this, args);
+                    if (func_type->variadic) {
+                        Size variadic_arg = stack[stack.len - 1].i;
+                        Span<bk_PrimitiveValue> args = MakeSpan(stack.end() - func_type->params_size - variadic_arg - 1,
+                                                                func_type->params_size + variadic_arg);
+                        Span<bk_PrimitiveValue> ret = MakeSpan(stack.end(), ret_type->size);
+                        stack.len += ret.len;
 
+                        func->native(this, args, ret);
+
+                        memmove_safe(args.ptr, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
                         stack.len -= args.len + 1;
-                        stack[stack.len - 1] = ret;
                     } else {
-                        Span<const bk_PrimitiveValue> args;
-                        args.len = func->params.len;
-                        args.ptr = stack.end() - args.len;
+                        Span<bk_PrimitiveValue> args = MakeSpan(stack.end() - func_type->params_size, func_type->params_size);
+                        Span<bk_PrimitiveValue> ret = MakeSpan(stack.end(), ret_type->size);
+                        stack.len += ret.len;
 
-                        bk_PrimitiveValue ret = func->native(this, args);
+                        func->native(this, args, ret);
 
+                        memmove_safe(args.ptr, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
                         stack.len -= args.len;
-                        stack[stack.len - 1] = ret;
                     }
 
                     frames.RemoveLast(1);
@@ -554,6 +560,8 @@ bool bk_VirtualMachine::Run(bool debug)
         }
         CASE(CallDirect): {
             const bk_FunctionInfo *func = inst->u.func;
+            const bk_FunctionTypeInfo *func_type = func->type;
+            const bk_TypeInfo *ret_type = func_type->ret_type;
 
             // Save current PC
             frame->pc = pc;
@@ -564,36 +572,35 @@ bool bk_VirtualMachine::Run(bool debug)
             frame->direct = true;
 
             if (func->mode == bk_FunctionInfo::Mode::Blikk) {
-                frame->bp = stack.len - func->params.len;
+                frame->bp = stack.len - func->type->params_size;
 
                 bp = frame->bp;
                 DISPATCH(pc = frame->pc);
             } else {
                 RG_ASSERT(func->mode == bk_FunctionInfo::Mode::Native);
 
-                if (func->type->variadic) {
-                    Span<const bk_PrimitiveValue> args;
-                    args.len = func->params.len + stack[stack.len - 1].i;
-                    args.ptr = stack.end() - args.len - 1;
+                stack.Grow(ret_type->size);
 
-                    bk_PrimitiveValue ret = func->native(this, args);
+                if (func_type->variadic) {
+                    Size variadic_arg = stack[stack.len - 1].i;
+                    Span<bk_PrimitiveValue> args = MakeSpan(stack.end() - func_type->params_size - variadic_arg - 1,
+                                                            func_type->params_size + variadic_arg);
+                    Span<bk_PrimitiveValue> ret = MakeSpan(stack.end(), ret_type->size);
+                    stack.len += ret.len;
 
-                    stack.len -= args.len;
-                    stack[stack.len - 1] = ret;
+                    func->native(this, args, ret);
+
+                    memmove_safe(args.ptr, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
+                    stack.len -= args.len + 1;
                 } else {
-                    Span<const bk_PrimitiveValue> args;
-                    args.len = func->params.len;
-                    args.ptr = stack.end() - args.len;
+                    Span<bk_PrimitiveValue> args = MakeSpan(stack.end() - func_type->params_size, func_type->params_size);
+                    Span<bk_PrimitiveValue> ret = MakeSpan(stack.end(), ret_type->size);
+                    stack.len += ret.len;
 
-                    bk_PrimitiveValue ret = func->native(this, args);
+                    func->native(this, args, ret);
 
-                    if (args.len) {
-                        stack.len -= args.len - 1;
-                    } else {
-                        stack.len -= args.len;
-                        stack.AppendDefault();
-                    }
-                    stack[stack.len - 1] = ret;
+                    memmove_safe(args.ptr, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
+                    stack.len -= args.len;
                 }
 
                 frames.RemoveLast(1);
@@ -654,7 +661,7 @@ void bk_VirtualMachine::DumpInstruction(Size pc) const
     switch (inst.code) {
         case bk_Opcode::Push: {
             switch (inst.primitive) {
-                case bk_PrimitiveKind::Null: { PrintLn(stderr, "%!D..[0x%1]%!0 Push null @%2", FmtHex(pc).Pad0(-5), stack.len); } break;
+                case bk_PrimitiveKind::Null: { RG_UNREACHABLE(); } break;
                 case bk_PrimitiveKind::Boolean: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %2 @%3", FmtHex(pc).Pad0(-5), inst.u.b, stack.len); } break;
                 case bk_PrimitiveKind::Integer: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %2 @%3", FmtHex(pc).Pad0(-5), inst.u.i, stack.len); } break;
                 case bk_PrimitiveKind::Float: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %2 @%3", FmtHex(pc).Pad0(-5), FmtDouble(inst.u.d, 1, INT_MAX), stack.len); } break;

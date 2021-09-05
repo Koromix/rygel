@@ -96,6 +96,7 @@ struct bk_TypeInfo {
 };
 struct bk_FunctionTypeInfo: public bk_TypeInfo {
     LocalArray<const bk_TypeInfo *, 16> params;
+    Size params_size;
     bool variadic;
     const bk_TypeInfo *ret_type;
 };
@@ -124,7 +125,7 @@ extern const bk_TypeInfo *bk_FloatType;
 extern const bk_TypeInfo *bk_StringType;
 extern const bk_TypeInfo *bk_TypeType;
 
-typedef bk_PrimitiveValue bk_NativeFunction(bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args);
+typedef void bk_NativeFunction(bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args, Span<bk_PrimitiveValue> ret);
 
 struct bk_FunctionInfo {
     enum class Mode {

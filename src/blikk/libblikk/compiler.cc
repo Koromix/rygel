@@ -484,6 +484,7 @@ void bk_Parser::AddFunction(const char *prototype, std::function<bk_NativeFuncti
 
                         func->params.Append({"", type2});
                         func_type->params.Append(type2);
+                        func_type->params_size += type2->size;
                     }
 
                     ptr[len] = c;
@@ -643,6 +644,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> positions)
                     param->mut = var->mut;
 
                     type_buf.params.Append(var->type);
+                    type_buf.params_size += var->type->size;
                 } else {
                     MarkError(pos - 1, "Functions cannot have more than %1 parameters", RG_LEN(type_buf.params.data));
                 }
@@ -1038,8 +1040,7 @@ void bk_Parser::ParseFunction(const PrototypeInfo *proto)
 
     if (!has_return) {
         if (func->type->ret_type == bk_NullType) {
-            ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Null});
-            EmitReturn(1);
+            EmitReturn(0);
         } else {
             MarkError(func_pos, "Some code paths do not return a value in function '%1'", func->name);
         }
@@ -1059,7 +1060,6 @@ void bk_Parser::ParseReturn()
 
     StackSlot slot;
     if (PeekToken(bk_TokenKind::EndOfLine) || PeekToken(bk_TokenKind::Semicolon)) {
-        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Null});
         slot = {bk_NullType};
     } else {
         slot = ParseExpression(true);
@@ -1136,7 +1136,7 @@ void bk_Parser::ParseLet()
     if (slot.var && !slot.var->mut && !slot.indirect_addr && !var->mut && var->ready_addr > 0) {
         // We're about to alias var to slot.var... we need to drop the load instructions.
         // Is it enough, and is it safe?
-        Size trim = 1 + (slot.type->size > 1);
+        Size trim = std::min(slot.type->size, (Size)2);
         TrimInstructions(trim);
 
         var->scope = slot.var->scope;
@@ -1160,7 +1160,7 @@ void bk_Parser::ParseLet()
 void bk_Parser::PushDefaultValue(Size var_pos, const bk_VariableInfo &var, const bk_TypeInfo *type)
 {
     switch (type->primitive) {
-        case bk_PrimitiveKind::Null:
+        case bk_PrimitiveKind::Null: {} break;
         case bk_PrimitiveKind::Boolean:
         case bk_PrimitiveKind::Integer:
         case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::Push, type->primitive, {.i = 0}}); } break;
@@ -1541,7 +1541,6 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                     goto unexpected;
                 expect_value = false;
 
-                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Null});
                 stack.Append({bk_NullType});
             } break;
             case bk_TokenKind::Boolean: {
@@ -1787,7 +1786,7 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                     // Remove useless load instruction. We don't remove the variable from
                     // stack slots, because it will be needed when we emit the store instruction
                     // and will be removed then.
-                    Size trim = 1 + (stack[stack.len - 1].type->size > 1);
+                    Size trim = std::min(stack[stack.len - 1].type->size, (Size)2);
                     TrimInstructions(trim);
                 } else if (tok.kind == bk_TokenKind::AndAnd) {
                     op.branch_addr = ir.len;
@@ -1984,7 +1983,7 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
         } else if (dest.type->size == 1) {
             bk_Opcode code = (dest.var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::StoreK : bk_Opcode::StoreLocalK;
             ir.Append({code, {}, {.i = dest.var->offset}});
-        } else {
+        } else if (dest.type->size) {
             bk_Opcode code = (dest.var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Lea : bk_Opcode::LeaLocal;
             ir.Append({code, {}, {.i = dest.var->offset}});
             ir.Append({bk_Opcode::StoreRevK, {}, {.i = dest.type->size}});
@@ -2563,7 +2562,7 @@ void bk_Parser::EmitLoad(const bk_VariableInfo &var)
             bk_Opcode code = (var.scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Load : bk_Opcode::LoadLocal;
             ir.Append({code, {}, {.i = var.offset}});
         }
-    } else {
+    } else if (var.type->size) {
         bk_Opcode code = (var.scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Lea : bk_Opcode::LeaLocal;
         ir.Append({code, {}, {.i = var.offset}});
         ir.Append({bk_Opcode::LoadIndirect, {}, {.i = var.type->size}});
@@ -2645,16 +2644,11 @@ void bk_Parser::EmitReturn(Size size)
     if (ir[ir.len - 1].code == bk_Opcode::CallDirect && ir[ir.len - 1].u.func == current_func) {
         ir.len--;
 
-        Size args_size = 0;
-        for (const bk_FunctionInfo::Parameter &param: current_func->params) {
-            args_size += param.type->size;
-        }
-
-        if (RG_LIKELY(args_size)) {
+        if (RG_LIKELY(current_func->type->params_size)) {
             ir.Append({bk_Opcode::LeaLocal, {}, {.i = 0}});
-            ir.Append({bk_Opcode::StoreRev, {}, {.i = args_size}});
+            ir.Append({bk_Opcode::StoreRev, {}, {.i = current_func->type->params_size}});
         }
-        EmitPop(var_offset - args_size);
+        EmitPop(var_offset - current_func->type->params_size);
         ir.Append({bk_Opcode::Jump, {}, {.i = current_func->addr - ir.len}});
 
         current_func->tre = true;
