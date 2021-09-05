@@ -662,14 +662,14 @@ void bk_VirtualMachine::DumpInstruction(Size pc) const
         case bk_Opcode::Push: {
             switch (inst.primitive) {
                 case bk_PrimitiveKind::Null: { RG_UNREACHABLE(); } break;
-                case bk_PrimitiveKind::Boolean: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %2 @%3", FmtHex(pc).Pad0(-5), inst.u.b, stack.len); } break;
-                case bk_PrimitiveKind::Integer: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %2 @%3", FmtHex(pc).Pad0(-5), inst.u.i, stack.len); } break;
-                case bk_PrimitiveKind::Float: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %2 @%3", FmtHex(pc).Pad0(-5), FmtDouble(inst.u.d, 1, INT_MAX), stack.len); } break;
-                case bk_PrimitiveKind::String: { PrintLn(stderr, "%!D..[0x%1]%!0 Push '%2' @%3", FmtHex(pc).Pad0(-5), inst.u.str, stack.len); } break;
-                case bk_PrimitiveKind::Type: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %2 @%3", FmtHex(pc).Pad0(-5), inst.u.type->signature, stack.len); } break;
-                case bk_PrimitiveKind::Function: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %2 @%3", FmtHex(pc).Pad0(-5), inst.u.func->prototype, stack.len); } break;
-                case bk_PrimitiveKind::Array: { PrintLn(stderr, "%!D..[0x%1]%!0 Push @%2 @%3", FmtHex(pc).Pad0(-5), inst.u.i, stack.len); } break;
-                case bk_PrimitiveKind::Record: { PrintLn(stderr, "%!D..[0x%1]%!0 Push @%2 @%3", FmtHex(pc).Pad0(-5), inst.u.i, stack.len); } break;
+                case bk_PrimitiveKind::Boolean: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %!Y..[Bool]%!0 %2 @%3", FmtHex(pc).Pad0(-5), inst.u.b, stack.len); } break;
+                case bk_PrimitiveKind::Integer: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %!Y..[Int]%!0 %2 @%3", FmtHex(pc).Pad0(-5), inst.u.i, stack.len); } break;
+                case bk_PrimitiveKind::Float: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %!Y..[Float]%!0 %2 @%3", FmtHex(pc).Pad0(-5), FmtDouble(inst.u.d, 1, INT_MAX), stack.len); } break;
+                case bk_PrimitiveKind::String: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %!Y..[String]%!0 '%2' @%3", FmtHex(pc).Pad0(-5), inst.u.str, stack.len); } break;
+                case bk_PrimitiveKind::Type: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %!Y..[Type]%!0 %2 @%3", FmtHex(pc).Pad0(-5), inst.u.type->signature, stack.len); } break;
+                case bk_PrimitiveKind::Function: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %!Y..[Function]%!0 %2 @%3", FmtHex(pc).Pad0(-5), inst.u.func->prototype, stack.len); } break;
+                case bk_PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
+                case bk_PrimitiveKind::Record: { RG_UNREACHABLE(); } break;
             }
         } break;
         case bk_Opcode::Pop: { PrintLn(stderr, "%!D..[0x%1]%!0 Pop %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
