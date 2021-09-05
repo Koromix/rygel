@@ -195,7 +195,7 @@ static const char *const bk_OpcodeNames[] = {
 
 struct bk_Instruction {
     bk_Opcode code;
-    bk_PrimitiveKind primitive; // Only set for Push/Load/Store
+    bk_PrimitiveKind primitive; // Only set for Push
     bk_PrimitiveValue u;
 };
 

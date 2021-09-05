@@ -654,34 +654,34 @@ void bk_VirtualMachine::DumpInstruction(Size pc) const
     switch (inst.code) {
         case bk_Opcode::Push: {
             switch (inst.primitive) {
-                case bk_PrimitiveKind::Null: { PrintLn(stderr, "%!D..[0x%1]%!0 Push null", FmtHex(pc).Pad0(-5)); } break;
-                case bk_PrimitiveKind::Boolean: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %2", FmtHex(pc).Pad0(-5), inst.u.b); } break;
-                case bk_PrimitiveKind::Integer: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-                case bk_PrimitiveKind::Float: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %2", FmtHex(pc).Pad0(-5), FmtDouble(inst.u.d, 1, INT_MAX)); } break;
-                case bk_PrimitiveKind::String: { PrintLn(stderr, "%!D..[0x%1]%!0 Push '%2'", FmtHex(pc).Pad0(-5), inst.u.str); } break;
-                case bk_PrimitiveKind::Type: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %2", FmtHex(pc).Pad0(-5), inst.u.type->signature); } break;
-                case bk_PrimitiveKind::Function: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %2", FmtHex(pc).Pad0(-5), inst.u.func->prototype); } break;
-                case bk_PrimitiveKind::Array: { PrintLn(stderr, "%!D..[0x%1]%!0 Push @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
-                case bk_PrimitiveKind::Record: { PrintLn(stderr, "%!D..[0x%1]%!0 Push @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+                case bk_PrimitiveKind::Null: { PrintLn(stderr, "%!D..[0x%1]%!0 Push null @%2", FmtHex(pc).Pad0(-5), stack.len); } break;
+                case bk_PrimitiveKind::Boolean: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %2 @%3", FmtHex(pc).Pad0(-5), inst.u.b, stack.len); } break;
+                case bk_PrimitiveKind::Integer: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %2 @%3", FmtHex(pc).Pad0(-5), inst.u.i, stack.len); } break;
+                case bk_PrimitiveKind::Float: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %2 @%3", FmtHex(pc).Pad0(-5), FmtDouble(inst.u.d, 1, INT_MAX), stack.len); } break;
+                case bk_PrimitiveKind::String: { PrintLn(stderr, "%!D..[0x%1]%!0 Push '%2' @%3", FmtHex(pc).Pad0(-5), inst.u.str, stack.len); } break;
+                case bk_PrimitiveKind::Type: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %2 @%3", FmtHex(pc).Pad0(-5), inst.u.type->signature, stack.len); } break;
+                case bk_PrimitiveKind::Function: { PrintLn(stderr, "%!D..[0x%1]%!0 Push %2 @%3", FmtHex(pc).Pad0(-5), inst.u.func->prototype, stack.len); } break;
+                case bk_PrimitiveKind::Array: { PrintLn(stderr, "%!D..[0x%1]%!0 Push @%2 @%3", FmtHex(pc).Pad0(-5), inst.u.i, stack.len); } break;
+                case bk_PrimitiveKind::Record: { PrintLn(stderr, "%!D..[0x%1]%!0 Push @%2 @%3", FmtHex(pc).Pad0(-5), inst.u.i, stack.len); } break;
             }
         } break;
         case bk_Opcode::Pop: { PrintLn(stderr, "%!D..[0x%1]%!0 Pop %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
-        case bk_Opcode::Lea: { PrintLn(stderr, "%!D..[0x%1]%!0 Lea @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::LeaLocal: { PrintLn(stderr, "%!D..[0x%1]%!0 LeaLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::LeaRel: { PrintLn(stderr, "%!D..[0x%1]%!0 LeaRel @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::Load: { PrintLn(stderr, "%!D..[0x%1]%!0 Load @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::LoadLocal: { PrintLn(stderr, "%!D..[0x%1]%!0 LoadLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::LoadIndirect: { PrintLn(stderr, "%!D..[0x%1]%!0 LoadIndirect |%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::LoadIndirectK: { PrintLn(stderr, "%!D..[0x%1]%!0 LoadIndirectK |%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::Store: { PrintLn(stderr, "%!D..[0x%1]%!0 Store @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::StoreK: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreK @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::StoreLocal: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreLocal @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::StoreLocalK: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreLocalK @%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::StoreIndirect: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreIndirect |%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::StoreIndirectK: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreIndirectK |%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::StoreRev: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreRev |%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
-        case bk_Opcode::StoreRevK: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreRevK |%2 (%3)", FmtHex(pc).Pad0(-5), inst.u.i, bk_PrimitiveKindNames[(int)inst.primitive]); } break;
+        case bk_Opcode::Lea: { PrintLn(stderr, "%!D..[0x%1]%!0 Lea @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::LeaLocal: { PrintLn(stderr, "%!D..[0x%1]%!0 LeaLocal @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::LeaRel: { PrintLn(stderr, "%!D..[0x%1]%!0 LeaRel @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::Load: { PrintLn(stderr, "%!D..[0x%1]%!0 Load @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::LoadLocal: { PrintLn(stderr, "%!D..[0x%1]%!0 LoadLocal @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::LoadIndirect: { PrintLn(stderr, "%!D..[0x%1]%!0 LoadIndirect |%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::LoadIndirectK: { PrintLn(stderr, "%!D..[0x%1]%!0 LoadIndirectK |%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::Store: { PrintLn(stderr, "%!D..[0x%1]%!0 Store @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::StoreK: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreK @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::StoreLocal: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreLocal @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::StoreLocalK: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreLocalK @%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::StoreIndirect: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreIndirect |%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::StoreIndirectK: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreIndirectK |%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::StoreRev: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreRev |%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
+        case bk_Opcode::StoreRevK: { PrintLn(stderr, "%!D..[0x%1]%!0 StoreRevK |%2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
         case bk_Opcode::CheckIndex: { PrintLn(stderr, "%!D..[0x%1]%!0 CheckIndex < %2", FmtHex(pc).Pad0(-5), inst.u.i); } break;
 
         case bk_Opcode::Jump: { PrintLn(stderr, "%!D..[0x%1]%!0 Jump 0x%2", FmtHex(pc).Pad0(-5), FmtHex(pc + inst.u.i).Pad0(-5)); } break;

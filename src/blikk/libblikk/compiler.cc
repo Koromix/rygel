@@ -1334,13 +1334,13 @@ void bk_Parser::ParseFor()
     var_offset += 3;
 
     // Put iterator value on the stack
-    ir.Append({bk_Opcode::LoadLocal, bk_PrimitiveKind::Integer, {.i = it->offset - 2}});
+    ir.Append({bk_Opcode::LoadLocal, {}, {.i = it->offset - 2}});
     it->type = bk_IntType;
 
     Size body_addr = ir.len;
 
-    ir.Append({bk_Opcode::LoadLocal, bk_PrimitiveKind::Integer, {.i = it->offset}});
-    ir.Append({bk_Opcode::LoadLocal, bk_PrimitiveKind::Integer, {.i = it->offset - 1}});
+    ir.Append({bk_Opcode::LoadLocal, {}, {.i = it->offset}});
+    ir.Append({bk_Opcode::LoadLocal, {}, {.i = it->offset - 1}});
     ir.Append({bk_Opcode::LessThanInt});
     ir.Append({bk_Opcode::BranchIfFalse});
 
@@ -1980,14 +1980,14 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
                 ir[dest.indirect_addr].code = bk_Opcode::LoadIndirectK;
             }
 
-            ir.Append({bk_Opcode::StoreIndirectK, dest.type->primitive, {.i = dest.type->size}});
+            ir.Append({bk_Opcode::StoreIndirectK, {}, {.i = dest.type->size}});
         } else if (dest.type->size == 1) {
             bk_Opcode code = (dest.var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::StoreK : bk_Opcode::StoreLocalK;
-            ir.Append({code, dest.type->primitive, {.i = dest.var->offset}});
+            ir.Append({code, {}, {.i = dest.var->offset}});
         } else {
             bk_Opcode code = (dest.var->scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Lea : bk_Opcode::LeaLocal;
-            ir.Append({code, dest.type->primitive, {.i = dest.var->offset}});
-            ir.Append({bk_Opcode::StoreRevK, dest.type->primitive, {.i = dest.type->size}});
+            ir.Append({code, {}, {.i = dest.var->offset}});
+            ir.Append({bk_Opcode::StoreRevK, {}, {.i = dest.type->size}});
         }
     } else { // Other operators
         switch (op.kind) {
@@ -2314,7 +2314,7 @@ void bk_Parser::ParseArraySubscript()
             // If an array gets loaded from a variable, its address is already on the stack
             // because of EmitLoad. But if it is a temporary value, we need to do it now.
 
-            ir.Append({bk_Opcode::LeaRel, bk_PrimitiveKind::Array, {.i = -stack[stack.len - 1].type->size}});
+            ir.Append({bk_Opcode::LeaRel, {}, {.i = -stack[stack.len - 1].type->size}});
             stack[stack.len - 1].indirect_addr = ir.len;
         } else {
             stack[stack.len - 1].indirect_addr = ir.len - 1;
@@ -2348,12 +2348,12 @@ void bk_Parser::ParseArraySubscript()
 
         // Load value
         stack[stack.len - 1].indirect_addr = ir.len;
-        ir.Append({bk_Opcode::LoadIndirect, unit_type->primitive, {.i = unit_type->size}});
+        ir.Append({bk_Opcode::LoadIndirect, {}, {.i = unit_type->size}});
 
         // Clean up temporary value (if any)
         if (!stack[stack.len - 1].var) {
-            ir.Append({bk_Opcode::LeaRel, bk_PrimitiveKind::Array, {.i = -unit_type->size - array_type->size}});
-            ir.Append({bk_Opcode::StoreRev, unit_type->primitive, {.i = unit_type->size}});
+            ir.Append({bk_Opcode::LeaRel, {}, {.i = -unit_type->size - array_type->size}});
+            ir.Append({bk_Opcode::StoreRev, {}, {.i = unit_type->size}});
 
             stack[stack.len - 1].indirect_imbalance += array_type->size - unit_type->size;
             EmitPop(stack[stack.len - 1].indirect_imbalance);
@@ -2377,7 +2377,7 @@ void bk_Parser::ParseRecordDot()
             // If a record gets loaded from a variable, its address is already on the stack
             // because of EmitLoad. But if it is a temporary value, we need to do it now.
 
-            ir.Append({bk_Opcode::LeaRel, bk_PrimitiveKind::Record, {.i = -record_type->size}});
+            ir.Append({bk_Opcode::LeaRel, {}, {.i = -record_type->size}});
             stack[stack.len - 1].indirect_addr = ir.len;
         } else {
             stack[stack.len - 1].indirect_addr = ir.len - 1;
@@ -2407,12 +2407,12 @@ void bk_Parser::ParseRecordDot()
 
     // Load value
     stack[stack.len - 1].indirect_addr = ir.len;
-    ir.Append({bk_Opcode::LoadIndirect, member->type->primitive, {.i = member->type->size}});
+    ir.Append({bk_Opcode::LoadIndirect, {}, {.i = member->type->size}});
 
     // Clean up temporary value (if any)
     if (!stack[stack.len - 1].var) {
-        ir.Append({bk_Opcode::LeaRel, bk_PrimitiveKind::Record, {.i = -member->type->size - record_type->size}});
-        ir.Append({bk_Opcode::StoreRev, member->type->primitive, {.i = member->type->size}});
+        ir.Append({bk_Opcode::LeaRel, {}, {.i = -member->type->size - record_type->size}});
+        ir.Append({bk_Opcode::StoreRev, {}, {.i = member->type->size}});
 
         stack[stack.len - 1].indirect_imbalance += record_type->size - member->type->size;
         EmitPop(stack[stack.len - 1].indirect_imbalance);
@@ -2561,12 +2561,12 @@ void bk_Parser::EmitLoad(const bk_VariableInfo &var)
             ir.Append(inst);
         } else {
             bk_Opcode code = (var.scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Load : bk_Opcode::LoadLocal;
-            ir.Append({code, var.type->primitive, {.i = var.offset}});
+            ir.Append({code, {}, {.i = var.offset}});
         }
     } else {
         bk_Opcode code = (var.scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Lea : bk_Opcode::LeaLocal;
-        ir.Append({code, var.type->primitive, {.i = var.offset}});
-        ir.Append({bk_Opcode::LoadIndirect, var.type->primitive, {.i = var.type->size}});
+        ir.Append({code, {}, {.i = var.offset}});
+        ir.Append({bk_Opcode::LoadIndirect, {}, {.i = var.type->size}});
     }
 
     stack.Append({var.type, &var});
@@ -2651,8 +2651,8 @@ void bk_Parser::EmitReturn(Size size)
         }
 
         if (RG_LIKELY(args_size)) {
-            ir.Append({bk_Opcode::LeaLocal, bk_PrimitiveKind::Record, {.i = 0}});
-            ir.Append({bk_Opcode::StoreRev, bk_PrimitiveKind::Record, {.i = args_size}});
+            ir.Append({bk_Opcode::LeaLocal, {}, {.i = 0}});
+            ir.Append({bk_Opcode::StoreRev, {}, {.i = args_size}});
         }
         EmitPop(var_offset - args_size);
         ir.Append({bk_Opcode::Jump, {}, {.i = current_func->addr - ir.len}});
