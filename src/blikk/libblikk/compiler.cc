@@ -2521,11 +2521,25 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
 {
     if (TestStr(name, "toFloat")) {
         if (args[0] == bk_IntType) {
-            ir.Append({bk_Opcode::IntToFloat});
+            if (ir[ir.len - 1].code == bk_Opcode::Push) {
+                RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Integer);
+
+                ir[ir.len - 1].primitive = bk_PrimitiveKind::Float;
+                ir[ir.len - 1].u.d = (double)ir[ir.len - 1].u.i;
+            } else {
+                ir.Append({bk_Opcode::IntToFloat});
+            }
         }
     } else if (TestStr(name, "toInt")) {
         if (args[0] == bk_FloatType) {
-            ir.Append({bk_Opcode::FloatToInt});
+            if (ir[ir.len - 1].code == bk_Opcode::Push) {
+                RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Float);
+
+                ir[ir.len - 1].primitive = bk_PrimitiveKind::Integer;
+                ir[ir.len - 1].u.i = (int64_t)ir[ir.len - 1].u.d;
+            } else {
+                ir.Append({bk_Opcode::FloatToInt});
+            }
         }
     } else if (TestStr(name, "typeOf")) {
         // XXX: We can change the signature from typeOf(...) to typeOf(Any) after Any
