@@ -120,14 +120,14 @@ Options:
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-c", "--command")) {
-                if (mode != RunMode::File) {
+                if (mode == RunMode::Interactive) {
                     LogError("You cannot use --command and --interactive at the same time");
                     return 1;
                 }
 
                 mode = RunMode::Command;
             } else if (opt.Test("-i", "--interactive")) {
-                if (mode != RunMode::File) {
+                if (mode == RunMode::Command) {
                     LogError("You cannot use --command and --interactive at the same time");
                     return 1;
                 }
