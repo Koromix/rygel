@@ -975,7 +975,7 @@ void bk_Parser::ParseFunction(const PrototypeInfo *proto)
         var->scope = bk_VariableInfo::Scope::Local;
 
         var->offset = var_offset;
-        var_offset++;
+        var_offset += param.type->size;
 
         std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySet(var);
         if (RG_UNLIKELY(!ret.second)) {
