@@ -43,11 +43,8 @@ static bool ApplySandbox()
         {"fstat", sec_FilterAction::Allow},
         {"ioctl/tty", sec_FilterAction::Allow},
         {"rt_sigaction", sec_FilterAction::Allow},
-
-        {"fsync", sec_FilterAction::Block},
-        {"sync", sec_FilterAction::Block},
-        {"syncfs", sec_FilterAction::Block},
-        {"close", sec_FilterAction::Block}
+        {"close", sec_FilterAction::Allow},
+        {"fsync", sec_FilterAction::Allow}
     });
 #endif
 
