@@ -606,8 +606,12 @@ bool bk_VirtualMachine::Run(bool debug)
             }
         }
         CASE(Return): {
-            stack[bp + frame->direct - 1] = stack[stack.len - 1];
-            stack.len = bp + frame->direct;
+            Size src = stack.len - inst->u.i;
+            stack.len = bp - 1 + frame->direct;
+            stack.Grow(inst->u.i);
+            for (Size i = 0; i < inst->u.i; i++) {
+                stack[stack.len++].i = stack.ptr[src + i].i;
+            }
 
             frames.RemoveLast(1);
             frame = &frames[frames.len - 1];

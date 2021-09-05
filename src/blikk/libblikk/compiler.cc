@@ -131,7 +131,7 @@ private:
     void DiscardResult(Size discard);
 
     void EmitPop(int64_t count);
-    void EmitReturn();
+    void EmitReturn(Size size);
 
     void DestroyVariables(Size first_idx);
     template<typename T>
@@ -1039,7 +1039,7 @@ void bk_Parser::ParseFunction(const PrototypeInfo *proto)
     if (!has_return) {
         if (func->type->ret_type == bk_NullType) {
             ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Null});
-            EmitReturn();
+            EmitReturn(1);
         } else {
             MarkError(func_pos, "Some code paths do not return a value in function '%1'", func->name);
         }
@@ -1070,17 +1070,8 @@ void bk_Parser::ParseReturn()
                   slot.type->signature, current_func->type->ret_type->signature);
         return;
     }
-    if (RG_UNLIKELY(slot.type->size > 1)) {
-        if (slot.var && slot.var->scope == bk_VariableInfo::Scope::Local) {
-            MarkError(return_pos, "Cannot return heavy variable '%1'", slot.var->name);
-            return;
-        } else if (!slot.var) {
-            MarkError(return_pos, "Cannot return heavy value of type '%1'", slot.type->signature);
-            return;
-        }
-    }
 
-    EmitReturn();
+    EmitReturn(slot.type->size);
 }
 
 void bk_Parser::ParseLet()
@@ -2646,7 +2637,7 @@ void bk_Parser::EmitPop(int64_t count)
     }
 }
 
-void bk_Parser::EmitReturn()
+void bk_Parser::EmitReturn(Size size)
 {
     RG_ASSERT(current_func);
 
@@ -2664,7 +2655,7 @@ void bk_Parser::EmitReturn()
 
         current_func->tre = true;
     } else {
-        ir.Append({bk_Opcode::Return});
+        ir.Append({bk_Opcode::Return, {}, {.i = size}});
     }
 }
 

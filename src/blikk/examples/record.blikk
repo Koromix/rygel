@@ -40,3 +40,14 @@ printLn(b)
 let mut c: Int
 b.j := 11
 printLn(b)
+
+let xx = struct(55)
+func struct(val: Int): C
+    let mut arr2: [3] Int
+    for i in 0:3
+        arr2[i] := i + 666
+    end
+    let tmp = C(val, arr2)
+    return tmp
+end
+printLn("Returned ", xx, " -- ", struct(14524))
