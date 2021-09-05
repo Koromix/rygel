@@ -2630,7 +2630,7 @@ void bk_Parser::DiscardResult(Size size)
 
 void bk_Parser::EmitPop(int64_t count)
 {
-    RG_ASSERT(count >= 0);
+    RG_ASSERT(count >= 0 || !valid);
 
     if (count) {
         ir.Append({bk_Opcode::Pop, {}, {.i = count}});
@@ -2645,12 +2645,16 @@ void bk_Parser::EmitReturn(Size size)
     if (ir[ir.len - 1].code == bk_Opcode::CallDirect && ir[ir.len - 1].u.func == current_func) {
         ir.len--;
 
-        for (Size i = current_func->params.len - 1; i >= 0; i--) {
-            const bk_FunctionInfo::Parameter &param = current_func->params[i];
-            ir.Append({bk_Opcode::StoreLocal, param.type->primitive, {.i = i}});
+        Size args_size = 0;
+        for (const bk_FunctionInfo::Parameter &param: current_func->params) {
+            args_size += param.type->size;
         }
 
-        EmitPop(var_offset - current_func->params.len);
+        if (RG_LIKELY(args_size)) {
+            ir.Append({bk_Opcode::LeaLocal, bk_PrimitiveKind::Record, {.i = 0}});
+            ir.Append({bk_Opcode::StoreRev, bk_PrimitiveKind::Record, {.i = args_size}});
+        }
+        EmitPop(var_offset - args_size);
         ir.Append({bk_Opcode::Jump, {}, {.i = current_func->addr - ir.len}});
 
         current_func->tre = true;
