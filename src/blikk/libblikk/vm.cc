@@ -142,7 +142,7 @@ bool bk_VirtualMachine::Run(bool debug)
         CASE(StoreIndirect): {
             Size ptr = stack[stack.len - inst->u.i - 1].i;
             Size src = stack.len - inst->u.i;
-            for (Size i = 0; i < inst->u.i; i++) {
+            for (Size i = inst->u.i - 1; i >= 0; i--) {
                 stack[ptr + i].i = stack[src + i].i;
             }
             stack.len -= inst->u.i + 1;
@@ -151,7 +151,7 @@ bool bk_VirtualMachine::Run(bool debug)
         CASE(StoreIndirectK): {
             Size ptr = stack[stack.len - inst->u.i - 1].i;
             Size src = stack.len - inst->u.i;
-            for (Size i = 0; i < inst->u.i; i++) {
+            for (Size i = inst->u.i - 1; i >= 0; i--) {
                 int64_t value = stack[src + i].i;
                 stack[ptr + i].i = value;
                 stack[src + i - 1].i = value;
@@ -162,7 +162,7 @@ bool bk_VirtualMachine::Run(bool debug)
         CASE(StoreRev): {
             Size ptr = stack.ptr[--stack.len].i;
             Size src = stack.len - inst->u.i;
-            for (Size i = 0; i < inst->u.i; i++) {
+            for (Size i = inst->u.i - 1; i >= 0; i--) {
                 stack[ptr + i].i = stack[src + i].i;
             }
             stack.len -= inst->u.i;
@@ -171,7 +171,7 @@ bool bk_VirtualMachine::Run(bool debug)
         CASE(StoreRevK): {
             Size ptr = stack.ptr[--stack.len].i;
             Size src = stack.len - inst->u.i;
-            for (Size i = 0; i < inst->u.i; i++) {
+            for (Size i = inst->u.i - 1; i >= 0; i--) {
                 stack[ptr + i].i = stack[src + i].i;
             }
             DISPATCH(++pc);
