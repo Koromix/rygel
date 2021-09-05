@@ -42,4 +42,7 @@ public:
     void AddGlobal(const char *name, const bk_TypeInfo *type, Span<const bk_PrimitiveValue> values, bool mut = false);
 };
 
+#define BK_ADD_FUNCTION(Compiler, Signature, Code) \
+    (Compiler).AddFunction((Signature), [&](bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args, Span<bk_PrimitiveValue> ret) Code)
+
 }

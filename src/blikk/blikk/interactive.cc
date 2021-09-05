@@ -130,12 +130,14 @@ int RunInteractive(bool execute, bool try_expr, bool debug)
     bool run = true;
 
     // Functions specific to interactive mode
-    const auto exit = [&](bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args, Span<bk_PrimitiveValue>) {
+    BK_ADD_FUNCTION(compiler, "exit()", {
         run = false;
         vm->SetInterrupt();
-    };
-    compiler.AddFunction("exit()", exit);
-    compiler.AddFunction("quit()", exit);
+    });
+    BK_ADD_FUNCTION(compiler, "quit()", {
+        run = false;
+        vm->SetInterrupt();
+    });
 
     // Make sure the prelude runs successfully
     {
