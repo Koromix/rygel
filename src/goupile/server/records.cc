@@ -811,7 +811,7 @@ RecordExporter::Column *RecordExporter::GetColumn(RecordExporter::Table *table, 
         if (suffix) {
             buf.Append('.');
             for (Size i = 0; suffix[i]; i++) {
-                char c = LowerAscii(key[i]);
+                char c = LowerAscii(suffix[i]);
                 buf.Append(c);
             }
         }
