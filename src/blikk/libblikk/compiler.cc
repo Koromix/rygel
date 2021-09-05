@@ -220,7 +220,7 @@ private:
         }
 
         if (warn_case) {
-            HintError(-1, "Identifiers are case-sensitive");
+            HintError(-1, "Identifiers are case-sensitive (e.g. foo and FOO are different)");
         }
     }
 };
