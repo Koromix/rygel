@@ -2627,7 +2627,13 @@ void bk_Parser::DiscardResult(Size size)
         } break;
 
         case bk_Opcode::StoreK:
-        case bk_Opcode::StoreLocalK:
+        case bk_Opcode::StoreLocalK: {
+            if (size == 1) {
+                ir[ir.len - 1].code = (bk_Opcode)((int)ir[ir.len - 1].code - 1);
+                return;
+            }
+        } break;
+
         case bk_Opcode::StoreIndirectK:
         case bk_Opcode::StoreRevK: {
             if (size == ir[ir.len - 1].u.i) {
