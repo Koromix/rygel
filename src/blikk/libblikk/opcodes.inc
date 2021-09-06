@@ -101,8 +101,8 @@ OPCODE(SkipIfTrue)
 OPCODE(SkipIfFalse)
 
 // Functions
+OPCODE(CallIndirect)
 OPCODE(Call)
-OPCODE(CallDirect)
 OPCODE(Return)
 
 // Intrinsics

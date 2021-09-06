@@ -497,7 +497,7 @@ bool bk_VirtualMachine::Run(bool debug)
             DISPATCH(pc += (b ? 1 : (Size)inst->u.i));
         }
 
-        CASE(Call): {
+        CASE(CallIndirect): {
             const bk_FunctionInfo *func = stack[stack.len + inst->u.i].func;
             const bk_FunctionTypeInfo *func_type = func->type;
             const bk_TypeInfo *ret_type = func_type->ret_type;
@@ -558,7 +558,7 @@ bool bk_VirtualMachine::Run(bool debug)
                 }
             }
         }
-        CASE(CallDirect): {
+        CASE(Call): {
             const bk_FunctionInfo *func = inst->u.func;
             const bk_FunctionTypeInfo *func_type = func->type;
             const bk_TypeInfo *ret_type = func_type->ret_type;
@@ -700,8 +700,8 @@ void bk_VirtualMachine::DumpInstruction(Size pc, Size bp) const
         case bk_Opcode::SkipIfTrue:
         case bk_Opcode::SkipIfFalse: { PrintLn(stderr, " %!G..0x%1%!0", FmtHex(pc + inst.u.i).Pad0(-6)); } break;
 
-        case bk_Opcode::Call: { PrintLn(stderr, " %!R..@%1%!0", stack.len + inst.u.i); } break;
-        case bk_Opcode::CallDirect: {
+        case bk_Opcode::CallIndirect: { PrintLn(stderr, " %!R..@%1%!0", stack.len + inst.u.i); } break;
+        case bk_Opcode::Call: {
             const bk_FunctionInfo *func = inst.u.func;
             PrintLn(stderr, " %!G..'%1'%!0", func->prototype);
         } break;

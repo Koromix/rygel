@@ -2508,7 +2508,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
     // Emit intrinsic or call
     if (!func) {
         Size offset = 1 + args_size;
-        ir.Append({bk_Opcode::Call, {}, {.i = -offset}});
+        ir.Append({bk_Opcode::CallIndirect, {}, {.i = -offset}});
 
         stack.len--;
     } else if (func->mode == bk_FunctionInfo::Mode::Intrinsic) {
@@ -2516,7 +2516,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
     } else if (func->mode == bk_FunctionInfo::Mode::Record) {
         // Nothing to do, the object stack
     } else {
-        ir.Append({bk_Opcode::CallDirect, {}, {.func = func}});
+        ir.Append({bk_Opcode::Call, {}, {.func = func}});
     }
     stack.Append({func_type->ret_type});
 
@@ -2667,7 +2667,7 @@ void bk_Parser::EmitReturn(Size size)
     RG_ASSERT(current_func);
 
     // We support tail recursion elimination (TRE)
-    if (ir[ir.len - 1].code == bk_Opcode::CallDirect && ir[ir.len - 1].u.func == current_func) {
+    if (ir[ir.len - 1].code == bk_Opcode::Call && ir[ir.len - 1].u.func == current_func) {
         ir.len--;
 
         if (current_func->type->params_size == 1) {
