@@ -2665,7 +2665,9 @@ void bk_Parser::EmitReturn(Size size)
     if (ir[ir.len - 1].code == bk_Opcode::CallDirect && ir[ir.len - 1].u.func == current_func) {
         ir.len--;
 
-        if (RG_LIKELY(current_func->type->params_size)) {
+        if (current_func->type->params_size == 1) {
+            ir.Append({bk_Opcode::StoreLocal, {}, {.i = 0}});
+        } else if (current_func->type->params_size > 1) {
             ir.Append({bk_Opcode::LeaLocal, {}, {.i = 0}});
             ir.Append({bk_Opcode::StoreRev, {}, {.i = current_func->type->params_size}});
         }
