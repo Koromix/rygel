@@ -419,7 +419,7 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
     }
 
     // CSRF protection
-    if (!http_PreventCSRF(request, io))
+    if (request.method != http_RequestMethod::Get && !http_PreventCSRF(request, io))
         return;
 
     // And now, API endpoints
@@ -629,7 +629,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
     }
 
     // CSRF protection
-    if (!http_PreventCSRF(request, io))
+    if (request.method != http_RequestMethod::Get && !http_PreventCSRF(request, io))
         return;
 
     // And now, API endpoints
