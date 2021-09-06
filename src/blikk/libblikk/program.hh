@@ -94,16 +94,6 @@ struct bk_TypeInfo {
         RG_ASSERT(primitive == bk_PrimitiveKind::Record);
         return (const bk_RecordTypeInfo *)this;
     }
-    struct bk_OpaqueTypeInfo *AsOpaqueType()
-    {
-        RG_ASSERT(primitive == bk_PrimitiveKind::Opaque);
-        return (bk_OpaqueTypeInfo *)this;
-    }
-    const struct bk_OpaqueTypeInfo *AsOpaqueType() const
-    {
-        RG_ASSERT(primitive == bk_PrimitiveKind::Opaque);
-        return (const bk_OpaqueTypeInfo *)this;
-    }
 
     RG_HASHTABLE_HANDLER(bk_TypeInfo, signature);
 };
@@ -126,9 +116,6 @@ struct bk_RecordTypeInfo: public bk_TypeInfo {
 
     LocalArray<Member, RG_LEN(bk_FunctionTypeInfo::params.data)> members;
     const bk_FunctionInfo *func;
-};
-struct bk_OpaqueTypeInfo: public bk_TypeInfo {
-    bool allow_null;
 };
 
 extern Span<const bk_TypeInfo> bk_BaseTypes;
@@ -238,7 +225,7 @@ struct bk_Program {
     BucketArray<bk_FunctionTypeInfo> function_types;
     BucketArray<bk_ArrayTypeInfo> array_types;
     BucketArray<bk_RecordTypeInfo> record_types;
-    BucketArray<bk_OpaqueTypeInfo> opaque_types;
+    BucketArray<bk_TypeInfo> bare_types;
     BucketArray<bk_FunctionInfo> functions;
     BucketArray<bk_VariableInfo> variables;
     HashTable<const char *, const bk_TypeInfo *> types_map;
