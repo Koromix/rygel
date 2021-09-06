@@ -122,8 +122,6 @@ struct bk_RecordTypeInfo: public bk_TypeInfo {
         const char *name;
         const bk_TypeInfo *type;
         Size offset;
-
-        RG_HASHTABLE_HANDLER(Member, name);
     };
 
     LocalArray<Member, RG_LEN(bk_FunctionTypeInfo::params.data)> members;
