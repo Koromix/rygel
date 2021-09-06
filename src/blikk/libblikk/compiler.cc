@@ -603,6 +603,7 @@ void bk_Parser::ParsePrototypes(Span<const Size> positions)
         type_buf.primitive = bk_PrimitiveKind::Function;
         type_buf.size = 1;
         type_buf.params.RemoveFrom(0);
+        type_buf.params_size = 0;
 
         // Parameters
         ConsumeToken(bk_TokenKind::LeftParenthesis);
