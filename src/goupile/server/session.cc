@@ -26,36 +26,37 @@ namespace RG {
 static const int BanTreshold = 6;
 static const int64_t BanTime = 1800 * 1000;
 
-struct FloodInfo {
+struct EventInfo {
     struct Key {
-        const char *address;
-        const char *context;
+        const char *where;
+        const char *who;
 
-        bool operator==(const Key &other) const { return TestStr(address, other.address) && TestStr(context, other.context); }
+        bool operator==(const Key &other) const { return TestStr(where, other.where) && TestStr(who, other.who); }
         bool operator!=(const Key &other) const { return !(*this == other); }
 
         uint64_t Hash() const
         {
-            uint64_t hash = HashTraits<const char *>::Hash(address) ^
-                            HashTraits<const char *>::Hash(context);
+            uint64_t hash = HashTraits<const char *>::Hash(where) ^
+                            HashTraits<const char *>::Hash(who);
             return hash;
         }
     };
 
     Key key;
-    int64_t until_time;
+    int64_t until; // Monotonic
 
-    int events;
-    bool banned;
+    int count;
+    int64_t prev_time; // Unix time
+    int64_t time; // Unix time
 
-    RG_HASHTABLE_HANDLER(FloodInfo, key);
+    RG_HASHTABLE_HANDLER(EventInfo, key);
 };
 
 static http_SessionManager<SessionInfo> sessions;
 
-static std::shared_mutex floods_mutex;
-static BucketArray<FloodInfo> floods;
-static HashTable<FloodInfo::Key, FloodInfo *> floods_map;
+static std::shared_mutex events_mutex;
+static BucketArray<EventInfo> events;
+static HashTable<EventInfo::Key, EventInfo *> events_map;
 
 bool SessionInfo::IsAdmin() const
 {
@@ -369,27 +370,27 @@ void PruneSessions()
     // Prune sessions
     sessions.Prune();
 
-    // Prune floods
+    // Prune events
     {
-        std::lock_guard<std::shared_mutex> lock_excl(floods_mutex);
+        std::lock_guard<std::shared_mutex> lock_excl(events_mutex);
 
         int64_t now = GetMonotonicTime();
 
         Size expired = 0;
-        for (const FloodInfo &flood: floods) {
-            if (flood.until_time > now)
+        for (const EventInfo &event: events) {
+            if (event.until > now)
                 break;
 
-            FloodInfo **ptr = floods_map.Find(flood.key);
-            if (*ptr == &flood) {
-                floods_map.Remove(ptr);
+            EventInfo **ptr = events_map.Find(event.key);
+            if (*ptr == &event) {
+                events_map.Remove(ptr);
             }
             expired++;
         }
-        floods.RemoveFirst(expired);
+        events.RemoveFirst(expired);
 
-        floods.Trim();
-        floods_map.Trim();
+        events.Trim();
+        events_map.Trim();
     }
 }
 
@@ -404,38 +405,41 @@ bool HashPassword(Span<const char> password, char out_hash[crypto_pwhash_STRBYTE
     return true;
 }
 
-static bool IsUserBanned(const char *address, const char *context)
+static const EventInfo *RegisterEvent(const char *where, const char *who, int64_t time = GetUnixTime())
 {
-    std::shared_lock<std::shared_mutex> lock_shr(floods_mutex);
+    std::lock_guard<std::shared_mutex> lock_excl(events_mutex);
 
-    FloodInfo::Key key = {address, context};
-    const FloodInfo *flood = floods_map.FindValue(key, nullptr);
+    EventInfo::Key key = {where, who};
+    EventInfo *event = events_map.FindValue(key, nullptr);
+
+    if (!event || event->until < GetMonotonicTime()) {
+        Allocator *alloc;
+        event = events.AppendDefault(&alloc);
+
+        event->key.where = DuplicateString(where, alloc).ptr;
+        event->key.who = DuplicateString(who, alloc).ptr;
+        event->until = GetMonotonicTime() + BanTime;
+
+        events_map.Set(event);
+    }
+
+    event->count++;
+    event->prev_time = event->time;
+    event->time = time;
+
+    return event;
+}
+
+static int CountEvents(const char *where, const char *who)
+{
+    std::shared_lock<std::shared_mutex> lock_shr(events_mutex);
+
+    EventInfo::Key key = {where, who};
+    const EventInfo *event = events_map.FindValue(key, nullptr);
 
     // We don't need to use precise timing, and a ban can last a bit
     // more than BanTime (until pruning clears the ban).
-    return flood && flood->banned;
-}
-
-static bool RegisterFloodEvent(const char *address, const char *context)
-{
-    std::lock_guard<std::shared_mutex> lock_excl(floods_mutex);
-
-    FloodInfo::Key key = {address, context};
-    FloodInfo *flood = floods_map.FindValue(key, nullptr);
-
-    if (!flood || flood->until_time < GetMonotonicTime()) {
-        Allocator *alloc;
-        flood = floods.AppendDefault(&alloc);
-        flood->key = {DuplicateString(address, alloc).ptr, DuplicateString(context, alloc).ptr};
-        flood->until_time = GetMonotonicTime() + BanTime;
-        floods_map.Set(flood);
-    }
-
-    if (++flood->events >= BanTreshold) {
-        flood->banned = true;
-    }
-
-    return flood->banned;
+    return event ? event->count : 0;
 }
 
 void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
@@ -503,7 +507,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
             const char *confirm = (const char *)sqlite3_column_text(stmt, 4);
             const char *secret = (const char *)sqlite3_column_text(stmt, 5);
 
-            if (IsUserBanned(request.client_addr, username)) {
+            if (CountEvents(request.client_addr, username) >= BanTreshold) {
                 LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
                 io->AttachError(403);
                 return;
@@ -558,7 +562,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
 
                 return;
             } else {
-                RegisterFloodEvent(request.client_addr, username);
+                RegisterEvent(request.client_addr, username);
             }
         }
 
@@ -804,11 +808,11 @@ bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
     }
 
     if (email || sms) {
-        // Avoid confirmation flood (spam for mails, and SMS are costly)
-        RegisterFloodEvent(request.client_addr, tid);
+        // Avoid confirmation event (spam for mails, and SMS are costly)
+        RegisterEvent(request.client_addr, tid);
     }
 
-    if (IsUserBanned(request.client_addr, tid)) {
+    if (CountEvents(request.client_addr, tid) >= BanTreshold) {
         LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
         io->AttachError(403);
         return false;
@@ -837,6 +841,44 @@ bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
     sessions.Open(request, io, session);
 
     return true;
+}
+
+static bool CheckTotp(InstanceHolder *instance, const SessionInfo &session,
+                      const char *code, const http_RequestInfo &request, http_IO *io)
+{
+    int64_t time = GetUnixTime();
+    int64_t counter = time / 30000;
+    int64_t min = counter - 1;
+    int64_t max = counter + 1;
+
+    if (sec_CheckHotp(session.secret, sec_HotpAlgorithm::SHA1, min, max, 6, code)) {
+        const char *where = instance ? instance->key.ptr : "";
+        const EventInfo *event = RegisterEvent(where, session.username, time);
+
+        bool replay = (event->prev_time / 30000 >= min) &&
+                      sec_CheckHotp(session.secret, sec_HotpAlgorithm::SHA1, min, event->prev_time / 30000, 6, code);
+
+        if (replay) {
+            LogError("Please wait for the next code");
+            io->AttachError(403);
+            return false;
+        }
+
+        return true;
+    } else {
+        bool replay = (min > counter - 1) &&
+                      sec_CheckHotp(session.secret, sec_HotpAlgorithm::SHA1, counter - 1, counter, 6, code);
+
+        if (replay) {
+            LogError("Please wait for the next code");
+        } else {
+            LogError("Code is incorrect");
+        }
+
+        LogError("Code is incorrect");
+        io->AttachError(403);
+        return false;
+    }
 }
 
 void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
@@ -875,7 +917,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
             }
         }
 
-        if (IsUserBanned(request.client_addr, session->username)) {
+        if (CountEvents(request.client_addr, session->username) >= BanTreshold) {
             LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
             io->AttachError(403);
             return;
@@ -895,20 +937,19 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
 
                     WriteProfileJson(session.GetRaw(), instance, request, io);
                 } else {
-                    if (RegisterFloodEvent(request.client_addr, session->username)) {
+                    const EventInfo *event = RegisterEvent(request.client_addr, session->username);
+
+                    if (event->count >= BanTreshold) {
                         sessions.Close(request, io);
                         LogError("Code is incorrect; you are now blocked for %1 minutes", (BanTime + 59000) / 60000);
-                    } else {
-                        LogError("Code is incorrect");
+                        io->AttachError(403);
                     }
-                    io->AttachError(403);
                 }
             } break;
 
             case SessionConfirm::TOTP:
             case SessionConfirm::QRcode: {
-                int64_t counter = GetUnixTime() / 30000;
-                if (sec_CheckHotp(session->secret, sec_HotpAlgorithm::SHA1, counter - 1, counter + 1, 6, code)) {
+                if (CheckTotp(instance, *session, code, request, io)) {
                     if (session->confirm == SessionConfirm::QRcode) {
                         if (!gp_domain.db.Run("UPDATE dom_users SET secret = ?2 WHERE userid = ?1",
                                               session->userid, session->secret))
@@ -920,13 +961,13 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
 
                     WriteProfileJson(session.GetRaw(), instance, request, io);
                 } else {
-                    if (RegisterFloodEvent(request.client_addr, session->username)) {
+                    const EventInfo *event = RegisterEvent(request.client_addr, session->username);
+
+                    if (event->count >= BanTreshold) {
                         sessions.Close(request, io);
                         LogError("Code is incorrect; you are now blocked for %1 minutes", (BanTime + 59000) / 60000);
-                    } else {
-                        LogError("Code is incorrect");
+                        io->AttachError(403);
                     }
-                    io->AttachError(403);
                 }
             } break;
         }
@@ -1198,12 +1239,8 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
         }
 
         // Check user knows secret
-        int64_t counter = GetUnixTime() / 30000;
-        if (!sec_CheckHotp(session->secret, sec_HotpAlgorithm::SHA1, counter - 1, counter + 1, 6, code)) {
-            LogError("Code is incorrect");
-            io->AttachError(403);
+        if (!CheckTotp(nullptr, *session, code, request, io))
             return;
-        }
 
         bool success = gp_domain.db.Transaction([&]() {
             int64_t time = GetUnixTime();
