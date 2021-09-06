@@ -40,6 +40,7 @@ public:
 
     void AddFunction(const char *prototype, std::function<bk_NativeFunction> native);
     void AddGlobal(const char *name, const bk_TypeInfo *type, Span<const bk_PrimitiveValue> values, bool mut = false);
+    void AddOpaque(const char *name, bool allow_null = false);
 };
 
 #define BK_ADD_FUNCTION(Compiler, Signature, Code) \

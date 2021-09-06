@@ -92,6 +92,7 @@ public:
     void AddFunction(const char *prototype, std::function<bk_NativeFunction> native);
     bk_VariableInfo *AddGlobal(const char *name, const bk_TypeInfo *type,
                                Span<const bk_PrimitiveValue> values, bool mut, bk_VariableInfo::Scope scope);
+    void AddOpaque(const char *name, bool allow_null);
 
 private:
     void ParsePrototypes(Span<const Size> positions);
@@ -295,6 +296,11 @@ void bk_Compiler::AddFunction(const char *prototype, std::function<bk_NativeFunc
 void bk_Compiler::AddGlobal(const char *name, const bk_TypeInfo *type, Span<const bk_PrimitiveValue> values, bool mut)
 {
     parser->AddGlobal(name, type, values, mut, bk_VariableInfo::Scope::Global);
+}
+
+void bk_Compiler::AddOpaque(const char *name, bool allow_null)
+{
+    parser->AddOpaque(name, allow_null);
 }
 
 bk_Parser::bk_Parser(bk_Program *program)
@@ -559,6 +565,20 @@ bk_VariableInfo *bk_Parser::AddGlobal(const char *name, const bk_TypeInfo *type,
     }
 
     return var;
+}
+
+void bk_Parser::AddOpaque(const char *name, bool allow_null)
+{
+    bk_OpaqueTypeInfo opaque_type = {};
+
+    opaque_type.signature = InternString(name);
+    opaque_type.primitive = bk_PrimitiveKind::Opaque;
+    opaque_type.size = 1;
+    opaque_type.allow_null = allow_null;
+
+    const bk_TypeInfo *type = InsertType(opaque_type, &program->opaque_types);
+    const bk_VariableInfo *var = AddGlobal(opaque_type.signature, bk_TypeType, {{.type = type}}, false, bk_VariableInfo::Scope::Module);
+    RG_ASSERT(!var->shadow);
 }
 
 void bk_Parser::ParsePrototypes(Span<const Size> positions)
@@ -1190,6 +1210,16 @@ void bk_Parser::PushDefaultValue(Size var_pos, const bk_VariableInfo &var, const
                 PushDefaultValue(var_pos, var, member.type);
             }
         } break;
+        case bk_PrimitiveKind::Opaque: {
+            const bk_OpaqueTypeInfo *opaque_type = type->AsOpaqueType();
+
+            if (opaque_type->allow_null) {
+                ir.Append({bk_Opcode::Push, type->primitive, {.opaque = nullptr}});
+            } else {
+                MarkError(var_pos, "Variable '%1' (defined as '%2') must be explicitely initialized",
+                          var.name, type->signature);
+            }
+        }
     }
 }
 

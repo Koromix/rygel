@@ -93,6 +93,7 @@ static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offs
             }
             fputc(')', stdout);
         } break;
+        case bk_PrimitiveKind::Opaque: { Print("0x%1", FmtArg(vm->stack[offset++].opaque).Pad0(-RG_SIZE(void *) * 2)); } break;
     }
 
     return offset;

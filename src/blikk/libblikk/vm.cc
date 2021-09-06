@@ -673,6 +673,7 @@ void bk_VirtualMachine::DumpInstruction(Size pc, Size bp) const
                 case bk_PrimitiveKind::Function: { PrintLn(stderr, " %!Y..[Function]%!0 '%1' %!M..>%2%!0", inst.u.func->prototype, stack.len); } break;
                 case bk_PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
                 case bk_PrimitiveKind::Record: { RG_UNREACHABLE(); } break;
+                case bk_PrimitiveKind::Opaque: { PrintLn(stderr, " %!Y..[Opaque]%!0 0x%1 %!M..>%2%!0", FmtArg(inst.u.opaque).Pad0(-RG_SIZE(void *) * 2), stack.len); } break;
             }
         } break;
         case bk_Opcode::Pop: { PrintLn(stderr, " %1", inst.u.i); } break;
