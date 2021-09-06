@@ -420,7 +420,8 @@ Options:
         }
     }
 
-    if (sec_CheckHotp(secret, algorithm, time / 30, digits, window, code)) {
+    int64_t counter = GetUnixTime() / 30000;
+    if (sec_CheckHotp(secret, algorithm, counter - window, counter + window, digits, code)) {
         LogInfo("Match!");
         return 0;
     } else {

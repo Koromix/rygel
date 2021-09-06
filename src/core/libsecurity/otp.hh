@@ -37,6 +37,6 @@ const char *sec_GenerateHotpUrl(const char *label, const char *username, const c
 bool sec_GenerateHotpPng(const char *url, int border, HeapArray<uint8_t> *out_buf);
 
 int sec_ComputeHotp(const char *secret, sec_HotpAlgorithm algo, int64_t counter, int digits);
-bool sec_CheckHotp(const char *secret, sec_HotpAlgorithm algo, int64_t counter, int digits, int window, const char *code);
+bool sec_CheckHotp(const char *secret, sec_HotpAlgorithm algo, int64_t min, int64_t max, int digits, const char *code);
 
 }

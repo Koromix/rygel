@@ -441,15 +441,15 @@ int sec_ComputeHotp(const char *secret, sec_HotpAlgorithm algo, int64_t counter,
     return ComputeHotp(key, algo, counter, digits);
 }
 
-bool sec_CheckHotp(const char *secret, sec_HotpAlgorithm algo, int64_t counter, int digits, int window, const char *code)
+bool sec_CheckHotp(const char *secret, sec_HotpAlgorithm algo, int64_t min, int64_t max, int digits, const char *code)
 {
     LocalArray<uint8_t, 128> key;
     key.len = DecodeBase32(secret, key.data);
     if (key.len < 0)
         return false;
 
-    for (int i = -window; i <= window; i++) {
-        int ret = ComputeHotp(key, algo, counter + i, digits);
+    for (int64_t counter = min; counter <= max; counter++) {
+        int ret = ComputeHotp(key, algo, counter, digits);
         if (ret < 0)
             return false;
 
