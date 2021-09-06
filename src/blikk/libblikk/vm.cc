@@ -535,8 +535,8 @@ bool bk_VirtualMachine::Run(bool debug)
 
                         func->native(this, args, ret);
 
-                        memmove_safe(args.ptr, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
-                        stack.len -= args.len + 1;
+                        memmove_safe(args.ptr - 1, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
+                        stack.len -= args.len + 2;
                     } else {
                         Span<bk_PrimitiveValue> args = MakeSpan(stack.end() - func_type->params_size, func_type->params_size);
                         Span<bk_PrimitiveValue> ret = MakeSpan(stack.end(), ret_type->size);
@@ -544,8 +544,8 @@ bool bk_VirtualMachine::Run(bool debug)
 
                         func->native(this, args, ret);
 
-                        memmove_safe(args.ptr, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
-                        stack.len -= args.len;
+                        memmove_safe(args.ptr - 1, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
+                        stack.len -= args.len + 1;
                     }
 
                     frames.RemoveLast(1);
