@@ -48,7 +48,7 @@ public:
     }
 
 private:
-    void DumpInstruction(Size pc) const;
+    void DumpInstruction(Size pc, Size bp) const;
 };
 
 bool bk_Run(const bk_Program &program, bool debug = false);
