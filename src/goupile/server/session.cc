@@ -299,8 +299,7 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
 }
 
 static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid,
-                                                const char *username, const char *local_key,
-                                                SessionConfirm confirm, const char *secret)
+                                                const char *username, const char *local_key)
 {
     Size username_bytes = strlen(username) + 1;
     Size session_bytes = RG_SIZE(SessionInfo) + username_bytes;
@@ -321,17 +320,6 @@ static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid
         // Should never happen, but let's be careful
         LogError("User local key is too big");
         return {};
-    }
-
-    session->confirm = confirm;
-    if (secret) {
-        RG_ASSERT(confirm != SessionConfirm::None);
-
-        if (!CopyString(secret, session->secret)) {
-            // Should never happen, but let's be careful
-            LogError("Session secret is too big");
-            return {};
-        }
     }
 
     return ptr;
@@ -363,9 +351,7 @@ RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const h
                     const char *username = (const char *)sqlite3_column_text(stmt, 1);
                     const char *local_key = (const char *)sqlite3_column_text(stmt, 2);
 
-                    RetainPtr<SessionInfo> session = CreateUserSession(SessionType::Auto, userid, username, local_key,
-                                                                       SessionConfirm::None, nullptr);
-
+                    RetainPtr<SessionInfo> session = CreateUserSession(SessionType::Auto, userid, username, local_key);
                     return session;
                 }();
                 instance->default_init = true;
@@ -533,15 +519,21 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
 
                 RetainPtr<SessionInfo> session;
                 if (!confirm) {
-                    session = CreateUserSession(SessionType::Login, userid, username, local_key,
-                                                SessionConfirm::None, nullptr);
+                    session = CreateUserSession(SessionType::Login, userid, username, local_key);
                 } else if (TestStr(confirm, "TOTP")) {
                     if (secret) {
-                        session = CreateUserSession(SessionType::Login, userid, username, local_key,
-                                                    SessionConfirm::TOTP, secret);
+                        if (strlen(secret) >= RG_SIZE(SessionInfo::secret)) {
+                            // Should never happen, but let's be careful
+                            LogError("Session secret is too big");
+                            return;
+                        }
+
+                        session = CreateUserSession(SessionType::Login, userid, username, local_key);
+                        session->confirm = SessionConfirm::TOTP;
+                        CopyString(secret, session->secret);
                     } else {
-                        session = CreateUserSession(SessionType::Login, userid, username, local_key,
-                                                    SessionConfirm::QRcode, nullptr);
+                        session = CreateUserSession(SessionType::Login, userid, username, local_key);
+                        session->confirm = SessionConfirm::QRcode;
                     }
                 } else {
                     LogError("Invalid confirmation method '%1'", confirm);
@@ -648,13 +640,17 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
 
         char code[9];
         {
+            RG_STATIC_ASSERT(RG_SIZE(code) <= RG_SIZE(SessionInfo::secret));
+
             uint32_t rnd = randombytes_uniform(100000000); // 8 digits
             Fmt(code, "%1", FmtArg(rnd).Pad0(-8));
         }
 
-        session = CreateUserSession(type, userid, key, local_key, SessionConfirm::Mail, code);
+        session = CreateUserSession(type, userid, key, local_key);
         if (RG_UNLIKELY(!session))
             return nullptr;
+        session->confirm = SessionConfirm::Mail;
+        CopyString(code, session->secret);
 
         smtp_MailContent content;
         content.subject = Fmt(alloc, "Vérifiation %1", instance->title).ptr;
@@ -676,20 +672,24 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
 
         char code[9];
         {
+            RG_STATIC_ASSERT(RG_SIZE(code) <= RG_SIZE(SessionInfo::secret));
+
             uint32_t rnd = randombytes_uniform(1000000); // 6 digits
             Fmt(code, "%1", FmtArg(rnd).Pad0(-6));
         }
 
-        session = CreateUserSession(type, userid, key, local_key, SessionConfirm::SMS, code);
+        session = CreateUserSession(type, userid, key, local_key);
         if (RG_UNLIKELY(!session))
             return nullptr;
+        session->confirm = SessionConfirm::SMS;
+        CopyString(code, session->secret);
 
         const char *message = Fmt(alloc, "Code: %1", code).ptr;
 
         if (!SendSMS(sms, message))
             return nullptr;
     } else {
-        session = CreateUserSession(type, userid, key, local_key, SessionConfirm::None, nullptr);
+        session = CreateUserSession(type, userid, key, local_key);
         if (RG_UNLIKELY(!session))
             return nullptr;
     }
