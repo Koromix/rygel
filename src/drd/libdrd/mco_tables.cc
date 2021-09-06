@@ -160,6 +160,9 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
         memcpy_safe(&raw_main_header, file_data.ptr, RG_SIZE(PackedHeader1111));
         FAIL_PARSE_IF(filename, raw_main_header.sections_count != 1);
 
+        // Cheap and dirty way to make sure sscanf does not go overboard
+        raw_main_header.pad1 = 0;
+
         memcpy_safe(&raw_main_section, file_data.ptr + RG_SIZE(PackedHeader1111), RG_SIZE(PackedSection1111));
         raw_main_section.values_count = BigEndian(raw_main_section.values_count);
         raw_main_section.value_len = BigEndian(raw_main_section.value_len);
@@ -203,6 +206,9 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
             FAIL_PARSE_IF(filename, file_data.len < (Size)(raw_table_ptr.raw_offset +
                                                            (uint32_t)raw_table_header.sections_count * RG_SIZE(PackedSection1111)));
             FAIL_PARSE_IF(filename, raw_table_header.sections_count > RG_LEN(raw_table_sections));
+
+            // Cheap and dirty way to make sure sscanf does not go overboard
+            raw_table_header.pad1 = 0;
 
             for (int j = 0; j < raw_table_header.sections_count; j++) {
                 memcpy_safe(&raw_table_sections[j], file_data.ptr + raw_table_ptr.raw_offset + RG_SIZE(PackedHeader1111) +
