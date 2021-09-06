@@ -683,6 +683,11 @@ void bk_Parser::ParsePrototypes(Span<const Size> positions)
                 member->offset = record_type->size;
                 record_type->size += param.type->size;
 
+                // Evaluate each time, so that overflow is not a problem
+                if (RG_UNLIKELY(record_type->size > UINT16_MAX)) {
+                    MarkError(proto->pos, "Record size is too big");
+                }
+
                 Size param_pos = definitions_map.FindValue(&param, -1);
                 definitions_map.Set(member, param_pos);
             }
