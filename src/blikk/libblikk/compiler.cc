@@ -339,7 +339,8 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
                            functions_len = program->functions.len,
                            function_types_len = program->function_types.len,
                            array_types_len = program->array_types.len,
-                           record_types_len = program->record_types.len) {
+                           record_types_len = program->record_types.len,
+                           bare_types_len = program->bare_types.len) {
         ir.RemoveFrom(prev_ir_len);
         program->sources.RemoveFrom(sources_len);
 
@@ -368,6 +369,7 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
         DestroyTypes(&program->function_types, function_types_len);
         DestroyTypes(&program->array_types, array_types_len);
         DestroyTypes(&program->record_types, record_types_len);
+        DestroyTypes(&program->bare_types, bare_types_len);
     };
 
     this->file = &file;
