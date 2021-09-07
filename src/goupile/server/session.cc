@@ -843,7 +843,7 @@ bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
     return true;
 }
 
-static bool CheckTotp(InstanceHolder *instance, const SessionInfo &session,
+static bool CheckTotp(const SessionInfo &session, InstanceHolder *instance,
                       const char *code, const http_RequestInfo &request, http_IO *io)
 {
     int64_t time = GetUnixTime();
@@ -852,7 +852,9 @@ static bool CheckTotp(InstanceHolder *instance, const SessionInfo &session,
     int64_t max = counter + 1;
 
     if (sec_CheckHotp(session.secret, sec_HotpAlgorithm::SHA1, min, max, 6, code)) {
-        const char *where = instance ? instance->key.ptr : "";
+        RG_ASSERT(session.userid >= 0 || instance);
+
+        const char *where = (session.userid >= 0) ? "" : instance->key.ptr;
         const EventInfo *event = RegisterEvent(where, session.username, time);
 
         bool replay = (event->prev_time / 30000 >= min) &&
@@ -949,7 +951,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
 
             case SessionConfirm::TOTP:
             case SessionConfirm::QRcode: {
-                if (CheckTotp(instance, *session, code, request, io)) {
+                if (CheckTotp(*session, instance, code, request, io)) {
                     if (session->confirm == SessionConfirm::QRcode) {
                         if (!gp_domain.db.Run("UPDATE dom_users SET secret = ?2 WHERE userid = ?1",
                                               session->userid, session->secret))
@@ -1239,7 +1241,7 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
         }
 
         // Check user knows secret
-        if (!CheckTotp(nullptr, *session, code, request, io))
+        if (!CheckTotp(*session, nullptr, code, request, io))
             return;
 
         bool success = gp_domain.db.Transaction([&]() {
