@@ -883,7 +883,9 @@ bool bk_Parser::ParseStatement()
         case bk_TokenKind::Record: {
             if (RG_UNLIKELY(current_func)) {
                 MarkError(pos, "Record types cannot be defined inside functions");
-                HintError(definitions_map.FindValue(current_func, -1), "Previous function was started here and is still open");
+                HintError(definitions_map.FindValue(current_func, -1), "Function was started here and is still open");
+            } else if (RG_UNLIKELY(depth)) {
+                MarkError(pos, "Records must be defined in top-level scope");
             }
 
             const PrototypeInfo *proto = prototypes_map.Find(pos);
