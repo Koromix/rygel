@@ -1304,10 +1304,10 @@ void bk_Parser::PushDefaultValue(Size var_pos, const bk_VariableInfo &var, const
                 PushDefaultValue(var_pos, var, member.type);
             }
         } break;
+        case bk_PrimitiveKind::Enum: { ir.Append({bk_Opcode::Push, type->primitive, {.i = 0}}); } break;
         case bk_PrimitiveKind::Opaque: { ir.Append({bk_Opcode::Push, type->primitive, {.opaque = nullptr}}); } break;
 
-        case bk_PrimitiveKind::Function:
-        case bk_PrimitiveKind::Enum: {
+        case bk_PrimitiveKind::Function: {
             MarkError(var_pos, "Variable '%1' (defined as '%2') must be explicitely initialized",
                       var.name, type->signature);
         } break;
