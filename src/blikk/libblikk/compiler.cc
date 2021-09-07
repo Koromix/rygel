@@ -814,7 +814,7 @@ void bk_Parser::PreparseEnum(Size proto_pos)
     enum_type->size = 1;
 
     ConsumeToken(bk_TokenKind::LeftParenthesis);
-    if (!MatchToken(bk_TokenKind::RightParenthesis)) {
+    if (RG_LIKELY(!MatchToken(bk_TokenKind::RightParenthesis))) {
         HashSet<const char *> used_labels;
 
         do {
@@ -835,6 +835,8 @@ void bk_Parser::PreparseEnum(Size proto_pos)
 
         SkipNewLines();
         ConsumeToken(bk_TokenKind::RightParenthesis);
+    } else {
+        MarkError(pos - 1, "Empty enums are not allowed");
     }
 
     proto->skip_pos = pos;
