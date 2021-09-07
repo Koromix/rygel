@@ -1018,6 +1018,10 @@ bool bk_Parser::ParseStatement()
             ParseContinue();
             EndStatement();
         } break;
+        case bk_TokenKind::Pass: {
+            pos++;
+            EndStatement();
+        } break;
 
         default: {
             StackSlot slot = ParseExpression(true);
@@ -1042,6 +1046,9 @@ bool bk_Parser::ParseDo()
         return false;
     } else if (PeekToken(bk_TokenKind::Continue)) {
         ParseContinue();
+        return false;
+    } else if (PeekToken(bk_TokenKind::Pass)) {
+        pos++;
         return false;
     } else {
         StackSlot slot = ParseExpression(true);

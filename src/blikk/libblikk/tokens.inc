@@ -32,6 +32,7 @@ TOKEN(Continue, "continue")
 TOKEN(Do, "do")
 TOKEN(Record, "record")
 TOKEN(Enum, "enum")
+TOKEN(Pass, "pass")
 
 // Immediate values
 TOKEN(Null, "null")

@@ -36,6 +36,8 @@ static const HashMap<Span<const char>, bk_Token> KeywordsMap {
     {"do", {bk_TokenKind::Do}},
     {"record", {bk_TokenKind::Record}},
     {"enum", {bk_TokenKind::Enum}},
+    {"pass", {bk_TokenKind::Pass}},
+
     {"null", {bk_TokenKind::Null}},
     {"true", {bk_TokenKind::Boolean, 0, 0, {.b = true}}},
     {"false", {bk_TokenKind::Boolean, 0, 0, {.b = false}}}
