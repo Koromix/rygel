@@ -25,15 +25,15 @@ int64_t mco_PriceGhs(const mco_GhsPriceInfo &price_info, double ghs_coefficient,
 
     int price_cents = ghs_cents;
     int exb_exh;
-    if (ghs_duration < price_info.exb_treshold && !death) {
-        exb_exh = -(price_info.exb_treshold - ghs_duration);
+    if (ghs_duration < price_info.exb_threshold && !death) {
+        exb_exh = -(price_info.exb_threshold - ghs_duration);
         if (price_info.flags & (int)mco_GhsPriceInfo::Flag::ExbOnce) {
             price_cents -= price_info.exb_cents;
         } else {
             price_cents += price_info.exb_cents * exb_exh;
         }
-    } else if (price_info.exh_treshold && ghs_duration + death >= price_info.exh_treshold) {
-        exb_exh = ghs_duration + death + 1 - price_info.exh_treshold;
+    } else if (price_info.exh_threshold && ghs_duration + death >= price_info.exh_threshold) {
+        exb_exh = ghs_duration + death + 1 - price_info.exh_threshold;
         price_cents += price_info.exh_cents * exb_exh;
     } else {
         exb_exh = 0;

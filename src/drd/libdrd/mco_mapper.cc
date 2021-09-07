@@ -57,8 +57,8 @@ static bool MergeConstraint(const mco_TableIndex &index,
         // Update base mask so that following GHM can't overlap with this one
         constraint.durations &= ~(uint32_t)0x1;
     }
-    if (ghm_root_info->short_duration_treshold) {
-        uint32_t short_mask = (uint32_t)(1 << ghm_root_info->short_duration_treshold) - 1;
+    if (ghm_root_info->short_duration_threshold) {
+        uint32_t short_mask = (uint32_t)(1 << ghm_root_info->short_duration_threshold) - 1;
         MERGE_CONSTRAINT('T', short_mask, 0);
         constraint.durations &= ~short_mask;
     }

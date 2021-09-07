@@ -46,12 +46,12 @@ const ui = new function() {
     }
 
     function adaptToViewport(keep_panel = null) {
-        let small_treshold = 900;
-        let mobile_treshold = 580;
+        let small_threshold = 900;
+        let mobile_threshold = 580;
 
-        let small = window.innerWidth < small_treshold;
-        let mobile = window.innerWidth < mobile_treshold;
-        let max_panels = util.clamp(Math.floor(window.innerWidth / mobile_treshold), 1, 2);
+        let small = window.innerWidth < small_threshold;
+        let mobile = window.innerWidth < mobile_threshold;
+        let max_panels = util.clamp(Math.floor(window.innerWidth / mobile_threshold), 1, 2);
 
         while (active_panels > max_panels) {
             let disable_priority = Number.MAX_SAFE_INTEGER;

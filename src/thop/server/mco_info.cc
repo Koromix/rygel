@@ -207,11 +207,11 @@ void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *, http_IO *io
             json.Key("ghm"); json.String(ghm_to_ghs_info.ghm.ToString(buf).ptr);
             json.Key("ghm_root"); json.String(ghm_to_ghs_info.ghm.Root().ToString(buf).ptr);
             if (ghm_root_info.young_severity_limit) {
-                json.Key("young_age_treshold"); json.Int(ghm_root_info.young_age_treshold);
+                json.Key("young_age_threshold"); json.Int(ghm_root_info.young_age_threshold);
                 json.Key("young_severity_limit"); json.Int(ghm_root_info.young_severity_limit);
             }
             if (ghm_root_info.old_severity_limit) {
-                json.Key("old_age_treshold"); json.Int(ghm_root_info.old_age_treshold);
+                json.Key("old_age_threshold"); json.Int(ghm_root_info.old_age_threshold);
                 json.Key("old_severity_limit"); json.Int(ghm_root_info.old_severity_limit);
             }
             json.Key("durations"); json.Uint(combined_durations);
@@ -224,8 +224,8 @@ void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *, http_IO *io
                     json.Key("warn_cmd28"); json.Bool(true);
                 }
             }
-            if (ghm_root_info.confirm_duration_treshold) {
-                json.Key("confirm_treshold"); json.Int(ghm_root_info.confirm_duration_treshold);
+            if (ghm_root_info.confirm_duration_threshold) {
+                json.Key("confirm_threshold"); json.Int(ghm_root_info.confirm_duration_threshold);
             }
 
             json.Key("ghs"); json.Int(ghs.number);
@@ -276,12 +276,12 @@ void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *, http_IO *io
                 }
                 json.Key("ghs_cents"); json.Int(ghs_price_info->ghs_cents);
                 json.Key("ghs_coefficient"); json.Double(index->GhsCoefficient(sector));
-                if (ghs_price_info->exh_treshold) {
-                    json.Key("exh_treshold"); json.Int(ghs_price_info->exh_treshold);
+                if (ghs_price_info->exh_threshold) {
+                    json.Key("exh_threshold"); json.Int(ghs_price_info->exh_threshold);
                     json.Key("exh_cents"); json.Int(ghs_price_info->exh_cents);
                 }
-                if (ghs_price_info->exb_treshold) {
-                    json.Key("exb_treshold"); json.Int(ghs_price_info->exb_treshold);
+                if (ghs_price_info->exb_threshold) {
+                    json.Key("exb_threshold"); json.Int(ghs_price_info->exb_threshold);
                     json.Key("exb_cents"); json.Int(ghs_price_info->exb_cents);
                     if (ghs_price_info->flags & (int)mco_GhsPriceInfo::Flag::ExbOnce) {
                         json.Key("exb_once"); json.Bool(true);

@@ -767,7 +767,7 @@ static bool ParseGhmRootTable(const uint8_t *file_data, const mco_TableInfo &tab
         uint8_t pad1[2];
         uint8_t cma_exclusion_offset;
         uint8_t cma_exclusion_mask;
-        uint8_t confirm_duration_treshold;
+        uint8_t confirm_duration_threshold;
         uint8_t childbirth_severity_mode; // Appeared in FG 11d
         uint8_t ignore_raac; // Appeared in FG 2019
         uint8_t force_ghs; // Appeared in FG 2020
@@ -808,44 +808,44 @@ static bool ParseGhmRootTable(const uint8_t *file_data, const mco_TableInfo &tab
                 ghm_root.allow_ambulatory = true;
             } break;
             case 2: {
-                ghm_root.short_duration_treshold = 1;
+                ghm_root.short_duration_threshold = 1;
             } break;
             case 3: {
-                ghm_root.short_duration_treshold = 2;
+                ghm_root.short_duration_threshold = 2;
             } break;
             case 4: {
-                ghm_root.short_duration_treshold = 3;
+                ghm_root.short_duration_threshold = 3;
             } break;
         }
-        ghm_root.confirm_duration_treshold = (int8_t)raw_ghm_root.confirm_duration_treshold;
+        ghm_root.confirm_duration_threshold = (int8_t)raw_ghm_root.confirm_duration_threshold;
 
         if (raw_ghm_root.young_severity_mode == 1) {
-            ghm_root.young_age_treshold = 2;
+            ghm_root.young_age_threshold = 2;
             ghm_root.young_severity_limit = 1;
         }
         switch (raw_ghm_root.old_severity_mode) {
             case 1: {
-                ghm_root.old_age_treshold = 70;
+                ghm_root.old_age_threshold = 70;
                 ghm_root.old_severity_limit = 1;
             } break;
             case 2: {
-                ghm_root.old_age_treshold = 80;
+                ghm_root.old_age_threshold = 80;
                 ghm_root.old_severity_limit = 1;
             } break;
             case 3: {
-                ghm_root.old_age_treshold = 70;
+                ghm_root.old_age_threshold = 70;
                 ghm_root.old_severity_limit = 2;
             } break;
             case 4: {
-                ghm_root.old_age_treshold = 80;
+                ghm_root.old_age_threshold = 80;
                 ghm_root.old_severity_limit = 2;
             } break;
             case 5: {
-                ghm_root.old_age_treshold = 70;
+                ghm_root.old_age_threshold = 70;
                 ghm_root.old_severity_limit = 3;
             } break;
             case 6: {
-                ghm_root.old_age_treshold = 80;
+                ghm_root.old_age_threshold = 80;
                 ghm_root.old_severity_limit = 3;
             } break;
         }
@@ -937,8 +937,8 @@ static bool ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &ta
         struct {
             uint16_t ghs_code;
              // We get those from the pricing tables, so they're ignored here
-            uint16_t high_duration_treshold;
-            uint16_t low_duration_treshold;
+            uint16_t high_duration_threshold;
+            uint16_t low_duration_threshold;
         } sectors[2];
 	};
     RG_STATIC_ASSERT(RG_LEN(PackedGhsNode().sectors) == RG_LEN(mco_GhmToGhsInfo().ghs));
@@ -955,10 +955,10 @@ static bool ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &ta
         raw_ghs_node.type_seq = BigEndian(raw_ghs_node.type_seq);
         for (int j = 0; j < 2; j++) {
             raw_ghs_node.sectors[j].ghs_code = BigEndian(raw_ghs_node.sectors[j].ghs_code);
-            raw_ghs_node.sectors[j].high_duration_treshold =
-                BigEndian(raw_ghs_node.sectors[j].high_duration_treshold);
-            raw_ghs_node.sectors[j].low_duration_treshold =
-                BigEndian(raw_ghs_node.sectors[j].low_duration_treshold);
+            raw_ghs_node.sectors[j].high_duration_threshold =
+                BigEndian(raw_ghs_node.sectors[j].high_duration_threshold);
+            raw_ghs_node.sectors[j].low_duration_threshold =
+                BigEndian(raw_ghs_node.sectors[j].low_duration_threshold);
         }
 
         if (!current_ghs.ghm.IsValid()) {
@@ -1273,8 +1273,8 @@ static bool ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &
                 do {
                     if (prop.key == "PriceCents") {
                         valid &= ParseInt(prop.value, &price_info.ghs_cents);
-                    } else if (prop.key == "ExbTreshold") {
-                        valid &= ParseInt(prop.value, &price_info.exb_treshold);
+                    } else if (prop.key == "ExbThreshold" || prop.key == "ExbTreshold") {
+                        valid &= ParseInt(prop.value, &price_info.exb_threshold);
                     } else if (prop.key == "ExbCents") {
                         valid &= ParseInt(prop.value, &price_info.exb_cents);
                     } else if (prop.key == "ExbType") {
@@ -1286,8 +1286,8 @@ static bool ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &
                             LogError("Invalid ExbType value '%1'", prop.value);
                             valid = false;
                         }
-                    } else if (prop.key == "ExhTreshold") {
-                        valid &= ParseInt(prop.value, &price_info.exh_treshold);
+                    } else if (prop.key == "ExhThreshold" || prop.key == "ExhTreshold") {
+                        valid &= ParseInt(prop.value, &price_info.exh_threshold);
                     } else if (prop.key == "ExhCents") {
                         valid &= ParseInt(prop.value, &price_info.exh_cents);
                     } else {
@@ -1297,8 +1297,8 @@ static bool ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &
                 } while (ini.NextInSection(&prop));
 
                 if (!price_info.ghs_cents ||
-                        (!price_info.exb_treshold != !price_info.exb_cents) ||
-                        (!price_info.exh_treshold != !price_info.exh_cents)) {
+                        (!price_info.exb_threshold != !price_info.exb_cents) ||
+                        (!price_info.exh_threshold != !price_info.exh_cents)) {
                     LogError("Missing GHS price attributes");
                     valid = false;
                 }

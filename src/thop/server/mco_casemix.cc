@@ -226,8 +226,8 @@ struct GhmGhsInfo {
 
     Key key;
     const mco_GhmToGhsInfo *ghm_to_ghs_info;
-    int16_t exh_treshold;
-    int16_t exb_treshold;
+    int16_t exh_threshold;
+    int16_t exb_threshold;
     uint32_t durations;
 };
 
@@ -373,13 +373,13 @@ static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, Date min_dat
                     }
 
                     if (ghs_price_info) {
-                        if (!agg_ghm_ghs->exh_treshold ||
-                                ghs_price_info->exh_treshold < agg_ghm_ghs->exh_treshold) {
-                            agg_ghm_ghs->exh_treshold = ghs_price_info->exh_treshold;
+                        if (!agg_ghm_ghs->exh_threshold ||
+                                ghs_price_info->exh_threshold < agg_ghm_ghs->exh_threshold) {
+                            agg_ghm_ghs->exh_threshold = ghs_price_info->exh_threshold;
                         }
-                        if (!agg_ghm_ghs->exb_treshold ||
-                                ghs_price_info->exb_treshold > agg_ghm_ghs->exb_treshold) {
-                            agg_ghm_ghs->exb_treshold = ghs_price_info->exb_treshold;
+                        if (!agg_ghm_ghs->exb_threshold ||
+                                ghs_price_info->exb_threshold > agg_ghm_ghs->exb_threshold) {
+                            agg_ghm_ghs->exb_threshold = ghs_price_info->exb_threshold;
                         }
                     }
                 }
@@ -508,11 +508,11 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
         json.Key("conditions"); json.Bool(ghm_ghs_info.ghm_to_ghs_info->conditions_count);
         json.Key("durations"); json.Uint(ghm_ghs_info.durations);
 
-        if (ghm_ghs_info.exh_treshold) {
-            json.Key("exh_treshold"); json.Int(ghm_ghs_info.exh_treshold);
+        if (ghm_ghs_info.exh_threshold) {
+            json.Key("exh_threshold"); json.Int(ghm_ghs_info.exh_threshold);
         }
-        if (ghm_ghs_info.exb_treshold) {
-            json.Key("exb_treshold"); json.Int(ghm_ghs_info.exb_treshold);
+        if (ghm_ghs_info.exb_threshold) {
+            json.Key("exb_threshold"); json.Int(ghm_ghs_info.exb_threshold);
         }
         json.EndObject();
     }

@@ -843,12 +843,12 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP sector_xp
         rcc_Vector<const char *> ghm = df_builder.Add<const char *>("ghm");
         rcc_Vector<int> ghs = df_builder.Add<int>("ghs");
         rcc_Vector<int> allow_ambulatory = df_builder.Add<int>("allow_ambulatory");
-        rcc_Vector<int> short_duration_treshold = df_builder.Add<int>("short_duration_treshold");
+        rcc_Vector<int> short_duration_threshold = df_builder.Add<int>("short_duration_threshold");
         rcc_Vector<int> allow_raac = df_builder.Add<int>("allow_raac");
-        rcc_Vector<int> confirm_treshold = df_builder.Add<int>("confirm_treshold");
-        rcc_Vector<int> young_age_treshold = df_builder.Add<int>("young_age_treshold");
+        rcc_Vector<int> confirm_threshold = df_builder.Add<int>("confirm_threshold");
+        rcc_Vector<int> young_age_threshold = df_builder.Add<int>("young_age_threshold");
         rcc_Vector<int> young_severity_limit = df_builder.Add<int>("young_severity_limit");
-        rcc_Vector<int> old_age_treshold = df_builder.Add<int>("old_age_treshold");
+        rcc_Vector<int> old_age_threshold = df_builder.Add<int>("old_age_threshold");
         rcc_Vector<int> old_severity_limit = df_builder.Add<int>("old_severity_limit");
         rcc_Vector<int> unit_authorization = df_builder.Add<int>("unit_authorization");
         rcc_Vector<int> bed_authorization = df_builder.Add<int>("bed_authorization");
@@ -859,9 +859,9 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP sector_xp
         rcc_Vector<const char *> procedures = df_builder.Add<const char *>("procedures");
         rcc_Vector<int> ghs_cents = df_builder.Add<int>("ghs_cents");
         rcc_Vector<double> ghs_coefficient = df_builder.Add<double>("ghs_coefficient");
-        rcc_Vector<int> exh_treshold = df_builder.Add<int>("exb_treshold");
+        rcc_Vector<int> exh_threshold = df_builder.Add<int>("exb_threshold");
         rcc_Vector<int> exh_cents = df_builder.Add<int>("exh_cents");
-        rcc_Vector<int> exb_treshold = df_builder.Add<int>("exb_treshold");
+        rcc_Vector<int> exb_threshold = df_builder.Add<int>("exb_threshold");
         rcc_Vector<int> exb_cents = df_builder.Add<int>("exb_cents");
         rcc_Vector<int> exb_once = df_builder.Add<int>("exb_once");
         rcc_Vector<int> durations;
@@ -883,21 +883,21 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP sector_xp
                 ghm.Set(i, ghm_to_ghs_info.ghm.ToString(buf));
                 ghs[i] = ghs_code.number;
                 allow_ambulatory[i] = ghm_root_info.allow_ambulatory;
-                short_duration_treshold[i] = ghm_root_info.short_duration_treshold ? ghm_root_info.short_duration_treshold : NA_INTEGER;
+                short_duration_threshold[i] = ghm_root_info.short_duration_threshold ? ghm_root_info.short_duration_threshold : NA_INTEGER;
                 allow_raac[i] = ghm_root_info.allow_raac;
-                confirm_treshold[i] = ghm_root_info.confirm_duration_treshold ? ghm_root_info.confirm_duration_treshold : NA_INTEGER;
+                confirm_threshold[i] = ghm_root_info.confirm_duration_threshold ? ghm_root_info.confirm_duration_threshold : NA_INTEGER;
                 if (ghm_root_info.young_severity_limit) {
-                    young_age_treshold[i] = ghm_root_info.young_age_treshold;
+                    young_age_threshold[i] = ghm_root_info.young_age_threshold;
                     young_severity_limit[i] = ghm_root_info.young_severity_limit;
                 } else {
-                    young_age_treshold[i] = NA_INTEGER;
+                    young_age_threshold[i] = NA_INTEGER;
                     young_severity_limit[i] = NA_INTEGER;
                 }
                 if (ghm_root_info.old_severity_limit) {
-                    old_age_treshold[i] = ghm_root_info.old_severity_limit;
+                    old_age_threshold[i] = ghm_root_info.old_severity_limit;
                     old_severity_limit[i] = ghm_root_info.old_severity_limit;
                 } else {
-                    old_age_treshold[i] = NA_INTEGER;
+                    old_age_threshold[i] = NA_INTEGER;
                     old_severity_limit[i] = NA_INTEGER;
                 }
                 unit_authorization[i] = ghm_to_ghs_info.unit_authorization ? ghm_to_ghs_info.unit_authorization : NA_INTEGER;
@@ -932,28 +932,28 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP sector_xp
                 if (ghs_price_info) {
                     ghs_cents[i] = ghs_price_info->ghs_cents;
                     ghs_coefficient[i] = index->GhsCoefficient(sector);
-                    if (ghs_price_info->exh_treshold) {
-                        exh_treshold[i] = ghs_price_info->exb_treshold;
+                    if (ghs_price_info->exh_threshold) {
+                        exh_threshold[i] = ghs_price_info->exb_threshold;
                         exh_cents[i] = ghs_price_info->exh_cents;
                     } else {
-                        exh_treshold[i] = NA_INTEGER;
+                        exh_threshold[i] = NA_INTEGER;
                         exh_cents[i] = NA_INTEGER;
                     }
-                    if (ghs_price_info->exb_treshold) {
-                        exb_treshold[i] = ghs_price_info->exb_treshold;
+                    if (ghs_price_info->exb_threshold) {
+                        exb_threshold[i] = ghs_price_info->exb_threshold;
                         exb_cents[i] = ghs_price_info->exh_cents;
                         exb_once[i] = !!(ghs_price_info->flags & (int)mco_GhsPriceInfo::Flag::ExbOnce);
                     } else {
-                        exb_treshold[i] = NA_INTEGER;
+                        exb_threshold[i] = NA_INTEGER;
                         exb_cents[i] = NA_INTEGER;
                         exb_once[i] = NA_INTEGER;
                     }
                 } else {
                     ghs_cents[i] = NA_INTEGER;
                     ghs_coefficient[i] = NA_REAL;
-                    exh_treshold[i] = NA_INTEGER;
+                    exh_threshold[i] = NA_INTEGER;
                     exh_cents[i] = NA_INTEGER;
-                    exb_treshold[i] = NA_INTEGER;
+                    exb_threshold[i] = NA_INTEGER;
                     exb_cents[i] = NA_INTEGER;
                     exb_once[i] = NA_INTEGER;
                 }

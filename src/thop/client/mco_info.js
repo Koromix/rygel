@@ -227,7 +227,7 @@ const mco_info = new function() {
                 {key: 'ghs', title: 'GHS', func: ghs => ghs.ghs},
                 {key: 'durations', title: 'Durées', func: ghs => maskToRangeStr(ghs.durations)},
                 {key: 'confirm', title: 'Confirmation',
-                    func: ghs => ghs.confirm_treshold ? `< ${format.duration(ghs.confirm_treshold)}` : ''},
+                    func: ghs => ghs.confirm_threshold ? `< ${format.duration(ghs.confirm_threshold)}` : ''},
                 {key: 'main_diagnosis', title: 'DP', func: ghs => ghs.main_diagnosis},
                 {key: 'diagnoses', title: 'Diagnostics', func: ghs => ghs.diagnoses},
                 {key: 'procedures', title: 'Actes', func: ghs => ghs.procedures ? ghs.procedures.join(', ') : ''},
@@ -242,10 +242,10 @@ const mco_info = new function() {
                     }
                 },
                 {key: 'old_severity', title: 'Sévérité âgé',
-                    func: ghs => ghs.old_age_treshold ? `≥ ${ghs.old_age_treshold} et ` +
+                    func: ghs => ghs.old_age_threshold ? `≥ ${ghs.old_age_threshold} et ` +
                                                         `< ${ghs.old_severity_limit + 1}` : null},
                 {key: 'young_severity', title: 'Sévérité jeune',
-                    func: ghs => ghs.young_age_treshold ? `< ${ghs.young_age_treshold} et ` +
+                    func: ghs => ghs.young_age_threshold ? `< ${ghs.young_age_threshold} et ` +
                                                           `< ${ghs.young_severity_limit + 1}` : null}
             ]
         });
@@ -717,16 +717,16 @@ const mco_info = new function() {
                     <tr><th>Tarif €</th>${util.mapRLE(columns, col =>
                             applyGhsCoefficient(col.ghs_cents, !apply_coeff || col.ghs_coefficient),
                         (cents, _, colspan) => html`<td class="noex" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
-                    <tr><th>Borne basse</th>${util.mapRLE(columns, col => col.exb_treshold,
-                        (treshold, _, colspan) => html`<td class="exb" colspan=${colspan}>${format.duration(treshold)}</td>`)}</tr>
+                    <tr><th>Borne basse</th>${util.mapRLE(columns, col => col.exb_threshold,
+                        (threshold, _, colspan) => html`<td class="exb" colspan=${colspan}>${format.duration(threshold)}</td>`)}</tr>
                     <tr><th>Forfait EXB €</th>${util.mapRLE(columns, col =>
                             applyGhsCoefficient(col.exb_once ? col.exb_cents : null, !apply_coeff || col.ghs_coefficient),
                         (cents, _, colspan) => html`<td class="exb" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
                     <tr><th>Tarif EXB €</th>${util.mapRLE(columns, col =>
                             applyGhsCoefficient(col.exb_once ? null : col.exb_cents, !apply_coeff || col.ghs_coefficient),
                         (cents, _, colspan) => html`<td class="exb" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
-                    <tr><th>Borne haute</th>${util.mapRLE(columns, col => col.exh_treshold ? (col.exh_treshold - 1) : null,
-                        (treshold, _, colspan) => html`<td class="exh" colspan=${colspan}>${format.duration(treshold)}</td>`)}</tr>
+                    <tr><th>Borne haute</th>${util.mapRLE(columns, col => col.exh_threshold ? (col.exh_threshold - 1) : null,
+                        (threshold, _, colspan) => html`<td class="exh" colspan=${colspan}>${format.duration(threshold)}</td>`)}</tr>
                     <tr><th>Tarif EXH €</th>${util.mapRLE(columns, col =>
                             applyGhsCoefficient(col.exh_cents, !apply_coeff || col.ghs_coefficient),
                         (cents, _, colspan) => html`<td class="exh" colspan=${colspan}>${format.price(cents)}</td>`)}</tr>
@@ -735,9 +735,9 @@ const mco_info = new function() {
                             let severity = col.ghm.charCodeAt(5) - '1'.charCodeAt(0);
                             if (severity >= 0 && severity < 4) {
                                 if (severity < col.young_severity_limit)
-                                    texts.push('< ' + col.young_age_treshold.toString());
+                                    texts.push('< ' + col.young_age_threshold.toString());
                                 if (severity < col.old_severity_limit)
-                                    texts.push('≥ ' + col.old_age_treshold.toString());
+                                    texts.push('≥ ' + col.old_age_threshold.toString());
                             }
 
                             return texts.join(', ');
@@ -941,16 +941,16 @@ const mco_info = new function() {
 
         let price_cents;
         let mode;
-        if (ghs.exb_treshold && duration < ghs.exb_treshold) {
+        if (ghs.exb_threshold && duration < ghs.exb_threshold) {
             price_cents = ghs.ghs_cents;
             if (ghs.exb_once) {
                 price_cents -= ghs.exb_cents;
             } else {
-                price_cents -= (ghs.exb_treshold - duration) * ghs.exb_cents;
+                price_cents -= (ghs.exb_threshold - duration) * ghs.exb_cents;
             }
             mode = 'exb';
-        } else if (ghs.exh_treshold && duration >= ghs.exh_treshold) {
-            price_cents = ghs.ghs_cents + (duration - ghs.exh_treshold + 1) * ghs.exh_cents;
+        } else if (ghs.exh_threshold && duration >= ghs.exh_threshold) {
+            price_cents = ghs.ghs_cents + (duration - ghs.exh_threshold + 1) * ghs.exh_cents;
             mode = 'exh';
         } else {
             price_cents = ghs.ghs_cents;

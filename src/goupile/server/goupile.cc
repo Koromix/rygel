@@ -742,7 +742,7 @@ static bool PruneOldFiles(const char *dirname, const char *filter, bool recursiv
 {
     BlockAllocator temp_alloc;
 
-    int64_t treshold = GetUnixTime() - max_age;
+    int64_t threshold = GetUnixTime() - max_age;
     bool complete = true;
 
     EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, FileType file_type) {
@@ -765,7 +765,7 @@ static bool PruneOldFiles(const char *dirname, const char *filter, bool recursiv
             } break;
             case FileType::File: {
                 if (!filter || MatchPathName(basename, filter)) {
-                    if (file_info.modification_time < treshold) {
+                    if (file_info.modification_time < threshold) {
                         LogInfo("Prune old file '%1'", filename);
                         complete &= UnlinkFile(filename);
                     } else {

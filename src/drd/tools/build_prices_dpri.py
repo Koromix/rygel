@@ -61,13 +61,13 @@ def extract_ghs_prices(csv_file):
         date = row['DATE-EFFET']
         ghs_info = {'PriceCents': parse_price_cents(row['GHS-PRI'])}
         if int(row['SEU-BAS']):
-            ghs_info['ExbTreshold'] = int(row['SEU-BAS'])
+            ghs_info['ExbThreshold'] = int(row['SEU-BAS'])
             ghs_info['ExbCents'] = parse_price_cents(row['EXB-JOURNALIER'])
             if not ghs_info['ExbCents']:
                 ghs_info['ExbCents'] = parse_price_cents(row['EXB-FORFAIT'])
                 ghs_info['ExbType'] = 'Once'
         if int(row['SEU-HAU']):
-            ghs_info['ExhTreshold'] = int(row['SEU-HAU']) + 1
+            ghs_info['ExhThreshold'] = int(row['SEU-HAU']) + 1
             ghs_info['ExhCents'] = parse_price_cents(row['EXH-PRI'])
         ghs[int(row['GHS-NRO'])] = ghs_info
     date = '-'.join(reversed(date.split('/')))

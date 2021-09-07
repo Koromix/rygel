@@ -434,26 +434,26 @@ void mco_DumpGhmRootTable(Span<const mco_GhmRootInfo> ghm_roots, StreamWriter *o
     for (const mco_GhmRootInfo &ghm_root: ghm_roots) {
         PrintLn(out_st, "      GHM root %1:", ghm_root.ghm_root);
 
-        if (ghm_root.confirm_duration_treshold) {
+        if (ghm_root.confirm_duration_threshold) {
             PrintLn(out_st, "        Confirm if < %1 days (except for deaths and MCO transfers)",
-                    ghm_root.confirm_duration_treshold);
+                    ghm_root.confirm_duration_threshold);
         }
 
         if (ghm_root.allow_ambulatory) {
             PrintLn(out_st, "        Can be ambulatory (J)");
         }
-        if (ghm_root.short_duration_treshold) {
+        if (ghm_root.short_duration_threshold) {
             PrintLn(out_st, "        Can be short duration (T) if < %1 days",
-                    ghm_root.short_duration_treshold);
+                    ghm_root.short_duration_threshold);
         }
 
-        if (ghm_root.young_age_treshold) {
+        if (ghm_root.young_age_threshold) {
             PrintLn(out_st, "        Increase severity if age < %1 years and severity < %2",
-                    ghm_root.young_age_treshold, ghm_root.young_severity_limit + 1);
+                    ghm_root.young_age_threshold, ghm_root.young_severity_limit + 1);
         }
-        if (ghm_root.old_age_treshold) {
+        if (ghm_root.old_age_threshold) {
             PrintLn(out_st, "        Increase severity if age >= %1 years and severity < %2",
-                    ghm_root.old_age_treshold, ghm_root.old_severity_limit + 1);
+                    ghm_root.old_age_threshold, ghm_root.old_severity_limit + 1);
         }
 
         if (ghm_root.childbirth_severity_list) {

@@ -179,17 +179,17 @@ struct mco_ValueRangeCell {
 struct mco_GhmRootInfo {
     mco_GhmRootCode ghm_root;
 
-    int8_t confirm_duration_treshold;
+    int8_t confirm_duration_threshold;
 
     bool allow_ambulatory;
-    int8_t short_duration_treshold;
+    int8_t short_duration_threshold;
     bool allow_raac;
     bool gradated;
 
     int8_t young_severity_limit;
-    int8_t young_age_treshold;
+    int8_t young_age_threshold;
     int8_t old_severity_limit;
-    int8_t old_age_treshold;
+    int8_t old_age_threshold;
 
     int8_t childbirth_severity_list;
 
@@ -240,8 +240,8 @@ struct mco_GhsPriceInfo {
     mco_GhsCode ghs;
 
     int32_t ghs_cents;
-    int16_t exh_treshold;
-    int16_t exb_treshold;
+    int16_t exh_threshold;
+    int16_t exb_threshold;
     int32_t exh_cents;
     int32_t exb_cents;
     uint16_t flags;

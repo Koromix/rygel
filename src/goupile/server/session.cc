@@ -23,7 +23,7 @@
 
 namespace RG {
 
-static const int BanTreshold = 6;
+static const int BanThreshold = 6;
 static const int64_t BanTime = 1800 * 1000;
 
 struct EventInfo {
@@ -507,7 +507,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
             const char *confirm = (const char *)sqlite3_column_text(stmt, 4);
             const char *secret = (const char *)sqlite3_column_text(stmt, 5);
 
-            if (CountEvents(request.client_addr, username) >= BanTreshold) {
+            if (CountEvents(request.client_addr, username) >= BanThreshold) {
                 LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
                 io->AttachError(403);
                 return;
@@ -812,7 +812,7 @@ bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
         RegisterEvent(request.client_addr, tid);
     }
 
-    if (CountEvents(request.client_addr, tid) >= BanTreshold) {
+    if (CountEvents(request.client_addr, tid) >= BanThreshold) {
         LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
         io->AttachError(403);
         return false;
@@ -917,7 +917,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
             }
         }
 
-        if (CountEvents(request.client_addr, session->username) >= BanTreshold) {
+        if (CountEvents(request.client_addr, session->username) >= BanThreshold) {
             LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
             io->AttachError(403);
             return;
@@ -939,7 +939,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
                 } else {
                     const EventInfo *event = RegisterEvent(request.client_addr, session->username);
 
-                    if (event->count >= BanTreshold) {
+                    if (event->count >= BanThreshold) {
                         sessions.Close(request, io);
                         LogError("Code is incorrect; you are now blocked for %1 minutes", (BanTime + 59000) / 60000);
                         io->AttachError(403);
@@ -963,7 +963,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
                 } else {
                     const EventInfo *event = RegisterEvent(request.client_addr, session->username);
 
-                    if (event->count >= BanTreshold) {
+                    if (event->count >= BanThreshold) {
                         sessions.Close(request, io);
                         LogError("Code is incorrect; you are now blocked for %1 minutes", (BanTime + 59000) / 60000);
                         io->AttachError(403);

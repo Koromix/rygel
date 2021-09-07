@@ -123,13 +123,13 @@ static float FixSmooth(float from, float to, float width, float delta) {
 }
 
 static void Follow(Vector2 pos, float t1, float t2) {
-    float treshold = t1 / 2.0f;
+    float threshold = t1 / 2.0f;
     float delta = (t2 - t1) / 2.0f;
 
-    float left_t1 = pos.x - screen.width * treshold;
-    float right_t1 = pos.x + screen.width * treshold;
-    float top_t1 = pos.y - screen.height * treshold;
-    float bottom_t1 = pos.y + screen.height * treshold;
+    float left_t1 = pos.x - screen.width * threshold;
+    float right_t1 = pos.x + screen.width * threshold;
+    float top_t1 = pos.y - screen.height * threshold;
+    float bottom_t1 = pos.y + screen.height * threshold;
 
     if (camera.pos.x < left_t1) {
         camera.pos.x += FixSmooth(camera.pos.x, left_t1, (float)screen.width, delta);

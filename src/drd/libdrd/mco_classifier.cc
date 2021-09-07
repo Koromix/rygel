@@ -1456,7 +1456,7 @@ static bool CheckConfirmation(const mco_PreparedStay &prep, mco_GhmCode ghm,
     bool confirm = false;
     if (RG_UNLIKELY(prep.duration >= 365)) {
         confirm = true;
-    } else if (prep.duration < ghm_root_info.confirm_duration_treshold &&
+    } else if (prep.duration < ghm_root_info.confirm_duration_threshold &&
                stay.exit.mode != '9' && stay.exit.mode != '0' &&
                (stay.exit.mode != '7' || stay.exit.destination != '1') &&
                !(stay.flags & (int)mco_Stay::Flag::RAAC)) {
@@ -1505,7 +1505,7 @@ static bool CheckConfirmation(const mco_PreparedStay &prep, mco_GhmCode ghm,
     if (stay.flags & (int)mco_Stay::Flag::Confirmed) {
         if (confirm) {
             SetError(out_errors, 223, 0);
-        } else if (prep.duration >= ghm_root_info.confirm_duration_treshold) {
+        } else if (prep.duration >= ghm_root_info.confirm_duration_threshold) {
             valid &= SetError(out_errors, 124);
         }
     } else if (confirm) {
@@ -1668,7 +1668,7 @@ static mco_GhmCode RunGhmSeverity(const mco_TableIndex &index, const mco_Prepare
     if (ghm_root_info.allow_ambulatory && !prep.duration) {
         ghm.parts.mode = 'J';
         ghm_for_ghs.parts.mode = 'J';
-    } else if (prep.duration < ghm_root_info.short_duration_treshold) {
+    } else if (prep.duration < ghm_root_info.short_duration_threshold) {
         ghm.parts.mode = 'T';
         ghm_for_ghs.parts.mode = 'T';
     } else if (ghm.parts.mode >= 'A' && ghm.parts.mode < 'E') {
@@ -1709,10 +1709,10 @@ static mco_GhmCode RunGhmSeverity(const mco_TableIndex &index, const mco_Prepare
             }
         }
 
-        if (prep.age >= ghm_root_info.old_age_treshold &&
+        if (prep.age >= ghm_root_info.old_age_threshold &&
                 severity < ghm_root_info.old_severity_limit) {
             severity++;
-        } else if (prep.age < ghm_root_info.young_age_treshold &&
+        } else if (prep.age < ghm_root_info.young_age_threshold &&
                    severity < ghm_root_info.young_severity_limit) {
             severity++;
         } else if (stay.exit.mode == '9' && !severity) {
@@ -1960,7 +1960,7 @@ mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet 
 }
 
 static bool TestSupplementRea(const mco_PreparedStay &prep, const mco_PreparedStay &mono_prep,
-                              Size list2_treshold)
+                              Size list2_threshold)
 {
     if (mono_prep.stay->igs2 >= 15 || prep.age < 18) {
         Size list2_matches = 0;
@@ -1969,7 +1969,7 @@ static bool TestSupplementRea(const mco_PreparedStay &prep, const mco_PreparedSt
                 return true;
             if (proc_info->bytes[27] & 0x8) {
                 list2_matches++;
-                if (list2_matches >= list2_treshold)
+                if (list2_matches >= list2_threshold)
                     return true;
             }
         }
