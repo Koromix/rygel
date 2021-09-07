@@ -477,6 +477,19 @@ bool bk_VirtualMachine::Run(bool debug)
             DISPATCH(++pc);
         }
 
+        CASE(EqualEnum): {
+            int64_t i1 = stack[stack.len - 2].i;
+            int64_t i2 = stack[stack.len - 1].i;
+            stack[--stack.len - 1].b = (i1 == i2);
+            DISPATCH(++pc);
+        }
+        CASE(NotEqualEnum): {
+            int64_t i1 = stack[stack.len - 2].i;
+            int64_t i2 = stack[stack.len - 1].i;
+            stack[--stack.len - 1].b = (i1 != i2);
+            DISPATCH(++pc);
+        }
+
         CASE(Jump): {
             DISPATCH(pc += (Size)inst->u.i);
         }
@@ -673,6 +686,7 @@ void bk_VirtualMachine::DumpInstruction(Size pc, Size bp) const
                 case bk_PrimitiveKind::Function: { PrintLn(stderr, " %!Y..[Function]%!0 '%1' %!M..>%2%!0", inst.u.func->prototype, stack.len); } break;
                 case bk_PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
                 case bk_PrimitiveKind::Record: { RG_UNREACHABLE(); } break;
+                case bk_PrimitiveKind::Enum: { PrintLn(stderr, " %!Y..[Enum]%!0 %1 %!M..>%2%!0", inst.u.i, stack.len); } break;
                 case bk_PrimitiveKind::Opaque: { PrintLn(stderr, " %!Y..[Opaque]%!0 0x%1 %!M..>%2%!0", FmtArg(inst.u.opaque).Pad0(-RG_SIZE(void *) * 2), stack.len); } break;
             }
         } break;

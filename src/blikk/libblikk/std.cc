@@ -93,6 +93,17 @@ static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offs
             }
             fputc(')', stdout);
         } break;
+        case bk_PrimitiveKind::Enum: {
+            const bk_EnumTypeInfo *enum_type = type->AsEnumType();
+            int64_t value = vm->stack[offset++].i;
+
+            if (RG_LIKELY(value >= 0 && value < enum_type->labels.len)) {
+                const char *label = enum_type->labels[value];
+                fputs(label, stdout);
+            } else {
+                fputs("???", stdout);
+            }
+        } break;
         case bk_PrimitiveKind::Opaque: { Print("0x%1", FmtArg(vm->stack[offset++].opaque).Pad0(-RG_SIZE(void *) * 2)); } break;
     }
 

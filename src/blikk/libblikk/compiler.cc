@@ -21,9 +21,9 @@ namespace RG {
 
 struct PrototypeInfo {
     Size pos;
+    Size skip_pos;
 
-    bk_FunctionInfo *func;
-    Size body_pos;
+    bk_FunctionInfo *func; // Useful only for functions
 
     RG_HASHTABLE_HANDLER(PrototypeInfo, pos);
 };
@@ -95,7 +95,9 @@ public:
     void AddOpaque(const char *name);
 
 private:
-    void ParsePrototypes(Span<const Size> positions);
+    void Preparse(Span<const Size> positions);
+    void PreparseFunction(Size proto_pos, bool record);
+    void PreparseEnum(Size proto_pos);
 
     // These 3 functions return true if (and only if) all code paths have a return statement.
     // For simplicity, return statements inside loops are not considered.
@@ -123,6 +125,7 @@ private:
     const bk_ArrayTypeInfo *ParseArrayType();
     void ParseArraySubscript();
     void ParseRecordDot();
+    void ParseEnumDot();
     bool ParseCall(const bk_FunctionTypeInfo *func_type, const bk_FunctionInfo *func, bool overload);
     void EmitIntrinsic(const char *name, Size call_pos, Size call_addr, Span<const bk_TypeInfo *const> args);
     void EmitLoad(const bk_VariableInfo &var);
@@ -205,17 +208,18 @@ private:
         }
     }
 
-    template <typename T>
-    void HintSuggestions(const char *name, const T &symbols)
+    template <typename T, typename Fun>
+    void HintSuggestions(const char *name, const T &symbols, Fun func)
     {
         Size threshold = strlen(name) / 2;
         bool warn_case = false;
 
         for (const auto &it: symbols) {
-            Size dist = LevenshteinDistance(name, it.name);
+            const char *symbol = func(it);
+            Size dist = LevenshteinDistance(name, symbol);
 
             if (dist <= threshold) {
-                HintError(definitions_map.FindValue(&it, -1), "Suggestion: %1 (%2)", it.name, it.type->signature);
+                HintError(definitions_map.FindValue(&symbol, -1), "Suggestion: %1", symbol);
                 warn_case |= !dist;
             }
         }
@@ -340,6 +344,7 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
                            function_types_len = program->function_types.len,
                            array_types_len = program->array_types.len,
                            record_types_len = program->record_types.len,
+                           enum_types_len = program->enum_types.len,
                            bare_types_len = program->bare_types.len) {
         ir.RemoveFrom(prev_ir_len);
         program->sources.RemoveFrom(sources_len);
@@ -369,6 +374,7 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
         DestroyTypes(&program->function_types, function_types_len);
         DestroyTypes(&program->array_types, array_types_len);
         DestroyTypes(&program->record_types, record_types_len);
+        DestroyTypes(&program->enum_types, enum_types_len);
         DestroyTypes(&program->bare_types, bare_types_len);
     };
 
@@ -400,7 +406,7 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
 
     // Preparse (top-level order-independence)
     preparse = true;
-    ParsePrototypes(file.prototypes);
+    Preparse(file.prototypes);
 
     // Do the actual parsing!
     preparse = false;
@@ -582,214 +588,267 @@ void bk_Parser::AddOpaque(const char *name)
     RG_ASSERT(!var->shadow);
 }
 
-void bk_Parser::ParsePrototypes(Span<const Size> positions)
+void bk_Parser::Preparse(Span<const Size> positions)
 {
     RG_ASSERT(!prototypes_map.count);
     RG_ASSERT(pos == 0);
 
-    // Reuse for performance
-    HeapArray<char> signature_buf;
-    HeapArray<char> prototype_buf;
-    bk_FunctionTypeInfo type_buf = {};
-
     for (Size i = 0; i < positions.len; i++) {
         Size proto_pos = positions[i];
-        Size prev_ir_len = ir.len;
-        Size prev_lines_len = src->lines.len;
 
-        pos = proto_pos;
+        pos = proto_pos + 1;
         show_errors = true;
 
-        RG_ASSERT(tokens[pos].kind == bk_TokenKind::Func || tokens[pos].kind == bk_TokenKind::Record);
-        bool record = (tokens[pos].kind == bk_TokenKind::Record);
-
-        pos++;
         if (!PeekToken(bk_TokenKind::Identifier))
             continue;
 
-        PrototypeInfo *proto = prototypes_map.SetDefault(proto_pos);
-        bk_FunctionInfo *func = program->functions.AppendDefault();
-        definitions_map.Set(func, pos);
+        switch (tokens[proto_pos].kind) {
+            case bk_TokenKind::Func: { PreparseFunction(proto_pos, false); } break;
+            case bk_TokenKind::Record: { PreparseFunction(proto_pos, true); } break;
+            case bk_TokenKind::Enum: { PreparseEnum(proto_pos); } break;
 
-        proto->pos = proto_pos;
-        proto->func = func;
-        func->name = ConsumeIdentifier();
-        func->mode = record ? bk_FunctionInfo::Mode::Record : bk_FunctionInfo::Mode::Blikk;
-
-        // Reset buffers
-        signature_buf.RemoveFrom(0);
-        signature_buf.Append("func (");
-        prototype_buf.RemoveFrom(0);
-        Fmt(&prototype_buf, "%1(", func->name);
-        type_buf.primitive = bk_PrimitiveKind::Function;
-        type_buf.size = 1;
-        type_buf.params.RemoveFrom(0);
-        type_buf.params_size = 0;
-
-        // Parameters
-        ConsumeToken(bk_TokenKind::LeftParenthesis);
-        if (!MatchToken(bk_TokenKind::RightParenthesis)) {
-            RG_DEFER_C(variables_len = program->variables.len) { DestroyVariables(variables_len); };
-
-            for (;;) {
-                SkipNewLines();
-
-                bk_VariableInfo *var = program->variables.AppendDefault();
-                Size param_pos = pos;
-
-                var->mut = !record && MatchToken(bk_TokenKind::Mut);
-                var->name = ConsumeIdentifier();
-                var->scope = bk_VariableInfo::Scope::Local;
-
-                std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySet(var);
-                if (RG_UNLIKELY(!ret.second)) {
-                    const bk_VariableInfo *prev_var = *ret.first;
-                    var->shadow = prev_var;
-
-                    // Error messages for globals are issued in ParseFunction(), because at
-                    // this stage some globals (those issues from the same Parse call) may not
-                    // yet exist. Better issue all errors about that later.
-                    if (prev_var->scope == bk_VariableInfo::Scope::Local) {
-                        MarkError(param_pos, "Parameter named '%1' already exists", var->name);
-                    }
-                }
-
-                ConsumeToken(bk_TokenKind::Colon);
-                var->type = ParseTypeExpression();
-
-                if (RG_LIKELY(func->params.Available())) {
-                    bk_FunctionInfo::Parameter *param = func->params.AppendDefault();
-                    definitions_map.Set(param, param_pos);
-
-                    param->name = var->name;
-                    param->type = var->type;
-                    param->mut = var->mut;
-
-                    type_buf.params.Append(var->type);
-                    type_buf.params_size += var->type->size;
-                } else {
-                    MarkError(pos - 1, "Functions cannot have more than %1 parameters", RG_LEN(type_buf.params.data));
-                }
-
-                signature_buf.Append(var->type->signature);
-                Fmt(&prototype_buf, "%1: %2", var->name, var->type->signature);
-
-                if (MatchToken(bk_TokenKind::Comma)) {
-                    signature_buf.Append(", ");
-                    prototype_buf.Append(", ");
-                } else {
-                    break;
-                }
-            }
-
-            SkipNewLines();
-            ConsumeToken(bk_TokenKind::RightParenthesis);
-        }
-        signature_buf.Append(')');
-        prototype_buf.Append(')');
-
-        // Return type
-        if (record) {
-            bk_RecordTypeInfo *record_type = program->record_types.AppendDefault();
-
-            record_type->signature = func->name;
-            record_type->primitive = bk_PrimitiveKind::Record;
-            record_type->func = func;
-
-            for (const bk_FunctionInfo::Parameter &param: func->params) {
-                bk_RecordTypeInfo::Member *member = record_type->members.AppendDefault();
-
-                member->name = param.name;
-                member->type = param.type;
-                member->offset = record_type->size;
-                record_type->size += param.type->size;
-
-                // Evaluate each time, so that overflow is not a problem
-                if (RG_UNLIKELY(record_type->size > UINT16_MAX)) {
-                    MarkError(proto->pos, "Record size is too big");
-                }
-
-                Size param_pos = definitions_map.FindValue(&param, -1);
-                definitions_map.Set(member, param_pos);
-            }
-
-            // We don't need to check for uniqueness
-            program->types_map.TrySet(record_type);
-
-            type_buf.ret_type = record_type;
-
-            Fmt(&signature_buf, ": %1", record_type->signature);
-            Fmt(&prototype_buf, ": %1", record_type->signature);
-        } else if (MatchToken(bk_TokenKind::Colon)) {
-            type_buf.ret_type = ParseTypeExpression();
-
-            if (type_buf.ret_type != bk_NullType) {
-                Fmt(&signature_buf, ": %1", type_buf.ret_type->signature);
-                Fmt(&prototype_buf, ": %1", type_buf.ret_type->signature);
-            } else {
-                signature_buf.Append(0);
-                prototype_buf.Append(0);
-            }
-        } else {
-            type_buf.ret_type = bk_NullType;
-
-            signature_buf.Append(0);
-            prototype_buf.Append(0);
-        }
-
-        proto->body_pos = pos;
-
-        // Reuse or add function type
-        type_buf.signature = InternString(signature_buf.ptr);
-        func->type = InsertType(type_buf, &program->function_types)->AsFunctionType();
-        func->prototype = InternString(prototype_buf.ptr);
-
-        // We don't know where it will live yet!
-        func->addr = -1;
-        func->earliest_ref_pos = RG_SIZE_MAX;
-        func->earliest_ref_addr = RG_SIZE_MAX;
-
-        // Publish function
-        {
-            std::pair<bk_FunctionInfo **, bool> ret = program->functions_map.TrySet(func);
-            bk_FunctionInfo *proto0 = *ret.first;
-
-            if (ret.second) {
-                proto0->overload_prev = proto0;
-                proto0->overload_next = proto0;
-            } else if (!record) {
-                proto0->overload_prev->overload_next = func;
-                func->overload_next = proto0;
-                func->overload_prev = proto0->overload_prev;
-                proto0->overload_prev = func;
-            } else {
-                MarkError(proto->pos, "Duplicate type '%1'", func->name);
-
-                func->overload_prev = func;
-                func->overload_next = func;
-            }
-        }
-
-        // This is a preparse step, clean up accidental side effets
-        ir.RemoveFrom(prev_ir_len);
-        src->lines.RemoveFrom(prev_lines_len);
-
-        // Publish symbol
-        const bk_VariableInfo *var;
-        if (record) {
-            var = AddGlobal(func->name, bk_TypeType, {{.type = type_buf.ret_type}}, false, bk_VariableInfo::Scope::Module);
-        } else {
-            var = AddGlobal(func->name, func->type, {{.func = func}}, false, bk_VariableInfo::Scope::Module);
-        }
-        definitions_map.Set(var, proto->pos);
-
-        // Expressions involving this prototype (function or record) won't issue (visible) errors
-        if (RG_UNLIKELY(!show_errors)) {
-            poisoned_set.Set(var);
+            default: { RG_UNREACHABLE(); } break;
         }
     }
 
     pos = 0;
+}
+
+void bk_Parser::PreparseFunction(Size proto_pos, bool record)
+{
+    Size prev_ir_len = ir.len;
+    Size prev_lines_len = src->lines.len;
+
+    PrototypeInfo *proto = prototypes_map.SetDefault(proto_pos);
+    bk_FunctionInfo *func = program->functions.AppendDefault();
+    definitions_map.Set(func, pos);
+
+    proto->pos = proto_pos;
+    proto->func = func;
+    func->name = ConsumeIdentifier();
+    func->mode = record ? bk_FunctionInfo::Mode::Record : bk_FunctionInfo::Mode::Blikk;
+
+    HeapArray<char> signature_buf;
+    HeapArray<char> prototype_buf;
+    bk_FunctionTypeInfo type_buf = {};
+    signature_buf.Append("func (");
+    Fmt(&prototype_buf, "%1(", func->name);
+    type_buf.primitive = bk_PrimitiveKind::Function;
+    type_buf.size = 1;
+
+    // Parameters
+    ConsumeToken(bk_TokenKind::LeftParenthesis);
+    if (!MatchToken(bk_TokenKind::RightParenthesis)) {
+        RG_DEFER_C(variables_len = program->variables.len) { DestroyVariables(variables_len); };
+
+        for (;;) {
+            SkipNewLines();
+
+            bk_VariableInfo *var = program->variables.AppendDefault();
+            Size param_pos = pos;
+
+            var->mut = !record && MatchToken(bk_TokenKind::Mut);
+            var->name = ConsumeIdentifier();
+            var->scope = bk_VariableInfo::Scope::Local;
+
+            std::pair<bk_VariableInfo **, bool> ret = program->variables_map.TrySet(var);
+            if (RG_UNLIKELY(!ret.second)) {
+                const bk_VariableInfo *prev_var = *ret.first;
+                var->shadow = prev_var;
+
+                // Error messages for globals are issued in ParseFunction(), because at
+                // this stage some globals (those issues from the same Parse call) may not
+                // yet exist. Better issue all errors about that later.
+                if (prev_var->scope == bk_VariableInfo::Scope::Local) {
+                    MarkError(param_pos, "Parameter named '%1' already exists", var->name);
+                }
+            }
+
+            ConsumeToken(bk_TokenKind::Colon);
+            var->type = ParseTypeExpression();
+
+            if (RG_LIKELY(func->params.Available())) {
+                bk_FunctionInfo::Parameter *param = func->params.AppendDefault();
+                definitions_map.Set(param, param_pos);
+
+                param->name = var->name;
+                param->type = var->type;
+                param->mut = var->mut;
+
+                type_buf.params.Append(var->type);
+                type_buf.params_size += var->type->size;
+            } else {
+                MarkError(pos - 1, "Functions cannot have more than %1 parameters", RG_LEN(type_buf.params.data));
+            }
+
+            signature_buf.Append(var->type->signature);
+            Fmt(&prototype_buf, "%1: %2", var->name, var->type->signature);
+
+            if (MatchToken(bk_TokenKind::Comma)) {
+                signature_buf.Append(", ");
+                prototype_buf.Append(", ");
+            } else {
+                break;
+            }
+        }
+
+        SkipNewLines();
+        ConsumeToken(bk_TokenKind::RightParenthesis);
+    }
+    signature_buf.Append(')');
+    prototype_buf.Append(')');
+
+    // Return type
+    if (record) {
+        bk_RecordTypeInfo *record_type = program->record_types.AppendDefault();
+
+        record_type->signature = func->name;
+        record_type->primitive = bk_PrimitiveKind::Record;
+        record_type->func = func;
+
+        for (const bk_FunctionInfo::Parameter &param: func->params) {
+            bk_RecordTypeInfo::Member *member = record_type->members.AppendDefault();
+
+            member->name = param.name;
+            member->type = param.type;
+            member->offset = record_type->size;
+            record_type->size += param.type->size;
+
+            // Evaluate each time, so that overflow is not a problem
+            if (RG_UNLIKELY(record_type->size > UINT16_MAX)) {
+                MarkError(proto->pos, "Record size is too big");
+            }
+
+            Size param_pos = definitions_map.FindValue(&param, -1);
+            definitions_map.Set(member, param_pos);
+        }
+
+        // We don't need to check for uniqueness
+        program->types_map.TrySet(record_type);
+
+        type_buf.ret_type = record_type;
+
+        Fmt(&signature_buf, ": %1", record_type->signature);
+        Fmt(&prototype_buf, ": %1", record_type->signature);
+    } else if (MatchToken(bk_TokenKind::Colon)) {
+        type_buf.ret_type = ParseTypeExpression();
+
+        if (type_buf.ret_type != bk_NullType) {
+            Fmt(&signature_buf, ": %1", type_buf.ret_type->signature);
+            Fmt(&prototype_buf, ": %1", type_buf.ret_type->signature);
+        } else {
+            signature_buf.Append(0);
+            prototype_buf.Append(0);
+        }
+    } else {
+        type_buf.ret_type = bk_NullType;
+
+        signature_buf.Append(0);
+        prototype_buf.Append(0);
+    }
+
+    proto->skip_pos = pos;
+
+    // Reuse or add function type
+    type_buf.signature = InternString(signature_buf.ptr);
+    func->type = InsertType(type_buf, &program->function_types)->AsFunctionType();
+    func->prototype = InternString(prototype_buf.ptr);
+
+    // We don't know where it will live yet!
+    func->addr = -1;
+    func->earliest_ref_pos = RG_SIZE_MAX;
+    func->earliest_ref_addr = RG_SIZE_MAX;
+
+    // Publish function
+    {
+        std::pair<bk_FunctionInfo **, bool> ret = program->functions_map.TrySet(func);
+        bk_FunctionInfo *proto0 = *ret.first;
+
+        if (ret.second) {
+            proto0->overload_prev = proto0;
+            proto0->overload_next = proto0;
+        } else if (!record) {
+            proto0->overload_prev->overload_next = func;
+            func->overload_next = proto0;
+            func->overload_prev = proto0->overload_prev;
+            proto0->overload_prev = func;
+        } else {
+            MarkError(proto->pos + 1, "Duplicate type '%1'", func->name);
+
+            func->overload_prev = func;
+            func->overload_next = func;
+        }
+    }
+
+    // This is a preparse step, clean up accidental side effets
+    ir.RemoveFrom(prev_ir_len);
+    src->lines.RemoveFrom(prev_lines_len);
+
+    // Publish symbol
+    const bk_VariableInfo *var;
+    if (record) {
+        var = AddGlobal(func->name, bk_TypeType, {{.type = type_buf.ret_type}}, false, bk_VariableInfo::Scope::Module);
+    } else {
+        var = AddGlobal(func->name, func->type, {{.func = func}}, false, bk_VariableInfo::Scope::Module);
+    }
+    definitions_map.Set(var, proto->pos);
+
+    // Expressions involving this prototype (function or record) won't issue (visible) errors
+    if (RG_UNLIKELY(!show_errors)) {
+        poisoned_set.Set(var);
+    }
+}
+
+void bk_Parser::PreparseEnum(Size proto_pos)
+{
+    Size prev_ir_len = ir.len;
+    Size prev_lines_len = src->lines.len;
+
+    PrototypeInfo *proto = prototypes_map.SetDefault(proto_pos);
+    bk_EnumTypeInfo *enum_type = program->enum_types.AppendDefault();
+
+    proto->pos = proto_pos;
+
+    enum_type->signature = ConsumeIdentifier();
+    enum_type->primitive = bk_PrimitiveKind::Enum;
+    enum_type->size = 1;
+
+    ConsumeToken(bk_TokenKind::LeftParenthesis);
+    if (!MatchToken(bk_TokenKind::RightParenthesis)) {
+        do {
+            SkipNewLines();
+
+            const char *label = ConsumeIdentifier();
+
+            if (RG_LIKELY(enum_type->labels.Available())) {
+                enum_type->labels.Append(label);
+            } else {
+                MarkError(pos - 1, "Enums cannot have more than %1 labels", RG_LEN(enum_type->labels.data));
+            }
+        } while (MatchToken(bk_TokenKind::Comma));
+
+        SkipNewLines();
+        ConsumeToken(bk_TokenKind::RightParenthesis);
+    }
+
+    proto->skip_pos = pos;
+
+    // This is a preparse step, clean up accidental side effets
+    ir.RemoveFrom(prev_ir_len);
+    src->lines.RemoveFrom(prev_lines_len);
+
+    // Publish enum
+    if (!program->types_map.TrySet(enum_type).second) {
+        MarkError(proto->pos + 1, "Duplicate type '%1'", enum_type->signature);
+    }
+
+    const bk_VariableInfo *var = AddGlobal(enum_type->signature, bk_TypeType, {{.type = enum_type}}, false, bk_VariableInfo::Scope::Module);
+    definitions_map.Set(var, proto->pos);
+
+    // Expressions involving this prototype (function or record) won't issue (visible) errors
+    if (RG_UNLIKELY(!show_errors)) {
+        poisoned_set.Set(var);
+    }
 }
 
 template<typename T>
@@ -893,7 +952,28 @@ bool bk_Parser::ParseStatement()
             const PrototypeInfo *proto = prototypes_map.Find(pos);
 
             if (RG_LIKELY(proto)) {
-                pos = proto->body_pos;
+                pos = proto->skip_pos;
+            } else {
+                pos++;
+
+                ConsumeToken(bk_TokenKind::Identifier);
+                RG_ASSERT(!valid);
+            }
+
+            EndStatement();
+        } break;
+        case bk_TokenKind::Enum: {
+            if (RG_UNLIKELY(current_func)) {
+                MarkError(pos, "Enum types cannot be defined inside functions");
+                HintError(definitions_map.FindValue(current_func, -1), "Function was started here and is still open");
+            } else if (RG_UNLIKELY(depth)) {
+                MarkError(pos, "Enums must be defined in top-level scope");
+            }
+
+            const PrototypeInfo *proto = prototypes_map.Find(pos);
+
+            if (RG_LIKELY(proto)) {
+                pos = proto->skip_pos;
             } else {
                 pos++;
 
@@ -981,7 +1061,7 @@ void bk_Parser::ParseFunction(const PrototypeInfo *proto)
         current_func = prev_func;
     };
 
-    // Do safety checks we could not do in ParsePrototypes()
+    // Do safety checks we could not do in Preparse()
     if (RG_UNLIKELY(current_func)) {
         MarkError(func_pos, "Nested functions are not supported");
         HintError(definitions_map.FindValue(current_func, -1), "Previous function was started here and is still open");
@@ -992,7 +1072,7 @@ void bk_Parser::ParseFunction(const PrototypeInfo *proto)
 
     // Skip prototype
     var_offset = 0;
-    pos = proto->body_pos;
+    pos = proto->skip_pos;
 
     // Create parameter variables
     for (const bk_FunctionInfo::Parameter &param: func->params) {
@@ -1014,7 +1094,7 @@ void bk_Parser::ParseFunction(const PrototypeInfo *proto)
             var->shadow = prev_var;
 
             // We should already have issued an error message for the other case (duplicate
-            // parameter name) in ParsePrototypes().
+            // parameter name) in Preparse().
             if (prev_var->scope == bk_VariableInfo::Scope::Module && prev_var->type->primitive == bk_PrimitiveKind::Function) {
                 MarkError(param_pos, "Parameter '%1' is not allowed to hide function", var->name);
                 HintDefinition(prev_var, "Function '%1' is defined here", prev_var->name);
@@ -1195,10 +1275,6 @@ void bk_Parser::PushDefaultValue(Size var_pos, const bk_VariableInfo &var, const
         case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::Push, type->primitive, {.i = 0}}); } break;
         case bk_PrimitiveKind::String: { ir.Append({bk_Opcode::Push, type->primitive, {.str = InternString("")}}); } break;
         case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::Push, type->primitive, {.type = bk_NullType}}); } break;
-        case bk_PrimitiveKind::Function: {
-            MarkError(var_pos, "Variable '%1' (defined as '%2') must be explicitely initialized",
-                      var.name, type->signature);
-        } break;
         case bk_PrimitiveKind::Array: {
             const bk_ArrayTypeInfo *array_type = type->AsArrayType();
 
@@ -1214,6 +1290,12 @@ void bk_Parser::PushDefaultValue(Size var_pos, const bk_VariableInfo &var, const
             }
         } break;
         case bk_PrimitiveKind::Opaque: { ir.Append({bk_Opcode::Push, type->primitive, {.opaque = nullptr}}); } break;
+
+        case bk_PrimitiveKind::Function:
+        case bk_PrimitiveKind::Enum: {
+            MarkError(var_pos, "Variable '%1' (defined as '%2') must be explicitely initialized",
+                      var.name, type->signature);
+        } break;
     }
 }
 
@@ -1634,13 +1716,22 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
             } break;
 
             case bk_TokenKind::Dot: {
-                if (!expect_value && stack[stack.len - 1].type->primitive == bk_PrimitiveKind::Record) {
-                    ParseRecordDot();
-                } else if (expect_value) {
-                    goto unexpected;
+                if (!expect_value) {
+                    bk_PrimitiveKind primitive = stack[stack.len - 1].type->primitive;
+
+                    if (primitive == bk_PrimitiveKind::Record) {
+                        ParseRecordDot();
+                        break;
+                    } else if (primitive == bk_PrimitiveKind::Type &&
+                               ir[ir.len - 1].code == bk_Opcode::Push &&
+                               ir[ir.len - 1].u.type->primitive == bk_PrimitiveKind::Enum) {
+                        ParseEnumDot();
+                    } else {
+                        MarkError(pos - 1, "Cannot use dot operator on value of type '%1'", stack[stack.len - 1].type->signature);
+                        goto error;
+                    }
                 } else {
-                    MarkError(pos - 1, "Cannot use dot operator on non-struct value");
-                    goto error;
+                    goto unexpected;
                 }
             } break;
 
@@ -1754,7 +1845,7 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                     if (preparse) {
                         HintError(-1, "Top-level declarations (prototypes) cannot reference variables");
                     }
-                    HintSuggestions(name, program->variables);
+                    HintSuggestions(name, program->variables, [](const bk_VariableInfo &var) { return var.name; });
 
                     goto error;
                 }
@@ -2083,7 +2174,8 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
                           EmitOperator2(bk_PrimitiveKind::Boolean, bk_Opcode::EqualBool, bk_BoolType) ||
                           EmitOperator2(bk_PrimitiveKind::String, bk_Opcode::EqualString, bk_BoolType) ||
                           EmitOperator2(bk_PrimitiveKind::Type, bk_Opcode::EqualType, bk_BoolType) ||
-                          EmitOperator2(bk_PrimitiveKind::Function, bk_Opcode::EqualFunc, bk_BoolType);
+                          EmitOperator2(bk_PrimitiveKind::Function, bk_Opcode::EqualFunc, bk_BoolType) ||
+                          EmitOperator2(bk_PrimitiveKind::Enum, bk_Opcode::EqualEnum, bk_BoolType);
             } break;
             case bk_TokenKind::NotEqual: {
                 success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::NotEqualInt, bk_BoolType) ||
@@ -2091,7 +2183,8 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
                           EmitOperator2(bk_PrimitiveKind::Boolean, bk_Opcode::NotEqualBool, bk_BoolType) ||
                           EmitOperator2(bk_PrimitiveKind::String, bk_Opcode::NotEqualString, bk_BoolType) ||
                           EmitOperator2(bk_PrimitiveKind::Type, bk_Opcode::NotEqualType, bk_BoolType) ||
-                          EmitOperator2(bk_PrimitiveKind::Function, bk_Opcode::NotEqualFunc, bk_BoolType);
+                          EmitOperator2(bk_PrimitiveKind::Function, bk_Opcode::NotEqualFunc, bk_BoolType) ||
+                          EmitOperator2(bk_PrimitiveKind::Enum, bk_Opcode::NotEqualEnum, bk_BoolType);
             } break;
             case bk_TokenKind::Greater: {
                 success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::GreaterThanInt, bk_BoolType) ||
@@ -2422,8 +2515,8 @@ void bk_Parser::ParseRecordDot()
                      [&](const bk_RecordTypeInfo::Member &member) { return TestStr(member.name, name); });
 
     if (RG_UNLIKELY(member == record_type->members.end())) {
-        MarkError(member_pos, "Type '%1' does not contain member called '%2'", record_type->signature, name);
-        HintSuggestions(name, record_type->members);
+        MarkError(member_pos, "Record '%1' does not contain member called '%2'", record_type->signature, name);
+        HintSuggestions(name, record_type->members, [](const bk_RecordTypeInfo::Member &member) { return member.name; });
 
         return;
     }
@@ -2448,6 +2541,31 @@ void bk_Parser::ParseRecordDot()
     }
 
     stack[stack.len - 1].type = member->type;
+}
+
+void bk_Parser::ParseEnumDot()
+{
+    Size label_pos = pos;
+
+    RG_ASSERT(ir[ir.len - 1].code == bk_Opcode::Push &&
+              ir[ir.len - 1].primitive == bk_PrimitiveKind::Type);
+    const bk_EnumTypeInfo *enum_type = ir.ptr[--ir.len].u.type->AsEnumType();
+
+    const char *name = ConsumeIdentifier();
+    const char *const *label = std::find_if(enum_type->labels.begin(), enum_type->labels.end(), 
+                                            [&](const char *label) { return TestStr(label, name); });
+
+    if (RG_UNLIKELY(label == enum_type->labels.end())) {
+        MarkError(label_pos, "Enum '%1' does not contain label called '%2'", enum_type->signature, name);
+        HintSuggestions(name, enum_type->labels, [](const char *label) { return label; });
+
+        return;
+    }
+
+    Size value = label - enum_type->labels.data;
+    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Enum, {.i = value}});
+
+    stack[stack.len - 1] = {enum_type};
 }
 
 // Don't try to call from outside ParseExpression()!

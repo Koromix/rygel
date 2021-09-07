@@ -35,6 +35,7 @@ static const HashMap<Span<const char>, bk_Token> KeywordsMap {
     {"continue", {bk_TokenKind::Continue}},
     {"do", {bk_TokenKind::Do}},
     {"record", {bk_TokenKind::Record}},
+    {"enum", {bk_TokenKind::Enum}},
     {"null", {bk_TokenKind::Null}},
     {"true", {bk_TokenKind::Boolean, 0, 0, {.b = true}}},
     {"false", {bk_TokenKind::Boolean, 0, 0, {.b = false}}}
@@ -483,7 +484,9 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                 if (keyword) {
                     // In order to have order-independent top-level records and functions, we need
                     // to parse their declarations first! Tell the parser where to look to help it.
-                    if (keyword->kind == bk_TokenKind::Func || keyword->kind == bk_TokenKind::Record) {
+                    if (keyword->kind == bk_TokenKind::Func ||
+                            keyword->kind == bk_TokenKind::Record ||
+                            keyword->kind == bk_TokenKind::Enum) {
                         file->prototypes.Append(tokens.len);
                     }
 

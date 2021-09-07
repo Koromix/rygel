@@ -85,13 +85,13 @@ OPCODE(OrBool)
 OPCODE(EqualString)
 OPCODE(NotEqualString)
 
-// Type operators
+// Other operators
 OPCODE(EqualType)
 OPCODE(NotEqualType)
-
-// Function operators
 OPCODE(EqualFunc)
 OPCODE(NotEqualFunc)
+OPCODE(EqualEnum)
+OPCODE(NotEqualEnum)
 
 // Jumps and branch
 OPCODE(Jump)

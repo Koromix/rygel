@@ -31,6 +31,7 @@ enum class bk_PrimitiveKind {
     Function,
     Array,
     Record,
+    Enum,
     Opaque
 };
 static const char *const bk_PrimitiveKindNames[] = {
@@ -43,6 +44,7 @@ static const char *const bk_PrimitiveKindNames[] = {
     "Function",
     "Array",
     "Record",
+    "Enum",
     "Opaque"
 };
 
@@ -94,6 +96,16 @@ struct bk_TypeInfo {
         RG_ASSERT(primitive == bk_PrimitiveKind::Record);
         return (const bk_RecordTypeInfo *)this;
     }
+    struct bk_EnumTypeInfo *AsEnumType()
+    {
+        RG_ASSERT(primitive == bk_PrimitiveKind::Enum);
+        return (bk_EnumTypeInfo *)this;
+    }
+    const struct bk_EnumTypeInfo *AsEnumType() const
+    {
+        RG_ASSERT(primitive == bk_PrimitiveKind::Enum);
+        return (const bk_EnumTypeInfo *)this;
+    }
 
     RG_HASHTABLE_HANDLER(bk_TypeInfo, signature);
 };
@@ -116,6 +128,9 @@ struct bk_RecordTypeInfo: public bk_TypeInfo {
 
     LocalArray<Member, RG_LEN(bk_FunctionTypeInfo::params.data)> members;
     const bk_FunctionInfo *func;
+};
+struct bk_EnumTypeInfo: public bk_TypeInfo {
+    LocalArray<const char *, 32> labels;
 };
 
 extern Span<const bk_TypeInfo> bk_BaseTypes;
@@ -225,9 +240,12 @@ struct bk_Program {
     BucketArray<bk_FunctionTypeInfo> function_types;
     BucketArray<bk_ArrayTypeInfo> array_types;
     BucketArray<bk_RecordTypeInfo> record_types;
+    BucketArray<bk_EnumTypeInfo> enum_types;
     BucketArray<bk_TypeInfo> bare_types;
+
     BucketArray<bk_FunctionInfo> functions;
     BucketArray<bk_VariableInfo> variables;
+
     HashTable<const char *, const bk_TypeInfo *> types_map;
     HashTable<const char *, bk_FunctionInfo *> functions_map;
     HashTable<const char *, bk_VariableInfo *> variables_map;

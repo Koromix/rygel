@@ -31,6 +31,7 @@ TOKEN(Break, "break")
 TOKEN(Continue, "continue")
 TOKEN(Do, "do")
 TOKEN(Record, "record")
+TOKEN(Enum, "enum")
 
 // Immediate values
 TOKEN(Null, "null")
