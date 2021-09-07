@@ -815,10 +815,16 @@ void bk_Parser::PreparseEnum(Size proto_pos)
 
     ConsumeToken(bk_TokenKind::LeftParenthesis);
     if (!MatchToken(bk_TokenKind::RightParenthesis)) {
+        HashSet<const char *> used_labels;
+
         do {
             SkipNewLines();
 
             const char *label = ConsumeIdentifier();
+
+            if (!used_labels.TrySet(label).second) {
+                MarkError(pos - 1, "Label '%1' is already used", label);
+            }
 
             if (RG_LIKELY(enum_type->labels.Available())) {
                 enum_type->labels.Append(label);
