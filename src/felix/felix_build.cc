@@ -195,6 +195,7 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
                             valid = false;
                         }
                     } else if (prop.key == "Features") {
+                        preset->build.features = 0;
                         valid &= ParseFeatureString(prop.value.ptr, &preset->build.features);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
