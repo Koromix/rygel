@@ -130,7 +130,15 @@ struct bk_RecordTypeInfo: public bk_TypeInfo {
     const bk_FunctionInfo *func;
 };
 struct bk_EnumTypeInfo: public bk_TypeInfo {
-    LocalArray<const char *, 32> labels;
+    struct Label {
+        const char *name;
+        int64_t value;
+
+        RG_HASHTABLE_HANDLER(Label, name);
+    };
+
+    HeapArray<Label> labels;
+    HashTable<const char *, const Label *> labels_map;
 };
 
 extern Span<const bk_TypeInfo> bk_BaseTypes;

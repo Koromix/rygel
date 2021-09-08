@@ -208,18 +208,17 @@ private:
         }
     }
 
-    template <typename T, typename Fun>
-    void HintSuggestions(const char *name, const T &symbols, Fun func)
+    template <typename T>
+    void HintSuggestions(const char *name, const T &symbols)
     {
         Size threshold = strlen(name) / 2;
         bool warn_case = false;
 
         for (const auto &it: symbols) {
-            const char *symbol = func(it);
-            Size dist = LevenshteinDistance(name, symbol);
+            Size dist = LevenshteinDistance(name, it.name);
 
             if (dist <= threshold) {
-                HintError(definitions_map.FindValue(&symbol, -1), "Suggestion: %1", symbol);
+                HintError(definitions_map.FindValue(&it, -1), "Suggestion: %1", it.name);
                 warn_case |= !dist;
             }
         }
@@ -815,21 +814,17 @@ void bk_Parser::PreparseEnum(Size proto_pos)
 
     ConsumeToken(bk_TokenKind::LeftParenthesis);
     if (RG_LIKELY(!MatchToken(bk_TokenKind::RightParenthesis))) {
-        HashSet<const char *> used_labels;
-
         do {
             SkipNewLines();
 
-            const char *label = ConsumeIdentifier();
+            bk_EnumTypeInfo::Label *label = enum_type->labels.AppendDefault();
 
-            if (!used_labels.TrySet(label).second) {
-                MarkError(pos - 1, "Label '%1' is already used", label);
-            }
+            label->name = ConsumeIdentifier();
+            label->value = enum_type->labels.len - 1;
 
-            if (RG_LIKELY(enum_type->labels.Available())) {
-                enum_type->labels.Append(label);
-            } else {
-                MarkError(pos - 1, "Enums cannot have more than %1 labels", RG_LEN(enum_type->labels.data));
+            bool duplicate = !enum_type->labels_map.TrySet(label).second;
+            if (RG_UNLIKELY(duplicate)) {
+                MarkError(pos - 1, "Label '%1' is already used", label->name);
             }
         } while (MatchToken(bk_TokenKind::Comma));
 
@@ -1860,7 +1855,7 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                     if (preparse) {
                         HintError(-1, "Top-level declarations (prototypes) cannot reference variables");
                     }
-                    HintSuggestions(name, program->variables, [](const bk_VariableInfo &var) { return var.name; });
+                    HintSuggestions(name, program->variables);
 
                     goto error;
                 }
@@ -2531,7 +2526,7 @@ void bk_Parser::ParseRecordDot()
 
     if (RG_UNLIKELY(member == record_type->members.end())) {
         MarkError(member_pos, "Record '%1' does not contain member called '%2'", record_type->signature, name);
-        HintSuggestions(name, record_type->members, [](const bk_RecordTypeInfo::Member &member) { return member.name; });
+        HintSuggestions(name, record_type->members);
 
         return;
     }
@@ -2567,18 +2562,16 @@ void bk_Parser::ParseEnumDot()
     const bk_EnumTypeInfo *enum_type = ir.ptr[--ir.len].u.type->AsEnumType();
 
     const char *name = ConsumeIdentifier();
-    const char *const *label = std::find_if(enum_type->labels.begin(), enum_type->labels.end(), 
-                                            [&](const char *label) { return TestStr(label, name); });
+    const bk_EnumTypeInfo::Label *label = enum_type->labels_map.FindValue(name, nullptr);
 
-    if (RG_UNLIKELY(label == enum_type->labels.end())) {
+    if (RG_UNLIKELY(!label)) {
         MarkError(label_pos, "Enum '%1' does not contain label called '%2'", enum_type->signature, name);
-        HintSuggestions(name, enum_type->labels, [](const char *label) { return label; });
+        HintSuggestions(name, enum_type->labels);
 
         return;
     }
 
-    Size value = label - enum_type->labels.data;
-    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Enum, {.i = value}});
+    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Enum, {.i = label->value}});
 
     stack[stack.len - 1] = {enum_type};
 }
