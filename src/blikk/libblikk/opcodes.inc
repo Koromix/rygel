@@ -84,8 +84,6 @@ OPCODE(OrBool)
 // String operators
 OPCODE(EqualString)
 OPCODE(NotEqualString)
-
-// Other operators
 OPCODE(EqualType)
 OPCODE(NotEqualType)
 OPCODE(EqualFunc)
