@@ -868,15 +868,6 @@ static bool CheckTotp(const SessionInfo &session, InstanceHolder *instance,
 
         return true;
     } else {
-        bool replay = (min > counter - 1) &&
-                      sec_CheckHotp(session.secret, sec_HotpAlgorithm::SHA1, counter - 1, counter, 6, code);
-
-        if (replay) {
-            LogError("Please wait for the next code");
-        } else {
-            LogError("Code is incorrect");
-        }
-
         LogError("Code is incorrect");
         io->AttachError(403);
         return false;
