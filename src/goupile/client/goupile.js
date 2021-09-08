@@ -297,9 +297,7 @@ const goupile = new function() {
                 ` : ''}
                 <br/>
             `);
-            let code = d.text('*code', 'Code secret', {
-                help: 'Le code comporte 6 à 8 chiffres'
-            });
+            let code = d.text('*code', 'Code secret', { help: '6 chiffres' });
 
             if (method === 'mail' || method === 'sms') {
                 d.output(html`<i>Si vous ne trouvez pas ce message, pensez à vérifiez vos spams.</i>`);
