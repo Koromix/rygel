@@ -16,6 +16,7 @@
 #include "error.hh"
 #include "lexer.hh"
 #include "program.hh"
+#include "vm.hh"
 
 namespace RG {
 
@@ -80,6 +81,7 @@ class bk_Parser {
 
     // Only used (and valid) while parsing expression
     HeapArray<StackSlot> stack;
+    bk_VirtualMachine folder;
 
     bk_Program *program;
     HeapArray<bk_Instruction> &ir;
@@ -121,6 +123,7 @@ private:
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *out_type);
     bool EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *out_type);
+    void Fold(Size count, const bk_TypeInfo *out_type);
     const bk_FunctionTypeInfo *ParseFunctionType();
     const bk_ArrayTypeInfo *ParseArrayType();
     void ParseArraySubscript();
@@ -307,7 +310,7 @@ void bk_Compiler::AddOpaque(const char *name)
 }
 
 bk_Parser::bk_Parser(bk_Program *program)
-    : program(program), ir(program->ir)
+    : folder(program), program(program), ir(program->ir)
 {
     RG_ASSERT(program);
     RG_ASSERT(!ir.len);
@@ -2134,32 +2137,12 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
                 if (op.unary) {
                     bk_Instruction *inst = &ir[ir.len - 1];
 
-                    switch (inst->code) {
-                        case bk_Opcode::Push: {
-                            if (stack[stack.len - 1].type->primitive == bk_PrimitiveKind::Integer) {
-                                // In theory, this could overflow trying to negate INT64_MIN.. but we
-                                // we can't have INT64_MIN, because numeric literal tokens are always
-                                // positive. inst->u.i will flip between positive and negative values
-                                // if we encounter successive '-' unary operators (e.g. -----64).
-                                inst->u.i = -inst->u.i;
-                                success = true;
-                            } else if (stack[stack.len - 1].type->primitive == bk_PrimitiveKind::Float) {
-                                inst->u.d = -inst->u.d;
-                                success = true;
-                            } else {
-                                success = false;
-                            }
-                        } break;
-                        case bk_Opcode::NegateInt:
-                        case bk_Opcode::NegateFloat: {
-                            TrimInstructions(1);
-                            success = true;
-                        } break;
-
-                        default: {
-                            success = EmitOperator1(bk_PrimitiveKind::Integer, bk_Opcode::NegateInt, stack[stack.len - 1].type) ||
-                                      EmitOperator1(bk_PrimitiveKind::Float, bk_Opcode::NegateFloat, stack[stack.len - 1].type);
-                        }
+                    if (inst->code == bk_Opcode::NegateInt || inst->code == bk_Opcode::NegateFloat) {
+                        TrimInstructions(1);
+                        success = true;
+                    } else {
+                        success = EmitOperator1(bk_PrimitiveKind::Integer, bk_Opcode::NegateInt, stack[stack.len - 1].type) ||
+                                  EmitOperator1(bk_PrimitiveKind::Float, bk_Opcode::NegateFloat, stack[stack.len - 1].type);
                     }
                 } else {
                     success = EmitOperator2(bk_PrimitiveKind::Integer, bk_Opcode::SubstractInt, stack[stack.len - 2].type) ||
@@ -2284,6 +2267,8 @@ bool bk_Parser::EmitOperator1(bk_PrimitiveKind in_primitive, bk_Opcode code, con
 
     if (type->primitive == in_primitive) {
         ir.Append({code});
+        Fold(1, out_type);
+
         stack[stack.len - 1] = {out_type};
 
         return true;
@@ -2299,11 +2284,45 @@ bool bk_Parser::EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, con
 
     if (type1->primitive == in_primitive && type1 == type2) {
         ir.Append({code});
+        Fold(2, out_type);
+
         stack[--stack.len - 1] = {out_type};
 
         return true;
     } else {
         return false;
+    }
+}
+
+void bk_Parser::Fold(Size count, const bk_TypeInfo *out_type)
+{
+    if (RG_UNLIKELY(!valid))
+        return;
+    for (Size i = 0; i < count; i++) {
+        if ((ir[ir.len - 2 - i].code != bk_Opcode::Push))
+            return;
+    }
+
+    ir.Append({bk_Opcode::End, {}, {.i = 1}});
+
+    folder.frames.RemoveFrom(1);
+    folder.frames[0].pc = ir.len - 2;
+    folder.stack.RemoveFrom(0);
+    for (Size i = count - 1; i >= 0; i--) {
+        folder.stack.Append(ir[ir.len - 3 - i].u);
+    }
+
+    bool folded = folder.Run((int)bk_RunFlag::HideErrors);
+
+    if (folded) {
+        TrimInstructions(1 + count);
+
+        bk_PrimitiveValue value = folder.stack[folder.stack.len - 1];
+        bk_PrimitiveKind primitive = out_type->primitive;
+
+        ir[ir.len - 1] = {bk_Opcode::Push, primitive, value};
+    } else {
+        ir.len--;
     }
 }
 
@@ -2677,25 +2696,13 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
 {
     if (TestStr(name, "toFloat")) {
         if (args[0] == bk_IntType) {
-            if (ir[ir.len - 1].code == bk_Opcode::Push) {
-                RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Integer);
-
-                ir[ir.len - 1].primitive = bk_PrimitiveKind::Float;
-                ir[ir.len - 1].u.d = (double)ir[ir.len - 1].u.i;
-            } else {
-                ir.Append({bk_Opcode::IntToFloat});
-            }
+            ir.Append({bk_Opcode::IntToFloat});
+            Fold(1, bk_FloatType);
         }
     } else if (TestStr(name, "toInt")) {
         if (args[0] == bk_FloatType) {
-            if (ir[ir.len - 1].code == bk_Opcode::Push) {
-                RG_ASSERT(ir[ir.len - 1].primitive == bk_PrimitiveKind::Float);
-
-                ir[ir.len - 1].primitive = bk_PrimitiveKind::Integer;
-                ir[ir.len - 1].u.i = (int64_t)ir[ir.len - 1].u.d;
-            } else {
-                ir.Append({bk_Opcode::FloatToInt});
-            }
+            ir.Append({bk_Opcode::FloatToInt});
+            Fold(1, bk_IntType);
         }
     } else if (TestStr(name, "typeOf")) {
         // XXX: We can change the signature from typeOf(...) to typeOf(Any) after Any
