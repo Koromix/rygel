@@ -35,6 +35,9 @@ const bk_TypeInfo *bk_TypeType = &BaseTypes[5];
 
 const char *bk_Program::LocateInstruction(Size pc, int32_t *out_line) const
 {
+    if (!sources.len)
+        return nullptr;
+
     const bk_SourceInfo *src = std::upper_bound(sources.begin(), sources.end(), pc,
                                                 [](Size pc, const bk_SourceInfo &src) { return pc < src.lines[0].addr; }) - 1;
     if (src < sources.ptr)
