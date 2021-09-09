@@ -69,7 +69,8 @@ static int RunFile(const char *filename, bool sandbox, bool execute, bool debug)
             return 1;
     }
 
-    return execute ? !bk_Run(program, debug) : 0;
+    unsigned int flags = debug ? (int)bk_RunFlag::DebugInstructions : 0;
+    return execute ? !bk_Run(program, flags) : 0;
 }
 
 int Main(int argc, char **argv)

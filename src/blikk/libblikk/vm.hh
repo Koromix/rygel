@@ -19,13 +19,17 @@
 
 namespace RG {
 
+enum class bk_RunFlag {
+    HideErrors = 1 << 0,
+    DebugInstructions = 1 << 1
+};
+
 class bk_VirtualMachine {
     RG_DELETE_COPY(bk_VirtualMachine)
 
-    Span<const bk_Instruction> ir;
-
     bool run;
     bool error;
+    bool report;
 
 public:
     const bk_Program *const program;
@@ -35,22 +39,24 @@ public:
 
     bk_VirtualMachine(const bk_Program *const program);
 
-    bool Run(bool debug = false);
+    bool Run(unsigned int flags);
 
     void SetInterrupt() { run = false; }
     template <typename... Args>
     void FatalError(const char *fmt, Args... args)
     {
-        bk_ReportRuntimeError(*program, frames, fmt, args...);
+        if (report) {
+            bk_ReportRuntimeError(*program, frames, fmt, args...);
 
-        run = false;
-        error = true;
+            run = false;
+            error = true;
+        }
     }
 
 private:
-    void DumpInstruction(Size pc, Size bp) const;
+    void DumpInstruction(const bk_Instruction &inst, Size pc, Size bp) const;
 };
 
-bool bk_Run(const bk_Program &program, bool debug = false);
+bool bk_Run(const bk_Program &program, unsigned int flags = 0);
 
 }

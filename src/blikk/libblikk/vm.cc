@@ -23,22 +23,24 @@ bk_VirtualMachine::bk_VirtualMachine(const bk_Program *const program)
     frames.AppendDefault();
 }
 
-bool bk_VirtualMachine::Run(bool debug)
+bool bk_VirtualMachine::Run(unsigned int flags)
 {
-    const bk_Instruction *inst;
+    bool debug = flags & (int)bk_RunFlag::DebugInstructions;
+    report = !(flags & (int)bk_RunFlag::HideErrors);
 
-    ir = program->ir;
     run = true;
     error = false;
 
     bk_CallFrame *frame = &frames[frames.len - 1];
     Size pc = frame->pc;
     Size bp = frame->bp;
+    Span<const bk_Instruction> ir = program->ir;
+    RG_ASSERT(pc < ir.len);
 
     // Save PC on exit
     RG_DEFER { frame->pc = pc; };
 
-    RG_ASSERT(pc < ir.len);
+    const bk_Instruction *inst;
 
 #if defined(__GNUC__) || defined(__clang__)
     static const void *dispatch[] = {
@@ -49,7 +51,7 @@ bool bk_VirtualMachine::Run(bool debug)
     #define DISPATCH(PC) \
         inst = &ir[(PC)]; \
         if (debug) { \
-            DumpInstruction(pc, bp); \
+            DumpInstruction(*inst, pc, bp); \
         } \
         goto *dispatch[(int)inst->code];
     #define LOOP \
@@ -60,13 +62,13 @@ bool bk_VirtualMachine::Run(bool debug)
     #define DISPATCH(PC) \
         inst = &ir[(PC)]; \
         if (debug) { \
-            DumpInstruction(pc, bp); \
+            DumpInstruction(*inst, pc, bp); \
         } \
         break
     #define LOOP \
         inst = &ir[pc]; \
         if (debug) { \
-            DumpInstruction(pc, bp); \
+            DumpInstruction(*inst, pc, bp); \
         } \
         for (;;) \
             switch(inst->code)
@@ -668,10 +670,8 @@ bool bk_VirtualMachine::Run(bool debug)
 #undef DISPATCH
 }
 
-void bk_VirtualMachine::DumpInstruction(Size pc, Size bp) const
+void bk_VirtualMachine::DumpInstruction(const bk_Instruction &inst, Size pc, Size bp) const
 {
-    const bk_Instruction &inst = ir[pc];
-
     Print(stderr, "%!D..[0x%1]%!0 %2%!..+%3%!0",
           FmtHex(pc).Pad0(-6), FmtArg("  ").Repeat((int)frames.len - 1), bk_OpcodeNames[(int)inst.code]);
 
@@ -727,10 +727,10 @@ void bk_VirtualMachine::DumpInstruction(Size pc, Size bp) const
     }
 }
 
-bool bk_Run(const bk_Program &program, bool debug)
+bool bk_Run(const bk_Program &program, unsigned int flags)
 {
     bk_VirtualMachine vm(&program);
-    return vm.Run(debug);
+    return vm.Run(flags);
 }
 
 }

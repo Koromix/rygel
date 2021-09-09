@@ -114,7 +114,8 @@ int RunCommand(Span<const char> code, bool execute, bool try_expr, bool debug)
             return 1;
     }
 
-    return execute ? !bk_Run(program, debug) : 0;
+    unsigned int flags = debug ? (int)bk_RunFlag::DebugInstructions : 0;
+    return execute ? !bk_Run(program, flags) : 0;
 }
 
 int RunInteractive(bool execute, bool try_expr, bool debug)
@@ -127,6 +128,7 @@ int RunInteractive(bool execute, bool try_expr, bool debug)
     bk_ImportAll(&compiler);
 
     bk_VirtualMachine vm(&program);
+    unsigned int flags = debug ? (int)bk_RunFlag::DebugInstructions : 0;
     bool run = true;
 
     // Functions specific to interactive mode
@@ -141,7 +143,7 @@ int RunInteractive(bool execute, bool try_expr, bool debug)
 
     // Make sure the prelude runs successfully
     {
-        bool success = compiler.Compile("", "<inline>") && vm.Run(debug);
+        bool success = compiler.Compile("", "<inline>") && vm.Run(flags);
         RG_ASSERT(success);
     }
 
@@ -204,7 +206,7 @@ int RunInteractive(bool execute, bool try_expr, bool debug)
             }
         }
 
-        if (execute && !vm.Run(debug)) {
+        if (execute && !vm.Run(flags)) {
             // Destroying global variables should be enough, because we execute single statements.
             // Thus, if the user defines a function, pretty much no execution can occur, and
             // execution should not even be able to fail in this case.
