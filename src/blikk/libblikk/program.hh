@@ -151,6 +151,10 @@ extern const bk_TypeInfo *bk_TypeType;
 
 typedef void bk_NativeFunction(bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args, Span<bk_PrimitiveValue> ret);
 
+enum class bk_FunctionFlag {
+    Pure = 1 << 0
+};
+
 struct bk_FunctionInfo {
     enum class Mode {
         Intrinsic,
@@ -172,6 +176,7 @@ struct bk_FunctionInfo {
 
     Mode mode;
     std::function<bk_NativeFunction> native;
+    bool impure;
 
     Size addr; // IR
     bool tre;

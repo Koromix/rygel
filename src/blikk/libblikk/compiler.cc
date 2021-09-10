@@ -91,7 +91,7 @@ public:
 
     bool Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report);
 
-    void AddFunction(const char *prototype, std::function<bk_NativeFunction> native);
+    void AddFunction(const char *prototype, unsigned int flags, std::function<bk_NativeFunction> native);
     bk_VariableInfo *AddGlobal(const char *name, const bk_TypeInfo *type,
                                Span<const bk_PrimitiveValue> values, bool mut, bk_VariableInfo::Scope scope);
     void AddOpaque(const char *name);
@@ -293,10 +293,10 @@ bool bk_Compiler::Compile(Span<const char> code, const char *filename, bk_Compil
     return parser->Parse(file, out_report);
 }
 
-void bk_Compiler::AddFunction(const char *prototype, std::function<bk_NativeFunction> native)
+void bk_Compiler::AddFunction(const char *prototype, unsigned int flags, std::function<bk_NativeFunction> native)
 {
     RG_ASSERT(native);
-    parser->AddFunction(prototype, native);
+    parser->AddFunction(prototype, flags, native);
 }
 
 void bk_Compiler::AddGlobal(const char *name, const bk_TypeInfo *type, Span<const bk_PrimitiveValue> values, bool mut)
@@ -327,11 +327,11 @@ bk_Parser::bk_Parser(bk_Program *program)
     AddGlobal("Inf", bk_FloatType, {{.d = (double)INFINITY}}, false, bk_VariableInfo::Scope::Global);
 
     // Intrinsics
-    AddFunction("toFloat(Int): Float", {});
-    AddFunction("toFloat(Float): Float", {});
-    AddFunction("toInt(Int): Int", {});
-    AddFunction("toInt(Float): Int", {});
-    AddFunction("typeOf(...): Type", {});
+    AddFunction("toFloat(Int): Float", (int)bk_FunctionFlag::Pure, {});
+    AddFunction("toFloat(Float): Float", (int)bk_FunctionFlag::Pure, {});
+    AddFunction("toInt(Int): Int", (int)bk_FunctionFlag::Pure, {});
+    AddFunction("toInt(Float): Int", (int)bk_FunctionFlag::Pure, {});
+    AddFunction("typeOf(...): Type", (int)bk_FunctionFlag::Pure, {});
 }
 
 bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report)
@@ -435,7 +435,7 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
 // This is not exposed to user scripts, and the validation of prototype is very light,
 // with a few debug-only asserts. Bad function names (even invalid UTF-8 sequences)
 // will go right through. Don't pass in garbage!
-void bk_Parser::AddFunction(const char *prototype, std::function<bk_NativeFunction> native)
+void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::function<bk_NativeFunction> native)
 {
     bk_FunctionInfo *func = program->functions.AppendDefault();
 
@@ -464,6 +464,7 @@ void bk_Parser::AddFunction(const char *prototype, std::function<bk_NativeFuncti
     func->prototype = InternString(prototype);
     func->mode = native ? bk_FunctionInfo::Mode::Native : bk_FunctionInfo::Mode::Intrinsic;
     func->native = native;
+    func->impure = !(flags & (int)bk_FunctionFlag::Pure);
     func->addr = -1;
 
     // Reuse or create function type
@@ -757,6 +758,7 @@ void bk_Parser::PreparseFunction(Size proto_pos, bool record)
     func->prototype = InternString(prototype_buf.ptr);
 
     // We don't know where it will live yet!
+    func->impure = true;
     func->addr = -1;
     func->earliest_ref_pos = RG_SIZE_MAX;
     func->earliest_ref_addr = RG_SIZE_MAX;
@@ -1149,6 +1151,7 @@ void bk_Parser::ParseFunction(const PrototypeInfo *proto)
         ir.Append({bk_Opcode::Jump});
     }
 
+    func->impure = false;
     func->addr = ir.len;
 
     // Function body
@@ -2296,14 +2299,21 @@ bool bk_Parser::EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, con
 
 void bk_Parser::Fold(Size count, const bk_TypeInfo *out_type)
 {
-    if (RG_UNLIKELY(!valid))
+    if (out_type->size > 1)
         return;
     for (Size i = 0; i < count; i++) {
         if ((ir[ir.len - 2 - i].code != bk_Opcode::Push))
             return;
     }
 
-    ir.Append({bk_Opcode::End, {}, {.i = 1}});
+    // We can theoretically fold, but if something went wrong it is not safe
+    // However, we don't want to trigger false "cannot resolve static value" errors.
+    if (RG_UNLIKELY(!valid)) {
+        show_errors = false;
+        return;
+    }
+
+    ir.Append({bk_Opcode::End, {}, {.i = out_type->size}});
 
     folder.frames.RemoveFrom(1);
     folder.frames[0].pc = ir.len - 2;
@@ -2315,12 +2325,14 @@ void bk_Parser::Fold(Size count, const bk_TypeInfo *out_type)
     bool folded = folder.Run((int)bk_RunFlag::HideErrors);
 
     if (folded) {
-        TrimInstructions(1 + count);
+        TrimInstructions(2 + count);
 
-        bk_PrimitiveValue value = folder.stack[folder.stack.len - 1];
-        bk_PrimitiveKind primitive = out_type->primitive;
+        if (out_type->size == 1) {
+            bk_PrimitiveValue value = folder.stack[folder.stack.len - 1];
+            bk_PrimitiveKind primitive = out_type->primitive;
 
-        ir[ir.len - 1] = {bk_Opcode::Push, primitive, value};
+            ir.Append({bk_Opcode::Push, primitive, value});
+        }
     } else {
         ir.len--;
     }
@@ -2674,6 +2686,10 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
         return false;
     }
 
+    if (current_func) {
+        current_func->impure |= !func || func->impure;
+    }
+
     // Emit intrinsic or call
     if (!func) {
         Size offset = 1 + args_size;
@@ -2686,6 +2702,10 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
         // Nothing to do, the object stack
     } else {
         ir.Append({bk_Opcode::Call, {}, {.func = func}});
+
+        if (!func->impure && func != current_func) {
+            Fold(args_size, func_type->ret_type);
+        }
     }
     stack.Append({func_type->ret_type});
 
@@ -2743,6 +2763,10 @@ void bk_Parser::EmitLoad(const bk_VariableInfo &var)
         bk_Opcode code = (var.scope != bk_VariableInfo::Scope::Local) ? bk_Opcode::Lea : bk_Opcode::LeaLocal;
         ir.Append({code, {}, {.i = var.offset}});
         ir.Append({bk_Opcode::LoadIndirect, {}, {.i = var.type->size}});
+    }
+
+    if (current_func) {
+        current_func->impure |= var.mut && var.scope != bk_VariableInfo::Scope::Local;
     }
 
     stack.Append({var.type, &var});

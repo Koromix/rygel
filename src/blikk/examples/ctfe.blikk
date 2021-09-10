@@ -1,0 +1,25 @@
+# CTFE is compile-time function execution
+
+let null_type = Null
+let null_type2 = null_type
+
+func get_type(str: String): Type
+    # If you uncomment this print statement, compilation will fail because
+    # I/O functions such as print are impure, and not eligible to CTFE.
+    # printLn(str)
+
+    if str == "string" do return String
+    if str == "int" do return typeOf(1)
+
+    # CTFE will fail if a global variable (such as null_type or null_type2) is marked
+    # as mutable (let mut null_type).
+    return null_type2
+end
+
+let a: get_type("string") = "Hello!"
+let b: get_type("int") = 1
+let c: get_type("fail")
+
+printLn("a = ", a, " (", typeOf(a), ")")
+printLn("b = ", b, " (", typeOf(b), ")")
+printLn("c = ", c, " (", typeOf(c), ")")

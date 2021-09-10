@@ -132,11 +132,11 @@ int RunInteractive(bool execute, bool try_expr, bool debug)
     bool run = true;
 
     // Functions specific to interactive mode
-    BK_ADD_FUNCTION(compiler, "exit()", {
+    BK_ADD_FUNCTION(compiler, "exit()", 0, {
         run = false;
         vm->SetInterrupt();
     });
-    BK_ADD_FUNCTION(compiler, "quit()", {
+    BK_ADD_FUNCTION(compiler, "quit()", 0, {
         run = false;
         vm->SetInterrupt();
     });
