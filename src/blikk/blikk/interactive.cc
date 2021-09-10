@@ -12,7 +12,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "../../core/libcc/libcc.hh"
-#include "../libblikk/libblikk.hh"
+#include "blikk.hh"
 
 namespace RG {
 
@@ -81,7 +81,7 @@ end
     return true;
 }
 
-int RunCommand(Span<const char> code, bool execute, bool try_expr, bool debug)
+int RunCommand(Span<const char> code, const Config &config)
 {
     bk_Program program;
 
@@ -90,7 +90,7 @@ int RunCommand(Span<const char> code, bool execute, bool try_expr, bool debug)
 
     // Try to parse with fake print first...
     bool valid_with_fake_print;
-    if (try_expr) {
+    if (config.try_expression) {
         bk_TokenizedFile file;
         if (!TokenizeWithFakePrint(code, "<inline>", &file))
             return 1;
@@ -99,7 +99,8 @@ int RunCommand(Span<const char> code, bool execute, bool try_expr, bool debug)
         SetLogHandler([](LogLevel level, const char *ctx, const char *msg) {});
         RG_DEFER { SetLogHandler(DefaultLogHandler); };
 
-        valid_with_fake_print = compiler.Compile(file);
+        unsigned int flags = config.fold ? 0 : (int)bk_CompileFlag::NoFold;
+        valid_with_fake_print = compiler.Compile(file, flags);
     } else {
         valid_with_fake_print = false;
     }
@@ -110,15 +111,16 @@ int RunCommand(Span<const char> code, bool execute, bool try_expr, bool debug)
         bool success = bk_Tokenize(code, "<inline>", &file);
         RG_ASSERT(success);
 
-        if (!compiler.Compile(file))
+        unsigned int flags = config.fold ? 0 : (int)bk_CompileFlag::NoFold;
+        if (!compiler.Compile(file, flags))
             return 1;
     }
 
-    unsigned int flags = debug ? (int)bk_RunFlag::DebugInstructions : 0;
-    return execute ? !bk_Run(program, flags) : 0;
+    unsigned int flags = config.debug ? (int)bk_RunFlag::DebugInstructions : 0;
+    return config.execute ? !bk_Run(program, flags) : 0;
 }
 
-int RunInteractive(bool execute, bool try_expr, bool debug)
+int RunInteractive(const Config &config)
 {
     LogInfo("%!R..blikk%!0 %1", FelixVersion);
 
@@ -128,7 +130,7 @@ int RunInteractive(bool execute, bool try_expr, bool debug)
     bk_ImportAll(&compiler);
 
     bk_VirtualMachine vm(&program);
-    unsigned int flags = debug ? (int)bk_RunFlag::DebugInstructions : 0;
+    unsigned int flags = config.debug ? (int)bk_RunFlag::DebugInstructions : 0;
     bool run = true;
 
     // Functions specific to interactive mode
@@ -143,7 +145,7 @@ int RunInteractive(bool execute, bool try_expr, bool debug)
 
     // Make sure the prelude runs successfully
     {
-        bool success = compiler.Compile("", "<inline>") && vm.Run(flags);
+        bool success = compiler.Compile("", "<inline>", 0) && vm.Run(flags);
         RG_ASSERT(success);
     }
 
@@ -173,12 +175,13 @@ int RunInteractive(bool execute, bool try_expr, bool debug)
         Size prev_stack_len = vm.stack.len;
 
         bool valid_with_fake_print;
-        if (try_expr) {
+        if (config.try_expression) {
             bk_TokenizedFile file;
             if (!TokenizeWithFakePrint(code, "<inline>", &file))
                 continue;
 
-            valid_with_fake_print = compiler.Compile(file);
+            unsigned int flags = config.fold ? 0 : (int)bk_CompileFlag::NoFold;
+            valid_with_fake_print = compiler.Compile(file, flags);
         } else {
             valid_with_fake_print = false;
         }
@@ -190,8 +193,10 @@ int RunInteractive(bool execute, bool try_expr, bool debug)
             bool success = bk_Tokenize(code, "<interactive>", &file);
             RG_ASSERT(success);
 
+            unsigned int flags = config.fold ? 0 : (int)bk_CompileFlag::NoFold;
             bk_CompileReport report;
-            if (!compiler.Compile(file, &report)) {
+
+            if (!compiler.Compile(file, flags, &report)) {
                 if (report.unexpected_eof) {
                     prompter.str.len = TrimStrRight(prompter.str.Take(), "\t ").len;
                     if (!prompter.str.len || prompter.str[prompter.str.len - 1] != '\n') {
@@ -206,7 +211,7 @@ int RunInteractive(bool execute, bool try_expr, bool debug)
             }
         }
 
-        if (execute && !vm.Run(flags)) {
+        if (config.execute && !vm.Run(flags)) {
             // Destroying global variables should be enough, because we execute single statements.
             // Thus, if the user defines a function, pretty much no execution can occur, and
             // execution should not even be able to fail in this case.

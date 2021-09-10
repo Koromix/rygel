@@ -12,13 +12,10 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "../../core/libcc/libcc.hh"
-#include "../libblikk/libblikk.hh"
+#include "blikk.hh"
 #include "../../core/libsecurity/libsecurity.hh"
 
 namespace RG {
-
-int RunCommand(Span<const char> code, bool execute, bool try_expr, bool debug);
-int RunInteractive(bool execute, bool try_expr, bool debug);
 
 static bool ApplySandbox()
 {
@@ -51,7 +48,7 @@ static bool ApplySandbox()
     return sb.Apply();
 }
 
-static int RunFile(const char *filename, bool sandbox, bool execute, bool debug)
+int RunFile(const char *filename, const Config &config)
 {
     bk_Program program;
     {
@@ -59,18 +56,19 @@ static int RunFile(const char *filename, bool sandbox, bool execute, bool debug)
         if (ReadFile(filename, Megabytes(256), &code) < 0)
             return 1;
 
-        if (sandbox && !ApplySandbox())
+        if (config.sandbox && !ApplySandbox())
             return 1;
 
         bk_Compiler compiler(&program);
         bk_ImportAll(&compiler);
 
-        if (!compiler.Compile(code, filename))
+        unsigned int flags = config.fold ? 0 : (int)bk_CompileFlag::NoFold;
+        if (!compiler.Compile(code, filename, flags))
             return 1;
     }
 
-    unsigned int flags = debug ? (int)bk_RunFlag::DebugInstructions : 0;
-    return execute ? !bk_Run(program, flags) : 0;
+    unsigned int flags = config.debug ? (int)bk_RunFlag::DebugInstructions : 0;
+    return config.execute ? !bk_Run(program, flags) : 0;
 }
 
 int Main(int argc, char **argv)
@@ -84,10 +82,7 @@ int Main(int argc, char **argv)
     // Options
     RunMode mode = RunMode::File;
     const char *filename_or_code = nullptr;
-    bool sandbox = false;
-    bool execute = true;
-    bool try_expr = true;
-    bool debug = false;
+    Config config;
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 [options] <file>
@@ -100,6 +95,7 @@ Options:
 
         %!..+--sandbox%!0                Run in strict OS sandbox (if supported)
 
+        %!..+--no_fold%!0                Disable unnecessary folding and CTFE
         %!..+--no_execute%!0             Parse code but don't run it
         %!..+--no_expression%!0          Don't try to run code as expression
                                  %!D..(works only with -c or -i)%!0
@@ -135,13 +131,15 @@ Options:
 
                 mode = RunMode::Interactive;
             } else if (opt.Test("--sandbox")) {
-                sandbox = true;
+                config.sandbox = true;
+            } else if (opt.Test("--no_fold")) {
+                config.fold = false;
             } else if (opt.Test("--no_execute")) {
-                execute = false;
+                config.execute = false;
             } else if (opt.Test("--no_expression")) {
-                try_expr = false;
+                config.try_expression = false;
             } else if (opt.Test("--debug")) {
-                debug = true;
+                config.debug = true;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -152,12 +150,7 @@ Options:
     }
 
     switch (mode) {
-        case RunMode::Interactive: {
-            if (sandbox && !ApplySandbox())
-                return 1;
-
-            return RunInteractive(execute, try_expr, debug);
-        } break;
+        case RunMode::Interactive: { return RunInteractive(config); } break;
 
         case RunMode::File: {
             if (!filename_or_code) {
@@ -165,7 +158,7 @@ Options:
                 return 1;
             }
 
-            return RunFile(filename_or_code, sandbox, execute, debug);
+            return RunFile(filename_or_code, config);
         } break;
         case RunMode::Command: {
             if (!filename_or_code) {
@@ -173,10 +166,7 @@ Options:
                 return 1;
             }
 
-            if (sandbox && !ApplySandbox())
-                return 1;
-
-            return RunCommand(filename_or_code, execute, try_expr, debug);
+            return RunCommand(filename_or_code, config);
         } break;
     }
 
