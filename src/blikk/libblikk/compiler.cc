@@ -893,6 +893,7 @@ bool bk_Parser::ParseBlock(bool end_with_else)
 
     bool recurse = RecurseInc();
     bool has_return = false;
+    Size trim_addr = ir.len;
 
     while (RG_LIKELY(pos < tokens.len)) {
         if (tokens[pos].kind == bk_TokenKind::End)
@@ -901,7 +902,10 @@ bool bk_Parser::ParseBlock(bool end_with_else)
             break;
 
         if (RG_LIKELY(recurse)) {
+            bool prev_return = has_return;
+
             has_return |= ParseStatement();
+            trim_addr = prev_return ? trim_addr : ir.len;
         } else {
             if (!has_return) {
                 MarkError(pos, "Excessive parsing depth (compiler limit)");
@@ -911,6 +915,7 @@ bool bk_Parser::ParseBlock(bool end_with_else)
             has_return = true;
         }
     }
+    TrimInstructions(ir.len - trim_addr);
 
     return has_return;
 }
