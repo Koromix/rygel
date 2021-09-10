@@ -1323,40 +1323,77 @@ bool bk_Parser::ParseIf()
 
     ParseExpression(bk_BoolType);
 
+    bool fold = !(flags & (int)bk_CompileFlag::NoFold) && (ir[ir.len - 1].code == bk_Opcode::Push);
+    bool fold_test = fold && ir[ir.len - 1].u.b;
+    bool fold_skip = fold && fold_test;
+    TrimInstructions(fold);
+
     Size branch_addr = ir.len;
-    ir.Append({bk_Opcode::BranchIfFalse});
+    if (!fold) {
+        ir.Append({bk_Opcode::BranchIfFalse});
+    }
 
     bool has_return = true;
     bool has_else = false;
 
     if (PeekToken(bk_TokenKind::Do)) {
         has_return &= ParseDo();
-        ir[branch_addr].u.i = ir.len - branch_addr;
+
+        if (fold && !fold_test) {
+            TrimInstructions(ir.len - branch_addr);
+        } else if (!fold) {
+            ir[branch_addr].u.i = ir.len - branch_addr;
+        }
     } else if (RG_LIKELY(EndStatement())) {
         has_return &= ParseBlock(true);
 
         if (MatchToken(bk_TokenKind::Else)) {
-            Size jump_addr = ir.len;
-            ir.Append({bk_Opcode::Jump, {}, {.i = -1}});
+            Size jump_addr;
+            if (fold && !fold_test) {
+                TrimInstructions(ir.len - branch_addr);
+                jump_addr = -1;
+            } else if (!fold) {
+                jump_addr = ir.len;
+                ir.Append({bk_Opcode::Jump, {}, {.i = -1}});
+            } else {
+                jump_addr = -1;
+            }
 
             do {
-                ir[branch_addr].u.i = ir.len - branch_addr;
+                if (!fold) {
+                    ir[branch_addr].u.i = ir.len - branch_addr;
+                }
 
                 if (MatchToken(bk_TokenKind::If)) {
+                    Size test_addr = ir.len;
                     ParseExpression(bk_BoolType);
+
+                    fold = !(flags & (int)bk_CompileFlag::NoFold) && (fold_skip || ir[ir.len - 1].code == bk_Opcode::Push);
+                    fold_test = fold && !fold_skip && ir[ir.len - 1].u.b;
+                    TrimInstructions(fold ? (ir.len - test_addr) : 0);
 
                     if (RG_LIKELY(EndStatement())) {
                         branch_addr = ir.len;
-                        ir.Append({bk_Opcode::BranchIfFalse});
+                        if (!fold) {
+                            ir.Append({bk_Opcode::BranchIfFalse});
+                        }
 
                         has_return &= ParseBlock(true);
 
-                        ir.Append({bk_Opcode::Jump, {}, {.i = jump_addr}});
-                        jump_addr = ir.len - 1;
+                        if (fold && !fold_test) {
+                            TrimInstructions(ir.len - branch_addr);
+                        } else if (!fold) {
+                            ir.Append({bk_Opcode::Jump, {}, {.i = jump_addr}});
+                            jump_addr = ir.len - 1;
+                        }
+                        fold_skip |= fold && fold_test;
                     }
                 } else if (RG_LIKELY(EndStatement())) {
+                    Size else_addr = ir.len;
                     has_return &= ParseBlock(false);
                     has_else = true;
+
+                    TrimInstructions(fold_skip ? (ir.len - else_addr) : 0);
 
                     break;
                 }
@@ -1364,7 +1401,11 @@ bool bk_Parser::ParseIf()
 
             FixJumps(jump_addr, ir.len);
         } else {
-            ir[branch_addr].u.i = ir.len - branch_addr;
+            if (fold && !fold_test) {
+                TrimInstructions(ir.len - branch_addr);
+            } else if (!fold) {
+                ir[branch_addr].u.i = ir.len - branch_addr;
+            }
         }
 
         ConsumeToken(bk_TokenKind::End);

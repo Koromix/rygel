@@ -23,3 +23,27 @@ let c: get_type("fail")
 printLn("a = ", a, " (", typeOf(a), ")")
 printLn("b = ", b, " (", typeOf(b), ")")
 printLn("c = ", c, " (", typeOf(c), ")")
+
+if get_type("string") == String
+    printLn("1A")
+else if get_type("int") == Int
+    printLn("1B")
+else
+    printLn("1C")
+end
+
+if get_type("foo") == String
+    printLn("2A")
+else if get_type("string") == Int
+    printLn("2B")
+else
+    printLn("2C")
+end
+
+if get_type("foo") == String
+    printLn("3A")
+else if get_type("int") == Int
+    printLn("3B")
+else
+    printLn("3C")
+end
