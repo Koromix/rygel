@@ -124,7 +124,6 @@ private:
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *out_type);
     bool EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *out_type);
-    void Fold(Size count, const bk_TypeInfo *out_type);
     const bk_FunctionTypeInfo *ParseFunctionType();
     const bk_ArrayTypeInfo *ParseArrayType();
     void ParseArraySubscript();
@@ -136,6 +135,7 @@ private:
 
     const bk_TypeInfo *ParseTypeExpression();
 
+    void FoldInstruction(Size count, const bk_TypeInfo *out_type);
     void DiscardResult(Size discard);
 
     void EmitPop(int64_t count);
@@ -2323,7 +2323,7 @@ bool bk_Parser::EmitOperator1(bk_PrimitiveKind in_primitive, bk_Opcode code, con
 
     if (type->primitive == in_primitive) {
         ir.Append({code});
-        Fold(1, out_type);
+        FoldInstruction(1, out_type);
 
         stack[stack.len - 1] = {out_type};
 
@@ -2340,56 +2340,13 @@ bool bk_Parser::EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, con
 
     if (type1->primitive == in_primitive && type1 == type2) {
         ir.Append({code});
-        Fold(2, out_type);
+        FoldInstruction(2, out_type);
 
         stack[--stack.len - 1] = {out_type};
 
         return true;
     } else {
         return false;
-    }
-}
-
-void bk_Parser::Fold(Size count, const bk_TypeInfo *out_type)
-{
-    if (flags & (int)bk_CompileFlag::NoFold)
-        return;
-    if (out_type->size > 1)
-        return;
-    for (Size i = 0; i < count; i++) {
-        if ((ir[ir.len - 2 - i].code != bk_Opcode::Push))
-            return;
-    }
-
-    // We can theoretically fold, but if something went wrong it is not safe
-    // However, we don't want to trigger false "cannot resolve static value" errors.
-    if (RG_UNLIKELY(!valid)) {
-        show_errors = false;
-        return;
-    }
-
-    ir.Append({bk_Opcode::End, {}, {.i = out_type->size}});
-
-    folder.frames.RemoveFrom(1);
-    folder.frames[0].pc = ir.len - 2;
-    folder.stack.RemoveFrom(0);
-    for (Size i = count - 1; i >= 0; i--) {
-        folder.stack.Append(ir[ir.len - 3 - i].u);
-    }
-
-    bool folded = folder.Run((int)bk_RunFlag::HideErrors);
-
-    if (folded) {
-        TrimInstructions(2 + count);
-
-        if (out_type->size == 1) {
-            bk_PrimitiveValue value = folder.stack[folder.stack.len - 1];
-            bk_PrimitiveKind primitive = out_type->primitive;
-
-            ir.Append({bk_Opcode::Push, primitive, value});
-        }
-    } else {
-        ir.len--;
     }
 }
 
@@ -2762,7 +2719,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
         ir.Append({bk_Opcode::Call, {}, {.func = func}});
 
         if (!func->impure && func != current_func) {
-            Fold(args_size, func_type->ret_type);
+            FoldInstruction(args_size, func_type->ret_type);
         }
     }
     stack.Append({func_type->ret_type});
@@ -2775,12 +2732,12 @@ void bk_Parser::EmitIntrinsic(const char *name, Size call_pos, Size call_addr, S
     if (TestStr(name, "toFloat")) {
         if (args[0] == bk_IntType) {
             ir.Append({bk_Opcode::IntToFloat});
-            Fold(1, bk_FloatType);
+            FoldInstruction(1, bk_FloatType);
         }
     } else if (TestStr(name, "toInt")) {
         if (args[0] == bk_FloatType) {
             ir.Append({bk_Opcode::FloatToInt});
-            Fold(1, bk_IntType);
+            FoldInstruction(1, bk_IntType);
         }
     } else if (TestStr(name, "typeOf")) {
         // XXX: We can change the signature from typeOf(...) to typeOf(Any) after Any
@@ -2856,6 +2813,49 @@ const bk_TypeInfo *bk_Parser::ParseTypeExpression()
     TrimInstructions(1);
 
     return type;
+}
+
+void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
+{
+    if (flags & (int)bk_CompileFlag::NoFold)
+        return;
+    if (out_type->size > 1)
+        return;
+    for (Size i = 0; i < count; i++) {
+        if ((ir[ir.len - 2 - i].code != bk_Opcode::Push))
+            return;
+    }
+
+    // We can theoretically fold, but if something went wrong it is not safe
+    // However, we don't want to trigger false "cannot resolve static value" errors.
+    if (RG_UNLIKELY(!valid)) {
+        show_errors = false;
+        return;
+    }
+
+    ir.Append({bk_Opcode::End, {}, {.i = out_type->size}});
+
+    folder.frames.RemoveFrom(1);
+    folder.frames[0].pc = ir.len - 2;
+    folder.stack.RemoveFrom(0);
+    for (Size i = count - 1; i >= 0; i--) {
+        folder.stack.Append(ir[ir.len - 3 - i].u);
+    }
+
+    bool folded = folder.Run((int)bk_RunFlag::HideErrors);
+
+    if (folded) {
+        TrimInstructions(2 + count);
+
+        if (out_type->size == 1) {
+            bk_PrimitiveValue value = folder.stack[folder.stack.len - 1];
+            bk_PrimitiveKind primitive = out_type->primitive;
+
+            ir.Append({bk_Opcode::Push, primitive, value});
+        }
+    } else {
+        ir.len--;
+    }
 }
 
 void bk_Parser::DiscardResult(Size size)
