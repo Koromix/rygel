@@ -119,7 +119,7 @@ private:
     void ParseBreak();
     void ParseContinue();
 
-    StackSlot ParseExpression(bool tolerate_assign);
+    StackSlot ParseExpression(bool stop_at_operator, bool tolerate_assign);
     bool ParseExpression(const bk_TypeInfo *type);
     void ProduceOperator(const PendingOperator &op);
     bool EmitOperator1(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *out_type);
@@ -945,7 +945,7 @@ bool bk_Parser::ParseStatement()
             if (proto) {
                 ParseFunction(proto);
             } else {
-                StackSlot slot = ParseExpression(true);
+                StackSlot slot = ParseExpression(false, true);
                 DiscardResult(slot.type->size);
             }
 
@@ -1028,7 +1028,7 @@ bool bk_Parser::ParseStatement()
         } break;
 
         default: {
-            StackSlot slot = ParseExpression(true);
+            StackSlot slot = ParseExpression(false, true);
             DiscardResult(slot.type->size);
 
             EndStatement();
@@ -1055,7 +1055,7 @@ bool bk_Parser::ParseDo()
         pos++;
         return false;
     } else {
-        StackSlot slot = ParseExpression(true);
+        StackSlot slot = ParseExpression(false, true);
         DiscardResult(slot.type->size);
 
         return false;
@@ -1189,7 +1189,7 @@ void bk_Parser::ParseReturn()
     if (PeekToken(bk_TokenKind::EndOfLine) || PeekToken(bk_TokenKind::Semicolon)) {
         slot = {bk_NullType};
     } else {
-        slot = ParseExpression(true);
+        slot = ParseExpression(false, true);
     }
 
     if (RG_UNLIKELY(slot.type != current_func->type->ret_type)) {
@@ -1235,7 +1235,7 @@ void bk_Parser::ParseLet()
     StackSlot slot;
     if (MatchToken(bk_TokenKind::Assign)) {
         SkipNewLines();
-        slot = ParseExpression(true);
+        slot = ParseExpression(false, true);
     } else {
         ConsumeToken(bk_TokenKind::Colon);
 
@@ -1247,7 +1247,7 @@ void bk_Parser::ParseLet()
             SkipNewLines();
 
             Size expr_pos = pos;
-            slot = ParseExpression(true);
+            slot = ParseExpression(false, true);
 
             if (RG_UNLIKELY(slot.type != type)) {
                 MarkError(expr_pos - 1, "Cannot assign '%1' value to variable '%2' (defined as '%3')",
@@ -1633,7 +1633,7 @@ static int GetOperatorPrecedence(bk_TokenKind kind, bool expect_unary)
     }
 }
 
-StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
+StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign)
 {
     Size start_stack_len = stack.len;
     RG_DEFER { stack.RemoveFrom(start_stack_len); };
@@ -1945,6 +1945,11 @@ StackSlot bk_Parser::ParseExpression(bool tolerate_assign)
                     }
                 }
 
+                if (stop_at_operator) {
+                    pos--;
+                    goto end;
+                }
+
                 if (expect_value != op.unary)
                     goto unexpected;
                 expect_value = true;
@@ -2057,7 +2062,7 @@ bool bk_Parser::ParseExpression(const bk_TypeInfo *expected_type)
 {
     Size expr_pos = pos;
 
-    const bk_TypeInfo *type = ParseExpression(true).type;
+    const bk_TypeInfo *type = ParseExpression(false, true).type;
     if (RG_UNLIKELY(type != expected_type)) {
         MarkError(expr_pos, "Expected expression result type to be '%1', not '%2'",
                   expected_type->signature, type->signature);
@@ -2454,7 +2459,7 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
         RG_DEFER_C(prev_flags = flags) { flags = prev_flags; };
         flags &= ~(int)bk_CompileFlag::NoFold;
 
-        const bk_TypeInfo *type = ParseExpression(false).type;
+        const bk_TypeInfo *type = ParseExpression(false, false).type;
 
         if (MatchToken(bk_TokenKind::Comma)) {
             multi = true;
@@ -2542,7 +2547,7 @@ void bk_Parser::ParseArraySubscript()
         // Parse index expression
         {
             Size idx_pos = pos;
-            const bk_TypeInfo *type = ParseExpression(false).type;
+            const bk_TypeInfo *type = ParseExpression(false, false).type;
 
             if (RG_UNLIKELY(type != bk_IntType)) {
                 MarkError(idx_pos, "Expected an 'Int' expression, not '%1'", type->signature);
@@ -2678,13 +2683,13 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
                 Size type_addr = ir.len;
                 ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Type});
 
-                const bk_TypeInfo *type = ParseExpression(true).type;
+                const bk_TypeInfo *type = ParseExpression(false, true).type;
                 args.Append(type);
                 args_size += 1 + type->size;
 
                 ir[type_addr].u.type = type;
             } else {
-                const bk_TypeInfo *type = ParseExpression(true).type;
+                const bk_TypeInfo *type = ParseExpression(false, true).type;
                 args.Append(type);
                 args_size += type->size;
             }
@@ -2829,7 +2834,7 @@ const bk_TypeInfo *bk_Parser::ParseTypeExpression()
         RG_DEFER_C(prev_flags = flags) { flags = prev_flags; };
         flags &= ~(int)bk_CompileFlag::NoFold;
 
-        const bk_TypeInfo *type = ParseExpression(false).type;
+        const bk_TypeInfo *type = ParseExpression(true, false).type;
 
         if (RG_UNLIKELY(type != bk_TypeType)) {
             MarkError(type_pos, "Expected a 'Type' expression, not '%1'", type->signature);
