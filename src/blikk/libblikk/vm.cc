@@ -723,6 +723,8 @@ void bk_VirtualMachine::DumpInstruction(const bk_Instruction &inst, Size pc, Siz
         } break;
         case bk_Opcode::Return: { PrintLn(stderr, " %1", inst.u.i); } break;
 
+        case bk_Opcode::End: { PrintLn(stderr, " (%1)", inst.u.i); } break;
+
         default: { PrintLn(stderr); } break;
     }
 }
