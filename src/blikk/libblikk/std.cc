@@ -33,8 +33,10 @@ static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offs
         case bk_PrimitiveKind::Integer: { Print("%1", vm->stack[offset++].i); } break;
         case bk_PrimitiveKind::Float: { Print("%1", FmtDouble(vm->stack[offset++].d, 1, INT_MAX)); } break;
         case bk_PrimitiveKind::String: {
+            const char *str = vm->stack[offset++].str;
+            str = str ? str : "";
+
             if (quote) {
-                const char *str = vm->stack[offset++].str;
 
                 fputc('"', stdout);
                 for (;;) {
@@ -60,7 +62,7 @@ static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offs
                 }
                 fputc('"', stdout);
             } else {
-                fputs(vm->stack[offset++].str, stdout);
+                fputs(str, stdout);
             }
         } break;
         case bk_PrimitiveKind::Type: { fputs(vm->stack[offset++].type->signature, stdout); } break;

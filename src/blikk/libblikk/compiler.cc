@@ -1305,9 +1305,13 @@ void bk_Parser::PushDefaultValue(Size var_pos, const bk_VariableInfo &var, const
         case bk_PrimitiveKind::Null: {} break;
         case bk_PrimitiveKind::Boolean:
         case bk_PrimitiveKind::Integer:
-        case bk_PrimitiveKind::Float: { ir.Append({bk_Opcode::Push, type->primitive, {.i = 0}}); } break;
-        case bk_PrimitiveKind::String: { ir.Append({bk_Opcode::Push, type->primitive, {.str = InternString("")}}); } break;
+        case bk_PrimitiveKind::Float:
+        case bk_PrimitiveKind::String:
+        case bk_PrimitiveKind::Enum:
+        case bk_PrimitiveKind::Opaque: { ir.Append({bk_Opcode::Push, type->primitive, {.i = 0}}); } break;
+
         case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::Push, type->primitive, {.type = bk_NullType}}); } break;
+
         case bk_PrimitiveKind::Array: {
             const bk_ArrayTypeInfo *array_type = type->AsArrayType();
 
@@ -1322,8 +1326,6 @@ void bk_Parser::PushDefaultValue(Size var_pos, const bk_VariableInfo &var, const
                 PushDefaultValue(var_pos, var, member.type);
             }
         } break;
-        case bk_PrimitiveKind::Enum: { ir.Append({bk_Opcode::Push, type->primitive, {.i = 0}}); } break;
-        case bk_PrimitiveKind::Opaque: { ir.Append({bk_Opcode::Push, type->primitive, {.opaque = nullptr}}); } break;
 
         case bk_PrimitiveKind::Function: {
             MarkError(var_pos, "Variable '%1' (defined as '%2') must be explicitely initialized",
@@ -1766,7 +1768,10 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                     goto unexpected;
                 expect_value = false;
 
-                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::String, {.str = InternString(tok.u.str)}});
+                const char *str = InternString(tok.u.str);
+                str = str[0] ? str : nullptr;
+
+                ir.Append({bk_Opcode::Push, bk_PrimitiveKind::String, {.str = str}});
                 stack.Append({bk_StringType});
             } break;
 

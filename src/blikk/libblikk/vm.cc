@@ -694,7 +694,7 @@ void bk_VirtualMachine::DumpInstruction(const bk_Instruction &inst, Size pc, Siz
                 case bk_PrimitiveKind::Boolean: { PrintLn(stderr, " %!Y..[Bool]%!0 %1 %!M..>%2%!0", inst.u.b, stack.len); } break;
                 case bk_PrimitiveKind::Integer: { PrintLn(stderr, " %!Y..[Int]%!0 %1 %!M..>%2%!0", inst.u.i, stack.len); } break;
                 case bk_PrimitiveKind::Float: { PrintLn(stderr, " %!Y..[Float]%!0 %1 %!M..>%2%!0", FmtDouble(inst.u.d, 1, INT_MAX), stack.len); } break;
-                case bk_PrimitiveKind::String: { PrintLn(stderr, " %!Y..[String]%!0 '%1' %!M..>%2%!0", inst.u.str, stack.len); } break;
+                case bk_PrimitiveKind::String: { PrintLn(stderr, " %!Y..[String]%!0 '%1' %!M..>%2%!0", inst.u.str ? inst.u.str : "", stack.len); } break;
                 case bk_PrimitiveKind::Type: { PrintLn(stderr, " %!Y..[Type]%!0 '%1' %!M..>%2%!0", inst.u.type->signature, stack.len); } break;
                 case bk_PrimitiveKind::Function: { PrintLn(stderr, " %!Y..[Function]%!0 '%1' %!M..>%2%!0", inst.u.func->prototype, stack.len); } break;
                 case bk_PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
