@@ -890,8 +890,10 @@ bool bk_Parser::ParseBlock(bool end_with_else)
     show_errors = true;
     depth++;
 
+    bool recurse = RecurseInc();
     RG_DEFER_C(prev_offset = var_offset,
                variables_len = program->variables.len) {
+        RecurseDec();
         depth--;
 
         EmitPop(var_offset - prev_offset);
@@ -899,7 +901,6 @@ bool bk_Parser::ParseBlock(bool end_with_else)
         var_offset = prev_offset;
     };
 
-    bool recurse = RecurseInc();
     bool has_return = false;
     Size trim_addr = ir.len;
 
