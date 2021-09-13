@@ -1,4 +1,5 @@
-# CTFE is compile-time function execution
+# Le CTFE (compile-time function execution) correspond à l'exécution de code et des fonctions
+# lors de la compilation.
 
 let null_type = Null
 let null_type2 = null_type
@@ -24,6 +25,10 @@ printLn("a = ", a, " (", typeOf(a), ")")
 printLn("b = ", b, " (", typeOf(b), ")")
 printLn("c = ", c, " (", typeOf(c), ")")
 
+# Blikk utilise l'évaluation à la compilation pour optimiser les branches
+# lorsque c'est possible. Dans l'exemple qui suit, les instructions de branchement
+# et le code des branches non utilisées est retiré lors de la compilation.
+
 if get_type("string") == String
     printLn("1A")
 else if get_type("int") == Int
@@ -47,3 +52,24 @@ else if get_type("int") == Int
 else
     printLn("3C")
 end
+
+# En dernier exemple, on peut aussi profiter du CTFE avec un Enum ;)
+
+enum Enum1 (Foo1, Foo2, Foo3)
+enum Enum2 (Bar1, Bar2, Bar3)
+
+let enum2_type = Enum2
+
+func get_enum(name: String): Type
+    if name == "Enum1" do return Enum1
+    if name == "Enum2" do return enum2_type
+    return Null
+end
+
+# Ceci fonctionne
+printLn("Enum1.Foo2 = ", get_enum("Enum1").Foo2)
+printLn("Enum1.Bar3 = ", get_enum("Enum2").Bar3)
+
+# Ceci ne fonctionnerait pas (échec de compilation)
+# printLn("Enum2.Foo2 = ", get_enum("Enum2").Foo2)
+# printLn("XXX.Label1 = ", get_enum("XXX").Label1)
