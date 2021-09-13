@@ -2817,7 +2817,7 @@ const bk_TypeInfo *bk_Parser::ParseTypeExpression()
 
 void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
 {
-    if (flags & (int)bk_CompileFlag::NoFold)
+    if ((flags & (int)bk_CompileFlag::NoFold) && out_type->primitive != bk_PrimitiveKind::Type)
         return;
     if (out_type->size > 1)
         return;
