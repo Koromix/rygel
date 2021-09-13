@@ -1550,17 +1550,25 @@ void bk_Parser::ParseFor()
         ConsumeToken(bk_TokenKind::End);
     }
 
-    FixJumps(loop_continue_addr, ir.len);
+    // Loop outro
+    if (ir.len > body_addr + 4) {
+        FixJumps(loop_continue_addr, ir.len);
 
-    ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = 1}});
-    ir.Append({bk_Opcode::AddInt});
-    ir.Append({bk_Opcode::Jump, {}, {.i = body_addr - ir.len}});
-    ir[body_addr + 3].u.i = ir.len - (body_addr + 3);
+        ir.Append({bk_Opcode::Push, bk_PrimitiveKind::Integer, {.i = 1}});
+        ir.Append({bk_Opcode::AddInt});
+        ir.Append({bk_Opcode::Jump, {}, {.i = body_addr - ir.len}});
+        ir[body_addr + 3].u.i = ir.len - (body_addr + 3);
 
-    FixJumps(loop_break_addr, ir.len);
+        FixJumps(loop_break_addr, ir.len);
+        EmitPop(3);
+    } else {
+        TrimInstructions(ir.len - body_addr + 1);
+
+        DiscardResult(1);
+        DiscardResult(1);
+    }
 
     // Destroy iterator and range values
-    EmitPop(3);
     DestroyVariables(program->variables.len - 1);
     var_offset -= 3;
 }
