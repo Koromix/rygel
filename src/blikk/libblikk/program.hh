@@ -177,6 +177,7 @@ struct bk_FunctionInfo {
     Mode mode;
     std::function<bk_NativeFunction> native;
     bool impure;
+    bool valid;
 
     Size addr; // IR
     bool tre;

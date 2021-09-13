@@ -518,6 +518,12 @@ bool bk_VirtualMachine::Run(unsigned int flags)
             const bk_FunctionTypeInfo *func_type = func->type;
             const bk_TypeInfo *ret_type = func_type->ret_type;
 
+            if (RG_UNLIKELY(!func->valid)) {
+                frame->pc = pc;
+                FatalError("Calling invalid function '%1'", func->prototype);
+                return false;
+            }
+
             if (func->mode == bk_FunctionInfo::Mode::Record) {
                 // Nothing to do, the arguments build the object and that's it!
                 // We just need to leave everything as-is on the stack
@@ -578,6 +584,12 @@ bool bk_VirtualMachine::Run(unsigned int flags)
             const bk_FunctionInfo *func = inst->u.func;
             const bk_FunctionTypeInfo *func_type = func->type;
             const bk_TypeInfo *ret_type = func_type->ret_type;
+
+            if (RG_UNLIKELY(!func->valid)) {
+                frame->pc = pc;
+                FatalError("Calling invalid function '%1'", func->prototype);
+                return false;
+            }
 
             // Save current PC
             frame->pc = pc;

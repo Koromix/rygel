@@ -165,6 +165,21 @@ private:
     bool RecurseInc();
     void RecurseDec();
 
+    void FlagError()
+    {
+        valid = false;
+        show_hints = show_errors;
+        show_errors = false;
+
+        if (current_func) {
+            current_func->valid = false;
+        }
+
+        if (out_report && valid) {
+            out_report->depth = depth;
+        }
+    }
+
     template <typename... Args>
     void MarkError(Size pos, const char *fmt, Args... args)
     {
@@ -175,17 +190,9 @@ private:
             int line = tokens[std::min(pos, tokens.len - 1)].line;
 
             bk_ReportDiagnostic(bk_DiagnosticType::Error, file->code, file->filename, line, offset, fmt, args...);
-
-            show_errors = false;
-            show_hints = true;
-        } else {
-            show_hints = false;
         }
 
-        if (out_report && valid) {
-            out_report->depth = depth;
-        }
-        valid = false;
+        FlagError();
     }
 
     template <typename... Args>
@@ -467,6 +474,7 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
     func->mode = native ? bk_FunctionInfo::Mode::Native : bk_FunctionInfo::Mode::Intrinsic;
     func->native = native;
     func->impure = !(flags & (int)bk_FunctionFlag::Pure);
+    func->valid = true;
     func->addr = -1;
 
     // Reuse or create function type
@@ -1124,7 +1132,7 @@ void bk_Parser::ParseFunction(const PrototypeInfo *proto)
                 MarkError(param_pos, "Parameter '%1' is not allowed to hide global variable", var->name);
                 HintDefinition(prev_var, "Global variable '%1' is defined here", prev_var->name);
             } else {
-                valid = false;
+                FlagError();
             }
         }
 
@@ -1159,6 +1167,7 @@ void bk_Parser::ParseFunction(const PrototypeInfo *proto)
     }
 
     func->impure = false;
+    func->valid = true;
     func->addr = ir.len;
 
     // Function body
@@ -2719,6 +2728,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
         ir.Append({bk_Opcode::Call, {}, {.func = func}});
 
         if (!func->impure && func != current_func) {
+            show_errors &= func->valid;
             FoldInstruction(args_size, func_type->ret_type);
         }
     }
@@ -2824,13 +2834,6 @@ void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
     for (Size i = 0; i < count; i++) {
         if ((ir[ir.len - 2 - i].code != bk_Opcode::Push))
             return;
-    }
-
-    // We can theoretically fold, but if something went wrong it is not safe
-    // However, we don't want to trigger false "cannot resolve static value" errors.
-    if (RG_UNLIKELY(!valid)) {
-        show_errors = false;
-        return;
     }
 
     ir.Append({bk_Opcode::End, {}, {.i = out_type->size}});
