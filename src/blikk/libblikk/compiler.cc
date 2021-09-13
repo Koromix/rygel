@@ -111,7 +111,6 @@ private:
     void ParseFunction(const PrototypeInfo *proto);
     void ParseReturn();
     void ParseLet();
-    void PushDefaultValue(Size var_pos, const bk_VariableInfo &var, const bk_TypeInfo *type);
     bool ParseIf();
     void ParseWhile();
     void ParseFor();
@@ -594,6 +593,7 @@ void bk_Parser::AddOpaque(const char *name)
 
     type_buf.signature = InternString(name);
     type_buf.primitive = bk_PrimitiveKind::Opaque;
+    type_buf.init0 = true;
     type_buf.size = 1;
 
     const bk_TypeInfo *type = InsertType(type_buf, &program->bare_types);
@@ -717,6 +717,7 @@ void bk_Parser::PreparseFunction(Size proto_pos, bool record)
 
         record_type->signature = func->name;
         record_type->primitive = bk_PrimitiveKind::Record;
+        record_type->init0 = true;
         record_type->func = func;
 
         for (const bk_FunctionInfo::Parameter &param: func->params) {
@@ -725,6 +726,8 @@ void bk_Parser::PreparseFunction(Size proto_pos, bool record)
             member->name = param.name;
             member->type = param.type;
             member->offset = record_type->size;
+
+            record_type->init0 &= param.type->init0;
             record_type->size += param.type->size;
 
             // Evaluate each time, so that overflow is not a problem
@@ -825,6 +828,7 @@ void bk_Parser::PreparseEnum(Size proto_pos)
 
     enum_type->signature = ConsumeIdentifier();
     enum_type->primitive = bk_PrimitiveKind::Enum;
+    enum_type->init0 = true;
     enum_type->size = 1;
 
     ConsumeToken(bk_TokenKind::LeftParenthesis);
@@ -1269,7 +1273,12 @@ void bk_Parser::ParseLet()
                           slot.type->signature, var->name, type->signature);
             }
         } else {
-            PushDefaultValue(var_pos, *var, type);
+            if (RG_UNLIKELY(!type->init0)) {
+                 MarkError(var_pos, "Variable '%1' (defined as '%2') must be explicitely initialized",
+                           var->name, type->signature);
+            }
+
+            ir.Append({bk_Opcode::Push0, type->primitive, {.i = type->size}});
             slot = {type};
         }
     }
@@ -1296,41 +1305,6 @@ void bk_Parser::ParseLet()
     // and will be marked as invalid too.
     if (RG_UNLIKELY(!show_errors)) {
         poisoned_set.Set(var);
-    }
-}
-
-void bk_Parser::PushDefaultValue(Size var_pos, const bk_VariableInfo &var, const bk_TypeInfo *type)
-{
-    switch (type->primitive) {
-        case bk_PrimitiveKind::Null: {} break;
-        case bk_PrimitiveKind::Boolean:
-        case bk_PrimitiveKind::Integer:
-        case bk_PrimitiveKind::Float:
-        case bk_PrimitiveKind::String:
-        case bk_PrimitiveKind::Enum:
-        case bk_PrimitiveKind::Opaque: { ir.Append({bk_Opcode::Push, type->primitive, {.i = 0}}); } break;
-
-        case bk_PrimitiveKind::Type: { ir.Append({bk_Opcode::Push, type->primitive, {.type = bk_NullType}}); } break;
-
-        case bk_PrimitiveKind::Array: {
-            const bk_ArrayTypeInfo *array_type = type->AsArrayType();
-
-            for (Size i = 0; i < array_type->len; i++) {
-                PushDefaultValue(var_pos, var, array_type->unit_type);
-            }
-        } break;
-        case bk_PrimitiveKind::Record: {
-            const bk_RecordTypeInfo *record_type = type->AsRecordType();
-
-            for (const bk_RecordTypeInfo::Member &member: record_type->members) {
-                PushDefaultValue(var_pos, var, member.type);
-            }
-        } break;
-
-        case bk_PrimitiveKind::Function: {
-            MarkError(var_pos, "Variable '%1' (defined as '%2') must be explicitely initialized",
-                      var.name, type->signature);
-        } break;
     }
 }
 
@@ -2485,6 +2459,7 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
     } else {
         type_buf.unit_type = ParseTypeExpression();
     }
+    type_buf.init0 = type_buf.unit_type->init0;
     type_buf.size = type_buf.len * type_buf.unit_type->size;
 
     // Safety checks

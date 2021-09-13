@@ -17,12 +17,12 @@
 namespace RG {
 
 static bk_TypeInfo BaseTypes[] = {
-    {"Null", bk_PrimitiveKind::Null, 0},
-    {"Bool", bk_PrimitiveKind::Boolean, 1},
-    {"Int", bk_PrimitiveKind::Integer, 1},
-    {"Float", bk_PrimitiveKind::Float, 1},
-    {"String", bk_PrimitiveKind::String, 1},
-    {"Type", bk_PrimitiveKind::Type, 1}
+    {"Null", bk_PrimitiveKind::Null, true, 0},
+    {"Bool", bk_PrimitiveKind::Boolean, true, 1},
+    {"Int", bk_PrimitiveKind::Integer, true, 1},
+    {"Float", bk_PrimitiveKind::Float, true, 1},
+    {"String", bk_PrimitiveKind::String, true, 1},
+    {"Type", bk_PrimitiveKind::Type, false, 1}
 };
 
 Span<const bk_TypeInfo> bk_BaseTypes = BaseTypes;

@@ -61,6 +61,7 @@ union bk_PrimitiveValue {
 struct bk_TypeInfo {
     const char *signature;
     bk_PrimitiveKind primitive;
+    bool init0;
     Size size;
 
     // Reference types will come later (maybe)

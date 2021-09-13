@@ -19,6 +19,7 @@ OPCODE(Nop)
 
 // Immediate values
 OPCODE(Push)
+OPCODE(Push0)
 OPCODE(Pop)
 
 // Load/store
