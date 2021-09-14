@@ -109,3 +109,9 @@
     state: absent
   loop: '{{ certbot_old.files }}'
   become: yes
+
+- name: Clean up outdated certificate renewal crontab entry
+  cron:
+    name: letsencrypt_renewal
+    state: absent
+  become: yes
