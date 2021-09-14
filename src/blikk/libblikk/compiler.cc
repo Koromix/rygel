@@ -906,7 +906,7 @@ bool bk_Parser::ParseBlock(bool end_with_else)
     };
 
     bool has_return = false;
-    Size trim_addr = ir.len;
+    bool issued_unreachable = false;
 
     while (RG_LIKELY(pos < tokens.len)) {
         if (tokens[pos].kind == bk_TokenKind::End)
@@ -914,21 +914,25 @@ bool bk_Parser::ParseBlock(bool end_with_else)
         if (end_with_else && tokens[pos].kind == bk_TokenKind::Else)
             break;
 
-        if (RG_LIKELY(recurse)) {
-            bool prev_return = has_return;
+        if (RG_UNLIKELY(has_return && !issued_unreachable)) {
+            MarkError(pos, "Unreachable statement");
+            HintError(-1, "You cannot put any code after return statements");
 
+            issued_unreachable = true;
+        }
+
+        if (RG_LIKELY(recurse)) {
             has_return |= ParseStatement();
-            trim_addr = prev_return ? trim_addr : ir.len;
         } else {
             if (!has_return) {
                 MarkError(pos, "Excessive parsing depth (compiler limit)");
                 HintError(-1, "Simplify surrounding code");
             }
+
             pos++;
             has_return = true;
         }
     }
-    TrimInstructions(ir.len - trim_addr);
 
     return has_return;
 }
