@@ -33,7 +33,7 @@ var blikkHighlightRules = function() {
             regex: "(0x[0-9a-fA-F_]*|[0-9_]+(\\.?[0-9_]*)?|0o[0-8_]*|0b[01_]*)\\b"
         }, {
             token: "keyword.control",
-            regex: "(?:let|for|func|if|else|while|begin|end|return|in|do|mut|break|continue|record|enum)\\b"
+            regex: "(?:let|for|func|if|else|while|begin|end|return|in|do|mut|break|continue|record|enum|pass)\\b"
         }, {
             token: "keyword.operator",
             regex: /<<=?|>>=?|&&|\|\||[:*%\/+\-&\^|~!<>=]=?/
