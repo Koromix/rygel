@@ -472,9 +472,10 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
     func->prototype = InternString(prototype);
     func->mode = native ? bk_FunctionInfo::Mode::Native : bk_FunctionInfo::Mode::Intrinsic;
     func->native = native;
-    func->impure = !(flags & (int)bk_FunctionFlag::Pure);
-    func->valid = true;
     func->addr = -1;
+    func->valid = true;
+    func->impure = !(flags & (int)bk_FunctionFlag::Pure);
+    func->side_effects = !(flags & ((int)bk_FunctionFlag::Pure | (int)bk_FunctionFlag::NoSideEffect));
 
     // Reuse or create function type
     {
@@ -770,9 +771,10 @@ void bk_Parser::PreparseFunction(Size proto_pos, bool record)
     func->type = InsertType(type_buf, &program->function_types)->AsFunctionType();
     func->prototype = InternString(prototype_buf.ptr);
 
-    // We don't know where it will live yet!
-    func->impure = true;
+    // We don't know anything about it yet!
     func->addr = -1;
+    func->impure = true;
+    func->side_effects = true;
     func->earliest_ref_pos = RG_SIZE_MAX;
     func->earliest_ref_addr = RG_SIZE_MAX;
 
@@ -1175,9 +1177,10 @@ void bk_Parser::ParseFunction(const PrototypeInfo *proto)
         ir.Append({bk_Opcode::Jump});
     }
 
-    func->impure = false;
     func->valid = true;
     func->addr = ir.len;
+    func->impure = false;
+    func->side_effects = false;
 
     // Function body
     bool has_return = false;
@@ -1543,9 +1546,7 @@ void bk_Parser::ParseFor()
         EmitPop(3);
     } else {
         TrimInstructions(ir.len - body_addr + 1);
-
-        DiscardResult(1);
-        DiscardResult(1);
+        DiscardResult(2);
     }
 
     // Destroy iterator and range values
@@ -2162,6 +2163,10 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
             default: { RG_UNREACHABLE(); } break;
         }
 
+        if (current_func) {
+            current_func->side_effects |= (dest.var->scope != bk_VariableInfo::Scope::Local);
+        }
+
         if (dest.indirect_addr) {
             // In order for StoreIndirectK to work, the variable address must remain on the stack.
             // To do so, replace LoadIndirect (which removes them) with LoadIndirectK.
@@ -2705,6 +2710,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
 
     if (current_func) {
         current_func->impure |= !func || func->impure;
+        current_func->side_effects |= !func || func->side_effects;
     }
 
     // Emit intrinsic or call
@@ -2784,7 +2790,7 @@ void bk_Parser::EmitLoad(const bk_VariableInfo &var)
     }
 
     if (current_func) {
-        current_func->impure |= var.mut && var.scope != bk_VariableInfo::Scope::Local;
+        current_func->impure |= var.mut && (var.scope != bk_VariableInfo::Scope::Local);
     }
 
     stack.Append({var.type, &var});
@@ -2856,39 +2862,54 @@ void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
 
 void bk_Parser::DiscardResult(Size size)
 {
-    switch (ir[ir.len - 1].code) {
-        case bk_Opcode::Push:
-        case bk_Opcode::Lea:
-        case bk_Opcode::LeaLocal:
-        case bk_Opcode::LeaRel:
-        case bk_Opcode::Load:
-        case bk_Opcode::LoadLocal: {
-            if (size == 1) {
+    while (size > 0) {
+        switch (ir[ir.len - 1].code) {
+            case bk_Opcode::Push:
+            case bk_Opcode::Lea:
+            case bk_Opcode::LeaLocal:
+            case bk_Opcode::LeaRel:
+            case bk_Opcode::Load:
+            case bk_Opcode::LoadLocal: {
                 TrimInstructions(1);
-                return;
-            }
-        } break;
+                size--;
+            } break;
 
-        case bk_Opcode::StoreK:
-        case bk_Opcode::StoreLocalK: {
-            if (size == 1) {
+            case bk_Opcode::StoreK:
+            case bk_Opcode::StoreLocalK: {
                 ir[ir.len - 1].code = (bk_Opcode)((int)ir[ir.len - 1].code - 1);
-                return;
-            }
-        } break;
+                size--;
+            } break;
 
-        case bk_Opcode::StoreIndirectK:
-        case bk_Opcode::StoreRevK: {
-            if (size == ir[ir.len - 1].u.i) {
-                ir[ir.len - 1].code = (bk_Opcode)((int)ir[ir.len - 1].code - 1);
-                return;
-            }
-        } break;
+            case bk_Opcode::StoreIndirectK:
+            case bk_Opcode::StoreRevK: {
+                if (size >= ir[ir.len - 1].u.i) {
+                    ir[ir.len - 1].code = (bk_Opcode)((int)ir[ir.len - 1].code - 1);
+                    size -= ir[ir.len - 1].u.i;
+                } else {
+                    EmitPop(size);
+                    return;
+                }
+            } break;
 
-        default: {} break;
+            case bk_Opcode::Call: {
+                const bk_FunctionInfo *func = ir[ir.len - 1].u.func;
+                const bk_FunctionTypeInfo *func_type = func->type;
+
+                if (!func->side_effects && !func_type->variadic && size >= func_type->ret_type->size) {
+                    TrimInstructions(1);
+                    size += func_type->params_size - func_type->ret_type->size;
+                } else {
+                    EmitPop(size);
+                    return;
+                }
+            } break;
+
+            default: {
+                EmitPop(size);
+                return;
+            } break;
+        }
     }
-
-    EmitPop(size);
 }
 
 void bk_Parser::EmitPop(int64_t count)

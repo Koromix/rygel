@@ -153,7 +153,8 @@ extern const bk_TypeInfo *bk_TypeType;
 typedef void bk_NativeFunction(bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args, Span<bk_PrimitiveValue> ret);
 
 enum class bk_FunctionFlag {
-    Pure = 1 << 0
+    Pure = 1 << 0,
+    NoSideEffect = 1 << 1 // Pure implies NoSideEffect
 };
 
 struct bk_FunctionInfo {
@@ -177,11 +178,13 @@ struct bk_FunctionInfo {
 
     Mode mode;
     std::function<bk_NativeFunction> native;
-    bool impure;
-    bool valid;
 
     Size addr; // IR
     bool tre;
+
+    bool valid;
+    bool impure;
+    bool side_effects;
 
     // Linked list
     bk_FunctionInfo *overload_prev;
