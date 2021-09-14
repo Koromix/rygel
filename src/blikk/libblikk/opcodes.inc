@@ -82,7 +82,7 @@ OPCODE(NotBool)
 OPCODE(AndBool)
 OPCODE(OrBool)
 
-// String operators
+// Other operators
 OPCODE(EqualString)
 OPCODE(NotEqualString)
 OPCODE(EqualType)
