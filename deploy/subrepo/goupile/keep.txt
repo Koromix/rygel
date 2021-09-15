@@ -3,6 +3,7 @@ build/felix
 doc/goupile
 src/core/libcc
 src/core/libnet
+src/core/libpasswd
 src/core/libsandbox
 src/core/libsecurity
 src/core/libsqlite

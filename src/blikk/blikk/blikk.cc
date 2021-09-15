@@ -13,35 +13,35 @@
 
 #include "../../core/libcc/libcc.hh"
 #include "blikk.hh"
-#include "../../core/libsecurity/libsecurity.hh"
+#include "../../core/libsandbox/libsandbox.hh"
 
 namespace RG {
 
 static bool ApplySandbox()
 {
-    if (!sec_IsSandboxSupported()) {
+    if (!sb_IsSandboxSupported()) {
         LogError("Sandbox mode is not supported on this platform");
         return false;
     }
 
-    sec_SandboxBuilder sb;
+    sb_SandboxBuilder sb;
 
 #ifdef __linux__
-    sb.FilterSyscalls(sec_FilterAction::Kill, {
-        {"exit", sec_FilterAction::Allow},
-        {"exit_group", sec_FilterAction::Allow},
-        {"brk", sec_FilterAction::Allow},
-        {"mmap/anon", sec_FilterAction::Allow},
-        {"munmap", sec_FilterAction::Allow},
-        {"read", sec_FilterAction::Allow},
-        {"readv", sec_FilterAction::Allow},
-        {"write", sec_FilterAction::Allow},
-        {"writev", sec_FilterAction::Allow},
-        {"fstat", sec_FilterAction::Allow},
-        {"ioctl/tty", sec_FilterAction::Allow},
-        {"rt_sigaction", sec_FilterAction::Allow},
-        {"close", sec_FilterAction::Allow},
-        {"fsync", sec_FilterAction::Allow}
+    sb.FilterSyscalls(sb_FilterAction::Kill, {
+        {"exit", sb_FilterAction::Allow},
+        {"exit_group", sb_FilterAction::Allow},
+        {"brk", sb_FilterAction::Allow},
+        {"mmap/anon", sb_FilterAction::Allow},
+        {"munmap", sb_FilterAction::Allow},
+        {"read", sb_FilterAction::Allow},
+        {"readv", sb_FilterAction::Allow},
+        {"write", sb_FilterAction::Allow},
+        {"writev", sb_FilterAction::Allow},
+        {"fstat", sb_FilterAction::Allow},
+        {"ioctl/tty", sb_FilterAction::Allow},
+        {"rt_sigaction", sb_FilterAction::Allow},
+        {"close", sb_FilterAction::Allow},
+        {"fsync", sb_FilterAction::Allow}
     });
 #endif
 

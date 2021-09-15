@@ -12,7 +12,7 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "../core/libcc/libcc.hh"
-#include "../core/libsecurity/libsecurity.hh"
+#include "../core/libpasswd/libpasswd.hh"
 #include "../../vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
@@ -74,7 +74,7 @@ retry:
         if (!password)
             return 1;
 
-        if (check && !sec_CheckPassword(password))
+        if (check && !pwd_CheckPassword(password))
             goto retry;
 
         if (confirm) {
@@ -87,11 +87,11 @@ reconfirm:
                 LogError("Password mismatch");
                 goto reconfirm;
             }
-        } else if (check && !sec_CheckPassword(password)) {
+        } else if (check && !pwd_CheckPassword(password)) {
             goto retry;
         }
     } else if (password[0]) {
-        if (check && !sec_CheckPassword(password))
+        if (check && !pwd_CheckPassword(password))
             return 1;
     } else {
         LogError("Password must not be empty");
@@ -117,7 +117,7 @@ static int RunGenerateTOTP(Span<const char *> arguments)
     const char *label = nullptr;
     const char *issuer = nullptr;
     const char *username = nullptr;
-    sec_HotpAlgorithm algorithm = sec_HotpAlgorithm::SHA1;
+    pwd_HotpAlgorithm algorithm = pwd_HotpAlgorithm::SHA1;
     const char *secret = nullptr;
     int digits = 6;
     const char *png_filename = nullptr;
@@ -138,7 +138,7 @@ Options:
     %!..+-d, --digits <digits>%!0        Use specified number of digits
 
     %!..+-O, --output_file <file>%!0     Write QR code PNG image to disk)",
-                FelixTarget, sec_HotpAlgorithmNames[(int)algorithm]);
+                FelixTarget, pwd_HotpAlgorithmNames[(int)algorithm]);
     };
 
     // Parse arguments
@@ -156,7 +156,7 @@ Options:
             } else if (opt.Test("-i", "--issuer", OptionType::Value)) {
                 issuer = opt.current_value;
             } else if (opt.Test("-a", "--algorithm", OptionType::Value)) {
-                if (!OptionToEnum(sec_HotpAlgorithmNames, opt.current_value, &algorithm)) {
+                if (!OptionToEnum(pwd_HotpAlgorithmNames, opt.current_value, &algorithm)) {
                     LogError("Unknown HMAC algorithm '%1'", opt.current_value);
                     return 1;
                 }
@@ -203,11 +203,11 @@ Options:
     }
 
     if (secret) {
-        if (!sec_CheckSecret(secret))
+        if (!pwd_CheckSecret(secret))
             return 1;
     } else {
         char *ptr = (char *)Allocator::Allocate(&temp_alloc, 33, 0);
-        sec_GenerateSecret(MakeSpan(ptr, 33));
+        pwd_GenerateSecret(MakeSpan(ptr, 33));
 
         secret = ptr;
     }
@@ -216,12 +216,12 @@ Options:
     LogInfo();
 
     // Generate URL
-    const char *url = sec_GenerateHotpUrl(label, username, issuer, algorithm, secret, digits, &temp_alloc);
+    const char *url = pwd_GenerateHotpUrl(label, username, issuer, algorithm, secret, digits, &temp_alloc);
     LogInfo("URL: %!..+%1%!0", url);
 
     if (png_filename) {
         HeapArray<uint8_t> png;
-        if (!sec_GenerateHotpPng(url, 12, &png))
+        if (!pwd_GenerateHotpPng(url, 12, &png))
             return 1;
 
         if (!WriteFile(png, png_filename))
@@ -237,7 +237,7 @@ static int RunComputeTOTP(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    sec_HotpAlgorithm algorithm = sec_HotpAlgorithm::SHA1;
+    pwd_HotpAlgorithm algorithm = pwd_HotpAlgorithm::SHA1;
     const char *secret = nullptr;
     int64_t time = GetUnixTime() / 1000;
     int digits = 6;
@@ -257,7 +257,7 @@ Options:
                                  %!D..(default: %3)%!0
     %!..+-w, --window <window>%!0        Generate multiple codes around current time
                                  %!D..(default: %4)%!0)",
-                FelixTarget, sec_HotpAlgorithmNames[(int)algorithm], digits, window);
+                FelixTarget, pwd_HotpAlgorithmNames[(int)algorithm], digits, window);
     };
 
     // Parse arguments
@@ -269,7 +269,7 @@ Options:
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-a", "--algorithm", OptionType::Value)) {
-                if (!OptionToEnum(sec_HotpAlgorithmNames, opt.current_value, &algorithm)) {
+                if (!OptionToEnum(pwd_HotpAlgorithmNames, opt.current_value, &algorithm)) {
                     LogError("Unknown HMAC algorithm '%1'", opt.current_value);
                     return 1;
                 }
@@ -314,7 +314,7 @@ Options:
     }
 
     for (int i = -window; i <= window; i++) {
-        int code = sec_ComputeHotp(secret, algorithm, time / 30 + i, digits);
+        int code = pwd_ComputeHotp(secret, algorithm, time / 30 + i, digits);
         if (code < 0)
             return 1;
         PrintLn("%1", FmtArg(code).Pad0(-digits));
@@ -328,7 +328,7 @@ static int RunCheckTOTP(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    sec_HotpAlgorithm algorithm = sec_HotpAlgorithm::SHA1;
+    pwd_HotpAlgorithm algorithm = pwd_HotpAlgorithm::SHA1;
     const char *secret = nullptr;
     int64_t time = GetUnixTime() / 1000;
     int digits = 6;
@@ -349,7 +349,7 @@ Options:
                                  %!D..(default: %3)%!0
     %!..+-w, --window <window>%!0        Generate multiple codes around current time
                                  %!D..(default: %4)%!0)",
-                FelixTarget, sec_HotpAlgorithmNames[(int)algorithm], digits, window);
+                FelixTarget, pwd_HotpAlgorithmNames[(int)algorithm], digits, window);
     };
 
     // Parse arguments
@@ -361,7 +361,7 @@ Options:
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-a", "--algorithm", OptionType::Value)) {
-                if (!OptionToEnum(sec_HotpAlgorithmNames, opt.current_value, &algorithm)) {
+                if (!OptionToEnum(pwd_HotpAlgorithmNames, opt.current_value, &algorithm)) {
                     LogError("Unknown HMAC algorithm '%1'", opt.current_value);
                     return 1;
                 }
@@ -396,7 +396,7 @@ Options:
     }
 
     if (secret) {
-        if (!sec_CheckSecret(secret))
+        if (!pwd_CheckSecret(secret))
             return 1;
     } else {
         secret = Prompt("Secret: ", &temp_alloc);
@@ -421,7 +421,7 @@ Options:
     }
 
     int64_t counter = GetUnixTime() / 30000;
-    if (sec_CheckHotp(secret, algorithm, counter - window, counter + window, digits, code)) {
+    if (pwd_CheckHotp(secret, algorithm, counter - window, counter + window, digits, code)) {
         LogInfo("Match!");
         return 0;
     } else {

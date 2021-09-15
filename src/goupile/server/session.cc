@@ -18,7 +18,7 @@
 #include "messages.hh"
 #include "session.hh"
 #include "../../core/libnet/libnet.hh"
-#include "../../core/libsecurity/libsecurity.hh"
+#include "../../core/libpasswd/libpasswd.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
@@ -851,14 +851,14 @@ static bool CheckTotp(const SessionInfo &session, InstanceHolder *instance,
     int64_t min = counter - 1;
     int64_t max = counter + 1;
 
-    if (sec_CheckHotp(session.secret, sec_HotpAlgorithm::SHA1, min, max, 6, code)) {
+    if (pwd_CheckHotp(session.secret, pwd_HotpAlgorithm::SHA1, min, max, 6, code)) {
         RG_ASSERT(session.userid >= 0 || instance);
 
         const char *where = (session.userid >= 0) ? "" : instance->key.ptr;
         const EventInfo *event = RegisterEvent(where, session.username, time);
 
         bool replay = (event->prev_time / 30000 >= min) &&
-                      sec_CheckHotp(session.secret, sec_HotpAlgorithm::SHA1, min, event->prev_time / 30000, 6, code);
+                      pwd_CheckHotp(session.secret, pwd_HotpAlgorithm::SHA1, min, event->prev_time / 30000, 6, code);
 
         if (replay) {
             LogError("Please wait for the next code");
@@ -1034,7 +1034,7 @@ void HandleChangePassword(const http_RequestInfo &request, http_IO *io)
         }
 
         // Check password strength
-        if (!sec_CheckPassword(new_password, session->username)) {
+        if (!pwd_CheckPassword(new_password, session->username)) {
             io->AttachError(422);
             return;
         }
@@ -1126,17 +1126,17 @@ void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
-    sec_GenerateSecret(session->secret);
+    pwd_GenerateSecret(session->secret);
 
-    const char *url = sec_GenerateHotpUrl(gp_domain.config.title, session->username, gp_domain.config.title,
-                                          sec_HotpAlgorithm::SHA1, session->secret, 6, &io->allocator);
+    const char *url = pwd_GenerateHotpUrl(gp_domain.config.title, session->username, gp_domain.config.title,
+                                          pwd_HotpAlgorithm::SHA1, session->secret, 6, &io->allocator);
     if (!url)
         return;
 
     Span<const uint8_t> png;
     {
         HeapArray<uint8_t> buf(&io->allocator);
-        if (!sec_GenerateHotpPng(url, 0, &buf))
+        if (!pwd_GenerateHotpPng(url, 0, &buf))
             return;
         png = buf.Leak();
     }

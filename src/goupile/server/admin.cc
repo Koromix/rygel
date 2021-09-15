@@ -18,7 +18,7 @@
 #include "goupile.hh"
 #include "instance.hh"
 #include "session.hh"
-#include "../../core/libsecurity/libsecurity.hh"
+#include "../../core/libpasswd/libpasswd.hh"
 #include "../../core/libwrap/json.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 #include "../../../vendor/miniz/miniz.h"
@@ -501,7 +501,7 @@ Options:
     if (!CheckUserName(username))
         return 1;
     if (password) {
-        if (!sec_CheckPassword(password, username))
+        if (!pwd_CheckPassword(password, username))
             return 1;
     } else {
 retry:
@@ -509,7 +509,7 @@ retry:
         if (!password)
             return 1;
 
-        if (!sec_CheckPassword(password, username))
+        if (!pwd_CheckPassword(password, username))
             goto retry;
 
 reconfirm:
@@ -2431,7 +2431,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
             if (username && !CheckUserName(username)) {
                 valid = false;
             }
-            if (password && !sec_CheckPassword(password)) {
+            if (password && !pwd_CheckPassword(password)) {
                 valid = false;
             }
             if (confirm) {
@@ -2571,7 +2571,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
             if (username && !CheckUserName(username)) {
                 valid = false;
             }
-            if (password && !sec_CheckPassword(password)) {
+            if (password && !pwd_CheckPassword(password)) {
                 valid = false;
             }
             if (confirm) {
