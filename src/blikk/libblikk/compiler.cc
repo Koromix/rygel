@@ -1447,8 +1447,14 @@ void bk_Parser::ParseWhile()
     Size condition_line_idx = src->lines.len;
     ParseExpression(bk_BoolType);
 
+    bool fold = !(flags & (int)bk_CompileFlag::NoFold) && (ir[ir.len - 1].code == bk_Opcode::Push);
+    bool fold_test = fold && ir[ir.len - 1].u.b;
+    TrimInstructions(fold);
+
     Size branch_addr = ir.len;
-    ir.Append({bk_Opcode::BranchIfFalse});
+    if (!fold) {
+        ir.Append({bk_Opcode::BranchIfFalse});
+    }
 
     // Break and continue need to apply to while loop blocks
     RG_DEFER_C(prev_offset = loop_offset,
@@ -1470,21 +1476,32 @@ void bk_Parser::ParseWhile()
         ConsumeToken(bk_TokenKind::End);
     }
 
-    FixJumps(loop_continue_addr, ir.len);
+    // Append loop outro
+    if (fold) {
+        if (fold_test) {
+            FixJumps(loop_continue_addr, branch_addr);
+            ir.Append({bk_Opcode::Jump, {}, {.i = branch_addr - ir.len}});
+            FixJumps(loop_break_addr, ir.len);
+        } else {
+            TrimInstructions(ir.len - branch_addr);
+        }
+    } else {
+        FixJumps(loop_continue_addr, ir.len);
 
-    // Copy the condition expression, and the IR/line map information
-    for (Size i = condition_line_idx; i < src->lines.len &&
-                                      src->lines[i].addr < branch_addr; i++) {
-        const bk_SourceInfo::Line &line = src->lines[i];
-        src->lines.Append({ir.len + (line.addr - condition_addr), line.line});
+        // Copy the condition expression, and the IR/line map information
+        for (Size i = condition_line_idx; i < src->lines.len &&
+                                          src->lines[i].addr < branch_addr; i++) {
+            const bk_SourceInfo::Line &line = src->lines[i];
+            src->lines.Append({ir.len + (line.addr - condition_addr), line.line});
+        }
+        ir.Grow(branch_addr - condition_addr);
+        ir.Append(ir.Take(condition_addr, branch_addr - condition_addr));
+
+        ir.Append({bk_Opcode::BranchIfTrue, {}, {.i = branch_addr - ir.len + 1}});
+        ir[branch_addr].u.i = ir.len - branch_addr;
+
+        FixJumps(loop_break_addr, ir.len);
     }
-    ir.Grow(branch_addr - condition_addr);
-    ir.Append(ir.Take(condition_addr, branch_addr - condition_addr));
-
-    ir.Append({bk_Opcode::BranchIfTrue, {}, {.i = branch_addr - ir.len + 1}});
-    ir[branch_addr].u.i = ir.len - branch_addr;
-
-    FixJumps(loop_break_addr, ir.len);
 }
 
 void bk_Parser::ParseFor()
