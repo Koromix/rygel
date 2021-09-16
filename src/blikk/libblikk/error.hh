@@ -116,7 +116,7 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, Span<const char> code, const ch
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), "\n%1 |%!0  %2%!D..%3%!0", FmtArg(line).Pad(-7), extract, comment).len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), "\n        |  %1%2%!M..^%!0", align, FmtArg(' ').Repeat(align_more)).len;
 
-            Log(LogLevel::Warning, ctx_buf, "%!Y..[warning]%!0 %1", msg_buf.data);
+            Log(LogLevel::Warning, ctx_buf, "%!M..Warning:%!0 %1", msg_buf.data);
         } break;
     }
 }
