@@ -3039,20 +3039,34 @@ void bk_Parser::FixJumps(Size jump_addr, Size target_addr)
 
 void bk_Parser::TrimInstructions(Size count)
 {
-    if (RG_LIKELY(ir.len - prev_ir_len >= count)) {
-        ir.RemoveLast(count);
-
-        if (src->lines.len > 0 && src->lines[src->lines.len - 1].addr > ir.len) {
-            bk_SourceInfo::Line line = src->lines[src->lines.len - 1];
-            line.addr = ir.len;
-
-            do {
-                src->lines.len--;
-            } while (src->lines.len > 0 && src->lines[src->lines.len - 1].addr >= ir.len);
-
-            src->lines.Append(line);
-        }
+    if (RG_UNLIKELY(count > ir.len - prev_ir_len)) {
+        RG_ASSERT(!valid);
+        return;
     }
+
+    Size trim_addr = ir.len - count;
+
+    // Remove potential jump sources
+    while (loop_break_addr >= trim_addr) {
+        loop_break_addr = ir[loop_break_addr].u.i;
+    }
+    while (loop_continue_addr >= trim_addr) {
+        loop_continue_addr = ir[loop_continue_addr].u.i;
+    }
+
+    // Adjust IR-line map
+    if (src->lines.len > 0 && src->lines[src->lines.len - 1].addr > trim_addr) {
+        bk_SourceInfo::Line line = src->lines[src->lines.len - 1];
+        line.addr = trim_addr;
+
+        do {
+            src->lines.len--;
+        } while (src->lines.len > 0 && src->lines[src->lines.len - 1].addr >= trim_addr);
+
+        src->lines.Append(line);
+    }
+
+    ir.RemoveFrom(trim_addr);
 }
 
 bool bk_Parser::TestOverload(const bk_FunctionTypeInfo &func_type, Span<const bk_TypeInfo *const> params)
