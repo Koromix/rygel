@@ -199,7 +199,7 @@ private:
     }
 
     template <typename... Args>
-    void HintError(Size pos, const char *fmt, Args... args)
+    void Hint(Size pos, const char *fmt, Args... args)
     {
         if (show_hints) {
             if (pos >= 0) {
@@ -222,7 +222,7 @@ private:
     {
         Size defn_pos = definitions_map.FindValue(defn, -1);
         if (defn_pos >= 0) {
-            HintError(defn_pos, fmt, args...);
+            Hint(defn_pos, fmt, args...);
         }
     }
 
@@ -236,14 +236,31 @@ private:
             Size dist = LevenshteinDistance(name, it.name);
 
             if (dist <= threshold) {
-                HintError(definitions_map.FindValue(&it, -1), "Suggestion: %1", it.name);
+                Hint(definitions_map.FindValue(&it, -1), "Suggestion: %1", it.name);
                 warn_case |= !dist;
             }
         }
 
         if (warn_case) {
-            HintError(-1, "Identifiers are case-sensitive (e.g. foo and FOO are different)");
+            Hint(-1, "Identifiers are case-sensitive (e.g. foo and FOO are different)");
         }
+    }
+
+    template <typename... Args>
+    void Warn(Size pos, const char *fmt, Args... args)
+    {
+        RG_ASSERT(pos >= 0);
+
+        Size offset = (pos < tokens.len) ? tokens[pos].offset : file->code.len;
+        int line = tokens[std::min(pos, tokens.len - 1)].line;
+
+        if (offset <= file->code.len) {
+            bk_ReportDiagnostic(bk_DiagnosticType::Warning, file->code, file->filename, line, offset, fmt, args...);
+        } else {
+            bk_ReportDiagnostic(bk_DiagnosticType::Warning, fmt, args...);
+        }
+
+        show_hints = true;
     }
 };
 
@@ -925,8 +942,8 @@ bool bk_Parser::ParseBlock(bool end_with_else)
             break;
 
         if (RG_UNLIKELY(has_return && !issued_unreachable)) {
-            MarkError(pos, "Unreachable statement");
-            HintError(-1, "You cannot put any code after return statements");
+            Warn(pos, "Unreachable statement");
+            Hint(-1, "Code after return statement can never run");
 
             issued_unreachable = true;
         }
@@ -936,7 +953,7 @@ bool bk_Parser::ParseBlock(bool end_with_else)
         } else {
             if (!has_return) {
                 MarkError(pos, "Excessive parsing depth (compiler limit)");
-                HintError(-1, "Simplify surrounding code");
+                Hint(-1, "Simplify surrounding code");
             }
 
             pos++;
@@ -986,7 +1003,7 @@ bool bk_Parser::ParseStatement()
         case bk_TokenKind::Record: {
             if (RG_UNLIKELY(current_func)) {
                 MarkError(pos, "Record types cannot be defined inside functions");
-                HintError(definitions_map.FindValue(current_func, -1), "Function was started here and is still open");
+                Hint(definitions_map.FindValue(current_func, -1), "Function was started here and is still open");
             } else if (RG_UNLIKELY(depth)) {
                 MarkError(pos, "Records must be defined in top-level scope");
             }
@@ -1007,7 +1024,7 @@ bool bk_Parser::ParseStatement()
         case bk_TokenKind::Enum: {
             if (RG_UNLIKELY(current_func)) {
                 MarkError(pos, "Enum types cannot be defined inside functions");
-                HintError(definitions_map.FindValue(current_func, -1), "Function was started here and is still open");
+                Hint(definitions_map.FindValue(current_func, -1), "Function was started here and is still open");
             } else if (RG_UNLIKELY(depth)) {
                 MarkError(pos, "Enums must be defined in top-level scope");
             }
@@ -1113,7 +1130,7 @@ void bk_Parser::ParseFunction(const PrototypeInfo *proto)
     // Do safety checks we could not do in Preparse()
     if (RG_UNLIKELY(current_func)) {
         MarkError(func_pos, "Nested functions are not supported");
-        HintError(definitions_map.FindValue(current_func, -1), "Previous function was started here and is still open");
+        Hint(definitions_map.FindValue(current_func, -1), "Previous function was started here and is still open");
     } else if (RG_UNLIKELY(depth)) {
         MarkError(func_pos, "Functions must be defined in top-level scope");
     }
@@ -1665,7 +1682,7 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
 
     if (RG_UNLIKELY(!recurse)) {
         MarkError(pos, "Excessive parsing depth (compiler limit)");
-        HintError(-1, "Simplify surrounding code");
+        Hint(-1, "Simplify surrounding code");
 
         goto error;
     }
@@ -1847,7 +1864,7 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                                         // Show all candidate functions with same name
                                         const bk_FunctionInfo *it = func;
                                         do {
-                                            HintError(definitions_map.FindValue(it, -1), "Candidate '%1'", it->prototype);
+                                            Hint(definitions_map.FindValue(it, -1), "Candidate '%1'", it->prototype);
                                             it = it->overload_next;
                                         } while (it != func);
 
@@ -1917,7 +1934,7 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
                 } else {
                     MarkError(var_pos, "Reference to unknown identifier '%1'", name);
                     if (preparse) {
-                        HintError(-1, "Top-level declarations (prototypes) cannot reference variables");
+                        Hint(-1, "Top-level declarations (prototypes) cannot reference variables");
                     }
                     HintSuggestions(name, program->variables);
 
@@ -2006,7 +2023,7 @@ StackSlot bk_Parser::ParseExpression(bool stop_at_operator, bool tolerate_assign
 
         if (RG_UNLIKELY(stack.len >= 64)) {
             MarkError(pos, "Excessive complexity while parsing expression (compiler limit)");
-            HintError(-1, "Simplify expression");
+            Hint(-1, "Simplify expression");
             goto error;
         }
     }
@@ -2103,7 +2120,7 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
         }
         if (RG_UNLIKELY(!dest.var->mut)) {
             MarkError(op.pos, "Cannot assign result to non-mutable variable '%1'", dest.var->name);
-            HintError(definitions_map.FindValue(dest.var, -1), "Variable '%1' is defined without 'mut' qualifier", dest.var->name);
+            Hint(definitions_map.FindValue(dest.var, -1), "Variable '%1' is defined without 'mut' qualifier", dest.var->name);
 
             return;
         }
@@ -2113,7 +2130,7 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
             } else {
                 MarkError(op.pos, "Cannot assign '%1' value here, expected '%2'", expr.type->signature, dest.type->signature);
             }
-            HintError(definitions_map.FindValue(dest.var, -1), "Variable '%1' is defined as '%2'",
+            Hint(definitions_map.FindValue(dest.var, -1), "Variable '%1' is defined as '%2'",
                       dest.var->name, dest.var->type->signature);
             return;
         }
@@ -2469,7 +2486,7 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
             type_buf.unit_type = recurse ? ParseArrayType() : bk_NullType;
         } else {
             MarkError(pos, "Excessive parsing depth (compiler limit)");
-            HintError(-1, "Simplify surrounding code");
+            Hint(-1, "Simplify surrounding code");
 
             type_buf.unit_type = bk_NullType;
         }
@@ -2699,7 +2716,7 @@ bool bk_Parser::ParseCall(const bk_FunctionTypeInfo *func_type, const bk_Functio
                 // Show all candidate functions with same name
                 const bk_FunctionInfo *it = func0;
                 do {
-                    HintError(definitions_map.FindValue(it, -1), "Candidate '%1'", it->prototype);
+                    Hint(definitions_map.FindValue(it, -1), "Candidate '%1'", it->prototype);
                     it = it->overload_next;
                 } while (it != func0);
 
@@ -2779,7 +2796,7 @@ void bk_Parser::EmitLoad(const bk_VariableInfo &var)
                     current_func && current_func->earliest_ref_addr < var.ready_addr)) {
         MarkError(definitions_map.FindValue(current_func, -1), "Function '%1' is referenced before global variable '%2' exists",
                   current_func->name, var.name);
-        HintError(current_func->earliest_ref_pos, "Function reference is here (it could be indirect)");
+        Hint(current_func->earliest_ref_pos, "Function reference is here (it could be indirect)");
         HintDefinition(&var, "Variable '%1' is defined here", var.name);
     }
 

@@ -24,6 +24,7 @@ RG_INIT(RedirectLog)
 {
     SetLogHandler([](LogLevel level, const char *ctx, const char *msg) {
         switch (level) {
+            case LogLevel::Warning:
             case LogLevel::Error: {
                 std::lock_guard<std::mutex> lock(rcc_log_mutex);
 

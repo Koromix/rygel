@@ -3116,6 +3116,7 @@ FmtArg FmtSpan(T (&arr)[N], const char *sep = ", ") { return FmtSpan(MakeSpan(ar
 enum class LogLevel {
     Debug,
     Info,
+    Warning,
     Error
 };
 

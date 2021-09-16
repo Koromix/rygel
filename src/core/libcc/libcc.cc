@@ -1720,6 +1720,7 @@ void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg)
     switch (level)  {
         case LogLevel::Debug:
         case LogLevel::Info: { PrintLn(stderr, "%!D..%1%2%!0%3", ctx ? ctx : "", ctx ? ": " : "", msg); } break;
+        case LogLevel::Warning: { PrintLn(stderr, "%!M..%1%2%!0%3", ctx ? ctx : "", ctx ? ": " : "", msg); } break;
         case LogLevel::Error: { PrintLn(stderr, "%!R..%1%2%!0%3", ctx ? ctx : "", ctx ? ": " : "", msg); } break;
     }
 
