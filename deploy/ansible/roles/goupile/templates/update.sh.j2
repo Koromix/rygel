@@ -1,0 +1,33 @@
+#!/bin/sh
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+cd '{{ goupile_root_path }}/repo'
+
+# Get remote changes
+git fetch
+git reset --hard FETCH_HEAD
+
+# Update or bootstrap Felix
+if ! bin/Paranoid/felix -pParanoid --compiler=clang-11 --linker=lld-11 felix; then
+    ./bootstrap.sh
+    ./felix -pParanoid --compiler=clang-11 --linker=lld-11 felix
+    rm -f felix
+fi
+
+# Build Goupile
+./felix -pParanoid --compiler=clang-11 --linker=lld-11 felix goupile
+
+# Install Goupile
+install -o root -g root -m 0755 bin/Paranoid/goupile '{{ goupile_root_path }}/goupile'

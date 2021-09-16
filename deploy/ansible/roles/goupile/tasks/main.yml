@@ -47,7 +47,8 @@
   file:
     path: '{{ goupile_root_path }}/repo'
     state: directory
-    owner: '{{ ansible_user | default(lookup("env", "USER"), True) }}'
+    owner: root
+    group: root
     recurse: yes
   become: yes
 
@@ -57,57 +58,16 @@
     version: '{{ goupile_commit }}'
     dest: '{{ goupile_root_path }}/repo'
     force: yes
-  become: no
-
-- name: Update Felix build system
-  command:
-    cmd: '{{ goupile_root_path }}/repo/bin/Paranoid/felix -pParanoid --compiler=clang-11 --linker=lld-11 felix'
-    chdir: '{{ goupile_root_path }}/repo'
-  ignore_errors: yes
-  register: build_felix
-  changed_when: 'not build_felix.failed and build_felix.stderr_lines[-1] != "Nothing to do!" and build_felix.stderr_lines[-2] != "Nothing to do!"'
-  become: no
-
-- name: Bootstrap Felix
-  block:
-    - name: Bootstrap Felix
-      shell:
-        cmd: '{{ goupile_root_path }}/repo/bootstrap.sh'
-        chdir: '{{ goupile_root_path }}/repo'
-    - name: Update Felix build system
-      command:
-        cmd: '{{ goupile_root_path }}/repo/felix -pParanoid --compiler=clang-11 --linker=lld-11 felix'
-        chdir: '{{ goupile_root_path }}/repo'
-    - name: Delete bootstrapped Felix
-      file:
-        path: '{{ goupile_root_path }}/repo/felix'
-        state: absent
-  when: 'not ansible_check_mode and build_felix.rc != 0'
-  become: no
-
-- name: Build Goupile
-  command:
-    cmd: '{{ goupile_root_path }}/repo/bin/Paranoid/felix -pParanoid --compiler=clang-11 --linker=lld-11'
-    chdir: '{{ goupile_root_path }}/repo'
-  register: build_goupile
-  changed_when: 'build_goupile.stderr_lines[-1] != "Nothing to do!" and build_goupile.stderr_lines[-2] != "Nothing to do!"'
-  become: no
-
-- name: Install Goupile
-  copy:
-    src: '{{ goupile_root_path }}/repo/bin/Paranoid/goupile'
-    remote_src: yes
-    dest: '{{ goupile_root_path }}/goupile'
-    owner: root
-    group: root
-    mode: '0755'
   become: yes
 
-- name: Install sync script
-  copy:
-    src: sync.py
-    dest: '{{ goupile_root_path }}/sync/sync.py'
+- name: Install sync scripts
+  template:
+    src: '{{ item }}.j2'
+    dest: '{{ goupile_root_path }}/sync/{{ item }}'
     mode: '0755'
+  loop:
+    - sync.py
+    - update.sh
   become: yes
 
 - name: Update configuration files
@@ -132,6 +92,21 @@
     daemon_reload: yes
   when: upload_config.changed
   become: yes
+
+- name: Set up Goupile update
+  cron:
+    name: goupile_update
+    hour: '{{ goupile_update_hour }}'
+    minute: 0
+    job: '{{ goupile_root_path }}/sync/update.sh && {{ goupile_root_path }}/sync/update.sh'
+  when: goupile_update_auto
+  become: yes
+
+- name: Update and install Goupile
+  command: '{{ goupile_root_path }}/sync/update.sh'
+  register: build_goupile
+  changed_when: 'build_goupile.stderr_lines[-1] != "Nothing to do!" and build_goupile.stderr_lines[-2] != "Nothing to do!"'
+  become: no
 
 - name: Sync Goupile services
   command: '{{ goupile_root_path }}/sync/sync.py'
