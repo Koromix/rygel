@@ -207,6 +207,7 @@ struct bk_VariableInfo {
     const char *name;
     const bk_TypeInfo *type;
     bool mut;
+    bool changes;
 
     Scope scope;
     Size offset; // Stack
