@@ -1357,14 +1357,18 @@ bool bk_Parser::ParseIf()
     }
 
     bool has_return = true;
-    bool has_else = false;
+    bool is_exhaustive = false;
 
     if (PeekToken(bk_TokenKind::Do)) {
         has_return &= ParseDo();
 
-        if (fold && !fold_test) {
-            TrimInstructions(ir.len - branch_addr);
-        } else if (!fold) {
+        if (fold) {
+            if (fold_test) {
+                is_exhaustive = true;
+            } else {
+                TrimInstructions(ir.len - branch_addr);
+            }
+        } else {
             ir[branch_addr].u.i = ir.len - branch_addr;
         }
     } else if (RG_LIKELY(EndStatement())) {
@@ -1401,11 +1405,18 @@ bool bk_Parser::ParseIf()
                             ir.Append({bk_Opcode::BranchIfFalse});
                         }
 
-                        has_return &= ParseBlock(true);
+                        bool block_return = ParseBlock(true);
 
-                        if (fold && !fold_test) {
-                            TrimInstructions(ir.len - branch_addr);
-                        } else if (!fold) {
+                        if (fold) {
+                            if (fold_test) {
+                                has_return = block_return;
+                                is_exhaustive = true;
+                            } else {
+                                TrimInstructions(ir.len - branch_addr);
+                            }
+                        } else {
+                            has_return &= block_return;
+
                             ir.Append({bk_Opcode::Jump, {}, {.i = jump_addr}});
                             jump_addr = ir.len - 1;
                         }
@@ -1413,8 +1424,14 @@ bool bk_Parser::ParseIf()
                     }
                 } else if (RG_LIKELY(EndStatement())) {
                     Size else_addr = ir.len;
-                    has_return &= ParseBlock(false);
-                    has_else = true;
+                    bool block_return = ParseBlock(false);
+
+                    if (fold && !fold_skip) {
+                        has_return = block_return;
+                    } else if (!fold) {
+                        has_return &= block_return;
+                    }
+                    is_exhaustive = true;
 
                     TrimInstructions(fold_skip ? (ir.len - else_addr) : 0);
 
@@ -1424,9 +1441,13 @@ bool bk_Parser::ParseIf()
 
             FixJumps(jump_addr, ir.len);
         } else {
-            if (fold && !fold_test) {
-                TrimInstructions(ir.len - branch_addr);
-            } else if (!fold) {
+            if (fold) {
+                if (fold_test) {
+                    is_exhaustive = true;
+                } else {
+                    TrimInstructions(ir.len - branch_addr);
+                }
+            } else {
                 ir[branch_addr].u.i = ir.len - branch_addr;
             }
         }
@@ -1434,7 +1455,7 @@ bool bk_Parser::ParseIf()
         ConsumeToken(bk_TokenKind::End);
     }
 
-    return has_return && has_else;
+    return has_return && is_exhaustive;
 }
 
 void bk_Parser::ParseWhile()
