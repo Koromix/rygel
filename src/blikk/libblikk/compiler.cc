@@ -188,7 +188,11 @@ private:
             Size offset = (pos < tokens.len) ? tokens[pos].offset : file->code.len;
             int line = tokens[std::min(pos, tokens.len - 1)].line;
 
-            bk_ReportDiagnostic(bk_DiagnosticType::Error, file->code, file->filename, line, offset, fmt, args...);
+            if (offset <= file->code.len) {
+                bk_ReportDiagnostic(bk_DiagnosticType::Error, file->code, file->filename, line, offset, fmt, args...);
+            } else {
+                bk_ReportDiagnostic(bk_DiagnosticType::Error, fmt, args...);
+            }
         }
 
         FlagError();
@@ -202,7 +206,11 @@ private:
                 Size offset = (pos < tokens.len) ? tokens[pos].offset : file->code.len;
                 int line = tokens[std::min(pos, tokens.len - 1)].line;
 
-                bk_ReportDiagnostic(bk_DiagnosticType::ErrorHint, file->code, file->filename, line, offset, fmt, args...);
+                if (offset <= file->code.len) {
+                    bk_ReportDiagnostic(bk_DiagnosticType::ErrorHint, file->code, file->filename, line, offset, fmt, args...);
+                } else {
+                    bk_ReportDiagnostic(bk_DiagnosticType::ErrorHint, fmt, args...);
+                }
             } else {
                 bk_ReportDiagnostic(bk_DiagnosticType::ErrorHint, fmt, args...);
             }
