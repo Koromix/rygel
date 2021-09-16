@@ -21,10 +21,6 @@ namespace RG {
 class bk_Parser;
 struct bk_TokenizedFile;
 
-enum class bk_CompileFlag {
-    NoFold = 1 << 0
-};
-
 struct bk_CompileReport {
     bool unexpected_eof;
     int depth;
@@ -39,8 +35,8 @@ public:
     bk_Compiler(bk_Program *out_program);
     ~bk_Compiler();
 
-    bool Compile(const bk_TokenizedFile &file, unsigned int flags, bk_CompileReport *out_report = nullptr);
-    bool Compile(Span<const char> code, const char *filename, unsigned int flags, bk_CompileReport *out_report = nullptr);
+    bool Compile(const bk_TokenizedFile &file, bk_CompileReport *out_report = nullptr);
+    bool Compile(Span<const char> code, const char *filename, bk_CompileReport *out_report = nullptr);
 
     void AddFunction(const char *prototype, unsigned int flags, std::function<bk_NativeFunction> native);
     void AddGlobal(const char *name, const bk_TypeInfo *type, Span<const bk_PrimitiveValue> values, bool mut = false);

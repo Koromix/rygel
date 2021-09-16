@@ -62,8 +62,7 @@ int RunFile(const char *filename, const Config &config)
         bk_Compiler compiler(&program);
         bk_ImportAll(&compiler);
 
-        unsigned int flags = config.fold ? 0 : (int)bk_CompileFlag::NoFold;
-        if (!compiler.Compile(code, filename, flags))
+        if (!compiler.Compile(code, filename))
             return 1;
     }
 
@@ -95,7 +94,6 @@ Options:
 
         %!..+--sandbox%!0                Run in strict OS sandbox (if supported)
 
-        %!..+--no_fold%!0                Disable unnecessary folding and CTFE
         %!..+--no_execute%!0             Parse code but don't run it
         %!..+--no_expression%!0          Don't try to run code as expression
                                  %!D..(works only with -c or -i)%!0
@@ -132,8 +130,6 @@ Options:
                 mode = RunMode::Interactive;
             } else if (opt.Test("--sandbox")) {
                 config.sandbox = true;
-            } else if (opt.Test("--no_fold")) {
-                config.fold = false;
             } else if (opt.Test("--no_execute")) {
                 config.execute = false;
             } else if (opt.Test("--no_expression")) {

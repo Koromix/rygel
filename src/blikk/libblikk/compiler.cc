@@ -52,7 +52,6 @@ class bk_Parser {
 
     // All these members are relevant to the current parse only, and get resetted each time
     const bk_TokenizedFile *file;
-    unsigned int flags;
     bk_CompileReport *out_report; // Can be NULL
     bool preparse;
     Span<const bk_Token> tokens;
@@ -90,7 +89,7 @@ class bk_Parser {
 public:
     bk_Parser(bk_Program *program);
 
-    bool Parse(const bk_TokenizedFile &file, unsigned int flags, bk_CompileReport *out_report);
+    bool Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report);
 
     void AddFunction(const char *prototype, unsigned int flags, std::function<bk_NativeFunction> native);
     bk_VariableInfo *AddGlobal(const char *name, const bk_TypeInfo *type,
@@ -311,18 +310,18 @@ bk_Compiler::~bk_Compiler()
     delete parser;
 }
 
-bool bk_Compiler::Compile(const bk_TokenizedFile &file, unsigned int flags, bk_CompileReport *out_report)
+bool bk_Compiler::Compile(const bk_TokenizedFile &file, bk_CompileReport *out_report)
 {
-    return parser->Parse(file, flags, out_report);
+    return parser->Parse(file, out_report);
 }
 
-bool bk_Compiler::Compile(Span<const char> code, const char *filename, unsigned int flags, bk_CompileReport *out_report)
+bool bk_Compiler::Compile(Span<const char> code, const char *filename, bk_CompileReport *out_report)
 {
     bk_TokenizedFile file;
     if (!bk_Tokenize(code, filename, &file))
         return false;
 
-    return parser->Parse(file, flags, out_report);
+    return parser->Parse(file, out_report);
 }
 
 void bk_Compiler::AddFunction(const char *prototype, unsigned int flags, std::function<bk_NativeFunction> native)
@@ -366,7 +365,7 @@ bk_Parser::bk_Parser(bk_Program *program)
     AddFunction("typeOf(...): Type", (int)bk_FunctionFlag::Pure, {});
 }
 
-bool bk_Parser::Parse(const bk_TokenizedFile &file, unsigned int flags, bk_CompileReport *out_report)
+bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report)
 {
     prev_ir_len = ir.len;
 
@@ -413,7 +412,6 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, unsigned int flags, bk_Compi
     };
 
     this->file = &file;
-    this->flags = flags;
     this->out_report = out_report;
     if (out_report) {
         *out_report = {};
@@ -1346,7 +1344,7 @@ bool bk_Parser::ParseIf()
 
     ParseExpression(bk_BoolType);
 
-    bool fold = !(flags & (int)bk_CompileFlag::NoFold) && (ir[ir.len - 1].code == bk_Opcode::Push);
+    bool fold = (ir[ir.len - 1].code == bk_Opcode::Push);
     bool fold_test = fold && ir[ir.len - 1].u.b;
     bool fold_skip = fold && fold_test;
     TrimInstructions(fold);
@@ -1395,7 +1393,7 @@ bool bk_Parser::ParseIf()
                     Size test_addr = ir.len;
                     ParseExpression(bk_BoolType);
 
-                    fold = !(flags & (int)bk_CompileFlag::NoFold) && (fold_skip || ir[ir.len - 1].code == bk_Opcode::Push);
+                    fold = fold_skip || (ir[ir.len - 1].code == bk_Opcode::Push);
                     fold_test = fold && !fold_skip && ir[ir.len - 1].u.b;
                     TrimInstructions(fold ? (ir.len - test_addr) : 0);
 
@@ -1468,7 +1466,7 @@ void bk_Parser::ParseWhile()
     Size condition_line_idx = src->lines.len;
     ParseExpression(bk_BoolType);
 
-    bool fold = !(flags & (int)bk_CompileFlag::NoFold) && (ir[ir.len - 1].code == bk_Opcode::Push);
+    bool fold = (ir[ir.len - 1].code == bk_Opcode::Push);
     bool fold_test = fold && ir[ir.len - 1].u.b;
     TrimInstructions(fold);
 
@@ -2487,9 +2485,6 @@ const bk_ArrayTypeInfo *bk_Parser::ParseArrayType()
 
     // Parse array length
     {
-        RG_DEFER_C(prev_flags = flags) { flags = prev_flags; };
-        flags &= ~(int)bk_CompileFlag::NoFold;
-
         const bk_TypeInfo *type = ParseExpression(false, false).type;
 
         if (MatchToken(bk_TokenKind::Comma)) {
@@ -2865,9 +2860,6 @@ const bk_TypeInfo *bk_Parser::ParseTypeExpression()
 
     // Parse type expression
     {
-        RG_DEFER_C(prev_flags = flags) { flags = prev_flags; };
-        flags &= ~(int)bk_CompileFlag::NoFold;
-
         const bk_TypeInfo *type = ParseExpression(true, false).type;
 
         if (RG_UNLIKELY(type != bk_TypeType)) {
@@ -2889,8 +2881,6 @@ const bk_TypeInfo *bk_Parser::ParseTypeExpression()
 
 void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
 {
-    if ((flags & (int)bk_CompileFlag::NoFold) && out_type->primitive != bk_PrimitiveKind::Type)
-        return;
     if (out_type->size > 1)
         return;
     for (Size i = 0; i < count; i++) {

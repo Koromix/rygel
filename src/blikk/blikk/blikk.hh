@@ -20,7 +20,6 @@ namespace RG {
 
 struct Config {
     bool sandbox = false;
-    bool fold = true;
     bool try_expression = true;
     bool execute = true;
     bool debug = false;

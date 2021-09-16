@@ -99,8 +99,7 @@ int RunCommand(Span<const char> code, const Config &config)
         SetLogHandler([](LogLevel level, const char *ctx, const char *msg) {});
         RG_DEFER { SetLogHandler(DefaultLogHandler); };
 
-        unsigned int flags = config.fold ? 0 : (int)bk_CompileFlag::NoFold;
-        valid_with_fake_print = compiler.Compile(file, flags);
+        valid_with_fake_print = compiler.Compile(file);
     } else {
         valid_with_fake_print = false;
     }
@@ -111,8 +110,7 @@ int RunCommand(Span<const char> code, const Config &config)
         bool success = bk_Tokenize(code, "<inline>", &file);
         RG_ASSERT(success);
 
-        unsigned int flags = config.fold ? 0 : (int)bk_CompileFlag::NoFold;
-        if (!compiler.Compile(file, flags))
+        if (!compiler.Compile(file))
             return 1;
     }
 
@@ -180,8 +178,7 @@ int RunInteractive(const Config &config)
             if (!TokenizeWithFakePrint(code, "<inline>", &file))
                 continue;
 
-            unsigned int flags = config.fold ? 0 : (int)bk_CompileFlag::NoFold;
-            valid_with_fake_print = compiler.Compile(file, flags);
+            valid_with_fake_print = compiler.Compile(file);
         } else {
             valid_with_fake_print = false;
         }
@@ -193,10 +190,8 @@ int RunInteractive(const Config &config)
             bool success = bk_Tokenize(code, "<interactive>", &file);
             RG_ASSERT(success);
 
-            unsigned int flags = config.fold ? 0 : (int)bk_CompileFlag::NoFold;
             bk_CompileReport report;
-
-            if (!compiler.Compile(file, flags, &report)) {
+            if (!compiler.Compile(file, &report)) {
                 if (report.unexpected_eof) {
                     prompter.str.len = TrimStrRight(prompter.str.Take(), "\t ").len;
                     if (!prompter.str.len || prompter.str[prompter.str.len - 1] != '\n') {
