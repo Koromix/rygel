@@ -18,7 +18,7 @@ function ApplicationInfo() {
     this.home = null;
     this.panels = {
         editor: goupile.hasPermission('admin_code'),
-        data: !goupile.isLocked() && goupile.hasPermission('data_load'),
+        data: !goupile.isLocked(),
         view: true
     };
     this.lockable = false;
