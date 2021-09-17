@@ -892,8 +892,12 @@ const goupile = new function() {
                                 "Abandonner les modifications", () => {});
     };
 
-    this.isLocked = function() { return profile.lock !== undefined ||
-                                        !goupile.hasPermission('data_load'); };
+    this.isLocked = function() {
+        if (!(controller instanceof InstanceController))
+            return false;
+
+        return profile.lock !== undefined || !self.hasPermission('data_load');
+    };
     this.hasPermission = function(perm) { return profile.permissions != null &&
                                                  profile.permissions[perm]; };
     this.isLoggedOnline = function() { return net.isOnline() && profile.online; };
