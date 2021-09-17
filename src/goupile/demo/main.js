@@ -1,3 +1,5 @@
+// Ce fichier définit un formulaire composé de 3 pages
+
 app.form("suivi", "Suivi", () => {
     app.page("introduction", "Introduction")
     app.page("avance", "Avancé")
