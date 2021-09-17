@@ -22,11 +22,7 @@
 #ifndef MBEDTLS_DEBUG_H
 #define MBEDTLS_DEBUG_H
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "build_info.h"
 
 #include "ssl.h"
 
@@ -59,9 +55,13 @@
 #endif
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
+#if !defined(MBEDTLS_X509_REMOVE_INFO)
 #define MBEDTLS_SSL_DEBUG_CRT( level, text, crt )                \
     mbedtls_debug_print_crt( ssl, level, __FILE__, __LINE__, text, crt )
-#endif
+#else
+#define MBEDTLS_SSL_DEBUG_CRT( level, text, crt )       do { } while( 0 )
+#endif /* MBEDTLS_X509_REMOVE_INFO */
+#endif /* MBEDTLS_X509_CRT_PARSE_C */
 
 #if defined(MBEDTLS_ECDH_C)
 #define MBEDTLS_SSL_DEBUG_ECDH( level, ecdh, attr )               \
@@ -94,8 +94,13 @@
  */
 #if defined(__has_attribute)
 #if __has_attribute(format)
+#if defined(__MINGW32__) && __USE_MINGW_ANSI_STDIO == 1
 #define MBEDTLS_PRINTF_ATTRIBUTE(string_index, first_to_check)    \
-    __attribute__((format (printf, string_index, first_to_check)))
+    __attribute__((__format__ (gnu_printf, string_index, first_to_check)))
+#else /* defined(__MINGW32__) && __USE_MINGW_ANSI_STDIO == 1 */
+#define MBEDTLS_PRINTF_ATTRIBUTE(string_index, first_to_check)    \
+    __attribute__((format(printf, string_index, first_to_check)))
+#endif
 #else /* __has_attribute(format) */
 #define MBEDTLS_PRINTF_ATTRIBUTE(string_index, first_to_check)
 #endif /* __has_attribute(format) */
@@ -115,14 +120,14 @@
  *
  * This module provides debugging functions.
  */
-#if defined(__MINGW32__) || (defined(_MSC_VER) && _MSC_VER < 1800)
+#if (defined(__MINGW32__) && __USE_MINGW_ANSI_STDIO == 0) || (defined(_MSC_VER) && _MSC_VER < 1800)
    #include <inttypes.h>
    #define MBEDTLS_PRINTF_SIZET     PRIuPTR
    #define MBEDTLS_PRINTF_LONGLONG  "I64d"
-#else /* defined(__MINGW32__) || (defined(_MSC_VER) && _MSC_VER < 1800) */
+#else /* (defined(__MINGW32__)  && __USE_MINGW_ANSI_STDIO == 0) || (defined(_MSC_VER) && _MSC_VER < 1800) */
    #define MBEDTLS_PRINTF_SIZET     "zu"
    #define MBEDTLS_PRINTF_LONGLONG  "lld"
-#endif /* defined(__MINGW32__) || (defined(_MSC_VER) && _MSC_VER < 1800) */
+#endif /* (defined(__MINGW32__)  && __USE_MINGW_ANSI_STDIO == 0) || (defined(_MSC_VER) && _MSC_VER < 1800) */
 
 #ifdef __cplusplus
 extern "C" {
@@ -248,7 +253,7 @@ void mbedtls_debug_print_ecp( const mbedtls_ssl_context *ssl, int level,
                       const char *text, const mbedtls_ecp_point *X );
 #endif
 
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
+#if defined(MBEDTLS_X509_CRT_PARSE_C) && !defined(MBEDTLS_X509_REMOVE_INFO)
 /**
  * \brief   Print a X.509 certificate structure to the debug output. This
  *          function is always used through the MBEDTLS_SSL_DEBUG_CRT() macro,

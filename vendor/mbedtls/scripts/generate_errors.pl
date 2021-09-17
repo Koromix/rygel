@@ -44,11 +44,11 @@ if( @ARGV ) {
 
 my $error_format_file = $data_dir.'/error.fmt';
 
-my @low_level_modules = qw( AES ARC4 ARIA ASN1 BASE64 BIGNUM BLOWFISH
+my @low_level_modules = qw( AES ARIA ASN1 BASE64 BIGNUM
                             CAMELLIA CCM CHACHA20 CHACHAPOLY CMAC CTR_DRBG DES
-                            ENTROPY ERROR GCM HKDF HMAC_DRBG MD2 MD4 MD5
+                            ENTROPY ERROR GCM HKDF HMAC_DRBG MD5
                             NET OID PADLOCK PBKDF2 PLATFORM POLY1305 RIPEMD160
-                            SHA1 SHA256 SHA512 THREADING XTEA );
+                            SHA1 SHA256 SHA512 THREADING );
 my @high_level_modules = qw( CIPHER DHM ECP MD
                              PEM PK PKCS12 PKCS5
                              RSA SSL X509 );
@@ -56,7 +56,7 @@ my @high_level_modules = qw( CIPHER DHM ECP MD
 my $line_separator = $/;
 undef $/;
 
-open(FORMAT_FILE, "$error_format_file") or die "Opening error format file '$error_format_file': $!";
+open(FORMAT_FILE, '<:crlf', "$error_format_file") or die "Opening error format file '$error_format_file': $!";
 my $error_format = <FORMAT_FILE>;
 close(FORMAT_FILE);
 
@@ -66,7 +66,7 @@ my @files = <$include_dir/*.h>;
 my @necessary_include_files;
 my @matches;
 foreach my $file (@files) {
-    open(FILE, "$file");
+    open(FILE, '<:crlf', "$file");
     my @grep_res = grep(/^\s*#define\s+MBEDTLS_ERR_\w+\s+\-0x[0-9A-Fa-f]+/, <FILE>);
     push(@matches, @grep_res);
     close FILE;

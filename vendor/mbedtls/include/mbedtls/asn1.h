@@ -21,12 +21,9 @@
  */
 #ifndef MBEDTLS_ASN1_H
 #define MBEDTLS_ASN1_H
+#include "private_access.h"
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "build_info.h"
 
 #include <stddef.h>
 
@@ -148,9 +145,9 @@ extern "C" {
  */
 typedef struct mbedtls_asn1_buf
 {
-    int tag;                /**< ASN1 type, e.g. MBEDTLS_ASN1_UTF8_STRING. */
-    size_t len;             /**< ASN1 length, in octets. */
-    unsigned char *p;       /**< ASN1 data, e.g. in ASCII. */
+    int MBEDTLS_PRIVATE(tag);                /**< ASN1 type, e.g. MBEDTLS_ASN1_UTF8_STRING. */
+    size_t MBEDTLS_PRIVATE(len);             /**< ASN1 length, in octets. */
+    unsigned char *MBEDTLS_PRIVATE(p);       /**< ASN1 data, e.g. in ASCII. */
 }
 mbedtls_asn1_buf;
 
@@ -159,9 +156,9 @@ mbedtls_asn1_buf;
  */
 typedef struct mbedtls_asn1_bitstring
 {
-    size_t len;                 /**< ASN1 length, in octets. */
-    unsigned char unused_bits;  /**< Number of unused bits at the end of the string */
-    unsigned char *p;           /**< Raw ASN1 data for the bit string */
+    size_t MBEDTLS_PRIVATE(len);                 /**< ASN1 length, in octets. */
+    unsigned char MBEDTLS_PRIVATE(unused_bits);  /**< Number of unused bits at the end of the string */
+    unsigned char *MBEDTLS_PRIVATE(p);           /**< Raw ASN1 data for the bit string */
 }
 mbedtls_asn1_bitstring;
 
@@ -170,8 +167,8 @@ mbedtls_asn1_bitstring;
  */
 typedef struct mbedtls_asn1_sequence
 {
-    mbedtls_asn1_buf buf;                   /**< Buffer containing the given ASN.1 item. */
-    struct mbedtls_asn1_sequence *next;    /**< The next entry in the sequence. */
+    mbedtls_asn1_buf MBEDTLS_PRIVATE(buf);                   /**< Buffer containing the given ASN.1 item. */
+    struct mbedtls_asn1_sequence *MBEDTLS_PRIVATE(next);    /**< The next entry in the sequence. */
 }
 mbedtls_asn1_sequence;
 
@@ -180,10 +177,10 @@ mbedtls_asn1_sequence;
  */
 typedef struct mbedtls_asn1_named_data
 {
-    mbedtls_asn1_buf oid;                   /**< The object identifier. */
-    mbedtls_asn1_buf val;                   /**< The named value. */
-    struct mbedtls_asn1_named_data *next;  /**< The next entry in the sequence. */
-    unsigned char next_merged;      /**< Merge next item into the current one? */
+    mbedtls_asn1_buf MBEDTLS_PRIVATE(oid);                   /**< The object identifier. */
+    mbedtls_asn1_buf MBEDTLS_PRIVATE(val);                   /**< The named value. */
+    struct mbedtls_asn1_named_data *MBEDTLS_PRIVATE(next);  /**< The next entry in the sequence. */
+    unsigned char MBEDTLS_PRIVATE(next_merged);      /**< Merge next item into the current one? */
 }
 mbedtls_asn1_named_data;
 
@@ -578,7 +575,7 @@ int mbedtls_asn1_get_alg_null( unsigned char **p,
  *
  * \return      NULL if not found, or a pointer to the existing entry.
  */
-mbedtls_asn1_named_data *mbedtls_asn1_find_named_data( mbedtls_asn1_named_data *list,
+const mbedtls_asn1_named_data *mbedtls_asn1_find_named_data( const mbedtls_asn1_named_data *list,
                                        const char *oid, size_t len );
 
 /**

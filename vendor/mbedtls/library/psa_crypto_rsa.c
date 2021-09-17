@@ -26,6 +26,7 @@
 #include "psa_crypto_core.h"
 #include "psa_crypto_random_impl.h"
 #include "psa_crypto_rsa.h"
+#include "psa_crypto_hash.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -38,7 +39,7 @@
 #include <mbedtls/rsa.h>
 #include <mbedtls/error.h>
 #include <mbedtls/pk.h>
-#include <mbedtls/pk_internal.h>
+#include "pk_wrap.h"
 
 #if ( defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR) ||  \
       ( defined(PSA_CRYPTO_DRIVER_TEST) &&                   \
@@ -107,7 +108,8 @@ psa_status_t mbedtls_psa_rsa_load_representation(
     /* Parse the data. */
     if( PSA_KEY_TYPE_IS_KEY_PAIR( type ) )
         status = mbedtls_to_psa_error(
-            mbedtls_pk_parse_key( &ctx, data, data_length, NULL, 0 ) );
+            mbedtls_pk_parse_key( &ctx, data, data_length, NULL, 0,
+                mbedtls_psa_get_random, MBEDTLS_PSA_RANDOM_STATE ) );
     else
         status = mbedtls_to_psa_error(
             mbedtls_pk_parse_public_key( &ctx, data, data_length ) );
@@ -273,7 +275,8 @@ static psa_status_t rsa_export_public_key(
 #endif /* defined(BUILTIN_KEY_TYPE_RSA_KEY_PAIR) ||
         * defined(BUILTIN_KEY_TYPE_RSA_PUBLIC_KEY) */
 
-#if defined(BUILTIN_KEY_TYPE_RSA_KEY_PAIR)
+#if defined(BUILTIN_KEY_TYPE_RSA_KEY_PAIR) && \
+    defined(MBEDTLS_GENPRIME)
 static psa_status_t psa_rsa_read_exponent( const uint8_t *domain_parameters,
                                            size_t domain_parameters_size,
                                            int *exponent )
@@ -315,7 +318,7 @@ static psa_status_t rsa_generate_key(
     if( status != PSA_SUCCESS )
         return( status );
 
-    mbedtls_rsa_init( &rsa, MBEDTLS_RSA_PKCS_V15, MBEDTLS_MD_NONE );
+    mbedtls_rsa_init( &rsa );
     ret = mbedtls_rsa_gen_key( &rsa,
                                mbedtls_psa_get_random,
                                MBEDTLS_PSA_RANDOM_STATE,
@@ -331,7 +334,8 @@ static psa_status_t rsa_generate_key(
 
     return( status );
 }
-#endif /* defined(BUILTIN_KEY_TYPE_RSA_KEY_PAIR) */
+#endif /* defined(BUILTIN_KEY_TYPE_RSA_KEY_PAIR)
+        * defined(MBEDTLS_GENPRIME) */
 
 /****************************************************************/
 /* Sign/verify hashes */
@@ -357,27 +361,14 @@ static psa_status_t psa_rsa_decode_md_type( psa_algorithm_t alg,
         return( PSA_ERROR_INVALID_ARGUMENT );
 #endif
 
-#if defined(BUILTIN_ALG_RSA_PKCS1V15_SIGN)
-    /* For PKCS#1 v1.5 signature, if using a hash, the hash length
-     * must be correct. */
-    if( PSA_ALG_IS_RSA_PKCS1V15_SIGN( alg ) &&
-        alg != PSA_ALG_RSA_PKCS1V15_SIGN_RAW )
+    /* For signatures using a hash, the hash length must be correct. */
+    if( alg != PSA_ALG_RSA_PKCS1V15_SIGN_RAW )
     {
         if( md_info == NULL )
             return( PSA_ERROR_NOT_SUPPORTED );
         if( mbedtls_md_get_size( md_info ) != hash_length )
             return( PSA_ERROR_INVALID_ARGUMENT );
     }
-#endif /* BUILTIN_ALG_RSA_PKCS1V15_SIGN */
-
-#if defined(BUILTIN_ALG_RSA_PSS)
-    /* PSS requires a hash internally. */
-    if( PSA_ALG_IS_RSA_PSS( alg ) )
-    {
-        if( md_info == NULL )
-            return( PSA_ERROR_NOT_SUPPORTED );
-    }
-#endif /* BUILTIN_ALG_RSA_PSS */
 
     return( PSA_SUCCESS );
 }
@@ -413,31 +404,36 @@ static psa_status_t rsa_sign_hash(
 #if defined(BUILTIN_ALG_RSA_PKCS1V15_SIGN)
     if( PSA_ALG_IS_RSA_PKCS1V15_SIGN( alg ) )
     {
-        mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V15,
-                                 MBEDTLS_MD_NONE );
-        ret = mbedtls_rsa_pkcs1_sign( rsa,
-                                      mbedtls_psa_get_random,
-                                      MBEDTLS_PSA_RANDOM_STATE,
-                                      MBEDTLS_RSA_PRIVATE,
-                                      md_alg,
-                                      (unsigned int) hash_length,
-                                      hash,
-                                      signature );
+        ret = mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V15,
+                                       MBEDTLS_MD_NONE );
+        if( ret == 0 )
+        {
+            ret = mbedtls_rsa_pkcs1_sign( rsa,
+                                          mbedtls_psa_get_random,
+                                          MBEDTLS_PSA_RANDOM_STATE,
+                                          md_alg,
+                                          (unsigned int) hash_length,
+                                          hash,
+                                          signature );
+        }
     }
     else
 #endif /* BUILTIN_ALG_RSA_PKCS1V15_SIGN */
 #if defined(BUILTIN_ALG_RSA_PSS)
     if( PSA_ALG_IS_RSA_PSS( alg ) )
     {
-        mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V21, md_alg );
-        ret = mbedtls_rsa_rsassa_pss_sign( rsa,
-                                           mbedtls_psa_get_random,
-                                           MBEDTLS_PSA_RANDOM_STATE,
-                                           MBEDTLS_RSA_PRIVATE,
-                                           MBEDTLS_MD_NONE,
-                                           (unsigned int) hash_length,
-                                           hash,
-                                           signature );
+        ret = mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V21, md_alg );
+
+        if( ret == 0 )
+        {
+            ret = mbedtls_rsa_rsassa_pss_sign( rsa,
+                                               mbedtls_psa_get_random,
+                                               MBEDTLS_PSA_RANDOM_STATE,
+                                               MBEDTLS_MD_NONE,
+                                               (unsigned int) hash_length,
+                                               hash,
+                                               signature );
+        }
     }
     else
 #endif /* BUILTIN_ALG_RSA_PSS */
@@ -488,31 +484,31 @@ static psa_status_t rsa_verify_hash(
 #if defined(BUILTIN_ALG_RSA_PKCS1V15_SIGN)
     if( PSA_ALG_IS_RSA_PKCS1V15_SIGN( alg ) )
     {
-        mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V15,
-                                 MBEDTLS_MD_NONE );
-        ret = mbedtls_rsa_pkcs1_verify( rsa,
-                                        mbedtls_psa_get_random,
-                                        MBEDTLS_PSA_RANDOM_STATE,
-                                        MBEDTLS_RSA_PUBLIC,
-                                        md_alg,
-                                        (unsigned int) hash_length,
-                                        hash,
-                                        signature );
+        ret = mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V15,
+                                       MBEDTLS_MD_NONE );
+        if( ret == 0 )
+        {
+            ret = mbedtls_rsa_pkcs1_verify( rsa,
+                                            md_alg,
+                                            (unsigned int) hash_length,
+                                            hash,
+                                            signature );
+        }
     }
     else
 #endif /* BUILTIN_ALG_RSA_PKCS1V15_SIGN */
 #if defined(BUILTIN_ALG_RSA_PSS)
     if( PSA_ALG_IS_RSA_PSS( alg ) )
     {
-        mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V21, md_alg );
-        ret = mbedtls_rsa_rsassa_pss_verify( rsa,
-                                             mbedtls_psa_get_random,
-                                             MBEDTLS_PSA_RANDOM_STATE,
-                                             MBEDTLS_RSA_PUBLIC,
-                                             MBEDTLS_MD_NONE,
-                                             (unsigned int) hash_length,
-                                             hash,
-                                             signature );
+        ret = mbedtls_rsa_set_padding( rsa, MBEDTLS_RSA_PKCS_V21, md_alg );
+        if( ret == 0 )
+        {
+            ret = mbedtls_rsa_rsassa_pss_verify( rsa,
+                                                 md_alg,
+                                                 (unsigned int) hash_length,
+                                                 hash,
+                                                 signature );
+        }
     }
     else
 #endif /* BUILTIN_ALG_RSA_PSS */
@@ -564,7 +560,8 @@ psa_status_t mbedtls_psa_rsa_export_public_key(
 #endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR) ||
         * defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_PUBLIC_KEY) */
 
-#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR)
+#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR) && \
+    defined(MBEDTLS_GENPRIME)
 psa_status_t mbedtls_psa_rsa_generate_key(
     const psa_key_attributes_t *attributes,
     uint8_t *key_buffer, size_t key_buffer_size, size_t *key_buffer_length )
@@ -572,7 +569,8 @@ psa_status_t mbedtls_psa_rsa_generate_key(
     return( rsa_generate_key( attributes, key_buffer, key_buffer_size,
                               key_buffer_length ) );
 }
-#endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR) */
+#endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_RSA_KEY_PAIR)
+        * defined(MBEDTLS_GENPRIME) */
 
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_RSA_PKCS1V15_SIGN) || \
     defined(MBEDTLS_PSA_BUILTIN_ALG_RSA_PSS)

@@ -258,7 +258,7 @@ static Size HmacSha1(Span<const uint8_t> key, Span<const uint8_t> message, uint8
 
     // Hash and/or pad key
     if (key.len > RG_SIZE(padded_key)) {
-        mbedtls_sha1_ret(key.ptr, (size_t)key.len, padded_key);
+        mbedtls_sha1(key.ptr, (size_t)key.len, padded_key);
         memset_safe(padded_key + 20, 0, RG_SIZE(padded_key) - 20);
     } else {
         memcpy_safe(padded_key, key.ptr, (size_t)key.len);
@@ -270,23 +270,23 @@ static Size HmacSha1(Span<const uint8_t> key, Span<const uint8_t> message, uint8
     {
         mbedtls_sha1_context ctx;
         mbedtls_sha1_init(&ctx);
-        mbedtls_sha1_starts_ret(&ctx);
+        mbedtls_sha1_starts(&ctx);
         RG_DEFER { mbedtls_sha1_free(&ctx); };
 
         for (Size i = 0; i < RG_SIZE(padded_key); i++) {
             padded_key[i] ^= 0x36;
         }
 
-        mbedtls_sha1_update_ret(&ctx, padded_key, RG_SIZE(padded_key));
-        mbedtls_sha1_update_ret(&ctx, message.ptr, (size_t)message.len);
-        mbedtls_sha1_finish_ret(&ctx, (unsigned char *)inner_hash);
+        mbedtls_sha1_update(&ctx, padded_key, RG_SIZE(padded_key));
+        mbedtls_sha1_update(&ctx, message.ptr, (size_t)message.len);
+        mbedtls_sha1_finish(&ctx, (unsigned char *)inner_hash);
     }
 
     // Outer hash
     {
         mbedtls_sha1_context ctx;
         mbedtls_sha1_init(&ctx);
-        mbedtls_sha1_starts_ret(&ctx);
+        mbedtls_sha1_starts(&ctx);
         RG_DEFER { mbedtls_sha1_free(&ctx); };
 
         for (Size i = 0; i < RG_SIZE(padded_key); i++) {
@@ -294,9 +294,9 @@ static Size HmacSha1(Span<const uint8_t> key, Span<const uint8_t> message, uint8
             padded_key[i] ^= 0x5C;
         }
 
-        mbedtls_sha1_update_ret(&ctx, padded_key, RG_SIZE(padded_key));
-        mbedtls_sha1_update_ret(&ctx, inner_hash, RG_SIZE(inner_hash));
-        mbedtls_sha1_finish_ret(&ctx, (unsigned char *)out_digest);
+        mbedtls_sha1_update(&ctx, padded_key, RG_SIZE(padded_key));
+        mbedtls_sha1_update(&ctx, inner_hash, RG_SIZE(inner_hash));
+        mbedtls_sha1_finish(&ctx, (unsigned char *)out_digest);
     }
 
     return 20;

@@ -23,11 +23,9 @@
  * example of good general usage.
  */
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#define MBEDTLS_ALLOW_PRIVATE_ACCESS
+
+#include "mbedtls/build_info.h"
 
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
@@ -1005,8 +1003,8 @@ exit:
 
     for( delay_idx = 0; delay_idx < MAX_DELAYED_HS; delay_idx++ )
     {
-        mbedtls_free( opt.delay_cli + delay_idx );
-        mbedtls_free( opt.delay_srv + delay_idx );
+        mbedtls_free( opt.delay_cli[delay_idx] );
+        mbedtls_free( opt.delay_srv[delay_idx] );
     }
 
     mbedtls_net_free( &client_fd );

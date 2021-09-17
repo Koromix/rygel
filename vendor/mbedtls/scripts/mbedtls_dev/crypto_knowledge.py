@@ -19,21 +19,21 @@ This module is entirely based on the PSA API.
 # limitations under the License.
 
 import re
-from typing import List, Optional, Tuple
+from typing import Dict, Iterable, Optional, Pattern, Tuple
 
 from mbedtls_dev.asymmetric_key_data import ASYMMETRIC_KEY_DATA
 
 class KeyType:
     """Knowledge about a PSA key type."""
 
-    def __init__(self, name: str, params: Optional[List[str]] = None):
+    def __init__(self, name: str, params: Optional[Iterable[str]] = None):
         """Analyze a key type.
 
         The key type must be specified in PSA syntax. In its simplest form,
         `name` is a string 'PSA_KEY_TYPE_xxx' which is the name of a PSA key
         type macro. For key types that take arguments, the arguments can
         be passed either through the optional argument `params` or by
-        passing an expression of the form 'PSA_KEY_TYPE_xxx(param1, param2)'
+        passing an expression of the form 'PSA_KEY_TYPE_xxx(param1, ...)'
         in `name` as a string.
         """
 
@@ -48,7 +48,7 @@ class KeyType:
                 m = re.match(r'(\w+)\s*\((.*)\)\Z', self.name)
                 assert m is not None
                 self.name = m.group(1)
-                params = ','.split(m.group(2))
+                params = m.group(2).split(',')
         self.params = (None if params is None else
                        [param.strip() for param in params])
         """The parameters of the key type, if there are any.
@@ -78,16 +78,19 @@ class KeyType:
         'PSA_ECC_FAMILY_SECT_R2': (163,),
         'PSA_ECC_FAMILY_BRAINPOOL_P_R1': (160, 192, 224, 256, 320, 384, 512),
         'PSA_ECC_FAMILY_MONTGOMERY': (255, 448),
+        'PSA_ECC_FAMILY_TWISTED_EDWARDS': (255, 448),
     }
     KEY_TYPE_SIZES = {
         'PSA_KEY_TYPE_AES': (128, 192, 256), # exhaustive
-        'PSA_KEY_TYPE_ARC4': (8, 128, 2048), # extremes + sensible
         'PSA_KEY_TYPE_ARIA': (128, 192, 256), # exhaustive
         'PSA_KEY_TYPE_CAMELLIA': (128, 192, 256), # exhaustive
         'PSA_KEY_TYPE_CHACHA20': (256,), # exhaustive
         'PSA_KEY_TYPE_DERIVE': (120, 128), # sample
         'PSA_KEY_TYPE_DES': (64, 128, 192), # exhaustive
         'PSA_KEY_TYPE_HMAC': (128, 160, 224, 256, 384, 512), # standard size for each supported hash
+        'PSA_KEY_TYPE_PASSWORD': (48, 168, 336), # sample
+        'PSA_KEY_TYPE_PASSWORD_HASH': (128, 256), # sample
+        'PSA_KEY_TYPE_PEPPER': (128, 256), # sample
         'PSA_KEY_TYPE_RAW_DATA': (8, 40, 128), # sample
         'PSA_KEY_TYPE_RSA_KEY_PAIR': (1024, 1536), # small sample
     }
@@ -135,3 +138,18 @@ class KeyType:
             return des3[:length]
         return b''.join([self.DATA_BLOCK] * (length // len(self.DATA_BLOCK)) +
                         [self.DATA_BLOCK[:length % len(self.DATA_BLOCK)]])
+
+    KEY_TYPE_FOR_SIGNATURE = {
+        'PSA_KEY_USAGE_SIGN_HASH': re.compile('.*KEY_PAIR'),
+        'PSA_KEY_USAGE_VERIFY_HASH': re.compile('.*KEY.*')
+    } #type: Dict[str, Pattern]
+    """Use a regexp to determine key types for which signature is possible
+       when using the actual usage flag.
+    """
+    def is_valid_for_signature(self, usage: str) -> bool:
+        """Determine if the key type is compatible with the specified
+           signitute type.
+
+        """
+        # This is just temporaly solution for the implicit usage flags.
+        return re.match(self.KEY_TYPE_FOR_SIGNATURE[usage], self.name) is not None

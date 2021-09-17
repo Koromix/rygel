@@ -131,7 +131,7 @@ exit:
 }
 /* END_CASE */
 
-/* BEGIN_CASE depends_on:MBEDTLS_FS_IO:MBEDTLS_X509_CRT_PARSE_C */
+/* BEGIN_CASE depends_on:MBEDTLS_FS_IO:MBEDTLS_X509_CRT_PARSE_C:!MBEDTLS_X509_REMOVE_INFO */
 void mbedtls_debug_print_crt( char * crt_file, char * file, int line,
                               char * prefix, char * result_str )
 {
@@ -179,7 +179,7 @@ void mbedtls_debug_print_mpi( int radix, char * value, char * file, int line,
 
     TEST_ASSERT( mbedtls_ssl_setup( &ssl, &conf ) == 0 );
 
-    TEST_ASSERT( mbedtls_mpi_read_string( &val, radix, value ) == 0 );
+    TEST_ASSERT( mbedtls_test_read_mpi( &val, radix, value ) == 0 );
 
     mbedtls_ssl_conf_dbg( &conf, string_debug, &buffer);
 

@@ -19,26 +19,8 @@
 #include <test/macros.h>
 #include <string.h>
 
-#if defined(MBEDTLS_CHECK_PARAMS)
-#include <setjmp.h>
-#endif
-
 /*----------------------------------------------------------------------------*/
 /* Static global variables */
-
-#if defined(MBEDTLS_CHECK_PARAMS)
-typedef struct
-{
-    uint8_t expected_call;
-    uint8_t expected_call_happened;
-
-    jmp_buf state;
-
-    mbedtls_test_param_failed_location_record_t location_record;
-}
-param_failed_ctx_t;
-static param_failed_ctx_t param_failed_ctx;
-#endif
 
 #if defined(MBEDTLS_PLATFORM_C)
 static mbedtls_platform_context platform_ctx;
@@ -222,63 +204,73 @@ int mbedtls_test_hexcmp( uint8_t * a, uint8_t * b,
     return ret;
 }
 
-#if defined(MBEDTLS_CHECK_PARAMS)
-void mbedtls_test_param_failed_get_location_record(
-         mbedtls_test_param_failed_location_record_t *location_record )
+#if defined(MBEDTLS_TEST_HOOKS)
+void mbedtls_test_err_add_check( int high, int low,
+                                 const char *file, int line )
 {
-    *location_record = param_failed_ctx.location_record;
-}
-
-void mbedtls_test_param_failed_expect_call( void )
-{
-    param_failed_ctx.expected_call_happened = 0;
-    param_failed_ctx.expected_call = 1;
-}
-
-int mbedtls_test_param_failed_check_expected_call( void )
-{
-    param_failed_ctx.expected_call = 0;
-
-    if( param_failed_ctx.expected_call_happened != 0 )
-        return( 0 );
-
-    return( -1 );
-}
-
-void* mbedtls_test_param_failed_get_state_buf( void )
-{
-    return &param_failed_ctx.state;
-}
-
-void mbedtls_test_param_failed_reset_state( void )
-{
-    memset( param_failed_ctx.state, 0, sizeof( param_failed_ctx.state ) );
-}
-
-void mbedtls_param_failed( const char *failure_condition,
-                           const char *file,
-                           int line )
-{
-    /* Record the location of the failure */
-    param_failed_ctx.location_record.failure_condition = failure_condition;
-    param_failed_ctx.location_record.file = file;
-    param_failed_ctx.location_record.line = line;
-
-    /* If we are testing the callback function...  */
-    if( param_failed_ctx.expected_call != 0 )
+    /* Error codes are always negative (a value of zero is a success) however
+     * their positive opposites can be easier to understand. The following
+     * examples given in comments have been made positive for ease of
+     * understanding. The structure of an error code is such:
+     *
+     *                                                shhhhhhhhlllllll
+     *
+     * s = sign bit.
+     * h = high level error code (includes high level module ID (bits 12..14)
+     *     and module-dependent error code (bits 7..11)).
+     * l = low level error code.
+     */
+    if ( high > -0x1000 && high != 0 )
+    /* high < 0001000000000000
+     * No high level module ID bits are set.
+     */
     {
-        param_failed_ctx.expected_call = 0;
-        param_failed_ctx.expected_call_happened = 1;
+        mbedtls_test_fail( "'high' is not a high-level error code",
+                            line, file );
+    }
+    else if ( high < -0x7F80 )
+    /* high > 0111111110000000
+     * Error code is greater than the largest allowed high level module ID.
+     */
+    {
+        mbedtls_test_fail( "'high' error code is greater than 15 bits",
+                            line, file );
+    }
+    else if ( ( high & 0x7F ) != 0 )
+    /* high & 0000000001111111
+     * Error code contains low level error code bits.
+     */
+    {
+        mbedtls_test_fail( "'high' contains a low-level error code",
+                            line, file );
+    }
+    else if ( low < -0x007F )
+    /* low >  0000000001111111
+     * Error code contains high or module level error code bits.
+     */
+    {
+        mbedtls_test_fail( "'low' error code is greater than 7 bits",
+                            line, file );
+    }
+    else if ( low > 0 )
+    {
+        mbedtls_test_fail( "'low' error code is greater than zero",
+                            line, file );
+    }
+}
+#endif /* MBEDTLS_TEST_HOOKS */
+
+#if defined(MBEDTLS_BIGNUM_C)
+int mbedtls_test_read_mpi( mbedtls_mpi *X, int radix, const char *s )
+{
+    /* mbedtls_mpi_read_string() currently retains leading zeros.
+     * It always allocates at least one limb for the value 0. */
+    if( s[0] == 0 )
+    {
+        mbedtls_mpi_free( X );
+        return( 0 );
     }
     else
-    {
-        /* ...else try a long jump. If the execution state has not been set-up
-         * or reset then the long jump buffer is all zero's and the call will
-         * with high probability fault, emphasizing there is something to look
-         * at.
-         */
-
-        longjmp( param_failed_ctx.state, 1 );
-    }
+        return( mbedtls_mpi_read_string( X, radix, s ) );
 }
-#endif /* MBEDTLS_CHECK_PARAMS */
+#endif

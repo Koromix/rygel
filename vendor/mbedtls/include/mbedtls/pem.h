@@ -21,12 +21,9 @@
  */
 #ifndef MBEDTLS_PEM_H
 #define MBEDTLS_PEM_H
+#include "private_access.h"
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
+#include "build_info.h"
 
 #include <stddef.h>
 
@@ -57,9 +54,9 @@ extern "C" {
  */
 typedef struct mbedtls_pem_context
 {
-    unsigned char *buf;     /*!< buffer for decoded data             */
-    size_t buflen;          /*!< length of the buffer                */
-    unsigned char *info;    /*!< buffer for extra header information */
+    unsigned char *MBEDTLS_PRIVATE(buf);     /*!< buffer for decoded data             */
+    size_t MBEDTLS_PRIVATE(buflen);          /*!< length of the buffer                */
+    unsigned char *MBEDTLS_PRIVATE(info);    /*!< buffer for extra header information */
 }
 mbedtls_pem_context;
 

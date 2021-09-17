@@ -23,22 +23,22 @@ import re
 import sys
 
 CLASSIC_DEPENDENCIES = frozenset([
-    # This list is manually filtered from config.h.
+    # This list is manually filtered from mbedtls_config.h.
 
     # Mbed TLS feature support.
     # Only features that affect what can be done are listed here.
     # Options that control optimizations or alternative implementations
     # are omitted.
-    #cipher#'MBEDTLS_CIPHER_MODE_CBC',
-    #cipher#'MBEDTLS_CIPHER_MODE_CFB',
-    #cipher#'MBEDTLS_CIPHER_MODE_CTR',
-    #cipher#'MBEDTLS_CIPHER_MODE_OFB',
-    #cipher#'MBEDTLS_CIPHER_MODE_XTS',
-    #cipher#'MBEDTLS_CIPHER_NULL_CIPHER',
-    #cipher#'MBEDTLS_CIPHER_PADDING_PKCS7',
-    #cipher#'MBEDTLS_CIPHER_PADDING_ONE_AND_ZEROS',
-    #cipher#'MBEDTLS_CIPHER_PADDING_ZEROS_AND_LEN',
-    #cipher#'MBEDTLS_CIPHER_PADDING_ZEROS',
+    'MBEDTLS_CIPHER_MODE_CBC',
+    'MBEDTLS_CIPHER_MODE_CFB',
+    'MBEDTLS_CIPHER_MODE_CTR',
+    'MBEDTLS_CIPHER_MODE_OFB',
+    'MBEDTLS_CIPHER_MODE_XTS',
+    'MBEDTLS_CIPHER_NULL_CIPHER',
+    'MBEDTLS_CIPHER_PADDING_PKCS7',
+    'MBEDTLS_CIPHER_PADDING_ONE_AND_ZEROS',
+    'MBEDTLS_CIPHER_PADDING_ZEROS_AND_LEN',
+    'MBEDTLS_CIPHER_PADDING_ZEROS',
     #curve#'MBEDTLS_ECP_DP_SECP192R1_ENABLED',
     #curve#'MBEDTLS_ECP_DP_SECP224R1_ENABLED',
     #curve#'MBEDTLS_ECP_DP_SECP256R1_ENABLED',
@@ -56,45 +56,39 @@ CLASSIC_DEPENDENCIES = frozenset([
     #'MBEDTLS_GENPRIME', #needed for RSA key generation
     'MBEDTLS_PKCS1_V15',
     'MBEDTLS_PKCS1_V21',
-    'MBEDTLS_SHA512_NO_SHA384',
 
     # Mbed TLS modules.
     # Only modules that provide cryptographic mechanisms are listed here.
     # Platform, data formatting, X.509 or TLS modules are omitted.
-    #cipher#'MBEDTLS_AES_C',
-    #cipher#'MBEDTLS_ARC4_C',
+    'MBEDTLS_AES_C',
     'MBEDTLS_BIGNUM_C',
-    #cipher#'MBEDTLS_BLOWFISH_C',
-    #cipher#'MBEDTLS_CAMELLIA_C',
-    #cipher#'MBEDTLS_ARIA_C',
-    #cipher#'MBEDTLS_CCM_C',
-    #cipher#'MBEDTLS_CHACHA20_C',
-    #cipher#'MBEDTLS_CHACHAPOLY_C',
-    #cipher#'MBEDTLS_CMAC_C',
+    'MBEDTLS_CAMELLIA_C',
+    'MBEDTLS_ARIA_C',
+    'MBEDTLS_CCM_C',
+    'MBEDTLS_CHACHA20_C',
+    'MBEDTLS_CHACHAPOLY_C',
+    'MBEDTLS_CMAC_C',
     'MBEDTLS_CTR_DRBG_C',
-    #cipher#'MBEDTLS_DES_C',
+    'MBEDTLS_DES_C',
     'MBEDTLS_DHM_C',
     'MBEDTLS_ECDH_C',
     'MBEDTLS_ECDSA_C',
     'MBEDTLS_ECJPAKE_C',
     'MBEDTLS_ECP_C',
     'MBEDTLS_ENTROPY_C',
-    #cipher#'MBEDTLS_GCM_C',
+    'MBEDTLS_GCM_C',
     'MBEDTLS_HKDF_C',
     'MBEDTLS_HMAC_DRBG_C',
-    #cipher#'MBEDTLS_NIST_KW_C',
-    'MBEDTLS_MD2_C',
-    'MBEDTLS_MD4_C',
+    'MBEDTLS_NIST_KW_C',
     'MBEDTLS_MD5_C',
     'MBEDTLS_PKCS5_C',
     'MBEDTLS_PKCS12_C',
-    #cipher#'MBEDTLS_POLY1305_C',
-    #cipher#'MBEDTLS_RIPEMD160_C',
+    'MBEDTLS_POLY1305_C',
+    'MBEDTLS_RIPEMD160_C',
     'MBEDTLS_RSA_C',
     'MBEDTLS_SHA1_C',
     'MBEDTLS_SHA256_C',
     'MBEDTLS_SHA512_C',
-    'MBEDTLS_XTEA_C',
 ])
 
 def is_classic_dependency(dep):
@@ -105,6 +99,8 @@ def is_classic_dependency(dep):
 
 def is_systematic_dependency(dep):
     """Whether dep is a PSA dependency which is determined systematically."""
+    if dep.startswith('PSA_WANT_ECC_'):
+        return False
     return dep.startswith('PSA_WANT_')
 
 WITHOUT_SYSTEMATIC_DEPENDENCIES = frozenset([
@@ -117,27 +113,6 @@ WITHOUT_SYSTEMATIC_DEPENDENCIES = frozenset([
     'PSA_KEY_TYPE_RAW_DATA', # always supported, don't list it to reduce noise
     'PSA_ALG_AT_LEAST_THIS_LENGTH_MAC', #only a modifier
     'PSA_ALG_AEAD_WITH_AT_LEAST_THIS_LENGTH_TAG', #only a modifier
-
-    # Not implemented yet: cipher-related key types and algorithms.
-    # Manually extracted from crypto_values.h.
-    'PSA_KEY_TYPE_AES',
-    'PSA_KEY_TYPE_DES',
-    'PSA_KEY_TYPE_CAMELLIA',
-    'PSA_KEY_TYPE_ARC4',
-    'PSA_KEY_TYPE_CHACHA20',
-    'PSA_ALG_CBC_MAC',
-    'PSA_ALG_CMAC',
-    'PSA_ALG_STREAM_CIPHER',
-    'PSA_ALG_CTR',
-    'PSA_ALG_CFB',
-    'PSA_ALG_OFB',
-    'PSA_ALG_XTS',
-    'PSA_ALG_ECB_NO_PADDING',
-    'PSA_ALG_CBC_NO_PADDING',
-    'PSA_ALG_CBC_PKCS7',
-    'PSA_ALG_CCM',
-    'PSA_ALG_GCM',
-    'PSA_ALG_CHACHA20_POLY1305',
 ])
 
 SPECIAL_SYSTEMATIC_DEPENDENCIES = {
@@ -163,9 +138,14 @@ def systematic_dependencies(file_name, function_name, arguments):
     deps = set()
 
     # Run key policy negative tests even if the algorithm to attempt performing
-    # is not supported.
+    # is not supported but in the case where the test is to check an
+    # incompatibility between a requested algorithm for a cryptographic
+    # operation and a key policy. In the latter, we want to filter out the
+    # cases # where PSA_ERROR_NOT_SUPPORTED is returned instead of
+    # PSA_ERROR_NOT_PERMITTED.
     if function_name.endswith('_key_policy') and \
-       arguments[-1].startswith('PSA_ERROR_'):
+       arguments[-1].startswith('PSA_ERROR_') and \
+       arguments[-1] != ('PSA_ERROR_NOT_PERMITTED'):
         arguments[-2] = ''
     if function_name == 'copy_fail' and \
        arguments[-1].startswith('PSA_ERROR_'):

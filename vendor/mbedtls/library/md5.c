@@ -88,7 +88,7 @@ void mbedtls_md5_clone( mbedtls_md5_context *dst,
 /*
  * MD5 context setup
  */
-int mbedtls_md5_starts_ret( mbedtls_md5_context *ctx )
+int mbedtls_md5_starts( mbedtls_md5_context *ctx )
 {
     ctx->total[0] = 0;
     ctx->total[1] = 0;
@@ -100,13 +100,6 @@ int mbedtls_md5_starts_ret( mbedtls_md5_context *ctx )
 
     return( 0 );
 }
-
-#if !defined(MBEDTLS_DEPRECATED_REMOVED)
-void mbedtls_md5_starts( mbedtls_md5_context *ctx )
-{
-    mbedtls_md5_starts_ret( ctx );
-}
-#endif
 
 #if !defined(MBEDTLS_MD5_PROCESS_ALT)
 int mbedtls_internal_md5_process( mbedtls_md5_context *ctx,
@@ -244,19 +237,12 @@ int mbedtls_internal_md5_process( mbedtls_md5_context *ctx,
     return( 0 );
 }
 
-#if !defined(MBEDTLS_DEPRECATED_REMOVED)
-void mbedtls_md5_process( mbedtls_md5_context *ctx,
-                          const unsigned char data[64] )
-{
-    mbedtls_internal_md5_process( ctx, data );
-}
-#endif
 #endif /* !MBEDTLS_MD5_PROCESS_ALT */
 
 /*
  * MD5 process buffer
  */
-int mbedtls_md5_update_ret( mbedtls_md5_context *ctx,
+int mbedtls_md5_update( mbedtls_md5_context *ctx,
                             const unsigned char *input,
                             size_t ilen )
 {
@@ -304,19 +290,10 @@ int mbedtls_md5_update_ret( mbedtls_md5_context *ctx,
     return( 0 );
 }
 
-#if !defined(MBEDTLS_DEPRECATED_REMOVED)
-void mbedtls_md5_update( mbedtls_md5_context *ctx,
-                         const unsigned char *input,
-                         size_t ilen )
-{
-    mbedtls_md5_update_ret( ctx, input, ilen );
-}
-#endif
-
 /*
  * MD5 final digest
  */
-int mbedtls_md5_finish_ret( mbedtls_md5_context *ctx,
+int mbedtls_md5_finish( mbedtls_md5_context *ctx,
                             unsigned char output[16] )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -370,20 +347,12 @@ int mbedtls_md5_finish_ret( mbedtls_md5_context *ctx,
     return( 0 );
 }
 
-#if !defined(MBEDTLS_DEPRECATED_REMOVED)
-void mbedtls_md5_finish( mbedtls_md5_context *ctx,
-                         unsigned char output[16] )
-{
-    mbedtls_md5_finish_ret( ctx, output );
-}
-#endif
-
 #endif /* !MBEDTLS_MD5_ALT */
 
 /*
  * output = MD5( input buffer )
  */
-int mbedtls_md5_ret( const unsigned char *input,
+int mbedtls_md5( const unsigned char *input,
                      size_t ilen,
                      unsigned char output[16] )
 {
@@ -392,13 +361,13 @@ int mbedtls_md5_ret( const unsigned char *input,
 
     mbedtls_md5_init( &ctx );
 
-    if( ( ret = mbedtls_md5_starts_ret( &ctx ) ) != 0 )
+    if( ( ret = mbedtls_md5_starts( &ctx ) ) != 0 )
         goto exit;
 
-    if( ( ret = mbedtls_md5_update_ret( &ctx, input, ilen ) ) != 0 )
+    if( ( ret = mbedtls_md5_update( &ctx, input, ilen ) ) != 0 )
         goto exit;
 
-    if( ( ret = mbedtls_md5_finish_ret( &ctx, output ) ) != 0 )
+    if( ( ret = mbedtls_md5_finish( &ctx, output ) ) != 0 )
         goto exit;
 
 exit:
@@ -406,15 +375,6 @@ exit:
 
     return( ret );
 }
-
-#if !defined(MBEDTLS_DEPRECATED_REMOVED)
-void mbedtls_md5( const unsigned char *input,
-                  size_t ilen,
-                  unsigned char output[16] )
-{
-    mbedtls_md5_ret( input, ilen, output );
-}
-#endif
 
 #if defined(MBEDTLS_SELF_TEST)
 /*
@@ -467,7 +427,7 @@ int mbedtls_md5_self_test( int verbose )
         if( verbose != 0 )
             mbedtls_printf( "  MD5 test #%d: ", i + 1 );
 
-        ret = mbedtls_md5_ret( md5_test_buf[i], md5_test_buflen[i], md5sum );
+        ret = mbedtls_md5( md5_test_buf[i], md5_test_buflen[i], md5sum );
         if( ret != 0 )
             goto fail;
 

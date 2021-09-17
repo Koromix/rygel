@@ -29,6 +29,7 @@ file is written:
 import os
 import sys
 
+from mbedtls_dev import build_tree
 from mbedtls_dev import macro_collector
 
 OUTPUT_TEMPLATE = '''\
@@ -117,11 +118,11 @@ static int psa_snprint_algorithm(char *buffer, size_t buffer_size,
         } else if (alg & PSA_ALG_AEAD_AT_LEAST_THIS_LENGTH_FLAG) {
             append(&buffer, buffer_size, &required_size,
                    "PSA_ALG_AEAD_WITH_AT_LEAST_THIS_LENGTH_TAG(", 43);
-            length_modifier = PSA_AEAD_TAG_LENGTH(alg);
+            length_modifier = PSA_ALG_AEAD_GET_TAG_LENGTH(alg);
         } else if (core_alg != alg) {
             append(&buffer, buffer_size, &required_size,
                    "PSA_ALG_AEAD_WITH_SHORTENED_TAG(", 32);
-            length_modifier = PSA_AEAD_TAG_LENGTH(alg);
+            length_modifier = PSA_ALG_AEAD_GET_TAG_LENGTH(alg);
         }
     } else if (PSA_ALG_IS_KEY_AGREEMENT(alg) &&
                !PSA_ALG_IS_RAW_KEY_AGREEMENT(alg)) {
@@ -304,7 +305,7 @@ class CaseBuilder(macro_collector.PSAMacroCollector):
 
     def _make_key_usage_code(self):
         return '\n'.join([self._make_bit_test('usage', bit)
-                          for bit in sorted(self.key_usages)])
+                          for bit in sorted(self.key_usage_flags)])
 
     def write_file(self, output_file):
         """Generate the pretty-printer function code from the gathered
@@ -335,8 +336,7 @@ def generate_psa_constants(header_file_names, output_file_name):
     os.replace(temp_file_name, output_file_name)
 
 if __name__ == '__main__':
-    if not os.path.isdir('programs') and os.path.isdir('../programs'):
-        os.chdir('..')
+    build_tree.chdir_to_root()
     # Allow to change the directory where psa_constant_names_generated.c is written to.
     OUTPUT_FILE_DIR = sys.argv[1] if len(sys.argv) == 2 else "programs/psa"
     generate_psa_constants(['include/psa/crypto_values.h',

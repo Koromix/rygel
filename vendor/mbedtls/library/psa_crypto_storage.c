@@ -18,18 +18,13 @@
  *  limitations under the License.
  */
 
-#if defined(MBEDTLS_CONFIG_FILE)
-#include MBEDTLS_CONFIG_FILE
-#else
-#include "mbedtls/config.h"
-#endif
+#include "common.h"
 
 #if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
 
 #include <stdlib.h>
 #include <string.h>
 
-#include "psa_crypto_service_integration.h"
 #include "psa/crypto.h"
 #include "psa_crypto_storage.h"
 #include "mbedtls/platform_util.h"
