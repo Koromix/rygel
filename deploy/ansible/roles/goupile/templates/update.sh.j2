@@ -14,20 +14,21 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 cd '{{ goupile_root_path }}/repo'
+USER=$(stat -c '%U' .)
 
 # Get remote changes
-git fetch
-git reset --hard FETCH_HEAD
+sudo -u $USER git fetch
+sudo -u $USER git reset --hard FETCH_HEAD
 
 # Update or bootstrap Felix
-if ! bin/Paranoid/felix -pParanoid --compiler=clang-11 --linker=lld-11 felix; then
-    ./bootstrap.sh
-    ./felix -pParanoid --compiler=clang-11 --linker=lld-11 felix
+if ! sudo -u $USER bin/Paranoid/felix -pParanoid --compiler=clang-11 --linker=lld-11 felix; then
+    sudo -u $USER ./bootstrap.sh
+    sudo -u $USER ./felix -pParanoid --compiler=clang-11 --linker=lld-11 felix
     rm -f felix
 fi
 
 # Build Goupile
-./felix -pParanoid --compiler=clang-11 --linker=lld-11 felix goupile
+sudo -u $USER ./felix -pParanoid --compiler=clang-11 --linker=lld-11 felix goupile
 
 # Install Goupile
 install -o root -g root -m 0755 bin/Paranoid/goupile '{{ goupile_root_path }}/goupile'

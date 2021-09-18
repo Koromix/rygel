@@ -47,8 +47,7 @@
   file:
     path: '{{ goupile_root_path }}/repo'
     state: directory
-    owner: root
-    group: root
+    owner: '{{ ansible_user | default(lookup("env", "USER"), True) }}'
     recurse: yes
   become: yes
 
@@ -58,7 +57,7 @@
     version: '{{ goupile_commit }}'
     dest: '{{ goupile_root_path }}/repo'
     force: yes
-  become: yes
+  become: no
 
 - name: Install sync scripts
   template:
@@ -106,7 +105,7 @@
   command: '{{ goupile_root_path }}/sync/update.sh'
   register: build_goupile
   changed_when: 'build_goupile.stderr_lines[-1] != "Nothing to do!" and build_goupile.stderr_lines[-2] != "Nothing to do!"'
-  become: no
+  become: yes
 
 - name: Sync Goupile services
   command: '{{ goupile_root_path }}/sync/sync.py'
