@@ -81,6 +81,7 @@ namespace RG {
 
 extern "C" const char *FelixTarget;
 extern "C" const char *FelixVersion;
+extern "C" const char *FelixCompiler;
 
 enum class Endianness {
     LittleEndian,

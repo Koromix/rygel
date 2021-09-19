@@ -99,6 +99,7 @@ namespace RG {
 #ifndef FELIX
 const char *FelixTarget = "????";
 const char *FelixVersion = "(unknown version)";
+const char *FelixCompiler = "????";
 #endif
 
 extern "C" void AssertMessage(const char *filename, int line, const char *cond)
