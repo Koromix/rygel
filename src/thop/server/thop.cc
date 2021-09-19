@@ -290,6 +290,8 @@ static void InitRoutes()
     html.data = PatchAsset(html, &routes_alloc, [](const char *key, StreamWriter *writer) {
         if (TestStr(key, "VERSION")) {
             writer->Write(FelixVersion);
+        } else if (TestStr(key, "COMPILER")) {
+            writer->Write(FelixCompiler);
         } else if (TestStr(key, "BASE_URL")) {
             writer->Write(thop_config.base_url);
         } else if (TestStr(key, "HAS_USERS")) {
@@ -485,7 +487,8 @@ Options:
 
     // Handle version
     if (argc >= 2 && TestStr(argv[1], "--version")) {
-        PrintLn("%!R..%1%!0 %2", FelixTarget, FelixVersion);
+        PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
+        PrintLn("Compiler: %1", FelixCompiler);
         return 0;
     }
 

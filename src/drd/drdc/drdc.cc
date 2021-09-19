@@ -104,7 +104,8 @@ Commands:
             return 0;
         }
     } else if (TestStr(cmd, "--version")) {
-        PrintLn("%!R..%1%!0 %2", FelixTarget, FelixVersion);
+        PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
+        PrintLn("Compiler: %1", FelixCompiler);
         return 0;
     }
 

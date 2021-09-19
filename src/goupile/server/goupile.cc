@@ -366,6 +366,8 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
             const AssetInfo *render = RenderTemplate(request.url, *asset, [&](const char *key, StreamWriter *writer) {
                 if (TestStr(key, "VERSION")) {
                     writer->Write(FelixVersion);
+                } else if (TestStr(key, "COMPILER")) {
+                    writer->Write(FelixCompiler);
                 } else if (TestStr(key, "TITLE")) {
                     writer->Write("Goupile Admin");
                 } else if (TestStr(key, "BASE_URL")) {
@@ -569,6 +571,8 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
             const AssetInfo *render = RenderTemplate(master_etag, *asset, [&](const char *key, StreamWriter *writer) {
                 if (TestStr(key, "VERSION")) {
                     writer->Write(FelixVersion);
+                } else if (TestStr(key, "COMPILER")) {
+                    writer->Write(FelixCompiler);
                 } else if (TestStr(key, "TITLE")) {
                     writer->Write(master->title);
                 } else if (TestStr(key, "BASE_URL")) {
@@ -721,6 +725,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 Print(writer, "/admin/static/%1/", shared_etag);
             } else if (TestStr(key, "VERSION")) {
                 writer->Write(FelixVersion);
+            } else if (TestStr(key, "COMPILER")) {
+                writer->Write(FelixCompiler);
             } else {
                 Print(writer, "{%1}", key);
             }
@@ -1014,7 +1020,8 @@ int Main(int argc, char **argv)
                 return RunServe(args);
             }
         } else if (TestStr(argv[1], "--version")) {
-            PrintLn("%!R..%1%!0 %2", FelixTarget, FelixVersion);
+            PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
+            PrintLn("Compiler: %1", FelixCompiler);
             return 0;
         }
     }
