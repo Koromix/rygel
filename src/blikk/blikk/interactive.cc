@@ -120,7 +120,7 @@ int RunCommand(Span<const char> code, const Config &config)
 
 int RunInteractive(const Config &config)
 {
-    LogInfo("%!R..blikk%!0 %1", FelixVersion);
+    LogInfo("%!R..blikk%!0 %!..+%1%!0", FelixVersion);
 
     bk_Program program;
 
