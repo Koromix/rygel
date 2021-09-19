@@ -97,7 +97,7 @@
     name: goupile_update
     hour: '{{ goupile_update_hour }}'
     minute: 0
-    job: '{{ goupile_root_path }}/sync/update.sh && {{ goupile_root_path }}/sync/update.sh'
+    job: '{{ goupile_root_path }}/sync/update.sh && {{ goupile_root_path }}/sync/sync.py'
   when: goupile_update_auto
   become: yes
 
