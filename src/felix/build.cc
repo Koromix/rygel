@@ -121,29 +121,28 @@ bool Builder::AddTarget(const TargetInfo &target)
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename,
                                        build.compiler->GetObjectExtension()).ptr;
 
+        bool module = !(build.features & (int)CompileFeature::Optimize);
+        uint32_t features = target.CombineFeatures(build.features);
+
         // Make C file
         {
             Command cmd = {};
-            build.compiler->MakePackCommand(target.pack_filenames, build.compile_opt,
+            build.compiler->MakePackCommand(target.pack_filenames, !module,
                                             target.pack_options, src_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Pack %1 assets", target.name).ptr;
             AppendNode(text, src_filename, cmd, target.pack_filenames);
         }
 
-        bool module = (build.compile_opt == CompileOptimization::None ||
-                       build.compile_opt == CompileOptimization::Debug);
-        uint32_t features = target.CombineFeatures(build.features);
-
         // Build object file
         {
             Command cmd = {};
             if (module) {
-                build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_opt,
+                build.compiler->MakeObjectCommand(src_filename, SourceType::C,
                                                   false, nullptr, {"EXPORT"}, {}, features, build.env,
                                                   obj_filename, &str_alloc, &cmd);
             } else {
-                build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_opt,
+                build.compiler->MakeObjectCommand(src_filename, SourceType::C,
                                                   false, nullptr, {}, {}, features, build.env,
                                                   obj_filename,  &str_alloc, &cmd);
             }
@@ -158,9 +157,8 @@ bool Builder::AddTarget(const TargetInfo &target)
                                               target.name, RG_SHARED_LIBRARY_EXTENSION).ptr;
 
             Command cmd = {};
-            build.compiler->MakeLinkCommand(obj_filename, CompileOptimization::None, {},
-                                            LinkType::SharedLibrary, features, build.env,
-                                            module_filename, &str_alloc, &cmd);
+            build.compiler->MakeLinkCommand(obj_filename, {}, LinkType::SharedLibrary,
+                                            features, build.env, module_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Link %1",
                                    SplitStrReverseAny(module_filename, RG_PATH_SEPARATORS)).ptr;
@@ -195,7 +193,7 @@ bool Builder::AddTarget(const TargetInfo &target)
             return false;
 
         Command cmd = {};
-        build.compiler->MakeObjectCommand(src_filename, SourceType::C, build.compile_opt,
+        build.compiler->MakeObjectCommand(src_filename, SourceType::C,
                                           false, nullptr, {}, {}, features, build.env,
                                           obj_filename, &str_alloc, &cmd);
 
@@ -212,9 +210,8 @@ bool Builder::AddTarget(const TargetInfo &target)
         uint32_t features = target.CombineFeatures(build.features);
 
         Command cmd = {};
-        build.compiler->MakeLinkCommand(obj_filenames, build.compile_opt, target.libraries,
-                                        LinkType::Executable, features, build.env, target_filename,
-                                        &str_alloc, &cmd);
+        build.compiler->MakeLinkCommand(obj_filenames, target.libraries, LinkType::Executable,
+                                        features, build.env, target_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, "Link %1", SplitStrReverseAny(target_filename, RG_PATH_SEPARATORS)).ptr;
         AppendNode(text, target_filename, cmd, obj_filenames);
@@ -252,7 +249,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
                 uint32_t features = pch->target->CombineFeatures(build.features);
 
                 Command cmd = {};
-                build.compiler->MakePchCommand(pch_filename, pch->type, build.compile_opt, warnings,
+                build.compiler->MakePchCommand(pch_filename, pch->type, warnings,
                                                pch->target->definitions, pch->target->include_directories,
                                                features, build.env, &str_alloc, &cmd);
 
@@ -275,7 +272,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
         uint32_t features = src.target->CombineFeatures(build.features);
 
         Command cmd = {};
-        build.compiler->MakeObjectCommand(src.filename, src.type, build.compile_opt, warnings,
+        build.compiler->MakeObjectCommand(src.filename, src.type, warnings,
                                           pch_filename, src.target->definitions, src.target->include_directories,
                                           features, build.env, obj_filename, &str_alloc, &cmd);
 

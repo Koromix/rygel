@@ -11,34 +11,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-[DebugSlow]
-Optimization = None
-Features = PCH, DebugInfo, ASan
-
-[DebugFast]
-Optimization = Debug
+[Debug]
 Features = PCH, DebugInfo, ASan
 
 [Fast]
-Optimization = Fast
-Features = PCH, DebugInfo
+Features = PCH, DebugInfo, Optimize
 
 [FastLTO]
-Optimization = LTO
-Features = PCH, DebugInfo
+Features = PCH, DebugInfo, Optimize, LTO
 
 [FastStatic]
-Optimization = Fast
-Features = PCH, DebugInfo, StaticLink
+Features = PCH, DebugInfo, Optimize, StaticLink
 
 [Paranoid]
 Compiler = clang
 Linker = lld
-Optimization = LTO
-Features = PCH, SafeStack, CFI, ZeroInit, ShuffleCode
+Features = PCH, Optimize, LTO, SafeStack, CFI, ZeroInit, ShuffleCode
 
 [ParanoidStatic]
 Compiler = clang
 Linker = lld
-Optimization = LTO
-Features = PCH, SafeStack, CFI, ZeroInit, StaticLink, ShuffleCode
+Features = PCH, Optimize, LTO, SafeStack, CFI, ZeroInit, StaticLink, ShuffleCode

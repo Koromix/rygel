@@ -17,38 +17,29 @@
 
 namespace RG {
 
-enum class CompileOptimization {
-    None,
-    Debug,
-    Fast,
-    LTO
-};
-static const char *const CompileOptimizationNames[] = {
-    "None",
-    "Debug",
-    "Fast",
-    "LTO"
-};
-
 enum class CompileFeature {
-    PCH = 1 << 0,
-    DebugInfo = 1 << 1,
-    StaticLink = 1 << 2,
-    ASan = 1 << 3,
-    TSan = 1 << 4,
-    UBSan = 1 << 5,
-    SafeStack = 1 << 6,
-    ZeroInit = 1 << 7,
-    CFI = 1 << 8,
-    ShuffleCode = 1 << 9
+    Optimize = 1 << 0,
+    PCH = 1 << 1,
+    DebugInfo = 1 << 2,
+    StaticLink = 1 << 3,
+    ASan = 1 << 4,
+    TSan = 1 << 5,
+    UBSan = 1 << 6,
+    LTO = 1 << 7,
+    SafeStack = 1 << 8,
+    ZeroInit = 1 << 9,
+    CFI = 1 << 10,
+    ShuffleCode = 1 << 11
 };
 static const OptionDesc CompileFeatureOptions[] = {
+    {"Optimize",    "Optimize generated builds"},
     {"PCH",         "Use precompiled headers for faster compilation"},
     {"DebugInfo",   "Add debug information to generated binaries"},
     {"StaticLink",  "Static link base system libraries (libc, etc.)"},
     {"ASan",        "Enable AdressSanitizer (ASan)"},
     {"TSan",        "Enable ThreadSanitizer (TSan)"},
     {"UBSan",       "Enable UndefinedBehaviorSanitizer (UBSan)"},
+    {"LTO",         "Enable Link-Time Optimization"},
     {"SafeStack",   "Enable SafeStack protection (Clang)"},
     {"ZeroInit",    "Zero-init all undefined variables (Clang)"},
     {"CFI",         "Enable forward-edge CFI protection (Clang LTO)"},
@@ -89,27 +80,27 @@ public:
 
     virtual ~Compiler() {}
 
-    virtual bool CheckFeatures(CompileOptimization compile_opt, uint32_t features) const = 0;
+    virtual bool CheckFeatures(uint32_t features) const = 0;
 
     virtual const char *GetObjectExtension() const = 0;
     virtual const char *GetExecutableExtension() const = 0;
 
-    virtual void MakePackCommand(Span<const char *const> pack_filenames, CompileOptimization compile_opt,
+    virtual void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
                                  const char *pack_options, const char *dest_filename,
                                  Allocator *alloc, Command *out_cmd) const = 0;
 
-    virtual void MakePchCommand(const char *pch_filename, SourceType src_type, CompileOptimization compile_opt,
+    virtual void MakePchCommand(const char *pch_filename, SourceType src_type,
                                 bool warnings, Span<const char *const> definitions,
                                 Span<const char *const> include_directories, uint32_t features, bool env_flags,
                                 Allocator *alloc, Command *out_cmd) const = 0;
     virtual const char *GetPchObject(const char *pch_filename, Allocator *alloc) const = 0;
 
-    virtual void MakeObjectCommand(const char *src_filename, SourceType src_type, CompileOptimization compile_opt,
+    virtual void MakeObjectCommand(const char *src_filename, SourceType src_type,
                                    bool warnings, const char *pch_filename, Span<const char *const> definitions,
                                    Span<const char *const> include_directories, uint32_t features, bool env_flags,
                                    const char *dest_filename, Allocator *alloc, Command *out_cmd) const = 0;
 
-    virtual void MakeLinkCommand(Span<const char *const> obj_filenames, CompileOptimization compile_opt,
+    virtual void MakeLinkCommand(Span<const char *const> obj_filenames,
                                  Span<const char *const> libraries, LinkType link_type,
                                  uint32_t features, bool env_flags, const char *dest_filename,
                                  Allocator *alloc, Command *out_cmd) const = 0;

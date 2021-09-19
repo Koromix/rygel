@@ -189,11 +189,6 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
                         preset->compiler_info.cc = DuplicateString(prop.value, alloc).ptr;
                     } else if (prop.key == "Linker") {
                         preset->compiler_info.ld = DuplicateString(prop.value, alloc).ptr;
-                    } else if (prop.key == "Optimization") {
-                        if (!OptionToEnum(CompileOptimizationNames, prop.value.ptr, &preset->build.compile_opt)) {
-                            LogError("Unknown optimization level '%1'", prop.value);
-                            valid = false;
-                        }
                     } else if (prop.key == "Features") {
                         preset->build.features = 0;
                         valid &= ParseFeatureString(prop.value.ptr, &preset->build.features);
@@ -246,7 +241,6 @@ Options:
 
         %!..+--compiler <compiler>%!0    Override compiler
         %!..+--linker <linker>%!0        Override linker
-        %!..+--optimize <level>%!0       Override optimization level
         %!..+--features <features>%!0    Override compilation features
 
     %!..+-e, --environment%!0            Use compiler flags found in environment (CFLAGS, LDFLAGS, etc.)
@@ -274,9 +268,7 @@ Supported compilers:)", FelixTarget, jobs);
 Use %!..+--compiler=<binary>%!0 to specify a custom C compiler, such as: %!..+felix --compiler=clang-11%!0.
 Felix will use the matching C++ compiler automatically.
 
-Supported optimization levels: %!..+%1%!0
-
-Supported compiler features:)", FmtSpan(CompileOptimizationNames));
+Supported compiler features:)");
 
         for (const OptionDesc &desc: CompileFeatureOptions) {
             PrintLn(fp, "    %!..+%1%!0  %2", FmtArg(desc.name).Pad(27), desc.help);
@@ -408,11 +400,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 compiler_info.cc = opt.current_value;
             } else if (opt.Test("--linker", OptionType::Value)) {
                 compiler_info.ld = opt.current_value;
-            } else if (opt.Test("--optimize", OptionType::Value)) {
-                if (!OptionToEnum(CompileOptimizationNames, opt.current_value, &build.compile_opt)) {
-                    LogError("Unknown build mode '%1'", opt.current_value);
-                    return 1;
-                }
             } else if (opt.Test("--features", OptionType::Value)) {
                 build.features = 0;
                 if (!ParseFeatureString(opt.current_value, &build.features))
@@ -467,18 +454,16 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     std::unique_ptr<const Compiler> compiler = PrepareCompiler(compiler_info);
     if (!compiler)
         return 1;
-    if (!compiler->CheckFeatures(build.compile_opt, build.features))
+    if (!compiler->CheckFeatures(build.features))
         return 1;
     build.compiler = compiler.get();
 
     // Output directory
     if (build.output_directory) {
         build.output_directory = NormalizePath(build.output_directory, start_directory, &temp_alloc).ptr;
-    } else if (preset_name) {
-        build.output_directory = Fmt(&temp_alloc, "%1%/bin%/%2", GetWorkingDirectory(), preset_name).ptr;
     } else {
-        build.output_directory = Fmt(&temp_alloc, "%1%/bin%/%2_%3", GetWorkingDirectory(),
-                                     build.compiler->name, CompileOptimizationNames[(int)build.compile_opt]).ptr;
+        const char *basename = preset_name ? preset_name : build.compiler->name;
+        build.output_directory = Fmt(&temp_alloc, "%1%/bin%/%2", GetWorkingDirectory(), basename).ptr;
     }
 
     // Load configuration file
@@ -563,7 +548,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     // We're ready to output stuff
     LogInfo("Root directory: %!..+%1%!0", GetWorkingDirectory());
     LogInfo("  Output directory: %!..+%1%!0", build.output_directory);
-    LogInfo("  Compiler: %!..+%1 (%2)%!0", build.compiler->name, CompileOptimizationNames[(int)build.compile_opt]);
+    LogInfo("  Compiler: %!..+%1%!0", build.compiler->name);
     LogInfo("  Features: %!..+%1%!0", FmtFlags(build.features, CompileFeatureOptions));
     LogInfo("  Version: %!..+%1%!0", build.version_str);
     if (!build.fake && !MakeDirectoryRec(build.output_directory))
