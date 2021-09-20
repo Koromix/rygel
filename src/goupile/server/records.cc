@@ -575,9 +575,6 @@ bool RecordExporter::Export(const char *filename)
 
     // Create tables
     for (const Table &table: tables) {
-        if (!table.rows.len)
-            continue;
-
         HeapArray<char> sql(&str_alloc);
 
         Fmt(&sql, "CREATE TABLE "); EncodeSqlName(table.name, &sql); Fmt(&sql, " (__ROOT TEXT, __ULID TEXT, __HID, ");
@@ -598,10 +595,8 @@ bool RecordExporter::Export(const char *filename)
     }
 
     // Import data
+    HashSet<const void *> used_tables;
     for (const Table &table: tables) {
-        if (!table.rows.len)
-            continue;
-
         HeapArray<char> sql(&str_alloc);
 
         Fmt(&sql, "INSERT INTO "); EncodeSqlName(table.name, &sql); Fmt(&sql, " VALUES (?1, ?2, ?3");
@@ -631,6 +626,20 @@ bool RecordExporter::Export(const char *filename)
             }
 
             if (!stmt.Run())
+                return false;
+
+            used_tables.Set(&table);
+        }
+    }
+
+    // Delete unused tables
+    for (const Table &table: tables) {
+        if (!used_tables.Find(&table)) {
+            HeapArray<char> sql(&str_alloc);
+
+            Fmt(&sql, "DROP TABLE "); EncodeSqlName(table.name, &sql);
+
+            if (!db.Run(sql.ptr))
                 return false;
         }
     }
