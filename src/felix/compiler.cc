@@ -235,6 +235,13 @@ public:
                           include_directories, features, env_flags, nullptr, alloc, out_cmd);
     }
 
+    const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override
+    {
+        RG_ASSERT(alloc);
+
+        const char *cache_filename = Fmt(alloc, "%1.gch", pch_filename).ptr;
+        return cache_filename;
+    }
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, bool warnings,
@@ -563,6 +570,13 @@ public:
                           definitions, include_directories, features, env_flags, nullptr, alloc, out_cmd);
     }
 
+    const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override
+    {
+        RG_ASSERT(alloc);
+
+        const char *cache_filename = Fmt(alloc, "%1.gch", pch_filename).ptr;
+        return cache_filename;
+    }
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, bool warnings,
@@ -841,6 +855,13 @@ public:
                           include_directories, features, env_flags, nullptr, alloc, out_cmd);
     }
 
+    const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override
+    {
+        RG_ASSERT(alloc);
+
+        const char *cache_filename = Fmt(alloc, "%1.pch", pch_filename).ptr;
+        return cache_filename;
+    }
     const char *GetPchObject(const char *pch_filename, Allocator *alloc) const override
     {
         RG_ASSERT(alloc);

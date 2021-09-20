@@ -247,6 +247,8 @@ const char *Builder::AddSource(const SourceFileInfo &src)
 
             if (!pch_filename) {
                 pch_filename = BuildObjectPath(pch->filename, build.output_directory, pch_ext, &str_alloc);
+
+                const char *cache_filename = build.compiler->GetPchCache(pch_filename, &str_alloc);
                 bool warnings = (pch->target->type != TargetType::ExternalLibrary);
                 uint32_t features = pch->target->CombineFeatures(build.features);
 
@@ -254,6 +256,10 @@ const char *Builder::AddSource(const SourceFileInfo &src)
                 build.compiler->MakePchCommand(pch_filename, pch->type, warnings,
                                                pch->target->definitions, pch->target->include_directories,
                                                features, build.env, &str_alloc, &cmd);
+
+                if (!IsFileUpToDate(cache_filename, pch_filename)) {
+                    mtime_map.Set(pch_filename, -1);
+                }
 
                 const char *text = Fmt(&str_alloc, "Precompile %1", pch->filename).ptr;
                 if (AppendNode(text, pch_filename, cmd, pch->filename)) {

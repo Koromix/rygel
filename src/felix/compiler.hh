@@ -93,6 +93,7 @@ public:
                                 bool warnings, Span<const char *const> definitions,
                                 Span<const char *const> include_directories, uint32_t features, bool env_flags,
                                 Allocator *alloc, Command *out_cmd) const = 0;
+    virtual const char *GetPchCache(const char *pch_filename, Allocator *alloc) const = 0;
     virtual const char *GetPchObject(const char *pch_filename, Allocator *alloc) const = 0;
 
     virtual void MakeObjectCommand(const char *src_filename, SourceType src_type,
