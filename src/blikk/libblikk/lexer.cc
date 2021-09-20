@@ -15,8 +15,6 @@
 #include "error.hh"
 #include "lexer.hh"
 #include "lexer_xid.inc"
-#define CXX20_CONSTEXPR
-#define HAS_CXX20_CONSTEXPR 0
 #include "../../../vendor/fast_float/fast_float.h"
 
 namespace RG {

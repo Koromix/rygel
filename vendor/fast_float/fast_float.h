@@ -38,22 +38,7 @@
 #ifndef FASTFLOAT_FAST_FLOAT_H
 #define FASTFLOAT_FAST_FLOAT_H
 
-
 #include <system_error>
-
-#if !defined(CXX20_CONSTEXPR)
-  #define CXX20_CONSTEXPR
-  #if defined __has_include
-    #if __has_include(<version>)
-      #include <version>
-      #if defined(__cpp_lib_bit_cast)
-        #undef CXX20_CONSTEXPR
-        #define CXX20_CONSTEXPR constexpr
-        #define HAS_CXX20_CONSTEXPR 1
-      #endif
-    #endif
-  #endif
-#endif
 
 namespace fast_float {
 enum chars_format {
@@ -100,14 +85,14 @@ struct parse_options {
  * The default is  `fast_float::chars_format::general` which allows both `fixed` and `scientific`.
  */
 template<typename T>
-CXX20_CONSTEXPR from_chars_result from_chars(const char *first, const char *last,
+from_chars_result from_chars(const char *first, const char *last,
                              T &value, chars_format fmt = chars_format::general)  noexcept;
 
 /**
  * Like from_chars, but accepts an `options` argument to govern number parsing.
  */
 template<typename T>
-CXX20_CONSTEXPR from_chars_result from_chars_advanced(const char *first, const char *last,
+from_chars_result from_chars_advanced(const char *first, const char *last,
                                       T &value, parse_options options)  noexcept;
 
 }
@@ -190,20 +175,6 @@ CXX20_CONSTEXPR from_chars_result from_chars_advanced(const char *first, const c
 #define fastfloat_really_inline inline __attribute__((always_inline))
 #endif
 
-#if !defined(CXX20_CONSTEXPR)
-  #define CXX20_CONSTEXPR
-  #if defined __has_include
-    #if __has_include(<version>)
-      #include <version>
-      #if defined(__cpp_lib_bit_cast)
-        #undef CXX20_CONSTEXPR
-        #define CXX20_CONSTEXPR constexpr
-        #define HAS_CXX20_CONSTEXPR 1
-      #endif
-    #endif
-  #endif
-#endif
-
 #ifndef FASTFLOAT_ASSERT
 #define FASTFLOAT_ASSERT(x)  { if (!(x)) abort(); }
 #endif
@@ -219,7 +190,7 @@ CXX20_CONSTEXPR from_chars_result from_chars_advanced(const char *first, const c
 namespace fast_float {
 
 // Compares two ASCII strings in a case insensitive manner.
-CXX20_CONSTEXPR inline bool fastfloat_strncasecmp(const char *input1, const char *input2,
+inline bool fastfloat_strncasecmp(const char *input1, const char *input2,
                                   size_t length) {
   char running_diff{0};
   for (size_t i = 0; i < length; i++) {
@@ -240,7 +211,7 @@ struct span {
   span(const T* _ptr, size_t _length) : ptr(_ptr), length(_length) {}
   span() : ptr(nullptr), length(0) {}
 
-  constexpr size_t len() noexcept {
+  constexpr size_t len() const noexcept {
     return length;
   }
 
@@ -258,7 +229,7 @@ struct value128 {
 };
 
 /* result might be undefined when input_num is zero */
-CXX20_CONSTEXPR fastfloat_really_inline int leading_zeroes(uint64_t input_num) {
+fastfloat_really_inline int leading_zeroes(uint64_t input_num) {
   assert(input_num > 0);
 #ifdef FASTFLOAT_VISUAL_STUDIO
   #if defined(_M_X64) || defined(_M_ARM64)
@@ -285,13 +256,13 @@ CXX20_CONSTEXPR fastfloat_really_inline int leading_zeroes(uint64_t input_num) {
 #ifdef FASTFLOAT_32BIT
 
 // slow emulation routine for 32-bit
-CXX20_CONSTEXPR fastfloat_really_inline uint64_t emulu(uint32_t x, uint32_t y) {
+fastfloat_really_inline uint64_t emulu(uint32_t x, uint32_t y) {
     return x * (uint64_t)y;
 }
 
 // slow emulation routine for 32-bit
 #if !defined(__MINGW64__)
-CXX20_CONSTEXPR fastfloat_really_inline uint64_t _umul128(uint64_t ab, uint64_t cd,
+fastfloat_really_inline uint64_t _umul128(uint64_t ab, uint64_t cd,
                                           uint64_t *hi) {
   uint64_t ad = emulu((uint32_t)(ab >> 32), (uint32_t)cd);
   uint64_t bd = emulu((uint32_t)ab, (uint32_t)cd);
@@ -470,7 +441,6 @@ template <> inline constexpr size_t binary_format<float>::max_digits() {
 }
 
 template<typename T>
-CXX20_CONSTEXPR
 fastfloat_really_inline void to_float(bool negative, adjusted_mantissa am, T &value) {
   uint64_t word = am.mantissa;
   word |= uint64_t(am.power2) << binary_format<T>::mantissa_explicit_bits();
@@ -501,23 +471,14 @@ fastfloat_really_inline void to_float(bool negative, adjusted_mantissa am, T &va
 #include <cstring>
 #include <iterator>
 
-#if defined __has_include
-  #if __has_include(<version>)
-    #include <version>
-    #if defined(__cpp_lib_bit_cast)
-      #include <bit>
-    #endif
-  #endif
-#endif
-
 
 namespace fast_float {
 
 // Next function can be micro-optimized, but compilers are entirely
 // able to optimize it well.
-CXX20_CONSTEXPR fastfloat_really_inline bool is_integer(char c)  noexcept  { return c >= '0' && c <= '9'; }
+fastfloat_really_inline bool is_integer(char c)  noexcept  { return c >= '0' && c <= '9'; }
 
-CXX20_CONSTEXPR fastfloat_really_inline uint64_t byteswap(uint64_t val) {
+fastfloat_really_inline uint64_t byteswap(uint64_t val) {
   return (val & 0xFF00000000000000) >> 56
     | (val & 0x00FF000000000000) >> 40
     | (val & 0x0000FF0000000000) >> 24
@@ -528,13 +489,9 @@ CXX20_CONSTEXPR fastfloat_really_inline uint64_t byteswap(uint64_t val) {
     | (val & 0x00000000000000FF) << 56;
 }
 
-CXX20_CONSTEXPR fastfloat_really_inline uint64_t read_u64(const char *chars) {
+fastfloat_really_inline uint64_t read_u64(const char *chars) {
   uint64_t val;
-#if defined(__cpp_lib_bit_cast)
-  val = std::bit_cast<uint64_t>(reinterpret_cast<const char (&)[8]>(chars));
-#else
   ::memcpy(&val, chars, sizeof(uint64_t));
-#endif
 #if FASTFLOAT_IS_BIG_ENDIAN == 1
   // Need to read as-if the number was in little-endian order.
   val = byteswap(val);
@@ -542,26 +499,16 @@ CXX20_CONSTEXPR fastfloat_really_inline uint64_t read_u64(const char *chars) {
   return val;
 }
 
-CXX20_CONSTEXPR fastfloat_really_inline void write_u64(uint8_t *chars, uint64_t val) {
+fastfloat_really_inline void write_u64(uint8_t *chars, uint64_t val) {
 #if FASTFLOAT_IS_BIG_ENDIAN == 1
   // Need to read as-if the number was in little-endian order.
   val = byteswap(val);
 #endif
-#if defined(__cpp_lib_bit_cast)
-  if (std::is_constant_evaluated()) {
-    char (&dst)[8] = reinterpret_cast<char (&)[8]>(chars);
-    const char (&src)[8] = reinterpret_cast<const char (&)[8]>(val);
-    std::copy(std::begin(src), std::end(src), std::begin(dst));
-  } else {
-    ::memcpy(chars, &val, sizeof(uint64_t));
-  }
-#else
   ::memcpy(chars, &val, sizeof(uint64_t));
-#endif
 }
 
 // credit  @aqrit
-CXX20_CONSTEXPR fastfloat_really_inline uint32_t  parse_eight_digits_unrolled(uint64_t val) {
+fastfloat_really_inline uint32_t  parse_eight_digits_unrolled(uint64_t val) {
   const uint64_t mask = 0x000000FF000000FF;
   const uint64_t mul1 = 0x000F424000000064; // 100 + (1000000ULL << 32)
   const uint64_t mul2 = 0x0000271000000001; // 1 + (10000ULL << 32)
@@ -571,17 +518,17 @@ CXX20_CONSTEXPR fastfloat_really_inline uint32_t  parse_eight_digits_unrolled(ui
   return uint32_t(val);
 }
 
-CXX20_CONSTEXPR fastfloat_really_inline uint32_t parse_eight_digits_unrolled(const char *chars)  noexcept  {
+fastfloat_really_inline uint32_t parse_eight_digits_unrolled(const char *chars)  noexcept  {
   return parse_eight_digits_unrolled(read_u64(chars));
 }
 
 // credit @aqrit
-CXX20_CONSTEXPR fastfloat_really_inline bool is_made_of_eight_digits_fast(uint64_t val)  noexcept  {
+fastfloat_really_inline bool is_made_of_eight_digits_fast(uint64_t val)  noexcept  {
   return !((((val + 0x4646464646464646) | (val - 0x3030303030303030)) &
      0x8080808080808080));
 }
 
-CXX20_CONSTEXPR fastfloat_really_inline bool is_made_of_eight_digits_fast(const char *chars)  noexcept  {
+fastfloat_really_inline bool is_made_of_eight_digits_fast(const char *chars)  noexcept  {
   return is_made_of_eight_digits_fast(read_u64(chars));
 }
 
@@ -601,7 +548,7 @@ struct parsed_number_string {
 
 // Assuming that you use no more than 19 digits, this will
 // parse an ASCII string.
-CXX20_CONSTEXPR fastfloat_really_inline
+fastfloat_really_inline
 parsed_number_string parse_number_string(const char *p, const char *pend, parse_options options) noexcept {
   const chars_format fmt = options.format;
   const char decimal_point = options.decimal_point;
@@ -1466,7 +1413,7 @@ namespace fast_float {
 // low part corresponding to the least significant bits.
 //
 template <int bit_precision>
-CXX20_CONSTEXPR fastfloat_really_inline
+fastfloat_really_inline
 value128 compute_product_approximation(int64_t q, uint64_t w) {
   const int index = 2 * int(q - powers::smallest_power_of_five);
   // For small values of q, e.g., q in [0,27], the answer is always exact because
@@ -1539,7 +1486,7 @@ adjusted_mantissa compute_error(int64_t q, uint64_t w)  noexcept  {
 // return an adjusted_mantissa with a negative power of 2: the caller should recompute
 // in such cases.
 template <typename binary>
-CXX20_CONSTEXPR fastfloat_really_inline
+fastfloat_really_inline
 adjusted_mantissa compute_float(int64_t q, uint64_t w)  noexcept  {
   adjusted_mantissa answer;
   if ((w == 0) || (q < binary::smallest_power_of_ten())) {
@@ -2242,23 +2189,14 @@ struct bigint {
 #include <cstring>
 #include <iterator>
 
-#if defined __has_include
-  #if __has_include(<version>)
-    #include <version>
-    #if defined(__cpp_lib_bit_cast)
-      #include <bit>
-    #endif
-  #endif
-#endif
-
 
 namespace fast_float {
 
 // Next function can be micro-optimized, but compilers are entirely
 // able to optimize it well.
-CXX20_CONSTEXPR fastfloat_really_inline bool is_integer(char c)  noexcept  { return c >= '0' && c <= '9'; }
+fastfloat_really_inline bool is_integer(char c)  noexcept  { return c >= '0' && c <= '9'; }
 
-CXX20_CONSTEXPR fastfloat_really_inline uint64_t byteswap(uint64_t val) {
+fastfloat_really_inline uint64_t byteswap(uint64_t val) {
   return (val & 0xFF00000000000000) >> 56
     | (val & 0x00FF000000000000) >> 40
     | (val & 0x0000FF0000000000) >> 24
@@ -2269,13 +2207,9 @@ CXX20_CONSTEXPR fastfloat_really_inline uint64_t byteswap(uint64_t val) {
     | (val & 0x00000000000000FF) << 56;
 }
 
-CXX20_CONSTEXPR fastfloat_really_inline uint64_t read_u64(const char *chars) {
+fastfloat_really_inline uint64_t read_u64(const char *chars) {
   uint64_t val;
-#if defined(__cpp_lib_bit_cast)
-  val = std::bit_cast<uint64_t>(reinterpret_cast<const char (&)[8]>(chars));
-#else
   ::memcpy(&val, chars, sizeof(uint64_t));
-#endif
 #if FASTFLOAT_IS_BIG_ENDIAN == 1
   // Need to read as-if the number was in little-endian order.
   val = byteswap(val);
@@ -2283,26 +2217,16 @@ CXX20_CONSTEXPR fastfloat_really_inline uint64_t read_u64(const char *chars) {
   return val;
 }
 
-CXX20_CONSTEXPR fastfloat_really_inline void write_u64(uint8_t *chars, uint64_t val) {
+fastfloat_really_inline void write_u64(uint8_t *chars, uint64_t val) {
 #if FASTFLOAT_IS_BIG_ENDIAN == 1
   // Need to read as-if the number was in little-endian order.
   val = byteswap(val);
 #endif
-#if defined(__cpp_lib_bit_cast)
-  if (std::is_constant_evaluated()) {
-    char (&dst)[8] = reinterpret_cast<char (&)[8]>(chars);
-    const char (&src)[8] = reinterpret_cast<const char (&)[8]>(val);
-    std::copy(std::begin(src), std::end(src), std::begin(dst));
-  } else {
-    ::memcpy(chars, &val, sizeof(uint64_t));
-  }
-#else
   ::memcpy(chars, &val, sizeof(uint64_t));
-#endif
 }
 
 // credit  @aqrit
-CXX20_CONSTEXPR fastfloat_really_inline uint32_t  parse_eight_digits_unrolled(uint64_t val) {
+fastfloat_really_inline uint32_t  parse_eight_digits_unrolled(uint64_t val) {
   const uint64_t mask = 0x000000FF000000FF;
   const uint64_t mul1 = 0x000F424000000064; // 100 + (1000000ULL << 32)
   const uint64_t mul2 = 0x0000271000000001; // 1 + (10000ULL << 32)
@@ -2312,17 +2236,17 @@ CXX20_CONSTEXPR fastfloat_really_inline uint32_t  parse_eight_digits_unrolled(ui
   return uint32_t(val);
 }
 
-CXX20_CONSTEXPR fastfloat_really_inline uint32_t parse_eight_digits_unrolled(const char *chars)  noexcept  {
+fastfloat_really_inline uint32_t parse_eight_digits_unrolled(const char *chars)  noexcept  {
   return parse_eight_digits_unrolled(read_u64(chars));
 }
 
 // credit @aqrit
-CXX20_CONSTEXPR fastfloat_really_inline bool is_made_of_eight_digits_fast(uint64_t val)  noexcept  {
+fastfloat_really_inline bool is_made_of_eight_digits_fast(uint64_t val)  noexcept  {
   return !((((val + 0x4646464646464646) | (val - 0x3030303030303030)) &
      0x8080808080808080));
 }
 
-CXX20_CONSTEXPR fastfloat_really_inline bool is_made_of_eight_digits_fast(const char *chars)  noexcept  {
+fastfloat_really_inline bool is_made_of_eight_digits_fast(const char *chars)  noexcept  {
   return is_made_of_eight_digits_fast(read_u64(chars));
 }
 
@@ -2342,7 +2266,7 @@ struct parsed_number_string {
 
 // Assuming that you use no more than 19 digits, this will
 // parse an ASCII string.
-CXX20_CONSTEXPR fastfloat_really_inline
+fastfloat_really_inline
 parsed_number_string parse_number_string(const char *p, const char *pend, parse_options options) noexcept {
   const chars_format fmt = options.format;
   const char decimal_point = options.decimal_point;
@@ -2930,7 +2854,7 @@ namespace detail {
  * strings a null-free and fixed.
  **/
 template <typename T>
-CXX20_CONSTEXPR from_chars_result parse_infnan(const char *first, const char *last, T &value)  noexcept  {
+from_chars_result parse_infnan(const char *first, const char *last, T &value)  noexcept  {
   from_chars_result answer;
   answer.ptr = first;
   answer.ec = std::errc(); // be optimistic
@@ -2973,13 +2897,13 @@ CXX20_CONSTEXPR from_chars_result parse_infnan(const char *first, const char *la
 } // namespace detail
 
 template<typename T>
-CXX20_CONSTEXPR from_chars_result from_chars(const char *first, const char *last,
+from_chars_result from_chars(const char *first, const char *last,
                              T &value, chars_format fmt /*= chars_format::general*/)  noexcept  {
   return from_chars_advanced(first, last, value, parse_options{fmt});
 }
 
 template<typename T>
-CXX20_CONSTEXPR from_chars_result from_chars_advanced(const char *first, const char *last,
+from_chars_result from_chars_advanced(const char *first, const char *last,
                                       T &value, parse_options options)  noexcept  {
 
   static_assert (std::is_same<T, double>::value || std::is_same<T, float>::value, "only float and double are supported");
