@@ -561,6 +561,8 @@ bool RecordExporter::Export(const char *filename)
 
     // Reorder columns
     for (Table &table: tables) {
+        table.ordered_columns.Clear();
+
         const Column *it = table.first_column;
 
         while (it) {
@@ -573,6 +575,9 @@ bool RecordExporter::Export(const char *filename)
 
     // Create tables
     for (const Table &table: tables) {
+        if (!table.rows.len)
+            continue;
+
         HeapArray<char> sql(&str_alloc);
 
         Fmt(&sql, "CREATE TABLE "); EncodeSqlName(table.name, &sql); Fmt(&sql, " (__ROOT TEXT, __ULID TEXT, __HID, ");
@@ -594,6 +599,9 @@ bool RecordExporter::Export(const char *filename)
 
     // Import data
     for (const Table &table: tables) {
+        if (!table.rows.len)
+            continue;
+
         HeapArray<char> sql(&str_alloc);
 
         Fmt(&sql, "INSERT INTO "); EncodeSqlName(table.name, &sql); Fmt(&sql, " VALUES (?1, ?2, ?3");
