@@ -25,12 +25,18 @@
 #include "warnless.h"
 #include "memdebug.h"
 
-static const char *preload_hosts[] = {
-  "1.example.com",
-  "2.example.com",
-  "3.example.com",
-  "4.example.com",
-  NULL /* end of list marker */
+struct entry {
+  const char *name;
+  const char *exp;
+};
+
+static struct entry preload_hosts[] = {
+  /* curl turns 39 that day just before 31-bit time_t overflow */
+  { "1.example.com", "20370320 01:02:03" },
+  { "2.example.com", "20370320 03:02:01" },
+  { "3.example.com", "20370319 01:02:03" },
+  { "4.example.com", "" },
+  { NULL, NULL } /* end of list marker */
 };
 
 struct state {
@@ -42,20 +48,31 @@ static CURLSTScode hstsread(CURL *easy, struct curl_hstsentry *e,
                             void *userp)
 {
   const char *host;
+  const char *expire;
   struct state *s = (struct state *)userp;
   (void)easy;
-  host = preload_hosts[s->index++];
+  host = preload_hosts[s->index].name;
+  expire = preload_hosts[s->index++].exp;
 
   if(host && (strlen(host) < e->namelen)) {
     strcpy(e->name, host);
     e->includeSubDomains = FALSE;
-    strcpy(e->expire, "20370320 01:02:03"); /* curl turns 39 that day
-                                   just before 31-bit time_t overflow */
+    strcpy(e->expire, expire);
     fprintf(stderr, "add '%s'\n", host);
   }
   else
     return CURLSTS_DONE;
   return CURLSTS_OK;
+}
+
+/* verify error from callback */
+static CURLSTScode hstsreadfail(CURL *easy, struct curl_hstsentry *e,
+                                void *userp)
+{
+  (void)easy;
+  (void)e;
+  (void)userp;
+  return CURLSTS_FAIL;
 }
 
 /* check that we get the hosts back in the save */
@@ -90,6 +107,19 @@ int test(char *URL)
     curl_easy_setopt(hnd, CURLOPT_HSTS_CTRL, CURLHSTS_ENABLE);
     ret = curl_easy_perform(hnd);
     curl_easy_cleanup(hnd);
+    printf("First request returned %d\n", (int)ret);
+  }
+  hnd = curl_easy_init();
+  if(hnd) {
+    curl_easy_setopt(hnd, CURLOPT_URL, URL);
+    curl_easy_setopt(hnd, CURLOPT_HSTSREADFUNCTION, hstsreadfail);
+    curl_easy_setopt(hnd, CURLOPT_HSTSREADDATA, &st);
+    curl_easy_setopt(hnd, CURLOPT_HSTSWRITEFUNCTION, hstswrite);
+    curl_easy_setopt(hnd, CURLOPT_HSTSWRITEDATA, &st);
+    curl_easy_setopt(hnd, CURLOPT_HSTS_CTRL, CURLHSTS_ENABLE);
+    ret = curl_easy_perform(hnd);
+    curl_easy_cleanup(hnd);
+    printf("Second request returned %d\n", (int)ret);
   }
   curl_global_cleanup();
   return (int)ret;
