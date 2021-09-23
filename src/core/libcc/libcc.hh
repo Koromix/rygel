@@ -1709,7 +1709,11 @@ public:
     {
         Size count = 0;
         for (size_t bits: data) {
-            count += RG::PopCount(bits);
+#ifdef RG_ARCH_64
+            count += RG::PopCount((uint64_t)bits);
+#else
+            count += RG::PopCount((uint32_t)bits);
+#endif
         }
         return count;
     }

@@ -89,6 +89,10 @@
 #  include "config-linux.h"
 #endif
 
+#ifdef __APPLE__
+#  include "config-macos.h"
+#endif
+
 #if defined(macintosh) && defined(__MRC__)
 #  include "config-mac.h"
 #endif

@@ -431,10 +431,7 @@ public:
 #if defined(_WIN32)
         Fmt(&buf, " --rtlib=compiler-rt -Wl,setargv.obj");
 #elif defined(__APPLE__)
-        Fmt(&buf, " -ldl -pthread");
-        if (link_type == LinkType::Executable) {
-            Fmt(&buf, " -pie");
-        }
+        Fmt(&buf, " -ldl -pthread -framework CoreFoundation -framework SystemConfiguration");
 #else
         Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code");
         if (link_type == LinkType::Executable) {
@@ -738,10 +735,7 @@ public:
 #if defined(_WIN32)
         Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat -Wl,--high-entropy-va");
 #elif defined(__APPLE__)
-        Fmt(&buf, " -ldl -pthread");
-        if (link_type == LinkType::Executable) {
-            Fmt(&buf, " -pie");
-        }
+        Fmt(&buf, " -ldl -pthread -framework CoreFoundation -framework SystemConfiguration");
 #else
         Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code");
         if (link_type == LinkType::Executable) {
