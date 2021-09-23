@@ -73,7 +73,7 @@ static int ParseClangMajorVersion(const char *cmd, const char *marker)
     if (!ExecuteCommandLine(cmd, {}, Kilobytes(1), &output, &exit_code))
         return -1;
     if (exit_code) {
-        LogError("Command '%1 failed (exit code: %2)", cmd, exit_code);
+        LogDebug("Command '%1 failed (exit code: %2)", cmd, exit_code);
         return -1;
     }
 
