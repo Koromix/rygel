@@ -2810,7 +2810,7 @@ class StreamWriter {
     BlockAllocator str_alloc;
 
 public:
-    StreamWriter() { Close(); }
+    StreamWriter() { Close(true); }
     StreamWriter(HeapArray<uint8_t> *mem, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
@@ -2827,7 +2827,7 @@ public:
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
         : StreamWriter() { Open(func, filename, compression_type, compression_speed); }
-    ~StreamWriter() { Close(); }
+    ~StreamWriter() { Close(true); }
 
     bool Open(HeapArray<uint8_t> *mem, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None,
@@ -2841,7 +2841,7 @@ public:
     bool Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None,
               CompressionSpeed compression_speed = CompressionSpeed::Default);
-    bool Close();
+    bool Close() { return Close(false); }
 
     // For compressed streams, Flush may not be complete and only Close() can finalize the file.
     bool Flush();
@@ -2857,6 +2857,8 @@ public:
     bool Write(const void *buf, Size len) { return Write(MakeSpan((const uint8_t *)buf, len)); }
 
 private:
+    bool Close(bool implicit);
+
     bool InitCompressor(CompressionType type, CompressionSpeed speed);
 
     bool WriteDeflate(Span<const uint8_t> buf);

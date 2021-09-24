@@ -4910,7 +4910,7 @@ struct MinizDeflateContext {
 bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
                         CompressionType compression_type, CompressionSpeed compression_speed)
 {
-    Close();
+    Close(true);
 
     RG_DEFER_N(error_guard) { error = true; };
     error = false;
@@ -4932,7 +4932,7 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
 bool StreamWriter::Open(FILE *fp, const char *filename,
                         CompressionType compression_type, CompressionSpeed compression_speed)
 {
-    Close();
+    Close(true);
 
     RG_DEFER_N(error_guard) { error = true; };
     error = false;
@@ -4956,7 +4956,7 @@ bool StreamWriter::Open(FILE *fp, const char *filename,
 bool StreamWriter::Open(const char *filename, unsigned int flags,
                         CompressionType compression_type, CompressionSpeed compression_speed)
 {
-    Close();
+    Close(true);
 
     RG_DEFER_N(error_guard) { error = true; };
     error = false;
@@ -5005,7 +5005,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
 bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename,
                         CompressionType compression_type, CompressionSpeed compression_speed)
 {
-    Close();
+    Close(true);
 
     RG_DEFER_N(error_guard) { error = true; };
     error = false;
@@ -5023,7 +5023,73 @@ bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, co
     return true;
 }
 
-bool StreamWriter::Close()
+bool StreamWriter::Flush()
+{
+    if (RG_UNLIKELY(error))
+        return false;
+
+    switch (dest.type) {
+        case DestinationType::Memory: { return true; } break;
+        case DestinationType::File: { return FlushFile(dest.u.file.fp, filename); } break;
+        case DestinationType::Function: { return true; } break;
+    }
+
+    RG_UNREACHABLE();
+}
+
+bool StreamWriter::Write(Span<const uint8_t> buf)
+{
+    if (RG_UNLIKELY(error))
+        return false;
+
+    switch (compression.type) {
+        case CompressionType::None: {
+            return WriteRaw(buf);
+        } break;
+
+        case CompressionType::Gzip:
+        case CompressionType::Zlib: {
+#ifdef MZ_VERSION
+            MinizDeflateContext *ctx = compression.u.miniz;
+
+            if (ctx->buf.len) {
+                Size copy_len = std::min(buf.len, ctx->buf.Available());
+
+                memcpy_safe(ctx->buf.end(), buf.ptr, copy_len);
+                ctx->buf.len += copy_len;
+                buf.ptr += copy_len;
+                buf.len -= copy_len;
+            }
+
+            if (buf.len) {
+                if (ctx->buf.len && !WriteDeflate(ctx->buf))
+                    return false;
+                ctx->buf.Clear();
+
+                if (buf.len >= RG_SIZE(ctx->buf.data) / 2) {
+                    if (!WriteDeflate(buf))
+                        return false;
+                } else {
+                    memcpy_safe(ctx->buf.data, buf.ptr, buf.len);
+                    ctx->buf.len = buf.len;
+                }
+            }
+
+            return true;
+#endif
+        } break;
+
+        case CompressionType::Brotli: {
+#ifdef BROTLI_DEFAULT_MODE
+            return WriteBrotli(buf);
+#endif
+        } break;
+    }
+
+    RG_UNREACHABLE();
+}
+
+bool StreamWriter::Close(bool implicit)
 {
     switch (compression.type) {
         case CompressionType::None: {} break;
@@ -5112,6 +5178,11 @@ bool StreamWriter::Close()
             }
 
             if (dest.u.file.tmp_filename) {
+                if (IsValid() && implicit) {
+                    LogDebug("Deleting implicitly closed file '%1'", filename);
+                    error = true;
+                }
+
                 if (IsValid()) {
                     fclose(dest.u.file.fp);
                     dest.u.file.owned = false;
@@ -5157,72 +5228,6 @@ bool StreamWriter::Close()
     str_alloc.ReleaseAll();
 
     return ret;
-}
-
-bool StreamWriter::Flush()
-{
-    if (RG_UNLIKELY(error))
-        return false;
-
-    switch (dest.type) {
-        case DestinationType::Memory: { return true; } break;
-        case DestinationType::File: { return FlushFile(dest.u.file.fp, filename); } break;
-        case DestinationType::Function: { return true; } break;
-    }
-
-    RG_UNREACHABLE();
-}
-
-bool StreamWriter::Write(Span<const uint8_t> buf)
-{
-    if (RG_UNLIKELY(error))
-        return false;
-
-    switch (compression.type) {
-        case CompressionType::None: {
-            return WriteRaw(buf);
-        } break;
-
-        case CompressionType::Gzip:
-        case CompressionType::Zlib: {
-#ifdef MZ_VERSION
-            MinizDeflateContext *ctx = compression.u.miniz;
-
-            if (ctx->buf.len) {
-                Size copy_len = std::min(buf.len, ctx->buf.Available());
-
-                memcpy_safe(ctx->buf.end(), buf.ptr, copy_len);
-                ctx->buf.len += copy_len;
-                buf.ptr += copy_len;
-                buf.len -= copy_len;
-            }
-
-            if (buf.len) {
-                if (ctx->buf.len && !WriteDeflate(ctx->buf))
-                    return false;
-                ctx->buf.Clear();
-
-                if (buf.len >= RG_SIZE(ctx->buf.data) / 2) {
-                    if (!WriteDeflate(buf))
-                        return false;
-                } else {
-                    memcpy_safe(ctx->buf.data, buf.ptr, buf.len);
-                    ctx->buf.len = buf.len;
-                }
-            }
-
-            return true;
-#endif
-        } break;
-
-        case CompressionType::Brotli: {
-#ifdef BROTLI_DEFAULT_MODE
-            return WriteBrotli(buf);
-#endif
-        } break;
-    }
-
-    RG_UNREACHABLE();
 }
 
 bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
