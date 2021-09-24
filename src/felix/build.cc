@@ -822,7 +822,7 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
         } else if (exit_code == 130) {
             interrupted = true; // SIGINT
         } else {
-            LogError("%1 (exit code %2)", node->text, exit_code);
+            LogError("%1 %!..+(exit code %2)%!0", node->text, exit_code);
             stderr_st.Write(output);
         }
 
