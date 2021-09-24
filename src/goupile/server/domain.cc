@@ -1212,7 +1212,9 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     INSERT INTO dom_users (userid, username, password_hash, admin, local_key, email, phone, totp_required)
                         SELECT userid, username, password_hash, admin, local_key, email, phone, 0 FROM dom_users_BAK;
                     INSERT INTO dom_permissions (userid, instance, permissions)
-                        SELECT userid, instance, permissions FROM dom_permissions_BAK;
+                        SELECT userid, instance, permissions FROM dom_permissions_BAK
+                        WHERE userid IN (SELECT userid FROM dom_users) AND
+                              instance IN (SELECT instance FROM dom_instances);
 
                     DROP TABLE dom_permissions_BAK;
                     DROP TABLE dom_users_BAK;
