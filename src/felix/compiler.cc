@@ -66,11 +66,11 @@ static void MakePackCommand(Span<const char *const> pack_filenames, bool optimiz
     out_cmd->cmd_line = buf.TrimAndLeak(1);
 }
 
-static int ParseClangMajorVersion(const char *cmd, const char *marker)
+static int ParseMajorVersion(const char *cmd, const char *marker)
 {
     HeapArray<char> output;
     int exit_code;
-    if (!ExecuteCommandLine(cmd, {}, Kilobytes(1), &output, &exit_code))
+    if (!ExecuteCommandLine(cmd, {}, Kilobytes(4), &output, &exit_code))
         return -1;
     if (exit_code) {
         LogDebug("Command '%1 failed (exit code: %2)", cmd, exit_code);
@@ -141,7 +141,7 @@ public:
             char cmd[2048];
             Fmt(cmd, "%1 --version", compiler->cc);
 
-            compiler->clang11 = ParseClangMajorVersion(cmd, "version") >= 11;
+            compiler->clang11 = ParseMajorVersion(cmd, "version") >= 11;
             return true;
         });
 
@@ -154,7 +154,7 @@ public:
                 Fmt(cmd, "%1 -Wl,--version", compiler->cc);
             }
 
-            compiler->lld11 = ParseClangMajorVersion(cmd, "LLD") >= 11;
+            compiler->lld11 = ParseMajorVersion(cmd, "LLD") >= 11;
             return true;
         });
 
@@ -483,6 +483,8 @@ class GnuCompiler final: public Compiler {
     const char *cxx;
     const char *ld;
 
+    bool gcc12;
+
     BlockAllocator str_alloc;
 
 public:
@@ -503,6 +505,14 @@ public:
             compiler->cxx = Fmt(&compiler->str_alloc, "%1g++%2", prefix, suffix).ptr;
             compiler->ld = ld ? DuplicateString(ld, &compiler->str_alloc).ptr : nullptr;
         }
+
+        // Determine GCC version
+        {
+            char cmd[2048];
+            Fmt(cmd, "%1 -v", compiler->cc);
+
+            compiler->gcc12 = ParseMajorVersion(cmd, "version") >= 12;
+        };
 
         return compiler;
     }
@@ -525,6 +535,7 @@ public:
         supported |= (int)CompileFeature::UBSan;
         supported |= (int)CompileFeature::LTO;
 #endif
+        supported |= (int)CompileFeature::ZeroInit;
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -535,6 +546,10 @@ public:
 
         if ((features & (int)CompileFeature::ASan) && (features & (int)CompileFeature::TSan)) {
             LogError("Cannot use ASan and TSan at the same time");
+            return false;
+        }
+        if (!gcc12 && (features & (int)CompileFeature::ZeroInit)) {
+            LogError("ZeroInit requires GCC >= 12, try --compiler option (e.g. --compiler=gcc-12)");
             return false;
         }
 
@@ -655,6 +670,9 @@ public:
 #ifndef _WIN32
         Fmt(&buf, " -fstack-clash-protection");
 #endif
+        if (features & (int)CompileFeature::ZeroInit) {
+            Fmt(&buf, " -ftrivial-auto-var-init=zero");
+        }
 
         // Sources and definitions
         Fmt(&buf, " -DFELIX -c \"%1\"", src_filename);
