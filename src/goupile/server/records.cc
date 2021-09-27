@@ -778,9 +778,8 @@ bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const 
                 if (key.len && std::all_of(key.begin(), key.end(), IsAsciiDigit)) {
                     const char *form2 = Fmt(&str_alloc, "%1.%2", form, prefix).ptr;
                     const char *ulid2 = Fmt(&str_alloc, "%1.%2", ulid, key).ptr;
-                    const char *prefix2 = nullptr;
 
-                    if (!ParseObject(root_ulid, form2, ulid2, key.ptr, prefix2, depth + 1))
+                    if (!ParseObject(root_ulid, form2, ulid2, key.ptr, nullptr, depth + 1))
                         return false;
                 } else if (prefix) {
                     const char *prefix2 = Fmt(&str_alloc, "%1.%2", prefix, key).ptr;
