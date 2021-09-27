@@ -133,7 +133,7 @@ bool Builder::AddTarget(const TargetInfo &target)
             build.compiler->MakePackCommand(target.pack_filenames, !module,
                                             target.pack_options, src_filename, &str_alloc, &cmd);
 
-            const char *text = Fmt(&str_alloc, "Pack %1 assets", target.name).ptr;
+            const char *text = Fmt(&str_alloc, "Pack %!..+%1%!0 assets", target.name).ptr;
             AppendNode(text, src_filename, cmd, target.pack_filenames);
         }
 
@@ -150,7 +150,7 @@ bool Builder::AddTarget(const TargetInfo &target)
                                                   obj_filename,  &str_alloc, &cmd);
             }
 
-            const char *text = Fmt(&str_alloc, "Compile %1 assets", target.name).ptr;
+            const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0 assets", target.name).ptr;
             AppendNode(text, obj_filename, cmd, src_filename);
         }
 
@@ -163,7 +163,7 @@ bool Builder::AddTarget(const TargetInfo &target)
             build.compiler->MakeLinkCommand(obj_filename, {}, LinkType::SharedLibrary,
                                             features, build.env, module_filename, &str_alloc, &cmd);
 
-            const char *text = Fmt(&str_alloc, "Link %1",
+            const char *text = Fmt(&str_alloc, "Link %!..+%1%!0",
                                    SplitStrReverseAny(module_filename, RG_PATH_SEPARATORS)).ptr;
             AppendNode(text, module_filename, cmd, obj_filename);
         } else {
@@ -200,7 +200,7 @@ bool Builder::AddTarget(const TargetInfo &target)
                                           false, nullptr, {}, {}, features, build.env,
                                           obj_filename, &str_alloc, &cmd);
 
-        const char *text = Fmt(&str_alloc, "Compile %1 version file", target.name).ptr;
+        const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0 version file", target.name).ptr;
         AppendNode(text, obj_filename, cmd, src_filename);
 
         obj_filenames.Append(obj_filename);
@@ -216,7 +216,7 @@ bool Builder::AddTarget(const TargetInfo &target)
         build.compiler->MakeLinkCommand(obj_filenames, target.libraries, LinkType::Executable,
                                         features, build.env, target_filename, &str_alloc, &cmd);
 
-        const char *text = Fmt(&str_alloc, "Link %1", SplitStrReverseAny(target_filename, RG_PATH_SEPARATORS)).ptr;
+        const char *text = Fmt(&str_alloc, "Link %!..+%1%!0", SplitStrReverseAny(target_filename, RG_PATH_SEPARATORS)).ptr;
         AppendNode(text, target_filename, cmd, obj_filenames);
 
         target_filenames.Set(target.name, target_filename);
@@ -262,7 +262,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
                     mtime_map.Set(pch_filename, -1);
                 }
 
-                const char *text = Fmt(&str_alloc, "Precompile %1", pch->filename).ptr;
+                const char *text = Fmt(&str_alloc, "Precompile %!..+%1%!0", pch->filename).ptr;
                 if (AppendNode(text, pch_filename, cmd, pch->filename)) {
                     if (!build.fake && !CreatePrecompileHeader(pch->filename, pch_filename))
                         return (const char *)nullptr;
@@ -285,7 +285,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
                                           pch_filename, src.target->definitions, src.target->include_directories,
                                           features, build.env, obj_filename, &str_alloc, &cmd);
 
-        const char *text = Fmt(&str_alloc, "Compile %1", src.filename).ptr;
+        const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0", src.filename).ptr;
         if (pch_filename ? AppendNode(text, obj_filename, cmd, {src.filename, pch_filename})
                          : AppendNode(text, obj_filename, cmd, src.filename)) {
             if (!build.fake && !EnsureDirectoryExists(obj_filename))
