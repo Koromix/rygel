@@ -150,7 +150,7 @@ bool Builder::AddTarget(const TargetInfo &target)
                                                   obj_filename,  &str_alloc, &cmd);
             }
 
-            const char *text = Fmt(&str_alloc, "Build %1 assets", target.name).ptr;
+            const char *text = Fmt(&str_alloc, "Compile %1 assets", target.name).ptr;
             AppendNode(text, obj_filename, cmd, src_filename);
         }
 
@@ -200,7 +200,7 @@ bool Builder::AddTarget(const TargetInfo &target)
                                           false, nullptr, {}, {}, features, build.env,
                                           obj_filename, &str_alloc, &cmd);
 
-        const char *text = Fmt(&str_alloc, "Build %1 version file", target.name).ptr;
+        const char *text = Fmt(&str_alloc, "Compile %1 version file", target.name).ptr;
         AppendNode(text, obj_filename, cmd, src_filename);
 
         obj_filenames.Append(obj_filename);
@@ -285,7 +285,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
                                           pch_filename, src.target->definitions, src.target->include_directories,
                                           features, build.env, obj_filename, &str_alloc, &cmd);
 
-        const char *text = Fmt(&str_alloc, "Build %1", src.filename).ptr;
+        const char *text = Fmt(&str_alloc, "Compile %1", src.filename).ptr;
         if (pch_filename ? AppendNode(text, obj_filename, cmd, {src.filename, pch_filename})
                          : AppendNode(text, obj_filename, cmd, src.filename)) {
             if (!build.fake && !EnsureDirectoryExists(obj_filename))
