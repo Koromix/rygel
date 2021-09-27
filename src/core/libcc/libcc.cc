@@ -581,6 +581,15 @@ int64_t GetUnixTime()
     return FileTimeToUnixTime(ft);
 #elif defined(__EMSCRIPTEN__)
     return (int64_t)emscripten_get_now();
+#elif defined(__linux__)
+    struct timespec ts;
+    if (clock_gettime(CLOCK_REALTIME_COARSE, &ts) < 0) {
+        LogError("clock_gettime(CLOCK_REALTIME_COARSE) failed: %1", strerror(errno));
+        abort();
+    }
+
+    int64_t time = (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
+    return time;
 #else
     struct timespec ts;
     if (clock_gettime(CLOCK_REALTIME, &ts) < 0) {
@@ -599,6 +608,14 @@ int64_t GetMonotonicTime()
     return (int64_t)GetTickCount64();
 #elif defined(__EMSCRIPTEN__)
     return (int64_t)emscripten_get_now();
+#elif defined(__linux__)
+    struct timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC_COARSE, &ts) < 0) {
+        LogError("clock_gettime(CLOCK_MONOTONIC_COARSE) failed: %1", strerror(errno));
+        abort();
+    }
+
+    return (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
 #else
     struct timespec ts;
     if (clock_gettime(CLOCK_MONOTONIC, &ts) < 0) {
