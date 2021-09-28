@@ -118,15 +118,20 @@ static const char *BuildGitVersionString(Allocator *alloc)
 
 static bool ParseFeatureString(Span<const char> str, uint32_t *out_features)
 {
-    str = TrimStr(str);
-
-    if (str == "None")
-        return true;
-
     while (str.len) {
         Span<const char> part = TrimStr(SplitStrAny(str, " ,", &str), " ");
 
-        if (part.len && !OptionToFlag(CompileFeatureOptions, part, out_features)) {
+        bool enable;
+        if (part.len && part[0] == '-') {
+            part = part.Take(1, part.len - 1);
+            enable = false;
+        } else {
+            enable = true;
+        }
+
+        if (part == "All") {
+            *out_features = enable ? 0xFFFFFFFFul : 0;
+        } else if (part.len && !OptionToFlag(CompileFeatureOptions, part, out_features, enable)) {
             LogError("Unknown target feature '%1'", part);
             return false;
         }
@@ -190,7 +195,6 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
                     } else if (prop.key == "Linker") {
                         preset->compiler_info.ld = DuplicateString(prop.value, alloc).ptr;
                     } else if (prop.key == "Features") {
-                        preset->build.features = 0;
                         valid &= ParseFeatureString(prop.value.ptr, &preset->build.features);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
@@ -242,6 +246,7 @@ Options:
         %!..+--compiler <compiler>%!0    Override compiler
         %!..+--linker <linker>%!0        Override linker
         %!..+--features <features>%!0    Override compilation features
+                                 %!D..(start with -All to reset and set only new flags)%!0
 
     %!..+-e, --environment%!0            Use compiler flags found in environment (CFLAGS, LDFLAGS, etc.)
 
@@ -401,7 +406,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             } else if (opt.Test("--linker", OptionType::Value)) {
                 compiler_info.ld = opt.current_value;
             } else if (opt.Test("--features", OptionType::Value)) {
-                build.features = 0;
                 if (!ParseFeatureString(opt.current_value, &build.features))
                     return 1;
             } else if (opt.Test("-e", "--environment")) {
