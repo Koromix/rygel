@@ -258,8 +258,21 @@ const char *Builder::AddSource(const SourceFileInfo &src)
                                                pch->target->definitions, pch->target->include_directories,
                                                features, build.env, &str_alloc, &cmd);
 
+                // Check the PCH cache file against main file dependencies
                 if (!IsFileUpToDate(cache_filename, pch_filename)) {
                     mtime_map.Set(pch_filename, -1);
+                } else {
+                    const CacheEntry *entry = cache_map.Find(pch_filename);
+
+                    if (!entry) {
+                        mtime_map.Set(pch_filename, -1);
+                    } else {
+                        Span<const char *> dep_filenames = MakeSpan(cache_dependencies.ptr + entry->deps_offset, entry->deps_len);
+
+                        if (!IsFileUpToDate(cache_filename, dep_filenames)) {
+                            mtime_map.Set(pch_filename, -1);
+                        }
+                    }
                 }
 
                 const char *text = Fmt(&str_alloc, "Precompile %!..+%1%!0", pch->filename).ptr;
