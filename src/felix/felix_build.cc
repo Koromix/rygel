@@ -91,6 +91,7 @@ static int RunTarget(const char *target_filename, Span<const char *const> argume
     argv.Append(nullptr);
 
     execv(target_filename, (char **)argv.ptr);
+
     LogError("Failed to execute '%1': %2", target_filename, strerror(errno));
     return 127;
 #endif
