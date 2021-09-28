@@ -301,16 +301,11 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                             }
 
                             if (part.len) {
-                                if (enable) {
-                                    if (!OptionToFlag(CompileFeatureOptions, part, &target_config.enable_features)) {
-                                        LogError("Unknown target feature '%1'", part);
-                                        valid = false;
-                                    }
-                                } else {
-                                    if (!OptionToFlag(CompileFeatureOptions, part, &target_config.disable_features)) {
-                                        LogError("Unknown target feature '%1'", part);
-                                        valid = false;
-                                    }
+                                uint32_t *dest = enable ? &target_config.enable_features : &target_config.disable_features;
+
+                                if (!OptionToFlag(CompileFeatureOptions, part, dest)) {
+                                    LogError("Unknown target feature '%1'", part);
+                                    valid = false;
                                 }
                             }
                         }
