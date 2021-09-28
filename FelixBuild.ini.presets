@@ -17,18 +17,10 @@ Features = PCH, DebugInfo, ASan
 [Fast]
 Features = PCH, DebugInfo, Optimize
 
-[FastLTO]
+[LTO]
 Features = PCH, DebugInfo, Optimize, LTO
-
-[FastStatic]
-Features = PCH, DebugInfo, Optimize, StaticLink
 
 [Paranoid]
 Compiler = clang
 Linker = lld
 Features = PCH, Optimize, LTO, SafeStack, CFI, ZeroInit, ShuffleCode
-
-[ParanoidStatic]
-Compiler = clang
-Linker = lld
-Features = PCH, Optimize, LTO, SafeStack, CFI, ZeroInit, StaticLink, ShuffleCode
