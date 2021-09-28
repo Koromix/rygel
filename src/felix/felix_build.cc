@@ -245,7 +245,7 @@ Options:
 
         %!..+--compiler <compiler>%!0    Override compiler
         %!..+--linker <linker>%!0        Override linker
-        %!..+--features <features>%!0    Override compilation features
+    %!..+-f, --features <features>%!0    Override compilation features
                                  %!D..(start with -All to reset and set only new flags)%!0
 
     %!..+-e, --environment%!0            Use compiler flags found in environment (CFLAGS, LDFLAGS, etc.)
@@ -405,7 +405,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 compiler_info.cc = opt.current_value;
             } else if (opt.Test("--linker", OptionType::Value)) {
                 compiler_info.ld = opt.current_value;
-            } else if (opt.Test("--features", OptionType::Value)) {
+            } else if (opt.Test("-f", "--features", OptionType::Value)) {
                 if (!ParseFeatureString(opt.current_value, &build.features))
                     return 1;
             } else if (opt.Test("-e", "--environment")) {
