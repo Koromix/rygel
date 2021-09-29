@@ -85,6 +85,11 @@ nginx_domains:
 
           proxy_pass http://unix:/run/goupile/f2rsm.goupile.org.sock:;
       }
+
+      location /annuaire {
+          proxy_http_version 1.1;
+          proxy_pass https://koromix.dev/carto_2nps/;
+      }
     ssl_certbot_email: niels.martignene@protonmail.com
   - name: medita.goupile.org
     config: |
