@@ -77,7 +77,7 @@ button:not(:disabled):hover { border-color: var(--anchor_color); }
     height: 2.8em;
     min-height: 2.8em;
     display: flex;
-    background: var(--menu_color);
+    background: linear-gradient(var(--menu_color_n1), var(--menu_color));
     color: white;
     z-index: 9999;
 }

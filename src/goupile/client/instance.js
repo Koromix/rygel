@@ -371,7 +371,7 @@ function InstanceController() {
         setTimeout(() => editor_ace.resize(false), 0);
 
         return html`
-            <div style="--menu_color: #2c2c2c;">
+            <div style="--menu_color: #1d1d1d; --menu_color_n1: #2c2c2c;">
                 <div class="ui_toolbar">
                     ${tabs.map(tab => html`<button class=${editor_filename === tab.filename ? 'active' : ''}
                                                    @click=${ui.wrapAction(e => toggleEditorFile(tab.filename))}>${tab.title}</button>`)}

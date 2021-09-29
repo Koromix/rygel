@@ -17,9 +17,9 @@ html.instance {
     --menu_color_n2: #4a494d;
     --menu_color_n3: #525155;
     --page_color: #24579d;
-    --anchor_color: #fe7c3c;
-    --anchor_color_n1: #ff9651;
-    --anchor_color_n2: #ea7135;
+    --page_color_n1: #346bb8;
+    --anchor_color: #fe7735;
+    --anchor_color_n1: #ff9059;
 
     --block_rounding: 0px;
     --widget_rounding: 0px;
@@ -62,7 +62,7 @@ html.mobile #ins_page { padding-top: 0; }
     font-size: 1.1em;
     margin: 0 0 6px 0;
     font-weight: bold;
-    color: var(--anchor_color_n2);
+    color: var(--anchor_color_n1);
 }
 #ins_menu * + h1 { margin-top: 10px; }
 #ins_menu ul {
@@ -88,12 +88,8 @@ html.mobile #ins_page { padding-top: 0; }
     color: black;
     border-radius: var(--widget_rounding);
 }
-#ins_menu ul a.active {
-    background: var(--anchor_color);
-    color: white;
-}
-#ins_menu ul a:not(.active):hover {
-    background: var(--anchor_color_n1);
+#ins_menu ul a.active, #ins_menu ul a:hover {
+    background: linear-gradient(var(--anchor_color_n1), var(--anchor_color));
     color: white;
 }
 #ins_menu hr {
