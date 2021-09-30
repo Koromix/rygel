@@ -18,10 +18,10 @@
 namespace RG {
 
 enum class CompileFeature {
-    Optimize = 1 << 0,
-    PCH = 1 << 1,
-    DebugInfo = 1 << 2,
-    StaticLink = 1 << 3,
+    PCH = 1 << 0,
+    DebugInfo = 1 << 1,
+    StaticLink = 1 << 2,
+    Optimize = 1 << 3,
     ASan = 1 << 4,
     TSan = 1 << 5,
     UBSan = 1 << 6,
@@ -32,10 +32,10 @@ enum class CompileFeature {
     ShuffleCode = 1 << 11
 };
 static const OptionDesc CompileFeatureOptions[] = {
-    {"Optimize",    "Optimize generated builds"},
     {"PCH",         "Use precompiled headers for faster compilation"},
     {"DebugInfo",   "Add debug information to generated binaries"},
     {"StaticLink",  "Static link base system libraries (libc, etc.)"},
+    {"Optimize",    "Optimize generated builds"},
     {"ASan",        "Enable AdressSanitizer (ASan)"},
     {"TSan",        "Enable ThreadSanitizer (TSan)"},
     {"UBSan",       "Enable UndefinedBehaviorSanitizer (UBSan)"},
