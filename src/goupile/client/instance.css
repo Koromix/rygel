@@ -23,6 +23,7 @@ html.instance {
 
     --block_rounding: 0px;
     --widget_rounding: 0px;
+    --button_rounding: 3px;
 }
 
 /* -------------------- Layout -------------------- */

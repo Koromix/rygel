@@ -50,7 +50,7 @@ button {
     font-family: inherit;
     font-size: 1em;
     cursor: pointer;
-    border-radius: var(--widget_rounding);
+    border-radius: var(--button_rounding);
 }
 button:not(:disabled) { cursor: pointer; }
 button:disabled {
