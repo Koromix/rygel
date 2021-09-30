@@ -578,7 +578,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
 }
 
 static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, SessionType type, const char *key,
-                                                const char *email, const char *sms, Allocator *alloc)
+                                                const char *username, const char *email, const char *sms, Allocator *alloc)
 {
     RG_ASSERT(!email || !sms);
 
@@ -650,7 +650,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
             Fmt(code, "%1", FmtArg(rnd).Pad0(-8));
         }
 
-        session = CreateUserSession(type, userid, key, local_key);
+        session = CreateUserSession(type, userid, username, local_key);
         if (RG_UNLIKELY(!session))
             return nullptr;
         session->confirm = SessionConfirm::Mail;
@@ -682,7 +682,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
             Fmt(code, "%1", FmtArg(rnd).Pad0(-6));
         }
 
-        session = CreateUserSession(type, userid, key, local_key);
+        session = CreateUserSession(type, userid, username, local_key);
         if (RG_UNLIKELY(!session))
             return nullptr;
         session->confirm = SessionConfirm::SMS;
@@ -693,7 +693,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
         if (!SendSMS(sms, message))
             return nullptr;
     } else {
-        session = CreateUserSession(type, userid, key, local_key);
+        session = CreateUserSession(type, userid, username, local_key);
         if (RG_UNLIKELY(!session))
             return nullptr;
     }
@@ -756,6 +756,7 @@ bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
     const char *email = nullptr;
     const char *sms = nullptr;
     const char *tid = nullptr;
+    const char *username = nullptr;
     HeapArray<const char *> claims;
     {
         StreamReader st(json);
@@ -772,6 +773,8 @@ bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
                 parser.ParseString(&sms);
             } else if (TestStr(key, "id")) {
                 parser.ParseString(&tid);
+            } else if (TestStr(key, "username")) {
+                parser.ParseString(&username);
             } else if (TestStr(key, "claims")) {
                 parser.ParseArray();
                 while (parser.InArray()) {
@@ -807,6 +810,9 @@ bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
             LogError("Missing or empty token id");
             valid = false;
         }
+        if (!username || !username[0]) {
+            username = tid;
+        }
 
         if (!valid) {
             io->AttachError(422);
@@ -825,7 +831,7 @@ bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
         return false;
     }
 
-    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Token, tid, email, sms, &io->allocator);
+    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Token, tid, username, email, sms, &io->allocator);
     if (!session)
         return false;
 
@@ -857,7 +863,7 @@ bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
     if (!key || !key[0])
         return true;
 
-    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, key, nullptr, nullptr, &io->allocator);
+    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, key, key, nullptr, nullptr, &io->allocator);
     if (!session)
         return false;
 
