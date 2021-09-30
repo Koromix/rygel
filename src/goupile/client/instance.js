@@ -197,7 +197,7 @@ function InstanceController() {
                 <button @click=${ui.deployMenu}>${route.page.title}</button>
                 <div>
                     ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormDrop(route.form.chain[idx]))}
-                    ${!goupile.isLocked() && route.form.multi ? html`
+                    ${profile.lock == null && route.form.multi ? html`
                         <div class="expand">
                             <button @click=${ui.expandMenu}>${route.form.multi}</button>
                             <div>
@@ -774,7 +774,7 @@ function InstanceController() {
                 <div id="ins_page">
                     <div id="ins_menu">
                         ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormMenu(route.form.chain[idx]))}
-                        ${!goupile.isLocked() && route.form.multi ? html`
+                        ${profile.lock == null && route.form.multi ? html`
                             <h1>${route.form.multi}</h1>
                             <ul>
                                 ${form_record.siblings.map(sibling => {
