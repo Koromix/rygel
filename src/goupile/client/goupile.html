@@ -107,7 +107,7 @@
                 eval('let test = new URLSearchParams');
 
                 // See here: https://github.com/dfahlander/Dexie.js/issues/317
-                var m = navigator.userAgent.match('Firefox/([0-9]+)');
+                var m = navigator.userAgent.toLowerCase().match('firefox/([0-9]+)');
                 if (m != null) {
                     var version = parseInt(m[1], 10);
                     if (version < 60)
