@@ -756,6 +756,7 @@ bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
     const char *email = nullptr;
     const char *sms = nullptr;
     const char *tid = nullptr;
+    HeapArray<const char *> claims;
     {
         StreamReader st(json);
         json_Parser parser(&st, &io->allocator);
@@ -765,13 +766,19 @@ bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
             const char *key = "";
             parser.ParseKey(&key);
 
-
             if (TestStr(key, "email")) {
                 parser.ParseString(&email);
             } else if (TestStr(key, "sms")) {
                 parser.ParseString(&sms);
             } else if (TestStr(key, "id")) {
                 parser.ParseString(&tid);
+            } else if (TestStr(key, "claims")) {
+                parser.ParseArray();
+                while (parser.InArray()) {
+                    const char *claim = "";
+                    parser.ParseString(&claim);
+                    claims.Append(claim);
+                }
             } else if (parser.IsValid()) {
                 LogError("Unknown key '%1' in token JSON", key);
                 io->AttachError(422);
@@ -821,6 +828,21 @@ bool HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
     RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Token, tid, email, sms, &io->allocator);
     if (!session)
         return false;
+
+    bool success = instance->db->Transaction([&]() {
+        RG_ASSERT(session->userid < 0);
+
+        for (const char *claim: claims) {
+            if (!instance->db->Run(R"(INSERT INTO ins_claims (userid, ulid) VALUES (?1, ?2)
+                                      ON CONFLICT DO NOTHING)", -session->userid, claim))
+                return false;
+        }
+
+        return true;
+    });
+    if (!success)
+        return false;
+
     sessions.Open(request, io, session);
 
     return true;
@@ -838,6 +860,7 @@ bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
     RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, key, nullptr, nullptr, &io->allocator);
     if (!session)
         return false;
+
     sessions.Open(request, io, session);
 
     return true;
