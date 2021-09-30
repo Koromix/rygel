@@ -588,7 +588,8 @@ function AdminController() {
 
                         let response = await net.fetch('/admin/api/instances/delete', {
                             method: 'POST',
-                            body: query
+                            body: query,
+                            timeout: 30000
                         });
 
                         if (response.ok) {
