@@ -433,7 +433,7 @@ public:
 #elif defined(__APPLE__)
         Fmt(&buf, " -ldl -pthread -framework CoreFoundation -framework SystemConfiguration");
 #else
-        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code");
+        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
         if (link_type == LinkType::Executable) {
             Fmt(&buf, " -pie");
         }
@@ -755,7 +755,7 @@ public:
 #elif defined(__APPLE__)
         Fmt(&buf, " -ldl -pthread -framework CoreFoundation -framework SystemConfiguration");
 #else
-        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code");
+        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
         if (link_type == LinkType::Executable) {
             Fmt(&buf, " -pie");
         }
