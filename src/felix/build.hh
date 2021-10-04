@@ -67,6 +67,7 @@ class Builder {
     };
 
     BuildSettings build;
+    const char *cache_directory;
     const char *cache_filename;
 
     // AddTarget, AddSource

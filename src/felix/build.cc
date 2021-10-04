@@ -99,7 +99,9 @@ Builder::Builder(const BuildSettings &build)
     RG_ASSERT(build.output_directory);
     RG_ASSERT(build.compiler);
 
-    cache_filename = Fmt(&str_alloc, "%1%/cache%/FelixCache.bin", build.output_directory).ptr;
+    cache_directory = Fmt(&str_alloc, "%1%/%2", build.output_directory, build.compiler->name).ptr;
+    cache_filename = Fmt(&str_alloc, "%1%/Shared%/FelixCache.bin", build.output_directory).ptr;
+
     LoadCache();
 }
 
@@ -120,7 +122,7 @@ bool Builder::AddTarget(const TargetInfo &target)
     // Assets
     if (target.pack_filenames.len) {
         const char *src_filename = Fmt(&str_alloc, "%1%/cache%/%2_assets.c",
-                                       build.output_directory, target.name).ptr;
+                                       cache_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename,
                                        build.compiler->GetObjectExtension()).ptr;
 
@@ -188,7 +190,7 @@ bool Builder::AddTarget(const TargetInfo &target)
 
     // Version string
     if (target.type == TargetType::Executable) {
-        const char *src_filename = Fmt(&str_alloc, "%1%/cache%/%2.c", build.output_directory, target.name).ptr;
+        const char *src_filename = Fmt(&str_alloc, "%1%/cache%/%2.c", cache_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
         uint32_t features = target.CombineFeatures(build.features);
 
@@ -247,7 +249,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
             pch_filename = build_map.FindValue(pch->filename, nullptr);
 
             if (!pch_filename) {
-                pch_filename = BuildObjectPath(pch->filename, build.output_directory, pch_ext, &str_alloc);
+                pch_filename = BuildObjectPath(pch->filename, cache_directory, pch_ext, &str_alloc);
 
                 const char *cache_filename = build.compiler->GetPchCache(pch_filename, &str_alloc);
                 bool warnings = (pch->target->type != TargetType::ExternalLibrary);
@@ -288,7 +290,7 @@ const char *Builder::AddSource(const SourceFileInfo &src)
 
     // Build object
     if (!obj_filename) {
-        obj_filename = BuildObjectPath(src.filename, build.output_directory,
+        obj_filename = BuildObjectPath(src.filename, cache_directory,
                                        build.compiler->GetObjectExtension(), &str_alloc);
         bool warnings = (src.target->type != TargetType::ExternalLibrary);
         uint32_t features = src.target->CombineFeatures(build.features);
@@ -378,7 +380,7 @@ bool Builder::Build(int jobs, bool verbose)
                 // that response files will be generated for anything other than link commands,
                 // so the risk is very low.
                 const char *target_basename = SplitStrReverseAny(node.dest_filename, RG_PATH_SEPARATORS).ptr;
-                const char *rsp_filename = Fmt(&str_alloc, "%1%/cache%/%2.rsp", build.output_directory, target_basename).ptr;
+                const char *rsp_filename = Fmt(&str_alloc, "%1%/cache%/%2.rsp", cache_directory, target_basename).ptr;
 
                 Span<const char> rsp = cmd.cmd_line.Take(cmd.rsp_offset + 1,
                                                          cmd.cmd_line.len - cmd.rsp_offset - 1);
