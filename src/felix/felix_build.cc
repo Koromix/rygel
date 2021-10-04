@@ -244,7 +244,7 @@ Options:
                                  %!D..(FelixBuild.ini.presets, FelixBuild.ini.user)%!0
     %!..+-p, --preset <preset>%!0        Select specific preset
 
-        %!..+--compiler <compiler>%!0    Override compiler
+    %!..+-c, --compiler <compiler>%!0    Override compiler
         %!..+--linker <linker>%!0        Override linker
     %!..+-f, --features <features>%!0    Override compilation features
                                  %!D..(start with -All to reset and set only new flags)%!0
@@ -402,7 +402,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 // Already handled
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 build.output_directory = opt.current_value;
-            } else if (opt.Test("--compiler", OptionType::Value)) {
+            } else if (opt.Test("-c", "--compiler", OptionType::Value)) {
                 compiler_info.cc = opt.current_value;
             } else if (opt.Test("--linker", OptionType::Value)) {
                 compiler_info.ld = opt.current_value;
