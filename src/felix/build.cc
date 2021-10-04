@@ -30,7 +30,7 @@ static const char *BuildObjectPath(const char *src_filename, const char *output_
 
     HeapArray<char> buf(alloc);
 
-    Size offset = Fmt(&buf, "%1%/objects%/", output_directory).len;
+    Size offset = Fmt(&buf, "%1%/Objects%/", output_directory).len;
     Fmt(&buf, "%1%2", src_filename, suffix);
 
     // Replace '..' components with '__'
@@ -121,7 +121,7 @@ bool Builder::AddTarget(const TargetInfo &target)
 
     // Assets
     if (target.pack_filenames.len) {
-        const char *src_filename = Fmt(&str_alloc, "%1%/cache%/%2_assets.c",
+        const char *src_filename = Fmt(&str_alloc, "%1%/Cache%/%2_assets.c",
                                        cache_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename,
                                        build.compiler->GetObjectExtension()).ptr;
@@ -190,11 +190,13 @@ bool Builder::AddTarget(const TargetInfo &target)
 
     // Version string
     if (target.type == TargetType::Executable) {
-        const char *src_filename = Fmt(&str_alloc, "%1%/cache%/%2.c", cache_directory, target.name).ptr;
-        const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
+        const char *src_filename = Fmt(&str_alloc, "%1%/Shared%/%2.c", build.output_directory, target.name).ptr;
+        const char *obj_filename = Fmt(&str_alloc, "%1%/Shared%/%2.c%3", cache_directory, target.name, build.compiler->GetObjectExtension()).ptr;
         uint32_t features = target.CombineFeatures(build.features);
 
         if (!UpdateVersionSource(target.name, build, src_filename))
+            return false;
+        if (!build.fake && !EnsureDirectoryExists(obj_filename))
             return false;
 
         Command cmd = {};
@@ -380,7 +382,10 @@ bool Builder::Build(int jobs, bool verbose)
                 // that response files will be generated for anything other than link commands,
                 // so the risk is very low.
                 const char *target_basename = SplitStrReverseAny(node.dest_filename, RG_PATH_SEPARATORS).ptr;
-                const char *rsp_filename = Fmt(&str_alloc, "%1%/cache%/%2.rsp", cache_directory, target_basename).ptr;
+                const char *rsp_filename = Fmt(&str_alloc, "%1%/Cache%/%2.rsp", cache_directory, target_basename).ptr;
+
+                if (!EnsureDirectoryExists(rsp_filename))
+                    return false;
 
                 Span<const char> rsp = cmd.cmd_line.Take(cmd.rsp_offset + 1,
                                                          cmd.cmd_line.len - cmd.rsp_offset - 1);
