@@ -190,13 +190,11 @@ bool Builder::AddTarget(const TargetInfo &target)
 
     // Version string
     if (target.type == TargetType::Executable) {
-        const char *src_filename = Fmt(&str_alloc, "%1%/Shared%/%2.c", build.output_directory, target.name).ptr;
-        const char *obj_filename = Fmt(&str_alloc, "%1%/Shared%/%2.c%3", cache_directory, target.name, build.compiler->GetObjectExtension()).ptr;
+        const char *src_filename = Fmt(&str_alloc, "%1%/Cache%/%2.c", cache_directory, target.name).ptr;
+        const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
         uint32_t features = target.CombineFeatures(build.features);
 
         if (!UpdateVersionSource(target.name, build, src_filename))
-            return false;
-        if (!build.fake && !EnsureDirectoryExists(obj_filename))
             return false;
 
         Command cmd = {};
