@@ -59,6 +59,11 @@ class Builder {
         RG_HASHTABLE_HANDLER(CacheEntry, filename);
     };
 
+    struct DependencyEntry {
+        const char *filename;
+        int64_t mtime;
+    };
+
     struct WorkerState {
         HeapArray<CacheEntry> entries;
         HeapArray<const char *> dependencies;
@@ -86,7 +91,7 @@ class Builder {
     HeapArray<WorkerState> workers;
 
     HashTable<const char *, CacheEntry> cache_map;
-    HeapArray<const char *> cache_dependencies;
+    HeapArray<DependencyEntry> cache_dependencies;
 
     BlockAllocator str_alloc;
 
@@ -109,7 +114,8 @@ private:
     bool NeedsRebuild(const char *dest_filename, const Command &cmd,
                       Span<const char *const> src_filenames);
     bool IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames);
-    int64_t GetFileModificationTime(const char *filename);
+    bool IsFileUpToDate(const char *dest_filename, Span<const DependencyEntry> dependencies);
+    int64_t GetFileModificationTime(const char *filename, bool retry = false);
 
     bool RunNode(Async *async, Node *node, bool verbose);
 };

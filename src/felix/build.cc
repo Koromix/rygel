@@ -269,9 +269,9 @@ const char *Builder::AddSource(const SourceFileInfo &src)
                     if (!entry) {
                         mtime_map.Set(pch_filename, -1);
                     } else {
-                        Span<const char *> dep_filenames = MakeSpan(cache_dependencies.ptr + entry->deps_offset, entry->deps_len);
+                        Span<const DependencyEntry> dependencies = MakeSpan(cache_dependencies.ptr + entry->deps_offset, entry->deps_len);
 
-                        if (!IsFileUpToDate(cache_filename, dep_filenames)) {
+                        if (!IsFileUpToDate(cache_filename, dependencies)) {
                             mtime_map.Set(pch_filename, -1);
                         }
                     }
@@ -332,8 +332,12 @@ bool Builder::Build(int jobs, bool verbose)
                 for (const CacheEntry &entry: worker.entries) {
                     cache_map.Set(entry)->deps_offset = cache_dependencies.len;
                     for (Size i = 0; i < entry.deps_len; i++) {
-                        const char *dep_filename = worker.dependencies[entry.deps_offset + i];
-                        cache_dependencies.Append(DuplicateString(dep_filename, &str_alloc).ptr);
+                        DependencyEntry dep = {};
+
+                        dep.filename = DuplicateString(worker.dependencies[entry.deps_offset + i], &str_alloc).ptr;
+                        dep.mtime = GetFileModificationTime(dep.filename, true);
+
+                        cache_dependencies.Append(dep);
                     }
                 }
             }
@@ -457,7 +461,8 @@ void Builder::SaveCache()
         PrintLn(&st, "%1", entry.filename);
         PrintLn(&st, "!%1", entry.cmd_line);
         for (Size i = 0; i < entry.deps_len; i++) {
-            PrintLn(&st, "+%1", cache_dependencies[entry.deps_offset + i]);
+            const DependencyEntry &dep = cache_dependencies[entry.deps_offset + i];
+            PrintLn(&st, "+%1:%2", dep.mtime, dep.filename);
         }
     }
 
@@ -515,7 +520,16 @@ void Builder::LoadCache()
                 if (line[0] == '!') {
                     entry.cmd_line = line.Take(1, line.len - 1);
                 } else if (line[0] == '+') {
-                    cache_dependencies.Append(line.ptr + 1);
+                    const char *filename;
+                    Span<const char> mtime = SplitStr(line.ptr + 1, ':', &filename);
+
+                    DependencyEntry dep = {};
+
+                    dep.filename = filename;
+                    if (!ParseInt(mtime, &dep.mtime))
+                        return;
+
+                    cache_dependencies.Append(dep);
                 } else {
                     break;
                 }
@@ -580,8 +594,9 @@ bool Builder::NeedsRebuild(const char *dest_filename, const Command &cmd,
     if (!IsFileUpToDate(dest_filename, src_filenames))
         return true;
 
-    Span<const char *> dep_filenames = MakeSpan(cache_dependencies.ptr + entry->deps_offset, entry->deps_len);
-    if (!IsFileUpToDate(dest_filename, dep_filenames))
+    Span<const DependencyEntry> dependencies = MakeSpan(cache_dependencies.ptr + entry->deps_offset, entry->deps_len);
+
+    if (!IsFileUpToDate(dest_filename, dependencies))
         return true;
 
     return false;
@@ -605,11 +620,32 @@ bool Builder::IsFileUpToDate(const char *dest_filename, Span<const char *const> 
     return true;
 }
 
-int64_t Builder::GetFileModificationTime(const char *filename)
+bool Builder::IsFileUpToDate(const char *dest_filename, Span<const DependencyEntry> dependencies)
+{
+    if (build.rebuild)
+        return false;
+
+    int64_t dest_time = GetFileModificationTime(dest_filename);
+    if (dest_time < 0)
+        return false;
+
+    for (const DependencyEntry &dep: dependencies) {
+        int64_t dep_time = GetFileModificationTime(dep.filename);
+
+        if (dep_time < 0 || dep_time > dest_time)
+            return false;
+        if (dep_time != dep.mtime)
+            return false;
+    }
+
+    return true;
+}
+
+int64_t Builder::GetFileModificationTime(const char *filename, bool retry)
 {
     int64_t *ptr = mtime_map.Find(filename);
 
-    if (ptr) {
+    if (ptr && (*ptr >= 0 || !retry)) {
         return *ptr;
     } else {
         FileInfo file_info;
