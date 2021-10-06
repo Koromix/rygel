@@ -121,7 +121,7 @@ bool Builder::AddTarget(const TargetInfo &target)
 
     // Assets
     if (target.pack_filenames.len) {
-        const char *src_filename = Fmt(&str_alloc, "%1%/Cache%/%2_assets.c",
+        const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_assets.c",
                                        cache_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename,
                                        build.compiler->GetObjectExtension()).ptr;
@@ -190,7 +190,7 @@ bool Builder::AddTarget(const TargetInfo &target)
 
     // Version string
     if (target.type == TargetType::Executable) {
-        const char *src_filename = Fmt(&str_alloc, "%1%/Cache%/%2.c", cache_directory, target.name).ptr;
+        const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2.c", cache_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
         uint32_t features = target.CombineFeatures(build.features);
 
@@ -380,7 +380,7 @@ bool Builder::Build(int jobs, bool verbose)
                 // that response files will be generated for anything other than link commands,
                 // so the risk is very low.
                 const char *target_basename = SplitStrReverseAny(node.dest_filename, RG_PATH_SEPARATORS).ptr;
-                const char *rsp_filename = Fmt(&str_alloc, "%1%/Cache%/%2.rsp", cache_directory, target_basename).ptr;
+                const char *rsp_filename = Fmt(&str_alloc, "%1%/Shared%/%2.rsp", build.output_directory, target_basename).ptr;
 
                 if (!EnsureDirectoryExists(rsp_filename))
                     return false;
