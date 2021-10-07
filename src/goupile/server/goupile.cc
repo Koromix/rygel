@@ -643,6 +643,8 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
         HandleSessionProfile(instance, request, io);
     } else if (TestStr(instance_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
         HandleSessionLogin(instance, request, io);
+    } else if (TestStr(instance_url, "/api/session/key") && request.method == http_RequestMethod::Post) {
+        HandleSessionKey(instance, request, io);
     } else if (TestStr(instance_url, "/api/session/confirm") && request.method == http_RequestMethod::Post) {
         HandleSessionConfirm(instance, request, io);
     } else if (TestStr(instance_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {

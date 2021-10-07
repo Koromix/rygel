@@ -235,13 +235,8 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
                     case SessionType::Login: { json.Key("type"); json.String("login"); } break;
                     case SessionType::Token: { json.Key("type"); json.String("token"); } break;
                     case SessionType::Key: {
-                        json.Key("type"); json.String("key");
-
                         RG_ASSERT(instance->config.auto_key);
-
-                        json.Key("restore"); json.StartObject();
-                            json.Key(instance->config.auto_key); json.String(session->username);
-                        json.EndObject();
+                        json.Key("type"); json.String("key");
                     } break;
                     case SessionType::Auto: { json.Key("type"); json.String("auto"); } break;
                 }
@@ -859,15 +854,45 @@ bool HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
 {
     RG_ASSERT(instance->config.auto_key);
 
-    const char *key = request.GetQueryValue(instance->config.auto_key);
-    if (!key || !key[0])
+    if (request.method == http_RequestMethod::Post) {
+        io->RunAsync([=]() {
+            // Read POST values
+            const char *key;
+            {
+                HashMap<const char *, const char *> values;
+                if (!io->ReadPostValues(&io->allocator, &values)) {
+                    io->AttachError(422);
+                    return;
+                }
+
+                key = values.FindValue("key", nullptr);
+                if (!key) {
+                    LogError("Missing 'key' parameter");
+                    io->AttachError(422);
+                    return;
+                }
+            }
+
+            RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, key, key, nullptr, nullptr, &io->allocator);
+            if (!session)
+                return;
+
+            sessions.Open(request, io, session);
+        });
+
+        io->AttachText(200, "Done!");
         return true;
+    } else {
+        const char *key = request.GetQueryValue(instance->config.auto_key);
+        if (!key || !key[0])
+            return true;
 
-    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, key, key, nullptr, nullptr, &io->allocator);
-    if (!session)
-        return false;
+        RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, key, key, nullptr, nullptr, &io->allocator);
+        if (!session)
+            return false;
 
-    sessions.Open(request, io, session);
+        sessions.Open(request, io, session);
+    }
 
     return true;
 }
@@ -881,9 +906,9 @@ static bool CheckTotp(const SessionInfo &session, InstanceHolder *instance,
     int64_t max = counter + 1;
 
     if (pwd_CheckHotp(session.secret, pwd_HotpAlgorithm::SHA1, min, max, 6, code)) {
-        RG_ASSERT(session.userid >= 0 || instance);
+        RG_ASSERT(session.userid > 0 || instance);
 
-        const char *where = (session.userid >= 0) ? "" : instance->key.ptr;
+        const char *where = (session.userid > 0) ? "" : instance->key.ptr;
         const EventInfo *event = RegisterEvent(where, session.username, time);
 
         bool replay = (event->prev_time / 30000 >= min) &&

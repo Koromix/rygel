@@ -342,9 +342,14 @@ const goupile = new function() {
             return;
         }
 
-        if (profile.restore != null) {
-            let url = util.pasteURL(`${ENV.urls.instance}api/session/profile`, profile.restore);
-            let response = await net.fetch(url);
+        if (profile.type === 'key') {
+            let query = new URLSearchParams;
+            query.set('key', profile.username);
+
+            let response = await net.fetch(`${ENV.urls.instance}api/session/key`, {
+                method: 'POST',
+                body: query
+            });
 
             if (!response.ok) {
                 let err = (await response.text()).trim();
