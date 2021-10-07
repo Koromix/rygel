@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 43;
+const int InstanceVersion = 44;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -96,8 +96,8 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                     config.backup_key = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(setting, "AutoKey")) {
                     config.auto_key = DuplicateString(value, &str_alloc).ptr;
-                } else if (TestStr(setting, "DefaultUser")) {
-                    valid &= ParseInt(value, &config.default_userid);
+                } else if (TestStr(setting, "AllowGuests")) {
+                    valid &= ParseBool(value, &config.allow_guests);
                 } else if (TestStr(setting, "FsVersion")) {
                     int version = -1;
                     valid &= ParseInt(value, &version);
@@ -1336,9 +1336,18 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 43: {
+                bool success = db->RunMany(R"(
+                    INSERT INTO fs_settings (key, value) VALUES ('AllowGuests', 0);
+                    DELETE FROM fs_settings WHERE key = 'DefaultUser';
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 43);
+            RG_STATIC_ASSERT(InstanceVersion == 44);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

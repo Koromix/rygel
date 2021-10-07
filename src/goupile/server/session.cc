@@ -170,18 +170,6 @@ void InvalidateUserStamps(int64_t userid)
             session->InvalidateStamps();
         }
     });
-
-    // Deal with automatic sessions
-    {
-        Span<InstanceHolder *> instances = gp_domain.LockInstances();
-        RG_DEFER { gp_domain.UnlockInstances(); };
-
-        for (const InstanceHolder *instance: instances) {
-            if (instance->default_init && instance->default_session->userid == userid) {
-                instance->default_session->InvalidateStamps();
-            }
-        }
-    }
 }
 
 static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *instance,
@@ -325,36 +313,17 @@ RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const h
 {
     RetainPtr<SessionInfo> session = sessions.Find(request, io);
 
-    if (!session && instance) {
-        int64_t default_userid = instance->master->config.default_userid;
-
-        if (default_userid > 0) {
-            if (RG_UNLIKELY(!instance->default_init)) {
-                instance->default_session = [&]() {
-                    sq_Statement stmt;
-                    if (!gp_domain.db.Prepare("SELECT userid, username, local_key FROM dom_users WHERE userid = ?1", &stmt))
-                        return RetainPtr<SessionInfo>(nullptr);
-                    sqlite3_bind_int64(stmt, 1, default_userid);
-
-                    if (!stmt.Step()) {
-                        if (stmt.IsValid()) {
-                            LogError("Automatic user ID %1 does not exist", default_userid);
-                        }
-                        return RetainPtr<SessionInfo>(nullptr);
-                    }
-
-                    int64_t userid = sqlite3_column_int64(stmt, 0);
-                    const char *username = (const char *)sqlite3_column_text(stmt, 1);
-                    const char *local_key = (const char *)sqlite3_column_text(stmt, 2);
-
-                    RetainPtr<SessionInfo> session = CreateUserSession(SessionType::Auto, userid, username, local_key);
-                    return session;
-                }();
-                instance->default_init = true;
-            }
-
-            session = instance->default_session;
+    if (!session && instance && instance->config.allow_guests) {
+        // Create local key
+        char local_key[45];
+        {
+            uint8_t buf[32];
+            randombytes_buf(&buf, RG_SIZE(buf));
+            sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
         }
+
+        session = CreateUserSession(SessionType::Auto, 0, "Guest", local_key);
+        session->AuthorizeInstance(instance, (int)UserPermission::DataSave);
     }
 
     return session;
@@ -1307,6 +1276,54 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
 
         io->AttachText(200, "Done!");
     });
+}
+
+RetainPtr<const SessionInfo> MigrateGuestSession(const SessionInfo &guest, InstanceHolder *instance,
+                                                 const http_RequestInfo &request, http_IO *io)
+{
+    RG_ASSERT(!guest.userid && guest.type == SessionType::Auto);
+
+    // Create random username
+    char key[11];
+    for (Size i = 0; i < 7; i++) {
+        key[i] = 'a' + randombytes_uniform('z' - 'a' + 1);
+    }
+    for (Size i = 7; i < 10; i++) {
+        key[i] = '0' + randombytes_uniform('9' - '0' + 1);
+    }
+    key[10] = 0;
+
+    // Create random local key
+    char local_key[45];
+    {
+        uint8_t buf[32];
+        randombytes_buf(&buf, RG_SIZE(buf));
+        sodium_bin2base64((char *)local_key, 45, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+    }
+
+    int64_t userid;
+    bool success = instance->db->Transaction([&]() {
+        if (!instance->db->Run("INSERT INTO ins_users (key, local_key) VALUES (?1, ?2)", key, local_key))
+            return false;
+
+        userid = sqlite3_last_insert_rowid(*instance->db);
+
+        return true;
+    });
+    if (!success)
+        return nullptr;
+
+    RG_ASSERT(userid > 0);
+    userid = -userid;
+
+    RetainPtr<SessionInfo> session = CreateUserSession(SessionType::Auto, userid, key, local_key);
+    if (!session)
+        return nullptr;
+    session->AuthorizeInstance(instance, (int)UserPermission::DataSave);
+
+    sessions.Open(request, io, session);
+
+    return session;
 }
 
 }

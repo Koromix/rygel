@@ -1353,17 +1353,10 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
             config.auto_key = values.FindValue("auto_key", config.auto_key);
             if (config.auto_key && !config.auto_key[0])
                 config.auto_key = nullptr;
-            if (const char *str = values.FindValue("default_userid", nullptr); str) {
-                if (str[0]) {
-                    valid &= ParseInt(str, &config.default_userid);
 
-                    if (config.default_userid <= 0) {
-                        LogError("Invalid automatic user ID");
-                        valid = false;
-                    }
-                } else {
-                    config.default_userid = 0;
-                }
+            if (const char *str = values.FindValue("allow_guests", nullptr); str) {
+                Span<const char> str2 = ConvertFromJsonName(str, buf);
+                valid &= ParseBool(str2, &config.allow_guests);
             }
 
             if (!valid) {
@@ -1392,8 +1385,7 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
                 success &= instance->db->Run(sql, "BackupKey", config.backup_key);
                 success &= instance->db->Run(sql, "TokenKey", config.token_key);
                 success &= instance->db->Run(sql, "AutoKey", config.auto_key);
-                success &= instance->db->Run(sql, "DefaultUser",
-                                             config.default_userid ? sq_Binding(config.default_userid) : sq_Binding());
+                success &= instance->db->Run(sql, "AllowGuests", 0 + config.allow_guests);
             }
             if (!instance->slaves.len) {
                 success &= instance->db->Run(sql, "SharedKey", config.shared_key);
@@ -1476,9 +1468,7 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
             if (instance->config.auto_key) {
                 json.Key("auto_key"); json.String(instance->config.auto_key);
             }
-            if (instance->config.default_userid > 0) {
-                json.Key("default_userid"); json.Int64(instance->config.default_userid);
-            }
+            json.Key("allow_guests"); json.Bool(instance->config.allow_guests);
         json.EndObject();
 
         json.EndObject();

@@ -183,6 +183,19 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
         return;
     }
 
+    if (!session->userid) {
+        RG_ASSERT(session->type == SessionType::Auto);
+
+        session = MigrateGuestSession(*session, instance, request, io);
+        if (!session)
+            return;
+        stamp = session->GetStamp(instance);
+        if (!stamp)
+            return;
+
+        RG_ASSERT(session->userid < 0);
+    }
+
     io->RunAsync([=]() {
         HeapArray<SaveRecord> records;
 

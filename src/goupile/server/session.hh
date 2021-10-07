@@ -114,4 +114,7 @@ void HandleChangePassword(const http_RequestInfo &request, http_IO *io);
 void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io);
 void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io);
 
+RetainPtr<const SessionInfo> MigrateGuestSession(const SessionInfo &guest, InstanceHolder *instance,
+                                                 const http_RequestInfo &request, http_IO *io);
+
 }

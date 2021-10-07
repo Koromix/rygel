@@ -233,8 +233,15 @@ function InstanceController() {
             ${profile.lock == null ? html`
                 <div class="drop right">
                     <button class="icon" style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}
-                            @click=${ui.deployMenu}>${profile.username}</button>
+                            @click=${ui.deployMenu}>${profile.type !== 'auto' ? profile.username : ''}</button>
                     <div>
+                        ${profile.type === 'auto' && profile.userid ? html`
+                            <button style="text-align: center;">
+                                ${profile.username}<br/>
+                                <span style="font-size: 0.8em; font-style: italic; color: #555;">Identifiant temporaire</span>
+                            </button>
+                            <hr/>
+                        ` : ''}
                         ${profile.type === 'login' ? html`
                             <button @click=${ui.wrapAction(goupile.runChangePasswordDialog)}>Changer le mot de passe</button>
                             <button @click=${ui.wrapAction(goupile.runResetTOTP)}>Changer les codes TOTP</button>

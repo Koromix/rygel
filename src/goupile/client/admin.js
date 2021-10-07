@@ -155,8 +155,6 @@ function AdminController() {
                                     ${selected_instance != null ? html`
                                         <td class=${selected_instance.master != null ? 'missing' : ''}
                                             style="white-space: normal;">
-                                            ${selected_instance.config.default_userid === user.userid ?
-                                                html`<span class="ui_tag" style="background: #db0a0a;">Défaut</span>` : ''}
                                             ${selected_instance.master == null ? makePermissionsTag(permissions, 'admin_', '#b518bf') : ''}
                                             ${!selected_instance.slaves ? makePermissionsTag(permissions, 'data_', '#258264') : ''}
                                         </td>
@@ -505,17 +503,13 @@ function AdminController() {
                         if (token_key.value != null && !checkCryptoKey(token_key.value))
                             token_key.error('Format de clé non valide');
                         let auto_key = d.text('auto_key', 'Session de requête', {value: instance.config.auto_key});
-                        let default_userid = d.enumDrop('default_userid', 'Session par défaut',
-                                                        users.map(user => [user.userid, user.username]), {
-                            value: instance.config.default_userid,
-                            untoggle: true
-                        });
+                        let allow_guests = d.boolean('allow_guests', 'Autoriser les invités', {value: instance.config.allow_guests});
 
                         d.action('Configurer', {disabled: !d.isValid()}, async () => {
                             let query = new URLSearchParams();
                             query.set('key', instance.key);
                             query.set('name', name.value);
-                            query.set('use_offline', use_offline.value);
+                            query.set('use_offline', 0 + use_offline.value);
                             query.set('sync_mode', sync_mode.value);
                             if (sync_mode.value === 'offline')
                                 query.set('backup_key', backup_key.value || '');
@@ -523,7 +517,7 @@ function AdminController() {
                                 query.set('shared_key', shared_key.value || '');
                             query.set('token_key', token_key.value || '');
                             query.set('auto_key', auto_key.value || '');
-                            query.set('default_userid', default_userid.value || '');
+                            query.set('allow_guests', 0 + allow_guests.value);
 
                             let response = await net.fetch('/admin/api/instances/configure', {
                                 method: 'POST',
