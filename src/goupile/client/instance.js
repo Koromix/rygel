@@ -230,7 +230,7 @@ function InstanceController() {
                     </div>
                 </div>
             ` : ''}
-            ${!goupile.isLocked() || profile.userid < 0 ? html`
+            ${profile.lock == null ? html`
                 <div class="drop right">
                     <button class="icon" style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}
                             @click=${ui.deployMenu}>${profile.username}</button>
@@ -249,7 +249,7 @@ function InstanceController() {
                     </div>
                 </div>
             ` : ''}
-            ${goupile.isLocked() && profile.userid >= 0 ?
+            ${profile.lock != null ?
                 html`<button class="icon" @click=${ui.wrapAction(goupile.goToLogin)}
                              style="background-position-y: calc(-450px + 1.2em);">Se connecter</button>` : ''}
         `;

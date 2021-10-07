@@ -355,7 +355,7 @@ const goupile = new function() {
                 let err = (await response.text()).trim();
                 throw new Error(err);
             }
-        } else if (profile.userid >= 0) {
+        } else if (profile.userid > 0) {
             confirm_promise = runLoginScreen(e, false);
             confirm_promise.finally(() => confirm_promise = null);
 
