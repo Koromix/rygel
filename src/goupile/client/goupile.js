@@ -247,7 +247,7 @@ const goupile = new function() {
                     <br/>
                 `);
 
-                username = d.text('*username', 'Nom d\'utilisateur');
+                username = d.text('*username', 'Nom d\'utilisateur', {value: profile.username});
             } else {
                 d.output(html`Veuillez <b>confirmer votre identité</b> pour continuer.`);
 
