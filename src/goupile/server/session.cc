@@ -652,7 +652,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
         CopyString(code, session->secret);
 
         smtp_MailContent content;
-        content.subject = Fmt(alloc, "Vérifiation %1", instance->title).ptr;
+        content.subject = Fmt(alloc, "Vérification %1", instance->title).ptr;
         content.text = Fmt(alloc, "Code: %1", code).ptr;
         content.html = Fmt(alloc, R"(
             <div style="text-align: center;">
