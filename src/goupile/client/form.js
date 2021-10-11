@@ -636,21 +636,28 @@ function FormBuilder(state, model, readonly = false) {
             return value;
         });
 
+        let tab0 = !props.some(p => value === p.value);
+        let tabbed = false;
+
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
             ${label != null ? html`<label for=${id}>${label}</label>` : ''}
             <div class=${options.readonly ? 'fm_radio readonly' : 'fm_radio'} id=${id}>
-                ${props.map((p, i) =>
+                ${props.map((p, i) => {
+                    let tab = !tabbed && (tab0 || value === p.value);
+                    tabbed |= tab;
+
                     // Remember to set name (and id) after .checked, because otherwise when we update
                     // the form with a new FormState on the same page, a previously checked radio button
                     // can unset a previous one when it's name is updated but the checked value is
                     // still true, meaning '.checked=false' hasn't run yet.
-                    html`<input type="radio" value=${util.valueToStr(p.value)}
-                                ?disabled=${options.disabled || false} .checked=${value === p.value}
-                                name=${id} id=${`${id}.${i}`}
-                                @click=${e => handleEnumRadioChange(e, key, options.untoggle && value === p.value)}
-                                @keydown=${handleRadioOrCheckKey} tabindex=${i ? -1 : 0} />
-                         <label for=${`${id}.${i}`}>${p.label}</label><br/>`)}
+                    return html`<input type="radio" value=${util.valueToStr(p.value)}
+                                       ?disabled=${options.disabled || false} .checked=${value === p.value}
+                                       name=${id} id=${`${id}.${i}`}
+                                       @click=${e => handleEnumRadioChange(e, key, options.untoggle && value === p.value)}
+                                       @keydown=${handleRadioOrCheckKey} tabindex=${tab ? 0 : -1} />
+                                <label for=${`${id}.${i}`}>${p.label}</label><br/>`;
+                })}
             </div>
         `);
 
