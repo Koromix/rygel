@@ -453,16 +453,16 @@ void Builder::SaveCache()
         UnlinkFile(cache_filename);
     };
 
-    StreamWriter st(cache_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
+    StreamWriter st(cache_filename, (int)StreamWriterFlag::Atomic);
     if (!st.IsValid())
         return;
 
     for (const CacheEntry &entry: cache_map) {
-        PrintLn(&st, "%1", entry.filename);
-        PrintLn(&st, "!%1", entry.cmd_line);
+        PrintLn(&st, "%1>%2", entry.deps_len, entry.filename);
+        PrintLn(&st, "%1", entry.cmd_line);
         for (Size i = 0; i < entry.deps_len; i++) {
             const DependencyEntry &dep = cache_dependencies[entry.deps_offset + i];
-            PrintLn(&st, "+%1:%2", dep.mtime, dep.filename);
+            PrintLn(&st, "%1|%2", dep.mtime, dep.filename);
         }
     }
 
@@ -487,52 +487,50 @@ void Builder::LoadCache()
 
     // Load whole file to memory
     HeapArray<char> cache(&str_alloc);
-    if (ReadFile(cache_filename, Megabytes(64), CompressionType::Gzip, &cache) < 0)
+    if (ReadFile(cache_filename, Megabytes(64), &cache) < 0)
         return;
     cache.len = TrimStrRight(cache.Take(), "\n").len;
-    cache.SetCapacity(cache.len + 1);
+    cache.Grow(1);
 
     // Parse cache file
     {
         Span<char> remain = cache;
 
-        Span<char> line = SplitStr(remain, '\n', &remain);
-        line.ptr[line.len] = 0;
-
         while (remain.len) {
             CacheEntry entry = {};
 
-            if (!line.len) {
-                LogError("Malformed cache file");
-                return;
-            }
-            entry.filename = line.ptr;
-
-            entry.deps_offset = cache_dependencies.len;
-            while (remain.len) {
-                line = SplitStr(remain, '\n', &remain);
-                if (line.len < 2) {
-                    LogError("Malformed cache file");
+            // Filename and dependency count
+            {
+                Span<char> part = SplitStr(remain, '>', &remain);
+                if (!ParseInt(part, &entry.deps_len))
                     return;
-                }
-                line.ptr[line.len] = 0;
+                entry.deps_offset = cache_dependencies.len;
 
-                if (line[0] == '!') {
-                    entry.cmd_line = line.Take(1, line.len - 1);
-                } else if (line[0] == '+') {
-                    const char *filename;
-                    Span<const char> mtime = SplitStr(line.ptr + 1, ':', &filename);
+                part = SplitStr(remain, '\n', &remain);
+                part.ptr[part.len] = 0;
+                entry.filename = part.ptr;
+            }
 
-                    DependencyEntry dep = {};
+            // Command line
+            {
+                Span<char> part = SplitStr(remain, '\n', &remain);
+                part.ptr[part.len] = 0;
+                entry.cmd_line = part;
+            }
 
-                    dep.filename = filename;
-                    if (!ParseInt(mtime, &dep.mtime))
-                        return;
+            // Dependencies
+            for (Size i = 0; i < entry.deps_len; i++) {
+                DependencyEntry dep = {};
 
-                    cache_dependencies.Append(dep);
-                } else {
-                    break;
-                }
+                Span<char> part = SplitStr(remain, '|', &remain);
+                if (!ParseInt(part, &dep.mtime))
+                    return;
+
+                part = SplitStr(remain, '\n', &remain);
+                part.ptr[part.len] = 0;
+                dep.filename = part.ptr;
+
+                cache_dependencies.Append(dep);
             }
             entry.deps_len = cache_dependencies.len - entry.deps_offset;
 
