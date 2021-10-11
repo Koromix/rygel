@@ -45,6 +45,7 @@ html.instance {
     max-width: 1080px;
 
     --anchor_color: #fe7735;
+    --anchor_color_n1: #ff864b;
     --outline_color: #00adff;
 }
 
