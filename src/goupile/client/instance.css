@@ -20,6 +20,7 @@ html.instance {
     --page_color_n1: #346bb8;
     --anchor_color: #fe7735;
     --anchor_color_n1: #ff9059;
+    --outline_color: #fe773577;
 
     --block_rounding: 0px;
     --widget_rounding: 0px;
@@ -38,12 +39,14 @@ html.instance {
     flex-direction: row;
     justify-content: center;
 }
+
 #ins_form {
     width: 100%;
     max-width: 1080px;
-}
 
-#ins_form a { color: var(--page_color); }
+    --anchor_color: #fe7735;
+    --outline_color: #00adff;
+}
 
 html.mobile #ins_page { padding-top: 0; }
 

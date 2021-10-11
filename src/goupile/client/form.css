@@ -79,21 +79,18 @@
 .fm_tabs > button {
     position: relative;
     background: white;
-    border: 1px solid white;
-    border-width: 0.5px;
+    border: none;
     color: black;
     z-index: 999;
 }
 .fm_tabs > button + button { margin-left: 8px; }
 .fm_tabs > button:not(.active):not(:disabled):hover {
     background: white;
-    border-color: var(--page_color);
     color: black;
     z-index: 1;
 }
 .fm_tabs > button.active, .fm_tabs > button.active:hover {
-    background: var(--page_color);
-    border-color: var(--page_color);
+    background: linear-gradient(var(--page_color_n1), var(--page_color));
     color: white;
 }
 
@@ -242,13 +239,13 @@ html:not(.small) .fm_widget.compact .fm_error {
 }
 .fm_enum > button:not(.active):not(:disabled):hover {
     background: white;
-    border-color: var(--page_color);
+    border-color: var(--page_color_n1);
     color: black;
     z-index: 1;
 }
 .fm_enum > button.active {
-    background: #555;
-    border-color: #555;
+    background: var(--page_color_n1);
+    border-color: var(--page_color_n1);
     color: white;
     color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
@@ -260,8 +257,8 @@ html:not(.small) .fm_widget.compact .fm_error {
 }
 .fm_enum > button.active::after { display: none; }
 .fm_enum > button.active:hover {
-    background: #777;
-    border-color: #777;
+    background: var(--page_color);
+    border-color: var(--page_color);
 }
 
 .fm_enum.readonly, .fm_radio.readonly, .fm_multi.readonly, .fm_slider.readonly {
@@ -318,8 +315,8 @@ html:not(.small) .fm_widget.compact .fm_error {
 }
 .fm_radio > input:checked + label::before { background: none; }
 .fm_radio > input:checked + label::after { content: ''; }
-.fm_radio > input:hover + label::before { border-color: var(--page_color); }
-.fm_radio > input:hover + label::after { background-color: var(--page_color); }
+.fm_radio > input:hover + label::before { border-color: var(--outline_color); }
+.fm_radio > input:hover + label::after { background-color: var(--outline_color); }
 
 .fm_multi {
     display: inline-block;
@@ -365,7 +362,7 @@ html:not(.small) .fm_widget.compact .fm_error {
 }
 .fm_multi > input:checked + label::after { content: ''; }
 .fm_multi > input:hover + label::before,
-    .fm_multi > input:hover + label::after { border-color: var(--page_color); }
+    .fm_multi > input:hover + label::after { border-color: var(--outline_color); }
 
 @media (pointer: coarse) {
     .fm_radio > input + label {

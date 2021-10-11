@@ -37,8 +37,7 @@ a {
 }
 
 *:focus, *:focus + label {
-    outline: 2px dotted #777;
-    outline-offset: 1px;
+    outline: 1px solid var(--outline_color);
     z-index: 99999;
 }
 
@@ -80,8 +79,15 @@ button:not(:disabled):hover { border-color: var(--anchor_color); }
     background: linear-gradient(var(--menu_color_n1), var(--menu_color));
     color: white;
     z-index: 9999;
+
+    --outline_color: var(--menu_color_n3);
 }
 .ui_toolbar.locked { filter: saturate(0%); }
+
+.ui_toolbar *:focus, .ui_toolbar *:focus + label {
+    outline-width: 2px;
+    outline-style: dotted;
+}
 
 .ui_toolbar button {
     display: block;
