@@ -82,7 +82,7 @@ button:not(:disabled):hover { border-color: var(--anchor_color); }
 
     --outline_color: var(--menu_color_n3);
 }
-.ui_toolbar.locked { filter: saturate(0%); }
+.ui_toolbar.locked { filter: invert(100%); }
 
 .ui_toolbar *:focus, .ui_toolbar *:focus + label {
     outline-width: 2px;
