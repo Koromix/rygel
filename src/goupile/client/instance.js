@@ -435,7 +435,7 @@ function InstanceController() {
         }
 
         let column_stats = {};
-        let hid_width = 20;
+        let hid_width = 40;
         for (let row of visible_rows) {
             for (let key of data_form.pages.keys())
                 column_stats[key] = (column_stats[key] || 0) + (row.status[key] != null);
@@ -463,13 +463,11 @@ function InstanceController() {
 
                 <table class="ui_table fixed" id="ins_data"
                        style=${'min-width: ' + (5 + 5 * data_form.menu.length) + 'em;'}>
-                    ${visible_rows.length ? html`
-                        <colgroup>
-                            <col style=${'width: ' + hid_width + 'px;'} />
-                            ${util.mapRange(0, data_form.menu.length, () => html`<col/>`)}
-                            <col style="width: 2em;"/>
-                        </colgroup>
-                    ` : ''}
+                    <colgroup>
+                        <col style=${'width: ' + hid_width + 'px;'} />
+                        ${util.mapRange(0, data_form.menu.length, () => html`<col/>`)}
+                        <col style="width: 2em;"/>
+                    </colgroup>
 
                     <thead>
                         <tr>
@@ -562,7 +560,9 @@ function InstanceController() {
         }
 
         let metrics = ctx.measureText(hid != null ? hid : 'NA');
-        let width = Math.min(Math.ceil(metrics.width * 1.04) + 20, 700);
+        let width = Math.ceil(metrics.width * 1.04) + 20;
+
+        width = Math.min(width, 700);
 
         return width;
     }
