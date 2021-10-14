@@ -14,4 +14,4 @@
 nginx_public_addr: '{{ ansible_host }}'
 
 nginx_mode: front
-nginx_back_addr: '{{ hostvars.server.nginx_public_addr }}' 
+nginx_back_addr: '{{ hostvars.server_node.nginx_public_addr }}' 
