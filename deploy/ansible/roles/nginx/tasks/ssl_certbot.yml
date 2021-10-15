@@ -88,6 +88,12 @@
   when: 'item.ssl_certbot_email is defined'
   become: yes
 
+- name: Enable certbot renewal unit
+  service:
+    name: certbot.timer
+    enabled: yes
+  become: yes
+
 - name: List old certbot renewals
   find:
     paths:
