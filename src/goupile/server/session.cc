@@ -1286,10 +1286,10 @@ RetainPtr<const SessionInfo> MigrateGuestSession(const SessionInfo &guest, Insta
     // Create random username
     char key[11];
     for (Size i = 0; i < 7; i++) {
-        key[i] = 'a' + randombytes_uniform('z' - 'a' + 1);
+        key[i] = (char)('a' + randombytes_uniform('z' - 'a' + 1));
     }
     for (Size i = 7; i < 10; i++) {
-        key[i] = '0' + randombytes_uniform('9' - '0' + 1);
+        key[i] = (char)('0' + randombytes_uniform('9' - '0' + 1));
     }
     key[10] = 0;
 
