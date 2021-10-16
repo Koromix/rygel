@@ -21,14 +21,14 @@ sudo -u $USER git fetch
 sudo -u $USER git reset --hard FETCH_HEAD
 
 # Update or bootstrap Felix
-if ! sudo -u $USER bin/Paranoid/felix -pParanoid --compiler=clang-11 --linker=lld-11 felix; then
+if ! sudo -u $USER bin/Paranoid/felix -pParanoid --compiler=clang-11:lld-11 felix; then
     sudo -u $USER ./bootstrap.sh
-    sudo -u $USER ./felix -pParanoid --compiler=clang-11 --linker=lld-11 felix
+    sudo -u $USER ./felix -pParanoid --compiler=clang-11:lld-11 felix
     rm -f felix
 fi
 
 # Build Goupile
-sudo -u $USER bin/Paranoid/felix -pParanoid --compiler=clang-11 --linker=lld-11 felix goupile
+sudo -u $USER bin/Paranoid/felix -pParanoid --compiler=clang-11:lld-11 felix goupile
 
 # Install Goupile
 install -C -o root -g root -m 0755 bin/Paranoid/goupile '{{ goupile_root_path }}/goupile'

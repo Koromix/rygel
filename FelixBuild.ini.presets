@@ -21,6 +21,5 @@ Features = PCH, DebugInfo, Optimize
 Features = DebugInfo, Optimize, LTO
 
 [Paranoid]
-Compiler = clang
-Linker = lld
+Compiler = clang:lld
 Features = Optimize, LTO, SafeStack, CFI, ZeroInit, ShuffleCode

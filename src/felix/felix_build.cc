@@ -117,6 +117,15 @@ static const char *BuildGitVersionString(Allocator *alloc)
     return output.TrimAndLeak().ptr;
 }
 
+static void ParseCompilerString(Span<const char> str, Allocator *alloc, CompilerInfo *out_compiler_info)
+{
+    Span<const char> ld;
+    Span<const char> cc = SplitStr(str, ':', &ld);
+
+    out_compiler_info->cc = cc.len ? DuplicateString(cc, alloc).ptr : nullptr;
+    out_compiler_info->ld = ld.len ? DuplicateString(ld, alloc).ptr : nullptr;
+}
+
 static bool ParseFeatureString(Span<const char> str, uint32_t *out_features)
 {
     while (str.len) {
@@ -164,16 +173,10 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
                 if (prop.key == "Preset") {
                     *out_preset_name = DuplicateString(prop.value, alloc).ptr;
                 } else if (prop.key == "Compiler") {
-                    out_compiler_info->cc = DuplicateString(prop.value, alloc).ptr;
+                    ParseCompilerString(prop.value, alloc, out_compiler_info);
 
                     for (BuildPreset &preset: *out_presets) {
                         preset.compiler_info.cc = out_compiler_info->cc;
-                    }
-                } else if (prop.key == "Linker") {
-                    out_compiler_info->ld = DuplicateString(prop.value, alloc).ptr;
-
-                    for (BuildPreset &preset: *out_presets) {
-                        preset.compiler_info.ld = out_compiler_info->ld;
                     }
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
@@ -192,9 +195,7 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
                     if (prop.key == "Directory") {
                         preset->build.output_directory = NormalizePath(prop.value, GetWorkingDirectory(), alloc).ptr;
                     } else if (prop.key == "Compiler") {
-                        preset->compiler_info.cc = DuplicateString(prop.value, alloc).ptr;
-                    } else if (prop.key == "Linker") {
-                        preset->compiler_info.ld = DuplicateString(prop.value, alloc).ptr;
+                        ParseCompilerString(prop.value, alloc, &preset->compiler_info);
                     } else if (prop.key == "Features") {
                         valid &= ParseFeatureString(prop.value.ptr, &preset->build.features);
                     } else {
@@ -244,8 +245,7 @@ Options:
                                  %!D..(FelixBuild.ini.presets, FelixBuild.ini.user)%!0
     %!..+-p, --preset <preset>%!0        Select specific preset
 
-    %!..+-c, --compiler <compiler>%!0    Override compiler
-        %!..+--linker <linker>%!0        Override linker
+    %!..+-c, --compiler <compiler>%!0    Override compiler and/or linker
     %!..+-f, --features <features>%!0    Override compilation features
                                  %!D..(start with -All to reset and set only new flags)%!0
 
@@ -403,9 +403,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 build.output_directory = opt.current_value;
             } else if (opt.Test("-c", "--compiler", OptionType::Value)) {
-                compiler_info.cc = opt.current_value;
-            } else if (opt.Test("--linker", OptionType::Value)) {
-                compiler_info.ld = opt.current_value;
+                ParseCompilerString(opt.current_value, &temp_alloc, &compiler_info);
             } else if (opt.Test("-f", "--features", OptionType::Value)) {
                 if (!ParseFeatureString(opt.current_value, &build.features))
                     return 1;
