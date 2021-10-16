@@ -1041,9 +1041,18 @@ std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info)
         return nullptr;
     }
 
-    if (info.ld && !FindExecutableInPath(info.ld)) {
-        LogError("Cannot find linker '%1' in PATH", info.ld);
-        return nullptr;
+    if (info.ld) {
+        if (TestStr(info.ld, "bfd") || TestStr(info.ld, "ld")) {
+            if (!FindExecutableInPath("ld")) {
+                LogError("Cannot find linker 'ld' in PATH");
+                return nullptr;
+            }
+
+            info.ld = "bfd";
+        } else if (!FindExecutableInPath(info.ld)) {
+            LogError("Cannot find linker '%1' in PATH", info.ld);
+            return nullptr;
+        }
     }
 
     // Find appropriate driver
