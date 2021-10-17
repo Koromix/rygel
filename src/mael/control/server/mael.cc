@@ -11,9 +11,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#include "../../core/libcc/libcc.hh"
+#include "../../../core/libcc/libcc.hh"
 #include "config.hh"
-#include "../../core/libnet/libnet.hh"
+#include "../../../core/libnet/libnet.hh"
 
 namespace RG {
 
