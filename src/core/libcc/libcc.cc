@@ -3416,7 +3416,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
 
 #else
 
-static bool CreatePipe(int pfd[2])
+bool CreatePipe(int pfd[2])
 {
 #ifdef __APPLE__
     if (pipe(pfd) < 0) {

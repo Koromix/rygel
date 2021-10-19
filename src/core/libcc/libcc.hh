@@ -3833,6 +3833,10 @@ const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, 
                                 Allocator *alloc, FILE **out_fp = nullptr);
 const char *CreateTemporaryDirectory(Span<const char> directory, const char *prefix, Allocator *alloc);
 
+#ifndef _WIN32
+bool CreatePipe(int pfd[2]);
+#endif
+
 bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
                         FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code);
 bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf, Size max_len,
