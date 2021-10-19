@@ -60,6 +60,12 @@ class http_Daemon {
     MHD_Daemon *daemon = nullptr;
     int listen_fd = -1;
     http_ClientAddressMode client_addr_mode = http_ClientAddressMode::Socket;
+
+#ifdef _WIN32
+    void *stop_handle = nullptr;
+#else
+    int stop_pfd[2] = {-1, -1};
+#endif
     std::atomic_bool running {false};
 
     std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;
@@ -124,6 +130,11 @@ struct http_RequestInfo {
         { return MHD_lookup_connection_value(conn, MHD_COOKIE_KIND, key); }
 };
 
+enum class http_WebSocketMode {
+    Text,
+    Binary
+};
+
 class http_IO {
     RG_DELETE_COPY(http_IO)
 
@@ -131,6 +142,7 @@ class http_IO {
         Sync,
         Idle,
         Async,
+        WebSocket,
         Zombie
     };
 
@@ -147,6 +159,7 @@ class http_IO {
     std::function<void()> async_func;
     bool async_func_response = false;
     const char *last_err = nullptr;
+    bool force_queue = false;
 
     std::condition_variable read_cv;
     Size read_max = -1;
@@ -155,13 +168,22 @@ class http_IO {
     Size read_total = 0;
     bool read_eof = false;
 
-    bool write_attached = false;
     int write_code;
     uint64_t write_len;
     std::condition_variable write_cv;
     HeapArray<uint8_t> write_buf;
     Size write_offset = 0;
     bool write_eof = false;
+
+    int ws_opcode;
+    std::condition_variable ws_cv;
+    struct MHD_UpgradeResponseHandle *ws_urh = nullptr;
+    MHD_socket ws_fd;
+    HeapArray<uint8_t> ws_buf;
+    Size ws_offset;
+#ifdef _WIN32
+    void *ws_handle;
+#endif
 
     HeapArray<std::function<void()>> finalizers;
 
@@ -192,10 +214,15 @@ public:
 
     void ResetResponse();
 
-    // Blocking, do in async context
+    bool IsWS() const;
+    bool UpgradeWS(http_WebSocketMode mode, StreamReader *out_reader, StreamWriter *out_writer);
+
+    // These must be run in async context (with RunAsync)
     bool OpenForRead(Size max_len, StreamReader *out_st);
-    bool ReadPostValues(Allocator *alloc, HashMap<const char *, const char *> *out_values);
     bool OpenForWrite(int code, Size len, CompressionType encoding, StreamWriter *out_st);
+    bool OpenForWrite(int code, Size len, StreamWriter *out_st)
+        { return OpenForWrite(code, len, CompressionType::None, out_st); }
+    bool ReadPostValues(Allocator *alloc, HashMap<const char *, const char *> *out_values);
 
     void AddFinalizer(const std::function<void()> &func);
 
@@ -204,6 +231,12 @@ private:
 
     Size Read(Span<uint8_t> out_buf);
     bool Write(Span<const uint8_t> buf);
+
+    static void HandleUpgrade(void *cls, struct MHD_Connection *, void *,
+                              const char *extra_in, size_t extra_in_size, MHD_socket fd,
+                              struct MHD_UpgradeResponseHandle *urh);
+    Size ReadWS(Span<uint8_t> out_buf);
+    bool WriteWS(Span<const uint8_t> buf);
 
     // Call with mutex locked
     void Suspend();

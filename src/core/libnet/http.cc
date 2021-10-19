@@ -14,6 +14,8 @@
 #include "../../core/libcc/libcc.hh"
 #include "http.hh"
 #include "http_misc.hh"
+#include "../../../vendor/mbedtls/include/mbedtls/sha1.h"
+#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 
 #ifdef _WIN32
     #include <io.h>
@@ -30,7 +32,11 @@
     #include <sys/stat.h>
     #include <sys/socket.h>
     #include <sys/un.h>
+    #include <sys/uio.h>
     #include <arpa/inet.h>
+    #include <fcntl.h>
+    #include <poll.h>
+    #include <unistd.h>
 #endif
 
 namespace RG {
@@ -120,7 +126,8 @@ bool http_Daemon::Start(const http_Config &config,
         return false;
 
     // MHD flags
-    int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_ALLOW_SUSPEND_RESUME | MHD_USE_ERROR_LOG;
+    int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_ALLOW_SUSPEND_RESUME |
+                MHD_ALLOW_UPGRADE | MHD_USE_ERROR_LOG;
 #ifndef NDEBUG
     flags |= MHD_USE_DEBUG;
 #endif
@@ -137,6 +144,17 @@ bool http_Daemon::Start(const http_Config &config,
     mhd_options.Append({MHD_OPTION_CONNECTION_TIMEOUT, config.idle_timeout});
     mhd_options.Append({MHD_OPTION_END, 0, nullptr});
     client_addr_mode = config.client_addr_mode;
+
+#ifdef _WIN32
+    stop_handle = WSACreateEvent();
+    if (!stop_handle) {
+        LogError("CreateEvent() failed: %1", GetWin32ErrorString());
+        return false;
+    }
+#else
+    if (!CreatePipe(stop_pfd))
+        return false;
+#endif
 
     handle_func = func;
     async = new Async(config.async_threads - 1);
@@ -155,8 +173,23 @@ void http_Daemon::Stop()
     running = false;
 
     if (async) {
+#ifdef _WIN32
+        WSASetEvent(stop_handle);
+
         async->Sync();
         delete async;
+
+        WSACloseEvent(stop_handle);
+#else
+        char dummy = 0;
+        write(stop_pfd[1], &dummy, 1);
+
+        async->Sync();
+        delete async;
+
+        close(stop_pfd[0]);
+        close(stop_pfd[1]);
+#endif
     }
 
     if (daemon) {
@@ -333,7 +366,7 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
     }
 
     // Handle write or attached response (if any)
-    if (io->write_attached) {
+    if (io->force_queue) {
         io->Resume();
         return MHD_queue_response(conn, (unsigned int)io->code, io->response);
     } else if (io->state == http_IO::State::Idle) {
@@ -436,6 +469,7 @@ void http_Daemon::RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
 
             io->read_cv.notify_one();
             io->write_cv.notify_one();
+            io->ws_cv.notify_one();
         } else {
             lock.unlock();
             delete io;
@@ -453,6 +487,12 @@ http_IO::~http_IO()
     for (const auto &func: finalizers) {
         func();
     }
+
+#ifdef _WIN32
+    if (ws_handle) {
+        WSACloseEvent(ws_handle);
+    }
+#endif
 
     MHD_destroy_response(response);
 }
@@ -674,7 +714,7 @@ void http_IO::AttachNothing(int code)
 
 bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
 {
-    RG_ASSERT(state != State::Sync);
+    RG_ASSERT(state != State::Sync && state != State::WebSocket);
 
     if (max_len >= 0) {
         if (const char *str = request.GetHeaderValue("Content-Length"); str) {
@@ -700,17 +740,19 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
     read_max = max_len;
 
     bool success = out_st->Open([this](Span<uint8_t> out_buf) { return Read(out_buf); }, "<http>");
-    return success;
+    RG_ASSERT(success);
+
+    return true;
 }
 
 bool http_IO::OpenForWrite(int code, Size len, CompressionType encoding, StreamWriter *out_st)
 {
-    RG_ASSERT(state != State::Sync);
+    RG_ASSERT(state != State::Sync && state != State::WebSocket);
 
     write_code = code;
     write_len = (len >= 0) ? (uint64_t)len : MHD_SIZE_UNKNOWN;
-    bool success = out_st->Open([this](Span<const uint8_t> buf) { return Write(buf); }, "<http>", encoding);
 
+    bool success = out_st->Open([this](Span<const uint8_t> buf) { return Write(buf); }, "<http>", encoding);
     return success;
 }
 
@@ -793,6 +835,157 @@ bool http_IO::ReadPostValues(Allocator *alloc, HashMap<const char *, const char 
     return true;
 }
 
+void http_IO::HandleUpgrade(void *cls, struct MHD_Connection *, void *,
+                            const char *extra_in, size_t extra_in_size, MHD_socket fd,
+                            struct MHD_UpgradeResponseHandle *urh)
+{
+    http_IO *io = (http_IO *)cls;
+
+    // Notify when handler ends
+    RG_DEFER_N(err_guard) {
+        MHD_upgrade_action(io->ws_urh, MHD_UPGRADE_ACTION_CLOSE);
+        io->ws_cv.notify_one();
+    };
+
+    std::lock_guard<std::mutex> lock(io->mutex);
+
+    // Set non-blocking socket behavior
+#ifdef _WIN32
+    unsigned long mode = 1;
+    if (ioctlsocket(fd, FIONBIO, &mode) < 0) {
+        LogError("Failed to make socket non-blocking: %1", GetWin32ErrorString(WSAGetLastError()));
+        return;
+    }
+#else
+    int flags = fcntl(fd, F_GETFL);
+    if (flags < 0) {
+        LogError("Failed to make socket non-blocking: %1", strerror(errno));
+        return;
+    }
+    if (!(flags & O_NONBLOCK) && fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+        LogError("Failed to make socket non-blocking: %1", strerror(errno));
+        return;
+    }
+#endif
+
+    io->ws_urh = urh;
+    io->ws_fd = fd;
+    io->ws_buf.Append(MakeSpan((const uint8_t *)extra_in, (Size)extra_in_size));
+    io->ws_offset = 0;
+
+#ifdef _WIN32
+    io->ws_handle = WSACreateEvent();
+    if (!io->ws_handle) {
+        LogError("WSACreateEvent() failed: %1", GetWin32ErrorString(WSAGetLastError()));
+        return;
+    }
+    if (WSAEventSelect(fd, io->ws_handle, FD_READ | FD_CLOSE)) {
+        LogError("Failed to associate event with socket: %1", GetWin32ErrorString(WSAGetLastError()));
+        return;
+    }
+#endif
+
+    err_guard.Disable();
+    io->state = State::WebSocket;
+    io->ws_cv.notify_one();
+}
+
+bool http_IO::IsWS() const
+{
+    const char *conn_str = request.GetHeaderValue("Connection");
+    const char *upgrade_str = request.GetHeaderValue("Upgrade");
+
+    if (!conn_str || !strstr(conn_str, "Upgrade"))
+        return false;
+    if (!upgrade_str || !TestStr(upgrade_str, "websocket"))
+        return false;
+
+    return true;
+}
+
+bool http_IO::UpgradeWS(http_WebSocketMode mode, StreamReader *out_reader, StreamWriter *out_writer)
+{
+    RG_ASSERT(state != State::Sync && state != State::WebSocket);
+    RG_ASSERT(!force_queue);
+
+    if (!IsWS()) {
+        LogError("Missing mandatory WebSocket headers");
+        AttachError(400);
+        return false;
+    }
+
+    // Check WebSocket headers
+    const char *key_str;
+    {
+        const char *version_str = request.GetHeaderValue("Sec-WebSocket-Version");
+        key_str = request.GetHeaderValue("Sec-WebSocket-Key");
+
+        if (!version_str || !TestStr(version_str, "13")) {
+            LogError("Unsupported Websocket version '%1'", version_str);
+            AddHeader("Sec-WebSocket-Version", "13");
+            AttachError(426);
+            return false;
+        }
+        if (!key_str) {
+            LogError("Missing 'Sec-WebSocket-Key' header");
+            AttachError(400);
+            return false;
+        }
+    }
+
+    // Compute accept value. Who designed this?
+    char accept_str[128];
+    {
+        LocalArray<char, 128> full_key;
+        uint8_t hash[20];
+
+        full_key.len = Fmt(full_key.data, "%1%2", key_str, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").len;
+        mbedtls_sha1((const uint8_t *)full_key.data, full_key.len, hash);
+        sodium_bin2base64(accept_str, RG_SIZE(accept_str), hash, RG_SIZE(hash), sodium_base64_VARIANT_ORIGINAL);
+    }
+
+    MHD_Response *response = MHD_create_response_for_upgrade(HandleUpgrade, this);
+    AttachResponse(101, response);
+
+    AddHeader("Upgrade", "websocket");
+    AddHeader("Sec-WebSocket-Accept", accept_str);
+
+    ws_opcode = -1;
+    switch (mode) {
+        case http_WebSocketMode::Text: { ws_opcode = 1; } break;
+        case http_WebSocketMode::Binary: { ws_opcode = 2; } break;
+    }
+    RG_ASSERT(ws_opcode >= 0);
+
+    // Wait for the handler to run
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+
+        force_queue = true;
+        while (!ws_urh) {
+            if (!daemon->running) {
+                LogError("Server is shutting down");
+                return false;
+            }
+            if (state == State::Zombie) {
+                LogError("Lost connection during WebSocket upgrade");
+                return false;
+            }
+
+            Resume();
+            ws_cv.wait(lock);
+        }
+        if (state != State::WebSocket)
+            return false;
+    }
+
+    // Give something to the user
+    out_reader->Open([this](Span<uint8_t> out_buf) { return ReadWS(out_buf); }, "<ws>");
+    out_writer->Open([this](Span<const uint8_t> buf) { return WriteWS(buf); }, "<ws>");
+
+    return true;
+}
+
 void http_IO::AddFinalizer(const std::function<void()> &func)
 {
     finalizers.Append(func);
@@ -834,6 +1027,11 @@ Size http_IO::Read(Span<uint8_t> out_buf)
 
     // Wait for libmicrohttpd
     while (state == State::Async && !read_len && !read_eof) {
+        if (!daemon->running) {
+            LogError("Server is shutting down");
+            return false;
+        }
+
         Resume();
         read_cv.wait(lock);
     }
@@ -859,13 +1057,13 @@ bool http_IO::Write(Span<const uint8_t> buf)
 
     std::unique_lock<std::mutex> lock(mutex);
 
-    if (!write_attached) {
+    if (!force_queue) {
         MHD_Response *new_response =
             MHD_create_response_from_callback(write_len, Kilobytes(16),
                                               &http_Daemon::HandleWrite, this, nullptr);
         AttachResponse(write_code, new_response);
 
-        write_attached = true;
+        force_queue = true;
     }
 
     // Make sure we switch to write state
@@ -873,6 +1071,11 @@ bool http_IO::Write(Span<const uint8_t> buf)
 
     write_eof |= !buf.len;
     while (state == State::Async && write_buf.len >= Kilobytes(4)) {
+        if (!daemon->running) {
+            LogError("Server is shutting down");
+            return false;
+        }
+
         write_cv.wait(lock);
     }
     write_buf.Append(buf);
@@ -880,6 +1083,200 @@ bool http_IO::Write(Span<const uint8_t> buf)
     if (!write_eof && state == State::Zombie) {
         LogError("Connection aborted while writing");
         return false;
+    }
+
+    return true;
+}
+
+Size http_IO::ReadWS(Span<uint8_t> out_buf)
+{
+    RG_ASSERT(state == State::WebSocket);
+
+    bool begin = false;
+    Size read_len = 0;
+
+    while (out_buf.len) {
+        // Decode message
+        {
+            if (ws_buf.len < 2)
+                goto pump;
+
+            int bits = (ws_buf[0] >> 4) & 0xF;
+            int opcode = ws_buf[0] & 0xF;
+            bool fin = bits & 0xF;
+
+            if (opcode == 1 || opcode == 2) {
+                begin = true;
+                read_len = 0;
+            }
+            begin &= (opcode < 3);
+
+            bool masked = ws_buf[1] & 0x80;
+            Size payload = ws_buf[1] & 0x7F;
+
+            if (bits != 8 && bits != 0) {
+                LogError("Unsupported WebSocket RSV bits");
+                return -1;
+            }
+            if (!masked) {
+                LogError("Client to server messages must be masked");
+                return -1;
+            }
+
+            Size offset;
+            uint8_t mask[4];
+            if (payload == 0x7E) {
+                if (ws_buf.len < 8)
+                    goto pump;
+
+                uint16_t payload16;
+                memcpy_safe(&payload16, ws_buf.ptr + 2, 2);
+                memcpy_safe(mask, ws_buf.ptr + 4, 4);
+
+                payload = BigEndian(payload16);
+                offset = 8;
+            } else if (payload == 0x7F) {
+                if (ws_buf.len < 14)
+                    goto pump;
+
+                memcpy_safe(&payload, ws_buf.ptr + 2, 8);
+                memcpy_safe(mask, ws_buf.ptr + 10, 4);
+
+                payload = BigEndian(payload);
+                offset = 14;
+            } else {
+                if (ws_buf.len < 6)
+                    goto pump;
+
+                memcpy_safe(mask, ws_buf.ptr + 2, 4);
+
+                offset = 6;
+            }
+            if (ws_buf.len - offset < payload)
+                goto pump;
+
+            if (begin) {
+                Size avail_len = std::min(payload, ws_buf.len - offset);
+                Size copy_len = std::min(out_buf.len - read_len, avail_len);
+
+                for (Size i = 0; i < copy_len; i++) {
+                    out_buf[read_len++] = ws_buf[offset + i] ^ mask[i % 4];
+                }
+            }
+
+            ws_buf.len = std::max(ws_buf.len - offset - payload, (Size)0);
+            memmove_safe(ws_buf.ptr, ws_buf.ptr + offset + payload, ws_buf.len);
+
+            // We can't return empty messages because this is a signal for EOF
+            // in the StreamReader code. Oups.
+            if (begin && fin && read_len)
+                break;
+        }
+
+pump:
+        // Pump more data from the OS
+        ws_buf.Grow(Kibibytes(1));
+
+#ifdef _WIN32
+        void *events[2] = {
+            ws_handle,
+            daemon->stop_handle
+        };
+
+        if (WSAWaitForMultipleEvents(2, events, FALSE, WSA_INFINITE, FALSE) == WSA_WAIT_FAILED) {
+            LogError("Failed to read from socket: %1", GetWin32ErrorString(WSAGetLastError()));
+            return -1;
+        }
+        WSAResetEvent(ws_handle);
+#else
+        struct pollfd pfds[2] = {
+            {ws_fd, POLLIN},
+            {daemon->stop_pfd[0], POLLIN}
+        };
+
+        if (poll(pfds, RG_LEN(pfds), -1) < 0) {
+            LogError("Failed to read from socket: %1", strerror(errno));
+            return -1;
+        }
+#endif
+
+        if (RG_UNLIKELY(!daemon->running)) {
+            LogError("Server is shutting down");
+            return -1;
+        }
+
+        ssize_t len = recv(ws_fd, (char *)ws_buf.end(), (int)(ws_buf.capacity - ws_buf.len), 0);
+        if (len < 0) {
+            if (errno == EWOULDBLOCK || errno == EAGAIN)
+                continue;
+
+#ifdef _WIN32
+            LogError("Failed to read from socket: %1", GetWin32ErrorString(WSAGetLastError()));
+#else
+            LogError("Failed to read from socket: %1", strerror(errno));
+#endif
+            return -1;
+        } else if (!len) {
+            break;
+        }
+        ws_buf.len += (Size)len;
+    }
+
+    return read_len;
+}
+
+bool http_IO::WriteWS(Span<const uint8_t> buf)
+{
+    RG_ASSERT(state == State::WebSocket);
+
+    int opcode = ws_opcode;
+
+    if (!buf.len) {
+        // In theory we muist exchange close frames. Too lazy to do it now
+        // but if someone wants to work on it, you're welcome ;)
+
+        MHD_upgrade_action(ws_urh, MHD_UPGRADE_ACTION_CLOSE);
+        return true;
+    }
+
+    while (buf.len) {
+        Size part_len = std::min(buf.len, (Size)4096 - 4);
+        Span<const uint8_t> part = buf.Take(0, part_len);
+
+        buf = buf.Take(part_len, buf.len - part_len);
+
+        LocalArray<uint8_t, 4> frame;
+        frame.data[0] = (uint8_t)((buf.len ? 0 : 0x8 << 4) | opcode);
+        frame.data[1] = (uint8_t)std::min(part_len, (Size)126);
+        if (part_len >= 126) {
+            frame.data[2] = (uint8_t)(part_len >> 8);
+            frame.data[3] = (uint8_t)(part_len & 0xFF);
+            frame.len = 4;
+        } else {
+            frame.len = 2;
+        }
+        opcode = 0;
+
+#ifdef _WIN32
+        if (send(ws_fd, (const char *)frame.data, (int)frame.len, 0) < 0) {
+            LogError("Failed to write to socket: %1", GetWin32ErrorString(WSAGetLastError()));
+            return false;
+        }
+        if (send(ws_fd, (const char *)part.ptr, (int)part.len, 0) < 0) {
+            LogError("Failed to write to socket: %1", GetWin32ErrorString(WSAGetLastError()));
+            return false;
+        }
+#else
+        struct iovec iov[2] = {
+            {(void *)frame.data, (size_t)frame.len},
+            {(void *)part.ptr, (size_t)part.len}
+        };
+
+        if (writev(ws_fd, iov, RG_LEN(iov)) < 0) {
+            LogError("Failed to write to socket: %1", strerror(errno));
+            return false;
+        }
+#endif
     }
 
     return true;
