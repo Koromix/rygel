@@ -424,7 +424,15 @@ public:
             Fmt(&buf, " \"%1\"", obj_filename);
         }
         for (const char *lib: libraries) {
+#ifdef __APPLE__
+            if (lib[0] == '!') {
+                Fmt(&buf, " -framework %1", lib);
+            } else {
+                Fmt(&buf, " -l%1", lib);
+            }
+#else
             Fmt(&buf, " -l%1", lib);
+#endif
         }
 
         // Platform flags
@@ -746,7 +754,15 @@ public:
             Fmt(&buf, " \"%1\"", obj_filename);
         }
         for (const char *lib: libraries) {
+#ifdef __APPLE__
+            if (lib[0] == '!') {
+                Fmt(&buf, " -framework %1", lib);
+            } else {
+                Fmt(&buf, " -l%1", lib);
+            }
+#else
             Fmt(&buf, " -l%1", lib);
+#endif
         }
 
         // Platform flags and libraries
