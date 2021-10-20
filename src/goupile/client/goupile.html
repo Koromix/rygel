@@ -82,6 +82,11 @@
                 font-size: 1.4em;
                 text-align: center;
             }
+
+            .gp_version {
+                font-size: 0.8em;
+                color: #444;
+            }
         </style>
 
         {HEAD_TAGS}
@@ -138,8 +143,12 @@
             function proposeBrowsers() {
                 document.querySelector('#ui_main').innerHTML =
                     '<div class="gp_fatal"><div>' +
-                        '<span style="color: red;">⚠\uFE0E <b>Ce navigateur ne semble pas être supporté, ou il s\'agit d\'une version trop ancienne</b></span><br/>' +
-                        'Vous pouvez utiliser Firefox (version ≥ 60), Chrome (version ≥ 55), Edge (version ≥ 17), Safari (≥ 11)' +
+                        '<span style="color: red;">⚠\uFE0E <b>Ce navigateur n\'est pas supporté, ou il s\'agit d\'une version trop ancienne</b></span><br/><br/>' +
+                        'Nous vous recommandons <u>l\'un de ces navigateurs</u> :<br/><br/>' + 
+                        '<b>Mozilla Firefox</b> <span class="gp_version">(version ≥ 60)</span><br/>' +
+                        '<b>Google Chrome</b> <span class="gp_version">(version ≥ 55)</span><br/>' +
+                        '<b>Microsoft Edge</b> <span class="gp_version">(version ≥ 17)</span><br/>' + 
+                        '<b>Apple Safari</b> <span class="gp_version">(version ≥ 11)</span>' +
                     '</div></div>';
                 document.body.classList.remove('gp_loading');
             }
