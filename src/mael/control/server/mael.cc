@@ -249,6 +249,7 @@ Options:
     }
 
     // Init device access
+    LogInfo("Init device monitor");
     hs_log_set_handler([](hs_log_level level, int, const char *msg, void *) {
         switch (level) {
             case HS_LOG_ERROR:
@@ -280,6 +281,7 @@ Options:
     // Run until exit
     WaitForInterrupt();
 
+    LogInfo("Exit requested");
     return 0;
 }
 
