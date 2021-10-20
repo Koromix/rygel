@@ -130,9 +130,8 @@ struct http_RequestInfo {
         { return MHD_lookup_connection_value(conn, MHD_COOKIE_KIND, key); }
 };
 
-enum class http_WebSocketMode {
-    Text,
-    Binary
+enum class http_WebSocketFlag {
+    Text = 1 << 0
 };
 
 class http_IO {
@@ -215,7 +214,7 @@ public:
     void ResetResponse();
 
     bool IsWS() const;
-    bool UpgradeWS(http_WebSocketMode mode, StreamReader *out_reader, StreamWriter *out_writer);
+    bool UpgradeWS(unsigned int flags, StreamReader *out_reader, StreamWriter *out_writer);
 
     // These must be run in async context (with RunAsync)
     bool OpenForRead(Size max_len, StreamReader *out_st);

@@ -903,7 +903,7 @@ bool http_IO::IsWS() const
     return true;
 }
 
-bool http_IO::UpgradeWS(http_WebSocketMode mode, StreamReader *out_reader, StreamWriter *out_writer)
+bool http_IO::UpgradeWS(unsigned int flags, StreamReader *out_reader, StreamWriter *out_writer)
 {
     RG_ASSERT(state != State::Sync && state != State::WebSocket);
     RG_ASSERT(!force_queue);
@@ -950,12 +950,7 @@ bool http_IO::UpgradeWS(http_WebSocketMode mode, StreamReader *out_reader, Strea
     AddHeader("Upgrade", "websocket");
     AddHeader("Sec-WebSocket-Accept", accept_str);
 
-    ws_opcode = -1;
-    switch (mode) {
-        case http_WebSocketMode::Text: { ws_opcode = 1; } break;
-        case http_WebSocketMode::Binary: { ws_opcode = 2; } break;
-    }
-    RG_ASSERT(ws_opcode >= 0);
+    ws_opcode = (flags & (int)http_WebSocketFlag::Text) ? 1 : 2;
 
     // Wait for the handler to run
     {
