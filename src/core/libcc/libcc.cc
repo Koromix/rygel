@@ -4251,7 +4251,7 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
 {
     Close();
 
-    RG_DEFER_N(error_guard) { error = true; };
+    RG_DEFER_N(err_guard) { error = true; };
     error = false;
 
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<memory>";
@@ -4263,7 +4263,7 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
     if (!InitDecompressor(compression_type))
         return false;
 
-    error_guard.Disable();
+    err_guard.Disable();
     return true;
 }
 
@@ -4271,7 +4271,7 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
 {
     Close();
 
-    RG_DEFER_N(error_guard) { error = true; };
+    RG_DEFER_N(err_guard) { error = true; };
     error = false;
 
     RG_ASSERT(fp);
@@ -4285,7 +4285,7 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
     if (!InitDecompressor(compression_type))
         return false;
 
-    error_guard.Disable();
+    err_guard.Disable();
     return true;
 }
 
@@ -4293,7 +4293,7 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
 {
     Close();
 
-    RG_DEFER_N(error_guard) { error = true; };
+    RG_DEFER_N(err_guard) { error = true; };
     error = false;
 
     RG_ASSERT(filename);
@@ -4308,7 +4308,7 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
     if (!InitDecompressor(compression_type))
         return false;
 
-    error_guard.Disable();
+    err_guard.Disable();
     return true;
 }
 
@@ -4317,7 +4317,7 @@ bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const ch
 {
     Close();
 
-    RG_DEFER_N(error_guard) { error = true; };
+    RG_DEFER_N(err_guard) { error = true; };
     error = false;
 
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<closure>";
@@ -4328,7 +4328,7 @@ bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const ch
     if (!InitDecompressor(compression_type))
         return false;
 
-    error_guard.Disable();
+    err_guard.Disable();
     return true;
 }
 
@@ -4929,7 +4929,7 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
 {
     Close(true);
 
-    RG_DEFER_N(error_guard) { error = true; };
+    RG_DEFER_N(err_guard) { error = true; };
     error = false;
 
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<memory>";
@@ -4942,7 +4942,7 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
     if (!InitCompressor(compression_type, compression_speed))
         return false;
 
-    error_guard.Disable();
+    err_guard.Disable();
     return true;
 }
 
@@ -4951,7 +4951,7 @@ bool StreamWriter::Open(FILE *fp, const char *filename,
 {
     Close(true);
 
-    RG_DEFER_N(error_guard) { error = true; };
+    RG_DEFER_N(err_guard) { error = true; };
     error = false;
 
     RG_ASSERT(fp);
@@ -4966,7 +4966,7 @@ bool StreamWriter::Open(FILE *fp, const char *filename,
     if (!InitCompressor(compression_type, compression_speed))
         return false;
 
-    error_guard.Disable();
+    err_guard.Disable();
     return true;
 }
 
@@ -4975,7 +4975,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
 {
     Close(true);
 
-    RG_DEFER_N(error_guard) { error = true; };
+    RG_DEFER_N(err_guard) { error = true; };
     error = false;
 
     RG_ASSERT(filename);
@@ -5015,7 +5015,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
     if (!InitCompressor(compression_type, compression_speed))
         return false;
 
-    error_guard.Disable();
+    err_guard.Disable();
     return true;
 }
 
@@ -5024,7 +5024,7 @@ bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, co
 {
     Close(true);
 
-    RG_DEFER_N(error_guard) { error = true; };
+    RG_DEFER_N(err_guard) { error = true; };
     error = false;
 
     this->filename = filename ? DuplicateString(filename, &str_alloc).ptr : "<closure>";
@@ -5036,7 +5036,7 @@ bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, co
     if (!InitCompressor(compression_type, compression_speed))
         return false;
 
-    error_guard.Disable();
+    err_guard.Disable();
     return true;
 }
 
@@ -5476,7 +5476,7 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
     if (RG_UNLIKELY(error))
         return LineType::Exit;
 
-    RG_DEFER_N(error_guard) { error = true; };
+    RG_DEFER_N(err_guard) { error = true; };
 
     Span<char> line;
     while (reader.Next(&line)) {
@@ -5499,7 +5499,7 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
             current_section.RemoveFrom(0);
             current_section.Append(section);
 
-            error_guard.Disable();
+            err_guard.Disable();
             return LineType::Section;
         } else {
             Span<char> value;
@@ -5517,7 +5517,7 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
             out_prop->key = key;
             out_prop->value = value;
 
-            error_guard.Disable();
+            err_guard.Disable();
             return LineType::KeyValue;
         }
     }
@@ -5526,7 +5526,7 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
 
     eof = true;
 
-    error_guard.Disable();
+    err_guard.Disable();
     return LineType::Exit;
 }
 
