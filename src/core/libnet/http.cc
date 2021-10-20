@@ -493,6 +493,9 @@ http_IO::~http_IO()
         WSACloseEvent(ws_handle);
     }
 #endif
+    if (ws_urh) {
+        MHD_upgrade_action(ws_urh, MHD_UPGRADE_ACTION_CLOSE);
+    }
 
     MHD_destroy_response(response);
 }
@@ -1008,9 +1011,9 @@ void http_IO::PushLogFilter()
 
 Size http_IO::Read(Span<uint8_t> out_buf)
 {
-    RG_ASSERT(state != State::Sync);
-
     std::unique_lock<std::mutex> lock(mutex);
+
+    RG_ASSERT(state != State::Sync);
 
     // Set read buffer
     read_buf = out_buf;
@@ -1047,10 +1050,10 @@ Size http_IO::Read(Span<uint8_t> out_buf)
 
 bool http_IO::Write(Span<const uint8_t> buf)
 {
+    std::unique_lock<std::mutex> lock(mutex);
+
     RG_ASSERT(state != State::Sync);
     RG_ASSERT(!write_eof);
-
-    std::unique_lock<std::mutex> lock(mutex);
 
     if (!force_queue) {
         MHD_Response *new_response =
@@ -1085,12 +1088,24 @@ bool http_IO::Write(Span<const uint8_t> buf)
 
 Size http_IO::ReadWS(Span<uint8_t> out_buf)
 {
-    RG_ASSERT(state == State::WebSocket);
+#ifndef NDEBUG
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        RG_ASSERT(state == State::WebSocket || state == State::Zombie);
+    }
+#endif
 
     bool begin = false;
     Size read_len = 0;
 
     while (out_buf.len) {
+        // Check status
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            if (state == State::Zombie)
+                break;
+        }
+
         // Decode message
         {
             if (ws_buf.len < 2)
@@ -1222,19 +1237,33 @@ pump:
 
 bool http_IO::WriteWS(Span<const uint8_t> buf)
 {
-    RG_ASSERT(state == State::WebSocket);
-
-    int opcode = ws_opcode;
+#ifndef NDEBUG
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        RG_ASSERT(state == State::WebSocket || state == State::Zombie);
+    }
+#endif
 
     if (!buf.len) {
-        // In theory we muist exchange close frames. Too lazy to do it now
+        // In theory we must exchange close frames. Too lazy to do it now
         // but if someone wants to work on it, you're welcome ;)
 
         MHD_upgrade_action(ws_urh, MHD_UPGRADE_ACTION_CLOSE);
+        ws_urh = nullptr;
+
         return true;
     }
 
+    int opcode = ws_opcode;
+
     while (buf.len) {
+        // Check status
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            if (state == State::Zombie)
+                break;
+        }
+
         Size part_len = std::min(buf.len, (Size)4096 - 4);
         Span<const uint8_t> part = buf.Take(0, part_len);
 
