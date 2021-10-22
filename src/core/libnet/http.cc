@@ -464,7 +464,7 @@ void http_Daemon::RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
     if (io) {
         std::unique_lock<std::mutex> lock(io->mutex);
 
-        if (io->state == http_IO::State::Async) {
+        if (io->state == http_IO::State::Async || io->state == http_IO::State::WebSocket) {
             io->state = http_IO::State::Zombie;
 
             io->read_cv.notify_one();
