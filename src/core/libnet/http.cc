@@ -912,7 +912,7 @@ bool http_IO::IsWS() const
     return true;
 }
 
-bool http_IO::UpgradeWS(unsigned int flags, StreamReader *out_reader, StreamWriter *out_writer)
+bool http_IO::UpgradeToWS(unsigned int flags)
 {
     RG_ASSERT(state != State::Sync && state != State::WebSocket);
     RG_ASSERT(!force_queue);
@@ -983,11 +983,18 @@ bool http_IO::UpgradeWS(unsigned int flags, StreamReader *out_reader, StreamWrit
             return false;
     }
 
-    // Give something to the user
-    out_reader->Open([this](Span<uint8_t> out_buf) { return ReadWS(out_buf); }, "<ws>");
-    out_writer->Open([this](Span<const uint8_t> buf) { return WriteWS(buf); }, "<ws>");
-
     return true;
+}
+
+void http_IO::OpenForReadWS(StreamReader *out_st)
+{
+    out_st->Open([this](Span<uint8_t> out_buf) { return ReadWS(out_buf); }, "<ws>");
+}
+
+bool http_IO::OpenForWriteWS(CompressionType encoding, StreamWriter *out_st)
+{
+    bool success = out_st->Open([this](Span<const uint8_t> buf) { return WriteWS(buf); }, "<ws>", encoding);
+    return success;
 }
 
 void http_IO::AddFinalizer(const std::function<void()> &func)

@@ -213,15 +213,19 @@ public:
 
     void ResetResponse();
 
-    bool IsWS() const;
-    bool UpgradeWS(unsigned int flags, StreamReader *out_reader, StreamWriter *out_writer);
-
     // These must be run in async context (with RunAsync)
     bool OpenForRead(Size max_len, StreamReader *out_st);
     bool OpenForWrite(int code, Size len, CompressionType encoding, StreamWriter *out_st);
     bool OpenForWrite(int code, Size len, StreamWriter *out_st)
         { return OpenForWrite(code, len, CompressionType::None, out_st); }
     bool ReadPostValues(Allocator *alloc, HashMap<const char *, const char *> *out_values);
+
+    // These must be run in async context (with RunAsync), except for IsWS
+    bool IsWS() const;
+    bool UpgradeToWS(unsigned int flags);
+    void OpenForReadWS(StreamReader *out_st);
+    bool OpenForWriteWS(CompressionType encoding, StreamWriter *out_st);
+    bool OpenForWriteWS(StreamWriter *out_st) { return OpenForWriteWS(CompressionType::None, out_st); }
 
     void AddFinalizer(const std::function<void()> &func);
 
