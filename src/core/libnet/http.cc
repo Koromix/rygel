@@ -445,6 +445,11 @@ void http_Daemon::RunNextAsync(http_IO *io)
                 lock.unlock();
                 delete io;
             } else {
+                if (io->ws_urh && !io->async_func) {
+                    MHD_upgrade_action(io->ws_urh, MHD_UPGRADE_ACTION_CLOSE);
+                    io->suspended = false;
+                }
+
                 io->state = http_IO::State::Idle;
                 io->Resume();
             }
@@ -466,6 +471,10 @@ void http_Daemon::RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
 
         if (io->state == http_IO::State::Async || io->state == http_IO::State::WebSocket) {
             io->state = http_IO::State::Zombie;
+
+            if (io->ws_urh) {
+                MHD_upgrade_action(io->ws_urh, MHD_UPGRADE_ACTION_CLOSE);
+            }
 
             io->read_cv.notify_one();
             io->write_cv.notify_one();
@@ -493,9 +502,6 @@ http_IO::~http_IO()
         WSACloseEvent(ws_handle);
     }
 #endif
-    if (ws_urh) {
-        MHD_upgrade_action(ws_urh, MHD_UPGRADE_ACTION_CLOSE);
-    }
 
     MHD_destroy_response(response);
 }
@@ -1118,6 +1124,8 @@ Size http_IO::ReadWS(Span<uint8_t> out_buf)
             if (opcode == 1 || opcode == 2) {
                 begin = true;
                 read_len = 0;
+            } else if (opcode == 8) {
+                return 0;
             }
             begin &= (opcode < 3);
 
@@ -1243,16 +1251,6 @@ bool http_IO::WriteWS(Span<const uint8_t> buf)
         RG_ASSERT(state == State::WebSocket || state == State::Zombie);
     }
 #endif
-
-    if (!buf.len) {
-        // In theory we must exchange close frames. Too lazy to do it now
-        // but if someone wants to work on it, you're welcome ;)
-
-        MHD_upgrade_action(ws_urh, MHD_UPGRADE_ACTION_CLOSE);
-        ws_urh = nullptr;
-
-        return true;
-    }
 
     int opcode = ws_opcode;
 
