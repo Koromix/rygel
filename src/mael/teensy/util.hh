@@ -14,12 +14,32 @@
 #pragma once
 
 #include <Arduino.h>
+#include <assert.h>
 
 #define STRINGIFY_(A) #A
 #define STRINGIFY(A) STRINGIFY_(A)
 #define CONCAT_(A, B) A ## B
 #define CONCAT(A, B) CONCAT_(A, B)
 #define UNIQUE_ID(Prefix) CONCAT(Prefix, __LINE__)
+
+#define STATIC_ASSERT(Cond) \
+    static_assert((Cond), STRINGIFY(Cond))
+
+template <typename T, unsigned N>
+char (&ComputeArraySize(T const (&)[N]))[N];
+#define LEN(Array) sizeof(ComputeArraySize(Array))
+
+template <typename T>
+struct Vec2 {
+    T x;
+    T y;
+};
+template <typename T>
+struct Vec3 {
+    T x;
+    T y;
+    T z;
+};
 
 class WaitFor {
     unsigned long delay;

@@ -9,22 +9,20 @@
 // GNU Affero General Public License for more details.
 //
 // You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see https://www.gnu.org/licenses/.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#pragma once
+#ifndef MESSAGE
+    #error Please define MESSAGE() before including messages.hh
+#endif
 
-#include "util.hh"
-#include "config.hh"
+MESSAGE(Imu, {
+    Vec3<double> pos;
+    Vec3<double> angle;
+})
 
-enum class MessageType: uint16_t {
-    #define MESSAGE(Name, Def) Name,
-    #include "messages.hh"
-};
+MESSAGE(Drive, {
+    Vec2<double> speed;
+    double w;
+})
 
-#define MESSAGE(Name, Def) struct Name ## Parameters Def;
-#include "messages.hh"
-
-void InitSerial();
-void ProcessSerial();
-
-bool PostMessage(MessageType type, const void *args);
+#undef MESSAGE

@@ -32,3 +32,6 @@
 #define PIN_DC2_PWM 28
 #define PIN_DC3_DIR 25
 #define PIN_DC3_PWM 29
+
+// XBee communication
+#define XBEE_OBJECT Serial

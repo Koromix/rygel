@@ -15,160 +15,183 @@
 #include "config.hh"
 #include "drive.hh"
 #include "serial.hh"
+#include <CRC32.h>
+
+struct PacketHeader {
+    uint32_t crc32;
+    uint16_t type; // MessageType
+    uint16_t payload;
+};
+STATIC_ASSERT(sizeof(PacketHeader) == 8);
+
+static const size_t PacketSizes[] = {
+    #define MESSAGE(Name, Def) sizeof(Name ## Parameters),
+    #include "messages.hh"
+};
+
+static bool recv_started = false;
+alignas(uint64_t) static uint8_t recv_buf[4096];
+static size_t recv_buf_len = 0;
+
+static uint8_t send_buf[4096];
+static size_t send_buf_write = 0;
+static size_t send_buf_send = 0;
 
 void InitSerial()
 {
     Serial.begin(9600);
+    XBEE_OBJECT.begin(9600);
 }
 
-static bool ParseLong(const char *str, long min, long max, long *out_value)
+static bool ExecuteCommand(MessageType type, const void *data)
 {
-    long value = 0;
+    switch (type) {
+        case MessageType::Drive: {
+            const DriveParameters &args = *(const DriveParameters *)data;
+            SetDriveSpeed(args.speed.x, args.speed.y, args.w);
+            return true;
+        } break;
 
-    bool neg = (str[0] == '-');
-    str += neg;
-
-    for (int pos = 0; str[pos]; pos++) {
-        unsigned int digit = (unsigned int)(str[pos] - '0');
-        if (digit > 9) {
-            Serial.println("Malformed integer");
+        default: {
+            Serial.println("Unexpected packet");
             return false;
+        } break;
+    }
+}
+
+static void ReceivePacket()
+{
+    while (XBEE_OBJECT.available()) {
+        int c = XBEE_OBJECT.read();
+
+        if (!recv_started) {
+            recv_started = (c == 0xA);
+            recv_buf_len = 0;
+        } else if (c != 0xA) {
+            if (recv_buf_len >= sizeof(recv_buf)) {
+                recv_started = false;
+                continue;
+            }
+
+            recv_buf[recv_buf_len++] = c;
+        } else {
+            recv_started = false;
+
+            size_t len = 0;
+            for (size_t i = 0; i < recv_buf_len; i++, len++) {
+                if (recv_buf[i] == 0xD) {
+                    if (i >= recv_buf_len - 1)
+                        goto malformed;
+
+                    recv_buf[i] = recv_buf[i + 1] ^ 0x8;
+                    i++;
+                }
+            }
+
+            PacketHeader hdr;
+            if (len < sizeof(hdr))
+                goto malformed;
+            memcpy(&hdr, recv_buf, sizeof(hdr));
+
+            if (hdr.payload != len - sizeof(hdr))
+                goto malformed;
+            if (hdr.type < 0 || hdr.type > LEN(PacketSizes))
+                goto malformed;
+            if (hdr.payload != PacketSizes[hdr.type])
+                goto malformed;
+            if (hdr.crc32 != CRC32::calculate(recv_buf + 4, len - 4))
+                goto malformed;
+
+            ExecuteCommand((MessageType)hdr.type, recv_buf + sizeof(hdr));
         }
 
-        value = (value * 10) - digit;
+        continue;
     }
-    value = neg ? value : -value;
 
-    if (value < min || value > max) {
-        Serial.println("Too small or too big");
+    return;
+
+malformed:
+    Serial.println("Malformed packet");
+}
+
+static inline bool WriteByte(uint8_t c)
+{
+    if (c == 0xA || c == 0xD) {
+        size_t next = (send_buf_write + 1) % sizeof(send_buf);
+
+        if (next == send_buf_send)
+            return false;
+
+        send_buf[send_buf_write] = 0xD;
+        send_buf_write = (send_buf_write + 1) % sizeof(send_buf);
+        c ^= (uint8_t)0x8;
+    }
+
+    size_t next = (send_buf_write + 1) % sizeof(send_buf);
+
+    if (next == send_buf_send)
         return false;
-    }
 
-    *out_value = value;
+    send_buf[send_buf_write] = c;
+    send_buf_write = (send_buf_write + 1) % sizeof(send_buf);
+
     return true;
 }
 
-static bool ExecuteCommand(char *cmd, char *arg0, char *arg1, char *arg2, char *arg3)
+bool PostMessage(MessageType type, const void *args)
 {
-    if (!strcmp(cmd, "drive") && arg0 && arg1 && arg2) {
-        long x;
-        long y;
-        long w;
-        if (!ParseLong(arg0, 0, 1000, &x))
-            return false;
-        if (!ParseLong(arg1, 0, 1000, &y))
-            return false;
-        if (!ParseLong(arg2, 0, 1000, &w))
-            return false;
+    assert((size_t)type >= 0 && (size_t)type < LEN(PacketSizes));
 
-        SetDriveSpeed((double)x, (double)y, (double)w);
-        return true;
-    } else {
-        Serial.println("Invalid command or arguments");
-        return false;
+    PacketHeader hdr = {};
+    size_t prev_write = send_buf_write;
+
+    // Fill basic header information
+    hdr.type = (uint16_t)type;
+    hdr.payload = PacketSizes[hdr.type];
+
+    // Compute checksum
+    {
+        CRC32 crc32;
+
+        crc32.update((const uint8_t *)&hdr + 4, sizeof(hdr) - 4);
+        crc32.update((const uint8_t *)args, PacketSizes[hdr.type]);
+
+        hdr.crc32 = crc32.finalize();
     }
+
+    // Write packet to send buffer
+    if (!WriteByte(0xA))
+        goto overflow;
+    for (size_t i = 0; i < sizeof(hdr); i++) {
+        uint8_t c = ((const uint8_t *)&hdr)[i];
+        if (!WriteByte(c))
+            goto overflow;
+    }
+    for (size_t i = 0; i < PacketSizes[hdr.type]; i++) {
+        const uint8_t *bytes = (const uint8_t *)args;
+        if (!WriteByte(bytes[i]))
+            goto overflow;
+    }
+    if (!WriteByte(0xA))
+        goto overflow;
+
+    return true;
+
+overflow:
+    send_buf_write = prev_write;
+
+    Serial.println("Send overflow, dropping packet");
+    return false;
 }
 
 void ProcessSerial()
 {
-    enum class ParseMode {
-        Start,
-        Command,
-        Arguments,
-        Skip
-    };
+    // Process incoming packets
+    ReceivePacket();
 
-    static ParseMode mode = ParseMode::Start;
-    static char cmd_buf[16];
-    static uint8_t cmd_buf_len;
-    static unsigned int arg_count;
-    static char arg_end_char;
-    static char arg_buf[4][32];
-    static uint8_t arg_buf_len;
-
-    while (Serial.available()) {
-        int c = Serial.read();
-
-        switch (mode) {
-            case ParseMode::Start: {
-                cmd_buf_len = 0;
-                arg_count = 0;
-                arg_end_char = ' ';
-                arg_buf_len = 0;
-
-                mode = ParseMode::Command;
-            } // fallthrough
-
-            case ParseMode::Command: {
-                if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
-                    if (cmd_buf_len < sizeof(cmd_buf) - 1) {
-                        cmd_buf[cmd_buf_len++] = c;
-                    } else {
-                        Serial.println("Excessive command name length");
-                        mode = ParseMode::Skip;
-                    }
-                } else if (c == ' ') {
-                    if (cmd_buf_len) {
-                        cmd_buf[cmd_buf_len] = 0;
-                        mode = ParseMode::Arguments;
-                    }
-                } else if (c == '\n' || c == '\r') {
-                    if (cmd_buf_len) {
-                        cmd_buf[cmd_buf_len] = 0;
-                        ExecuteCommand(cmd_buf, nullptr, nullptr, nullptr, nullptr);
-                        mode = ParseMode::Start;
-                    }
-                } else {
-                    Serial.println("Syntax error");
-                    mode = ParseMode::Skip;
-                }
-            } break;
-
-            case ParseMode::Arguments: {
-                if (c == arg_end_char || c == '\n' || c == '\r') {
-                    if (arg_buf_len || arg_end_char != ' ') {
-                        arg_buf[arg_count][arg_buf_len] = 0;
-                        arg_count++;
-
-                        if (arg_end_char != ' ' && c != arg_end_char) {
-                            Serial.println("Missing end quote");
-                            mode = ParseMode::Skip;
-                            break;
-                        }
-                    }
-
-                    if (c == '\n' || c == '\r') {
-                        ExecuteCommand(cmd_buf, arg_count >= 1 ? arg_buf[0] : nullptr,
-                                                arg_count >= 2 ? arg_buf[1] : nullptr,
-                                                arg_count >= 3 ? arg_buf[2] : nullptr,
-                                                arg_count >= 4 ? arg_buf[3] : nullptr);
-                        mode = ParseMode::Start;
-                    }
-
-                    arg_end_char = ' ';
-                    arg_buf_len = 0;
-                } else if (arg_count < 4) {
-                    if (!arg_buf_len && (c == '\'' || c == '"')) {
-                        arg_end_char = c;
-                    } else {
-                        if (arg_buf_len < sizeof(arg_buf) - 1) {
-                            arg_buf[arg_count][arg_buf_len++] = c;
-                        } else {
-                            Serial.println("Excessive argument length");
-                            mode = ParseMode::Skip;
-                        }
-                    }
-                } else {
-                    Serial.println("Too many arguments");
-                    mode = ParseMode::Skip;
-                }
-            } break;
-
-            case ParseMode::Skip: {
-                if (c == '\n' || c == '\r') {
-                    mode = ParseMode::Start;
-                }
-            } break;
-        }
+    // Send pending packets
+    while (XBEE_OBJECT.availableForWrite() && send_buf_send != send_buf_write) {
+        XBEE_OBJECT.write(send_buf[send_buf_send]);
+        send_buf_send = (send_buf_send + 1) % sizeof(send_buf);
     }
 }
