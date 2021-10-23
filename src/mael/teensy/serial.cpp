@@ -17,6 +17,7 @@
 #include "serial.hh"
 #include <CRC32.h>
 
+// Keep in sync with server code
 struct PacketHeader {
     uint32_t crc32;
     uint16_t type; // MessageType
@@ -79,12 +80,13 @@ static void ReceivePacket()
 
             size_t len = 0;
             for (size_t i = 0; i < recv_buf_len; i++, len++) {
+                recv_buf[len] = recv_buf[i];
+
                 if (recv_buf[i] == 0xD) {
                     if (i >= recv_buf_len - 1)
                         goto malformed;
 
-                    recv_buf[i] = recv_buf[i + 1] ^ 0x8;
-                    i++;
+                    recv_buf[len] = recv_buf[++i] ^ 0x8;
                 }
             }
 
@@ -95,7 +97,7 @@ static void ReceivePacket()
 
             if (hdr.payload != len - sizeof(hdr))
                 goto malformed;
-            if (hdr.type < 0 || hdr.type > LEN(PacketSizes))
+            if (hdr.type > LEN(PacketSizes))
                 goto malformed;
             if (hdr.payload != PacketSizes[hdr.type])
                 goto malformed;
@@ -114,9 +116,9 @@ malformed:
     Serial.println("Malformed packet");
 }
 
-static inline bool WriteByte(uint8_t c)
+static inline bool WriteByte(uint8_t c, bool escape)
 {
-    if (c == 0xA || c == 0xD) {
+    if (escape && (c == 0xA || c == 0xD)) {
         size_t next = (send_buf_write + 1) % sizeof(send_buf);
 
         if (next == send_buf_send)
@@ -160,19 +162,19 @@ bool PostMessage(MessageType type, const void *args)
     }
 
     // Write packet to send buffer
-    if (!WriteByte(0xA))
+    if (!WriteByte(0xA, false))
         goto overflow;
     for (size_t i = 0; i < sizeof(hdr); i++) {
         uint8_t c = ((const uint8_t *)&hdr)[i];
-        if (!WriteByte(c))
+        if (!WriteByte(c, true))
             goto overflow;
     }
     for (size_t i = 0; i < PacketSizes[hdr.type]; i++) {
         const uint8_t *bytes = (const uint8_t *)args;
-        if (!WriteByte(bytes[i]))
+        if (!WriteByte(bytes[i], true))
             goto overflow;
     }
-    if (!WriteByte(0xA))
+    if (!WriteByte(0xA, false))
         goto overflow;
 
     return true;

@@ -16,15 +16,5 @@
 #include "util.hh"
 #include "config.hh"
 
-enum class MessageType: uint16_t {
-    #define MESSAGE(Name, Def) Name,
-    #include "messages.hh"
-};
-
-#define MESSAGE(Name, Defn) struct Name ## Parameters Defn;
-#include "messages.hh"
-
-void InitSerial();
-void ProcessSerial();
-
-bool PostMessage(MessageType type, const void *args);
+void InitIMU();
+void ProcessIMU();

@@ -15,6 +15,7 @@
 #include "config.hh"
 #include "../../../core/libnet/libnet.hh"
 #include "../../../../vendor/libhs/libhs.h"
+#include "../../../../vendor/miniz/miniz.h"
 #ifdef _WIN32
     #ifndef NOMINMAX
         #define NOMINMAX
@@ -30,62 +31,245 @@
 
 namespace RG {
 
+enum class MessageType: uint16_t {
+    #define MESSAGE(Name, Def) Name,
+    #include "../../teensy/messages.hh"
+};
+
+// Keep in sync with Teensy code
+struct PacketHeader {
+    uint32_t crc32;
+    uint16_t type; // MessageType
+    uint16_t payload;
+};
+RG_STATIC_ASSERT(RG_SIZE(PacketHeader) == 8);
+
+#define MESSAGE(Name, Defn) struct Name ## Parameters Defn;
+#include "../../teensy/messages.hh"
+
+static const Size PacketSizes[] = {
+    #define MESSAGE(Name, Def) RG_SIZE(Name ## Parameters),
+    #include "../../teensy/messages.hh"
+};
+
 static Config mael_config;
 
 static hs_monitor *monitor = nullptr;
 static std::thread monitor_thread;
-// static hs_device *monitor_dev = nullptr;
 #ifdef _WIN32
 static HANDLE monitor_event;
 #else
 static int monitor_pfd[2] = {-1, -1};
 #endif
 
+static std::mutex comm_mutex;
+static hs_device *comm_dev = nullptr;
+static hs_port *comm_port = nullptr;
+
+bool recv_started = false;
+alignas(uint64_t) static LocalArray<uint8_t, 65536> recv_buf;
+
+static const hs_match_spec DeviceSpecs[] = {
+    HS_MATCH_VID_PID(0x16C0, 0x0483, nullptr)
+};
+
 static int DeviceCallback(hs_device *dev, void *)
 {
-    const char *event = "?";
+    std::lock_guard<std::mutex> lock(comm_mutex);
 
     switch (dev->status) {
-        case HS_DEVICE_STATUS_DISCONNECTED: { event = "Remove"; } break;
-        case HS_DEVICE_STATUS_ONLINE: { event = "Add"; } break;
-    }
+        case HS_DEVICE_STATUS_ONLINE: {
+            if (comm_dev) {
+                LogError("Ignoring supplementary device '%1'", dev->location);
+                return 0;
+            }
 
-    PrintLn("%1 %2@%3 %4:%5 (%6)",
-            event, dev->location, dev->iface_number, FmtHex(dev->vid).Pad0(-4),
-            FmtHex(dev->pid).Pad0(-4), hs_device_type_strings[dev->type]);
-    PrintLn("  - device key:    %1", dev->key);
-    PrintLn("  - device node:   %1", dev->path);
-    if (dev->manufacturer_string) {
-        PrintLn("  - manufacturer:  %1", dev->manufacturer_string);
-    }
-    if (dev->product_string) {
-        PrintLn("  - product:       %1", dev->product_string);
-    }
-    if (dev->serial_number_string) {
-        PrintLn("  - serial number: %1", dev->serial_number_string);
+            LogInfo("Acquired control device '%1'", dev->location);
+            comm_dev = hs_device_ref(dev);
+        } break;
+
+        case HS_DEVICE_STATUS_DISCONNECTED: {
+            if (dev == comm_dev) {
+                LogInfo("Lost control device '%1'", dev->location);
+
+                hs_device_unref(comm_dev);
+                hs_port_close(comm_port);
+                comm_dev = nullptr;
+                comm_port = nullptr;
+            }
+        } break;
     }
 
     return 0;
 }
 
-// XXX: Do something when an error happens and the thread fails
+static hs_device *LockDevice()
+{
+    std::lock_guard<std::mutex> lock(comm_mutex);
+    return comm_dev ? hs_device_ref(comm_dev) : nullptr;
+}
+
+static bool ExecuteCommand(MessageType type, const void *data)
+{
+    switch (type) {
+        case MessageType::Imu: {
+            const ImuParameters &imu = *(const ImuParameters *)data;
+
+            LogDebug("IMU: [P] %1 x %2 x %3 [O] %4 x %5 x %6 [A] %7 x %8 x %9",
+                     FmtDouble(imu.position.x, 2), FmtDouble(imu.position.y, 2), FmtDouble(imu.position.z, 2),
+                     FmtDouble(imu.orientation.x, 2), FmtDouble(imu.orientation.y, 2), FmtDouble(imu.orientation.z, 2),
+                     FmtDouble(imu.acceleration.x, 2), FmtDouble(imu.acceleration.y, 2), FmtDouble(imu.acceleration.z, 2));
+
+            return true;
+        } break;
+
+        default: {
+            LogError("Unexpected packet");
+            return false;
+        } break;
+    }
+}
+
+// Returns true until there is nothing to do
+static bool ReceivePacket()
+{
+    // Find packet start
+    if (!recv_started) {
+        Size i = 0;
+
+        while (i < recv_buf.len) {
+            if (recv_buf[i++] == 0xA) {
+                recv_started = true;
+                break;
+            }
+        }
+
+        recv_buf.len -= i;
+        memmove(recv_buf.data, recv_buf.data + i, recv_buf.len);
+
+        if (!recv_started)
+            return false;
+    }
+
+    // Rewrite packet (escaped bytes)
+    Span<uint8_t> pkt;
+    Size end;
+    {
+        Size i = 0;
+        Size len = 0;
+
+        for (; i < recv_buf.len; i++, len++) {
+            recv_buf[len] = recv_buf[i];
+
+            if (recv_buf[i] == 0xA) {
+                recv_started = false;
+                break;
+            } else if (recv_buf[i] == 0xD) {
+                if (i >= recv_buf.len - 1)
+                    break;
+
+                recv_buf[len] = recv_buf[++i] ^ 0x8;
+            }
+        }
+        if (recv_started)
+            return false;
+
+        pkt = MakeSpan(recv_buf.data, len);
+        end = i + !!len;
+    }
+
+    // Clear first packet after processing
+    RG_DEFER {
+        recv_buf.len -= end;
+        memmove(recv_buf.data, recv_buf.data + end, recv_buf.len);
+    };
+    if (pkt.len < RG_SIZE(PacketHeader)) {
+        LogError("Truncated packet");
+        return true;
+    }
+
+    const PacketHeader &hdr = *(const PacketHeader *)pkt.ptr;
+
+    // Check integrity
+    if (hdr.payload > pkt.len - RG_SIZE(PacketHeader)) {
+        LogError("Invalid payload length");
+        return true;
+    }
+    if (hdr.type >= RG_LEN(PacketSizes)) {
+        LogError("Invalid packet type");
+        return true;
+    }
+    if (hdr.payload != PacketSizes[hdr.type]) {
+        LogError("Mis-sized packet payload");
+        return true;
+    }
+    if (hdr.crc32 != mz_crc32(MZ_CRC32_INIT, pkt.ptr + 4, hdr.payload + 4)) {
+        LogError("Packet failed CRC32 check");
+        return true;
+    }
+
+    const void *args = (const uint8_t *)&hdr + RG_SIZE(hdr);
+    ExecuteCommand((MessageType)hdr.type, args);
+
+    return true;
+}
+
 static void RunMonitorThread()
 {
-    hs_poll_source sources[2] = {
-        {hs_monitor_get_poll_handle(monitor)},
+    LocalArray<hs_poll_source, 3> sources = {
 #ifdef _WIN32
-        {monitor_event}
+        {monitor_event},
 #else
-        {monitor_pfd[0]}
+        {monitor_pfd[0]},
 #endif
+        {hs_monitor_get_poll_handle(monitor)}
     };
 
     do {
-        if (hs_monitor_refresh(monitor, DeviceCallback, nullptr) < 0)
+        // Try to open device
+        if (!comm_port) {
+            hs_device *dev = LockDevice();
+            RG_DEFER { hs_device_unref(dev); };
+
+            if (dev) {
+                hs_port_open(dev, HS_PORT_MODE_RW, &comm_port);
+            }
+        }
+
+        // Poll the controller if it is plugged
+        sources.len = 2;
+        if (comm_port) {
+            hs_handle h = hs_port_get_poll_handle(comm_port);
+            sources.Append({h});
+        }
+
+        // Wait for something to happen
+        if (hs_poll(sources.data, sources.len, -1) < 0) {
+            SignalWaitFor();
             return;
-        if (hs_poll(sources, RG_LEN(sources), -1) < 0)
+        }
+
+        // Refresh known devices
+        if (sources[1].ready && hs_monitor_refresh(monitor, DeviceCallback, nullptr) < 0) {
+            SignalWaitFor();
             return;
-    } while (!sources[1].ready);
+        }
+
+        if (comm_port && sources[2].ready) {
+            Span<uint8_t> buf = recv_buf.TakeAvailable();
+            buf.len = hs_serial_read(comm_port, buf.ptr, buf.len, 0);
+
+            if (buf.len >= 0) {
+                recv_buf.len += buf.len;
+                while (ReceivePacket());
+            } else {
+                recv_buf.Clear();
+
+                hs_port_close(comm_port);
+                comm_port = nullptr;
+            }
+        }
+    } while (!sources[0].ready);
 }
 
 static void StopMonitor();
@@ -104,7 +288,7 @@ static bool InitMonitor()
         return false;
 #endif
 
-    if (hs_monitor_new(nullptr, 0, &monitor) < 0)
+    if (hs_monitor_new(DeviceSpecs, RG_LEN(DeviceSpecs), &monitor) < 0)
         return false;
     if (hs_monitor_start(monitor) < 0)
         return false;
@@ -119,9 +303,6 @@ static bool InitMonitor()
 
 static void StopMonitor()
 {
-    // hs_device_unref(monitor_dev);
-    // monitor_dev = nullptr;
-
     if (monitor) {
 #ifdef _WIN32
         SetEvent(monitor_event);
@@ -152,6 +333,64 @@ static void StopMonitor()
     monitor_pfd[0] = -1;
     monitor_pfd[1] = -1;
 #endif
+
+    hs_port_close(comm_port);
+    hs_device_unref(comm_dev);
+    comm_dev = nullptr;
+    comm_port = nullptr;
+}
+
+struct Client {
+    Client *prev;
+    Client *next;
+
+    StreamReader reader;
+    StreamWriter writer;
+};
+
+static std::mutex clients_mutex;
+static Client clients_root = {&clients_root, &clients_root};
+
+static void HandleWebSocket(const http_RequestInfo &request, http_IO *io)
+{
+    io->RunAsync([=]() {
+        Client client;
+
+        // Upgrade connection
+        if (!io->UpgradeToWS((int)http_WebSocketFlag::Text))
+            return;
+        io->OpenForReadWS(&client.reader);
+        io->OpenForWriteWS(&client.writer);
+
+        // Register client
+        {
+            std::lock_guard<std::mutex> lock(clients_mutex);
+
+            client.prev = clients_root.prev;
+            client.prev->next = &client;
+            clients_root.prev = &client;
+            client.next = &clients_root;
+        }
+        RG_DEFER {
+            std::lock_guard<std::mutex> lock(clients_mutex);
+
+            client.next->prev = client.prev;
+            client.prev->next = client.next;
+        };
+
+        // Read in blocking mode
+        while (!client.reader.IsEOF()) {
+            LocalArray<uint8_t, 1024> buf;
+            buf.len = client.reader.Read(buf.data);
+            if (buf.len < 0)
+                break;
+
+            if (buf.len) {
+                Span<const char> text = MakeSpan((const char *)buf.data, buf.len);
+                LogDebug("Received: '%1'", text);
+            }
+        }
+    });
 }
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
@@ -181,11 +420,20 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     if (TestStr(request.url, "/")) {
         const char *text = Fmt(&io->allocator, "Mael %1", FelixVersion).ptr;
         io->AttachText(200, text);
-
-        return;
+    } else if (TestStr(request.url, "/api/ws")) {
+        HandleWebSocket(request, io);
+    } else {
+        io->AttachError(404);
     }
+}
 
-    io->AttachError(404);
+static void PingClients()
+{
+    std::lock_guard<std::mutex> lock(clients_mutex);
+
+    for (Client *client = clients_root.next; client != &clients_root; client = client->next) {
+        client->writer.Write("Ping");
+    }
 }
 
 int Main(int argc, char **argv)
@@ -278,10 +526,30 @@ Options:
         return 1;
 #endif
 
-    // Run until exit
-    WaitForInterrupt();
+    // Run periodic tasks until exit
+    {
+        bool run = true;
+        int timeout = 30 * 1000;
 
-    LogInfo("Exit requested");
+        while (run) {
+            WaitForResult ret = WaitForInterrupt(timeout);
+
+            if (ret == WaitForResult::Interrupt || ret == WaitForResult::Message) {
+                if (ret == WaitForResult::Interrupt) {
+                    LogInfo("Exit requested");
+                }
+
+                LogDebug("Stop HTTP server");
+                daemon.Stop();
+
+                run = false;
+            }
+
+            LogDebug("Ping clients");
+            PingClients();
+        }
+    }
+
     return 0;
 }
 

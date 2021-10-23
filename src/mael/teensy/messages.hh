@@ -16,8 +16,9 @@
 #endif
 
 MESSAGE(Imu, {
-    Vec3<double> pos;
-    Vec3<double> angle;
+    Vec3<double> position;
+    Vec3<double> orientation;
+    Vec3<double> acceleration;
 })
 
 MESSAGE(Drive, {

@@ -14,16 +14,19 @@
 #include "util.hh"
 #include "config.hh"
 #include "drive.hh"
+#include "imu.hh"
 #include "serial.hh"
 
 void setup()
 {
     InitSerial();
+    InitIMU();
     InitDrive();
 }
 
 void loop()
 {
     ProcessSerial();
+    ProcessIMU();
     ProcessDrive();
 }

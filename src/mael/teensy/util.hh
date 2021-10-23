@@ -16,6 +16,8 @@
 #include <Arduino.h>
 #include <assert.h>
 
+#define DEG2RAD 0.01745329251
+
 #define STRINGIFY_(A) #A
 #define STRINGIFY(A) STRINGIFY_(A)
 #define CONCAT_(A, B) A ## B
