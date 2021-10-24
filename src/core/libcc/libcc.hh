@@ -1024,8 +1024,8 @@ public:
     LocalArray(std::initializer_list<T> l)
     {
         RG_ASSERT(l.size() <= N);
-        for (Size i = 0; i < (Size)l.size(); i++) {
-            data[i] = l[i];
+        for (const T &it: l) {
+            data[len++] = it;
         }
         len = (Size)l.size();
     }
@@ -1147,10 +1147,9 @@ public:
     HeapArray(std::initializer_list<T> l)
     {
         Reserve(l.size());
-        for (Size i = 0; i < (Size)l.size(); i++) {
-            ptr[i] = l[i];
+        for (const T &it: l) {
+            ptr[len++] = it;
         }
-        len = (Size)l.size();
     }
     ~HeapArray() { Clear(); }
 
