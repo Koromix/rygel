@@ -15,7 +15,7 @@
 #include "config.hh"
 #include "drive.hh"
 #include "serial.hh"
-#include <CRC32.h>
+#include <FastCRC.h>
 
 static bool recv_started = false;
 alignas(uint64_t) static uint8_t recv_buf[4096];
@@ -88,7 +88,7 @@ static void ReceivePacket()
                 goto malformed;
             if (hdr.payload != PacketSizes[hdr.type])
                 goto malformed;
-            if (hdr.crc32 != CRC32::calculate(recv_buf + 4, len - 4))
+            if (hdr.crc32 != FastCRC32().crc32(recv_buf + 4, len - 4))
                 goto malformed;
 
             ExecuteCommand((MessageType)hdr.type, recv_buf + sizeof(hdr));
@@ -140,12 +140,10 @@ bool PostMessage(MessageType type, const void *args)
 
     // Compute checksum
     {
-        CRC32 crc32;
+        FastCRC32 crc32;
 
-        crc32.update((const uint8_t *)&hdr + 4, sizeof(hdr) - 4);
-        crc32.update((const uint8_t *)args, PacketSizes[hdr.type]);
-
-        hdr.crc32 = crc32.finalize();
+        crc32.crc32((const uint8_t *)&hdr + 4, sizeof(hdr) - 4);
+        hdr.crc32 = crc32.crc32_upd((const uint8_t *)args, PacketSizes[hdr.type]);
     }
 
     // Write packet to send buffer
