@@ -34,7 +34,7 @@ async function init() {
 }
 
 function update() {
-    if (connected && performance.now() - recv_time > 5000) {
+    if (connected && performance.now() - recv_time > 10000) {
         let err = new Error('WebSocket connection timed out');
         console.log(err);
 
@@ -48,7 +48,8 @@ function update() {
         ws = new WebSocket(`ws://${url.host}/api/ws`);
 
         ws.onopen = () => {
-            connected = true;
+            // Don't set connected, the first message will do it to make sure a
+            // device is really connected to the server.
             recv_time = performance.now();
         };
         ws.onerror = e => {
@@ -70,7 +71,9 @@ function update() {
 }
 
 function receiveMessage(msg) {
+    connected = true;
     recv_time = performance.now();
+
     console.log(msg);
 }
 
@@ -100,15 +103,25 @@ function draw() {
 
     // Status
     {
+        ctx.save();
+
         let text = connected ? 'Status: Online' : 'Status: Offline';
         ctx.textAlign = 'left';
+        ctx.fillStyle = connected ? 'white' : '#f11313';
         ctx.fillText(text, 8, 24);
+
+        ctx.restore();
     }
 
     // FPS
     {
+        ctx.save();
+
         let text = `FPS : ${(1000 / frame_time).toFixed(0)} (${frame_time.toFixed(1)} ms)`;
         ctx.textAlign = 'right';
+        ctx.fillStyle
         ctx.fillText(text, canvas.width - 8, 24);
+
+        ctx.restore();
     }
 }
