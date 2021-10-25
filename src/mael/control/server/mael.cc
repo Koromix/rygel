@@ -126,6 +126,34 @@ static int DeviceCallback(hs_device *dev, void *)
     return 0;
 }
 
+static bool CheckIntegrity(Span<const uint8_t> pkt)
+{
+    const PacketHeader &hdr = *(const PacketHeader *)pkt.ptr;
+
+    if (pkt.len < RG_SIZE(hdr)) {
+        LogError("Truncated packet header");
+        return false;
+    }
+    if (hdr.payload > pkt.len - RG_SIZE(PacketHeader)) {
+        LogError("Invalid payload length");
+        return false;
+    }
+    if (hdr.type >= RG_LEN(PacketSizes)) {
+        LogError("Invalid packet type");
+        return false;
+    }
+    if (hdr.payload != PacketSizes[hdr.type]) {
+        LogError("Mis-sized packet payload");
+        return false;
+    }
+    if (hdr.crc32 != mz_crc32(MZ_CRC32_INIT, pkt.ptr + 4, hdr.payload + 4)) {
+        LogError("Packet failed CRC32 check");
+        return false;
+    }
+
+    return true;
+}
+
 // Returns true until there is nothing to do
 static bool ReceivePacket()
 {
@@ -179,30 +207,8 @@ static bool ReceivePacket()
         recv_buf.len -= end;
         memmove(recv_buf.data, recv_buf.data + end, recv_buf.len);
     };
-    if (pkt.len < RG_SIZE(PacketHeader)) {
-        LogError("Truncated packet");
+    if (!CheckIntegrity(pkt))
         return true;
-    }
-
-    const PacketHeader &hdr = *(const PacketHeader *)pkt.ptr;
-
-    // Check integrity
-    if (hdr.payload > pkt.len - RG_SIZE(PacketHeader)) {
-        LogError("Invalid payload length");
-        return true;
-    }
-    if (hdr.type >= RG_LEN(PacketSizes)) {
-        LogError("Invalid packet type");
-        return true;
-    }
-    if (hdr.payload != PacketSizes[hdr.type]) {
-        LogError("Mis-sized packet payload");
-        return true;
-    }
-    if (hdr.crc32 != mz_crc32(MZ_CRC32_INIT, pkt.ptr + 4, hdr.payload + 4)) {
-        LogError("Packet failed CRC32 check");
-        return true;
-    }
 
     // Dispatch to all clients
     {
@@ -260,6 +266,8 @@ static void RunMonitorThread()
         }
 
         if (comm_port && sources[2].ready) {
+            std::lock_guard<std::mutex> lock(comm_mutex);
+
             Span<uint8_t> buf = recv_buf.TakeAvailable();
             buf.len = hs_serial_read(comm_port, buf.ptr, buf.len, 0);
 
@@ -344,6 +352,32 @@ static void StopMonitor()
     comm_port = nullptr;
 }
 
+static void RelayPacketToDevice(Span<const uint8_t> pkt)
+{
+    RG_ASSERT(pkt.len <= 1024);
+
+    std::lock_guard<std::mutex> lock(comm_mutex);
+
+    if (!comm_port) {
+        LogError("Dropping packet (device not open)");
+        return;
+    }
+
+    LocalArray<uint8_t, 4096> buf;
+    buf.Append(0xA);
+    for (uint8_t c: pkt) {
+        if (c == 0xA || c == 0xD) {
+            buf.Append(0xD);
+            c ^= 0x8;
+        }
+        buf.Append(c);
+    }
+    buf.Append(0xA);
+
+    // Do something if it fails?
+    hs_serial_write(comm_port, buf.data, (size_t)buf.len, -1);
+}
+
 static void HandleWebSocket(const http_RequestInfo &request, http_IO *io)
 {
     io->RunAsync([=]() {
@@ -371,16 +405,15 @@ static void HandleWebSocket(const http_RequestInfo &request, http_IO *io)
             client.prev->next = client.next;
         };
 
-        // Read in blocking mode
+        // Transmit commands to control device
         while (!client.reader.IsEOF()) {
-            LocalArray<uint8_t, 1024> buf;
+            alignas(uint64_t) LocalArray<uint8_t, 1024> buf;
             buf.len = client.reader.Read(buf.data);
-            if (buf.len < 0)
+            if (buf.len <= 0)
                 break;
 
-            if (buf.len) {
-                Span<const char> text = MakeSpan((const char *)buf.data, buf.len);
-                LogDebug("Received: '%1'", text);
+            if (CheckIntegrity(buf)) {
+                RelayPacketToDevice(buf);
             }
         }
     });
