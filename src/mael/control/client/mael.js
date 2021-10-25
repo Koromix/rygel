@@ -98,10 +98,16 @@ function draw() {
         ctx.restore();
     }
 
-    // Debug / FPS
+    // Status
     {
-        let text = `FPS : ${(1000 / frame_time).toFixed(0)} (${frame_time.toFixed(1)} ms)` +
-                   ` | Status : ${connected ? 'Online' : 'Offline'}`;
+        let text = connected ? 'Status: Online' : 'Status: Offline';
+        ctx.textAlign = 'left';
+        ctx.fillText(text, 8, 24);
+    }
+
+    // FPS
+    {
+        let text = `FPS : ${(1000 / frame_time).toFixed(0)} (${frame_time.toFixed(1)} ms)`;
         ctx.textAlign = 'right';
         ctx.fillText(text, canvas.width - 8, 24);
     }
