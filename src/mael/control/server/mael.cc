@@ -50,6 +50,17 @@ static hs_port *comm_port = nullptr;
 bool recv_started = false;
 alignas(uint64_t) static LocalArray<uint8_t, 65536> recv_buf;
 
+struct Client {
+    Client *prev;
+    Client *next;
+
+    StreamReader reader;
+    StreamWriter writer;
+};
+
+static std::mutex clients_mutex;
+static Client clients_root = {&clients_root, &clients_root};
+
 static const hs_match_spec DeviceSpecs[] = {
     HS_MATCH_VID_PID(0x16C0, 0x0483, nullptr)
 };
@@ -82,33 +93,6 @@ static int DeviceCallback(hs_device *dev, void *)
     }
 
     return 0;
-}
-
-static hs_device *LockDevice()
-{
-    std::lock_guard<std::mutex> lock(comm_mutex);
-    return comm_dev ? hs_device_ref(comm_dev) : nullptr;
-}
-
-static bool ExecuteCommand(MessageType type, const void *data)
-{
-    switch (type) {
-        case MessageType::Imu: {
-            const ImuParameters &imu = *(const ImuParameters *)data;
-
-            LogDebug("IMU: [P] %1 x %2 x %3 [O] %4 x %5 x %6 [A] %7 x %8 x %9",
-                     FmtDouble(imu.position.x, 2), FmtDouble(imu.position.y, 2), FmtDouble(imu.position.z, 2),
-                     FmtDouble(imu.orientation.x, 2), FmtDouble(imu.orientation.y, 2), FmtDouble(imu.orientation.z, 2),
-                     FmtDouble(imu.acceleration.x, 2), FmtDouble(imu.acceleration.y, 2), FmtDouble(imu.acceleration.z, 2));
-
-            return true;
-        } break;
-
-        default: {
-            LogError("Unexpected packet");
-            return false;
-        } break;
-    }
 }
 
 // Returns true until there is nothing to do
@@ -189,8 +173,14 @@ static bool ReceivePacket()
         return true;
     }
 
-    const void *args = (const uint8_t *)&hdr + RG_SIZE(hdr);
-    ExecuteCommand((MessageType)hdr.type, args);
+    // Dispatch to all clients
+    {
+        std::lock_guard<std::mutex> lock(clients_mutex);
+
+        for (Client *client = clients_root.next; client != &clients_root; client = client->next) {
+            client->writer.Write(pkt);
+        }
+    }
 
     return true;
 }
@@ -209,7 +199,9 @@ static void RunMonitorThread()
     do {
         // Try to open device
         if (!comm_port) {
-            hs_device *dev = LockDevice();
+            std::lock_guard<std::mutex> lock(comm_mutex);
+
+            hs_device *dev = comm_dev ? hs_device_ref(comm_dev) : nullptr;
             RG_DEFER { hs_device_unref(dev); };
 
             if (dev) {
@@ -321,24 +313,13 @@ static void StopMonitor()
     comm_port = nullptr;
 }
 
-struct Client {
-    Client *prev;
-    Client *next;
-
-    StreamReader reader;
-    StreamWriter writer;
-};
-
-static std::mutex clients_mutex;
-static Client clients_root = {&clients_root, &clients_root};
-
 static void HandleWebSocket(const http_RequestInfo &request, http_IO *io)
 {
     io->RunAsync([=]() {
         Client client;
 
         // Upgrade connection
-        if (!io->UpgradeToWS((int)http_WebSocketFlag::Text))
+        if (!io->UpgradeToWS(0))
             return;
         io->OpenForReadWS(&client.reader);
         io->OpenForWriteWS(&client.writer);
@@ -405,15 +386,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         HandleWebSocket(request, io);
     } else {
         io->AttachError(404);
-    }
-}
-
-static void PingClients()
-{
-    std::lock_guard<std::mutex> lock(clients_mutex);
-
-    for (Client *client = clients_root.next; client != &clients_root; client = client->next) {
-        client->writer.Write("Ping");
     }
 }
 
@@ -507,29 +479,12 @@ Options:
         return 1;
 #endif
 
-    // Run periodic tasks until exit
-    {
-        bool run = true;
-        int timeout = 30 * 1000;
-
-        while (run) {
-            WaitForResult ret = WaitForInterrupt(timeout);
-
-            if (ret == WaitForResult::Interrupt || ret == WaitForResult::Message) {
-                if (ret == WaitForResult::Interrupt) {
-                    LogInfo("Exit requested");
-                }
-
-                LogDebug("Stop HTTP server");
-                daemon.Stop();
-
-                run = false;
-            }
-
-            LogDebug("Ping clients");
-            PingClients();
-        }
+    // Run until exit
+    if (WaitForInterrupt() == WaitForResult::Interrupt) {
+        LogInfo("Exit requested");
     }
+    LogDebug("Stop HTTP server");
+    daemon.Stop();
 
     return 0;
 }
