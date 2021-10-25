@@ -18,6 +18,9 @@ let connected = false;
 let recv_time;
 
 async function init() {
+    if (navigator.serviceWorker)
+        navigator.serviceWorker.register('sw.pk.js');
+
     let filenames = {
         table: 'table.webp'
     };

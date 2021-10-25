@@ -44,6 +44,7 @@ struct Client {
 static Config mael_config;
 
 static HashMap<const char *, const AssetInfo *> assets_map;
+static HeapArray<const char *> assets_for_cache;
 static LinkedAllocator assets_alloc;
 static char shared_etag[17];
 
@@ -72,6 +73,7 @@ static const hs_match_spec DeviceSpecs[] = {
 static void InitAssets()
 {
     assets_map.Clear();
+    assets_for_cache.Clear();
     assets_alloc.ReleaseAll();
 
     // Update ETag
@@ -84,14 +86,22 @@ static void InitAssets()
     for (const AssetInfo &asset: GetPackedAssets()) {
         if (TestStr(asset.name, "src/mael/control/client/index.html")) {
             assets_map.Set("/", &asset);
+            assets_for_cache.Append("/");
         } else if (TestStr(asset.name, "src/mael/control/client/favicon.png")) {
             assets_map.Set("/favicon.png", &asset);
+            assets_for_cache.Append("/favicon.png");
+        } else if (TestStr(asset.name, "src/mael/control/client/manifest.json")) {
+            assets_map.Set("/manifest.json", &asset);
+            assets_for_cache.Append("/manifest.json");
+        } else if (TestStr(asset.name, "src/mael/control/client/sw.pk.js")) {
+            assets_map.Set("/sw.pk.js", &asset);
         } else if (StartsWith(asset.name, "src/mael/control/client/") ||
                    StartsWith(asset.name, "vendor/")) {
             const char *name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
             const char *url = Fmt(&assets_alloc, "/static/%1", name).ptr;
 
             assets_map.Set(url, &asset);
+            assets_for_cache.Append(url);
         }
     }
 }
@@ -439,6 +449,24 @@ static void AttachStatic(const AssetInfo &asset, int max_age, const char *etag,
     }
 }
 
+static void HandleAppStatic(const http_RequestInfo &, http_IO *io)
+{
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.StartObject();
+    json.Key("buster"); json.String(shared_etag);
+    json.Key("assets"); json.StartArray();
+    for (const char *url: assets_for_cache) {
+        json.String(url);
+    }
+    json.EndArray();
+    json.EndObject();
+
+    json.Finish();
+}
+
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
 #ifndef NDEBUG
@@ -488,7 +516,9 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     }
 
     // Try API endpoints
-    if (TestStr(request.url, "/api/ws")) {
+    if (TestStr(request.url, "/api/static")) {
+        HandleAppStatic(request, io);
+    } else if (TestStr(request.url, "/api/ws")) {
         HandleWebSocket(request, io);
     } else {
         io->AttachError(404);
