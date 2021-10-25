@@ -11,19 +11,36 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef MESSAGE
-    #error Please define MESSAGE() before including messages.hh
-#endif
+#pragma once
 
-MESSAGE(Imu, {
-    Vec3<double> position;
-    Vec3<double> orientation;
-    Vec3<double> acceleration;
-})
+template <typename T>
+struct Vec2 {
+    T x;
+    T y;
+};
+template <typename T>
+struct Vec3 {
+    T x;
+    T y;
+    T z;
+};
 
-MESSAGE(Drive, {
-    Vec2<double> speed;
-    double w;
-})
+struct PacketHeader {
+    uint32_t crc32;
+    uint16_t type; // MessageType
+    uint16_t payload;
+};
+static_assert(sizeof(PacketHeader) == 8, "sizeof(PacketHeader) == 8");
 
-#undef MESSAGE
+#define MESSAGE(Name, Defn) struct Name ## Parameters Defn;
+#include "protocol_inc.hh"
+
+static const size_t PacketSizes[] = {
+    #define MESSAGE(Name, Def) sizeof(Name ## Parameters),
+    #include "protocol_inc.hh"
+};
+
+enum class MessageType: uint16_t {
+    #define MESSAGE(Name, Def) Name,
+    #include "protocol_inc.hh"
+};

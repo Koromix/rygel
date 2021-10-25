@@ -13,13 +13,7 @@
 
 #include "libcc.hh"
 #if !defined(LIBCC_NO_MINIZ) && __has_include("../../../vendor/miniz/miniz.h")
-    #define MINIZ_NO_STDIO
-    #define MINIZ_NO_TIME
-    #define MINIZ_NO_ARCHIVE_APIS
-    #define MINIZ_NO_ARCHIVE_WRITING_APIS
-    #define MINIZ_NO_ZLIB_APIS
     #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
-    #define MINIZ_NO_MALLOC
     #include "../../../vendor/miniz/miniz.h"
 #endif
 #if !defined(LIBCC_NO_BROTLI) && __has_include("../../../vendor/brotli/c/include/brotli/decode.h")

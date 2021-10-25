@@ -14,7 +14,9 @@
 #include "../../../core/libcc/libcc.hh"
 #include "config.hh"
 #include "../../../core/libnet/libnet.hh"
+#include "../../teensy/protocol.hh"
 #include "../../../../vendor/libhs/libhs.h"
+#define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
 #include "../../../../vendor/miniz/miniz.h"
 #ifdef _WIN32
     #ifndef NOMINMAX
@@ -30,27 +32,6 @@
 #include <thread>
 
 namespace RG {
-
-enum class MessageType: uint16_t {
-    #define MESSAGE(Name, Def) Name,
-    #include "../../teensy/messages.hh"
-};
-
-// Keep in sync with Teensy code
-struct PacketHeader {
-    uint32_t crc32;
-    uint16_t type; // MessageType
-    uint16_t payload;
-};
-RG_STATIC_ASSERT(RG_SIZE(PacketHeader) == 8);
-
-#define MESSAGE(Name, Defn) struct Name ## Parameters Defn;
-#include "../../teensy/messages.hh"
-
-static const Size PacketSizes[] = {
-    #define MESSAGE(Name, Def) RG_SIZE(Name ## Parameters),
-    #include "../../teensy/messages.hh"
-};
 
 static Config mael_config;
 

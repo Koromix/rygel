@@ -16,6 +16,7 @@
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 #include "../../../vendor/mbedtls/include/mbedtls/sha1.h"
 #include "../../../vendor/qrcodegen/qrcodegen.hpp"
+#define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
 #include "../../../vendor/miniz/miniz.h"
 
 namespace RG {

@@ -9,15 +9,21 @@
 // GNU Affero General Public License for more details.
 //
 // You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see https://www.gnu.org/licenses/.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#pragma once
+#ifndef MESSAGE
+    #error Please define MESSAGE() before including protocol_inc.hh
+#endif
 
-#include "util.hh"
-#include "config.hh"
-#include "protocol.hh"
+MESSAGE(Imu, {
+    Vec3<double> position;
+    Vec3<double> orientation;
+    Vec3<double> acceleration;
+})
 
-void InitSerial();
-void ProcessSerial();
+MESSAGE(Drive, {
+    Vec2<double> speed;
+    double w;
+})
 
-bool PostMessage(MessageType type, const void *args);
+#undef MESSAGE

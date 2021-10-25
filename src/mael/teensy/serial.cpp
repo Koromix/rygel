@@ -17,19 +17,6 @@
 #include "serial.hh"
 #include <CRC32.h>
 
-// Keep in sync with server code
-struct PacketHeader {
-    uint32_t crc32;
-    uint16_t type; // MessageType
-    uint16_t payload;
-};
-STATIC_ASSERT(sizeof(PacketHeader) == 8);
-
-static const size_t PacketSizes[] = {
-    #define MESSAGE(Name, Def) sizeof(Name ## Parameters),
-    #include "messages.hh"
-};
-
 static bool recv_started = false;
 alignas(uint64_t) static uint8_t recv_buf[4096];
 static size_t recv_buf_len = 0;

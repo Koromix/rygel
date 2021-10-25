@@ -21,6 +21,7 @@
 #include "../../core/libpasswd/libpasswd.hh"
 #include "../../core/libwrap/json.hh"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
+#define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
 #include "../../../vendor/miniz/miniz.h"
 
 #include <time.h>

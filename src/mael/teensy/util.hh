@@ -31,18 +31,6 @@ template <typename T, unsigned N>
 char (&ComputeArraySize(T const (&)[N]))[N];
 #define LEN(Array) sizeof(ComputeArraySize(Array))
 
-template <typename T>
-struct Vec2 {
-    T x;
-    T y;
-};
-template <typename T>
-struct Vec3 {
-    T x;
-    T y;
-    T z;
-};
-
 class WaitFor {
     unsigned long delay;
     unsigned long last_execution;
