@@ -13,6 +13,10 @@
 
 let assets = {};
 
+let ws;
+let connected = false;
+let recv_time;
+
 async function init() {
     let filenames = {
         table: 'table.png'
@@ -30,7 +34,44 @@ async function init() {
 }
 
 function update() {
-    // Nothing to do yet
+    if (connected && performance.now() - recv_time > 5000) {
+        let err = new Error('WebSocket connection timed out');
+        console.log(err);
+
+        connected = false;
+        ws.close();
+        ws = null;
+    }
+
+    if (!connected && !ws) {
+        let url = new URL(window.location.href);
+        ws = new WebSocket(`ws://${url.host}/api/ws`);
+
+        ws.onopen = () => {
+            connected = true;
+            recv_time = performance.now();
+        };
+        ws.onerror = e => {
+            if (connected) {
+                let err = new Error('Lost connection to WebSocket API');
+                console.log(err);
+            } else {
+                let err = new Error('Failed to connect to WebSocket API');
+                console.log(err);
+            }
+
+            connected = false;
+            ws.close();
+            ws = null;
+        };
+
+        ws.onmessage = e => receiveMessage(e.data);
+    }
+}
+
+function receiveMessage(msg) {
+    recv_time = performance.now();
+    console.log(msg);
 }
 
 function draw() {
@@ -39,25 +80,29 @@ function draw() {
     ctx.font = '18px Open Sans';
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-    // ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     // Paint stable background
     {
-        let img = assets.table;
+        ctx.save();
 
+        if (!connected)
+            ctx.filter = 'grayscale(100%)';
+
+        let img = assets.table;
         let cx = canvas.width / 2;
         let cy = canvas.height / 2;
         let factor = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.9;
 
         ctx.drawImage(img, cx - img.width * factor / 2, cy - img.height * factor / 2,
                            img.width * factor, img.height * factor);
+
+        ctx.restore();
     }
 
     // Debug / FPS
     {
         let text = `FPS : ${(1000 / frame_time).toFixed(0)} (${frame_time.toFixed(1)} ms)` +
-                   ` | Update : ${update_time.toFixed(1)} ms | Draw : ${draw_time.toFixed(1)} ms`;
+                   ` | Status : ${connected ? 'Online' : 'Offline'}`;
         ctx.textAlign = 'right';
-        ctx.fillText(text, canvas.width - 8, canvas.height - 8);
+        ctx.fillText(text, canvas.width - 8, 24);
     }
 }
