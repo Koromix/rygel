@@ -19,7 +19,7 @@ let recv_time;
 
 async function init() {
     let filenames = {
-        table: 'table.png'
+        table: 'table.webp'
     };
 
     let images = await Promise.all(Object.keys(filenames).map(key => {
