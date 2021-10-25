@@ -33,7 +33,19 @@
 
 namespace RG {
 
+struct Client {
+    Client *prev;
+    Client *next;
+
+    StreamReader reader;
+    StreamWriter writer;
+};
+
 static Config mael_config;
+
+static HashMap<const char *, const AssetInfo *> assets_map;
+static LinkedAllocator assets_alloc;
+static char shared_etag[17];
 
 static hs_monitor *monitor = nullptr;
 static std::thread monitor_thread;
@@ -50,20 +62,39 @@ static hs_port *comm_port = nullptr;
 bool recv_started = false;
 alignas(uint64_t) static LocalArray<uint8_t, 65536> recv_buf;
 
-struct Client {
-    Client *prev;
-    Client *next;
-
-    StreamReader reader;
-    StreamWriter writer;
-};
-
 static std::mutex clients_mutex;
 static Client clients_root = {&clients_root, &clients_root};
 
 static const hs_match_spec DeviceSpecs[] = {
     HS_MATCH_VID_PID(0x16C0, 0x0483, nullptr)
 };
+
+static void InitAssets()
+{
+    assets_map.Clear();
+    assets_alloc.ReleaseAll();
+
+    // Update ETag
+    {
+        uint64_t buf;
+        randombytes_buf(&buf, RG_SIZE(buf));
+        Fmt(shared_etag, "%1", FmtHex(buf).Pad0(-16));
+    }
+
+    for (const AssetInfo &asset: GetPackedAssets()) {
+        if (TestStr(asset.name, "src/mael/control/client/index.html")) {
+            assets_map.Set("/", &asset);
+        } else if (TestStr(asset.name, "src/mael/control/client/favicon.png")) {
+            assets_map.Set("/favicon.png", &asset);
+        } else if (StartsWith(asset.name, "src/mael/control/client/") ||
+                   StartsWith(asset.name, "vendor/")) {
+            const char *name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
+            const char *url = Fmt(&assets_alloc, "/static/%1", name).ptr;
+
+            assets_map.Set(url, &asset);
+        }
+    }
+}
 
 static int DeviceCallback(hs_device *dev, void *)
 {
@@ -355,8 +386,43 @@ static void HandleWebSocket(const http_RequestInfo &request, http_IO *io)
     });
 }
 
+static void AttachStatic(const AssetInfo &asset, int max_age, const char *etag,
+                         const http_RequestInfo &request, http_IO *io)
+{
+    const char *client_etag = request.GetHeaderValue("If-None-Match");
+
+    if (client_etag && TestStr(client_etag, etag)) {
+        MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+        io->AttachResponse(304, response);
+    } else {
+        const char *mimetype = http_GetMimeType(GetPathExtension(asset.name));
+
+        io->AttachBinary(200, asset.data, mimetype, asset.compression_type);
+        io->AddCachingHeaders(max_age, etag);
+
+        if (asset.source_map) {
+            io->AddHeader("SourceMap", asset.source_map);
+        }
+    }
+}
+
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
+#ifndef NDEBUG
+    // This is not actually thread safe, because it may release memory from an asset
+    // that is being used by another thread. This code only runs in development builds
+    // and it pretty much never goes wrong so it is kind of OK.
+    {
+        static std::mutex mutex;
+        std::lock_guard<std::mutex> lock(mutex);
+
+        if (ReloadAssets()) {
+            LogInfo("Reload assets");
+            InitAssets();
+        }
+    }
+#endif
+
     if (mael_config.require_host) {
         const char *host = request.GetHeaderValue("Host");
 
@@ -378,11 +444,18 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     io->AddHeader("X-Robots-Tag", "noindex");
     io->AddHeader("Permissions-Policy", "interest-cohort=()");
 
-    // Serve page
-    if (TestStr(request.url, "/")) {
-        const char *text = Fmt(&io->allocator, "Mael %1", FelixVersion).ptr;
-        io->AttachText(200, text);
-    } else if (TestStr(request.url, "/api/ws")) {
+    // Try static assets first
+    {
+        const AssetInfo *asset = assets_map.FindValue(request.url, nullptr);
+
+        if (asset) {
+            AttachStatic(*asset, 0, shared_etag, request, io);
+            return;
+        };
+    }
+
+    // Try API endpoints
+    if (TestStr(request.url, "/api/ws")) {
         HandleWebSocket(request, io);
     } else {
         io->AttachError(404);
@@ -448,6 +521,10 @@ Options:
             }
         }
     }
+
+    // Init assets
+    LogInfo("Init assets");
+    InitAssets();
 
     // Init device access
     LogInfo("Init device monitor");

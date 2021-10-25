@@ -103,6 +103,18 @@ malformed:
     Serial.println("Malformed packet");
 }
 
+void ProcessSerial()
+{
+    // Process incoming packets
+    ReceivePacket();
+
+    // Send pending packets
+    while (XBEE_OBJECT.availableForWrite() && send_buf_send != send_buf_write) {
+        XBEE_OBJECT.write(send_buf[send_buf_send]);
+        send_buf_send = (send_buf_send + 1) % sizeof(send_buf);
+    }
+}
+
 static inline bool WriteByte(uint8_t c, bool escape)
 {
     if (escape && (c == 0xA || c == 0xD)) {
@@ -169,16 +181,4 @@ overflow:
 
     Serial.println("Send overflow, dropping packet");
     return false;
-}
-
-void ProcessSerial()
-{
-    // Process incoming packets
-    ReceivePacket();
-
-    // Send pending packets
-    while (XBEE_OBJECT.availableForWrite() && send_buf_send != send_buf_write) {
-        XBEE_OBJECT.write(send_buf[send_buf_send]);
-        send_buf_send = (send_buf_send + 1) % sizeof(send_buf);
-    }
 }
