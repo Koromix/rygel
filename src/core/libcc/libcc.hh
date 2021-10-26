@@ -3458,12 +3458,15 @@ static inline Span<char> SplitStrAny(Span<char> str, const char *split_chars, Sp
 {
     Bitset<256> split_mask;
     for (Size i = 0; split_chars[i]; i++) {
-        split_mask.Set(split_chars[i]);
+        uint8_t c = (uint8_t)split_chars[i];
+        split_mask.Set(c);
     }
 
     Size part_len = 0;
     while (part_len < str.len) {
-        if (split_mask.Test(str[part_len])) {
+        uint8_t c = (uint8_t)str[part_len];
+
+        if (split_mask.Test(c)) {
             if (out_remainder) {
                 *out_remainder = str.Take(part_len + 1, str.len - part_len - 1);
             }
@@ -3481,12 +3484,15 @@ static inline Span<char> SplitStrAny(char *str, const char *split_chars, char **
 {
     Bitset<256> split_mask;
     for (Size i = 0; split_chars[i]; i++) {
-        split_mask.Set(split_chars[i]);
+        uint8_t c = (uint8_t)split_chars[i];
+        split_mask.Set(c);
     }
 
     Size part_len = 0;
     while (str[part_len]) {
-        if (split_mask.Test(str[part_len])) {
+        uint8_t c = (uint8_t)str[part_len];
+
+        if (split_mask.Test(c)) {
             if (out_remainder) {
                 *out_remainder = str + part_len + 1;
             }
@@ -3533,12 +3539,15 @@ static inline Span<const char> SplitStrReverseAny(Span<const char> str, const ch
 {
     Bitset<256> split_mask;
     for (Size i = 0; split_chars[i]; i++) {
-        split_mask.Set(split_chars[i]);
+        uint8_t c = (uint8_t)split_chars[i];
+        split_mask.Set(c);
     }
 
     Size remainder_len = str.len - 1;
     while (remainder_len >= 0) {
-        if (split_mask.Test(str[remainder_len])) {
+        uint8_t c = (uint8_t)str[remainder_len];
+
+        if (split_mask.Test(c)) {
             if (out_remainder) {
                 *out_remainder = str.Take(0, remainder_len);
             }
