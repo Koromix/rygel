@@ -102,7 +102,18 @@ static void InitAssets()
             assets_map.Set("/manifest.json", &asset);
             assets_for_cache.Append("/manifest.json");
         } else if (TestStr(asset.name, "src/mael/control/client/sw.pk.js")) {
-            assets_map.Set("/sw.pk.js", &asset);
+            AssetInfo *copy = (AssetInfo *)Allocator::Allocate(&assets_alloc, RG_SIZE(AssetInfo));
+
+            *copy = asset;
+            copy->data = PatchAsset(*copy, &assets_alloc, [](const char *key, StreamWriter *writer) {
+                if (TestStr(key, "BUSTER")) {
+                    writer->Write(shared_etag);
+                } else {
+                    Print(writer, "{%1}", key);
+                }
+            });
+
+            assets_map.Set("/sw.pk.js", copy);
         } else if (StartsWith(asset.name, "src/mael/control/client/") ||
                    StartsWith(asset.name, "vendor/")) {
             const char *name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
@@ -458,16 +469,15 @@ static void HandleAppStatic(const http_RequestInfo &, http_IO *io)
     if (!json.Init(io))
         return;
 
-    json.StartObject();
-    json.Key("buster"); json.String(shared_etag);
-    json.Key("assets"); json.StartArray();
+    json.StartArray();
     for (const char *url: assets_for_cache) {
         json.String(url);
     }
     json.EndArray();
-    json.EndObject();
 
     json.Finish();
+
+    io->AddCachingHeaders(0, nullptr);
 }
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)

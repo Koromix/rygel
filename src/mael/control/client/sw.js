@@ -11,15 +11,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-let buster = null;
+let buster = '{BUSTER}';
 
 self.addEventListener('install', e => {
     e.waitUntil(async function() {
-        let static = await net.fetchJson(`api/static`);
-        let cache = await caches.open(static.buster);
-        buster = static.buster;
+        let assets = await net.fetchJson(`api/static`);
+        let cache = await caches.open(buster);
 
-        await cache.addAll(static.assets);
+        await cache.addAll(assets);
         await self.skipWaiting();
     }());
 });
