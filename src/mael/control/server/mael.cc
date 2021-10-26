@@ -114,7 +114,7 @@ static void InitAssets()
     }
 
     for (const AssetInfo &asset: GetPackedAssets()) {
-        if (TestStr(asset.name, "src/mael/control/client/index.html")) {
+        if (TestStr(asset.name, "src/mael/control/client/mael.html")) {
             AssetInfo *copy = PatchVariables(asset);
             assets_map.Set("/", copy);
             assets_for_cache.Append("/");
