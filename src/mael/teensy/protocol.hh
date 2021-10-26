@@ -13,16 +13,14 @@
 
 #pragma once
 
-template <typename T>
 struct Vec2 {
-    T x;
-    T y;
+    double x;
+    double y;
 };
-template <typename T>
 struct Vec3 {
-    T x;
-    T y;
-    T z;
+    double x;
+    double y;
+    double z;
 };
 
 struct PacketHeader {

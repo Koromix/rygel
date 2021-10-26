@@ -16,13 +16,13 @@
 #endif
 
 MESSAGE(Imu, {
-    Vec3<double> position;
-    Vec3<double> orientation;
-    Vec3<double> acceleration;
+    Vec3 position;
+    Vec3 orientation;
+    Vec3 acceleration;
 })
 
 MESSAGE(Drive, {
-    Vec2<double> speed;
+    Vec2 speed;
     double w;
 })
 

@@ -20,7 +20,7 @@
 
 static Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28);
 
-static Vec3<double> position;
+static Vec3 position;
 
 void InitIMU()
 {
