@@ -18,9 +18,6 @@ let connected = false;
 let recv_time;
 
 async function init() {
-    if (navigator.serviceWorker)
-        navigator.serviceWorker.register('sw.pk.js');
-
     let filenames = {
         playground: 'playground.webp'
     };
@@ -74,14 +71,12 @@ function update() {
                 ws = null;
             };
 
-            ws.onmessage = e => receiveMessage(e.data);
+            ws.onmessage = e => {
+                connected = true;
+                recv_time = performance.now();
+            };
         }
     }
-}
-
-function receiveMessage(msg) {
-    connected = true;
-    recv_time = performance.now();
 }
 
 function draw() {
@@ -113,7 +108,6 @@ function draw() {
         ctx.save();
 
         let text = connected ? 'Status: Online' : 'Status: Offline';
-        ctx.textAlign = 'left';
         ctx.fillStyle = connected ? 'white' : '#f11313';
         ctx.fillText(text, 8, 24);
 
@@ -126,8 +120,22 @@ function draw() {
 
         let text = `FPS : ${(1000 / frame_time).toFixed(0)} (${frame_time.toFixed(1)} ms)`;
         ctx.textAlign = 'right';
-        ctx.fillStyle
         ctx.fillText(text, canvas.width - 8, 24);
+
+        ctx.restore();
+    }
+
+    // Log
+    {
+        ctx.save();
+
+        for (let i = 0, y = canvas.height - 16; i < log_entries.length; i++, y -= 24) {
+            let entry = log_entries[i];
+            let msg = (entry.msg instanceof Error) ? entry.msg.message : entry.msg;
+
+            ctx.fillStyle = (entry.type === 'error') ? '#f11313' : 'white';
+            ctx.fillText(msg, 8, y);
+        }
 
         ctx.restore();
     }

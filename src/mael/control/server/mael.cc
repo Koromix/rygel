@@ -78,6 +78,28 @@ static const hs_match_spec DeviceSpecs[] = {
     HS_MATCH_VID_PID(0x16C0, 0x0483, nullptr)
 };
 
+static AssetInfo *PatchVariables(const AssetInfo &asset)
+{
+    AssetInfo *copy = (AssetInfo *)Allocator::Allocate(&assets_alloc, RG_SIZE(AssetInfo));
+
+    *copy = asset;
+    copy->data = PatchAsset(*copy, &assets_alloc, [](const char *key, StreamWriter *writer) {
+        if (TestStr(key, "VERSION")) {
+            writer->Write(FelixVersion);
+        } else if (TestStr(key, "COMPILER")) {
+            writer->Write(FelixCompiler);
+        } else if (TestStr(key, "PWA")) {
+            writer->Write(mael_config.pwa ? "true" : "false");
+        } else if (TestStr(key, "BUSTER")) {
+            writer->Write(shared_etag);
+        } else {
+            Print(writer, "{%1}", key);
+        }
+    });
+
+    return copy;
+}
+
 static void InitAssets()
 {
     assets_map.Clear();
@@ -93,7 +115,8 @@ static void InitAssets()
 
     for (const AssetInfo &asset: GetPackedAssets()) {
         if (TestStr(asset.name, "src/mael/control/client/index.html")) {
-            assets_map.Set("/", &asset);
+            AssetInfo *copy = PatchVariables(asset);
+            assets_map.Set("/", copy);
             assets_for_cache.Append("/");
         } else if (TestStr(asset.name, "src/mael/control/client/favicon.png")) {
             assets_map.Set("/favicon.png", &asset);
@@ -102,17 +125,7 @@ static void InitAssets()
             assets_map.Set("/manifest.json", &asset);
             assets_for_cache.Append("/manifest.json");
         } else if (TestStr(asset.name, "src/mael/control/client/sw.pk.js")) {
-            AssetInfo *copy = (AssetInfo *)Allocator::Allocate(&assets_alloc, RG_SIZE(AssetInfo));
-
-            *copy = asset;
-            copy->data = PatchAsset(*copy, &assets_alloc, [](const char *key, StreamWriter *writer) {
-                if (TestStr(key, "BUSTER")) {
-                    writer->Write(shared_etag);
-                } else {
-                    Print(writer, "{%1}", key);
-                }
-            });
-
+            AssetInfo *copy = PatchVariables(asset);
             assets_map.Set("/sw.pk.js", copy);
         } else if (StartsWith(asset.name, "src/mael/control/client/") ||
                    StartsWith(asset.name, "vendor/")) {

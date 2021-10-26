@@ -57,6 +57,8 @@ let new_widgets = new Map;
 let old_sources = new Map;
 let new_sources = new Map;
 
+let log_entries = [];
+
 // ------------------------------------------------------------------------
 // Init
 // ------------------------------------------------------------------------
@@ -84,6 +86,9 @@ async function checkBrowser() {
 }
 
 async function start() {
+    log.pushHandler(notifyHandler);
+    registerSW();
+
     canvas = document.querySelector('#game');
     ctx = canvas.getContext('2d');
     audio = new AudioContext;
@@ -99,6 +104,55 @@ async function start() {
     await init();
 
     window.requestAnimationFrame(loop);
+}
+
+function notifyHandler(action, entry) {
+    if (entry.type !== 'debug') {
+        switch (action) {
+            case 'open': { log_entries.unshift(entry); } break;
+            case 'close': { log_entries = log_entries.filter(it => it !== entry); } break;
+        }
+    }
+
+    log.defaultHandler(action, entry);
+}
+
+async function registerSW() {
+    if (navigator.serviceWorker) {
+        if (ENV.pwa) {
+            let registration = await navigator.serviceWorker.register('sw.pk.js');
+            let progress = new log.Entry;
+
+            if (registration.waiting) {
+                progress.error('Fermez tous les onglets pour terminer la mise à jour puis rafraichissez la page');
+            } else {
+                registration.addEventListener('updatefound', () => {
+                    if (registration.active) {
+                        progress.progress('Mise à jour en cours, veuillez patienter');
+
+                        registration.installing.addEventListener('statechange', e => {
+                            if (e.target.state === 'installed') {
+                                progress.success('Mise à jour effectuée, l\'application va redémarrer');
+                                setTimeout(() => document.location.reload(), 3000);
+                            }
+                        });
+                    }
+                });
+            }
+        } else {
+            let registration = await navigator.serviceWorker.getRegistration();
+            let progress = new log.Entry;
+
+            if (registration != null) {
+                progress.progress('Nettoyage de l\'instance en cache, veuillez patienter');
+
+                await registration.unregister();
+
+                progress.success('Nettoyage effectué, l\'application va redémarrer');
+                setTimeout(() => document.location.reload(), 3000);
+            }
+        }
+    }
 }
 
 async function loadTexture(url) {

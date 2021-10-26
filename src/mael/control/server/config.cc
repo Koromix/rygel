@@ -40,7 +40,16 @@ bool LoadConfig(StreamReader *st, Config *out_config)
     {
         IniProperty prop;
         while (ini.Next(&prop)) {
-            if (prop.section == "HTTP") {
+            if (prop.section == "Application") {
+                do {
+                    if (prop.key == "PWA") {
+                        valid &= ParseBool(prop.value, &config.pwa);
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
+            } else if (prop.section == "HTTP") {
                 do {
                     if (prop.key == "SocketType" || prop.key == "IPStack") {
                         if (!OptionToEnum(SocketTypeNames, prop.value, &config.http.sock_type)) {
