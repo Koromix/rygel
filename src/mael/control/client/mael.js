@@ -16,6 +16,8 @@ let assets = {};
 let ws;
 let connected = false;
 let recv_time;
+let recv_first;
+let recv_last;
 
 async function init() {
     let asset_paths = [
@@ -55,6 +57,7 @@ async function init() {
 function update() {
     let delay = performance.now() - recv_time;
 
+    // Check and update connection status
     if (delay > 8000) {
         if (ws != null && ws.readyState === 1) {
             let err = new Error('Data connection timed out');
@@ -81,14 +84,96 @@ function update() {
                 ws = null;
             };
 
-            ws.onmessage = e => {
+            ws.onmessage = async e => {
                 connected = true;
                 recv_time = performance.now();
+
+                let buf = await e.data.arrayBuffer();
+                let pkt = {
+                    data: buf,
+                    next: null
+                };
+
+                if (recv_last) {
+                    recv_last.next = pkt;
+                } else {
+                    recv_first = pkt;
+                    recv_last = pkt;
+                }
             };
         }
 
         recv_time = performance.now();
     }
+
+    // Process incoming packets
+    for (let pkt = recv_first; pkt; pkt = pkt.next) {
+        let view = new DataView(pkt.data);
+
+        if (view.byteLength < 8) {
+            console.log('Truncated packet');
+            continue;
+        }
+
+        let crc32 = view.getInt32(0, true);
+        let type = view.getUint16(4, true);
+        let payload = view.getUint16(6, true);
+
+        if (payload !== view.byteLength - 8) {
+            console.log('Invalid payload length');
+            continue;
+        }
+        if (type > messages.length) {
+            console.log('Invalid packet type');
+            continue;
+        }
+        if (crc32 !== CRC32.buf(new Uint8Array(pkt.data, 4))) {
+            console.log('Packet failed CRC32 check');
+            continue;
+        }
+
+        let obj = {};
+        try {
+            let info = messages[type];
+            let offset = 8;
+
+            for (let key in info.members) {
+                let type = info.members[key];
+
+                switch (type) {
+                    case 'double': {
+                        obj[key] = view.getFloat64(offset, true);
+                        offset += 8;
+                    } break;
+                    case 'Vec2': {
+                        obj[key] = {
+                            x: view.getFloat64(offset, true),
+                            y: view.getFloat64(offset + 8, true)
+                        };
+                        offset += 16;
+                    } break;
+                    case 'Vec3': {
+                        obj[key] = {
+                            x: view.getFloat64(offset, true),
+                            y: view.getFloat64(offset + 8, true),
+                            z: view.getFloat64(offset + 16, true)
+                        };
+                        offset += 24;
+                    } break;
+                }
+            }
+
+            if (offset !== view.byteLength)
+                throw new RangeError();
+
+            console.log(info.name, obj);
+        } catch (err) {
+            console.log('Mis-sized packet payload');
+            continue;
+        }
+    }
+    recv_first = null;
+    recv_last = null;
 }
 
 function draw() {

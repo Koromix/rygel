@@ -176,7 +176,7 @@ static bool CheckIntegrity(Span<const uint8_t> pkt)
         LogError("Truncated packet header");
         return false;
     }
-    if (hdr.payload > pkt.len - RG_SIZE(PacketHeader)) {
+    if (hdr.payload != pkt.len - RG_SIZE(PacketHeader)) {
         LogError("Invalid payload length");
         return false;
     }

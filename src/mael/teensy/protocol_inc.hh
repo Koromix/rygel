@@ -14,16 +14,20 @@
 #ifndef MESSAGE
     #error Please define MESSAGE() before including protocol_inc.hh
 #endif
+#ifndef MEMBER
+    #define MEMBER(Type, Name) Type Name;
+#endif
 
 MESSAGE(Imu, {
-    Vec3 position;
-    Vec3 orientation;
-    Vec3 acceleration;
+    MEMBER(Vec3, position)
+    MEMBER(Vec3, orientation)
+    MEMBER(Vec3, acceleration)
 })
 
 MESSAGE(Drive, {
-    Vec2 speed;
-    double rotation;
+    MEMBER(Vec2, speed)
+    MEMBER(double, rotation)
 })
 
+#undef MEMBER
 #undef MESSAGE
