@@ -562,6 +562,7 @@ int Main(int argc, char **argv)
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
+        %!..+--pwa%!0                    Enable PWA mode
         %!..+--port <port>%!0            Change web server port
                                  %!D..(default: %2)%!0)",
                 FelixTarget, mael_config.http.port);
@@ -604,6 +605,8 @@ Options:
             } else if (opt.Test("--port", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &mael_config.http.port))
                     return 1;
+            } else if (opt.Test("--pwa")) {
+                mael_config.pwa = true;
             } else {
                 opt.LogUnknownError();
                 return 1;
