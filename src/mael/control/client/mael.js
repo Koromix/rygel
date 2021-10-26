@@ -76,8 +76,6 @@ function update() {
 function receiveMessage(msg) {
     connected = true;
     recv_time = performance.now();
-
-    console.log(msg);
 }
 
 function draw() {
