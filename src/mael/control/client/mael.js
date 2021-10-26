@@ -34,42 +34,48 @@ async function init() {
         let key = Object.keys(filenames)[i];
         assets[key] = images[i];
     }
+
+    recv_time = -100000;
 }
 
 function update() {
-    if (connected && performance.now() - recv_time > 10000) {
-        let err = new Error('WebSocket connection timed out');
-        console.log(err);
+    let delay = performance.now() - recv_time;
 
-        connected = false;
-        ws.close();
-        ws = null;
-    }
-
-    if (!connected && !ws) {
-        let url = new URL(window.location.href);
-        ws = new WebSocket(`ws://${url.host}/api/ws`);
-
-        ws.onopen = () => {
-            // Don't set connected, the first message will do it to make sure a
-            // device is really connected to the server.
-            recv_time = performance.now();
-        };
-        ws.onerror = e => {
-            if (connected) {
-                let err = new Error('Lost connection to WebSocket API');
-                console.log(err);
-            } else {
-                let err = new Error('Failed to connect to WebSocket API');
-                console.log(err);
-            }
+    if (delay > 8000) {
+        if (connected) {
+            let err = new Error('WebSocket connection timed out');
+            console.log(err);
 
             connected = false;
             ws.close();
             ws = null;
-        };
+        }
 
-        ws.onmessage = e => receiveMessage(e.data);
+        if (!connected && !ws) {
+            let url = new URL(window.location.href);
+            ws = new WebSocket(`ws://${url.host}/api/ws`);
+
+            ws.onopen = () => {
+                // Don't set connected, the first message will do it to make sure a
+                // device is really connected to the server.
+                recv_time = performance.now();
+            };
+            ws.onerror = e => {
+                if (connected) {
+                    let err = new Error('Lost connection to WebSocket API');
+                    console.log(err);
+                } else {
+                    let err = new Error('Failed to connect to WebSocket API');
+                    console.log(err);
+                }
+
+                connected = false;
+                ws.close();
+                ws = null;
+            };
+
+            ws.onmessage = e => receiveMessage(e.data);
+        }
     }
 }
 
