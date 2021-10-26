@@ -22,7 +22,7 @@ async function init() {
         navigator.serviceWorker.register('sw.pk.js');
 
     let filenames = {
-        table: 'table.webp'
+        playground: 'playground.webp'
     };
 
     let images = await Promise.all(Object.keys(filenames).map(key => {
@@ -97,7 +97,7 @@ function draw() {
         if (!connected)
             ctx.filter = 'grayscale(100%)';
 
-        let img = assets.table;
+        let img = assets.playground;
         let cx = canvas.width / 2;
         let cy = canvas.height / 2;
         let factor = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.9;
