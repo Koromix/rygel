@@ -87,6 +87,8 @@ async function checkBrowser() {
 
 async function start() {
     log.pushHandler(notifyHandler);
+    log.defaultTimeout = 6000;
+
     registerSW();
 
     canvas = document.querySelector('#game');
@@ -374,29 +376,41 @@ function runButtonAction(btn) {
 }
 
 function drawUI() {
+    // Draw log
+    for (let i = 0, y = canvas.height - 8; i < log_entries.length; i++) {
+        let entry = log_entries[i];
+
+        let msg = (entry.msg instanceof Error) ? entry.msg.message : entry.msg;
+        let color = (entry.type === 'error') ? '#ff0000' : 'white';
+        let icon = (entry.type === 'error') ? assets.ui.error : assets.ui.info;
+
+        y -= label(canvas.width / 2, y, msg, { align: 2, color: color, icon: icon }).height + 8;
+    }
+
+    // Draw buttons
     for (let btn of buttons) {
         ctx.save();
 
         let gradient = ctx.createLinearGradient(0, btn.p.y, 0, btn.p.y + btn.height);
 
-        if (btn.over)
+        if (btn.highlight && btn.over)
             cursor = 'pointer';
         if (btn.active) {
             gradient.addColorStop(0, '#8c4515');
             gradient.addColorStop(0.5, '#d76f28');
             gradient.addColorStop(1, '#8c4515');
         } else if (btn.pressed || btn.busy) {
-            gradient.addColorStop(0, '#3d0c5f');
-            gradient.addColorStop(0.5, '#6b1da0');
-            gradient.addColorStop(1, '#3d0c5f');
-        } else if (btn.over) {
-            gradient.addColorStop(0, '#5f198f');
-            gradient.addColorStop(0.5, '#842ac0');
-            gradient.addColorStop(1, '#5f198f');
+            gradient.addColorStop(0, '#1083b9');
+            gradient.addColorStop(0.5, '#178fc7');
+            gradient.addColorStop(1, '#1083b9');
+        } else if (btn.highlight && btn.over) {
+            gradient.addColorStop(0, '#21a0cd');
+            gradient.addColorStop(0.5, '#29aedc');
+            gradient.addColorStop(1, '#21a0cd');
         } else {
-            gradient.addColorStop(0, '#7a22b5');
-            gradient.addColorStop(0.5, '#ae3ff7');
-            gradient.addColorStop(1, '#7a22b5');
+            gradient.addColorStop(0, '#383838');
+            gradient.addColorStop(0.5, '#545454');
+            gradient.addColorStop(1, '#383838');
         }
 
         ctx.fillStyle = gradient;
@@ -424,8 +438,18 @@ function drawUI() {
             ctx.globalCompositeOperation = 'source-over';
             ctx.drawImage(btn.text, btn.p.x + btn.padding, btn.p.y + 9, 20, 20);
         } else {
-            ctx.fillStyle = 'white';
-            ctx.fillText(btn.text, btn.p.x + 20, btn.p.y + 26);
+            if (btn.icon != null) {
+                ctx.globalCompositeOperation = 'multiply';
+                ctx.drawImage(btn.icon, btn.p.x + btn.padding - 2, btn.p.y + 7, 24, 24);
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.drawImage(btn.icon, btn.p.x + btn.padding, btn.p.y + 9, 20, 20);
+
+                ctx.fillStyle = btn.color;
+                ctx.fillText(btn.text, btn.p.x + 50, btn.p.y + 26);
+            } else {
+                ctx.fillStyle = btn.color;
+                ctx.fillText(btn.text, btn.p.x + 20, btn.p.y + 26);
+            }
         }
 
         ctx.restore();
@@ -436,7 +460,7 @@ function drawUI() {
 // Widgets
 // ------------------------------------------------------------------------
 
-function button(x, y, text, options, func = null) {
+function button(x, y, text, options = {}, func = null) {
     let id = options.id || text;
 
     let btn = {
@@ -446,9 +470,12 @@ function button(x, y, text, options, func = null) {
         width: 0,
         height: 0,
         text: text,
+        icon: options.icon,
+        color: options.color || 'white',
         padding: (options.padding != null) ? options.padding : 20,
         corners: (options.corners != null) ? options.corners : 0b1111,
         active: !!options.active,
+        highlight: (options.highlight != null) ? options.highlight : true,
         func: func,
 
         over: false,
@@ -474,9 +501,11 @@ function button(x, y, text, options, func = null) {
     } else if (typeof text == 'object') {
         btn.width = 22 + btn.padding * 2;
     } else {
-        ctx.font = '18px Open Sans';
+        ctx.font = '20px Open Sans';
         btn.width = ctx.measureText(text).width + btn.padding * 2;
         btn.width = Math.round(btn.width);
+        if (btn.icon != null)
+            btn.width += 40;
     }
     if (options.height == null)
         btn.height = 38;
@@ -540,6 +569,16 @@ function button(x, y, text, options, func = null) {
     buttons.push(btn);
     new_widgets.set(id, btn);
 
+    return btn;
+}
+
+function label(x, y, text, options = {}) {
+    options = Object.assign({}, options);
+    options.highlight = false;
+    if (options.corners == null)
+        options.corners = 0;
+
+    let btn = button(x, y, text, options);
     return btn;
 }
 

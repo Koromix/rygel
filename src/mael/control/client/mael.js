@@ -18,18 +18,35 @@ let connected = false;
 let recv_time;
 
 async function init() {
-    let filenames = {
-        playground: 'playground.webp'
-    };
+    let asset_paths = [
+        'playground.webp',
+        'ui/busy.png',
+        'ui/info.png',
+        'ui/error.png',
+        'ui/left.png',
+        'ui/right.png'
+    ];
 
-    let images = await Promise.all(Object.keys(filenames).map(key => {
-        let url = 'static/' + filenames[key];
+    let images = await Promise.all(asset_paths.map(path => {
+        let basename = path.replace(/^.*\//, '');
+        let url = 'static/' + basename;
+
         return loadTexture(url);
     }));
 
-    for (let i = 0; i < Object.keys(filenames).length; i++) {
-        let key = Object.keys(filenames)[i];
-        assets[key] = images[i];
+    for (let i = 0; i < asset_paths.length; i++) {
+        let url = asset_paths[i];
+        let ptr = assets;
+
+        let parts = url.split('/');
+        let basename = parts.pop().replace(/\..*$/, '');
+
+        for (let part of parts) {
+            if (ptr[part] == null)
+                ptr[part] = {};
+            ptr = ptr[part];
+        }
+        ptr[basename] = images[i];
     }
 
     recv_time = -100000;
@@ -39,31 +56,24 @@ function update() {
     let delay = performance.now() - recv_time;
 
     if (delay > 8000) {
-        if (connected) {
-            let err = new Error('WebSocket connection timed out');
-            console.log(err);
+        if (ws != null && ws.readyState === 1) {
+            let err = new Error('Data connection timed out');
+            log.error(err);
 
             connected = false;
             ws.close();
             ws = null;
-        }
-
-        if (!connected && !ws) {
+        } else {
             let url = new URL(window.location.href);
             ws = new WebSocket(`ws://${url.host}/api/ws`);
 
-            ws.onopen = () => {
-                // Don't set connected, the first message will do it to make sure a
-                // device is really connected to the server.
-                recv_time = performance.now();
-            };
             ws.onerror = e => {
                 if (connected) {
-                    let err = new Error('Lost connection to WebSocket API');
-                    console.log(err);
+                    let err = new Error('Lost connection to WebSocket endpoint');
+                    log.error(err);
                 } else {
-                    let err = new Error('Failed to connect to WebSocket API');
-                    console.log(err);
+                    let err = new Error('Failed to connect to WebSocket endpoint');
+                    log.error(err);
                 }
 
                 connected = false;
@@ -76,13 +86,15 @@ function update() {
                 recv_time = performance.now();
             };
         }
+
+        recv_time = performance.now();
     }
 }
 
 function draw() {
     ctx.fillStyle = 'white';
     ctx.strokeStyle = 'white';
-    ctx.font = '18px Open Sans';
+    ctx.font = '20px Open Sans';
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 
     // Paint stable background
@@ -90,12 +102,12 @@ function draw() {
         ctx.save();
 
         if (!connected)
-            ctx.filter = 'grayscale(100%)';
+            ctx.filter = 'grayscale(96%)';
 
         let img = assets.playground;
         let cx = canvas.width / 2;
         let cy = canvas.height / 2;
-        let factor = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.9;
+        let factor = Math.min(canvas.width / img.width, canvas.height / img.height);
 
         ctx.drawImage(img, cx - img.width * factor / 2, cy - img.height * factor / 2,
                            img.width * factor, img.height * factor);
@@ -105,38 +117,13 @@ function draw() {
 
     // Status
     {
-        ctx.save();
-
         let text = connected ? 'Status: Online' : 'Status: Offline';
-        ctx.fillStyle = connected ? 'white' : '#f11313';
-        ctx.fillText(text, 8, 24);
-
-        ctx.restore();
+        label(8, 8, text, { align: 7, color: connected ? 'white' : '#ff0000' });
     }
 
     // FPS
     {
-        ctx.save();
-
         let text = `FPS : ${(1000 / frame_time).toFixed(0)} (${frame_time.toFixed(1)} ms)`;
-        ctx.textAlign = 'right';
-        ctx.fillText(text, canvas.width - 8, 24);
-
-        ctx.restore();
-    }
-
-    // Log
-    {
-        ctx.save();
-
-        for (let i = 0, y = canvas.height - 16; i < log_entries.length; i++, y -= 24) {
-            let entry = log_entries[i];
-            let msg = (entry.msg instanceof Error) ? entry.msg.message : entry.msg;
-
-            ctx.fillStyle = (entry.type === 'error') ? '#f11313' : 'white';
-            ctx.fillText(msg, 8, y);
-        }
-
-        ctx.restore();
+        label(canvas.width - 8, 8, text, { align: 9 });
     }
 }
