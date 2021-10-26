@@ -60,8 +60,16 @@ static std::mutex comm_mutex;
 static hs_device *comm_dev = nullptr;
 static hs_port *comm_port = nullptr;
 
-bool recv_started = false;
+enum class ReceptionStatus {
+    None,
+    Started,
+    Complete
+};
+
 alignas(uint64_t) static LocalArray<uint8_t, 65536> recv_buf;
+static ReceptionStatus recv_status = ReceptionStatus::None;
+static Size recv_start = 0;
+static Size recv_end = 0;
 
 static std::mutex clients_mutex;
 static Client clients_root = {&clients_root, &clients_root};
@@ -164,72 +172,64 @@ static bool CheckIntegrity(Span<const uint8_t> pkt)
     return true;
 }
 
-// Returns true until there is nothing to do
-static bool ReceivePacket()
+static void ReceivePacket()
 {
-    // Find packet start
-    if (!recv_started) {
-        Size i = 0;
-
-        while (i < recv_buf.len) {
-            if (recv_buf[i++] == 0xA) {
-                recv_started = true;
-                break;
-            }
-        }
-
-        recv_buf.len -= i;
-        memmove(recv_buf.data, recv_buf.data + i, recv_buf.len);
-
-        if (!recv_started)
-            return false;
-    }
-
-    // Rewrite packet (escaped bytes)
     Span<uint8_t> pkt;
-    Size end;
-    {
-        Size i = 0;
-        Size len = 0;
 
-        for (; i < recv_buf.len; i++, len++) {
-            recv_buf[len] = recv_buf[i];
+    // Find start marker
+    if (recv_status == ReceptionStatus::None) {
+        while (recv_start < recv_buf.len) {
+            if (recv_buf[recv_start++] == 0xA) {
+                recv_end = recv_start;
+                recv_status = ReceptionStatus::Started;
 
-            if (recv_buf[i] == 0xA) {
-                recv_started = false;
                 break;
-            } else if (recv_buf[i] == 0xD) {
-                if (i >= recv_buf.len - 1)
-                    break;
-
-                recv_buf[len] = recv_buf[++i] ^ 0x8;
             }
         }
-        if (recv_started)
-            return false;
-
-        pkt = MakeSpan(recv_buf.data, len);
-        end = i + !!len;
     }
 
-    // Clear first packet after processing
-    RG_DEFER {
-        recv_buf.len -= end;
-        memmove(recv_buf.data, recv_buf.data + end, recv_buf.len);
-    };
-    if (!CheckIntegrity(pkt))
-        return true;
+    // Complete packet
+    if (recv_status == ReceptionStatus::Started) {
+        while (recv_end < recv_buf.len) {
+            if (recv_buf[recv_end++] == 0xA) {
+                Size delta = recv_end - recv_start;
+                memmove(recv_buf.data, recv_buf.data + recv_start, delta);
 
-    // Dispatch to all clients
-    {
-        std::lock_guard<std::mutex> lock(clients_mutex);
+                pkt = MakeSpan(recv_buf.data, delta - 1);
+                recv_status = ReceptionStatus::Complete;
 
-        for (Client *client = clients_root.next; client != &clients_root; client = client->next) {
-            client->writer.Write(pkt);
+                break;
+            }
         }
     }
 
-    return true;
+    // Process full packet
+    if (recv_status == ReceptionStatus::Complete) {
+        Size j = 0;
+        for (Size i = 0; i < pkt.len; i++, j++) {
+            if (pkt[i] == 0xD) {
+                pkt[j] = pkt.ptr[++i] ^ 0x8;
+            } else {
+                pkt[j] = pkt[i];
+            }
+        }
+        pkt.len = j;
+
+        if (CheckIntegrity(pkt)) {
+            std::lock_guard<std::mutex> lock(clients_mutex);
+
+            for (Client *client = clients_root.next; client != &clients_root; client = client->next) {
+                client->writer.Write(pkt);
+            }
+        }
+
+        recv_buf.len -= recv_end;
+        memmove(recv_buf.data, recv_buf.data + recv_end, recv_buf.len);
+
+        recv_start = 0;
+        recv_end = 0;
+        recv_status = ReceptionStatus::None;
+    }
 }
 
 static void RunMonitorThread()
@@ -253,6 +253,11 @@ static void RunMonitorThread()
 
             if (dev) {
                 hs_port_open(dev, HS_PORT_MODE_RW, &comm_port);
+
+                recv_buf.Clear();
+                recv_start = 0;
+                recv_end = 0;
+                recv_status = ReceptionStatus::None;
             }
         }
 
@@ -283,10 +288,8 @@ static void RunMonitorThread()
 
             if (buf.len >= 0) {
                 recv_buf.len += buf.len;
-                while (ReceivePacket());
+                ReceivePacket();
             } else {
-                recv_buf.Clear();
-
                 hs_port_close(comm_port);
                 comm_port = nullptr;
             }
