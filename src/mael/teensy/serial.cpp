@@ -36,7 +36,7 @@ static bool ExecuteCommand(MessageType type, const void *data)
     switch (type) {
         case MessageType::Drive: {
             const DriveParameters &args = *(const DriveParameters *)data;
-            SetDriveSpeed(args.speed.x, args.speed.y, args.w);
+            SetDriveSpeed(args.speed.x, args.speed.y, args.rotation);
             return true;
         } break;
 

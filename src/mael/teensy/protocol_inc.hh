@@ -23,7 +23,7 @@ MESSAGE(Imu, {
 
 MESSAGE(Drive, {
     Vec2 speed;
-    double w;
+    double rotation;
 })
 
 #undef MESSAGE
