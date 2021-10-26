@@ -377,7 +377,7 @@ function runButtonAction(btn) {
 
 function drawUI() {
     // Draw log
-    for (let i = 0, y = canvas.height - 8; i < log_entries.length; i++) {
+    for (let i = 0, y = canvas.height - 12; i < log_entries.length; i++) {
         let entry = log_entries[i];
 
         let msg = (entry.msg instanceof Error) ? entry.msg.message : entry.msg;

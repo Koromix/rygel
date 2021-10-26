@@ -118,12 +118,12 @@ function draw() {
     // Status
     {
         let text = connected ? 'Status: Online' : 'Status: Offline';
-        label(8, 8, text, { align: 7, color: connected ? 'white' : '#ff0000' });
+        label(12, 12, text, { align: 7, color: connected ? 'white' : '#ff0000' });
     }
 
     // FPS
     {
         let text = `FPS : ${(1000 / frame_time).toFixed(0)} (${frame_time.toFixed(1)} ms)`;
-        label(canvas.width - 8, 8, text, { align: 9 });
+        label(canvas.width - 12, 12, text, { align: 9 });
     }
 }
