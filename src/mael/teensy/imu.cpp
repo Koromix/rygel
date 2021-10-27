@@ -34,7 +34,7 @@ void InitIMU()
 
 void ProcessIMU()
 {
-    PROCESS_EVERY(1000);
+    PROCESS_EVERY(5000);
 
     // Get IMU data
     sensors_event_t orient;
