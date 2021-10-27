@@ -102,17 +102,35 @@ static const char *BuildGitVersionString(Allocator *alloc)
     RG_ASSERT(alloc);
 
     HeapArray<char> output(alloc);
-    int exit_code;
-    if (!ExecuteCommandLine("git log -n1 --pretty=format:%cd_%h --date=format:%Y%m%d.%H%M",
-                            {}, Kilobytes(1), &output, &exit_code))
-        return nullptr;
-    if (exit_code) {
-        LogError("Command 'git log' failed");
-        return nullptr;
+
+    // Describe the current commit
+    {
+        int exit_code;
+        if (!ExecuteCommandLine("git log -n1 --pretty=format:%cd_%h --date=format:%Y%m%d.%H%M",
+                                {}, Kilobytes(1), &output, &exit_code))
+            return nullptr;
+        if (exit_code) {
+            LogError("Command 'git log' failed");
+            return nullptr;
+        }
+
+        output.len = TrimStrRight(output.Take()).len;
     }
 
-    output.len = TrimStrRight(output.Take()).len;
-    output.Append(0);
+    // Is the work tree clean?
+    {
+        HeapArray<char> buf;
+        int exit_code;
+        if (!ExecuteCommandLine("git status --short", {}, Kilobytes(4), &buf, &exit_code))
+            return nullptr;
+        if (exit_code) {
+            LogError("Command 'git status' failed");
+            return nullptr;
+        }
+
+        buf.len = TrimStrRight(buf.Take()).len;
+        Fmt(&output, buf.len ? "~dirty" : "");
+    }
 
     return output.TrimAndLeak().ptr;
 }
