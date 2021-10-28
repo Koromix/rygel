@@ -50,6 +50,7 @@ h2 {
     font-weight: normal;
     color: white;
 }
+h4 { font-style: italic; }
 
 table {
     width: 90%;
@@ -115,7 +116,7 @@ td {
     position: fixed;
     left: calc(50% + 485px);
     top: 4.5em;
-    width: 220px;
+    width: 240px;
     padding: 0 1em 0 0;
     background: white;
     font-size: 0.9em;
@@ -239,6 +240,11 @@ table {
 .columns {
     display: flex;
     align-items: start;
+}
+
+pre {
+    background: #ebebeb;
+    padding: 12px;
 }
 
 #veil {

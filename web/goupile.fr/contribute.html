@@ -33,31 +33,293 @@
             </div>
             <a href="/"><img id="logo" src="favicon.png"/></a>
             <div>
-                <a href="/manual">Documentation</a>
+                <a href="/manual">Utilisation</a>
                 <a href="mailto:hello@goupile.fr">Contact</a>
             </div>
         </nav>
 
         <main>
-            <h1 id="tickets">Tester l'outil</h1>
-            <h2 id="demo">Démo en ligne</h2>
+            <h1 id="intro">Principes généraux</h1>
+            <p>Goupile permet de concevoir un eCRF avec une approche un peu différente des outils habituels, puisqu'il s'agit de programmer le contenu des formulaires, tout en automatisant les autres aspects communs à tous les eCRF :</p>
+            <ul>
+                <li>Types de champs préprogrammés et flexibles</li>
+                <li>Publication des formulaires</li>
+                <li>Enregistrement et synchronisation des données</li>
+                <li>Recueil en ligne et hors ligne, sur ordinateur, tablette ou mobile</li>
+                <li>Gestion des utilisateurs et droits</li>
+            </ul>
+            <p>En plus des fonctionnalités habituelles, nous nous sommes efforcés de réduire au maximum le délai entre le développement d'un formulaire et la saisie des données.</p>
+            <p>Il s'agit d'un <i>outil en développement</i> et certains choix sont encore en cours. Les indications <strong>[WIP]</strong> désignent des fonctionnalités ou options en cours de développement ou d'amélioration.</p>
             <p>Même si une version publique compilée n'est pas encore disponible, vous pouvez tester
             la <a href="/demo/">démo en ligne</a>.</p>
-            <h2 id="bugs">Fonctionnalités et rapports de bugs</h2>
-            <p>Utilisez notre outil de <a href="https://framagit.org/interhop/goupile/issues">suivi de tickets</a>
-            en ligne pour demander de nouvelles fonctionnalités ou rapporter des bugs.</p>
+            <h2 id="intro_domains">Domaines et projets</h2>
+            <p>Chaque service Goupile dispose d'un domaine (ou sous-domaine). Par exemple, <em><a href="http://demo.goupile.fr" target="_blank">demo.goupile.fr</a></em> et <em><a href="http://psy-lille.goupile.fr" target="_blank">psy-lille.goupile.fr</a></em> sont des services distincts avec des bases de données séparées et des utilisateurs différents (même si possiblement hébergés sur un même serveur).</p>
+            <p>Lors de la création d'un domaine, un (ou plusieurs) administrateurs de confiance sont désignés pour en gérer les projets et les utilisateurs. Une paire de clé de chiffrement est générée pour réaliser les backups des bases de données du domaine. La clé publique est stockée sur le serveur pour créer les backups. La clé privée est confiée aux administrateurs désignés et n'est pas stockée; sa perte <strong>entraîne la perte de tous les backups</strong> de ce domaine.</p>
+            <p><em>Les détails sur le chiffrement utilisé sont détaillés dans la section sur les <a href="#Choix-architecturaux">choix architecturaux</a>.</em></p>
+            <p>Ce sont les administrateurs qui peuvent créér les projets et leur affecter des utilisateurs, soit pour qu'ils conçoivent les formulaires, soit pour qu'ils y saisissent les données.</p>
+            <h2 id="intro_users">Gestion des utilisateurs</h2>
+            <div class="screenshot right">
+                <img src="static/screenshots/admin.webp"/>
+                <p>Gérez vos projets et vos utilisateurs au sein du module d'administration.</p>
+            </div>
+            <p>Chaque domaine Goupile contient une liste d'utilisateurs.</p>
+            <p>Ces comptes utilisateurs sont gérés par le ou les administrateurs désignés pour ce domaine, qui peuvent les créer, les modifier et les supprimer.</p>
+            <p>Chaque utilisateur peut être affecté à un ou plusieurs projets, avec un ensemble de droits en fonction de ses préprogatives. Il existe deux ensembles de droits :</p>
+            <ul>
+                <li>Droits de développement, qui permettent de configurer un projet et ses formulaires</li>
+                <li>Droits d'accès, qui permettent d'accéder aux données</li>
+            </ul>
+            <p>Ces droits sont détaillés dans les tableaux qui suivent :</p>
+            <div class="columns">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Droit</th>
+                            <th>Explication</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><em>Develop</em></td>
+                            <td>Modification des formulaires</td>
+                        </tr>
+                        <tr>
+                            <td><em>Publish</em></td>
+                            <td>Publication des formulaires modifiés</td>
+                        </tr>
+                        <tr>
+                            <td><em>Configure</em></td>
+                            <td>Configuration du projet et des centres (multi-centrique)</td>
+                        </tr>
+                        <tr>
+                            <td><em>Assign</em></td>
+                            <td>Modification des droits des utilisateurs sur le projet</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Droit</th>
+                            <th>Explication</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><em>Load</em></td>
+                            <td>Lecture des enregistrements</td>
+                        </tr>
+                        <tr>
+                            <td><em>Save</em></td>
+                            <td>Modification des enregistrements</td>
+                        </tr>
+                        <tr>
+                            <td><em>Export</em></td>
+                            <td>Export facile des données (CSV, XLSX, etc.)</td>
+                        </tr>
+                        <tr>
+                            <td><em>Batch</em></td>
+                            <td>Recalcul de toutes les variables calculées sur tous les enregistrements</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p>Par défaut l'authentification des utilisateurs repose sur un couple identifiant / mot de passe. Ce mot de passe est stocké hashé en base (libsodium pwhash).</p>
+            <p>Plusieurs <b>modes d'authentification forte</b> sont disponibles ou prévus :</p>
+            <ul>
+                <li>Fichier clé supplémentaire stocké sur clé USB (ce mode présente l'avantage d'être compatible avec une utilisation chiffrée hors ligne)</li>
+                <li>Support de tokens TOTP avec applications d'authentification (Authy, FreeOTP, Google Authenticator, etc.)</li>
+                <li><strong>[WIP]</strong> Support de clés physiques avec Webauthn (Yubikey, etc.)</li>
+            </ul>
 
-            <h1 id="code">Code source</h1>
-            <h2 id="license">Licence</h2>
+            <h1 id="usage">Utilisation de Goupile</h1>
+            <p>Goupile est codé comme une application web de type SPA (Single Page Application). Un bref aperçu des différentes facettes de Goupile est donné ci-après; référez-vous au manuel utilisateur pour des informations plus détaillées.</p>
+            <h2 id="usage_code">Conception d'un eCRF</h2>
+            <div class="screenshot left">
+                <img src="static/screenshots/editor.webp"/>
+                <p>Programmez la page dans <b>l'éditeur</b> (gauche), et le <b>résultat</b> (droite)
+                s'affiche immédiatement</p>
+            </div>
+            <p>Lors de la conception d'un formulaire, l'utilisateur le programme en Javascript via un éditeur texte en ligne, en appelant des fonctions prédéfinies qui génèrent les champs voulus par l'utilisateur. L'eCRF s'affiche directement sur le même écran.</p>
+            <p>Pour créer un eCRF, l'utilisateur commence par définir l'organisation et la succession des pages de saisie et des tables de données sous-jacentes. Il est possible de créer simplement des eCRF à plusieurs tables avec des relations 1-à-1 et 1-à-N (parent-enfants) à partir de ce mode.</p>
+            <p>Le contenu des pages est également défini en Javascript. Le fait de programmer nous donne beaucoup de possibilités, notamment la réalisation de formulaires complexes (conditions, boucles, calculs dynamiques, widgets spécifiques, etc.), sans sacrifier la simplicité pour les formulaires usuels.</p>
+            <h2 id="usage_validation">Validation des données</h2>
+            <p>La vérification de la validité des données par rapport aux contraintes imposées a lieu côté client (systématiquement) et côté serveur (sur les pages où cette option est activée). Celle-ci repose sur le code Javascript de chaque page, qui peut définir des conditions et des erreurs en fonction des données saisies.</p>
+            <p>Ces erreurs alimentent la base de <em>contrôles qualités</em> qui peuvent ensuite être monitorées <strong>[WIP]</strong>.</p>
+            <p>Pour assurer la sécurité du serveur malgré l'exécution de code Javascript potentiellement malveillant, plusieurs mesures sont prises et détaillées dans la section <a href="#Architecture-du-serveur">Architecture du serveur</a>.</p>
+            <h2 id="usage_offline">Support hors ligne</h2>
+            <p>Les eCRF développés avec Goupile peuvent fonctionner en mode hors ligne (si cette option est activée). Dans ce cas, Goupile utilise les fonctionnalités PWA des navigateurs modernes pour pouvoir mettre en cache ses fichiers et les scripts des formulaires, et être installé en tant que pseudo-application native.</p>
+            <p>Dans ce cas, les données sont synchronisées dans un deuxième temps lorsque la connexion est disponible.</p><p>Les données hors ligne sont chiffrées symétriquement à l'aide d'une clé spécifique à chaque utilisateur et connue du serveur. Cette clé est communiquée au navigateur après une authentification réussie.</p>
+            <p>Pour que l'utilisateur puisse se connecter à son application hors ligne, une copie de son profil (dont la clé de chiffrement des données hors ligne) est stockée sur sa machine, chiffrée par une clé dérivée de son mot de passe. Lorsqu'il cherche à se connecter hors ligne, son identifiant et son mot de passe sont utilisés pour déchiffrer ce profil et pouvoir accéder aux données locales.</p>
+            <p>Si le client installable est utilisé (basé sur Electron), l'authentification hors ligne peut aussi être configurée en mode fort, avec nécessité de brancher une clé USB contenant une seconde clé de chiffrement pour pouvoir se connecter à l'eCRF.</p>
+
+            <h1 id="architecture">Architecture du serveur</h1>
+            <h2 id="architecture_overview">Vue générale</h2>
+            <p>Le serveur Goupile est développé en C++. Le binaire compilé contient directement le moteur de base de données (<a href="https://sqlite.org/" target="_blank">SQLite</a>), un serveur HTTP (<a href="https://www.gnu.org/software/libmicrohttpd/" target="_blank">libmicrohttpd</a>) ainsi que le code HTML/CSS/Javascript envoyé aux navigateurs web.</p>
+            <p>Plusieurs bases de données SQLite sont créées et utilisées pour chaque domaine. Tout d'abord, il existe une base maitre qui contient la liste des projets, des utilisateurs et les permissions. Ensuite, chaque projet utilise 1 à plusieurs bases (1 pour le projet + 1 par centre en cas de projet multi-centrique). Par exemple, un domaine avec 2 projets dont un multi-centrique pourrait utiliser les fichiers suivants :</p>
+            <pre>
+<code class="bash hljs">goupile.db <span class="hljs-comment"># Base principale</span>
+instances/projet1.db
+instances/projet2.db
+instances/projet2@lille.db
+instances/projet2@paris.db
+</code></pre>
+            <p><em>Le support de PostgreSQL pour pouvoir déporter la base de données sur une autre machine est prévu pour plus tard <strong>[WIP]</strong>.</em></p>
+            <h2 id="architecture_isolation">Isolation des services</h2>
+            <p>Chaque domaine est géré par un service dédié (par exemple lancé par systemd), qui est capable de s'auto-containériser sur Linux (utilisation des capabilities POSIX, des namespaces et filtres seccomp) dans un namespace avec pratiquement aucun accès sauf au fichier SQLite.</p>
+            <p>Ce service peut utiliser un seul (mode mono-processus) ou plusieurs processus (mode multi-processus <strong>[WIP]</strong>) pour gérer chaque projet. Dans le mode multi-processus, la communication HTTP est relayée par le processus maître au processus en charge de la gestion du projet concerné.</p>
+            <p>Dans tous les cas, lorsque le serveur valide les données du formulaire (option non systématique selon les besoins de validation de données d'un formulaire), le code Javascript est exécuté par le moteur V8 (en mode jitless) dans un processus forké avec des droits complètement restreints (pas d'accès au système de fichier ou à la base de données).</p>
+            <h2 id="architecture_compilation">Options de compilation</h2>
+            <p>En plus de la containerisation, plusieurs options de compilation Clang sont utilisées pour mitiger la vulnérabilité du serveur en cas de faille. Lors de la compilation de Goupile décrite plus loin, il s'agit du <em>mode Paranoid</em>.</p>
+            <p>Plusieurs mesures sont destinées à empêcher les attaques par corruption de la pile d'appels ou de détournement du flux d'exécution :</p>
+            <ul>
+                <li><em>Stack Smashing Protection</em> (et Stack Clash Protection) pour limiter les attaques par corruption de pile</li>
+                <li><em>Safe Stack</em> pour limiter les attaques de type ROP</li>
+                <li><em>Compilation en PIE</em> pour le support ASLR (qui complète la mesure précédente)</li>
+                <li><em>CFI (Control Flow Integrity)</em> : coarse grained forward-edge protection</li>
+                <li><em>Options de lien</em> : relro, noexecstack, separate-code</li>
+            </ul>
+            <p>Par ailleurs, pendant le développement nous utilisons <em>différents sanitizers (ASan, TSan et UBsan)</em> pour détecter des erreurs d'accès mémoire, de multi-threading et l'utilisation de comportements non définis en C/C++.</p>
+            <h2 id="architecture_data">Format des données</h2>
+            <p>Chaque base de données Goupile est chiffrée au repos (<a href="https://github.com/utelle/SQLite3MultipleCiphers" target="_blank">SQLite3 Multiple Ciphers</a>). La clé de chiffrement de la base principale est communiquée à Goupile lors du lancement par un moyen à déterminer par la personne qui administre le serveur. Chaque autre base a une clé spécifique stockée dans la base principale.</p>
+            <p>Le script des formulaires d'un projet sont stockés et versionnées dans les bases SQLite.</p>
+            <p>Les données saisies dans un projet sont stockées dans la base SQLite correspondante (pour les études multi-centriques, chaque centre dispose d'une base séparée). Deux tables SQLite sont utilisées pour les données :</p>
+            <ul>
+                <li><em>Table rec_entries</em> : cette table contient une ligne par enregistrement avec les informations récapitulatives</li>
+                <li><em>Table rec_fragments</em> : cette table contient toutes les modifications historisées d'un enregistrement (audit trail)</li>
+            </ul>
+            <p>La clé principale d'un enregistrement est au <a href="https://github.com/ulid/spec" target="_blank">format ULID</a>. Ceci permet de générer les identifiants d'enregistrement client (avec risque infinitésimal de collision) ce qui simplifie l'implémentation du mode hors ligne, tout en évitant les problèmes de performance posés par l'indexation des identifiants UUID.</p>
+
+            <h1 id="install">Installation de Goupile</h1>
+            <h2 id="install_build">Compilation</h2>
+            <p>Le serveur Goupile est multi-plateforme, mais il est <strong>recommandé de l'utiliser sur Linux</strong> pour une sécurité maximale.</p>
+            <p>En effet, sur Linux Goupile peut fonctionner en mode sandboxé grâce à seccomp et les espaces de noms Linux (appel système unshare). Le support du sandboxing est envisagé à long terme pour d'autres systèmes d'exploitation mais n'est pas disponible pour le moment. L'utilisation de la distribution Debian 10+ est recommandée.</p>
+            <p>Goupile repose sur du C++ (côté serveur) et HTML/CSS/JS (côté client). La compilation de Goupile utilise un outil dédié qui est inclus directement dans le dépôt.</p>
+            <p>Commencez par récupérer le code depuis le dépôt Git : <a href="https://framagit.org/interhop/goupile" target="_blank">https://framagit.org/interhop/goupile</a></p>
+            <pre>
+<code class="bash hljs">git <span class="hljs-built_in">clone</span> https://framagit.org/interhop/goupile
+<span class="hljs-built_in">cd</span> goupile
+</code></pre>
+            <h3 id="install_build_linux">Linux</h3>
+            <p>Pour compiler une <strong>version de développement</strong> et de test procédez comme ceci depuis la racine du dépôt :</p>
+            <pre>
+<code class="bash hljs"><span class="hljs-comment"># Préparation de l'outil Felix utilisé pour compiler Goupile</span>
+./bootstrap.sh
+
+<span class="hljs-comment"># L'exécutable sera déposé dans le dossier bin/Debug</span>
+./felix
+</code></pre>
+            <p>Pour une <strong>utilisation en production</strong>, il est recommandé de compiler Goupile <a href="#Options-de-compilation">en mode Paranoid</a> à l'aide de Clang 11+ et le lieur LLD 11+. Sous Debian 10, vous pouvez faire comme ceci :</p>
+            <pre>
+<code class="bash hljs"><span class="hljs-comment"># Préparation de l'outil Felix utilisé pour compiler Goupile</span>
+./bootstrap.sh
+
+<span class="hljs-comment"># Installation de LLVM décrite ici et recopiée ci-dessous : https://apt.llvm.org/</span>
+sudo bash -c <span class="hljs-string">"<span class="hljs-subst">$(wget -O - https://apt.llvm.org/llvm.sh)</span>"</span>
+sudo apt install clang-11 lld-11
+
+<span class="hljs-comment"># L'exécutable sera déposé dans le dossier bin/Paranoid</span>
+./felix -pParanoid --compiler=clang-11 --linker=lld-11
+</code></pre>
+            <h3 id="install_build_others">Autres systèmes</h3>
+            <p>Pour compiler une <strong>version de développement</strong> et de test procédez comme ceci depuis la racine du dépôt :</p>
+            <h4>Systèmes POSIX (macOS, WSL, etc.)</h4>
+            <pre>
+<code class="bash hljs"><span class="hljs-comment"># Préparation de l'outil Felix utilisé pour compiler Goupile</span>
+./bootstrap.sh
+
+<span class="hljs-comment"># L'exécutable sera déposé dans le dossier bin/Debug</span>
+./felix
+</code></pre>
+            <h4>Windows</h4>
+            <pre>
+<code class="bash hljs"><span class="hljs-comment"># Préparation de l'outil Felix utilisé pour compiler Goupile</span>
+<span class="hljs-comment"># Il peut être nécessaires d'utiliser l'environnement console de</span>
+<span class="hljs-comment"># Visual Studio avant de continuer</span>
+bootstrap.bat
+
+<span class="hljs-comment"># L'exécutable sera déposé dans le dossier bin/Debug</span>
+felix
+</code></pre>
+            <p>Il n'est pas recommandé d'utiliser Goupile en production sur un autre système, car le mode bac à sable (sandboxing) et la compilation en mode Paranoid n'y sont pas disponibles pour le moment.</p>
+            <p>Cependant, vous pouvez utiliser la commande <code>./felix --help</code> (ou <code>felix --help</code> sur Windows) pour consulter les modes et options de compilations disponibles pour votre système.</p>
+            <h2 id="install_deploy">Déploiement manuel</h2>
+            <p>Une fois l'exécutable Goupile compilé, il est possible de créer un domaine Goupile à l'aide de la commande suivante :</p>
+            <pre>
+<code class="bash hljs"><span class="hljs-comment"># Pour cet exemple, nous allons créer ce domaine dans un sous-dossier tmp</span>
+<span class="hljs-comment"># du dépôt, mais vous pouvez le créer où vous le souhaiter !</span>
+mkdir tmp
+
+<span class="hljs-comment"># L'exécution de cette commande vous demandera de créer un premier</span>
+<span class="hljs-comment"># compte administrateur et de définir son mot de passe.</span>
+bin/Paranoid/goupile init tmp/domaine_test
+</code></pre>
+            <p>L'initilisation de ce domaine va créer <strong>une clé de récupération d'archive</strong> que vous devez stocker afin de pouvoir restaurer une archive créée dans le panneau d'administration du domaine Goupile. Si elle est perdue, cette clé peut être modifiée mais les archives créées avec la clé précédente ne seront pas récupérables !</p>
+            <p>Pour accéder à ce domaine via un navigateur web, vous pouvez le lancer à l'aide de la commande suivante :</p>
+            <pre>
+<code class="bash hljs"><span class="hljs-comment"># Avec cette commande, Goupile sera accessible via http://localhost:8888/</span>
+bin/Paranoid/goupile -C tmp/domaine_test/goupile.ini
+</code></pre>
+            <p>Pour un mise en production, il est <em>recommandé de faire fonctionner Goupile derrière un reverse proxy HTTPS</em> comme par exemple NGINX.</p>
+            <p>Pour automiser le déploiement d'un serveur complet en production (avec plusieurs domaines Goupile et NGINX configuré automatiquement), nous <em>fournissons un playbook et des rôles Ansible</em> prêts à l'emploi que vous pouvez utiliser tel quel ou adapter à vos besoins.</p>
+            <h2 id="install_ansible">Déploiement Ansible</h2>
+            <p>Les scripts Ansible fournis sont adaptés à un déploiement sécurisé sur Debian 10+. Ils peuvent théoriquement être utilisés et/ou adaptés pour d'autres systèmes mais ceci n'est pas testé régulièrement.</p><p>Ce playbook PKnet est configuré pour installer les services suivants :</p>
+            <ul>
+                <li><em>Goupile</em></li>
+                <li><em>Nginx</em> : reverse proxy HTTP (avec auto-configuration Let's Encrypt optionelle)</li>
+                <li><em>Borg</em> : backups quotidiens des bases de données SQLite utilisées par Goupile</li>
+                <li><em>Prometheus et Grafana</em> : surveillance des machines</li>
+            </ul>
+            <p>Dans ce playbook, ces services sont répartis sur 3 machines :</p>
+            <ul>
+                <li><em>host1</em> (machine principale avec Goupile)</li>
+                <li><em>backup</em> (stockage des backups)</li>
+                <li><em>monitor</em> (collectionneur Prometheus et tableau de bord Grafana)</li>
+            </ul>
+            <p>Vous pouvez tester rapidement ce playbook à l'aide du script Vagrant qui est inclus dans le dépôt à l'aide des commandes suivantes :</p>
+            <pre>
+<code class="bash hljs"><span class="hljs-built_in">cd</span> deploy
+vagrant up --no-provision
+vagrant provision
+</code></pre>
+            <p>Les domaines de test suivants seront alors configurés et accessibles sur la machine locale :</p>
+            <ul>
+                <li><a href="https://goupile1.pknet.local/" target="_blank">https://goupile1.pknet.local/</a> : domaine Goupile (HTTPS via certificat auto-signé)</li>
+                <li><a href="https://goupile2.pknet.local/" target="_blank">https://goupile2.pknet.local/</a> : domaine Goupile (HTTPS via certificat auto-signé)</li>
+                <li><a href="https://pknet-monitor.local/grafana" target="_blank">https://pknet-monitor.local/grafana</a> : tableau de bord de surveillance préconfiguré</li>
+            </ul>
+            <p>Le playbook est défini par <em>deploy/pknet.yml</em> et l'inventaire Vagrant qui sert d'exemple est défini dans <em>deploy/inventories/vagrant/hosts.yml</em>. Vous pouvez copier l'inventaire et l'adapter pour configurer votre propre environnement de production, avec vos propres machines et vos propres domaines. Celui-ci contient des commentaires qui expliquent les différents réglages disponibles.</p>
+
+            <h1 id="code">Développement de Goupile</h1>
+            <h2 id="code_repo">Code et licence</h2>
             <p>Goupile est une application <b>libre et gratuite</b>, sous
             <a href="https://www.gnu.org/licenses/#AGPL">licence AGPL 3</a>. Vous pouvez librement
             télécharger et utiliser le code source de Goupile. Tout le monde a l'autorisation d'exécuter,
             de copier, de modifier, et de redistribuer des versions modifiées de ce code.</p>
-            <h2 id="repository">Dépôt</h2>
             <p>Le code source est disponible dans notre <a href="https://framagit.org/interhop/goupile">dépôt git</a>.</p>
             <p>Attention, il s'agit d'un <b>dépôt unique</b> (<i>monorepo</i>) qui contient plusieurs projets.
             Le code spécifique de Goupile est disponible dans <i>src/goupile</i>, mais il fait référence à plusieurs
             autres librairies (internes ou externes) dans ce dépôt.</p>
+            <h2 id="code_tickets">Bugs et demandes</h2>
+            <p>Utilisez notre outil de <a href="https://framagit.org/interhop/goupile/issues">suivi de tickets</a>
+            en ligne pour demander de nouvelles fonctionnalités ou rapporter des bugs.</p>
+
+            <h1 id="Configuration-serveur-HDS">Configuration serveur HDS</h1>
+            <h2 id="Environnements-et-serveurs">Environnements et serveurs</h2>
+            <p>Nos serveurs HDS sont déployés automatiquement à l'aide de scripts Ansible, qui sont exécutés par notre hébergeur GPLExpert (sous-traitant HDS et infogérance).</p>
+            <p>Nous utilisons deux environnements de déploiement : un environnement de pré-production (qui gère les sous-domaines <code>*.preprod.goupile.fr</code>) et un environnement de production. L'environnement de pré-production est identique à la production et nous permet de tester nos scripts de déploiement. Il ne contient que des domaines et données de test.</p><p>Chaque environnement utilise deux serveurs :</p>
+            <ul>
+                <li><em>Serveur proxy</em>, qui filtre les connexions via NGINX et nous permet de rapidement rediriger les requêtes (vers un autre back-end) en cas de problème.</li>
+                <li><em>Serveur back-end</em>, qui contient les services et bases de données Goupile. Les serveurs Goupile sont accessibles derrière un deuxième service NGINX qui tourne sur le serveur back-end.</li>
+            </ul>
+            <p>La communication entre le serveur proxy et le serveur back-end a lieu via un canal sécurisé (IPSec et TLS 1.2+). Les échanges entre les deux services NGINX sont protégés par des certificats serveur et client signés par un certificat interne créé au moment du déploiement (et donc la clé privée est supprimée immédiatement).</p>
+            <h2 id="Plan-de-reprise-d'activité-WIP">Plan de reprise d'activité <strong>[WIP]</strong></h2>
+            <p>Les environnements serveur sont configurés intégralement par des scripts Ansible automatisés et peuvent être reproduits à l'identique en quelques minutes.</p>
+            <p>La restauration des données après perte du serveur principal peut être effectuée à partir de plusieurs sources :</p><ol>
+                <li>Bases répliquées en continu sur un autre serveur <strong>[WIP]</strong></li>
+                <li>Backup nocturne chiffré des bases SQLite réalisé et copié sur un serveur à part dans un autre datacenter <strong>[WIP]</strong></li>
+                <li>Snapshot des VPS réalisé chaque nuit et conservé 14 jours, qui peut être restauré en une heure par GPLExpert</li>
+            </ol>
         </main>
     </body>
 </html>
