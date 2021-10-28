@@ -23,7 +23,7 @@ borg_backup_path: '{{ borg_root_path }}/backup'
 # Set these on hosts that need to be backed up
 # borg_directories:
 # borg_passphrase:
-borg_time: '03:00 UTC' # systemd timestamp
+borg_time: '02:00 UTC' # systemd timestamp
 
 # Set these on hosts where backups will be stored
 borg_server: no

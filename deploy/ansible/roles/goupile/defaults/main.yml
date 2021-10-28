@@ -14,7 +14,7 @@
 goupile_repo: https://framagit.org/interhop/goupile.git
 goupile_commit: master
 goupile_update_auto: yes
-goupile_update_hour: 6
+goupile_update_hour: 3 # UTC
 goupile_root_path: /opt/goupile # Installation directory
 goupile_snapshot_path: '{{ goupile_root_path }}/snapshots' # Snapshot directory
 goupile_run_user: goupile # POSIX user that will run goupile services
