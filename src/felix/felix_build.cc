@@ -290,7 +290,8 @@ Supported compilers:)", FelixTarget, jobs);
 
         PrintLn(fp, R"(
 Use %!..+--compiler=<binary>%!0 to specify a custom C compiler, such as: %!..+felix --compiler=clang-11%!0.
-Felix will use the matching C++ compiler automatically.
+Felix will use the matching C++ compiler automatically. You can also use this option to
+change the linker: %!..+felix --compiler=clang-11:lld-11%!0 or %!..+felix --compiler=:gold%!0.
 
 Supported compiler features:)");
 
