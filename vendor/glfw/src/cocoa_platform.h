@@ -31,12 +31,21 @@
 
 // NOTE: All of NSGL was deprecated in the 10.14 SDK
 //       This disables the pointless warnings for every symbol we use
+#ifndef GL_SILENCE_DEPRECATION
 #define GL_SILENCE_DEPRECATION
+#endif
 
 #if defined(__OBJC__)
 #import <Cocoa/Cocoa.h>
 #else
 typedef void* id;
+#endif
+
+// NOTE: Many Cocoa enum values have been renamed and we need to build across
+//       SDK versions where one is unavailable or the other deprecated
+//       We use the newer names in code and these macros to handle compatibility
+#if MAC_OS_X_VERSION_MAX_ALLOWED < 120000
+ #define kIOMainPortDefault kIOMasterPortDefault
 #endif
 
 // NOTE: Many Cocoa enum values have been renamed and we need to build across
@@ -133,7 +142,6 @@ typedef struct _GLFWwindowNS
     // since the last cursor motion event was processed
     // This is kept to counteract Cocoa doing the same internally
     double          cursorWarpDeltaX, cursorWarpDeltaY;
-
 } _GLFWwindowNS;
 
 // Cocoa-specific global data
@@ -168,7 +176,6 @@ typedef struct _GLFWlibraryNS
         PFN_LMGetKbdType GetKbdType;
         CFStringRef     kPropertyUnicodeKeyLayoutData;
     } tis;
-
 } _GLFWlibraryNS;
 
 // Cocoa-specific per-monitor data
@@ -180,7 +187,6 @@ typedef struct _GLFWmonitorNS
     uint32_t            unitNumber;
     id                  screen;
     double              fallbackRefreshRate;
-
 } _GLFWmonitorNS;
 
 // Cocoa-specific per-cursor data
@@ -188,7 +194,6 @@ typedef struct _GLFWmonitorNS
 typedef struct _GLFWcursorNS
 {
     id              object;
-
 } _GLFWcursorNS;
 
 // Cocoa-specific global timer data
@@ -196,7 +201,6 @@ typedef struct _GLFWcursorNS
 typedef struct _GLFWtimerNS
 {
     uint64_t        frequency;
-
 } _GLFWtimerNS;
 
 
