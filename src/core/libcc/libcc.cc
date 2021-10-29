@@ -3227,9 +3227,12 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
     // processes remaining alive. Furthermore, processes killed by GenerateConsoleCtrlEvent()
     // can trigger "MessageBox" errors, unless SetErrorMode() is used.
     //
-    // TerminateJobObject() is a bit brutal, but it takes care of these issues. If job creation
-    // or assignement fails, we will try TerminateProcess() instead.
+    // TerminateJobObject() is a bit brutal, but it takes care of these issues.
     HANDLE job_handle = CreateJobObject(nullptr, nullptr);
+    if (!job_handle) {
+        LogError("Failed to create job object: %1", GetWin32ErrorString());
+        return false;
+    }
     RG_DEFER { CloseHandleSafe(&job_handle); };
 
     // Create read and write pipes
@@ -3388,11 +3391,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
 
     // Get exit code
     if (WaitForSingleObject(console_ctrl_event, 0) == WAIT_OBJECT_0) {
-        if (job_handle) {
-            TerminateJobObject(job_handle, STATUS_CONTROL_C_EXIT);
-        } else {
-            TerminateProcess(process_handle, STATUS_CONTROL_C_EXIT);
-        }
+        TerminateJobObject(job_handle, STATUS_CONTROL_C_EXIT);
         exit_code = STATUS_CONTROL_C_EXIT;
     } else if (!GetExitCodeProcess(process_handle, &exit_code)) {
         LogError("GetExitCodeProcess() failed: %1", GetWin32ErrorString());
