@@ -129,7 +129,7 @@ static const char *BuildGitVersionString(Allocator *alloc)
         }
 
         buf.len = TrimStrRight(buf.Take()).len;
-        Fmt(&output, buf.len ? "~dirty" : "");
+        Fmt(&output, buf.len ? "_dirty" : "");
     }
 
     return output.TrimAndLeak().ptr;
