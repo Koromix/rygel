@@ -3235,6 +3235,17 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
     }
     RG_DEFER { CloseHandleSafe(&job_handle); };
 
+    // If I die, everyone dies!
+    {
+        JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = {};
+        limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+
+        if (!SetInformationJobObject(job_handle, JobObjectExtendedLimitInformation, &limits, RG_SIZE(limits))) {
+            LogError("SetInformationJobObject() failed: %1", GetWin32ErrorString());
+            return false;
+        }
+    }
+
     // Create read and write pipes
     HANDLE in_pipe[2] = {};
     HANDLE out_pipe[2] = {};
@@ -3409,6 +3420,58 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
 
 #else
 
+static std::atomic_bool explicit_interrupt = false;
+
+static void SetSignalHandler(int signal, struct sigaction *prev, void (*func)(int))
+{
+    struct sigaction action = {};
+
+    action.sa_handler = func;
+    sigemptyset(&action.sa_mask);
+    action.sa_flags = 0;
+
+    sigaction(signal, &action, prev);
+}
+
+static void DefaultSignalHandler(int signal)
+{
+    pid_t pid = getpid();
+    RG_ASSERT(pid > 1);
+
+    // Send to process group
+    {
+        struct sigaction prev_action;
+        SetSignalHandler(signal, &prev_action, [](int) {});
+        RG_DEFER { sigaction(signal, &prev_action, nullptr); };
+
+        kill(-pid, signal);
+    }
+
+    if (!explicit_interrupt) {
+        int code = (signal == SIGINT) ? 130 : 1;
+        exit(code);
+    }
+}
+
+RG_INIT(SetupDefaultHandlers)
+{
+    int ret = setpgid(0, 0);
+    RG_ASSERT(!ret);
+
+    SetSignalHandler(SIGINT, nullptr, DefaultSignalHandler);
+    SetSignalHandler(SIGTERM, nullptr, DefaultSignalHandler);
+    SetSignalHandler(SIGHUP, nullptr, DefaultSignalHandler);
+}
+
+RG_EXIT(TerminateChildren)
+{
+    pid_t pid = getpid();
+    RG_ASSERT(pid > 1);
+
+    SetSignalHandler(SIGTERM, nullptr, [](int) {});
+    kill(-pid, SIGTERM);
+}
+
 bool CreatePipe(int pfd[2])
 {
 #ifdef __APPLE__
@@ -3491,29 +3554,24 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
 
     // Read and write standard process streams
     do {
-        struct pollfd pfds[2] = {{-1}, {-1}};
-        nfds_t pfds_count = 0;
+        LocalArray<struct pollfd, 2> pfds;
+        int in_idx = -1, out_idx = -1;
         if (in_pfd[1] >= 0) {
-            pfds[pfds_count++] = {in_pfd[1], POLLOUT};
+            in_idx = pfds.len;
+            pfds.Append({in_pfd[1], POLLOUT});
         }
         if (out_pfd[0] >= 0) {
-            pfds[pfds_count++] = {out_pfd[0], POLLIN};
+            out_idx = pfds.len;
+            pfds.Append({out_pfd[0], POLLIN});
         }
 
-        if (RG_POSIX_RESTART_EINTR(poll(pfds, pfds_count, -1), < 0) < 0) {
+        if (RG_POSIX_RESTART_EINTR(poll(pfds.data, (nfds_t)pfds.len, -1), < 0) < 0) {
             LogError("Failed to read process output: %1", strerror(errno));
             break;
         }
 
-        unsigned int in_revents;
-        unsigned int out_revents;
-        if (pfds[0].fd == in_pfd[1]) {
-            in_revents = pfds[0].revents;
-            out_revents = pfds[1].revents;
-        } else {
-            in_revents = 0;
-            out_revents = pfds[0].revents;
-        }
+        unsigned int in_revents = (in_idx >= 0) ? pfds[in_idx].revents : 0;
+        unsigned int out_revents = (out_idx >= 0) ? pfds[out_idx].revents : 0;
 
         // Try to write
         if (in_revents & POLLERR) {
@@ -3681,26 +3739,13 @@ void WaitDelay(int64_t delay)
     }
 }
 
-static void SetSignalHandler(int signal, void (*func)(int))
-{
-    struct sigaction action = {};
-
-    action.sa_handler = func;
-    sigemptyset(&action.sa_mask);
-    action.sa_flags = 0;
-
-    sigaction(signal, &action, nullptr);
-}
-
 WaitForResult WaitForInterrupt(int64_t timeout)
 {
     static volatile bool run = true;
     static volatile bool message = false;
 
-    SetSignalHandler(SIGINT, [](int) { run = false; });
-    SetSignalHandler(SIGTERM, [](int) { run = false; });
-    SetSignalHandler(SIGHUP, [](int) { run = false; });
-    SetSignalHandler(SIGUSR1, [](int) { message = true; });
+    explicit_interrupt = true;
+    SetSignalHandler(SIGUSR1, nullptr, [](int) { message = true; });
 
     if (timeout >= 0) {
         struct timespec ts;
@@ -3730,7 +3775,8 @@ WaitForResult WaitForInterrupt(int64_t timeout)
 
 void SignalWaitFor()
 {
-    kill(getpid(), SIGUSR1);
+    pid_t pid = getpid();
+    kill(pid, SIGUSR1);
 }
 
 #endif
