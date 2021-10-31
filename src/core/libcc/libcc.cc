@@ -3420,6 +3420,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
 
 #else
 
+static std::atomic_bool flag_interrupt = false;
 static std::atomic_bool explicit_interrupt = false;
 
 static void SetSignalHandler(int signal, struct sigaction *prev, void (*func)(int))
@@ -3447,7 +3448,9 @@ static void DefaultSignalHandler(int signal)
         kill(-pid, signal);
     }
 
-    if (!explicit_interrupt) {
+    if (flag_interrupt) {
+        explicit_interrupt = true;
+    } else {
         int code = (signal == SIGINT) ? 130 : 1;
         exit(code);
     }
@@ -3741,10 +3744,9 @@ void WaitDelay(int64_t delay)
 
 WaitForResult WaitForInterrupt(int64_t timeout)
 {
-    static volatile bool run = true;
-    static volatile bool message = false;
+    static std::atomic_bool message = false;
 
-    explicit_interrupt = true;
+    flag_interrupt = true;
     SetSignalHandler(SIGUSR1, nullptr, [](int) { message = true; });
 
     if (timeout >= 0) {
@@ -3753,17 +3755,17 @@ WaitForResult WaitForInterrupt(int64_t timeout)
         ts.tv_nsec = (int)((timeout % 1000) * 1000000);
 
         struct timespec rem;
-        while (run && !message && nanosleep(&ts, &rem) < 0) {
+        while (!explicit_interrupt && !message && nanosleep(&ts, &rem) < 0) {
             RG_ASSERT(errno == EINTR);
             ts = rem;
         }
     } else {
-        while (run && !message) {
+        while (!explicit_interrupt && !message) {
             pause();
         }
     }
 
-    if (!run) {
+    if (explicit_interrupt) {
         return WaitForResult::Interrupt;
     } else if (message) {
         message = false;

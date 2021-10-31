@@ -311,8 +311,6 @@ const char *Builder::AddSource(const SourceFileInfo &src)
     return obj_filename;
 }
 
-// The caller needs to ignore (or do whetever) SIGINT for the clean up to work if
-// the user interrupts felix. For this you can use libcc: call WaitForInterrupt(0).
 bool Builder::Build(int jobs, bool verbose)
 {
     RG_ASSERT(jobs >= 0);
@@ -321,7 +319,6 @@ bool Builder::Build(int jobs, bool verbose)
     clear_filenames.Clear();
     rsp_map.Clear();
     progress = total - nodes.len;
-    interrupted = false;
     workers.Clear();
     workers.AppendDefault(jobs);
 
@@ -432,7 +429,7 @@ bool Builder::Build(int jobs, bool verbose)
             LogInfo("Nothing to do%!D..%1%!0", build.fake ? " [dry run]" : "");
         }
         return true;
-    } else if (interrupted) {
+    } else if (WaitForInterrupt(0) == WaitForResult::Interrupt) {
         LogError("Build was interrupted");
         return false;
     } else {
@@ -770,7 +767,7 @@ static Size ExtractShowIncludes(Span<char> buf, Allocator *alloc, HeapArray<cons
 
 bool Builder::RunNode(Async *async, Node *node, bool verbose)
 {
-    if (interrupted)
+    if (WaitForInterrupt(0) == WaitForResult::Interrupt)
         return false;
 
     const Command &cmd = node->cmd;
@@ -871,9 +868,7 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
         if (!started) {
             // Error already issued by ExecuteCommandLine()
             stderr_st.Write(output);
-        } else if (exit_code == 130) {
-            interrupted = true; // SIGINT
-        } else {
+        } else if (WaitForInterrupt(0) != WaitForResult::Interrupt) {
             LogError("%1 %!..+(exit code %2)%!0", node->text, exit_code);
             stderr_st.Write(output);
         }

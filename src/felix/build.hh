@@ -87,7 +87,6 @@ class Builder {
     HeapArray<const char *> clear_filenames;
     HashMap<const void *, const char *> rsp_map;
     Size progress;
-    bool interrupted;
     HeapArray<WorkerState> workers;
 
     HashTable<const char *, CacheEntry> cache_map;
