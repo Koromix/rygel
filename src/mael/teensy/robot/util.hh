@@ -17,6 +17,7 @@
 #include <assert.h>
 
 #define DEG2RAD 0.01745329251
+#define RAD2DEG 57.2957795457
 
 #define STRINGIFY_(A) #A
 #define STRINGIFY(A) STRINGIFY_(A)

@@ -19,6 +19,8 @@ let recv_time;
 let recv_first;
 let recv_last;
 
+let robot;
+
 async function init() {
     let asset_paths = [
         'playground.webp',
@@ -166,7 +168,9 @@ function update() {
             if (offset !== view.byteLength)
                 throw new RangeError();
 
-            console.log(info.name, obj);
+            switch (info.name) {
+                case 'Imu': { robot = obj; } break;
+            }
         } catch (err) {
             console.log('Mis-sized packet payload');
             continue;
@@ -198,6 +202,21 @@ function draw() {
                            img.width * factor, img.height * factor);
 
         ctx.restore();
+    }
+
+    // Paint robot
+    if (connected && robot != null) {
+        ctx.save();
+        ctx.fillStyle = '#ff0000';
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(robot.orientation.x);
+        ctx.fillRect(-20, -20, 40, 40);
+        ctx.restore();
+
+        let text = 'Rotation : ' + (robot.orientation.x * (180 / Math.PI)).toFixed(1) + '°' +
+                           ' x ' + (robot.orientation.y * (180 / Math.PI)).toFixed(1) + '°' +
+                           ' x ' + (robot.orientation.z * (180 / Math.PI)).toFixed(1) + '°';
+        label(canvas.width - 12, canvas.height - 12, text, { align: 3 });
     }
 
     // Status

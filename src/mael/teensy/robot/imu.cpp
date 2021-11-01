@@ -48,6 +48,8 @@ void ProcessIMU()
     position.y += 0.5 * (double)accel.acceleration.y * (1.0 / 1000.0) * (1.0 / 1000.0);
     position.z += 0.5 * (double)accel.acceleration.z * (1.0 / 1000.0) * (1.0 / 1000.0);
 
+    PROCESS_EVERY(50000);
+
     // Fill basic IMU data
     ImuParameters imu = {};
     imu.position = position;
