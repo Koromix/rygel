@@ -14,7 +14,7 @@
 #include "../../../core/libcc/libcc.hh"
 #include "config.hh"
 #include "../../../core/libnet/libnet.hh"
-#include "../../teensy/protocol.hh"
+#include "../../teensy/robot/protocol.hh"
 #include "../../../../vendor/libhs/libhs.h"
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
 #include "../../../../vendor/miniz/miniz.h"

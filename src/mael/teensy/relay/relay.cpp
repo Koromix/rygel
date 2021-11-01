@@ -16,7 +16,7 @@
 #include <SPI.h>
 #include <RF24.h>
 
-static RF24 radio(CE_PIN, CSN_PIN);
+static RF24 radio(PIN_RF24_CE, PIN_RF24_CSN);
 
 static void InitRadio()
 {
@@ -28,13 +28,8 @@ static void InitRadio()
     radio.setPALevel(RF24_PA_LOW);
     radio.setPayloadSize(32);
 
-    if (RADIO_NUMBER) {
-        radio.openWritingPipe(RADIO_ADDR1);
-        radio.openReadingPipe(1, RADIO_ADDR2);
-    } else {
-        radio.openWritingPipe(RADIO_ADDR2);
-        radio.openReadingPipe(1, RADIO_ADDR1);
-    }
+    radio.openWritingPipe(RF24_ADDR2);
+    radio.openReadingPipe(1, RF24_ADDR1);
 
     radio.startListening();
 }

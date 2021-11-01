@@ -13,9 +13,28 @@
 
 #pragma once
 
+// Encoder pins
+#define PIN_ENC0_INT 12
+#define PIN_ENC0_DIR 16
+#define PIN_ENC1_INT 13
+#define PIN_ENC1_DIR 17
+#define PIN_ENC2_INT 14
+#define PIN_ENC2_DIR 18
+#define PIN_ENC3_INT 15
+#define PIN_ENC3_DIR 19
+
+// DC driver pins
+#define PIN_DC0_DIR 22
+#define PIN_DC0_PWM 26
+#define PIN_DC1_DIR 23
+#define PIN_DC1_PWM 27
+#define PIN_DC2_DIR 24
+#define PIN_DC2_PWM 28
+#define PIN_DC3_DIR 25
+#define PIN_DC3_PWM 29
+
 // RF24 config
-#define RADIO_NUMBER 1
-#define RADIO_ADDR1 0xDEAD4321ul
-#define RADIO_ADDR2 0xDEAD1234ul
-#define CE_PIN 4
-#define CSN_PIN 3
+#define RF24_ADDR1 0xDEAD4321ul
+#define RF24_ADDR2 0xDEAD1234ul
+#define PIN_RF24_CE 4
+#define PIN_RF24_CSN 3
