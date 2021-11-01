@@ -33,5 +33,9 @@
 #define PIN_DC3_DIR 25
 #define PIN_DC3_PWM 29
 
-// XBee communication
-#define XBEE_OBJECT Serial
+// RF24 config
+#define RADIO_NUMBER 0
+#define RADIO_ADDR1 0xDEAD4321ul
+#define RADIO_ADDR2 0xDEAD1234ul
+#define CE_PIN 4
+#define CSN_PIN 3

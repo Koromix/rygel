@@ -16,6 +16,10 @@
 #include "drive.hh"
 #include "serial.hh"
 #include <FastCRC.h>
+#include <SPI.h>
+#include <RF24.h>
+
+static RF24 radio(CE_PIN, CSN_PIN);
 
 static bool recv_started = false;
 alignas(uint64_t) static uint8_t recv_buf[4096];
@@ -25,10 +29,33 @@ static uint8_t send_buf[4096];
 static size_t send_buf_write = 0;
 static size_t send_buf_send = 0;
 
+static void InitRadio()
+{
+    while (!radio.begin(&SPI)) {
+        Serial.println("Radio hardware not responding!!");
+        delay(2000);
+    }
+
+    radio.setPALevel(RF24_PA_LOW);
+    radio.setPayloadSize(32);
+
+    if (RADIO_NUMBER) {
+        radio.openWritingPipe(RADIO_ADDR1);
+        radio.openReadingPipe(1, RADIO_ADDR2);
+    } else {
+        radio.openWritingPipe(RADIO_ADDR2);
+        radio.openReadingPipe(1, RADIO_ADDR1);
+    }
+
+    radio.startListening();
+}
+
 void InitSerial()
 {
     Serial.begin(9600);
-    XBEE_OBJECT.begin(9600);
+
+    SPI.begin();
+    InitRadio();
 }
 
 static bool ExecuteCommand(MessageType type, const void *data)
@@ -49,8 +76,9 @@ static bool ExecuteCommand(MessageType type, const void *data)
 
 static void ReceivePacket()
 {
-    while (XBEE_OBJECT.available()) {
-        int c = XBEE_OBJECT.read();
+    while (radio.available()) {
+        uint8_t c;
+        radio.read(&c, 1);
 
         if (!recv_started) {
             recv_started = (c == 0xA);
@@ -105,13 +133,35 @@ malformed:
 
 void ProcessSerial()
 {
+    if (radio.failureDetected) {
+        radio.failureDetected = false;
+        Serial.println("Radio failure detected, restarting radio");
+
+        delay(250);
+        InitRadio();
+    }
+
     // Process incoming packets
     ReceivePacket();
 
     // Send pending packets
-    while (XBEE_OBJECT.availableForWrite() && send_buf_send != send_buf_write) {
-        XBEE_OBJECT.write(send_buf[send_buf_send]);
-        send_buf_send = (send_buf_send + 1) % sizeof(send_buf);
+    if (send_buf_send != send_buf_write) {
+        radio.stopListening();
+
+        while (send_buf_send != send_buf_write) {
+            uint8_t buf[32] = {};
+            int buf_len = 1;
+
+            while (send_buf_send != send_buf_write && buf_len < sizeof(buf)) {
+                buf[buf_len++] = send_buf[send_buf_send];
+                send_buf_send = (send_buf_send + 1) % sizeof(send_buf);
+            }
+            buf[0] = (uint8_t)(buf_len - 1);
+
+            radio.write(buf, 32);
+        }
+
+        radio.startListening();
     }
 }
 

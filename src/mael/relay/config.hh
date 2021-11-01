@@ -11,8 +11,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-// Model: Teensy 3.5
-// Libraries:
-// * FastCRC 1.31: https://github.com/FrankBoesing/FastCRC
-// * Adafruit BNO055 1.5.1: https://github.com/adafruit/Adafruit_BNO055
-// * RF24 1.4.1: https://github.com/nRF24/RF24
+#pragma once
+
+// RF24 config
+#define RADIO_NUMBER 1
+#define RADIO_ADDR1 0xDEAD4321ul
+#define RADIO_ADDR2 0xDEAD1234ul
+#define CE_PIN 4
+#define CSN_PIN 3
