@@ -239,7 +239,11 @@ static void ReceivePacket()
         }
         pkt.len = j;
 
-        if (CheckIntegrity(pkt)) {
+        if (!pkt.len) {
+            // Fix start/end inversion
+            recv_start = 0;
+            recv_end = 1;
+        } else if (CheckIntegrity(pkt)) {
             std::lock_guard<std::mutex> lock(clients_mutex);
 
             for (Client *client = clients_root.next; client != &clients_root; client = client->next) {

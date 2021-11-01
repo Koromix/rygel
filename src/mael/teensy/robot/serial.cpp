@@ -100,6 +100,12 @@ static void ReceivePacket()
                 }
             }
 
+            // Fix start/end inversion
+            if (!len) {
+                recv_started = true;
+                goto malformed;
+            }
+
             PacketHeader hdr;
             if (len < sizeof(hdr))
                 goto malformed;
