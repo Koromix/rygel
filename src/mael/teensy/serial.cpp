@@ -21,7 +21,7 @@
 #include <SPI.h>
 #include <RF24.h>
 
-static RF24 radio(RF24_PIN_CE, RF24_PIN_CSN);
+static RF24 rf24;
 
 static bool recv_started = false;
 alignas(uint64_t) static uint8_t recv_buf[1024];
@@ -33,18 +33,20 @@ static size_t send_buf_send = 0;
 
 static void InitRadio()
 {
-    while (!radio.begin(&(RF24_SPI))) {
+    while (!rf24.begin(&(RF24_SPI), RF24_PIN_CE, RF24_PIN_CSN)) {
         Serial.println("Radio hardware not responding!!");
         delay(2000);
     }
 
-    radio.setPALevel(RF24_PA_LOW);
-    radio.setPayloadSize(RF24_PAYLOAD_SIZE);
+    rf24.setPALevel(RF24_PA_LOW);
+    rf24.setPayloadSize(RF24_PAYLOAD_SIZE);
+    rf24.setAutoAck(false);
+    rf24.disableCRC();
 
-    radio.openWritingPipe(RF24_ADDR_RTOH);
-    radio.openReadingPipe(1, RF24_ADDR_HTOR);
+    rf24.openWritingPipe(RF24_ADDR_RTOH);
+    rf24.openReadingPipe(1, RF24_ADDR_HTOR);
 
-    radio.startListening();
+    rf24.startListening();
 }
 
 void InitSerial()
@@ -73,9 +75,9 @@ static bool ExecuteCommand(MessageType type, const void *data)
 
 static void ReceivePacket()
 {
-    while (radio.available()) {
+    while (rf24.available()) {
         uint8_t c;
-        radio.read(&c, 1);
+        rf24.read(&c, 1);
 
         if (!recv_started) {
             recv_started = (c == 0xA);
@@ -136,9 +138,11 @@ malformed:
 
 void ProcessSerial()
 {
-    if (radio.failureDetected) {
-        radio.failureDetected = false;
-        Serial.println("Radio failure detected, restarting radio");
+    PROCESS_EVERY(1000);
+
+    if (rf24.failureDetected) {
+        rf24.failureDetected = false;
+        Serial.println("Radio failure detected, restarting RF24");
 
         delay(250);
         InitRadio();
@@ -149,8 +153,9 @@ void ProcessSerial()
 
     // Send pending packets
     if (send_buf_send != send_buf_write) {
-        radio.stopListening();
+        rf24.stopListening();
 
+        int rf24_len = 0;
         while (send_buf_send != send_buf_write) {
             uint8_t buf[RF24_PAYLOAD_SIZE] = {};
             int buf_len = 1;
@@ -161,10 +166,17 @@ void ProcessSerial()
             }
             buf[0] = (uint8_t)(buf_len - 1);
 
-            radio.write(buf, sizeof(buf));
+            rf24.writeFast(buf, sizeof(buf));
+            rf24_len += sizeof(buf);
+
+            if (rf24_len == RF24_PAYLOAD_SIZE * 3) {
+                rf24.txStandBy(0);
+                rf24.flush_tx();
+                rf24_len = 0;
+            }
         }
 
-        radio.startListening();
+        rf24.startListening();
     }
 }
 

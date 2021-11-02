@@ -13,27 +13,30 @@
 
 #ifdef __MKL26Z64__
 
+#include "util.hh"
 #include "config.hh"
 #include <Arduino.h>
 #include <SPI.h>
 #include <RF24.h>
 
-static RF24 radio(RF24_PIN_CE, RF24_PIN_CSN);
+static RF24 rf24;
 
 static void InitRadio()
 {
-    while (!radio.begin(&(RF24_SPI))) {
+    while (!rf24.begin(&(RF24_SPI), RF24_PIN_CE, RF24_PIN_CSN)) {
         Serial.println("Radio hardware not responding!!");
         delay(2000);
     }
 
-    radio.setPALevel(RF24_PA_LOW);
-    radio.setPayloadSize(RF24_PAYLOAD_SIZE);
+    rf24.setPALevel(RF24_PA_LOW);
+    rf24.setPayloadSize(RF24_PAYLOAD_SIZE);
+    rf24.setAutoAck(false);
+    rf24.disableCRC();
 
-    radio.openWritingPipe(RF24_ADDR_HTOR);
-    radio.openReadingPipe(1, RF24_ADDR_RTOH);
+    rf24.openWritingPipe(RF24_ADDR_HTOR);
+    rf24.openReadingPipe(1, RF24_ADDR_RTOH);
 
-    radio.startListening();
+    rf24.startListening();
 }
 
 void setup()
@@ -46,17 +49,19 @@ void setup()
 
 void loop()
 {
-    if (radio.failureDetected) {
-        radio.failureDetected = false;
-        Serial.println("Radio failure detected, restarting radio");
+    PROCESS_EVERY(1000);
+
+    if (rf24.failureDetected) {
+        rf24.failureDetected = false;
+        Serial.println("Radio failure detected, restarting RF24");
 
         delay(250);
         InitRadio();
     }
 
-    while (radio.available()) {
+    while (rf24.available()) {
         uint8_t buf[RF24_PAYLOAD_SIZE];
-        radio.read(buf, sizeof(buf));
+        rf24.read(buf, sizeof(buf));
 
         if (buf[0] <= sizeof(buf) - 1) {
             Serial.write(buf + 1, buf[0]);
