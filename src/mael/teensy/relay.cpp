@@ -31,6 +31,7 @@ static void InitRadio()
     rf24.setPALevel(RF24_PA_LOW);
     rf24.setPayloadSize(RF24_PAYLOAD_SIZE);
     rf24.setAutoAck(false);
+    rf24.setRetries(0, 0);
     rf24.disableCRC();
 
     rf24.openWritingPipe(RF24_ADDR_HTOR);
