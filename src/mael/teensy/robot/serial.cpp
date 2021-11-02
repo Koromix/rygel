@@ -37,7 +37,7 @@ static void InitRadio()
     }
 
     radio.setPALevel(RF24_PA_LOW);
-    radio.setPayloadSize(32);
+    radio.setPayloadSize(RF24_PAYLOAD_SIZE);
 
     radio.openWritingPipe(RF24_ADDR_RTOH);
     radio.openReadingPipe(1, RF24_ADDR_HTOR);
@@ -150,7 +150,7 @@ void ProcessSerial()
         radio.stopListening();
 
         while (send_buf_send != send_buf_write) {
-            uint8_t buf[32] = {};
+            uint8_t buf[RF24_PAYLOAD_SIZE] = {};
             int buf_len = 1;
 
             while (send_buf_send != send_buf_write && buf_len < sizeof(buf)) {
@@ -159,7 +159,7 @@ void ProcessSerial()
             }
             buf[0] = (uint8_t)(buf_len - 1);
 
-            radio.write(buf, 32);
+            radio.write(buf, sizeof(buf));
         }
 
         radio.startListening();

@@ -26,7 +26,7 @@ static void InitRadio()
     }
 
     radio.setPALevel(RF24_PA_LOW);
-    radio.setPayloadSize(32);
+    radio.setPayloadSize(RF24_PAYLOAD_SIZE);
 
     radio.openWritingPipe(RF24_ADDR_HTOR);
     radio.openReadingPipe(1, RF24_ADDR_RTOH);
@@ -53,10 +53,10 @@ void loop()
     }
 
     while (radio.available()) {
-        uint8_t buf[32];
-        radio.read(buf, 32);
+        uint8_t buf[RF24_PAYLOAD_SIZE];
+        radio.read(buf, sizeof(buf));
 
-        if (buf[0] <= 31) {
+        if (buf[0] <= sizeof(buf) - 1) {
             Serial.write(buf + 1, buf[0]);
         }
     }
