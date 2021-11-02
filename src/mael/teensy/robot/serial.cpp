@@ -22,10 +22,10 @@
 static RF24 radio(PIN_RF24_CE, PIN_RF24_CSN);
 
 static bool recv_started = false;
-alignas(uint64_t) static uint8_t recv_buf[4096];
+alignas(uint64_t) static uint8_t recv_buf[1024];
 static size_t recv_buf_len = 0;
 
-static uint8_t send_buf[4096];
+static uint8_t send_buf[1024];
 static size_t send_buf_write = 0;
 static size_t send_buf_send = 0;
 
