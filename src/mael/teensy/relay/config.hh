@@ -14,7 +14,8 @@
 #pragma once
 
 // RF24 config
-#define RF24_ADDR1 0xDEAD4321ul
-#define RF24_ADDR2 0xDEAD1234ul
-#define PIN_RF24_CE 4
-#define PIN_RF24_CSN 3
+#define RF24_SPI SPI
+#define RF24_PIN_CE 4
+#define RF24_PIN_CSN 3
+#define RF24_ADDR_HTOR 0xDEAD4321ul
+#define RF24_ADDR_RTOH 0xDEAD1234ul

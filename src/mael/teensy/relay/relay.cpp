@@ -16,11 +16,11 @@
 #include <SPI.h>
 #include <RF24.h>
 
-static RF24 radio(PIN_RF24_CE, PIN_RF24_CSN);
+static RF24 radio(RF24_PIN_CE, RF24_PIN_CSN);
 
 static void InitRadio()
 {
-    while (!radio.begin(&SPI)) {
+    while (!radio.begin(&(RF24_SPI))) {
         Serial.println("Radio hardware not responding!!");
         delay(2000);
     }
@@ -28,8 +28,8 @@ static void InitRadio()
     radio.setPALevel(RF24_PA_LOW);
     radio.setPayloadSize(32);
 
-    radio.openWritingPipe(RF24_ADDR2);
-    radio.openReadingPipe(1, RF24_ADDR1);
+    radio.openWritingPipe(RF24_ADDR_HTOR);
+    radio.openReadingPipe(1, RF24_ADDR_RTOH);
 
     radio.startListening();
 }
