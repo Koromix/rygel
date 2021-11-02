@@ -16,5 +16,5 @@
 const messages = [
     #define MESSAGE(Name, Defn) { name: # Name, members: Defn },
     #define MEMBER(Type, Name) Name: # Type,
-    #include "../../teensy/robot/protocol_inc.hh"
+    #include "../../teensy/protocol_inc.hh"
 ];

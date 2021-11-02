@@ -11,6 +11,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
+#ifdef __MKL26Z64__
+
 #include "config.hh"
 #include <Arduino.h>
 #include <SPI.h>
@@ -61,3 +63,5 @@ void loop()
         }
     }
 }
+
+#endif

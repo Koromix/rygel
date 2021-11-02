@@ -13,6 +13,8 @@
 
 #pragma once
 
+#ifdef __MK64FX512__
+
 #include "util.hh"
 #include "config.hh"
 #include "protocol.hh"
@@ -21,3 +23,5 @@ void InitSerial();
 void ProcessSerial();
 
 bool PostMessage(MessageType type, const void *args);
+
+#endif

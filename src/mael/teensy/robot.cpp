@@ -11,6 +11,26 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-// Model: Teensy LC
-// Libraries:
-// * RF24 1.4.1: https://github.com/nRF24/RF24
+#ifdef __MK64FX512__
+
+#include "util.hh"
+#include "config.hh"
+#include "drive.hh"
+#include "imu.hh"
+#include "serial.hh"
+
+void setup()
+{
+    InitSerial();
+    InitIMU();
+    InitDrive();
+}
+
+void loop()
+{
+    ProcessSerial();
+    ProcessIMU();
+    ProcessDrive();
+}
+
+#endif

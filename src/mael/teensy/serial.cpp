@@ -11,6 +11,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
+#ifdef __MK64FX512__
+
 #include "util.hh"
 #include "config.hh"
 #include "drive.hh"
@@ -233,3 +235,5 @@ overflow:
     Serial.println("Send overflow, dropping packet");
     return false;
 }
+
+#endif
