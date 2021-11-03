@@ -1815,7 +1815,7 @@ function InstanceController() {
                 timeout = 5000;
             }
 
-            autosave_timer = setTimeout(async () => {
+            autosave_timer = setTimeout(util.serialize(async () => {
                 if (self.hasUnsavedData()) {
                     try {
                         await saveRecord(form_record, form_values, route.page);
@@ -1827,7 +1827,7 @@ function InstanceController() {
                 }
 
                 autosave_timer = null;
-            }, timeout);
+            }, mutex), timeout);
         }
 
         // Highlight might need to change (conditions, etc.)
