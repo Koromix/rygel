@@ -47,6 +47,7 @@ function InstanceController() {
     let ignore_editor_change = false;
     let ignore_editor_scroll = false;
     let ignore_page_scroll = false;
+    let autosave_timer;
 
     let data_form;
     let data_rows;
@@ -1574,25 +1575,33 @@ function InstanceController() {
             if (!options.reload && !options.force) {
                 if (self.hasUnsavedData() && (new_record !== form_record || 
                                               new_route.page !== route.page)) {
-                    try {
-                        await ui.runConfirm(e, html`Si vous continuez, vos <b>modifications seront enregistrées</b>. Voulez-vous enregistrer ?`,
-                                               "Enregistrer", async () => {
-                            form_builder.triggerErrors();
-
-                            await mutex.chain(() => saveRecord(form_record, form_values, route.page));
-                            new_route.version = null;
-                        });
+                    if (route.page.options.autosave) {
+                        await mutex.chain(() => saveRecord(form_record, form_values, route.page));
+                        new_route.version = null;
 
                         options.reload = true;
                         continue;
-                    } catch (err) {
-                        if (err != null)
-                            log.error(err);
+                    } else {
+                        try {
+                            await ui.runConfirm(e, html`Si vous continuez, vos <b>modifications seront enregistrées</b>. Voulez-vous enregistrer ?`,
+                                                   "Enregistrer", async () => {
+                                form_builder.triggerErrors();
 
-                        // If we're popping state, this will fuck up navigation history but we can't
-                        // refuse popstate events. History mess is better than data loss.
-                        await mutex.chain(self.run);
-                        return;
+                                await mutex.chain(() => saveRecord(form_record, form_values, route.page));
+                                new_route.version = null;
+                            });
+
+                            options.reload = true;
+                            continue;
+                        } catch (err) {
+                            if (err != null)
+                                log.error(err);
+
+                            // If we're popping state, this will fuck up navigation history but we can't
+                            // refuse popstate events. History mess is better than data loss.
+                            await mutex.chain(self.run);
+                            return;
+                        }
                     }
                 }
             }
@@ -1784,10 +1793,42 @@ function InstanceController() {
             form_values = {};
             form_values[new_record.form.key] = form_state.values;
         }
+
+        if (new_record !== form_record || !copy_ui) {
+            if (autosave_timer != null)
+                clearTimeout(autosave_timer);
+            autosave_timer = null;
+        }
     }
 
     async function handleStateChange() {
         await self.run();
+
+        if (route.page.options.autosave) {
+            if (autosave_timer != null)
+                clearTimeout(autosave_timer);
+
+            let timeout;
+            if (typeof route.page.options.autosave === 'number') {
+                timeout = route.page.options.autosave;
+            } else {
+                timeout = 5000;
+            }
+
+            autosave_timer = setTimeout(async () => {
+                if (self.hasUnsavedData()) {
+                    try {
+                        await saveRecord(form_record, form_values, route.page);
+                    } catch (err) {
+                        log.error(err);
+                    }
+
+                    self.run();
+                }
+
+                autosave_timer = null;
+            }, timeout);
+        }
 
         // Highlight might need to change (conditions, etc.)
         if (ui.isPanelEnabled('editor'))
