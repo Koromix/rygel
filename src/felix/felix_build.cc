@@ -170,7 +170,7 @@ static bool ParseFeatureString(Span<const char> str, uint32_t *out_features)
 
 static bool LoadPresetFile(const char *basename, Allocator *alloc,
                            const char **out_preset_name, CompilerInfo *out_compiler_info,
-                           HeapArray<BuildPreset> *out_presets)
+                           int *out_jobs, HeapArray<BuildPreset> *out_presets)
 {
     // This function assumes the file is in the current working directory
     RG_ASSERT(!strpbrk(basename, RG_PATH_SEPARATORS));
@@ -195,6 +195,15 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
 
                     for (BuildPreset &preset: *out_presets) {
                         preset.compiler_info.cc = out_compiler_info->cc;
+                    }
+                } else if (prop.key == "Jobs") {
+                    if (ParseInt(prop.value, out_jobs)) {
+                        if (*out_jobs < 1) {
+                            LogError("Jobs count cannot be < 1");
+                            valid = false;
+                        }
+                    } else {
+                        valid = false;
                     }
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
@@ -365,10 +374,12 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         const char *default_preset = nullptr;
 
         if (TestFile(presets_filename) && !LoadPresetFile(presets_filename, &temp_alloc,
-                                                          &default_preset, &compiler_info, &presets))
+                                                          &default_preset, &compiler_info,
+                                                          &jobs, &presets))
             return 1;
         if (TestFile(user_filename) && !LoadPresetFile(user_filename, &temp_alloc,
-                                                       &default_preset, &compiler_info, &presets))
+                                                       &default_preset, &compiler_info,
+                                                       &jobs, &presets))
             return 1;
 
         preset_name = preset_name ? preset_name : default_preset;
