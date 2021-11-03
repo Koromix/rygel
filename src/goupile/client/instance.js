@@ -1818,7 +1818,7 @@ function InstanceController() {
             autosave_timer = setTimeout(util.serialize(async () => {
                 if (self.hasUnsavedData()) {
                     try {
-                        await saveRecord(form_record, form_values, route.page);
+                        await mutex.chain(() => saveRecord(form_record, form_values, route.page));
                     } catch (err) {
                         log.error(err);
                     }
