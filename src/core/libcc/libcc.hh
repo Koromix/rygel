@@ -112,6 +112,7 @@ enum class Endianness {
 #define RG_CONCAT(a, b) RG_CONCAT_(a, b)
 #define RG_UNIQUE_ID(prefix) RG_CONCAT(prefix, __LINE__)
 #define RG_FORCE_EXPAND(x) x
+#define RG_IGNORE (void)!
 
 #if defined(__GNUC__)
     #define RG_PUSH_NO_WARNINGS() \
