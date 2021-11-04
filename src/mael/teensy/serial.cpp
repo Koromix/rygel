@@ -169,10 +169,10 @@ void ProcessSerial()
 
             if (rf24_len == RF24_PAYLOAD_SIZE * 3) {
                 rf24.txStandBy(0);
-                rf24.flush_tx();
                 rf24_len = 0;
             }
         }
+        rf24.txStandBy(0);
 
         rf24.startListening();
     }
