@@ -59,6 +59,10 @@
     checksum: '{{ prometheus_packages[item].checksum }}'
     dest: '{{ prometheus_root_path }}/packages/{{ prometheus_packages[item].url | basename }}'
     mode: '0644'
+  register: download
+  until: download is succeeded
+  delay: 3
+  retries: 3
   loop: '{{ prometheus_services }}'
   when: 'prometheus_packages[item].url is defined'
   become: yes
