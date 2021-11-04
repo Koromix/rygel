@@ -54,9 +54,6 @@ void loop()
 
     if (rf24.failureDetected) {
         rf24.failureDetected = false;
-        Serial.println("Radio failure detected, restarting RF24");
-
-        delay(250);
         InitRadio();
     }
 
