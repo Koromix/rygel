@@ -1683,6 +1683,8 @@ static void RunLogFilter(Size idx, LogLevel level, const char *ctx, const char *
     });
 }
 
+static RG_THREAD_LOCAL bool skip_next_log_lock = false;
+
 void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args)
 {
     static bool init = false;
@@ -1712,6 +1714,14 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
         }
     }
 
+    static std::mutex mutex;
+    std::unique_lock<std::mutex> lock(mutex, std::defer_lock);
+
+    if (!skip_next_log_lock) {
+        lock.lock();
+    }
+    skip_next_log_lock = false;
+
     if (log_filters_len) {
         RunLogFilter(log_filters_len - 1, level, ctx, msg_buf);
     } else {
@@ -1726,9 +1736,6 @@ void SetLogHandler(const std::function<LogFunc> &func)
 
 void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg)
 {
-    static std::mutex mutex;
-    std::lock_guard<std::mutex> lock(mutex);
-
     switch (level)  {
         case LogLevel::Debug:
         case LogLevel::Info: { PrintLn(stderr, "%!D..%1%2%!0%3", ctx ? ctx : "", ctx ? ": " : "", msg); } break;
@@ -3141,6 +3148,11 @@ static bool ignore_ctrl_event = false;
 
 static BOOL CALLBACK ConsoleCtrlHandler(DWORD)
 {
+    if (ignore_ctrl_event) {
+        skip_next_log_lock = true;
+        LogInfo("Interrupt signal registered, please wait...");
+    }
+
     SetEvent(console_ctrl_event);
     return (BOOL)ignore_ctrl_event;
 }
@@ -3449,7 +3461,12 @@ static void DefaultSignalHandler(int signal)
     }
 
     if (flag_interrupt) {
-        explicit_interrupt = true;
+        bool warn = !explicit_interrupt.exchange(true);
+
+        if (warn) {
+            skip_next_log_lock = true;
+            LogInfo("Interrupt signal registered, please wait...");
+        }
     } else {
         int code = (signal == SIGINT) ? 130 : 1;
         exit(code);

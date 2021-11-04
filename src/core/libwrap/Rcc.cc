@@ -16,7 +16,6 @@
 
 namespace RG {
 
-std::mutex rcc_log_mutex;
 BucketArray<const char *> rcc_log_messages;
 bool rcc_log_missing_messages = false;
 
@@ -26,8 +25,6 @@ RG_INIT(RedirectLog)
         switch (level) {
             case LogLevel::Warning:
             case LogLevel::Error: {
-                std::lock_guard<std::mutex> lock(rcc_log_mutex);
-
                 Allocator *alloc;
                 const char **ptr = rcc_log_messages.AppendDefault(&alloc);
                 *ptr = DuplicateString(msg, alloc).ptr;

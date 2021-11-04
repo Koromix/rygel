@@ -19,7 +19,6 @@
 
 namespace RG {
 
-extern std::mutex rcc_log_mutex;
 extern BucketArray<const char *> rcc_log_messages;
 extern bool rcc_log_missing_messages;
 
