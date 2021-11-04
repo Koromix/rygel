@@ -11,6 +11,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
+distrib = 'generic/debian10'
 host1_ip = '192.168.33.20'
 backup_ip = '192.168.33.28'
 monitor_ip = '192.168.33.29'
@@ -20,7 +21,7 @@ Vagrant.configure('2') do |config|
     config.hostmanager.manage_host = true
 
     config.vm.define 'host1' do |m|
-        m.vm.box = 'generic/debian10'
+        m.vm.box = distrib
         m.vm.hostname = 'pknet-host1.local'
         m.vm.network 'private_network', ip: host1_ip
 
@@ -37,7 +38,7 @@ Vagrant.configure('2') do |config|
     end
 
     config.vm.define 'backup' do |m|
-        m.vm.box = 'generic/debian10'
+        m.vm.box = distrib
         m.vm.hostname = 'pknet-backup.local'
         m.vm.network 'private_network', ip: backup_ip
 
@@ -51,7 +52,7 @@ Vagrant.configure('2') do |config|
     end
 
     config.vm.define 'monitor' do |m|
-        m.vm.box = 'generic/debian10'
+        m.vm.box = distrib
         m.vm.hostname = 'pknet-monitor.local'
         m.vm.network 'private_network', ip: monitor_ip
 
