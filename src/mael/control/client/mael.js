@@ -208,15 +208,26 @@ function draw() {
     if (connected && robot != null) {
         ctx.save();
         ctx.fillStyle = '#ff0000';
-        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.translate(robot.position.x + canvas.width / 2,
+                      robot.position.y + canvas.height / 2);
         ctx.rotate(robot.orientation.x);
         ctx.fillRect(-20, -20, 40, 40);
         ctx.restore();
 
-        let text = 'Rotation : ' + (robot.orientation.x * (180 / Math.PI)).toFixed(1) + '°' +
-                           ' x ' + (robot.orientation.y * (180 / Math.PI)).toFixed(1) + '°' +
-                           ' x ' + (robot.orientation.z * (180 / Math.PI)).toFixed(1) + '°';
-        label(canvas.width - 12, canvas.height - 12, text, { align: 3 });
+        let text1 = 'Position : ' + robot.position.x.toFixed(1) +
+                            ' x ' + robot.position.y.toFixed(1) +
+                            ' x ' + robot.position.z.toFixed(1);
+        label(canvas.width - 12, canvas.height - 96, text1, { align: 3 });
+
+        let text2 = 'Acceleration : ' + robot.acceleration.x.toFixed(1) +
+                                ' x ' + robot.acceleration.y.toFixed(1) +
+                                ' x ' + robot.acceleration.z.toFixed(1);
+        label(canvas.width - 12, canvas.height - 54, text2, { align: 3 });
+
+        let text3 = 'Rotation : ' + (robot.orientation.x * (180 / Math.PI)).toFixed(1) + '°' +
+                            ' x ' + (robot.orientation.y * (180 / Math.PI)).toFixed(1) + '°' +
+                            ' x ' + (robot.orientation.z * (180 / Math.PI)).toFixed(1) + '°';
+        label(canvas.width - 12, canvas.height - 12, text3, { align: 3 });
     }
 
     // Status

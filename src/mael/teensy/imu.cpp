@@ -46,9 +46,9 @@ void ProcessIMU()
 
     // Compute position (Euler integration)
     // pos = 0.5 * accel * dt^2
-    position.x += 0.5 * (double)accel.acceleration.x * (1.0 / 1000.0) * (1.0 / 1000.0);
-    position.y += 0.5 * (double)accel.acceleration.y * (1.0 / 1000.0) * (1.0 / 1000.0);
-    position.z += 0.5 * (double)accel.acceleration.z * (1.0 / 1000.0) * (1.0 / 1000.0);
+    position.x += 1000000.0 * 0.5 * (double)accel.acceleration.x * (1.0 / 1000.0) * (1.0 / 1000.0);
+    position.y += 1000000.0 * 0.5 * (double)accel.acceleration.y * (1.0 / 1000.0) * (1.0 / 1000.0);
+    position.z += 1000000.0 * 0.5 * (double)accel.acceleration.z * (1.0 / 1000.0) * (1.0 / 1000.0);
 
     PROCESS_EVERY(50000);
 
