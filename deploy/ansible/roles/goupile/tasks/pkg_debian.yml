@@ -15,13 +15,13 @@
   ansible.builtin.apt_key:
     url: https://apt.llvm.org/llvm-snapshot.gpg.key
     id: 084F3CF814B57C1CF12EFD515CF4D18AF4F7421
-    state: present
+    state: '{{ "present" if ansible_distribution_major_version == "10" else "absent" }}'
   become: yes
 
 - name: Add LLVM-11 repository
   apt_repository:
     repo: 'deb http://apt.llvm.org/{{ ansible_distribution_release }}/ llvm-toolchain-{{ ansible_distribution_release }}-11 main'
-    state: present
+    state: '{{ "present" if ansible_distribution_major_version == "10" else "absent" }}'
   become: yes
 
 - name: Install packages
