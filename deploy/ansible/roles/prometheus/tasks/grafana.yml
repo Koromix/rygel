@@ -20,8 +20,13 @@
 
 - name: Add Grafana repository
   apt_repository:
-    repo: deb https://packages.grafana.com/oss/deb beta main
-    state: present
+    repo: 'deb https://packages.grafana.com/oss/deb {{ item.channel }} main'
+    state: '{{ item.state }}'
+  loop:
+    - channel: stable
+      state: present
+    - channel: beta
+      state: absent
   become: yes
 
 - name: Install packages
