@@ -361,7 +361,7 @@ static void StopMonitor()
         SetEvent(monitor_event);
 #else
         char dummy = 0;
-        write(monitor_pfd[1], &dummy, 1);
+        (void)!write(monitor_pfd[1], &dummy, 1);
 #endif
 
         if (monitor_thread.joinable()) {

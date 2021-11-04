@@ -182,7 +182,7 @@ void http_Daemon::Stop()
         WSACloseEvent(stop_handle);
 #else
         char dummy = 0;
-        write(stop_pfd[1], &dummy, 1);
+        (void)!write(stop_pfd[1], &dummy, 1);
 
         async->Sync();
         delete async;
