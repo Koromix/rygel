@@ -28,7 +28,6 @@
   apt:
     update_cache: yes
     pkg:
-      - nginx
       - git
       - clang-11
       - lld-11
