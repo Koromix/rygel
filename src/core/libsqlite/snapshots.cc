@@ -76,8 +76,11 @@ bool sq_Database::CheckpointSnapshot(bool restart)
         }
     };
 
-    // Restart snapshot stream if needed
-    if (restart || now - snapshot_start >= snapshot_full_delay) {
+    // Restart snapshot stream if forced or needed
+    restart |= !snapshot_wal_writer.GetFileName() ||
+               now - snapshot_start >= snapshot_full_delay;
+
+    if (restart) {
         snapshot_path_buf.len = SplitStrReverseAny(snapshot_path_buf, RG_PATH_SEPARATORS).ptr - snapshot_path_buf.ptr;
         snapshot_path_buf.ptr[snapshot_path_buf.len] = 0;
 

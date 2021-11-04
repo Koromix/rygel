@@ -969,6 +969,12 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             LogDebug("Prune old snapshot files");
             PruneOldFiles(gp_domain.config.snapshot_directory, nullptr, true, 3 * 86400 * 1000);
 
+            // Make sure data loss (if it happens) is very limited in time.
+            // If it fails, exit; something is really wrong and we don't fake to it.
+            LogDebug("Checkpoint databases");
+            if (!gp_domain.Checkpoint())
+                return 1;
+
             WaitForResult ret = WaitForInterrupt(timeout);
 
             if (ret == WaitForResult::Interrupt) {
@@ -982,12 +988,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
                 LogDebug("Syncing instances");
                 gp_domain.SyncAll(true);
             }
-
-            // Make sure data loss (if it happens) is very limited in time.
-            // If it fails, exit; something is really wrong and we don't fake to it.
-            LogDebug("Checkpoint databases");
-            if (!gp_domain.Checkpoint())
-                return 1;
 
             LogDebug("Prune sessions");
             PruneSessions();

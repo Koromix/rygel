@@ -142,14 +142,12 @@ bool sq_Database::SetSnapshotDirectory(const char *directory, int64_t full_delay
     if (!snapshot_wal_reader.Open(wal_filename))
         return false;
 
-    // Perform initial checkpoint
-    if (!CheckpointSnapshot(true))
-        return false;
-
     // Set up WAL hook to copy new pages
     sqlite3_wal_hook(db, [](void *udata, sqlite3 *, const char *, int) {
         sq_Database *db = (sq_Database *)udata;
-        db->CopyWAL();
+        if (RG_LIKELY(db->snapshot_wal_writer.IsValid())) {
+            db->CopyWAL();
+        }
         return SQLITE_OK;
     }, this);
 
