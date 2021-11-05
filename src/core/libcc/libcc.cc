@@ -3594,6 +3594,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
     }
 
     // Read and write standard process streams
+    bool terminate = false;
     do {
         LocalArray<struct pollfd, 3> pfds;
         int in_idx = -1, out_idx = -1, term_idx = -1;
@@ -3664,6 +3665,8 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
 
         if (term_revents) {
             kill(pid, SIGTERM);
+            terminate = true;
+
             break;
         }
     } while (in_pfd[1] >= 0 || out_pfd[0] >= 0);
@@ -3674,9 +3677,29 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
 
     // Wait for process exit
     int status;
-    if (RG_POSIX_RESTART_EINTR(waitpid(pid, &status, 0), < 0) < 0) {
-        LogError("Failed to wait for process exit: %1", strerror(errno));
-        return false;
+    {
+        int64_t start = GetMonotonicTime();
+
+        for (;;) {
+            int ret = RG_POSIX_RESTART_EINTR(waitpid(pid, &status, terminate ? WNOHANG : 0), < 0);
+
+            if (ret < 0) {
+                LogError("Failed to wait for process exit: %1", strerror(errno));
+                return false;
+            } else if (!ret) {
+                int64_t delay = GetMonotonicTime() - start;
+
+                if (delay < 2000) {
+                    // A timeout on waitpid would be better, but... sigh
+                    WaitDelay(10);
+                } else {
+                    kill(pid, SIGKILL);
+                    terminate = false;
+                }
+            } else {
+                break;
+            }
+        }
     }
 
     if (WIFSIGNALED(status)) {
