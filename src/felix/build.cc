@@ -426,7 +426,7 @@ bool Builder::Build(int jobs, bool verbose)
             double time = (double)(GetMonotonicTime() - now) / 1000.0;
             LogInfo("Done (%1s)%!D..%2%!0", FmtDouble(time, 1), build.fake ? " [dry run]" : "");
         } else {
-            LogInfo("Nothing to do%!D..%1%!0", build.fake ? " [dry run]" : "");
+            LogInfo("Nothing to do!%!D..%1%!0", build.fake ? " [dry run]" : "");
         }
         return true;
     } else if (WaitForInterrupt(0) == WaitForResult::Interrupt) {
