@@ -3434,6 +3434,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
 
 static std::atomic_bool flag_interrupt = false;
 static std::atomic_bool explicit_interrupt = false;
+static int interrupt_pfd[2] = {-1, -1};
 
 static void SetSignalHandler(int signal, struct sigaction *prev, void (*func)(int))
 {
@@ -3451,13 +3452,9 @@ static void DefaultSignalHandler(int signal)
     pid_t pid = getpid();
     RG_ASSERT(pid > 1);
 
-    // Send to process group
-    {
-        struct sigaction prev_action;
-        SetSignalHandler(signal, &prev_action, [](int) {});
-        RG_DEFER { sigaction(signal, &prev_action, nullptr); };
-
-        kill(-pid, signal);
+    if (interrupt_pfd[1] >= 0) {
+        char dummy = 0;
+        RG_IGNORE write(interrupt_pfd[1], &dummy, 1);
     }
 
     if (flag_interrupt) {
@@ -3504,10 +3501,14 @@ bool CreatePipe(int pfd[2])
         LogError("Failed to set FD_CLOEXEC on pipe: %1", strerror(errno));
         return false;
     }
+    if (fcntl(pfd[0], F_SETFL, O_NONBLOCK) < 0 || fcntl(pfd[1], F_SETFL, O_NONBLOCK) < 0) {
+        LogError("Failed to set O_NONBLOCK on pipe: %1", strerror(errno));
+        return false;
+    }
 
     return true;
 #else
-    if (pipe2(pfd, O_CLOEXEC) < 0)  {
+    if (pipe2(pfd, O_CLOEXEC | O_NONBLOCK) < 0)  {
         LogError("Failed to create pipe: %1", strerror(errno));
         return false;
     }
@@ -3544,6 +3545,26 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
         return false;
     }
 
+    // Create child termination pipe
+    {
+        static bool success = ([]() {
+            if (!CreatePipe(interrupt_pfd))
+                return false;
+
+            atexit([]() {
+                CloseDescriptorSafe(&interrupt_pfd[0]);
+                CloseDescriptorSafe(&interrupt_pfd[1]);
+            });
+
+            return true;
+        })();
+
+        if (!success) {
+            LogError("Failed to create termination pipe");
+            return false;
+        }
+    }
+
     // Start process
     pid_t pid;
     {
@@ -3574,8 +3595,8 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
 
     // Read and write standard process streams
     do {
-        LocalArray<struct pollfd, 2> pfds;
-        int in_idx = -1, out_idx = -1;
+        LocalArray<struct pollfd, 3> pfds;
+        int in_idx = -1, out_idx = -1, term_idx = -1;
         if (in_pfd[1] >= 0) {
             in_idx = pfds.len;
             pfds.Append({in_pfd[1], POLLOUT});
@@ -3583,6 +3604,10 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
         if (out_pfd[0] >= 0) {
             out_idx = pfds.len;
             pfds.Append({out_pfd[0], POLLIN});
+        }
+        if (interrupt_pfd[0] >= 0) {
+            term_idx = pfds.len;
+            pfds.Append({interrupt_pfd[0], POLLIN});
         }
 
         if (RG_POSIX_RESTART_EINTR(poll(pfds.data, (nfds_t)pfds.len, -1), < 0) < 0) {
@@ -3592,6 +3617,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
 
         unsigned int in_revents = (in_idx >= 0) ? pfds[in_idx].revents : 0;
         unsigned int out_revents = (out_idx >= 0) ? pfds[out_idx].revents : 0;
+        unsigned int term_revents = (term_idx >= 0) ? pfds[term_idx].revents : 0;
 
         // Try to write
         if (in_revents & POLLERR) {
@@ -3633,6 +3659,11 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
                 break;
             }
         } else if (out_revents & POLLHUP) {
+            break;
+        }
+
+        if (term_revents) {
+            kill(pid, SIGTERM);
             break;
         }
     } while (in_pfd[1] >= 0 || out_pfd[0] >= 0);
