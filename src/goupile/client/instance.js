@@ -705,11 +705,12 @@ function InstanceController() {
             form_record.hid = meta.hid;
 
             form_builder.popOptions({});
-
             if (model.hasErrors())
                 form_builder.errorList();
 
-            if (route.page.options.default_actions && model.variables.length) {
+            let default_actions = route.page.getOption('default_actions', form_record, true);
+
+            if (default_actions && model.variables.length) {
                 let prev_actions = model.actions;
                 model.actions = [];
 
@@ -739,7 +740,9 @@ function InstanceController() {
 
                             if (form_record.saved) {
                                 let record = await loadRecord(form_record.ulid, form_record.version);
-                                await expandRecord(record, route.page.options.load || []);
+
+                                let load = route.page.getOption('load', record, []);
+                                await expandRecord(record, load);
 
                                 updateContext(route, record);
                             } else {
@@ -1071,7 +1074,9 @@ function InstanceController() {
                 }
 
                 record = await loadRecord(ulid, null);
-                await expandRecord(record, page.options.load || []);
+
+                let load = page.getOption('load', record, []);
+                await expandRecord(record, load);
 
                 updateContext(route, record);
             } catch (err) {
@@ -1555,7 +1560,8 @@ function InstanceController() {
                 new_record = createRecord(new_route.form, new_route.ulid);
 
             // Load close records (parents, siblings, children)
-            await expandRecord(new_record, new_route.page.options.load || []);
+            let load = new_route.page.getOption('load', new_record, []);
+            await expandRecord(new_record, load);
 
             // Safety checks
             if (profile.lock != null && !new_record.chain.some(record => record.ulid === profile.lock.ctx))
@@ -1575,7 +1581,9 @@ function InstanceController() {
             if (!options.reload && !options.force) {
                 if (self.hasUnsavedData() && (new_record !== form_record || 
                                               new_route.page !== route.page)) {
-                    if (route.page.options.autosave) {
+                    let autosave = route.page.getOption('autosave', form_record, false);
+
+                    if (autosave) {
                         await mutex.chain(() => saveRecord(form_record, form_values, route.page));
                         new_route.version = null;
 
@@ -1614,8 +1622,10 @@ function InstanceController() {
 
         // Dictionaries
         new_dictionaries = {};
-        if (new_route.page.options.dictionaries != null) {
-            for (let dict of new_route.page.options.dictionaries) {
+        {
+            let dictionaries = new_route.page.getOption('dictionaries', new_record, []);
+
+            for (let dict of dictionaries) {
                 let records = form_dictionaries[dict];
                 if (records == null)
                     new_dictionaries[dict] = await loadRecords(null, dict);
@@ -1685,24 +1695,13 @@ function InstanceController() {
     }
 
     function isPageEnabled(page, record) {
-        if (goupile.isLocked() && !page.options.lockable)
+        let lockable = page.getOption('lockable', record, false);
+        let enabled = page.getOption('enabled', record, true);
+
+        if (goupile.isLocked() && !lockable)
             return false;
 
-        if (typeof page.options.enabled === 'function') {
-            try {
-                return page.options.enabled(record);
-            } catch (err) {
-                let line = util.parseEvalErrorLine(err);
-                let msg = `Erreur\n${line != null ? `Ligne ${line} : ` : ''}${err.message}`;
-                log.error(msg);
-
-                return false;
-            }
-        } else if (page.options.enabled != null) {
-            return page.options.enabled;
-        } else {
-            return true;
-        }
+        return enabled;
     }
 
     this.run = async function(push_history = true) {
@@ -1804,16 +1803,14 @@ function InstanceController() {
     async function handleStateChange() {
         await self.run();
 
-        if (route.page.options.autosave) {
+        let autosave = route.page.getOption('autosave', form_record, false);
+
+        if (autosave) {
             if (autosave_timer != null)
                 clearTimeout(autosave_timer);
 
-            let timeout;
-            if (typeof route.page.options.autosave === 'number') {
-                timeout = route.page.options.autosave;
-            } else {
-                timeout = 5000;
-            }
+            if (typeof autosave !== 'number')
+                autosave = 5000;
 
             autosave_timer = setTimeout(util.serialize(async () => {
                 if (self.hasUnsavedData()) {
@@ -1827,7 +1824,7 @@ function InstanceController() {
                 }
 
                 autosave_timer = null;
-            }, mutex), timeout);
+            }, mutex), autosave);
         }
 
         // Highlight might need to change (conditions, etc.)

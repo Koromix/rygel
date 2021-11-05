@@ -35,26 +35,44 @@ function FormInfo(key, title) {
     this.url = null;
 }
 
-function PageInfo(key, title) {
+function PageInfo(key, title, stack) {
+    let self = this;
+
     this.key = key;
     this.title = title;
     this.form = null;
-    this.enabled = true;
-    this.options = {};
     this.url = null;
     this.filename = null;
+
+    this.getOption = function(key, record, default_value = undefined) {
+        for (let i = stack.length - 1; i >= 0; i--) {
+            let options = stack[i];
+
+            if (typeof options === 'function')
+                options = options(record, self);
+
+            let value = options[key];
+
+            if (typeof value === 'function')
+                value = value(record, self);
+            if (value != null)
+                return value;
+        }
+
+        return default_value;
+    };
 }
 
 function ApplicationBuilder(app) {
     let self = this;
 
     let options_stack = [{
-        enabled: true,
-        loackable: false,
-        dictionaries: null,
-        load: null,
-        default_actions: true,
-        autosave: false
+        // enabled: true,
+        // lockable: false,
+        // dictionaries: null,
+        // load: null,
+        // default_actions: true,
+        // autosave: false
     }];
     let form_ref = null;
 
@@ -62,8 +80,7 @@ function ApplicationBuilder(app) {
     this.panel = function(panel, enable) { app.panels[panel] = enable; };
 
     this.pushOptions = function(options = {}) {
-        options = expandOptions(options);
-        options_stack.push(options);
+        options_stack = expandOptions(options);
     };
     this.popOptions = function() {
         if (options_stack.length < 2)
@@ -74,16 +91,16 @@ function ApplicationBuilder(app) {
 
     this.head = function(head) { app.head = head; };
 
-    this.form = function(key, title, func = null, options = {}) {
+    this.form = function(key, title, func = null, options = null) {
         checkKey(key);
         if (app.forms.has(key))
             throw new Error(`Form key '${key}' is already used`);
 
-        let prev_options = options_stack;
+        let prev_options = Array.from(options_stack);
         let prev_form = form_ref;
 
         try {
-            options_stack = [expandOptions(options)];
+            options = expandOptions(options);
 
             form_ref = new FormInfo(key, title);
             if (prev_form != null)
@@ -135,7 +152,7 @@ function ApplicationBuilder(app) {
         return form;
     };
 
-    this.page = function(key, title, options = {}) {
+    this.page = function(key, title, options = null) {
         checkKey(key);
         if (app.pages.has(key))
             throw new Error(`Page key '${key}' is already used`);
@@ -144,14 +161,13 @@ function ApplicationBuilder(app) {
 
         options = expandOptions(options);
 
-        let page = new PageInfo(key, title);
+        let page = new PageInfo(key, title, options);
 
         if (form_ref != null) {
             page.form = form_ref;
         } else {
             page.form = new FormInfo(key, title);
         }
-        page.options = options;
         if (options.lockable)
             app.lockable = true;
         page.url = `${ENV.urls.instance}main/${key}`;
@@ -181,7 +197,11 @@ function ApplicationBuilder(app) {
     }
 
     function expandOptions(options) {
-        options = Object.assign({}, options_stack[options_stack.length - 1], options);
-        return options;
+        if (options != null) {
+            let stack = [...options_stack, options];
+            return stack;
+        } else {
+            return options_stack;
+        }
     }
 }
