@@ -405,7 +405,7 @@ bool Builder::Build(int jobs, bool verbose)
         }
     }
 
-    LogInfo("Building...");
+    LogInfo("Building with %1 %2...", jobs, jobs > 1 ? "threads" : "thread");
     int64_t now = GetMonotonicTime();
 
     Async async(jobs - 1, build.stop_after_error);
