@@ -50,8 +50,6 @@ void setup()
 
 void loop()
 {
-    PROCESS_EVERY(1000);
-
     if (rf24.failureDetected) {
         rf24.failureDetected = false;
         InitRadio();
