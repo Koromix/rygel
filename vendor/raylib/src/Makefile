@@ -43,8 +43,8 @@
 .PHONY: all clean install uninstall
 
 # Define required raylib variables
-RAYLIB_VERSION        = 3.7.0
-RAYLIB_API_VERSION    = 370
+RAYLIB_VERSION        = 4.0.0
+RAYLIB_API_VERSION    = 400
 
 # Define raylib source code path
 RAYLIB_SRC_PATH      ?= ../src
@@ -76,11 +76,10 @@ RAYLIB_MODULE_MODELS ?= TRUE
 RAYLIB_MODULE_RAYGUI ?= FALSE
 RAYLIB_MODULE_PHYSAC ?= FALSE
 
-RAYLIB_MODULE_RAYGUI_PATH ?= $(RAYLIB_SRC_PATH)/../../raygui/src
-RAYLIB_MODULE_PHYSAC_PATH ?= $(RAYLIB_SRC_PATH)
+RAYLIB_MODULE_RAYGUI_PATH ?= $(RAYLIB_SRC_PATH)/extras
+RAYLIB_MODULE_PHYSAC_PATH ?= $(RAYLIB_SRC_PATH)/extras
 
 # Use external GLFW library instead of rglfw module
-# TODO: Review usage of examples on Linux.
 USE_EXTERNAL_GLFW    ?= FALSE
 
 # Use Wayland display server protocol on Linux desktop
@@ -186,16 +185,16 @@ ifeq ($(PLATFORM),PLATFORM_ANDROID)
     ANDROID_SYSROOT ?= $(ANDROID_TOOLCHAIN)/sysroot
 
     ifeq ($(ANDROID_ARCH),arm)
-        ANDROID_ARCH_NAME = armeabi-v7a
+        ANDROID_COMPILER_ARCH = armv7a
     endif
     ifeq ($(ANDROID_ARCH),arm64)
-        ANDROID_ARCH_NAME = arm64-v8a
+        ANDROID_COMPILER_ARCH = aarch64
     endif
     ifeq ($(ANDROID_ARCH),x86)
-        ANDROID_ARCH_NAME = i686
+        ANDROID_COMPILER_ARCH = i686
     endif
     ifeq ($(ANDROID_ARCH),x86_64)
-        ANDROID_ARCH_NAME = x86_64
+        ANDROID_COMPILER_ARCH = x86_64
     endif
 
 endif
@@ -255,21 +254,13 @@ endif
 ifeq ($(PLATFORM),PLATFORM_ANDROID)
     # Android toolchain (must be provided for desired architecture and compiler)
     ifeq ($(ANDROID_ARCH),arm)
-        CC = $(ANDROID_TOOLCHAIN)/bin/armv7a-linux-androideabi$(ANDROID_API_VERSION)-clang
-        AR = $(ANDROID_TOOLCHAIN)/bin/arm-linux-androideabi-ar
+        CC = $(ANDROID_TOOLCHAIN)/bin/$(ANDROID_COMPILER_ARCH)-linux-androideabi$(ANDROID_API_VERSION)-clang
     endif
     ifeq ($(ANDROID_ARCH),arm64)
-        CC = $(ANDROID_TOOLCHAIN)/bin/aarch64-linux-android$(ANDROID_API_VERSION)-clang
-        AR = $(ANDROID_TOOLCHAIN)/bin/aarch64-linux-android-ar
+        CC = $(ANDROID_TOOLCHAIN)/bin/$(ANDROID_COMPILER_ARCH)-linux-android$(ANDROID_API_VERSION)-clang
     endif
-    ifeq ($(ANDROID_ARCH),x86)
-        CC = $(ANDROID_TOOLCHAIN)/bin/i686-linux-android$(ANDROID_API_VERSION)-clang
-        AR = $(ANDROID_TOOLCHAIN)/bin/i686-linux-android-ar
-    endif
-    ifeq ($(ANDROID_ARCH),x86_64)
-        CC = $(ANDROID_TOOLCHAIN)/bin/x86_64-linux-android$(ANDROID_API_VERSION)-clang
-        AR = $(ANDROID_TOOLCHAIN)/bin/x86_64-linux-android-ar
-    endif
+    # It seems from Android NDK r22 onwards we need to use llvm-ar
+    AR = $(ANDROID_TOOLCHAIN)/bin/llvm-ar
 endif
 
 # Define compiler flags:
@@ -297,10 +288,8 @@ endif
 
 ifeq ($(RAYLIB_BUILD_MODE),DEBUG)
     CFLAGS += -g
-    ifeq ($(PLATFORM),PLATFORM_WEB)
-        CFLAGS += -s ASSERTIONS=1 --profiling
-    endif
 endif
+
 ifeq ($(RAYLIB_BUILD_MODE),RELEASE)
     ifeq ($(PLATFORM),PLATFORM_WEB)
         CFLAGS += -Os
@@ -324,7 +313,7 @@ endif
 ifeq ($(PLATFORM),PLATFORM_WEB)
     # -Os                        # size optimization
     # -O2                        # optimization level 2, if used, also set --memory-init-file 0
-    # -s USE_GLFW=3              # Use glfw3 library (context/input management)
+    # -s USE_GLFW=3              # Use glfw3 library (context/input management) -> Only for linker!
     # -s ALLOW_MEMORY_GROWTH=1   # to allow memory resizing -> WARNING: Audio buffers could FAIL!
     # -s TOTAL_MEMORY=16777216   # to specify heap memory size (default = 16MB)
     # -s USE_PTHREADS=1          # multithreading support
@@ -333,7 +322,9 @@ ifeq ($(PLATFORM),PLATFORM_WEB)
     # --profiling                # include information for code profiling
     # --memory-init-file 0       # to avoid an external memory initialization code file (.mem)
     # --preload-file resources   # specify a resources folder for data compilation
-    CFLAGS += -s USE_GLFW=3
+    ifeq ($(RAYLIB_BUILD_MODE),DEBUG)
+        CFLAGS += -s ASSERTIONS=1 --profiling
+    endif
 endif
 ifeq ($(PLATFORM),PLATFORM_ANDROID)
     # Compiler flags for arquitecture
@@ -343,10 +334,10 @@ ifeq ($(PLATFORM),PLATFORM_ANDROID)
     ifeq ($(ANDROID_ARCH),arm64)
         CFLAGS += -target aarch64 -mfix-cortex-a53-835769
     endif
-    ifeq ($(ANDROID_ARCH), x86)
+    ifeq ($(ANDROID_ARCH),x86)
         CFLAGS += -march=i686
     endif
-    ifeq ($(ANDROID_ARCH), x86_64)
+    ifeq ($(ANDROID_ARCH),x86_64)
         CFLAGS += -march=x86-64
     endif
     # Compilation functions attributes options
@@ -451,10 +442,10 @@ endif
 # OBJS = $(patsubst %.c, %.o, $(wildcard *.c))
 
 # Define object required on compilation
-OBJS = core.o \
-       shapes.o \
-       textures.o \
-       text.o \
+OBJS = rcore.o \
+       rshapes.o \
+       rtextures.o \
+       rtext.o \
        utils.o
 
 ifeq ($(PLATFORM),PLATFORM_DESKTOP)
@@ -463,7 +454,7 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
     endif
 endif
 ifeq ($(RAYLIB_MODULE_MODELS),TRUE)
-    OBJS += models.o
+    OBJS += rmodels.o
 endif
 ifeq ($(RAYLIB_MODULE_AUDIO),TRUE)
     OBJS += raudio.o
@@ -508,7 +499,7 @@ else
             endif
             ifeq ($(PLATFORM_OS),OSX)
 				$(CC) -dynamiclib -o $(RAYLIB_RELEASE_PATH)/lib$(RAYLIB_LIB_NAME).$(RAYLIB_VERSION).dylib $(OBJS) $(LDFLAGS) -compatibility_version $(RAYLIB_API_VERSION) -current_version $(RAYLIB_VERSION) -framework OpenGL -framework Cocoa -framework IOKit -framework CoreAudio -framework CoreVideo
-				install_name_tool -id "lib$(RAYLIB_LIB_NAME).$(VERSION).dylib" $(RAYLIB_RELEASE_PATH)/lib$(RAYLIB_LIB_NAME).$(RAYLIB_VERSION).dylib
+				install_name_tool -id "@rpath/lib$(RAYLIB_LIB_NAME).$(RAYLIB_API_VERSION).dylib" $(RAYLIB_RELEASE_PATH)/lib$(RAYLIB_LIB_NAME).$(RAYLIB_VERSION).dylib
 				@echo "raylib shared library generated (lib$(RAYLIB_LIB_NAME).$(RAYLIB_VERSION).dylib)!"
 				cd $(RAYLIB_RELEASE_PATH) && ln -fs lib$(RAYLIB_LIB_NAME).$(RAYLIB_VERSION).dylib lib$(RAYLIB_LIB_NAME).$(RAYLIB_API_VERSION).dylib
 				cd $(RAYLIB_RELEASE_PATH) && ln -fs lib$(RAYLIB_LIB_NAME).$(RAYLIB_VERSION).dylib lib$(RAYLIB_LIB_NAME).dylib
@@ -557,7 +548,7 @@ endif
 # Compile all modules with their prerequisites
 
 # Compile core module
-core.o : core.c raylib.h rlgl.h utils.h raymath.h camera.h gestures.h
+rcore.o : rcore.c raylib.h rlgl.h utils.h raymath.h rcamera.h rgestures.h
 	$(CC) -c $< $(CFLAGS) $(INCLUDE_PATHS) -D$(PLATFORM) -D$(GRAPHICS)
 
 # Compile rglfw module
@@ -565,15 +556,15 @@ rglfw.o : rglfw.c
 	$(CC) $(GLFW_OSX) -c $< $(CFLAGS) $(INCLUDE_PATHS) -D$(PLATFORM) -D$(GRAPHICS)
 
 # Compile shapes module
-shapes.o : shapes.c raylib.h rlgl.h
+rshapes.o : rshapes.c raylib.h rlgl.h
 	$(CC) -c $< $(CFLAGS) $(INCLUDE_PATHS) -D$(PLATFORM) -D$(GRAPHICS)
 
 # Compile textures module
-textures.o : textures.c raylib.h rlgl.h utils.h
+rtextures.o : rtextures.c raylib.h rlgl.h utils.h
 	$(CC) -c $< $(CFLAGS) $(INCLUDE_PATHS) -D$(PLATFORM) -D$(GRAPHICS)
 
 # Compile text module
-text.o : text.c raylib.h utils.h
+rtext.o : rtext.c raylib.h utils.h
 	$(CC) -c $< $(CFLAGS) $(INCLUDE_PATHS) -D$(PLATFORM) -D$(GRAPHICS)
 
 # Compile utils module
@@ -581,7 +572,7 @@ utils.o : utils.c utils.h
 	$(CC) -c $< $(CFLAGS) $(INCLUDE_PATHS) -D$(PLATFORM)
 
 # Compile models module
-models.o : models.c raylib.h rlgl.h raymath.h
+rmodels.o : rmodels.c raylib.h rlgl.h raymath.h
 	$(CC) -c $< $(CFLAGS) $(INCLUDE_PATHS) -D$(PLATFORM) -D$(GRAPHICS)
 
 # Compile audio module
@@ -590,18 +581,19 @@ raudio.o : raudio.c raylib.h
 
 # Compile raygui module
 # NOTE: raygui header should be distributed with raylib.h
-raygui.o : raygui.c raygui.h gui_textbox_extended.h ricons.h
+raygui.o : raygui.c
 	$(CC) -c $< $(CFLAGS) $(INCLUDE_PATHS) -D$(PLATFORM) -DRAYGUI_IMPLEMENTATION
 raygui.c:
-	echo '#define RAYGUI_IMPLEMENTATION' > raygui.c
-	echo '#include "$(RAYLIB_MODULE_RAYGUI_PATH)/raygui.h"' >> raygui.c
+	echo #define RAYGUI_IMPLEMENTATION > raygui.c
+	echo #include "$(RAYLIB_MODULE_RAYGUI_PATH)/raygui.h" >> raygui.c
 
 # Compile physac module
 # NOTE: physac header should be distributed with raylib.h
-physac.o : physac.c physac.h
-	@echo #define PHYSAC_IMPLEMENTATION > physac.c
-	@echo #include "$(RAYLIB_MODULE_PHYSAC_PATH)/physac.h" > physac.c
+physac.o : physac.c
 	$(CC) -c $< $(CFLAGS) $(INCLUDE_PATHS) -D$(PLATFORM) -DPHYSAC_IMPLEMENTATION
+physac.c:
+	@echo #define PHYSAC_IMPLEMENTATION > physac.c
+	@echo #include "$(RAYLIB_MODULE_PHYSAC_PATH)/physac.h" >> physac.c
 
 # Compile android_native_app_glue module
 android_native_app_glue.o : $(NATIVE_APP_GLUE)/android_native_app_glue.c
@@ -616,7 +608,7 @@ android_native_app_glue.o : $(NATIVE_APP_GLUE)/android_native_app_glue.c
 # for our -L and -I specification to simplify management of the raylib source package.
 # Customize these locations if you like but don't forget to pass them to make
 # for compilation and enable runtime linking with -rpath, LD_LIBRARY_PATH, or ldconfig.
-# Hint: add -L$(RAYLIB_INSTALL_PATH) -I$(RAYLIB_H_INSTALL_PATH) to your own makefiles.
+# HINT: Add -L$(RAYLIB_INSTALL_PATH) -I$(RAYLIB_H_INSTALL_PATH) to your own makefiles.
 # See below and ../examples/Makefile for more information.
 # TODO: Add other platforms. Remove sudo requirement, i.e. add USER mode.
 
@@ -650,7 +642,7 @@ ifeq ($(ROOT),root)
 		cp --update raylib.h $(RAYLIB_H_INSTALL_PATH)/raylib.h
 		cp --update raymath.h $(RAYLIB_H_INSTALL_PATH)/raymath.h
 		cp --update rlgl.h $(RAYLIB_H_INSTALL_PATH)/rlgl.h
-		cp --update physac.h $(RAYLIB_H_INSTALL_PATH)/physac.h
+		cp --update extras/physac.h $(RAYLIB_H_INSTALL_PATH)/physac.h
 		@echo "raylib development files installed/updated!"
     else
 		@echo "This function currently works on GNU/Linux systems. Add yours today (^;"
@@ -660,7 +652,7 @@ else
 endif
 
 # Remove raylib dev files installed on the system
-# TODO: see 'install' target.
+# NOTE: see 'install' target.
 uninstall :
 ifeq ($(ROOT),root)
     # WARNING: You are root, about to delete items from $(RAYLIB_INSTALL_PATH).

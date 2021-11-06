@@ -82,7 +82,7 @@ static bool InitAssets()
                 LogError("Failed to create texture for '%1'", asset.name);
                 return false;
             }
-            SetTextureFilter(tex, FILTER_BILINEAR);
+            SetTextureFilter(tex, TEXTURE_FILTER_BILINEAR);
 
             Texture *ptr = textures.Append(tex);
             textures_map.Set(asset.name, ptr);

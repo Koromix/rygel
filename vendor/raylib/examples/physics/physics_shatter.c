@@ -14,7 +14,7 @@
 #include "raylib.h"
 
 #define PHYSAC_IMPLEMENTATION
-#include "physac.h"
+#include "extras/physac.h"
 
 int main(void)
 {
@@ -35,7 +35,7 @@ int main(void)
     SetPhysicsGravity(0, 0);
 
     // Create random polygon physics body to shatter
-    CreatePhysicsBodyPolygon((Vector2){ screenWidth/2.0f, screenHeight/2.0f }, GetRandomValue(80, 200), GetRandomValue(3, 8), 10);
+    CreatePhysicsBodyPolygon((Vector2){ screenWidth/2.0f, screenHeight/2.0f }, (float)GetRandomValue(80, 200), GetRandomValue(3, 8), 10);
 
     SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
@@ -50,10 +50,10 @@ int main(void)
         {
             ResetPhysics();
 
-            CreatePhysicsBodyPolygon((Vector2){ screenWidth/2.0f, screenHeight/2.0f }, GetRandomValue(80, 200), GetRandomValue(3, 8), 10);
+            CreatePhysicsBodyPolygon((Vector2){ screenWidth/2.0f, screenHeight/2.0f }, (float)GetRandomValue(80, 200), GetRandomValue(3, 8), 10);
         }
 
-        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))    // Physics shatter input
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))    // Physics shatter input
         {
             int count = GetPhysicsBodiesCount();
             for (int i = count - 1; i >= 0; i--)

@@ -1,8 +1,8 @@
 
 if(USE_EXTERNAL_GLFW STREQUAL "ON")
-    find_package(glfw3 3.2.1 REQUIRED)
+    find_package(glfw3 3.3.3 REQUIRED)
 elseif(USE_EXTERNAL_GLFW STREQUAL "IF_POSSIBLE")
-    find_package(glfw3 3.2.1 QUIET)
+    find_package(glfw3 3.3.3 QUIET)
 endif()
 if (glfw3_FOUND)
     set(LIBS_PRIVATE ${LIBS_PRIVATE} glfw)
@@ -26,7 +26,7 @@ if(NOT glfw3_FOUND AND NOT USE_EXTERNAL_GLFW STREQUAL "ON" AND "${PLATFORM}" MAT
     set(BUILD_SHARED_LIBS ${WAS_SHARED} CACHE BOOL " " FORCE)
     unset(WAS_SHARED)
     
-    list(APPEND raylib_sources $<TARGET_OBJECTS:glfw_objlib>)
+    list(APPEND raylib_sources $<TARGET_OBJECTS:glfw>)
     include_directories(BEFORE SYSTEM external/glfw/include)
 else()
     MESSAGE(STATUS "Using external GLFW")

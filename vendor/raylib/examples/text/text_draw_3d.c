@@ -5,14 +5,14 @@
 *   Draw a 2D text in 3D space, each letter is drawn in a quad (or 2 quads if backface is set)
 *   where the texture coodinates of each quad map to the texture coordinates of the glyphs
 *   inside the font texture.
-*	A more efficient approach, i believe, would be to render the text in a render texture and
-*	map that texture to a plane and render that, or maybe a shader but my method allows more
-*	flexibility...for example to change position of each letter individually to make somethink
-*	like a wavy text effect.
-*	
-*	Special thanks to:
-*		@Nighten for the DrawTextStyle() code https://github.com/NightenDushi/Raylib_DrawTextStyle
-*		Chris Camacho (codifies - http://bedroomcoders.co.uk/) for the alpha discard shader
+*    A more efficient approach, i believe, would be to render the text in a render texture and
+*    map that texture to a plane and render that, or maybe a shader but my method allows more
+*    flexibility...for example to change position of each letter individually to make somethink
+*    like a wavy text effect.
+*    
+*    Special thanks to:
+*        @Nighten for the DrawTextStyle() code https://github.com/NightenDushi/Raylib_DrawTextStyle
+*        Chris Camacho (codifies - http://bedroomcoders.co.uk/) for the alpha discard shader
 *
 *   This example has been created using raylib 3.5 (www.raylib.com)
 *   raylib is licensed under an unmodified zlib/libpng license (View raylib.h for details)
@@ -186,17 +186,17 @@ int main(void)
         }
 
         // Handle clicking the cube
-        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
         {
             Ray ray = GetMouseRay(GetMousePosition(), camera);
 
             // Check collision between ray and box
-            bool collision = CheckCollisionRayBox(ray,
+            RayCollision collision = GetRayCollisionBox(ray,
                             (BoundingBox){(Vector3){ cubePosition.x - cubeSize.x/2, cubePosition.y - cubeSize.y/2, cubePosition.z - cubeSize.z/2 },
                                           (Vector3){ cubePosition.x + cubeSize.x/2, cubePosition.y + cubeSize.y/2, cubePosition.z + cubeSize.z/2 }});
-            if (collision)
+            if (collision.hit)
             {
-            	// Generate new random colors
+                // Generate new random colors
                 light = GenerateRandomColor(0.5f, 0.78f);
                 dark = GenerateRandomColor(0.4f, 0.58f);
             }
@@ -291,7 +291,7 @@ int main(void)
                         for (int i = 0; i < layers; ++i)
                         {
                             Color clr = light;
-                            if(multicolor) clr = multi[i];
+                            if (multicolor) clr = multi[i];
                             DrawTextWave3D(font, text, (Vector3){ -tbox.x/2.0f, layerDistance*i, -4.5f }, fontSize, fontSpacing, lineSpacing, true, &wcfg, time, clr);
                         }
 
@@ -454,18 +454,18 @@ void DrawTextCodepoint3D(Font font, int codepoint, Vector3 position, float fontS
 
     // Character destination rectangle on screen
     // NOTE: We consider charsPadding on drawing
-    position.x += (float)(font.chars[index].offsetX - font.charsPadding)/(float)font.baseSize*scale;
-    position.z += (float)(font.chars[index].offsetY - font.charsPadding)/(float)font.baseSize*scale;
+    position.x += (float)(font.glyphs[index].offsetX - font.glyphPadding)/(float)font.baseSize*scale;
+    position.z += (float)(font.glyphs[index].offsetY - font.glyphPadding)/(float)font.baseSize*scale;
 
     // Character source rectangle from font texture atlas
     // NOTE: We consider chars padding when drawing, it could be required for outline/glow shader effects
-    Rectangle srcRec = { font.recs[index].x - (float)font.charsPadding, font.recs[index].y - (float)font.charsPadding,
-                         font.recs[index].width + 2.0f*font.charsPadding, font.recs[index].height + 2.0f*font.charsPadding };
+    Rectangle srcRec = { font.recs[index].x - (float)font.glyphPadding, font.recs[index].y - (float)font.glyphPadding,
+                         font.recs[index].width + 2.0f*font.glyphPadding, font.recs[index].height + 2.0f*font.glyphPadding };
 
-    float width = (float)(font.recs[index].width + 2.0f*font.charsPadding)/(float)font.baseSize*scale;
-    float height = (float)(font.recs[index].height + 2.0f*font.charsPadding)/(float)font.baseSize*scale;
+    float width = (float)(font.recs[index].width + 2.0f*font.glyphPadding)/(float)font.baseSize*scale;
+    float height = (float)(font.recs[index].height + 2.0f*font.glyphPadding)/(float)font.baseSize*scale;
 
-    if(font.texture.id > 0)
+    if (font.texture.id > 0)
     {
         const float x = 0.0f;
         const float y = 0.0f;
@@ -477,16 +477,11 @@ void DrawTextCodepoint3D(Font font, int codepoint, Vector3 position, float fontS
         const float tw = (srcRec.x+srcRec.width)/font.texture.width;
         const float th = (srcRec.y+srcRec.height)/font.texture.height;
 
-        if(SHOW_LETTER_BOUNDRY)
-            DrawCubeWiresV((Vector3){ position.x + width/2, position.y, position.z + height/2}, (Vector3){ width, LETTER_BOUNDRY_SIZE, height }, LETTER_BOUNDRY_COLOR);
+        if (SHOW_LETTER_BOUNDRY) DrawCubeWiresV((Vector3){ position.x + width/2, position.y, position.z + height/2}, (Vector3){ width, LETTER_BOUNDRY_SIZE, height }, LETTER_BOUNDRY_COLOR);
 
-#if defined(RAYLIB_NEW_RLGL)
         rlCheckRenderBatchLimit(4 + 4*backface);
         rlSetTexture(font.texture.id);
-#else
-        if (rlCheckBufferLimit(4 + 4*backface)) rlglDraw();
-        rlEnableTexture(font.texture.id);
-#endif
+
         rlPushMatrix();
             rlTranslatef(position.x, position.y, position.z);
 
@@ -512,11 +507,7 @@ void DrawTextCodepoint3D(Font font, int codepoint, Vector3 position, float fontS
             rlEnd();
         rlPopMatrix();
 
-#if defined(RAYLIB_NEW_RLGL)
         rlSetTexture(0);
-#else
-        rlDisableTexture();
-#endif
     }
 }
 
@@ -533,7 +524,7 @@ void DrawText3D(Font font, const char *text, Vector3 position, float fontSize, f
     {
         // Get next codepoint from byte string and glyph index in font
         int codepointByteCount = 0;
-        int codepoint = GetNextCodepoint(&text[i], &codepointByteCount);
+        int codepoint = GetCodepoint(&text[i], &codepointByteCount);
         int index = GetGlyphIndex(font, codepoint);
 
         // NOTE: Normally we exit the decoding sequence as soon as a bad byte is found (and return 0x3f)
@@ -554,8 +545,8 @@ void DrawText3D(Font font, const char *text, Vector3 position, float fontSize, f
                 DrawTextCodepoint3D(font, codepoint, (Vector3){ position.x + textOffsetX, position.y, position.z + textOffsetY }, fontSize, backface, tint);
             }
 
-            if (font.chars[index].advanceX == 0) textOffsetX += (float)(font.recs[index].width + fontSpacing)/(float)font.baseSize*scale;
-            else textOffsetX += (float)(font.chars[index].advanceX + fontSpacing)/(float)font.baseSize*scale;
+            if (font.glyphs[index].advanceX == 0) textOffsetX += (float)(font.recs[index].width + fontSpacing)/(float)font.baseSize*scale;
+            else textOffsetX += (float)(font.glyphs[index].advanceX + fontSpacing)/(float)font.baseSize*scale;
         }
 
         i += codepointByteCount;   // Move text bytes counter to next codepoint
@@ -582,7 +573,7 @@ Vector3 MeasureText3D(Font font, const char* text, float fontSize, float fontSpa
         lenCounter++;
 
         int next = 0;
-        letter = GetNextCodepoint(&text[i], &next);
+        letter = GetCodepoint(&text[i], &next);
         index = GetGlyphIndex(font, letter);
 
         // NOTE: normally we exit the decoding sequence as soon as a bad byte is found (and return 0x3f)
@@ -592,8 +583,8 @@ Vector3 MeasureText3D(Font font, const char* text, float fontSize, float fontSpa
 
         if (letter != '\n')
         {
-            if (font.chars[index].advanceX != 0) textWidth += (font.chars[index].advanceX+fontSpacing)/(float)font.baseSize*scale;
-            else textWidth += (font.recs[index].width + font.chars[index].offsetX)/(float)font.baseSize*scale;
+            if (font.glyphs[index].advanceX != 0) textWidth += (font.glyphs[index].advanceX+fontSpacing)/(float)font.baseSize*scale;
+            else textWidth += (font.recs[index].width + font.glyphs[index].offsetX)/(float)font.baseSize*scale;
         }
         else
         {
@@ -632,7 +623,7 @@ void DrawTextWave3D(Font font, const char *text, Vector3 position, float fontSiz
     {
         // Get next codepoint from byte string and glyph index in font
         int codepointByteCount = 0;
-        int codepoint = GetNextCodepoint(&text[i], &codepointByteCount);
+        int codepoint = GetCodepoint(&text[i], &codepointByteCount);
         int index = GetGlyphIndex(font, codepoint);
 
         // NOTE: Normally we exit the decoding sequence as soon as a bad byte is found (and return 0x3f)
@@ -649,7 +640,7 @@ void DrawTextWave3D(Font font, const char *text, Vector3 position, float fontSiz
         }
         else if (codepoint == '~')
         {
-            if (GetNextCodepoint(&text[i+1], &codepointByteCount) == '~')
+            if (GetCodepoint(&text[i+1], &codepointByteCount) == '~')
             {
                 codepointByteCount += 1;
                 wave = !wave;
@@ -670,8 +661,8 @@ void DrawTextWave3D(Font font, const char *text, Vector3 position, float fontSiz
                 DrawTextCodepoint3D(font, codepoint, (Vector3){ pos.x + textOffsetX, pos.y, pos.z + textOffsetY }, fontSize, backface, tint);
             }
 
-            if (font.chars[index].advanceX == 0) textOffsetX += (float)(font.recs[index].width + fontSpacing)/(float)font.baseSize*scale;
-            else textOffsetX += (float)(font.chars[index].advanceX + fontSpacing)/(float)font.baseSize*scale;
+            if (font.glyphs[index].advanceX == 0) textOffsetX += (float)(font.recs[index].width + fontSpacing)/(float)font.baseSize*scale;
+            else textOffsetX += (float)(font.glyphs[index].advanceX + fontSpacing)/(float)font.baseSize*scale;
         }
 
         i += codepointByteCount;   // Move text bytes counter to next codepoint
@@ -698,7 +689,7 @@ Vector3 MeasureTextWave3D(Font font, const char* text, float fontSize, float fon
         lenCounter++;
 
         int next = 0;
-        letter = GetNextCodepoint(&text[i], &next);
+        letter = GetCodepoint(&text[i], &next);
         index = GetGlyphIndex(font, letter);
 
         // NOTE: normally we exit the decoding sequence as soon as a bad byte is found (and return 0x3f)
@@ -708,14 +699,14 @@ Vector3 MeasureTextWave3D(Font font, const char* text, float fontSize, float fon
 
         if (letter != '\n')
         {
-            if(letter == '~' && GetNextCodepoint(&text[i+1], &next) == '~')
+            if (letter == '~' && GetCodepoint(&text[i+1], &next) == '~')
             {
                 i++;
             }
             else
             {
-                if (font.chars[index].advanceX != 0) textWidth += (font.chars[index].advanceX+fontSpacing)/(float)font.baseSize*scale;
-                else textWidth += (font.recs[index].width + font.chars[index].offsetX)/(float)font.baseSize*scale;
+                if (font.glyphs[index].advanceX != 0) textWidth += (font.glyphs[index].advanceX+fontSpacing)/(float)font.baseSize*scale;
+                else textWidth += (font.recs[index].width + font.glyphs[index].offsetX)/(float)font.baseSize*scale;
             }
         }
         else

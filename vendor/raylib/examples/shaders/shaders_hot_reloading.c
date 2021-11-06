@@ -67,7 +67,7 @@ int main(void)
         SetShaderValue(shader, mouseLoc, mousePos, SHADER_UNIFORM_VEC2);
 
         // Hot shader reloading
-        if (shaderAutoReloading || (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)))
+        if (shaderAutoReloading || (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)))
         {
             long currentFragShaderModTime = GetFileModTime(TextFormat(fragShaderFileName, GLSL_VERSION));
 
@@ -77,7 +77,7 @@ int main(void)
                 // Try reloading updated shader
                 Shader updatedShader = LoadShader(0, TextFormat(fragShaderFileName, GLSL_VERSION));
 
-                if (updatedShader.id != rlGetShaderDefault().id)      // It was correctly loaded
+                if (updatedShader.id != rlGetShaderIdDefault())      // It was correctly loaded
                 {
                     UnloadShader(shader);
                     shader = updatedShader;
