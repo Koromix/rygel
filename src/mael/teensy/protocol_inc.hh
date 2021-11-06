@@ -19,9 +19,10 @@
 #endif
 
 MESSAGE(Imu, {
-    MEMBER(Vec3, position)
     MEMBER(Vec3, orientation)
     MEMBER(Vec3, acceleration)
+    MEMBER(Vec3, speed)
+    MEMBER(Vec3, position)
 })
 
 MESSAGE(Drive, {

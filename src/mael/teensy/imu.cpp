@@ -22,6 +22,7 @@
 
 static Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28);
 
+static Vec3 speed;
 static Vec3 position;
 
 void InitIMU()
@@ -44,19 +45,21 @@ void ProcessIMU()
     bno.getEvent(&orient, Adafruit_BNO055::VECTOR_EULER);
     bno.getEvent(&accel, Adafruit_BNO055::VECTOR_LINEARACCEL);
 
-    // Compute position (Euler integration)
-    // pos = 0.5 * accel * dt^2
-    position.x += 1000000.0 * 0.5 * (double)accel.acceleration.x * (1.0 / 1000.0) * (1.0 / 1000.0);
-    position.y += 1000000.0 * 0.5 * (double)accel.acceleration.y * (1.0 / 1000.0) * (1.0 / 1000.0);
-    position.z += 1000000.0 * 0.5 * (double)accel.acceleration.z * (1.0 / 1000.0) * (1.0 / 1000.0);
+    speed.x += (double)accel.acceleration.x * (1.0 / 1000.0);
+    speed.y += (double)accel.acceleration.y * (1.0 / 1000.0);
+    speed.z += (double)accel.acceleration.z * (1.0 / 1000.0);
+    position.x += speed.x * 10.0;
+    position.y += speed.y * 10.0;
+    position.z += speed.z * 10.0;
 
     PROCESS_EVERY(50000);
 
     // Fill basic IMU data
     ImuParameters imu = {};
-    imu.position = position;
     imu.orientation = {(double)orient.orientation.x * DEG2RAD, (double)orient.orientation.y * DEG2RAD, (double)orient.orientation.z * DEG2RAD};
     imu.acceleration = {(double)accel.acceleration.x, (double)accel.acceleration.y, (double)accel.acceleration.z};
+    imu.speed = speed;
+    imu.position = position;
 
     PostMessage(MessageType::Imu, &imu);
 }
