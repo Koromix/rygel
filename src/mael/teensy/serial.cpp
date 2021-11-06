@@ -153,7 +153,6 @@ void ProcessSerial()
     if (send_buf_send != send_buf_write) {
         rf24.stopListening();
 
-        int rf24_len = 0;
         while (send_buf_send != send_buf_write) {
             uint8_t buf[RF24_PAYLOAD_SIZE] = {};
             int buf_len = 1;
@@ -165,14 +164,8 @@ void ProcessSerial()
             buf[0] = (uint8_t)(buf_len - 1);
 
             rf24.writeFast(buf, sizeof(buf));
-            rf24_len += sizeof(buf);
-
-            if (rf24_len == RF24_PAYLOAD_SIZE * 3) {
-                rf24.txStandBy(0);
-                rf24_len = 0;
-            }
+            rf24.txStandBy(0);
         }
-        rf24.txStandBy(0);
 
         rf24.startListening();
     }
