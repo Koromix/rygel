@@ -107,9 +107,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 @ENABLE_PYTHON_TRUE@am__append_1 = python
-TESTS = arch-syscall-check$(EXEEXT)
-check_PROGRAMS = arch-syscall-check$(EXEEXT) \
-	arch-syscall-dump$(EXEEXT)
+check_PROGRAMS = arch-syscall-dump$(EXEEXT)
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_code_coverage.m4 \
@@ -175,41 +173,7 @@ am__v_lt_1 =
 libseccomp_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libseccomp_la_CFLAGS) \
 	$(CFLAGS) $(libseccomp_la_LDFLAGS) $(LDFLAGS) -o $@
-am__objects_2 = arch_syscall_check-api.$(OBJEXT) \
-	arch_syscall_check-system.$(OBJEXT) \
-	arch_syscall_check-helper.$(OBJEXT) \
-	arch_syscall_check-gen_pfc.$(OBJEXT) \
-	arch_syscall_check-gen_bpf.$(OBJEXT) \
-	arch_syscall_check-hash.$(OBJEXT) \
-	arch_syscall_check-db.$(OBJEXT) \
-	arch_syscall_check-arch.$(OBJEXT) \
-	arch_syscall_check-arch-x86.$(OBJEXT) \
-	arch_syscall_check-arch-x86_64.$(OBJEXT) \
-	arch_syscall_check-arch-x32.$(OBJEXT) \
-	arch_syscall_check-arch-arm.$(OBJEXT) \
-	arch_syscall_check-arch-aarch64.$(OBJEXT) \
-	arch_syscall_check-arch-mips.$(OBJEXT) \
-	arch_syscall_check-arch-mips64.$(OBJEXT) \
-	arch_syscall_check-arch-mips64n32.$(OBJEXT) \
-	arch_syscall_check-arch-parisc.$(OBJEXT) \
-	arch_syscall_check-arch-parisc64.$(OBJEXT) \
-	arch_syscall_check-arch-ppc.$(OBJEXT) \
-	arch_syscall_check-arch-ppc64.$(OBJEXT) \
-	arch_syscall_check-arch-riscv64.$(OBJEXT) \
-	arch_syscall_check-arch-s390.$(OBJEXT) \
-	arch_syscall_check-arch-s390x.$(OBJEXT) \
-	arch_syscall_check-syscalls.$(OBJEXT) \
-	arch_syscall_check-syscalls.perf.$(OBJEXT)
-am_arch_syscall_check_OBJECTS =  \
-	arch_syscall_check-arch-syscall-check.$(OBJEXT) \
-	$(am__objects_2)
-arch_syscall_check_OBJECTS = $(am_arch_syscall_check_OBJECTS)
-arch_syscall_check_LDADD = $(LDADD)
-arch_syscall_check_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
-	$(arch_syscall_check_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
-am__objects_3 = api.$(OBJEXT) system.$(OBJEXT) helper.$(OBJEXT) \
+am__objects_2 = api.$(OBJEXT) system.$(OBJEXT) helper.$(OBJEXT) \
 	gen_pfc.$(OBJEXT) gen_bpf.$(OBJEXT) hash.$(OBJEXT) \
 	db.$(OBJEXT) arch.$(OBJEXT) arch-x86.$(OBJEXT) \
 	arch-x86_64.$(OBJEXT) arch-x32.$(OBJEXT) arch-arm.$(OBJEXT) \
@@ -220,7 +184,7 @@ am__objects_3 = api.$(OBJEXT) system.$(OBJEXT) helper.$(OBJEXT) \
 	arch-s390.$(OBJEXT) arch-s390x.$(OBJEXT) syscalls.$(OBJEXT) \
 	syscalls.perf.$(OBJEXT)
 am_arch_syscall_dump_OBJECTS = arch-syscall-dump.$(OBJEXT) \
-	$(am__objects_3)
+	$(am__objects_2)
 arch_syscall_dump_OBJECTS = $(am_arch_syscall_dump_OBJECTS)
 arch_syscall_dump_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -247,35 +211,9 @@ am__depfiles_remade = ./$(DEPDIR)/api.Po ./$(DEPDIR)/arch-aarch64.Po \
 	./$(DEPDIR)/arch-s390x.Po ./$(DEPDIR)/arch-syscall-dump.Po \
 	./$(DEPDIR)/arch-x32.Po ./$(DEPDIR)/arch-x86.Po \
 	./$(DEPDIR)/arch-x86_64.Po ./$(DEPDIR)/arch.Po \
-	./$(DEPDIR)/arch_syscall_check-api.Po \
-	./$(DEPDIR)/arch_syscall_check-arch-aarch64.Po \
-	./$(DEPDIR)/arch_syscall_check-arch-arm.Po \
-	./$(DEPDIR)/arch_syscall_check-arch-mips.Po \
-	./$(DEPDIR)/arch_syscall_check-arch-mips64.Po \
-	./$(DEPDIR)/arch_syscall_check-arch-mips64n32.Po \
-	./$(DEPDIR)/arch_syscall_check-arch-parisc.Po \
-	./$(DEPDIR)/arch_syscall_check-arch-parisc64.Po \
-	./$(DEPDIR)/arch_syscall_check-arch-ppc.Po \
-	./$(DEPDIR)/arch_syscall_check-arch-ppc64.Po \
-	./$(DEPDIR)/arch_syscall_check-arch-riscv64.Po \
-	./$(DEPDIR)/arch_syscall_check-arch-s390.Po \
-	./$(DEPDIR)/arch_syscall_check-arch-s390x.Po \
-	./$(DEPDIR)/arch_syscall_check-arch-syscall-check.Po \
-	./$(DEPDIR)/arch_syscall_check-arch-x32.Po \
-	./$(DEPDIR)/arch_syscall_check-arch-x86.Po \
-	./$(DEPDIR)/arch_syscall_check-arch-x86_64.Po \
-	./$(DEPDIR)/arch_syscall_check-arch.Po \
-	./$(DEPDIR)/arch_syscall_check-db.Po \
-	./$(DEPDIR)/arch_syscall_check-gen_bpf.Po \
-	./$(DEPDIR)/arch_syscall_check-gen_pfc.Po \
-	./$(DEPDIR)/arch_syscall_check-hash.Po \
-	./$(DEPDIR)/arch_syscall_check-helper.Po \
-	./$(DEPDIR)/arch_syscall_check-syscalls.Po \
-	./$(DEPDIR)/arch_syscall_check-syscalls.perf.Po \
-	./$(DEPDIR)/arch_syscall_check-system.Po ./$(DEPDIR)/db.Po \
-	./$(DEPDIR)/gen_bpf.Po ./$(DEPDIR)/gen_pfc.Po \
-	./$(DEPDIR)/hash.Po ./$(DEPDIR)/helper.Po \
-	./$(DEPDIR)/libseccomp_la-api.Plo \
+	./$(DEPDIR)/db.Po ./$(DEPDIR)/gen_bpf.Po \
+	./$(DEPDIR)/gen_pfc.Po ./$(DEPDIR)/hash.Po \
+	./$(DEPDIR)/helper.Po ./$(DEPDIR)/libseccomp_la-api.Plo \
 	./$(DEPDIR)/libseccomp_la-arch-aarch64.Plo \
 	./$(DEPDIR)/libseccomp_la-arch-arm.Plo \
 	./$(DEPDIR)/libseccomp_la-arch-mips.Plo \
@@ -320,10 +258,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(libseccomp_la_SOURCES) $(arch_syscall_check_SOURCES) \
-	$(arch_syscall_dump_SOURCES)
-DIST_SOURCES = $(libseccomp_la_SOURCES) $(arch_syscall_check_SOURCES) \
-	$(arch_syscall_dump_SOURCES)
+SOURCES = $(libseccomp_la_SOURCES) $(arch_syscall_dump_SOURCES)
+DIST_SOURCES = $(libseccomp_la_SOURCES) $(arch_syscall_dump_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -582,12 +518,12 @@ SOURCES_ALL = \
 	arch-s390x.h arch-s390x.c \
 	syscalls.h syscalls.c syscalls.perf.c
 
-EXTRA_DIST = arch-syscall-validate arch-gperf-generate syscalls.csv \
-	syscalls.perf.template syscalls.perf.c syscalls.perf
+EXTRA_DIST = arch-syscall-validate arch-syscall-check \
+	arch-gperf-generate syscalls.csv syscalls.perf.template \
+	syscalls.perf.c syscalls.perf
+TESTS = arch-syscall-check
 lib_LTLIBRARIES = libseccomp.la
 arch_syscall_dump_SOURCES = arch-syscall-dump.c ${SOURCES_ALL}
-arch_syscall_check_SOURCES = arch-syscall-check.c ${SOURCES_ALL}
-arch_syscall_check_CFLAGS = ${AM_CFLAGS}
 libseccomp_la_SOURCES = ${SOURCES_ALL}
 libseccomp_la_CPPFLAGS = ${AM_CPPFLAGS} ${CODE_COVERAGE_CPPFLAGS}
 libseccomp_la_CFLAGS = ${AM_CFLAGS} ${CODE_COVERAGE_CFLAGS} ${CFLAGS} \
@@ -678,10 +614,6 @@ clean-libLTLIBRARIES:
 libseccomp.la: $(libseccomp_la_OBJECTS) $(libseccomp_la_DEPENDENCIES) $(EXTRA_libseccomp_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libseccomp_la_LINK) -rpath $(libdir) $(libseccomp_la_OBJECTS) $(libseccomp_la_LIBADD) $(LIBS)
 
-arch-syscall-check$(EXEEXT): $(arch_syscall_check_OBJECTS) $(arch_syscall_check_DEPENDENCIES) $(EXTRA_arch_syscall_check_DEPENDENCIES) 
-	@rm -f arch-syscall-check$(EXEEXT)
-	$(AM_V_CCLD)$(arch_syscall_check_LINK) $(arch_syscall_check_OBJECTS) $(arch_syscall_check_LDADD) $(LIBS)
-
 arch-syscall-dump$(EXEEXT): $(arch_syscall_dump_OBJECTS) $(arch_syscall_dump_DEPENDENCIES) $(EXTRA_arch_syscall_dump_DEPENDENCIES) 
 	@rm -f arch-syscall-dump$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(arch_syscall_dump_OBJECTS) $(arch_syscall_dump_LDADD) $(LIBS)
@@ -710,32 +642,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch-x86.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch-x86_64.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-api.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-arch-aarch64.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-arch-arm.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-arch-mips.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-arch-mips64.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-arch-mips64n32.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-arch-parisc.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-arch-parisc64.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-arch-ppc.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-arch-ppc64.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-arch-riscv64.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-arch-s390.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-arch-s390x.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-arch-syscall-check.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-arch-x32.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-arch-x86.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-arch-x86_64.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-arch.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-db.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-gen_bpf.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-gen_pfc.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-hash.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-helper.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-syscalls.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-syscalls.perf.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_syscall_check-system.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/db.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_bpf.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_pfc.Po@am__quote@ # am--include-marker
@@ -974,370 +880,6 @@ libseccomp_la-syscalls.perf.lo: syscalls.perf.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='syscalls.perf.c' object='libseccomp_la-syscalls.perf.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libseccomp_la_CPPFLAGS) $(CPPFLAGS) $(libseccomp_la_CFLAGS) $(CFLAGS) -c -o libseccomp_la-syscalls.perf.lo `test -f 'syscalls.perf.c' || echo '$(srcdir)/'`syscalls.perf.c
-
-arch_syscall_check-arch-syscall-check.o: arch-syscall-check.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-syscall-check.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-syscall-check.Tpo -c -o arch_syscall_check-arch-syscall-check.o `test -f 'arch-syscall-check.c' || echo '$(srcdir)/'`arch-syscall-check.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-syscall-check.Tpo $(DEPDIR)/arch_syscall_check-arch-syscall-check.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-syscall-check.c' object='arch_syscall_check-arch-syscall-check.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-syscall-check.o `test -f 'arch-syscall-check.c' || echo '$(srcdir)/'`arch-syscall-check.c
-
-arch_syscall_check-arch-syscall-check.obj: arch-syscall-check.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-syscall-check.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-syscall-check.Tpo -c -o arch_syscall_check-arch-syscall-check.obj `if test -f 'arch-syscall-check.c'; then $(CYGPATH_W) 'arch-syscall-check.c'; else $(CYGPATH_W) '$(srcdir)/arch-syscall-check.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-syscall-check.Tpo $(DEPDIR)/arch_syscall_check-arch-syscall-check.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-syscall-check.c' object='arch_syscall_check-arch-syscall-check.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-syscall-check.obj `if test -f 'arch-syscall-check.c'; then $(CYGPATH_W) 'arch-syscall-check.c'; else $(CYGPATH_W) '$(srcdir)/arch-syscall-check.c'; fi`
-
-arch_syscall_check-api.o: api.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-api.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-api.Tpo -c -o arch_syscall_check-api.o `test -f 'api.c' || echo '$(srcdir)/'`api.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-api.Tpo $(DEPDIR)/arch_syscall_check-api.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='api.c' object='arch_syscall_check-api.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-api.o `test -f 'api.c' || echo '$(srcdir)/'`api.c
-
-arch_syscall_check-api.obj: api.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-api.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-api.Tpo -c -o arch_syscall_check-api.obj `if test -f 'api.c'; then $(CYGPATH_W) 'api.c'; else $(CYGPATH_W) '$(srcdir)/api.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-api.Tpo $(DEPDIR)/arch_syscall_check-api.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='api.c' object='arch_syscall_check-api.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-api.obj `if test -f 'api.c'; then $(CYGPATH_W) 'api.c'; else $(CYGPATH_W) '$(srcdir)/api.c'; fi`
-
-arch_syscall_check-system.o: system.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-system.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-system.Tpo -c -o arch_syscall_check-system.o `test -f 'system.c' || echo '$(srcdir)/'`system.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-system.Tpo $(DEPDIR)/arch_syscall_check-system.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='system.c' object='arch_syscall_check-system.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-system.o `test -f 'system.c' || echo '$(srcdir)/'`system.c
-
-arch_syscall_check-system.obj: system.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-system.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-system.Tpo -c -o arch_syscall_check-system.obj `if test -f 'system.c'; then $(CYGPATH_W) 'system.c'; else $(CYGPATH_W) '$(srcdir)/system.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-system.Tpo $(DEPDIR)/arch_syscall_check-system.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='system.c' object='arch_syscall_check-system.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-system.obj `if test -f 'system.c'; then $(CYGPATH_W) 'system.c'; else $(CYGPATH_W) '$(srcdir)/system.c'; fi`
-
-arch_syscall_check-helper.o: helper.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-helper.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-helper.Tpo -c -o arch_syscall_check-helper.o `test -f 'helper.c' || echo '$(srcdir)/'`helper.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-helper.Tpo $(DEPDIR)/arch_syscall_check-helper.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='helper.c' object='arch_syscall_check-helper.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-helper.o `test -f 'helper.c' || echo '$(srcdir)/'`helper.c
-
-arch_syscall_check-helper.obj: helper.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-helper.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-helper.Tpo -c -o arch_syscall_check-helper.obj `if test -f 'helper.c'; then $(CYGPATH_W) 'helper.c'; else $(CYGPATH_W) '$(srcdir)/helper.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-helper.Tpo $(DEPDIR)/arch_syscall_check-helper.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='helper.c' object='arch_syscall_check-helper.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-helper.obj `if test -f 'helper.c'; then $(CYGPATH_W) 'helper.c'; else $(CYGPATH_W) '$(srcdir)/helper.c'; fi`
-
-arch_syscall_check-gen_pfc.o: gen_pfc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-gen_pfc.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-gen_pfc.Tpo -c -o arch_syscall_check-gen_pfc.o `test -f 'gen_pfc.c' || echo '$(srcdir)/'`gen_pfc.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-gen_pfc.Tpo $(DEPDIR)/arch_syscall_check-gen_pfc.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gen_pfc.c' object='arch_syscall_check-gen_pfc.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-gen_pfc.o `test -f 'gen_pfc.c' || echo '$(srcdir)/'`gen_pfc.c
-
-arch_syscall_check-gen_pfc.obj: gen_pfc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-gen_pfc.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-gen_pfc.Tpo -c -o arch_syscall_check-gen_pfc.obj `if test -f 'gen_pfc.c'; then $(CYGPATH_W) 'gen_pfc.c'; else $(CYGPATH_W) '$(srcdir)/gen_pfc.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-gen_pfc.Tpo $(DEPDIR)/arch_syscall_check-gen_pfc.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gen_pfc.c' object='arch_syscall_check-gen_pfc.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-gen_pfc.obj `if test -f 'gen_pfc.c'; then $(CYGPATH_W) 'gen_pfc.c'; else $(CYGPATH_W) '$(srcdir)/gen_pfc.c'; fi`
-
-arch_syscall_check-gen_bpf.o: gen_bpf.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-gen_bpf.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-gen_bpf.Tpo -c -o arch_syscall_check-gen_bpf.o `test -f 'gen_bpf.c' || echo '$(srcdir)/'`gen_bpf.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-gen_bpf.Tpo $(DEPDIR)/arch_syscall_check-gen_bpf.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gen_bpf.c' object='arch_syscall_check-gen_bpf.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-gen_bpf.o `test -f 'gen_bpf.c' || echo '$(srcdir)/'`gen_bpf.c
-
-arch_syscall_check-gen_bpf.obj: gen_bpf.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-gen_bpf.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-gen_bpf.Tpo -c -o arch_syscall_check-gen_bpf.obj `if test -f 'gen_bpf.c'; then $(CYGPATH_W) 'gen_bpf.c'; else $(CYGPATH_W) '$(srcdir)/gen_bpf.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-gen_bpf.Tpo $(DEPDIR)/arch_syscall_check-gen_bpf.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gen_bpf.c' object='arch_syscall_check-gen_bpf.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-gen_bpf.obj `if test -f 'gen_bpf.c'; then $(CYGPATH_W) 'gen_bpf.c'; else $(CYGPATH_W) '$(srcdir)/gen_bpf.c'; fi`
-
-arch_syscall_check-hash.o: hash.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-hash.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-hash.Tpo -c -o arch_syscall_check-hash.o `test -f 'hash.c' || echo '$(srcdir)/'`hash.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-hash.Tpo $(DEPDIR)/arch_syscall_check-hash.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='hash.c' object='arch_syscall_check-hash.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-hash.o `test -f 'hash.c' || echo '$(srcdir)/'`hash.c
-
-arch_syscall_check-hash.obj: hash.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-hash.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-hash.Tpo -c -o arch_syscall_check-hash.obj `if test -f 'hash.c'; then $(CYGPATH_W) 'hash.c'; else $(CYGPATH_W) '$(srcdir)/hash.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-hash.Tpo $(DEPDIR)/arch_syscall_check-hash.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='hash.c' object='arch_syscall_check-hash.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-hash.obj `if test -f 'hash.c'; then $(CYGPATH_W) 'hash.c'; else $(CYGPATH_W) '$(srcdir)/hash.c'; fi`
-
-arch_syscall_check-db.o: db.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-db.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-db.Tpo -c -o arch_syscall_check-db.o `test -f 'db.c' || echo '$(srcdir)/'`db.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-db.Tpo $(DEPDIR)/arch_syscall_check-db.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='db.c' object='arch_syscall_check-db.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-db.o `test -f 'db.c' || echo '$(srcdir)/'`db.c
-
-arch_syscall_check-db.obj: db.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-db.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-db.Tpo -c -o arch_syscall_check-db.obj `if test -f 'db.c'; then $(CYGPATH_W) 'db.c'; else $(CYGPATH_W) '$(srcdir)/db.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-db.Tpo $(DEPDIR)/arch_syscall_check-db.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='db.c' object='arch_syscall_check-db.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-db.obj `if test -f 'db.c'; then $(CYGPATH_W) 'db.c'; else $(CYGPATH_W) '$(srcdir)/db.c'; fi`
-
-arch_syscall_check-arch.o: arch.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch.Tpo -c -o arch_syscall_check-arch.o `test -f 'arch.c' || echo '$(srcdir)/'`arch.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch.Tpo $(DEPDIR)/arch_syscall_check-arch.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch.c' object='arch_syscall_check-arch.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch.o `test -f 'arch.c' || echo '$(srcdir)/'`arch.c
-
-arch_syscall_check-arch.obj: arch.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch.Tpo -c -o arch_syscall_check-arch.obj `if test -f 'arch.c'; then $(CYGPATH_W) 'arch.c'; else $(CYGPATH_W) '$(srcdir)/arch.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch.Tpo $(DEPDIR)/arch_syscall_check-arch.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch.c' object='arch_syscall_check-arch.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch.obj `if test -f 'arch.c'; then $(CYGPATH_W) 'arch.c'; else $(CYGPATH_W) '$(srcdir)/arch.c'; fi`
-
-arch_syscall_check-arch-x86.o: arch-x86.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-x86.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-x86.Tpo -c -o arch_syscall_check-arch-x86.o `test -f 'arch-x86.c' || echo '$(srcdir)/'`arch-x86.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-x86.Tpo $(DEPDIR)/arch_syscall_check-arch-x86.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-x86.c' object='arch_syscall_check-arch-x86.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-x86.o `test -f 'arch-x86.c' || echo '$(srcdir)/'`arch-x86.c
-
-arch_syscall_check-arch-x86.obj: arch-x86.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-x86.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-x86.Tpo -c -o arch_syscall_check-arch-x86.obj `if test -f 'arch-x86.c'; then $(CYGPATH_W) 'arch-x86.c'; else $(CYGPATH_W) '$(srcdir)/arch-x86.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-x86.Tpo $(DEPDIR)/arch_syscall_check-arch-x86.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-x86.c' object='arch_syscall_check-arch-x86.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-x86.obj `if test -f 'arch-x86.c'; then $(CYGPATH_W) 'arch-x86.c'; else $(CYGPATH_W) '$(srcdir)/arch-x86.c'; fi`
-
-arch_syscall_check-arch-x86_64.o: arch-x86_64.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-x86_64.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-x86_64.Tpo -c -o arch_syscall_check-arch-x86_64.o `test -f 'arch-x86_64.c' || echo '$(srcdir)/'`arch-x86_64.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-x86_64.Tpo $(DEPDIR)/arch_syscall_check-arch-x86_64.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-x86_64.c' object='arch_syscall_check-arch-x86_64.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-x86_64.o `test -f 'arch-x86_64.c' || echo '$(srcdir)/'`arch-x86_64.c
-
-arch_syscall_check-arch-x86_64.obj: arch-x86_64.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-x86_64.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-x86_64.Tpo -c -o arch_syscall_check-arch-x86_64.obj `if test -f 'arch-x86_64.c'; then $(CYGPATH_W) 'arch-x86_64.c'; else $(CYGPATH_W) '$(srcdir)/arch-x86_64.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-x86_64.Tpo $(DEPDIR)/arch_syscall_check-arch-x86_64.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-x86_64.c' object='arch_syscall_check-arch-x86_64.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-x86_64.obj `if test -f 'arch-x86_64.c'; then $(CYGPATH_W) 'arch-x86_64.c'; else $(CYGPATH_W) '$(srcdir)/arch-x86_64.c'; fi`
-
-arch_syscall_check-arch-x32.o: arch-x32.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-x32.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-x32.Tpo -c -o arch_syscall_check-arch-x32.o `test -f 'arch-x32.c' || echo '$(srcdir)/'`arch-x32.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-x32.Tpo $(DEPDIR)/arch_syscall_check-arch-x32.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-x32.c' object='arch_syscall_check-arch-x32.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-x32.o `test -f 'arch-x32.c' || echo '$(srcdir)/'`arch-x32.c
-
-arch_syscall_check-arch-x32.obj: arch-x32.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-x32.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-x32.Tpo -c -o arch_syscall_check-arch-x32.obj `if test -f 'arch-x32.c'; then $(CYGPATH_W) 'arch-x32.c'; else $(CYGPATH_W) '$(srcdir)/arch-x32.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-x32.Tpo $(DEPDIR)/arch_syscall_check-arch-x32.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-x32.c' object='arch_syscall_check-arch-x32.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-x32.obj `if test -f 'arch-x32.c'; then $(CYGPATH_W) 'arch-x32.c'; else $(CYGPATH_W) '$(srcdir)/arch-x32.c'; fi`
-
-arch_syscall_check-arch-arm.o: arch-arm.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-arm.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-arm.Tpo -c -o arch_syscall_check-arch-arm.o `test -f 'arch-arm.c' || echo '$(srcdir)/'`arch-arm.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-arm.Tpo $(DEPDIR)/arch_syscall_check-arch-arm.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-arm.c' object='arch_syscall_check-arch-arm.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-arm.o `test -f 'arch-arm.c' || echo '$(srcdir)/'`arch-arm.c
-
-arch_syscall_check-arch-arm.obj: arch-arm.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-arm.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-arm.Tpo -c -o arch_syscall_check-arch-arm.obj `if test -f 'arch-arm.c'; then $(CYGPATH_W) 'arch-arm.c'; else $(CYGPATH_W) '$(srcdir)/arch-arm.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-arm.Tpo $(DEPDIR)/arch_syscall_check-arch-arm.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-arm.c' object='arch_syscall_check-arch-arm.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-arm.obj `if test -f 'arch-arm.c'; then $(CYGPATH_W) 'arch-arm.c'; else $(CYGPATH_W) '$(srcdir)/arch-arm.c'; fi`
-
-arch_syscall_check-arch-aarch64.o: arch-aarch64.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-aarch64.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-aarch64.Tpo -c -o arch_syscall_check-arch-aarch64.o `test -f 'arch-aarch64.c' || echo '$(srcdir)/'`arch-aarch64.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-aarch64.Tpo $(DEPDIR)/arch_syscall_check-arch-aarch64.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-aarch64.c' object='arch_syscall_check-arch-aarch64.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-aarch64.o `test -f 'arch-aarch64.c' || echo '$(srcdir)/'`arch-aarch64.c
-
-arch_syscall_check-arch-aarch64.obj: arch-aarch64.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-aarch64.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-aarch64.Tpo -c -o arch_syscall_check-arch-aarch64.obj `if test -f 'arch-aarch64.c'; then $(CYGPATH_W) 'arch-aarch64.c'; else $(CYGPATH_W) '$(srcdir)/arch-aarch64.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-aarch64.Tpo $(DEPDIR)/arch_syscall_check-arch-aarch64.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-aarch64.c' object='arch_syscall_check-arch-aarch64.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-aarch64.obj `if test -f 'arch-aarch64.c'; then $(CYGPATH_W) 'arch-aarch64.c'; else $(CYGPATH_W) '$(srcdir)/arch-aarch64.c'; fi`
-
-arch_syscall_check-arch-mips.o: arch-mips.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-mips.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-mips.Tpo -c -o arch_syscall_check-arch-mips.o `test -f 'arch-mips.c' || echo '$(srcdir)/'`arch-mips.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-mips.Tpo $(DEPDIR)/arch_syscall_check-arch-mips.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-mips.c' object='arch_syscall_check-arch-mips.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-mips.o `test -f 'arch-mips.c' || echo '$(srcdir)/'`arch-mips.c
-
-arch_syscall_check-arch-mips.obj: arch-mips.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-mips.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-mips.Tpo -c -o arch_syscall_check-arch-mips.obj `if test -f 'arch-mips.c'; then $(CYGPATH_W) 'arch-mips.c'; else $(CYGPATH_W) '$(srcdir)/arch-mips.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-mips.Tpo $(DEPDIR)/arch_syscall_check-arch-mips.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-mips.c' object='arch_syscall_check-arch-mips.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-mips.obj `if test -f 'arch-mips.c'; then $(CYGPATH_W) 'arch-mips.c'; else $(CYGPATH_W) '$(srcdir)/arch-mips.c'; fi`
-
-arch_syscall_check-arch-mips64.o: arch-mips64.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-mips64.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-mips64.Tpo -c -o arch_syscall_check-arch-mips64.o `test -f 'arch-mips64.c' || echo '$(srcdir)/'`arch-mips64.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-mips64.Tpo $(DEPDIR)/arch_syscall_check-arch-mips64.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-mips64.c' object='arch_syscall_check-arch-mips64.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-mips64.o `test -f 'arch-mips64.c' || echo '$(srcdir)/'`arch-mips64.c
-
-arch_syscall_check-arch-mips64.obj: arch-mips64.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-mips64.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-mips64.Tpo -c -o arch_syscall_check-arch-mips64.obj `if test -f 'arch-mips64.c'; then $(CYGPATH_W) 'arch-mips64.c'; else $(CYGPATH_W) '$(srcdir)/arch-mips64.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-mips64.Tpo $(DEPDIR)/arch_syscall_check-arch-mips64.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-mips64.c' object='arch_syscall_check-arch-mips64.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-mips64.obj `if test -f 'arch-mips64.c'; then $(CYGPATH_W) 'arch-mips64.c'; else $(CYGPATH_W) '$(srcdir)/arch-mips64.c'; fi`
-
-arch_syscall_check-arch-mips64n32.o: arch-mips64n32.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-mips64n32.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-mips64n32.Tpo -c -o arch_syscall_check-arch-mips64n32.o `test -f 'arch-mips64n32.c' || echo '$(srcdir)/'`arch-mips64n32.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-mips64n32.Tpo $(DEPDIR)/arch_syscall_check-arch-mips64n32.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-mips64n32.c' object='arch_syscall_check-arch-mips64n32.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-mips64n32.o `test -f 'arch-mips64n32.c' || echo '$(srcdir)/'`arch-mips64n32.c
-
-arch_syscall_check-arch-mips64n32.obj: arch-mips64n32.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-mips64n32.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-mips64n32.Tpo -c -o arch_syscall_check-arch-mips64n32.obj `if test -f 'arch-mips64n32.c'; then $(CYGPATH_W) 'arch-mips64n32.c'; else $(CYGPATH_W) '$(srcdir)/arch-mips64n32.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-mips64n32.Tpo $(DEPDIR)/arch_syscall_check-arch-mips64n32.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-mips64n32.c' object='arch_syscall_check-arch-mips64n32.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-mips64n32.obj `if test -f 'arch-mips64n32.c'; then $(CYGPATH_W) 'arch-mips64n32.c'; else $(CYGPATH_W) '$(srcdir)/arch-mips64n32.c'; fi`
-
-arch_syscall_check-arch-parisc.o: arch-parisc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-parisc.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-parisc.Tpo -c -o arch_syscall_check-arch-parisc.o `test -f 'arch-parisc.c' || echo '$(srcdir)/'`arch-parisc.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-parisc.Tpo $(DEPDIR)/arch_syscall_check-arch-parisc.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-parisc.c' object='arch_syscall_check-arch-parisc.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-parisc.o `test -f 'arch-parisc.c' || echo '$(srcdir)/'`arch-parisc.c
-
-arch_syscall_check-arch-parisc.obj: arch-parisc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-parisc.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-parisc.Tpo -c -o arch_syscall_check-arch-parisc.obj `if test -f 'arch-parisc.c'; then $(CYGPATH_W) 'arch-parisc.c'; else $(CYGPATH_W) '$(srcdir)/arch-parisc.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-parisc.Tpo $(DEPDIR)/arch_syscall_check-arch-parisc.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-parisc.c' object='arch_syscall_check-arch-parisc.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-parisc.obj `if test -f 'arch-parisc.c'; then $(CYGPATH_W) 'arch-parisc.c'; else $(CYGPATH_W) '$(srcdir)/arch-parisc.c'; fi`
-
-arch_syscall_check-arch-parisc64.o: arch-parisc64.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-parisc64.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-parisc64.Tpo -c -o arch_syscall_check-arch-parisc64.o `test -f 'arch-parisc64.c' || echo '$(srcdir)/'`arch-parisc64.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-parisc64.Tpo $(DEPDIR)/arch_syscall_check-arch-parisc64.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-parisc64.c' object='arch_syscall_check-arch-parisc64.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-parisc64.o `test -f 'arch-parisc64.c' || echo '$(srcdir)/'`arch-parisc64.c
-
-arch_syscall_check-arch-parisc64.obj: arch-parisc64.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-parisc64.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-parisc64.Tpo -c -o arch_syscall_check-arch-parisc64.obj `if test -f 'arch-parisc64.c'; then $(CYGPATH_W) 'arch-parisc64.c'; else $(CYGPATH_W) '$(srcdir)/arch-parisc64.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-parisc64.Tpo $(DEPDIR)/arch_syscall_check-arch-parisc64.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-parisc64.c' object='arch_syscall_check-arch-parisc64.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-parisc64.obj `if test -f 'arch-parisc64.c'; then $(CYGPATH_W) 'arch-parisc64.c'; else $(CYGPATH_W) '$(srcdir)/arch-parisc64.c'; fi`
-
-arch_syscall_check-arch-ppc.o: arch-ppc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-ppc.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-ppc.Tpo -c -o arch_syscall_check-arch-ppc.o `test -f 'arch-ppc.c' || echo '$(srcdir)/'`arch-ppc.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-ppc.Tpo $(DEPDIR)/arch_syscall_check-arch-ppc.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-ppc.c' object='arch_syscall_check-arch-ppc.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-ppc.o `test -f 'arch-ppc.c' || echo '$(srcdir)/'`arch-ppc.c
-
-arch_syscall_check-arch-ppc.obj: arch-ppc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-ppc.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-ppc.Tpo -c -o arch_syscall_check-arch-ppc.obj `if test -f 'arch-ppc.c'; then $(CYGPATH_W) 'arch-ppc.c'; else $(CYGPATH_W) '$(srcdir)/arch-ppc.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-ppc.Tpo $(DEPDIR)/arch_syscall_check-arch-ppc.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-ppc.c' object='arch_syscall_check-arch-ppc.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-ppc.obj `if test -f 'arch-ppc.c'; then $(CYGPATH_W) 'arch-ppc.c'; else $(CYGPATH_W) '$(srcdir)/arch-ppc.c'; fi`
-
-arch_syscall_check-arch-ppc64.o: arch-ppc64.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-ppc64.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-ppc64.Tpo -c -o arch_syscall_check-arch-ppc64.o `test -f 'arch-ppc64.c' || echo '$(srcdir)/'`arch-ppc64.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-ppc64.Tpo $(DEPDIR)/arch_syscall_check-arch-ppc64.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-ppc64.c' object='arch_syscall_check-arch-ppc64.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-ppc64.o `test -f 'arch-ppc64.c' || echo '$(srcdir)/'`arch-ppc64.c
-
-arch_syscall_check-arch-ppc64.obj: arch-ppc64.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-ppc64.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-ppc64.Tpo -c -o arch_syscall_check-arch-ppc64.obj `if test -f 'arch-ppc64.c'; then $(CYGPATH_W) 'arch-ppc64.c'; else $(CYGPATH_W) '$(srcdir)/arch-ppc64.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-ppc64.Tpo $(DEPDIR)/arch_syscall_check-arch-ppc64.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-ppc64.c' object='arch_syscall_check-arch-ppc64.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-ppc64.obj `if test -f 'arch-ppc64.c'; then $(CYGPATH_W) 'arch-ppc64.c'; else $(CYGPATH_W) '$(srcdir)/arch-ppc64.c'; fi`
-
-arch_syscall_check-arch-riscv64.o: arch-riscv64.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-riscv64.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-riscv64.Tpo -c -o arch_syscall_check-arch-riscv64.o `test -f 'arch-riscv64.c' || echo '$(srcdir)/'`arch-riscv64.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-riscv64.Tpo $(DEPDIR)/arch_syscall_check-arch-riscv64.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-riscv64.c' object='arch_syscall_check-arch-riscv64.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-riscv64.o `test -f 'arch-riscv64.c' || echo '$(srcdir)/'`arch-riscv64.c
-
-arch_syscall_check-arch-riscv64.obj: arch-riscv64.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-riscv64.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-riscv64.Tpo -c -o arch_syscall_check-arch-riscv64.obj `if test -f 'arch-riscv64.c'; then $(CYGPATH_W) 'arch-riscv64.c'; else $(CYGPATH_W) '$(srcdir)/arch-riscv64.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-riscv64.Tpo $(DEPDIR)/arch_syscall_check-arch-riscv64.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-riscv64.c' object='arch_syscall_check-arch-riscv64.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-riscv64.obj `if test -f 'arch-riscv64.c'; then $(CYGPATH_W) 'arch-riscv64.c'; else $(CYGPATH_W) '$(srcdir)/arch-riscv64.c'; fi`
-
-arch_syscall_check-arch-s390.o: arch-s390.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-s390.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-s390.Tpo -c -o arch_syscall_check-arch-s390.o `test -f 'arch-s390.c' || echo '$(srcdir)/'`arch-s390.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-s390.Tpo $(DEPDIR)/arch_syscall_check-arch-s390.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-s390.c' object='arch_syscall_check-arch-s390.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-s390.o `test -f 'arch-s390.c' || echo '$(srcdir)/'`arch-s390.c
-
-arch_syscall_check-arch-s390.obj: arch-s390.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-s390.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-s390.Tpo -c -o arch_syscall_check-arch-s390.obj `if test -f 'arch-s390.c'; then $(CYGPATH_W) 'arch-s390.c'; else $(CYGPATH_W) '$(srcdir)/arch-s390.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-s390.Tpo $(DEPDIR)/arch_syscall_check-arch-s390.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-s390.c' object='arch_syscall_check-arch-s390.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-s390.obj `if test -f 'arch-s390.c'; then $(CYGPATH_W) 'arch-s390.c'; else $(CYGPATH_W) '$(srcdir)/arch-s390.c'; fi`
-
-arch_syscall_check-arch-s390x.o: arch-s390x.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-s390x.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-s390x.Tpo -c -o arch_syscall_check-arch-s390x.o `test -f 'arch-s390x.c' || echo '$(srcdir)/'`arch-s390x.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-s390x.Tpo $(DEPDIR)/arch_syscall_check-arch-s390x.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-s390x.c' object='arch_syscall_check-arch-s390x.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-s390x.o `test -f 'arch-s390x.c' || echo '$(srcdir)/'`arch-s390x.c
-
-arch_syscall_check-arch-s390x.obj: arch-s390x.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-arch-s390x.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-arch-s390x.Tpo -c -o arch_syscall_check-arch-s390x.obj `if test -f 'arch-s390x.c'; then $(CYGPATH_W) 'arch-s390x.c'; else $(CYGPATH_W) '$(srcdir)/arch-s390x.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-arch-s390x.Tpo $(DEPDIR)/arch_syscall_check-arch-s390x.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='arch-s390x.c' object='arch_syscall_check-arch-s390x.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-arch-s390x.obj `if test -f 'arch-s390x.c'; then $(CYGPATH_W) 'arch-s390x.c'; else $(CYGPATH_W) '$(srcdir)/arch-s390x.c'; fi`
-
-arch_syscall_check-syscalls.o: syscalls.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-syscalls.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-syscalls.Tpo -c -o arch_syscall_check-syscalls.o `test -f 'syscalls.c' || echo '$(srcdir)/'`syscalls.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-syscalls.Tpo $(DEPDIR)/arch_syscall_check-syscalls.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='syscalls.c' object='arch_syscall_check-syscalls.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-syscalls.o `test -f 'syscalls.c' || echo '$(srcdir)/'`syscalls.c
-
-arch_syscall_check-syscalls.obj: syscalls.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-syscalls.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-syscalls.Tpo -c -o arch_syscall_check-syscalls.obj `if test -f 'syscalls.c'; then $(CYGPATH_W) 'syscalls.c'; else $(CYGPATH_W) '$(srcdir)/syscalls.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-syscalls.Tpo $(DEPDIR)/arch_syscall_check-syscalls.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='syscalls.c' object='arch_syscall_check-syscalls.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-syscalls.obj `if test -f 'syscalls.c'; then $(CYGPATH_W) 'syscalls.c'; else $(CYGPATH_W) '$(srcdir)/syscalls.c'; fi`
-
-arch_syscall_check-syscalls.perf.o: syscalls.perf.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-syscalls.perf.o -MD -MP -MF $(DEPDIR)/arch_syscall_check-syscalls.perf.Tpo -c -o arch_syscall_check-syscalls.perf.o `test -f 'syscalls.perf.c' || echo '$(srcdir)/'`syscalls.perf.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-syscalls.perf.Tpo $(DEPDIR)/arch_syscall_check-syscalls.perf.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='syscalls.perf.c' object='arch_syscall_check-syscalls.perf.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-syscalls.perf.o `test -f 'syscalls.perf.c' || echo '$(srcdir)/'`syscalls.perf.c
-
-arch_syscall_check-syscalls.perf.obj: syscalls.perf.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -MT arch_syscall_check-syscalls.perf.obj -MD -MP -MF $(DEPDIR)/arch_syscall_check-syscalls.perf.Tpo -c -o arch_syscall_check-syscalls.perf.obj `if test -f 'syscalls.perf.c'; then $(CYGPATH_W) 'syscalls.perf.c'; else $(CYGPATH_W) '$(srcdir)/syscalls.perf.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/arch_syscall_check-syscalls.perf.Tpo $(DEPDIR)/arch_syscall_check-syscalls.perf.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='syscalls.perf.c' object='arch_syscall_check-syscalls.perf.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(arch_syscall_check_CFLAGS) $(CFLAGS) -c -o arch_syscall_check-syscalls.perf.obj `if test -f 'syscalls.perf.c'; then $(CYGPATH_W) 'syscalls.perf.c'; else $(CYGPATH_W) '$(srcdir)/syscalls.perf.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -1660,32 +1202,6 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/arch-x86.Po
 	-rm -f ./$(DEPDIR)/arch-x86_64.Po
 	-rm -f ./$(DEPDIR)/arch.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-api.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-aarch64.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-arm.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-mips.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-mips64.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-mips64n32.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-parisc.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-parisc64.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-ppc.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-ppc64.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-riscv64.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-s390.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-s390x.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-syscall-check.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-x32.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-x86.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-x86_64.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-db.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-gen_bpf.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-gen_pfc.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-hash.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-helper.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-syscalls.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-syscalls.perf.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-system.Po
 	-rm -f ./$(DEPDIR)/db.Po
 	-rm -f ./$(DEPDIR)/gen_bpf.Po
 	-rm -f ./$(DEPDIR)/gen_pfc.Po
@@ -1782,32 +1298,6 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/arch-x86.Po
 	-rm -f ./$(DEPDIR)/arch-x86_64.Po
 	-rm -f ./$(DEPDIR)/arch.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-api.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-aarch64.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-arm.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-mips.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-mips64.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-mips64n32.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-parisc.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-parisc64.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-ppc.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-ppc64.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-riscv64.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-s390.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-s390x.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-syscall-check.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-x32.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-x86.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch-x86_64.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-arch.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-db.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-gen_bpf.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-gen_pfc.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-hash.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-helper.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-syscalls.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-syscalls.perf.Po
-	-rm -f ./$(DEPDIR)/arch_syscall_check-system.Po
 	-rm -f ./$(DEPDIR)/db.Po
 	-rm -f ./$(DEPDIR)/gen_bpf.Po
 	-rm -f ./$(DEPDIR)/gen_pfc.Po
