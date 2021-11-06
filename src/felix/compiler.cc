@@ -168,6 +168,7 @@ public:
         uint32_t supported = 0;
 
         supported |= (int)CompileFeature::Optimize;
+        supported |= (int)CompileFeature::HotAssets;
         supported |= (int)CompileFeature::PCH;
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::StaticLink;
@@ -283,6 +284,9 @@ public:
             Fmt(&buf, " -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter");
         } else {
             Fmt(&buf, " -Wno-everything");
+        }
+        if (features & (int)CompileFeature::HotAssets) {
+            Fmt(&buf, " -DFELIX_HOT_ASSETS");
         }
 
         // Platform flags
@@ -530,6 +534,7 @@ public:
         uint32_t supported = 0;
 
         supported |= (int)CompileFeature::Optimize;
+        supported |= (int)CompileFeature::HotAssets;
 #ifndef _WIN32
         // Sometimes it works, somestimes not and the object files are
         // corrupt... just avoid PCH on MinGW
@@ -640,6 +645,9 @@ public:
             }
         } else {
             Fmt(&buf, " -w");
+        }
+        if (features & (int)CompileFeature::HotAssets) {
+            Fmt(&buf, " -DFELIX_HOT_ASSETS");
         }
         Fmt(&buf, " -fvisibility=hidden");
 
@@ -843,6 +851,7 @@ public:
         uint32_t supported = 0;
 
         supported |= (int)CompileFeature::Optimize;
+        supported |= (int)CompileFeature::HotAssets;
         supported |= (int)CompileFeature::PCH;
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::StaticLink;
@@ -934,6 +943,9 @@ public:
             Fmt(&buf, " /W4 /wd4200 /wd4458 /wd4706 /wd4100 /wd4127 /wd4702");
         } else {
             Fmt(&buf, " /w");
+        }
+        if (features & (int)CompileFeature::HotAssets) {
+            Fmt(&buf, " /DFELIX_HOT_ASSETS");
         }
 
         // Platform flags

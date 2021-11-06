@@ -3995,7 +3995,13 @@ struct AssetInfo {
     RG_HASHTABLE_HANDLER(AssetInfo, name);
 };
 
-#ifdef NDEBUG
+#ifdef FELIX_HOT_ASSETS
+
+bool ReloadAssets();
+Span<const AssetInfo> GetPackedAssets();
+const AssetInfo *FindPackedAsset(const char *name);
+
+#else
 
 // Reserved for internal use
 void InitPackedMap(Span<const AssetInfo> assets);
@@ -4022,12 +4028,6 @@ static inline const AssetInfo *FindPackedAsset(const char *name)
     InitPackedMap(PackedAssets);
     return PackedAssets_map.FindValue(name, nullptr);
 }
-
-#else
-
-bool ReloadAssets();
-Span<const AssetInfo> GetPackedAssets();
-const AssetInfo *FindPackedAsset(const char *name);
 
 #endif
 

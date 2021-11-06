@@ -5659,7 +5659,7 @@ bool IniParser::NextInSection(IniProperty *out_prop)
 // Assets
 // ------------------------------------------------------------------------
 
-#if defined(FELIX) && !defined(NDEBUG)
+#ifdef FELIX_HOT_ASSETS
 
 static char assets_filename[4096];
 static int64_t assets_last_check = -1;

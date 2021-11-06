@@ -680,7 +680,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
-#ifndef NDEBUG
+#ifdef FELIX_HOT_ASSETS
     // This is not actually thread safe, because it may release memory from an asset
     // that is being used by another thread. This code only runs in development builds
     // and it pretty much never goes wrong so it is kind of OK.
@@ -917,7 +917,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
         LogInfo("Init sandbox");
 
         const char *const reveal_paths[] = {
-#ifndef NDEBUG
+#ifdef FELIX_HOT_ASSETS
             // Needed for asset module
             GetApplicationDirectory(),
 #endif

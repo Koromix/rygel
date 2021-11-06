@@ -12,7 +12,7 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 [Debug]
-Features = PCH, DebugInfo, ASan
+Features = PCH, DebugInfo, HotAssets, ASan
 
 [Fast]
 Features = PCH, DebugInfo, Optimize
