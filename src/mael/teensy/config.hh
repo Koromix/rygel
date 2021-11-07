@@ -14,24 +14,24 @@
 #pragma once
 
 // Encoder pins
-#define PIN_ENC0_INT 12
-#define PIN_ENC0_DIR 16
-#define PIN_ENC1_INT 13
-#define PIN_ENC1_DIR 17
-#define PIN_ENC2_INT 14
-#define PIN_ENC2_DIR 18
-#define PIN_ENC3_INT 15
-#define PIN_ENC3_DIR 19
+#define ENC0_PIN_INT 12
+#define ENC0_PIN_DIR 16
+#define ENC1_PIN_INT 13
+#define ENC1_PIN_DIR 17
+#define ENC2_PIN_INT 14
+#define ENC2_PIN_DIR 18
+#define ENC3_PIN_INT 15
+#define ENC3_PIN_DIR 19
 
 // DC driver pins
-#define PIN_DC0_DIR 22
-#define PIN_DC0_PWM 26
-#define PIN_DC1_DIR 23
-#define PIN_DC1_PWM 27
-#define PIN_DC2_DIR 24
-#define PIN_DC2_PWM 28
-#define PIN_DC3_DIR 25
-#define PIN_DC3_PWM 29
+#define DC0_PIN_DIR 22
+#define DC0_PIN_PWM 26
+#define DC1_PIN_DIR 23
+#define DC1_PIN_PWM 27
+#define DC2_PIN_DIR 24
+#define DC2_PIN_PWM 28
+#define DC3_PIN_DIR 25
+#define DC3_PIN_PWM 29
 
 // RF24 config
 #define RF24_SPI SPI

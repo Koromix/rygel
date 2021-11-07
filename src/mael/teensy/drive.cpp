@@ -39,22 +39,22 @@ static inline void IncrementEncoderSpeed(int idx, int dir_pin)
 void InitDrive()
 {
     // Encoder speed
-    attachInterrupt(digitalPinToInterrupt(PIN_ENC0_INT), []() { IncrementEncoderSpeed(0, PIN_ENC0_DIR); }, FALLING);
-    attachInterrupt(digitalPinToInterrupt(PIN_ENC1_INT), []() { IncrementEncoderSpeed(0, PIN_ENC1_DIR); }, FALLING);
-    attachInterrupt(digitalPinToInterrupt(PIN_ENC2_INT), []() { IncrementEncoderSpeed(0, PIN_ENC2_DIR); }, FALLING);
-    attachInterrupt(digitalPinToInterrupt(PIN_ENC3_INT), []() { IncrementEncoderSpeed(0, PIN_ENC3_DIR); }, FALLING);
+    attachInterrupt(digitalPinToInterrupt(ENC0_PIN_INT), []() { IncrementEncoderSpeed(0, ENC0_PIN_DIR); }, FALLING);
+    attachInterrupt(digitalPinToInterrupt(ENC1_PIN_INT), []() { IncrementEncoderSpeed(0, ENC1_PIN_DIR); }, FALLING);
+    attachInterrupt(digitalPinToInterrupt(ENC2_PIN_INT), []() { IncrementEncoderSpeed(0, ENC2_PIN_DIR); }, FALLING);
+    attachInterrupt(digitalPinToInterrupt(ENC3_PIN_INT), []() { IncrementEncoderSpeed(0, ENC3_PIN_DIR); }, FALLING);
 
     // DC driver direction pins
-    pinMode(PIN_DC0_DIR, OUTPUT);
-    pinMode(PIN_DC1_DIR, OUTPUT);
-    pinMode(PIN_DC2_DIR, OUTPUT);
-    pinMode(PIN_DC3_DIR, OUTPUT);
+    pinMode(DC0_PIN_DIR, OUTPUT);
+    pinMode(DC1_PIN_DIR, OUTPUT);
+    pinMode(DC2_PIN_DIR, OUTPUT);
+    pinMode(DC3_PIN_DIR, OUTPUT);
 
     // DC driver PWM pins
-    pinMode(PIN_DC0_PWM, OUTPUT);
-    pinMode(PIN_DC1_PWM, OUTPUT);
-    pinMode(PIN_DC2_PWM, OUTPUT);
-    pinMode(PIN_DC3_PWM, OUTPUT);
+    pinMode(DC0_PIN_PWM, OUTPUT);
+    pinMode(DC1_PIN_PWM, OUTPUT);
+    pinMode(DC2_PIN_PWM, OUTPUT);
+    pinMode(DC3_PIN_PWM, OUTPUT);
 }
 
 static void WriteMotorSpeed(int dir_pin, int pwm_pin, int speed)
@@ -134,10 +134,10 @@ void ProcessDrive()
         dc_speed[i] = constrain(dc_speed[i], -255, 255);
     }
 
-    WriteMotorSpeed(PIN_DC0_DIR, PIN_DC0_PWM, dc_speed[0]);
-    WriteMotorSpeed(PIN_DC1_DIR, PIN_DC1_PWM, dc_speed[1]);
-    WriteMotorSpeed(PIN_DC2_DIR, PIN_DC2_PWM, dc_speed[2]);
-    WriteMotorSpeed(PIN_DC3_DIR, PIN_DC3_PWM, dc_speed[3]);
+    WriteMotorSpeed(DC0_PIN_DIR, DC0_PIN_PWM, dc_speed[0]);
+    WriteMotorSpeed(DC1_PIN_DIR, DC1_PIN_PWM, dc_speed[1]);
+    WriteMotorSpeed(DC2_PIN_DIR, DC2_PIN_PWM, dc_speed[2]);
+    WriteMotorSpeed(DC3_PIN_DIR, DC3_PIN_PWM, dc_speed[3]);
 }
 
 void SetDriveSpeed(double x, double y, double w)
