@@ -14,29 +14,29 @@
 #pragma once
 
 // Encoder pins
-#define ENC0_PIN_INT 12
-#define ENC0_PIN_DIR 16
-#define ENC1_PIN_INT 13
-#define ENC1_PIN_DIR 17
-#define ENC2_PIN_INT 14
-#define ENC2_PIN_DIR 18
-#define ENC3_PIN_INT 15
-#define ENC3_PIN_DIR 19
+#define ENC0_PIN_INT 24
+#define ENC0_PIN_DIR 25
+#define ENC1_PIN_INT 26
+#define ENC1_PIN_DIR 27
+#define ENC2_PIN_INT 28
+#define ENC2_PIN_DIR 29
+#define ENC3_PIN_INT 30
+#define ENC3_PIN_DIR 31
 
 // DC driver pins
-#define DC0_PIN_DIR 22
-#define DC0_PIN_PWM 26
-#define DC1_PIN_DIR 23
-#define DC1_PIN_PWM 27
-#define DC2_PIN_DIR 24
-#define DC2_PIN_PWM 28
-#define DC3_PIN_DIR 25
-#define DC3_PIN_PWM 29
+#define DC0_PIN_DIR 2
+#define DC0_PIN_PWM 3
+#define DC1_PIN_DIR 4
+#define DC1_PIN_PWM 5
+#define DC2_PIN_DIR 6
+#define DC2_PIN_PWM 7
+#define DC3_PIN_DIR 8
+#define DC3_PIN_PWM 9
 
 // RF24 config
 #define RF24_SPI SPI
-#define RF24_PIN_CE 4
-#define RF24_PIN_CSN 3
+#define RF24_PIN_CE 0
+#define RF24_PIN_CSN 1
 #define RF24_ADDR_HTOR 0xDEAD4321ul
 #define RF24_ADDR_RTOH 0xDEAD1234ul
 #define RF24_PAYLOAD_SIZE 32
