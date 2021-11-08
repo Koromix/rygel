@@ -621,6 +621,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     // We're ready to output stuff
     LogInfo("Root directory: %!..+%1%!0", GetWorkingDirectory());
     LogInfo("  Output directory: %!..+%1%!0", build.output_directory);
+    LogInfo("  Host: %!..+%1%!0", HostPlatformNames[(int)compiler_info.host]);
     LogInfo("  Compiler: %!..+%1%!0", build.compiler->name);
     LogInfo("  Features: %!..+%1%!0", FmtFlags(build.features, CompileFeatureOptions));
     LogInfo("  Version: %!..+%1%!0", build.version_str);
