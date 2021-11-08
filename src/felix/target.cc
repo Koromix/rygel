@@ -216,7 +216,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                 valid = false;
             }
             target_config.type = TargetType::Executable;
-            target_config.hosts = UINT_MAX;
+            ParseSupportedHosts("Desktop", &target_config.hosts);
 
             // Type property must be specified first
             if (prop.key == "Type") {
