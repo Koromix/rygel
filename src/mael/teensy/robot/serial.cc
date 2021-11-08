@@ -148,6 +148,7 @@ void ProcessSerial()
     // Send pending packets
     if (send_buf_send != send_buf_write) {
         rf24.stopListening();
+        DEFER { rf24.startListening(); };
 
         while (send_buf_send != send_buf_write) {
             uint8_t buf[RF24_PAYLOAD_SIZE] = {};
@@ -162,8 +163,6 @@ void ProcessSerial()
             rf24.writeFast(buf, sizeof(buf));
             rf24.txStandBy(0);
         }
-
-        rf24.startListening();
     }
 }
 

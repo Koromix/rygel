@@ -56,3 +56,51 @@ public:
     static WaitFor UNIQUE_ID(wf_)(DelayUs); \
     if (!UNIQUE_ID(wf_).Test()) \
         return;
+
+template <typename Fun>
+class DeferGuard {
+    DeferGuard(const DeferGuard&) = delete;
+    DeferGuard &operator=(const DeferGuard&) = delete;
+
+    Fun f;
+    bool enabled;
+
+public:
+    DeferGuard() = delete;
+    DeferGuard(Fun f_, bool enable = true) : f(std::move(f_)), enabled(enable) {}
+    ~DeferGuard()
+    {
+        if (enabled) {
+            f();
+        }
+    }
+
+    DeferGuard(DeferGuard &&other)
+        : f(std::move(other.f)), enabled(other.enabled)
+    {
+        other.enabled = false;
+    }
+
+    void Disable() { enabled = false; }
+};
+
+// Honestly, I don't understand all the details in there, this comes from Andrei Alexandrescu.
+// https://channel9.msdn.com/Shows/Going+Deep/C-and-Beyond-2012-Andrei-Alexandrescu-Systematic-Error-Handling-in-C
+struct DeferGuardHelper {};
+template <typename Fun>
+DeferGuard<Fun> operator+(DeferGuardHelper, Fun &&f)
+{
+    return DeferGuard<Fun>(std::forward<Fun>(f));
+}
+
+// Write 'DEFER { code };' to do something at the end of the current scope, you
+// can use DEFER_N(Name) if you need to disable the guard for some reason, and
+// DEFER_NC(Name, Captures) if you need to capture values.
+#define DEFER \
+    auto UNIQUE_ID(defer) = DeferGuardHelper() + [&]()
+#define DEFER_N(Name) \
+    auto Name = DeferGuardHelper() + [&]()
+#define DEFER_C(...) \
+    auto UNIQUE_ID(defer) = DeferGuardHelper() + [&, __VA_ARGS__]()
+#define DEFER_NC(Name, ...) \
+    auto Name = DeferGuardHelper() + [&, __VA_ARGS__]()
