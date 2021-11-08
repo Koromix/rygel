@@ -139,7 +139,7 @@ public:
         // Determine Clang version
         async.Run([&]() {
             char cmd[2048];
-            Fmt(cmd, "%1 --version", compiler->cc);
+            Fmt(cmd, "\"%1\" --version", compiler->cc);
 
             compiler->clang11 = ParseMajorVersion(cmd, "version") >= 11;
             return true;
@@ -149,9 +149,9 @@ public:
         async.Run([&]() {
             char cmd[2048];
             if (compiler->ld) {
-                Fmt(cmd, "%1 -fuse-ld=%2 -Wl,--version", compiler->cc, compiler->ld);
+                Fmt(cmd, "\"%1\" -fuse-ld=%2 -Wl,--version", compiler->cc, compiler->ld);
             } else {
-                Fmt(cmd, "%1 -Wl,--version", compiler->cc);
+                Fmt(cmd, "\"%1\" -Wl,--version", compiler->cc);
             }
 
             compiler->lld11 = ParseMajorVersion(cmd, "LLD") >= 11;
@@ -212,10 +212,12 @@ public:
 
 #ifdef _WIN32
     const char *GetObjectExtension() const override { return ".obj"; }
-    const char *GetExecutableExtension() const override { return ".exe"; }
+    const char *GetLinkExtension() const override { return ".exe"; }
+    const char *GetPostExtension() const override { return nullptr; }
 #else
     const char *GetObjectExtension() const override { return ".o"; }
-    const char *GetExecutableExtension() const override { return ""; }
+    const char *GetLinkExtension() const override { return ""; }
+    const char *GetPostExtension() const override { return nullptr; }
 #endif
 
     void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
@@ -256,8 +258,8 @@ public:
 
         // Compiler
         switch (src_type) {
-            case SourceType::C: { Fmt(&buf, "%1 -std=gnu11", cc); } break;
-            case SourceType::CXX: { Fmt(&buf, "%1 -std=gnu++2a", cxx); } break;
+            case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
+            case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -405,9 +407,9 @@ public:
         switch (link_type) {
             case LinkType::Executable: {
                 bool link_static = features & (int)CompileFeature::StaticLink;
-                Fmt(&buf, "%1%2", cxx, link_static ? " -static" : "");
+                Fmt(&buf, "\"%1\"%2", cxx, link_static ? " -static" : "");
             } break;
-            case LinkType::SharedLibrary: { Fmt(&buf, "%1 -shared", cxx); } break;
+            case LinkType::SharedLibrary: { Fmt(&buf, "\"%1\" -shared", cxx); } break;
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
@@ -488,6 +490,8 @@ public:
         }
         out_cmd->cmd_line = buf.TrimAndLeak(1);
     }
+
+    void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 };
 
 class GnuCompiler final: public Compiler {
@@ -521,7 +525,7 @@ public:
         // Determine GCC version
         {
             char cmd[2048];
-            Fmt(cmd, "%1 -v", compiler->cc);
+            Fmt(cmd, "\"%1\" -v", compiler->cc);
 
             compiler->gcc12 = ParseMajorVersion(cmd, "version") >= 12;
         };
@@ -562,7 +566,7 @@ public:
             return false;
         }
         if (!gcc12 && (features & (int)CompileFeature::ZeroInit)) {
-            LogError("ZeroInit requires GCC >= 12, try --compiler option (e.g. --compiler=gcc-12)");
+            LogError("ZeroInit requires GCC >= 12, try --host option (e.g. --host=,gcc-12)");
             return false;
         }
 
@@ -571,10 +575,12 @@ public:
 
 #ifdef _WIN32
     const char *GetObjectExtension() const override { return ".o"; }
-    const char *GetExecutableExtension() const override { return ".exe"; }
+    const char *GetLinkExtension() const override { return ".exe"; }
+    const char *GetPostExtension() const override { return nullptr; }
 #else
     const char *GetObjectExtension() const override { return ".o"; }
-    const char *GetExecutableExtension() const override { return ""; }
+    const char *GetLinkExtension() const override { return ""; }
+    const char *GetPostExtension() const override { return nullptr; }
 #endif
 
     void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
@@ -615,8 +621,8 @@ public:
 
         // Compiler
         switch (src_type) {
-            case SourceType::C: { Fmt(&buf, "%1 -std=gnu11", cc); } break;
-            case SourceType::CXX: { Fmt(&buf, "%1 -std=gnu++2a", cxx); } break;
+            case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
+            case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -733,9 +739,9 @@ public:
         switch (link_type) {
             case LinkType::Executable: {
                 bool static_link = features & (int)CompileFeature::StaticLink;
-                Fmt(&buf, "%1%2", cxx, static_link ? " -static" : "");
+                Fmt(&buf, "\"%1\"%2", cxx, static_link ? " -static" : "");
             } break;
-            case LinkType::SharedLibrary: { Fmt(&buf, "%1 -shared", cxx); } break;
+            case LinkType::SharedLibrary: { Fmt(&buf, "\"%1\" -shared", cxx); } break;
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
@@ -806,6 +812,8 @@ public:
         }
         out_cmd->cmd_line = buf.TrimAndLeak(1);
     }
+
+    void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 };
 
 #ifdef _WIN32
@@ -861,7 +869,8 @@ public:
     }
 
     const char *GetObjectExtension() const override { return ".obj"; }
-    const char *GetExecutableExtension() const override { return ".exe"; }
+    const char *GetLinkExtension() const override { return ".exe"; }
+    const char *GetPostExtension() const override { return nullptr; }
 
     void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
                          const char *pack_options, const char *dest_filename,
@@ -909,8 +918,8 @@ public:
 
         // Compiler
         switch (src_type) {
-            case SourceType::C: { Fmt(&buf, "%1 /nologo", cl); } break;
-            case SourceType::CXX: { Fmt(&buf, "%1 /nologo /std:c++latest", cl); } break;
+            case SourceType::C: { Fmt(&buf, "\"%1\" /nologo", cl); } break;
+            case SourceType::CXX: { Fmt(&buf, "\"%1\" /nologo /std:c++latest", cl); } break;
         }
         if (dest_filename) {
             Fmt(&buf, " \"/Fo%1\"", dest_filename);
@@ -999,8 +1008,8 @@ public:
 
         // Linker
         switch (link_type) {
-            case LinkType::Executable: { Fmt(&buf, "%1 /nologo", link); } break;
-            case LinkType::SharedLibrary: { Fmt(&buf, "%1 /nologo /DLL", link); } break;
+            case LinkType::Executable: { Fmt(&buf, "\"%1\" /nologo", link); } break;
+            case LinkType::SharedLibrary: { Fmt(&buf, "\"%1\" /nologo /DLL", link); } break;
         }
         Fmt(&buf, " \"/OUT:%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
@@ -1038,77 +1047,334 @@ public:
         out_cmd->cmd_line = buf.TrimAndLeak(1);
         out_cmd->skip_success = true;
     }
+
+    void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 };
 #endif
 
+class TeensyCompiler final: public Compiler {
+    enum class Model {
+        TeensyLC,
+        Teensy35
+    };
+
+    const char *cc;
+    const char *cxx;
+    const char *ld;
+    const char *objcopy;
+    Model model;
+
+    BlockAllocator str_alloc;
+
+public:
+    TeensyCompiler(const char *target) : Compiler(target) {}
+
+    static std::unique_ptr<const Compiler> Create(HostPlatform target, const char *cc)
+    {
+        const char *name = HostPlatformNames[(int)target];
+        std::unique_ptr<TeensyCompiler> compiler = std::make_unique<TeensyCompiler>(name);
+
+        // Decode model string
+        switch (target) {
+            case HostPlatform::TeensyLC: { compiler->model = Model::TeensyLC; } break;
+            case HostPlatform::Teensy35: { compiler->model = Model::Teensy35; } break;
+
+            default: { RG_UNREACHABLE(); } break;
+        }
+
+        // Find executables
+        {
+            Span<const char> prefix;
+            Span<const char> suffix;
+            if (!SplitPrefixSuffix(cc, "gcc", &prefix, &suffix))
+                return nullptr;
+
+            compiler->cc = DuplicateString(cc, &compiler->str_alloc).ptr;
+            compiler->cxx = Fmt(&compiler->str_alloc, "%1g++%2", prefix, suffix).ptr;
+            compiler->ld = Fmt(&compiler->str_alloc, "%1ld%2", prefix, suffix).ptr;
+            compiler->objcopy = Fmt(&compiler->str_alloc, "%1objcopy%2", prefix, suffix).ptr;
+        }
+
+        return compiler;
+    }
+
+    bool CheckFeatures(uint32_t features) const override
+    {
+        uint32_t supported = 0;
+
+        supported |= (int)CompileFeature::Optimize;
+        supported |= (int)CompileFeature::HotAssets;
+        supported |= (int)CompileFeature::DebugInfo;
+        supported |= (int)CompileFeature::LTO;
+
+        uint32_t unsupported = features & ~supported;
+        if (unsupported) {
+            LogError("Some features are not supported by %1: %2",
+                     name, FmtFlags(unsupported, CompileFeatureOptions));
+            return false;
+        }
+
+        return true;
+    }
+
+    const char *GetObjectExtension() const override { return ".o"; }
+    const char *GetLinkExtension() const override { return ".elf"; }
+    const char *GetPostExtension() const override { return ".hex"; }
+
+    void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
+                         const char *pack_options, const char *dest_filename,
+                         Allocator *alloc, Command *out_cmd) const override
+    {
+        RG_ASSERT(alloc);
+
+        // Strings literals are limited in length in MSVC, even with concatenation (64kiB)
+        RG::MakePackCommand(pack_filenames, optimize, true, pack_options,
+                            dest_filename, alloc, out_cmd);
+    }
+
+    void MakePchCommand(const char *pch_filename, SourceType src_type, bool warnings,
+                        Span<const char *const> definitions, Span<const char *const> include_directories,
+                        uint32_t features, bool env_flags, Allocator *alloc, Command *out_cmd) const override { RG_UNREACHABLE(); }
+    const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override { return nullptr; }
+    const char *GetPchObject(const char *pch_filename, Allocator *alloc) const override { return nullptr; }
+
+    void MakeObjectCommand(const char *src_filename, SourceType src_type, bool warnings,
+                           const char *pch_filename, Span<const char *const> definitions,
+                           Span<const char *const> include_directories, uint32_t features, bool env_flags,
+                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
+    {
+        RG_ASSERT(alloc);
+
+        HeapArray<char> buf(alloc);
+
+        // Compiler
+        switch (src_type) {
+            case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
+            case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++14", cxx); } break;
+        }
+        RG_ASSERT(dest_filename); // No PCH
+        Fmt(&buf, " -o \"%1\"", dest_filename);
+        Fmt(&buf, " -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
+        out_cmd->rsp_offset = buf.len;
+
+        // Build options
+        if (features & (int)CompileFeature::Optimize) {
+            Fmt(&buf, " -Os -DNDEBUG");
+        } else {
+            Fmt(&buf, " -O0 -fsanitize=signed-integer-overflow -fsanitize-undefined-trap-on-error -fno-omit-frame-pointer");
+        }
+        if (features & (int)CompileFeature::LTO) {
+            Fmt(&buf, " -flto");
+        }
+        if (warnings) {
+            Fmt(&buf, " -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter");
+        } else {
+            Fmt(&buf, " -w");
+        }
+        if (features & (int)CompileFeature::HotAssets) {
+            Fmt(&buf, " -DFELIX_HOT_ASSETS");
+        }
+        Fmt(&buf, " -fvisibility=hidden");
+
+        // Platform flags
+        Fmt(&buf, " -ffunction-sections -fdata-sections -nostdlib -mno-unaligned-access");
+        Fmt(&buf, " -mthumb -DARDUINO=10805 -DTEENSYDUINO=144");
+        switch (model) {
+            case Model::TeensyLC: { Fmt(&buf, " -mcpu=cortex-m0plus -fsingle-precision-constant -D__MKL26Z64__ -DF_CPU=48000000"); } break;
+            case Model::Teensy35: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -fsingle-precision-constant -D__MK64FX512__ -DF_CPU=120000000"); } break;
+        }
+        Fmt(&buf, " -DUSB_SERIAL -DLAYOUT_US_ENGLISH");
+        if (src_type == SourceType::CXX) {
+            Fmt(&buf, " -felide-constructors -fno-exceptions -fno-rtti");
+        }
+
+        // Features
+        if (features & (int)CompileFeature::DebugInfo) {
+            Fmt(&buf, " -g");
+        }
+        if (features & (int)CompileFeature::ZeroInit) {
+            Fmt(&buf, " -ftrivial-auto-var-init=zero");
+        }
+
+        // Sources and definitions
+        Fmt(&buf, " -DFELIX -c \"%1\"", src_filename);
+        if (pch_filename) {
+            Fmt(&buf, " -include \"%1\"", pch_filename);
+        }
+        for (const char *definition: definitions) {
+            Fmt(&buf, " -D%1", definition);
+        }
+        for (const char *include_directory: include_directories) {
+            Fmt(&buf, " \"-I%1\"", include_directory);
+        }
+
+        if (env_flags) {
+            switch (src_type) {
+                case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
+                case SourceType::CXX: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+            }
+        }
+
+        out_cmd->cache_len = buf.len;
+        if (FileIsVt100(stdout)) {
+            Fmt(&buf, " -fdiagnostics-color=always");
+        }
+        out_cmd->cmd_line = buf.TrimAndLeak(1);
+
+        // Dependencies
+        out_cmd->deps_mode = Command::DependencyMode::MakeLike;
+        out_cmd->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
+    }
+
+    void MakeLinkCommand(Span<const char *const> obj_filenames,
+                         Span<const char *const> libraries, LinkType link_type,
+                         uint32_t features, bool env_flags, const char *dest_filename,
+                         Allocator *alloc, Command *out_cmd) const override
+    {
+        RG_ASSERT(alloc);
+
+        HeapArray<char> buf(alloc);
+
+        // Linker
+        switch (link_type) {
+            case LinkType::Executable: { Fmt(&buf, "\"%1\"", cc); } break;
+            case LinkType::SharedLibrary: { /* XXX: not supported */ } break;
+        }
+        Fmt(&buf, " -o \"%1\"", dest_filename);
+        out_cmd->rsp_offset = buf.len;
+
+        // Build mode
+        if (!(features & (int)CompileFeature::DebugInfo)) {
+            Fmt(&buf, " -s");
+        }
+        if (features & (int)CompileFeature::LTO) {
+            Fmt(&buf, " -flto -Wl,-Os");
+        }
+
+        // Objects and libraries
+        for (const char *obj_filename: obj_filenames) {
+            Fmt(&buf, " \"%1\"", obj_filename);
+        }
+        for (const char *lib: libraries) {
+            Fmt(&buf, " -l%1", lib);
+        }
+
+        // Platform flags and libraries
+        Fmt(&buf, " -mthumb -Wl,--gc-sections,--defsym=__rtc_localtime=0 --specs=nano.specs");
+        switch (model) {
+            case Model::TeensyLC: { Fmt(&buf, " -mcpu=cortex-m0plus -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mkl26z64.ld"); } break;
+            case Model::Teensy35: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk64fx512.ld"); } break;
+        }
+        Fmt(&buf, " -larm_cortexM4lf_math -lm -lstdc++");
+
+        if (env_flags) {
+            AddEnvironmentFlags("LDFLAGS", &buf);
+        }
+
+        out_cmd->cache_len = buf.len;
+        if (FileIsVt100(stdout)) {
+            Fmt(&buf, " -fdiagnostics-color=always");
+        }
+        out_cmd->cmd_line = buf.TrimAndLeak(1);
+    }
+
+    void MakePostCommand(const char *src_filename, const char *dest_filename,
+                         Allocator *alloc, Command *out_cmd) const override
+    {
+        RG_ASSERT(alloc);
+
+        Span<const char> cmd = Fmt(alloc, "\"%1\" -O ihex -R .eeprom \"%2\" \"%3\"", objcopy, src_filename, dest_filename);
+        out_cmd->cmd_line = cmd;
+    }
+};
+
 std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info)
 {
-    if (!info.cc) {
-        for (const SupportedCompiler &supported: SupportedCompilers) {
-            if (FindExecutableInPath(supported.cc)) {
-                info.cc = supported.cc;
-                break;
-            }
-        }
-
+    if (info.host == NativeHost) {
         if (!info.cc) {
-            LogError("Could not find any supported compiler in PATH");
-            return nullptr;
-        }
-    } else if (!FindExecutableInPath(info.cc)) {
-        LogError("Cannot find compiler '%1' in PATH", info.cc);
-        return nullptr;
-    }
+            for (const SupportedCompiler &supported: SupportedCompilers) {
+                if (supported.cc && FindExecutableInPath(supported.cc)) {
+                    info.cc = supported.cc;
+                    break;
+                }
+            }
 
-    if (info.ld) {
-        if (TestStr(info.ld, "bfd") || TestStr(info.ld, "ld")) {
-            if (!FindExecutableInPath("ld")) {
-                LogError("Cannot find linker 'ld' in PATH");
+            if (!info.cc) {
+                LogError("Could not find any supported compiler in PATH");
                 return nullptr;
             }
-
-            info.ld = "bfd";
-        } else if (!FindExecutableInPath(info.ld)) {
-            LogError("Cannot find linker '%1' in PATH", info.ld);
+        } else if (!FindExecutableInPath(info.cc)) {
+            LogError("Cannot find compiler '%1' in PATH", info.cc);
             return nullptr;
         }
-    }
 
-    // Find appropriate driver
-    {
-        Span<const char> remain = SplitStrReverseAny(info.cc, RG_PATH_SEPARATORS).ptr;
+        if (info.ld) {
+            if (TestStr(info.ld, "bfd") || TestStr(info.ld, "ld")) {
+                if (!FindExecutableInPath("ld")) {
+                    LogError("Cannot find linker 'ld' in PATH");
+                    return nullptr;
+                }
 
-        while (remain.len) {
-            Span<const char> part = SplitStr(remain, '-', &remain);
-
-            if (part == "clang") {
-                return ClangCompiler::Create(info.cc, info.ld);
-            } else if (part == "gcc") {
-                return GnuCompiler::Create(info.cc, info.ld);
-#ifdef _WIN32
-            } else if (part == "cl") {
-                return MsCompiler::Create(info.cc, info.ld);
-#endif
+                info.ld = "bfd";
+            } else if (!FindExecutableInPath(info.ld)) {
+                LogError("Cannot find linker '%1' in PATH", info.ld);
+                return nullptr;
             }
         }
-    }
 
-    LogError("Cannot find driver for compiler '%1'", info.cc);
-    return nullptr;
+        // Find appropriate driver
+        {
+            Span<const char> remain = SplitStrReverseAny(info.cc, RG_PATH_SEPARATORS).ptr;
+
+            while (remain.len) {
+                Span<const char> part = SplitStr(remain, '-', &remain);
+
+                if (part == "clang") {
+                    return ClangCompiler::Create(info.cc, info.ld);
+                } else if (part == "gcc") {
+                    return GnuCompiler::Create(info.cc, info.ld);
+#ifdef _WIN32
+                } else if (part == "cl") {
+                    return MsCompiler::Create(info.cc, info.ld);
+#endif
+                }
+            }
+        }
+
+        LogError("Cannot find driver for compiler '%1'", info.cc);
+        return nullptr;
+    } else if (info.host == HostPlatform::TeensyLC ||
+               info.host == HostPlatform::Teensy35) {
+        if (!info.cc) {
+            LogError("Path to Teensy compiler must be explicitely specified");
+            return nullptr;
+        }
+        if (info.ld) {
+            LogError("Cannot use custom linker for host '%1'", HostPlatformNames[(int)info.host]);
+            return nullptr;
+        }
+
+        return TeensyCompiler::Create(info.host, info.cc);
+    } else {
+        LogError("Cross-compilation from host '%1' to '%2' is not supported",
+                 HostPlatformNames[(int)info.host], HostPlatformNames[(int)NativeHost]);
+        return nullptr;
+    }
 }
 
 static const SupportedCompiler CompilerTable[] = {
 #if defined(_WIN32)
     {"MSVC", "cl"},
     {"Clang", "clang"},
-    {"GCC", "gcc"}
+    {"GCC", "gcc"},
 #elif defined(__APPLE__)
     {"Clang", "clang"},
-    {"GCC", "gcc"}
+    {"GCC", "gcc"},
 #else
     {"GCC", "gcc"},
-    {"Clang", "clang"}
+    {"Clang", "clang"},
 #endif
+    {"Teensy", nullptr}
 };
 const Span<const SupportedCompiler> SupportedCompilers = CompilerTable;
 

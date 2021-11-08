@@ -135,13 +135,24 @@ static const char *BuildGitVersionString(Allocator *alloc)
     return output.TrimAndLeak().ptr;
 }
 
-static void ParseCompilerString(Span<const char> str, Allocator *alloc, CompilerInfo *out_compiler_info)
+static bool ParseHostString(Span<const char> str, Allocator *alloc, CompilerInfo *out_compiler_info)
 {
-    Span<const char> ld;
-    Span<const char> cc = SplitStr(str, ':', &ld);
+    Span<const char> host = SplitStr(str, ',', &str);
+    Span<const char> cc = SplitStr(str, ',', &str);
+    Span<const char> ld = SplitStr(str, ',', &str);
 
-    out_compiler_info->cc = cc.len ? DuplicateString(cc, alloc).ptr : nullptr;
+    if (host.len) {
+        if (!OptionToEnum(HostPlatformNames, host, &out_compiler_info->host)) {
+            LogError("Unknown host '%1'", host);
+            return false;
+        }
+    } else {
+        out_compiler_info->host = NativeHost;
+    }
+    out_compiler_info->cc = cc.len ? NormalizePath(cc, alloc).ptr : nullptr;
     out_compiler_info->ld = ld.len ? DuplicateString(ld, alloc).ptr : nullptr;
+
+    return true;
 }
 
 static bool ParseFeatureString(Span<const char> str, uint32_t *out_features)
@@ -190,8 +201,8 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
             if (!prop.section.len) {
                 if (prop.key == "Preset") {
                     *out_preset_name = DuplicateString(prop.value, alloc).ptr;
-                } else if (prop.key == "Compiler") {
-                    ParseCompilerString(prop.value, alloc, out_compiler_info);
+                } else if (prop.key == "Host") {
+                    valid &= ParseHostString(prop.value, alloc, out_compiler_info);
 
                     for (BuildPreset &preset: *out_presets) {
                         preset.compiler_info.cc = out_compiler_info->cc;
@@ -221,8 +232,8 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
                 do {
                     if (prop.key == "Directory") {
                         preset->build.output_directory = NormalizePath(prop.value, GetWorkingDirectory(), alloc).ptr;
-                    } else if (prop.key == "Compiler") {
-                        ParseCompilerString(prop.value, alloc, &preset->compiler_info);
+                    } else if (prop.key == "Host") {
+                        valid &= ParseHostString(prop.value, alloc, &preset->compiler_info);
                     } else if (prop.key == "Features") {
                         valid &= ParseFeatureString(prop.value.ptr, &preset->build.features);
                     } else {
@@ -272,7 +283,7 @@ Options:
                                  %!D..(FelixBuild.ini.presets, FelixBuild.ini.user)%!0
     %!..+-p, --preset <preset>%!0        Select specific preset
 
-    %!..+-c, --compiler <compiler>%!0    Override compiler and/or linker
+    %!..+-h, --host <host>%!0            Override host, compiler and/or linker
     %!..+-f, --features <features>%!0    Override compilation features
                                  %!D..(start with -All to reset and set only new flags)%!0
 
@@ -291,16 +302,28 @@ Options:
                                  %!D..(all remaining arguments are passed as-is)%!0
         %!..+--run_here <target>%!0      Same thing, but run from current directory
 
-Supported compilers:)", FelixTarget, jobs);
+Supported hosts:)", FelixTarget, jobs);
 
-        for (const SupportedCompiler &supported: SupportedCompilers) {
-            PrintLn(fp, "    %!..+%1%!0 Binary: %2", FmtArg(supported.name).Pad(28), supported.cc);
+        for (const char *host: HostPlatformNames) {
+            PrintLn(fp, "    %!..+%1%!0", host);
         }
 
         PrintLn(fp, R"(
-Use %!..+--compiler=<binary>%!0 to specify a custom C compiler, such as: %!..+felix --compiler=clang-11%!0.
-Felix will use the matching C++ compiler automatically. You can also use this option to
-change the linker: %!..+felix --compiler=clang-11:lld-11%!0 or %!..+felix --compiler=:gold%!0.
+Supported compilers:)");
+
+        for (const SupportedCompiler &supported: SupportedCompilers) {
+            if (supported.cc) {
+                PrintLn(fp, "    %!..+%1%!0 Binary: %2", FmtArg(supported.name).Pad(28), supported.cc);
+            } else {
+                PrintLn(fp, "    %!..+%1%!0", supported.name);
+            }
+        }
+
+        PrintLn(fp, R"(
+Use %!..+--host=<host>%!0 to specify a custom host, such as: %!..+felix --host=Teensy35%!0.
+You can also use %!..+--host=,<binary>%!0 to specify a custom C compiler, such as: %!..+felix --host=,clang-11%!0.
+Felix will use the matching C++ compiler automatically. Finally, you can also use this option to
+change the linker: %!..+felix --host=,clang-11,lld-11%!0 or %!..+felix --host=,,gold%!0.
 
 Supported compiler features:)");
 
@@ -432,8 +455,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 // Already handled
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 build.output_directory = opt.current_value;
-            } else if (opt.Test("-c", "--compiler", OptionType::Value)) {
-                ParseCompilerString(opt.current_value, &temp_alloc, &compiler_info);
+            } else if (opt.Test("-h", "--host", OptionType::Value)) {
+                if (!ParseHostString(opt.current_value, &temp_alloc, &compiler_info))
+                    return 1;
             } else if (opt.Test("-f", "--features", OptionType::Value)) {
                 if (!ParseFeatureString(opt.current_value, &build.features))
                     return 1;
@@ -512,6 +536,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     HeapArray<const TargetInfo *> enabled_targets;
     HeapArray<const SourceFileInfo *> enabled_sources;
     if (selectors.len) {
+        bool valid = true;
         HashSet<const char *> handled_set;
 
         for (const char *selector: selectors) {
@@ -519,6 +544,12 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             for (const TargetInfo &target: target_set.targets) {
                 if (MatchPathSpec(target.name, selector)) {
                     if (handled_set.TrySet(target.name).second) {
+                        if (!target.TestHosts(compiler_info.host)) {
+                            LogError("Cannot build '%1' for host '%2'",
+                                     target.name, HostPlatformNames[(int)compiler_info.host]);
+                            valid = false;
+                        }
+
                         enabled_targets.Append(&target);
                     }
 
@@ -528,6 +559,12 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             for (const SourceFileInfo &src: target_set.sources) {
                 if (MatchPathSpec(src.filename, selector)) {
                     if (handled_set.TrySet(src.filename).second) {
+                        if (!src.target->TestHosts(compiler_info.host)) {
+                            LogError("Cannot build '%1' for host '%2'",
+                                     src.target->name, HostPlatformNames[(int)compiler_info.host]);
+                            valid = false;
+                        }
+
                         enabled_sources.Append(&src);
                     }
 
@@ -540,9 +577,12 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 return 1;
             }
         }
+
+        if (!valid)
+            return 1;
     } else {
         for (const TargetInfo &target: target_set.targets) {
-            if (target.enable_by_default) {
+            if (target.enable_by_default && target.TestHosts(compiler_info.host)) {
                 enabled_targets.Append(&target);
             }
         }

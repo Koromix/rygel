@@ -27,6 +27,7 @@ struct FileSet {
 struct TargetConfig {
     const char *name;
     TargetType type;
+    unsigned int hosts;
     bool enable_by_default;
 
     FileSet src_file_set;
@@ -120,32 +121,52 @@ static bool ResolveFileSet(const FileSet &file_set,
     return true;
 }
 
-static bool MatchPlatform(Span<const char> name, bool *out_match)
+static bool ParseSupportedHosts(Span<const char> str, unsigned int *out_hosts)
 {
-    int flags = 0;
-    if (name == "Desktop") {
-        flags = (int)TargetPlatform::Windows |
-                (int)TargetPlatform::Linux |
-                (int)TargetPlatform::macOS;
-    } else if (name == "POSIX") {
-        flags = (int)TargetPlatform::Linux |
-                (int)TargetPlatform::macOS;
-    } else if (name == "Win32") {
-        // Old name, supported for compatibility (easier bisect)
-        flags = (int)TargetPlatform::Windows;
-    } else {
-        if (!OptionToFlag(TargetPlatformNames, name, &flags)) {
-            LogError("Unknown platform '%1'", name);
-            return false;
+    unsigned int hosts = 0;
+
+    while (str.len) {
+        Span<const char> part = SplitStrAny(str, ", ", &str);
+
+        if (part.len) {
+            if (part == "Desktop") {
+                hosts |= (1 << (int)HostPlatform::Windows) |
+                         (1 << (int)HostPlatform::Linux) |
+                         (1 << (int)HostPlatform::macOS);
+            } else if (part == "POSIX") {
+                hosts |= (1 << (int)HostPlatform::Linux) |
+                         (1 << (int)HostPlatform::macOS);
+            } else if (part == "Embedded") {
+                hosts |= (1 << (int)HostPlatform::TeensyLC) |
+                         (1 << (int)HostPlatform::Teensy35);
+            } else if (part == "Win32") {
+                // Old name, supported for compatibility (easier bisect)
+                hosts |= 1 << (int)HostPlatform::Windows;
+            } else {
+                if (!OptionToFlag(HostPlatformNames, part, &hosts)) {
+                    LogError("Unknown host '%1'", part);
+                    return false;
+                }
+            }
         }
     }
 
+    *out_hosts = hosts;
+    return true;
+}
+
+static bool MatchNativeHost(Span<const char> str, bool *out_match)
+{
+    unsigned int hosts;
+    if (!ParseSupportedHosts(str, &hosts))
+        return false;
+
 #if defined(_WIN32)
-    *out_match |= (bool)(flags & (int)TargetPlatform::Windows);
+    *out_match |= (bool)(hosts & (1 << (int)HostPlatform::Windows));
 #elif defined(__linux__)
-    *out_match |= (bool)(flags & (int)TargetPlatform::Linux);
+    *out_match |= (bool)(hosts & (1 << (int)HostPlatform::Linux));
 #elif defined(__APPLE__)
-    *out_match |= (bool)(flags & (int)TargetPlatform::macOS);
+    *out_match |= (bool)(hosts & (1 << (int)HostPlatform::macOS));
 #else
     #error Unsupported platform
 #endif
@@ -195,6 +216,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                 valid = false;
             }
             target_config.type = TargetType::Executable;
+            target_config.hosts = UINT_MAX;
 
             // Type property must be specified first
             if (prop.key == "Type") {
@@ -214,30 +236,20 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                 valid = false;
             }
 
-            bool restricted_platforms = false;
-            bool supported_platform = false;
             while (ini.NextInSection(&prop)) {
-                // These properties do not support platform suffixes
+                // These properties do not support host suffixes
                 if (prop.key == "Type") {
                     LogError("Target type cannot be changed");
                     valid = false;
-                } else if (prop.key == "Platforms") {
-                    while (prop.value.len) {
-                        Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
-
-                        if (part.len) {
-                            valid &= MatchPlatform(part, &supported_platform);
-                        }
-                    }
-
-                    restricted_platforms = true;
+                } else if (prop.key == "Hosts") {
+                    valid &= ParseSupportedHosts(prop.value, &target_config.hosts);
                 } else {
-                    Span<const char> platform;
-                    prop.key = SplitStr(prop.key, '_', &platform);
+                    Span<const char> host;
+                    prop.key = SplitStr(prop.key, '_', &host);
 
-                    if (platform.len) {
+                    if (host.len) {
                         bool use_property = false;
-                        valid &= MatchPlatform(platform, &use_property);
+                        valid &= MatchNativeHost(host, &use_property);
 
                         if (!use_property)
                             continue;
@@ -334,10 +346,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                 }
             }
 
-            supported_platform |= !restricted_platforms;
-            if (valid && supported_platform && !CreateTarget(&target_config)) {
-                valid = false;
-            }
+            valid &= !!CreateTarget(&target_config);
         }
     }
     if (!ini.IsValid() || !valid)
@@ -387,6 +396,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     // Copy/steal simple values
     target->name = target_config->name;
     target->type = target_config->type;
+    target->hosts = target_config->hosts;
     target->enable_by_default = target_config->enable_by_default;
     std::swap(target->definitions, target_config->definitions);
     std::swap(target->export_definitions, target_config->export_definitions);

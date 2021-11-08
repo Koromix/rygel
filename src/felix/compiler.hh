@@ -17,6 +17,33 @@
 
 namespace RG {
 
+enum class HostPlatform {
+    Windows,
+    Linux,
+    macOS,
+
+    TeensyLC,
+    Teensy35
+};
+static const char *const HostPlatformNames[] = {
+    "Windows",
+    "Linux",
+    "macOS",
+
+    "TeensyLC",
+    "Teensy35"
+};
+
+#if defined(_WIN32)
+    static const HostPlatform NativeHost = HostPlatform::Windows;
+#elif defined(__APPLE__)
+    static const HostPlatform NativeHost = HostPlatform::macOS;
+#elif defined(__linux__)
+    static const HostPlatform NativeHost = HostPlatform::Linux;
+#else
+    #error Unsupported platform
+#endif
+
 enum class CompileFeature {
     PCH = 1 << 0,
     DebugInfo = 1 << 1,
@@ -85,7 +112,8 @@ public:
     virtual bool CheckFeatures(uint32_t features) const = 0;
 
     virtual const char *GetObjectExtension() const = 0;
-    virtual const char *GetExecutableExtension() const = 0;
+    virtual const char *GetLinkExtension() const = 0;
+    virtual const char *GetPostExtension() const = 0;
 
     virtual void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
                                  const char *pack_options, const char *dest_filename,
@@ -107,6 +135,8 @@ public:
                                  Span<const char *const> libraries, LinkType link_type,
                                  uint32_t features, bool env_flags, const char *dest_filename,
                                  Allocator *alloc, Command *out_cmd) const = 0;
+    virtual void MakePostCommand(const char *src_filename, const char *dest_filename,
+                                 Allocator *alloc, Command *out_cmd) const = 0;
 
 protected:
     Compiler(const char *name) : name(name) {}
@@ -118,6 +148,7 @@ struct SupportedCompiler {
 };
 
 struct CompilerInfo {
+    HostPlatform host = NativeHost;
     const char *cc = nullptr;
     const char *ld = nullptr;
 };

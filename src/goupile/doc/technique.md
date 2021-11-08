@@ -197,7 +197,7 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
 sudo apt install clang-11 lld-11
 
 # L'exécutable sera déposé dans le dossier bin/Paranoid
-./felix -pParanoid --compiler=clang-11:lld-11
+./felix -pParanoid --host=,clang-11,lld-11
 ```
 
 ### Autres systèmes

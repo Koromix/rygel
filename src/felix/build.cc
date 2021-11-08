@@ -213,16 +213,35 @@ bool Builder::AddTarget(const TargetInfo &target)
 
     // Link commands
     if (target.type == TargetType::Executable) {
-        const char *target_filename = Fmt(&str_alloc, "%1%/%2%3", build.output_directory,
-                                          target.name, build.compiler->GetExecutableExtension()).ptr;
-        uint32_t features = target.CombineFeatures(build.features);
+        const char *link_ext = build.compiler->GetLinkExtension();
+        const char *post_ext = build.compiler->GetPostExtension();
 
-        Command cmd = {};
-        build.compiler->MakeLinkCommand(obj_filenames, target.libraries, LinkType::Executable,
-                                        features, build.env, target_filename, &str_alloc, &cmd);
+        // Generate linked output
+        const char *link_filename;
+        {
+            link_filename = Fmt(&str_alloc, "%1%/%2%3", build.output_directory, target.name, link_ext).ptr;
+            uint32_t features = target.CombineFeatures(build.features);
 
-        const char *text = Fmt(&str_alloc, "Link %!..+%1%!0", SplitStrReverseAny(target_filename, RG_PATH_SEPARATORS)).ptr;
-        AppendNode(text, target_filename, cmd, obj_filenames);
+            Command cmd = {};
+            build.compiler->MakeLinkCommand(obj_filenames, target.libraries, LinkType::Executable,
+                                            features, build.env, link_filename, &str_alloc, &cmd);
+
+            const char *text = Fmt(&str_alloc, "Link %!..+%1%!0", SplitStrReverseAny(link_filename, RG_PATH_SEPARATORS)).ptr;
+            AppendNode(text, link_filename, cmd, obj_filenames);
+        }
+
+        const char *target_filename;
+        if (post_ext) {
+            target_filename = Fmt(&str_alloc, "%1%/%2%3", build.output_directory, target.name, post_ext).ptr;
+
+            Command cmd = {};
+            build.compiler->MakePostCommand(link_filename, target_filename, &str_alloc, &cmd);
+
+            const char *text = Fmt(&str_alloc, "Post-process %!..+%1%!0", SplitStrReverseAny(target_filename, RG_PATH_SEPARATORS)).ptr;
+            AppendNode(text, target_filename, cmd, link_filename);
+        } else {
+            target_filename = link_filename;
+        }
 
         target_filenames.Set(target.name, target_filename);
     }
