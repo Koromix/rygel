@@ -198,7 +198,7 @@ static bool CheckIntegrity(Span<const uint8_t> pkt)
 
 static void ReceivePacket()
 {
-    Span<uint8_t> pkt;
+    Span<uint8_t> pkt = {};
 
     // Find start marker
     if (recv_status == ReceptionStatus::None) {
@@ -297,7 +297,7 @@ static void RunMonitorThread()
         }
 
         // Wait for something to happen
-        if (hs_poll(sources.data, sources.len, -1) < 0) {
+        if (hs_poll(sources.data, (unsigned int)sources.len, -1) < 0) {
             SignalWaitFor();
             return;
         }
