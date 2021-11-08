@@ -1067,12 +1067,11 @@ class TeensyCompiler final: public Compiler {
     BlockAllocator str_alloc;
 
 public:
-    TeensyCompiler(const char *target) : Compiler(target) {}
+    TeensyCompiler() : Compiler("GCC ARM") {}
 
     static std::unique_ptr<const Compiler> Create(HostPlatform target, const char *cc)
     {
-        const char *name = HostPlatformNames[(int)target];
-        std::unique_ptr<TeensyCompiler> compiler = std::make_unique<TeensyCompiler>(name);
+        std::unique_ptr<TeensyCompiler> compiler = std::make_unique<TeensyCompiler>();
 
         // Decode model string
         switch (target) {
@@ -1366,15 +1365,14 @@ static const SupportedCompiler CompilerTable[] = {
 #if defined(_WIN32)
     {"MSVC", "cl"},
     {"Clang", "clang"},
-    {"GCC", "gcc"},
+    {"GCC", "gcc"}
 #elif defined(__APPLE__)
     {"Clang", "clang"},
-    {"GCC", "gcc"},
+    {"GCC", "gcc"}
 #else
     {"GCC", "gcc"},
-    {"Clang", "clang"},
+    {"Clang", "clang"}
 #endif
-    {"Teensy", nullptr}
 };
 const Span<const SupportedCompiler> SupportedCompilers = CompilerTable;
 
