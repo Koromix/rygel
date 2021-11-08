@@ -142,7 +142,9 @@ static bool ParseHostString(Span<const char> str, Allocator *alloc, CompilerInfo
     Span<const char> ld = SplitStr(str, ',', &str);
 
     if (host.len) {
-        if (!OptionToEnum(HostPlatformNames, host, &out_compiler_info->host)) {
+        if (host == "Native") {
+            out_compiler_info->host = NativeHost;
+        } else if (!OptionToEnum(HostPlatformNames, host, &out_compiler_info->host)) {
             LogError("Unknown host '%1'", host);
             return false;
         }
