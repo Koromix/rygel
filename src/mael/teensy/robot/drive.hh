@@ -9,12 +9,14 @@
 // GNU Affero General Public License for more details.
 //
 // You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// along with this program. If not, see https://www.gnu.org/licenses/.
 
-// Regenerate protocol.js with gcc -E -P -x c protocol.js.pre > protocol.js
+#pragma once
 
-const messages = [
-    #define MESSAGE(Name, Defn) { name: # Name, members: Defn },
-    #define MEMBER(Type, Name) Name: # Type,
-    #include "../../teensy/protocol_inc.hh"
-];
+#include "../common/util.hh"
+#include "../common/config.hh"
+
+void InitDrive();
+void ProcessDrive();
+
+void SetDriveSpeed(double x, double y, double w);

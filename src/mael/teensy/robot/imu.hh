@@ -13,14 +13,8 @@
 
 #pragma once
 
-#ifdef __MK64FX512__
+#include "../common/util.hh"
+#include "../common/config.hh"
 
-#include "util.hh"
-#include "config.hh"
-
-void InitDrive();
-void ProcessDrive();
-
-void SetDriveSpeed(double x, double y, double w);
-
-#endif
+void InitIMU();
+void ProcessIMU();

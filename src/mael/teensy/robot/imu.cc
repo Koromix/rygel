@@ -11,10 +11,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#ifdef __MK64FX512__
-
-#include "util.hh"
-#include "config.hh"
+#include "../common/util.hh"
+#include "../common/config.hh"
 #include "imu.hh"
 #include "serial.hh"
 #include <Adafruit_Sensor.h>
@@ -63,5 +61,3 @@ void ProcessIMU()
 
     PostMessage(MessageType::Imu, &imu);
 }
-
-#endif

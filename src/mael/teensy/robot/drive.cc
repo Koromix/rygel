@@ -11,10 +11,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#ifdef __MK64FX512__
-
-#include "util.hh"
-#include "config.hh"
+#include "../common/util.hh"
+#include "../common/config.hh"
 #include "drive.hh"
 
 // Drive speed
@@ -146,5 +144,3 @@ void SetDriveSpeed(double x, double y, double w)
     drv_y = y;
     drv_w = fmodf(-w, 360.0) * PI / 180.0;
 }
-
-#endif

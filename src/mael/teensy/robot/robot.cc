@@ -11,14 +11,22 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#ifdef __MK64FX512__
+#include "../common/util.hh"
+#include "../common/config.hh"
+#include "drive.hh"
+#include "imu.hh"
+#include "serial.hh"
 
-#pragma once
+void setup()
+{
+    InitSerial();
+    InitIMU();
+    InitDrive();
+}
 
-#include "util.hh"
-#include "config.hh"
-
-void InitIMU();
-void ProcessIMU();
-
-#endif
+void loop()
+{
+    ProcessSerial();
+    ProcessIMU();
+    ProcessDrive();
+}
