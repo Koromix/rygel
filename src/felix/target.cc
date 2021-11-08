@@ -54,11 +54,6 @@ static bool AppendNormalizedPath(Span<const char> path,
 {
     RG_ASSERT(alloc);
 
-    if (PathIsAbsolute(path)) {
-        LogError("Cannot use absolute path '%1'", path);
-        return false;
-    }
-
     const char *norm_path = NormalizePath(path, alloc).ptr;
     out_paths->Append(norm_path);
 

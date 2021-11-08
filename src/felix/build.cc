@@ -25,8 +25,11 @@ namespace RG {
 static const char *BuildObjectPath(const char *src_filename, const char *output_directory,
                                    const char *suffix, Allocator *alloc)
 {
-    RG_ASSERT(!PathIsAbsolute(src_filename));
     RG_ASSERT(alloc);
+
+    if (PathIsAbsolute(src_filename)) {
+        src_filename += strcspn(src_filename, RG_PATH_SEPARATORS) + 1;
+    }
 
     HeapArray<char> buf(alloc);
 
