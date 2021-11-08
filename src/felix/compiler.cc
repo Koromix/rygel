@@ -1055,7 +1055,12 @@ public:
 class TeensyCompiler final: public Compiler {
     enum class Model {
         TeensyLC,
-        Teensy35
+        Teensy30,
+        Teensy31,
+        Teensy35,
+        Teensy36,
+        Teensy40,
+        Teensy41
     };
 
     const char *cc;
@@ -1076,7 +1081,12 @@ public:
         // Decode model string
         switch (host) {
             case HostPlatform::TeensyLC: { compiler->model = Model::TeensyLC; } break;
+            case HostPlatform::Teensy30: { compiler->model = Model::Teensy30; } break;
+            case HostPlatform::Teensy31: { compiler->model = Model::Teensy31; } break;
             case HostPlatform::Teensy35: { compiler->model = Model::Teensy35; } break;
+            case HostPlatform::Teensy36: { compiler->model = Model::Teensy36; } break;
+            case HostPlatform::Teensy40: { compiler->model = Model::Teensy40; } break;
+            case HostPlatform::Teensy41: { compiler->model = Model::Teensy41; } break;
 
             default: { RG_UNREACHABLE(); } break;
         }
@@ -1190,7 +1200,12 @@ public:
         Fmt(&buf, " -mthumb -DARDUINO=10805 -DTEENSYDUINO=144");
         switch (model) {
             case Model::TeensyLC: { Fmt(&buf, " -mcpu=cortex-m0plus -fsingle-precision-constant -D__MKL26Z64__%1", set_fcpu ? " -DF_CPU=48000000" : ""); } break;
+            case Model::Teensy30: { Fmt(&buf, " -mcpu=cortex-m4 -fsingle-precision-constant -D__MK20DX128__%1", set_fcpu ? " -DF_CPU=96000000" : ""); } break;
+            case Model::Teensy31: { Fmt(&buf, " -mcpu=cortex-m4 -fsingle-precision-constant -D__MK20DX256__%1", set_fcpu ? " -DF_CPU=96000000" : ""); } break;
             case Model::Teensy35: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -fsingle-precision-constant -D__MK64FX512__%1", set_fcpu ? " -DF_CPU=120000000" : ""); } break;
+            case Model::Teensy36: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -fsingle-precision-constant -D__MK66FX1M0__%1", set_fcpu ? " -DF_CPU=180000000" : ""); } break;
+            case Model::Teensy40: { Fmt(&buf, " -mcpu=cortex-m7 -mfloat-abi=hard -mfpu=fpv5-d16 -D__IMXRT1062__%1", set_fcpu ? " -DF_CPU=600000000" : ""); } break;
+            case Model::Teensy41: { Fmt(&buf, " -mcpu=cortex-m7 -mfloat-abi=hard -mfpu=fpv5-d16 -D__IMXRT1062__%1", set_fcpu ? " -DF_CPU=600000000" : ""); } break;
         }
         if (src_type == SourceType::CXX) {
             Fmt(&buf, " -felide-constructors -fno-exceptions -fno-rtti");
@@ -1276,10 +1291,15 @@ public:
         // Platform flags and libraries
         Fmt(&buf, " -mthumb -Wl,--gc-sections,--defsym=__rtc_localtime=0 --specs=nano.specs");
         switch (model) {
-            case Model::TeensyLC: { Fmt(&buf, " -mcpu=cortex-m0plus -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mkl26z64.ld"); } break;
-            case Model::Teensy35: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk64fx512.ld"); } break;
+            case Model::TeensyLC: { Fmt(&buf, " -mcpu=cortex-m0plus -larm_cortexM0l_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mkl26z64.ld"); } break;
+            case Model::Teensy30: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -larm_cortexM4lf_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk20dx128.ld"); } break;
+            case Model::Teensy31: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -larm_cortexM4lf_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk20dx256.ld"); } break;
+            case Model::Teensy35: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -larm_cortexM4lf_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk64fx512.ld"); } break;
+            case Model::Teensy36: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -larm_cortexM4lf_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk66fx1m0.ld"); } break;
+            case Model::Teensy40: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv5-d16 -larm_cortexM7lfsp_math -Tvendor/teensy/cores/teensy4/imxrt1062.ld"); } break;
+            case Model::Teensy41: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv5-d16 -larm_cortexM7lfsp_math -Tvendor/teensy/cores/teensy4/imxrt1062_t41.ld"); } break;
         }
-        Fmt(&buf, " -larm_cortexM4lf_math -lm -lstdc++");
+        Fmt(&buf, " -lm -lstdc++");
 
         if (env_flags) {
             AddEnvironmentFlags("LDFLAGS", &buf);
@@ -1358,7 +1378,12 @@ std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info)
         LogError("Cannot find driver for compiler '%1'", info.cc);
         return nullptr;
     } else if (info.host == HostPlatform::TeensyLC ||
-               info.host == HostPlatform::Teensy35) {
+               info.host == HostPlatform::Teensy30 ||
+               info.host == HostPlatform::Teensy31 ||
+               info.host == HostPlatform::Teensy35 ||
+               info.host == HostPlatform::Teensy36 ||
+               info.host == HostPlatform::Teensy40 ||
+               info.host == HostPlatform::Teensy41) {
         if (!info.cc) {
             LogError("Path to Teensy compiler must be explicitely specified");
             return nullptr;

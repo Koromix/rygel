@@ -23,7 +23,12 @@ enum class HostPlatform {
     macOS,
 
     TeensyLC,
-    Teensy35
+    Teensy30,
+    Teensy31,
+    Teensy35,
+    Teensy36,
+    Teensy40,
+    Teensy41
 };
 static const char *const HostPlatformNames[] = {
     "Windows",
@@ -31,7 +36,12 @@ static const char *const HostPlatformNames[] = {
     "macOS",
 
     "TeensyLC",
-    "Teensy35"
+    "Teensy30",
+    "Teensy31",
+    "Teensy35",
+    "Teensy36",
+    "Teensy40",
+    "Teensy41"
 };
 
 #if defined(_WIN32)
