@@ -1175,16 +1175,31 @@ public:
         }
         Fmt(&buf, " -fvisibility=hidden");
 
+        // Don't override explicit user defines
+        bool set_fcpu = true;
+        bool set_usb = true;
+        bool set_layout = true;
+        for (const char *definition: definitions) {
+            set_fcpu &= !StartsWith(definition, "F_CPU=");
+            set_usb &= !StartsWith(definition, "USB_");
+            set_layout &= !StartsWith(definition, "LAYOUT_");
+        }
+
         // Platform flags
         Fmt(&buf, " -ffunction-sections -fdata-sections -nostdlib -mno-unaligned-access");
         Fmt(&buf, " -mthumb -DARDUINO=10805 -DTEENSYDUINO=144");
         switch (model) {
-            case Model::TeensyLC: { Fmt(&buf, " -mcpu=cortex-m0plus -fsingle-precision-constant -D__MKL26Z64__ -DF_CPU=48000000"); } break;
-            case Model::Teensy35: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -fsingle-precision-constant -D__MK64FX512__ -DF_CPU=120000000"); } break;
+            case Model::TeensyLC: { Fmt(&buf, " -mcpu=cortex-m0plus -fsingle-precision-constant -D__MKL26Z64__%1", set_fcpu ? " -DF_CPU=48000000" : ""); } break;
+            case Model::Teensy35: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -fsingle-precision-constant -D__MK64FX512__%1", set_fcpu ? " -DF_CPU=120000000" : ""); } break;
         }
-        Fmt(&buf, " -DUSB_SERIAL -DLAYOUT_US_ENGLISH");
         if (src_type == SourceType::CXX) {
             Fmt(&buf, " -felide-constructors -fno-exceptions -fno-rtti");
+        }
+        if (set_usb) {
+            Fmt(&buf, " -DUSB_SERIAL");
+        }
+        if (set_layout) {
+            Fmt(&buf, " -DLAYOUT_US_ENGLISH");
         }
 
         // Features
