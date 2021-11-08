@@ -1381,12 +1381,12 @@ static const SupportedCompiler CompilerTable[] = {
     {"MSVC", "cl"},
     {"Clang", "clang"},
     {"GCC", "gcc"}
-#elif defined(__APPLE__)
-    {"Clang", "clang"},
-    {"GCC", "gcc"}
-#else
+#elif defined(__linux__)
     {"GCC", "gcc"},
     {"Clang", "clang"}
+#else
+    {"Clang", "clang"},
+    {"GCC", "gcc"}
 #endif
 };
 const Span<const SupportedCompiler> SupportedCompilers = CompilerTable;
