@@ -741,21 +741,12 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build mode
-#ifdef _WIN32
         if (!(features & (int)CompileFeature::DebugInfo)) {
             Fmt(&buf, " -s");
         }
         if (features & (int)CompileFeature::LTO) {
             Fmt(&buf, " -flto -Wl,-O1");
         }
-#else
-        if (!(features & (int)CompileFeature::DebugInfo)) {
-            Fmt(&buf, " -s");
-        }
-        if (features & (int)CompileFeature::LTO) {
-            Fmt(&buf, " -flto -Wl,-O1");
-        }
-#endif
 
         // Objects and libraries
         for (const char *obj_filename: obj_filenames) {
