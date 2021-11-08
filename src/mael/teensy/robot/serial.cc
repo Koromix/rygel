@@ -154,7 +154,7 @@ void ProcessSerial()
             uint8_t buf[RF24_PAYLOAD_SIZE] = {};
             int buf_len = 1;
 
-            while (send_buf_send != send_buf_write && buf_len < sizeof(buf)) {
+            while (send_buf_send != send_buf_write && buf_len < (int)sizeof(buf)) {
                 buf[buf_len++] = send_buf[send_buf_send];
                 send_buf_send = (send_buf_send + 1) % sizeof(send_buf);
             }
