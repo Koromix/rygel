@@ -53,12 +53,29 @@ void loop()
         InitRadio();
     }
 
-    while (rf24.available()) {
+    if (rf24.available()) {
         uint8_t buf[RF24_PAYLOAD_SIZE];
         rf24.read(buf, sizeof(buf));
 
         if (buf[0] <= sizeof(buf) - 1) {
             Serial.write(buf + 1, buf[0]);
         }
+    }
+
+    if (Serial.available()) {
+        rf24.stopListening();
+        DEFER { rf24.startListening(); };
+
+        uint8_t buf[RF24_PAYLOAD_SIZE];
+
+        int i = 0;
+        while (Serial.available() && i < RF24_PAYLOAD_SIZE - 1) {
+            uint8_t c = Serial.read();
+            buf[++i] = c;
+        }
+        buf[0] = (uint8_t)i;
+
+        rf24.writeFast(buf, sizeof(buf));
+        rf24.txStandBy(0);
     }
 }
