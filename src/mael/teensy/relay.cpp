@@ -34,8 +34,8 @@ static void InitRadio()
     rf24.setRetries(0, 0);
     rf24.disableCRC();
 
-    rf24.openWritingPipe(RF24_ADDR_HTOR);
-    rf24.openReadingPipe(1, RF24_ADDR_RTOH);
+    rf24.openWritingPipe(RF24_ADDR);
+    rf24.openReadingPipe(1, RF24_ADDR ^ 1);
 
     rf24.startListening();
 }
