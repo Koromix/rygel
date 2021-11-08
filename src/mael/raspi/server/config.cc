@@ -42,7 +42,9 @@ bool LoadConfig(StreamReader *st, Config *out_config)
         while (ini.Next(&prop)) {
             if (prop.section == "Application") {
                 do {
-                    if (prop.key == "PWA") {
+                    if (prop.key == "SerialNumber") {
+                        config.serial_number = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "PWA") {
                         valid &= ParseBool(prop.value, &config.pwa);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);

@@ -22,6 +22,7 @@ struct Config {
     http_Config http;
     const char *require_host = nullptr;
 
+    const char *serial_number = nullptr;
     bool pwa = false;
 
     BlockAllocator str_alloc;

@@ -144,13 +144,15 @@ static int DeviceCallback(hs_device *dev, void *)
 
     switch (dev->status) {
         case HS_DEVICE_STATUS_ONLINE: {
-            if (comm_dev) {
-                LogError("Ignoring supplementary device '%1'", dev->location);
-                return 0;
-            }
+            if (mael_config.serial_number && TestStr(dev->serial_number_string, mael_config.serial_number)) {
+                if (comm_dev) {
+                    LogError("Ignoring supplementary device '%1'", dev->location);
+                    return 0;
+                }
 
-            LogInfo("Acquired control device '%1'", dev->location);
-            comm_dev = hs_device_ref(dev);
+                LogInfo("Acquired control device '%1' (S/N = %2)", dev->location, dev->serial_number_string);
+                comm_dev = hs_device_ref(dev);
+            }
         } break;
 
         case HS_DEVICE_STATUS_DISCONNECTED: {
@@ -340,6 +342,12 @@ static bool InitMonitor()
     if (!CreatePipe(monitor_pfd))
         return false;
 #endif
+
+    if (mael_config.serial_number) {
+        LogInfo("Expecting relay device serial number '%!..+%1%!0'", mael_config.serial_number);
+    } else {
+        LogInfo("Expecting relay device with any serial number");
+    }
 
     if (hs_monitor_new(DeviceSpecs, RG_LEN(DeviceSpecs), &monitor) < 0)
         return false;
@@ -566,7 +574,9 @@ int Main(int argc, char **argv)
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
+    %!..+-s, --serial_number <S/N>%!0    Set expected serial number
         %!..+--pwa%!0                    Enable PWA mode
+
         %!..+--port <port>%!0            Change web server port
                                  %!D..(default: %2)%!0)",
                 FelixTarget, mael_config.http.port);
@@ -606,11 +616,13 @@ Options:
         while (opt.Next()) {
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
+            } else if (opt.Test("-s", "--serial_number", OptionType::Value)) {
+                mael_config.serial_number = opt.current_value;
+            } else if (opt.Test("--pwa")) {
+                mael_config.pwa = true;
             } else if (opt.Test("--port", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &mael_config.http.port))
                     return 1;
-            } else if (opt.Test("--pwa")) {
-                mael_config.pwa = true;
             } else {
                 opt.LogUnknownError();
                 return 1;
