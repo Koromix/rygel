@@ -640,10 +640,11 @@ Options:
     http_Daemon daemon;
     if (!daemon.Start(mael_config.http, HandleRequest))
         return 1;
+
     if (mael_config.http.sock_type == SocketType::Unix) {
-        LogInfo("Listening on socket '%1' (Unix stack)", mael_config.http.unix_path);
+        LogInfo("Listening on socket '%!..+%1%!0' (Unix stack)", mael_config.http.unix_path);
     } else {
-        LogInfo("Listening on port %1 (%2 stack)",
+        LogInfo("Listening on port %!..+%1%!0 (%2 stack)",
                 mael_config.http.port, SocketTypeNames[(int)mael_config.http.sock_type]);
     }
 
