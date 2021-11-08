@@ -105,6 +105,7 @@ class Compiler {
     RG_DELETE_COPY(Compiler)
 
 public:
+    HostPlatform host;
     const char *name;
 
     virtual ~Compiler() {}
@@ -139,7 +140,7 @@ public:
                                  Allocator *alloc, Command *out_cmd) const = 0;
 
 protected:
-    Compiler(const char *name) : name(name) {}
+    Compiler(HostPlatform host, const char *name) : host(host), name(name) {}
 };
 
 struct SupportedCompiler {

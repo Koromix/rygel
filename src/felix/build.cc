@@ -102,7 +102,8 @@ Builder::Builder(const BuildSettings &build)
     RG_ASSERT(build.output_directory);
     RG_ASSERT(build.compiler);
 
-    cache_directory = Fmt(&str_alloc, "%1%/%2", build.output_directory, build.compiler->name).ptr;
+    cache_directory = Fmt(&str_alloc, "%1%/%2/%3", build.output_directory, HostPlatformNames[(int)build.compiler->host],
+                                                                           build.compiler->name).ptr;
     cache_filename = Fmt(&str_alloc, "%1%/Shared%/FelixCache.bin", build.output_directory).ptr;
 
     LoadCache();

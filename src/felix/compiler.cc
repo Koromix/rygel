@@ -111,11 +111,11 @@ class ClangCompiler final: public Compiler {
     BlockAllocator str_alloc;
 
 public:
-    ClangCompiler() : Compiler("Clang") {}
+    ClangCompiler(HostPlatform host) : Compiler(host, "Clang") {}
 
     static std::unique_ptr<const Compiler> Create(const char *cc, const char *ld)
     {
-        std::unique_ptr<ClangCompiler> compiler = std::make_unique<ClangCompiler>();
+        std::unique_ptr<ClangCompiler> compiler = std::make_unique<ClangCompiler>(NativeHost);
 
         // Prefer LLD
         if (!ld && FindExecutableInPath("lld")) {
@@ -504,11 +504,11 @@ class GnuCompiler final: public Compiler {
     BlockAllocator str_alloc;
 
 public:
-    GnuCompiler() : Compiler("GCC") {}
+    GnuCompiler(HostPlatform host) : Compiler(host, "GCC") {}
 
     static std::unique_ptr<const Compiler> Create(const char *cc, const char *ld)
     {
-        std::unique_ptr<GnuCompiler> compiler = std::make_unique<GnuCompiler>();
+        std::unique_ptr<GnuCompiler> compiler = std::make_unique<GnuCompiler>(NativeHost);
 
         // Find executables
         {
@@ -824,7 +824,7 @@ class MsCompiler final: public Compiler {
     BlockAllocator str_alloc;
 
 public:
-    MsCompiler() : Compiler("MSVC") {}
+    MsCompiler() : Compiler(HostPlatform::Windows, "MSVC") {}
 
     static std::unique_ptr<const Compiler> Create(const char *cl, const char *link)
     {
@@ -1067,14 +1067,14 @@ class TeensyCompiler final: public Compiler {
     BlockAllocator str_alloc;
 
 public:
-    TeensyCompiler() : Compiler("GCC ARM") {}
+    TeensyCompiler(HostPlatform host) : Compiler(host, "GCC_ARM") {}
 
-    static std::unique_ptr<const Compiler> Create(HostPlatform target, const char *cc)
+    static std::unique_ptr<const Compiler> Create(HostPlatform host, const char *cc)
     {
-        std::unique_ptr<TeensyCompiler> compiler = std::make_unique<TeensyCompiler>();
+        std::unique_ptr<TeensyCompiler> compiler = std::make_unique<TeensyCompiler>(host);
 
         // Decode model string
-        switch (target) {
+        switch (host) {
             case HostPlatform::TeensyLC: { compiler->model = Model::TeensyLC; } break;
             case HostPlatform::Teensy35: { compiler->model = Model::Teensy35; } break;
 
