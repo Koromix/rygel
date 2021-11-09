@@ -44,6 +44,22 @@ static const char *const HostPlatformNames[] = {
     "Teensy41"
 };
 
+struct HostFamily {
+    const char *name;
+    unsigned int hosts;
+};
+
+static const HostFamily HostFamilies[] = {
+    {"Desktop",  (1u << (int)HostPlatform::Windows) | (1u << (int)HostPlatform::Linux) | (1u << (int)HostPlatform::macOS)},
+    {"POSIX",    (1u << (int)HostPlatform::Linux) | (1u << (int)HostPlatform::macOS)},
+    {"Embedded", (1u << (int)HostPlatform::TeensyLC) | (1u << (int)HostPlatform::Teensy30) | (1u << (int)HostPlatform::Teensy31) |
+                 (1u << (int)HostPlatform::Teensy35) | (1u << (int)HostPlatform::Teensy36) | (1u << (int)HostPlatform::Teensy40) |
+                 (1u << (int)HostPlatform::Teensy41)},
+    {"Teensy",   (1u << (int)HostPlatform::TeensyLC) | (1u << (int)HostPlatform::Teensy30) | (1u << (int)HostPlatform::Teensy31) |
+                 (1u << (int)HostPlatform::Teensy35) | (1u << (int)HostPlatform::Teensy36) | (1u << (int)HostPlatform::Teensy40) |
+                 (1u << (int)HostPlatform::Teensy41)},
+};
+
 #if defined(_WIN32)
     static const HostPlatform NativeHost = HostPlatform::Windows;
 #elif defined(__APPLE__)

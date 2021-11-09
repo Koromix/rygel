@@ -1322,6 +1322,18 @@ public:
     }
 };
 
+static bool TestHostFamily(HostPlatform host, const char *name)
+{
+    const HostFamily *family = std::find_if(std::begin(HostFamilies), std::end(HostFamilies),
+                                            [&](const HostFamily &family) { return TestStr(family.name, name); });
+
+    if (family == std::end(HostFamilies))
+        return false;
+
+    bool match = family->hosts & (1u << (int)host);
+    return match;
+}
+
 std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info)
 {
     if (info.host == NativeHost) {
@@ -1377,13 +1389,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info)
 
         LogError("Cannot find driver for compiler '%1'", info.cc);
         return nullptr;
-    } else if (info.host == HostPlatform::TeensyLC ||
-               info.host == HostPlatform::Teensy30 ||
-               info.host == HostPlatform::Teensy31 ||
-               info.host == HostPlatform::Teensy35 ||
-               info.host == HostPlatform::Teensy36 ||
-               info.host == HostPlatform::Teensy40 ||
-               info.host == HostPlatform::Teensy41) {
+    } else if (TestHostFamily(info.host, "Teensy")) {
         if (!info.cc) {
             LogError("Path to Teensy compiler must be explicitely specified");
             return nullptr;

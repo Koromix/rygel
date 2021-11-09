@@ -129,29 +129,17 @@ static bool ParseSupportedHosts(Span<const char> str, unsigned int *out_hosts)
         Span<const char> part = SplitStrAny(str, ", ", &str);
 
         if (part.len) {
-            if (part == "Desktop") {
-                hosts |= (1 << (int)HostPlatform::Windows) |
-                         (1 << (int)HostPlatform::Linux) |
-                         (1 << (int)HostPlatform::macOS);
-            } else if (part == "POSIX") {
-                hosts |= (1 << (int)HostPlatform::Linux) |
-                         (1 << (int)HostPlatform::macOS);
-            } else if (part == "Embedded") {
-                hosts |= (1 << (int)HostPlatform::TeensyLC) |
-                         (1 << (int)HostPlatform::Teensy30) |
-                         (1 << (int)HostPlatform::Teensy31) |
-                         (1 << (int)HostPlatform::Teensy35) |
-                         (1 << (int)HostPlatform::Teensy36) |
-                         (1 << (int)HostPlatform::Teensy40) |
-                         (1 << (int)HostPlatform::Teensy41);
+            const HostFamily *family = std::find_if(std::begin(HostFamilies), std::end(HostFamilies),
+                                                    [&](const HostFamily &family) { return TestStr(family.name, part); });
+
+            if (family != std::end(HostFamilies)) {
+                hosts |= family->hosts;
             } else if (part == "Win32") {
                 // Old name, supported for compatibility (easier bisect)
                 hosts |= 1 << (int)HostPlatform::Windows;
-            } else {
-                if (!OptionToFlag(HostPlatformNames, part, &hosts)) {
-                    LogError("Unknown host '%1'", part);
-                    return false;
-                }
+            } else if (!OptionToFlag(HostPlatformNames, part, &hosts)) {
+                LogError("Unknown host '%1'", part);
+                return false;
             }
         }
     }
