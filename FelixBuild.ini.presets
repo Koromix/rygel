@@ -23,3 +23,31 @@ Features = DebugInfo, Optimize, LTO
 [Paranoid]
 Host = ,clang,lld
 Features = Optimize, LTO, SafeStack, CFI, ZeroInit, ShuffleCode
+
+[TeensyLC]
+Host = TeensyLC
+Features = Optimize
+
+[Teensy30]
+Host = Teensy30
+Features = Optimize
+
+[Teensy31]
+Host = Teensy31
+Features = Optimize
+
+[Teensy35]
+Host = Teensy35
+Features = Optimize
+
+[Teensy36]
+Host = Teensy36
+Features = Optimize
+
+[Teensy40]
+Host = Teensy40
+Features = Optimize
+
+[Teensy41]
+Host = Teensy41
+Features = Optimize
