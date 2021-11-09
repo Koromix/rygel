@@ -229,6 +229,8 @@ public:
     const char *GetPostExtension() const override { return nullptr; }
 #endif
 
+    bool GetCoreSources(Allocator *alloc, HeapArray<const char *> *) const override { return true; }
+
     void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
@@ -592,6 +594,8 @@ public:
     const char *GetPostExtension() const override { return nullptr; }
 #endif
 
+    bool GetCoreSources(Allocator *alloc, HeapArray<const char *> *) const override { return true; }
+
     void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
@@ -881,6 +885,8 @@ public:
     const char *GetLinkExtension() const override { return ".exe"; }
     const char *GetPostExtension() const override { return nullptr; }
 
+    bool GetCoreSources(Allocator *alloc, HeapArray<const char *> *) const override { return true; }
+
     void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
@@ -1139,6 +1145,26 @@ public:
     const char *GetLinkExtension() const override { return ".elf"; }
     const char *GetPostExtension() const override { return ".hex"; }
 
+    bool GetCoreSources(Allocator *alloc, HeapArray<const char *> *out_filenames) const override
+    {
+        const char *dirname = ((int)model > (int)Model::Teensy40) ? "vendor/teensy/cores/teensy4"
+                                                                  : "vendor/teensy/cores/teensy3";
+
+        EnumStatus status = EnumerateDirectory(dirname, nullptr, 1024,
+                                               [&](const char *basename, FileType) {
+            if (DetermineSourceType(basename)) {
+                const char *src_filename = NormalizePath(basename, dirname, alloc).ptr;
+                out_filenames->Append(src_filename);
+            }
+
+            return true;
+        });
+        if (status != EnumStatus::Done)
+            return false;
+
+        return true;
+    }
+
     void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
@@ -1208,13 +1234,17 @@ public:
         Fmt(&buf, " -ffunction-sections -fdata-sections -nostdlib -mno-unaligned-access");
         Fmt(&buf, " -mthumb -DARDUINO=10805 -DTEENSYDUINO=144");
         switch (model) {
-            case Model::TeensyLC: { Fmt(&buf, " -mcpu=cortex-m0plus -fsingle-precision-constant -D__MKL26Z64__%1", set_fcpu ? " -DF_CPU=48000000" : ""); } break;
-            case Model::Teensy30: { Fmt(&buf, " -mcpu=cortex-m4 -fsingle-precision-constant -D__MK20DX128__%1", set_fcpu ? " -DF_CPU=96000000" : ""); } break;
-            case Model::Teensy31: { Fmt(&buf, " -mcpu=cortex-m4 -fsingle-precision-constant -D__MK20DX256__%1", set_fcpu ? " -DF_CPU=96000000" : ""); } break;
-            case Model::Teensy35: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -fsingle-precision-constant -D__MK64FX512__%1", set_fcpu ? " -DF_CPU=120000000" : ""); } break;
-            case Model::Teensy36: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -fsingle-precision-constant -D__MK66FX1M0__%1", set_fcpu ? " -DF_CPU=180000000" : ""); } break;
-            case Model::Teensy40: { Fmt(&buf, " -mcpu=cortex-m7 -mfloat-abi=hard -mfpu=fpv5-d16 -D__IMXRT1062__%1", set_fcpu ? " -DF_CPU=600000000" : ""); } break;
-            case Model::Teensy41: { Fmt(&buf, " -mcpu=cortex-m7 -mfloat-abi=hard -mfpu=fpv5-d16 -D__IMXRT1062__%1", set_fcpu ? " -DF_CPU=600000000" : ""); } break;
+            case Model::TeensyLC: { Fmt(&buf, " -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m0plus -fsingle-precision-constant -D__MKL26Z64__%1", set_fcpu ? " -DF_CPU=48000000" : ""); } break;
+            case Model::Teensy30: { Fmt(&buf, " -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -fsingle-precision-constant -D__MK20DX128__%1", set_fcpu ? " -DF_CPU=96000000" : ""); } break;
+            case Model::Teensy31: { Fmt(&buf, " -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -fsingle-precision-constant -D__MK20DX256__%1", set_fcpu ? " -DF_CPU=96000000" : ""); } break;
+            case Model::Teensy35: { Fmt(&buf, " -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -mfloat-abi=hard"
+                                              " -mfpu=fpv4-sp-d16 -fsingle-precision-constant -D__MK64FX512__%1", set_fcpu ? " -DF_CPU=120000000" : ""); } break;
+            case Model::Teensy36: { Fmt(&buf, " -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -mfloat-abi=hard"
+                                              " -mfpu=fpv4-sp-d16 -fsingle-precision-constant -D__MK66FX1M0__%1", set_fcpu ? " -DF_CPU=180000000" : ""); } break;
+            case Model::Teensy40: { Fmt(&buf, " -Ivendor/teensy/cores/teensy4 -mcpu=cortex-m7 -mfloat-abi=hard"
+                                              " -mfpu=fpv5-d16 -D__IMXRT1062__%1", set_fcpu ? " -DF_CPU=600000000" : ""); } break;
+            case Model::Teensy41: { Fmt(&buf, " -Ivendor/teensy/cores/teensy4 -mcpu=cortex-m7 -mfloat-abi=hard"
+                                              " -mfpu=fpv5-d16 -D__IMXRT1062__%1", set_fcpu ? " -DF_CPU=600000000" : ""); } break;
         }
         if (src_type == SourceType::CXX) {
             Fmt(&buf, " -felide-constructors -fno-exceptions -fno-rtti");
@@ -1471,6 +1501,25 @@ std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info)
         LogError("Cross-compilation from host '%1' to '%2' is not supported",
                  HostPlatformNames[(int)info.host], HostPlatformNames[(int)NativeHost]);
         return nullptr;
+    }
+}
+
+bool DetermineSourceType(const char *filename, SourceType *out_type)
+{
+    Span<const char> extension = GetPathExtension(filename);
+
+    if (extension == ".c") {
+        if (out_type) {
+            *out_type = SourceType::C;
+        }
+        return true;
+    } else if (extension == ".cc" || extension == ".cpp") {
+        if (out_type) {
+            *out_type = SourceType::CXX;
+        }
+        return true;
+    } else {
+        return false;
     }
 }
 

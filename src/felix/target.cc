@@ -421,17 +421,11 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
             return nullptr;
 
         for (const char *src_filename: src_filenames) {
-            Span<const char> extension = GetPathExtension(src_filename);
-
-            const SourceFileInfo *src;
-            if (extension == ".c") {
-                src = CreateSource(target, src_filename, SourceType::C);
-            } else if (extension == ".cc" || extension == ".cpp") {
-                src = CreateSource(target, src_filename, SourceType::CXX);
-            } else {
+            SourceType src_type;
+            if (!DetermineSourceType(src_filename, &src_type))
                 continue;
-            }
 
+            const SourceFileInfo *src = CreateSource(target, src_filename, src_type);
             target->sources.Append(src);
         }
     }

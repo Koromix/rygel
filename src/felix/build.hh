@@ -75,6 +75,11 @@ class Builder {
     const char *cache_directory;
     const char *cache_filename;
 
+    // Core host target (if any)
+    bool core_init = false;
+    TargetInfo core_target = {};
+    BucketArray<SourceFileInfo> core_sources;
+
     // AddTarget, AddSource
     HeapArray<Node> nodes;
     Size total = 0;

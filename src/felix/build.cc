@@ -114,12 +114,42 @@ bool Builder::AddTarget(const TargetInfo &target)
 {
     HeapArray<const char *> obj_filenames;
 
+    // Core host source files (e.g. Teensy core)
+    if (!core_init) {
+        core_init = true;
+
+        HeapArray<const char *> src_filenames;
+        if (!build.compiler->GetCoreSources(&str_alloc, &src_filenames))
+            return false;
+
+        if (src_filenames.len) {
+            core_target.name = HostPlatformNames[(int)build.compiler->host];
+            core_target.type = TargetType::ExternalLibrary;
+            core_target.hosts = 1u << (int)build.compiler->host;
+
+            for (const char *src_filename: src_filenames) {
+                SourceFileInfo src = {};
+
+                src.target = &core_target;
+                src.filename = src_filename;
+                DetermineSourceType(src_filename, &src.type);
+
+                core_sources.Append(src);
+            }
+        }
+    }
+
     // Object commands
+    for (const SourceFileInfo &src: core_sources) {
+        const char *obj_filename = AddSource(src);
+        if (!obj_filename)
+            return false;
+        obj_filenames.Append(obj_filename);
+    }
     for (const SourceFileInfo *src: target.sources) {
         const char *obj_filename = AddSource(*src);
         if (!obj_filename)
             return false;
-
         obj_filenames.Append(obj_filename);
     }
 
