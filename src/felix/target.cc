@@ -138,7 +138,12 @@ static bool ParseSupportedHosts(Span<const char> str, unsigned int *out_hosts)
                          (1 << (int)HostPlatform::macOS);
             } else if (part == "Embedded") {
                 hosts |= (1 << (int)HostPlatform::TeensyLC) |
-                         (1 << (int)HostPlatform::Teensy35);
+                         (1 << (int)HostPlatform::Teensy30) |
+                         (1 << (int)HostPlatform::Teensy31) |
+                         (1 << (int)HostPlatform::Teensy35) |
+                         (1 << (int)HostPlatform::Teensy36) |
+                         (1 << (int)HostPlatform::Teensy40) |
+                         (1 << (int)HostPlatform::Teensy41);
             } else if (part == "Win32") {
                 // Old name, supported for compatibility (easier bisect)
                 hosts |= 1 << (int)HostPlatform::Windows;
