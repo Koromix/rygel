@@ -1234,13 +1234,16 @@ public:
         Fmt(&buf, " -ffunction-sections -fdata-sections -nostdlib -mno-unaligned-access");
         Fmt(&buf, " -mthumb -DARDUINO=10805 -DTEENSYDUINO=144");
         switch (model) {
-            case Model::TeensyLC: { Fmt(&buf, " -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m0plus -fsingle-precision-constant -D__MKL26Z64__%1", set_fcpu ? " -DF_CPU=48000000" : ""); } break;
-            case Model::Teensy30: { Fmt(&buf, " -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -fsingle-precision-constant -D__MK20DX128__%1", set_fcpu ? " -DF_CPU=96000000" : ""); } break;
-            case Model::Teensy31: { Fmt(&buf, " -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -fsingle-precision-constant -D__MK20DX256__%1", set_fcpu ? " -DF_CPU=96000000" : ""); } break;
+            case Model::TeensyLC: { Fmt(&buf, " -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m0plus"
+                                              " -fsingle-precision-constant -Wno-error=narrowing -D__MKL26Z64__%1", set_fcpu ? " -DF_CPU=48000000" : ""); } break;
+            case Model::Teensy30: { Fmt(&buf, " -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4"
+                                              " -fsingle-precision-constant -Wno-error=narrowing -D__MK20DX128__%1", set_fcpu ? " -DF_CPU=96000000" : ""); } break;
+            case Model::Teensy31: { Fmt(&buf, " -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4"
+                                              " -fsingle-precision-constant -Wno-error=narrowing -D__MK20DX256__%1", set_fcpu ? " -DF_CPU=96000000" : ""); } break;
             case Model::Teensy35: { Fmt(&buf, " -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -mfloat-abi=hard"
-                                              " -mfpu=fpv4-sp-d16 -fsingle-precision-constant -D__MK64FX512__%1", set_fcpu ? " -DF_CPU=120000000" : ""); } break;
+                                              " -mfpu=fpv4-sp-d16 -fsingle-precision-constant -Wno-error=narrowing -D__MK64FX512__%1", set_fcpu ? " -DF_CPU=120000000" : ""); } break;
             case Model::Teensy36: { Fmt(&buf, " -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -mfloat-abi=hard"
-                                              " -mfpu=fpv4-sp-d16 -fsingle-precision-constant -D__MK66FX1M0__%1", set_fcpu ? " -DF_CPU=180000000" : ""); } break;
+                                              " -mfpu=fpv4-sp-d16 -fsingle-precision-constant -Wno-error=narrowing -D__MK66FX1M0__%1", set_fcpu ? " -DF_CPU=180000000" : ""); } break;
             case Model::Teensy40: { Fmt(&buf, " -Ivendor/teensy/cores/teensy4 -mcpu=cortex-m7 -mfloat-abi=hard"
                                               " -mfpu=fpv5-d16 -D__IMXRT1062__%1", set_fcpu ? " -DF_CPU=600000000" : ""); } break;
             case Model::Teensy41: { Fmt(&buf, " -Ivendor/teensy/cores/teensy4 -mcpu=cortex-m7 -mfloat-abi=hard"
@@ -1331,8 +1334,8 @@ public:
         Fmt(&buf, " -mthumb -Wl,--gc-sections,--defsym=__rtc_localtime=0 --specs=nano.specs");
         switch (model) {
             case Model::TeensyLC: { Fmt(&buf, " -mcpu=cortex-m0plus -larm_cortexM0l_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mkl26z64.ld"); } break;
-            case Model::Teensy30: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -larm_cortexM4lf_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk20dx128.ld"); } break;
-            case Model::Teensy31: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -larm_cortexM4lf_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk20dx256.ld"); } break;
+            case Model::Teensy30: { Fmt(&buf, " -mcpu=cortex-m4 -larm_cortexM4l_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk20dx128.ld"); } break;
+            case Model::Teensy31: { Fmt(&buf, " -mcpu=cortex-m4 -larm_cortexM4l_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk20dx256.ld"); } break;
             case Model::Teensy35: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -larm_cortexM4lf_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk64fx512.ld"); } break;
             case Model::Teensy36: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -larm_cortexM4lf_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk66fx1m0.ld"); } break;
             case Model::Teensy40: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv5-d16 -larm_cortexM7lfsp_math -Tvendor/teensy/cores/teensy4/imxrt1062.ld"); } break;
