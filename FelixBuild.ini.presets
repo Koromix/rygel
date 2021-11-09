@@ -24,6 +24,14 @@ Features = DebugInfo, Optimize, LTO
 Host = ,clang,lld
 Features = Optimize, LTO, SafeStack, CFI, ZeroInit, ShuffleCode
 
+[Teensy20]
+Host = Teensy20
+Features = Optimize
+
+[Teensy20++]
+Host = Teensy20++
+Features = Optimize
+
 [TeensyLC]
 Host = TeensyLC
 Features = Optimize

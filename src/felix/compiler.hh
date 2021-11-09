@@ -22,6 +22,8 @@ enum class HostPlatform {
     Linux,
     macOS,
 
+    Teensy20,
+    Teensy20pp,
     TeensyLC,
     Teensy30,
     Teensy31,
@@ -35,6 +37,8 @@ static const char *const HostPlatformNames[] = {
     "Linux",
     "macOS",
 
+    "Teensy20",
+    "Teensy20++",
     "TeensyLC",
     "Teensy30",
     "Teensy31",
@@ -50,14 +54,12 @@ struct HostFamily {
 };
 
 static const HostFamily HostFamilies[] = {
-    {"Desktop",  (1u << (int)HostPlatform::Windows) | (1u << (int)HostPlatform::Linux) | (1u << (int)HostPlatform::macOS)},
-    {"POSIX",    (1u << (int)HostPlatform::Linux) | (1u << (int)HostPlatform::macOS)},
-    {"Embedded", (1u << (int)HostPlatform::TeensyLC) | (1u << (int)HostPlatform::Teensy30) | (1u << (int)HostPlatform::Teensy31) |
-                 (1u << (int)HostPlatform::Teensy35) | (1u << (int)HostPlatform::Teensy36) | (1u << (int)HostPlatform::Teensy40) |
-                 (1u << (int)HostPlatform::Teensy41)},
-    {"Teensy",   (1u << (int)HostPlatform::TeensyLC) | (1u << (int)HostPlatform::Teensy30) | (1u << (int)HostPlatform::Teensy31) |
-                 (1u << (int)HostPlatform::Teensy35) | (1u << (int)HostPlatform::Teensy36) | (1u << (int)HostPlatform::Teensy40) |
-                 (1u << (int)HostPlatform::Teensy41)},
+    {"Desktop",    (1u << (int)HostPlatform::Windows) | (1u << (int)HostPlatform::Linux) | (1u << (int)HostPlatform::macOS)},
+    {"POSIX",      (1u << (int)HostPlatform::Linux) | (1u << (int)HostPlatform::macOS)},
+    {"Teensy/AVR", (1u << (int)HostPlatform::Teensy20) | (1u << (int)HostPlatform::Teensy20pp)},
+    {"Teensy/ARM", (1u << (int)HostPlatform::TeensyLC) | (1u << (int)HostPlatform::Teensy30) | (1u << (int)HostPlatform::Teensy31) |
+                   (1u << (int)HostPlatform::Teensy35) | (1u << (int)HostPlatform::Teensy36) | (1u << (int)HostPlatform::Teensy40) |
+                   (1u << (int)HostPlatform::Teensy41)}
 };
 
 #if defined(_WIN32)

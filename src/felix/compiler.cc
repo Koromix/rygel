@@ -1069,6 +1069,8 @@ public:
 
 class TeensyCompiler final: public Compiler {
     enum class Model {
+        Teensy20,
+        Teensy20pp,
         TeensyLC,
         Teensy30,
         Teensy31,
@@ -1087,14 +1089,16 @@ class TeensyCompiler final: public Compiler {
     BlockAllocator str_alloc;
 
 public:
-    TeensyCompiler(HostPlatform host) : Compiler(host, "GCC_ARM") {}
+    TeensyCompiler(HostPlatform host, const char *name) : Compiler(host, name) {}
 
-    static std::unique_ptr<const Compiler> Create(HostPlatform host, const char *cc)
+    static std::unique_ptr<const Compiler> Create(HostPlatform host, const char *name, const char *cc)
     {
-        std::unique_ptr<TeensyCompiler> compiler = std::make_unique<TeensyCompiler>(host);
+        std::unique_ptr<TeensyCompiler> compiler = std::make_unique<TeensyCompiler>(host, name);
 
         // Decode model string
         switch (host) {
+            case HostPlatform::Teensy20: { compiler->model = Model::Teensy20; } break;
+            case HostPlatform::Teensy20pp: { compiler->model = Model::Teensy20pp; } break;
             case HostPlatform::TeensyLC: { compiler->model = Model::TeensyLC; } break;
             case HostPlatform::Teensy30: { compiler->model = Model::Teensy30; } break;
             case HostPlatform::Teensy31: { compiler->model = Model::Teensy31; } break;
@@ -1147,8 +1151,18 @@ public:
 
     bool GetCoreSources(Allocator *alloc, HeapArray<const char *> *out_filenames) const override
     {
-        const char *dirname = ((int)model >= (int)Model::Teensy40) ? "vendor/teensy/cores/teensy4"
-                                                                   : "vendor/teensy/cores/teensy3";
+        const char *dirname;
+        switch (model) {
+            case Model::Teensy20:
+            case Model::Teensy20pp: { dirname = "vendor/teensy/cores/teensy"; } break;
+            case Model::TeensyLC:
+            case Model::Teensy30:
+            case Model::Teensy31:
+            case Model::Teensy35:
+            case Model::Teensy36: { dirname = "vendor/teensy/cores/teensy3"; } break;
+            case Model::Teensy40:
+            case Model::Teensy41: { dirname = "vendor/teensy/cores/teensy4"; } break;
+        }
 
         EnumStatus status = EnumerateDirectory(dirname, nullptr, 1024,
                                                [&](const char *basename, FileType) {
@@ -1234,23 +1248,25 @@ public:
         }
 
         // Platform flags
-        Fmt(&buf, " -ffunction-sections -fdata-sections -nostdlib -mno-unaligned-access");
-        Fmt(&buf, " -mthumb -DARDUINO=10805 -DTEENSYDUINO=153");
+        Fmt(&buf, " -ffunction-sections -fdata-sections -nostdlib");
+        Fmt(&buf, " -DARDUINO=10805 -DTEENSYDUINO=153");
         switch (model) {
-            case Model::TeensyLC: { Fmt(&buf, " -DARDUINO_TEENSYLC -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m0plus"
-                                              " -fsingle-precision-constant -Wno-error=narrowing -D__MKL26Z64__%1", set_fcpu ? " -DF_CPU=48000000" : ""); } break;
-            case Model::Teensy30: { Fmt(&buf, " -DARDUINO_TEENSY30 -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4"
-                                              " -fsingle-precision-constant -Wno-error=narrowing -D__MK20DX128__%1", set_fcpu ? " -DF_CPU=96000000" : ""); } break;
-            case Model::Teensy31: { Fmt(&buf, " -DARDUINO_TEENSY31 -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4"
-                                              " -fsingle-precision-constant -Wno-error=narrowing -D__MK20DX256__%1", set_fcpu ? " -DF_CPU=96000000" : ""); } break;
-            case Model::Teensy35: { Fmt(&buf, " -DARDUINO_TEENSY35 -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -mfloat-abi=hard"
-                                              " -mfpu=fpv4-sp-d16 -fsingle-precision-constant -Wno-error=narrowing -D__MK64FX512__%1", set_fcpu ? " -DF_CPU=120000000" : ""); } break;
-            case Model::Teensy36: { Fmt(&buf, " -DARDUINO_TEENSY36 -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -mfloat-abi=hard"
-                                              " -mfpu=fpv4-sp-d16 -fsingle-precision-constant -Wno-error=narrowing -D__MK66FX1M0__%1", set_fcpu ? " -DF_CPU=180000000" : ""); } break;
-            case Model::Teensy40: { Fmt(&buf, " -DARDUINO_TEENSY40 -Ivendor/teensy/cores/teensy4 -mcpu=cortex-m7 -mfloat-abi=hard"
-                                              " -mfpu=fpv5-d16 -D__IMXRT1062__%1", set_fcpu ? " -DF_CPU=600000000" : ""); } break;
-            case Model::Teensy41: { Fmt(&buf, " -DARDUINO_TEENSY41 -Ivendor/teensy/cores/teensy4 -mcpu=cortex-m7 -mfloat-abi=hard"
-                                              " -mfpu=fpv5-d16 -D__IMXRT1062__%1", set_fcpu ? " -DF_CPU=600000000" : ""); } break;
+            case Model::Teensy20: { Fmt(&buf, " -DARDUINO_ARCH_AVR -DARDUINO_TEENSY2 -Ivendor/teensy/cores/teensy -mmcu=atmega32u4%1", set_fcpu ? " -DF_CPU=16000000" : ""); } break;
+            case Model::Teensy20pp: { Fmt(&buf, " -DARDUINO_ARCH_AVR -DARDUINO_TEENSY2PP -Ivendor/teensy/cores/teensy -mmcu=at90usb1286%1", set_fcpu ? " -DF_CPU=16000000" : ""); } break;
+            case Model::TeensyLC: { Fmt(&buf, " -DARDUINO_TEENSYLC -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m0plus -mthumb"
+                                              " -fsingle-precision-constant -mno-unaligned-access -Wno-error=narrowing -D__MKL26Z64__%1", set_fcpu ? " -DF_CPU=48000000" : ""); } break;
+            case Model::Teensy30: { Fmt(&buf, " -DARDUINO_TEENSY30 -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -mthumb"
+                                              " -fsingle-precision-constant -mno-unaligned-access -Wno-error=narrowing -D__MK20DX128__%1", set_fcpu ? " -DF_CPU=96000000" : ""); } break;
+            case Model::Teensy31: { Fmt(&buf, " -DARDUINO_TEENSY31 -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -mthumb"
+                                              " -fsingle-precision-constant -mno-unaligned-access -Wno-error=narrowing -D__MK20DX256__%1", set_fcpu ? " -DF_CPU=96000000" : ""); } break;
+            case Model::Teensy35: { Fmt(&buf, " -DARDUINO_TEENSY35 -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -mthumb -mfloat-abi=hard"
+                                              " -mfpu=fpv4-sp-d16 -fsingle-precision-constant -mno-unaligned-access -Wno-error=narrowing -D__MK64FX512__%1", set_fcpu ? " -DF_CPU=120000000" : ""); } break;
+            case Model::Teensy36: { Fmt(&buf, " -DARDUINO_TEENSY36 -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -mthumb -mfloat-abi=hard"
+                                              " -mfpu=fpv4-sp-d16 -fsingle-precision-constant -mno-unaligned-access -Wno-error=narrowing -D__MK66FX1M0__%1", set_fcpu ? " -DF_CPU=180000000" : ""); } break;
+            case Model::Teensy40: { Fmt(&buf, " -DARDUINO_TEENSY40 -Ivendor/teensy/cores/teensy4 -mcpu=cortex-m7 -mthumb -mfloat-abi=hard"
+                                              " -mfpu=fpv5-d16 -mno-unaligned-access -D__IMXRT1062__%1", set_fcpu ? " -DF_CPU=600000000" : ""); } break;
+            case Model::Teensy41: { Fmt(&buf, " -DARDUINO_TEENSY41 -Ivendor/teensy/cores/teensy4 -mcpu=cortex-m7 -mthumb -mfloat-abi=hard"
+                                              " -mfpu=fpv5-d16 -mno-unaligned-access -D__IMXRT1062__%1", set_fcpu ? " -DF_CPU=600000000" : ""); } break;
         }
         if (src_type == SourceType::CXX) {
             Fmt(&buf, " -felide-constructors -fno-exceptions -fno-rtti");
@@ -1334,15 +1350,17 @@ public:
         }
 
         // Platform flags and libraries
-        Fmt(&buf, " -mthumb -Wl,--gc-sections,--defsym=__rtc_localtime=0 --specs=nano.specs");
+        Fmt(&buf, " -Wl,--gc-sections,--defsym=__rtc_localtime=0 --specs=nano.specs");
         switch (model) {
-            case Model::TeensyLC: { Fmt(&buf, " -mcpu=cortex-m0plus -larm_cortexM0l_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mkl26z64.ld"); } break;
-            case Model::Teensy30: { Fmt(&buf, " -mcpu=cortex-m4 -larm_cortexM4l_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk20dx128.ld"); } break;
-            case Model::Teensy31: { Fmt(&buf, " -mcpu=cortex-m4 -larm_cortexM4l_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk20dx256.ld"); } break;
-            case Model::Teensy35: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -larm_cortexM4lf_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk64fx512.ld"); } break;
-            case Model::Teensy36: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -larm_cortexM4lf_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk66fx1m0.ld"); } break;
-            case Model::Teensy40: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv5-d16 -larm_cortexM7lfsp_math -Tvendor/teensy/cores/teensy4/imxrt1062.ld"); } break;
-            case Model::Teensy41: { Fmt(&buf, " -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv5-d16 -larm_cortexM7lfsp_math -Tvendor/teensy/cores/teensy4/imxrt1062_t41.ld"); } break;
+            case Model::Teensy20: { Fmt(&buf, " -mmcu=atmega32u4"); } break;
+            case Model::Teensy20pp: { Fmt(&buf, " -mmcu=at90usb1286"); } break;
+            case Model::TeensyLC: { Fmt(&buf, " -mcpu=cortex-m0plus -mthumb -larm_cortexM0l_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mkl26z64.ld"); } break;
+            case Model::Teensy30: { Fmt(&buf, " -mcpu=cortex-m4 -mthumb -larm_cortexM4l_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk20dx128.ld"); } break;
+            case Model::Teensy31: { Fmt(&buf, " -mcpu=cortex-m4 -mthumb -larm_cortexM4l_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk20dx256.ld"); } break;
+            case Model::Teensy35: { Fmt(&buf, " -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -larm_cortexM4lf_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk64fx512.ld"); } break;
+            case Model::Teensy36: { Fmt(&buf, " -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -larm_cortexM4lf_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk66fx1m0.ld"); } break;
+            case Model::Teensy40: { Fmt(&buf, " -mcpu=cortex-m7 -mthumb -mfloat-abi=hard -mfpu=fpv5-d16 -larm_cortexM7lfsp_math -Tvendor/teensy/cores/teensy4/imxrt1062.ld"); } break;
+            case Model::Teensy41: { Fmt(&buf, " -mcpu=cortex-m7 -mthumb -mfloat-abi=hard -mfpu=fpv5-d16 -larm_cortexM7lfsp_math -Tvendor/teensy/cores/teensy4/imxrt1062_t41.ld"); } break;
         }
         Fmt(&buf, " -lm -lstdc++");
 
@@ -1377,6 +1395,61 @@ static bool TestHostFamily(HostPlatform host, const char *name)
 
     bool match = family->hosts & (1u << (int)host);
     return match;
+}
+
+static void FindArduinoCompiler(const char *name, const char *compiler, Span<char> out_cc)
+{
+#ifdef _WIN32
+    wchar_t buf[2048];
+    DWORD buf_len = RG_LEN(buf);
+
+    bool arduino = !RegGetValueW(HKEY_LOCAL_MACHINE, L"Software\\Arduino", L"Install_Dir",
+                                 RRF_RT_REG_SZ, nullptr, buf, &buf_len) ||
+                   !RegGetValueW(HKEY_LOCAL_MACHINE, L"Software\\WOW6432Node\\Arduino", L"Install_Dir",
+                                 RRF_RT_REG_SZ, nullptr, buf, &buf_len) ||
+                   !RegGetValueW(HKEY_CURRENT_USER, L"Software\\Arduino", L"Install_Dir",
+                                 RRF_RT_REG_SZ, nullptr, buf, &buf_len) ||
+                   !RegGetValueW(HKEY_CURRENT_USER, L"Software\\WOW6432Node\\Arduino", L"Install_Dir",
+                                 RRF_RT_REG_SZ, nullptr, buf, &buf_len);
+    if (!arduino)
+        return;
+
+    Size pos = ConvertWin32WideToUtf8(buf, out_cc);
+    if (pos < 0)
+        return;
+
+    Span<char> remain = out_cc.Take(pos, out_cc.len - pos);
+    Fmt(remain, "%/%1.exe", compiler);
+    for (Size i = 0; remain.ptr[i]; i++) {
+        char c = remain.ptr[i];
+        remain.ptr[i] = (c == '/') ? '\\' : c;
+    }
+
+    if (TestFile(out_cc.ptr, FileType::File)) {
+        LogDebug("Found %1 compiler for Teensy: '%2'", name, out_cc.ptr);
+    } else {
+        out_cc[0] = 0;
+    }
+#else
+    static const char *const test_paths[] = {
+        "/usr/share/arduino",
+        "/usr/local/share/arduino",
+#ifdef __APPLE__
+        "/Applications/Arduino.app/Contents/Java"
+#endif
+    };
+
+    for (const char *path: test_paths) {
+        Fmt(out_cc, "%1%/%2", path, compiler);
+
+        if (TestFile(out_cc.ptr, FileType::File)) {
+            LogDebug("Found %1 compiler for Teensy: '%2'", name, out_cc.ptr);
+            return;
+        }
+    }
+
+    out_cc[0] = 0;
+#endif
 }
 
 std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
@@ -1434,67 +1507,19 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
 
         LogError("Cannot find driver for compiler '%1'", spec.cc);
         return nullptr;
-    } else if (TestHostFamily(spec.host, "Teensy")) {
+    } else if (TestHostFamily(spec.host, "Teensy/AVR")) {
         if (!spec.cc) {
             static std::once_flag flag;
             static char cc[2048];
 
-#ifdef _WIN32
-            std::call_once(flag, [&]() {
-                wchar_t buf[2048];
-                DWORD buf_len = RG_LEN(buf);
+            std::call_once(flag, []() { FindArduinoCompiler("GCC AVR", "hardware/tools/avr/bin/avr-gcc", cc); });
 
-                bool arduino = !RegGetValueW(HKEY_LOCAL_MACHINE, L"Software\\Arduino", L"Install_Dir",
-                                             RRF_RT_REG_SZ, nullptr, buf, &buf_len) ||
-                               !RegGetValueW(HKEY_LOCAL_MACHINE, L"Software\\WOW6432Node\\Arduino", L"Install_Dir",
-                                             RRF_RT_REG_SZ, nullptr, buf, &buf_len) ||
-                               !RegGetValueW(HKEY_CURRENT_USER, L"Software\\Arduino", L"Install_Dir",
-                                             RRF_RT_REG_SZ, nullptr, buf, &buf_len) ||
-                               !RegGetValueW(HKEY_CURRENT_USER, L"Software\\WOW6432Node\\Arduino", L"Install_Dir",
-                                             RRF_RT_REG_SZ, nullptr, buf, &buf_len);
-                if (!arduino)
-                    return;
-
-                Size pos = ConvertWin32WideToUtf8(buf, cc);
-                if (pos < 0)
-                    return;
-
-                Span<char> remain = MakeSpan(cc + pos, RG_SIZE(cc) - pos);
-                Fmt(remain, "%/hardware%/tools%/arm%/bin%/arm-none-eabi-gcc.exe");
-
-                if (TestFile(cc, FileType::File)) {
-                    LogDebug("Found GCC ARM compiler for Teensy: '%1'", cc);
-                } else {
-                    cc[0] = 0;
-                }
-            });
-#else
-            std::call_once(flag, [&]() {
-                static const char *const test_filenames[] = {
-                    "/usr/share/arduino/hardware/tools/arm/bin/arm-none-eabi-gcc",
-                    "/usr/local/share/arduino/hardware/tools/arm/bin/arm-none-eabi-gcc",
-#ifdef __APPLE__
-                    "/Applications/Arduino.app/Contents/Java/hardware/tools/arm/bin/arm-none-eabi-gcc"
-#endif
-                };
-
-                for (const char *filename: test_filenames) {
-                    if (TestFile(filename, FileType::File)) {
-                        bool success = CopyString(filename, cc);
-                        RG_ASSERT(success);
-
-                        break;
-                    }
-                }
-            });
-#endif
-
-            if (cc[0]) {
-                spec.cc = cc;
-            } else {
+            if (!cc[0]) {
                 LogError("Path to Teensy compiler must be explicitly specified");
                 return nullptr;
             }
+
+            spec.cc = cc;
         }
 
         if (spec.ld) {
@@ -1502,7 +1527,28 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
             return nullptr;
         }
 
-        return TeensyCompiler::Create(spec.host, spec.cc);
+        return TeensyCompiler::Create(spec.host, "GCC_AVR", spec.cc);
+    } else if (TestHostFamily(spec.host, "Teensy/ARM")) {
+        if (!spec.cc) {
+            static std::once_flag flag;
+            static char cc[2048];
+
+            std::call_once(flag, []() { FindArduinoCompiler("GCC ARM", "hardware/tools/arm/bin/arm-none-eabi-gcc", cc); });
+
+            if (!cc[0]) {
+                LogError("Path to Teensy compiler must be explicitly specified");
+                return nullptr;
+            }
+
+            spec.cc = cc;
+        }
+
+        if (spec.ld) {
+            LogError("Cannot use custom linker for host '%1'", HostPlatformNames[(int)spec.host]);
+            return nullptr;
+        }
+
+        return TeensyCompiler::Create(spec.host, "GCC_ARM", spec.cc);
     } else {
         LogError("Cross-compilation from host '%1' to '%2' is not supported",
                  HostPlatformNames[(int)spec.host], HostPlatformNames[(int)NativeHost]);
@@ -1541,7 +1587,9 @@ static const SupportedCompiler CompilerTable[] = {
     {"Clang", "clang"},
     {"GCC", "gcc"},
 #endif
-    {"Teensy (GCC ARM)", nullptr}
+
+    {"Teensy (GCC AVR)"},
+    {"Teensy (GCC ARM)"}
 };
 const Span<const SupportedCompiler> SupportedCompilers = CompilerTable;
 
