@@ -1147,11 +1147,14 @@ public:
 
     bool GetCoreSources(Allocator *alloc, HeapArray<const char *> *out_filenames) const override
     {
-        const char *dirname = ((int)model > (int)Model::Teensy40) ? "vendor/teensy/cores/teensy4"
-                                                                  : "vendor/teensy/cores/teensy3";
+        const char *dirname = ((int)model >= (int)Model::Teensy40) ? "vendor/teensy/cores/teensy4"
+                                                                   : "vendor/teensy/cores/teensy3";
 
         EnumStatus status = EnumerateDirectory(dirname, nullptr, 1024,
                                                [&](const char *basename, FileType) {
+            if (TestStr(basename, "Blink.cc"))
+                return true;
+
             if (DetermineSourceType(basename)) {
                 const char *src_filename = NormalizePath(basename, dirname, alloc).ptr;
                 out_filenames->Append(src_filename);
@@ -1232,21 +1235,21 @@ public:
 
         // Platform flags
         Fmt(&buf, " -ffunction-sections -fdata-sections -nostdlib -mno-unaligned-access");
-        Fmt(&buf, " -mthumb -DARDUINO=10805 -DTEENSYDUINO=144");
+        Fmt(&buf, " -mthumb -DARDUINO=10805 -DTEENSYDUINO=153");
         switch (model) {
-            case Model::TeensyLC: { Fmt(&buf, " -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m0plus"
+            case Model::TeensyLC: { Fmt(&buf, " -DARDUINO_TEENSYLC -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m0plus"
                                               " -fsingle-precision-constant -Wno-error=narrowing -D__MKL26Z64__%1", set_fcpu ? " -DF_CPU=48000000" : ""); } break;
-            case Model::Teensy30: { Fmt(&buf, " -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4"
+            case Model::Teensy30: { Fmt(&buf, " -DARDUINO_TEENSY30 -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4"
                                               " -fsingle-precision-constant -Wno-error=narrowing -D__MK20DX128__%1", set_fcpu ? " -DF_CPU=96000000" : ""); } break;
-            case Model::Teensy31: { Fmt(&buf, " -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4"
+            case Model::Teensy31: { Fmt(&buf, " -DARDUINO_TEENSY31 -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4"
                                               " -fsingle-precision-constant -Wno-error=narrowing -D__MK20DX256__%1", set_fcpu ? " -DF_CPU=96000000" : ""); } break;
-            case Model::Teensy35: { Fmt(&buf, " -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -mfloat-abi=hard"
+            case Model::Teensy35: { Fmt(&buf, " -DARDUINO_TEENSY35 -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -mfloat-abi=hard"
                                               " -mfpu=fpv4-sp-d16 -fsingle-precision-constant -Wno-error=narrowing -D__MK64FX512__%1", set_fcpu ? " -DF_CPU=120000000" : ""); } break;
-            case Model::Teensy36: { Fmt(&buf, " -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -mfloat-abi=hard"
+            case Model::Teensy36: { Fmt(&buf, " -DARDUINO_TEENSY36 -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -mfloat-abi=hard"
                                               " -mfpu=fpv4-sp-d16 -fsingle-precision-constant -Wno-error=narrowing -D__MK66FX1M0__%1", set_fcpu ? " -DF_CPU=180000000" : ""); } break;
-            case Model::Teensy40: { Fmt(&buf, " -Ivendor/teensy/cores/teensy4 -mcpu=cortex-m7 -mfloat-abi=hard"
+            case Model::Teensy40: { Fmt(&buf, " -DARDUINO_TEENSY40 -Ivendor/teensy/cores/teensy4 -mcpu=cortex-m7 -mfloat-abi=hard"
                                               " -mfpu=fpv5-d16 -D__IMXRT1062__%1", set_fcpu ? " -DF_CPU=600000000" : ""); } break;
-            case Model::Teensy41: { Fmt(&buf, " -Ivendor/teensy/cores/teensy4 -mcpu=cortex-m7 -mfloat-abi=hard"
+            case Model::Teensy41: { Fmt(&buf, " -DARDUINO_TEENSY41 -Ivendor/teensy/cores/teensy4 -mcpu=cortex-m7 -mfloat-abi=hard"
                                               " -mfpu=fpv5-d16 -D__IMXRT1062__%1", set_fcpu ? " -DF_CPU=600000000" : ""); } break;
         }
         if (src_type == SourceType::CXX) {
