@@ -176,16 +176,16 @@ struct SupportedCompiler {
     const char *cc;
 };
 
-struct CompilerInfo {
+struct PlatformSpecifier {
     HostPlatform host = NativeHost;
     const char *cc = nullptr;
     const char *ld = nullptr;
 };
 
-std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info);
+extern const Span<const SupportedCompiler> SupportedCompilers;
+
+std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec);
 
 bool DetermineSourceType(const char *filename, SourceType *out_type = nullptr);
-
-extern const Span<const SupportedCompiler> SupportedCompilers;
 
 }

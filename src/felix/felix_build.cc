@@ -33,7 +33,9 @@ namespace RG {
 struct BuildPreset {
     const char *name;
 
-    CompilerInfo compiler_info;
+    PlatformSpecifier platform_spec;
+    bool changed_spec;
+
     BuildSettings build;
 };
 
@@ -135,7 +137,7 @@ static const char *BuildGitVersionString(Allocator *alloc)
     return output.TrimAndLeak().ptr;
 }
 
-static bool ParseHostString(Span<const char> str, Allocator *alloc, CompilerInfo *out_compiler_info)
+static bool ParseHostString(Span<const char> str, Allocator *alloc, PlatformSpecifier *out_platform_spec)
 {
     Span<const char> host = SplitStr(str, ',', &str);
     Span<const char> cc = SplitStr(str, ',', &str);
@@ -143,16 +145,16 @@ static bool ParseHostString(Span<const char> str, Allocator *alloc, CompilerInfo
 
     if (host.len) {
         if (host == "Native") {
-            out_compiler_info->host = NativeHost;
-        } else if (!OptionToEnum(HostPlatformNames, host, &out_compiler_info->host)) {
+            out_platform_spec->host = NativeHost;
+        } else if (!OptionToEnum(HostPlatformNames, host, &out_platform_spec->host)) {
             LogError("Unknown host '%1'", host);
             return false;
         }
     } else {
-        out_compiler_info->host = NativeHost;
+        out_platform_spec->host = NativeHost;
     }
-    out_compiler_info->cc = cc.len ? NormalizePath(cc, alloc).ptr : nullptr;
-    out_compiler_info->ld = ld.len ? DuplicateString(ld, alloc).ptr : nullptr;
+    out_platform_spec->cc = cc.len ? NormalizePath(cc, alloc).ptr : nullptr;
+    out_platform_spec->ld = ld.len ? DuplicateString(ld, alloc).ptr : nullptr;
 
     return true;
 }
@@ -182,7 +184,7 @@ static bool ParseFeatureString(Span<const char> str, uint32_t *out_features)
 }
 
 static bool LoadPresetFile(const char *basename, Allocator *alloc,
-                           const char **out_preset_name, CompilerInfo *out_compiler_info,
+                           const char **out_preset_name, PlatformSpecifier *out_platform_spec,
                            int *out_jobs, HeapArray<BuildPreset> *out_presets)
 {
     // This function assumes the file is in the current working directory
@@ -204,10 +206,12 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
                 if (prop.key == "Preset") {
                     *out_preset_name = DuplicateString(prop.value, alloc).ptr;
                 } else if (prop.key == "Host") {
-                    valid &= ParseHostString(prop.value, alloc, out_compiler_info);
+                    valid &= ParseHostString(prop.value, alloc, out_platform_spec);
 
                     for (BuildPreset &preset: *out_presets) {
-                        preset.compiler_info.cc = out_compiler_info->cc;
+                        if (!preset.changed_spec) {
+                            preset.platform_spec = *out_platform_spec;
+                        }
                     }
                 } else if (prop.key == "Jobs") {
                     if (ParseInt(prop.value, out_jobs)) {
@@ -228,14 +232,15 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
                 if (preset == out_presets->end()) {
                     preset = out_presets->AppendDefault();
                     preset->name = DuplicateString(prop.section, alloc).ptr;
-                    preset->compiler_info = *out_compiler_info;
+                    preset->platform_spec = *out_platform_spec;
                 }
 
                 do {
                     if (prop.key == "Directory") {
                         preset->build.output_directory = NormalizePath(prop.value, GetWorkingDirectory(), alloc).ptr;
                     } else if (prop.key == "Host") {
-                        valid &= ParseHostString(prop.value, alloc, &preset->compiler_info);
+                        valid &= ParseHostString(prop.value, alloc, &preset->platform_spec);
+                        preset->changed_spec = true;
                     } else if (prop.key == "Features") {
                         valid &= ParseFeatureString(prop.value.ptr, &preset->build.features);
                     } else {
@@ -261,7 +266,7 @@ int RunBuild(Span<const char *> arguments)
     const char *config_filename = nullptr;
     bool load_presets = true;
     const char *preset_name = nullptr;
-    CompilerInfo compiler_info = {};
+    PlatformSpecifier platform_spec = {};
     BuildSettings build = {};
     int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_WORKERS + 1);
     bool quiet = false;
@@ -408,11 +413,11 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         const char *default_preset = nullptr;
 
         if (TestFile(presets_filename) && !LoadPresetFile(presets_filename, &temp_alloc,
-                                                          &default_preset, &compiler_info,
+                                                          &default_preset, &platform_spec,
                                                           &jobs, &presets))
             return 1;
         if (TestFile(user_filename) && !LoadPresetFile(user_filename, &temp_alloc,
-                                                       &default_preset, &compiler_info,
+                                                       &default_preset, &platform_spec,
                                                        &jobs, &presets))
             return 1;
 
@@ -441,7 +446,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
 
         if (preset) {
             preset_name = preset->name;
-            compiler_info = preset->compiler_info;
+            platform_spec = preset->platform_spec;
             build = preset->build;
         }
     }
@@ -467,7 +472,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 build.output_directory = opt.current_value;
             } else if (opt.Test("-h", "--host", OptionType::Value)) {
-                if (!ParseHostString(opt.current_value, &temp_alloc, &compiler_info))
+                if (!ParseHostString(opt.current_value, &temp_alloc, &platform_spec))
                     return 1;
             } else if (opt.Test("-f", "--features", OptionType::Value)) {
                 if (!ParseFeatureString(opt.current_value, &build.features))
@@ -519,7 +524,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     }
 
     // Initialize and check compiler
-    std::unique_ptr<const Compiler> compiler = PrepareCompiler(compiler_info);
+    std::unique_ptr<const Compiler> compiler = PrepareCompiler(platform_spec);
     if (!compiler)
         return 1;
     if (!compiler->CheckFeatures(build.features))
@@ -536,7 +541,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
 
     // Load configuration file
     TargetSet target_set;
-    if (!LoadTargetSet(config_filename, compiler_info.host, &target_set))
+    if (!LoadTargetSet(config_filename, platform_spec.host, &target_set))
         return 1;
     if (!target_set.targets.len) {
         LogError("Configuration file does not contain any target");
@@ -555,9 +560,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             for (const TargetInfo &target: target_set.targets) {
                 if (MatchPathSpec(target.name, selector)) {
                     if (handled_set.TrySet(target.name).second) {
-                        if (!target.TestHosts(compiler_info.host)) {
+                        if (!target.TestHosts(platform_spec.host)) {
                             LogError("Cannot build '%1' for host '%2'",
-                                     target.name, HostPlatformNames[(int)compiler_info.host]);
+                                     target.name, HostPlatformNames[(int)platform_spec.host]);
                             valid = false;
                         }
 
@@ -570,9 +575,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             for (const SourceFileInfo &src: target_set.sources) {
                 if (MatchPathSpec(src.filename, selector)) {
                     if (handled_set.TrySet(src.filename).second) {
-                        if (!src.target->TestHosts(compiler_info.host)) {
+                        if (!src.target->TestHosts(platform_spec.host)) {
                             LogError("Cannot build '%1' for host '%2'",
-                                     src.target->name, HostPlatformNames[(int)compiler_info.host]);
+                                     src.target->name, HostPlatformNames[(int)platform_spec.host]);
                             valid = false;
                         }
 
@@ -593,7 +598,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             return 1;
     } else {
         for (const TargetInfo &target: target_set.targets) {
-            if (target.enable_by_default && target.TestHosts(compiler_info.host)) {
+            if (target.enable_by_default && target.TestHosts(platform_spec.host)) {
                 enabled_targets.Append(&target);
             }
         }
@@ -632,7 +637,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     // We're ready to output stuff
     LogInfo("Root directory: %!..+%1%!0", GetWorkingDirectory());
     LogInfo("  Output directory: %!..+%1%!0", build.output_directory);
-    LogInfo("  Host: %!..+%1%!0", HostPlatformNames[(int)compiler_info.host]);
+    LogInfo("  Host: %!..+%1%!0", HostPlatformNames[(int)platform_spec.host]);
     LogInfo("  Compiler: %!..+%1%!0", build.compiler->name);
     LogInfo("  Features: %!..+%1%!0", FmtFlags(build.features, CompileFeatureOptions));
     LogInfo("  Version: %!..+%1%!0", build.version_str);

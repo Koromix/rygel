@@ -1379,63 +1379,63 @@ static bool TestHostFamily(HostPlatform host, const char *name)
     return match;
 }
 
-std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info)
+std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
 {
-    if (info.host == NativeHost) {
-        if (!info.cc) {
+    if (spec.host == NativeHost) {
+        if (!spec.cc) {
             for (const SupportedCompiler &supported: SupportedCompilers) {
                 if (supported.cc && FindExecutableInPath(supported.cc)) {
-                    info.cc = supported.cc;
+                    spec.cc = supported.cc;
                     break;
                 }
             }
 
-            if (!info.cc) {
+            if (!spec.cc) {
                 LogError("Could not find any supported compiler in PATH");
                 return nullptr;
             }
-        } else if (!FindExecutableInPath(info.cc)) {
-            LogError("Cannot find compiler '%1' in PATH", info.cc);
+        } else if (!FindExecutableInPath(spec.cc)) {
+            LogError("Cannot find compiler '%1' in PATH", spec.cc);
             return nullptr;
         }
 
-        if (info.ld) {
-            if (TestStr(info.ld, "bfd") || TestStr(info.ld, "ld")) {
+        if (spec.ld) {
+            if (TestStr(spec.ld, "bfd") || TestStr(spec.ld, "ld")) {
                 if (!FindExecutableInPath("ld")) {
                     LogError("Cannot find linker 'ld' in PATH");
                     return nullptr;
                 }
 
-                info.ld = "bfd";
-            } else if (!FindExecutableInPath(info.ld)) {
-                LogError("Cannot find linker '%1' in PATH", info.ld);
+                spec.ld = "bfd";
+            } else if (!FindExecutableInPath(spec.ld)) {
+                LogError("Cannot find linker '%1' in PATH", spec.ld);
                 return nullptr;
             }
         }
 
         // Find appropriate driver
         {
-            Span<const char> remain = SplitStrReverseAny(info.cc, RG_PATH_SEPARATORS).ptr;
+            Span<const char> remain = SplitStrReverseAny(spec.cc, RG_PATH_SEPARATORS).ptr;
 
             while (remain.len) {
                 Span<const char> part = SplitStr(remain, '-', &remain);
 
                 if (part == "clang") {
-                    return ClangCompiler::Create(info.cc, info.ld);
+                    return ClangCompiler::Create(spec.cc, spec.ld);
                 } else if (part == "gcc") {
-                    return GnuCompiler::Create(info.cc, info.ld);
+                    return GnuCompiler::Create(spec.cc, spec.ld);
 #ifdef _WIN32
                 } else if (part == "cl") {
-                    return MsCompiler::Create(info.cc, info.ld);
+                    return MsCompiler::Create(spec.cc, spec.ld);
 #endif
                 }
             }
         }
 
-        LogError("Cannot find driver for compiler '%1'", info.cc);
+        LogError("Cannot find driver for compiler '%1'", spec.cc);
         return nullptr;
-    } else if (TestHostFamily(info.host, "Teensy")) {
-        if (!info.cc) {
+    } else if (TestHostFamily(spec.host, "Teensy")) {
+        if (!spec.cc) {
             static std::once_flag flag;
             static char cc[2048];
 
@@ -1490,22 +1490,22 @@ std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info)
 #endif
 
             if (cc[0]) {
-                info.cc = cc;
+                spec.cc = cc;
             } else {
                 LogError("Path to Teensy compiler must be explicitly specified");
                 return nullptr;
             }
         }
 
-        if (info.ld) {
-            LogError("Cannot use custom linker for host '%1'", HostPlatformNames[(int)info.host]);
+        if (spec.ld) {
+            LogError("Cannot use custom linker for host '%1'", HostPlatformNames[(int)spec.host]);
             return nullptr;
         }
 
-        return TeensyCompiler::Create(info.host, info.cc);
+        return TeensyCompiler::Create(spec.host, spec.cc);
     } else {
         LogError("Cross-compilation from host '%1' to '%2' is not supported",
-                 HostPlatformNames[(int)info.host], HostPlatformNames[(int)NativeHost]);
+                 HostPlatformNames[(int)spec.host], HostPlatformNames[(int)NativeHost]);
         return nullptr;
     }
 }
