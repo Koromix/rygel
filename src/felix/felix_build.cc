@@ -304,10 +304,19 @@ Options:
                                  %!D..(all remaining arguments are passed as-is)%!0
         %!..+--run_here <target>%!0      Same thing, but run from current directory
 
-Supported hosts:)", FelixTarget, jobs);
+Supported host families:)", FelixTarget, jobs);
 
-        for (const char *host: HostPlatformNames) {
-            PrintLn(fp, "    %!..+%1%!0", host);
+        for (const HostFamily &family: HostFamilies) {
+            Print(fp, "    %!..+%1%!0", FmtArg(family.name).Pad(28));
+
+            bool comma = false;
+            for (int i = 0; i < RG_LEN(HostPlatformNames); i++) {
+                if (family.hosts & (1u << i)) {
+                    Print(fp, "%1%2", comma ? ", " : "", HostPlatformNames[i]);
+                    comma = true;
+                }
+            }
+            PrintLn(fp);
         }
 
         PrintLn(fp, R"(
