@@ -1789,19 +1789,21 @@ Size ConvertUtf8ToWin32Wide(Span<const char> str, Span<wchar_t> out_str_w)
     return (Size)len;
 }
 
-static Size ConvertWin32WideToUtf8(LPCWSTR str_w, Span<char> out_str)
+Size ConvertWin32WideToUtf8(LPCWSTR str_w, Span<char> out_str)
 {
     RG_ASSERT(out_str.len >= 1);
 
-    int len = WideCharToMultiByte(CP_UTF8, 0, str_w, -1, out_str.ptr, (int)out_str.len, nullptr, nullptr);
+    int len = WideCharToMultiByte(CP_UTF8, 0, str_w, -1, out_str.ptr, (int)out_str.len - 1, nullptr, nullptr);
     if (!len) {
-        // This function is mainly used for strings returned by Win32, errors should
-        // be rare so there is no need for fancy messages.
-        LogError("WideCharToMultiByte() failed: %1", GetWin32ErrorString());
+        switch (GetLastError()) {
+            case ERROR_INSUFFICIENT_BUFFER: { LogError("String '<UTF-16 ?>' is too large"); } break;
+            case ERROR_NO_UNICODE_TRANSLATION: { LogError("String '<UTF-16 ?>' is not valid UTF-8"); } break;
+            default: { LogError("WideCharToMultiByte() failed: %1", GetWin32ErrorString()); } break;
+        }
         return -1;
     }
 
-    return (Size)len;
+    return (Size)len - 1;
 }
 
 char *GetWin32ErrorString(uint32_t error_code)

@@ -13,6 +13,15 @@
 
 #include "../core/libcc/libcc.hh"
 #include "compiler.hh"
+#ifdef _WIN32
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+    #include <windows.h>
+#endif
 
 namespace RG {
 
@@ -1391,9 +1400,51 @@ std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info)
         return nullptr;
     } else if (TestHostFamily(info.host, "Teensy")) {
         if (!info.cc) {
+#ifdef _WIN32
+            static std::once_flag flag;
+            static char cc[2048];
+
+            std::call_once(flag, [&]() {
+                wchar_t buf[2048];
+                DWORD buf_len = RG_LEN(buf);
+
+                bool arduino = !RegGetValueW(HKEY_LOCAL_MACHINE, L"Software\\Arduino", L"Install_Dir",
+                                             RRF_RT_REG_SZ, nullptr, buf, &buf_len) ||
+                               !RegGetValueW(HKEY_LOCAL_MACHINE, L"Software\\WOW6432Node\\Arduino", L"Install_Dir",
+                                             RRF_RT_REG_SZ, nullptr, buf, &buf_len) ||
+                               !RegGetValueW(HKEY_CURRENT_USER, L"Software\\Arduino", L"Install_Dir",
+                                             RRF_RT_REG_SZ, nullptr, buf, &buf_len) ||
+                               !RegGetValueW(HKEY_CURRENT_USER, L"Software\\WOW6432Node\\Arduino", L"Install_Dir",
+                                             RRF_RT_REG_SZ, nullptr, buf, &buf_len);
+                if (!arduino)
+                    return;
+
+                Size pos = ConvertWin32WideToUtf8(buf, cc);
+                if (pos < 0)
+                    return;
+
+                Span<char> remain = MakeSpan(cc + pos, RG_SIZE(cc) - pos);
+                Fmt(remain, "%/hardware%/tools%/arm%/bin%/arm-none-eabi-gcc.exe");
+
+                if (TestFile(cc, FileType::File)) {
+                    LogDebug("Found GCC ARM compiler for Teensy: '%1'", cc);
+                } else {
+                    cc[0] = 0;
+                }
+            });
+
+            if (cc[0]) {
+                info.cc = cc;
+            } else {
+                LogError("Path to Teensy compiler must be explicitely specified");
+                return nullptr;
+            }
+#else
             LogError("Path to Teensy compiler must be explicitely specified");
             return nullptr;
+#endif
         }
+
         if (info.ld) {
             LogError("Cannot use custom linker for host '%1'", HostPlatformNames[(int)info.host]);
             return nullptr;

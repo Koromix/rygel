@@ -14,7 +14,7 @@ if NOT ERRORLEVEL 1 (
         echo Bootstrapping felix with MSVC...
         mkdir %BUILD%
         cl /nologo /std:c++latest /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /DLIBCC_NO_BROTLI /c %SRC% /Fo%BUILD%\
-        link /nologo %BUILD%\*.obj ws2_32.lib /out:%BUILD%\felix.exe
+        link /nologo %BUILD%\*.obj ws2_32.lib advapi32.lib /out:%BUILD%\felix.exe
         %BUILD%\felix.exe --no_presets --features=Optimize,StaticLink -O %BUILD%\Fast felix
         move %BUILD%\Fast\felix.exe %BIN%
 
@@ -32,7 +32,7 @@ if NOT ERRORLEVEL 1 (
         echo Bootstrapping felix with Clang...
         mkdir %BUILD%
         cl /nologo /std:c++latest /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /DLIBCC_NO_BROTLI /c %SRC% /Fo%BUILD%\
-        link /nologo %BUILD%\*.obj ws2_32.lib /out:%BUILD%\felix.exe
+        link /nologo %BUILD%\*.obj ws2_32.lib advapi32.lib /out:%BUILD%\felix.exe
         %BUILD%\felix.exe --no_presets --features=Optimize,StaticLink -O %BUILD%\Fast felix
         move %BUILD%\Fast\felix.exe %BIN%
 
@@ -50,7 +50,7 @@ where /q g++
 if NOT ERRORLEVEL 1 (
     echo Bootstrapping felix with GCC...
     mkdir %BUILD%
-    g++ -std=gnu++2a -O0 -DNDEBUG -DNOMINMAX  -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE -DLIBCC_NO_BROTLI %SRC% -lws2_32 -w -o%BUILD%\felix.exe
+    g++ -std=gnu++2a -O0 -DNDEBUG -DNOMINMAX  -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE -DLIBCC_NO_BROTLI %SRC% -lws2_32 -ladvapi32 -w -o%BUILD%\felix.exe
     %BUILD%\felix.exe --no_presets --features=Optimize,StaticLink -O %BUILD%\Fast felix
     move %BUILD%\Fast\felix.exe %BIN%
 
