@@ -129,17 +129,24 @@ static bool ParseSupportedHosts(Span<const char> str, unsigned int *out_hosts)
         Span<const char> part = SplitStrAny(str, ", ", &str);
 
         if (part.len) {
-            const HostFamily *family = std::find_if(std::begin(HostFamilies), std::end(HostFamilies),
-                                                    [&](const HostFamily &family) { return TestStr(family.name, part); });
+            bool found_family = false;
+            for (const HostFamily &family: HostFamilies) {
+                Span<const char> prefix = SplitStr(family.name, '/');
 
-            if (family != std::end(HostFamilies)) {
-                hosts |= family->hosts;
-            } else if (part == "Win32") {
-                // Old name, supported for compatibility (easier bisect)
-                hosts |= 1 << (int)HostPlatform::Windows;
-            } else if (!OptionToFlag(HostPlatformNames, part, &hosts)) {
-                LogError("Unknown host '%1'", part);
-                return false;
+                if (TestStr(family.name, part) || TestStr(prefix, part)) {
+                    hosts |= family.hosts;
+                    found_family = true;
+                }
+            }
+
+            if (!found_family) {
+                if (part == "Win32") {
+                    // Old name, supported for compatibility (easier bisect)
+                    hosts |= 1 << (int)HostPlatform::Windows;
+                } else if (!OptionToFlag(HostPlatformNames, part, &hosts)) {
+                    LogError("Unknown host '%1'", part);
+                    return false;
+                }
             }
         }
     }
