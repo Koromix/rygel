@@ -1411,14 +1411,15 @@ static const SupportedCompiler CompilerTable[] = {
 #if defined(_WIN32)
     {"MSVC", "cl"},
     {"Clang", "clang"},
-    {"GCC", "gcc"}
+    {"GCC", "gcc"},
 #elif defined(__linux__)
     {"GCC", "gcc"},
-    {"Clang", "clang"}
+    {"Clang", "clang"},
 #else
     {"Clang", "clang"},
-    {"GCC", "gcc"}
+    {"GCC", "gcc"},
 #endif
+    {"Teensy (GCC ARM)", nullptr}
 };
 const Span<const SupportedCompiler> SupportedCompilers = CompilerTable;
 
