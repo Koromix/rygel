@@ -1400,10 +1400,10 @@ std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info)
         return nullptr;
     } else if (TestHostFamily(info.host, "Teensy")) {
         if (!info.cc) {
-#ifdef _WIN32
             static std::once_flag flag;
             static char cc[2048];
 
+#ifdef _WIN32
             std::call_once(flag, [&]() {
                 wchar_t buf[2048];
                 DWORD buf_len = RG_LEN(buf);
@@ -1432,6 +1432,26 @@ std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info)
                     cc[0] = 0;
                 }
             });
+#else
+            std::call_once(flag, [&]() {
+                static const char *const test_filenames[] = {
+                    "/usr/share/arduino/hardware/tools/arm/bin/arm-none-eabi-gcc",
+                    "/usr/local/share/arduino/hardware/tools/arm/bin/arm-none-eabi-gcc",
+#ifdef __APPLE__
+                    "/Applications/Arduino.app/Contents/Java/hardware/tools/arm/bin/arm-none-eabi-gcc"
+#endif
+                };
+
+                for (const char *filename: test_filenames) {
+                    if (TestFile(filename, FileType::File)) {
+                        bool success = CopyString(filename, cc);
+                        RG_ASSERT(success);
+
+                        break;
+                    }
+                }
+            });
+#endif
 
             if (cc[0]) {
                 info.cc = cc;
@@ -1439,10 +1459,6 @@ std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info)
                 LogError("Path to Teensy compiler must be explicitly specified");
                 return nullptr;
             }
-#else
-            LogError("Path to Teensy compiler must be explicitly specified");
-            return nullptr;
-#endif
         }
 
         if (info.ld) {
