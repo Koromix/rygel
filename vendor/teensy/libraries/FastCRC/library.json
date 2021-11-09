@@ -1,7 +1,11 @@
 {
   "name": "FastCRC",
   "keywords": "CRC7, CRC8, CRC16, CRC32",
-  "description": "Fast CRC routines for Arduino (Teensy 3.x: CRC in hardware)",
+  "description": "Fast CRC routines for Arduino and PC (Teensy 3.x: CRC in hardware)",
+  "exclude": [
+    "examples",
+    "examples_PC"
+  ],  
   "repository":
   {
     "type": "git",
@@ -16,7 +20,7 @@
       "maintainer": true
     }
   ],
-  "version": "1.31",
+  "version": "1.42",
   "frameworks": "arduino",
   "platforms": "*"
 }
