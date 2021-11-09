@@ -1436,11 +1436,11 @@ std::unique_ptr<const Compiler> PrepareCompiler(CompilerInfo info)
             if (cc[0]) {
                 info.cc = cc;
             } else {
-                LogError("Path to Teensy compiler must be explicitely specified");
+                LogError("Path to Teensy compiler must be explicitly specified");
                 return nullptr;
             }
 #else
-            LogError("Path to Teensy compiler must be explicitely specified");
+            LogError("Path to Teensy compiler must be explicitly specified");
             return nullptr;
 #endif
         }

@@ -1304,7 +1304,7 @@ void bk_Parser::ParseLet()
             }
         } else {
             if (RG_UNLIKELY(!type->init0)) {
-                 MarkError(var_pos, "Variable '%1' (defined as '%2') must be explicitely initialized",
+                 MarkError(var_pos, "Variable '%1' (defined as '%2') must be explicitly initialized",
                            var->name, type->signature);
             }
 
