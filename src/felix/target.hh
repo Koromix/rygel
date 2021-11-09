@@ -89,12 +89,14 @@ struct TargetSet {
 class TargetSetBuilder {
     RG_DELETE_COPY(TargetSetBuilder)
 
+    HostPlatform host;
+
     BlockAllocator temp_alloc;
 
     TargetSet set;
 
 public:
-    TargetSetBuilder() = default;
+    TargetSetBuilder(HostPlatform host) : host(host) {}
 
     bool LoadIni(StreamReader *st);
     bool LoadFiles(Span<const char *const> filenames);
@@ -104,8 +106,10 @@ public:
 private:
     const TargetInfo *CreateTarget(TargetConfig *target_config);
     const SourceFileInfo *CreateSource(const TargetInfo *target, const char *filename, SourceType type);
+
+    bool MatchHostSuffix(Span<const char> str, bool *out_match);
 };
 
-bool LoadTargetSet(Span<const char *const> filenames, TargetSet *out_set);
+bool LoadTargetSet(Span<const char *const> filenames, HostPlatform host, TargetSet *out_set);
 
 }

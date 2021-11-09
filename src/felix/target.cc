@@ -155,25 +155,6 @@ static bool ParseSupportedHosts(Span<const char> str, unsigned int *out_hosts)
     return true;
 }
 
-static bool MatchNativeHost(Span<const char> str, bool *out_match)
-{
-    unsigned int hosts;
-    if (!ParseSupportedHosts(str, &hosts))
-        return false;
-
-#if defined(_WIN32)
-    *out_match |= (bool)(hosts & (1 << (int)HostPlatform::Windows));
-#elif defined(__linux__)
-    *out_match |= (bool)(hosts & (1 << (int)HostPlatform::Linux));
-#elif defined(__APPLE__)
-    *out_match |= (bool)(hosts & (1 << (int)HostPlatform::macOS));
-#else
-    #error Unsupported platform
-#endif
-
-    return true;
-}
-
 static bool CheckTargetName(Span<const char> name)
 {
     const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_'; };
@@ -244,12 +225,12 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                 } else if (prop.key == "Hosts") {
                     valid &= ParseSupportedHosts(prop.value, &target_config.hosts);
                 } else {
-                    Span<const char> host;
-                    prop.key = SplitStr(prop.key, '_', &host);
+                    Span<const char> suffix;
+                    prop.key = SplitStr(prop.key, '_', &suffix);
 
-                    if (host.len) {
+                    if (suffix.len) {
                         bool use_property = false;
-                        valid &= MatchNativeHost(host, &use_property);
+                        valid &= MatchHostSuffix(suffix, &use_property);
 
                         if (!use_property)
                             continue;
@@ -543,9 +524,20 @@ void TargetSetBuilder::Finish(TargetSet *out_set)
     std::swap(*out_set, set);
 }
 
-bool LoadTargetSet(Span<const char *const> filenames, TargetSet *out_set)
+bool TargetSetBuilder::MatchHostSuffix(Span<const char> str, bool *out_match)
 {
-    TargetSetBuilder target_set_builder;
+    unsigned int hosts;
+
+    if (!ParseSupportedHosts(str, &hosts))
+        return false;
+
+    *out_match = (hosts & (1 << (int)host));
+    return true;
+}
+
+bool LoadTargetSet(Span<const char *const> filenames, HostPlatform host, TargetSet *out_set)
+{
+    TargetSetBuilder target_set_builder(host);
     if (!target_set_builder.LoadFiles(filenames))
         return false;
     target_set_builder.Finish(out_set);

@@ -527,7 +527,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
 
     // Load configuration file
     TargetSet target_set;
-    if (!LoadTargetSet(config_filename, &target_set))
+    if (!LoadTargetSet(config_filename, compiler_info.host, &target_set))
         return 1;
     if (!target_set.targets.len) {
         LogError("Configuration file does not contain any target");
