@@ -455,6 +455,9 @@ public:
         // Platform flags
 #if defined(_WIN32)
         Fmt(&buf, " --rtlib=compiler-rt -Wl,setargv.obj");
+        if (features & (int)CompileFeature::DebugInfo) {
+            Fmt(&buf, " -g");
+        }
 #elif defined(__APPLE__)
         Fmt(&buf, " -ldl -pthread -framework CoreFoundation -framework SystemConfiguration");
 #else
