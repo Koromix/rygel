@@ -178,6 +178,70 @@ function update() {
     }
     recv_first = null;
     recv_last = null;
+
+    // Actions
+    if (connected) {
+        button(canvas.width - 12, canvas.height - 12, "Reset position", { align: 3 }, btn => {
+            sendPacket('SetPosition', {
+                position: { x: 0.0, y: 0.0, z: 0.0 }
+            });
+        });
+    }
+}
+
+function sendPacket(type, obj) {
+    if (typeof type === 'string')
+        type = messages.findIndex(info => info.name === type);
+    let info = messages[type];
+
+    // Compute payload size
+    let payload = 0;
+    for (let key in info.members) {
+        let type = info.members[key];
+
+        switch (type) {
+            case 'double': { payload += 8; } break;
+            case 'Vec2': { payload += 16; } break;
+            case 'Vec3': { payload += 24; } break;
+        }
+    }
+
+    let data = new ArrayBuffer(8 + payload);
+    let view = new DataView(data);
+
+    // Encode payload
+    {
+        let offset = 8;
+
+        for (let key in info.members) {
+            let type = info.members[key];
+
+            switch (type) {
+                case 'double': {
+                    view.setFloat64(offset, obj[key], true);
+                    offset += 8;
+                } break;
+                case 'Vec2': {
+                    view.setFloat64(offset, obj[key].x, true);
+                    view.setFloat64(offset + 8, obj[key].y, true);
+                    offset += 16;
+                } break;
+                case 'Vec3': {
+                    view.setFloat64(offset, obj[key].x, true);
+                    view.setFloat64(offset + 8, obj[key].y, true);
+                    view.setFloat64(offset + 16, obj[key].z, true);
+                    offset += 24;
+                } break;
+            }
+        }
+    }
+
+    // Encode header
+    view.setUint16(4, type, true);
+    view.setUint16(6, payload, true);
+    view.setInt32(0, CRC32.buf(new Uint8Array(data, 4)), true);
+
+    ws.send(data);
 }
 
 function draw() {

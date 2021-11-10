@@ -15,6 +15,7 @@
 #include "../common/config.hh"
 #include "../common/protocol.hh"
 #include "drive.hh"
+#include "imu.hh"
 #include "serial.hh"
 #include <FastCRC.h>
 #include <SPI.h>

@@ -62,3 +62,9 @@ void ProcessIMU()
 
     PostMessage(MessageType::Imu, &imu);
 }
+
+void SetPosition(Vec3 pos)
+{
+    speed = {};
+    position = pos;
+}

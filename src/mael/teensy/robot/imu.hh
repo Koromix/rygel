@@ -19,3 +19,5 @@
 
 void InitIMU();
 void ProcessIMU();
+
+void SetPosition(Vec3 pos);

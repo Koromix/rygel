@@ -30,5 +30,9 @@ MESSAGE(Drive, {
     MEMBER(double, rotation)
 })
 
+MESSAGE(SetPosition, {
+    MEMBER(Vec3, position)
+})
+
 #undef MEMBER
 #undef MESSAGE
