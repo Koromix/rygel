@@ -3,8 +3,6 @@
 setlocal enableDelayedExpansion
 cd %~dp0
 
-cd $(dirname $0)
-
 echo ---------- Building RELAY ----------
 felix -pTeensyLC mael_relay
 echo ---------- Building ROBOT ----------
