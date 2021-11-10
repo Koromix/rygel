@@ -5587,7 +5587,8 @@ bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer)
 
 static bool CheckIniKey(Span<const char> key)
 {
-    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_' || c == '-' || c == '.'; };
+    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_' ||
+                                               c == '-' || c == '.' || c == '/'; };
 
     if (!key.len) {
         LogError("INI key cannot be empty");
