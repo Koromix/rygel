@@ -13,6 +13,7 @@
 
 #include "../common/util.hh"
 #include "../common/config.hh"
+#include "../common/protocol.hh"
 #include "drive.hh"
 #include "imu.hh"
 #include "serial.hh"

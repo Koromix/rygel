@@ -13,6 +13,7 @@
 
 #include "../common/util.hh"
 #include "../common/config.hh"
+#include "../common/protocol.hh"
 #include "drive.hh"
 
 // Drive speed
@@ -138,9 +139,9 @@ void ProcessDrive()
     WriteMotorSpeed(DC3_PIN_DIR, DC3_PIN_PWM, dc_speed[3]);
 }
 
-void SetDriveSpeed(double x, double y, double w)
+void SetDriveSpeed(Vec2 speed, double rotation)
 {
-    drv_x = x;
-    drv_y = y;
-    drv_w = fmodf(-w, 360.0) * PI / 180.0;
+    drv_x = speed.x;
+    drv_y = speed.y;
+    drv_w = fmodf(-rotation, 360.0) * PI / 180.0;
 }

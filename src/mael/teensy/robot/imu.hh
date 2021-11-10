@@ -15,6 +15,7 @@
 
 #include "../common/util.hh"
 #include "../common/config.hh"
+#include "../common/protocol.hh"
 
 void InitIMU();
 void ProcessIMU();

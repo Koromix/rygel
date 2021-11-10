@@ -15,8 +15,9 @@
 
 #include "../common/util.hh"
 #include "../common/config.hh"
+#include "../common/protocol.hh"
 
 void InitDrive();
 void ProcessDrive();
 
-void SetDriveSpeed(double x, double y, double w);
+void SetDriveSpeed(Vec2 speed, double rotation);

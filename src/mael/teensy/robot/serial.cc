@@ -13,6 +13,7 @@
 
 #include "../common/util.hh"
 #include "../common/config.hh"
+#include "../common/protocol.hh"
 #include "drive.hh"
 #include "serial.hh"
 #include <FastCRC.h>
@@ -61,7 +62,7 @@ static bool ExecuteCommand(MessageType type, const void *data)
     switch (type) {
         case MessageType::Drive: {
             const DriveParameters &args = *(const DriveParameters *)data;
-            SetDriveSpeed(args.speed.x, args.speed.y, args.rotation);
+            SetDriveSpeed(args.speed, args.rotation);
             return true;
         } break;
 
