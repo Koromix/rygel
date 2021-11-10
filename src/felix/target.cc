@@ -241,6 +241,16 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                     } else if (prop.key == "SourceDirectory") {
                         valid &= AppendNormalizedPath(prop.value,
                                                       &set.str_alloc, &target_config.src_file_set.directories);
+                    } else if (prop.key == "SourceDirectoryInc") {
+                        HeapArray<const char *> *directories = &target_config.src_file_set.directories;
+                        Size start_len = directories->len;
+
+                        if (AppendNormalizedPath(prop.value, &set.str_alloc, directories)) {
+                            Span<const char *> copy = directories->Take(start_len, directories->len - start_len);
+                            target_config.include_directories.Append(copy);
+                        } else {
+                            valid = false;
+                        }
                     } else if (prop.key == "SourceDirectoryRec") {
                         valid &= AppendNormalizedPath(prop.value,
                                                       &set.str_alloc, &target_config.src_file_set.directories_rec);
