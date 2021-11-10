@@ -75,58 +75,62 @@ static bool ExecuteCommand(MessageType type, const void *data)
 static void ReceivePacket()
 {
     while (rf24.available()) {
-        uint8_t c;
-        rf24.read(&c, 1);
+        uint8_t buf[RF24_PAYLOAD_SIZE];
+        rf24.read(buf, sizeof(buf));
 
-        if (!recv_started) {
-            recv_started = (c == 0xA);
-            recv_buf_len = 0;
-        } else if (c != 0xA) {
-            if (recv_buf_len >= sizeof(recv_buf)) {
-                recv_started = false;
-                continue;
-            }
+        for (size_t i = 0; i < buf[0]; i++) {
+            uint8_t c = buf[1 + i];
 
-            recv_buf[recv_buf_len++] = c;
-        } else {
-            recv_started = false;
-
-            size_t len = 0;
-            for (size_t i = 0; i < recv_buf_len; i++, len++) {
-                recv_buf[len] = recv_buf[i];
-
-                if (recv_buf[i] == 0xD) {
-                    if (i >= recv_buf_len - 1)
-                        goto malformed;
-
-                    recv_buf[len] = recv_buf[++i] ^ 0x8;
+            if (!recv_started) {
+                recv_started = (c == 0xA);
+                recv_buf_len = 0;
+            } else if (c != 0xA) {
+                if (recv_buf_len >= sizeof(recv_buf)) {
+                    recv_started = false;
+                    continue;
                 }
+
+                recv_buf[recv_buf_len++] = c;
+            } else {
+                recv_started = false;
+
+                size_t len = 0;
+                for (size_t i = 0; i < recv_buf_len; i++, len++) {
+                    recv_buf[len] = recv_buf[i];
+
+                    if (recv_buf[i] == 0xD) {
+                        if (i >= recv_buf_len - 1)
+                            goto malformed;
+
+                        recv_buf[len] = recv_buf[++i] ^ 0x8;
+                    }
+                }
+
+                // Fix start/end inversion
+                if (!len) {
+                    recv_started = true;
+                    goto malformed;
+                }
+
+                PacketHeader hdr;
+                if (len < sizeof(hdr))
+                    goto malformed;
+                memcpy(&hdr, recv_buf, sizeof(hdr));
+
+                if (hdr.payload != len - sizeof(hdr))
+                    goto malformed;
+                if (hdr.type > LEN(PacketSizes))
+                    goto malformed;
+                if (hdr.payload != PacketSizes[hdr.type])
+                    goto malformed;
+                if (hdr.crc32 != FastCRC32().crc32(recv_buf + 4, len - 4))
+                    goto malformed;
+
+                ExecuteCommand((MessageType)hdr.type, recv_buf + sizeof(hdr));
             }
 
-            // Fix start/end inversion
-            if (!len) {
-                recv_started = true;
-                goto malformed;
-            }
-
-            PacketHeader hdr;
-            if (len < sizeof(hdr))
-                goto malformed;
-            memcpy(&hdr, recv_buf, sizeof(hdr));
-
-            if (hdr.payload != len - sizeof(hdr))
-                goto malformed;
-            if (hdr.type > LEN(PacketSizes))
-                goto malformed;
-            if (hdr.payload != PacketSizes[hdr.type])
-                goto malformed;
-            if (hdr.crc32 != FastCRC32().crc32(recv_buf + 4, len - 4))
-                goto malformed;
-
-            ExecuteCommand((MessageType)hdr.type, recv_buf + sizeof(hdr));
+            continue;
         }
-
-        continue;
     }
 
     return;
@@ -176,7 +180,7 @@ static inline bool WriteByte(uint8_t c, bool escape)
 
         send_buf[send_buf_write] = 0xD;
         send_buf_write = (send_buf_write + 1) % sizeof(send_buf);
-        c ^= (uint8_t)0x8;
+        c ^= 0x8;
     }
 
     size_t next = (send_buf_write + 1) % sizeof(send_buf);
