@@ -146,9 +146,19 @@ static bool ParseHostString(Span<const char> str, Allocator *alloc, PlatformSpec
     if (host.len) {
         if (host == "Native") {
             out_platform_spec->host = NativeHost;
-        } else if (!OptionToEnum(HostPlatformNames, host, &out_platform_spec->host)) {
-            LogError("Unknown host '%1'", host);
-            return false;
+        } else {
+            unsigned int hosts = ParseSupportedHosts(host);
+
+            if (!hosts) {
+                LogError("Unknown host '%1'", host);
+                return false;
+            } else if (PopCount(hosts) > 1) {
+                LogError("Ambiguous host '%1' (multiple matches)", host);
+                return false;
+            } else {
+                int ctz = CountTrailingZeros(hosts);
+                out_platform_spec->host = (HostPlatform)ctz;
+            }
         }
     } else {
         out_platform_spec->host = NativeHost;
@@ -309,19 +319,10 @@ Options:
                                  %!D..(all remaining arguments are passed as-is)%!0
         %!..+--run_here <target>%!0      Same thing, but run from current directory
 
-Supported host families:)", FelixTarget, jobs);
+Supported hosts:)", FelixTarget, jobs);
 
-        for (const HostFamily &family: HostFamilies) {
-            Print(fp, "    %!..+%1%!0", FmtArg(family.name).Pad(28));
-
-            bool comma = false;
-            for (int i = 0; i < RG_LEN(HostPlatformNames); i++) {
-                if (family.hosts & (1u << i)) {
-                    Print(fp, "%1%2", comma ? ", " : "", HostPlatformNames[i]);
-                    comma = true;
-                }
-            }
-            PrintLn(fp);
+        for (const char *name: HostPlatformNames) {
+            PrintLn(fp, "    %!..+%1%!0", name);
         }
 
         PrintLn(fp, R"(

@@ -121,40 +121,6 @@ static bool ResolveFileSet(const FileSet &file_set,
     return true;
 }
 
-static bool ParseSupportedHosts(Span<const char> str, unsigned int *out_hosts)
-{
-    unsigned int hosts = 0;
-
-    while (str.len) {
-        Span<const char> part = SplitStrAny(str, ", ", &str);
-
-        if (part.len) {
-            bool found_family = false;
-            for (const HostFamily &family: HostFamilies) {
-                Span<const char> prefix = SplitStr(family.name, '/');
-
-                if (TestStr(family.name, part) || TestStr(prefix, part)) {
-                    hosts |= family.hosts;
-                    found_family = true;
-                }
-            }
-
-            if (!found_family) {
-                if (part == "Win32") {
-                    // Old name, supported for compatibility (easier bisect)
-                    hosts |= 1 << (int)HostPlatform::Windows;
-                } else if (!OptionToFlag(HostPlatformNames, part, &hosts)) {
-                    LogError("Unknown host '%1'", part);
-                    return false;
-                }
-            }
-        }
-    }
-
-    *out_hosts = hosts;
-    return true;
-}
-
 static bool CheckTargetName(Span<const char> name)
 {
     const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_'; };
@@ -197,7 +163,8 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                 valid = false;
             }
             target_config.type = TargetType::Executable;
-            ParseSupportedHosts("Desktop", &target_config.hosts);
+            target_config.hosts = ParseSupportedHosts("Desktop");
+            RG_ASSERT(target_config.hosts);
 
             // Type property must be specified first
             if (prop.key == "Type") {
@@ -223,7 +190,8 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                     LogError("Target type cannot be changed");
                     valid = false;
                 } else if (prop.key == "Hosts") {
-                    valid &= ParseSupportedHosts(prop.value, &target_config.hosts);
+                    target_config.hosts = ParseSupportedHosts(prop.value);
+                    valid &= !!target_config.hosts;
                 } else {
                     Span<const char> suffix;
                     prop.key = SplitStr(prop.key, '_', &suffix);
@@ -530,13 +498,46 @@ void TargetSetBuilder::Finish(TargetSet *out_set)
 
 bool TargetSetBuilder::MatchHostSuffix(Span<const char> str, bool *out_match)
 {
-    unsigned int hosts;
-
-    if (!ParseSupportedHosts(str, &hosts))
+    unsigned int hosts = ParseSupportedHosts(str);
+    if (!hosts)
         return false;
 
     *out_match = (hosts & (1 << (int)host));
     return true;
+}
+
+unsigned int ParseSupportedHosts(Span<const char> str)
+{
+    unsigned int hosts = 0;
+
+    while (str.len) {
+        Span<const char> part = SplitStrAny(str, ", ", &str);
+
+        if (part == "Win32") {
+            // Old name, supported for compatibility (easier bisect)
+            hosts |= 1 << (int)HostPlatform::Windows;
+            continue;
+        }
+
+        if (part.len) {
+            for (Size i = 0; i < RG_LEN(HostPlatformNames); i++) {
+                Span<const char> name = HostPlatformNames[i];
+
+                do {
+                    Size len = StartsWith(name, part);
+
+                    if (len == name.len || name[len] == '/') {
+                        hosts |= 1u << i;
+                        break;
+                    }
+
+                    SplitStr(name, '/', &name);
+                } while (name.len);
+            }
+        }
+    }
+
+    return hosts;
 }
 
 bool LoadTargetSet(Span<const char *const> filenames, HostPlatform host, TargetSet *out_set)

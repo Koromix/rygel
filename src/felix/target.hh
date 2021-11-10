@@ -110,6 +110,8 @@ private:
     bool MatchHostSuffix(Span<const char> str, bool *out_match);
 };
 
+unsigned int ParseSupportedHosts(Span<const char> str);
+
 bool LoadTargetSet(Span<const char *const> filenames, HostPlatform host, TargetSet *out_set);
 
 }

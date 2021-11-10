@@ -1388,18 +1388,6 @@ public:
     }
 };
 
-static bool TestHostFamily(HostPlatform host, const char *name)
-{
-    const HostFamily *family = std::find_if(std::begin(HostFamilies), std::end(HostFamilies),
-                                            [&](const HostFamily &family) { return TestStr(family.name, name); });
-
-    if (family == std::end(HostFamilies))
-        return false;
-
-    bool match = family->hosts & (1u << (int)host);
-    return match;
-}
-
 static void FindArduinoCompiler(const char *name, const char *compiler, Span<char> out_cc)
 {
 #ifdef _WIN32
@@ -1510,7 +1498,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
 
         LogError("Cannot find driver for compiler '%1'", spec.cc);
         return nullptr;
-    } else if (TestHostFamily(spec.host, "Teensy/AVR")) {
+    } else if (StartsWith(HostPlatformNames[(int)spec.host], "Teensy/AVR/")) {
         if (!spec.cc) {
             static std::once_flag flag;
             static char cc[2048];
@@ -1531,7 +1519,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
         }
 
         return TeensyCompiler::Create(spec.host, spec.cc);
-    } else if (TestHostFamily(spec.host, "Teensy/ARM")) {
+    } else if (StartsWith(HostPlatformNames[(int)spec.host], "Teensy/ARM/")) {
         if (!spec.cc) {
             static std::once_flag flag;
             static char cc[2048];
