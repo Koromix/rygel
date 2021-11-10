@@ -114,20 +114,20 @@ static void InitAssets()
     }
 
     for (const AssetInfo &asset: GetPackedAssets()) {
-        if (TestStr(asset.name, "src/mael/control/client/mael.html")) {
+        if (TestStr(asset.name, "src/mael/raspi/client/mael.html")) {
             AssetInfo *copy = PatchVariables(asset);
             assets_map.Set("/", copy);
             assets_for_cache.Append("/");
-        } else if (TestStr(asset.name, "src/mael/control/client/favicon.png")) {
+        } else if (TestStr(asset.name, "src/mael/raspi/client/favicon.png")) {
             assets_map.Set("/favicon.png", &asset);
             assets_for_cache.Append("/favicon.png");
-        } else if (TestStr(asset.name, "src/mael/control/client/manifest.json")) {
+        } else if (TestStr(asset.name, "src/mael/raspi/client/manifest.json")) {
             assets_map.Set("/manifest.json", &asset);
             assets_for_cache.Append("/manifest.json");
-        } else if (TestStr(asset.name, "src/mael/control/client/sw.pk.js")) {
+        } else if (TestStr(asset.name, "src/mael/raspi/client/sw.pk.js")) {
             AssetInfo *copy = PatchVariables(asset);
             assets_map.Set("/sw.pk.js", copy);
-        } else if (StartsWith(asset.name, "src/mael/control/client/") ||
+        } else if (StartsWith(asset.name, "src/mael/raspi/client/") ||
                    StartsWith(asset.name, "vendor/")) {
             const char *name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS).ptr;
             const char *url = Fmt(&assets_alloc, "/static/%1", name).ptr;
