@@ -400,17 +400,17 @@ function drawUI() {
             gradient.addColorStop(0.5, '#d76f28');
             gradient.addColorStop(1, '#8c4515');
         } else if (btn.pressed || btn.busy) {
-            gradient.addColorStop(0, '#1083b9');
-            gradient.addColorStop(0.5, '#178fc7');
-            gradient.addColorStop(1, '#1083b9');
+            gradient.addColorStop(0, '#bbbbbb');
+            gradient.addColorStop(0.5, '#cccccc');
+            gradient.addColorStop(1, '#bbbbbb');
         } else if (btn.highlight && btn.over) {
-            gradient.addColorStop(0, '#21a0cd');
-            gradient.addColorStop(0.5, '#29aedc');
-            gradient.addColorStop(1, '#21a0cd');
+            gradient.addColorStop(0, '#cccccc');
+            gradient.addColorStop(0.5, '#dddddd');
+            gradient.addColorStop(1, '#cccccc');
         } else {
-            gradient.addColorStop(0, '#383838');
-            gradient.addColorStop(0.5, '#545454');
-            gradient.addColorStop(1, '#383838');
+            gradient.addColorStop(0, '#dddddd');
+            gradient.addColorStop(0.5, '#eeeeee');
+            gradient.addColorStop(1, '#dddddd');
         }
 
         ctx.fillStyle = gradient;
@@ -471,7 +471,7 @@ function button(x, y, text, options = {}, func = null) {
         height: 0,
         text: text,
         icon: options.icon,
-        color: options.color || 'white',
+        color: options.color || 'black',
         padding: (options.padding != null) ? options.padding : 20,
         corners: (options.corners != null) ? options.corners : 0b1111,
         active: !!options.active,

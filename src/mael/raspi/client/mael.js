@@ -238,7 +238,7 @@ function draw() {
     // Status
     {
         let text = connected ? 'Status: Online' : 'Status: Offline';
-        label(12, 12, text, { align: 7, color: connected ? 'white' : '#ff0000' });
+        label(12, 12, text, { align: 7, color: connected ? 'black' : '#ff0000' });
     }
 
     // FPS
