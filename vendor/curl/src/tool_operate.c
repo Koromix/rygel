@@ -794,19 +794,100 @@ static CURLcode single_transfer(struct GlobalConfig *global,
                     !strcmp(state->outfiles, "-")) && urlnum > 1);
 
       if(state->up < state->infilenum) {
-        struct per_transfer *per;
+        struct per_transfer *per = NULL;
         struct OutStruct *outs;
         struct InStruct *input;
         struct OutStruct *heads;
         struct OutStruct *etag_save;
         struct HdrCbData *hdrcbdata = NULL;
-        CURL *curl = curl_easy_init();
-        result = add_per_transfer(&per);
-        if(result || !curl) {
-          curl_easy_cleanup(curl);
+        struct OutStruct etag_first;
+        CURL *curl;
+
+        /* --etag-save */
+        memset(&etag_first, 0, sizeof(etag_first));
+        etag_save = &etag_first;
+        etag_save->stream = stdout;
+
+        /* --etag-compare */
+        if(config->etag_compare_file) {
+          char *etag_from_file = NULL;
+          char *header = NULL;
+          ParameterError pe;
+
+          /* open file for reading: */
+          FILE *file = fopen(config->etag_compare_file, FOPEN_READTEXT);
+          if(!file && !config->etag_save_file) {
+            errorf(global,
+                   "Failed to open %s\n", config->etag_compare_file);
+            result = CURLE_READ_ERROR;
+            break;
+          }
+
+          if((PARAM_OK == file2string(&etag_from_file, file)) &&
+             etag_from_file) {
+            header = aprintf("If-None-Match: %s", etag_from_file);
+            Curl_safefree(etag_from_file);
+          }
+          else
+            header = aprintf("If-None-Match: \"\"");
+
+          if(!header) {
+            if(file)
+              fclose(file);
+            errorf(global,
+                   "Failed to allocate memory for custom etag header\n");
+            result = CURLE_OUT_OF_MEMORY;
+            break;
+          }
+
+          /* add Etag from file to list of custom headers */
+          pe = add2list(&config->headers, header);
+          Curl_safefree(header);
+
+          if(file)
+            fclose(file);
+          if(pe != PARAM_OK) {
+            result = CURLE_OUT_OF_MEMORY;
+            break;
+          }
+        }
+
+        if(config->etag_save_file) {
+          /* open file for output: */
+          if(strcmp(config->etag_save_file, "-")) {
+            FILE *newfile = fopen(config->etag_save_file, "wb");
+            if(!newfile) {
+              warnf(global, "Failed creating file for saving etags: \"%s\". "
+                    "Skip this transfer\n", config->etag_save_file);
+              Curl_safefree(state->outfiles);
+              glob_cleanup(state->urls);
+              return CURLE_OK;
+            }
+            else {
+              etag_save->filename = config->etag_save_file;
+              etag_save->s_isreg = TRUE;
+              etag_save->fopened = TRUE;
+              etag_save->stream = newfile;
+            }
+          }
+          else {
+            /* always use binary mode for protocol header output */
+            set_binmode(etag_save->stream);
+          }
+        }
+
+        curl = curl_easy_init();
+        if(curl)
+          result = add_per_transfer(&per);
+        else
           result = CURLE_OUT_OF_MEMORY;
+        if(result) {
+          curl_easy_cleanup(curl);
+          if(etag_save->fopened)
+            fclose(etag_save->stream);
           break;
         }
+        per->etag_save = etag_first; /* copy the whole struct */
         if(state->uploadfile) {
           per->uploadfile = strdup(state->uploadfile);
           if(!per->uploadfile) {
@@ -859,76 +940,6 @@ static CURLcode single_transfer(struct GlobalConfig *global,
 
         /* default output stream is stdout */
         outs->stream = stdout;
-
-        /* --etag-compare */
-        if(config->etag_compare_file) {
-          char *etag_from_file = NULL;
-          char *header = NULL;
-
-          /* open file for reading: */
-          FILE *file = fopen(config->etag_compare_file, FOPEN_READTEXT);
-          if(!file && !config->etag_save_file) {
-            errorf(global,
-                   "Failed to open %s\n", config->etag_compare_file);
-            result = CURLE_READ_ERROR;
-            break;
-          }
-
-          if((PARAM_OK == file2string(&etag_from_file, file)) &&
-             etag_from_file) {
-            header = aprintf("If-None-Match: %s", etag_from_file);
-            Curl_safefree(etag_from_file);
-          }
-          else
-            header = aprintf("If-None-Match: \"\"");
-
-          if(!header) {
-            if(file)
-              fclose(file);
-            errorf(global,
-                   "Failed to allocate memory for custom etag header\n");
-            result = CURLE_OUT_OF_MEMORY;
-            break;
-          }
-
-          /* add Etag from file to list of custom headers */
-          add2list(&config->headers, header);
-
-          Curl_safefree(header);
-
-          if(file) {
-            fclose(file);
-          }
-        }
-
-        /* --etag-save */
-        etag_save = &per->etag_save;
-        etag_save->stream = stdout;
-
-        if(config->etag_save_file) {
-          /* open file for output: */
-          if(strcmp(config->etag_save_file, "-")) {
-            FILE *newfile = fopen(config->etag_save_file, "wb");
-            if(!newfile) {
-              warnf(
-                global,
-                "Failed to open %s\n", config->etag_save_file);
-
-              result = CURLE_WRITE_ERROR;
-              break;
-            }
-            else {
-              etag_save->filename = config->etag_save_file;
-              etag_save->s_isreg = TRUE;
-              etag_save->fopened = TRUE;
-              etag_save->stream = newfile;
-            }
-          }
-          else {
-            /* always use binary mode for protocol header output */
-            set_binmode(etag_save->stream);
-          }
-        }
 
         if(state->urls) {
           result = glob_next_url(&per->this_url, state->urls);
@@ -1407,6 +1418,11 @@ static CURLcode single_transfer(struct GlobalConfig *global,
              to fail if we are not talking to who we think we should */
           my_setopt_str(curl, CURLOPT_SSH_HOST_PUBLIC_KEY_MD5,
                         config->hostpubmd5);
+
+          /* new in libcurl 7.80.0: SSH host key sha256 checking allows us
+             to fail if we are not talking to who we think we should */
+          my_setopt_str(curl, CURLOPT_SSH_HOST_PUBLIC_KEY_SHA256,
+              config->hostpubsha256);
 
           /* new in libcurl 7.56.0 */
           if(config->ssh_compression)
@@ -2300,8 +2316,12 @@ static CURLcode serial_transfers(struct GlobalConfig *global,
   bool added = FALSE;
 
   result = create_transfer(global, share, &added);
-  if(result || !added)
+  if(result)
     return result;
+  if(!added) {
+    errorf(global, "no transfer performed\n");
+    return CURLE_READ_ERROR;
+  }
   for(per = transfers; per;) {
     bool retry;
     long delay;

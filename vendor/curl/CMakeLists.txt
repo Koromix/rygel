@@ -259,6 +259,17 @@ if(ENABLE_IPV6 AND NOT WIN32)
     set(ENABLE_IPV6 OFF
         CACHE BOOL "Define if you want to enable IPv6 support" FORCE)
   endif()
+
+  if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND NOT ENABLE_ARES)
+    set(use_core_foundation ON)
+
+    find_library(SYSTEMCONFIGURATION_FRAMEWORK "SystemConfiguration")
+    if(NOT SYSTEMCONFIGURATION_FRAMEWORK)
+      message(FATAL_ERROR "SystemConfiguration framework not found")
+    endif()
+
+    list(APPEND CURL_LIBS "-framework SystemConfiguration")
+  endif()
 endif()
 
 if(USE_MANUAL)
@@ -343,28 +354,29 @@ endif()
 
 # check SSL libraries
 # TODO support GnuTLS
+option(CURL_ENABLE_SSL "Enable SSL support" ON)
 if(CMAKE_USE_WINSSL)
   message(FATAL_ERROR "The cmake option CMAKE_USE_WINSSL was renamed to CMAKE_USE_SCHANNEL.")
 endif()
 
 if(APPLE)
-  option(CMAKE_USE_SECTRANSP "enable Apple OS native SSL/TLS" OFF)
+  cmake_dependent_option(CMAKE_USE_SECTRANSP "enable Apple OS native SSL/TLS" OFF CURL_ENABLE_SSL OFF)
 endif()
 if(WIN32)
-  option(CMAKE_USE_SCHANNEL "enable Windows native SSL/TLS" OFF)
+  cmake_dependent_option(CMAKE_USE_SCHANNEL "enable Windows native SSL/TLS" OFF CURL_ENABLE_SSL OFF)
   cmake_dependent_option(CURL_WINDOWS_SSPI "Use windows libraries to allow NTLM authentication without openssl" ON
     CMAKE_USE_SCHANNEL OFF)
 endif()
-option(CMAKE_USE_MBEDTLS "Enable mbedTLS for SSL/TLS" OFF)
-option(CMAKE_USE_BEARSSL "Enable BearSSL for SSL/TLS" OFF)
-option(CMAKE_USE_NSS "Enable NSS for SSL/TLS" OFF)
-option(CMAKE_USE_WOLFSSL "enable wolfSSL for SSL/TLS" OFF)
+cmake_dependent_option(CMAKE_USE_MBEDTLS "Enable mbedTLS for SSL/TLS" OFF CURL_ENABLE_SSL OFF)
+cmake_dependent_option(CMAKE_USE_BEARSSL "Enable BearSSL for SSL/TLS" OFF CURL_ENABLE_SSL OFF)
+cmake_dependent_option(CMAKE_USE_NSS "Enable NSS for SSL/TLS" OFF CURL_ENABLE_SSL OFF)
+cmake_dependent_option(CMAKE_USE_WOLFSSL "enable wolfSSL for SSL/TLS" OFF CURL_ENABLE_SSL OFF)
 
 set(openssl_default ON)
 if(WIN32 OR CMAKE_USE_SECTRANSP OR CMAKE_USE_SCHANNEL OR CMAKE_USE_MBEDTLS OR CMAKE_USE_NSS OR CMAKE_USE_WOLFSSL)
   set(openssl_default OFF)
 endif()
-option(CMAKE_USE_OPENSSL "Use OpenSSL code. Experimental" ${openssl_default})
+cmake_dependent_option(CMAKE_USE_OPENSSL "Use OpenSSL code. Experimental" ${openssl_default} CURL_ENABLE_SSL OFF)
 option(CURL_DISABLE_OPENSSL_AUTO_LOAD_CONFIG "Disable automatic loading of OpenSSL configuration" OFF)
 
 count_true(enabled_ssl_options_count
@@ -394,29 +406,26 @@ if(CMAKE_USE_DARWINSSL)
   message(FATAL_ERROR "The cmake option CMAKE_USE_DARWINSSL was renamed to CMAKE_USE_SECTRANSP.")
 endif()
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+if(CMAKE_USE_SECTRANSP)
+  set(use_core_foundation ON)
+
+  find_library(SECURITY_FRAMEWORK "Security")
+  if(NOT SECURITY_FRAMEWORK)
+     message(FATAL_ERROR "Security framework not found")
+  endif()
+
+  set(SSL_ENABLED ON)
+  set(USE_SECTRANSP ON)
+  list(APPEND CURL_LIBS "-framework Security")
+endif()
+
+if(use_core_foundation)
   find_library(COREFOUNDATION_FRAMEWORK "CoreFoundation")
   if(NOT COREFOUNDATION_FRAMEWORK)
       message(FATAL_ERROR "CoreFoundation framework not found")
   endif()
 
-  find_library(SYSTEMCONFIGURATION_FRAMEWORK "SystemConfiguration")
-  if(NOT SYSTEMCONFIGURATION_FRAMEWORK)
-     message(FATAL_ERROR "SystemConfiguration framework not found")
-  endif()
-
-  list(APPEND CURL_LIBS "-framework CoreFoundation" "-framework SystemConfiguration")
-
-  if(CMAKE_USE_SECTRANSP)
-    find_library(SECURITY_FRAMEWORK "Security")
-    if(NOT SECURITY_FRAMEWORK)
-       message(FATAL_ERROR "Security framework not found")
-    endif()
-
-    set(SSL_ENABLED ON)
-    set(USE_SECTRANSP ON)
-    list(APPEND CURL_LIBS "-framework Security")
-  endif()
+  list(APPEND CURL_LIBS "-framework CoreFoundation")
 endif()
 
 if(CMAKE_USE_OPENSSL)
@@ -445,6 +454,8 @@ if(CMAKE_USE_OPENSSL)
   check_symbol_exists(RAND_status "${CURL_INCLUDES}" HAVE_RAND_STATUS)
   check_symbol_exists(RAND_screen "${CURL_INCLUDES}" HAVE_RAND_SCREEN)
   check_symbol_exists(RAND_egd    "${CURL_INCLUDES}" HAVE_RAND_EGD)
+
+  add_definitions(-DOPENSSL_SUPPRESS_DEPRECATED)
 endif()
 
 if(CMAKE_USE_MBEDTLS)
@@ -908,7 +919,6 @@ endif()
 # Check for header files
 if(NOT UNIX)
   check_include_file_concat("windows.h"      HAVE_WINDOWS_H)
-  check_include_file_concat("winsock.h"      HAVE_WINSOCK_H)
   check_include_file_concat("ws2tcpip.h"     HAVE_WS2TCPIP_H)
   check_include_file_concat("winsock2.h"     HAVE_WINSOCK2_H)
   check_include_file_concat("wincrypt.h"     HAVE_WINCRYPT_H)
@@ -1484,12 +1494,10 @@ set(libdir                  "${CMAKE_INSTALL_PREFIX}/lib")
 foreach(_lib ${CMAKE_C_IMPLICIT_LINK_LIBRARIES} ${CURL_LIBS})
   if(TARGET "${_lib}")
     set(_libname "${_lib}")
-    get_target_property(_libtype "${_libname}" TYPE)
-    if(_libtype STREQUAL INTERFACE_LIBRARY)
-      # Interface libraries can occur when an external project embeds curl and
-      # defined targets such as ZLIB::ZLIB by themselves. Ignore these as
-      # reading the LOCATION property will error out. Assume the user won't need
-      # this information in the .pc file.
+    get_target_property(_imported "${_libname}" IMPORTED)
+    if(NOT _imported)
+      # Reading the LOCATION property on non-imported target will error out.
+      # Assume the user won't need this information in the .pc file.
       continue()
     endif()
     get_target_property(_lib "${_libname}" LOCATION)

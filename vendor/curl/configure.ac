@@ -477,7 +477,7 @@ dnl Compilation based checks should not be done before this point.
 dnl **********************************************************************
 
 dnl **********************************************************************
-dnl Make sure that our checks for headers windows.h winsock.h winsock2.h
+dnl Make sure that our checks for headers windows.h winsock2.h
 dnl and ws2tcpip.h take precedence over any other further checks which
 dnl could be done later using AC_CHECK_HEADER or AC_CHECK_HEADERS for
 dnl this specific header files. And do them before its results are used.
@@ -487,7 +487,6 @@ CURL_CHECK_HEADER_WINDOWS
 CURL_CHECK_NATIVE_WINDOWS
 case X-"$curl_cv_native_windows" in
   X-yes)
-    CURL_CHECK_HEADER_WINSOCK
     CURL_CHECK_HEADER_WINSOCK2
     CURL_CHECK_HEADER_WS2TCPIP
     CURL_CHECK_HEADER_WINCRYPT
@@ -495,7 +494,6 @@ case X-"$curl_cv_native_windows" in
     CURL_CHECK_HEADER_WINBER
     ;;
   *)
-    curl_cv_header_winsock_h="no"
     curl_cv_header_winsock2_h="no"
     curl_cv_header_ws2tcpip_h="no"
     curl_cv_header_wincrypt_h="no"
@@ -1022,16 +1020,6 @@ if test "$HAVE_GETHOSTBYNAME" != "1"
 then
   dnl This is for winsock systems
   if test "$curl_cv_header_windows_h" = "yes"; then
-    if test "$curl_cv_header_winsock_h" = "yes"; then
-      case $host in
-        *-*-mingw32ce*)
-          winsock_LIB="-lwinsock"
-          ;;
-        *)
-          winsock_LIB="-lwsock32"
-          ;;
-      esac
-    fi
     if test "$curl_cv_header_winsock2_h" = "yes"; then
       winsock_LIB="-lws2_32"
     fi
@@ -1048,10 +1036,6 @@ then
 #include <windows.h>
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
-#else
-#ifdef HAVE_WINSOCK_H
-#include <winsock.h>
-#endif
 #endif
 #endif
         ]],[[
@@ -1693,18 +1677,17 @@ AC_ARG_WITH(gssapi,
   fi
 ])
 
-: ${KRB5CONFIG:="$GSSAPI_ROOT/bin/krb5-config"}
-
 save_CPPFLAGS="$CPPFLAGS"
 AC_MSG_CHECKING([if GSS-API support is requested])
 if test x"$want_gss" = xyes; then
   AC_MSG_RESULT(yes)
 
+  CURL_CHECK_PKGCONFIG(mit-krb5-gssapi)
   if test -z "$GSSAPI_INCS"; then
      if test -n "$host_alias" -a -f "$GSSAPI_ROOT/bin/$host_alias-krb5-config"; then
         GSSAPI_INCS=`$GSSAPI_ROOT/bin/$host_alias-krb5-config --cflags gssapi`
-     elif test -f "$KRB5CONFIG"; then
-        GSSAPI_INCS=`$KRB5CONFIG --cflags gssapi`
+     elif test "$PKGCONFIG" != "no" ; then
+        GSSAPI_INCS=`$PKGCONFIG --cflags mit-krb5-gssapi`
      elif test "$GSSAPI_ROOT" != "yes"; then
         GSSAPI_INCS="-I$GSSAPI_ROOT/include"
      fi
@@ -1789,15 +1772,14 @@ if test x"$want_gss" = xyes; then
         LIBS="-lgssapi_krb5 -lresolv $LIBS"
         ;;
      *)
+        CURL_CHECK_PKGCONFIG(mit-krb5-gssapi)
         if test -n "$host_alias" -a -f "$GSSAPI_ROOT/bin/$host_alias-krb5-config"; then
            dnl krb5-config doesn't have --libs-only-L or similar, put everything
            dnl into LIBS
            gss_libs=`$GSSAPI_ROOT/bin/$host_alias-krb5-config --libs gssapi`
            LIBS="$gss_libs $LIBS"
-        elif test -f "$KRB5CONFIG"; then
-           dnl krb5-config doesn't have --libs-only-L or similar, put everything
-           dnl into LIBS
-           gss_libs=`$KRB5CONFIG --libs gssapi`
+        elif test "$PKGCONFIG" != "no" ; then
+           gss_libs=`$PKGCONFIG --libs mit-krb5-gssapi`
            LIBS="$gss_libs $LIBS"
         else
            case $host in
@@ -2525,20 +2507,14 @@ if test "$want_idn" = "yes"; then
   fi
 fi
 
-
-dnl Let's hope this split URL remains working:
-dnl https://www15.software.ibm.com/doc_link/en_US/a_doc_lib/aixprggd/ \
-dnl genprogc/thread_quick_ref.htm
-
-
 dnl **********************************************************************
 dnl Check for nghttp2
 dnl **********************************************************************
 
 OPT_H2="yes"
 
-if test "x$disable_http" = "xyes"; then
-  # without HTTP, nghttp2 is no use
+if test "x$disable_http" = "xyes" -o X"$want_hyper" != Xno; then
+  # without HTTP or with Hyper, nghttp2 is no use
   OPT_H2="no"
 fi
 
@@ -2549,38 +2525,38 @@ AS_HELP_STRING([--without-nghttp2],[Disable nghttp2 usage]),
 case "$OPT_H2" in
   no)
     dnl --without-nghttp2 option used
-    want_h2="no"
+    want_nghttp2="no"
     ;;
   yes)
     dnl --with-nghttp2 option used without path
-    want_h2="default"
-    want_h2_path=""
+    want_nghttp2="default"
+    want_nghttp2_path=""
     ;;
   *)
     dnl --with-nghttp2 option used with path
-    want_h2="yes"
-    want_h2_path="$withval/lib/pkgconfig"
+    want_nghttp2="yes"
+    want_nghttp2_path="$withval/lib/pkgconfig"
     ;;
 esac
 
-if test X"$want_h2" != Xno; then
+if test X"$want_nghttp2" != Xno; then
   dnl backup the pre-nghttp2 variables
   CLEANLDFLAGS="$LDFLAGS"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
-  CURL_CHECK_PKGCONFIG(libnghttp2, $want_h2_path)
+  CURL_CHECK_PKGCONFIG(libnghttp2, $want_nghttp2_path)
 
   if test "$PKGCONFIG" != "no" ; then
-    LIB_H2=`CURL_EXPORT_PCDIR([$want_h2_path])
+    LIB_H2=`CURL_EXPORT_PCDIR([$want_nghttp2_path])
       $PKGCONFIG --libs-only-l libnghttp2`
     AC_MSG_NOTICE([-l is $LIB_H2])
 
-    CPP_H2=`CURL_EXPORT_PCDIR([$want_h2_path]) dnl
+    CPP_H2=`CURL_EXPORT_PCDIR([$want_nghttp2_path]) dnl
       $PKGCONFIG --cflags-only-I libnghttp2`
     AC_MSG_NOTICE([-I is $CPP_H2])
 
-    LD_H2=`CURL_EXPORT_PCDIR([$want_h2_path])
+    LD_H2=`CURL_EXPORT_PCDIR([$want_nghttp2_path])
       $PKGCONFIG --libs-only-L libnghttp2`
     AC_MSG_NOTICE([-L is $LD_H2])
 
@@ -2607,7 +2583,7 @@ if test X"$want_h2" != Xno; then
 
   else
     dnl no nghttp2 pkg-config found, deal with it
-    if test X"$want_h2" != Xdefault; then
+    if test X"$want_nghttp2" != Xdefault; then
       dnl To avoid link errors, we do not allow --with-nghttp2 without
       dnl a pkgconfig file
       AC_MSG_ERROR([--with-nghttp2 was specified but could not find libnghttp2 pkg-config file.])
@@ -4091,7 +4067,7 @@ if test "x$CURL_WITH_MULTI_SSL" = "x1"; then
   SUPPORT_FEATURES="$SUPPORT_FEATURES MultiSSL"
 fi
 
-dnl if not explictily turned off, HTTPS-proxy comes with some TLS backends
+dnl if not explicitly turned off, HTTPS-proxy comes with some TLS backends
 if test "x$https_proxy" != "xno"; then
   if test "x$OPENSSL_ENABLED" = "x1" -o "x$GNUTLS_ENABLED" = "x1" \
       -o "x$NSS_ENABLED" = "x1"; then

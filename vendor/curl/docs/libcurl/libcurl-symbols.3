@@ -19,7 +19,7 @@
 .\" * KIND, either express or implied.
 .\" *
 .\" **************************************************************************
-.TH libcurl-symbols 3 "Sep 15, 2021" "libcurl 7.41.0" "libcurl symbols"
+.TH libcurl-symbols 3 "Nov 10, 2021" "libcurl 7.41.0" "libcurl symbols"
 .SH NAME
 libcurl-symbols \- libcurl symbol version information
 .SH "libcurl symbols"
@@ -1082,6 +1082,8 @@ Introduced in 7.7
 Introduced in 7.10.8
 .IP CURLOPT_MAXFILESIZE_LARGE
 Introduced in 7.11.0
+.IP CURLOPT_MAXLIFETIME_CONN
+Introduced in 7.80.0
 .IP CURLOPT_MAXREDIRS
 Introduced in 7.5
 .IP CURLOPT_MAX_RECV_SPEED_LARGE
@@ -1157,6 +1159,10 @@ Introduced in 7.1
 Introduced in 7.19.1
 .IP CURLOPT_PREQUOTE
 Introduced in 7.9.5
+.IP CURLOPT_PREREQDATA
+Introduced in 7.80.0
+.IP CURLOPT_PREREQFUNCTION
+Introduced in 7.80.0
 .IP CURLOPT_PRE_PROXY
 Introduced in 7.52.0
 .IP CURLOPT_PRIVATE
@@ -1323,6 +1329,8 @@ Introduced in 7.16.1
 Introduced in 7.56.0
 .IP CURLOPT_SSH_HOST_PUBLIC_KEY_MD5
 Introduced in 7.17.1
+.IP CURLOPT_SSH_HOST_PUBLIC_KEY_SHA256
+Introduced in 7.80.0
 .IP CURLOPT_SSH_KEYDATA
 Introduced in 7.19.6
 .IP CURLOPT_SSH_KEYFUNCTION
@@ -2036,6 +2044,10 @@ Introduced in 7.14.0
 Introduced in 7.14.0
 .IP CURL_POLL_REMOVE
 Introduced in 7.14.0
+.IP CURL_PREREQFUNC_ABORT
+Introduced in 7.79.0
+.IP CURL_PREREQFUNC_OK
+Introduced in 7.79.0
 .IP CURL_PROGRESSFUNC_CONTINUE
 Introduced in 7.68.0
 .IP CURL_PROGRESS_BAR

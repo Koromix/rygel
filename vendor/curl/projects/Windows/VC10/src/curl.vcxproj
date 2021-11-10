@@ -2657,6 +2657,7 @@
     <ClCompile Include="..\..\..\..\src\tool_homedir.c" />
     <ClCompile Include="..\..\..\..\src\tool_hugehelp.c" />
     <ClCompile Include="..\..\..\..\src\tool_libinfo.c" />
+    <ClCompile Include="..\..\..\..\src\tool_listhelp.c" />
     <ClCompile Include="..\..\..\..\src\tool_main.c" />
     <ClCompile Include="..\..\..\..\src\tool_msgs.c" />
     <ClCompile Include="..\..\..\..\src\tool_operate.c" />

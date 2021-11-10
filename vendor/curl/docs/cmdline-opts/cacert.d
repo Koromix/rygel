@@ -4,6 +4,7 @@ Help: CA certificate to verify peer against
 Protocols: TLS
 Category: tls
 Example: --cacert CA-file.txt $URL
+Added: 7.5
 ---
 Tells curl to use the specified certificate file to verify the peer. The file
 may contain multiple CA certificates. The certificate(s) must be in PEM
@@ -15,7 +16,7 @@ set, and uses the given path as a path to a CA cert bundle. This option
 overrides that variable.
 
 The windows version of curl will automatically look for a CA certs file named
-\'curl-ca-bundle.crt\', either in the same directory as curl.exe, or in the
+'curl-ca-bundle.crt', either in the same directory as curl.exe, or in the
 Current Working Directory, or in any folder along your PATH.
 
 If curl is built against the NSS SSL library, the NSS PEM PKCS#11 module

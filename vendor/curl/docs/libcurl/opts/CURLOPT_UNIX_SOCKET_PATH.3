@@ -20,7 +20,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_UNIX_SOCKET_PATH 3 "September 08, 2021" "libcurl 7.79.1" "curl_easy_setopt options"
+.TH CURLOPT_UNIX_SOCKET_PATH 3 "October 27, 2021" "libcurl 7.80.0" "curl_easy_setopt options"
 
 .SH NAME
 CURLOPT_UNIX_SOCKET_PATH \- Unix domain socket
@@ -73,7 +73,7 @@ you could use the proc filesystem to bypass the limitation:
   /* Be sure to keep dirfd valid until you discard the handle */
 .fi
 .SH AVAILABILITY
-Since 7.40.0.
+Added in 7.40.0.
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"

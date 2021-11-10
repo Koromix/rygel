@@ -486,7 +486,7 @@ curl_includes_unistd="\
 dnl CURL_INCLUDES_WINSOCK2
 dnl -------------------------------------------------
 dnl Set up variable with list of headers that must be
-dnl included when winsock(2).h is to be included.
+dnl included when winsock2.h is to be included.
 
 AC_DEFUN([CURL_INCLUDES_WINSOCK2], [
 curl_includes_winsock2="\
@@ -498,15 +498,10 @@ curl_includes_winsock2="\
 #  include <windows.h>
 #  ifdef HAVE_WINSOCK2_H
 #    include <winsock2.h>
-#  else
-#    ifdef HAVE_WINSOCK_H
-#      include <winsock.h>
-#    endif
 #  endif
 #endif
 /* includes end */"
   CURL_CHECK_HEADER_WINDOWS
-  CURL_CHECK_HEADER_WINSOCK
   CURL_CHECK_HEADER_WINSOCK2
 ])
 
@@ -2053,6 +2048,10 @@ AC_DEFUN([CURL_CHECK_FUNC_GETADDRINFO], [
         ;;
       hpux*)
         dnl hpux 11.11 and newer
+        tst_tsafe_getaddrinfo="yes"
+        ;;
+      midnightbsd*)
+        dnl all MidnightBSD versions
         tst_tsafe_getaddrinfo="yes"
         ;;
       netbsd[[123]].*)

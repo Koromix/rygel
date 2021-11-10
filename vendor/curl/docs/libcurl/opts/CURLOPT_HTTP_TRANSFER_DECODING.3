@@ -20,7 +20,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_HTTP_TRANSFER_DECODING 3 "September 08, 2021" "libcurl 7.79.1" "curl_easy_setopt options"
+.TH CURLOPT_HTTP_TRANSFER_DECODING 3 "October 22, 2021" "libcurl 7.80.0" "curl_easy_setopt options"
 
 .SH NAME
 CURLOPT_HTTP_TRANSFER_DECODING \- HTTP transfer decoding control
@@ -50,7 +50,8 @@ if(curl) {
 }
 .fi
 .SH AVAILABILITY
-Added in 7.16.2
+Added in 7.16.2 Does not work with the hyper backend (it will always have
+transfer decoding enabled).
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"

@@ -20,7 +20,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_COOKIE 3 "September 08, 2021" "libcurl 7.79.1" "curl_easy_setopt options"
+.TH CURLOPT_COOKIE 3 "October 31, 2021" "libcurl 7.80.0" "curl_easy_setopt options"
 
 .SH NAME
 CURLOPT_COOKIE \- HTTP Cookie header
@@ -43,7 +43,7 @@ similar, they will all get this cookie passed on.
 
 The cookies set by this option are separate from the internal cookie storage
 held by the cookie engine and will not be modified by it. If you enable the
-cookie engine and either you've imported a cookie of the same name (e.g. 'foo')
+cookie engine and either you have imported a cookie of the same name (e.g. 'foo')
 or the server has set one, it will have no effect on the cookies you set here.
 A request to the server will send both the 'foo' held by the cookie engine and
 the 'foo' held by this option. To set a cookie that is instead held by the

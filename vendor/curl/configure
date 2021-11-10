@@ -1163,7 +1163,6 @@ enable_warnings
 enable_werror
 enable_curldebug
 enable_symbol_hiding
-enable_hidden_symbols
 enable_ares
 enable_rt
 enable_ech
@@ -1919,9 +1918,6 @@ Optional Features:
   --disable-curldebug     Disable curl debug memory tracking
   --enable-symbol-hiding  Enable hiding of library internal symbols
   --disable-symbol-hiding Disable hiding of library internal symbols
-  --enable-hidden-symbols To be deprecated, use --enable-symbol-hiding
-  --disable-hidden-symbols
-                          To be deprecated, use --disable-symbol-hiding
   --enable-ares[=PATH]    Enable c-ares for DNS lookups
   --disable-ares          Disable c-ares for DNS lookups
   --disable-rt            disable dependency on -lrt
@@ -3680,12 +3676,6 @@ printf %s "checking whether to enable hiding of library internal symbols... " >&
 if test ${enable_symbol_hiding+y}
 then :
   enableval=$enable_symbol_hiding; OPT_SYMBOL_HIDING=$enableval
-fi
-
-  # Check whether --enable-hidden-symbols was given.
-if test ${enable_hidden_symbols+y}
-then :
-  enableval=$enable_hidden_symbols; OPT_SYMBOL_HIDING=$enableval
 fi
 
   case "$OPT_SYMBOL_HIDING" in
@@ -11528,7 +11518,7 @@ if test "x$xc_lt_want_with_pic" = 'xdefault'; then
   case $host_cpu in # (
     x86_64 | amd64 | ia64)
       case $host_os in # (
-        linux* | freebsd*)
+        linux* | freebsd* | midnightbsd*)
           xc_lt_want_with_pic='yes'
           ;;
       esac
@@ -20235,62 +20225,6 @@ fi
 case X-"$curl_cv_native_windows" in
   X-yes)
 
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for winsock.h" >&5
-printf %s "checking for winsock.h... " >&6; }
-if test ${curl_cv_header_winsock_h+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#undef inline
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#include <winsock.h>
-
-int main (void)
-{
-
-#if defined(__CYGWIN__) || defined(__CEGCC__)
-        HAVE_WINSOCK_H shall not be defined.
-#else
-        int dummy=WSACleanup();
-#endif
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-
-      curl_cv_header_winsock_h="yes"
-
-else $as_nop
-
-      curl_cv_header_winsock_h="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $curl_cv_header_winsock_h" >&5
-printf "%s\n" "$curl_cv_header_winsock_h" >&6; }
-  case "$curl_cv_header_winsock_h" in
-    yes)
-
-printf "%s\n" "#define HAVE_WINSOCK_H 1" >>confdefs.h
-
-      ;;
-  esac
-
-
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for winsock2.h" >&5
 printf %s "checking for winsock2.h... " >&6; }
 if test ${curl_cv_header_winsock2_h+y}
@@ -20577,7 +20511,6 @@ printf "%s\n" "#define HAVE_WINBER_H 1" >>confdefs.h
 
     ;;
   *)
-    curl_cv_header_winsock_h="no"
     curl_cv_header_winsock2_h="no"
     curl_cv_header_ws2tcpip_h="no"
     curl_cv_header_wincrypt_h="no"
@@ -21931,16 +21864,6 @@ fi
 if test "$HAVE_GETHOSTBYNAME" != "1"
 then
     if test "$curl_cv_header_windows_h" = "yes"; then
-    if test "$curl_cv_header_winsock_h" = "yes"; then
-      case $host in
-        *-*-mingw32ce*)
-          winsock_LIB="-lwinsock"
-          ;;
-        *)
-          winsock_LIB="-lwsock32"
-          ;;
-      esac
-    fi
     if test "$curl_cv_header_winsock2_h" = "yes"; then
       winsock_LIB="-lws2_32"
     fi
@@ -21960,10 +21883,6 @@ printf %s "checking for gethostbyname in $winsock_LIB... " >&6; }
 #include <windows.h>
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
-#else
-#ifdef HAVE_WINSOCK_H
-#include <winsock.h>
-#endif
 #endif
 #endif
 
@@ -22225,10 +22144,6 @@ curl_includes_winsock2="\
 #  include <windows.h>
 #  ifdef HAVE_WINSOCK2_H
 #    include <winsock2.h>
-#  else
-#    ifdef HAVE_WINSOCK_H
-#      include <winsock.h>
-#    endif
 #  endif
 #endif
 /* includes end */"
@@ -22283,62 +22198,6 @@ printf "%s\n" "$curl_cv_header_windows_h" >&6; }
     yes)
 
 printf "%s\n" "#define HAVE_WINDOWS_H 1" >>confdefs.h
-
-      ;;
-  esac
-
-
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for winsock.h" >&5
-printf %s "checking for winsock.h... " >&6; }
-if test ${curl_cv_header_winsock_h+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#undef inline
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#include <winsock.h>
-
-int main (void)
-{
-
-#if defined(__CYGWIN__) || defined(__CEGCC__)
-        HAVE_WINSOCK_H shall not be defined.
-#else
-        int dummy=WSACleanup();
-#endif
-
- ;
- return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-
-      curl_cv_header_winsock_h="yes"
-
-else $as_nop
-
-      curl_cv_header_winsock_h="no"
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $curl_cv_header_winsock_h" >&5
-printf "%s\n" "$curl_cv_header_winsock_h" >&6; }
-  case "$curl_cv_header_winsock_h" in
-    yes)
-
-printf "%s\n" "#define HAVE_WINSOCK_H 1" >>confdefs.h
 
       ;;
   esac
@@ -24415,8 +24274,6 @@ then :
 fi
 
 
-: ${KRB5CONFIG:="$GSSAPI_ROOT/bin/krb5-config"}
-
 save_CPPFLAGS="$CPPFLAGS"
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if GSS-API support is requested" >&5
 printf %s "checking if GSS-API support is requested... " >&6; }
@@ -24424,11 +24281,147 @@ if test x"$want_gss" = xyes; then
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
 
+
+    if test -n "$PKG_CONFIG"; then
+      PKGCONFIG="$PKG_CONFIG"
+    else
+      if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
+set dummy ${ac_tool_prefix}pkg-config; ac_word=$2
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+printf %s "checking for $ac_word... " >&6; }
+if test ${ac_cv_path_PKGCONFIG+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  case $PKGCONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PKGCONFIG="$PKGCONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+as_dummy="$PATH:/usr/bin:/usr/local/bin"
+for as_dir in $as_dummy
+do
+  IFS=$as_save_IFS
+  case $as_dir in #(((
+    '') as_dir=./ ;;
+    */) ;;
+    *) as_dir=$as_dir/ ;;
+  esac
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+    ac_cv_path_PKGCONFIG="$as_dir$ac_word$ac_exec_ext"
+    printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+PKGCONFIG=$ac_cv_path_PKGCONFIG
+if test -n "$PKGCONFIG"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $PKGCONFIG" >&5
+printf "%s\n" "$PKGCONFIG" >&6; }
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_path_PKGCONFIG"; then
+  ac_pt_PKGCONFIG=$PKGCONFIG
+  # Extract the first word of "pkg-config", so it can be a program name with args.
+set dummy pkg-config; ac_word=$2
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+printf %s "checking for $ac_word... " >&6; }
+if test ${ac_cv_path_ac_pt_PKGCONFIG+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  case $ac_pt_PKGCONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_PKGCONFIG="$ac_pt_PKGCONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+as_dummy="$PATH:/usr/bin:/usr/local/bin"
+for as_dir in $as_dummy
+do
+  IFS=$as_save_IFS
+  case $as_dir in #(((
+    '') as_dir=./ ;;
+    */) ;;
+    *) as_dir=$as_dir/ ;;
+  esac
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_PKGCONFIG="$as_dir$ac_word$ac_exec_ext"
+    printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_PKGCONFIG=$ac_cv_path_ac_pt_PKGCONFIG
+if test -n "$ac_pt_PKGCONFIG"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_pt_PKGCONFIG" >&5
+printf "%s\n" "$ac_pt_PKGCONFIG" >&6; }
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+
+  if test "x$ac_pt_PKGCONFIG" = x; then
+    PKGCONFIG="no"
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+printf "%s\n" "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    PKGCONFIG=$ac_pt_PKGCONFIG
+  fi
+else
+  PKGCONFIG="$ac_cv_path_PKGCONFIG"
+fi
+
+    fi
+
+    if test "x$PKGCONFIG" != "xno"; then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for mit-krb5-gssapi options with pkg-config" >&5
+printf %s "checking for mit-krb5-gssapi options with pkg-config... " >&6; }
+            itexists=`
+    if test -n ""; then
+      PKG_CONFIG_LIBDIR=""
+      export PKG_CONFIG_LIBDIR
+    fi
+         $PKGCONFIG --exists mit-krb5-gssapi >/dev/null 2>&1 && echo 1`
+
+      if test -z "$itexists"; then
+                        PKGCONFIG="no"
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+      else
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: found" >&5
+printf "%s\n" "found" >&6; }
+      fi
+    fi
+
   if test -z "$GSSAPI_INCS"; then
      if test -n "$host_alias" -a -f "$GSSAPI_ROOT/bin/$host_alias-krb5-config"; then
         GSSAPI_INCS=`$GSSAPI_ROOT/bin/$host_alias-krb5-config --cflags gssapi`
-     elif test -f "$KRB5CONFIG"; then
-        GSSAPI_INCS=`$KRB5CONFIG --cflags gssapi`
+     elif test "$PKGCONFIG" != "no" ; then
+        GSSAPI_INCS=`$PKGCONFIG --cflags mit-krb5-gssapi`
      elif test "$GSSAPI_ROOT" != "yes"; then
         GSSAPI_INCS="-I$GSSAPI_ROOT/include"
      fi
@@ -24568,11 +24561,147 @@ printf "%s\n" "#define HAVE_GSSAPI 1" >>confdefs.h
         LIBS="-lgssapi_krb5 -lresolv $LIBS"
         ;;
      *)
+
+    if test -n "$PKG_CONFIG"; then
+      PKGCONFIG="$PKG_CONFIG"
+    else
+      if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
+set dummy ${ac_tool_prefix}pkg-config; ac_word=$2
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+printf %s "checking for $ac_word... " >&6; }
+if test ${ac_cv_path_PKGCONFIG+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  case $PKGCONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PKGCONFIG="$PKGCONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+as_dummy="$PATH:/usr/bin:/usr/local/bin"
+for as_dir in $as_dummy
+do
+  IFS=$as_save_IFS
+  case $as_dir in #(((
+    '') as_dir=./ ;;
+    */) ;;
+    *) as_dir=$as_dir/ ;;
+  esac
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+    ac_cv_path_PKGCONFIG="$as_dir$ac_word$ac_exec_ext"
+    printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+PKGCONFIG=$ac_cv_path_PKGCONFIG
+if test -n "$PKGCONFIG"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $PKGCONFIG" >&5
+printf "%s\n" "$PKGCONFIG" >&6; }
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_path_PKGCONFIG"; then
+  ac_pt_PKGCONFIG=$PKGCONFIG
+  # Extract the first word of "pkg-config", so it can be a program name with args.
+set dummy pkg-config; ac_word=$2
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+printf %s "checking for $ac_word... " >&6; }
+if test ${ac_cv_path_ac_pt_PKGCONFIG+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  case $ac_pt_PKGCONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_PKGCONFIG="$ac_pt_PKGCONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+as_dummy="$PATH:/usr/bin:/usr/local/bin"
+for as_dir in $as_dummy
+do
+  IFS=$as_save_IFS
+  case $as_dir in #(((
+    '') as_dir=./ ;;
+    */) ;;
+    *) as_dir=$as_dir/ ;;
+  esac
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_PKGCONFIG="$as_dir$ac_word$ac_exec_ext"
+    printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_PKGCONFIG=$ac_cv_path_ac_pt_PKGCONFIG
+if test -n "$ac_pt_PKGCONFIG"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_pt_PKGCONFIG" >&5
+printf "%s\n" "$ac_pt_PKGCONFIG" >&6; }
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+
+  if test "x$ac_pt_PKGCONFIG" = x; then
+    PKGCONFIG="no"
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+printf "%s\n" "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    PKGCONFIG=$ac_pt_PKGCONFIG
+  fi
+else
+  PKGCONFIG="$ac_cv_path_PKGCONFIG"
+fi
+
+    fi
+
+    if test "x$PKGCONFIG" != "xno"; then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for mit-krb5-gssapi options with pkg-config" >&5
+printf %s "checking for mit-krb5-gssapi options with pkg-config... " >&6; }
+            itexists=`
+    if test -n ""; then
+      PKG_CONFIG_LIBDIR=""
+      export PKG_CONFIG_LIBDIR
+    fi
+         $PKGCONFIG --exists mit-krb5-gssapi >/dev/null 2>&1 && echo 1`
+
+      if test -z "$itexists"; then
+                        PKGCONFIG="no"
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+      else
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: found" >&5
+printf "%s\n" "found" >&6; }
+      fi
+    fi
+
         if test -n "$host_alias" -a -f "$GSSAPI_ROOT/bin/$host_alias-krb5-config"; then
                                  gss_libs=`$GSSAPI_ROOT/bin/$host_alias-krb5-config --libs gssapi`
            LIBS="$gss_libs $LIBS"
-        elif test -f "$KRB5CONFIG"; then
-                                 gss_libs=`$KRB5CONFIG --libs gssapi`
+        elif test "$PKGCONFIG" != "no" ; then
+           gss_libs=`$PKGCONFIG --libs mit-krb5-gssapi`
            LIBS="$gss_libs $LIBS"
         else
            case $host in
@@ -25101,7 +25230,7 @@ else $as_nop
 
               { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking OpenSSL linking with -ldl" >&5
 printf %s "checking OpenSSL linking with -ldl... " >&6; }
-       LIBS="$CLEANLIBS -lcrypto -ldl"
+       LIBS="-lcrypto $CLEANLIBS -ldl"
        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -25130,7 +25259,7 @@ printf "%s\n" "no" >&6; }
 
          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking OpenSSL linking with -ldl and -lpthread" >&5
 printf %s "checking OpenSSL linking with -ldl and -lpthread... " >&6; }
-         LIBS="$CLEANLIBS -lcrypto -ldl -lpthread"
+         LIBS="-lcrypto $CLEANLIBS -ldl -lpthread"
          cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -25630,7 +25759,7 @@ rm -f conftest.err conftest.i conftest.$ac_ext
         ;;
       *)
         if test "$curl_cv_have_def_OPENSSL_VERSION_STR" = "yes"; then
-          ver=`echo $curl_cv_def_OPENSSL_VERSION_STR | sed s/\"//g`;
+          ver=`echo $curl_cv_def_OPENSSL_VERSION_STR | sed 's/"//g'`;
           tst_vermaj=`echo $ver | cut -d. -f1`
           tst_vermin=`echo $ver | cut -d. -f2`
           tst_verfix=`echo $ver | cut -d. -f3`
@@ -30238,13 +30367,10 @@ printf "%s\n" "$as_me: WARNING: Cannot find libraries for IDN support: IDN disab
 fi
 
 
-
-
-
 OPT_H2="yes"
 
-if test "x$disable_http" = "xyes"; then
-  # without HTTP, nghttp2 is no use
+if test "x$disable_http" = "xyes" -o X"$want_hyper" != Xno; then
+  # without HTTP or with Hyper, nghttp2 is no use
   OPT_H2="no"
 fi
 
@@ -30257,19 +30383,19 @@ fi
 
 case "$OPT_H2" in
   no)
-        want_h2="no"
+        want_nghttp2="no"
     ;;
   yes)
-        want_h2="default"
-    want_h2_path=""
+        want_nghttp2="default"
+    want_nghttp2_path=""
     ;;
   *)
-        want_h2="yes"
-    want_h2_path="$withval/lib/pkgconfig"
+        want_nghttp2="yes"
+    want_nghttp2_path="$withval/lib/pkgconfig"
     ;;
 esac
 
-if test X"$want_h2" != Xno; then
+if test X"$want_nghttp2" != Xno; then
     CLEANLDFLAGS="$LDFLAGS"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
@@ -30394,8 +30520,8 @@ fi
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for libnghttp2 options with pkg-config" >&5
 printf %s "checking for libnghttp2 options with pkg-config... " >&6; }
             itexists=`
-    if test -n "$want_h2_path"; then
-      PKG_CONFIG_LIBDIR="$want_h2_path"
+    if test -n "$want_nghttp2_path"; then
+      PKG_CONFIG_LIBDIR="$want_nghttp2_path"
       export PKG_CONFIG_LIBDIR
     fi
          $PKGCONFIG --exists libnghttp2 >/dev/null 2>&1 && echo 1`
@@ -30413,8 +30539,8 @@ printf "%s\n" "found" >&6; }
 
   if test "$PKGCONFIG" != "no" ; then
     LIB_H2=`
-    if test -n "$want_h2_path"; then
-      PKG_CONFIG_LIBDIR="$want_h2_path"
+    if test -n "$want_nghttp2_path"; then
+      PKG_CONFIG_LIBDIR="$want_nghttp2_path"
       export PKG_CONFIG_LIBDIR
     fi
 
@@ -30423,8 +30549,8 @@ printf "%s\n" "found" >&6; }
 printf "%s\n" "$as_me: -l is $LIB_H2" >&6;}
 
     CPP_H2=`
-    if test -n "$want_h2_path"; then
-      PKG_CONFIG_LIBDIR="$want_h2_path"
+    if test -n "$want_nghttp2_path"; then
+      PKG_CONFIG_LIBDIR="$want_nghttp2_path"
       export PKG_CONFIG_LIBDIR
     fi
        $PKGCONFIG --cflags-only-I libnghttp2`
@@ -30432,8 +30558,8 @@ printf "%s\n" "$as_me: -l is $LIB_H2" >&6;}
 printf "%s\n" "$as_me: -I is $CPP_H2" >&6;}
 
     LD_H2=`
-    if test -n "$want_h2_path"; then
-      PKG_CONFIG_LIBDIR="$want_h2_path"
+    if test -n "$want_nghttp2_path"; then
+      PKG_CONFIG_LIBDIR="$want_nghttp2_path"
       export PKG_CONFIG_LIBDIR
     fi
 
@@ -30512,7 +30638,7 @@ fi
 
 
   else
-        if test X"$want_h2" != Xdefault; then
+        if test X"$want_nghttp2" != Xdefault; then
                   as_fn_error $? "--with-nghttp2 was specified but could not find libnghttp2 pkg-config file." "$LINENO" 5
     fi
   fi
@@ -33738,7 +33864,7 @@ fi
 
 
 
-      ac_fn_c_check_header_compile "$LINENO" "sys/types.h" "ac_cv_header_sys_types_h" "$ac_includes_default"
+    ac_fn_c_check_header_compile "$LINENO" "sys/types.h" "ac_cv_header_sys_types_h" "$ac_includes_default"
 if test "x$ac_cv_header_sys_types_h" = xyes
 then :
   printf "%s\n" "#define HAVE_SYS_TYPES_H 1" >>confdefs.h
@@ -33776,10 +33902,6 @@ else $as_nop
 #include <windows.h>
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
-#else
-#ifdef HAVE_WINSOCK_H
-#include <winsock.h>
-#endif
 #endif
 #endif
 #ifdef HAVE_SYS_TYPES_H
@@ -34425,10 +34547,6 @@ _EOF
 #include <windows.h>
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
-#else
-#ifdef HAVE_WINSOCK_H
-#include <winsock.h>
-#endif
 #endif
 #else
 #ifdef HAVE_SYS_TYPES_H
@@ -34473,10 +34591,6 @@ else $as_nop
 #include <windows.h>
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
-#else
-#ifdef HAVE_WINSOCK_H
-#include <winsock.h>
-#endif
 #endif
 #else
 #ifdef HAVE_SYS_TYPES_H
@@ -34597,10 +34711,6 @@ printf %s "checking for select... " >&6; }
 #include <windows.h>
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
-#else
-#ifdef HAVE_WINSOCK_H
-#include <winsock.h>
-#endif
 #endif
 #endif
 #ifdef HAVE_SYS_TYPES_H
@@ -34679,10 +34789,6 @@ else $as_nop
 #include <windows.h>
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
-#else
-#ifdef HAVE_WINSOCK_H
-#include <winsock.h>
-#endif
 #endif
 #define SELECTCALLCONV PASCAL
 #endif
@@ -34822,7 +34928,7 @@ printf "%s\n" "#define HAVE_SELECT 1" >>confdefs.h
 
 
 
-      ac_fn_c_check_header_compile "$LINENO" "sys/types.h" "ac_cv_header_sys_types_h" "$ac_includes_default"
+    ac_fn_c_check_header_compile "$LINENO" "sys/types.h" "ac_cv_header_sys_types_h" "$ac_includes_default"
 if test "x$ac_cv_header_sys_types_h" = xyes
 then :
   printf "%s\n" "#define HAVE_SYS_TYPES_H 1" >>confdefs.h
@@ -34850,10 +34956,6 @@ printf %s "checking for recv... " >&6; }
 #include <windows.h>
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
-#else
-#ifdef HAVE_WINSOCK_H
-#include <winsock.h>
-#endif
 #endif
 #else
 #ifdef HAVE_PROTO_BSDSOCKET_H
@@ -34922,10 +35024,6 @@ else $as_nop
 #include <windows.h>
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
-#else
-#ifdef HAVE_WINSOCK_H
-#include <winsock.h>
-#endif
 #endif
 #define RECVCALLCONV PASCAL
 #else
@@ -35011,7 +35109,7 @@ printf "%s\n" "#define HAVE_RECV 1" >>confdefs.h
   fi
 
 
-      ac_fn_c_check_header_compile "$LINENO" "sys/types.h" "ac_cv_header_sys_types_h" "$ac_includes_default"
+    ac_fn_c_check_header_compile "$LINENO" "sys/types.h" "ac_cv_header_sys_types_h" "$ac_includes_default"
 if test "x$ac_cv_header_sys_types_h" = xyes
 then :
   printf "%s\n" "#define HAVE_SYS_TYPES_H 1" >>confdefs.h
@@ -35039,10 +35137,6 @@ printf %s "checking for send... " >&6; }
 #include <windows.h>
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
-#else
-#ifdef HAVE_WINSOCK_H
-#include <winsock.h>
-#endif
 #endif
 #else
 #ifdef HAVE_PROTO_BSDSOCKET_H
@@ -35111,10 +35205,6 @@ else $as_nop
 #include <windows.h>
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
-#else
-#ifdef HAVE_WINSOCK_H
-#include <winsock.h>
-#endif
 #endif
 #define SENDCALLCONV PASCAL
 #else
@@ -35266,10 +35356,6 @@ else $as_nop
 #include <windows.h>
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
-#else
-#ifdef HAVE_WINSOCK_H
-#include <winsock.h>
-#endif
 #endif
 #else
 #ifdef HAVE_PROTO_BSDSOCKET_H
@@ -37480,6 +37566,9 @@ printf %s "checking if getaddrinfo is threadsafe... " >&6; }
                 tst_tsafe_getaddrinfo="no"
         ;;
       hpux*)
+                tst_tsafe_getaddrinfo="yes"
+        ;;
+      midnightbsd*)
                 tst_tsafe_getaddrinfo="yes"
         ;;
       netbsd[123].*)

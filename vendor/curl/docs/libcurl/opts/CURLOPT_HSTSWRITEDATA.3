@@ -20,7 +20,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_HSTSWRITEDATA 3 "September 06, 2021" "libcurl 7.79.1" "curl_easy_setopt options"
+.TH CURLOPT_HSTSWRITEDATA 3 "October 31, 2021" "libcurl 7.80.0" "curl_easy_setopt options"
 
 .SH NAME
 CURLOPT_HSTSWRITEDATA \- pointer passed to the HSTS write callback
@@ -30,10 +30,10 @@ CURLOPT_HSTSWRITEDATA \- pointer passed to the HSTS write callback
 CURLcode curl_easy_setopt(CURL *handle, CURLOPT_HSTSWRITEDATA, void *pointer);
 .SH DESCRIPTION
 Data \fIpointer\fP to pass to the HSTS write function. If you use the
-\fICURLOPT_HSTSWRITEFUNCTION(3)\fP option, this is the pointer you'll get as
+\fICURLOPT_HSTSWRITEFUNCTION(3)\fP option, this is the pointer you will get as
 input in the 4th argument to the callback.
 
-This option doesn't enable HSTS, you need to use \fICURLOPT_HSTS_CTRL(3)\fP to
+This option does not enable HSTS, you need to use \fICURLOPT_HSTS_CTRL(3)\fP to
 do that.
 .SH DEFAULT
 NULL

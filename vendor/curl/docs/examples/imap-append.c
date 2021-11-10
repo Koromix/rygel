@@ -69,7 +69,7 @@ static size_t payload_source(char *ptr, size_t size, size_t nmemb, void *userp)
 
   data = &payload_text[upload_ctx->bytes_read];
 
-  if(data) {
+  if(*data) {
     size_t len = strlen(data);
     if(room < len)
       len = room;
@@ -101,7 +101,7 @@ int main(void)
      * SELECT to ensure you are creating the message in the OUTBOX. */
     curl_easy_setopt(curl, CURLOPT_URL, "imap://imap.example.com/100");
 
-    /* In this case, we're using a callback function to specify the data. You
+    /* In this case, we are using a callback function to specify the data. You
      * could just use the CURLOPT_READDATA option to specify a FILE pointer to
      * read from. */
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, payload_source);

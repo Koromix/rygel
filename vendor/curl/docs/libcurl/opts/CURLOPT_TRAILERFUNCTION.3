@@ -20,7 +20,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_TRAILERFUNCTION 3 "September 08, 2021" "libcurl 7.79.1" "curl_easy_setopt options"
+.TH CURLOPT_TRAILERFUNCTION 3 "October 26, 2021" "libcurl 7.80.0" "curl_easy_setopt options"
 
 .SH NAME
 CURLOPT_TRAILERFUNCTION \- callback for sending trailing headers
@@ -67,7 +67,7 @@ HTTP
 static int trailer_cb(struct curl_slist **tr, void *data)
 {
   /* libcurl will free the list */
-  tr = curl_slist_append(*tr, "My-super-awesome-trailer: trailer-stuff");
+  *tr = curl_slist_append(*tr, "My-super-awesome-trailer: trailer-stuff");
   return CURL_TRAILERFUNC_OK;
 }
 

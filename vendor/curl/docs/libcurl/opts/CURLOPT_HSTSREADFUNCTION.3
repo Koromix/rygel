@@ -20,7 +20,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_HSTSREADFUNCTION 3 "September 16, 2021" "libcurl 7.79.1" "curl_easy_setopt options"
+.TH CURLOPT_HSTSREADFUNCTION 3 "October 31, 2021" "libcurl 7.80.0" "curl_easy_setopt options"
 
 .SH NAME
 CURLOPT_HSTSREADFUNCTION \- read callback for HSTS hosts
@@ -51,7 +51,7 @@ no entry to return. It can also return \fICURLSTS_FAIL\fP to signal
 error. Returning \fICURLSTS_FAIL\fP will stop the transfer from being
 performed and make \fICURLE_ABORTED_BY_CALLBACK\fP get returned.
 
-This option doesn't enable HSTS, you need to use \fICURLOPT_HSTS_CTRL(3)\fP to
+This option does not enable HSTS, you need to use \fICURLOPT_HSTS_CTRL(3)\fP to
 do that.
 .SH DEFAULT
 NULL - no callback.

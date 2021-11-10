@@ -799,6 +799,10 @@ SOURCE=..\..\..\..\src\tool_libinfo.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\..\..\src\tool_listhelp.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\..\..\src\tool_main.c
 # End Source File
 # Begin Source File

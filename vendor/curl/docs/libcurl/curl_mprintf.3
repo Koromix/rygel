@@ -19,7 +19,7 @@
 .\" * KIND, either express or implied.
 .\" *
 .\" **************************************************************************
-.TH curl_printf 3 "July 07, 2021" "libcurl 7.79.1" "libcurl Manual"
+.TH curl_printf 3 "November 04, 2021" "libcurl 7.80.0" "libcurl Manual"
 
 .SH NAME
 curl_maprintf, curl_mfprintf, curl_mprintf, curl_msnprintf, curl_msprintf
@@ -240,6 +240,11 @@ by the corresponding argument.
 .TP
 .B %
 A '%' is written. No argument is converted.
+.SH EXAMPLE
+.nf
+  mprintf("My name is %s\\n", name);
+  mprintf("Pi is almost %f\\n", 25/8);
+.fi
 .SH AVAILABILITY
 These functions will be removed from the public libcurl API in the future. Do
 not use them in new programs or projects.

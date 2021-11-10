@@ -1452,6 +1452,9 @@
 				RelativePath="..\..\..\..\src\tool_libinfo.c">
 			</File>
 			<File
+				RelativePath="..\..\..\..\src\tool_listhelp.c">
+			</File>
+			<File
 				RelativePath="..\..\..\..\src\tool_main.c">
 			</File>
 			<File

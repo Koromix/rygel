@@ -20,7 +20,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_DOH_URL 3 "July 28, 2021" "libcurl 7.79.1" "curl_easy_setopt options"
+.TH CURLOPT_DOH_URL 3 "October 31, 2021" "libcurl 7.80.0" "curl_easy_setopt options"
 
 .SH NAME
 CURLOPT_DOH_URL \- provide the DNS-over-HTTPS URL
@@ -34,7 +34,7 @@ resolving. The parameter should be a char * to a null-terminated string which
 must be URL-encoded in the following format: "https://host:port/path". It MUST
 specify a HTTPS URL.
 
-libcurl doesn't validate the syntax or use this variable until the transfer is
+libcurl does not validate the syntax or use this variable until the transfer is
 issued. Even if you set a crazy value here, \fIcurl_easy_setopt(3)\fP will
 still return \fICURLE_OK\fP.
 
@@ -55,7 +55,7 @@ can be controlled separately via \fICURLOPT_DOH_SSL_VERIFYHOST(3)\fP and
 
 A set \fICURLOPT_OPENSOCKETFUNCTION(3)\fP callback is not inherited.
 .SH DEFAULT
-NULL - there is no default DoH URL. If this option isn't set, libcurl will use
+NULL - there is no default DoH URL. If this option is not set, libcurl will use
 the default name resolver.
 .SH PROTOCOLS
 All
@@ -74,7 +74,7 @@ Added in 7.62.0
 Returns CURLE_OK on success or CURLE_OUT_OF_MEMORY if there was insufficient
 heap space.
 
-Note that \fIcurl_easy_setopt(3)\fP won't actually parse the given string so
+Note that \fIcurl_easy_setopt(3)\fP will not actually parse the given string so
 given a bad DoH URL, curl will not detect a problem until it tries to resolve
 a name with it.
 .SH "SEE ALSO"

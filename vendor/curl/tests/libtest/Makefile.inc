@@ -36,7 +36,7 @@ SUPPORTFILES = first.c test.h
 
 # These are all libcurl test programs
 noinst_PROGRAMS = chkhostname libauthretry libntlmconnect                \
- chkdecimalpoint                                                         \
+ chkdecimalpoint libprereq                                               \
  lib500 lib501 lib502 lib503 lib504 lib505 lib506 lib507 lib508 lib509   \
  lib510 lib511 lib512 lib513 lib514 lib515 lib516 lib517 lib518 lib519   \
  lib520 lib521 lib523 lib524 lib525 lib526 lib527 lib529        lib532   \
@@ -55,13 +55,13 @@ noinst_PROGRAMS = chkhostname libauthretry libntlmconnect                \
  lib1518         lib1520 lib1521 lib1522 lib1523 \
  lib1525 lib1526 lib1527 lib1528 lib1529 lib1530 lib1531 lib1532 lib1533 \
  lib1534 lib1535 lib1536 lib1537 lib1538 lib1539 \
- lib1540         \
+ lib1540         lib1542 \
  lib1550 lib1551 lib1552 lib1553 lib1554 lib1555 lib1556 lib1557 \
  lib1558 lib1559 lib1560 lib1564 lib1565 lib1567 lib1568 lib1569 \
  lib1591 lib1592 lib1593 lib1594 lib1596 \
          lib1905 lib1906 lib1907 lib1908 lib1910 lib1911 lib1912 lib1913 \
          lib1915 lib1916 lib1917 lib1918 lib1933 lib1934 lib1935 lib1936 \
-         lib3010
+ lib1937 lib1938 lib3010
 
 chkdecimalpoint_SOURCES = chkdecimalpoint.c ../../lib/mprintf.c \
  ../../lib/curl_ctype.c  ../../lib/dynbuf.c ../../lib/strdup.c
@@ -80,6 +80,10 @@ libntlmconnect_CPPFLAGS = $(AM_CPPFLAGS)
 
 libauthretry_SOURCES = libauthretry.c $(SUPPORTFILES)
 libauthretry_CPPFLAGS = $(AM_CPPFLAGS)
+
+libprereq_SOURCES = libprereq.c $(SUPPORTFILES) $(TESTUTIL) $(WARNLESS)
+libprereq_LDADD = $(TESTUTIL_LIBS)
+libprereq_CPPFLAGS = $(AM_CPPFLAGS)
 
 lib500_SOURCES = lib500.c $(SUPPORTFILES) $(TESTUTIL) $(TSTTRACE) $(MULTIBYTE)
 lib500_LDADD = $(TESTUTIL_LIBS)
@@ -494,7 +498,7 @@ lib1520_CPPFLAGS = $(AM_CPPFLAGS) -DLIB1520
 nodist_lib1521_SOURCES = lib1521.c $(SUPPORTFILES)
 lib1521_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)
 
-lib1522_SOURCES = lib1522.c $(SUPPORTFILES) $(TESTUTIL) $(TSTTRACE) 
+lib1522_SOURCES = lib1522.c $(SUPPORTFILES) $(TESTUTIL) $(TSTTRACE)
 lib1522_LDADD = $(TESTUTIL_LIBS)
 lib1522_CPPFLAGS = $(AM_CPPFLAGS)
 
@@ -564,6 +568,10 @@ lib1539_CPPFLAGS = $(AM_CPPFLAGS) -DLIB1539
 lib1540_SOURCES = lib1540.c $(SUPPORTFILES) $(TESTUTIL) $(WARNLESS)
 lib1540_LDADD = $(TESTUTIL_LIBS)
 lib1540_CPPFLAGS = $(AM_CPPFLAGS)
+
+lib1542_SOURCES = lib1542.c $(SUPPORTFILES) $(TESTUTIL) $(TSTTRACE) $(WARNLESS)
+lib1542_LDADD = $(TESTUTIL_LIBS)
+lib1542_CPPFLAGS = $(AM_CPPFLAGS)
 
 lib1550_SOURCES = lib1550.c $(SUPPORTFILES)
 lib1550_CPPFLAGS = $(AM_CPPFLAGS) -DLIB1517
@@ -698,6 +706,14 @@ lib1935_CPPFLAGS = $(AM_CPPFLAGS)
 lib1936_SOURCES = lib1936.c $(SUPPORTFILES) $(TESTUTIL) $(WARNLESS)
 lib1936_LDADD = $(TESTUTIL_LIBS)
 lib1936_CPPFLAGS = $(AM_CPPFLAGS)
+
+lib1937_SOURCES = lib1937.c $(SUPPORTFILES)
+lib1937_LDADD = $(TESTUTIL_LIBS)
+lib1937_CPPFLAGS = $(AM_CPPFLAGS)
+
+lib1938_SOURCES = lib1938.c $(SUPPORTFILES)
+lib1938_LDADD = $(TESTUTIL_LIBS)
+lib1938_CPPFLAGS = $(AM_CPPFLAGS)
 
 lib3010_SOURCES = lib3010.c $(SUPPORTFILES) $(TESTUTIL) $(WARNLESS)
 lib3010_LDADD = $(TESTUTIL_LIBS)
