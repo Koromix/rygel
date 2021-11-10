@@ -1089,11 +1089,11 @@ class TeensyCompiler final: public Compiler {
     BlockAllocator str_alloc;
 
 public:
-    TeensyCompiler(HostPlatform host, const char *name) : Compiler(host, name) {}
+    TeensyCompiler(HostPlatform host) : Compiler(host, "GCC") {}
 
-    static std::unique_ptr<const Compiler> Create(HostPlatform host, const char *name, const char *cc)
+    static std::unique_ptr<const Compiler> Create(HostPlatform host, const char *cc)
     {
-        std::unique_ptr<TeensyCompiler> compiler = std::make_unique<TeensyCompiler>(host, name);
+        std::unique_ptr<TeensyCompiler> compiler = std::make_unique<TeensyCompiler>(host);
 
         // Decode model string
         switch (host) {
@@ -1527,7 +1527,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
             return nullptr;
         }
 
-        return TeensyCompiler::Create(spec.host, "GCC_AVR", spec.cc);
+        return TeensyCompiler::Create(spec.host, spec.cc);
     } else if (TestHostFamily(spec.host, "Teensy/ARM")) {
         if (!spec.cc) {
             static std::once_flag flag;
@@ -1548,7 +1548,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
             return nullptr;
         }
 
-        return TeensyCompiler::Create(spec.host, "GCC_ARM", spec.cc);
+        return TeensyCompiler::Create(spec.host, spec.cc);
     } else {
         LogError("Cross-compilation from host '%1' to '%2' is not supported",
                  HostPlatformNames[(int)spec.host], HostPlatformNames[(int)NativeHost]);
