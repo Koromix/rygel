@@ -60,7 +60,7 @@ function update() {
     let delay = performance.now() - recv_time;
 
     // Check and update connection status
-    if (delay > 8000) {
+    if (delay > 20000) {
         if (ws != null && ws.readyState === 1) {
             let err = new Error('Data connection timed out');
             log.error(err);
@@ -235,10 +235,19 @@ function draw() {
         label(12, canvas.height - 12, text4, { align: 1 });
     }
 
-    // Status
+    // Status and delay warning
     {
         let text = connected ? 'Status: Online' : 'Status: Offline';
         label(12, 12, text, { align: 7, color: connected ? 'black' : '#ff0000' });
+
+        if (connected) {
+            let delay = performance.now() - recv_time;
+
+            if (delay > 1000) {
+                let text = `Last update: ${(delay / 1000).toFixed(1)} sec`;
+                label(12, 54, text, { align: 7, icon: assets.ui.error, color: '#ff0000' });
+            }
+        }
     }
 
     // FPS
