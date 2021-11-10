@@ -1645,6 +1645,22 @@ static std::function<LogFunc> log_handler = DefaultLogHandler;
 static RG_THREAD_LOCAL std::function<LogFilterFunc> *log_filters[16];
 static RG_THREAD_LOCAL Size log_filters_len;
 
+static const char *GetQualifiedEnv(const char *name)
+{
+    RG_ASSERT(strlen(name) < 256);
+
+    LocalArray<char, 1024> buf;
+    while (FelixTarget[buf.len]) {
+        int c = UpperAscii(FelixTarget[buf.len]);
+        buf.Append((char)c);
+    }
+    buf.Append('_');
+    buf.Append(name);
+    buf.Append(0);
+
+    return getenv(buf.data);
+}
+
 bool GetDebugFlag(const char *name)
 {
 #ifdef __EMSCRIPTEN__
@@ -1657,7 +1673,7 @@ bool GetDebugFlag(const char *name)
         }
     }, name);
 #else
-    const char *debug = getenv(name);
+    const char *debug = GetQualifiedEnv(name);
 
     if (debug) {
         bool ret;
@@ -3864,7 +3880,7 @@ int GetCoreCount()
     static int cores;
 
     if (!cores) {
-        const char *env = getenv("OVERRIDE_CORES");
+        const char *env = GetQualifiedEnv("CORES");
 
         if (env) {
             char *end_ptr;
