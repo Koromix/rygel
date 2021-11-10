@@ -144,7 +144,7 @@ function AdminController() {
                                 <tr>
                                     <td style=${'text-align: left;' + (user.admin ? ' color: #db0a0a;' : '')}>
                                         ${user.username}
-                                        ${user.admin ? html`<span title="Administrateur">♛\uFE0F</span>` : ''}
+                                        ${user.admin ? html`<span title="Administrateur">♛\uFE0E</span>` : ''}
                                     </td>
                                     ${selected_instance == null ? html`
                                         <td style="text-align: left;">${user.email != null ? html`<a href=${'mailto:' + user.email}>${user.email}</a>` : ''}</td>
