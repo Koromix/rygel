@@ -86,6 +86,16 @@ static void ReceivePacket()
         uint8_t buf[RF24_PAYLOAD_SIZE];
         rf24.read(buf, sizeof(buf));
 
+#if 0
+        Serial.print("RF24 payload:");
+        for (size_t i = 0; i < buf[0]; i++) {
+            uint8_t c = buf[i + 1];
+            Serial.print(" 0x");
+            Serial.print(c, HEX);
+        }
+        Serial.println();
+#endif
+
         for (size_t i = 0; i < buf[0]; i++) {
             uint8_t c = buf[1 + i];
 

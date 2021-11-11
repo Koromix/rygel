@@ -423,6 +423,20 @@ static void RelayPacketToDevice(Span<const uint8_t> pkt)
     }
     buf.Append(0xA);
 
+#if 0
+    // Dump packet
+    {
+        static std::mutex mutex;
+        std::lock_guard<std::mutex> lock(mutex);
+
+        Print(stderr, "PKT:");
+        for (uint8_t c: buf) {
+            Print(" 0x%1", FmtHex(c).Pad0(-2));
+        }
+        PrintLn(stderr);
+    }
+#endif
+
     // Do something if it fails?
     hs_serial_write(comm_port, buf.data, (size_t)buf.len, -1);
 }
