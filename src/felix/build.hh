@@ -84,7 +84,7 @@ class Builder {
 
         uint64_t Hash() const
         {
-            uint64_t hash = ns ? HashTraits<const char *>::Hash(ns) : 0ull ^
+            uint64_t hash = (ns ? HashTraits<const char *>::Hash(ns) : 0ull) ^
                             HashTraits<const char *>::Hash(filename);
             return hash;
         }
