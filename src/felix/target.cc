@@ -510,8 +510,9 @@ unsigned int ParseSupportedHosts(Span<const char> str)
 {
     unsigned int hosts = 0;
 
-    while (str.len) {
-        Span<const char> part = SplitStrAny(str, ", ", &str);
+    Span<const char> remain = str;
+    while (remain.len) {
+        Span<const char> part = SplitStrAny(remain, ", ", &remain);
 
         if (part == "Win32") {
             // Old name, supported for compatibility (easier bisect)
@@ -535,6 +536,9 @@ unsigned int ParseSupportedHosts(Span<const char> str)
                 } while (name.len);
             }
         }
+    }
+    if (!hosts) {
+        LogError("Unknown host or host family '%1'", str);
     }
 
     return hosts;

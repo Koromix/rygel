@@ -150,7 +150,6 @@ static bool ParseHostString(Span<const char> str, Allocator *alloc, PlatformSpec
             unsigned int hosts = ParseSupportedHosts(host);
 
             if (!hosts) {
-                LogError("Unknown host '%1'", host);
                 return false;
             } else if (PopCount(hosts) > 1) {
                 LogError("Ambiguous host '%1' (multiple matches)", host);
