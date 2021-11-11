@@ -118,7 +118,7 @@ static void InitAssets()
             AssetInfo *copy = PatchVariables(asset);
             assets_map.Set("/", copy);
             assets_for_cache.Append("/");
-        } else if (TestStr(asset.name, "src/mael/raspi/client/favicon.png")) {
+        } else if (TestStr(asset.name, "src/mael/raspi/client/assets/favicon.png")) {
             assets_map.Set("/favicon.png", &asset);
             assets_for_cache.Append("/favicon.png");
         } else if (TestStr(asset.name, "src/mael/raspi/client/manifest.json")) {
