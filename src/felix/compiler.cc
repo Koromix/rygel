@@ -1154,7 +1154,7 @@ public:
 
     bool GetCoreSources(Allocator *alloc, HeapArray<const char *> *out_filenames) const override
     {
-        const char *dirname;
+        const char *dirname = nullptr;
         switch (model) {
             case Model::Teensy20:
             case Model::Teensy20pp: { dirname = "vendor/teensy/cores/teensy"; } break;
@@ -1166,6 +1166,7 @@ public:
             case Model::Teensy40:
             case Model::Teensy41: { dirname = "vendor/teensy/cores/teensy4"; } break;
         }
+        RG_ASSERT(dirname);
 
         EnumStatus status = EnumerateDirectory(dirname, nullptr, 1024,
                                                [&](const char *basename, FileType) {
