@@ -71,20 +71,39 @@ class Builder {
         BlockAllocator str_alloc;
     };
 
+    struct BuildKey {
+        const char *ns;
+        const char *filename;
+
+        bool operator==(const BuildKey &other) const
+        {
+            return (ns ? (other.ns && TestStr(ns, other.ns)) : !other.ns) &&
+                   TestStr(filename, other.filename);
+        }
+        bool operator !=(const BuildKey &other) const { return !(*this == other); }
+
+        uint64_t Hash() const
+        {
+            uint64_t hash = ns ? HashTraits<const char *>::Hash(ns) : 0ull ^
+                            HashTraits<const char *>::Hash(filename);
+            return hash;
+        }
+    };
+
     BuildSettings build;
     const char *cache_directory;
     const char *cache_filename;
 
-    // Core host target (if any)
-    bool core_init = false;
-    TargetInfo core_target = {};
+    // Core host targets (if any)
+    BucketArray<TargetInfo> core_targets;
+    HashMap<const char *, TargetInfo *> core_targets_map;
     BucketArray<SourceFileInfo> core_sources;
 
     // AddTarget, AddSource
     HeapArray<Node> nodes;
     Size total = 0;
     HashMap<const char *, Size> nodes_map;
-    HashMap<const char *, const char *> build_map;
+    HashMap<BuildKey, const char *> build_map;
     HashMap<const char *, int64_t> mtime_map;
 
     // Build
@@ -105,7 +124,7 @@ public:
     Builder(const BuildSettings &build);
 
     bool AddTarget(const TargetInfo &target);
-    const char *AddSource(const SourceFileInfo &src);
+    const char *AddSource(const SourceFileInfo &src, const char *ns = nullptr);
 
     bool Build(int jobs, bool verbose);
 
@@ -114,7 +133,7 @@ private:
     void LoadCache();
 
     bool AppendNode(const char *text, const char *dest_filename, const Command &cmd,
-                    Span<const char *const> src_filenames);
+                    Span<const char *const> src_filenames, const char *ns);
     bool NeedsRebuild(const char *dest_filename, const Command &cmd,
                       Span<const char *const> src_filenames);
     bool IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames);

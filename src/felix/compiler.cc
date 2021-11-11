@@ -229,7 +229,7 @@ public:
     const char *GetPostExtension() const override { return nullptr; }
 #endif
 
-    bool GetCoreSources(Allocator *alloc, HeapArray<const char *> *) const override { return true; }
+    bool GetCore(Span<const char *const>, Allocator *, HeapArray<const char *> *, const char **) const override { return true; }
 
     void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
                          const char *pack_options, const char *dest_filename,
@@ -597,7 +597,7 @@ public:
     const char *GetPostExtension() const override { return nullptr; }
 #endif
 
-    bool GetCoreSources(Allocator *alloc, HeapArray<const char *> *) const override { return true; }
+    bool GetCore(Span<const char *const>, Allocator *, HeapArray<const char *> *, const char **) const override { return true; }
 
     void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
                          const char *pack_options, const char *dest_filename,
@@ -888,7 +888,7 @@ public:
     const char *GetLinkExtension() const override { return ".exe"; }
     const char *GetPostExtension() const override { return nullptr; }
 
-    bool GetCoreSources(Allocator *alloc, HeapArray<const char *> *) const override { return true; }
+    bool GetCore(Span<const char *const>, Allocator *, HeapArray<const char *> *, const char **) const override { return true; }
 
     void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
                          const char *pack_options, const char *dest_filename,
@@ -1152,7 +1152,8 @@ public:
     const char *GetLinkExtension() const override { return ".elf"; }
     const char *GetPostExtension() const override { return ".hex"; }
 
-    bool GetCoreSources(Allocator *alloc, HeapArray<const char *> *out_filenames) const override
+    bool GetCore(Span<const char *const> definitions, Allocator *alloc,
+                 HeapArray<const char *> *out_filenames, const char **out_ns) const override
     {
         const char *dirname = nullptr;
         switch (model) {
@@ -1182,6 +1183,16 @@ public:
         });
         if (status != EnumStatus::Done)
             return false;
+
+        uint64_t hash = 0;
+        for (const char *definition: definitions) {
+            if (StartsWith(definition, "F_CPU=") ||
+                    StartsWith(definition, "USB_") ||
+                    StartsWith(definition, "LAYOUT_")) {
+                hash ^= HashTraits<const char *>::Hash(definition);
+            }
+        }
+        *out_ns = Fmt(alloc, "%1", FmtHex(hash).Pad0(-16)).ptr;
 
         return true;
     }
