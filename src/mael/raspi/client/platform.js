@@ -267,8 +267,8 @@ function loop(timestamp) {
 
     frame_time = measurePerf(frame_times, delay);
 
-    // Keep physics at 120 Hz...
-    updates += update_speed * Math.round(delay / (1000 / 120));
+    // Keep physics at 600 Hz...
+    updates += update_speed * Math.round(delay / (1000 / 600));
 
     // ... unless it takes too long, in which case game slows down
     if (draw_counter % 8 == 0) {
