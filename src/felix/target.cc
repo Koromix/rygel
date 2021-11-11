@@ -524,7 +524,7 @@ unsigned int ParseSupportedHosts(Span<const char> str)
             for (Size i = 0; i < RG_LEN(HostPlatformNames); i++) {
                 Span<const char> name = HostPlatformNames[i];
 
-                do {
+                while (name.len) {
                     Size len = StartsWith(name, part);
 
                     if (len == name.len || name[len] == '/') {
@@ -533,7 +533,7 @@ unsigned int ParseSupportedHosts(Span<const char> str)
                     }
 
                     SplitStr(name, '/', &name);
-                } while (name.len);
+                }
             }
         }
     }
