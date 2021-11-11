@@ -144,7 +144,7 @@ static int DeviceCallback(hs_device *dev, void *)
 
     switch (dev->status) {
         case HS_DEVICE_STATUS_ONLINE: {
-            if (mael_config.serial_number && TestStr(dev->serial_number_string, mael_config.serial_number)) {
+            if (!mael_config.serial_number || TestStr(dev->serial_number_string, mael_config.serial_number)) {
                 if (comm_dev) {
                     LogError("Ignoring supplementary device '%1'", dev->location);
                     return 0;
