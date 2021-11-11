@@ -156,6 +156,26 @@ malformed:
     Serial.println("Malformed packet");
 }
 
+static void SendFrame()
+{
+    if (send_buf_send != send_buf_write) {
+        rf24.stopListening();
+        DEFER { rf24.startListening(); };
+
+        uint8_t buf[RF24_PAYLOAD_SIZE] = {};
+        int buf_len = 1;
+
+        while (send_buf_send != send_buf_write && buf_len < (int)sizeof(buf)) {
+            buf[buf_len++] = send_buf[send_buf_send];
+            send_buf_send = (send_buf_send + 1) % sizeof(send_buf);
+        }
+        buf[0] = (uint8_t)(buf_len - 1);
+
+        rf24.writeFast(buf, sizeof(buf));
+        rf24.txStandBy(0);
+    }
+}
+
 void ProcessSerial()
 {
     if (rf24.failureDetected) {
@@ -163,50 +183,32 @@ void ProcessSerial()
         InitRadio();
     }
 
-    // Process incoming packets
+    // Process incoming and outgoing data
     ReceivePacket();
-
-    // Send pending packets
-    if (send_buf_send != send_buf_write) {
-        rf24.stopListening();
-        DEFER { rf24.startListening(); };
-
-        while (send_buf_send != send_buf_write) {
-            uint8_t buf[RF24_PAYLOAD_SIZE] = {};
-            int buf_len = 1;
-
-            while (send_buf_send != send_buf_write && buf_len < (int)sizeof(buf)) {
-                buf[buf_len++] = send_buf[send_buf_send];
-                send_buf_send = (send_buf_send + 1) % sizeof(send_buf);
-            }
-            buf[0] = (uint8_t)(buf_len - 1);
-
-            rf24.writeFast(buf, sizeof(buf));
-            rf24.txStandBy(0);
-        }
-    }
+    SendFrame();
 }
 
-static inline bool WriteByte(uint8_t c, bool escape)
+static inline bool PostByte(uint8_t c, bool escape)
 {
     if (escape && (c == 0xA || c == 0xD)) {
         size_t next = (send_buf_write + 1) % sizeof(send_buf);
+        size_t after = (next + 1) % sizeof(send_buf);
 
-        if (next == send_buf_send)
+        if (after == send_buf_send)
             return false;
 
         send_buf[send_buf_write] = 0xD;
-        send_buf_write = (send_buf_write + 1) % sizeof(send_buf);
-        c ^= 0x8;
+        send_buf[next] = c ^ 0x8;
+        send_buf_write = after;
+    } else {
+        size_t after = (send_buf_write + 1) % sizeof(send_buf);
+
+        if (after == send_buf_send)
+            return false;
+
+        send_buf[send_buf_write] = c;
+        send_buf_write = after;
     }
-
-    size_t next = (send_buf_write + 1) % sizeof(send_buf);
-
-    if (next == send_buf_send)
-        return false;
-
-    send_buf[send_buf_write] = c;
-    send_buf_write = (send_buf_write + 1) % sizeof(send_buf);
 
     return true;
 }
@@ -231,19 +233,19 @@ bool PostMessage(MessageType type, const void *args)
     }
 
     // Write packet to send buffer
-    if (!WriteByte(0xA, false))
+    if (!PostByte(0xA, false))
         goto overflow;
     for (size_t i = 0; i < sizeof(hdr); i++) {
         uint8_t c = ((const uint8_t *)&hdr)[i];
-        if (!WriteByte(c, true))
+        if (!PostByte(c, true))
             goto overflow;
     }
     for (size_t i = 0; i < PacketSizes[hdr.type]; i++) {
         const uint8_t *bytes = (const uint8_t *)args;
-        if (!WriteByte(bytes[i], true))
+        if (!PostByte(bytes[i], true))
             goto overflow;
     }
-    if (!WriteByte(0xA, false))
+    if (!PostByte(0xA, false))
         goto overflow;
 
     return true;
