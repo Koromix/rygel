@@ -67,6 +67,12 @@ static bool ExecuteCommand(MessageType type, const void *data)
             return true;
         } break;
 
+        case MessageType::SetPosition: {
+            const SetPositionParameters &args = *(const SetPositionParameters *)data;
+            SetPosition(args.position);
+            return true;
+        } break;
+
         default: {
             Serial.println("Unexpected packet");
             return false;
