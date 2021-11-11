@@ -34,8 +34,7 @@ static size_t send_buf_send = 0;
 static void InitRadio()
 {
     while (!rf24.begin(&(RF24_SPI), RF24_PIN_CE, RF24_PIN_CSN)) {
-        Serial.println("Radio hardware not responding!!");
-        delay(2000);
+        Serial.println("Radio hardware not responding!");
     }
 
     rf24.setPALevel(RF24_PA_LOW);
