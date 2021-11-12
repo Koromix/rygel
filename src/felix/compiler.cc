@@ -1464,16 +1464,36 @@ static void FindArduinoCompiler(const char *name, const char *compiler, Span<cha
         out_cc[0] = 0;
     }
 #else
-    static const char *const test_paths[] = {
-        "/usr/share/arduino",
-        "/usr/local/share/arduino",
+    struct TestPath {
+        const char *env;
+        const char *path;
+    };
+
+    static const TestPath test_paths[] = {
+        {nullptr, "/usr/share/arduino"},
+        {nullptr, "/usr/local/share/arduino"},
+        {"HOME",  ".local/share/arduino"},
 #ifdef __APPLE__
-        "/Applications/Arduino.app/Contents/Java"
+        {nullptr, "/Applications/Arduino.app/Contents/Java"}
 #endif
     };
 
-    for (const char *path: test_paths) {
-        Fmt(out_cc, "%1%/%2", path, compiler);
+    for (const TestPath &test: test_paths) {
+        if (test.env) {
+            Span<const char> prefix = getenv(test.env);
+
+            if (prefix.len) {
+                while (prefix.len && IsPathSeparator(prefix[prefix.len - 1])) {
+                    prefix.len--;
+                }
+
+                Fmt(out_cc, "%1%/%2%/%3", prefix, test.path, compiler);
+            } else {
+                Fmt(out_cc, "%1%/%2", test.path, compiler);
+            }
+        } else {
+            Fmt(out_cc, "%1%/%2", test.path, compiler);
+        }
 
         if (TestFile(out_cc.ptr, FileType::File)) {
             LogDebug("Found %1 compiler for Teensy: '%2'", name, out_cc.ptr);
