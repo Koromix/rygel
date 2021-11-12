@@ -176,7 +176,8 @@ public:
     {
         uint32_t supported = 0;
 
-        supported |= (int)CompileFeature::Optimize;
+        supported |= (int)CompileFeature::OptimizeSpeed;
+        supported |= (int)CompileFeature::OptimizeSize;
         supported |= (int)CompileFeature::HotAssets;
         supported |= (int)CompileFeature::PCH;
         supported |= (int)CompileFeature::DebugInfo;
@@ -203,6 +204,10 @@ public:
             return false;
         }
 
+        if ((features & (int)CompileFeature::OptimizeSpeed) && (features & (int)CompileFeature::OptimizeSize)) {
+            LogError("Cannot use OptimizeSpeed and OptimizeSize at the same time");
+            return false;
+        }
         if ((features & (int)CompileFeature::ASan) && (features & (int)CompileFeature::TSan)) {
             LogError("Cannot use ASan and TSan at the same time");
             return false;
@@ -285,8 +290,10 @@ public:
 
         // Build options
         Fmt(&buf, " -fvisibility=hidden");
-        if (features & (int)CompileFeature::Optimize) {
+        if (features & (int)CompileFeature::OptimizeSpeed) {
             Fmt(&buf, " -O2 -DNDEBUG");
+        } else if (features & (int)CompileFeature::OptimizeSize) {
+            Fmt(&buf, " -Os -DNDEBUG");
         } else {
             Fmt(&buf, " -O0 -ftrapv -fno-omit-frame-pointer");
         }
@@ -324,7 +331,7 @@ public:
         if (clang11) {
             Fmt(&buf, " -fno-semantic-interposition");
         }
-        if (features & (int)CompileFeature::Optimize) {
+        if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
             Fmt(&buf, " -D_FORTIFY_SOURCE=2");
         }
 #endif
@@ -551,7 +558,8 @@ public:
     {
         uint32_t supported = 0;
 
-        supported |= (int)CompileFeature::Optimize;
+        supported |= (int)CompileFeature::OptimizeSpeed;
+        supported |= (int)CompileFeature::OptimizeSize;
         supported |= (int)CompileFeature::HotAssets;
 #ifndef _WIN32
         // Sometimes it works, somestimes not and the object files are
@@ -575,6 +583,10 @@ public:
             return false;
         }
 
+        if ((features & (int)CompileFeature::OptimizeSpeed) && (features & (int)CompileFeature::OptimizeSize)) {
+            LogError("Cannot use OptimizeSpeed and OptimizeSize at the same time");
+            return false;
+        }
         if ((features & (int)CompileFeature::ASan) && (features & (int)CompileFeature::TSan)) {
             LogError("Cannot use ASan and TSan at the same time");
             return false;
@@ -652,8 +664,10 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        if (features & (int)CompileFeature::Optimize) {
+        if (features & (int)CompileFeature::OptimizeSpeed) {
             Fmt(&buf, " -O2 -DNDEBUG");
+        } else if (features & (int)CompileFeature::OptimizeSize) {
+            Fmt(&buf, " -Os -DNDEBUG");
         } else {
             Fmt(&buf, " -O0 -fsanitize=signed-integer-overflow -fsanitize-undefined-trap-on-error -fno-omit-frame-pointer");
         }
@@ -683,7 +697,7 @@ public:
 #else
         Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
                   " -pthread -fPIC -fno-semantic-interposition");
-        if (features & (int)CompileFeature::Optimize) {
+        if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
             Fmt(&buf, " -D_FORTIFY_SOURCE=2");
         }
     #if defined(__arm__) || defined(__thumb__)
@@ -865,7 +879,8 @@ public:
     {
         uint32_t supported = 0;
 
-        supported |= (int)CompileFeature::Optimize;
+        supported |= (int)CompileFeature::OptimizeSpeed;
+        supported |= (int)CompileFeature::OptimizeSize;
         supported |= (int)CompileFeature::HotAssets;
         supported |= (int)CompileFeature::PCH;
         supported |= (int)CompileFeature::DebugInfo;
@@ -878,6 +893,11 @@ public:
         if (unsupported) {
             LogError("Some features are not supported by %1: %2",
                      name, FmtFlags(unsupported, CompileFeatureOptions));
+            return false;
+        }
+
+        if ((features & (int)CompileFeature::OptimizeSpeed) && (features & (int)CompileFeature::OptimizeSize)) {
+            LogError("Cannot use OptimizeSpeed and OptimizeSize at the same time");
             return false;
         }
 
@@ -949,8 +969,10 @@ public:
 
         // Build options
         Fmt(&buf, " /EHsc");
-        if (features & (int)CompileFeature::Optimize) {
+        if (features & (int)CompileFeature::OptimizeSpeed) {
             Fmt(&buf, " /O2 /DNDEBUG");
+        } else if (features & (int)CompileFeature::OptimizeSize) {
+            Fmt(&buf, " /O1 /DNDEBUG");
         } else {
             Fmt(&buf, " /Od /RTCsu");
         }
@@ -1133,7 +1155,8 @@ public:
     {
         uint32_t supported = 0;
 
-        supported |= (int)CompileFeature::Optimize;
+        supported |= (int)CompileFeature::OptimizeSpeed;
+        supported |= (int)CompileFeature::OptimizeSize;
         supported |= (int)CompileFeature::HotAssets;
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::LTO;
@@ -1142,6 +1165,11 @@ public:
         if (unsupported) {
             LogError("Some features are not supported by %1: %2",
                      name, FmtFlags(unsupported, CompileFeatureOptions));
+            return false;
+        }
+
+        if ((features & (int)CompileFeature::OptimizeSpeed) && (features & (int)CompileFeature::OptimizeSize)) {
+            LogError("Cannot use OptimizeSpeed and OptimizeSize at the same time");
             return false;
         }
 
@@ -1234,7 +1262,9 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        if (features & (int)CompileFeature::Optimize) {
+        if (features & (int)CompileFeature::OptimizeSpeed) {
+            Fmt(&buf, " -O2 -DNDEBUG");
+        } else if (features & (int)CompileFeature::OptimizeSize) {
             Fmt(&buf, " -Os -DNDEBUG");
         } else {
             Fmt(&buf, " -O0 -fsanitize=signed-integer-overflow -fsanitize-undefined-trap-on-error -fno-omit-frame-pointer");

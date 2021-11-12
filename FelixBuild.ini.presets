@@ -15,47 +15,47 @@
 Features = PCH, DebugInfo, HotAssets, ASan
 
 [Fast]
-Features = PCH, DebugInfo, Optimize
+Features = PCH, DebugInfo, OptimizeSpeed
 
 [LTO]
-Features = DebugInfo, Optimize, LTO
+Features = DebugInfo, OptimizeSpeed, LTO
 
 [Paranoid]
 Host = ,clang,lld
-Features = Optimize, LTO, SafeStack, CFI, ZeroInit, ShuffleCode
+Features = OptimizeSpeed, LTO, SafeStack, CFI, ZeroInit, ShuffleCode
 
 [Teensy20]
 Host = Teensy20
-Features = Optimize
+Features = OptimizeSize
 
 [Teensy20++]
 Host = Teensy20++
-Features = Optimize
+Features = OptimizeSize
 
 [TeensyLC]
 Host = TeensyLC
-Features = Optimize
+Features = OptimizeSize
 
 [Teensy30]
 Host = Teensy30
-Features = Optimize
+Features = OptimizeSize
 
 [Teensy31]
 Host = Teensy31
-Features = Optimize
+Features = OptimizeSize
 
 [Teensy35]
 Host = Teensy35
-Features = Optimize
+Features = OptimizeSize
 
 [Teensy36]
 Host = Teensy36
-Features = Optimize
+Features = OptimizeSize
 
 [Teensy40]
 Host = Teensy40
-Features = Optimize
+Features = OptimizeSize
 
 [Teensy41]
 Host = Teensy41
-Features = Optimize
+Features = OptimizeSize
