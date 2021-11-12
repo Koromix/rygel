@@ -557,6 +557,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
 
         for (const char *selector: selectors) {
             bool match = false;
+
+            // Match targets
             for (const TargetInfo &target: target_set.targets) {
                 if (MatchPathSpec(target.name, selector)) {
                     if (handled_set.TrySet(target.name).second) {
@@ -572,12 +574,14 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                     match = true;
                 }
             }
+
+            // Match source files
             for (const SourceFileInfo &src: target_set.sources) {
                 if (MatchPathSpec(src.filename, selector)) {
                     if (handled_set.TrySet(src.filename).second) {
                         if (!src.target->TestHosts(platform_spec.host)) {
                             LogError("Cannot build '%1' for host '%2'",
-                                     src.target->name, HostPlatformNames[(int)platform_spec.host]);
+                                     src.filename, HostPlatformNames[(int)platform_spec.host]);
                             valid = false;
                         }
 
