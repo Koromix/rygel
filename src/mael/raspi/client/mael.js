@@ -287,25 +287,22 @@ function draw() {
         ctx.fillRect(-20, -20, 40, 40);
         ctx.restore();
 
-        let text1 = 'Position : ' + robot.position.x.toFixed(1) +
-                            ' x ' + robot.position.y.toFixed(1) +
-                            ' x ' + robot.position.z.toFixed(1);
-        label(12, canvas.height - 138, text1, { align: 1 });
+        let text = '';
 
-        let text2 = 'Speed : ' + robot.speed.x.toFixed(1) +
-                         ' x ' + robot.speed.y.toFixed(1) +
-                         ' x ' + robot.speed.z.toFixed(1);
-        label(12, canvas.height - 96, text2, { align: 1 });
+        text += 'Position : ' + robot.position.x.toFixed(1) +
+                        ' x ' + robot.position.y.toFixed(1) +
+                        ' x ' + robot.position.z.toFixed(1) + '\n';
+        text += 'Speed : ' + robot.speed.x.toFixed(1) +
+                     ' x ' + robot.speed.y.toFixed(1) +
+                     ' x ' + robot.speed.z.toFixed(1) + '\n';
+        text += 'Acceleration : ' + robot.acceleration.x.toFixed(1) +
+                            ' x ' + robot.acceleration.y.toFixed(1) +
+                            ' x ' + robot.acceleration.z.toFixed(1) + '\n';
+        text += 'Rotation : ' + (robot.orientation.x * (180 / Math.PI)).toFixed(1) + '°' +
+                        ' x ' + (robot.orientation.y * (180 / Math.PI)).toFixed(1) + '°' +
+                        ' x ' + (robot.orientation.z * (180 / Math.PI)).toFixed(1) + '°';
 
-        let text3 = 'Acceleration : ' + robot.acceleration.x.toFixed(1) +
-                                ' x ' + robot.acceleration.y.toFixed(1) +
-                                ' x ' + robot.acceleration.z.toFixed(1);
-        label(12, canvas.height - 54, text3, { align: 1 });
-
-        let text4 = 'Rotation : ' + (robot.orientation.x * (180 / Math.PI)).toFixed(1) + '°' +
-                            ' x ' + (robot.orientation.y * (180 / Math.PI)).toFixed(1) + '°' +
-                            ' x ' + (robot.orientation.z * (180 / Math.PI)).toFixed(1) + '°';
-        label(12, canvas.height - 12, text4, { align: 1 });
+        label(12, canvas.height - 12, text, { align: 1 });
     }
 
     // Status and delay warning
@@ -318,7 +315,7 @@ function draw() {
 
             if (delay > 1000) {
                 let text = `Last update: ${(delay / 1000).toFixed(1)} sec`;
-                label(12, 54, text, { align: 7, icon: assets.ui.error, color: '#ff0000' });
+                label(12, 82, text, { align: 7, icon: assets.ui.error, color: '#ff0000' });
             }
         }
     }

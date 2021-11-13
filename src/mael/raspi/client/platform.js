@@ -438,17 +438,22 @@ function drawUI() {
             ctx.globalCompositeOperation = 'source-over';
             ctx.drawImage(btn.text, btn.p.x + btn.padding, btn.p.y + 9, 20, 20);
         } else {
+            let x = btn.p.x + btn.padding;
+            let y = btn.p.y + btn.padding + 20;
+
             if (btn.icon != null) {
                 ctx.globalCompositeOperation = 'multiply';
-                ctx.drawImage(btn.icon, btn.p.x + btn.padding - 2, btn.p.y + 7, 24, 24);
+                ctx.drawImage(btn.icon, btn.p.x + btn.padding - 2, btn.p.y + btn.padding, 24, 24);
                 ctx.globalCompositeOperation = 'source-over';
-                ctx.drawImage(btn.icon, btn.p.x + btn.padding, btn.p.y + 9, 20, 20);
+                ctx.drawImage(btn.icon, btn.p.x + btn.padding, btn.p.y + btn.padding + 2, 20, 20);
 
-                ctx.fillStyle = btn.color;
-                ctx.fillText(btn.text, btn.p.x + 50, btn.p.y + 26);
-            } else {
-                ctx.fillStyle = btn.color;
-                ctx.fillText(btn.text, btn.p.x + 20, btn.p.y + 26);
+                x += 30;
+            }
+
+            ctx.fillStyle = btn.color;
+            for (let line of btn.text.split('\n')) {
+                ctx.fillText(line, x, y);
+                y += 28;
             }
         }
 
@@ -472,7 +477,7 @@ function button(x, y, text, options = {}, func = null) {
         text: text,
         icon: options.icon,
         color: options.color || 'black',
-        padding: (options.padding != null) ? options.padding : 20,
+        padding: (options.padding != null) ? options.padding : 16,
         corners: (options.corners != null) ? options.corners : 0b1111,
         active: !!options.active,
         highlight: (options.highlight != null) ? options.highlight : true,
@@ -496,19 +501,21 @@ function button(x, y, text, options = {}, func = null) {
         }
     }
 
+    let lines = text.split('\n');
+
     if (options.width != null) {
         btn.width = options.width + btn.padding * 2;
     } else if (typeof text == 'object') {
         btn.width = 22 + btn.padding * 2;
     } else {
         ctx.font = '20px Open Sans';
-        btn.width = ctx.measureText(text).width + btn.padding * 2;
-        btn.width = Math.round(btn.width);
+        btn.width = lines.reduce((acc, line) => Math.max(acc, ctx.measureText(line).width), 0);
+        btn.width = Math.round(btn.width) + btn.padding * 2;
         if (btn.icon != null)
             btn.width += 40;
     }
     if (options.height == null)
-        btn.height = 38;
+        btn.height = 28 * lines.length + 2 * btn.padding;
 
     let align;
     if (options.align != null) {
