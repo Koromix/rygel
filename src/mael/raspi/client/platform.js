@@ -381,7 +381,7 @@ function drawUI() {
         let entry = log_entries[i];
 
         let msg = (entry.msg instanceof Error) ? entry.msg.message : entry.msg;
-        let color = (entry.type === 'error') ? '#ff0000' : 'white';
+        let color = (entry.type === 'error') ? '#ff0000' : 'black';
         let icon = (entry.type === 'error') ? assets.ui.error : assets.ui.info;
 
         y -= label(canvas.width / 2, y, msg, { align: 2, color: color, icon: icon }).height + 8;
