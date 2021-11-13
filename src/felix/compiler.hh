@@ -37,15 +37,15 @@ static const char *const HostPlatformNames[] = {
     "Desktop/POSIX/Linux",
     "Desktop/POSIX/macOS",
 
-    "Teensy/AVR/Teensy20",
-    "Teensy/AVR/Teensy20++",
-    "Teensy/ARM/TeensyLC",
-    "Teensy/ARM/Teensy30",
-    "Teensy/ARM/Teensy31",
-    "Teensy/ARM/Teensy35",
-    "Teensy/ARM/Teensy36",
-    "Teensy/ARM/Teensy40",
-    "Teensy/ARM/Teensy41"
+    "Embedded/Teensy/AVR/Teensy20",
+    "Embedded/Teensy/AVR/Teensy20++",
+    "Embedded/Teensy/ARM/TeensyLC",
+    "Embedded/Teensy/ARM/Teensy30",
+    "Embedded/Teensy/ARM/Teensy31",
+    "Embedded/Teensy/ARM/Teensy35",
+    "Embedded/Teensy/ARM/Teensy36",
+    "Embedded/Teensy/ARM/Teensy40",
+    "Embedded/Teensy/ARM/Teensy41"
 };
 
 #if defined(_WIN32)

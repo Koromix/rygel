@@ -1568,7 +1568,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
 
         LogError("Cannot find driver for compiler '%1'", spec.cc);
         return nullptr;
-    } else if (StartsWith(HostPlatformNames[(int)spec.host], "Teensy/AVR/")) {
+    } else if (StartsWith(HostPlatformNames[(int)spec.host], "Embedded/Teensy/AVR/")) {
         if (!spec.cc) {
             static std::once_flag flag;
             static char cc[2048];
@@ -1589,7 +1589,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
         }
 
         return TeensyCompiler::Create(spec.host, spec.cc);
-    } else if (StartsWith(HostPlatformNames[(int)spec.host], "Teensy/ARM/")) {
+    } else if (StartsWith(HostPlatformNames[(int)spec.host], "Embedded/Teensy/ARM/")) {
         if (!spec.cc) {
             static std::once_flag flag;
             static char cc[2048];
