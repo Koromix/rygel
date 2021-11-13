@@ -66,7 +66,7 @@ ArchiveKey = %2
 
 [HTTP]
 # SocketType = Dual
-# Port = 8888
+# Port = 8889
 # Threads =
 # AsyncThreads =
 # ClientAddress = Socket

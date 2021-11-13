@@ -19,7 +19,7 @@
 namespace RG {
 
 struct Config {
-    http_Config http;
+    http_Config http = {.port = 8890};
     const char *require_host = nullptr;
 
     const char *serial_number = nullptr;

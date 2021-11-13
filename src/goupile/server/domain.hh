@@ -38,9 +38,7 @@ struct DomainConfig {
     bool sync_full = false;
     bool auto_migrate = true;
 
-    // XXX: Restore http_Config designated initializers when MSVC ICE is fixed
-    // https://developercommunity.visualstudio.com/content/problem/1238876/fatal-error-c1001-ice-with-ehsc.html
-    http_Config http;
+    http_Config http = {.port = 8889};
     const char *require_host = nullptr;
 
     smtp_Config smtp;
