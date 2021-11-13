@@ -60,15 +60,13 @@ function update() {
     let delay = performance.now() - recv_time;
 
     // Check and update connection status
-    if (delay > 20000) {
+    if (delay > 8000) {
         if (ws != null && ws.readyState === 1) {
             let err = new Error('Data connection timed out');
             log.error(err);
 
             connected = false;
-            ws.close();
-            ws = null;
-        } else {
+        } else if (!connected) {
             let url = new URL(window.location.href);
             ws = new WebSocket(`ws://${url.host}/api/ws`);
 
@@ -78,6 +76,17 @@ function update() {
                     log.error(err);
                 } else {
                     let err = new Error('Failed to connect to WebSocket endpoint');
+                    log.error(err);
+                }
+
+                connected = false;
+                ws.close();
+                ws = null;
+            };
+
+            ws.onclose = e => {
+                if (connected) {
+                    let err = new Error('WebSocket connection has been closed');
                     log.error(err);
                 }
 
