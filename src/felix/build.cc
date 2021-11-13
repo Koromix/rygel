@@ -136,7 +136,9 @@ bool Builder::AddTarget(const TargetInfo &target)
     const char *ns = nullptr;
     {
         HeapArray<const char *> core_filenames;
-        if (!build.compiler->GetCore(target.definitions, &str_alloc, &core_filenames, &ns))
+        HeapArray<const char *> core_definitions;
+        if (!build.compiler->GetCore(target.definitions, &str_alloc,
+                                     &core_filenames, &core_definitions, &ns))
             return false;
 
         if (core_filenames.len) {
@@ -150,7 +152,7 @@ bool Builder::AddTarget(const TargetInfo &target)
                 core->name = Fmt(&str_alloc, "Cores/%1", ns).ptr;
                 core->type = TargetType::ExternalLibrary;
                 core->hosts = 1u << (int)build.compiler->host;
-                core->definitions.Append(target.definitions);
+                std::swap(core->definitions, core_definitions);
 
                 for (const char *core_filename: core_filenames) {
                     SourceFileInfo src = {};

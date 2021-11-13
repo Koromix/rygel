@@ -133,7 +133,8 @@ public:
     virtual const char *GetPostExtension() const = 0;
 
     virtual bool GetCore(Span<const char *const> definitions, Allocator *alloc,
-                         HeapArray<const char *> *out_filenames, const char **out_ns) const = 0;
+                         HeapArray<const char *> *out_filenames,
+                         HeapArray<const char *> *out_definitions, const char **out_ns) const = 0;
 
     virtual void MakePackCommand(Span<const char *const> pack_filenames, bool optimize,
                                  const char *pack_options, const char *dest_filename,
