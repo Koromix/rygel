@@ -115,6 +115,17 @@ Builder::Builder(const BuildSettings &build)
     LoadCache();
 }
 
+static const char *GetLastDirectoryAndName(const char *filename)
+{
+    Span<const char> remain = filename;
+    const char *name;
+
+    SplitStrReverseAny(remain, RG_PATH_SEPARATORS, &remain);
+    name = SplitStrReverseAny(remain, RG_PATH_SEPARATORS, &remain).ptr;
+
+    return name;
+}
+
 // Beware, failures can leave the Builder in a undefined state
 bool Builder::AddTarget(const TargetInfo &target)
 {
@@ -219,8 +230,7 @@ bool Builder::AddTarget(const TargetInfo &target)
             build.compiler->MakeLinkCommand(obj_filename, {}, LinkType::SharedLibrary,
                                             features, build.env, module_filename, &str_alloc, &cmd);
 
-            const char *text = Fmt(&str_alloc, "Link %!..+%1%!0",
-                                   SplitStrReverseAny(module_filename, RG_PATH_SEPARATORS)).ptr;
+            const char *text = Fmt(&str_alloc, "Link %!..+%1%!0", GetLastDirectoryAndName(module_filename)).ptr;
             AppendNode(text, module_filename, cmd, obj_filename, ns);
         } else {
             obj_filenames.Append(obj_filename);
@@ -277,7 +287,7 @@ bool Builder::AddTarget(const TargetInfo &target)
             build.compiler->MakeLinkCommand(obj_filenames, target.libraries, LinkType::Executable,
                                             features, build.env, link_filename, &str_alloc, &cmd);
 
-            const char *text = Fmt(&str_alloc, "Link %!..+%1%!0", SplitStrReverseAny(link_filename, RG_PATH_SEPARATORS)).ptr;
+            const char *text = Fmt(&str_alloc, "Link %!..+%1%!0", GetLastDirectoryAndName(link_filename)).ptr;
             AppendNode(text, link_filename, cmd, obj_filenames, ns);
         }
 
@@ -288,7 +298,7 @@ bool Builder::AddTarget(const TargetInfo &target)
             Command cmd = {};
             build.compiler->MakePostCommand(link_filename, target_filename, &str_alloc, &cmd);
 
-            const char *text = Fmt(&str_alloc, "Post-process %!..+%1%!0", SplitStrReverseAny(target_filename, RG_PATH_SEPARATORS)).ptr;
+            const char *text = Fmt(&str_alloc, "Post-process %!..+%1%!0", GetLastDirectoryAndName(target_filename)).ptr;
             AppendNode(text, target_filename, cmd, link_filename, ns);
         } else {
             target_filename = link_filename;
