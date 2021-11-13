@@ -107,7 +107,8 @@ bool http_Daemon::Bind(const http_Config &config)
 }
 
 bool http_Daemon::Start(const http_Config &config,
-                        std::function<void(const http_RequestInfo &request, http_IO *io)> func)
+                        std::function<void(const http_RequestInfo &request, http_IO *io)> func,
+                        bool log_socket)
 {
     RG_ASSERT(!daemon);
     RG_ASSERT(func);
@@ -164,6 +165,15 @@ bool http_Daemon::Start(const http_Config &config,
                               &http_Daemon::HandleRequest, this,
                               MHD_OPTION_NOTIFY_COMPLETED, &http_Daemon::RequestCompleted, this,
                               MHD_OPTION_ARRAY, mhd_options.data, MHD_OPTION_END);
+
+    if (log_socket) {
+        if (config.sock_type == SocketType::Unix) {
+            LogInfo("Listening on socket '%!..+%1%!0' (Unix stack)", config.unix_path);
+        } else {
+            LogInfo("Listening on %!..+http://localhost:%1/%!0 (%2 stack)",
+                    config.port, SocketTypeNames[(int)config.sock_type]);
+        }
+    }
 
     return daemon;
 }

@@ -78,7 +78,8 @@ public:
 
     bool Bind(const http_Config &config);
     bool Start(const http_Config &config,
-               std::function<void(const http_RequestInfo &request, http_IO *io)> func);
+               std::function<void(const http_RequestInfo &request, http_IO *io)> func,
+               bool log_socket = true);
 
     void Stop();
 
