@@ -1166,7 +1166,6 @@ public:
 
         supported |= (int)CompileFeature::OptimizeSpeed;
         supported |= (int)CompileFeature::OptimizeSize;
-        supported |= (int)CompileFeature::HotAssets;
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::LTO;
 
@@ -1289,9 +1288,6 @@ public:
         } else {
             Fmt(&buf, " -w");
         }
-        if (features & (int)CompileFeature::HotAssets) {
-            Fmt(&buf, " -DFELIX_HOT_ASSETS");
-        }
         Fmt(&buf, " -fvisibility=hidden");
 
         // Don't override explicit user defines
@@ -1385,7 +1381,7 @@ public:
         // Linker
         switch (link_type) {
             case LinkType::Executable: { Fmt(&buf, "\"%1\"", cc); } break;
-            case LinkType::SharedLibrary: { /* XXX: not supported */ } break;
+            case LinkType::SharedLibrary: { RG_UNREACHABLE(); } break;
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
