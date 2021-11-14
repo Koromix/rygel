@@ -548,6 +548,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     }
 
     // Load configuration file
+    LogInfo("Loading targets...");
     TargetSet target_set;
     if (!LoadTargetSet(config_filename, platform_spec.host, &target_set))
         return 1;
