@@ -68,7 +68,7 @@ static bool UpdateVersionSource(const char *target_name, const BuildSettings &bu
               "const char *FelixTarget = \"%1\";\n"
               "const char *FelixVersion = \"%2\";\n"
               "const char *FelixCompiler = \"%3 (%4)\";\n",
-        target_name, build.version_str,
+        target_name, build.version_str ? build.version_str : "(unknown version)",
         build.compiler->name, FmtFlags(build.features, CompileFeatureOptions));
 
     bool new_version;

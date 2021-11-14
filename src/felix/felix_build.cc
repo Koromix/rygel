@@ -321,6 +321,9 @@ Options:
     %!..+-v, --verbose%!0                Show detailed build commands
     %!..+-n, --dry_run%!0                Fake command execution
 
+        %!..+--version_str <version>%!0  Change version incorporated in binaries
+                                 %!D..(default: made from git commit hash, date and status)%!0
+
         %!..+--run <target>%!0           Run target after successful build
                                  %!D..(all remaining arguments are passed as-is)%!0
         %!..+--run_here <target>%!0      Same thing, but run from current directory
@@ -504,6 +507,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 verbose = true;
             } else if (opt.Test("-n", "--dry_run")) {
                 build.fake = true;
+            } else if (opt.Test("--version_str", OptionType::Value)) {
+                build.version_str = opt.current_value;
             } else if (opt.Test("--run", OptionType::Value)) {
                 run_target_name = opt.current_value;
                 break;
@@ -637,13 +642,11 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     }
 
     // Build version string from git commit (date, hash)
-    {
-        const char *version_str = BuildGitVersionString(&temp_alloc);
+    if (!build.version_str) {
+        build.version_str = BuildGitVersionString(&temp_alloc);
 
-        if (version_str) {
-            build.version_str = version_str;
-        } else {
-            LogError("Failed to use git to build version string");
+        if (!build.version_str) {
+            LogError("Failed to use git to build version string (ignoring)");
         }
     }
 
@@ -653,7 +656,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     LogInfo("  Host: %!..+%1%!0", HostPlatformNames[(int)platform_spec.host]);
     LogInfo("  Compiler: %!..+%1%!0", build.compiler->name);
     LogInfo("  Features: %!..+%1%!0", FmtFlags(build.features, CompileFeatureOptions));
-    LogInfo("  Version: %!..+%1%!0", build.version_str);
+    LogInfo("  Version string: %!..+%1%!0", build.version_str ? build.version_str : "(unknown version)");
     if (!build.fake && !MakeDirectoryRec(build.output_directory))
         return 1;
 
