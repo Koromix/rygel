@@ -126,7 +126,7 @@ public:
 
     virtual ~Compiler() {}
 
-    virtual bool CheckFeatures(uint32_t features) const = 0;
+    virtual bool CheckFeatures(uint32_t features, uint32_t maybe_features, uint32_t *out_features) const = 0;
 
     virtual const char *GetObjectExtension() const = 0;
     virtual const char *GetLinkExtension() const = 0;

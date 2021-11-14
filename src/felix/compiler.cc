@@ -172,7 +172,7 @@ public:
         return compiler;
     }
 
-    bool CheckFeatures(uint32_t features) const override
+    bool CheckFeatures(uint32_t features, uint32_t maybe_features, uint32_t *out_features) const override
     {
         uint32_t supported = 0;
 
@@ -204,6 +204,8 @@ public:
             return false;
         }
 
+        features |= (supported & maybe_features);
+
         if ((features & (int)CompileFeature::OptimizeSpeed) && (features & (int)CompileFeature::OptimizeSize)) {
             LogError("Cannot use OptimizeSpeed and OptimizeSize at the same time");
             return false;
@@ -221,6 +223,7 @@ public:
             return false;
         }
 
+        *out_features = features;
         return true;
     }
 
@@ -554,7 +557,7 @@ public:
         return compiler;
     }
 
-    bool CheckFeatures(uint32_t features) const override
+    bool CheckFeatures(uint32_t features, uint32_t maybe_features, uint32_t *out_features) const override
     {
         uint32_t supported = 0;
 
@@ -583,6 +586,8 @@ public:
             return false;
         }
 
+        features |= (supported & maybe_features);
+
         if ((features & (int)CompileFeature::OptimizeSpeed) && (features & (int)CompileFeature::OptimizeSize)) {
             LogError("Cannot use OptimizeSpeed and OptimizeSize at the same time");
             return false;
@@ -596,6 +601,7 @@ public:
             return false;
         }
 
+        *out_features = features;
         return true;
     }
 
@@ -875,7 +881,7 @@ public:
         return compiler;
     }
 
-    bool CheckFeatures(uint32_t features) const override
+    bool CheckFeatures(uint32_t features, uint32_t maybe_features, uint32_t *out_features) const override
     {
         uint32_t supported = 0;
 
@@ -896,11 +902,14 @@ public:
             return false;
         }
 
+        features |= (supported & maybe_features);
+
         if ((features & (int)CompileFeature::OptimizeSpeed) && (features & (int)CompileFeature::OptimizeSize)) {
             LogError("Cannot use OptimizeSpeed and OptimizeSize at the same time");
             return false;
         }
 
+        *out_features = features;
         return true;
     }
 
@@ -1151,7 +1160,7 @@ public:
         return compiler;
     }
 
-    bool CheckFeatures(uint32_t features) const override
+    bool CheckFeatures(uint32_t features, uint32_t maybe_features, uint32_t *out_features) const override
     {
         uint32_t supported = 0;
 
@@ -1168,11 +1177,14 @@ public:
             return false;
         }
 
+        features |= (supported & maybe_features);
+
         if ((features & (int)CompileFeature::OptimizeSpeed) && (features & (int)CompileFeature::OptimizeSize)) {
             LogError("Cannot use OptimizeSpeed and OptimizeSize at the same time");
             return false;
         }
 
+        *out_features = features;
         return true;
     }
 

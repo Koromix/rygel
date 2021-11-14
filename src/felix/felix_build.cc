@@ -37,6 +37,7 @@ struct BuildPreset {
     bool changed_spec;
 
     BuildSettings build;
+    uint32_t maybe_features = 0;
 };
 
 static int RunTarget(const char *target_filename, Span<const char *const> arguments)
@@ -168,22 +169,26 @@ static bool ParseHostString(Span<const char> str, Allocator *alloc, PlatformSpec
     return true;
 }
 
-static bool ParseFeatureString(Span<const char> str, uint32_t *out_features)
+static bool ParseFeatureString(Span<const char> str, uint32_t *out_features, uint32_t *out_maybe)
 {
     while (str.len) {
         Span<const char> part = TrimStr(SplitStrAny(str, " ,", &str), " ");
 
-        bool enable;
+        bool maybe = false;
+        bool enable = true;
+
         if (part.len && part[0] == '-') {
             part = part.Take(1, part.len - 1);
             enable = false;
-        } else {
-            enable = true;
+        } else if (part.len && part[0] == '?') {
+            part = part.Take(1, part.len - 1);
+            maybe = true;
         }
 
-        if (part == "All") {
+        if (part == "All" && !maybe) {
             *out_features = enable ? 0xFFFFFFFFul : 0;
-        } else if (part.len && !OptionToFlag(CompileFeatureOptions, part, out_features, enable)) {
+        } else if (part.len && !OptionToFlag(CompileFeatureOptions, part,
+                                             maybe ? out_maybe : out_features, enable)) {
             LogError("Unknown target feature '%1'", part);
             return false;
         }
@@ -251,7 +256,8 @@ static bool LoadPresetFile(const char *basename, Allocator *alloc,
                         valid &= ParseHostString(prop.value, alloc, &preset->platform_spec);
                         preset->changed_spec = true;
                     } else if (prop.key == "Features") {
-                        valid &= ParseFeatureString(prop.value.ptr, &preset->build.features);
+                        valid &= ParseFeatureString(prop.value.ptr, &preset->build.features,
+                                                    &preset->maybe_features);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -277,6 +283,7 @@ int RunBuild(Span<const char *> arguments)
     const char *preset_name = nullptr;
     PlatformSpecifier platform_spec = {};
     BuildSettings build = {};
+    uint32_t maybe_features = 0;
     int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_WORKERS + 1);
     bool quiet = false;
     bool verbose = false;
@@ -448,6 +455,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             preset_name = preset->name;
             platform_spec = preset->platform_spec;
             build = preset->build;
+            maybe_features = preset->maybe_features;
         }
     }
 
@@ -475,7 +483,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 if (!ParseHostString(opt.current_value, &temp_alloc, &platform_spec))
                     return 1;
             } else if (opt.Test("-f", "--features", OptionType::Value)) {
-                if (!ParseFeatureString(opt.current_value, &build.features))
+                if (!ParseFeatureString(opt.current_value, &build.features, &maybe_features))
                     return 1;
             } else if (opt.Test("-e", "--environment")) {
                 build.env = true;
@@ -527,7 +535,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     std::unique_ptr<const Compiler> compiler = PrepareCompiler(platform_spec);
     if (!compiler)
         return 1;
-    if (!compiler->CheckFeatures(build.features))
+    if (!compiler->CheckFeatures(build.features, maybe_features, &build.features))
         return 1;
     build.compiler = compiler.get();
 

@@ -12,13 +12,13 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 [ASan]
-Features = PCH, DebugInfo, HotAssets, ASan
+Features = ?PCH, DebugInfo, HotAssets, ASan
 
 [Debug]
-Features = PCH, DebugInfo, HotAssets
+Features = ?PCH, DebugInfo, HotAssets
 
 [Fast]
-Features = PCH, DebugInfo, OptimizeSpeed
+Features = ?PCH, DebugInfo, OptimizeSpeed
 
 [LTO]
 Features = DebugInfo, OptimizeSpeed, LTO
