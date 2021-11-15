@@ -51,10 +51,8 @@
     cursor: pointer;
 }
 .fm_section .fm_section .fm_legend {
-    padding: 0.5em;
-    background: none;
+    background: rgba(136, 136, 136, 0.12);
     color: inherit;
-    font-weight: bold;
 }
 .fm_deploy {
     width: 100%;
