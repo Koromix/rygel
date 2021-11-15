@@ -50,6 +50,12 @@
     -webkit-print-color-adjust: exact !important;
     cursor: pointer;
 }
+.fm_section .fm_section .fm_legend {
+    padding: 0.5em;
+    background: none;
+    color: inherit;
+    font-weight: bold;
+}
 .fm_deploy {
     width: 100%;
     display: block;
