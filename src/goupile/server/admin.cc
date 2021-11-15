@@ -2403,6 +2403,7 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
         // Read POST values
         const char *username;
         const char *password;
+        bool force_password = false;
         const char *confirm;
         const char *email;
         const char *phone;
@@ -2412,6 +2413,9 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
 
             username = values.FindValue("username", nullptr);
             password = values.FindValue("password", nullptr);
+            if (const char *str = values.FindValue("force_password", nullptr); str) {
+                valid &= ParseBool(str, &force_password);
+            }
             confirm = values.FindValue("confirm", nullptr);
             email = values.FindValue("email", nullptr);
             phone = values.FindValue("phone", nullptr);
@@ -2422,8 +2426,12 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
             if (username && !CheckUserName(username)) {
                 valid = false;
             }
-            if (password && !pwd_CheckPassword(password)) {
-                valid = false;
+            if (password) {
+                if (force_password) {
+                    valid &= !!password[0];
+                } else {
+                    valid &= pwd_CheckPassword(password);
+                }
             }
             if (confirm) {
                 if (confirm[0]) {
@@ -2537,6 +2545,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
         int64_t userid = 0;
         const char *username;
         const char *password;
+        bool force_password = false;
         const char *confirm;
         bool set_confirm = false;
         bool reset_secret = false;
@@ -2556,14 +2565,21 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
 
             username = values.FindValue("username", nullptr);
             password = values.FindValue("password", nullptr);
+            if (const char *str = values.FindValue("force_password", nullptr); str) {
+                valid &= ParseBool(str, &force_password);
+            }
             confirm = values.FindValue("confirm", nullptr);
             email = values.FindValue("email", nullptr);
             phone = values.FindValue("phone", nullptr);
             if (username && !CheckUserName(username)) {
                 valid = false;
             }
-            if (password && !pwd_CheckPassword(password)) {
-                valid = false;
+            if (password) {
+                if (force_password) {
+                    valid &= !!password[0];
+                } else {
+                    valid &= pwd_CheckPassword(password);
+                }
             }
             if (confirm) {
                 if (confirm[0]) {
