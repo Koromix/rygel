@@ -160,12 +160,12 @@ html:not(.small) .fm_widget.compact > label {
     min-width: 270px;
     margin-bottom: 0;
     padding-right: 4px;
-    font-weight: normal;
 }
 html:not(.small) .fm_widget.compact .fm_error {
     flex: 1;
     text-align: right;
 }
+html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
 
 /* -------------------- Simple widgets -------------------- */
 
