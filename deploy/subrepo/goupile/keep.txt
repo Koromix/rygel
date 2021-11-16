@@ -22,6 +22,7 @@ vendor/chartjs
 vendor/curl
 vendor/docxtemplater
 vendor/dragonbox
+vendor/esbuild
 vendor/grisu-exact
 vendor/libmicrohttpd
 vendor/libseccomp
