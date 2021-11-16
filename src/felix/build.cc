@@ -298,7 +298,7 @@ bool Builder::AddTarget(const TargetInfo &target)
             Command cmd = {};
             build.compiler->MakePostCommand(link_filename, target_filename, &str_alloc, &cmd);
 
-            const char *text = Fmt(&str_alloc, "Post-process %!..+%1%!0", GetLastDirectoryAndName(target_filename)).ptr;
+            const char *text = Fmt(&str_alloc, "Convert %!..+%1%!0", GetLastDirectoryAndName(target_filename)).ptr;
             AppendNode(text, target_filename, cmd, link_filename, ns);
         } else {
             target_filename = link_filename;
