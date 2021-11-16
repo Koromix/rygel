@@ -176,6 +176,7 @@ button { cursor: pointer; }
     text-align: center;
     font-size: 0.8em;
     z-index: 9999;
+    color: white;
 }
 
 #th_view.busy {
@@ -215,6 +216,7 @@ button { cursor: pointer; }
         width: auto;
         padding-top: 0;
         font-size: inherit;
+        color: inherit;
     }
 
     #th_options > * { max-width: 100%; }
