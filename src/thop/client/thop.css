@@ -149,7 +149,7 @@ button { cursor: pointer; }
 
     #th_menu {
         min-height: 38px;
-        font-size: 1.3em;
+        font-size: 1.2em;
     }
     #th_menu:not(.active) {
         max-height: 38px;
