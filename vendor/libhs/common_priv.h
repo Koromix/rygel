@@ -8,5 +8,16 @@
 
    See the LICENSE file for more details. */
 
-#define HS_IMPLEMENTATION
-#include "libhs.h"
+#ifndef _HS_COMMON_PRIV_H
+#define _HS_COMMON_PRIV_H
+
+#include "common.h"
+#include <assert.h>
+#include <errno.h>
+#include <inttypes.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#endif
