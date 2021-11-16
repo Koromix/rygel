@@ -622,7 +622,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         }
 
         if (!enabled_targets.len) {
-            LogError("No target to build by default");
+            LogError("No target to build by default for host '%1'", HostPlatformNames[(int)platform_spec.host]);
             return 1;
         }
     }
