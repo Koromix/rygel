@@ -57,126 +57,159 @@
         </nav>
 
         <main>
-            <h1 id="setup">Administration</h1>
-            <h2 id="setup_projects">Projets et utilisateurs</h2>
-            <div class="screenshot right">
-                <img src="static/screenshots/admin.webp"/>
-                <p>Gérez vos projets et vos utilisateurs au sein du module d'administration.</p>
+            <h1 id="intro">Présentation générale</h1>
+            <p>Goupile est un outil de conception de cahier d'observations électroniques ou electronical Clinical Report Forms (eCRF). Il s'agit d'une application web multiplateforme et multisupport destinée à recueillir les informations définies par le protocole de recherche clinique.</p>
+            <h2 id="intro_ecrf">Apport des eCRF</h2>
+            <p>L'eCRF est le versant électronique du CRF papier traditionnel. L'eCRF permet le recueil des données en ligne par les investigateurs et les attachés de recherche clinique (ARC).</p>
+            <p>Ses apports principaux sont multiples :</p>
+            <ul>
+                <li>Centralisation et simplification de la saisie : la saisie des données se réalise en ligne sur un portail d'accès sécurisé et via un formulaire électronique adaptée à l'étude</li>
+                <li>Sécurisation du recueil : les données sont hébergées sur un serveur sécurisé et accessibles uniquement aux personnes autorisées</li>
+                <li>Contrôle de la cohérence et optimisation de la qualité des données : des masques de saisie et des contrôles de cohérence internes paramétrables et automatisés limitent les erreurs de saisie</li>
+                <li>Suivi de l'exhaustivité des données et monitoring du recueil : le contrôle du recueil est assuré via l'implémentation de tableau de bord, d'indicateurs de suivi et d'un journal d'audit (audit trail) consultables à distance.</li>
+            </ul>
+            <h2 id="intro_plus">Apport de Goupile</h2>
+            <p>Goupile est un éditeur en ligne d'eCRF entièrement configurable par l'utilisateur via une interface simplifiée et disposant de fonctionnalités avancées.</p>
+            <p>Goupile est une solution multiplateforme (ordinateur, tablette, smartphone) et multisupport (Windows, Linux, Mac Os X, Androïd, iOS…). Goupile est compatible sur tout navigateur web récent (Google Chrome, Mozilla Firefox, Microsoft Edge, Safari…).</p>
+            <o>Goupile peut être déployé sur le serveur souhaité par l'utilisateur mais propose également un hébergement sur un serveur certifié Hébergeur de Données de Santé (HDS) [GPLExpert].</o>
+            <p>Il s'agit d'un logiciel libre et opensource délivré sous licence libre : licence AGPL 3.0. Le code source est disponible gratuitement en ligne : <a href="https://framagit.org/interhop/goupile">https://framagit.org/interhop/goupile</a>.
+
+            <h1 id="admin">Première prise en main</h1>
+            <h2 id="admin_admin">Interface d'administration</h2>
+            <p>Cette interface vous permet de créer et gérer vos projets, d'ajouter des utilisateurs, de configurer leurs droits et d'archiver vos projets.</p>
+            <h3 id="admin_login">Authentification</h3>
+            <div class="screenshot"><img src="static/manual/admin_login.webp" style="height: 360px;" alt=""/></div>
+            <p>L'authentification se réalise via le portail de connexion présenté ci-dessous. Le nom d'utilisateur et le mot de passe sont transmis par e-mail. Le nom d'utilisateur est généralement (par convention) au format « <b>nom.prenom</b> ». Après la saisie du nom d'utilisateur et du mot de passe, cliquez sur « Se connecter ».</p>
+            <h3 id="admin_overview1">Aperçu</h3>
+            <div class="screenshot"><img src="static/manual/admin_overview.webp" alt=""/></div>
+            <p>La page d'accueil se présente sous la forme suivante. Elle peut être schématiquement décomposée en 3 parties. Le bandeau [1] vous permet de configurer l'affichage de la page. Vous pouvez afficher (ou non) un ou deux panneaux en sélectionnant (ou déselectionnant) le(s) panneau(x) d'intérêt. Par défaut, les panneaux « Projets » [2] et « Utilisateurs » [3] sont sélectionnés.</p>
+            <div class="screenshot"><img src="static/manual/admin_panels.webp" alt=""/></div>
+            <h3 id="admin_overview2">Projets</h3>
+            <div class="screenshot"><img src="static/manual/admin_projects.webp" alt=""/></div>
+            <p>Le panneau de configuration « Projets » vous permet de créer un nouveau projet (« Créer un projet »), le diviser en sous projet, configurer les paramètres généraux et y affecter des utilisateurs avec différents droits.</p>
+            <h3 id="admin_overview3">Utilisateurs</h3>
+            <div class="screenshot"><img src="static/manual/admin_users.webp" alt=""/></div>
+            <p>Le panneau de configuration « Utilisateurs » vous permet de créer un nouvel utilisateur (« Créer un utilisateur »), modifier les paramètres d'un utilisateur (« Modifier ») et assigner les droits d'un utilisateur sur un projet donné.</p>
+            <h3 id="admin_overview4">Archives</h3>
+            <div class="screenshot"><img src="static/manual/admin_archives.webp" alt=""/></div>
+            <p>Le panneau de configuration « Archives » vous permet de créer une nouvelle archive (« Créer une archive »), restaurer (« Restaurer »), supprimer (« Supprimer ») ou charger (« Uploader une archive ») une archive.</p>
+            <p>Une archive enregistre l'état des (formulaires et données) au moment où elle est créée. Une fois l'archive créée, vous pouvez télécharger le fichier créé (avec l'extension .goupilebackup) et le stocker à l'abri par un moyen adéquat.</p>
+            <p>Attention, pour pouvoir restaurer ce fichier, vous devez <b>conserver la clé de restauration</b> qui vous a été communiquée lors de la création du domaine. Sans cette clé, la restauration est impossible et les données sont perdues. Par ailleurs, il <b>nous est strictement impossible de récupérer cette clé</b> si vous la perdez.</p>
+            <h3>Changement de mot de passe</h3>
+            <div class="screenshot"><img src="static/manual/admin_password1.webp" alt=""/></div>
+            <div class="screenshot left"><img src="static/manual/admin_password2.webp" style="height: 120px;" alt=""/></div>
+            <p>Pour changer votre mot de passe, cliquer sur l'icône du menu déroulant à côté de votre nom d'utilisateur [1] puis sur « Changer le mot de passe » [2]. Le nouveau mot de passe doit contenir au moins 8 caractères de 3 classes différentes (numériques, alphanumériques, symboles spéciaux).</p>
+            <h3>Déconnecter la session</h3>
+            <div class="screenshot"><img src="static/manual/admin_logout1.webp" alt=""/></div>
+            <div class="screenshot left"><img src="static/manual/admin_logout2.webp" style="height: 120px;" alt=""/></div>
+            <p>Pour déconnecter votre session, cliquer sur l'icône du menu déroulant à côté de votre nom d'utilisateur [1] puis sur « Se déconnecter » [2].</p>
+            <h2 id="admin_project">Création d'un projet</h2>
+            <p>Pour créer un nouveau projet, il faut se connecter sur l'interface administrateur, afficher le panneau de configuration « Projets » [1] puis cliquer sur « Créer un projet » [2].</p>
+            <div class="screenshot"><img src="static/manual/admin_project_new1.webp" alt=""/></div>
+            <p>Une nouvelle fenêtre apparaît (« Création d'un projet »). Vous devez y définir une clé de projet (« Clé du projet »), un nom de projet (« Nom ») et vous aurez le choix pour ajouter (ou non) des pages par défaut (« Ajouter les pages par défaut »).</p>
+            <p>La clé du projet apparaîtra dans l'URL de connexion au projet. Son format doit être alphanumérique et ne peut excéder 24 caractères. Les majuscules, les accents et les caractères spéciaux ne sont pas autorisés (sauf le tiret court ou tiret du 6, ‘-‘). Le nom du projet correspond au nom que vous souhaitez donner à votre projet. Son format peut être numérique ou alphanumérique. Les majuscules et les caractères spéciaux sont autorisés. Les « pages par défaut » permettent l'ajout de quelques pages d'exemple vous permettant de vous familiariser avec la conception d'un eCRF avec Goupile et fournissent une première base de travail. Si vous êtes déjà familier avec la conception d'un eCRF avec Goupile, vous pouvez cliquer sur « non ». Après avoir saisi les différents champs, cliquer sur « Créer » [1].</p>
+            <div class="screenshot">
+                <img src="static/manual/admin_project_new2.webp" style="height: 380px;" alt=""/>
+                <img src="static/manual/admin_project_new3.webp" style="height: 380px;" alt=""/>
+                <img src="static/manual/admin_project_new4.webp" style="height: 380px;" alt=""/>
             </div>
-            <p>Le panneau d'administration vous permet de créer des projets, des utilisateurs et de leur
-            affecter des droits par projet.</p>
-            <p>Par défaut, les panneaux <i>Projets</i> et <i>Utilisateurs</i> sont affichés côte à côte. Pour
-            activer ou désactiver un panneau, utilisez les boutons dédiés dans le menu tout en haut de la page.</p>
-            <p>Pour modifier les droits d'un utilisateur sur un projet spécifique, cliquez sur <i>Droits</i>
-            à droite du nom du projet. Ceci affichera la liste des droits dans le panneau utilisateurs. Il
-            existe deux ensembles de droits : les droits de développement (en vert), qui portent sur la
-            mise au point des formulaires, et les droits de saisie (en violet), qui portent sur l'accès
-            aux données (lecture, création, édition, suppression).</p>
+            <p>Une fois votre projet créé, plusieurs menus sont disponibles via le panneau de configuration « Projets » : « Diviser » [1], « Droits » [2], « Configurer » [3] et « accès » [4].</p>
+            <div class="screenshot"><img src="static/manual/admin_project_actions.webp" alt=""/></div>
+            <p>Par défaut, les projets sont mono-centriques. Pour transformer un projet mono-centrique en projet multi-centrique, vous pouvez utiliser l'option « Diviser ».</p>
+            <p>L'<b>option « Diviser »</b> vous permet de subdiviser votre projet initial en différents sous-projets. Une nouvelle fenêtre apparait « Division de *votre clé de projet* ». Vous devez alors renseigner une clé de sous-projet (« Clé du sous-projet ») et un nom de sous-projet (« Nom ») selon les mêmes contraintes que celles mentionnées pour la clé et le nom du projet. Après avoir saisi les différents champs, cliquer sur « Créer » [1].</p>
+            <div class="screenshot">
+                <img src="static/manual/admin_project_split1.webp" style="height: 380px;" alt=""/>
+                <img src="static/manual/admin_project_split2.webp" style="height: 380px;" alt=""/>
+                <img src="static/manual/admin_project_split3.webp" style="height: 380px;" alt=""/>
+            </div>
+            <p>Une fois votre sous-projet créé, plusieurs menus sont disponibles via le panneau de configuration « Projets » : « Droits », « Configurer » et « accès ».</p>
+            <div class="screenshot"><img src="static/manual/admin_project_sub.webp" alt=""/></div>
+            <p>L'<b>option « Droits »</b> vous permet de créer un nouvel utilisateur (« Créer un utilisateur »), modifier les paramètres d'un utilisateur (« Modifier ») et assigner des droits à un utilisateur (« Assigner ») pour votre projet (ou sous-projet selon la sélection réalisée).</p>
+            <div class="screenshot"><img src="static/manual/admin_project_permissions.webp" alt=""/></div>
+            <p>L'<b>option « Configurer »</b> vous permet de modifier les paramètres de votre projet (« Modifier ») ou supprimer votre projet (« Supprimer »).</p>
+            <p>L'<b>onglet « Modifier »</b> vous permet de modifier le nom de votre projet, activer (ou non) l'utilisation hors-ligne (par défaut l'option n'est pas activée), modifier le mode de synchronisation (par défaut le mode de synchronisation est « En ligne ») et définir la session par défaut. L'utilisation hors-ligne permet à l'application de fonctionner sans connexion internet. Le mode de synchronisation « En ligne » correspond à une copie sur le serveur des données, le mode de synchronisation « Hors ligne » correspond à une copie uniquement locale (sur votre machine) des données sans copie sur le serveur et le mode de synchronisation « Miroir » permet une copie en ligne des données et une recopie des données sur chaque machine utilisée. La session par défaut permet d'afficher la session d'un utilisateur donné lors de la connexion.</p>
+            <p>L'<b>onglet « Supprimer »</b> vous permet de supprimer votre projet.</p>
+            <div class="screenshot">
+                <img src="static/manual/admin_project_edit.webp" style="height: 560px;" alt=""/>
+                <img src="static/manual/admin_project_delete.webp" style="height: 200px;" alt=""/>
+            </div>
+            <h2 id="admin_users">Gestion des utilisateurs</h2>
+            <p>Pour créer un nouvel utilisateur, il faut se connecter sur l'interface administrateur, afficher le panneau de configuration « Utilisateurs » [1] puis cliquer sur « Créer un utilisateur » [2].</p>
+            <div class="screenshot"><img src="static/manual/admin_user_new1.webp" alt=""/></div>
+            <p>Une nouvelle fenêtre apparaît (« Création d'un utilisateur »). Vous devez y définir obligatoirement un nom d'utilisateur (« Nom d'utilisateur »), un mot de passe de connexion (« Mot de passe ») et son statut administrateur ou non (« Administrateur »). Vous pouvez compléter ces informations avec une adresse de courriel (« Courriel ») et un numéro de téléphone (« Téléphone »).</p>
+            <p>Le nom d'utilisateur correspond au nom de l'utilisateur. Il peut être de format numérique ou alphanumérique. Les majuscules et les caractères spéciaux (à l'exception du tiret court ‘-‘, de l'underscore ‘_' et du point ‘.') ne sont pas autorisés. Nous vous conseillons un nom d'utilisateur au format : « prenom.nom ».</p>
+            <p>e mot de passe doit contenir au moins 8 caractères de 3 classes différentes (numériques, alphanumériques, symboles spéciaux). Le statut administrateur permet l'accès à l'interface administrateur. Par défaut, le statut administrateur n'est pas activé.</p>
+            <p>Après avoir saisi les différents champs, cliquer sur « Créer » [1].</p>
+            <div class="screenshot">
+                <img src="static/manual/admin_user_new2.webp" style="height: 380px;" alt=""/>
+                <img src="static/manual/admin_user_new3.webp" style="height: 380px;" alt=""/>
+                <img src="static/manual/admin_user_new4.webp" style="height: 380px;" alt=""/>
+            </div>
+            <p>Une fois votre utilisateur créé, un menu est disponible via le panneau de configuration « Utilisateurs » : « Modifier ».</p>
+            <p>L'<b>onglet « Modifier »</b> vous permet de modifier le nom d'utilisateur, le mot de passe, le courriel, le téléphone et le statut administrateur de l'utilisateur.</p>
+            <p>L'<b>onglet « Supprimer »</b> vous permet de supprimer l'utilisateur.</p>
+            <div class="screenshot">
+                <img src="static/manual/admin_user_edit.webp" style="height: 560px;" alt=""/>
+                <img src="static/manual/admin_user_delete.webp" style="height: 200px;" alt=""/>
+            </div>
+            <p>Pour affecter à un utilisateur des droits sur un projet donné, il faut afficher le panneau de configuration « Projets » [1] et cliquer sur l'option « Droits » du projet d'intérêt [2].</p>
+            <div class="screenshot"><img src="static/manual/admin_user_assign1.webp" alt=""/></div>
+            <p>Le panneau de configuration « Utilisateurs » s'affiche alors à droite du panneau de configuration « Projets ». Vous pouvez affecter des droits à un utilisateur donné via le menu « Assigner » de l'utilisateur d'intérêt [1].</p>
+            <div class="screenshot"><img src="static/manual/admin_user_assign2.webp" alt=""/></div>
+            <div class="mini right"><img src="static/manual/admin_user_assign3.webp" alt=""/></div>
+            <p>Une nouvelle fenêtre s'ouvre (« Droits de *votre utilisateur* sur *votre clé de projet* »). Vous pouvez affecter des droits de développement ou d'enregistrements à votre utilisateur.</p>
             <div style="clear: both;"></div>
+            <p>Les droits de développement comprennent :</p>
             <div class="columns">
                 <table>
                     <thead>
-                        <tr>
-                            <th>Droit</th>
-                            <th>Explication</th>
-                        </tr>
+                        <tr><th>Droit</th><th>Explication</th></tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td><em>Develop</em></td>
-                            <td>Modification des formulaires</td>
-                        </tr>
-                        <tr>
-                            <td><em>Publish</em></td>
-                            <td>Publication des formulaires modifiés</td>
-                        </tr>
-                        <tr>
-                            <td><em>Configure</em></td>
-                            <td>Configuration du projet et des centres (multi-centrique)</td>
-                        </tr>
-                        <tr>
-                            <td><em>Assign</em></td>
-                            <td>Modification des droits des utilisateurs sur le projet</td>
-                        </tr>
+                        <tr><td><em>Develop</em></td><td>Modification des formulaires</td></tr>
+                        <tr><td><em>Publish</em></td><td>Publication des formulaires modifiés</td></tr>
+                        <tr><td><em>Configure</em></td><td>Configuration du projet et des centres (multi-centrique)</td></tr>
+                        <tr><td><em>Assign</em></td><td>Modification des droits des utilisateurs sur le projet</td></tr>
                     </tbody>
                 </table>
-
                 <table>
                     <thead>
-                        <tr>
-                            <th>Droit</th>
-                            <th>Explication</th>
-                        </tr>
+                        <tr><th>Droit</th><th>Explication</th></tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td><em>Load</em></td>
-                            <td>Lecture des enregistrements</td>
-                        </tr>
-                        <tr>
-                            <td><em>Save</em></td>
-                            <td>Modifications des enregistrement</td>
-                        </tr>
-                        <tr>
-                            <td><em>Export</em></td>
-                            <td>Export facile des données (CSV, XLSX, etc.)</td>
-                        </tr>
-                        <tr>
-                            <td><em>Batch</em></td>
-                            <td>Recalcul de toutes les variables calculées sur tous les enregistrements</td>
-                        </tr>
-                        <tr>
-                            <td><em>Message</em></td>
-                            <td>Envoi de mails et SMS automatisés</td>
-                        </tr>
+                        <tr><td><em>Load</em></td><td>Lecture des enregistrements</td></tr>
+                        <tr><td><em>Save</em></td><td>Modifications des enregistrement</td></tr>
+                        <tr><td><em>Export</em></td><td>Export facile des données (CSV, XLSX, etc.)</td></tr>
+                        <tr><td><em>Batch</em></td><td>Recalcul de toutes les variables calculées sur tous les enregistrements</td></tr>
+                        <tr><td><em>Message</em></td><td>Envoi de mails et SMS automatisés</td></tr>
                     </tbody>
                 </table>
             </div>
-            <p>Par défaut, les projets sont mono-centriques. Pour transformer un projet mono-centrique en
-            projet multi-centrique, cliquez sur le bouton <i>Diviser</i> à droite du projet et nommez le
-            premier centre. Dans un projet multi-centrique les droits sont paramétrés, soit sur le projet
-            global (droits de développement en vert), soit sur chaque centre (droits sur les données en violet).</p>
+            <p>Il est à noter que les droits d'enregistrements ne sont configurables qu'après avoir préalablement édité une première version de l'eCRF.</p>
 
-            <h2 id="setup_backups">Sauvegardes</h2>
-            Le panneau de sauvegardes vous permet de sauvegarder l'intégralité des projets (formulaires et données) en un
-            simple clic. Une fois la sauvegarde effectuée, vous pouvez télécharger le fichier créé (avec l'extension
-            <i>.goupilebackup</i>) et le stocker à l'abri par un moyen adéquat.
-            <p>Attention, pour pouvoir restaurer ce fichier, vous devez <b>conserver la clé de restauration</b> qui vous a été
-            communiquée lors de la création du domaine. Sans cette clé, la restauration est impossible et les données
-            sont perdues. Par ailleurs, <b>il nous est strictement impossible de récupérer cette clé</b> si vous la perdez.
-
-            <h1 id="dev">Paramétrage des pages</h1>
-            <h2 id="dev_main">Structure de l'application</h2>
-            <p>Le <b>panneau d'édition d'application</b> permet de définir l'architecture des tables,
-            les relations entre les tables, et l'organisation des pages ainsi que leur style global.</p>
-            <h2 id="dev_page">Éditeur de page</h2>
-            <p>L'<b>éditeur de page</b> vous permet de construire le contenu du formulaire. Il s'agit d'un
-            éditeur de code, mais vous n'avez pas besoin de connaissances de programmation pour réaliser
-            des formulaires simples : Goupile fournit des fonctions prédéfinies qui permet de créer les
-            widgets (champ texte, numérique, liste déroulante, etc.) très simplement et de gérer les
-            variables recueillies de manière automatique.</p>
-            <div class="screenshot right">
-                <img src="static/screenshots/editor.webp"/>
-                <p>Programmez la page dans <b>l'éditeur</b> (gauche), et le <b>résultat</b> (droite)
-                s'affiche immédiatement</p>
-            </div>
-            <p>Les changements réalisés dans l'éditeur sont immédiatement exécutés et le <b>panneau
-            d'aperçu</b> à droite vous affiche le formulaire qui en résulte. Il s'agit de la même page
-            qui sera présentée à l'utilisateur final. A ce stade, vous pouvez déjà ajouter des données.</p>
-            <p>Une page est constituée de plusieurs <b>widgets</b>. De nombreux widgets prédéfinis sont
-            disponibles : champ texte, champ numérique, liste déroulante, etc. Pour ajouter un widget,
-            il vous suffit d'apeler une fonction. Pour la liste des widgets et les instructions détaillées,
-            rendez-vous à la <a href="#dev_widgets">table des widgets</a>.</p>
-            <p>Chaque widget accepte différentes <b>options</b>. Pour les widgets d'entrées (champs) vous devez
-            spécifique un nom de variable et un libellé affiché à l'utilisateur. De nombreuses autres
-            options sont disponibles : <i>champ obligatoire</i>, <i>affichage compact ou élargi</i>, etc.</p>
-            <p>La programmation des pages se fait en Javascript, il s'agit d'un langage de programmation
-            largement répandu sur le web. En conséquence, vous pouvez utiliser la majorité des fonctionnalités
-            Javascript disponibles dans les navigateurs. Nous utiliserons cela pour implémenter des champs
-            conditionnels et des boucles, parmi d'autres choses.</p>
-
+            <h1 id="dev">Création d'un eCRF</h1>
+            <p>Pour créer un eCRF, il faut se connecter sur l'interface administrateur, afficher le panneau de configuration « Projets » [1] puis cliquer sur le menu « Accès » du projet d'intérêt [2].</p>
+            <div class="screenshot"><img src="static/manual/dev_access.webp" alt=""/></div>
+            <h2 id="dev_home">Page d'accueil</h2>
+            <p>Un nouvel onglet s'ouvre dans votre navigateur. Le bandeau noir permet de configurer l'affichage de la page. Vous pouvez afficher (ou non) un ou deux panneaux en sélectionnant (ou déselectionnant) le(s) panneau(x) d'intérêt. Par défaut, le panneau « Liste » [2] est sélectionné. Les différents panneaux de configuration sont : « Code » [1], « Liste » [2] et « Saisie » [3]. Le menu déroulant [4] vous permet de naviguer entre les différentes pages de votre eCRF (ici la première page se nomme « Introduction »). Le menu déroulant [5] vous permet de naviguer entre les différents sous-projets si votre projet a été subdivisé. Enfin le menu déroulant [6] vous permet de changer votre mot de passe ou déconnecter votre session.</p>
+            <div class="screenshot"><img src="static/manual/dev_panels.webp" alt=""/></div>
+            <h3 id="dev_code">Code</h3>
+            <p>Le panneau de configuration « Code » vous permet d'éditer votre eCRF. Il contient deux onglets : « Application » et « Formulaire ». Par défaut, l'onglet « Formulaire » est affiché. L'onglet « Formulaire » vous permet l'édition du contenu de votre eCRF pour une page donnée (ici « Introduction ». Pour rappel la navigation entre les différentes pages de votre formulaire s'effectue via le menu déroulant [1]).</p>
+            <p>L'<b>onglet « Formulaire »</b> vous permet l'édition du contenu de votre eCRF pour une page donnée (ici « Introduction ». Pour rappel la navigation entre les différentes pages de votre formulaire s'effectue via le menu déroulant [1]).<br/>
+            Le contenu est édité en ligne de codes via un éditeur de script. Le langage de programmation est le JavaScript. La connaissance du langage n'est pas nécessaire pour l'édition du script. L'édition de l'eCRF et les différents modules de code seront abordés plus en détail ultérieurement.</p>
+            <div class="screenshot"><img src="static/manual/dev_code1.webp" alt=""/></div>
+            <p>L'<b>onglet « Application »</b> vous permet d'éditer la structure générale de votre eCRF. Elle permet ainsi de définir les différentes pages et ensemble de pages. La structure est éditée en ligne de code via un éditeur de script. Le langage de programmation est le JavaScript. La connaissance du langage n'est pas nécessaire pour l'édition du script. L'édition de la structure de l'eCRF et les différents modules de code seront abordés plus en détail ultérieurement.</p>
+            <div class="screenshot"><img src="static/manual/dev_code2.webp" alt=""/></div>
+            <p>Le contenu est édité en ligne de codes via un éditeur de script. Le langage de programmation est le JavaScript. La connaissance du langage n'est pas nécessaire pour l'édition du script. L'édition de l'eCRF et les différents modules de code seront abordés plus en détail ultérieurement. L'onglet « Application » vous permet d'éditer la structure générale de votre eCRF. Elle permet ainsi de définir les différentes pages et ensemble de pages.</p>
+            <p>La structure est éditée en ligne de code via un éditeur de script. Le langage de programmation est le JavaScript. La connaissance du langage n'est pas nécessaire pour l'édition du script. L'édition de la structure de l'eCRF et les différents modules de code seront abordés plus en détail ultérieurement.</p>
+            <h3 id="dev_list">Liste</h3>
+            <p>Le panneau de configuration « Liste » vous permet d'ajouter des nouvelles observations (« Ajouter un suivi ») et de monitorer le recueil de données. La variable « ID » correspond à l'identifiant d'un formulaire de recueil. Les variables « Introduction », « Avancé » et « Mise en page » correspondent aux trois pages de l'eCRF d'exemple.</p>
+            <div class="screenshot"><img src="static/manual/dev_list.webp" alt=""/></div>
+            <h3 id="dev_entry">Saisie</h3>
+            <p>Le panneau de configuration « Saisie » vous permet de réaliser le recueil d'une nouvelle observation (nouveau patient) ou de modifier une observation donnée (après sélection de l'observation dans le panneau de configuration « Liste »). La navigation entre les différentes pages de l'eCRF peut s'effectuer avec le menu déroulant [1] ou le menu de navigation [2]. Après avoir réalisé la saisie d'une observation, cliquer sur « Enregistrer » [3].</p>
+            <div class="screenshot"><img src="static/manual/dev_entry.webp" alt=""/></div>
             <h2 id="dev_widgets">Widgets standards</h2>
-            <div class="screenshot right">
+            <div class="mini right">
                 <img src="static/screenshots/instant.png"/>
                 <p>Exemples de widgets prédéfinis, avec le code à gauche et le résultat à droite</p>
             </div>
@@ -194,7 +227,7 @@
             correspondent pas, une erreur se produit et la page affichée ne peut pas être mise à jour
             tant que l'erreur persiste. La <a href="#dev_errors">section sur les erreurs</a> contient
             plus d'informations à ce sujet.</p>
-            <h3>Input widgets</h3>
+            <h3 id="dev_widgets1">Saisie d'information</h3>
             <table>
                 <tr>
                     <th>Widget</th>
@@ -261,7 +294,7 @@
                 </tr>
             </table>
 
-            <h3>Other widgets</h3>
+            <h3 id="dev_widgets2">Autres widgets</h3>
             <table>
                 <tr>
                     <th>Widget</th>
@@ -285,19 +318,17 @@
             </table>
 
             <h2 id="dev_errors">Erreurs de programmation</h2>
-            <div class="screenshot">
+            <div class="mini right">
                 <img src="static/screenshots/error.png"/>
                 <p>Voyez-vous l'erreur ? Il y a une parenthèse fermante en trop à droite.</p>
             </div>
             <p>Les langages de programmation (comme Javascript utilisé ici) sont très sensibles aux
             erreurs de syntaxe. Si vous faites une erreur, le code ne peut pas être exécuté et un
             message d'erreur sera affiché.</p>
-
             <p>Si cela se produit, <b>ne paniquez pas</b> ! La plupart des erreurs sont faciles à
             corriger. Si vous ne trouvez pas l'erreur, revenez en arrière à l'aide de Ctrl+Z.</p>
-
-            <h1 id="publish">Publication du formulaire</h1>
-            <div class="screenshot left">
+            <h2 id="publish">Publication du formulaire</h2>
+            <div class="mini">
                 <img src="static/screenshots/publish.webp"/>
                 <p>Publiez votre formulaire simplement lorsqu'il est prêt.</p>
             </div>
@@ -320,7 +351,7 @@
             pour le compléter ou vérifier les données saisies.</p>
 
             <h2 id="run_data">Export des données</h2>
-            <div class="screenshot right">
+            <div class="mini">
                 <img src="static/screenshots/data.webp"/>
                 <p>Testez votre formulaire et vérifiez instantanément les données produites dans le
                 panneau d'export.</p>

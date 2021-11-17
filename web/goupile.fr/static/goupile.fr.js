@@ -141,7 +141,7 @@ function initHighlight() {
 }
 
 function initScreenshots() {
-    let containers = document.querySelectorAll('.screenshot, .slideshow');
+    let containers = document.querySelectorAll('.mini, .screenshot, .slideshow');
 
     for (let i = 0; i < containers.length; i++) {
         let images = containers[i].querySelectorAll('img');
