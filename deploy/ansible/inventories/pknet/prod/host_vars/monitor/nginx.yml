@@ -88,3 +88,15 @@ nginx_domains:
       location / {
           return 301 https://goupile.fr$request_uri;
       }
+  - name: volpil.fr
+    ssl_certbot_email: niels.martignene@protonmail.com
+    config: |
+      location / {
+          return 301 https://goupile.fr$request_uri;
+      }
+  - name: www.volpil.fr
+    ssl_certbot_email: niels.martignene@protonmail.com
+    config: |
+      location / {
+          return 301 https://goupile.fr$request_uri;
+      }
