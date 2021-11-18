@@ -147,33 +147,27 @@ def run_service_command(domain, cmd):
 
 def update_domain_config(domain, info, archive_key, smtp, sms):
     filename = os.path.join(info.main_directory, 'goupile.ini')
-    ini = parse_ini(filename)
 
-    if not ini.has_section('Domain'):
-        ini.add_section('Domain')
+    ini = configparser.ConfigParser()
+    ini.optionxform = str
+
+    ini.add_section('Domain')
     ini.set('Domain', 'Title', domain)
 
-    ini.remove_section('Paths')
+    ini.add_section('Data')
     ini.set('Data', 'SnapshotDirectory', info.snapshot_directory)
     ini.set('Data', 'ArchiveKey', archive_key)
-    ini.remove_option('Data', 'SnapshotHour')
-    ini.remove_option('Data', 'SnapshotZone')
 
-    if not ini.has_section('HTTP'):
-        ini.add_section('HTTP')
+    ini.add_section('HTTP')
     ini.set('HTTP', 'SocketType', 'Unix')
     ini.set('HTTP', 'UnixPath', info.socket)
     ini.set('HTTP', 'ClientAddress', 'X-Forwarded-For')
-    ini.remove_option('HTTP', 'TrustXRealIP')
-    ini.remove_option('HTTP', 'Port')
 
-    ini.remove_section('SMTP')
     if smtp is not None:
         ini.add_section('SMTP')
         for key, value in smtp.items():
             ini.set('SMTP', key, value)
 
-    ini.remove_section('SMS')
     if sms is not None:
         ini.add_section('SMS')
         for key, value in sms.items():
