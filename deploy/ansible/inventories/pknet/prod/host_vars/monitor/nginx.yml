@@ -70,8 +70,19 @@ nginx_domains:
 
           proxy_pass http://127.0.0.1:9200;
       }
-
   - name: www.goupile.fr
+    ssl_certbot_email: niels.martignene@protonmail.com
+    config: |
+      location / {
+          return 301 https://goupile.fr$request_uri;
+      }
+  - name: goupile.org
+    ssl_certbot_email: niels.martignene@protonmail.com
+    config: |
+      location / {
+          return 301 https://goupile.fr$request_uri;
+      }
+  - name: www.goupile.org
     ssl_certbot_email: niels.martignene@protonmail.com
     config: |
       location / {
