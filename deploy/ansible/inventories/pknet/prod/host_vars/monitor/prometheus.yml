@@ -18,7 +18,7 @@ prometheus_exporters:
   - nginx_exporter
   - systemd_exporter
 
-grafana_url: 'https://volpil.fr/grafana'
+grafana_url: 'https://goupile.fr/pknet'
 grafana_default_password: !vault |
   $ANSIBLE_VAULT;1.1;AES256
   66633065343632386261343466373833613162386238356665373365353765663238306430666365

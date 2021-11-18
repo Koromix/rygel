@@ -32,7 +32,7 @@ nginx_domains:
           proxy_pass http://127.0.0.1:{{ prometheus_packages[exporter].port }}/metrics;
       }
       {% endfor %}
-  - name: volpil.fr
+  - name: goupile.fr
     ssl_certbot_email: niels.martignene@protonmail.com
     config: |
       location / {
@@ -42,10 +42,27 @@ nginx_domains:
           rewrite ^(/?[a-zA-Z0-9]+)/$ $1 permanent;
           try_files $uri $uri/ =404;
 
-          root /opt/static/live/volpil.fr;
+          root /opt/static/live/goupile.fr;
       }
 
-      location /grafana {
+      # Some stuff still leves on the old server
+      location /files {
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+          proxy_pass https://51.210.176.2;
+      }
+      location /demo {
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+          proxy_pass https://51.210.176.2;
+      }
+      location /acuteflow {
+          proxy_pass https://anesth-lille.goupile.fr;
+      }
+
+      location /pknet {
           limit_req zone=default burst=100 nodelay;
 
           proxy_set_header Host $host;
@@ -53,9 +70,10 @@ nginx_domains:
 
           proxy_pass http://127.0.0.1:9200;
       }
-  - name: www.volpil.fr
+
+  - name: www.goupile.fr
     ssl_certbot_email: niels.martignene@protonmail.com
     config: |
       location / {
-          return 301 https://volpil.fr$request_uri;
+          return 301 https://goupile.fr$request_uri;
       }

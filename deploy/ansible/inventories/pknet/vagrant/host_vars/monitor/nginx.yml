@@ -51,5 +51,5 @@ nginx_domains:
           rewrite ^(/?[a-zA-Z0-9]+)/$ $1 permanent;
           try_files $uri $uri/ =404;
 
-          root /opt/static/live/volpil.fr;
+          root /opt/static/live/goupile.fr;
       }

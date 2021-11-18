@@ -12,6 +12,6 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 static_deploys:
-  - name: volpil.fr
+  - name: goupile.fr
     repo: https://framagit.org/interhop/goupile
-    path: web/goupile.fr # Placeholder until volpil.fr content actually exists :)
+    path: web/goupile.fr
