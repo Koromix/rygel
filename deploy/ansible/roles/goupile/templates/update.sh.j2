@@ -17,8 +17,9 @@ cd '{{ goupile_root_path }}/repo'
 USER=$(stat -c '%U' .)
 
 # Get remote changes
-sudo -u $USER git fetch
-sudo -u $USER git reset --hard FETCH_HEAD
+sudo -u $USER git fetch --all
+sudo -u $USER git reset --hard
+sudo -u $USER git checkout 'origin/{{ goupile_commit }}'
 
 # Update or bootstrap Felix
 if ! sudo -u $USER bin/Paranoid/felix -pParanoid --host=,clang-11,lld-11 felix; then
