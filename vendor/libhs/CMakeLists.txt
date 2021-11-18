@@ -57,7 +57,7 @@ set(LIBHS_SOURCES array.c
                   monitor_priv.h
                   platform.c
                   platform_darwin.c
-                  platform_posix.c
+                  platform_linux.c
                   platform_win32.c
                   platform.h
                   serial_posix.c

@@ -61,7 +61,7 @@
     #include "monitor_darwin.c"
     #include "platform.c"
     #include "platform_darwin.c"
-    #include "platform_posix.c"
+    #include "platform_linux.c"
     #include "platform_win32.c"
     #include "serial_posix.c"
     #include "serial_win32.c"
