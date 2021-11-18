@@ -31,4 +31,5 @@ fi
 sudo -u $USER bin/Paranoid/felix -pParanoid --host=,clang-11,lld-11 felix goupile
 
 # Install Goupile
-install -C -o root -g root -m 0755 bin/Paranoid/goupile '{{ goupile_root_path }}/goupile'
+rsync -cp bin/Paranoid/goupile '{{ goupile_root_path }}/goupile'
+chown root:root '{{ goupile_root_path }}/goupile'

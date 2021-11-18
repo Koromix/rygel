@@ -20,5 +20,6 @@
       - clang
       - lld
       - gcc
+      - rsync
     state: latest
   become: yes

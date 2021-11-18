@@ -33,5 +33,6 @@
       - lld-11
       - gcc
       - g++
+      - rsync
     state: latest
   become: yes
