@@ -35,11 +35,15 @@ nginx_domains:
   - name: goupile.fr
     ssl_certbot_email: niels.martignene@protonmail.com
     config: |
+      location = /en {
+          return 301 https://$host/en/;
+      }
       location / {
           index index.html;
 
-          rewrite ^(/?[a-zA-Z0-9]+)$ $1.html;
-          rewrite ^(/?[a-zA-Z0-9]+)/$ $1 permanent;
+          rewrite ^/en/$ /en/index.html;
+          rewrite ^(/?(?:en/)?[a-zA-Z0-9]+)$ $1.html;
+          rewrite ^(/?(?:en/)?[a-zA-Z0-9]+)/$ $1 permanent;
           try_files $uri $uri/ =404;
 
           root /opt/static/live/goupile.fr;
