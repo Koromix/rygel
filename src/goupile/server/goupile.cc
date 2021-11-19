@@ -124,6 +124,7 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         {"lseek", sb_FilterAction::Allow},
         {"ftruncate", sb_FilterAction::Allow},
         {"fsync", sb_FilterAction::Allow},
+        {"fdatasync", sb_FilterAction::Allow},
         {"fstat", sb_FilterAction::Allow},
         {"stat", sb_FilterAction::Allow},
         {"lstat", sb_FilterAction::Allow},
