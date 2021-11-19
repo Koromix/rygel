@@ -309,6 +309,13 @@ pre {
         font-size: 0.7em;
     }
 
+    .screenshot {
+        flex-direction: column;
+        align-items: center;
+    }
+    .screenshot.left { align-items: start; }
+    .screenshot.right { align-items: end; }
+
     .mini {
         float: none !important;
         margin: 1em auto !important;
