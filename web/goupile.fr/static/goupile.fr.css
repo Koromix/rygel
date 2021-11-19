@@ -115,7 +115,7 @@ td {
 #menu {
     position: fixed;
     left: calc(50% + 485px);
-    top: 4.5em;
+    top: 4em;
     width: 240px;
     padding: 0 1em 0 0;
     background: white;
@@ -146,7 +146,7 @@ main {
     background: white;
     box-sizing: border-box;
     max-width: 970px;
-    padding: 2em 1.5em 1.5em 1.5em;
+    padding: 1.5em 1.5em 1.5em;
 }
 
 .slideshow {
