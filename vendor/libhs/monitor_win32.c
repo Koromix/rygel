@@ -1177,7 +1177,7 @@ static int post_event(hs_monitor *monitor, enum event_type event_type, const cha
     return 0;
 }
 
-static LRESULT __stdcall window_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     hs_monitor *monitor = (hs_monitor *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
     int r;
@@ -1241,7 +1241,7 @@ static LRESULT __stdcall window_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM 
         } break;
     }
 
-    return DefWindowProc(hwnd, msg, wparam, lparam);
+    return DefWindowProcA(hwnd, msg, wparam, lparam);
 }
 
 static void unregister_monitor_class(void)
