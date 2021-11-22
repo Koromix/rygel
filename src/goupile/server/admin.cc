@@ -992,7 +992,7 @@ static bool BackupInstances(const InstanceHolder *filter, bool *out_conflict = n
         }
 
         HeapArray<char> buf(&temp_alloc);
-        Fmt(&buf, "%1%/%2", gp_domain.config.archive_directory, mtime_str);
+        Fmt(&buf, "%1%/%2_%3", gp_domain.config.archive_directory, gp_domain.config.title, mtime_str);
         if (filter) {
             const char *filename = sqlite3_db_filename(*filter->db, "main");
 
