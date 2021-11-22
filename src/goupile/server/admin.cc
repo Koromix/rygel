@@ -486,9 +486,13 @@ Options:
 
     // Gather missing information
     if (!title) {
+retry_title:
         title = Prompt("Domain title: ", &temp_alloc);
         if (!title)
             return 1;
+
+        if (!CheckDomainTitle(title))
+            goto retry_title;
     }
     if (!title[0]) {
         LogError("Empty domain title is now allowed");
@@ -505,22 +509,22 @@ Options:
         if (!pwd_CheckPassword(password, username))
             return 1;
     } else {
-retry:
+retry_pwd:
         password = Prompt("Admin password: ", "*", &temp_alloc);
         if (!password)
             return 1;
 
         if (!pwd_CheckPassword(password, username))
-            goto retry;
+            goto retry_pwd;
 
-reconfirm:
+reconfirm_pwd:
         const char *password2 = Prompt("Confirm: ", "*", &temp_alloc);
         if (!password2)
             return 1;
 
         if (!TestStr(password, password2)) {
             LogError("Password mismatch");
-            goto reconfirm;
+            goto reconfirm_pwd;
         }
     }
     LogInfo();

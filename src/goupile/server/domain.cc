@@ -24,10 +24,31 @@ const int64_t FullSnapshotDelay = 86400 * 1000;
 // Process-wide unique instance identifier 
 static std::atomic_int64_t next_unique = 0;
 
+bool CheckDomainTitle(Span<const char> title)
+{
+    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_' || c == '.' || c == '-'; };
+
+    if (!title.len) {
+        LogError("Domain title cannot be empty");
+        return false;
+    }
+    if (title.len > 32) {
+        LogError("Domain title cannot be have more than 32 characters");
+        return false;
+    }
+    if (!std::all_of(title.begin(), title.end(), test_char)) {
+        LogError("Domain title must only contain alphanumeric, '_', '.' or '-' characters");
+        return false;
+    }
+
+    return true;
+}
+
 bool DomainConfig::Validate() const
 {
     bool valid = true;
 
+    valid &= CheckDomainTitle(title);
     if (!enable_archives) {
         LogError("Domain archive key is not set");
         valid = false;
@@ -188,7 +209,12 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
         Span<const char> basename = SplitStrReverseAny(root_directory, RG_PATH_SEPARATORS);
         config.title = DuplicateString(basename, &config.str_alloc).ptr;
 
-        LogError("Domain title is not set, using '%1'", config.title);
+        if (CheckDomainTitle(config.title)) {
+            LogError("Domain title is not set, using '%1'", config.title);
+        } else {
+            LogError("Domain title is not set");
+            return false;
+        }
     }
     if (!config.database_filename) {
         config.database_filename = NormalizePath("goupile.db", root_directory, &config.str_alloc).ptr;

@@ -49,6 +49,8 @@ struct DomainConfig {
     BlockAllocator str_alloc;
 };
 
+bool CheckDomainTitle(Span<const char> title);
+
 const char *MakeInstanceFileName(const char *directory, const char *key, Allocator *alloc);
 
 bool LoadConfig(StreamReader *st, DomainConfig *out_config);
