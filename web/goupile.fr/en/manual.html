@@ -57,20 +57,20 @@
         </nav>
         <main>
             <h1 id="intro">General presentation</h1>
-            <p>Goupile is an electronic observation book design tool or electronical Clinical Report Forms (eCRF). It is a multi-platform and multi-support web application intended to collect the information defined by the clinical research protocol.</p>
+            <p>Goupile is a tool designed to help users create and run electronical Clinical Report Forms (eCRF). It is a multi-platform and multi-support web application intended to collect the information defined by clinical research protocols.</p>
             <h2 id="intro_ecrf">Contribution of eCRFs</h2>
             <p>The eCRF is the electronic side of the traditional paper CRF. ECRF enables online data collection by investigators and clinical research associates (CRAs).</p>
             <p>Its main contributions are multiple:</p>
             <ul>
                 <li>Centralization and simplification of data entry: data entry is carried out online on a secure access portal and via an electronic form adapted to the study</li>
-                <li>Securing the collection: the data is hosted on a secure server and accessible only to authorized persons</li>
+                <li>Securing data collection: the data is hosted on a secure server and accessible only to authorized persons</li>
                 <li>Consistency control and data quality optimization: configurable and automated input masks and internal consistency checks limit input errors</li>
                 <li>Monitoring of the completeness of the data and monitoring of the collection: the control of the collection is ensured through the implementation of a dashboard, monitoring indicators and an audit trail that can be consulted remotely.</li>
             </ul>
             <h2 id="intro_plus">Goupile contribution</h2>
             <p>Goupile is an online eCRF editor that is fully user-configurable through a simplified interface and has advanced features.</p>
-            <p>Goupile is a multiplatform (computer, tablet, smartphone) and multisupport (Windows, Linux, Mac Os X, Android, iOS…) solution. Goupile is compatible with any recent web browser (Google Chrome, Mozilla Firefox, Microsoft Edge, Safari…).</p>
-            <p>Goupile can be deployed on the server desired by the user but also offers hosting on a certified server for Health Data Hosting (HDS) [GPLExpert].</p>
+            <p>Goupile is a multiplatform (computer, tablet, smartphone) and multisupport (Windows, Linux, Mac Os X, Android, iOS…) solution. It is compatible with any recent web browser (Google Chrome, Mozilla Firefox, Microsoft Edge, Safari…).</p>
+            <p>It can be deployed on the server desired by the user but also offers hosting on a certified server for Health Data Hosting (HDS) [GPLExpert].</p>
             <p>It is free and opensource software released under a free license: AGPL 3.0 license. The source code is available for free online: <a href="https://framagit.org/interhop/goupile">https://framagit.org/interhop/goupile</a>.</p>
 
             <h1 id="admin">General administration</h1>
@@ -80,12 +80,12 @@
             <div class="screenshot">
                 <img src="../static/manual/admin_login.webp" style="height: 360px;" alt="">
             </div>
-            <p>Authentication is carried out via the login portal presented below. Username and password are sent by e-mail. Username is usually (by convention) in the format "<b>name.name</b>". After entering the username and password, click on "Log in".</p>
+            <p>Authentication is carried out via the login portal presented below. Username and password are sent by e-mail. Usernames are usually (by convention) in the format "<b>name.name</b>". After entering the username and password, click on "Log in".</p>
             <h3 id="admin_overview1">Overview</h3>
             <div class="screenshot">
                 <img src="../static/manual/admin_overview.webp" alt="">
             </div>
-            <p>The admin page looks like this. It can be schematically broken down into 3 parts. The top banner [1] allows you to configure the display of the page. You can display (or not) one or two panels by selecting (or deselecting) the panel (s) of interest. By default, the "Projects" [2] and "Users" [3] panels are selected.</p>
+            <p>The admin page can be schematically broken down into 3 parts. The top banner [1] allows you to configure which panels are active. You can display (or not) one or two panels by selecting (or deselecting) the panel(s) of interest. By default, the "Projects" [2] and "Users" [3] panels are selected.</p>
             <div class="screenshot">
                 <img src="../static/manual/admin_panels.webp" alt="">
             </div>
@@ -104,7 +104,7 @@
                 <img src="../static/manual/admin_archives.webp" alt="">
             </div>
             <p>The "Archives" control panel allows you to create a new archive ("Create archive"), restore ("Restore"), delete ("Delete") or upload ("Upload archive") an archive.</p>
-            <p>An archive records the state of (forms and data) when it is created. Once the archive has been created, you can download the created file (with the extension .goupilebackup) and store it securely by suitable means.</p>
+            <p>An archive records the exact state of all projects (with its forms and data) when it is created. Once the archive has been created, you can download the created file (with the extension .goupilebackup) and store it securely by suitable means.</p>
             <p>Please note, to be able to restore this file, you must <b>keep the restore key</b> that was given to you when you created the domain. Without this key, recovery is not possible and data is lost. In addition, it <b>is strictly impossible for us to recover this key</b> if you lose it!</p>
             <h3>Password change</h3>
             <div class="screenshot">
@@ -128,7 +128,7 @@
                 <img src="../static/manual/admin_project_new1.webp" alt="">
             </div>
             <p>A new window appears ("Creating a project"). You must define a project key ("Project key"), a project name ("Name") and you will have the choice to add (or not) default pages ("Add default pages").</p>
-            <p>The project key will appear in the project login URL. Its format must be alphanumeric and cannot exceed 24 characters. Uppercase letters, accents and special characters are not allowed (except the short dash or dash of 6, '-'). The name of the project corresponds to the name you want to give to your project. Its format can be numeric or alphanumeric. Uppercase and special characters are allowed. The "default pages" allow the addition of a few sample pages allowing you to familiarize yourself with the design of an eCRF with Goupile and provide a first working basis. If you are already familiar with designing an eCRF with Pin, you can click "no". After entering the various fields, click on "Create" [1].</p>
+            <p>The project key will appear in the project login URL. Its format must be alphanumeric and cannot exceed 24 characters. Uppercase letters, accents and special characters are not allowed (except the short dash or dash of 6, '-'). The name of the project corresponds to the name you want to give to your project, and will be visible to the user as the browser page title. Its format can be numeric or alphanumeric. Uppercase and special characters are allowed. The "default pages" allow the addition of a few sample pages allowing you to familiarize yourself with the design of an eCRF with Goupile and provide a first working basis. If you are already familiar with designing an eCRF with Pin, you can click "no". After completing the various fields, click on "Create" [1].</p>
             <div class="screenshot">
                 <img src="../static/manual/admin_project_new2.webp" style="height: 320px;" alt="">
                 <img src="../static/manual/admin_project_new3.webp" style="height: 320px;" alt="">
@@ -138,14 +138,14 @@
             <div class="screenshot">
                 <img src="../static/manual/admin_project_actions.webp" alt="">
             </div>
-            <p>By default, the projects are mono-centric. To transform a single-center project into a multi-center project, you can use the "Divide" option.</p>
-            <p>The <b>"Divide" option</b> allows you to subdivide your initial project into different sub-projects. A new window appears "Division of * your project key *". You must then enter a subproject key ("Subproject key") and a subproject name ("Name") according to the same constraints as those mentioned for the key and the name of the project. After entering the various fields, click on "Create" [1].</p>
+            <p>By default, projects are single-center. To transform a single-center project into a multi-center project, you can use the "Divide" option.</p>
+            <p>The <b>"Divide" option</b> allows you to subdivide your initial project into different sub-projects. A new window appears "Division of * your project key *". You must then enter a subproject key ("Subproject key") and a subproject name ("Name") according to the same constraints as those mentioned for the key and the name of the project. After completing the various fields, click on "Create" [1].</p>
             <div class="screenshot">
                 <img src="../static/manual/admin_project_split1.webp" style="height: 320px;" alt="">
                 <img src="../static/manual/admin_project_split2.webp" style="height: 320px;" alt="">
                 <img src="../static/manual/admin_project_split3.webp" style="height: 320px;" alt="">
             </div>
-            <p>Once your subproject has been created, several menus are available via the "Projects" configuration panel: "Rights", "Configure" and "Access".</p>
+            <p>Once your subproject has been created, several actions are available via the "Projects" configuration panel: "Rights", "Configure" and "Access".</p>
             <div class="screenshot">
                 <img src="../static/manual/admin_project_sub.webp" alt="">
             </div>
@@ -154,7 +154,7 @@
                 <img src="../static/manual/admin_project_permissions.webp" alt="">
             </div>
             <p>The <b>"Configure" option</b> allows you to modify the parameters of your project ("Modify") or delete your project ("Delete").</p>
-            <p>The <b>"Modify" tab</b>allows you to modify the name of your project, activate (or not) the offline use (by default the option is not activated), modify the synchronization mode (by default the synchronization mode is "Online") and set the default session. Off-line use allows the application to work without an internet connection. The "Online" synchronization mode corresponds to a copy on the data server, the "Offline" synchronization mode corresponds to a local copy only (on your machine) of the data without a copy on the server and the synchronization mode "Mirror" allows an online copy of the data and a recopy of the data on each machine used. The default session is used to display the session of a given user during connection.</p>
+            <p>The <b>"Modify" tab</b>allows you to modify the name of your project, activate (or not) the offline use (by default the option is not activated), modify the synchronization mode (by default the synchronization mode is "Online") and set the default session. Off-line use allows the application to work without an internet connection. The "Online" synchronization mode corresponds to a copy on the data server, the "Offline" synchronization mode corresponds to a local copy only (on your machine) of the data without a copy on the server and the synchronization mode "Mirror" allows an online copy of the data and replication of all data on each machine used. The default session is used to display the session of a given user during connection.</p>
             <p>The <b>"Delete" tab</b> allows you to delete your project.</p>
             <div class="screenshot">
                 <img src="../static/manual/admin_project_edit.webp" style="height: 560px;" alt="">
@@ -165,8 +165,8 @@
             <div class="screenshot">
                 <img src="../static/manual/admin_user_new1.webp" alt="">
             </div>
-            <p>A new window appears ("Creating a user"). You must define a user name ("User name"), a connection password ("Password") and its administrator status or not ("Administrator"). You can complete this information with an email address ("Email") and a phone number ("Phone").</p>
-            <p>The username is the user's name. It can be in numeric or alphanumeric format. Uppercase and special characters (except for the short dash '-', underscore '_' and period '.') Are not allowed. We recommend a username in the format: "firstname.lastname".</p>
+            <p>A new window appears ("Create user"). You must define a user name ("Username"), a connection password ("Password") and its administrator status or not ("Administrator"). You can optionally complete this information with an email address ("Email") and a phone number ("Phone").</p>
+            <p>The username is the user's login. It can be in numeric or alphanumeric format. Uppercase and special characters (except for the short dash '-', underscore '_' and period '.') are not allowed. We recommend a username in the format: "firstname.lastname".</p>
             <p>The password must contain at least 8 characters from 3 different classes (numeric, alphanumeric, special symbols). The administrator status allows access to the administrator interface. By default, administrator status is not enabled.</p>
             <p>After entering the various fields, click on "Create" [1].</p>
             <div class="screenshot">
@@ -194,7 +194,7 @@
             </div>
             <p>A new window opens (* permissions of * your user * on * your project key *). You can assign development or record permissions to your user.</p>
             <div style="clear: both;"></div>
-            <p>The permissions include:</p>
+            <p>These permissions include:</p>
             <div class="columns">
                 <table>
                     <thead>
@@ -222,35 +222,33 @@
             <p>It should be noted that the recording rights can only be configured after having previously edited a first version of the eCRF.</p>
 
             <h1 id="dev">Project development</h1>
-            <p>To create an eCRF, you must connect to the administrator interface, display the "Projects" configuration panel [1] then click on the "Access" menu of the project of interest [2].</p>
+            <p>To create an eCRF, you must connect to the administrator interface, display the "Projects" configuration panel [1] then click on the "access" menu of the project of interest [2]. You can bookmark this link to directly open the project afterwards.</p>
             <div class="screenshot">
                 <img src="../static/manual/dev_access.webp" alt="">
             </div>
-            <h2 id="dev_home">Home page</h2>
-            <p>A new tab opens in your browser. The black banner is used to configure the display of the page. You can display (or not) one or two panels by selecting (or deselecting) the panel (s) of interest. By default, the "List" panel [2] is selected. The different configuration panels are: "Code" [1], "List" [2] and "Input" [3]. The drop-down menu [4] allows you to navigate between the different pages of your eCRF (here the first page is called "Introduction"). The drop-down menu [5] allows you to navigate between the different sub-projects if your project has been subdivided. Finally the drop-down menu [6] allows you to change your password or disconnect your session.</p>
+            <h2 id="dev_home">Default view</h2>
+            <p>A new tab opens in your browser. The black banner (top page) is used to configure the display of the page. You can display (or not) one or two panels by selecting (or deselecting) the panel (s) of interest. By default, the "List" panel [2] is selected. The different configuration panels are: "Code" [1], "List" [2] and "Input" [3]. The center drop-down menu [4] allows you to navigate between the different pages of your eCRF (here the first page is called "Introduction"). Another drop-down menu [5] allows you to navigate between the different sub-projects if your project has been subdivided. The rightmost drop-down menu [6] allows you to change your password or disconnect your session.</p>
             <div class="screenshot">
                 <img src="../static/manual/dev_panels.webp" alt="">
             </div>
-            <h3 id="dev_code">Coded</h3>
-            <p>The "Code" control panel allows you to edit your eCRF. It contains two tabs: "Application" and "Form". By default, the "Form" tab is displayed. The "Form" tab allows you to edit the content of your eCRF for a given page (here "Introduction". As a reminder, navigation between the different pages of your form is done via the drop-down menu [1]).</p>
+            <h3 id="dev_code">Code</h3>
+            <p>The "Code" control panel allows you to edit your eCRF. It contains two tabs: "Application" and "Form". By default, the "Form" tab is displayed.</p>
             <p>The <b>"Form" tab</b> allows you to edit the content of your eCRF for a given page (here "Introduction". As a reminder, navigation between the different pages of your form is done via the drop-down menu [1]).<br/>
-            The content is edited in line of codes via a script editor. The programming language is JavaScript. Knowledge of the language is not necessary for editing the script. Editing the eCRF and the various code modules will be discussed in more detail later.</p>
+            The content is edited in line of codes via a script editor. The programming language is JavaScript. Knowledge of the language is not necessary for editing simple scripts. Editing the eCRF and the various code modules will be discussed in more detail later.</p>
             <div class="screenshot">
                 <img src="../static/manual/dev_code1.webp" alt="">
             </div>
-            <p>The <b>"Application" tab</b> allows you to edit the general structure of your eCRF. It thus makes it possible to define the different pages and set of pages. The structure is edited in line of code via a script editor. The programming language is JavaScript. Knowledge of the language is not necessary for editing the script. Editing the structure of the eCRF and the different code modules will be discussed in more detail later.</p>
+            <p>The <b>"Application" tab</b> allows you to edit the general structure of your eCRF. It thus makes it possible to define the different pages and set of pages. The structure is edited in line of code via a script editor. The programming language is also JavaScript. Editing the structure of the eCRF and the different code modules will be discussed in more detail later.</p>
             <div class="screenshot">
                 <img src="../static/manual/dev_code2.webp" alt="">
             </div>
-            <p>The content is edited in line of codes via a script editor. The programming language is JavaScript. Knowledge of the language is not necessary for editing the script. Editing the eCRF and the various code modules will be discussed in more detail later. The "Application" tab allows you to edit the general structure of your eCRF. It thus makes it possible to define the different pages and set of pages.</p>
-            <p>The structure is edited in line of code via a script editor. The programming language is JavaScript. Knowledge of the language is not necessary for editing the script. Editing the structure of the eCRF and the different code modules will be discussed in more detail later.</p>
             <h3 id="dev_list">Listing</h3>
-            <p>The "List" configuration panel allows you to add new observations ("Add a follow-up") and to monitor the data collection. The "ID" variable corresponds to the identifier of a collection form. The variables "Introduction", "Advanced" and "Layout" correspond to the three pages of the example eCRF.</p>
+            <p>The "List" configuration panel allows you to add new observations ("Add a follow-up") and to monitor the data collection. The "ID" variable corresponds to the identifier of a collection form. It is sequential by default but this can be configured for each project. The variables "Introduction", "Advanced" and "Layout" correspond to the three pages of the example eCRF.</p>
             <div class="screenshot">
                 <img src="../static/manual/dev_list.webp" alt="">
             </div>
-            <h3 id="dev_entry">Capture</h3>
-            <p>The "Input" configuration panel allows you to collect a new observation (new patient) or to modify a given observation (after selecting the observation in the "List" configuration panel). Navigation between the different pages of the eCRF can be done with the drop-down menu [1] or the navigation menu [2]. After entering an observation, click on "Save" [3].</p>
+            <h3 id="dev_entry">Data entry</h3>
+            <p>The "Entry" panel allows you to collect a new observation (new patient) or to modify a given observation (after selecting the observation in the "List" configuration panel). Navigation between the different pages of the eCRF can be done with the drop-down menu [1] or the navigation menu [2]. After entering your data, click on "Save" [3].</p>
             <div class="screenshot">
                 <img src="../static/manual/dev_entry.webp" alt="">
             </div>
@@ -264,8 +262,10 @@
             <p></p>
             <p>Variable names must begin with a letter or _, followed by zero or more alphanumeric characters or _. They must not contain spaces, accented characters or any other special character.</p>
             <p>Most widgets accept optional parameters like this:</p>
-            <p class="code"><span style="color: #24579d;">function</span> ( <span style="color: #c09500;">"variable_name"</span> , <span style="color: #842d3d;">"Label presented to the user"</span> , { <span style="color: #054e2d;">option1</span> : <span style="color: #431180;">value</span> , <span style="color: #054e2d;">option2</span> : <span style="color: #431180;">value</span> })</p>
-            <p></p>
+            <p class="code"><span style="color: #24579d;">function</span> ( <span style="color: #c09500;">"variable_name"</span> , <span style="color: #842d3d;">"Label presented to the user"</span> , {
+    <span style="color: #054e2d;">option1</span> : <span style="color: #431180;">value</span>,
+    <span style="color: #054e2d;">option2</span> : <span style="color: #431180;">value</span>
+} )</p>
             <p>Pay attention to the syntax of the code. When the parentheses or quotes do not match, an error occurs and the displayed page cannot be updated until the error persists. The <a href="#dev_errors">section on errors</a> has more information on this.</p>
             <h3 id="dev_widgets1">Entering information</h3>
             <table>
@@ -275,47 +275,47 @@
                 </tr>
                 <tr>
                     <td class="widget"><img src="../static/screenshots/widgets.png" style="height: 58px; object-position: 0px 0px;"></td>
-                    <td class="code">form.text ("variable", "Label")</td>
+                    <td class="code">form.text("variable", "Label")</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="../static/screenshots/widgets.png" style="height: 58px; object-position: 0 -53px;"></td>
-                    <td class="code">form.number ("variable", "Label")</td>
+                    <td class="code">form.number("variable", "Label")</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="../static/screenshots/widgets.png" style="height: 58px; object-position: 0 -106px;"></td>
-                    <td class="code">form.slider ("variable", "Label")</td>
+                    <td class="code">form.slider("variable", "Label")</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="../static/screenshots/widgets.png" style="height: 58px; object-position: 0 -175px;"></td>
-                    <td class="code">form.date ("variable_name", "Label")</td>
+                    <td class="code">form.date("variable_name", "Label")</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="../static/screenshots/widgets.png" style="height: 63px; object-position: 0 -228px;"></td>
-                    <td class="code">form.binary ("variable_name", "Label")</td>
+                    <td class="code">form.binary("variable_name", "Label")</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="../static/screenshots/widgets.png" style="height: 63px; object-position: 0 -285px;"></td>
-                    <td class="code">form.enum ("variable_name", "Label", [["modality1", "modality1 Label"], ["modality2", "modality2 Label"]])</td>
+                    <td class="code">form.enum("variable_name", "Label", [["modality1", "modality1 Label"], ["modality2", "modality2 Label"]])</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="../static/screenshots/widgets.png" style="height: 58px; object-position: 0 -340px;"></td>
-                    <td class="code">form.enumDrop ("variable_name", "Label", [["modality1", "modality1 Label"], ["modality2", "modality2 Label"]])</td>
+                    <td class="code">form.enumDrop("variable_name", "Label", [["modality1", "modality1 Label"], ["modality2", "modality2 Label"]])</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="../static/screenshots/widgets.png" style="height: 74px; object-position: 0 -392px;"></td>
-                    <td class="code">form.enumRadio ("variable_name", "Label", [["modality1", "modality1 Label"], ["modality2", "modality2 Label"]])</td>
+                    <td class="code">form.enumRadio("variable_name", "Label", [["modality1", "modality1 Label"], ["modality2", "modality2 Label"]])</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="../static/screenshots/widgets.png" style="height: 63px; object-position: 0 -461px;"></td>
-                    <td class="code">form.multi ("variable_name", "Label", [["modality1", "modality1 Label"], ["modality2", "modality2 Label"]])</td>
+                    <td class="code">form.multi("variable_name", "Label", [["modality1", "modality1 Label"], ["modality2", "modality2 Label"]])</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="../static/screenshots/widgets.png" style="height: 74px; object-position: 0 -517px;"></td>
-                    <td class="code">form.multiCheck ("variable_name", "Label", [["modality1", "modality1 Label"], ["modality2", "modality2 Label"]])</td>
+                    <td class="code">form.multiCheck("variable_name", "Label", [["modality1", "modality1 Label"], ["modality2", "modality2 Label"]])</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="../static/screenshots/widgets.png" style="height: 51px; object-position: 0 -586px;"></td>
-                    <td class="code">form.calc ("variable_name", 18)</td>
+                    <td class="code">form.calc("variable_name", 18)</td>
                 </tr>
             </table>
             <h3 id="dev_widgets2">Other widgets</h3>
@@ -326,24 +326,24 @@
                 </tr>
                 <tr>
                     <td class="widget"><img src="../static/screenshots/widgets.png" style="height: 152px; object-position: 0 -632px;"></td>
-                    <td class="code">form.section ("Section name", () =&gt; {form.text ("variable1", "Label 1") form.number ("variable2", "Label 2")})</td>
+                    <td class="code">form.section("Section name", () =&gt; {form.text ("variable1", "Label 1") form.number ("variable2", "Label 2")})</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="../static/screenshots/widgets.png" style="height: 27px; object-position: 0 -779px;"></td>
-                    <td class="code">form.output ("This is &lt;b&gt; text &lt;/b&gt; content")</td>
+                    <td class="code">form.output("This is &lt;b&gt; text &lt;/b&gt; content")</td>
                 </tr>
                 <tr>
                     <td class="widget"><img src="../static/screenshots/widgets.png" style="height: 27px; object-position: 0 -801px;"></td>
-                    <td class="code">form.output (html`This is &lt;b&gt; HTML &lt;/b&gt; content`)</td>
+                    <td class="code">form.output(html`This is &lt;b&gt; HTML &lt;/b&gt; content`)</td>
                 </tr>
             </table>
             <h2 id="dev_errors">Programming errors</h2>
             <div class="mini right">
                 <img src="../static/screenshots/error.png">
-                <p>Do you see the error? There is an excess closing parenthesis on the right.</p>
+                <p>Do you see the error? There is one closing parenthesis in excess on the right.</p>
             </div>
             <p>Programming languages (like JavaScript used here) are very susceptible to syntax errors. If you make a mistake, the code cannot be executed and an error message will be displayed.</p>
-            <p>If this happens, <b>don't panic!</b> Most mistakes are easy to correct. If you can't find the error, go back using Ctrl + Z.</p>
+            <p>If this happens, <b>don't panic!</b> Most mistakes are easy to correct. If you can't find the error, you can usually just go back using Ctrl + Z.</p>
             <h2 id="publish">Publishing the project</h2>
             <div class="mini">
                 <img src="../static/screenshots/publish.webp">
@@ -355,7 +355,7 @@
             <div style="clear: both;"></div>
 
             <h1 id="run">Daily use</h1>
-            <p>Once the form is ready, the monitoring and export panels allow you to follow the progress of the entry and to export the data.</p>
+            <p>Once the form is ready, the monitoring and export panels allow you to follow the progress of data entry and to export the data (if you have permission to do so).</p>
             <h2 id="run_status">Data tracking</h2>
             <p>The monitoring table displays the list of records with their status (not entered, recorded, completed). From this monitoring table, you can directly access a specific record to complete it or verify the data entered.</p>
             <h2 id="run_data">Data export</h2>

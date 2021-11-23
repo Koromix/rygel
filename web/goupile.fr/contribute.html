@@ -254,14 +254,14 @@ mkdir tmp
 <span class="hljs-comment"># compte administrateur et de définir son mot de passe.</span>
 bin/Paranoid/goupile init tmp/domaine_test
 </code></pre>
-            <p>L'initilisation de ce domaine va créer <b>une clé de récupération d'archive</b> que vous devez stocker afin de pouvoir restaurer une archive créée dans le panneau d'administration du domaine Goupile. Si elle est perdue, cette clé peut être modifiée mais les archives créées avec la clé précédente ne seront pas récupérables !</p>
+            <p>L'initialisation de ce domaine va créer <b>une clé de récupération d'archive</b> que vous devez stocker afin de pouvoir restaurer une archive créée dans le panneau d'administration du domaine Goupile. Si elle est perdue, cette clé peut être modifiée mais les <b>archives créées avec la clé précédente ne seront pas récupérables</b> !</p>
             <p>Pour accéder à ce domaine via un navigateur web, vous pouvez le lancer à l'aide de la commande suivante :</p>
             <pre>
 <code class="bash hljs"><span class="hljs-comment"># Avec cette commande, Goupile sera accessible via http://localhost:8889/</span>
 bin/Paranoid/goupile -C tmp/domaine_test/goupile.ini
 </code></pre>
             <p>Pour un mise en production, il est <i>recommandé de faire fonctionner Goupile derrière un reverse proxy HTTPS</i> comme par exemple NGINX.</p>
-            <p>Pour automiser le déploiement d'un serveur complet en production (avec plusieurs domaines Goupile et NGINX configuré automatiquement), nous <i>fournissons un playbook et des rôles Ansible</i> prêts à l'emploi que vous pouvez utiliser tel quel ou adapter à vos besoins.</p>
+            <p>Pour automatiser le déploiement d'un serveur complet en production (avec plusieurs domaines Goupile et NGINX configuré automatiquement), nous <i>fournissons un playbook et des rôles Ansible</i> prêts à l'emploi que vous pouvez utiliser tel quel ou adapter à vos besoins.</p>
             <h2 id="install_ansible">Déploiement Ansible</h2>
             <p>Les scripts Ansible fournis sont adaptés à un déploiement sécurisé sur Debian 10+. Ils peuvent théoriquement être utilisés et/ou adaptés pour d'autres systèmes mais ceci n'est pas testé régulièrement.</p><p>Ce playbook PKnet est configuré pour installer les services suivants :</p>
             <ul>
@@ -301,7 +301,7 @@ vagrant provision
 
             <h1 id="hds">Configuration serveur HDS</h1>
             <h2 id="hds_env">Environnements et serveurs</h2>
-            <p>Nos serveurs HDS sont déployés automatiquement à l'aide de scripts Ansible, qui sont exécutés par notre hébergeur GPLExpert (sous-traitant HDS et infogérance).</p>
+            <p>Nos serveurs HDS sont déployés automatiquement à l'aide de scripts Ansible, qui sont exécutés par notre hébergeur <a href="https://gplexpert.com/">GPLExpert</a> (sous-traitant HDS et infogérance).</p>
             <p>Nous utilisons deux environnements de déploiement : un environnement de pré-production (qui gère les sous-domaines <code>*.preprod.goupile.fr</code>) et un environnement de production. L'environnement de pré-production est identique à la production et nous permet de tester nos scripts de déploiement. Il ne contient que des domaines et données de test.</p><p>Chaque environnement utilise deux serveurs :</p>
             <ul>
                 <li><i>Serveur proxy</i>, qui filtre les connexions via NGINX et nous permet de rapidement rediriger les requêtes (vers un autre back-end) en cas de problème.</li>
@@ -313,7 +313,7 @@ vagrant provision
             <p>La restauration des données après perte du serveur principal peut être effectuée à partir de plusieurs sources :</p><ol>
                 <li>Bases répliquées en continu sur un autre serveur <b>[WIP]</b></li>
                 <li>Backup nocturne chiffré des bases SQLite réalisé et copié sur un serveur à part dans un autre datacenter <b>[WIP]</b></li>
-                <li>Snapshot des VPS réalisé chaque nuit et conservé 14 jours, qui peut être restauré en une heure par GPLExpert</li>
+                <li>Snapshot des VPS réalisé chaque nuit et conservé 14 jours, qui peut être restauré rapidement par GPLExpert</li>
             </ol>
         </main>
     </body>

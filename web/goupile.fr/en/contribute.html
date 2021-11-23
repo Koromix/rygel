@@ -45,13 +45,13 @@
                 <li>Publication of forms</li>
                 <li>Data recording and synchronization</li>
                 <li>Online and offline collection, on computer, tablet or mobile</li>
-                <li>User and rights management</li>
+                <li>User and permissions management</li>
             </ul>
             <p>In addition to the usual features, we have made every effort to minimize the time between developing a form and entering data.</p>
-            <p>This is a <i>tool in development</i> and some choices are still underway. <b>[WIP]</b> indications designate features or options that are under development or improvement.</p>
+            <p>This is a <i>tool in development</i> and many design choices are still underway. <b>[WIP]</b> indications designate features or options that are under development or improvement.</p>
             <p>Even if a compiled public version is not yet available, you can test the <a href="/demo">demo online</a>.</p>
-            <h2 id="intro_domains">Areas and projects</h2>
-            <p>Each Goupile service has a domain (or subdomain). For example, <i><a href="https://demo.goupile.fr" target="_blank">demo.goupile.fr</a></i> and <i><a href="https://psy-lille.goupile.fr" target="_blank">psy-lille.goupile.fr</a></i> are separate services with separate databases and different users (even if possibly hosted on the same server).</p>
+            <h2 id="intro_domains">Domains and projects</h2>
+            <p>Each Goupile service has a domain (or subdomain). For example, <i><a href="https://demo.goupile.fr" target="_blank">demo.goupile.fr</a></i> and <i><a href="https://psy-lille.goupile.fr" target="_blank">psy-lille.goupile.fr</a></i> are separate services with separate databases and different users, even if possibly hosted on the same server.</p>
             <p>When creating a domain, one (or more) trusted administrators are designated to manage its projects and users. A pair of encryption keys is generated to perform backups of the domain databases. The public key is stored on the server to create the backups. The private key is entrusted to designated administrators and is not stored; its loss <b>leads to the loss of all backups</b> of this domain.</p>
             <p><i>Details on the encryption used are detailed in the section on <a href="#architecture">architectural choices</a>.</i></p>
             <p>Administrators can create projects and assign users to them, either to design forms or to enter data.</p>
@@ -61,7 +61,7 @@
                 <p>Manage your projects and users within the administration module.</p>
             </div>
             <p>Each Goupile domain has its own table of users.</p>
-            <p>These user accounts are managed by the administrator (s) designated for this domain, who can create, modify and delete them.</p>
+            <p>These user accounts are managed by the administrator(s) designated for this domain, who can create, modify and delete them.</p>
             <p>Each user can be assigned to one or more projects, with a set of permissions according to his preprogatives. There are two sets of permissions:</p>
             <ul>
                 <li>Development permissions, which allow you to configure a project and its forms</li>
@@ -101,29 +101,29 @@
             </ul>
 
             <h1 id="usage">Goupile usage</h1>
-            <p>Goupile is coded as a SPA (Single Page Application) type web application. A brief overview of the different facets of Goupile is given below; refer to the user manual for more detailed information.</p>
+            <p>Goupile is coded as a SPA (Single Page Application) type web application. A brief overview of the different aspects of Goupile is given below; refer to the user manual for more detailed information.</p>
             <h2 id="usage_code">Design of an eCRF</h2>
             <div class="mini left">
                 <img src="../static/screenshots/editor.webp">
                 <p>Program the page in <b>the editor</b> (left), and the <b>result</b> (right) is displayed immediately</p>
             </div>
             <p>When designing a form, the user programs it in JavaScript via an online text editor, by calling predefined functions which generate the fields desired by the user. The eCRF is displayed directly on the same screen.</p>
-            <p>To create an eCRF, the user begins by defining the organization and sequence of entry pages and the underlying data tables. It is possible to simply create multiple table eCRFs with 1-to-1 and 1-to-N (parent-child) relationships from this mode.</p>
-            <p>The content of the pages is also defined in Javascript. The fact of programming gives us a lot of possibilities, in particular the realization of complex forms (conditions, loops, dynamic calculations, specific widgets, etc.), without sacrificing the simplicity for the usual forms.</p>
+            <p>To create an eCRF, the user begins by defining the organization and sequence of entry pages and the underlying data tables. It is possible to create multiple table eCRFs with 1-to-1 and 1-to-N (parent-child) relationships in this phase.</p>
+            <p>The content of the pages is also defined in Javascript. The use of a programming language to design the forms gives us a lot of possibilities, in particular the creation of complex forms (conditions, loops, dynamic calculations, specific widgets, etc.), without sacrificing simplicity for more usual forms.</p>
             <h2 id="usage_validation">Data validation</h2>
             <p>The verification of the validity of the data in relation to the imposed constraints takes place on the client side (systematically) and on the server side (on the pages where this option is activated). This is based on the Javascript code of each page, which can define conditions and errors depending on the data entered.</p>
             <p>These errors feed the <i>quality control</i> base which can then be monitored <b>[WIP]</b>.</p>
-            <p>To ensure the security of the server despite the execution of potentially malicious JavaScript code, several measures are taken and detailed in the section about <a href="#architecture">server architecture</a> .</p>
+            <p>To ensure the security of the server despite the execution of potentially malicious JavaScript code, several measures are taken and detailed in the section about <a href="#architecture">server architecture</a>.</p>
             <h2 id="usage_offline">Offline support</h2>
-            <p>ECRFs developed with Goupile can work in offline mode (if this option is enabled). In this case, Goupile uses the PWA features of modern browsers to be able to cache its files and form scripts, and be installed as a native pseudo-application.</p>
+            <p>eCRFs developed with Goupile can work in offline mode (if this option is enabled). In this case, Goupile uses the PWA features of modern browsers to be able to cache its files and form scripts, and be installed as a native pseudo-application.</p>
             <p>In this case, the data is synchronized in a second step when the connection is available.</p>
             <p>Offline data is symmetrically encrypted using a key specific to each user and known to the server. This key is communicated to the browser after successful authentication.</p>
             <p>In order for the user to be able to connect to their offline application, a copy of their profile (including the offline data encryption key) is stored on their machine, encrypted by a key derived from their password. When he tries to connect offline, his username and password are used to decrypt this profile and be able to access local data.</p>
-            <p>If the installable client is used (based on Electron), offline authentication can also be configured in strong mode, with the need to plug in a USB stick containing a second encryption key to be able to connect to the eCRF.</p>
+            <p>If the installable client is used (based on Electron), offline authentication can also be configured in strong mode, with the need to plug in a USB stick containing a secondary encryption key to be able to connect to the eCRF.</p>
 
             <h1 id="architecture">Server architecture</h1>
             <h2 id="architecture_overview">General view</h2>
-            <p>The Goupile server is developed in C ++. The compiled binary directly contains the database engine (<a href="https://sqlite.org/" target="_blank">SQLite</a>), an HTTP server (<a href="https://www.gnu.org/software/libmicrohttpd/" target="_blank">libmicrohttpd</a>) as well as the HTML / CSS / Javascript code sent to web browsers.</p>
+            <p>The Goupile server is developed in C++. The compiled binary directly contains the database engine (<a href="https://sqlite.org/" target="_blank">SQLite</a>), an HTTP server (<a href="https://www.gnu.org/software/libmicrohttpd/" target="_blank">libmicrohttpd</a>) as well as the HTML / CSS / Javascript code sent to web browsers.</p>
             <p>Several SQLite databases are created and used for each domain. First of all, there is a master database which contains the list of projects, users and permissions. Then, each project uses 1 to several databases (1 for the project + 1 per center in the case of a multi-center project). For example, a domain with 2 projects including a multi-center could use the following files:</p>
             <pre><code class="bash hljs">goupile.db <span class="hljs-comment"># Main database</span>
 instances/projet1.db
@@ -133,9 +133,9 @@ instances/projet2@paris.db
 </code></pre>
             <p><i>PostgreSQL support to be able to deport the database to another machine is planned for later <b>[WIP]</b> .</i></p>
             <h2 id="architecture_isolation">Isolation of services</h2>
-            <p>Each domain is managed by a dedicated service (for example launched by systemd), which is able to self-containerize on Linux (using POSIX capabilities, namespaces and seccomp filters) in a namespace with virtually no access except to the SQLite file.</p>
-            <p>This service can use a single (single-process mode) or several processes (multi-process mode <b>[WIP]</b> ) to manage each project. In     multi-process mode, HTTP communication is relayed by the master process to the process in charge of managing the project concerned.</p>
-            <p>In all cases, when the server validates the form data (non-systematic option according to the data validation needs of a form), the Javascript code is executed by the V8 engine (in jitless mode) in a forked process with completely restricted rights (no access to file system or database).</p>
+            <p>Each domain is managed by a dedicated service (launched, for example, by systemd), which is able to self-containerize on Linux (using POSIX capabilities, namespaces and seccomp filters) in a namespace with virtually no access except to the SQLite files.</p>
+            <p>This service can use a single (single-process mode) or several processes (multi-process mode <b>[WIP]</b> ) to manage each project. In     multi-process mode, HTTP communication is relayed by the master process to the process in charge of managing each project.</p>
+            <p>In all cases, when the server validates the form data (non-systematic option according to the data validation needs of a form), the Javascript code is executed by the SpiderMonkey engine in a forked process with completely restricted rights (no access to file system or database).</p>
             <h2 id="architecture_compilation">Compilation options</h2>
             <p>In addition to containerization, several Clang compilation options are used to mitigate code vulnerabilities of the server in the event of a breach. As described later, the main Goupile binary is built in <i>Paranoid mode</i>.</p>
             <p>Several measures are intended to prevent attacks by corrupting the call stack or hijacking the execution flow:</p>
@@ -155,13 +155,13 @@ instances/projet2@paris.db
                 <li><i>rec_entries table</i>: this table contains one row per record with summary information</li>
                 <li><i>rec_fragments table</i>: this table contains all the historical modifications of a recording (audit trail)</li>
             </ul>
-            <p>The master key for a record is in <a href="https://github.com/ulid/spec" target="_blank">ULID format</a>. This makes it possible to generate the customer registration identifiers (with infinitesimal risk of collision) which simplifies the implementation of the offline mode, while avoiding the performance problems posed by the indexing of the UUID identifiers.</p>
+            <p>The master key for a record is in <a href="https://github.com/ulid/spec" target="_blank">ULID format</a>. This makes it possible to generate unique record identifiers client-side (with infinitesimal risk of collision) which simplifies the implementation of the offline mode, while avoiding the performance problems posed by the indexing of the UUID identifiers.</p>
 
             <h1 id="install">Goupile installation</h1>
             <h2 id="install_build">Compilation</h2>
             <p>The goupile server is cross-platform, but it is <b>recommended to use it on Linux</b> for maximum security.</p>
-            <p>Indeed, on Linux Goupile can operate in sandboxed mode thanks to seccomp and Linux namespaces (unshare system call). Sandboxing support is planned for the long term for other operating systems but is not available at this time. Use of the Debian 10+ distribution is recommended.</p>
-            <p>Goupile is based on C ++ (server side) and HTML / CSS / JS (client side). The compilation of Goupile uses a dedicated tool which is included directly in the repository.</p>
+            <p>Indeed, on Linux Goupile can operate in sandboxed mode thanks to seccomp and Linux namespaces (unshare system call). Sandboxing support is planned in the long term for other operating systems but is not available at this time. It is recommended to use it on Debian 10+ distribution.</p>
+            <p>Goupile is based on C++ (server side) and HTML / CSS / JS (client side). The compilation of Goupile uses a dedicated build tool which is itself stored in the repository.</p>
             <p>Start by getting the code from the Git repository: <a href="https://framagit.org/interhop/goupile" target="_blank">https://framagit.org/interhop/goupile</a></p>
             <pre><code class="bash hljs">git <span class="hljs-built_in">clone</span> https://framagit.org/interhop/goupile
 <span class="hljs-built_in">cd</span> goupile
@@ -174,7 +174,7 @@ instances/projet2@paris.db
 <span class="hljs-comment"># The goupile binary will be deposited in bin/Debug</span>
 ./felix
 </code></pre>
-            <p>For <b>production use</b>, it is recommended to build Goupile <a href="#architecture_compilation">in Paranoid mode</a> using Clang 11+ and the LLD 11+ linker. Under Debian 10 you can do like this:</p>
+            <p>For <b>production use</b>, it is recommended to build Goupile <a href="#architecture_compilation">in Paranoid mode</a> using Clang 11+ and the LLD 11+ linker. Under Debian 10 you can proceed like this:</p>
             <pre><code class="bash hljs"><span class="hljs-comment"># Bootstrap the Felix tool used to build Goupile itself</span>
 ./bootstrap.sh
 
@@ -203,7 +203,7 @@ bootstrap.bat
 <span class="hljs-comment"># The goupile binary will be deposited in bin/Debug</span>
 felix
 </code></pre>
-            <p>It is not recommended to use Goupile in production on another system, as sandboxing mode and compilation in Paranoid mode are not available there at the moment.</p>
+            <p>It is not recommended to use Goupile in production on non-Linux systems, as sandboxing and compilation in Paranoid mode are not available for these platforms.</p>
             <p>However, you can use the command <code>./felix --help</code>(or <code>felix --help</code>on Windows) to view the build modes and options available for your system.</p>
             <h2 id="install_deploy">Manual deployment</h2>
             <p>Once the Goupile executable has been compiled, it is possible to create a Goupile domain using the following command:</p>
@@ -214,13 +214,13 @@ mkdir tmp
 <span class="hljs-comment"># This command will ask to create the first admin account and to define its password.</span>
 bin/Paranoid/goupile init tmp/test_domain
 </code></pre>
-            <p>Initiating this domain will create <b>an archive recovery key</b> that you must store in order to be able to restore an archive created in the Goupile domain administration panel. If lost, this key can be changed but archives created with the previous key will not be recoverable!</p>
+            <p>This process will create <b>an archive recovery key</b> that you must store in order to be able to restore an archive created in the Goupile domain administration panel. If lost, this key can be changed but <b>archives created with the previous key will not be recoverable!</b></p>
             <p>To access this domain through a web browser, you can launch it using the following command:</p>
             <pre><code class="bash hljs"><span class="hljs-comment"># Start this, Goupile will run on http://localhost:8889/</span>
 bin/Paranoid/goupile -C tmp/test_domain/goupile.ini
 </code></pre>
             <p>For a production release, it is <i>recommended to run Goupile behind an HTTPS reverse proxy</i> such as NGINX.</p>
-            <p>To automate the deployment of a complete server in production (with multiple Goupile and NGINX domains configured automatically), we provide a <i>ready-to-use playbook and Ansible roles</i> that you can use as is or adapt to your needs.</p>
+            <p>To automate the deployment of a complete server in production (with multiple Goupile and NGINX domains configured automatically), we provide a <i>ready-to-use playbook and Ansible roles</i> that you can use as-is or adapt to your needs.</p>
             <h2 id="install_ansible">Ansible deployment</h2>
             <p>The Ansible scripts provided are suitable for secure deployment on Debian 10+. They can theoretically be used and / or adapted for other systems but this is not regularly tested.</p>
             <p>This PKnet playbook is configured to install the following services:</p>
@@ -259,21 +259,21 @@ vagrant provision
 
             <h1 id="hds">HDS server configuration</h1>
             <h2 id="hds_env">Environments and servers</h2>
-            <p>Our HDS servers are deployed automatically using Ansible scripts, which are hosted by our host GPLExpert (HDS subcontractor and outsourcing).</p>
+            <p>Our HDS servers are deployed automatically using Ansible scripts, which are hosted host <a href="https://gplexpert.com/">GPLExpert</a> (HDS subcontractor and outsourcing).</p>
             <p>We use two deployment environments: a pre-production environment (which manages subdomains <code>*.preprod.goupile.fr</code>) and a production environment. The pre-production environment is identical to production and allows us to test our deployment scripts. It only contains domains and test data.</p>
             <p>Each environment uses two servers:</p>
             <ul>
                 <li><i>Proxy server</i>, which filters connections through NGINX and allows us to quickly redirect requests (to another back-end) in the event of a problem.</li>
                 <li><i>Back-end server</i>, which contains Goupile services and databases. Goupile servers are accessible behind a second NGINX service which runs on the back-end server.</li>
             </ul>
-            <p>Communication between the proxy server and the back-end server takes place via a secure channel (IPSec and TLS 1.2+). The exchanges between the two NGINX services are protected by server and client certificates signed by an internal certificate created at the time of deployment (and therefore the private key is deleted immediately).</p>
+            <p>Communication between the proxy server and the back-end server takes place via a secure channel (IPSec and TLS 1.2+). The exchanges between the two NGINX services are protected by server and client certificates signed by an internal certificate created at the time of deployment (the private key is deleted immediately).</p>
             <h2 id="hds_drp">Disaster recovery plan <b>[WIP]</b></h2>
             <p>Server environments are fully configured by automated Ansible scripts and can be replicated identically in minutes.</p>
             <p>Restoring data after loss of the primary server can be done from several sources:</p>
             <ol>
                 <li>Databases continuously replicated on another server <b>[WIP]</b></li>
                 <li>Encrypted nightly backup of SQLite databases carried out and copied to a separate server in another datacenter <b>[WIP]</b></li>
-                <li>Snapshot of VPS taken every night and kept for 14 days, which can be restored in one hour by GPLExpert</li>
+                <li>Snapshot of VPS taken every night and kept for 14 days, which can be restored quickly by GPLExpert</li>
             </ol>
         </main>
         </body>
