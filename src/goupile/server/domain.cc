@@ -207,10 +207,10 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
     // Default values
     if (!config.title) {
         Span<const char> basename = SplitStrReverseAny(root_directory, RG_PATH_SEPARATORS);
-        config.title = DuplicateString(basename, &config.str_alloc).ptr;
 
-        if (CheckDomainTitle(config.title)) {
-            LogError("Domain title is not set, using '%1'", config.title);
+        if (CheckDomainTitle(basename)) {
+            LogError("Domain title is not set, using '%1'", basename);
+            config.title = DuplicateString(basename, &config.str_alloc).ptr;
         } else {
             LogError("Domain title is not set");
             return false;
