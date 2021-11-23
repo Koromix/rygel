@@ -72,7 +72,8 @@ enum class CompileFeature {
     SafeStack = 1 << 10,
     ZeroInit = 1 << 11,
     CFI = 1 << 12,
-    ShuffleCode = 1 << 13
+    ShuffleCode = 1 << 13,
+    Cxx17 = 1 << 14
 };
 static const OptionDesc CompileFeatureOptions[] = {
     {"PCH",           "Use precompiled headers for faster compilation"},
@@ -88,7 +89,8 @@ static const OptionDesc CompileFeatureOptions[] = {
     {"SafeStack",     "Enable SafeStack protection (Clang)"},
     {"ZeroInit",      "Zero-init all undefined variables (Clang)"},
     {"CFI",           "Enable forward-edge CFI protection (Clang LTO)"},
-    {"ShuffleCode",   "Randomize ordering of data and functions (Clang)"}
+    {"ShuffleCode",   "Randomize ordering of data and functions (Clang)"},
+    {"C++17",         "Use C++17 standard instead of C++20"}
 };
 
 enum class SourceType {

@@ -196,6 +196,7 @@ public:
 #ifndef _WIN32
         supported |= (int)CompileFeature::ShuffleCode; // Requires lld version >= 11
 #endif
+        supported |= (int)CompileFeature::Cxx17;
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -279,7 +280,10 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
+            case SourceType::CXX: {
+                const char *std = (features & (int)CompileFeature::Cxx17) ? "17" : "2a";
+                Fmt(&buf, "\"%1\" -std=gnu++%2", cxx, std);
+            } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -579,6 +583,7 @@ public:
         supported |= (int)CompileFeature::LTO;
 #endif
         supported |= (int)CompileFeature::ZeroInit;
+        supported |= (int)CompileFeature::Cxx17;
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -658,7 +663,10 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::CXX: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
+            case SourceType::CXX: {
+                const char *std = (features & (int)CompileFeature::Cxx17) ? "17" : "2a";
+                Fmt(&buf, "\"%1\" -std=gnu++%2", cxx, std);
+            } break;
         }
         if (dest_filename) {
             Fmt(&buf, " -o \"%1\"", dest_filename);
@@ -896,6 +904,7 @@ public:
         supported |= (int)CompileFeature::ASan;
         supported |= (int)CompileFeature::LTO;
         supported |= (int)CompileFeature::CFI;
+        supported |= (int)CompileFeature::Cxx17;
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -969,7 +978,10 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" /nologo", cl); } break;
-            case SourceType::CXX: { Fmt(&buf, "\"%1\" /nologo /std:c++latest", cl); } break;
+            case SourceType::CXX: {
+                const char *std = (features & (int)CompileFeature::Cxx17) ? "17" : "latest";
+                Fmt(&buf, "\"%1\" /nologo /std:c++%2", cl, std);
+            } break;
         }
         if (dest_filename) {
             Fmt(&buf, " \"/Fo%1\"", dest_filename);
