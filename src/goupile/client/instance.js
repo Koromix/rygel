@@ -365,6 +365,8 @@ function InstanceController() {
     }
 
     function renderEditor() {
+        let filename = route.page.getOption('filename', form_record);
+
         let tabs = [];
         tabs.push({
             title: 'Application',
@@ -372,7 +374,7 @@ function InstanceController() {
         });
         tabs.push({
             title: 'Formulaire',
-            filename: route.page.filename
+            filename: filename
         });
 
         // Ask ACE to adjust if needed, it needs to happen after the render
@@ -645,7 +647,8 @@ function InstanceController() {
     }
 
     function renderPage() {
-        let code = code_buffers.get(route.page.filename).code;
+        let filename = route.page.getOption('filename', form_record);
+        let code = code_buffers.get(filename).code;
 
         let readonly = (route.version < form_record.fragments.length);
 
@@ -1617,9 +1620,6 @@ function InstanceController() {
             break;
         }
 
-        // Fetch and cache page code for page panel
-        await fetchCode(new_route.page.filename);
-
         // Dictionaries
         new_dictionaries = {};
         {
@@ -1631,6 +1631,12 @@ function InstanceController() {
                     new_dictionaries[dict] = await loadRecords(null, dict);
                 new_dictionaries[dict] = records;
             }
+        }
+
+        // Fetch and cache page code for page panel
+        {
+            let filename = new_route.page.getOption('filename', new_record);
+            await fetchCode(filename);
         }
 
         // Help the user fill new or selected forms and pages
@@ -1715,12 +1721,13 @@ function InstanceController() {
 
         // Fetch and cache page code for page panel
         // Again to make sure we are up to date (e.g. publication)
-        await fetchCode(route.page.filename);
+        let filename = route.page.getOption('filename', form_record);
+        await fetchCode(filename);
 
         // Sync editor (if needed)
         if (ui.isPanelEnabled('editor')) {
             if (editor_filename == null || editor_filename.startsWith('pages/'))
-                editor_filename = route.page.filename;
+                editor_filename = filename;
 
             await syncEditor();
         }

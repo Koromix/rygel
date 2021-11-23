@@ -48,13 +48,22 @@ function PageInfo(key, title, stack) {
         for (let i = stack.length - 1; i >= 0; i--) {
             let options = stack[i];
 
-            if (typeof options === 'function')
+            if (typeof options === 'function') {
+                if (record == null)
+                    continue;
+
                 options = options(record, self);
+            }
 
             let value = options[key];
 
-            if (typeof value === 'function')
+            if (typeof value === 'function') {
+                if (record == null)
+                    continue;
+
                 value = value(record, self);
+            }
+
             if (value != null)
                 return value;
         }
@@ -100,7 +109,7 @@ function ApplicationBuilder(app) {
         let prev_form = form_ref;
 
         try {
-            options = expandOptions(options);
+            options_stack = expandOptions(options);
 
             form_ref = new FormInfo(key, title);
             if (prev_form != null)
@@ -168,10 +177,11 @@ function ApplicationBuilder(app) {
         } else {
             page.form = new FormInfo(key, title);
         }
-        if (options.lockable)
-            app.lockable = true;
         page.url = `${ENV.urls.instance}main/${key}`;
-        page.filename = (options.filename != null) ? options.filename : `pages/${key}.js`;
+
+        // XXX: Let the user decide the global option, instead of this hack
+        if (page.getOption('lockable'))
+            app.lockable = true;
 
         let item = {
             key: key,
