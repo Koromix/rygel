@@ -144,15 +144,16 @@ public:
 
     virtual void MakePchCommand(const char *pch_filename, SourceType src_type,
                                 bool warnings, Span<const char *const> definitions,
-                                Span<const char *const> include_directories, uint32_t features, bool env_flags,
-                                Allocator *alloc, Command *out_cmd) const = 0;
+                                Span<const char *const> include_directories, Span<const char *const> include_files,
+                                uint32_t features, bool env_flags, Allocator *alloc, Command *out_cmd) const = 0;
     virtual const char *GetPchCache(const char *pch_filename, Allocator *alloc) const = 0;
     virtual const char *GetPchObject(const char *pch_filename, Allocator *alloc) const = 0;
 
     virtual void MakeObjectCommand(const char *src_filename, SourceType src_type,
                                    bool warnings, const char *pch_filename, Span<const char *const> definitions,
-                                   Span<const char *const> include_directories, uint32_t features, bool env_flags,
-                                   const char *dest_filename, Allocator *alloc, Command *out_cmd) const = 0;
+                                   Span<const char *const> include_directories, Span<const char *const> include_files,
+                                   uint32_t features, bool env_flags, const char *dest_filename,
+                                   Allocator *alloc, Command *out_cmd) const = 0;
 
     virtual void MakeLinkCommand(Span<const char *const> obj_filenames,
                                  Span<const char *const> libraries, LinkType link_type,

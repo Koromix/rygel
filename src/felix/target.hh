@@ -49,6 +49,7 @@ struct TargetInfo {
     HeapArray<const char *> definitions;
     HeapArray<const char *> export_definitions;
     HeapArray<const char *> include_directories;
+    HeapArray<const char *> include_files;
     HeapArray<const char *> libraries;
 
     uint32_t enable_features;

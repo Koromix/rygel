@@ -211,11 +211,11 @@ bool Builder::AddTarget(const TargetInfo &target)
             Command cmd = {};
             if (module) {
                 build.compiler->MakeObjectCommand(src_filename, SourceType::C,
-                                                  false, nullptr, {"EXPORT"}, {}, features, build.env,
+                                                  false, nullptr, {"EXPORT"}, {}, {}, features, build.env,
                                                   obj_filename, &str_alloc, &cmd);
             } else {
                 build.compiler->MakeObjectCommand(src_filename, SourceType::C,
-                                                  false, nullptr, {}, {}, features, build.env,
+                                                  false, nullptr, {}, {}, {}, features, build.env,
                                                   obj_filename,  &str_alloc, &cmd);
             }
 
@@ -265,7 +265,7 @@ bool Builder::AddTarget(const TargetInfo &target)
 
         Command cmd = {};
         build.compiler->MakeObjectCommand(src_filename, SourceType::C,
-                                          false, nullptr, {}, {}, features, build.env,
+                                          false, nullptr, {}, {}, {}, features, build.env,
                                           obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0 version file", target.name).ptr;
@@ -343,7 +343,7 @@ const char *Builder::AddSource(const SourceFileInfo &src, const char *ns)
                 Command cmd = {};
                 build.compiler->MakePchCommand(pch_filename, pch->type, warnings,
                                                pch->target->definitions, pch->target->include_directories,
-                                               features, build.env, &str_alloc, &cmd);
+                                               pch->target->include_files, features, build.env, &str_alloc, &cmd);
 
                 // Check the PCH cache file against main file dependencies
                 if (!IsFileUpToDate(cache_filename, pch_filename)) {
@@ -383,7 +383,8 @@ const char *Builder::AddSource(const SourceFileInfo &src, const char *ns)
         Command cmd = {};
         build.compiler->MakeObjectCommand(src.filename, src.type, warnings,
                                           pch_filename, src.target->definitions, src.target->include_directories,
-                                          features, build.env, obj_filename, &str_alloc, &cmd);
+                                          src.target->include_files, features, build.env,
+                                          obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0", src.filename).ptr;
         if (pch_filename ? AppendNode(text, obj_filename, cmd, {src.filename, pch_filename}, ns)

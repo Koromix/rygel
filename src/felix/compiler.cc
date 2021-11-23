@@ -252,11 +252,12 @@ public:
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, bool warnings,
                         Span<const char *const> definitions, Span<const char *const> include_directories,
-                        uint32_t features, bool env_flags, Allocator *alloc, Command *out_cmd) const override
+                        Span<const char *const> include_files, uint32_t features, bool env_flags,
+                        Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        MakeObjectCommand(pch_filename, src_type, warnings, nullptr, definitions,
-                          include_directories, features, env_flags, nullptr, alloc, out_cmd);
+        MakeObjectCommand(pch_filename, src_type, warnings, nullptr, definitions, include_directories,
+                          include_files, features, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override
@@ -270,8 +271,9 @@ public:
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, bool warnings,
                            const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, uint32_t features, bool env_flags,
-                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
+                           Span<const char *const> include_directories, Span<const char *const> include_files,
+                           uint32_t features, bool env_flags, const char *dest_filename,
+                           Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 
@@ -400,6 +402,9 @@ public:
         }
         for (const char *include_directory: include_directories) {
             Fmt(&buf, " \"-I%1\"", include_directory);
+        }
+        for (const char *include_file: include_files) {
+            Fmt(&buf, " -include \"%1\"", include_file);
         }
 
         if (env_flags) {
@@ -635,11 +640,12 @@ public:
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, bool warnings,
                         Span<const char *const> definitions, Span<const char *const> include_directories,
-                        uint32_t features, bool env_flags, Allocator *alloc, Command *out_cmd) const override
+                        Span<const char *const> include_files, uint32_t features, bool env_flags,
+                        Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        MakeObjectCommand(pch_filename, src_type, warnings, nullptr,
-                          definitions, include_directories, features, env_flags, nullptr, alloc, out_cmd);
+        MakeObjectCommand(pch_filename, src_type, warnings, nullptr, definitions,
+                          include_directories, include_files, features, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override
@@ -653,8 +659,9 @@ public:
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, bool warnings,
                            const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, uint32_t features, bool env_flags,
-                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
+                           Span<const char *const> include_directories, Span<const char *const> include_files,
+                           uint32_t features, bool env_flags, const char *dest_filename,
+                           Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 
@@ -752,6 +759,9 @@ public:
         }
         for (const char *include_directory: include_directories) {
             Fmt(&buf, " \"-I%1\"", include_directory);
+        }
+        for (const char *include_file: include_files) {
+            Fmt(&buf, " -include \"%1\"", include_file);
         }
 
         if (env_flags) {
@@ -944,11 +954,12 @@ public:
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, bool warnings,
                         Span<const char *const> definitions, Span<const char *const> include_directories,
-                        uint32_t features, bool env_flags, Allocator *alloc, Command *out_cmd) const override
+                        Span<const char *const> include_files, uint32_t features, bool env_flags,
+                        Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        MakeObjectCommand(pch_filename, src_type, warnings, nullptr, definitions,
-                          include_directories, features, env_flags, nullptr, alloc, out_cmd);
+        MakeObjectCommand(pch_filename, src_type, warnings, nullptr, definitions, include_directories,
+                          include_files, features, env_flags, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override
@@ -968,8 +979,9 @@ public:
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, bool warnings,
                            const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, uint32_t features, bool env_flags,
-                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
+                           Span<const char *const> include_directories, Span<const char *const> include_files,
+                           uint32_t features, bool env_flags, const char *dest_filename,
+                           Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 
@@ -1044,6 +1056,9 @@ public:
         }
         for (const char *include_directory: include_directories) {
             Fmt(&buf, " \"/I%1\"", include_directory);
+        }
+        for (const char *include_file: include_files) {
+            Fmt(&buf, " \"/FI%1\"", include_file);
         }
 
         if (env_flags) {
@@ -1266,14 +1281,16 @@ public:
 
     void MakePchCommand(const char *pch_filename, SourceType src_type, bool warnings,
                         Span<const char *const> definitions, Span<const char *const> include_directories,
-                        uint32_t features, bool env_flags, Allocator *alloc, Command *out_cmd) const override { RG_UNREACHABLE(); }
+                        Span<const char *const> include_files, uint32_t features, bool env_flags,
+                        Allocator *alloc, Command *out_cmd) const override { RG_UNREACHABLE(); }
     const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override { return nullptr; }
     const char *GetPchObject(const char *pch_filename, Allocator *alloc) const override { return nullptr; }
 
     void MakeObjectCommand(const char *src_filename, SourceType src_type, bool warnings,
                            const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, uint32_t features, bool env_flags,
-                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
+                           Span<const char *const> include_directories, Span<const char *const> include_files,
+                           uint32_t features, bool env_flags, const char *dest_filename,
+                           Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 
@@ -1366,6 +1383,9 @@ public:
         }
         for (const char *include_directory: include_directories) {
             Fmt(&buf, " \"-I%1\"", include_directory);
+        }
+        for (const char *include_file: include_files) {
+            Fmt(&buf, " -include \"%1\"", include_file);
         }
 
         if (env_flags) {

@@ -39,6 +39,7 @@ struct TargetConfig {
     HeapArray<const char *> definitions;
     HeapArray<const char *> export_definitions;
     HeapArray<const char *> include_directories;
+    HeapArray<const char *> include_files;
     HeapArray<const char *> libraries;
 
     uint32_t enable_features;
@@ -246,6 +247,9 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                     } else if (prop.key == "IncludeDirectory") {
                         valid &= AppendNormalizedPath(prop.value, &set.str_alloc,
                                                       &target_config.include_directories);
+                    } else if (prop.key == "ForceInclude") {
+                        valid &= AppendNormalizedPath(prop.value, &set.str_alloc,
+                                                      &target_config.include_files);
                     } else if (prop.key == "PrecompileC") {
                         target_config.c_pch_filename = NormalizePath(prop.value, &set.str_alloc).ptr;
                     } else if (prop.key == "PrecompileCXX") {
@@ -360,6 +364,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     std::swap(target->definitions, target_config->definitions);
     std::swap(target->export_definitions, target_config->export_definitions);
     std::swap(target->include_directories, target_config->include_directories);
+    std::swap(target->include_files, target_config->include_files);
     std::swap(target->libraries, target_config->libraries);
     target->enable_features = target_config->enable_features;
     target->disable_features = target_config->disable_features;
