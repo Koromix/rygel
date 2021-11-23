@@ -25,6 +25,7 @@ namespace RG {
 
 static const int BanThreshold = 6;
 static const int64_t BanTime = 1800 * 1000;
+static const int64_t TotpPeriod = 30000;
 
 struct EventInfo {
     struct Key {
@@ -870,7 +871,7 @@ static bool CheckTotp(const SessionInfo &session, InstanceHolder *instance,
                       const char *code, const http_RequestInfo &request, http_IO *io)
 {
     int64_t time = GetUnixTime();
-    int64_t counter = time / 30000;
+    int64_t counter = time / TotpPeriod;
     int64_t min = counter - 1;
     int64_t max = counter + 1;
 
@@ -880,8 +881,8 @@ static bool CheckTotp(const SessionInfo &session, InstanceHolder *instance,
         const char *where = (session.userid > 0) ? "" : instance->key.ptr;
         const EventInfo *event = RegisterEvent(where, session.username, time);
 
-        bool replay = (event->prev_time / 30000 >= min) &&
-                      pwd_CheckHotp(session.secret, pwd_HotpAlgorithm::SHA1, min, event->prev_time / 30000, 6, code);
+        bool replay = (event->prev_time / TotpPeriod >= min) &&
+                      pwd_CheckHotp(session.secret, pwd_HotpAlgorithm::SHA1, min, event->prev_time / TotpPeriod, 6, code);
 
         if (replay) {
             LogError("Please wait for the next code");
