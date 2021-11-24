@@ -42,7 +42,6 @@ function PageInfo(key, title, stack) {
     this.title = title;
     this.form = null;
     this.url = null;
-    this.filename = null;
 
     this.getOption = function(key, record, default_value = undefined) {
         for (let i = stack.length - 1; i >= 0; i--) {
@@ -66,6 +65,12 @@ function PageInfo(key, title, stack) {
 
             if (value != null)
                 return value;
+        }
+
+        if (default_value == null) {
+            switch (key) {
+                case 'filename': return `pages/${self.key}.js`;
+            }
         }
 
         return default_value;
