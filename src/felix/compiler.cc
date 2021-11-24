@@ -463,7 +463,7 @@ public:
         for (const char *lib: libraries) {
 #ifdef __APPLE__
             if (lib[0] == '!') {
-                Fmt(&buf, " -framework %1", lib);
+                Fmt(&buf, " -framework %1", lib + 1);
             } else {
                 Fmt(&buf, " -l%1", lib);
             }
@@ -817,7 +817,7 @@ public:
         for (const char *lib: libraries) {
 #ifdef __APPLE__
             if (lib[0] == '!') {
-                Fmt(&buf, " -framework %1", lib);
+                Fmt(&buf, " -framework %1", lib + 1);
             } else {
                 Fmt(&buf, " -l%1", lib);
             }
