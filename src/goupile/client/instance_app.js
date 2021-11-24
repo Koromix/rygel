@@ -67,12 +67,6 @@ function PageInfo(key, title, stack) {
                 return value;
         }
 
-        if (default_value == null) {
-            switch (key) {
-                case 'filename': return `pages/${self.key}.js`;
-            }
-        }
-
         return default_value;
     };
 }
@@ -80,14 +74,16 @@ function PageInfo(key, title, stack) {
 function ApplicationBuilder(app) {
     let self = this;
 
-    let options_stack = [{
-        // enabled: true,
-        // lockable: false,
-        // dictionaries: null,
-        // load: null,
-        // default_actions: true,
-        // autosave: false
-    }];
+    let options_stack = [
+        // {
+        //     enabled: true,
+        //     lockable: false,
+        //     dictionaries: null,
+        //     load: null,
+        //     default_actions: true,
+        //     autosave: false
+        // }
+    ];
     let form_ref = null;
 
     this.home = function(home) { app.home = home; };
@@ -173,7 +169,9 @@ function ApplicationBuilder(app) {
         if (form_ref == null)
             throw new Error('Cannot make page without enclosing form');
 
-        options = expandOptions(options);
+        options = expandOptions(options, {
+            filename: `pages/${key}.js`
+        });
 
         let page = new PageInfo(key, title, options);
 
@@ -211,12 +209,14 @@ function ApplicationBuilder(app) {
             throw new Error('Keys must not start with \'__\'');
     }
 
-    function expandOptions(options) {
-        if (options != null) {
-            let stack = [...options_stack, options];
-            return stack;
-        } else {
-            return options_stack;
-        }
+    function expandOptions(options, defaults = null) {
+        let stack = options_stack;
+
+        if (defaults != null)
+            stack = [defaults, ...stack];
+        if (options != null)
+            stack = [...stack, options];
+
+        return stack;
     }
 }
