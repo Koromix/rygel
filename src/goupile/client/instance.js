@@ -1222,10 +1222,10 @@ function InstanceController() {
             buffer.session = session;
         }
 
-        if (editor_filename.startsWith('pages/')) {
-            editor_ace.setTheme('ace/theme/merbivore_soft');
-        } else {
+        if (editor_filename === 'main.js') {
             editor_ace.setTheme('ace/theme/monokai');
+        } else {
+            editor_ace.setTheme('ace/theme/merbivore_soft');
         }
 
         editor_ace.setSession(buffer.session);
@@ -1726,7 +1726,7 @@ function InstanceController() {
 
         // Sync editor (if needed)
         if (ui.isPanelEnabled('editor')) {
-            if (editor_filename == null || editor_filename.startsWith('pages/'))
+            if (editor_filename !== 'main.js')
                 editor_filename = filename;
 
             await syncEditor();
