@@ -1,12 +1,12 @@
+#ifndef Adafruit_SPIDevice_h
+#define Adafruit_SPIDevice_h
+
 #include <Arduino.h>
 
 #if !defined(SPI_INTERFACES_COUNT) ||                                          \
     (defined(SPI_INTERFACES_COUNT) && (SPI_INTERFACES_COUNT > 0))
 
 #include <SPI.h>
-
-#ifndef Adafruit_SPIDevice_h
-#define Adafruit_SPIDevice_h
 
 // some modern SPI definitions don't have BitOrder enum
 #if (defined(__AVR__) && !defined(ARDUINO_ARCH_MEGAAVR)) ||                    \
@@ -103,5 +103,5 @@ private:
   bool _begun;
 };
 
-#endif // Adafruit_SPIDevice_h
 #endif // has SPI defined
+#endif // Adafruit_SPIDevice_h

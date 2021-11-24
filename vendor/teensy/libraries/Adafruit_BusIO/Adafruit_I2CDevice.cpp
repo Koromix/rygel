@@ -1,5 +1,4 @@
-#include <Adafruit_I2CDevice.h>
-#include <Arduino.h>
+#include "Adafruit_I2CDevice.h"
 
 //#define DEBUG_SERIAL Serial
 
@@ -34,6 +33,18 @@ bool Adafruit_I2CDevice::begin(bool addr_detect) {
     return detected();
   }
   return true;
+}
+
+/*!
+ *    @brief  De-initialize device, turn off the Wire interface
+ */
+void Adafruit_I2CDevice::end(void) {
+#ifndef ESP8266
+  // ESP8266 does not implement Wire::end()
+  _wire->end();
+#endif
+
+  _begun = false;
 }
 
 /*!
@@ -127,22 +138,21 @@ bool Adafruit_I2CDevice::write(const uint8_t *buffer, size_t len, bool stop,
       DEBUG_SERIAL.println();
     }
   }
-  DEBUG_SERIAL.println();
-#endif
 
-#ifdef DEBUG_SERIAL
-  DEBUG_SERIAL.print("Stop: ");
-  DEBUG_SERIAL.println(stop);
+  if (stop) {
+    DEBUG_SERIAL.print("\tSTOP");
+  }
 #endif
 
   if (_wire->endTransmission(stop) == 0) {
 #ifdef DEBUG_SERIAL
+    DEBUG_SERIAL.println();
     // DEBUG_SERIAL.println("Sent!");
 #endif
     return true;
   } else {
 #ifdef DEBUG_SERIAL
-    DEBUG_SERIAL.println("Failed to send!");
+    DEBUG_SERIAL.println("\tFailed to send!");
 #endif
     return false;
   }
