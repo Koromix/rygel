@@ -97,8 +97,8 @@
     name: goupile_update
     hour: '{{ goupile_update_hour }}'
     minute: 0
+    state: '{{ "present" if goupile_update_auto else "absent" }}'
     job: '{{ goupile_root_path }}/sync/update.sh && {{ goupile_root_path }}/sync/sync.py'
-  when: goupile_update_auto
   become: yes
 
 - name: Update and install Goupile
