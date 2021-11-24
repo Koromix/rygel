@@ -74,6 +74,20 @@ nginx_domains:
 
           proxy_pass http://127.0.0.1:9200;
       }
+
+      location = /r/dreval/video {
+          return 302 https://google.fr;
+      }
+      location = /r/dreval/interv {
+          return 302 https://inter.goupile.fr/dreval/main/intro?id=5${request_id};
+      }
+      location = /r/dreval/temoin {
+          return 302 https://inter.goupile.fr/dreval/main/intro?id=7${request_id};
+      }
+      location = /r/dreval/t2 {
+          add_header Content-Type text/html;
+          alias /srv/dreval_t2.html;
+      }
   - name: www.goupile.fr
     ssl_certbot_email: niels.martignene@protonmail.com
     config: |
