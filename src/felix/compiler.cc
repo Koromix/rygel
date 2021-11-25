@@ -299,7 +299,7 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        Fmt(&buf, " -fvisibility=hidden");
+        Fmt(&buf, " -fvisibility=hidden -fno-strict-aliasing");
         if (features & (int)CompileFeature::OptimizeSpeed) {
             Fmt(&buf, " -O2 -DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {
@@ -687,6 +687,7 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
+        Fmt(&buf, " -fvisibility=hidden -fno-strict-aliasing");
         if (features & (int)CompileFeature::OptimizeSpeed) {
             Fmt(&buf, " -O2 -DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {
@@ -708,7 +709,6 @@ public:
         if (features & (int)CompileFeature::HotAssets) {
             Fmt(&buf, " -DFELIX_HOT_ASSETS");
         }
-        Fmt(&buf, " -fvisibility=hidden");
 
         // Platform flags
 #if defined(_WIN32)
@@ -1307,6 +1307,7 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
+        Fmt(&buf, " -fvisibility=hidden -fno-strict-aliasing");
         if (features & (int)CompileFeature::OptimizeSpeed) {
             Fmt(&buf, " -O2 -DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {
@@ -1322,7 +1323,6 @@ public:
         } else {
             Fmt(&buf, " -w");
         }
-        Fmt(&buf, " -fvisibility=hidden");
 
         // Don't override explicit user defines
         bool set_fcpu = true;
