@@ -18,6 +18,9 @@ const ui = new function() {
     let panels = new Map;
     let active_panels = 0;
 
+    let expanded = new Set;
+    let new_expanded;
+
     let dialogs = {
         prev: null,
         next: null
@@ -93,6 +96,8 @@ const ui = new function() {
 
         // Render main screen
         if (render_main) {
+            new_expanded = new Set;
+
             render(html`
                 ${menu_render != null ? html`<nav class=${goupile.isLocked() ? 'ui_toolbar locked' : 'ui_toolbar'}
                                                   id="ui_top" style="z-index: 999999;">${menu_render()}</nav>` : ''}
@@ -101,6 +106,8 @@ const ui = new function() {
                     ${util.map(panels.values(), panel => panel.active ? panel.render() : '')}
                 </main>
             `, document.querySelector('#ui_main'));
+
+            expanded = new_expanded;
         } else {
             render('', document.querySelector('#ui_main'));
         }
@@ -440,21 +447,39 @@ const ui = new function() {
         e.stopPropagation();
     };
 
-    this.expandMenu = function(e) {
+    this.expandMenu = function(key, title, content) {
+        let active = expanded.has(key);
+
+        if (active)
+            new_expanded.add(key);
+
+        return html`
+            <div class=${active ? 'expand active' : 'expand'}>
+                <button @click=${e => handleMenuClick(e, key)}>${title}</button>
+                <div>${content}</div>
+            <div>
+        `;
+    };
+
+    function handleMenuClick(e, key) {
         let menu = util.findParent(e.target, el => el.classList.contains('drop'));
         let el = util.findParent(e.target, el => el.classList.contains('expand'));
 
         if (el.classList.contains('active')) {
             if (!e.ctrlKey)
                 el.classList.remove('active');
+
+            expanded.delete(key);
         } else {
             let expands = menu.querySelectorAll('.expand');
             for (let exp of expands)
                 exp.classList.toggle('active', exp === el);
+
+            expanded.add(key);
         }
 
         e.stopPropagation();
-    };
+    }
 
     function notifyHandler(action, entry) {
         if (typeof lithtml !== 'undefined' && entry.type !== 'debug') {

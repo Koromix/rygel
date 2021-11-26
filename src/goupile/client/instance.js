@@ -199,20 +199,17 @@ function InstanceController() {
                 <button @click=${ui.deployMenu}>${route.page.title}</button>
                 <div>
                     ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormDrop(route.form.chain[idx]))}
-                    ${profile.lock == null && route.form.multi ? html`
-                        <div class="expand">
-                            <button @click=${ui.expandMenu}>${route.form.multi}</button>
-                            <div>
-                                ${form_record.siblings.map(sibling => {
-                                    let url = route.page.url + `/${sibling.ulid}`;
-                                    return html`<button @click=${ui.wrapAction(e => self.go(e, url))}
-                                                        class=${sibling.ulid === form_record.ulid ? 'active' : ''}>${sibling.ctime.toLocaleString()}</a>`;
-                                })}
-                                <button @click=${ui.wrapAction(e => self.go(e, contextualizeURL(route.page.url, form_record.parent)))}
-                                        class=${!form_record.saved ? 'active' : ''}>Nouvelle fiche</button>
-                            </div>
+                    ${profile.lock == null && route.form.multi ? ui.expandMenu(route.form.key, route.form.multi, html`
+                        <div>
+                            ${form_record.siblings.map(sibling => {
+                                let url = route.page.url + `/${sibling.ulid}`;
+                                return html`<button @click=${ui.wrapAction(e => self.go(e, url))}
+                                                    class=${sibling.ulid === form_record.ulid ? 'active' : ''}>${sibling.ctime.toLocaleString()}</a>`;
+                            })}
+                            <button @click=${ui.wrapAction(e => self.go(e, contextualizeURL(route.page.url, form_record.parent)))}
+                                    class=${!form_record.saved ? 'active' : ''}>Nouvelle fiche</button>
                         </div>
-                    ` : ''}
+                    `) : ''}
                     ${route.form.chain.length === 1 || route.form.menu.length > 1 ? renderFormDrop(route.form) : ''}
                 </div>
             </div>
@@ -292,50 +289,43 @@ function InstanceController() {
         }
 
         if (items.length > 1) {
-            return html`
-                <div class="expand">
-                    <button @click=${ui.expandMenu}>${form.title}</button>
-                    <div>
-                        ${util.map(form.menu, item => {
-                            let active;
-                            let url;
-                            let title;
-                            let status;
+            return ui.expandMenu(form.key, form.title, util.map(form.menu, item => {
+                let active;
+                let url;
+                let title;
+                let status;
 
-                            if (item.type === 'page') {
-                                let page = item.page;
+                if (item.type === 'page') {
+                    let page = item.page;
 
-                                if (!isPageEnabled(page, form_record))
-                                    return '';
+                    if (!isPageEnabled(page, form_record))
+                        return '';
 
-                                active = (page === route.page);
-                                url = page.url;
-                                title = page.title;
-                                status = (meta != null) && (meta.status[form.key] != null);
-                            } else if (item.type === 'form') {
-                                let form = item.form;
+                    active = (page === route.page);
+                    url = page.url;
+                    title = page.title;
+                    status = (meta != null) && (meta.status[form.key] != null);
+                } else if (item.type === 'form') {
+                    let form = item.form;
 
-                                if (!isFormEnabled(form, form_record))
-                                    return '';
+                    if (!isFormEnabled(form, form_record))
+                        return '';
 
-                                active = route.form.chain.some(parent => form === parent);
-                                url = form.url;
-                                title = form.multi || form.title;
-                                status = (meta != null) && (meta.status[form.key] != null);
-                            } else {
-                                throw new Error(`Unknown item type '${item.type}'`);
-                            }
+                    active = route.form.chain.some(parent => form === parent);
+                    url = form.url;
+                    title = form.multi || form.title;
+                    status = (meta != null) && (meta.status[form.key] != null);
+                } else {
+                    throw new Error(`Unknown item type '${item.type}'`);
+                }
 
-                            return html`
-                                <button class=${active ? 'active' : ''} @click=${ui.wrapAction(e => self.go(e, url))}>
-                                    <div style="flex: 1;">${title}</div>
-                                    ${status ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
-                               </button>
-                            `;
-                        })}
-                    </div>
-                </div>
-            `;
+                return html`
+                    <button class=${active ? 'active' : ''} @click=${ui.wrapAction(e => self.go(e, url))}>
+                        <div style="flex: 1;">${title}</div>
+                        ${status ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
+                   </button>
+                `;
+            }));
         } else {
             return '';
         }
