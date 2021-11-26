@@ -267,7 +267,7 @@ function InstanceController() {
     function renderFormDrop(form) {
         let meta = form_record.map[form.key];
 
-        let items= [];
+        let items = [];
         let active_item;
         for (let item of form.menu) {
             if (item.type === 'page') {
@@ -292,14 +292,6 @@ function InstanceController() {
         }
 
         if (items.length > 1) {
-            let active_item = form.menu.find(item => {
-                if (item.type === 'page') {
-                    return item.page === route.page;
-                } else if (item.type === 'form') {
-                    return route.form.chain.some(parent => item.form === parent);
-                }
-            });
-
             return html`
                 <div class="expand">
                     <button @click=${ui.expandMenu}>${form.title}</button>
