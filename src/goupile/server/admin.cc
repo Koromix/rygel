@@ -510,7 +510,7 @@ retry_title:
             return 1;
     } else {
 retry_pwd:
-        password = Prompt("Admin password: ", "*", &temp_alloc);
+        password = Prompt("Admin password: ", nullptr, "*", &temp_alloc);
         if (!password)
             return 1;
 
@@ -518,7 +518,7 @@ retry_pwd:
             goto retry_pwd;
 
 reconfirm_pwd:
-        const char *password2 = Prompt("Confirm: ", "*", &temp_alloc);
+        const char *password2 = Prompt("Confirm: ", nullptr, "*", &temp_alloc);
         if (!password2)
             return 1;
 
@@ -754,7 +754,7 @@ Options:
     }
 
     if (!decrypt_key) {
-        decrypt_key = Prompt("Decryption key: ", "*", &temp_alloc);
+        decrypt_key = Prompt("Decryption key: ", nullptr, "*", &temp_alloc);
         if (!decrypt_key)
             return 1;
     }

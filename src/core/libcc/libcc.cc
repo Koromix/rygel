@@ -6724,7 +6724,7 @@ void ConsolePrompter::EnsureNulTermination()
     str.ptr[str.len] = 0;
 }
 
-const char *Prompt(const char *prompt, const char *mask, Allocator *alloc)
+const char *Prompt(const char *prompt, const char *default_value, const char *mask, Allocator *alloc)
 {
     RG_ASSERT(alloc);
 
@@ -6733,6 +6733,9 @@ const char *Prompt(const char *prompt, const char *mask, Allocator *alloc)
     prompter.prompt = prompt;
     prompter.mask = mask;
     prompter.str.allocator = alloc;
+    if (default_value) {
+        prompter.str.Append(default_value);
+    }
 
     if (!prompter.Read())
         return nullptr;

@@ -70,7 +70,7 @@ Options:
 
     if (!password) {
 retry:
-        password = Prompt("Password: ", mask ? "*" : nullptr, &temp_alloc);
+        password = Prompt("Password: ", nullptr, mask ? "*" : nullptr, &temp_alloc);
         if (!password)
             return 1;
 
@@ -79,7 +79,7 @@ retry:
 
         if (confirm) {
 reconfirm:
-            const char *password2 = Prompt("Confirm: ", mask ? "*" : nullptr, &temp_alloc);
+            const char *password2 = Prompt("Confirm: ", nullptr, mask ? "*" : nullptr, &temp_alloc);
             if (!password2)
                 return 1;
 

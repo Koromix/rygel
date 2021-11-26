@@ -4219,8 +4219,8 @@ private:
     void EnsureNulTermination();
 };
 
-const char *Prompt(const char *prompt, const char *mask, Allocator *alloc);
+const char *Prompt(const char *prompt, const char *default_value, const char *mask, Allocator *alloc);
 static inline const char *Prompt(const char *prompt, Allocator *alloc)
-    { return Prompt(prompt, nullptr, alloc); }
+    { return Prompt(prompt, nullptr, nullptr, alloc); }
 
 }
