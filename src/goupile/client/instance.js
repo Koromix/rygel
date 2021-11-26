@@ -35,6 +35,7 @@ function InstanceController() {
     let form_builder;
     let form_values;
     let form_dictionaries = {};
+    let new_hid;
 
     let editor_el;
     let editor_ace;
@@ -675,7 +676,7 @@ function InstanceController() {
                     go: (url) => self.go(null, url),
 
                     save: async () => {
-                        await saveRecord(form_record, form_values, route.page);
+                        await saveRecord(form_record, new_hid, form_values, route.page);
                         await self.run();
                     },
                     delete: (e, ulid, confirm = true) => {
@@ -705,7 +706,7 @@ function InstanceController() {
                     }
                 }
             });
-            form_record.hid = meta.hid;
+            new_hid = meta.hid;
 
             form_builder.popOptions({});
             if (model.hasErrors())
@@ -720,7 +721,7 @@ function InstanceController() {
                 form_builder.action('Enregistrer', {disabled: !form_state.hasChanged()}, async () => {
                     form_builder.triggerErrors();
 
-                    await saveRecord(form_record, form_values, route.page);
+                    await saveRecord(form_record, new_hid, form_values, route.page);
 
                     self.run();
                 });
@@ -733,7 +734,7 @@ function InstanceController() {
                             await ui.runConfirm(e, html`Confirmez-vous l'enregistrement <b>malgré la présence d'erreurs</b> ?`,
                                                    'Enregistrer', () => {});
 
-                            await saveRecord(form_record, form_values, route.page);
+                            await saveRecord(form_record, new_hid, form_values, route.page);
 
                             self.run();
                         });
@@ -973,7 +974,7 @@ function InstanceController() {
         });
     }
 
-    async function saveRecord(record, values, page) {
+    async function saveRecord(record, hid, values, page) {
         await mutex.run(async () => {
             if (develop)
                 throw new Error('Enregistrement refusé : formulaire non publié');
@@ -1006,8 +1007,8 @@ function InstanceController() {
                         let entry;
                         if (obj != null) {
                             entry = await goupile.decryptSymmetric(obj.enc, 'records');
-                            if (record.hid != null)
-                                entry.hid = record.hid;
+                            if (hid != null)
+                                entry.hid = hid;
                         } else {
                             obj = {
                                 keys: {
@@ -1020,7 +1021,7 @@ function InstanceController() {
                             };
                             entry = {
                                 ulid: record.ulid,
-                                hid: record.hid,
+                                hid: hid,
                                 parent: null,
                                 form: record.form.key,
                                 fragments: []
@@ -1587,7 +1588,7 @@ function InstanceController() {
                     let autosave = route.page.getOption('autosave', form_record, false);
 
                     if (autosave) {
-                        await mutex.chain(() => saveRecord(form_record, form_values, route.page));
+                        await mutex.chain(() => saveRecord(form_record, new_hid, form_values, route.page));
                         new_route.version = null;
 
                         options.reload = true;
@@ -1598,7 +1599,7 @@ function InstanceController() {
                                                    "Enregistrer", async () => {
                                 form_builder.triggerErrors();
 
-                                await mutex.chain(() => saveRecord(form_record, form_values, route.page));
+                                await mutex.chain(() => saveRecord(form_record, new_hid, form_values, route.page));
                                 new_route.version = null;
                             });
 
@@ -1800,6 +1801,8 @@ function InstanceController() {
             form_values[new_record.form.key] = form_state.values;
         }
 
+        new_hid = new_record.hid;
+
         if (new_record !== form_record || !copy_ui) {
             if (autosave_timer != null)
                 clearTimeout(autosave_timer);
@@ -1822,7 +1825,7 @@ function InstanceController() {
             autosave_timer = setTimeout(util.serialize(async () => {
                 if (self.hasUnsavedData()) {
                     try {
-                        await mutex.chain(() => saveRecord(form_record, form_values, route.page));
+                        await mutex.chain(() => saveRecord(form_record, new_hid, form_values, route.page));
                     } catch (err) {
                         log.error(err);
                     }
