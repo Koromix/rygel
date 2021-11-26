@@ -486,8 +486,10 @@ Options:
 
     // Gather missing information
     if (!title) {
+        title = SplitStrReverseAny(root_directory, RG_PATH_SEPARATORS).ptr;
+
 retry_title:
-        title = Prompt("Domain title: ", &temp_alloc);
+        title = Prompt("Domain title: ", title, nullptr, &temp_alloc);
         if (!title)
             return 1;
 
