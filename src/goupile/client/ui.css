@@ -221,6 +221,8 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
     content: '–';
     color: #ccc;
 }
+.ui_toolbar .expand > div > button.active { background-color: var(--menu_color_n3); }
+.ui_toolbar .expand > div > button:not(.active):hover { background-color: var(--menu_color_n3); }
 
 /* -------------------- Panels -------------------- */
 
