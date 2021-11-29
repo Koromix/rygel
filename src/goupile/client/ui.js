@@ -18,7 +18,7 @@ const ui = new function() {
     let panels = new Map;
     let active_panels = 0;
 
-    let expanded = new Set;
+    let expanded = {};
     let new_expanded;
 
     let dialogs = {
@@ -96,7 +96,7 @@ const ui = new function() {
 
         // Render main screen
         if (render_main) {
-            new_expanded = new Set;
+            new_expanded = {};
 
             render(html`
                 ${menu_render != null ? html`<nav class=${goupile.isLocked() ? 'ui_toolbar locked' : 'ui_toolbar'}
@@ -447,36 +447,24 @@ const ui = new function() {
         e.stopPropagation();
     };
 
-    this.expandMenu = function(key, title, content) {
-        let active = expanded.has(key);
-
-        if (active)
-            new_expanded.add(key);
+    this.expandMenu = function(key, title, active, content) {
+        if (expanded.hasOwnProperty(key))
+            active = expanded[key];
+        new_expanded[key] = active;
 
         return html`
-            <div class=${active ? 'expand active' : 'expand'}>
-                <button @click=${e => handleMenuClick(e, key)}>${title}</button>
+            <div class=${active ? 'expand active' : 'expand'} data-key=${key}>
+                <button @click=${handleMenuClick}>${title}</button>
                 <div>${content}</div>
             <div>
         `;
     };
 
-    function handleMenuClick(e, key) {
-        let menu = util.findParent(e.target, el => el.classList.contains('drop'));
+    function handleMenuClick(e) {
         let el = util.findParent(e.target, el => el.classList.contains('expand'));
+        let key = el.dataset.key;
 
-        if (el.classList.contains('active')) {
-            if (!e.ctrlKey)
-                el.classList.remove('active');
-
-            expanded.delete(key);
-        } else {
-            let expands = menu.querySelectorAll('.expand');
-            for (let exp of expands)
-                exp.classList.toggle('active', exp === el);
-
-            expanded.add(key);
-        }
+        expanded[key] = el.classList.toggle('active');
 
         e.stopPropagation();
     }

@@ -198,19 +198,7 @@ function InstanceController() {
             <div class="drop">
                 <button @click=${ui.deployMenu}>${route.page.title}</button>
                 <div>
-                    ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormDrop(route.form.chain[idx]))}
-                    ${profile.lock == null && route.form.multi ? ui.expandMenu(route.form.key, route.form.multi, html`
-                        <div>
-                            ${form_record.siblings.map(sibling => {
-                                let url = route.page.url + `/${sibling.ulid}`;
-                                return html`<button @click=${ui.wrapAction(e => self.go(e, url))}
-                                                    class=${sibling.ulid === form_record.ulid ? 'active' : ''}>${sibling.ctime.toLocaleString()}</a>`;
-                            })}
-                            <button @click=${ui.wrapAction(e => self.go(e, contextualizeURL(route.page.url, form_record.parent)))}
-                                    class=${!form_record.saved ? 'active' : ''}>Nouvelle fiche</button>
-                        </div>
-                    `) : ''}
-                    ${route.form.chain.length === 1 || route.form.menu.length > 1 ? renderFormDrop(route.form) : ''}
+                    ${route.form.chain.map(renderFormDrop)}
                 </div>
             </div>
             <div style="flex: 1; min-width: 15px;"></div>
@@ -288,8 +276,22 @@ function InstanceController() {
             }
         }
 
-        if (items.length > 1) {
-            return ui.expandMenu(form.key, form.title, util.map(form.menu, item => {
+        let show = (form !== route.form || form.menu.length > 1 || route.form.chain.length === 1);
+        let active = (form === route.form.chain[route.form.chain.length - 1 - !show]);
+        let title = form.multi ? (meta.saved ? meta.ctime.toLocaleString() : 'Nouvelle fiche') : form.title;
+
+        return html`
+            ${profile.lock == null && meta.siblings != null ? ui.expandMenu('$' + form.key, form.multi, true, html`
+                ${meta.siblings.map(sibling => {
+                    let url = route.page.url + `/${sibling.ulid}`;
+                    return html`<button @click=${ui.wrapAction(e => self.go(e, url))}
+                                        class=${sibling.ulid === meta.ulid ? 'active' : ''}>${sibling.ctime.toLocaleString()}</a>`;
+                })}
+                <button @click=${ui.wrapAction(e => self.go(e, contextualizeURL(route.page.url, meta.parent)))}
+                        class=${!meta.saved ? 'active' : ''}>Nouvelle fiche</button>
+            `) : ''}
+
+            ${show ? ui.expandMenu(form.key, title, active, util.map(form.menu, item => {
                 let active;
                 let url;
                 let title;
@@ -325,10 +327,8 @@ function InstanceController() {
                         ${status ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
                    </button>
                 `;
-            }));
-        } else {
-            return '';
-        }
+            })) : ''}
+        `;
     }
 
     async function togglePanel(e, key) {
@@ -769,20 +769,7 @@ function InstanceController() {
         return html`
             <div class="print" @scroll=${syncEditorScroll}}>
                 <div id="ins_page">
-                    <div id="ins_menu">
-                        ${util.mapRange(0, route.form.chain.length - 1, idx => renderFormMenu(route.form.chain[idx]))}
-                        ${profile.lock == null && route.form.multi ? html`
-                            <h1>${route.form.multi}</h1>
-                            <ul>
-                                ${form_record.siblings.map(sibling => {
-                                    let url = route.page.url + `/${sibling.ulid}`;
-                                    return html`<li><a href=${url} class=${sibling.ulid === form_record.ulid ? 'active' : ''}>${sibling.ctime.toLocaleString()}</a></li>`;
-                                })}
-                                <li><a href=${contextualizeURL(route.page.url, form_record.parent)} class=${!form_record.saved ? 'active' : ''}>Nouvelle fiche</a></li>
-                            </ul>
-                        ` : ''}
-                        ${route.form.chain.length === 1 || route.form.menu.length > 1 ? renderFormMenu(route.form) : ''}
-                    </div>
+                    <div id="ins_menu">${route.form.chain.map(renderFormMenu)}</div>
 
                     <form id="ins_form" autocomplete="off" @submit=${e => e.preventDefault()}>
                         ${page_div}
@@ -831,51 +818,67 @@ function InstanceController() {
     function renderFormMenu(form) {
         let meta = form_record.map[form.key];
 
+        let show = (form !== route.form || route.form.chain.length === 1 || route.form.menu.length > 1);
+        let title = form.multi ? (meta.saved ? meta.ctime.toLocaleString() : 'Nouvelle fiche') : form.title;
+
         return html`
-            <h1>${form.title}</h1>
-            <ul>
-                ${util.map(form.menu, item => {
-                    if (item.type === 'page') {
-                        let page = item.page;
+            ${profile.lock == null && meta.siblings != null ? html`
+                <h1>${form.multi}</h1>
+                <ul>
+                    ${meta.siblings.map(sibling => {
+                        let url = route.page.url + `/${sibling.ulid}`;
+                        return html`<li><a href=${url} class=${sibling.ulid === meta.ulid ? 'active' : ''}>${sibling.ctime.toLocaleString()}</a></li>`;
+                    })}
+                    <li><a href=${contextualizeURL(route.page.url, meta.parent)} class=${!form_record.saved ? 'active' : ''}>Nouvelle fiche</a></li>
+                </ul>
+            ` : ''}
 
-                        let cls = '';
-                        if (!isPageEnabled(page, form_record)) {
-                            if (goupile.isLocked())
-                                return '';
+            ${show ? html`
+                <h1>${title}</h1>
+                <ul>
+                    ${util.map(form.menu, item => {
+                        if (item.type === 'page') {
+                            let page = item.page;
 
-                            cls = 'disabled';
-                        } else if (page === route.page) {
-                            cls = 'active';
+                            let cls = '';
+                            if (!isPageEnabled(page, form_record)) {
+                                if (goupile.isLocked())
+                                    return '';
+
+                                cls = 'disabled';
+                            } else if (page === route.page) {
+                                cls = 'active';
+                            }
+
+                            return html`
+                                <li><a class=${cls} href=${contextualizeURL(page.url, form_record)}>
+                                    <div style="flex: 1;">${page.title}</div>
+                                    ${meta && meta.status[page.key] != null ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
+                                </a></li>
+                            `;
+                        } else if (item.type === 'form') {
+                            let form = item.form;
+
+                            let cls = '';
+                            if (!isFormEnabled(form, form_record)) {
+                                if (goupile.isLocked())
+                                    return '';
+
+                                cls = 'disabled';
+                            } else if (route.form.chain.some(parent => form === parent)) {
+                                cls = 'active';
+                            }
+
+                            return html`
+                                <li><a class=${cls} href=${contextualizeURL(form.url, form_record)} style="display: flex;">
+                                    <div style="flex: 1;">${form.multi || form.title}</div>
+                                    ${meta && meta.status[form.key] != null ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
+                                </a></li>
+                            `;
                         }
-
-                        return html`
-                            <li><a class=${cls} href=${contextualizeURL(page.url, form_record)}>
-                                <div style="flex: 1;">${page.title}</div>
-                                ${meta && meta.status[page.key] != null ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
-                            </a></li>
-                        `;
-                    } else if (item.type === 'form') {
-                        let form = item.form;
-
-                        let cls = '';
-                        if (!isFormEnabled(form, form_record)) {
-                            if (goupile.isLocked())
-                                return '';
-
-                            cls = 'disabled';
-                        } else if (route.form.chain.some(parent => form === parent)) {
-                            cls = 'active';
-                        }
-
-                        return html`
-                            <li><a class=${cls} href=${contextualizeURL(form.url, form_record)} style="display: flex;">
-                                <div style="flex: 1;">${form.multi || form.title}</div>
-                                ${meta && meta.status[form.key] != null ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
-                            </a></li>
-                        `;
-                    }
-                })}
-            </ul>
+                    })}
+                </ul>
+            ` : ''}
         `;
     }
 
@@ -1543,7 +1546,7 @@ function InstanceController() {
             if (new_record != null && new_record.form !== new_route.form)
                 new_record = await moveToAppropriateRecord(new_record, new_route.form, true);
             if (new_route.ulid == null || new_record == null)
-                new_record = createRecord(new_route.form, new_route.ulid);
+                new_record = await createRecord(new_route.form, new_route.ulid);
 
             // Load close records (parents, siblings, children)
             let load = new_route.page.getOption('load', new_record, []);
@@ -1908,7 +1911,7 @@ function InstanceController() {
         return code;
     }
 
-    function createRecord(form, ulid = null, parent_record = null) {
+    async function createRecord(form, ulid = null, parent_record = null) {
         let record = {
             form: form,
             ulid: ulid || util.makeULID(),
@@ -1931,8 +1934,13 @@ function InstanceController() {
 
         if (form.chain.length > 1) {
             if (parent_record == null)
-                parent_record = createRecord(form.chain[form.chain.length - 2]);
+                parent_record = await createRecord(form.chain[form.chain.length - 2]);
             record.parent = parent_record;
+
+            if (form.multi) {
+                record.siblings = await listChildren(record.parent.ulid, record.form.key);
+                record.siblings.sort(util.makeComparator(record => record.ulid));
+            }
         }
 
         return record;
@@ -1944,6 +1952,12 @@ function InstanceController() {
 
         if (obj != null) {
             let record = await decryptRecord(obj, version, false);
+
+            if (record.form.multi && record.parent != null) {
+                record.siblings = await listChildren(record.parent.ulid, record.form.key);
+                record.siblings.sort(util.makeComparator(record => record.ulid));
+            }
+
             return record;
         } else if (error_missing) {
             throw new Error('L\'enregistrement demandé n\'existe pas');
@@ -1965,26 +1979,21 @@ function InstanceController() {
 
             let it = record;
             while (it.parent != null) {
-                let parent_record = it.parent;
-                if (parent_record.values == null)
-                    parent_record = await loadRecord(it.parent.ulid, null);
+                let parent = it.parent;
 
-                parent_record.chain = chain;
-                parent_record.map = map;
-                chain.push(parent_record);
-                map[parent_record.form.key] = parent_record;
-                it.parent = parent_record;
+                if (parent.values == null)
+                    parent = await loadRecord(it.parent.ulid, null);
 
-                it = parent_record;
+                parent.chain = chain;
+                parent.map = map;
+                chain.push(parent);
+                map[parent.form.key] = parent;
+                it.parent = parent;
+
+                it = parent;
             }
 
             chain.reverse();
-        }
-
-        // Siblings (formMulti)
-        if (record.form.multi && record.parent != null) {
-            record.siblings = await listChildren(record.parent.ulid, record.form.key);
-            record.siblings.sort(util.makeComparator(record => record.ulid));
         }
 
         // Load children (if requested)
@@ -2160,7 +2169,7 @@ function InstanceController() {
                     if (record.form !== form)
                         throw new Error('Saut impossible en raison d\'un changement de schéma');
                 } else if (create_new) {
-                    record = createRecord(form, null, record);
+                    record = await createRecord(form, null, record);
                 } else {
                     return null;
                 }
