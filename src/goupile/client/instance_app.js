@@ -153,14 +153,15 @@ function ApplicationBuilder(app) {
         }
     };
 
-    this.formMulti = function(key, multi, title, func = null, options = {}) {
+    this.many = function(key, multi, title, func = null, options = {}) {
         if (form_ref == null)
-            throw new Error('formMulti cannot be used for top-level forms');
+            throw new Error('many cannot be used for top-level forms');
 
         let form = self.form(key, title, func, options);
         form.multi = multi;
         return form;
     };
+    this.formMulti = this.many;
 
     this.page = function(key, title, options = null) {
         checkKey(key);
