@@ -2415,10 +2415,11 @@ function InstanceController() {
                 if (changed && standalone) {
                     progress.success('Synchronisation terminée');
 
-                    // XXX: Keep current user value changes
                     if (form_record != null) {
                         data_rows = null;
-                        self.go(null, window.location.href, { reload: true });
+
+                        let reload = !form_state.hasChanged();
+                        self.go(null, window.location.href, { reload: !form_state.hasChanged() });
                     }
                 } else {
                     if (standalone)
