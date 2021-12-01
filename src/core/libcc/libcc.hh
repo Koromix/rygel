@@ -2913,11 +2913,8 @@ enum class FmtType {
     Random,
     FlagNames,
     FlagOptions,
-    Function,
     Span
 };
-
-typedef void FmtFunction(FunctionRef<void(Span<const char>)>);
 
 class FmtArg {
 public:
@@ -2953,7 +2950,6 @@ public:
             } u;
             const char *separator;
         } flags;
-        FunctionRef<FmtFunction> func;
 
         struct {
             FmtType type;
@@ -3090,14 +3086,6 @@ static inline FmtArg FmtFlags(uint64_t flags, Span<const struct OptionDesc> opti
     arg.u.flags.flags = flags & ((1ull << options.len) - 1);
     arg.u.flags.u.options = options;
     arg.u.flags.separator = sep;
-    return arg;
-}
-
-static inline FmtArg FmtCall(FunctionRef<FmtFunction> func)
-{
-    FmtArg arg;
-    arg.type = FmtType::Function;
-    arg.u.func = func;
     return arg;
 }
 

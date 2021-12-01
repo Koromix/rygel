@@ -1266,11 +1266,6 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 }
             } break;
 
-            case FmtType::Function: {
-                arg.u.func(append);
-                continue;
-            } break;
-
             case FmtType::Span: {
                 FmtArg arg2;
                 arg2.type = arg.u.span.type;
@@ -1316,7 +1311,6 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                         case FmtType::Random: { RG_UNREACHABLE(); } break;
                         case FmtType::FlagNames: { RG_UNREACHABLE(); } break;
                         case FmtType::FlagOptions: { RG_UNREACHABLE(); } break;
-                        case FmtType::Function: { arg2.u.func = *(FunctionRef<FmtFunction> *)ptr; } break;
                         case FmtType::Span: { RG_UNREACHABLE(); } break;
                     }
                     ptr += arg.u.span.type_len;
