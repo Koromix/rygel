@@ -21,7 +21,7 @@ import stat
 import sys
 import tempfile
 
-DEFAULT_REMOTE = 'git@git.sr.ht:~koromix/rygel-public'
+DEFAULT_REMOTE = 'git@github.com:Koromix/helium.git'
 
 def rewrite_repository(root_directory, clone_directory, force_push = False):
     # Clone or update repository
