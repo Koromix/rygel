@@ -283,7 +283,7 @@ static inline Date GetSlotDateSafe(WrenVM *vm, int slot)
 
             return *(Date *)wrenGetSlotForeign(vm, slot);
         } break;
-        case WREN_TYPE_NULL: { return {}; } break;
+        case WREN_TYPE_NULL: return {};
 
         default: {
             TriggerError(vm, "Expected Date or null");
@@ -313,7 +313,7 @@ static inline char GetSlotModeSafe(WrenVM *vm, int slot)
 
             return value[0];
         } break;
-        case WREN_TYPE_NULL: { return 0; } break;
+        case WREN_TYPE_NULL: return 0;
 
         default: {
             TriggerError(vm, "Expected number or character");

@@ -3773,7 +3773,7 @@ WaitForResult WaitForInterrupt(int64_t timeout)
     }
 
     switch (ret) {
-        case WAIT_OBJECT_0: { return WaitForResult::Interrupt; } break;
+        case WAIT_OBJECT_0: return WaitForResult::Interrupt;
         case WAIT_OBJECT_0 + 1: {
             ResetEvent(wait_msg_event);
             return WaitForResult::Message;
@@ -5153,9 +5153,9 @@ bool StreamWriter::Flush()
         return false;
 
     switch (dest.type) {
-        case DestinationType::Memory: { return true; } break;
-        case DestinationType::File: { return FlushFile(dest.u.file.fp, filename); } break;
-        case DestinationType::Function: { return true; } break;
+        case DestinationType::Memory: return true;
+        case DestinationType::File: return FlushFile(dest.u.file.fp, filename);
+        case DestinationType::Function: return true;
     }
 
     RG_UNREACHABLE();
@@ -6587,19 +6587,19 @@ int32_t ConsolePrompter::ReadChar()
 
             if (ctrl && !alt) {
                 switch (ev.Event.KeyEvent.wVirtualKeyCode) {
-                    case 'A': { return 0x1; } break;
-                    case 'B': { return 0x2; } break;
-                    case 'C': { return 0x3; } break;
-                    case 'D': { return 0x4; } break;
-                    case 'E': { return 0x5; } break;
-                    case 'F': { return 0x6; } break;
-                    case 'H': { return 0x8; } break;
-                    case 'K': { return 0xB; } break;
-                    case 'L': { return 0xC; } break;
-                    case 'N': { return 0xE; } break;
-                    case 'P': { return 0x10; } break;
-                    case 'T': { return 0x14; } break;
-                    case 'U': { return 0x15; } break;
+                    case 'A': return 0x1;
+                    case 'B': return 0x2;
+                    case 'C': return 0x3;
+                    case 'D': return 0x4;
+                    case 'E': return 0x5;
+                    case 'F': return 0x6;
+                    case 'H': return 0x8;
+                    case 'K': return 0xB;
+                    case 'L': return 0xC;
+                    case 'N': return 0xE;
+                    case 'P': return 0x10;
+                    case 'T': return 0x14;
+                    case 'U': return 0x15;
                     case VK_LEFT: {
                         fake_input = "[1;5D";
                         return 0x1B;
@@ -6624,14 +6624,14 @@ int32_t ConsolePrompter::ReadChar()
                 }
 
                 switch (ev.Event.KeyEvent.wVirtualKeyCode) {
-                    case VK_UP: { return 0x10; } break;
-                    case VK_DOWN: { return 0xE; } break;
-                    case VK_LEFT: { return 0x2; } break;
-                    case VK_RIGHT: { return 0x6; } break;
-                    case VK_HOME: { return 0x1; } break;
-                    case VK_END: { return 0x5; } break;
-                    case VK_RETURN: { return '\r'; } break;
-                    case VK_BACK: { return 0x8; } break;
+                    case VK_UP: return 0x10;
+                    case VK_DOWN: return 0xE;
+                    case VK_LEFT: return 0x2;
+                    case VK_RIGHT: return 0x6;
+                    case VK_HOME: return 0x1;
+                    case VK_END: return 0x5;
+                    case VK_RETURN: return '\r';
+                    case VK_BACK: return 0x8;
                     case VK_DELETE: {
                         fake_input = "[3~";
                         return 0x1B;

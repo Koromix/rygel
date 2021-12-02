@@ -147,7 +147,7 @@ Options:
     }
 
     switch (mode) {
-        case RunMode::Interactive: { return RunInteractive(config); } break;
+        case RunMode::Interactive: return RunInteractive(config);
 
         case RunMode::File: {
             if (!filename_or_code) {

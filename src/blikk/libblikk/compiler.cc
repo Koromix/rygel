@@ -1652,9 +1652,9 @@ static int GetOperatorPrecedence(bk_TokenKind kind, bool expect_unary)
             case bk_TokenKind::XorOrComplement:
             case bk_TokenKind::Plus:
             case bk_TokenKind::Minus:
-            case bk_TokenKind::Not: { return 12; } break;
+            case bk_TokenKind::Not: return 12;
 
-            default: { return -1; } break;
+            default: return -1;
         }
     } else {
         switch (kind) {
@@ -1670,30 +1670,30 @@ static int GetOperatorPrecedence(bk_TokenKind kind, bool expect_unary)
             case bk_TokenKind::RightRotateAssign:
             case bk_TokenKind::AndAssign:
             case bk_TokenKind::OrAssign:
-            case bk_TokenKind::XorAssign: { return 0; } break;
+            case bk_TokenKind::XorAssign: return 0;
 
-            case bk_TokenKind::OrOr: { return 2; } break;
-            case bk_TokenKind::AndAnd: { return 3; } break;
+            case bk_TokenKind::OrOr: return 2;
+            case bk_TokenKind::AndAnd: return 3;
             case bk_TokenKind::Equal:
-            case bk_TokenKind::NotEqual: { return 4; } break;
+            case bk_TokenKind::NotEqual: return 4;
             case bk_TokenKind::Greater:
             case bk_TokenKind::GreaterOrEqual:
             case bk_TokenKind::Less:
-            case bk_TokenKind::LessOrEqual: { return 5; } break;
-            case bk_TokenKind::Or: { return 6; } break;
-            case bk_TokenKind::XorOrComplement: { return 7; } break;
-            case bk_TokenKind::And: { return 8; } break;
+            case bk_TokenKind::LessOrEqual: return 5;
+            case bk_TokenKind::Or: return 6;
+            case bk_TokenKind::XorOrComplement: return 7;
+            case bk_TokenKind::And: return 8;
             case bk_TokenKind::LeftShift:
             case bk_TokenKind::RightShift:
             case bk_TokenKind::LeftRotate:
-            case bk_TokenKind::RightRotate: { return 9; } break;
+            case bk_TokenKind::RightRotate: return 9;
             case bk_TokenKind::Plus:
-            case bk_TokenKind::Minus: { return 10; } break;
+            case bk_TokenKind::Minus: return 10;
             case bk_TokenKind::Multiply:
             case bk_TokenKind::Divide:
-            case bk_TokenKind::Modulo: { return 11; } break;
+            case bk_TokenKind::Modulo: return 11;
 
-            default: { return -1; } break;
+            default: return -1;
         }
     }
 }

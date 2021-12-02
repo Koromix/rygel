@@ -201,10 +201,10 @@ static bool CheckDiagnosisErrors(const mco_PreparedStay &prep, const mco_Diagnos
         return SetError(out_errors, error_codes[0]);
     } else if (RG_UNLIKELY(!diag_info.raw[0])) {
         switch (diag_info.raw[1]) {
-            case 0: { return SetError(out_errors, error_codes[1]); } break;
-            case 1: { return SetError(out_errors, error_codes[2]); } break;
-            case 2: { return SetError(out_errors, error_codes[3]); } break;
-            case 3: { return SetError(out_errors, error_codes[4]); } break;
+            case 0: return SetError(out_errors, error_codes[1]);
+            case 1: return SetError(out_errors, error_codes[2]);
+            case 2: return SetError(out_errors, error_codes[3]);
+            case 3: return SetError(out_errors, error_codes[4]);
         }
     } else if (RG_UNLIKELY(prep.stay->exit.date >= Date(2014, 3, 1) &&
                            diag_info.raw[0] == 23 && diag_info.raw[1] == 14)) {

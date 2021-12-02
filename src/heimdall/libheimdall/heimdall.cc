@@ -47,10 +47,10 @@ static const gui_Info *gui_info;
 static ImU32 GetVisColor(VisColor color, float alpha = 1.0f)
 {
     switch (color) {
-        case VisColor::Event: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.36f, 0.60f, 0.91f, alpha)); } break;
-        case VisColor::Alert: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.97f, 0.36f, 0.34f, alpha)); } break;
-        case VisColor::Plot: { return ImGui::GetColorU32(ImGuiCol_Text, alpha); } break;
-        case VisColor::Limit: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.9f, 0.7f, 0.03f, 0.55f * alpha)); } break;
+        case VisColor::Event: return ImGui::ColorConvertFloat4ToU32(ImVec4(0.36f, 0.60f, 0.91f, alpha));
+        case VisColor::Alert: return ImGui::ColorConvertFloat4ToU32(ImVec4(0.97f, 0.36f, 0.34f, alpha));
+        case VisColor::Plot: return ImGui::GetColorU32(ImGuiCol_Text, alpha);
+        case VisColor::Limit: return ImGui::ColorConvertFloat4ToU32(ImVec4(0.9f, 0.7f, 0.03f, 0.55f * alpha));
     }
 
     RG_UNREACHABLE();
@@ -59,12 +59,12 @@ static ImU32 GetVisColor(VisColor color, float alpha = 1.0f)
 static bool DetectAnomaly(const Element &elmt)
 {
     switch (elmt.type) {
-        case Element::Type::Event: { return false; } break;
+        case Element::Type::Event: return false;
         case Element::Type::Measure: {
             return ((!std::isnan(elmt.u.measure.min) && elmt.u.measure.value < elmt.u.measure.min) ||
                     (!std::isnan(elmt.u.measure.max) && elmt.u.measure.value > elmt.u.measure.max));
         } break;
-        case Element::Type::Period: { return false; } break;
+        case Element::Type::Period: return false;
     }
 
     RG_UNREACHABLE();

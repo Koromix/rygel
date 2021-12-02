@@ -421,9 +421,9 @@ static int ComputeHotp(Span<const uint8_t> key, pwd_HotpAlgorithm algo, int64_t 
 
     // Return just enough digits
     switch (digits) {
-        case 6: { return sbits % 1000000; } break;
-        case 7: { return sbits % 10000000; } break;
-        case 8: { return sbits % 100000000; } break;
+        case 6: return sbits % 1000000;
+        case 7: return sbits % 10000000;
+        case 8: return sbits % 100000000;
 
         default: {
             LogError("Invalid number of digits");

@@ -95,8 +95,8 @@ bool sms_Sender::Send(const char *to, const char *message)
     RG_ASSERT(config.provider != sms_Provider::None);
 
     switch (config.provider) {
-        case sms_Provider::None: {} break;
-        case sms_Provider::Twilio: { return SendTwilio(to, message); } break;
+        case sms_Provider::None: { RG_UNREACHABLE(); } break;
+        case sms_Provider::Twilio: return SendTwilio(to, message);
     }
 
     RG_UNREACHABLE();
