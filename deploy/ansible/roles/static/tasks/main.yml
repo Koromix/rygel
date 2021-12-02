@@ -47,7 +47,18 @@
     dest: '{{ static_root_path }}/repo/{{ item.name }}'
     force: yes
   loop: '{{ static_deploys }}'
+  when: 'item.repo is defined'
   become: no
+
+- name: Create live directories
+  file:
+    path: '{{ static_root_path }}/live/{{ item.name }}'
+    state: directory
+    owner: root
+    group: root
+    recurse: yes
+  loop: '{{ static_deploys }}'
+  become: yes
 
 - name: Extract static subdirectories
   synchronize:
@@ -59,4 +70,5 @@
       - '--exclude=".*"'
   delegate_to: '{{ inventory_hostname }}'
   loop: '{{ static_deploys }}'
+  when: 'item.repo is defined'
   become: yes
