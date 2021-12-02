@@ -119,12 +119,12 @@ function ApplicationBuilder(app) {
 
             if (typeof func === 'function') {
                 func(self);
+
+                if (!form_ref.menu.length)
+                    self.page(key, title);
             } else {
                 self.page(key, func || title);
             }
-
-            if (!form_ref.menu.length)
-                throw new Error(`Form '${key}' must contain at least one page or child form`);
 
             // Determine URL
             if (form_ref.pages.size) {
