@@ -519,14 +519,13 @@ retry_pwd:
         if (!pwd_CheckPassword(password, username))
             goto retry_pwd;
 
-reconfirm_pwd:
         const char *password2 = Prompt("Confirm: ", nullptr, "*", &temp_alloc);
         if (!password2)
             return 1;
 
         if (!TestStr(password, password2)) {
             LogError("Password mismatch");
-            goto reconfirm_pwd;
+            goto retry_pwd;
         }
     }
     LogInfo();

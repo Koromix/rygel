@@ -78,14 +78,13 @@ retry:
             goto retry;
 
         if (confirm) {
-reconfirm:
             const char *password2 = Prompt("Confirm: ", nullptr, mask ? "*" : nullptr, &temp_alloc);
             if (!password2)
                 return 1;
 
             if (!TestStr(password, password2)) {
                 LogError("Password mismatch");
-                goto reconfirm;
+                goto retry;
             }
         } else if (check && !pwd_CheckPassword(password)) {
             goto retry;
