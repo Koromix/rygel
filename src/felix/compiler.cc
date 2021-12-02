@@ -1591,6 +1591,9 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
             while (remain.len) {
                 Span<const char> part = SplitStr(remain, '-', &remain);
 
+                // Remove extension (if any)
+                part = SplitStrReverse(part, '.');
+
                 if (part == "clang") {
                     return ClangCompiler::Create(spec.cc, spec.ld);
                 } else if (part == "gcc") {
