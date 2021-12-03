@@ -1589,10 +1589,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
             Span<const char> remain = SplitStrReverseAny(spec.cc, RG_PATH_SEPARATORS).ptr;
 
             while (remain.len) {
-                Span<const char> part = SplitStr(remain, '-', &remain);
-
-                // Remove extension (if any)
-                part = SplitStrReverse(part, '.');
+                Span<const char> part = SplitStrAny(remain, "_-.", &remain);
 
                 if (part == "clang") {
                     return ClangCompiler::Create(spec.cc, spec.ld);
