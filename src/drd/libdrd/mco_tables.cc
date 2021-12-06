@@ -169,7 +169,7 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
         raw_main_section.raw_len = BigEndian(raw_main_section.raw_len);
         raw_main_section.raw_offset = BigEndian(raw_main_section.raw_offset);
 
-        int version = 0, revision = 0;
+        unsigned int version = 0, revision = 0;
         sscanf(raw_main_header.version, "%2u%2u", &version, &revision);
         FAIL_PARSE_IF(filename, version < 11 || (version == 11 && revision < 10));
         FAIL_PARSE_IF(filename, raw_main_section.value_len != RG_SIZE(PackedTablePtr1111));
@@ -267,7 +267,7 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
                &table.build_date.st.year);
         table.build_date.st.year = (int16_t)(table.build_date.st.year + 2000);
         FAIL_PARSE_IF(filename, !table.build_date.IsValid());
-        sscanf(raw_table_header.version, "%2" SCNd16 "%2" SCNd16,
+        sscanf(raw_table_header.version, "%2" SCNu16 "%2" SCNu16,
                &table.version[0], &table.version[1]);
         table.limit_dates[0] = mco_ConvertDate1980(raw_table_ptr.date_range[0]);
         if (table.type == mco_TableType::GhmDecisionTree &&
@@ -2064,13 +2064,16 @@ mco_ListSpecifier mco_ListSpecifier::FromString(const char *spec_str)
         } break;
 
         case '-': {
-            spec.type = mco_ListSpecifier::Type::CmdJump;
-            int ret = sscanf(spec_str + 2, "%02" SCNu8 "%02" SCNu8,
-                             &spec.u.cmd_jump.cmd, &spec.u.cmd_jump.jump);
+            uint8_t cmd, jump;
+            int ret = sscanf(spec_str + 2, "%02" SCNu8 "%02" SCNu8, &cmd, &jump);
+
             if (ret == 1) {
                 spec.type = mco_ListSpecifier::Type::Cmd;
+                spec.u.cmd = cmd;
             } else if (ret == 2) {
                 spec.type = mco_ListSpecifier::Type::CmdJump;
+                spec.u.cmd_jump.cmd = (int8_t)cmd;
+                spec.u.cmd_jump.jump = (int8_t)jump;
             } else {
                 goto error;
             }
