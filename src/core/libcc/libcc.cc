@@ -2309,8 +2309,31 @@ bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_p
         }
         return true;
     } else {
-        // XXX: Non-Unicode friendly on Win32
+#ifdef _WIN32
+        LocalArray<char, 16384> buf;
+        Span<const char> env;
+        {
+            wchar_t buf_w[RG_SIZE(buf.data)];
+            DWORD len = GetEnvironmentVariableW(L"PATH", buf_w, RG_LEN(buf_w));
+
+            if (!len && GetLastError() != ERROR_ENVVAR_NOT_FOUND) {
+                LogError("Failed to get PATH environment variable: %1", GetWin32ErrorString());
+                return false;
+            } else if (len >= RG_LEN(buf_w)) {
+                LogError("Failed to get PATH environment variable: buffer to small");
+                return false;
+            }
+            buf_w[len] = 0;
+
+            buf.len = ConvertWin32WideToUtf8(buf_w, buf.data);
+            if (buf.len < 0)
+                return false;
+
+            env = buf;
+        }
+#else
         Span<const char> env = getenv("PATH");
+#endif
 
         while (env.len) {
             Span<const char> path = SplitStr(env, RG_PATH_DELIMITER, &env);
