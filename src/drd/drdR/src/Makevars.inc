@@ -22,16 +22,16 @@ all:
 override OBJECTS = $(addprefix ./${R_ARCH}_, drdR_mco.cc.o Rcc.cc.o libcc.cc.o libdrd.cc.o miniz.c.o)
 
 ./${R_ARCH}_drdR_mco.cc.o: ../drdR_mco.cc
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 ./${R_ARCH}_Rcc.cc.o: ../../../core/libwrap/Rcc.cc
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 ./${R_ARCH}_libcc.cc.o: ../../../core/libcc/libcc.cc
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 ./${R_ARCH}_libdrd.cc.o: ../../libdrd/libdrd.cc
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 
 MINIZ_FLAGS = -fno-strict-aliasing -DMINIZ_NO_MALLOC -DMINIZ_NO_STDIO -DMINIZ_NO_TIME\
               -DMINIZ_NO_ARCHIVE_APIS -DMINIZ_NO_ARCHIVE_WRITING_APIS -DMINIZ_NO_ZLIB_APIS\
               -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES
 ./${R_ARCH}_miniz.c.o: ../../../../vendor/miniz/miniz.c
-	$(CC) $(ALL_CPPFLAGS) $(ALL_CFLAGS) $(MINIZ_FLAGS) -c -o $@ $<
+	$(CC) $(ALL_CPPFLAGS) $(ALL_CFLAGS) $(MINIZ_FLAGS) -Wno-pedantic -c -o $@ $<

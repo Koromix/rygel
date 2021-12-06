@@ -24,33 +24,33 @@ override OBJECTS := $(addprefix ./${R_ARCH}_, heimdallR.cc.o Rcc.cc.o libcc.cc.o
                                               miniz.c.o roboto_medium_ttf.c.o)
 
 ./${R_ARCH}_heimdallR.cc.o: ../heimdallR.cc
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 ./${R_ARCH}_Rcc.cc.o: ../../../core/libwrap/Rcc.cc
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 ./${R_ARCH}_libcc.cc.o: ../../../core/libcc/libcc.cc
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 ./${R_ARCH}_libgui.cc.o: ../../../core/libgui/libgui.cc
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 ./${R_ARCH}_opengl.cc.o: ../../../core/libwrap/opengl.cc
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 ./${R_ARCH}_libheimdall.cc.o: ../../libheimdall/libheimdall.cc
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 ./${R_ARCH}_roboto_medium_ttf.c.o: ../../libheimdall/roboto_medium_ttf.c
-	$(CC) $(ALL_CPPFLAGS) $(ALL_CFLAGS) -c -o $@ $<
+	$(CC) $(ALL_CPPFLAGS) $(ALL_CFLAGS) -Wno-pedantic -c -o $@ $<
 
 ./${R_ARCH}_imgui.cpp.o: ../../../../vendor/imgui/imgui.cpp
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 ./${R_ARCH}_imgui_demo.cpp.o: ../../../../vendor/imgui/imgui_demo.cpp
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 ./${R_ARCH}_imgui_draw.cpp.o: ../../../../vendor/imgui/imgui_draw.cpp
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 ./${R_ARCH}_imgui_tables.cpp.o: ../../../../vendor/imgui/imgui_tables.cpp
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 ./${R_ARCH}_imgui_widgets.cpp.o: ../../../../vendor/imgui/imgui_widgets.cpp
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 
 MINIZ_FLAGS = -fno-strict-aliasing -DMINIZ_NO_MALLOC -DMINIZ_NO_STDIO -DMINIZ_NO_TIME\
               -DMINIZ_NO_ARCHIVE_APIS -DMINIZ_NO_ARCHIVE_WRITING_APIS -DMINIZ_NO_ZLIB_APIS\
               -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES
 ./${R_ARCH}_miniz.c.o: ../../../../vendor/miniz/miniz.c
-	$(CC) $(ALL_CPPFLAGS) $(ALL_CFLAGS) $(MINIZ_FLAGS) -c -o $@ $<
+	$(CC) $(ALL_CPPFLAGS) $(ALL_CFLAGS) $(MINIZ_FLAGS) -Wno-pedantic -c -o $@ $<
