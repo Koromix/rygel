@@ -50,7 +50,7 @@ Provided the needed dependencies are available (including Rtools and Rcpp), it s
 
 # Mono repository
 
-I've started using a single repository for all my projects a little over a year ago because it is easier to manage.
+I've started using a single repository for all my projects in 2018 because it is easier to manage.
 There are two killers features for me:
 
 * Cross-project refactoring
