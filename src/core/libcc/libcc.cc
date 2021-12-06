@@ -2310,10 +2310,10 @@ bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_p
         return true;
     } else {
 #ifdef _WIN32
-        LocalArray<char, 16384> buf;
+        LocalArray<char, 16384> env_buf;
         Span<const char> env;
         {
-            wchar_t buf_w[RG_SIZE(buf.data)];
+            wchar_t buf_w[RG_SIZE(env_buf.data)];
             DWORD len = GetEnvironmentVariableW(L"PATH", buf_w, RG_LEN(buf_w));
 
             if (!len && GetLastError() != ERROR_ENVVAR_NOT_FOUND) {
@@ -2325,11 +2325,11 @@ bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_p
             }
             buf_w[len] = 0;
 
-            buf.len = ConvertWin32WideToUtf8(buf_w, buf.data);
-            if (buf.len < 0)
+            env_buf.len = ConvertWin32WideToUtf8(buf_w, env_buf.data);
+            if (env_buf.len < 0)
                 return false;
 
-            env = buf;
+            env = env_buf;
         }
 #else
         Span<const char> env = getenv("PATH");
