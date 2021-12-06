@@ -65,5 +65,6 @@ Some projects contain proprietary assets (such as Otocyon), these files are encr
 key to work on these projects :)
 
 For ease of use on Windows, the compiled binary is available in the repository: `vendor/git-crypt/git-crypt.exe`.
-
 If you want to rebuild it, use `mingw32-make LDFLAGS="-static-libgcc -static-libstdc++ -static -lcrypto -lws2_32 -s"`.
+
+Once you have the key file, just run `git-crypt unlock <path_to_key>` and enjoy!
