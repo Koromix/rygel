@@ -57,3 +57,13 @@ There are two killers features for me:
 * Simplified dependency management
 
 You can find a more detailed rationale here: https://danluu.com/monorepo/
+
+# Encrypted files
+
+Some projects contain proprietary assets (such as Otocyon), these files are encrypted with
+[git-crypt](https://github.com/AGWA/git-crypt), using a simple symmetric key. Ask me if you want the
+key to work on these projects :)
+
+For ease of use on Windows, the compiled binary is available in the repository: `vendor/git-crypt/git-crypt.exe`.
+
+If you want to rebuild it, use `mingw32-make LDFLAGS="-static-libgcc -static-libstdc++ -static -lcrypto -lws2_32 -s"`.
