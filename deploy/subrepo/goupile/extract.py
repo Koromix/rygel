@@ -25,7 +25,7 @@ DEFAULT_REMOTE = 'git@framagit.org:interhop/goupile.git'
 
 def rewrite_repository(root_directory, clone_directory, push):
     # Clone or update repository
-    subprocess.run(['git', 'clone', root_directory, clone_directory, '--no-local'], check = True)
+    subprocess.run(['git', 'clone', '--bare', root_directory, clone_directory, '--no-local'], check = True)
     os.chdir(clone_directory)
 
     # FelixBuild.ini blobs
@@ -107,20 +107,20 @@ def rewrite_repository(root_directory, clone_directory, push):
                     '--invert-paths', '--paths-from-file', script_directory + '/remove.txt'], check = True)
 
     # Fetch remote repository
-    subprocess.run(['git', 'remote', 'add', 'origin', args.remote_url], check = True)
-    subprocess.run(['git', 'fetch', 'origin'], check = True)
+    subprocess.run(['git', 'remote', 'add', 'distant', args.remote_url], check = True)
+    subprocess.run(['git', 'fetch', 'distant'], check = True)
 
     # Find common ancestor commit
-    subject = subprocess.check_output(['git', 'show', 'origin/master', '-s', '--pretty=format:%s']).decode('utf-8').strip()
+    subject = subprocess.check_output(['git', 'show', 'distant/master', '-s', '--pretty=format:%s']).decode('utf-8').strip()
     base = subprocess.check_output(['git', 'log', '--pretty=format:%H', '--grep=' + subject]).decode('utf-8').strip()
     head = subprocess.check_output(['git', 'show', '-s', '--pretty=format:%H']).decode('utf-8').strip()
 
     # Apply and push changes
     if base != head:
-        subprocess.run(['git', 'reset', '--hard', 'origin/master'])
+        subprocess.run(['git', 'reset', '--hard', 'distant/master'])
         subprocess.run(['git', 'cherry-pick', base + '..' + head])
         if push:
-            subprocess.run(['git', 'push', '-u', 'origin', 'master'])
+            subprocess.run(['git', 'push', '-u', 'distant', 'master'])
 
 if __name__ == "__main__":
     start_directory = os.getcwd()
