@@ -26,7 +26,8 @@
 namespace RG {
 
 static bool SplitPrefixSuffix(const char *binary, const char *needle,
-                              Span<const char> *out_prefix, Span<const char> *out_suffix)
+                              Span<const char> *out_prefix, Span<const char> *out_suffix,
+                              Span<const char> *out_version)
 {
     const char *ptr = strstr(binary, needle);
     if (!ptr) {
@@ -36,6 +37,12 @@ static bool SplitPrefixSuffix(const char *binary, const char *needle,
 
     *out_prefix = MakeSpan(binary, ptr - binary);
     *out_suffix = ptr + strlen(needle);
+
+    if (out_suffix->ptr[0] == '-' && std::all_of(out_suffix->ptr + 1, out_suffix->end(), IsAsciiDigit)) {
+        *out_version = *out_suffix;
+    } else {
+        *out_version = {};
+    }
 
     return true;
 }
@@ -123,9 +130,9 @@ class ClangCompiler final: public Compiler {
 public:
     ClangCompiler(HostPlatform host) : Compiler(host, "Clang") {}
 
-    static std::unique_ptr<const Compiler> Create(const char *cc, const char *ld)
+    static std::unique_ptr<const Compiler> Create(HostPlatform host, const char *cc, const char *ld)
     {
-        std::unique_ptr<ClangCompiler> compiler = std::make_unique<ClangCompiler>(NativeHost);
+        std::unique_ptr<ClangCompiler> compiler = std::make_unique<ClangCompiler>(host);
 
         // Prefer LLD
         if (!ld && FindExecutableInPath("lld")) {
@@ -136,12 +143,13 @@ public:
         {
             Span<const char> prefix;
             Span<const char> suffix;
-            if (!SplitPrefixSuffix(cc, "clang", &prefix, &suffix))
+            Span<const char> version;
+            if (!SplitPrefixSuffix(cc, "clang", &prefix, &suffix, &version))
                 return nullptr;
 
             compiler->cc = DuplicateString(cc, &compiler->str_alloc).ptr;
             compiler->cxx = Fmt(&compiler->str_alloc, "%1clang++%2", prefix, suffix).ptr;
-            compiler->rc = Fmt(&compiler->str_alloc, "%1llvm-rc%2", prefix, suffix).ptr;
+            compiler->rc = Fmt(&compiler->str_alloc, "%1llvm-rc%2", prefix, version).ptr;
             compiler->ld = ld ? DuplicateString(ld, &compiler->str_alloc).ptr : nullptr;
         }
 
@@ -185,19 +193,15 @@ public:
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::StaticLink;
         supported |= (int)CompileFeature::ASan;
-#ifndef _WIN32
-        supported |= (int)CompileFeature::TSan;
-#endif
         supported |= (int)CompileFeature::UBSan;
         supported |= (int)CompileFeature::LTO;
-#ifndef _WIN32
-        supported |= (int)CompileFeature::SafeStack;
-#endif
         supported |= (int)CompileFeature::ZeroInit;
         supported |= (int)CompileFeature::CFI; // LTO only
-#ifndef _WIN32
-        supported |= (int)CompileFeature::ShuffleCode; // Requires lld version >= 11
-#endif
+        if (host != HostPlatform::Windows) {
+            supported |= (int)CompileFeature::TSan;
+            supported |= (int)CompileFeature::SafeStack;
+            supported |= (int)CompileFeature::ShuffleCode; // Requires lld version >= 11
+        }
         supported |= (int)CompileFeature::Cxx17;
 
         uint32_t unsupported = features & ~supported;
@@ -230,15 +234,17 @@ public:
         return true;
     }
 
-#ifdef _WIN32
-    const char *GetObjectExtension() const override { return ".obj"; }
-    const char *GetLinkExtension() const override { return ".exe"; }
+    const char *GetObjectExtension() const override
+    {
+        const char *ext = (host == HostPlatform::Windows) ? ".obj" : ".o";
+        return ext;
+    }
+    const char *GetLinkExtension() const override
+    {
+        const char *ext = (host == HostPlatform::Windows) ? ".exe" : "";
+        return ext;
+    }
     const char *GetPostExtension() const override { return nullptr; }
-#else
-    const char *GetObjectExtension() const override { return ".o"; }
-    const char *GetLinkExtension() const override { return ""; }
-    const char *GetPostExtension() const override { return nullptr; }
-#endif
 
     bool GetCore(Span<const char *const>, Allocator *, HeapArray<const char *> *,
                  HeapArray<const char *> *, const char **) const override { return true; }
@@ -322,43 +328,49 @@ public:
         }
 
         // Platform flags
-#if defined(_WIN32)
-        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
-                  " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
-                  " -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE"
-                  " -D_MT -Xclang --dependent-lib=oldnames"
-                  " -Wno-unknown-warning-option -Wno-unknown-pragmas -Wno-deprecated-declarations");
+        switch (host) {
+            case HostPlatform::Windows: {
+                Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
+                          " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
+                          " -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE"
+                          " -D_MT -Xclang --dependent-lib=oldnames"
+                          " -Wno-unknown-warning-option -Wno-unknown-pragmas -Wno-deprecated-declarations");
 
-        if (src_type == SourceType::CXX) {
-            Fmt(&buf, " -Xclang -flto-visibility-public-std -D_SILENCE_CLANG_CONCEPTS_MESSAGE");
+                if (src_type == SourceType::CXX) {
+                    Fmt(&buf, " -Xclang -flto-visibility-public-std -D_SILENCE_CLANG_CONCEPTS_MESSAGE");
+                }
+            } break;
+
+            case HostPlatform::macOS: {
+                Fmt(&buf, " -pthread -fPIC");
+                if (clang11) {
+                    Fmt(&buf, " -fno-semantic-interposition");
+                }
+            } break;
+
+            default: {
+                Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
+                          " -pthread -fPIC");
+                if (clang11) {
+                    Fmt(&buf, " -fno-semantic-interposition");
+                }
+                if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
+                    Fmt(&buf, " -D_FORTIFY_SOURCE=2");
+                }
+            } break;
         }
-#elif defined(__APPLE__)
-        Fmt(&buf, " -pthread -fPIC");
-        if (clang11) {
-            Fmt(&buf, " -fno-semantic-interposition");
-        }
-#else
-        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
-                  " -pthread -fPIC");
-        if (clang11) {
-            Fmt(&buf, " -fno-semantic-interposition");
-        }
-        if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
-            Fmt(&buf, " -D_FORTIFY_SOURCE=2");
-        }
-#endif
 
         // Features
         if (features & (int)CompileFeature::DebugInfo) {
             Fmt(&buf, " -g");
         }
-#ifdef _WIN32
-        if (features & (int)CompileFeature::StaticLink) {
-            Fmt(&buf, " -Xclang --dependent-lib=libcmt");
-        } else {
-            Fmt(&buf, " -Xclang --dependent-lib=msvcrt");
+        if (host == HostPlatform::Windows) {
+            if (features & (int)CompileFeature::StaticLink) {
+                Fmt(&buf, " -Xclang --dependent-lib=libcmt");
+            } else {
+                Fmt(&buf, " -Xclang --dependent-lib=msvcrt");
+            }
         }
-#endif
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
         }
@@ -369,11 +381,9 @@ public:
             Fmt(&buf, " -fsanitize=undefined");
         }
         Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4");
-#ifdef __linux__
-        if (clang11) {
+        if (host == HostPlatform::Linux && clang11) {
             Fmt(&buf, " -fstack-clash-protection");
         }
-#endif
         if (features & (int)CompileFeature::SafeStack) {
             Fmt(&buf, " -fsanitize=safe-stack");
         }
@@ -457,49 +467,51 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build mode
-#ifdef _WIN32
         if (features & (int)CompileFeature::LTO) {
             Fmt(&buf, " -flto");
+
+            if (host != HostPlatform::Windows) {
+                Fmt(&buf, " -Wl,-O1");
+            }
         }
-#else
-        if (features & (int)CompileFeature::LTO) {
-            Fmt(&buf, " -flto -Wl,-O1");
-        }
-#endif
 
         // Objects and libraries
         for (const char *obj_filename: obj_filenames) {
             Fmt(&buf, " \"%1\"", obj_filename);
         }
         for (const char *lib: libraries) {
-#ifdef __APPLE__
-            if (lib[0] == '!') {
+            if (host == HostPlatform::macOS && lib[0] == '!') {
                 Fmt(&buf, " -framework %1", lib + 1);
             } else {
                 Fmt(&buf, " -l%1", lib);
             }
-#else
-            Fmt(&buf, " -l%1", lib);
-#endif
         }
 
         // Platform flags
-#if defined(_WIN32)
-        Fmt(&buf, " --rtlib=compiler-rt -Wl,setargv.obj");
-        if (features & (int)CompileFeature::DebugInfo) {
-            Fmt(&buf, " -g");
-        }
-#elif defined(__APPLE__)
-        Fmt(&buf, " -ldl -pthread -framework CoreFoundation -framework SystemConfiguration");
-#else
-        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
-        if (link_type == LinkType::Executable) {
-            Fmt(&buf, " -pie");
-        }
-    #if defined(__arm__) || defined(__thumb__)
-        Fmt(&buf, " -latomic");
-    #endif
+        switch (host) {
+            case HostPlatform::Windows: {
+                Fmt(&buf, " --rtlib=compiler-rt -Wl,setargv.obj");
+                if (features & (int)CompileFeature::DebugInfo) {
+                    Fmt(&buf, " -g");
+                }
+            } break;
+
+            case HostPlatform::macOS: {
+                Fmt(&buf, " -ldl -pthread -framework CoreFoundation -framework SystemConfiguration");
+            } break;
+
+            default: {
+                Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
+                if (link_type == LinkType::Executable) {
+                    Fmt(&buf, " -pie");
+                }
+
+                // XXX: Ugly, but cross-compilation is not yet supported for this platform anyway
+#if defined(__arm__) || defined(__thumb__)
+                Fmt(&buf, " -latomic");
 #endif
+            } break;
+        }
 
         // Features
         if (features & (int)CompileFeature::ASan) {
@@ -552,20 +564,21 @@ class GnuCompiler final: public Compiler {
 public:
     GnuCompiler(HostPlatform host) : Compiler(host, "GCC") {}
 
-    static std::unique_ptr<const Compiler> Create(const char *cc, const char *ld)
+    static std::unique_ptr<const Compiler> Create(HostPlatform host, const char *cc, const char *ld)
     {
-        std::unique_ptr<GnuCompiler> compiler = std::make_unique<GnuCompiler>(NativeHost);
+        std::unique_ptr<GnuCompiler> compiler = std::make_unique<GnuCompiler>(host);
 
         // Find executables
         {
             Span<const char> prefix;
             Span<const char> suffix;
-            if (!SplitPrefixSuffix(cc, "gcc", &prefix, &suffix))
+            Span<const char> version;
+            if (!SplitPrefixSuffix(cc, "gcc", &prefix, &suffix, &version))
                 return nullptr;
 
             compiler->cc = DuplicateString(cc, &compiler->str_alloc).ptr;
             compiler->cxx = Fmt(&compiler->str_alloc, "%1g++%2", prefix, suffix).ptr;
-            compiler->windres = Fmt(&compiler->str_alloc, "%1windres%2", prefix, suffix).ptr;
+            compiler->windres = Fmt(&compiler->str_alloc, "%1windres%2", prefix, version).ptr;
             compiler->ld = ld ? DuplicateString(ld, &compiler->str_alloc).ptr : nullptr;
         }
 
@@ -587,19 +600,17 @@ public:
         supported |= (int)CompileFeature::OptimizeSpeed;
         supported |= (int)CompileFeature::OptimizeSize;
         supported |= (int)CompileFeature::HotAssets;
-#ifndef _WIN32
-        // Sometimes it works, somestimes not and the object files are
-        // corrupt... just avoid PCH on MinGW
-        supported |= (int)CompileFeature::PCH;
-#endif
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::StaticLink;
-#ifndef _WIN32
-        supported |= (int)CompileFeature::ASan;
-        supported |= (int)CompileFeature::TSan;
-        supported |= (int)CompileFeature::UBSan;
-        supported |= (int)CompileFeature::LTO;
-#endif
+        if (host != HostPlatform::Windows) {
+            // Sometimes it works, somestimes not and the object files are
+            // corrupt... just avoid PCH on MinGW
+            supported |= (int)CompileFeature::PCH;
+            supported |= (int)CompileFeature::ASan;
+            supported |= (int)CompileFeature::TSan;
+            supported |= (int)CompileFeature::UBSan;
+            supported |= (int)CompileFeature::LTO;
+        }
         supported |= (int)CompileFeature::ZeroInit;
         supported |= (int)CompileFeature::Cxx17;
 
@@ -629,15 +640,13 @@ public:
         return true;
     }
 
-#ifdef _WIN32
     const char *GetObjectExtension() const override { return ".o"; }
-    const char *GetLinkExtension() const override { return ".exe"; }
+    const char *GetLinkExtension() const override
+    {
+        const char *ext = (host == HostPlatform::Windows) ? ".exe" : "";
+        return ext;
+    }
     const char *GetPostExtension() const override { return nullptr; }
-#else
-    const char *GetObjectExtension() const override { return ".o"; }
-    const char *GetLinkExtension() const override { return ""; }
-    const char *GetPostExtension() const override { return nullptr; }
-#endif
 
     bool GetCore(Span<const char *const>, Allocator *, HeapArray<const char *> *,
                  HeapArray<const char *> *, const char **) const override { return true; }
@@ -724,22 +733,30 @@ public:
         }
 
         // Platform flags
-#if defined(_WIN32)
-        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
-                  " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
-                  " -D__USE_MINGW_ANSI_STDIO=1");
-#elif defined(__APPLE__)
-        Fmt(&buf, " -pthread -fPIC -fno-semantic-interposition");
-#else
-        Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
-                  " -pthread -fPIC -fno-semantic-interposition");
-        if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
-            Fmt(&buf, " -D_FORTIFY_SOURCE=2");
-        }
-    #if defined(__arm__) || defined(__thumb__)
-        Fmt(&buf, " -Wno-psabi");
-    #endif
+        switch (host) {
+            case HostPlatform::Windows: {
+                Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
+                          " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE"
+                          " -D__USE_MINGW_ANSI_STDIO=1");
+            } break;
+
+            case HostPlatform::macOS: {
+                Fmt(&buf, " -pthread -fPIC -fno-semantic-interposition");
+            } break;
+
+            default: {
+                Fmt(&buf, " -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
+                          " -pthread -fPIC -fno-semantic-interposition");
+                if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
+                    Fmt(&buf, " -D_FORTIFY_SOURCE=2");
+                }
+
+                // XXX: Ugly, but cross-compilation is not yet supported for this platform anyway
+#if defined(__arm__) || defined(__thumb__)
+                Fmt(&buf, " -Wno-psabi");
 #endif
+            } break;
+        }
 
         // Features
         if (features & (int)CompileFeature::DebugInfo) {
@@ -755,9 +772,9 @@ public:
             Fmt(&buf, " -fsanitize=undefined");
         }
         Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4");
-#ifndef _WIN32
-        Fmt(&buf, " -fstack-clash-protection");
-#endif
+        if (host != HostPlatform::Windows) {
+            Fmt(&buf, " -fstack-clash-protection");
+        }
         if (features & (int)CompileFeature::ZeroInit) {
             Fmt(&buf, " -ftrivial-auto-var-init=zero");
         }
@@ -837,31 +854,35 @@ public:
             Fmt(&buf, " \"%1\"", obj_filename);
         }
         for (const char *lib: libraries) {
-#ifdef __APPLE__
-            if (lib[0] == '!') {
+            if (host == HostPlatform::macOS && lib[0] == '!') {
                 Fmt(&buf, " -framework %1", lib + 1);
             } else {
                 Fmt(&buf, " -l%1", lib);
             }
-#else
-            Fmt(&buf, " -l%1", lib);
-#endif
         }
 
         // Platform flags and libraries
-#if defined(_WIN32)
-        Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat -Wl,--high-entropy-va");
-#elif defined(__APPLE__)
-        Fmt(&buf, " -ldl -pthread -framework CoreFoundation -framework SystemConfiguration");
-#else
-        Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
-        if (link_type == LinkType::Executable) {
-            Fmt(&buf, " -pie");
-        }
-    #if defined(__arm__) || defined(__thumb__)
-        Fmt(&buf, " -latomic");
-    #endif
+        switch (host) {
+            case HostPlatform::Windows: {
+                Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat -Wl,--high-entropy-va");
+            } break;
+
+            case HostPlatform::macOS: {
+                Fmt(&buf, " -ldl -pthread -framework CoreFoundation -framework SystemConfiguration");
+            } break;
+
+            default: {
+                Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
+                if (link_type == LinkType::Executable) {
+                    Fmt(&buf, " -pie");
+                }
+
+                // XXX: Ugly, but cross-compilation is not yet supported for this platform anyway
+#if defined(__arm__) || defined(__thumb__)
+                Fmt(&buf, " -latomic");
 #endif
+            } break;
+        }
 
         // Features
         if (features & (int)CompileFeature::ASan) {
@@ -873,9 +894,9 @@ public:
         if (features & (int)CompileFeature::UBSan) {
             Fmt(&buf, " -fsanitize=undefined");
         }
-#ifdef _WIN32
-        Fmt(&buf, " -lssp");
-#endif
+        if (host == HostPlatform::Windows) {
+            Fmt(&buf, " -lssp");
+        }
 
         if (ld) {
             Fmt(&buf, " -fuse-ld=%1", ld);
@@ -913,13 +934,14 @@ public:
         {
             Span<const char> prefix;
             Span<const char> suffix;
-            if (!SplitPrefixSuffix(cl, "cl", &prefix, &suffix))
+            Span<const char> version;
+            if (!SplitPrefixSuffix(cl, "cl", &prefix, &suffix, &version))
                 return nullptr;
 
             compiler->cl = DuplicateString(cl, &compiler->str_alloc).ptr;
-            compiler->rc = Fmt(&compiler->str_alloc, "%1rc%2", prefix, suffix).ptr;
+            compiler->rc = Fmt(&compiler->str_alloc, "%1rc%2", prefix, version).ptr;
             compiler->link = link ? DuplicateString(link, &compiler->str_alloc).ptr
-                                  : Fmt(&compiler->str_alloc, "%1link%2", prefix, suffix).ptr;
+                                  : Fmt(&compiler->str_alloc, "%1link%2", prefix, version).ptr;
         }
 
         return compiler;
@@ -1211,13 +1233,14 @@ public:
         {
             Span<const char> prefix;
             Span<const char> suffix;
-            if (!SplitPrefixSuffix(cc, "gcc", &prefix, &suffix))
+            Span<const char> version;
+            if (!SplitPrefixSuffix(cc, "gcc", &prefix, &suffix, &version))
                 return nullptr;
 
             compiler->cc = DuplicateString(cc, &compiler->str_alloc).ptr;
             compiler->cxx = Fmt(&compiler->str_alloc, "%1g++%2", prefix, suffix).ptr;
-            compiler->ld = Fmt(&compiler->str_alloc, "%1ld%2", prefix, suffix).ptr;
-            compiler->objcopy = Fmt(&compiler->str_alloc, "%1objcopy%2", prefix, suffix).ptr;
+            compiler->ld = Fmt(&compiler->str_alloc, "%1ld%2", prefix, version).ptr;
+            compiler->objcopy = Fmt(&compiler->str_alloc, "%1objcopy%2", prefix, version).ptr;
         }
 
         return compiler;
@@ -1511,6 +1534,28 @@ public:
     }
 };
 
+static std::unique_ptr<const Compiler> CreateDesktopCompiler(const PlatformSpecifier &spec)
+{
+    Span<const char> remain = SplitStrReverseAny(spec.cc, RG_PATH_SEPARATORS).ptr;
+
+    while (remain.len) {
+        Span<const char> part = SplitStrAny(remain, "_-.", &remain);
+
+        if (part == "clang") {
+            return ClangCompiler::Create(spec.host, spec.cc, spec.ld);
+        } else if (part == "gcc") {
+            return GnuCompiler::Create(spec.host, spec.cc, spec.ld);
+#ifdef _WIN32
+        } else if (part == "cl") {
+            return MsCompiler::Create(spec.cc, spec.ld);
+#endif
+        }
+    }
+
+    LogError("Cannot find driver for compiler '%1'", spec.cc);
+    return nullptr;
+}
+
 static void FindArduinoCompiler(const char *name, const char *compiler, Span<char> out_cc)
 {
 #ifdef _WIN32
@@ -1620,27 +1665,16 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
             }
         }
 
-        // Find appropriate driver
-        {
-            Span<const char> remain = SplitStrReverseAny(spec.cc, RG_PATH_SEPARATORS).ptr;
-
-            while (remain.len) {
-                Span<const char> part = SplitStrAny(remain, "_-.", &remain);
-
-                if (part == "clang") {
-                    return ClangCompiler::Create(spec.cc, spec.ld);
-                } else if (part == "gcc") {
-                    return GnuCompiler::Create(spec.cc, spec.ld);
-#ifdef _WIN32
-                } else if (part == "cl") {
-                    return MsCompiler::Create(spec.cc, spec.ld);
-#endif
-                }
-            }
+        return CreateDesktopCompiler(spec);
+#ifdef __linux__
+    } else if (spec.host == HostPlatform::Windows) {
+        if (!spec.cc) {
+            LogError("Path to cross-platform MinGW must be explicitly specified");
+            return nullptr;
         }
 
-        LogError("Cannot find driver for compiler '%1'", spec.cc);
-        return nullptr;
+        return CreateDesktopCompiler(spec);
+#endif
     } else if (StartsWith(HostPlatformNames[(int)spec.host], "Embedded/Teensy/AVR/")) {
         if (!spec.cc) {
             static std::once_flag flag;
