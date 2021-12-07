@@ -112,6 +112,7 @@ static int ParseMajorVersion(const char *cmd, const char *marker)
 class ClangCompiler final: public Compiler {
     const char *cc;
     const char *cxx;
+    const char *rc;
     const char *ld;
 
     bool clang11;
@@ -140,6 +141,7 @@ public:
 
             compiler->cc = DuplicateString(cc, &compiler->str_alloc).ptr;
             compiler->cxx = Fmt(&compiler->str_alloc, "%1clang++%2", prefix, suffix).ptr;
+            compiler->rc = Fmt(&compiler->str_alloc, "%1llvm-rc%2", prefix, suffix).ptr;
             compiler->ld = ld ? DuplicateString(ld, &compiler->str_alloc).ptr : nullptr;
         }
 
@@ -425,6 +427,15 @@ public:
         out_cmd->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
     }
 
+    void MakeResourceCommand(const char *rc_filename, const char *dest_filename,
+                             Allocator *alloc, Command *out_cmd) const override
+    {
+        RG_ASSERT(alloc);
+
+        out_cmd->cmd_line = Fmt(alloc, "\"%1\" /FO\"%2\" \"%3\"", rc, dest_filename, rc_filename);
+        out_cmd->cache_len = out_cmd->cmd_line.len;
+    }
+
     void MakeLinkCommand(Span<const char *const> obj_filenames,
                          Span<const char *const> libraries, LinkType link_type,
                          uint32_t features, bool env_flags, const char *dest_filename,
@@ -531,6 +542,7 @@ public:
 class GnuCompiler final: public Compiler {
     const char *cc;
     const char *cxx;
+    const char *windres;
     const char *ld;
 
     bool gcc12;
@@ -553,6 +565,7 @@ public:
 
             compiler->cc = DuplicateString(cc, &compiler->str_alloc).ptr;
             compiler->cxx = Fmt(&compiler->str_alloc, "%1g++%2", prefix, suffix).ptr;
+            compiler->windres = Fmt(&compiler->str_alloc, "%1windres%2", prefix, suffix).ptr;
             compiler->ld = ld ? DuplicateString(ld, &compiler->str_alloc).ptr : nullptr;
         }
 
@@ -782,6 +795,15 @@ public:
         out_cmd->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
     }
 
+    void MakeResourceCommand(const char *rc_filename, const char *dest_filename,
+                             Allocator *alloc, Command *out_cmd) const override
+    {
+        RG_ASSERT(alloc);
+
+        out_cmd->cmd_line = Fmt(alloc, "\"%1\" -O coff \"%2\" \"%3\"", windres, rc_filename, dest_filename);
+        out_cmd->cache_len = out_cmd->cmd_line.len;
+    }
+
     void MakeLinkCommand(Span<const char *const> obj_filenames,
                          Span<const char *const> libraries, LinkType link_type,
                          uint32_t features, bool env_flags, const char *dest_filename,
@@ -875,6 +897,7 @@ public:
 #ifdef _WIN32
 class MsCompiler final: public Compiler {
     const char *cl;
+    const char *rc;
     const char *link;
 
     BlockAllocator str_alloc;
@@ -894,6 +917,7 @@ public:
                 return nullptr;
 
             compiler->cl = DuplicateString(cl, &compiler->str_alloc).ptr;
+            compiler->rc = Fmt(&compiler->str_alloc, "%1rc%2", prefix, suffix).ptr;
             compiler->link = link ? DuplicateString(link, &compiler->str_alloc).ptr
                                   : Fmt(&compiler->str_alloc, "%1link%2", prefix, suffix).ptr;
         }
@@ -1074,6 +1098,15 @@ public:
 
         // Dependencies
         out_cmd->deps_mode = Command::DependencyMode::ShowIncludes;
+    }
+
+    void MakeResourceCommand(const char *rc_filename, const char *dest_filename,
+                             Allocator *alloc, Command *out_cmd) const override
+    {
+        RG_ASSERT(alloc);
+
+        out_cmd->cmd_line = Fmt(alloc, "\"%1\" /nologo /FO\"%2\" \"%3\"", rc, dest_filename, rc_filename);
+        out_cmd->cache_len = out_cmd->cmd_line.len;
     }
 
     void MakeLinkCommand(Span<const char *const> obj_filenames,
@@ -1405,6 +1438,9 @@ public:
         out_cmd->deps_mode = Command::DependencyMode::MakeLike;
         out_cmd->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
     }
+
+    void MakeResourceCommand(const char *rc_filename, const char *dest_filename,
+                             Allocator *alloc, Command *out_cmd) const override { RG_UNREACHABLE(); }
 
     void MakeLinkCommand(Span<const char *const> obj_filenames,
                          Span<const char *const> libraries, LinkType link_type,

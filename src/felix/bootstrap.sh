@@ -2,7 +2,7 @@
 
 cd $(dirname $0)
 
-SRC=$(ls -1 ../../src/felix/*.cc ../../src/core/libcc/libcc.cc ../../src/core/libwrap/json.cc)
+SRC=$(ls -1 ../felix/*.cc ../core/libcc/libcc.cc ../core/libwrap/json.cc ../../vendor/pugixml/src/pugixml.cpp)
 BIN=../../felix
 BUILD=../../bin/BootstrapFelix
 

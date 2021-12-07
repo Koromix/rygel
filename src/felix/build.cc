@@ -13,6 +13,7 @@
 
 #include "../core/libcc/libcc.hh"
 #include "build.hh"
+#include "../../vendor/pugixml/src/pugixml.hpp"
 
 namespace RG {
 
@@ -86,6 +87,105 @@ static bool UpdateVersionSource(const char *target_name, const BuildSettings &bu
 
     if (!build.fake && new_version) {
         return WriteFile(code, dest_filename);
+    } else {
+        return true;
+    }
+}
+
+template <typename T>
+static bool SaveXmlString(const pugi::xml_document *doc, T *out_buf)
+{
+    class StaticWriter: public pugi::xml_writer {
+        T *out_buf;
+        bool error = false;
+
+    public:
+        StaticWriter(T *out_buf) : out_buf(out_buf) {}
+
+        bool IsValid() const { return !error; }
+
+        void Append(Span<const char> str)
+        {
+            error |= (str.len > out_buf->Available());
+            if (RG_UNLIKELY(error))
+                return;
+
+            out_buf->Append(str);
+        }
+
+        void write(const void *buf, size_t len) override
+        {
+            for (Size i = 0; i < (Size)len; i++) {
+                int c = ((const uint8_t *)buf)[i];
+
+                switch (c) {
+                    case '\"': { Append("\"\""); } break;
+                    case '\t':
+                    case '\r': {} break;
+                    case '\n': { Append("\\n\",\n\t\""); } break;
+
+                    default: {
+                        if (c < 32 || c >= 128) {
+                            error |= (out_buf->Available() < 4);
+                            if (RG_UNLIKELY(error))
+                                return;
+
+                            Fmt(out_buf->TakeAvailable(), "\\x%1", FmtHex(c).Pad0(-2));
+                            out_buf->len += 4;
+                        } else {
+                            char ch = (char)c;
+                            Append(ch);
+                        }
+                    } break;
+                }
+            }
+        }
+    };
+
+    StaticWriter writer(out_buf);
+    writer.Append("#include <winuser.h>\n\n");
+    writer.Append("1 24 {\n\t\"");
+    doc->save(writer);
+    writer.Append("\"\n}\n");
+
+    return writer.IsValid();
+}
+
+static bool UpdateResourceFile(const char *target_name, bool fake, const char *dest_filename)
+{
+    static const char *const manifest = R"(
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+    <assemblyIdentity type="win32" name="" version="6.0.0.0"/>
+</assembly>
+)";
+
+    pugi::xml_document doc;
+    pugi::xml_parse_result result = doc.load_string(manifest);
+    RG_ASSERT(result);
+
+    pugi::xml_node identity = doc.select_node("/assembly/assemblyIdentity").node();
+    identity.attribute("name").set_value(target_name);
+
+    LocalArray<char, 2048> xml;
+    if (!SaveXmlString(&doc, &xml))
+        return false;
+
+    bool new_manifest;
+    if (TestFile(dest_filename, FileType::File)) {
+        char old_xml[1024] = {};
+        {
+            StreamReader reader(dest_filename);
+            reader.Read(RG_SIZE(old_xml) - 1, old_xml);
+        }
+
+        new_manifest = !TestStr(old_xml, xml);
+    } else {
+        new_manifest = true;
+    }
+
+    if (!fake && new_manifest) {
+        return WriteFile(xml, dest_filename);
     } else {
         return true;
     }
@@ -272,6 +372,23 @@ bool Builder::AddTarget(const TargetInfo &target)
         AppendNode(text, obj_filename, cmd, src_filename, ns);
 
         obj_filenames.Append(obj_filename);
+    }
+
+    // Resource file (Windows only)
+    if (build.compiler->host == HostPlatform::Windows && target.type == TargetType::Executable) {
+        const char *rc_filename = Fmt(&str_alloc, "%1%/Misc%/%2.rc", cache_directory, target.name).ptr;
+        const char *res_filename = Fmt(&str_alloc, "%1.res", rc_filename).ptr;
+
+        if (!UpdateResourceFile(target.name, build.fake, rc_filename))
+            return false;
+
+        Command cmd = {};
+        build.compiler->MakeResourceCommand(rc_filename, res_filename, &str_alloc, &cmd);
+
+        const char *text = Fmt(&str_alloc, "Build %!..+%1%!0 resource file", target.name).ptr;
+        AppendNode(text, res_filename, cmd, rc_filename, ns);
+
+        obj_filenames.Append(res_filename);
     }
 
     // Link commands

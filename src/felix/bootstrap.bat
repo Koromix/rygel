@@ -3,7 +3,7 @@
 setlocal enableDelayedExpansion
 cd %~dp0
 
-set SRC=*.cc ..\core\libcc\libcc.cc ..\core\libwrap\json.cc
+set SRC=*.cc ..\core\libcc\libcc.cc ..\core\libwrap\json.cc ..\..\vendor\pugixml\src\pugixml.cpp
 set BIN=..\..\felix.exe
 set BUILD=..\..\bin\BootstrapFelix
 
