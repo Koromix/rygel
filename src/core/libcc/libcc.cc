@@ -1767,6 +1767,13 @@ void PopLogFilter()
 
 #ifdef _WIN32
 
+static bool win32_utf8 = (GetACP() == CP_UTF8);
+
+bool IsWin32Utf8()
+{
+    return win32_utf8;
+}
+
 Size ConvertUtf8ToWin32Wide(Span<const char> str, Span<wchar_t> out_str_w)
 {
     RG_ASSERT(out_str_w.len >= 2);
@@ -1817,14 +1824,21 @@ char *GetWin32ErrorString(uint32_t error_code)
         error_code = GetLastError();
     }
 
-    wchar_t buf_w[256];
-    if (!FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                        nullptr, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                        buf_w, RG_SIZE(buf_w), nullptr))
-        goto fail;
+    if (win32_utf8) {
+        if (!FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                            nullptr, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                            str_buf, RG_SIZE(str_buf), nullptr))
+            goto fail;
+    } else {
+        wchar_t buf_w[256];
+        if (!FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                            nullptr, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                            buf_w, RG_SIZE(buf_w), nullptr))
+            goto fail;
 
-    if (!WideCharToMultiByte(CP_UTF8, 0, buf_w, -1, str_buf, RG_SIZE(str_buf), nullptr, nullptr))
-        goto fail;
+        if (!WideCharToMultiByte(CP_UTF8, 0, buf_w, -1, str_buf, RG_SIZE(str_buf), nullptr, nullptr))
+            goto fail;
+    }
 
     // Truncate newlines
     {
@@ -1854,12 +1868,18 @@ static FileType FileAttributesToType(uint32_t attr)
 
 bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
 {
-    wchar_t filename_w[4096];
-    if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
-        return false;
+    HANDLE h;
+    if (win32_utf8) {
+        h = CreateFileA(filename, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                        nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    } else {
+        wchar_t filename_w[4096];
+        if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
+            return false;
 
-    HANDLE h = CreateFileW(filename_w, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                           nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+        h = CreateFileW(filename_w, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                        nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    }
     if (h == INVALID_HANDLE_VALUE) {
         DWORD err = GetLastError();
         if (error_if_missing ||
@@ -1885,20 +1905,28 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
 
 bool RenameFile(const char *src_filename, const char *dest_filename, bool overwrite, bool)
 {
-    wchar_t src_filename_w[4096];
-    wchar_t dest_filename_w[4096];
-    if (ConvertUtf8ToWin32Wide(src_filename, src_filename_w) < 0)
-        return false;
-    if (ConvertUtf8ToWin32Wide(dest_filename, dest_filename_w) < 0)
-        return false;
-
     DWORD flags = overwrite ? MOVEFILE_REPLACE_EXISTING : 0;
-    if (!MoveFileExW(src_filename_w, dest_filename_w, flags)) {
-        LogError("Failed to rename file '%1' to '%2': %3", src_filename, dest_filename, GetWin32ErrorString());
-        return false;
+
+    if (win32_utf8) {
+        if (!MoveFileExA(src_filename, dest_filename, flags))
+            goto error;
+    } else {
+        wchar_t src_filename_w[4096];
+        wchar_t dest_filename_w[4096];
+        if (ConvertUtf8ToWin32Wide(src_filename, src_filename_w) < 0)
+            return false;
+        if (ConvertUtf8ToWin32Wide(dest_filename, dest_filename_w) < 0)
+            return false;
+
+        if (!MoveFileExW(src_filename_w, dest_filename_w, flags))
+            goto error;
     }
 
     return true;
+
+error:
+    LogError("Failed to rename file '%1' to '%2': %3", src_filename, dest_filename, GetWin32ErrorString());
+    return false;
 }
 
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
@@ -2312,7 +2340,9 @@ bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_p
 #ifdef _WIN32
         LocalArray<char, 16384> env_buf;
         Span<const char> env;
-        {
+        if (win32_utf8) {
+            env = getenv("PATH");
+        } else {
             wchar_t buf_w[RG_SIZE(env_buf.data)];
             DWORD len = GetEnvironmentVariableW(L"PATH", buf_w, RG_LEN(buf_w));
 
@@ -2373,20 +2403,24 @@ bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_p
 bool SetWorkingDirectory(const char *directory)
 {
 #ifdef _WIN32
-    wchar_t directory_w[4096];
-    if (ConvertUtf8ToWin32Wide(directory, directory_w) < 0)
-        return false;
+    if (!win32_utf8) {
+        wchar_t directory_w[4096];
+        if (ConvertUtf8ToWin32Wide(directory, directory_w) < 0)
+            return false;
 
-    if (!SetCurrentDirectoryW(directory_w)) {
-        LogError("Failed to set current directory to '%1': %2", directory, GetWin32ErrorString());
-        return false;
+        if (!SetCurrentDirectoryW(directory_w)) {
+            LogError("Failed to set current directory to '%1': %2", directory, GetWin32ErrorString());
+            return false;
+        }
+
+        return true;
     }
-#else
+#endif
+
     if (chdir(directory) < 0) {
         LogError("Failed to set current directory to '%1': %2", directory, strerror(errno));
         return false;
     }
-#endif
 
     return true;
 }
@@ -2396,16 +2430,20 @@ const char *GetWorkingDirectory()
     static RG_THREAD_LOCAL char buf[4096];
 
 #ifdef _WIN32
-    wchar_t buf_w[RG_SIZE(buf)];
-    DWORD ret = GetCurrentDirectoryW(RG_SIZE(buf_w), buf_w);
-    RG_ASSERT(ret && ret <= RG_SIZE(buf_w));
+    if (!win32_utf8) {
+        wchar_t buf_w[RG_SIZE(buf)];
+        DWORD ret = GetCurrentDirectoryW(RG_SIZE(buf_w), buf_w);
+        RG_ASSERT(ret && ret <= RG_SIZE(buf_w));
 
-    Size str_len = ConvertWin32WideToUtf8(buf_w, buf);
-    RG_ASSERT(str_len >= 0);
-#else
+        Size str_len = ConvertWin32WideToUtf8(buf_w, buf);
+        RG_ASSERT(str_len >= 0);
+
+        return buf;
+    }
+#endif
+
     const char *ptr = getcwd(buf, RG_SIZE(buf));
     RG_ASSERT(ptr);
-#endif
 
     return buf;
 }
@@ -2464,12 +2502,17 @@ const char *GetApplicationExecutable()
     static char executable_path[4096];
 
     if (!executable_path[0]) {
-        wchar_t path_w[RG_SIZE(executable_path)];
-        Size path_len = (Size)GetModuleFileNameW(nullptr, path_w, RG_SIZE(path_w));
-        RG_ASSERT(path_len && path_len < RG_SIZE(path_w));
+        if (win32_utf8) {
+            Size path_len = (Size)GetModuleFileNameA(nullptr, executable_path, RG_SIZE(executable_path));
+            RG_ASSERT(path_len && path_len < RG_SIZE(executable_path));
+        } else {
+            wchar_t path_w[RG_SIZE(executable_path)];
+            Size path_len = (Size)GetModuleFileNameW(nullptr, path_w, RG_SIZE(path_w));
+            RG_ASSERT(path_len && path_len < RG_LEN(path_w));
 
-        Size str_len = ConvertWin32WideToUtf8(path_w, executable_path);
-        RG_ASSERT(str_len >= 0);
+            Size str_len = ConvertWin32WideToUtf8(path_w, executable_path);
+            RG_ASSERT(str_len >= 0);
+        }
     }
 
     return executable_path;
@@ -2670,10 +2713,6 @@ bool PathContainsDotDot(const char *path)
 
 int OpenDescriptor(const char *filename, unsigned int flags)
 {
-    wchar_t filename_w[4096];
-    if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
-        return -1;
-
     DWORD access = 0;
     DWORD share = 0;
     DWORD creation = 0;
@@ -2719,8 +2758,16 @@ int OpenDescriptor(const char *filename, unsigned int flags)
         share |= FILE_SHARE_DELETE;
     }
 
-    HANDLE h = CreateFileW(filename_w, access, share, nullptr, creation,
-                           FILE_ATTRIBUTE_NORMAL, nullptr);
+    HANDLE h;
+    if (win32_utf8) {
+        h = CreateFileA(filename, access, share, nullptr, creation, FILE_ATTRIBUTE_NORMAL, nullptr);
+    } else {
+        wchar_t filename_w[4096];
+        if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
+            return -1;
+
+        h = CreateFileW(filename_w, access, share, nullptr, creation, FILE_ATTRIBUTE_NORMAL, nullptr);
+    }
     if (h == INVALID_HANDLE_VALUE) {
         DWORD err = GetLastError();
 
@@ -2833,6 +2880,10 @@ bool FileIsVt100(FILE *fp)
                     }
                 }
 
+                if (emulation && win32_utf8) {
+                    SetConsoleOutputCP(CP_UTF8);
+                }
+
                 return emulation;
             }();
 
@@ -2850,20 +2901,29 @@ bool FileIsVt100(FILE *fp)
 
 bool MakeDirectory(const char *directory, bool error_if_exists)
 {
-    wchar_t directory_w[4096];
-    if (ConvertUtf8ToWin32Wide(directory, directory_w) < 0)
-        return false;
-
-    if (!CreateDirectoryW(directory_w, nullptr)) {
-        DWORD err = GetLastError();
-
-        if (err != ERROR_ALREADY_EXISTS || error_if_exists) {
-            LogError("Cannot create directory '%1': %2", directory, GetWin32ErrorString(err));
+    if (win32_utf8) {
+        if (!CreateDirectoryA(directory, nullptr))
+            goto error;
+    } else {
+        wchar_t directory_w[4096];
+        if (ConvertUtf8ToWin32Wide(directory, directory_w) < 0)
             return false;
-        }
+
+        if (!CreateDirectoryW(directory_w, nullptr))
+            goto error;
     }
 
     return true;
+
+error:
+    DWORD err = GetLastError();
+
+    if (err != ERROR_ALREADY_EXISTS || error_if_exists) {
+        LogError("Cannot create directory '%1': %2", directory, GetWin32ErrorString(err));
+        return false;
+    } else {
+        return true;
+    }
 }
 
 bool MakeDirectoryRec(Span<const char> directory)
@@ -2913,32 +2973,56 @@ bool MakeDirectoryRec(Span<const char> directory)
 
 bool UnlinkDirectory(const char *directory, bool error_if_missing)
 {
-    wchar_t directory_w[4096];
-    if (ConvertUtf8ToWin32Wide(directory, directory_w) < 0)
-        return false;
+    if (win32_utf8) {
+        if (!RemoveDirectoryA(directory))
+            goto error;
+    } else {
+        wchar_t directory_w[4096];
+        if (ConvertUtf8ToWin32Wide(directory, directory_w) < 0)
+            return false;
 
-    if (!RemoveDirectoryW(directory_w) &&
-            (GetLastError() != ERROR_FILE_NOT_FOUND || error_if_missing)) {
-        LogError("Failed to remove directory '%1': %2", directory, GetWin32ErrorString());
-        return false;
+        if (!RemoveDirectoryW(directory_w))
+            goto error;
     }
 
     return true;
+
+error:
+    DWORD err = GetLastError();
+
+    if (err != ERROR_FILE_NOT_FOUND || error_if_missing) {
+        LogError("Failed to remove directory '%1': %2", directory, GetWin32ErrorString(err));
+        return false;
+    } else {
+        return true;
+    }
 }
 
 bool UnlinkFile(const char *filename, bool error_if_missing)
 {
-    wchar_t filename_w[4096];
-    if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
-        return false;
+    if (win32_utf8) {
+        if (!DeleteFileA(filename))
+            goto error;
+    } else {
+        wchar_t filename_w[4096];
+        if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
+            return false;
 
-    if (!DeleteFileW(filename_w) &&
-            (GetLastError() != ERROR_FILE_NOT_FOUND || error_if_missing)) {
-        LogError("Failed to remove file '%1': %2", filename, GetWin32ErrorString());
-        return false;
+        if (!DeleteFileW(filename_w))
+            goto error;
     }
 
     return true;
+
+error:
+    DWORD err = GetLastError();
+
+    if (err != ERROR_FILE_NOT_FOUND || error_if_missing) {
+        LogError("Failed to remove file '%1': %2", filename, GetWin32ErrorString());
+        return false;
+    } else {
+        return true;
+    }
 }
 
 #else
@@ -5713,11 +5797,16 @@ bool ReloadAssets()
     }
 
 #ifdef _WIN32
-    wchar_t filename_w[4096];
-    if (ConvertUtf8ToWin32Wide(assets_filename, filename_w) < 0)
-        return false;
+    HMODULE h;
+    if (win32_utf8) {
+        h = LoadLibraryA(assets_filename);
+    } else {
+        wchar_t filename_w[4096];
+        if (ConvertUtf8ToWin32Wide(assets_filename, filename_w) < 0)
+            return false;
 
-    HMODULE h = LoadLibraryW(filename_w);
+        h = LoadLibraryW(filename_w);
+    }
     if (!h) {
         LogError("Cannot load library '%1'", assets_filename);
         return false;

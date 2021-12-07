@@ -3754,6 +3754,7 @@ static inline bool IsPathSeparator(char c)
 }
 
 #ifdef _WIN32
+bool IsWin32Utf8();
 Size ConvertUtf8ToWin32Wide(Span<const char> str, Span<wchar_t> out_str_w);
 Size ConvertWin32WideToUtf8(const wchar_t *str_w, Span<char> out_str);
 char *GetWin32ErrorString(uint32_t error_code = UINT32_MAX);
