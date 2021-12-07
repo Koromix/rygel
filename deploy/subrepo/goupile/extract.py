@@ -25,7 +25,7 @@ DEFAULT_REMOTE = 'git@framagit.org:interhop/goupile.git'
 
 def rewrite_repository(root_directory, clone_directory, push):
     # Clone or update repository
-    subprocess.run(['git', 'clone', '--bare', root_directory, clone_directory, '--no-local'], check = True)
+    subprocess.run(['git', 'clone', root_directory, clone_directory, '--no-local'], check = True)
     os.chdir(clone_directory)
 
     # FelixBuild.ini blobs
