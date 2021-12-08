@@ -13,6 +13,6 @@
 
 static_deploys:
   - name: goupile.fr
-    repo: https://framagit.org/interhop/goupile
+    repo: https://github.com/Koromix/rygel.git
     path: web/goupile.fr
   - name: files
