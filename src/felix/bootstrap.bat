@@ -7,43 +7,40 @@ set SRC=*.cc ..\core\libcc\libcc.cc ..\core\libwrap\json.cc ..\..\vendor\pugixml
 set BIN=..\..\felix.exe
 set BUILD=..\..\bin\BootstrapFelix
 
-where /q link
+where /q clang-cl
 if NOT ERRORLEVEL 1 (
-    where /q cl
-    if NOT ERRORLEVEL 1 (
-        echo Bootstrapping felix with MSVC...
-        mkdir %BUILD%
-        cl /nologo /std:c++latest /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /DLIBCC_NO_MINIZ /DLIBCC_NO_BROTLI /c %SRC% /Fo%BUILD%\
-        link /nologo %BUILD%\*.obj ws2_32.lib advapi32.lib /out:%BUILD%\felix.exe
-        %BUILD%\felix.exe --no_presets --features=OptimizeSpeed,StaticLink -O %BUILD%\Fast felix
-        move %BUILD%\Fast\felix.exe %BIN%
+    echo Bootstrapping felix with Clang...
+    mkdir %BUILD%
+    clang-cl /nologo /std:c++latest /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /DLIBCC_NO_MINIZ /DLIBCC_NO_BROTLI /c %SRC% /Fo%BUILD%\
+    lld-link /nologo %BUILD%\*.obj ws2_32.lib advapi32.lib /out:%BUILD%\felix.exe
+    %BUILD%\felix.exe --no_presets --features=OptimizeSpeed,StaticLink -O %BUILD%\Fast felix
+    move %BUILD%\Fast\felix.exe %BIN%
 
-        echo Cleaning up...
-        ping -n 4 127.0.0.1 >NUL
-        rmdir /S /Q %BUILD%\Fast
-        del /Q %BUILD%\*
-        rmdir /Q %BUILD%
+    echo Cleaning up...
+    ping -n 4 127.0.0.1 >NUL
+    rmdir /S /Q %BUILD%\Fast
+    del /Q %BUILD%\*
+    rmdir /Q %BUILD%
 
-        exit /B
-    )
+    exit /B
+)
 
-    where /q clang-cl
-    if NOT ERRORLEVEL 1 (
-        echo Bootstrapping felix with Clang...
-        mkdir %BUILD%
-        cl /nologo /std:c++latest /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /DLIBCC_NO_MINIZ /DLIBCC_NO_BROTLI /c %SRC% /Fo%BUILD%\
-        link /nologo %BUILD%\*.obj ws2_32.lib advapi32.lib /out:%BUILD%\felix.exe
-        %BUILD%\felix.exe --no_presets --features=OptimizeSpeed,StaticLink -O %BUILD%\Fast felix
-        move %BUILD%\Fast\felix.exe %BIN%
+where /q cl
+if NOT ERRORLEVEL 1 (
+    echo Bootstrapping felix with MSVC...
+    mkdir %BUILD%
+    cl /nologo /std:c++latest /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /DLIBCC_NO_MINIZ /DLIBCC_NO_BROTLI /c %SRC% /Fo%BUILD%\
+    link /nologo %BUILD%\*.obj ws2_32.lib advapi32.lib /out:%BUILD%\felix.exe
+    %BUILD%\felix.exe --no_presets --features=OptimizeSpeed,StaticLink -O %BUILD%\Fast felix
+    move %BUILD%\Fast\felix.exe %BIN%
 
-        echo Cleaning up...
-        ping -n 4 127.0.0.1 >NUL
-        rmdir /S /Q %BUILD%\Fast
-        del /Q %BUILD%\*
-        rmdir /Q %BUILD%
+    echo Cleaning up...
+    ping -n 4 127.0.0.1 >NUL
+    rmdir /S /Q %BUILD%\Fast
+    del /Q %BUILD%\*
+    rmdir /Q %BUILD%
 
-        exit /B
-    )
+    exit /B
 )
 
 where /q g++
