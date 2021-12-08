@@ -91,6 +91,6 @@ subprocess.run([sys.executable, FILTER_SCRIPT,
                 '--force', '--refs', 'master',
                 '--blob-callback', REWRITE_FELIXBUILD,
                 '--paths-from-file', PROJECT_DIRECTORY + '/keep.txt'], check = True)
-subprocess.run([sys.executable, FILTER_SCRIPT, '--force',
+subprocess.run([sys.executable, FILTER_SCRIPT,
                 '--force', '--refs', 'master',
                 '--invert-paths', '--paths-from-file', PROJECT_DIRECTORY + '/remove.txt'], check = True)

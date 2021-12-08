@@ -39,7 +39,7 @@ def update_repository(root_directory, clone_directory, remote_url):
         os.chdir(clone_directory)
         subprocess.run(['git', 'remote', 'add', 'peer', remote_url], check = True)
 
-def publish_peer(push):
+def publish_peer(master, deploy):
     subprocess.run(['git', 'fetch', 'peer'], check = True)
 
     # Find common ancestor commit
@@ -47,12 +47,16 @@ def publish_peer(push):
     base = subprocess.check_output(['git', 'log', '--pretty=format:%H', '--grep=' + subject]).decode('utf-8').strip()
     head = subprocess.check_output(['git', 'show', '-s', '--pretty=format:%H']).decode('utf-8').strip()
 
-    # Apply and push changes
+    # Apply changes
+    subprocess.run(['git', 'reset', '--hard', 'peer/master'], check = True)
     if base != head:
-        subprocess.run(['git', 'reset', '--hard', 'peer/master'], check = True)
         subprocess.run(['git', 'cherry-pick', base + '..' + head], check = True)
-        if push:
-            subprocess.run(['git', 'push', '-u', 'peer', 'master'], check = True)
+
+    # Push changes
+    if master:
+        subprocess.run(['git', 'push', 'peer', 'master:master'], check = True)
+    for suffix in deploy:
+        subprocess.run(['git', 'push', 'peer', 'master:deploy_' + suffix], check = True)
 
 if __name__ == "__main__":
     start_directory = os.getcwd()
@@ -61,7 +65,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'Clone Goupile-specific repository')
     parser.add_argument('-O', '--clone_dir', dest = 'clone_dir', action = 'store', help = 'Clone in this directory')
     parser.add_argument('--remote', dest = 'remote_url', action = 'store', help = 'Change remote URL')
-    parser.add_argument('--no_push', dest = 'push', action = 'store_false', help = 'Disable final remote push')
+    parser.add_argument('--no_master', dest = 'master', action = 'store_false', help = 'Disable push to master branch')
+    parser.add_argument('-d', '--deploy', dest = 'deploy', action = 'store', nargs = '+', default = [], help = 'Push to deploy branches')
     parser.add_argument('project', help = 'Project to rewrite and publish')
     args = parser.parse_args()
 
@@ -104,4 +109,4 @@ if __name__ == "__main__":
             'FILTER_SCRIPT': os.path.join(script_directory, 'git-filter-repo.py')
         })
 
-    publish_peer(args.push)
+    publish_peer(args.master, args.deploy)
