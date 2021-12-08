@@ -32,6 +32,7 @@ vendor/mbedtls
 vendor/miniz
 vendor/notosans
 vendor/opensans
+vendor/pugixml
 vendor/qrcodegen
 vendor/rapidjson
 vendor/sha256

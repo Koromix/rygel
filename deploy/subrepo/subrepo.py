@@ -29,7 +29,7 @@ DEFAULT_REMOTES = {
 
 def update_repository(root_directory, clone_directory, remote_url):
     # Clone or update repository
-    if os.path.exists(clone_directory):
+    if os.path.exists(clone_directory + '/.git'):
         os.chdir(clone_directory)
         subprocess.run(['git', 'reset', '--hard', 'origin/master'], check = True)
         subprocess.run(['git', 'pull'], check = True)
@@ -50,7 +50,7 @@ def publish_peer(master, deploy):
     # Apply changes
     subprocess.run(['git', 'reset', '--hard', 'peer/master'], check = True)
     if base != head:
-        subprocess.run(['git', 'cherry-pick', base + '..' + head], check = True)
+        subprocess.run(['git', 'cherry-pick', '--allow-empty', base + '..' + head], check = True)
 
     # Push changes
     if master:
