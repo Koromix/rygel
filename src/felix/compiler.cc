@@ -1534,26 +1534,21 @@ public:
     }
 };
 
-static std::unique_ptr<const Compiler> CreateDesktopCompiler(const PlatformSpecifier &spec)
+static bool IdentifyCompiler(const char *cc, const char *needle)
 {
-    Span<const char> remain = SplitStrReverseAny(spec.cc, RG_PATH_SEPARATORS).ptr;
+    cc = SplitStrReverseAny(cc, RG_PATH_SEPARATORS).ptr;
 
-    while (remain.len) {
-        Span<const char> part = SplitStrAny(remain, "_-.", &remain);
+    const char *ptr = strstr(cc, needle);
+    Size len = (Size)strlen(needle);
 
-        if (part == "clang") {
-            return ClangCompiler::Create(spec.host, spec.cc, spec.ld);
-        } else if (part == "gcc") {
-            return GnuCompiler::Create(spec.host, spec.cc, spec.ld);
-#ifdef _WIN32
-        } else if (part == "cl") {
-            return MsCompiler::Create(spec.cc, spec.ld);
-#endif
-        }
-    }
+    if (!ptr)
+        return false;
+    if (ptr != cc && !strchr("_-.", ptr[-1]))
+        return false;
+    if (ptr[len] && !strchr("_-.", ptr[len]))
+        return false;
 
-    LogError("Cannot find driver for compiler '%1'", spec.cc);
-    return nullptr;
+    return true;
 }
 
 static void FindArduinoCompiler(const char *name, const char *compiler, Span<char> out_cc)
@@ -1665,15 +1660,30 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
             }
         }
 
-        return CreateDesktopCompiler(spec);
+        if (IdentifyCompiler(spec.cc, "clang")) {
+            return ClangCompiler::Create(spec.host, spec.cc, spec.ld);
+        } else if (IdentifyCompiler(spec.cc, "gcc")) {
+            return GnuCompiler::Create(spec.host, spec.cc, spec.ld);
+#ifdef _WIN32
+        } else if (IdentifyCompiler(spec.cc, "cl")) {
+            return MsCompiler::Create(spec.cc, spec.ld);
+#endif
+        } else {
+            LogError("Cannot find driver for compiler '%1'", spec.cc);
+            return nullptr;
+        }
 #ifdef __linux__
     } else if (spec.host == HostPlatform::Windows) {
         if (!spec.cc) {
             LogError("Path to cross-platform MinGW must be explicitly specified");
             return nullptr;
         }
+        if (!IdentifyCompiler(spec.cc, "mingw-w64")) {
+            LogError("Only MinGW-w64 can be used for Windows cross-compilation at the moment");
+            return nullptr;
+        }
 
-        return CreateDesktopCompiler(spec);
+        return GnuCompiler::Create(spec.host, spec.cc, spec.ld);
 #endif
     } else if (StartsWith(HostPlatformNames[(int)spec.host], "Embedded/Teensy/AVR/")) {
         if (!spec.cc) {
