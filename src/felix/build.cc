@@ -384,7 +384,7 @@ bool Builder::AddTarget(const TargetInfo &target)
     // Resource file (Windows only)
     if (build.compiler->host == HostPlatform::Windows && target.type == TargetType::Executable) {
         const char *rc_filename = Fmt(&str_alloc, "%1%/Misc%/%2.rc", cache_directory, target.name).ptr;
-        const char *res_filename = Fmt(&str_alloc, "%1.res", rc_filename).ptr;
+        const char *res_filename = Fmt(&str_alloc, "%1%/Misc%/%2.res", cache_directory, target.name).ptr;
 
         if (!UpdateResourceFile(target.name, build.fake, rc_filename))
             return false;
