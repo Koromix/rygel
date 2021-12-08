@@ -90,7 +90,7 @@ REWRITE_FELIXBUILD = f'''
 subprocess.run([sys.executable, FILTER_SCRIPT,
                 '--force', '--refs', 'master',
                 '--blob-callback', REWRITE_FELIXBUILD,
-                '--paths-from-file', SCRIPT_DIRECTORY + '/keep.txt'], check = True)
+                '--paths-from-file', PROJECT_DIRECTORY + '/keep.txt'], check = True)
 subprocess.run([sys.executable, FILTER_SCRIPT, '--force',
                 '--force', '--refs', 'master',
-                '--invert-paths', '--paths-from-file', SCRIPT_DIRECTORY + '/remove.txt'], check = True)
+                '--invert-paths', '--paths-from-file', PROJECT_DIRECTORY + '/remove.txt'], check = True)

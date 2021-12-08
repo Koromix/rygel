@@ -73,9 +73,10 @@ if __name__ == "__main__":
     else:
         remote_url = args.remote_url
 
-    # Always work from build.py directory
-    script_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), args.project)
-    os.chdir(script_directory)
+    # Always work from project directory
+    script_directory = os.path.dirname(os.path.abspath(__file__))
+    project_directory = os.path.join(script_directory, args.project)
+    os.chdir(project_directory)
 
     # Find repository directory
     root_directory = script_directory
@@ -87,7 +88,7 @@ if __name__ == "__main__":
 
     # Clone directory
     if args.clone_dir is None:
-        clone_directory = os.path.join(root_directory, 'bin/SubRepo', args.project)
+        clone_directory = os.path.join(root_directory, 'bin', 'SubRepo', args.project)
     else:
         clone_directory = os.path.normpath(os.path.join(start_directory, args.clone_dir))
 
@@ -95,12 +96,12 @@ if __name__ == "__main__":
 
     # Run the rewrite script
     # Why the hell is it so "complicated" to import and run Python code? Why is import so weird?
-    script_filename = os.path.join(script_directory, 'rewrite.py')
-    with open(script_filename) as f:
+    project_filename = os.path.join(project_directory, 'rewrite.py')
+    with open(project_filename) as f:
         script = f.read()
         exec(script, {
-            'SCRIPT_DIRECTORY': script_directory,
-            'FILTER_SCRIPT': script_directory + '/../git-filter-repo.py',
+            'PROJECT_DIRECTORY': project_directory,
+            'FILTER_SCRIPT': os.path.join(script_directory, 'git-filter-repo.py')
         })
 
     publish_peer(args.push)
