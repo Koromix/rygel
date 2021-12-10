@@ -165,6 +165,7 @@ function InstanceController() {
     this.runTasks = util.serialize(this.runTasks, mutex);
 
     function renderMenu() {
+        let menu = (route.form.menu > 1 || route.form.chain.length > 1);
         let historical = (route.version < form_record.fragments.length);
 
         return html`
@@ -195,12 +196,12 @@ function InstanceController() {
                     ${historical ? html`<br/><span style="font-size: 0.7em;">${form_record.ctime.toLocaleString()}</span>` : ''}
                 </button>
             ` : ''}
-            <div class="drop">
-                <button @click=${ui.deployMenu}>${route.page.title}</button>
-                <div>
-                    ${route.form.chain.map(renderFormDrop)}
+            ${menu ? html`
+                <div class="drop">
+                    <button @click=${ui.deployMenu}>${route.page.title}</button>
+                    <div>${route.form.chain.map(renderFormDrop)}</div>
                 </div>
-            </div>
+            ` : ''}
             <div style="flex: 1; min-width: 15px;"></div>
 
             ${!goupile.isLocked() && profile.instances == null ?
@@ -766,12 +767,13 @@ function InstanceController() {
             ignore_page_scroll = false;
         }
 
+        let menu = (route.form.menu > 1 || route.form.chain.length > 1);
         let historical = (route.version < form_record.fragments.length);
 
         return html`
             <div class="print" @scroll=${syncEditorScroll}}>
                 <div id="ins_page">
-                    <div id="ins_menu">${route.form.chain.map(renderFormMenu)}</div>
+                    <div id="ins_menu">${menu ? route.form.chain.map(renderFormMenu) : ''}</div>
 
                     <form id="ins_form" autocomplete="off" @submit=${e => e.preventDefault()}>
                         ${page_div}
