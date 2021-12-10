@@ -422,7 +422,7 @@ function InstanceController() {
         }
 
         let column_stats = {};
-        let hid_width = 40;
+        let hid_width = 80;
         for (let row of visible_rows) {
             for (let key of data_form.pages.keys())
                 column_stats[key] = (column_stats[key] || 0) + (row.status[key] != null);
