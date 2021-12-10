@@ -53,6 +53,7 @@ video tutorials.
  - Ralph Eastwood
  - Fredrik Ehnbom
  - Robin Eklind
+ - Jan Ekström
  - Siavash Eliasi
  - TheExileFox
  - Felipe Ferreira
@@ -61,12 +62,15 @@ video tutorials.
  - Mário Freitas
  - GeO4d
  - Marcus Geelnard
+ - ghuser404
  - Charles Giessen
  - Ryan C. Gordon
  - Stephen Gowen
  - Kovid Goyal
  - Eloi Marín Gratacós
  - Stefan Gustavson
+ - Andrew Gutekanst
+ - Stephen Gutekanst
  - Jonathan Hale
  - hdf89shfdfs
  - Sylvain Hellegouarch
@@ -76,6 +80,7 @@ video tutorials.
  - Paul Holden
  - Warren Hu
  - Charles Huber
+ - InKryption
  - IntellectualKitty
  - Aaron Jacobs
  - Erik S. V. Jansson
@@ -208,6 +213,7 @@ video tutorials.
  - Richard A. Wilkes
  - Tatsuya Yatagawa
  - Ryogo Yoshimura
+ - Rácz Zalán
  - Lukas Zanner
  - Andrey Zholos
  - Aihui Zhu

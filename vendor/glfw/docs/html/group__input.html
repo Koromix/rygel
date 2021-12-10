@@ -1975,6 +1975,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The UTF-8 encoded name of the gamepad, or <code>NULL</code> if the joystick is not present, does not have a mapping or an <a class="el" href="intro_guide.html#error_handling">error</a> occurred.</dd></dl>
+<dl class="section user"><dt>Errors</dt><dd>Possible errors include <a class="el" href="group__errors.html#ga2374ee02c177f12e1fa76ff3ed15e14a">GLFW_NOT_INITIALIZED</a> and <a class="el" href="group__errors.html#ga76f6bb9c4eea73db675f096b404593ce">GLFW_INVALID_ENUM</a>.</dd></dl>
 <dl class="section user"><dt>Pointer lifetime</dt><dd>The returned string is allocated and freed by GLFW. You should not free it yourself. It is valid until the specified joystick is disconnected, the gamepad mappings are updated or the library is terminated.</dd></dl>
 <dl class="section user"><dt>Thread safety</dt><dd>This function must only be called from the main thread.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="input_guide.html#gamepad">Gamepad input</a> </dd>
@@ -2098,7 +2099,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The contents of the clipboard as a UTF-8 encoded string, or <code>NULL</code> if an <a class="el" href="intro_guide.html#error_handling">error</a> occurred.</dd></dl>
-<dl class="section user"><dt>Errors</dt><dd>Possible errors include <a class="el" href="group__errors.html#ga2374ee02c177f12e1fa76ff3ed15e14a">GLFW_NOT_INITIALIZED</a> and <a class="el" href="group__errors.html#gad44162d78100ea5e87cdd38426b8c7a1">GLFW_PLATFORM_ERROR</a>.</dd></dl>
+<dl class="section user"><dt>Errors</dt><dd>Possible errors include <a class="el" href="group__errors.html#ga2374ee02c177f12e1fa76ff3ed15e14a">GLFW_NOT_INITIALIZED</a>, <a class="el" href="group__errors.html#ga196e125ef261d94184e2b55c05762f14">GLFW_FORMAT_UNAVAILABLE</a> and <a class="el" href="group__errors.html#gad44162d78100ea5e87cdd38426b8c7a1">GLFW_PLATFORM_ERROR</a>.</dd></dl>
 <dl class="section user"><dt>Pointer lifetime</dt><dd>The returned string is allocated and freed by GLFW. You should not free it yourself. It is valid until the next call to <a class="el" href="group__input.html#ga71a5b20808ea92193d65c21b82580355">glfwGetClipboardString</a> or <a class="el" href="group__input.html#gaba1f022c5eb07dfac421df34cdcd31dd">glfwSetClipboardString</a>, or until the library is terminated.</dd></dl>
 <dl class="section user"><dt>Thread safety</dt><dd>This function must only be called from the main thread.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="input_guide.html#clipboard">Clipboard input and output</a> </dd>
@@ -2220,7 +2221,7 @@ Functions</h2></td></tr>
 </div><!-- contents -->
 <address class="footer">
 <p>
-Last update on Thu Oct 28 2021 for GLFW 3.3.5
+Last update on Thu Dec 9 2021 for GLFW 3.3.6
 </p>
 </address>
 </body>
