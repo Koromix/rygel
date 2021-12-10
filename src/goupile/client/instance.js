@@ -487,8 +487,9 @@ function InstanceController() {
                                             let url = page.url + `/${row.ulid}`;
 
                                             if (row.status[page.key] != null) {
+                                                let mtime = row.status[page.key];
                                                 return html`<td class=${active && page === route.page ? 'saved active' : 'saved'}
-                                                                title=${row.status[page.key].toLocaleString()}><a href=${url}>${row.status[page.key].toLocaleDateString()}</a></td>`;
+                                                                title=${row.status[page.key].toLocaleString()}><a href=${url}>${mtime.toLocaleDateString()} (${mtime.toLocaleTimeString()})</a></td>`;
                                             } else {
                                                 return html`<td class=${active && page === route.page ? 'missing active' : 'missing'}
                                                                 title=${item.title}><a href=${url}>Afficher</a></td>`;
@@ -499,9 +500,10 @@ function InstanceController() {
                                             if (row.status[form.key] != null) {
                                                 let child = row.children[form.key][0];
                                                 let url = form.url + `/${child.ulid}`;
+                                                let mtime = row.status[page.key];
 
                                                 return html`<td class=${active && route.form.chain.includes(form) ? 'saved active' : 'saved'}
-                                                                title=${item.title}><a href=${url}>${row.status[form.key].toLocaleDateString()}</a></td>`;
+                                                                title=${item.title}><a href=${url}>${row.status[form.key].toLocaleDateString()} (${mtime.toLocaleTimeString()})</a></td>`;
                                             } else {
                                                 let url = form.url + `/${row.ulid}`;
 
