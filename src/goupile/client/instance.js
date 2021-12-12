@@ -165,7 +165,7 @@ function InstanceController() {
     this.runTasks = util.serialize(this.runTasks, mutex);
 
     function renderMenu() {
-        let menu = (route.form.menu > 1 || route.form.chain.length > 1);
+        let menu = (route.form.menu.length > 1 || route.form.chain.length > 1);
         let historical = (route.version < form_record.fragments.length);
 
         return html`
@@ -767,7 +767,7 @@ function InstanceController() {
             ignore_page_scroll = false;
         }
 
-        let menu = (route.form.menu > 1 || route.form.chain.length > 1);
+        let menu = (route.form.menu.length > 1 || route.form.chain.length > 1);
         let historical = (route.version < form_record.fragments.length);
 
         return html`
