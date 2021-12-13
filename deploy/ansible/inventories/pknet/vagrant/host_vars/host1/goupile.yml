@@ -12,6 +12,7 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 goupile_commit: deploy_pknet
+goupile_update_hour: '*'
 
 goupile_domains:
   - name: goupile1.pknet.local
