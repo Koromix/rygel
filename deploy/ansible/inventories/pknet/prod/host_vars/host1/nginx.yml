@@ -107,7 +107,6 @@ nginx_domains:
           proxy_pass http://unix:/run/goupile/test.goupile.fr.sock:;
       }
     ssl_certbot_email: niels.martignene@protonmail.com
-    ssl_certbot_relay: 185.176.148.83
 
   - name: f2rsm.goupile.org
     config: |

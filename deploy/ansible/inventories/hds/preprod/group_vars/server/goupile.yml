@@ -19,8 +19,6 @@ goupile_domains:
     archive_key: pr3m+wokFdBy2JHyCHZe4yP3vLBdQPsVkVCwG/in5xI=
   - name: psy-lille.preprod.goupile.fr
     archive_key: c0cxZblCz4cWCQ5xFqFHUnTnLSw2T9EKwela41402hU=
-  - name: test.goupile.fr
-    archive_key: 0Fgewos+0G9EDqfFjXqnRnjwdE07nsIgpsMBqTJTTUA=
 
 goupile_default_username: admin
 goupile_default_password: !vault |
