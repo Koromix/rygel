@@ -501,7 +501,7 @@ function InstanceController() {
                                             if (row.status[form.key] != null) {
                                                 let child = row.children[form.key][0];
                                                 let url = form.url + `/${child.ulid}`;
-                                                let mtime = row.status[page.key];
+                                                let mtime = row.status[form.key];
 
                                                 return html`<td class=${active && route.form.chain.includes(form) ? 'saved active' : 'saved'}
                                                                 title=${item.title}><a href=${url}>${row.status[form.key].toLocaleDateString()} (${mtime.toLocaleTimeString()})</a></td>`;
