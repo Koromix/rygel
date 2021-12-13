@@ -166,7 +166,7 @@ function InstanceController() {
 
     function renderMenu() {
         let menu = (route.form.menu.length > 1 || route.form.chain.length > 1);
-        let historical = (route.version < form_record.fragments.length);
+        let history = (!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null);
 
         return html`
             ${app.panels.editor ? html`
@@ -190,10 +190,10 @@ function InstanceController() {
             ` : ''}
             <div style="flex: 1; min-width: 15px;"></div>
 
-            ${app.panels.data && form_record.chain[0].saved && form_record.chain[0].hid != null ? html`
+            ${history ? html`
                 <button class="ins_hid" @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
                     ${form_record.chain[0].form.title} <span style="font-weight: bold;">#${form_record.chain[0].hid}</span>
-                    ${historical ? html`<br/><span style="font-size: 0.7em;">${form_record.ctime.toLocaleString()}</span>` : ''}
+                    ${form_record.historical ? html`<br/><span class="historical">${form_record.ctime.toLocaleString()}</span>` : ''}
                 </button>
             ` : ''}
             ${menu ? html`
@@ -636,9 +636,8 @@ function InstanceController() {
         let filename = route.page.getOption('filename', form_record);
         let code = code_buffers.get(filename).code;
 
-        let readonly = (route.version < form_record.fragments.length);
-
         let model = new FormModel;
+        let readonly = form_record.historical;
         form_builder = new FormBuilder(form_state, model, readonly);
 
         try {
@@ -768,7 +767,6 @@ function InstanceController() {
         }
 
         let menu = (route.form.menu.length > 1 || route.form.chain.length > 1);
-        let historical = (route.version < form_record.fragments.length);
 
         return html`
             <div class="print" @scroll=${syncEditorScroll}}>
@@ -781,6 +779,7 @@ function InstanceController() {
 
                     <div id="ins_actions">
                         ${model.renderActions()}
+                        ${form_record.historical ? html`<p class="historical">${form_record.ctime.toLocaleString()}</p>` : ''}
                     </div>
                 </div>
                 <div style="flex: 1;"></div>
@@ -794,10 +793,10 @@ function InstanceController() {
 
                 <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
                     ${!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null ? html`
-                        <button class="ins_hid" style=${historical ? 'color: #00ffff;' : ''}
+                        <button class="ins_hid" style=${form_record.historical ? 'color: #00ffff;' : ''}
                                 @click=${ui.wrapAction(e => runTrailDialog(e, route.ulid))}>
                             ${form_record.chain[0].form.title} <span style="font-weight: bold;">#${form_record.chain[0].hid}</span>
-                            ${historical ? ' (historique)' : ''}
+                            ${form_record.historical ? ' (historique)' : ''}
                         </button>
                     ` : ''}
                     <div style="flex: 1;"></div>
@@ -941,7 +940,11 @@ function InstanceController() {
                     </colgroup>
 
                     <tbody>
-                        ${!form_record.fragments.length ? html`<tr><td colspan="3">Aucune modification enregistrée</td></tr>` : ''}
+                        <tr class=${route.version == null ? 'active' : ''}>
+                            <td><a href=${route.page.url + `/${route.ulid}@`}>🔍\uFE0E</a></td>
+                            <td colspan="2">Version actuelle</td>
+                        </tr>
+
                         ${util.mapRange(0, form_record.fragments.length, idx => {
                             let version = form_record.fragments.length - idx;
                             let fragment = form_record.fragments[version - 1];
@@ -1510,11 +1513,13 @@ function InstanceController() {
             }
 
             // And with version!
-            if (version) {
+            if (version != null) {
                 version = version.trim();
 
                 if (version.match(/^[0-9]+$/)) {
                     new_route.version = parseInt(version, 10);
+                } else if (!version.length) {
+                    new_route.version = null;
                 } else {
                     log.error('L\'indicateur de version n\'est pas un nombre');
                     new_route.version = null;
@@ -1542,9 +1547,14 @@ function InstanceController() {
                 new_route.version = null;
                 new_record = null;
             }
-            if (new_record != null && (new_route.ulid !== new_record.ulid ||
-                                       new_route.version !== new_record.version))
-                new_record = null;
+            if (new_record != null) {
+                let version = new_record.historical ? new_record.version : null;
+                let mismatch = (new_route.ulid !== new_record.ulid ||
+                                new_route.version !== version);
+
+                if (mismatch)
+                    new_record = null;
+            }
             if (new_record == null && new_route.ulid != null)
                 new_record = await loadRecord(new_route.ulid, new_route.version, !goupile.isLocked());
             if (new_record != null && new_record.form !== new_route.form)
@@ -1773,7 +1783,8 @@ function InstanceController() {
 
         route = new_route;
         route.ulid = new_record.ulid;
-        route.version = new_record.version;
+        if (route.version != null)
+            route.version = new_record.version;
 
         if (new_record !== form_record) {
             form_record = new_record;
@@ -1837,7 +1848,7 @@ function InstanceController() {
 
         if (record != null) {
             url += `/${record.ulid}`;
-            if (record.version < record.fragments.length)
+            if (record.historical)
                 url += `@${record.version}`;
         } else {
             url += default_ctx;
@@ -1921,6 +1932,7 @@ function InstanceController() {
             ulid: ulid || util.makeULID(),
             hid: null,
             version: 0,
+            historical: false,
             ctime: null,
             mtime: null,
             fragments: [],
@@ -1985,8 +1997,10 @@ function InstanceController() {
             while (it.parent != null) {
                 let parent = it.parent;
 
-                if (parent.values == null)
+                if (parent.values == null) {
                     parent = await loadRecord(it.parent.ulid, null);
+                    parent.historical = record.historical; // XXX
+                }
 
                 parent.chain = chain;
                 parent.map = map;
@@ -2009,8 +2023,12 @@ function InstanceController() {
 
                 if (child != null) {
                     if (form.multi) {
-                        record.map[key] = await loadRecords(child.parent.ulid, form.key);
+                        let children = await loadRecords(child.parent.ulid, form.key);
+                        for (let child of children)
+                            child.historical = record.historical; // XXX
+                        record.map[key] = children;
                     } else {
+                        child.historical = record.historical; // XXX
                         record.map[key] = child;
                     }
                 } else {
@@ -2079,6 +2097,8 @@ function InstanceController() {
     }
 
     async function decryptRecord(obj, version, allow_deleted) {
+        let historical = (version != null);
+
         let entry = await goupile.decryptSymmetric(obj.enc, 'records');
         let fragments = entry.fragments;
 
@@ -2131,6 +2151,7 @@ function InstanceController() {
             ulid: entry.ulid,
             hid: entry.hid,
             version: version,
+            historical: historical,
             ctime: new Date(util.decodeULIDTime(entry.ulid)),
             mtime: fragments.length ? fragments[version - 1].mtime : null,
             fragments: fragments,

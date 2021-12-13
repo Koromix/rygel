@@ -119,6 +119,11 @@ html.mobile #ins_page { padding-top: 0; }
 }
 #ins_actions > button { width: 100%; }
 #ins_actions > button + button { margin-top: 6px; }
+#ins_actions > .historical {
+    margin-top: 6px;
+    font-size: 0.9em;
+    color: red;
+}
 
 html:not(.small) #ui_panels > div:only-child #ins_menu { display: block; }
 html:not(.small) #ui_panels > div:only-child #ins_actions { display: block; }
@@ -148,6 +153,12 @@ html:not(.small) #ui_panels > div:not(:only-child) #ins_page { border-bottom-wid
 /* -------------------- Misc -------------------- */
 
 html.mobile #ui_top .ins_hid { display: none; }
+.ins_hid > .historical {
+    font-size: 0.5em;
+    padding: 1px 3px;
+    border-radius: 2px;
+    background: #db0a0a;
+}
 
 #ins_notice {
     position: sticky;
