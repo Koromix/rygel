@@ -80,12 +80,11 @@ public:
 
     SessionType type;
     int64_t userid;
-    const char *username;
     int64_t admin_until;
     char local_key[45];
-
     std::atomic<SessionConfirm> confirm;
     char secret[33]; // Lock mutex to change
+    char username[];
 
     bool IsAdmin() const;
     bool HasPermission(const InstanceHolder *instance, UserPermission perm) const;

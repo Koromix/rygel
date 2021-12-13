@@ -299,13 +299,12 @@ static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid
 
     session->type = type;
     session->userid = userid;
-    session->username = (char *)session + RG_SIZE(SessionInfo);
-    CopyString(username, MakeSpan((char *)session->username, username_bytes));
     if (!CopyString(local_key, session->local_key)) {
         // Should never happen, but let's be careful
         LogError("User local key is too big");
         return {};
     }
+    CopyString(username, MakeSpan((char *)session->username, username_bytes));
 
     return ptr;
 }
