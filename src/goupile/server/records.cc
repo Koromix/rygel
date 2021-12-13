@@ -159,6 +159,7 @@ struct SaveRecord {
         int64_t version = -1;
     } parent;
     HeapArray<Fragment> fragments;
+    bool deleted = false;
 };
 
 void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
@@ -320,6 +321,9 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     io->AttachError(422);
                     return;
                 }
+
+                record->deleted = record->fragments.len &&
+                                  TestStr(record->fragments[record->fragments.len - 1].type, "deleted");
             }
             if (!parser.IsValid()) {
                 io->AttachError(422);
@@ -419,13 +423,14 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                 // Insert or update record entry (if needed)
                 if (RG_LIKELY(updated)) {
                     if (!instance->db->Run(R"(INSERT INTO rec_entries (ulid, hid, form, parent_ulid,
-                                                                       parent_version, root_ulid, anchor)
-                                              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                                                                       parent_version, root_ulid, anchor, deleted)
+                                              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
                                               ON CONFLICT (ulid) DO UPDATE SET hid = IFNULL(excluded.hid, hid),
-                                                                               anchor = excluded.anchor)",
+                                                                               anchor = excluded.anchor,
+                                                                               deleted = excluded.deleted)",
                                           record.ulid, record.hid, record.form, record.parent.ulid,
                                           record.parent.version >= 0 ? sq_Binding(record.parent.version) : sq_Binding(),
-                                          root_ulid, anchor))
+                                          root_ulid, anchor, record.deleted))
                         return false;
 
                     if (sqlite3_changes(*instance->db) && !record.hid) {
@@ -515,8 +520,6 @@ class RecordExporter {
 
     BucketArray<Table> tables;
     HashTable<const char *, Table *> tables_map;
-
-    HashSet<const char *> valid_roots;
 
     BlockAllocator str_alloc;
 
@@ -624,9 +627,6 @@ bool RecordExporter::Export(const char *filename)
 
         for (Size i = 0; i < table.rows.len; i++) {
             stmt.Reset();
-
-            if (!valid_roots.Find(table.rows[i].root_ulid))
-                continue;
 
             Span<const char> ulid = SplitStr(table.rows[i].ulid, '.');
 
@@ -934,10 +934,6 @@ RecordExporter::Row *RecordExporter::GetRow(RecordExporter::Table *table, const 
         row->hid = DuplicateString(hid, &str_alloc).ptr;
         row->idx = table->rows.len - 1;
 
-        if (TestStr(ulid, root_ulid)) {
-            valid_roots.Set(row->root_ulid);
-        }
-
         table->rows_map.Set(row);
 
         for (Column &col: table->columns) {
@@ -972,9 +968,9 @@ void HandleRecordExport(InstanceHolder *instance, const http_RequestInfo &reques
     io->RunAsync([=]() {
         sq_Statement stmt;
         if (!instance->db->Prepare(R"(SELECT e.root_ulid, e.ulid, e.hid, e.form, f.type, f.json FROM rec_entries e
+                                      INNER JOIN rec_entries r ON (r.ulid = e.root_ulid)
                                       INNER JOIN rec_fragments f ON (f.ulid = e.ulid)
-                                      INNER JOIN rec_fragments fl ON (fl.anchor = e.anchor)
-                                      WHERE fl.type <> 'delete'
+                                      WHERE r.deleted = 0
                                       ORDER BY f.anchor)", &stmt))
             return;
 

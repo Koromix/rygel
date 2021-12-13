@@ -21,7 +21,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 45;
+const int InstanceVersion = 46;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -1353,9 +1353,60 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 45: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX rec_entries_a;
+                    DROP INDEX rec_entries_f;
+                    DROP INDEX rec_entries_u;
+                    DROP INDEX rec_fragments_uv;
+
+                    ALTER TABLE rec_entries RENAME TO rec_entries_BAK;
+                    ALTER TABLE rec_fragments RENAME TO rec_fragments_BAK;
+
+                    CREATE TABLE rec_entries (
+                        ulid TEXT NOT NULL,
+                        hid BLOB,
+                        form TEXT NOT NULL,
+                        parent_ulid TEXT,
+                        parent_version INTEGER,
+                        anchor INTEGER NOT NULL,
+                        root_ulid TEXT NOT NULL,
+                        deleted INTEGER CHECK(deleted IN (0, 1)) NOT NULL
+                    );
+                    CREATE INDEX rec_entries_f ON rec_entries (form);
+                    CREATE UNIQUE INDEX rec_entries_u ON rec_entries (ulid);
+                    CREATE INDEX rec_entries_a ON rec_entries (anchor);
+
+                    CREATE TABLE rec_fragments (
+                        anchor INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ulid TEXT NOT NULL REFERENCES rec_entries (ulid) DEFERRABLE INITIALLY DEFERRED,
+                        version INTEGER NOT NULL,
+                        type TEXT NOT NULL,
+                        userid INTEGER NOT NULL,
+                        username TEXT NOT NULL,
+                        mtime TEXT NOT NULL,
+                        page TEXT,
+                        json BLOB
+                    );
+                    CREATE UNIQUE INDEX rec_fragments_uv ON rec_fragments (ulid, version);
+
+                    INSERT INTO rec_entries (ulid, hid, form, parent_ulid, parent_version, anchor, root_ulid, deleted)
+                        SELECT e.ulid, e.hid, e.form, e.parent_ulid, e.parent_version, e.anchor, e.root_ulid,
+                               IIF(f.type = 'delete', 1, 0) FROM rec_entries_BAK e
+                        INNER JOIN rec_fragments_BAK f ON (f.anchor = e.anchor);
+                    INSERT INTO rec_fragments (anchor, ulid, version, type, userid, username, mtime, page, json)
+                        SELECT anchor, ulid, version, type, userid, username, mtime, page, json FROM rec_fragments_BAK;
+
+                    DROP TABLE rec_fragments_BAK;
+                    DROP TABLE rec_entries_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            RG_STATIC_ASSERT(InstanceVersion == 45);
+            RG_STATIC_ASSERT(InstanceVersion == 46);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
