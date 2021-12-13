@@ -701,6 +701,97 @@ Options:
     return 0;
 }
 
+enum class UnsealResult {
+    Error,
+    WrongKey,
+    Success
+};
+
+static UnsealResult UnsealArchive(StreamReader *reader, StreamWriter *writer, const char *decrypt_key)
+{
+    // Derive asymmetric keys
+    uint8_t askey[crypto_box_SECRETKEYBYTES];
+    uint8_t apkey[crypto_box_PUBLICKEYBYTES];
+    {
+        RG_STATIC_ASSERT(crypto_scalarmult_SCALARBYTES == crypto_box_SECRETKEYBYTES);
+        RG_STATIC_ASSERT(crypto_scalarmult_BYTES == crypto_box_PUBLICKEYBYTES);
+
+        size_t key_len;
+        int ret = sodium_base642bin(askey, RG_SIZE(askey),
+                                    decrypt_key, strlen(decrypt_key), nullptr, &key_len,
+                                    nullptr, sodium_base64_VARIANT_ORIGINAL);
+        if (ret || key_len != 32) {
+            LogError("Malformed decryption key");
+            return UnsealResult::Error;
+        }
+
+        crypto_scalarmult_base(apkey, askey);
+    }
+
+    // Read archive header
+    ArchiveIntro intro;
+    if (reader->Read(RG_SIZE(intro), &intro) != RG_SIZE(intro)) {
+        if (reader->IsValid()) {
+            LogError("Truncated archive");
+        }
+        return UnsealResult::Error;
+    }
+
+    // Check signature
+    if (strncmp(intro.signature, ARCHIVE_SIGNATURE, RG_SIZE(intro.signature)) != 0) {
+        LogError("Unexpected archive signature");
+        return UnsealResult::Error;
+    }
+    if (intro.version != ARCHIVE_VERSION) {
+        LogError("Unexpected archive version %1 (expected %2)", intro.version, ARCHIVE_VERSION);
+        return UnsealResult::Error;
+    }
+
+    // Decrypt symmetric key
+    uint8_t skey[crypto_secretstream_xchacha20poly1305_KEYBYTES];
+    if (crypto_box_seal_open(skey, intro.eskey, RG_SIZE(intro.eskey), apkey, askey) != 0) {
+        LogError("Failed to unseal archive (wrong key?)");
+        return UnsealResult::WrongKey;
+    }
+
+    // Init symmetric decryption
+    crypto_secretstream_xchacha20poly1305_state state;
+    if (crypto_secretstream_xchacha20poly1305_init_pull(&state, intro.header, skey) != 0) {
+        LogError("Failed to initialize symmetric decryption (corrupt archive?)");
+        return UnsealResult::Error;
+    }
+
+    // Write cleartext ZIP archive
+    for (;;) {
+        LocalArray<uint8_t, 4096> cypher;
+        cypher.len = reader->Read(cypher.data);
+        if (cypher.len < 0)
+            return UnsealResult::Error;
+
+        uint8_t buf[4096];
+        unsigned long long buf_len = 5;
+        uint8_t tag;
+        if (crypto_secretstream_xchacha20poly1305_pull(&state, buf, &buf_len, &tag,
+                                                       cypher.data, cypher.len, nullptr, 0) != 0) {
+            LogError("Failed during symmetric decryption (corrupt archive?)");
+            return UnsealResult::Error;
+        }
+
+        if (!writer->Write(buf, (Size)buf_len))
+            return UnsealResult::Error;
+
+        if (reader->IsEOF()) {
+            if (tag != crypto_secretstream_xchacha20poly1305_TAG_FINAL) {
+                LogError("Truncated archive");
+                return UnsealResult::Error;
+            }
+            break;
+        }
+    }
+
+    return UnsealResult::Success;
+}
+
 int RunUnseal(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -743,6 +834,10 @@ Options:
         }
     }
 
+    StreamReader reader(archive_filename);
+    if (!reader.IsValid())
+        return 1;
+
     if (!output_filename) {
         Span<const char> extension = GetPathExtension(archive_filename);
         Span<const char> name = MakeSpan(archive_filename, extension.ptr - archive_filename);
@@ -760,94 +855,17 @@ Options:
             return 1;
     }
 
-    StreamReader reader(archive_filename);
     StreamWriter writer(output_filename, (int)StreamWriterFlag::Atomic |
                                          (int)StreamWriterFlag::Exclusive);
-    if (!reader.IsValid())
-        return 1;
     if (!writer.IsValid())
         return 1;
 
-    // Derive asymmetric keys
-    uint8_t askey[crypto_box_SECRETKEYBYTES];
-    uint8_t apkey[crypto_box_PUBLICKEYBYTES];
-    {
-        RG_STATIC_ASSERT(crypto_scalarmult_SCALARBYTES == crypto_box_SECRETKEYBYTES);
-        RG_STATIC_ASSERT(crypto_scalarmult_BYTES == crypto_box_PUBLICKEYBYTES);
-
-        size_t key_len;
-        int ret = sodium_base642bin(askey, RG_SIZE(askey),
-                                    decrypt_key, strlen(decrypt_key), nullptr, &key_len,
-                                    nullptr, sodium_base64_VARIANT_ORIGINAL);
-        if (ret || key_len != 32) {
-            LogError("Malformed decryption key");
-            return 1;
-        }
-
-        crypto_scalarmult_base(apkey, askey);
-    }
-
-    // Check signature and initialize symmetric decryption
-    uint8_t skey[crypto_secretstream_xchacha20poly1305_KEYBYTES];
-    crypto_secretstream_xchacha20poly1305_state state;
-    {
-        ArchiveIntro intro;
-        if (reader.Read(RG_SIZE(intro), &intro) != RG_SIZE(intro)) {
-            if (reader.IsValid()) {
-                LogError("Truncated archive");
-            }
-            return 1;
-        }
-
-        if (strncmp(intro.signature, ARCHIVE_SIGNATURE, RG_SIZE(intro.signature)) != 0) {
-            LogError("Unexpected archive signature");
-            return 1;
-        }
-        if (intro.version != ARCHIVE_VERSION) {
-            LogError("Unexpected archive version %1 (expected %2)", intro.version, ARCHIVE_VERSION);
-            return 1;
-        }
-
-        if (crypto_box_seal_open(skey, intro.eskey, RG_SIZE(intro.eskey), apkey, askey) != 0) {
-            LogError("Failed to unseal archive (wrong key?)");
-            return 1;
-        }
-        if (crypto_secretstream_xchacha20poly1305_init_pull(&state, intro.header, skey) != 0) {
-            LogError("Failed to initialize symmetric decryption (corrupt archive?)");
-            return 1;
-        }
-    }
-
-    for (;;) {
-        LocalArray<uint8_t, 4096> cypher;
-        cypher.len = reader.Read(cypher.data);
-        if (cypher.len < 0)
-            return 1;
-
-        uint8_t buf[4096];
-        unsigned long long buf_len = 5;
-        uint8_t tag;
-        if (crypto_secretstream_xchacha20poly1305_pull(&state, buf, &buf_len, &tag,
-                                                       cypher.data, cypher.len, nullptr, 0) != 0) {
-            LogError("Failed during symmetric decryption (corrupt archive?)");
-            return 1;
-        }
-
-        if (!writer.Write(buf, (Size)buf_len))
-            return 1;
-
-        if (reader.IsEOF()) {
-            if (tag != crypto_secretstream_xchacha20poly1305_TAG_FINAL) {
-                LogError("Truncated archive");
-                return 1;
-            }
-            break;
-        }
-    }
+    if (UnsealArchive(&reader, &writer, decrypt_key) != UnsealResult::Success)
+        return 1;
     if (!writer.Close())
         return 1;
 
-    LogInfo("Decrypted archive: %!..+%1%!0", output_filename);
+    LogInfo("Unsealed archive: %!..+%1%!0", output_filename);
     return 0;
 }
 
@@ -2067,92 +2085,13 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
             if (!writer.IsValid())
                 return;
 
-            // Derive asymmetric keys
-            uint8_t askey[crypto_box_SECRETKEYBYTES];
-            uint8_t apkey[crypto_box_PUBLICKEYBYTES];
-            {
-                RG_STATIC_ASSERT(crypto_scalarmult_SCALARBYTES == crypto_box_SECRETKEYBYTES);
-                RG_STATIC_ASSERT(crypto_scalarmult_BYTES == crypto_box_PUBLICKEYBYTES);
-
-                size_t key_len;
-                int ret = sodium_base642bin(askey, RG_SIZE(askey),
-                                            decrypt_key, strlen(decrypt_key), nullptr, &key_len,
-                                            nullptr, sodium_base64_VARIANT_ORIGINAL);
-                if (ret || key_len != 32) {
-                    LogError("Malformed decryption key");
-                    io->AttachError(422);
-                    return;
+            UnsealResult ret = UnsealArchive(&reader, &writer, decrypt_key);
+            if (ret != UnsealResult::Success) {
+                if (reader.IsValid()) {
+                    io->AttachError(ret == UnsealResult::WrongKey ? 403 : 422);
                 }
-
-                crypto_scalarmult_base(apkey, askey);
+                return;
             }
-
-            // Check signature and initialize symmetric decryption
-            uint8_t skey[crypto_secretstream_xchacha20poly1305_KEYBYTES];
-            crypto_secretstream_xchacha20poly1305_state state;
-            {
-                ArchiveIntro intro;
-                if (reader.Read(RG_SIZE(intro), &intro) != RG_SIZE(intro)) {
-                    if (reader.IsValid()) {
-                        LogError("Truncated archive");
-                        io->AttachError(422);
-                    }
-                    return;
-                }
-
-                if (strncmp(intro.signature, ARCHIVE_SIGNATURE, RG_SIZE(intro.signature)) != 0) {
-                    LogError("Unexpected archive signature");
-                    io->AttachError(422);
-                    return;
-                }
-                if (intro.version != ARCHIVE_VERSION) {
-                    LogError("Unexpected archive version %1 (expected %2)", intro.version, ARCHIVE_VERSION);
-                    io->AttachError(422);
-                    return;
-                }
-
-                if (crypto_box_seal_open(skey, intro.eskey, RG_SIZE(intro.eskey), apkey, askey) != 0) {
-                    LogError("Failed to unseal archive (wrong key?)");
-                    io->AttachError(403);
-                    return;
-                }
-                if (crypto_secretstream_xchacha20poly1305_init_pull(&state, intro.header, skey) != 0) {
-                    LogError("Failed to initialize symmetric decryption (corrupt archive?)");
-                    io->AttachError(422);
-                    return;
-                }
-            }
-
-            // Extract cleartext ZIP archive
-            for (;;) {
-                LocalArray<uint8_t, 4096> cypher;
-                cypher.len = reader.Read(cypher.data);
-                if (cypher.len < 0)
-                    return;
-
-                uint8_t buf[4096];
-                unsigned long long buf_len = 5;
-                uint8_t tag;
-                if (crypto_secretstream_xchacha20poly1305_pull(&state, buf, &buf_len, &tag,
-                                                               cypher.data, cypher.len, nullptr, 0) != 0) {
-                    LogError("Failed during symmetric decryption (corrupt archive?)");
-                    io->AttachError(422);
-                    return;
-                }
-
-                if (!writer.Write(buf, (Size)buf_len))
-                    return;
-
-                if (reader.IsEOF()) {
-                    if (tag != crypto_secretstream_xchacha20poly1305_TAG_FINAL) {
-                        LogError("Truncated archive");
-                        io->AttachError(422);
-                        return;
-                    }
-                    break;
-                }
-            }
-
             if (!writer.Close())
                 return;
         }
