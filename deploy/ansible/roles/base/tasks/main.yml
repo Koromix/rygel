@@ -136,6 +136,16 @@
     sysctl_set: yes
   become: yes
 
+- name: Set up weekly upgrade and reboot (Debian)
+  cron:
+    name: weekly_upgrade
+    weekday: sun
+    hour: 5
+    minute: 0
+    state: '{{ "present" if weekly_upgrade else "absent" }}'
+    job: '/usr/bin/apt update && /usr/bin/apt upgrade && /usr/sbin/shutdown -r now'
+  become: yes
+
 # - name: Delete default debian user
 #   user:
 #     name: debian

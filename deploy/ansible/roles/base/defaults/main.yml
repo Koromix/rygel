@@ -11,6 +11,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
+weekly_upgrade: yes
+
 # Use these variables to set up IPv6 on OVH VPS
 # Documentation here: https://docs.ovh.com/fr/vps/configurer-ipv6/
 # ovh_ipv6_addr:
