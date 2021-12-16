@@ -1470,7 +1470,7 @@ bool mco_TableSetBuilder::LoadFiles(Span<const char *const> filenames)
     return success;
 }
 
-bool mco_TableSetBuilder::Finish(mco_TableSet *out_set)
+void mco_TableSetBuilder::Finish(mco_TableSet *out_set)
 {
     std::sort(table_loads.begin(), table_loads.end(),
               [&](const TableLoadInfo &tab_load_info1, const TableLoadInfo &tab_load_info2) {
@@ -1541,7 +1541,6 @@ bool mco_TableSetBuilder::Finish(mco_TableSet *out_set)
     }
 
     std::swap(*out_set, set);
-    return true;
 }
 
 static void BuildAdditionLists(const mco_TableIndex &index,
@@ -1929,8 +1928,7 @@ bool mco_LoadTableSet(Span<const char *const> table_directories,
         mco_TableSetBuilder table_set_builder;
         if (!table_set_builder.LoadFiles(filenames))
             return false;
-        if (!table_set_builder.Finish(out_set))
-            return false;
+        table_set_builder.Finish(out_set);
     }
 
     return true;

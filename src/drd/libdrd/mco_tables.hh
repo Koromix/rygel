@@ -395,7 +395,7 @@ public:
     bool LoadPrices(StreamReader *st);
     bool LoadFiles(Span<const char *const> filenames);
 
-    bool Finish(mco_TableSet *out_set);
+    void Finish(mco_TableSet *out_set);
 
 private:
     bool CommitIndex(Date start_date, Date end_date, TableLoadInfo *current_tables[]);
