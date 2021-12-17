@@ -56,7 +56,7 @@
  * Module   Nr  Codes assigned
  * ERROR     2  0x006E          0x0001
  * MPI       7  0x0002-0x0010
- * GCM       3  0x0012-0x0014   0x0013-0x0013
+ * GCM       3  0x0012-0x0016   0x0013-0x0013
  * THREADING 3  0x001A-0x001E
  * AES       5  0x0020-0x0022   0x0021-0x0025
  * CAMELLIA  3  0x0024-0x0026   0x0027-0x0027
@@ -108,11 +108,15 @@
 extern "C" {
 #endif
 
-#define MBEDTLS_ERR_ERROR_GENERIC_ERROR       -0x0001  /**< Generic error */
-#define MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED -0x006E  /**< This is a bug in the library */
+/** Generic error */
+#define MBEDTLS_ERR_ERROR_GENERIC_ERROR       -0x0001
+/** This is a bug in the library */
+#define MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED -0x006E
 
-#define MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED     -0x0070 /**< Hardware accelerator failed */
-#define MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED -0x0072 /**< The requested feature is not supported by the platform */
+/** Hardware accelerator failed */
+#define MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED     -0x0070
+/** The requested feature is not supported by the platform */
+#define MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED -0x0072
 
 /**
  * \brief Combines a high-level and low-level error code together.

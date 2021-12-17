@@ -42,6 +42,7 @@
 #include "private_access.h"
 
 #include "build_info.h"
+#include "platform_util.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -51,11 +52,14 @@
 #define MBEDTLS_AES_DECRYPT     0 /**< AES decryption. */
 
 /* Error codes in range 0x0020-0x0022 */
-#define MBEDTLS_ERR_AES_INVALID_KEY_LENGTH                -0x0020  /**< Invalid key length. */
-#define MBEDTLS_ERR_AES_INVALID_INPUT_LENGTH              -0x0022  /**< Invalid data input length. */
+/** Invalid key length. */
+#define MBEDTLS_ERR_AES_INVALID_KEY_LENGTH                -0x0020
+/** Invalid data input length. */
+#define MBEDTLS_ERR_AES_INVALID_INPUT_LENGTH              -0x0022
 
 /* Error codes in range 0x0021-0x0025 */
-#define MBEDTLS_ERR_AES_BAD_INPUT_DATA                    -0x0021  /**< Invalid input data. */
+/** Invalid input data. */
+#define MBEDTLS_ERR_AES_BAD_INPUT_DATA                    -0x0021
 
 #if ( defined(__ARMCC_VERSION) || defined(_MSC_VER) ) && \
     !defined(inline) && !defined(__cplusplus)
@@ -160,6 +164,7 @@ void mbedtls_aes_xts_free( mbedtls_aes_xts_context *ctx );
  * \return         \c 0 on success.
  * \return         #MBEDTLS_ERR_AES_INVALID_KEY_LENGTH on failure.
  */
+MBEDTLS_CHECK_RETURN_TYPICAL
 int mbedtls_aes_setkey_enc( mbedtls_aes_context *ctx, const unsigned char *key,
                     unsigned int keybits );
 
@@ -178,6 +183,7 @@ int mbedtls_aes_setkey_enc( mbedtls_aes_context *ctx, const unsigned char *key,
  * \return         \c 0 on success.
  * \return         #MBEDTLS_ERR_AES_INVALID_KEY_LENGTH on failure.
  */
+MBEDTLS_CHECK_RETURN_TYPICAL
 int mbedtls_aes_setkey_dec( mbedtls_aes_context *ctx, const unsigned char *key,
                     unsigned int keybits );
 
@@ -198,6 +204,7 @@ int mbedtls_aes_setkey_dec( mbedtls_aes_context *ctx, const unsigned char *key,
  * \return         \c 0 on success.
  * \return         #MBEDTLS_ERR_AES_INVALID_KEY_LENGTH on failure.
  */
+MBEDTLS_CHECK_RETURN_TYPICAL
 int mbedtls_aes_xts_setkey_enc( mbedtls_aes_xts_context *ctx,
                                 const unsigned char *key,
                                 unsigned int keybits );
@@ -218,6 +225,7 @@ int mbedtls_aes_xts_setkey_enc( mbedtls_aes_xts_context *ctx,
  * \return         \c 0 on success.
  * \return         #MBEDTLS_ERR_AES_INVALID_KEY_LENGTH on failure.
  */
+MBEDTLS_CHECK_RETURN_TYPICAL
 int mbedtls_aes_xts_setkey_dec( mbedtls_aes_xts_context *ctx,
                                 const unsigned char *key,
                                 unsigned int keybits );
@@ -246,6 +254,7 @@ int mbedtls_aes_xts_setkey_dec( mbedtls_aes_xts_context *ctx,
 
  * \return         \c 0 on success.
  */
+MBEDTLS_CHECK_RETURN_TYPICAL
 int mbedtls_aes_crypt_ecb( mbedtls_aes_context *ctx,
                     int mode,
                     const unsigned char input[16],
@@ -293,6 +302,7 @@ int mbedtls_aes_crypt_ecb( mbedtls_aes_context *ctx,
  * \return         #MBEDTLS_ERR_AES_INVALID_INPUT_LENGTH
  *                 on failure.
  */
+MBEDTLS_CHECK_RETURN_TYPICAL
 int mbedtls_aes_crypt_cbc( mbedtls_aes_context *ctx,
                     int mode,
                     size_t length,
@@ -337,6 +347,7 @@ int mbedtls_aes_crypt_cbc( mbedtls_aes_context *ctx,
  *                     smaller than an AES block in size (16 Bytes) or if \p
  *                     length is larger than 2^20 blocks (16 MiB).
  */
+MBEDTLS_CHECK_RETURN_TYPICAL
 int mbedtls_aes_crypt_xts( mbedtls_aes_xts_context *ctx,
                            int mode,
                            size_t length,
@@ -385,6 +396,7 @@ int mbedtls_aes_crypt_xts( mbedtls_aes_xts_context *ctx,
  *
  * \return         \c 0 on success.
  */
+MBEDTLS_CHECK_RETURN_TYPICAL
 int mbedtls_aes_crypt_cfb128( mbedtls_aes_context *ctx,
                        int mode,
                        size_t length,
@@ -429,6 +441,7 @@ int mbedtls_aes_crypt_cfb128( mbedtls_aes_context *ctx,
  *
  * \return         \c 0 on success.
  */
+MBEDTLS_CHECK_RETURN_TYPICAL
 int mbedtls_aes_crypt_cfb8( mbedtls_aes_context *ctx,
                     int mode,
                     size_t length,
@@ -483,6 +496,7 @@ int mbedtls_aes_crypt_cfb8( mbedtls_aes_context *ctx,
  *
  * \return         \c 0 on success.
  */
+MBEDTLS_CHECK_RETURN_TYPICAL
 int mbedtls_aes_crypt_ofb( mbedtls_aes_context *ctx,
                        size_t length,
                        size_t *iv_off,
@@ -496,10 +510,6 @@ int mbedtls_aes_crypt_ofb( mbedtls_aes_context *ctx,
 /**
  * \brief      This function performs an AES-CTR encryption or decryption
  *             operation.
- *
- *             This function performs the operation defined in the \p mode
- *             parameter (encrypt/decrypt), on the input data buffer
- *             defined in the \p input parameter.
  *
  *             Due to the nature of CTR, you must use the same key schedule
  *             for both encryption and decryption operations. Therefore, you
@@ -569,6 +579,7 @@ int mbedtls_aes_crypt_ofb( mbedtls_aes_context *ctx,
  *
  * \return                 \c 0 on success.
  */
+MBEDTLS_CHECK_RETURN_TYPICAL
 int mbedtls_aes_crypt_ctr( mbedtls_aes_context *ctx,
                        size_t length,
                        size_t *nc_off,
@@ -589,6 +600,7 @@ int mbedtls_aes_crypt_ctr( mbedtls_aes_context *ctx,
  *
  * \return          \c 0 on success.
  */
+MBEDTLS_CHECK_RETURN_TYPICAL
 int mbedtls_internal_aes_encrypt( mbedtls_aes_context *ctx,
                                   const unsigned char input[16],
                                   unsigned char output[16] );
@@ -604,6 +616,7 @@ int mbedtls_internal_aes_encrypt( mbedtls_aes_context *ctx,
  *
  * \return          \c 0 on success.
  */
+MBEDTLS_CHECK_RETURN_TYPICAL
 int mbedtls_internal_aes_decrypt( mbedtls_aes_context *ctx,
                                   const unsigned char input[16],
                                   unsigned char output[16] );
@@ -615,6 +628,7 @@ int mbedtls_internal_aes_decrypt( mbedtls_aes_context *ctx,
  * \return         \c 0 on success.
  * \return         \c 1 on failure.
  */
+MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_aes_self_test( int verbose );
 
 #endif /* MBEDTLS_SELF_TEST */

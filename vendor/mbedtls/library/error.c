@@ -645,6 +645,8 @@ const char * mbedtls_low_level_strerr( int error_code )
             return( "GCM - Authenticated decryption failed" );
         case -(MBEDTLS_ERR_GCM_BAD_INPUT):
             return( "GCM - Bad input parameters to function" );
+        case -(MBEDTLS_ERR_GCM_BUFFER_TOO_SMALL):
+            return( "GCM - An output buffer is too small" );
 #endif /* MBEDTLS_GCM_C */
 
 #if defined(MBEDTLS_HKDF_C)

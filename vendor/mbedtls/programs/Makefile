@@ -17,6 +17,12 @@ LOCAL_LDFLAGS = ${MBEDTLS_TEST_OBJS} 		\
 		-lmbedx509$(SHARED_SUFFIX)	\
 		-lmbedcrypto$(SHARED_SUFFIX)
 
+ifeq ($(shell uname -s),Linux)
+DLOPEN_LDFLAGS ?= -ldl
+else
+DLOPEN_LDFLAGS ?=
+endif
+
 include ../3rdparty/Makefile.inc
 LOCAL_CFLAGS+=$(THIRDPARTY_INCLUDES)
 
@@ -43,12 +49,28 @@ LOCAL_LDFLAGS += -lws2_32
 ifdef SHARED
 SHARED_SUFFIX=.$(DLEXT)
 endif
-PYTHON ?= python
 else
 DLEXT ?= so
 EXEXT=
 SHARED_SUFFIX=
+endif
+
+ifdef WINDOWS
+PYTHON ?= python
+else
 PYTHON ?= $(shell if type python3 >/dev/null 2>/dev/null; then echo python3; else echo python; fi)
+endif
+
+# Only build the dlopen test in shared library builds, and not when building
+# for Windows.
+ifdef BUILD_DLOPEN
+# Don't override the value
+else ifdef WINDOWS_BUILD
+BUILD_DLOPEN =
+else ifdef SHARED
+BUILD_DLOPEN = y
+else
+BUILD_DLOPEN =
 endif
 
 ## The following assignment is the list of base names of applications that
@@ -106,11 +128,16 @@ APPS = \
 	x509/cert_req \
 	x509/cert_write \
 	x509/crl_app \
+	x509/load_roots \
 	x509/req_app \
 # End of APPS
 
 ifdef PTHREAD
 APPS +=	ssl/ssl_pthread_server
+endif
+
+ifdef BUILD_DLOPEN
+APPS +=	test/dlopen
 endif
 
 ifdef TEST_CPP
@@ -331,9 +358,22 @@ test/benchmark$(EXEXT): test/benchmark.c $(DEP)
 	echo "  CC    test/benchmark.c"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) test/benchmark.c   $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
+test/cpp_dummy_build.cpp: test/generate_cpp_dummy_build.sh
+	echo "  Gen   test/cpp_dummy_build.cpp"
+	test/generate_cpp_dummy_build.sh
+
 test/cpp_dummy_build$(EXEXT): test/cpp_dummy_build.cpp $(DEP)
 	echo "  CXX   test/cpp_dummy_build.cpp"
 	$(CXX) $(LOCAL_CXXFLAGS) $(CXXFLAGS) test/cpp_dummy_build.cpp   $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
+
+ifdef BUILD_DLOPEN
+test/dlopen$(EXEXT): test/dlopen.c $(DEP)
+	echo "  CC    test/dlopen.c"
+# Do not link any test objects (that would bring in a static dependency on
+# libmbedcrypto at least). Do not link with libmbed* (that would defeat the
+# purpose of testing dynamic loading).
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) test/dlopen.c $(LDFLAGS) $(DLOPEN_LDFLAGS) -o $@
+endif
 
 test/query_config.o: test/query_config.c test/query_config.h $(DEP)
 	echo "  CC    test/query_config.c"
@@ -379,6 +419,10 @@ x509/cert_req$(EXEXT): x509/cert_req.c $(DEP)
 	echo "  CC    x509/cert_req.c"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) x509/cert_req.c    $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
+x509/load_roots$(EXEXT): x509/load_roots.c $(DEP)
+	echo "  CC    x509/load_roots.c"
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) x509/load_roots.c    $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
+
 x509/req_app$(EXEXT): x509/req_app.c $(DEP)
 	echo "  CC    x509/req_app.c"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) x509/req_app.c    $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
@@ -391,10 +435,12 @@ clean:
 ifndef WINDOWS
 	rm -f $(EXES)
 	-rm -f ssl/ssl_pthread_server$(EXEXT)
-	-rm -f test/cpp_dummy_build$(EXEXT)
+	-rm -f test/cpp_dummy_build.cpp test/cpp_dummy_build$(EXEXT)
+	-rm -f test/dlopen$(EXEXT)
 else
 	if exist *.o del /Q /F *.o
 	if exist *.exe del /Q /F *.exe
+	if exist test\cpp_dummy_build.cpp del /Q /F test\cpp_dummy_build.cpp
 endif
 	$(MAKE) -C fuzz clean
 

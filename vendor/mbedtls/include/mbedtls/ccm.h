@@ -57,8 +57,10 @@
 #define MBEDTLS_CCM_STAR_DECRYPT  2
 #define MBEDTLS_CCM_STAR_ENCRYPT  3
 
-#define MBEDTLS_ERR_CCM_BAD_INPUT       -0x000D /**< Bad input parameters to the function. */
-#define MBEDTLS_ERR_CCM_AUTH_FAILED     -0x000F /**< Authenticated decryption failed. */
+/** Bad input parameters to the function. */
+#define MBEDTLS_ERR_CCM_BAD_INPUT       -0x000D
+/** Authenticated decryption failed. */
+#define MBEDTLS_ERR_CCM_AUTH_FAILED     -0x000F
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,7 +76,27 @@ extern "C" {
  */
 typedef struct mbedtls_ccm_context
 {
+    unsigned char MBEDTLS_PRIVATE(y)[16];    /*!< The Y working buffer */
+    unsigned char MBEDTLS_PRIVATE(ctr)[16];  /*!< The counter buffer */
     mbedtls_cipher_context_t MBEDTLS_PRIVATE(cipher_ctx);    /*!< The cipher context used. */
+    size_t MBEDTLS_PRIVATE(plaintext_len);   /*!< Total plaintext length */
+    size_t MBEDTLS_PRIVATE(add_len);         /*!< Total authentication data length */
+    size_t MBEDTLS_PRIVATE(tag_len);         /*!< Total tag length */
+    size_t MBEDTLS_PRIVATE(processed);       /*!< Track how many bytes of input data
+                                                  were processed (chunked input).
+                                                  Used independently for both auth data
+                                                  and plaintext/ciphertext.
+                                                  This variable is set to zero after
+                                                  auth data input is finished. */
+    unsigned char MBEDTLS_PRIVATE(q);        /*!< The Q working value */
+    unsigned char MBEDTLS_PRIVATE(mode);     /*!< The operation to perform:
+                                                  #MBEDTLS_CCM_ENCRYPT or
+                                                  #MBEDTLS_CCM_DECRYPT or
+                                                  #MBEDTLS_CCM_STAR_ENCRYPT or
+                                                  #MBEDTLS_CCM_STAR_DECRYPT. */
+    int MBEDTLS_PRIVATE(state);              /*!< Working value holding context's
+                                                  state. Used for chunked data
+                                                  input */
 }
 mbedtls_ccm_context;
 
@@ -176,6 +198,7 @@ int mbedtls_ccm_encrypt_and_tag( mbedtls_ccm_context *ctx, size_t length,
  * \param ctx       The CCM context to use for encryption. This must be
  *                  initialized and bound to a key.
  * \param length    The length of the input data in Bytes.
+ *                  For tag length = 0, input length is ignored.
  * \param iv        The initialization vector (nonce). This must be a readable
  *                  buffer of at least \p iv_len Bytes.
  * \param iv_len    The length of the nonce in Bytes: 7, 8, 9, 10, 11, 12,
@@ -257,6 +280,7 @@ int mbedtls_ccm_auth_decrypt( mbedtls_ccm_context *ctx, size_t length,
  * \param ctx       The CCM context to use for decryption. This must be
  *                  initialized and bound to a key.
  * \param length    The length of the input data in Bytes.
+ *                  For tag length = 0, input length is ignored.
  * \param iv        The initialization vector (nonce). This must be a readable
  *                  buffer of at least \p iv_len Bytes.
  * \param iv_len    The length of the nonce in Bytes: 7, 8, 9, 10, 11, 12,

@@ -456,10 +456,6 @@
 #error "MBEDTLS_PLATFORM_STD_CALLOC defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_PLATFORM_STD_CALLOC) && !defined(MBEDTLS_PLATFORM_MEMORY)
-#error "MBEDTLS_PLATFORM_STD_CALLOC defined, but not all prerequisites"
-#endif
-
 #if defined(MBEDTLS_PLATFORM_STD_FREE) && !defined(MBEDTLS_PLATFORM_MEMORY)
 #error "MBEDTLS_PLATFORM_STD_FREE defined, but not all prerequisites"
 #endif
@@ -602,9 +598,16 @@
 #error "MBEDTLS_SSL_PROTO_TLS1_2 defined, but not all prerequisites"
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && ( !defined(MBEDTLS_HKDF_C) && \
-    !defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA512_C) )
-#error "MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL defined, but not all prerequisites"
+/*
+ * HKDF is mandatory for TLS 1.3.
+ * Otherwise support for at least one ciphersuite mandates either SHA_256 or
+ * SHA_384.
+ */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && \
+    ( ( !defined(MBEDTLS_HKDF_C) ) || \
+      ( !defined(MBEDTLS_SHA256_C) && !defined(MBEDTLS_SHA384_C) ) || \
+      ( !defined(MBEDTLS_PSA_CRYPTO_C) ) )
+#error "MBEDTLS_SSL_PROTO_TLS1_3 defined, but not all prerequisites"
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) &&                                    \
@@ -802,14 +805,6 @@
 
 #if defined(MBEDTLS_ZLIB_SUPPORT) //no-check-names
 #error "MBEDTLS_ZLIB_SUPPORT was removed in Mbed TLS 3.0. See https://github.com/ARMmbed/mbedtls/issues/4031"
-#endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1) //no-check-names
-#error "MBEDTLS_SSL_PROTO_TLS1 (TLS v1.0 support) was removed in Mbed TLS 3.0. See https://github.com/ARMmbed/mbedtls/issues/4286"
-#endif
-
-#if defined(MBEDTLS_SSL_PROTO_TLS1_1) //no-check-names
-#error "MBEDTLS_SSL_PROTO_TLS1_1 (TLS v1.1 support) was removed in Mbed TLS 3.0. See https://github.com/ARMmbed/mbedtls/issues/4286"
 #endif
 
 #if defined(MBEDTLS_CHECK_PARAMS) //no-check-names

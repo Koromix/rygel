@@ -29,6 +29,7 @@
 #include <psa/crypto.h>
 
 #include <test/asn1_helpers.h>
+#include <psa_crypto_slot_management.h>
 #include <test/psa_crypto_helpers.h>
 
 #if defined(MBEDTLS_PSA_CRYPTO_SE_C)
@@ -306,10 +307,10 @@ static int exercise_signature_key( mbedtls_svc_key_id_t key,
         psa_algorithm_t hash_alg = PSA_ALG_SIGN_GET_HASH( alg );
 
         /* If the policy allows signing with any hash, just pick one. */
-        if( PSA_ALG_IS_HASH_AND_SIGN( alg ) && hash_alg == PSA_ALG_ANY_HASH )
+        if( PSA_ALG_IS_SIGN_HASH( alg ) && hash_alg == PSA_ALG_ANY_HASH )
         {
-    #if defined(KNOWN_SUPPORTED_HASH_ALG)
-            hash_alg = KNOWN_SUPPORTED_HASH_ALG;
+    #if defined(KNOWN_MBEDTLS_SUPPORTED_HASH_ALG)
+            hash_alg = KNOWN_MBEDTLS_SUPPORTED_HASH_ALG;
             alg ^= PSA_ALG_ANY_HASH ^ hash_alg;
     #else
             TEST_ASSERT( ! "No hash algorithm for hash-and-sign testing" );
@@ -642,7 +643,7 @@ int mbedtls_test_psa_exported_key_sanity_check(
         TEST_EQUAL( exported_length, PSA_BITS_TO_BYTES( bits ) );
     else
 
-#if defined(MBEDTLS_RSA_C) && defined(MBEDTLS_PK_PARSE_C)
+#if defined(MBEDTLS_ASN1_PARSE_C)
     if( type == PSA_KEY_TYPE_RSA_KEY_PAIR )
     {
         uint8_t *p = (uint8_t*) exported;
@@ -663,7 +664,7 @@ int mbedtls_test_psa_exported_key_sanity_check(
         TEST_EQUAL( mbedtls_asn1_get_tag( &p, end, &len,
                                           MBEDTLS_ASN1_SEQUENCE |
                                           MBEDTLS_ASN1_CONSTRUCTED ), 0 );
-        TEST_EQUAL( p + len, end );
+        TEST_EQUAL( len, end - p );
         if( ! mbedtls_test_asn1_skip_integer( &p, end, 0, 0, 0 ) )
             goto exit;
         if( ! mbedtls_test_asn1_skip_integer( &p, end, bits, bits, 1 ) )
@@ -684,12 +685,12 @@ int mbedtls_test_psa_exported_key_sanity_check(
             goto exit;
         if( ! mbedtls_test_asn1_skip_integer( &p, end, 1, bits / 2 + 1, 0 ) )
             goto exit;
-        TEST_EQUAL( p, end );
+        TEST_EQUAL( p - end, 0 );
 
         TEST_ASSERT( exported_length <= PSA_EXPORT_KEY_PAIR_MAX_SIZE );
     }
     else
-#endif /* MBEDTLS_RSA_C */
+#endif /* MBEDTLS_ASN1_PARSE_C */
 
 #if defined(MBEDTLS_ECP_C)
     if( PSA_KEY_TYPE_IS_ECC_KEY_PAIR( type ) )
@@ -702,7 +703,7 @@ int mbedtls_test_psa_exported_key_sanity_check(
     else
 #endif /* MBEDTLS_ECP_C */
 
-#if defined(MBEDTLS_RSA_C)
+#if defined(MBEDTLS_ASN1_PARSE_C)
     if( type == PSA_KEY_TYPE_RSA_PUBLIC_KEY )
     {
         uint8_t *p = (uint8_t*) exported;
@@ -716,12 +717,12 @@ int mbedtls_test_psa_exported_key_sanity_check(
                                           MBEDTLS_ASN1_SEQUENCE |
                                           MBEDTLS_ASN1_CONSTRUCTED ),
                     0 );
-        TEST_EQUAL( p + len, end );
+        TEST_EQUAL( len, end - p );
         if( ! mbedtls_test_asn1_skip_integer( &p, end, bits, bits, 1 ) )
             goto exit;
         if( ! mbedtls_test_asn1_skip_integer( &p, end, 2, bits, 1 ) )
             goto exit;
-        TEST_EQUAL( p, end );
+        TEST_EQUAL( p - end, 0 );
 
 
         TEST_ASSERT( exported_length <=
@@ -730,7 +731,7 @@ int mbedtls_test_psa_exported_key_sanity_check(
                      PSA_EXPORT_PUBLIC_KEY_MAX_SIZE );
     }
     else
-#endif /* MBEDTLS_RSA_C */
+#endif /* MBEDTLS_ASN1_PARSE_C */
 
 #if defined(MBEDTLS_ECP_C)
     if( PSA_KEY_TYPE_IS_ECC_PUBLIC_KEY( type ) )
@@ -925,7 +926,7 @@ psa_key_usage_t mbedtls_test_psa_usage_to_exercise( psa_key_type_t type,
 {
     if( PSA_ALG_IS_MAC( alg ) || PSA_ALG_IS_SIGN( alg ) )
     {
-        if( PSA_ALG_IS_HASH_AND_SIGN( alg ) )
+        if( PSA_ALG_IS_SIGN_HASH( alg ) )
         {
             if( PSA_ALG_SIGN_GET_HASH( alg ) )
                 return( PSA_KEY_TYPE_IS_PUBLIC_KEY( type ) ?

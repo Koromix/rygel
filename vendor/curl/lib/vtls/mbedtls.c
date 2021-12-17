@@ -671,7 +671,7 @@ mbed_connect_step2(struct Curl_easy *data, struct connectdata *conn,
     mbedtls_x509_crt *p = NULL;
     unsigned char *pubkey = NULL;
 
-#if MBEDTLS_VERSION_NUMBER >= 0x03000000
+#if MBEDTLS_VERSION_NUMBER >= 0x03000000 && MBEDTLS_VERSION_NUMBER < 0x03010000
     if(!peercert || !peercert->MBEDTLS_PRIVATE(raw).MBEDTLS_PRIVATE(p) ||
        !peercert->MBEDTLS_PRIVATE(raw).MBEDTLS_PRIVATE(len)) {
 #else
@@ -698,7 +698,7 @@ mbed_connect_step2(struct Curl_easy *data, struct connectdata *conn,
     /* Make a copy of our const peercert because mbedtls_pk_write_pubkey_der
        needs a non-const key, for now.
        https://github.com/ARMmbed/mbedtls/issues/396 */
-#if MBEDTLS_VERSION_NUMBER >= 0x03000000
+#if MBEDTLS_VERSION_NUMBER >= 0x03000000 && MBEDTLS_VERSION_NUMBER < 0x03010000
     if(mbedtls_x509_crt_parse_der(p,
                         peercert->MBEDTLS_PRIVATE(raw).MBEDTLS_PRIVATE(p),
                         peercert->MBEDTLS_PRIVATE(raw).MBEDTLS_PRIVATE(len))) {
@@ -710,7 +710,7 @@ mbed_connect_step2(struct Curl_easy *data, struct connectdata *conn,
       goto pinnedpubkey_error;
     }
 
-#if MBEDTLS_VERSION_NUMBER >= 0x03000000
+#if MBEDTLS_VERSION_NUMBER >= 0x03000000 && MBEDTLS_VERSION_NUMBER < 0x03010000
     size = mbedtls_pk_write_pubkey_der(&p->MBEDTLS_PRIVATE(pk), pubkey,
                                        PUB_DER_MAX_BYTES);
 #else
