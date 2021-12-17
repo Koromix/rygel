@@ -3783,7 +3783,7 @@ struct FileInfo {
     FileType type;
 
     int64_t size;
-    int64_t modification_time;
+    int64_t mtime;
 };
 
 enum class EnumStatus {

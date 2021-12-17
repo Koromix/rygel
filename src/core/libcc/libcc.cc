@@ -1898,7 +1898,7 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
 
     out_info->type = FileAttributesToType(attr.dwFileAttributes);
     out_info->size = ((uint64_t)attr.nFileSizeHigh << 32) | attr.nFileSizeLow;
-    out_info->modification_time = FileTimeToUnixTime(attr.ftLastWriteTime);
+    out_info->mtime = FileTimeToUnixTime(attr.ftLastWriteTime);
 
     return true;
 }
@@ -2025,13 +2025,13 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
 
     out_info->size = (int64_t)sb.st_size;
 #if defined(__linux__)
-    out_info->modification_time = (int64_t)sb.st_mtim.tv_sec * 1000 +
+    out_info->mtime = (int64_t)sb.st_mtim.tv_sec * 1000 +
                                   (int64_t)sb.st_mtim.tv_nsec / 1000000;
 #elif defined(__APPLE__)
-    out_info->modification_time = (int64_t)sb.st_mtimespec.tv_sec * 1000 +
+    out_info->mtime = (int64_t)sb.st_mtimespec.tv_sec * 1000 +
                                   (int64_t)sb.st_mtimespec.tv_nsec / 1000000;
 #else
-    out_info->modification_time = (int64_t)sb.st_mtime * 1000;
+    out_info->mtime = (int64_t)sb.st_mtime * 1000;
 #endif
 
     return true;
@@ -5791,9 +5791,9 @@ bool ReloadAssets()
         if (!StatFile(assets_filename, &file_info))
             return false;
 
-        if (assets_last_check == file_info.modification_time)
+        if (assets_last_check == file_info.mtime)
             return false;
-        assets_last_check = file_info.modification_time;
+        assets_last_check = file_info.mtime;
     }
 
 #ifdef _WIN32

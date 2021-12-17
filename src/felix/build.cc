@@ -859,9 +859,9 @@ int64_t Builder::GetFileModificationTime(const char *filename, bool retry)
 
         // filename might be temporary (e.g. dependency filenames in NeedsRebuild())
         const char *filename2 = DuplicateString(filename, &str_alloc).ptr;
-        mtime_map.Set(filename2, file_info.modification_time);
+        mtime_map.Set(filename2, file_info.mtime);
 
-        return file_info.modification_time;
+        return file_info.mtime;
     }
 }
 

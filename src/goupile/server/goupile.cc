@@ -774,7 +774,7 @@ static bool PruneOldFiles(const char *dirname, const char *filter, bool recursiv
             } break;
             case FileType::File: {
                 if (!filter || MatchPathName(basename, filter)) {
-                    if (file_info.modification_time < threshold) {
+                    if (file_info.mtime < threshold) {
                         LogInfo("Prune old file '%1'", filename);
                         complete &= UnlinkFile(filename);
                     } else {
