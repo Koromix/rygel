@@ -1603,15 +1603,14 @@ static void FindArduinoCompiler(const char *name, const char *compiler, Span<cha
         if (test.env) {
             Span<const char> prefix = getenv(test.env);
 
-            if (prefix.len) {
-                while (prefix.len && IsPathSeparator(prefix[prefix.len - 1])) {
-                    prefix.len--;
-                }
+            if (!prefix.len)
+                continue;
 
-                Fmt(out_cc, "%1%/%2%/%3", prefix, test.path, compiler);
-            } else {
-                Fmt(out_cc, "%1%/%2", test.path, compiler);
+            while (prefix.len && IsPathSeparator(prefix[prefix.len - 1])) {
+                prefix.len--;
             }
+
+            Fmt(out_cc, "%1%/%2%/%3", prefix, test.path, compiler);
         } else {
             Fmt(out_cc, "%1%/%2", test.path, compiler);
         }
