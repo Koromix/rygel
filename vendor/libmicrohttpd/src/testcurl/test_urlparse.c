@@ -1,6 +1,7 @@
 /*
      This file is part of libmicrohttpd
      Copyright (C) 2007, 2009, 2011 Christian Grothoff
+     Copyright (C) 2014-2019 Evgeny Grin (Karlson2k)
 
      libmicrohttpd is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published
@@ -22,6 +23,7 @@
  * @file daemontest_urlparse.c
  * @brief  Testcase for libmicrohttpd url parsing
  * @author Christian Grothoff
+ * @author Karlson2k (Evgeny Grin)
  */
 
 #include "MHD_config.h"
@@ -216,5 +218,5 @@ main (int argc, char *const *argv)
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);
   curl_global_cleanup ();
-  return errorCount != 0;       /* 0 == pass */
+  return (0 == errorCount) ? 0 : 1;       /* 0 == pass */
 }

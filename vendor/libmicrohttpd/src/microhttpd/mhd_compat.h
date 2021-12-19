@@ -35,7 +35,9 @@
 #define MHD_COMPAT_H 1
 
 #include "mhd_options.h"
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
+#endif /* HAVE_STDLIB_H */
 #ifdef HAVE_STRING_H /* for strerror() */
 #include <string.h>
 #endif /* HAVE_STRING_H */

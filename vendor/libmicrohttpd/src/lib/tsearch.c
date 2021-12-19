@@ -64,7 +64,7 @@ tfind (const void *vkey,         /* key to be found */
        void *const *vrootp,      /* address of the tree root */
        int (*compar)(const void *, const void *))
 {
-  node_t *const *rootp = (node_t *const*) vrootp;
+  node_t *const *rootp = (node_t *const *) vrootp;
 
   if (NULL == rootp)
     return NULL;

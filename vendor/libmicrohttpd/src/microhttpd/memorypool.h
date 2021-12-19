@@ -31,7 +31,9 @@
 #define MEMORYPOOL_H
 
 #include "mhd_options.h"
+#ifdef HAVE_STDDEF_H
 #include <stddef.h>
+#endif /* HAVE_STDDEF_H */
 #ifdef HAVE_STDBOOL_H
 #include <stdbool.h>
 #endif
@@ -87,12 +89,37 @@ MHD_pool_allocate (struct MemoryPool *pool,
 
 
 /**
+ * Try to allocate @a size bytes memory area from the @a pool.
+ *
+ * If allocation fails, @a required_bytes is updated with size required to be
+ * freed in the @a pool from relocatable area to allocate requested number
+ * of bytes.
+ * Allocated memory area is always not rellocatable ("from end").
+ *
+ * @param pool memory pool to use for the operation
+ * @param size the size of memory in bytes to allocate
+ * @param[out] required_bytes the pointer to variable to be updated with
+ *                            the size of the required additional free
+ *                            memory area, not updated if function succeed.
+ *                            Cannot be NULL.
+ * @return the pointer to allocated memory area if succeed,
+ *         NULL if the pool doesn't have enough space, required_bytes is updated
+ *         with amount of space needed to be freed in relocatable area or
+ *         set to SIZE_MAX if requested size is too large for the pool.
+ */
+void *
+MHD_pool_try_alloc (struct MemoryPool *pool,
+                    size_t size,
+                    size_t *required_bytes);
+
+
+/**
  * Reallocate a block of memory obtained from the pool.
  * This is particularly efficient when growing or
  * shrinking the block that was last (re)allocated.
  * If the given block is not the most recently
  * (re)allocated block, the memory of the previous
- * allocation may be leaked until the pool is
+ * allocation may be not released until the pool is
  * destroyed or reset.
  *
  * @param pool memory pool to use for the operation

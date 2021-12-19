@@ -9,8 +9,14 @@
  * Totally public domain.
  */
 
+#include "mhd_options.h"
 #include "tsearch.h"
+#ifdef HAVE_STDDEF_H
+#include <stddef.h>
+#endif /* HAVE_STDDEF_H */
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
+#endif /* HAVE_STDLIB_H */
 
 
 typedef struct node

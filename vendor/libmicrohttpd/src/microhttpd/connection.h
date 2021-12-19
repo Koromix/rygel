@@ -89,13 +89,15 @@ MHD_set_http_callbacks_ (struct MHD_Connection *connection);
 /**
  * This function handles a particular connection when it has been
  * determined that there is data to be read off a socket. All
- * implementations (multithreaded, external select, internal select)
+ * implementations (multithreaded, external polling, internal polling)
  * call this function to handle reads.
  *
  * @param connection connection to handle
+ * @param socket_error set to true if socket error was detected
  */
 void
-MHD_connection_handle_read (struct MHD_Connection *connection);
+MHD_connection_handle_read (struct MHD_Connection *connection,
+                            bool socket_error);
 
 
 /**

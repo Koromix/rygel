@@ -9,13 +9,13 @@
 /* Define if MS VC compiler is used */
 #define MSVC 1
 
-/* Define that MS VC does not support VLAs */
 #ifndef __clang__
+/* Define that MS VC does not support VLAs */
+#ifndef __STDC_NO_VLA__
 #define __STDC_NO_VLA__ 1
-#endif
-
+#endif /* ! __STDC_NO_VLA__ */
+#else
 /* If clang is used then variable-length arrays are supported. */
-#ifdef __clang__
 #define HAVE_C_VARARRAYS 1
 #endif
 
@@ -33,6 +33,31 @@
 #define MHD_HAVE___BUILTIN_BSWAP64 1
 #endif /* __clang__ */
 
+/* The size of `size_t', as computed by sizeof. */
+#if defined(_M_X64) || defined(_M_AMD64) || defined(_M_ARM64) || defined(_WIN64)
+#define SIZEOF_SIZE_T 8
+#else  /* ! _WIN64 */
+#define SIZEOF_SIZE_T 4
+#endif /* ! _WIN64 */
+
+/* The size of `tv_sec' member of `struct timeval', as computed by sizeof */
+#define SIZEOF_STRUCT_TIMEVAL_TV_SEC 4
+
+/* The size of `uint64_t', as computed by sizeof. */
+#define SIZEOF_UINT64_T 8
+
+/* The size of `unsigned int', as computed by sizeof. */
+#define SIZEOF_UNSIGNED_INT 4
+
+/* The size of `unsigned long long', as computed by sizeof. */
+#define SIZEOF_UNSIGNED_LONG_LONG 8
+
+/* Define to supported 'noreturn' function declaration */
+#if defined(_STDC_VERSION__) && (__STDC_VERSION__ + 0) >= 201112L
+#define _MHD_NORETURN _Noreturn
+#else  /* before C11 */
+#define _MHD_NORETURN __declspec(noreturn)
+#endif /* before C11 */
 
 /* *** MHD configuration *** */
 /* Undef to disable feature */
@@ -65,7 +90,7 @@
 
 #ifndef _WIN32_WINNT
 /* MHD supports Windows XP and later W32 systems*/
-#define _WIN32_WINNT 0x0501
+#define _WIN32_WINNT 0x0600
 #endif /* _WIN32_WINNT */
 
 /* winsock poll is available only on Vista and later */
@@ -128,6 +153,14 @@
 /* Define to 1 if your compiler supports __func__ magic-macro. */
 #define HAVE___FUNC__ 1
 
+#if _MSC_VER + 0 >= 1900 /* VS 2015 and later */
+#if defined(_STDC_VERSION__) && (__STDC_VERSION__ + 0) >= 201112L
+/* Define to 1 if your compiler supports 'alignof()' */
+#define HAVE_C_ALIGNOF 1
+/* Define to 1 if you have the <stdalign.h> header file. */
+#define HAVE_STDALIGN_H 1
+#endif /* C11 */
+#endif /* VS 2015 and later */
 
 /* *** Headers information *** */
 /* Not really important as not used by code currently */

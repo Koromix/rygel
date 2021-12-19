@@ -36,7 +36,7 @@
   "<title>WebSocket chat</title>\n"                                           \
   "<script>\n"                                                                \
   "document.addEventListener('DOMContentLoaded', function() {\n"              \
-  "  const ws = new WebSocket('ws:// ' + window.location.host);\n"        /*  \
+  "  const ws = new WebSocket('ws:/" "/ ' + window.location.host);\n"     /*  \
   "  const btn = document.getElementById('send');\n"                          \
   "  const msg = document.getElementById('msg');\n"                           \
   "  const log = document.getElementById('log');\n"                           \
@@ -420,9 +420,9 @@ is_websocket_request (struct MHD_Connection *con, const char *upg_header,
 
   (void) con;  /* Unused. Silent compiler warning. */
 
-  return (upg_header != NULL) && (con_header != NULL)
-         && (0 == strcmp (upg_header, WS_UPGRADE_VALUE))
-         && (NULL != strstr (con_header, "Upgrade"))
+  return ((upg_header != NULL) && (con_header != NULL)
+          && (0 == strcmp (upg_header, WS_UPGRADE_VALUE))
+          && (NULL != strstr (con_header, "Upgrade")))
          ? MHD_YES
          : MHD_NO;
 }
@@ -495,7 +495,11 @@ ws_get_accept_value (const char *key, char **val)
   strncpy (str + WS_KEY_LEN, WS_GUID, WS_GUID_LEN + 1);
   SHA1Reset (&ctx);
   SHA1Input (&ctx, (const unsigned char *) str, WS_KEY_GUID_LEN);
-  SHA1Result (&ctx, hash);
+  if (SHA1_RESULT_SUCCESS != SHA1Result (&ctx, hash))
+  {
+    free (str);
+    return MHD_NO;
+  }
   free (str);
   len = BASE64Encode (hash, SHA1HashSize, val);
   if (-1 == len)
@@ -515,14 +519,15 @@ make_blocking (MHD_socket fd)
 
   flags = fcntl (fd, F_GETFL);
   if (-1 == flags)
-    return;
+    abort ();
   if ((flags & ~O_NONBLOCK) != flags)
     if (-1 == fcntl (fd, F_SETFL, flags & ~O_NONBLOCK))
       abort ();
 #elif defined(MHD_WINSOCK_SOCKETS)
-  unsigned long flags = 1;
+  unsigned long flags = 0;
 
-  ioctlsocket (fd, FIONBIO, &flags);
+  if (0 != ioctlsocket (fd, (int) FIONBIO, &flags))
+    abort ();
 #endif /* MHD_WINSOCK_SOCKETS */
 }
 
@@ -535,7 +540,7 @@ send_all (MHD_socket sock, const unsigned char *buf, size_t len)
 
   for (off = 0; off < len; off += ret)
   {
-    ret = send (sock, (const void*) &buf[off], len - off, 0);
+    ret = send (sock, (const void *) &buf[off], len - off, 0);
     if (0 > ret)
     {
       if (EAGAIN == errno)
@@ -571,14 +576,8 @@ ws_send_frame (MHD_socket sock, const char *msg, size_t length)
     frame[1] = length & 0x7F;
     idx_first_rdata = 2;
   }
-  else if ((length >= 126) && (length <= 0xFFFF))
-  {
-    frame[1] = 126;
-    frame[2] = (length >> 8) & 0xFF;
-    frame[3] = length & 0xFF;
-    idx_first_rdata = 4;
-  }
-  else
+#if SIZEOF_SIZE_T > 4
+  else if (0xFFFF < length)
   {
     frame[1] = 127;
     frame[2] = (unsigned char) ((length >> 56) & 0xFF);
@@ -590,6 +589,14 @@ ws_send_frame (MHD_socket sock, const char *msg, size_t length)
     frame[8] = (unsigned char) ((length >> 8) & 0xFF);
     frame[9] = (unsigned char) (length & 0xFF);
     idx_first_rdata = 10;
+  }
+#endif /* SIZEOF_SIZE_T > 4 */
+  else
+  {
+    frame[1] = 126;
+    frame[2] = (length >> 8) & 0xFF;
+    frame[3] = length & 0xFF;
+    idx_first_rdata = 4;
   }
   idx_response = 0;
   response = malloc (idx_first_rdata + length + 1);
@@ -699,7 +706,7 @@ run_usock (void *cls)
   make_blocking (ws->sock);
   while (1)
   {
-    got = recv (ws->sock, (void*) buf, sizeof (buf), 0);
+    got = recv (ws->sock, (void *) buf, sizeof (buf), 0);
     if (0 >= got)
     {
       break;

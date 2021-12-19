@@ -47,7 +47,7 @@ value_checker (void *cls,
   (void) transfer_encoding; (void) data; (void) off;             /* Unused. Silent compiler warning. */
 #if 0
   fprintf (stderr,
-           "VC: %llu %u `%s' `%s' `%s' `%s' `%.*s'\n",
+           "VC: %" PRIu64 " %u `%s' `%s' `%s' `%s' `%.*s'\n",
            off, size,
            key, filename, content_type, transfer_encoding, size, data);
 #endif

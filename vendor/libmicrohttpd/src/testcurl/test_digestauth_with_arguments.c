@@ -1,6 +1,7 @@
 /*
      This file is part of libmicrohttpd
      Copyright (C) 2010, 2012 Christian Grothoff
+     Copyright (C) 2016-2021 Evgeny Grin (Karlson2k)
 
      libmicrohttpd is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published
@@ -22,6 +23,7 @@
  * @file daemontest_digestauth_with_arguments.c
  * @brief  Testcase for libmicrohttpd Digest Auth with arguments
  * @author Amr Ali
+ * @author Karlson2k (Evgeny Grin)
  */
 #include "MHD_config.h"
 #include "platform.h"
@@ -194,7 +196,7 @@ testDigestAuth ()
                GetLastError ());
       return 1;
     }
-    b = CryptGenRandom (cc, 8, (BYTE*) rnd);
+    b = CryptGenRandom (cc, 8, (BYTE *) rnd);
     if (b == 0)
     {
       fprintf (stderr, "Failed to generate 8 random bytes: %lu\n",
@@ -279,5 +281,5 @@ main (int argc, char *const *argv)
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);
   curl_global_cleanup ();
-  return errorCount != 0;       /* 0 == pass */
+  return (0 == errorCount) ? 0 : 1;       /* 0 == pass */
 }

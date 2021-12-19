@@ -128,7 +128,7 @@ iovec_ahc (void *cls,
     iov[j].iov_len = TESTSTR_SIZE / TESTSTR_IOVCNT;
 
     for (i = 0; i < (int) (TESTSTR_IOVLEN / sizeof(int)); ++i)
-      ((int*) iov[j].iov_base)[i] = i + (j * TESTSTR_IOVLEN / sizeof(int));
+      ((int *) iov[j].iov_base)[i] = i + (j * TESTSTR_IOVLEN / sizeof(int));
   }
 
   response = MHD_create_response_from_iovec (iov,
@@ -261,8 +261,8 @@ ahc_empty (void *cls,
   (void) upload_data;
   (void) upload_data_size; /* Unused. Silent compiler warning. */
 
-  if (0 != strcasecmp ("GET",
-                       method))
+  if (0 != strcmp ("GET",
+                   method))
     return MHD_NO;              /* unexpected method */
   if (&ptr != *unused)
   {
@@ -408,7 +408,7 @@ main (int argc, char *const *argv)
     return 77;
   }
 
-  if (curl_uses_nss_ssl () == 0)
+  if (curl_tls_is_nss ())
   {
     aes256_sha_tlsv1 = "rsa_aes_256_sha";
   }

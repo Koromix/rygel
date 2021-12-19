@@ -75,8 +75,16 @@ int
 curl_check_version (const char *req_version, ...);
 
 int
-curl_uses_nss_ssl (void);
+curl_tls_is_gnutls (void);
 
+int
+curl_tls_is_nss (void);
+
+int
+curl_tls_is_schannel (void);
+
+int
+curl_tls_is_sectransport (void);
 
 FILE *
 setup_ca_cert (void);
@@ -138,14 +146,10 @@ teardown_testcase (struct MHD_Daemon *d);
 
 int
 setup_session (gnutls_session_t *session,
-               gnutls_datum_t *key,
-               gnutls_datum_t *cert,
                gnutls_certificate_credentials_t *xcred);
 
 int
 teardown_session (gnutls_session_t session,
-                  gnutls_datum_t *key,
-                  gnutls_datum_t *cert,
                   gnutls_certificate_credentials_t xcred);
 
 int

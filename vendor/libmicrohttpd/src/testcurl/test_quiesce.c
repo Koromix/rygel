@@ -1,6 +1,7 @@
 /*
      This file is part of libmicrohttpd
      Copyright (C) 2013, 2015 Christian Grothoff
+     Copyright (C) 2014-2021 Evgeny Grin (Karlson2k)
 
      libmicrohttpd is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published
@@ -21,6 +22,7 @@
  * @file test_quiesce.c
  * @brief  Testcase for libmicrohttpd quiescing
  * @author Christian Grothoff
+ * @author Karlson2k (Evgeny Grin)
  */
 
 #include "MHD_config.h"
@@ -282,7 +284,7 @@ testGet (int type, int pool_count, int poll_flag)
     return 2;
   }
   if (0 != pthread_create (&thrd, NULL, &ServeOneRequest,
-                           (void*) (intptr_t) fd))
+                           (void *) (intptr_t) fd))
   {
     fprintf (stderr, "pthread_create failed\n");
     curl_easy_cleanup (c);
@@ -301,7 +303,7 @@ testGet (int type, int pool_count, int poll_flag)
     return 2;
   }
 
-  if (0 != pthread_join (thrd, (void**) &thrdRet))
+  if (0 != pthread_join (thrd, (void **) &thrdRet))
   {
     fprintf (stderr, "pthread_join failed\n");
     curl_easy_cleanup (c);
@@ -336,7 +338,7 @@ testGet (int type, int pool_count, int poll_flag)
   /* at this point, the forked server quit, and the new
    * server has quiesced, so new requests should fail
    */
-  if (CURLE_OK == (errornum = curl_easy_perform (c)))
+  if (CURLE_OK == curl_easy_perform (c))
   {
     fprintf (stderr, "curl_easy_perform should fail\n");
     curl_easy_cleanup (c);
@@ -454,44 +456,63 @@ testExternalGet ()
       tv.tv_usec = 1000;
       if (-1 == select (maxposixs + 1, &rs, &ws, &es, &tv))
       {
-#ifdef MHD_POSIX_SOCKETS
+  #ifdef MHD_POSIX_SOCKETS
         if (EINTR != errno)
-          abort ();
-#else
-        if ((WSAEINVAL != WSAGetLastError ()) || (0 != rs.fd_count) || (0 !=
-                                                                        ws.
-                                                                        fd_count)
-            || (0 != es.fd_count) )
-          abort ();
-        Sleep (1000);
-#endif
+        {
+          fprintf (stderr, "Unexpected select() error: %d. Line: %d\n",
+                   (int) errno, __LINE__);
+          fflush (stderr);
+          exit (99);
+        }
+  #else
+        if ((WSAEINVAL != WSAGetLastError ()) ||
+            (0 != rs.fd_count) || (0 != ws.fd_count) || (0 != es.fd_count) )
+        {
+          fprintf (stderr, "Unexpected select() error: %d. Line: %d\n",
+                   (int) WSAGetLastError (), __LINE__);
+          fflush (stderr);
+          exit (99);
+        }
+        Sleep (1);
+  #endif
       }
       curl_multi_perform (multi, &running);
       if (0 == running)
       {
-        msg = curl_multi_info_read (multi, &running);
-        if (NULL == msg)
-          break;
-        if (msg->msg == CURLMSG_DONE)
+        int pending;
+        int curl_fine = 0;
+        while (NULL != (msg = curl_multi_info_read (multi, &pending)))
         {
-          if ((i == 0) && (msg->data.result != CURLE_OK) )
-            printf ("%s failed at %s:%d: `%s'\n",
-                    "curl_multi_perform",
-                    __FILE__,
-                    __LINE__,
-                    curl_easy_strerror (msg->data.result));
-          else if ( (i == 1) &&
-                    (msg->data.result == CURLE_OK) )
-            printf ("%s should have failed at %s:%d\n",
-                    "curl_multi_perform",
-                    __FILE__,
-                    __LINE__);
-          curl_multi_remove_handle (multi, c);
-          curl_multi_cleanup (multi);
-          curl_easy_cleanup (c);
-          c = NULL;
-          multi = NULL;
+          if (msg->msg == CURLMSG_DONE)
+          {
+            if (msg->data.result == CURLE_OK)
+              curl_fine = 1;
+            else if (i == 0)
+            {
+              fprintf (stderr,
+                       "%s failed at %s:%d: `%s'\n",
+                       "curl_multi_perform",
+                       __FILE__,
+                       __LINE__, curl_easy_strerror (msg->data.result));
+            }
+          }
         }
+        if ((i == 0) && (! curl_fine))
+        {
+          fprintf (stderr, "libcurl haven't returned OK code\n");
+          abort ();
+        }
+        else if ((i == 1) && (curl_fine))
+        {
+          fprintf (stderr, "libcurl returned OK code, while it shouldn't\n");
+          abort ();
+        }
+        curl_multi_remove_handle (multi, c);
+        curl_multi_cleanup (multi);
+        curl_easy_cleanup (c);
+        c = NULL;
+        multi = NULL;
+        break;
       }
       MHD_run (d);
     }
@@ -575,5 +596,5 @@ main (int argc, char *const *argv)
              "Error (code: %u)\n",
              errorCount);
   curl_global_cleanup ();
-  return errorCount != 0;       /* 0 == pass */
+  return (0 == errorCount) ? 0 : 1;       /* 0 == pass */
 }

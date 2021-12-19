@@ -67,6 +67,7 @@ Free Documentation License".
 * microhttpd-post::             Adding a @code{POST} processor.
 * microhttpd-info::             Obtaining and modifying status information.
 * microhttpd-util::             Utilities.
+* microhttpd-websocket::        Websockets.
 
 Appendices
 
@@ -1246,6 +1247,493 @@ list.
 @end deftp
 
 
+@deftp {Enumeration} MHD_WEBSOCKET_FLAG
+@cindex websocket
+Options for the MHD websocket stream.
+
+This is used for initialization of a websocket stream when calling
+@code{MHD_websocket_stream_init} or @code{MHD_websocket_stream_init2} and
+alters the behavior of the websocket stream.
+
+Note that websocket streams are only available if you include the header file
+@code{microhttpd_ws.h} and compiled @emph{libmicrohttpd} with websockets.
+
+@table @code
+@item MHD_WEBSOCKET_FLAG_SERVER
+The websocket stream is initialized in server mode (default).
+Thus all outgoing payload will not be masked.
+All incoming payload must be masked.
+
+This flag cannot be used together with @code{MHD_WEBSOCKET_FLAG_CLIENT}.
+
+@item MHD_WEBSOCKET_FLAG_CLIENT
+The websocket stream is initialized in client mode.
+You will usually never use that mode in combination with @emph{libmicrohttpd},
+because @emph{libmicrohttpd} provides a server and not a client.
+In client mode all outgoing payload will be masked
+(XOR-ed with random values).
+All incoming payload must be unmasked.
+If you use this mode, you must always call @code{MHD_websocket_stream_init2}
+instead of @code{MHD_websocket_stream_init}, because you need
+to pass a random number generator callback function for masking.
+
+This flag cannot be used together with @code{MHD_WEBSOCKET_FLAG_SERVER}.
+
+@item MHD_WEBSOCKET_FLAG_NO_FRAGMENTS
+You don't want to get fragmented data while decoding (default).
+Fragmented frames will be internally put together until
+they are complete.
+Whether or not data is fragmented is decided
+by the sender of the data during encoding.
+
+This cannot be used together with @code{MHD_WEBSOCKET_FLAG_WANT_FRAGMENTS}.
+
+@item MHD_WEBSOCKET_FLAG_WANT_FRAGMENTS
+You want fragmented data, if it appears while decoding.
+You will receive the content of the fragmented frame,
+but if you are decoding text, you will never get an unfinished
+UTF-8 sequence (if the sequence appears between two fragments).
+Instead the text will end before the unfinished UTF-8 sequence.
+With the next fragment, which finishes the UTF-8 sequence,
+you will get the complete UTF-8 sequence.
+
+This cannot be used together with @code{MHD_WEBSOCKET_FLAG_NO_FRAGMENTS}.
+
+@item MHD_WEBSOCKET_FLAG_GENERATE_CLOSE_FRAMES_ON_ERROR
+If the websocket stream becomes invalid during decoding due to
+protocol errors, a matching close frame will automatically
+be generated.
+The close frame will be returned via the parameters
+@code{payload} and @code{payload_len} of @code{MHD_websocket_decode} and
+the return value is negative (a value of @code{enum MHD_WEBSOCKET_STATUS}).
+
+The generated close frame must be freed by the caller
+with @code{MHD_websocket_free}.
+
+@end table
+@end deftp
+
+
+@deftp {Enumeration} MHD_WEBSOCKET_FRAGMENTATION
+@cindex websocket
+This enumeration is used to specify the fragmentation behavior
+when encoding of data (text/binary) for a websocket stream.
+This is used with @code{MHD_websocket_encode_text} or
+@code{MHD_websocket_encode_binary}.
+
+Note that websocket streams are only available if you include the header file
+@code{microhttpd_ws.h} and compiled @emph{libmicrohttpd} with websockets.
+
+@table @code
+@item MHD_WEBSOCKET_FRAGMENTATION_NONE
+You don't want to use fragmentation.
+The encoded frame consists of only one frame.
+
+@item MHD_WEBSOCKET_FRAGMENTATION_FIRST
+You want to use fragmentation.
+The encoded frame is the first frame of
+a series of data frames of the same type
+(text or binary).
+You may send control frames (ping, pong or close)
+between these data frames.
+
+@item MHD_WEBSOCKET_FRAGMENTATION_FOLLOWING
+You want to use fragmentation.
+The encoded frame is not the first frame of
+the series of data frames, but also not the last one.
+You may send control frames (ping, pong or close)
+between these data frames.
+
+@item MHD_WEBSOCKET_FRAGMENTATION_LAST
+You want to use fragmentation.
+The encoded frame is the last frame of
+the series of data frames, but also not the first one.
+After this frame, you may send all types of frames again.
+
+@end table
+@end deftp
+
+
+@deftp {Enumeration} MHD_WEBSOCKET_STATUS
+@cindex websocket
+This enumeration is used for the return value of almost
+every websocket stream function.
+Errors are negative and values equal to or above zero mean a success.
+Positive values are only used by @code{MHD_websocket_decode}.
+
+Note that websocket streams are only available if you include the header file
+@code{microhttpd_ws.h} and compiled @emph{libmicrohttpd} with websockets.
+
+@table @code
+@item MHD_WEBSOCKET_STATUS_OK
+The call succeeded.
+Especially for @code{MHD_websocket_decode} this means that no error occurred,
+but also no frame has been completed yet.
+For other functions this means simply a success.
+
+@item MHD_WEBSOCKET_STATUS_TEXT_FRAME
+@code{MHD_websocket_decode} has decoded a text frame.
+The parameters @code{payload} and @code{payload_len} are filled with
+the decoded text (if any).
+You must free the returned @code{payload} after use with
+@code{MHD_websocket_free}.
+
+@item MHD_WEBSOCKET_STATUS_BINARY_FRAME
+@code{MHD_websocket_decode} has decoded a binary frame.
+The parameters @code{payload} and @code{payload_len} are filled with
+the decoded binary data (if any).
+You must free the returned @code{payload} after use with
+@code{MHD_websocket_free}.
+
+@item MHD_WEBSOCKET_STATUS_CLOSE_FRAME
+@code{MHD_websocket_decode} has decoded a close frame.
+This means you must close the socket using @code{MHD_upgrade_action}
+with @code{MHD_UPGRADE_ACTION_CLOSE}.
+You may respond with a close frame before closing.
+The parameters @code{payload} and @code{payload_len} are filled with
+the close reason (if any).
+The close reason starts with a two byte sequence of close code
+in network byte order (see @code{enum MHD_WEBSOCKET_CLOSEREASON}).
+After these two bytes a UTF-8 encoded close reason may follow.
+You can call @code{MHD_websocket_split_close_reason} to split that
+close reason.
+You must free the returned @code{payload} after use with
+@code{MHD_websocket_free}.
+
+@item MHD_WEBSOCKET_STATUS_PING_FRAME
+@code{MHD_websocket_decode} has decoded a ping frame.
+You should respond to this with a pong frame.
+The pong frame must contain the same binary data as
+the corresponding ping frame (if it had any).
+The parameters @code{payload} and @code{payload_len} are filled with
+the binary ping data (if any).
+You must free the returned @code{payload} after use with
+@code{MHD_websocket_free}.
+
+@item MHD_WEBSOCKET_STATUS_PONG_FRAME
+@code{MHD_websocket_decode} has decoded a pong frame.
+You should usually only receive pong frames if you sent
+a ping frame before.
+The binary data should be equal to your ping frame and can be
+used to distinguish the response if you sent multiple ping frames.
+The parameters @code{payload} and @code{payload_len} are filled with
+the binary pong data (if any).
+You must free the returned @code{payload} after use with
+@code{MHD_websocket_free}.
+
+@item MHD_WEBSOCKET_STATUS_TEXT_FIRST_FRAGMENT
+@code{MHD_websocket_decode} has decoded a text frame fragment.
+The parameters @code{payload} and @code{payload_len} are filled with
+the decoded text (if any).
+This is like @code{MHD_WEBSOCKET_STATUS_TEXT_FRAME}, but it can only
+appear if you specified @code{MHD_WEBSOCKET_FLAG_WANT_FRAGMENTS} during
+the call of @code{MHD_websocket_stream_init} or
+@code{MHD_websocket_stream_init2}.
+You must free the returned @code{payload} after use with
+@code{MHD_websocket_free}.
+
+@item MHD_WEBSOCKET_STATUS_TEXT_FIRST_FRAGMENT
+@code{MHD_websocket_decode} has decoded a binary frame fragment.
+The parameters @code{payload} and @code{payload_len} are filled with
+the decoded binary data (if any).
+This is like @code{MHD_WEBSOCKET_STATUS_BINARY_FRAME}, but it can only
+appear if you specified @code{MHD_WEBSOCKET_FLAG_WANT_FRAGMENTS} during
+the call of @code{MHD_websocket_stream_init} or
+@code{MHD_websocket_stream_init2}.
+You must free the returned @code{payload} after use with
+@code{MHD_websocket_free}.
+
+@item MHD_WEBSOCKET_STATUS_TEXT_NEXT_FRAGMENT
+@code{MHD_websocket_decode} has decoded the next text frame fragment.
+The parameters @code{payload} and @code{payload_len} are filled with
+the decoded text (if any).
+This is like @code{MHD_WEBSOCKET_STATUS_TEXT_FIRST_FRAGMENT}, but it appears
+only after the first and before the last fragment of a series of fragments.
+It can only appear if you specified @code{MHD_WEBSOCKET_FLAG_WANT_FRAGMENTS}
+during the call of @code{MHD_websocket_stream_init} or
+@code{MHD_websocket_stream_init2}.
+You must free the returned @code{payload} after use with
+@code{MHD_websocket_free}.
+
+@item MHD_WEBSOCKET_STATUS_BINARY_NEXT_FRAGMENT
+@code{MHD_websocket_decode} has decoded the next binary frame fragment.
+The parameters @code{payload} and @code{payload_len} are filled with
+the decoded binary data (if any).
+This is like @code{MHD_WEBSOCKET_STATUS_BINARY_FIRST_FRAGMENT}, but it appears
+only after the first and before the last fragment of a series of fragments.
+It can only appear if you specified @code{MHD_WEBSOCKET_FLAG_WANT_FRAGMENTS}
+during the call of @code{MHD_websocket_stream_init} or
+@code{MHD_websocket_stream_init2}.
+You must free the returned @code{payload} after use with
+@code{MHD_websocket_free}.
+
+@item MHD_WEBSOCKET_STATUS_TEXT_LAST_FRAGMENT
+@code{MHD_websocket_decode} has decoded the last text frame fragment.
+The parameters @code{payload} and @code{payload_len} are filled with
+the decoded text (if any).
+This is like @code{MHD_WEBSOCKET_STATUS_TEXT_FIRST_FRAGMENT}, but it appears
+only for the last fragment of a series of fragments.
+It can only appear if you specified @code{MHD_WEBSOCKET_FLAG_WANT_FRAGMENTS}
+during the call of @code{MHD_websocket_stream_init} or
+@code{MHD_websocket_stream_init2}.
+You must free the returned @code{payload} after use with
+@code{MHD_websocket_free}.
+
+@item MHD_WEBSOCKET_STATUS_BINARY_LAST_FRAGMENT
+@code{MHD_websocket_decode} has decoded the last binary frame fragment.
+The parameters @code{payload} and @code{payload_len} are filled with
+the decoded binary data (if any).
+This is like @code{MHD_WEBSOCKET_STATUS_BINARY_FIRST_FRAGMENT}, but it appears
+only for the last fragment of a series of fragments.
+It can only appear if you specified @code{MHD_WEBSOCKET_FLAG_WANT_FRAGMENTS}
+during the call of @code{MHD_websocket_stream_init} or
+@code{MHD_websocket_stream_init2}.
+You must free the returned @code{payload} after use with
+@code{MHD_websocket_free}.
+
+@item MHD_WEBSOCKET_STATUS_PROTOCOL_ERROR
+The call failed and the stream is invalid now for decoding.
+You must close the websocket now using @code{MHD_upgrade_action}
+with @code{MHD_UPGRADE_ACTION_CLOSE}.
+You may send a close frame before closing.
+This is only used by @code{MHD_websocket_decode} and happens
+if the stream contains errors (i. e. invalid byte data).
+
+@item MHD_WEBSOCKET_STATUS_STREAM_BROKEN
+You tried to decode something, but the stream has already
+been marked invalid.
+You must close the websocket now using @code{MHD_upgrade_action}
+with @code{MHD_UPGRADE_ACTION_CLOSE}.
+You may send a close frame before closing.
+This is only used by @code{MHD_websocket_decode} and happens
+if you call @code{MDM_websocket_decode} again after
+has been invalidated.
+You can call @code{MHD_websocket_stream_is_valid} at any time
+to check whether a stream is invalid or not.
+
+@item MHD_WEBSOCKET_STATUS_MEMORY_ERROR
+A memory allocation failed. The stream remains valid.
+If this occurred while decoding, the decoding could be
+possible later if enough memory is available.
+This could happen while decoding if you received a too big data frame.
+You could try to specify max_payload_size during the call of
+@code{MHD_websocket_stream_init} or @code{MHD_websocket_stream_init2} to
+avoid this and close the websocket instead.
+
+@item MHD_WEBSOCKET_STATUS_PARAMETER_ERROR
+You passed invalid parameters during the function call
+(i. e. a NULL pointer for a required parameter).
+The stream remains valid.
+
+@item MHD_WEBSOCKET_STATUS_MAXIMUM_SIZE_EXCEEDED
+The maximum payload size has been exceeded.
+If you got this return code from @code{MHD_websocket_decode} then
+the stream becomes invalid and the websocket must be closed
+using @code{MHD_upgrade_action} with @code{MHD_UPGRADE_ACTION_CLOSE}.
+You may send a close frame before closing.
+The maximum payload size is specified during the call of
+@code{MHD_websocket_stream_init} or @code{MHD_websocket_stream_init2}.
+This can also appear if you specified 0 as maximum payload size
+when the message is greater than the maximum allocatable memory size
+(i. e. more than 4 GiB on 32 bit systems).
+If you got this return code from @code{MHD_websocket_encode_close},
+@code{MHD_websocket_encode_ping} or @code{MHD_websocket_encode_pong} then
+you passed to much payload data. The stream remains valid then.
+
+@item MHD_WEBSOCKET_STATUS_UTF8_ENCODING_ERROR
+An UTF-8 sequence is invalid.
+If you got this return code from @code{MHD_websocket_decode} then
+the stream becomes invalid and you must close the websocket
+using @code{MHD_upgrade_action} with @code{MHD_UPGRADE_ACTION_CLOSE}.
+You may send a close frame before closing.
+If you got this from @code{MHD_websocket_encode_text} or
+@code{MHD_websocket_encode_close} then you passed invalid UTF-8 text.
+The stream remains valid then.
+
+@item MHD_WEBSOCKET_STATUS_NO_WEBSOCKET_HANDSHAKE_HEADER
+A check routine for the HTTP headers came to the conclusion that
+the header value isn't valid for a websocket handshake request.
+This value can only be returned from the following functions:
+@code{MHD_websocket_check_http_version},
+@code{MHD_websocket_check_connection_header},
+@code{MHD_websocket_check_upgrade_header},
+@code{MHD_websocket_check_version_header},
+@code{MHD_websocket_create_accept_header}
+
+@end table
+@end deftp
+
+
+@deftp {Enumeration} MHD_WEBSOCKET_CLOSEREASON
+@cindex websocket
+Enumeration of possible close reasons for websocket close frames.
+
+The possible values are specified in RFC 6455 7.4.1
+These close reasons here are the default set specified by RFC 6455,
+but also other close reasons could be used.
+
+The definition is for short:
+@itemize @bullet
+@item 0-999 are never used (if you pass 0 in
+@code{MHD_websocket_encode_close} then no close reason is used).
+@item 1000-2999 are specified by RFC 6455.
+@item 3000-3999 are specified by libraries, etc. but must be registered by IANA.
+@item 4000-4999 are reserved for private use.
+@end itemize
+
+Note that websocket streams are only available if you include the header file
+@code{microhttpd_ws.h} and compiled @emph{libmicrohttpd} with websockets.
+
+@table @code
+@item MHD_WEBSOCKET_CLOSEREASON_NO_REASON
+This value is used as placeholder for @code{MHD_websocket_encode_close}
+to tell that you don't want to specify any reason.
+If you use this value then no reason text may be used.
+This value cannot be a result of decoding, because this value
+is not a valid close reason for the websocket protocol.
+
+@item MHD_WEBSOCKET_CLOSEREASON_REGULAR
+You close the websocket because it fulfilled its purpose and shall
+now be closed in a normal, planned way.
+
+@item MHD_WEBSOCKET_CLOSEREASON_GOING_AWAY
+You close the websocket because you are shutting down the server or
+something similar.
+
+@item MHD_WEBSOCKET_CLOSEREASON_PROTOCOL_ERROR
+You close the websocket because a protocol error occurred
+during decoding (i. e. invalid byte data).
+
+@item MHD_WEBSOCKET_CLOSEREASON_UNSUPPORTED_DATATYPE
+You close the websocket because you received data which you don't accept.
+For example if you received a binary frame,
+but your application only expects text frames.
+
+@item MHD_WEBSOCKET_CLOSEREASON_MALFORMED_UTF8
+You close the websocket because it contains malformed UTF-8.
+The UTF-8 validity is automatically checked by @code{MHD_websocket_decode},
+so you don't need to check it on your own.
+UTF-8 is specified in RFC 3629.
+
+@item MHD_WEBSOCKET_CLOSEREASON_POLICY_VIOLATED
+You close the websocket because you received a frame which is too big
+to process.
+You can specify the maximum allowed payload size during the call of
+@code{MHD_websocket_stream_init} or @code{MHD_websocket_stream_init2}.
+
+@item MHD_WEBSOCKET_CLOSEREASON_MISSING_EXTENSION
+This status code can be sent by the client if it
+expected a specific extension, but this extension hasn't been negotiated.
+
+@item MHD_WEBSOCKET_CLOSEREASON_UNEXPECTED_CONDITION
+The server closes the websocket because it encountered
+an unexpected condition that prevented it from fulfilling the request.
+
+@end table
+@end deftp
+
+
+@deftp {Enumeration} MHD_WEBSOCKET_UTF8STEP
+@cindex websocket
+Enumeration of possible UTF-8 check steps for websocket functions
+
+These values are used during the encoding of fragmented text frames
+or for error analysis while encoding text frames.
+Its values specify the next step of the UTF-8 check.
+UTF-8 sequences consist of one to four bytes.
+This enumeration just says how long the current UTF-8 sequence is
+and what is the next expected byte.
+
+Note that websocket streams are only available if you include the header file
+@code{microhttpd_ws.h} and compiled @emph{libmicrohttpd} with websockets.
+
+@table @code
+@item MHD_WEBSOCKET_UTF8STEP_NORMAL
+There is no open UTF-8 sequence.
+The next byte must be 0x00-0x7F or 0xC2-0xF4.
+
+@item MHD_WEBSOCKET_UTF8STEP_UTF2TAIL_1OF1
+The second byte of a two byte UTF-8 sequence.
+The first byte was 0xC2-0xDF.
+The next byte must be 0x80-0xBF.
+
+@item MHD_WEBSOCKET_UTF8STEP_UTF3TAIL1_1OF2
+The second byte of a three byte UTF-8 sequence.
+The first byte was 0xE0.
+The next byte must be 0xA0-0xBF.
+
+@item MHD_WEBSOCKET_UTF8STEP_UTF3TAIL2_1OF2
+The second byte of a three byte UTF-8 sequence.
+The first byte was 0xED.
+The next byte must by 0x80-0x9F.
+
+@item MHD_WEBSOCKET_UTF8STEP_UTF3TAIL_1OF2
+The second byte of a three byte UTF-8 sequence.
+The first byte was 0xE1-0xEC or 0xEE-0xEF.
+The next byte must be 0x80-0xBF.
+
+@item MHD_WEBSOCKET_UTF8STEP_UTF3TAIL_2OF2
+The third byte of a three byte UTF-8 sequence.
+The next byte must be 0x80-0xBF.
+
+@item MHD_WEBSOCKET_UTF8STEP_UTF4TAIL1_1OF3
+The second byte of a four byte UTF-8 sequence.
+The first byte was 0xF0.
+The next byte must be 0x90-0xBF.
+
+@item MHD_WEBSOCKET_UTF8STEP_UTF4TAIL2_1OF3
+The second byte of a four byte UTF-8 sequence.
+The first byte was 0xF4.
+The next byte must be 0x80-0x8F.
+
+@item MHD_WEBSOCKET_UTF8STEP_UTF4TAIL_1OF3
+The second byte of a four byte UTF-8 sequence.
+The first byte was 0xF1-0xF3.
+The next byte must be 0x80-0xBF.
+
+@item MHD_WEBSOCKET_UTF8STEP_UTF4TAIL_2OF3
+The third byte of a four byte UTF-8 sequence.
+The next byte must be 0x80-0xBF.
+
+@item MHD_WEBSOCKET_UTF8STEP_UTF4TAIL_3OF3
+The fourth byte of a four byte UTF-8 sequence.
+The next byte must be 0x80-0xBF.
+
+@end table
+@end deftp
+
+
+@deftp {Enumeration} MHD_WEBSOCKET_VALIDITY
+@cindex websocket
+Enumeration of validity values of a websocket stream
+
+These values are used for @code{MHD_websocket_stream_is_valid}
+and specify the validity status.
+
+Note that websocket streams are only available if you include the header file
+@code{microhttpd_ws.h} and compiled @emph{libmicrohttpd} with websockets.
+
+@table @code
+@item MHD_WEBSOCKET_VALIDITY_INVALID
+The stream is invalid.
+It cannot be used for decoding anymore.
+
+@item MHD_WEBSOCKET_VALIDITY_VALID
+The stream is valid.
+Decoding works as expected.
+
+@item MHD_WEBSOCKET_VALIDITY_ONLY_VALID_FOR_CONTROL_FRAMES
+The stream has received a close frame and
+is partly invalid.
+You can still use the stream for decoding,
+but if a data frame is received an error will be reported.
+After a close frame has been sent, no data frames
+may follow from the sender of the close frame.
+
+@end table
+@end deftp
+
+
 @c ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 @c ------------------------------------------------------------
@@ -1288,6 +1776,12 @@ Information about a connection.
 
 @deftp {C Union} MHD_DaemonInfo
 Information about an MHD daemon.
+@end deftp
+
+
+@deftp {C Struct} MHD_WebSocketStream
+@cindex websocket
+Information about a MHD websocket stream.
 @end deftp
 
 
@@ -1546,6 +2040,95 @@ number of bytes in data available.
 
 Return @code{MHD_YES} to continue iterating, @code{MHD_NO} to abort the
 iteration.
+@end deftypefn
+
+
+@deftypefn {Function Pointer} void* {*MHD_WebSocketMallocCallback} (size_t buf_len)
+@cindex websocket
+This callback function is used internally by many websocket functions
+for allocating data.
+By default @code{malloc} is used.
+You can use your own allocation function with @code{MHD_websocket_stream_init2}
+if you wish to.
+This can be useful for operating systems like Windows
+where @code{malloc}, @code{realloc} and @code{free} are compiler-dependent.
+You can call the associated @code{malloc} callback of
+a websocket stream with @code{MHD_websocket_malloc}.
+
+@table @var
+@item buf_len
+size of the buffer to allocate in bytes.
+@end table
+
+Return the pointer of the allocated buffer or @code{NULL} on failure.
+@end deftypefn
+
+
+@deftypefn {Function Pointer} void* {*MHD_WebSocketReallocCallback} (void *buf, size_t new_buf_len)
+@cindex websocket
+This callback function is used internally by many websocket
+functions for reallocating data.
+By default @code{realloc} is used.
+You can use your own reallocation function with
+@code{MHD_websocket_stream_init2} if you wish to.
+This can be useful for operating systems like Windows
+where @code{malloc}, @code{realloc} and @code{free} are compiler-dependent.
+You can call the associated @code{realloc} callback of
+a websocket stream with @code{MHD_websocket_realloc}.
+
+@table @var
+@item buf
+current buffer, may be @code{NULL};
+
+@item new_buf_len
+new size of the buffer in bytes.
+@end table
+
+Return the pointer of the reallocated buffer or @code{NULL} on failure.
+On failure the old pointer must remain valid.
+@end deftypefn
+
+
+@deftypefn {Function Pointer} void {*MHD_WebSocketFreeCallback} (void *buf)
+@cindex websocket
+This callback function is used internally by many websocket
+functions for freeing data.
+By default @code{free} is used.
+You can use your own free function with
+@code{MHD_websocket_stream_init2} if you wish to.
+This can be useful for operating systems like Windows
+where @code{malloc}, @code{realloc} and @code{free} are compiler-dependent.
+You can call the associated @code{free} callback of
+a websocket stream with @code{MHD_websocket_free}.
+
+@table @var
+@item cls
+current buffer to free, this may be @code{NULL} then nothing happens.
+@end table
+@end deftypefn
+
+
+@deftypefn {Function Pointer} size_t {*MHD_WebSocketRandomNumberGenerator} (void *cls, void* buf, size_t buf_len)
+@cindex websocket
+This callback function is used for generating random numbers
+for masking payload data in client mode.
+If you use websockets in server mode with @emph{libmicrohttpd} then
+you don't need a random number generator, because
+the server doesn't mask its outgoing messages.
+However if you wish to use a websocket stream in client mode,
+you must pass this callback function to @code{MHD_websocket_stream_init2}.
+
+@table @var
+@item cls
+closure specified in @code{MHD_websocket_stream_init2};
+@item buf
+buffer to fill with random values;
+@item buf_len
+size of buffer in bytes.
+@end table
+
+Return the number of generated random bytes.
+The return value should usually equal to buf_len.
 @end deftypefn
 
 
@@ -3159,6 +3742,12 @@ to the access handler.
 
 Takes no extra arguments.
 
+@item MHD_CONNECTION_INFO_HTTP_STATUS
+Returns the HTTP status code of the response that was
+queued. Returns NULL if no response was queued yet.
+
+Takes no extra arguments.
+
 @end table
 @end deftp
 
@@ -3336,6 +3925,704 @@ Returns length of the resulting val (@code{strlen(val)} may be
 shorter afterwards due to elimination of escape sequences).
 
 @end deftypefun
+
+
+
+
+
+@c ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+@c ------------------------------------------------------------
+@node microhttpd-websocket
+@chapter Websocket functions.
+
+@noindent
+Websocket functions provide what you need to use an upgraded connection
+as a websocket.
+These functions are only available if you include the header file
+@code{microhttpd_ws.h} and compiled @emph{libmicrohttpd} with websockets.
+
+@menu
+* microhttpd-websocket handshake::    Websocket handshake functions
+* microhttpd-websocket stream::       Websocket stream functions
+* microhttpd-websocket decode::       Websocket decode functions
+* microhttpd-websocket encode::       Websocket encode functions
+* microhttpd-websocket memory::       Websocket memory functions
+@end menu
+
+@c ------------------------------------------------------------
+@node microhttpd-websocket handshake
+@section Websocket handshake functions
+
+
+@deftypefun {enum MHD_WEBSOCKET_STATUS} MHD_websocket_check_http_version (const char* http_version)
+@cindex websocket
+Checks the HTTP version of the incoming request.
+Websocket requests are only allowed for HTTP/1.1 or above.
+
+@table @var
+@item http_version
+The value of the @code{version} parameter of your
+@code{access_handler} callback.
+If you pass @code{NULL} then this is handled like a not
+matching HTTP version.
+@end table
+
+Returns 0 when the HTTP version is
+valid for a websocket request and
+a value less than zero when the HTTP version isn't
+valid for a websocket request.
+Can be compared with @code{enum MHD_WEBSOCKET_STATUS}.
+@end deftypefun
+
+
+@deftypefun {enum MHD_WEBSOCKET_STATUS} MHD_websocket_check_connection_header (const char* connection_header)
+@cindex websocket
+Checks the value of the @code{Connection} HTTP request header.
+Websocket requests require the token @code{Upgrade} in
+the @code{Connection} HTTP request header.
+
+@table @var
+@item connection_header
+Value of the @code{Connection} request header.
+You can get this request header value by passing
+@code{MHD_HTTP_HEADER_CONNECTION} to
+@code{MHD_lookup_connection_value()}.
+If you pass @code{NULL} then this is handled like a not
+matching @code{Connection} header value.
+@end table
+
+Returns 0 when the @code{Connection} header is
+valid for a websocket request and
+a value less than zero when the @code{Connection} header isn't
+valid for a websocket request.
+Can be compared with @code{enum MHD_WEBSOCKET_STATUS}.
+@end deftypefun
+
+
+@deftypefun {enum MHD_WEBSOCKET_STATUS} MHD_websocket_check_upgrade_header (const char* upgrade_header)
+@cindex websocket
+Checks the value of the @code{Upgrade} HTTP request header.
+Websocket requests require the value @code{websocket} in
+the @code{Upgrade} HTTP request header.
+
+@table @var
+@item upgrade_header
+Value of the @code{Upgrade} request header.
+You can get this request header value by passing
+@code{MHD_HTTP_HEADER_UPGRADE} to
+@code{MHD_lookup_connection_value()}.
+If you pass @code{NULL} then this is handled like a not
+matching @code{Upgrade} header value.
+@end table
+
+Returns 0 when the @code{Upgrade} header is
+valid for a websocket request and
+a value less than zero when the @code{Upgrade} header isn't
+valid for a websocket request.
+Can be compared with @code{enum MHD_WEBSOCKET_STATUS}.
+@end deftypefun
+
+
+@deftypefun {enum MHD_WEBSOCKET_STATUS} MHD_websocket_check_version_header (const char* version_header)
+@cindex websocket
+Checks the value of the @code{Sec-WebSocket-Version} HTTP request header.
+Websocket requests require the value @code{13} in
+the @code{Sec-WebSocket-Version} HTTP request header.
+
+@table @var
+@item version_header
+Value of the @code{Sec-WebSocket-Version} request header.
+You can get this request header value by passing
+@code{MHD_HTTP_HEADER_SEC_WEBSOCKET_VERSION} to
+@code{MHD_lookup_connection_value()}.
+If you pass @code{NULL} then this is handled like a not
+matching @code{Sec-WebSocket-Version} header value.
+@end table
+
+Returns 0 when the @code{Sec-WebSocket-Version} header is
+valid for a websocket request and
+a value less than zero when the @code{Sec-WebSocket-Version} header isn't
+valid for a websocket request.
+Can be compared with @code{enum MHD_WEBSOCKET_STATUS}.
+@end deftypefun
+
+
+@deftypefun {enum MHD_WEBSOCKET_STATUS} MHD_websocket_create_accept_header (const char* sec_websocket_key, char* sec_websocket_accept)
+@cindex websocket
+Checks the value of the @code{Sec-WebSocket-Key}
+HTTP request header and generates the value for
+the @code{Sec-WebSocket-Accept} HTTP response header.
+The generated value must be sent to the client.
+
+@table @var
+@item sec_websocket_key
+Value of the @code{Sec-WebSocket-Key} request header.
+You can get this request header value by passing
+@code{MHD_HTTP_HEADER_SEC_WEBSOCKET_KEY} to
+@code{MHD_lookup_connection_value()}.
+If you pass @code{NULL} then this is handled like a not
+matching @code{Sec-WebSocket-Key} header value.
+
+@item sec_websocket_accept
+Response buffer, which will receive
+the generated value for the @code{Sec-WebSocket-Accept}
+HTTP response header.
+This buffer must be at least 29 bytes long and
+will contain the response value plus a terminating @code{NUL}
+character on success.
+Must not be @code{NULL}.
+You can add this HTTP header to your response by passing
+@code{MHD_HTTP_HEADER_SEC_WEBSOCKET_ACCEPT} to
+@code{MHD_add_response_header()}.
+@end table
+
+Returns 0 when the @code{Sec-WebSocket-Key} header was
+not empty and a result value for the @code{Sec-WebSocket-Accept}
+was calculated.
+A value less than zero is returned when the @code{Sec-WebSocket-Key}
+header isn't valid for a websocket request or when any
+error occurred.
+Can be compared with @code{enum MHD_WEBSOCKET_STATUS}.
+@end deftypefun
+
+
+@c ------------------------------------------------------------
+@node microhttpd-websocket stream
+@section Websocket stream functions
+
+@deftypefun {enum MHD_WEBSOCKET_STATUS} MHD_websocket_stream_init (struct MHD_WebSocketStream **ws, int flags, size_t max_payload_size)
+@cindex websocket
+Creates a new websocket stream, used for decoding/encoding.
+
+@table @var
+@item ws
+pointer a variable to fill with the newly created
+@code{struct MHD_WebSocketStream},
+receives @code{NULL} on error. May not be @code{NULL}.
+
+If not required anymore, free the created websocket stream with
+@code{MHD_websocket_stream_free()}.
+
+@item flags
+combination of @code{enum MHD_WEBSOCKET_FLAG} values to
+modify the behavior of the websocket stream.
+
+@item max_payload_size
+maximum size for incoming payload data in bytes. Use 0 to allow each size.
+@end table
+
+Returns 0 on success, negative values on error.
+Can be compared with @code{enum MHD_WEBSOCKET_STATUS}.
+@end deftypefun
+
+
+@deftypefun {enum MHD_WEBSOCKET_STATUS} MHD_websocket_stream_init2 (struct MHD_WebSocketStream **ws, int flags, size_t max_payload_size, MHD_WebSocketMallocCallback callback_malloc, MHD_WebSocketReallocCallback callback_realloc, MHD_WebSocketFreeCallback callback_free, void* cls_rng, MHD_WebSocketRandomNumberGenerator callback_rng)
+@cindex websocket
+Creates a new websocket stream, used for decoding/encoding,
+but with custom memory functions for malloc, realloc and free.
+Also a random number generator can be specified for client mode.
+
+@table @var
+@item ws
+pointer a variable to fill with the newly created
+@code{struct MHD_WebSocketStream},
+receives @code{NULL} on error. Must not be @code{NULL}.
+
+If not required anymore, free the created websocket stream with
+@code{MHD_websocket_stream_free}.
+
+@item flags
+combination of @code{enum MHD_WEBSOCKET_FLAG} values to
+modify the behavior of the websocket stream.
+
+@item max_payload_size
+maximum size for incoming payload data in bytes. Use 0 to allow each size.
+
+@item callback_malloc
+callback function for allocating memory. Must not be @code{NULL}.
+The shorter @code{MHD_websocket_stream_init()} passes a reference to @code{malloc} here.
+
+@item callback_realloc
+callback function for reallocating memory. Must not be @code{NULL}.
+The shorter @code{MHD_websocket_stream_init()} passes a reference to @code{realloc} here.
+
+@item callback_free
+callback function for freeing memory. Must not be @code{NULL}.
+The shorter @code{MHD_websocket_stream_init()} passes a reference to @code{free} here.
+
+@item cls_rng
+closure for the random number generator.
+This is only required when
+@code{MHD_WEBSOCKET_FLAG_CLIENT} is passed in @code{flags}.
+The given value is passed to the random number generator callback.
+May be @code{NULL} if not needed.
+Should be @code{NULL} when you are not using @code{MHD_WEBSOCKET_FLAG_CLIENT}.
+The shorter @code{MHD_websocket_stream_init} passes @code{NULL} here.
+
+@item callback_rng
+callback function for a secure random number generator.
+This is only required when @code{MHD_WEBSOCKET_FLAG_CLIENT} is
+passed in @code{flags} and must not be @code{NULL} then.
+Should be @code{NULL} otherwise.
+The shorter @code{MHD_websocket_stream_init()} passes @code{NULL} here.
+@end table
+
+Returns 0 on success, negative values on error.
+Can be compared with @code{enum MHD_WEBSOCKET_STATUS}.
+@end deftypefun
+
+
+@deftypefun {enum MHD_WEBSOCKET_STATUS} MHD_websocket_stream_free (struct MHD_WebSocketStream *ws)
+@cindex websocket
+Frees a previously allocated websocket stream
+
+@table @var
+@item ws
+websocket stream to free, this value may be @code{NULL}.
+@end table
+
+Returns 0 on success, negative values on error.
+Can be compared with @code{enum MHD_WEBSOCKET_STATUS}.
+@end deftypefun
+
+
+@deftypefun {enum MHD_WEBSOCKET_STATUS} MHD_websocket_stream_invalidate (struct MHD_WebSocketStream *ws)
+@cindex websocket
+Invalidates a websocket stream.
+After invalidation a websocket stream cannot be used for decoding anymore.
+Encoding is still possible.
+
+@table @var
+@item ws
+websocket stream to invalidate.
+@end table
+
+Returns 0 on success, negative values on error.
+Can be compared with @code{enum MHD_WEBSOCKET_STATUS}.
+@end deftypefun
+
+
+@deftypefun {enum MHD_WEBSOCKET_VALIDITY} MHD_websocket_stream_is_valid (struct MHD_WebSocketStream *ws)
+@cindex websocket
+Queries whether a websocket stream is valid.
+Invalidated websocket streams cannot be used for decoding anymore.
+Encoding is still possible.
+
+@table @var
+@item ws
+websocket stream to invalidate.
+@end table
+
+Returns 0 if invalid, 1 if valid for all types or
+2 if valid only for control frames.
+Can be compared with @code{enum MHD_WEBSOCKET_VALIDITY}.
+@end deftypefun
+
+
+@c ------------------------------------------------------------
+@node microhttpd-websocket decode
+@section Websocket decode functions
+
+
+@deftypefun {enum MHD_WEBSOCKET_STATUS} MHD_websocket_decode (struct MHD_WebSocketStream* ws, const char* streambuf, size_t streambuf_len, size_t* streambuf_read_len, char** payload, size_t* payload_len)
+@cindex websocket
+Decodes a byte sequence for a websocket stream.
+Decoding is done until either a frame is complete or
+the end of the byte sequence is reached.
+
+@table @var
+@item ws
+websocket stream for decoding.
+
+@item streambuf
+byte sequence for decoding.
+This is what you typically received via @code{recv()}.
+
+@item streambuf_len
+length of the byte sequence in parameter @code{streambuf}.
+
+@item streambuf_read_len
+pointer to a variable, which receives the number of bytes,
+that has been processed by this call.
+This value may be less than the value of @code{streambuf_len} when
+a frame is decoded before the end of the buffer is reached.
+The remaining bytes of @code{buf} must be passed to
+the next call of this function.
+
+@item payload
+pointer to a variable, which receives the allocated buffer with the payload
+data of the decoded frame. Must not be @code{NULL}.
+If no decoded data is available or an error occurred @code{NULL} is returned.
+When the returned value is not @code{NULL} then the buffer contains always
+@code{payload_len} bytes plus one terminating @code{NUL} character
+(regardless of the frame type).
+
+The caller must free this buffer using @code{MHD_websocket_free()}.
+
+If you passed the flag @code{MHD_WEBSOCKET_FLAG_GENERATE_CLOSE_FRAMES_ON_ERROR}
+upon creation of the websocket stream and a decoding error occurred
+(function return value less than 0), then this buffer contains
+a generated close frame, which must be sent via the socket to the recipient.
+
+If you passed the flag @code{MHD_WEBSOCKET_FLAG_WANT_FRAGMENTS}
+upon creation of the websocket stream then
+this payload may only be a part of the complete message.
+Only complete UTF-8 sequences are returned for fragmented text frames.
+If necessary the UTF-8 sequence will be completed with the next text fragment.
+
+@item payload_len
+pointer to a variable, which receives length of the result
+@code{payload} buffer in bytes.
+Must not be @code{NULL}.
+This receives 0 when no data is available, when the decoded payload
+has a length of zero or when an error occurred.
+@end table
+
+Returns a value greater than zero when a frame is complete.
+Compare with @code{enum MHD_WEBSOCKET_STATUS} to distinguish the frame type.
+Returns 0 when the call succeeded, but no frame is available.
+Returns a value less than zero on errors.
+@end deftypefun
+
+
+@deftypefun {enum MHD_WEBSOCKET_STATUS} MHD_websocket_split_close_reason (const char* payload, size_t payload_len, unsigned short* reason_code, const char** reason_utf8, size_t* reason_utf8_len)
+@cindex websocket
+Splits the payload of a decoded close frame.
+
+@table @var
+@item payload
+payload of the close frame.
+This parameter may only be @code{NULL} if @code{payload_len} is 0.
+
+@item payload_len
+length of @code{payload}.
+
+@item reason_code
+pointer to a variable, which receives the numeric close reason.
+If there was no close reason, this is 0.
+This value can be compared with @code{enum MHD_WEBSOCKET_CLOSEREASON}.
+May be @code{NULL}.
+
+@item reason_utf8
+pointer to a variable, which receives the literal close reason.
+If there was no literal close reason, this will be @code{NULL}.
+May be @code{NULL}.
+
+Please note that no memory is allocated in this function.
+If not @code{NULL} the returned value of this parameter
+points to a position in the specified @code{payload}.
+
+@item reason_utf8_len
+pointer to a variable, which receives the length of the literal close reason.
+If there was no literal close reason, this is 0.
+May be @code{NULL}.
+@end table
+
+Returns 0 on success or a value less than zero on errors.
+Can be compared with @code{enum MHD_WEBSOCKET_STATUS}.
+@end deftypefun
+
+
+@c ------------------------------------------------------------
+@node microhttpd-websocket encode
+@section Websocket encode functions
+
+
+@deftypefun {enum MHD_WEBSOCKET_STATUS} MHD_websocket_encode_text (struct MHD_WebSocketStream* ws, const char* payload_utf8, size_t payload_utf8_len, int fragmentation, char** frame, size_t* frame_len, int* utf8_step)
+@cindex websocket
+Encodes an UTF-8 encoded text into websocket text frame
+
+@table @var
+@item ws
+websocket stream;
+
+@item payload_utf8
+text to send. This must be UTF-8 encoded.
+If you don't want UTF-8 then send a binary frame
+with @code{MHD_websocket_encode_binary()} instead.
+May be be @code{NULL} if @code{payload_utf8_len} is 0,
+must not be @code{NULL} otherwise.
+
+@item payload_utf8_len
+length of @code{payload_utf8} in bytes.
+
+@item fragmentation
+A value of @code{enum MHD_WEBSOCKET_FRAGMENTATION}
+to specify the fragmentation behavior.
+Specify @code{MHD_WEBSOCKET_FRAGMENTATION_NONE} or just 0
+if you don't want to use fragmentation (default).
+
+@item frame
+pointer to a variable, which receives a buffer with the encoded text frame.
+Must not be @code{NULL}.
+The buffer contains what you typically send via @code{send()} to the recipient.
+If no encoded data is available the variable receives @code{NULL}.
+
+If the variable is not @code{NULL} then the buffer contains always
+@code{frame_len} bytes plus one terminating @code{NUL} character.
+The caller must free this buffer using @code{MHD_websocket_free()}.
+
+@item frame_len
+pointer to a variable, which receives the length of the encoded frame in bytes.
+Must not be @code{NULL}.
+
+@item utf8_step
+If fragmentation is used (the parameter @code{fragmentation} is not 0)
+then is parameter is required and must not be @code{NULL}.
+If no fragmentation is used, this parameter is optional and
+should be @code{NULL}.
+
+This parameter is a pointer to a variable which contains the last check status
+of the UTF-8 sequence. It is required to continue a previous
+UTF-8 sequence check when fragmentation is used, because a UTF-8 sequence
+could be splitted upon fragments.
+
+@code{enum MHD_WEBSOCKET_UTF8STEP} is used for this value.
+If you start a new fragment using
+@code{MHD_WEBSOCKET_FRAGMENTATION_NONE} or
+@code{MHD_WEBSOCKET_FRAGMENTATION_FIRST} the old value of this variable
+will be discarded and the value of this variable will be initialized
+to @code{MHD_WEBSOCKET_UTF8STEP_NORMAL}.
+On all other fragmentation modes the previous value of the pointed variable
+will be used to continue the UTF-8 sequence check.
+@end table
+
+Returns 0 on success or a value less than zero on errors.
+Can be compared with @code{enum MHD_WEBSOCKET_STATUS}.
+@end deftypefun
+
+
+@deftypefun {enum MHD_WEBSOCKET_STATUS} MHD_websocket_encode_binary (struct MHD_WebSocketStream* ws, const char* payload, size_t payload_len, int fragmentation, char** frame, size_t* frame_len)
+@cindex websocket
+Encodes binary data into websocket binary frame
+
+@table @var
+@item ws
+websocket stream;
+
+@item payload
+binary data to send.
+May be be @code{NULL} if @code{payload_len} is 0,
+must not be @code{NULL} otherwise.
+
+@item payload_len
+length of @code{payload} in bytes.
+
+@item fragmentation
+A value of @code{enum MHD_WEBSOCKET_FRAGMENTATION}
+to specify the fragmentation behavior.
+Specify @code{MHD_WEBSOCKET_FRAGMENTATION_NONE} or just 0
+if you don't want to use fragmentation (default).
+
+@item frame
+pointer to a variable, which receives a buffer with the encoded binary frame.
+Must not be @code{NULL}.
+The buffer contains what you typically send via @code{send()} to the recipient.
+If no encoded data is available the variable receives @code{NULL}.
+
+If the variable is not @code{NULL} then the buffer contains always
+@code{frame_len} bytes plus one terminating @code{NUL} character.
+The caller must free this buffer using @code{MHD_websocket_free()}.
+
+@item frame_len
+pointer to a variable, which receives the length of the encoded frame in bytes.
+Must not be @code{NULL}.
+@end table
+
+Returns 0 on success or a value less than zero on errors.
+Can be compared with @code{enum MHD_WEBSOCKET_STATUS}.
+@end deftypefun
+
+
+@deftypefun {enum MHD_WEBSOCKET_STATUS} MHD_websocket_encode_ping (struct MHD_WebSocketStream* ws, const char* payload, size_t payload_len, char** frame, size_t* frame_len)
+@cindex websocket
+Encodes a websocket ping frame.
+Ping frames are used to check whether a recipient is still available
+and what latency the websocket connection has.
+
+@table @var
+@item ws
+websocket stream;
+
+@item payload
+binary ping data to send.
+May be @code{NULL} if @code{payload_len} is 0.
+
+@item payload_len
+length of @code{payload} in bytes.
+This may not exceed 125 bytes.
+
+@item frame
+pointer to a variable, which receives a buffer with the encoded ping frame.
+Must not be @code{NULL}.
+The buffer contains what you typically send via @code{send()} to the recipient.
+If no encoded data is available the variable receives @code{NULL}.
+
+If the variable is not @code{NULL} then the buffer contains always
+@code{frame_len} bytes plus one terminating @code{NUL} character.
+The caller must free this buffer using @code{MHD_websocket_free()}.
+
+@item frame_len
+pointer to a variable, which receives the length of the encoded frame in bytes.
+Must not be @code{NULL}.
+@end table
+
+Returns 0 on success or a value less than zero on errors.
+Can be compared with @code{enum MHD_WEBSOCKET_STATUS}.
+@end deftypefun
+
+
+@deftypefun {enum MHD_WEBSOCKET_STATUS} MHD_websocket_encode_pong (struct MHD_WebSocketStream* ws, const char* payload, size_t payload_len, char** frame, size_t* frame_len)
+@cindex websocket
+Encodes a websocket pong frame.
+Pong frames are used to answer a previously received websocket ping frame.
+
+@table @var
+@item ws
+websocket stream;
+
+@item payload
+binary pong data to send, which should be
+the decoded payload from the received ping frame.
+May be @code{NULL} if @code{payload_len} is 0.
+
+@item payload_len
+length of @code{payload} in bytes.
+This may not exceed 125 bytes.
+
+@item frame
+pointer to a variable, which receives a buffer with the encoded pong frame.
+Must not be @code{NULL}.
+The buffer contains what you typically send via @code{send()} to the recipient.
+If no encoded data is available the variable receives @code{NULL}.
+
+If the variable is not @code{NULL} then the buffer contains always
+@code{frame_len} bytes plus one terminating @code{NUL} character.
+The caller must free this buffer using @code{MHD_websocket_free()}.
+
+@item frame_len
+pointer to a variable, which receives the length of the encoded frame in bytes.
+Must not be @code{NULL}.
+@end table
+
+Returns 0 on success or a value less than zero on errors.
+Can be compared with @code{enum MHD_WEBSOCKET_STATUS}.
+@end deftypefun
+
+
+@deftypefun {enum MHD_WEBSOCKET_STATUS} MHD_websocket_encode_close (struct MHD_WebSocketStream* ws, unsigned short reason_code, const char* reason_utf8, size_t reason_utf8_len, char** frame, size_t* frame_len)
+@cindex websocket
+Encodes a websocket close frame.
+Close frames are used to close a websocket connection in a formal way.
+
+@table @var
+@item ws
+websocket stream;
+
+@item reason_code
+reason for close.
+You can use @code{enum MHD_WEBSOCKET_CLOSEREASON} for typical reasons,
+but you are not limited to these values.
+The allowed values are specified in RFC 6455 7.4.
+If you don't want to enter a reason, you can specify
+@code{MHD_WEBSOCKET_CLOSEREASON_NO_REASON} (or just 0) then
+no reason is encoded.
+
+@item reason_utf8
+An UTF-8 encoded text reason why the connection is closed.
+This may be @code{NULL} if @code{reason_utf8_len} is 0.
+This must be @code{NULL} if @code{reason_code} equals to zero
+(@code{MHD_WEBSOCKET_CLOSEREASON_NO_REASON}).
+
+@item reason_utf8_len
+length of the UTF-8 encoded text reason in bytes.
+This may not exceed 123 bytes.
+
+@item frame
+pointer to a variable, which receives a buffer with the encoded close frame.
+Must not be @code{NULL}.
+The buffer contains what you typically send via @code{send()} to the recipient.
+If no encoded data is available the variable receives @code{NULL}.
+
+If the variable is not @code{NULL} then the buffer contains always
+@code{frame_len} bytes plus one terminating @code{NUL} character.
+The caller must free this buffer using @code{MHD_websocket_free()}.
+
+@item frame_len
+pointer to a variable, which receives the length of the encoded frame in bytes.
+Must not be @code{NULL}.
+@end table
+
+Returns 0 on success or a value less than zero on errors.
+Can be compared with @code{enum MHD_WEBSOCKET_STATUS}.
+@end deftypefun
+
+
+@c ------------------------------------------------------------
+@node microhttpd-websocket memory
+@section Websocket memory functions
+
+
+@deftypefun {void*} MHD_websocket_malloc (struct MHD_WebSocketStream* ws, size_t buf_len)
+@cindex websocket
+Allocates memory with the associated @code{malloc()} function
+of the websocket stream.
+The memory allocation function could be different for a websocket stream if
+@code{MHD_websocket_stream_init2()} has been used for initialization.
+
+@table @var
+@item ws
+websocket stream;
+
+@item buf_len
+size of the buffer to allocate in bytes.
+@end table
+
+Returns the pointer of the allocated buffer or @code{NULL} on failure.
+@end deftypefun
+
+
+@deftypefun {void*} MHD_websocket_realloc (struct MHD_WebSocketStream* ws, void* buf, size_t new_buf_len)
+@cindex websocket
+Reallocates memory with the associated @code{realloc()} function
+of the websocket stream.
+The memory reallocation function could be different for a websocket stream if
+@code{MHD_websocket_stream_init2()} has been used for initialization.
+
+@table @var
+@item ws
+websocket stream;
+
+@item buf
+current buffer, may be @code{NULL};
+
+@item new_buf_len
+new size of the buffer in bytes.
+@end table
+
+Return the pointer of the reallocated buffer or @code{NULL} on failure.
+On failure the old pointer remains valid.
+@end deftypefun
+
+
+@deftypefun {void} MHD_websocket_free (struct MHD_WebSocketStream* ws, void* buf)
+@cindex websocket
+Frees memory with the associated @code{free()} function
+of the websocket stream.
+The memory free function could be different for a websocket stream if
+@code{MHD_websocket_stream_init2()} has been used for initialization.
+
+@table @var
+@item ws
+websocket stream;
+
+@item buf
+buffer to free, this may be @code{NULL} then nothing happens.
+@end table
+
+@end deftypefun
+
 
 
 

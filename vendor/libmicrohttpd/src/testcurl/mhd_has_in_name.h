@@ -1,6 +1,6 @@
 /*
   This file is part of libmicrohttpd
-  Copyright (C) 2016-2019 Karlson2k (Evgeny Grin)
+  Copyright (C) 2016-2021 Karlson2k (Evgeny Grin)
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -61,5 +61,5 @@ has_in_name (const char *prog_name, const char *marker)
   }
   if (name_pos == pos)
     return 0;
-  return strstr (prog_name + name_pos, marker) != (char*) 0;
+  return strstr (prog_name + name_pos, marker) != (char *) 0;
 }

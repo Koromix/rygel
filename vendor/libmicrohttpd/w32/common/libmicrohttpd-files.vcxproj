@@ -35,6 +35,7 @@
     <ClInclude Include="$(MhdSrc)microhttpd\sha256.h" />
     <ClInclude Include="$(MhdSrc)microhttpd\memorypool.h" />
     <ClInclude Include="$(MhdSrc)microhttpd\mhd_assert.h" />
+    <ClInclude Include="$(MhdSrc)microhttpd\mhd_align.h" />
     <ClInclude Include="$(MhdSrc)microhttpd\mhd_bithelpers.h" />
     <ClInclude Include="$(MhdSrc)microhttpd\mhd_byteorder.h" />
     <ClInclude Include="$(MhdSrc)microhttpd\mhd_limits.h" />

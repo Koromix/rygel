@@ -114,7 +114,7 @@ main (int argc, char *const *argv)
     return 99;
   }
   fclose (crt);
-  if (curl_uses_nss_ssl () == 0)
+  if (curl_tls_is_nss ())
   {
     aes256_sha = "rsa_aes_256_sha";
   }

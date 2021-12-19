@@ -40,7 +40,6 @@
  * Change socket to blocking.
  *
  * @param fd the socket to manipulate
- * @return non-zero if succeeded, zero otherwise
  */
 static void
 make_blocking (MHD_socket fd)
@@ -50,16 +49,16 @@ make_blocking (MHD_socket fd)
 
   flags = fcntl (fd, F_GETFL);
   if (-1 == flags)
-    return;
+    abort ();
   if ((flags & ~O_NONBLOCK) != flags)
     if (-1 == fcntl (fd, F_SETFL, flags & ~O_NONBLOCK))
       abort ();
 #elif defined(MHD_WINSOCK_SOCKETS)
-  unsigned long flags = 1;
+  unsigned long flags = 0;
 
-  ioctlsocket (fd, FIONBIO, &flags);
+  if (0 != ioctlsocket (fd, (int) FIONBIO, &flags))
+    abort ();
 #endif /* MHD_WINSOCK_SOCKETS */
-
 }
 
 

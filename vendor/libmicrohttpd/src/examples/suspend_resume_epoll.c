@@ -53,7 +53,7 @@ ahc_echo (void *cls,
 {
   struct MHD_Response *response;
   enum MHD_Result ret;
-  struct Request*req;
+  struct Request *req;
   struct itimerspec ts;
 
   (void) cls;

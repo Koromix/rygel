@@ -43,6 +43,7 @@ ahc_echo (void *cls,
   char *me;
   struct MHD_Response *response;
   enum MHD_Result ret;
+  int resp_len;
   (void) url;               /* Unused. Silent compiler warning. */
   (void) version;           /* Unused. Silent compiler warning. */
   (void) upload_data;       /* Unused. Silent compiler warning. */
@@ -56,13 +57,24 @@ ahc_echo (void *cls,
     *ptr = &aptr;
     return MHD_YES;
   }
-  *ptr = NULL;                  /* reset when done */
+  *ptr = NULL;      /* reset when done */
+  if (NULL == fmt)
+    return MHD_NO;  /* The cls must not be NULL */
   val = MHD_lookup_connection_value (connection, MHD_GET_ARGUMENT_KIND, "q");
-  me = malloc (snprintf (NULL, 0, fmt, "q", val) + 1);
+  if (NULL == val)
+    return MHD_NO;  /* No "q" argument was found */
+  resp_len = snprintf (NULL, 0, fmt, "q", val);
+  if (0 > resp_len)
+    return MHD_NO;  /* Error calculating response size */
+  me = malloc (resp_len + 1);
   if (me == NULL)
-    return MHD_NO;
-  sprintf (me, fmt, "q", val);
-  response = MHD_create_response_from_buffer (strlen (me), me,
+    return MHD_NO;  /* Error allocating memory */
+  if (resp_len != snprintf (me, resp_len + 1, fmt, "q", val))
+  {
+    free (me);
+    return MHD_NO;  /* Error forming the response body */
+  }
+  response = MHD_create_response_from_buffer (resp_len, me,
                                               MHD_RESPMEM_MUST_FREE);
   if (response == NULL)
   {

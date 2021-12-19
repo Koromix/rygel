@@ -70,6 +70,7 @@ test_daemon_get (void *cls,
   CURL *c;
   struct CBC cbc;
   CURLcode errornum;
+  CURLcode e;
   char url[255];
   size_t len;
   (void) cls;    /* Unused. Silence compiler warning. */
@@ -92,29 +93,51 @@ test_daemon_get (void *cls,
 #if DEBUG_HTTPS_TEST
   curl_easy_setopt (c, CURLOPT_VERBOSE, 1L);
 #endif
-  curl_easy_setopt (c, CURLOPT_URL, url);
-  curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-  curl_easy_setopt (c, CURLOPT_TIMEOUT, 10L);
-  curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 10L);
-  curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-  curl_easy_setopt (c, CURLOPT_FILE, &cbc);
+  if ((CURLE_OK != (e = curl_easy_setopt (c, CURLOPT_URL, url))) ||
+      (CURLE_OK != (e = curl_easy_setopt (c, CURLOPT_HTTP_VERSION,
+                                          CURL_HTTP_VERSION_1_0))) ||
+      (CURLE_OK != (e = curl_easy_setopt (c, CURLOPT_TIMEOUT, 10L))) ||
+      (CURLE_OK != (e = curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 10L))) ||
+      (CURLE_OK != (e = curl_easy_setopt (c, CURLOPT_WRITEFUNCTION,
+                                          &copyBuffer))) ||
+      (CURLE_OK != (e = curl_easy_setopt (c, CURLOPT_FILE, &cbc))) ||
+      (CURLE_OK != (e = curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L))) ||
+      (CURLE_OK != (e = curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L))))
+  {
+    fprintf (stderr, "curl_easy_setopt failed: `%s'\n",
+             curl_easy_strerror (e));
+    curl_easy_cleanup (c);
+    free (cbc.buf);
+    return e;
+  }
 
   /* TLS options */
-  curl_easy_setopt (c, CURLOPT_SSLVERSION, proto_version);
-  curl_easy_setopt (c, CURLOPT_SSL_CIPHER_LIST, cipher_suite);
+  if ((CURLE_OK != (e = curl_easy_setopt (c, CURLOPT_SSLVERSION,
+                                          proto_version))) ||
+      (CURLE_OK != (e = curl_easy_setopt (c, CURLOPT_SSL_CIPHER_LIST,
+                                          cipher_suite))) ||
 
-  /* perform peer authentication */
-  /* TODO merge into send_curl_req */
-  curl_easy_setopt (c, CURLOPT_SSL_VERIFYPEER, ver_peer);
-  if (ver_peer)
-    curl_easy_setopt (c, CURLOPT_CAINFO, ca_cert_file_name);
-  curl_easy_setopt (c, CURLOPT_SSL_VERIFYHOST, 0L);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
-
-  /* NOTE: use of CONNECTTIMEOUT without also
-     setting NOSIGNAL results in really weird
-     crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+      /* perform peer authentication */
+      /* TODO merge into send_curl_req */
+      (CURLE_OK != (e = curl_easy_setopt (c, CURLOPT_SSL_VERIFYPEER,
+                                          ver_peer))) ||
+      (CURLE_OK != (e = curl_easy_setopt (c, CURLOPT_SSL_VERIFYHOST, 0L))))
+  {
+    fprintf (stderr, "HTTPS curl_easy_setopt failed: `%s'\n",
+             curl_easy_strerror (e));
+    curl_easy_cleanup (c);
+    free (cbc.buf);
+    return e;
+  }
+  if (ver_peer &&
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_CAINFO, ca_cert_file_name)))
+  {
+    fprintf (stderr, "HTTPS curl_easy_setopt failed: `%s'\n",
+             curl_easy_strerror (e));
+    curl_easy_cleanup (c);
+    free (cbc.buf);
+    return e;
+  }
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
   {
     fprintf (stderr, "curl_easy_perform failed: `%s'\n",
@@ -250,35 +273,54 @@ send_curl_req (char *url,
 {
   CURL *c;
   CURLcode errornum;
+  CURLcode e;
   c = curl_easy_init ();
 #if DEBUG_HTTPS_TEST
   curl_easy_setopt (c, CURLOPT_VERBOSE, CURL_VERBOS_LEVEL);
 #endif
-  curl_easy_setopt (c, CURLOPT_URL, url);
-  curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-  curl_easy_setopt (c, CURLOPT_TIMEOUT, 60L);
-  curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 60L);
+  if ((CURLE_OK != (e = curl_easy_setopt (c, CURLOPT_URL, url))) ||
+      (CURLE_OK  != (e = curl_easy_setopt (c, CURLOPT_HTTP_VERSION,
+                                           CURL_HTTP_VERSION_1_0))) ||
+      (CURLE_OK  != (e = curl_easy_setopt (c, CURLOPT_TIMEOUT, 60L))) ||
+      (CURLE_OK  != (e = curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 60L))) ||
 
+      (CURLE_OK  != (e = curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L))) ||
+
+      (CURLE_OK  != (e = curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L))))
+  {
+    fprintf (stderr, "curl_easy_setopt failed: `%s'\n",
+             curl_easy_strerror (e));
+    curl_easy_cleanup (c);
+    return e;
+  }
   if (cbc != NULL)
   {
-    curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-    curl_easy_setopt (c, CURLOPT_FILE, cbc);
+    if ((CURLE_OK  != (e = curl_easy_setopt (c, CURLOPT_WRITEFUNCTION,
+                                             &copyBuffer))) ||
+        (CURLE_OK  != (e = curl_easy_setopt (c, CURLOPT_FILE, cbc))))
+    {
+      fprintf (stderr, "curl_easy_setopt failed: `%s'\n",
+               curl_easy_strerror (e));
+      curl_easy_cleanup (c);
+      return e;
+    }
   }
 
   /* TLS options */
-  curl_easy_setopt (c, CURLOPT_SSLVERSION, proto_version);
-  curl_easy_setopt (c, CURLOPT_SSL_CIPHER_LIST, cipher_suite);
+  if ((CURLE_OK  != (e = curl_easy_setopt (c, CURLOPT_SSLVERSION,
+                                           proto_version))) ||
+      (CURLE_OK  != (e = curl_easy_setopt (c, CURLOPT_SSL_CIPHER_LIST,
+                                           cipher_suite))) ||
+      /* currently skip any peer authentication */
+      (CURLE_OK  != (e = curl_easy_setopt (c, CURLOPT_SSL_VERIFYPEER, 0L))) ||
+      (CURLE_OK  != (e = curl_easy_setopt (c, CURLOPT_SSL_VERIFYHOST, 0L))))
+  {
+    fprintf (stderr, "HTTPS curl_easy_setopt failed: `%s'\n",
+             curl_easy_strerror (e));
+    curl_easy_cleanup (c);
+    return e;
+  }
 
-  /* currently skip any peer authentication */
-  curl_easy_setopt (c, CURLOPT_SSL_VERIFYPEER, 0L);
-  curl_easy_setopt (c, CURLOPT_SSL_VERIFYHOST, 0L);
-
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
-
-  /* NOTE: use of CONNECTTIMEOUT without also
-     setting NOSIGNAL results in really weird
-     crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
   {
     fprintf (stderr, "curl_easy_perform failed: `%s'\n",
@@ -462,62 +504,33 @@ teardown_testcase (struct MHD_Daemon *d)
 
 int
 setup_session (gnutls_session_t *session,
-               gnutls_datum_t *key,
-               gnutls_datum_t *cert,
                gnutls_certificate_credentials_t *xcred)
 {
-  int ret;
-  const char *err_pos;
-
-  gnutls_certificate_allocate_credentials (xcred);
-  key->size = strlen (srv_key_pem) + 1;
-  key->data = malloc (key->size);
-  if (NULL == key->data)
+  if (GNUTLS_E_SUCCESS == gnutls_init (session, GNUTLS_CLIENT))
   {
-    gnutls_certificate_free_credentials (*xcred);
-    return -1;
-  }
-  memcpy (key->data, srv_key_pem, key->size);
-  cert->size = strlen (srv_self_signed_cert_pem) + 1;
-  cert->data = malloc (cert->size);
-  if (NULL == cert->data)
-  {
-    gnutls_certificate_free_credentials (*xcred);
-    free (key->data);
-    return -1;
-  }
-  memcpy (cert->data, srv_self_signed_cert_pem, cert->size);
-  gnutls_certificate_set_x509_key_mem (*xcred, cert, key,
-                                       GNUTLS_X509_FMT_PEM);
-  gnutls_init (session, GNUTLS_CLIENT);
-  ret = gnutls_priority_set_direct (*session,
-                                    "NORMAL", &err_pos);
-  if (ret < 0)
-  {
+    if (GNUTLS_E_SUCCESS == gnutls_set_default_priority (*session))
+    {
+      if (GNUTLS_E_SUCCESS == gnutls_certificate_allocate_credentials (xcred))
+      {
+        if (GNUTLS_E_SUCCESS == gnutls_credentials_set (*session,
+                                                        GNUTLS_CRD_CERTIFICATE,
+                                                        *xcred))
+        {
+          return 0;
+        }
+        gnutls_certificate_free_credentials (*xcred);
+      }
+    }
     gnutls_deinit (*session);
-    gnutls_certificate_free_credentials (*xcred);
-    free (key->data);
-    return -1;
   }
-  gnutls_credentials_set (*session,
-                          GNUTLS_CRD_CERTIFICATE,
-                          *xcred);
-  return 0;
+  return -1;
 }
 
 
 int
 teardown_session (gnutls_session_t session,
-                  gnutls_datum_t *key,
-                  gnutls_datum_t *cert,
                   gnutls_certificate_credentials_t xcred)
 {
-  free (key->data);
-  key->data = NULL;
-  key->size = 0;
-  free (cert->data);
-  cert->data = NULL;
-  cert->size = 0;
   gnutls_deinit (session);
   gnutls_certificate_free_credentials (xcred);
   return 0;
@@ -565,6 +578,100 @@ test_wrap (const char *test_name, int
 }
 
 
+static int inited_tls_is_gnutls = 0;
+static int inited_tls_is_openssl = 0;
+
+int
+curl_tls_is_gnutls (void)
+{
+  const char *tlslib;
+  if (inited_tls_is_gnutls)
+    return 1;
+  if (inited_tls_is_openssl)
+    return 0;
+
+  tlslib = curl_version_info (CURLVERSION_NOW)->ssl_version;
+  if (NULL == tlslib)
+    return 0;
+  if (0 == strncmp (tlslib, "GnuTLS/", 7))
+    return 1;
+
+  /* Multi-backends handled during initialization by setting variable */
+  return 0;
+}
+
+
+int
+curl_tls_is_nss (void)
+{
+  const char *tlslib;
+  if (inited_tls_is_gnutls)
+    return 0;
+  if (inited_tls_is_openssl)
+    return 0;
+
+  tlslib = curl_version_info (CURLVERSION_NOW)->ssl_version;
+  if (NULL == tlslib)
+    return 0;
+  if (0 == strncmp (tlslib, "NSS/", 4))
+    return 1;
+
+  /* Handle multi-backends with selected backend */
+  if (NULL != strstr (tlslib," NSS/"))
+    return 1;
+
+  return 0;
+}
+
+
+int
+curl_tls_is_schannel (void)
+{
+  const char *tlslib;
+  if (inited_tls_is_gnutls)
+    return 0;
+  if (inited_tls_is_openssl)
+    return 0;
+
+  tlslib = curl_version_info (CURLVERSION_NOW)->ssl_version;
+  if (NULL == tlslib)
+    return 0;
+  if ((0 == strncmp (tlslib, "Schannel", 8)) || (0 == strncmp (tlslib, "WinSSL",
+                                                               6)))
+    return 1;
+
+  /* Handle multi-backends with selected backend */
+  if ((NULL != strstr (tlslib," Schannel")) || (NULL != strstr (tlslib,
+                                                                " WinSSL")))
+    return 1;
+
+  return 0;
+}
+
+
+int
+curl_tls_is_sectransport (void)
+{
+  const char *tlslib;
+  if (inited_tls_is_gnutls)
+    return 0;
+  if (inited_tls_is_openssl)
+    return 0;
+
+  tlslib = curl_version_info (CURLVERSION_NOW)->ssl_version;
+  if (NULL == tlslib)
+    return 0;
+  if (0 == strncmp (tlslib, "SecureTransport", 15))
+    return 1;
+
+  /* Handle multi-backends with selected backend */
+  if (NULL != strstr (tlslib," SecureTransport"))
+    return 1;
+
+  return 0;
+}
+
+
 int
 testsuite_curl_global_init (void)
 {
@@ -572,10 +679,15 @@ testsuite_curl_global_init (void)
 #if LIBCURL_VERSION_NUM >= 0x073800
   if (CURLSSLSET_OK != curl_global_sslset (CURLSSLBACKEND_GNUTLS, NULL, NULL))
   {
-    if (CURLSSLSET_TOO_LATE == curl_global_sslset (CURLSSLBACKEND_OPENSSL, NULL,
-                                                   NULL))
+    CURLsslset e;
+    e = curl_global_sslset (CURLSSLBACKEND_OPENSSL, NULL, NULL);
+    if (CURLSSLSET_TOO_LATE == e)
       fprintf (stderr, "WARNING: libcurl was already initialised.\n");
+    else if (CURLSSLSET_OK == e)
+      inited_tls_is_openssl = 1;
   }
+  else
+    inited_tls_is_gnutls = 1;
 #endif /* LIBCURL_VERSION_NUM >= 0x07380 */
   res = curl_global_init (CURL_GLOBAL_ALL);
   if (CURLE_OK != res)

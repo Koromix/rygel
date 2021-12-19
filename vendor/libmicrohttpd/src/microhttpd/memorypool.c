@@ -1,6 +1,6 @@
 /*
      This file is part of libmicrohttpd
-     Copyright (C) 2007--2019 Daniel Pittman, Christian Grothoff and
+     Copyright (C) 2007--2021 Daniel Pittman, Christian Grothoff, and
      Karlson2k (Evgeny Grin)
 
      This library is free software; you can redistribute it and/or
@@ -25,7 +25,9 @@
  * @author Karlson2k (Evgeny Grin)
  */
 #include "memorypool.h"
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
+#endif /* HAVE_STDLIB_H */
 #include <string.h>
 #include <stdint.h>
 #include "mhd_assert.h"
@@ -43,6 +45,34 @@
 #define MHD_SC_PAGESIZE _SC_PAGESIZE
 #endif /* _SC_PAGESIZE */
 #endif /* HAVE_SYSCONF */
+#include "mhd_limits.h" /* for SIZE_MAX, PAGESIZE / PAGE_SIZE */
+
+#if defined(MHD_USE_PAGESIZE_MACRO) || defined (MHD_USE_PAGE_SIZE_MACRO)
+#ifndef HAVE_SYSCONF /* Avoid duplicate include */
+#include <unistd.h>
+#endif /* HAVE_SYSCONF */
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif /* HAVE_SYS_PARAM_H */
+#endif /* MHD_USE_PAGESIZE_MACRO || MHD_USE_PAGE_SIZE_MACRO */
+
+/**
+ * Fallback value of page size
+ */
+#define _MHD_FALLBACK_PAGE_SIZE (4096)
+
+#if defined(MHD_USE_PAGESIZE_MACRO)
+#define MHD_DEF_PAGE_SIZE_ PAGESIZE
+#elif defined(MHD_USE_PAGE_SIZE_MACRO)
+#define MHD_DEF_PAGE_SIZE_ PAGE_SIZE
+#else  /* ! PAGESIZE */
+#define MHD_DEF_PAGE_SIZE_ _MHD_FALLBACK_PAGE_SIZE
+#endif /* ! PAGESIZE */
+
+
+#ifdef MHD_ASAN_POISON_ACTIVE
+#include <sanitizer/asan_interface.h>
+#endif /* MHD_ASAN_POISON_ACTIVE */
 
 /* define MAP_ANONYMOUS for Mac OS X */
 #if defined(MAP_ANON) && ! defined(MAP_ANONYMOUS)
@@ -65,18 +95,39 @@
 #define ROUND_TO_ALIGN(n) (((n) + (ALIGN_SIZE - 1)) \
                            / (ALIGN_SIZE) *(ALIGN_SIZE))
 
-#if defined(PAGE_SIZE) && (0 < (PAGE_SIZE + 0))
-#define MHD_DEF_PAGE_SIZE_ PAGE_SIZE
-#elif defined(PAGESIZE) && (0 < (PAGESIZE + 0))
-#define MHD_DEF_PAGE_SIZE_ PAGESIZE
-#else  /* ! PAGESIZE */
-#define MHD_DEF_PAGE_SIZE_ (4096)
-#endif /* ! PAGESIZE */
+
+#ifndef MHD_ASAN_POISON_ACTIVE
+#define _MHD_NOSANITIZE_PTRS /**/
+#define _MHD_RED_ZONE_SIZE (0)
+#define ROUND_TO_ALIGN_PLUS_RED_ZONE(n) ROUND_TO_ALIGN(n)
+#define _MHD_POISON_MEMORY(pointer, size) (void)0
+#define _MHD_UNPOISON_MEMORY(pointer, size) (void)0
+#else  /* MHD_ASAN_POISON_ACTIVE */
+#if defined(FUNC_ATTR_PTRCOMPARE_WOKRS)
+#define _MHD_NOSANITIZE_PTRS \
+  __attribute__((no_sanitize("pointer-compare","pointer-subtract")))
+#elif defined(FUNC_ATTR_NOSANITIZE_WORKS)
+#define _MHD_NOSANITIZE_PTRS __attribute__((no_sanitize("address")))
+#endif
+#define _MHD_RED_ZONE_SIZE (ALIGN_SIZE)
+#define ROUND_TO_ALIGN_PLUS_RED_ZONE(n) (ROUND_TO_ALIGN(n) + _MHD_RED_ZONE_SIZE)
+#define _MHD_POISON_MEMORY(pointer, size) \
+  ASAN_POISON_MEMORY_REGION ((pointer), (size))
+#define _MHD_UNPOISON_MEMORY(pointer, size) \
+  ASAN_UNPOISON_MEMORY_REGION ((pointer), (size))
+#endif /* MHD_ASAN_POISON_ACTIVE */
 
 /**
  * Size of memory page
  */
-static size_t MHD_sys_page_size_ = MHD_DEF_PAGE_SIZE_; /* Default fallback value */
+static size_t MHD_sys_page_size_ =
+#if defined(MHD_USE_PAGESIZE_MACRO_STATIC)
+  PAGESIZE;
+#elif defined(MHD_USE_PAGE_SIZE_MACRO_STATIC)
+  PAGE_SIZE;
+#else  /* ! MHD_USE_PAGE_SIZE_MACRO_STATIC */
+  _MHD_FALLBACK_PAGE_SIZE;   /* Default fallback value */
+#endif /* ! MHD_USE_PAGE_SIZE_MACRO_STATIC */
 
 /**
  * Initialise values for memory pools
@@ -203,6 +254,7 @@ MHD_pool_create (size_t max)
   pool->end = alloc_size;
   pool->size = alloc_size;
   mhd_assert (0 < alloc_size);
+  _MHD_POISON_MEMORY (pool->memory, pool->size);
   return pool;
 }
 
@@ -220,6 +272,7 @@ MHD_pool_destroy (struct MemoryPool *pool)
 
   mhd_assert (pool->end >= pool->pos);
   mhd_assert (pool->size >= pool->end - pool->pos);
+  _MHD_POISON_MEMORY (pool->memory, pool->size);
   if (! pool->is_mmap)
     free (pool->memory);
   else
@@ -248,7 +301,11 @@ MHD_pool_get_free (struct MemoryPool *pool)
 {
   mhd_assert (pool->end >= pool->pos);
   mhd_assert (pool->size >= pool->end - pool->pos);
-  return (pool->end - pool->pos);
+#ifdef MHD_ASAN_POISON_ACTIVE
+  if ((pool->end - pool->pos) <= _MHD_RED_ZONE_SIZE)
+    return 0;
+#endif /* MHD_ASAN_POISON_ACTIVE */
+  return (pool->end - pool->pos) - _MHD_RED_ZONE_SIZE;
 }
 
 
@@ -273,11 +330,10 @@ MHD_pool_allocate (struct MemoryPool *pool,
 
   mhd_assert (pool->end >= pool->pos);
   mhd_assert (pool->size >= pool->end - pool->pos);
-  asize = ROUND_TO_ALIGN (size);
+  asize = ROUND_TO_ALIGN_PLUS_RED_ZONE (size);
   if ( (0 == asize) && (0 != size) )
     return NULL; /* size too close to SIZE_MAX */
-  if ( (pool->pos + asize > pool->end) ||
-       (pool->pos + asize < pool->pos))
+  if (asize > pool->end - pool->pos)
     return NULL;
   if (from_end)
   {
@@ -289,6 +345,59 @@ MHD_pool_allocate (struct MemoryPool *pool,
     ret = &pool->memory[pool->pos];
     pool->pos += asize;
   }
+  _MHD_UNPOISON_MEMORY (ret, size);
+  return ret;
+}
+
+
+/**
+ * Try to allocate @a size bytes memory area from the @a pool.
+ *
+ * If allocation fails, @a required_bytes is updated with size required to be
+ * freed in the @a pool from rellocatable area to allocate requested number
+ * of bytes.
+ * Allocated memory area is always not rellocatable ("from end").
+ *
+ * @param pool memory pool to use for the operation
+ * @param size the size of memory in bytes to allocate
+ * @param[out] required_bytes the pointer to variable to be updated with
+ *                            the size of the required additional free
+ *                            memory area, not updated if function succeed.
+ *                            Cannot be NULL.
+ * @return the pointer to allocated memory area if succeed,
+ *         NULL if the pool doesn't have enough space, required_bytes is updated
+ *         with amount of space needed to be freed in rellocatable area or
+ *         set to SIZE_MAX if requested size is too large for the pool.
+ */
+void *
+MHD_pool_try_alloc (struct MemoryPool *pool,
+                    size_t size,
+                    size_t *required_bytes)
+{
+  void *ret;
+  size_t asize;
+
+  mhd_assert (pool->end >= pool->pos);
+  mhd_assert (pool->size >= pool->end - pool->pos);
+  asize = ROUND_TO_ALIGN_PLUS_RED_ZONE (size);
+  if ( (0 == asize) && (0 != size) )
+  { /* size is too close to SIZE_MAX, very unlikely */
+    *required_bytes = SIZE_MAX;
+    return NULL;
+  }
+  if (asize > pool->end - pool->pos)
+  {
+    mhd_assert ((pool->end - pool->pos) == \
+                ROUND_TO_ALIGN (pool->end - pool->pos));
+    if (asize <= pool->end)
+      *required_bytes = asize - (pool->end - pool->pos);
+    else
+      *required_bytes = SIZE_MAX;
+    return NULL;
+  }
+  ret = &pool->memory[pool->end - asize];
+  pool->end -= asize;
+  _MHD_UNPOISON_MEMORY (ret, size);
   return ret;
 }
 
@@ -299,7 +408,7 @@ MHD_pool_allocate (struct MemoryPool *pool,
  * shrinking the block that was last (re)allocated.
  * If the given block is not the most recently
  * (re)allocated block, the memory of the previous
- * allocation may be leaked until the pool is
+ * allocation may be not released until the pool is
  * destroyed or reset.
  *
  * @param pool memory pool to use for the operation
@@ -310,7 +419,7 @@ MHD_pool_allocate (struct MemoryPool *pool,
  *         NULL if the pool cannot support @a new_size
  *         bytes (old continues to be valid for @a old_size)
  */
-void *
+_MHD_NOSANITIZE_PTRS void *
 MHD_pool_reallocate (struct MemoryPool *pool,
                      void *old,
                      size_t old_size,
@@ -322,25 +431,35 @@ MHD_pool_reallocate (struct MemoryPool *pool,
   mhd_assert (pool->end >= pool->pos);
   mhd_assert (pool->size >= pool->end - pool->pos);
   mhd_assert (old != NULL || old_size == 0);
-  mhd_assert (old == NULL || pool->memory <= (uint8_t*) old);
-  mhd_assert (old == NULL || pool->memory + pool->size >= (uint8_t*) old
-              + old_size);
+  mhd_assert (pool->size >= old_size);
+  mhd_assert (old == NULL || pool->memory <= (uint8_t *) old);
+  /* (old == NULL || pool->memory + pool->size >= (uint8_t*) old + old_size) */
+  mhd_assert (old == NULL || \
+              (pool->size - _MHD_RED_ZONE_SIZE) >= \
+              (((size_t) (((uint8_t *) old) - pool->memory)) + old_size));
   /* Blocks "from the end" must not be reallocated */
+  /* (old == NULL || old_size == 0 || pool->memory + pool->pos > (uint8_t*) old) */
   mhd_assert (old == NULL || old_size == 0 || \
-              pool->memory + pool->pos > (uint8_t*) old);
+              pool->pos > (size_t) ((uint8_t *) old - pool->memory));
+  mhd_assert (old == NULL || old_size == 0 || \
+              (size_t) (((uint8_t *) old) - pool->memory) + old_size <= \
+              pool->end - _MHD_RED_ZONE_SIZE);
 
-  if (0 != old_size)
-  {   /* Need to save some data */
-    const size_t old_offset = (uint8_t*) old - pool->memory;
+  if (NULL != old)
+  {   /* Have previously allocated data */
+    const size_t old_offset = (uint8_t *) old - pool->memory;
     const bool shrinking = (old_size > new_size);
     /* Try resizing in-place */
     if (shrinking)
     {     /* Shrinking in-place, zero-out freed part */
-      memset ((uint8_t*) old + new_size, 0, old_size - new_size);
+      memset ((uint8_t *) old + new_size, 0, old_size - new_size);
+      _MHD_POISON_MEMORY ((uint8_t *) old + new_size, old_size - new_size);
     }
-    if (pool->pos == ROUND_TO_ALIGN (old_offset + old_size))
+    if (pool->pos ==
+        ROUND_TO_ALIGN_PLUS_RED_ZONE (old_offset + old_size))
     {     /* "old" block is the last allocated block */
-      const size_t new_apos = ROUND_TO_ALIGN (old_offset + new_size);
+      const size_t new_apos =
+        ROUND_TO_ALIGN_PLUS_RED_ZONE (old_offset + new_size);
       if (! shrinking)
       {                               /* Grow in-place, check for enough space. */
         if ( (new_apos > pool->end) ||
@@ -349,13 +468,14 @@ MHD_pool_reallocate (struct MemoryPool *pool,
       }
       /* Resized in-place */
       pool->pos = new_apos;
+      _MHD_UNPOISON_MEMORY (old, new_size);
       return old;
     }
     if (shrinking)
       return old;   /* Resized in-place, freed part remains allocated */
   }
   /* Need to allocate new block */
-  asize = ROUND_TO_ALIGN (new_size);
+  asize = ROUND_TO_ALIGN_PLUS_RED_ZONE (new_size);
   if ( ( (0 == asize) &&
          (0 != new_size) ) || /* Value wrap, too large new_size. */
        (asize > pool->end - pool->pos) ) /* Not enough space */
@@ -364,12 +484,14 @@ MHD_pool_reallocate (struct MemoryPool *pool,
   new_blc = pool->memory + pool->pos;
   pool->pos += asize;
 
+  _MHD_UNPOISON_MEMORY (new_blc, new_size);
   if (0 != old_size)
   {
     /* Move data to new block, old block remains allocated */
     memcpy (new_blc, old, old_size);
     /* Zero-out old block */
     memset (old, 0, old_size);
+    _MHD_POISON_MEMORY (old, old_size);
   }
   return new_blc;
 }
@@ -388,7 +510,7 @@ MHD_pool_reallocate (struct MemoryPool *pool,
  *                 (should be larger or equal to @a copy_bytes)
  * @return addr new address of @a keep (if it had to change)
  */
-void *
+_MHD_NOSANITIZE_PTRS void *
 MHD_pool_reset (struct MemoryPool *pool,
                 void *keep,
                 size_t copy_bytes,
@@ -396,11 +518,15 @@ MHD_pool_reset (struct MemoryPool *pool,
 {
   mhd_assert (pool->end >= pool->pos);
   mhd_assert (pool->size >= pool->end - pool->pos);
-  mhd_assert (copy_bytes < new_size);
+  mhd_assert (copy_bytes <= new_size);
+  mhd_assert (copy_bytes <= pool->size);
   mhd_assert (keep != NULL || copy_bytes == 0);
-  mhd_assert (keep == NULL || pool->memory <= (uint8_t*) keep);
-  mhd_assert (keep == NULL || pool->memory + pool->size >= (uint8_t*) keep
-              + copy_bytes);
+  mhd_assert (keep == NULL || pool->memory <= (uint8_t *) keep);
+  /* (keep == NULL || pool->memory + pool->size >= (uint8_t*) keep + copy_bytes) */
+  mhd_assert (keep == NULL || \
+              pool->size >= \
+              ((size_t) ((uint8_t *) keep - pool->memory)) + copy_bytes);
+  _MHD_UNPOISON_MEMORY (pool->memory, new_size);
   if ( (NULL != keep) &&
        (keep != pool->memory) )
   {
@@ -415,6 +541,7 @@ MHD_pool_reset (struct MemoryPool *pool,
     size_t to_zero;   /** Size of area to zero-out */
 
     to_zero = pool->size - copy_bytes;
+    _MHD_UNPOISON_MEMORY (pool->memory + copy_bytes, to_zero);
 #ifdef _WIN32
     if (pool->is_mmap)
     {
@@ -444,8 +571,10 @@ MHD_pool_reset (struct MemoryPool *pool,
             0,
             to_zero);
   }
-  pool->pos = ROUND_TO_ALIGN (new_size);
+  pool->pos = ROUND_TO_ALIGN_PLUS_RED_ZONE (new_size);
   pool->end = pool->size;
+  _MHD_POISON_MEMORY (((uint8_t *) pool->memory) + new_size, \
+                      pool->size - new_size);
   return pool->memory;
 }
 

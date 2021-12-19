@@ -1,6 +1,7 @@
 /*
      This file is part of libmicrohttpd
      Copyright (C) 2007 Christian Grothoff
+     Copyright (C) 2016-2019 Evgeny Grin (Karlson2k)
 
      libmicrohttpd is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published
@@ -22,6 +23,7 @@
  * @file test_timeout.c
  * @brief  Testcase for libmicrohttpd PUT operations
  * @author Matthias Wachs
+ * @author Karlson2k (Evgeny Grin)
  */
 
 #include "MHD_config.h"
@@ -30,18 +32,58 @@
 #include <microhttpd.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif /* HAVE_UNISTD_H */
+#ifdef HAVE_TIME_H
 #include <time.h>
+#endif /* HAVE_TIME_H */
 #include "mhd_has_in_name.h"
 
-#ifndef WINDOWS
-#include <unistd.h>
+
+/**
+ * Pause execution for specified number of milliseconds.
+ * @param ms the number of milliseconds to sleep
+ */
+void
+_MHD_sleep (uint32_t ms)
+{
+#if defined(_WIN32)
+  Sleep (ms);
+#elif defined(HAVE_NANOSLEEP)
+  struct timespec slp = {ms / 1000, (ms % 1000) * 1000000};
+  struct timespec rmn;
+  int num_retries = 0;
+  while (0 != nanosleep (&slp, &rmn))
+  {
+    if (num_retries++ > 8)
+      break;
+    slp = rmn;
+  }
+#elif defined(HAVE_USLEEP)
+  uint64_t us = ms * 1000;
+  do
+  {
+    uint64_t this_sleep;
+    if (999999 < us)
+      this_sleep = 999999;
+    else
+      this_sleep = us;
+    /* Ignore return value as it could be void */
+    usleep (this_sleep);
+    us -= this_sleep;
+  } while (us > 0);
+#else
+  fprintf (stderr, "No sleep function available on this system.\n");
 #endif
+}
+
 
 static int oneone;
 
-static int withTimeout = 1;
+static int withTimeout = 0;
 
-static int withoutTimeout = 1;
+static int withoutTimeout = 0;
 
 struct CBC
 {
@@ -65,21 +107,40 @@ termination_cb (void *cls,
   case MHD_REQUEST_TERMINATED_COMPLETED_OK:
     if (test == &withoutTimeout)
     {
-      withoutTimeout = 0;
+      withoutTimeout = 1;
+    }
+    else
+    {
+      fprintf (stderr, "Connection completed without errors while "
+               "timeout is expected.\n");
     }
     break;
   case MHD_REQUEST_TERMINATED_WITH_ERROR:
+    fprintf (stderr, "Connection terminated with error.\n");
+    exit (4);
+    break;
   case MHD_REQUEST_TERMINATED_READ_ERROR:
+    fprintf (stderr, "Connection terminated with read error.\n");
+    exit (4);
     break;
   case MHD_REQUEST_TERMINATED_TIMEOUT_REACHED:
     if (test == &withTimeout)
     {
-      withTimeout = 0;
+      withTimeout = 1;
+    }
+    else
+    {
+      fprintf (stderr, "Connection terminated with timeout while expected "
+               "to be successfully completed.\n");
     }
     break;
   case MHD_REQUEST_TERMINATED_DAEMON_SHUTDOWN:
+    fprintf (stderr, "Connection terminated by daemon shutdown.\n");
+    exit (4);
     break;
   case MHD_REQUEST_TERMINATED_CLIENT_ABORT:
+    fprintf (stderr, "Connection terminated by client.\n");
+    exit (4);
     break;
   }
 }
@@ -104,6 +165,7 @@ static size_t
 putBuffer_fail (void *stream, size_t size, size_t nmemb, void *ptr)
 {
   (void) stream; (void) size; (void) nmemb; (void) ptr;        /* Unused. Silent compiler warning. */
+  _MHD_sleep (100); /* Avoid busy-waiting */
   return 0;
 }
 
@@ -191,7 +253,7 @@ testWithoutTimeout ()
                         NULL, NULL, &ahc_echo, &done_flag,
                         MHD_OPTION_CONNECTION_TIMEOUT, 2,
                         MHD_OPTION_NOTIFY_COMPLETED, &termination_cb,
-                        &withTimeout,
+                        &withoutTimeout,
                         MHD_OPTION_END);
   if (d == NULL)
     return 1;
@@ -225,14 +287,22 @@ testWithoutTimeout ()
    *   setting NOSIGNAL results in really weird
    *   crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+  withoutTimeout = 0;
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
   {
+    fprintf (stderr, "curl_easy_perform failed: '%s'\n",
+             curl_easy_strerror (errornum));
     curl_easy_cleanup (c);
     MHD_stop_daemon (d);
     return 2;
   }
   curl_easy_cleanup (c);
   MHD_stop_daemon (d);
+  if (0 == withoutTimeout)
+  {
+    fprintf (stderr, "Request wasn't processed successfully.\n");
+    return 2;
+  }
   if (cbc.pos != strlen ("/hello_world"))
     return 4;
   if (0 != strncmp ("/hello_world", cbc.buf, strlen ("/hello_world")))
@@ -269,7 +339,7 @@ testWithTimeout ()
                         NULL, NULL, &ahc_echo, &done_flag,
                         MHD_OPTION_CONNECTION_TIMEOUT, 2,
                         MHD_OPTION_NOTIFY_COMPLETED, &termination_cb,
-                        &withoutTimeout,
+                        &withTimeout,
                         MHD_OPTION_END);
   if (d == NULL)
     return 16;
@@ -303,13 +373,24 @@ testWithTimeout ()
    *   setting NOSIGNAL results in really weird
    *   crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+  withTimeout = 0;
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
   {
     curl_easy_cleanup (c);
     MHD_stop_daemon (d);
     if (errornum == CURLE_GOT_NOTHING)
-      /* mhd had the timeout */
-      return 0;
+    {
+      if (0 != withTimeout)
+      {
+        /* mhd had the timeout */
+        return 0;
+      }
+      else
+      {
+        fprintf (stderr, "Timeout wasn't detected.\n");
+        return 8;
+      }
+    }
     else
       /* curl had the timeout first */
       return 32;
@@ -338,8 +419,5 @@ main (int argc, char *const *argv)
              "Error during test execution (code: %u)\n",
              errorCount);
   curl_global_cleanup ();
-  if ((withTimeout == 0) && (withoutTimeout == 0))
-    return 0;
-  else
-    return errorCount;       /* 0 == pass */
+  return (0 == errorCount) ? 0 : 1;       /* 0 == pass */
 }

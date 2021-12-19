@@ -1,6 +1,7 @@
 /*
      This file is part of libmicrohttpd
      Copyright (C) 2007 Christian Grothoff
+     Copyright (C) 2014-2021 Evgeny Grin (Karlson2k)
 
      libmicrohttpd is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published
@@ -20,9 +21,9 @@
 
 /**
  * @file test_iplimit.c
- * @brief  Testcase for libmicrohttpd GET operations
- *         TODO: test parsing of query
+ * @brief  Testcase for libmicrohttpd limits per IP
  * @author Christian Grothoff
+ * @author Karlson2k (Evgeny Grin)
  */
 
 #include "MHD_config.h"
@@ -134,7 +135,7 @@ testMultithreadedGet ()
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
                         port, NULL, NULL,
                         &ahc_echo, "GET",
-                        MHD_OPTION_PER_IP_CONNECTION_LIMIT, 2,
+                        MHD_OPTION_PER_IP_CONNECTION_LIMIT, (unsigned int) 2,
                         MHD_OPTION_END);
   if (d == NULL)
     return 16;
@@ -245,7 +246,7 @@ testMultithreadedPoolGet ()
 
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
                         port, NULL, NULL, &ahc_echo, "GET",
-                        MHD_OPTION_PER_IP_CONNECTION_LIMIT, 2,
+                        MHD_OPTION_PER_IP_CONNECTION_LIMIT, (unsigned int) 2,
                         MHD_OPTION_THREAD_POOL_SIZE, MHD_CPU_COUNT,
                         MHD_OPTION_END);
   if (d == NULL)
@@ -358,5 +359,5 @@ main (int argc, char *const *argv)
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);
   curl_global_cleanup ();
-  return errorCount != 0;       /* 0 == pass */
+  return (0 == errorCount) ? 0 : 1;       /* 0 == pass */
 }

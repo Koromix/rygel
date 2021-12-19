@@ -1,7 +1,7 @@
 /*
      This file is part of libmicrohttpd
      Copyright (C) 2007, 2009, 2011 Christian Grothoff
-     Copyright (C) 2016-2021 Karlson2k (Evgeny Grin)
+     Copyright (C) 2014-2021 Evgeny Grin (Karlson2k)
 
      libmicrohttpd is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published
@@ -189,7 +189,7 @@ testRunWaitGet (int port, int poll_flag)
   }
 
   if (0 != pthread_create (&get_tid, NULL,
-                           &thread_gets, (void*) (intptr_t) port))
+                           &thread_gets, (void *) (intptr_t) port))
     _exit (99);
 
   /* As another thread sets "done" flag after ending of network

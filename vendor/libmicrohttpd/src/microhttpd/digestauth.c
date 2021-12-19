@@ -1212,9 +1212,10 @@ MHD_digest_auth_check (struct MHD_Connection *connection,
       da.sessionkey = skey.sha256;                        \
       da.init = &MHD_SHA256_init;                             \
       da.update = &MHD_SHA256_update;                         \
-      da.digest = &sha256_finish;                         \
+      da.digest = &MHD_SHA256_finish;                         \
       break;                                              \
     default:                                              \
+      da.digest_size = 0;                                 \
       mhd_assert (false);                                 \
       break;                                              \
     }                                                     \

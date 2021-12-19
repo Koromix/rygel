@@ -22,6 +22,15 @@
 /* This is a FreeBSD system */
 #undef FREEBSD
 
+/* Define to '1' if '__attribute__((no_sanitize("address")))' works for
+   pointers compare */
+#undef FUNC_ATTR_NOSANITIZE_WORKS
+
+/* Define to '1' if
+   '__attribute__((no_sanitize("pointer-compare","pointer-subtract")))' works
+   */
+#undef FUNC_ATTR_PTRCOMPARE_WOKRS
+
 /* Define to `1' if host machine runs on GNU Hurd. */
 #undef GNU_HURD
 
@@ -55,6 +64,9 @@
    `mach_port_deallocate' functions. */
 #undef HAVE_CLOCK_GET_TIME
 
+/* Define to 1 if your compiler supports 'alignof()' */
+#undef HAVE_C_ALIGNOF
+
 /* Define to 1 if C supports variable-length arrays. */
 #undef HAVE_C_VARARRAYS
 
@@ -64,10 +76,6 @@
 /* Define if the GNU dcgettext() function is already present or preinstalled.
    */
 #undef HAVE_DCGETTEXT
-
-/* Define to 1 if you have the declaration of `SOCK_NONBLOCK', and to 0 if you
-   don't. */
-#undef HAVE_DECL_SOCK_NONBLOCK
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
@@ -105,7 +113,7 @@
 /* Define if the GNU gettext() function is already present or preinstalled. */
 #undef HAVE_GETTEXT
 
-/* Define to 1 if you have the `gettimeofday' function. */
+/* Define to 1 if you have `gettimeofday' function. */
 #undef HAVE_GETTIMEOFDAY
 
 /* Define to 1 if you have the `gmtime_r' function. */
@@ -129,9 +137,6 @@
 /* Define to 1 if you have a functional curl library. */
 #undef HAVE_LIBCURL
 
-/* Define to 1 if you have suitable libmagic. */
-#undef HAVE_LIBMAGIC
-
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
 
@@ -141,9 +146,6 @@
 /* can use shutdown on listen sockets */
 #undef HAVE_LISTEN_SHUTDOWN
 
-/* Define to 1 if you have the <locale.h> header file. */
-#undef HAVE_LOCALE_H
-
 /* Define to 1 if you have the `lseek64' function. */
 #undef HAVE_LSEEK64
 
@@ -152,9 +154,6 @@
 
 /* Define to 1 if you have the <machine/param.h> header file. */
 #undef HAVE_MACHINE_PARAM_H
-
-/* Define to 1 if you have the <math.h> header file. */
-#undef HAVE_MATH_H
 
 /* Define to 1 if you have the `memmem' function. */
 #undef HAVE_MEMMEM
@@ -168,11 +167,17 @@
 /* Define to 1 if you have the <netdb.h> header file. */
 #undef HAVE_NETDB_H
 
+/* Define to 1 if you have the <netinet/icmp_var.h> header file. */
+#undef HAVE_NETINET_ICMP_VAR_H
+
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #undef HAVE_NETINET_IN_H
 
 /* Define to 1 if you have the <netinet/ip.h> header file. */
 #undef HAVE_NETINET_IP_H
+
+/* Define to 1 if you have the <netinet/ip_icmp.h> header file. */
+#undef HAVE_NETINET_IP_ICMP_H
 
 /* Define to 1 if you have the <netinet/tcp.h> header file. */
 #undef HAVE_NETINET_TCP_H
@@ -198,7 +203,8 @@
 /* Define to 1 if you have the `pread64' function. */
 #undef HAVE_PREAD64
 
-/* Define if you have IBM i form of pthread_attr_setname_np(3) function. */
+/* Define if you have IBM i form (or Solaris form) of
+   pthread_attr_setname_np(3) function. */
 #undef HAVE_PTHREAD_ATTR_SETNAME_NP_IBMI
 
 /* Define if you have NetBSD form (or OSF1 form) of pthread_attr_setname_np(3)
@@ -239,6 +245,9 @@
 /* Define to 1 if you have the real boolean type. */
 #undef HAVE_REAL_BOOL
 
+/* Define to 1 if you have the <sanitizer/asan_interface.h> header file. */
+#undef HAVE_SANITIZER_ASAN_INTERFACE_H
+
 /* Define to 1 if you have the <sdkddkver.h> header file. */
 #undef HAVE_SDKDDKVER_H
 
@@ -266,6 +275,9 @@
 
 /* Define to 1 if you have Solaris-style sendfile(3). */
 #undef HAVE_SOLARIS_SENDFILE
+
+/* Define to 1 if you have the <stdalign.h> header file. */
+#undef HAVE_STDALIGN_H
 
 /* Define to 1 if you have the <stdbool.h> header file and <stdbool.h> defines
    'bool' type. */
@@ -300,6 +312,12 @@
 
 /* Define to 1 if you have the `sysconf' function. */
 #undef HAVE_SYSCONF
+
+/* Define to 1 if you have the `sysctl' function. */
+#undef HAVE_SYSCTL
+
+/* Define to 1 if you have the `sysctlbyname' function. */
+#undef HAVE_SYSCTLBYNAME
 
 /* Define to 1 if you have the <sys/byteorder.h> header file. */
 #undef HAVE_SYS_BYTEORDER_H
@@ -337,11 +355,18 @@
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
 
+/* Define to 1 if you have the <sys/sysctl.h> header file. */
+#undef HAVE_SYS_SYSCTL_H
+
 /* Define to 1 if you have the <sys/time.h> header file. */
 #undef HAVE_SYS_TIME_H
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
+
+/* Define to 1 if you have C11 `mhd_cv_func_timespec_get' function and
+   TIME_UTC macro. */
+#undef HAVE_TIMESPEC_GET
 
 /* Define to 1 if you have the <time.h> header file. */
 #undef HAVE_TIME_H
@@ -460,6 +485,15 @@
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
 #undef LT_OBJDIR
 
+/* Define to '1' if you have address sanitizer enabled */
+#undef MHD_ASAN_ACTIVE
+
+/* Define to '1' if user memory poison is used */
+#undef MHD_ASAN_POISON_ACTIVE
+
+/* Define to 1 if you have suitable libmagic. */
+#undef MHD_HAVE_LIBMAGIC
+
 /* Define to 1 if you have __builtin_bswap32() builtin function */
 #undef MHD_HAVE___BUILTIN_BSWAP32
 
@@ -489,6 +523,18 @@
 
 /* Define if you have usable `getsockname' function. */
 #undef MHD_USE_GETSOCKNAME
+
+/* Define if you have usable PAGESIZE macro */
+#undef MHD_USE_PAGESIZE_MACRO
+
+/* Define if you have PAGESIZE macro usable for static init */
+#undef MHD_USE_PAGESIZE_MACRO_STATIC
+
+/* Define if you have usable PAGE_SIZE macro */
+#undef MHD_USE_PAGE_SIZE_MACRO
+
+/* Define if you have PAGE_SIZE macro usable for static init */
+#undef MHD_USE_PAGE_SIZE_MACRO_STATIC
 
 /* define to use pthreads */
 #undef MHD_USE_POSIX_THREADS
@@ -541,6 +587,21 @@
 /* Define to necessary symbol if this constant uses a non-standard name on
    your system. */
 #undef PTHREAD_CREATE_JOINABLE
+
+/* The size of `size_t', as computed by sizeof. */
+#undef SIZEOF_SIZE_T
+
+/* The size of `tv_sec' member of `struct timeval', as computed by sizeof */
+#undef SIZEOF_STRUCT_TIMEVAL_TV_SEC
+
+/* The size of `uint64_t', as computed by sizeof. */
+#undef SIZEOF_UINT64_T
+
+/* The size of `unsigned int', as computed by sizeof. */
+#undef SIZEOF_UNSIGNED_INT
+
+/* The size of `unsigned long long', as computed by sizeof. */
+#undef SIZEOF_UNSIGNED_LONG_LONG
 
 /* This is a Solaris system */
 #undef SOLARIS
@@ -605,6 +666,9 @@
 /* defines how to decorate public symbols while building */
 #undef _MHD_EXTERN
 
+/* Define to 1 to enable "heavy" test paths. */
+#undef _MHD_HEAVY_TESTS
+
 /* Define to use eventFD for inter-thread communication */
 #undef _MHD_ITC_EVENTFD
 
@@ -613,6 +677,9 @@
 
 /* Define to use socketpair for inter-thread communication */
 #undef _MHD_ITC_SOCKETPAIR
+
+/* Define to supported 'noreturn' function declaration */
+#undef _MHD_NORETURN
 
 /* Define to prefix which will be used with MHD static inline functions. */
 #undef _MHD_static_inline

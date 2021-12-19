@@ -25,6 +25,13 @@
 #include "platform.h"
 #include <microhttpd.h>
 
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
+#endif /* HAVE_INTTYPES_H */
+#ifndef PRIu64
+#define PRIu64  "llu"
+#endif /* ! PRIu64 */
+
 #if defined(MHD_CPU_COUNT) && (MHD_CPU_COUNT + 0) < 2
 #undef MHD_CPU_COUNT
 #endif
@@ -87,7 +94,7 @@ completed_callback (void *cls,
   if (delta < SMALL)
     small_deltas[delta]++;
   else
-    fprintf (stdout, "D: %llu 1\n", (unsigned long long) delta);
+    fprintf (stdout, "D: %" PRIu64 " 1\n", delta);
   free (tv);
 }
 
@@ -230,7 +237,7 @@ main (int argc, char *const *argv)
   (void) getc (stdin);
   MHD_stop_daemon (d);
   MHD_destroy_response (response);
-  for (i = 0; i<SMALL; i++)
+  for (i = 0; i < SMALL; i++)
     if (0 != small_deltas[i])
       fprintf (stdout, "D: %d %u\n", i, small_deltas[i]);
   return 0;

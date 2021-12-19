@@ -30,13 +30,14 @@ string_to_base64 (const char *message)
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   unsigned long l;
   size_t i;
+  size_t j;
   char *tmp;
   size_t length = strlen (message);
 
   tmp = malloc (length * 2 + 1);
   if (NULL == tmp)
     return NULL;
-  tmp[0] = 0;
+  j = 0;
   for (i = 0; i < length; i += 3)
   {
     l = (((unsigned long) message[i]) << 16)
@@ -44,17 +45,21 @@ string_to_base64 (const char *message)
         | (((i + 2) < length) ? ((unsigned long) message[i + 2]) : 0);
 
 
-    strncat (tmp, &lookup[(l >> 18) & 0x3F], 1);
-    strncat (tmp, &lookup[(l >> 12) & 0x3F], 1);
+    tmp [j++] = lookup[(l >> 18) & 0x3F];
+    tmp [j++] = lookup[(l >> 12) & 0x3F];
 
     if (i + 1 < length)
-      strncat (tmp, &lookup[(l >> 6) & 0x3F], 1);
+      tmp [j++] = lookup[(l >> 6) & 0x3F];
     if (i + 2 < length)
-      strncat (tmp, &lookup[l & 0x3F], 1);
+      tmp [j++] = lookup[l & 0x3F];
   }
 
-  if (length % 3)
-    strncat (tmp, "==", 3 - length % 3);
+  if (0 != length % 3)
+    tmp [j++] = '=';
+  if (1 == length % 3)
+    tmp [j++] = '=';
+
+  tmp [j] = 0;
 
   return tmp;
 }

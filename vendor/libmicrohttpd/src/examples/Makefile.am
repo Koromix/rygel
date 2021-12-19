@@ -30,6 +30,11 @@ noinst_PROGRAMS = \
  fileserver_example_external_select \
  refuse_post_example
 
+if HAVE_EXPERIMENTAL
+noinst_PROGRAMS += \
+  websocket_chatserver_example
+endif
+
 if MHD_HAVE_EPOLL
 noinst_PROGRAMS += \
   suspend_resume_epoll
@@ -123,6 +128,12 @@ chunked_example_SOURCES = \
 chunked_example_LDADD = \
  $(top_builddir)/src/microhttpd/libmicrohttpd.la
 
+websocket_chatserver_example_SOURCES = \
+ websocket_chatserver_example.c
+websocket_chatserver_example_LDADD = \
+ $(top_builddir)/src/microhttpd_ws/libmicrohttpd_ws.la \
+ $(top_builddir)/src/microhttpd/libmicrohttpd.la
+
 demo_SOURCES = \
  demo.c
 demo_CFLAGS = \
@@ -132,7 +143,7 @@ demo_CPPFLAGS = \
 demo_LDADD = \
  $(top_builddir)/src/microhttpd/libmicrohttpd.la  \
  $(PTHREAD_LIBS)
-if HAVE_LIBMAGIC
+if MHD_HAVE_LIBMAGIC
 demo_LDADD += -lmagic
 endif
 
@@ -145,7 +156,7 @@ demo_https_CPPFLAGS = \
 demo_https_LDADD = \
  $(top_builddir)/src/microhttpd/libmicrohttpd.la  \
  $(PTHREAD_LIBS)
-if HAVE_LIBMAGIC
+if MHD_HAVE_LIBMAGIC
 demo_https_LDADD += -lmagic
 endif
 

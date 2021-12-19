@@ -52,10 +52,14 @@
 #else  /* ! __LONG_MAX__ */
 #define LONG_MAX MHD_SIGNED_TYPE_MAX (long)
 #endif /* ! __LONG_MAX__ */
-#endif /* !OFF_T_MAX */
+#endif /* !LONG_MAX */
 
 #ifndef ULLONG_MAX
+#ifdef ULONGLONG_MAX
+#define ULLONG_MAX ULONGLONG_MAX
+#else  /* ! ULONGLONG_MAX */
 #define ULLONG_MAX MHD_UNSIGNED_TYPE_MAX_ (MHD_UNSIGNED_LONG_LONG)
+#endif /* ! ULONGLONG_MAX */
 #endif /* !ULLONG_MAX */
 
 #ifndef INT32_MAX
@@ -103,8 +107,6 @@
 #ifndef SSIZE_MAX
 #ifdef __SSIZE_MAX__
 #define SSIZE_MAX __SSIZE_MAX__
-#elif defined(PTRDIFF_MAX)
-#define SSIZE_MAX PTRDIFF_MAX
 #elif defined(INTPTR_MAX)
 #define SSIZE_MAX INTPTR_MAX
 #else

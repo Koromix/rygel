@@ -1,11 +1,11 @@
 #define PACKAGE "libmicrohttpd"
 #define PACKAGE_BUGREPORT "libmicrohttpd@gnu.org"
 #define PACKAGE_NAME "GNU Libmicrohttpd"
-#define PACKAGE_STRING "GNU Libmicrohttpd 0.9.72"
+#define PACKAGE_STRING "GNU Libmicrohttpd 0.9.74"
 #define PACKAGE_TARNAME "libmicrohttpd"
 #define PACKAGE_URL "http://www.gnu.org/software/libmicrohttpd/"
-#define PACKAGE_VERSION "0.9.72"
-#define VERSION "0.9.72"
+#define PACKAGE_VERSION "0.9.74"
+#define VERSION "0.9.74"
 
 #if defined(__MINGW32__)
     #define BAUTH_SUPPORT 1
@@ -14,7 +14,6 @@
     #define HAVE_C_VARARRAYS 1
     #define HAVE_CALLOC 1
     #define HAVE_CLOCK_GETTIME 1
-    #define HAVE_DECL_SOCK_NONBLOCK 0
     #define HAVE_ERRNO_H 1
     #define HAVE_FCNTL_H 1
     #define HAVE_FSEEKO 1
@@ -22,9 +21,7 @@
     #define HAVE_INET6 1
     #define HAVE_INTTYPES_H 1
     #define HAVE_LIMITS_H 1
-    #define HAVE_LOCALE_H 1
     #define HAVE_LSEEK64 1
-    #define HAVE_MATH_H 1
     #define HAVE_MEMORY_H 1
     #define HAVE_MESSAGES 1
     #define HAVE_NANOSLEEP 1
@@ -72,13 +69,24 @@
     #define _MHD_EXTERN __attribute__((visibility("default"))) __declspec(dllexport) extern
     #define _MHD_ITC_SOCKETPAIR 1
     #define _MHD_static_inline static inline __attribute__((always_inline))
+    #define _MHD_NORETURN __attribute__((noreturn))
     #define _XOPEN_SOURCE 1
     #define _XOPEN_SOURCE_EXTENDED 1
+    #define FUNC_ATTR_NOSANITIZE_WORKS 1
+    #define FUNC_ATTR_PTRCOMPARE_WOKRS 1
+    #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
+        #define SIZEOF_SIZE_T 8
+    #else
+        #define SIZEOF_SIZE_T 4
+    #endif
+    #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 4
+    #define SIZEOF_UINT64_T 8
+    #define SIZEOF_UNSIGNED_INT 4
+    #define SIZEOF_UNSIGNED_LONG_LONG 8
 #elif defined(_MSC_VER)
     #define WINDOWS 1
     #define MSVC 1
     #define INLINE_FUNC 1
-    #define _MHD_static_inline static __forceinline
     #define BAUTH_SUPPORT 1
     #define DAUTH_SUPPORT 1
     #define HAVE_POSTPROCESSOR 1
@@ -105,8 +113,6 @@
     #define HAVE_FCNTL_H 1
     #define HAVE_INTTYPES_H 1
     #define HAVE_LIMITS_H 1
-    #define HAVE_LOCALE_H 1
-    #define HAVE_MATH_H 1
     #define HAVE_MEMORY_H 1
     #define HAVE_SDKDDKVER_H 1
     #define HAVE_STDINT_H 1
@@ -125,6 +131,21 @@
     #define _GNU_SOURCE  1
     #define STDC_HEADERS 1
     #define __STDC_NO_VLA__ 1
+    #define _MHD_static_inline static __forceinline
+    #define _MHD_NORETURN __declspec(noreturn)
+    #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
+        #define SIZEOF_SIZE_T 8
+    #else
+        #define SIZEOF_SIZE_T 4
+    #endif
+    #ifdef _USE_32BIT_TIME_T
+        #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 4
+    #else
+        #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 8
+    #endif
+    #define SIZEOF_UINT64_T 8
+    #define SIZEOF_UNSIGNED_INT 4
+    #define SIZEOF_UNSIGNED_LONG_LONG 8
 #elif defined(__APPLE__)
     #define BAUTH_SUPPORT 1
     #define DAUTH_SUPPORT 1
@@ -136,7 +157,6 @@
     #define HAVE_CLOCK_GET_TIME 1
     #define HAVE_DARWIN_SENDFILE 1
     #define HAVE_DECL_GETSOCKNAME 1
-    #define HAVE_DECL_SOCK_NONBLOCK 0
     #define HAVE_DLFCN_H 1
     #define HAVE_ERRNO_H 1
     #define HAVE_FCNTL_H 1
@@ -149,10 +169,8 @@
     #define HAVE_INTTYPES_H 1
     #define HAVE_LIBCURL 1
     #define HAVE_LIMITS_H 1
-    #define HAVE_LOCALE_H 1
     #define HAVE_MACHINE_ENDIAN_H 1
     #define HAVE_MACHINE_PARAM_H 1
-    #define HAVE_MATH_H 1
     #define HAVE_MEMMEM 1
     #define HAVE_MEMORY_H 1
     #define HAVE_MESSAGES 1
@@ -192,8 +210,11 @@
     #define HAVE_SYS_SELECT_H 1
     #define HAVE_SYS_SOCKET_H 1
     #define HAVE_SYS_STAT_H 1
+    #define HAVE_SYS_SYSCTL_H 1
     #define HAVE_SYS_TIME_H 1
     #define HAVE_SYS_TYPES_H 1
+    #define HAVE_SYSCTL 1
+    #define HAVE_SYSCONF 1
     #define HAVE_TIME_H 1
     #define HAVE_TSEARCH 1
     #define HAVE_UNISTD_H 1
@@ -219,6 +240,23 @@
     #define _MHD_EXTERN __attribute__((visibility("default"))) extern
     #define _MHD_ITC_PIPE 1
     #define _MHD_static_inline static inline __attribute__((always_inline))
+    #define _MHD_NORETURN __attribute__((noreturn))
+    #define FUNC_ATTR_NOSANITIZE_WORKS 1
+    #define FUNC_ATTR_PTRCOMPARE_WOKRS 1
+    #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
+        #define SIZEOF_SIZE_T 8
+        #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 8
+    #else
+        #define SIZEOF_SIZE_T 4
+        #if _TIME_BITS == 64
+            #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 8
+        #else
+            #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 4
+        #endif
+    #endif
+    #define SIZEOF_UINT64_T 8
+    #define SIZEOF_UNSIGNED_INT 4
+    #define SIZEOF_UNSIGNED_LONG_LONG 8
 #elif defined(__linux__)
     #define BAUTH_SUPPORT 1
     #define DAUTH_SUPPORT 1
@@ -229,7 +267,6 @@
     #define HAVE_C_VARARRAYS 1
     #define HAVE_CALLOC 1
     #define HAVE_CLOCK_GETTIME 1
-    #define HAVE_DECL_SOCK_NONBLOCK 1
     #define HAVE_DLFCN_H 1
     #define HAVE_ENDIAN_H 1
     #define HAVE_EPOLL_CREATE1 1
@@ -243,9 +280,7 @@
     #define HAVE_INTTYPES_H 1
     #define HAVE_LIMITS_H 1
     #define HAVE_LISTEN_SHUTDOWN 1
-    #define HAVE_LOCALE_H 1
     #define HAVE_LSEEK64 1
-    #define HAVE_MATH_H 1
     #define HAVE_MEMMEM 1
     #define HAVE_MEMORY_H 1
     #define HAVE_MESSAGES 1
@@ -288,8 +323,10 @@
     #define HAVE_SYS_SELECT_H 1
     #define HAVE_SYS_SOCKET_H 1
     #define HAVE_SYS_STAT_H 1
+    #define HAVE_SYS_SYSCTL_H 1
     #define HAVE_SYS_TIME_H 1
     #define HAVE_SYS_TYPES_H 1
+    #define HAVE_SYSCTL 1
     #define HAVE_SYSCONF 1
     #define HAVE_TIME_H 1
     #define HAVE_TSEARCH 1
@@ -311,7 +348,28 @@
     #define _MHD_EXTERN __attribute__((visibility("default"))) extern
     #define _MHD_ITC_EVENTFD 1
     #define _MHD_static_inline static inline __attribute__((always_inline))
+    #define _MHD_NORETURN __attribute__((noreturn))
     #define _XOPEN_SOURCE 700
+    #define FUNC_ATTR_NOSANITIZE_WORKS 1
+    #define FUNC_ATTR_PTRCOMPARE_WOKRS 1
+    #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
+        #define SIZEOF_SIZE_T 8
+        #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 8
+    #else
+        #define SIZEOF_SIZE_T 4
+        #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 4
+    #endif
+    #define SIZEOF_UINT64_T 8
+    #define SIZEOF_UNSIGNED_INT 4
+    #define SIZEOF_UNSIGNED_LONG_LONG 8
 #else
     #error "Custom MHD_config.h not suited for this platform"
+#endif
+
+#if defined(__clang__)
+    #if __has_feature(address_sanitizer)
+        #define MHD_ASAN_ACTIVE 1
+    #endif
+#elif defined(__SANITIZE_ADDRESS__)
+    #define MHD_ASAN_ACTIVE 1
 #endif

@@ -72,7 +72,7 @@ struct MHD_IPCount
  * @param daemon handle to a daemon
  * @return master daemon handle
  */
-static struct MHD_Daemon*
+static struct MHD_Daemon *
 get_master (struct MHD_Daemon *daemon)
 {
   while (NULL != daemon->master)
@@ -145,7 +145,7 @@ MHD_ip_addr_to_key (const struct sockaddr *addr,
   /* IPv4 addresses */
   if (sizeof (struct sockaddr_in) == addrlen)
   {
-    const struct sockaddr_in *addr4 = (const struct sockaddr_in*) addr;
+    const struct sockaddr_in *addr4 = (const struct sockaddr_in *) addr;
 
     key->family = AF_INET;
     memcpy (&key->addr.ipv4,
@@ -158,7 +158,7 @@ MHD_ip_addr_to_key (const struct sockaddr *addr,
   /* IPv6 addresses */
   if (sizeof (struct sockaddr_in6) == addrlen)
   {
-    const struct sockaddr_in6 *addr6 = (const struct sockaddr_in6*) addr;
+    const struct sockaddr_in6 *addr6 = (const struct sockaddr_in6 *) addr;
 
     key->family = AF_INET6;
     memcpy (&key->addr.ipv6,

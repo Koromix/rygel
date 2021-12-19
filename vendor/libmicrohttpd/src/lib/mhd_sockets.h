@@ -533,7 +533,7 @@ typedef int MHD_SCKT_SEND_SIZE_;
  * @param err the WinSock error code.
  * @return pointer to string description of specified WinSock error.
  */
-const char*MHD_W32_strerror_winsock_ (int err);
+const char *MHD_W32_strerror_winsock_ (int err);
 
 #endif /* MHD_WINSOCK_SOCKETS */
 

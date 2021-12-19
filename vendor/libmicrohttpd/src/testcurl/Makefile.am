@@ -1,6 +1,8 @@
 # This Makefile.am is in the public domain
 EMPTY_ITEM =
 
+@HEAVY_TESTS_NOTPARALLEL@
+
 SUBDIRS = .
 
 if USE_COVERAGE
@@ -18,6 +20,9 @@ AM_CPPFLAGS = \
 -I$(top_srcdir)/src/include \
 $(LIBCURL_CPPFLAGS)
 
+LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  @LIBCURL@
 
 THREAD_ONLY_TESTS = \
   test_urlparse \
@@ -82,6 +87,10 @@ check_PROGRAMS = \
   test_get \
   test_get_iovec \
   test_get_sendfile \
+  test_get_close \
+  test_get_close10 \
+  test_get_keep_alive \
+  test_get_keep_alive10 \
   test_delete \
   test_patch \
   test_put \
@@ -90,6 +99,16 @@ check_PROGRAMS = \
   test_process_headers \
   test_process_arguments \
   test_parse_cookies \
+  test_toolarge_method \
+  test_toolarge_url \
+  test_toolarge_request_header_name \
+  test_toolarge_request_header_value \
+  test_toolarge_request_headers \
+  test_toolarge_reply_header_name \
+  test_toolarge_reply_header_value \
+  test_toolarge_reply_headers \
+  test_tricky_url \
+  test_tricky_header2 \
   test_large_put \
   test_get11 \
   test_get_iovec11 \
@@ -99,6 +118,21 @@ check_PROGRAMS = \
   test_large_put11 \
   test_large_put_inc11 \
   test_get_chunked \
+  test_get_chunked_close \
+  test_get_chunked_string \
+  test_get_chunked_close_string \
+  test_get_chunked_empty \
+  test_get_chunked_close_empty \
+  test_get_chunked_string_empty \
+  test_get_chunked_close_string_empty \
+  test_get_chunked_sized \
+  test_get_chunked_close_sized \
+  test_get_chunked_empty_sized \
+  test_get_chunked_close_empty_sized \
+  test_get_chunked_forced \
+  test_get_chunked_close_forced \
+  test_get_chunked_empty_forced \
+  test_get_chunked_close_empty_forced \
   test_put_chunked \
   test_callback \
   $(EMPTY_ITEM)
@@ -136,55 +170,38 @@ check_PROGRAMS += \
 endif
 
 TESTS = $(check_PROGRAMS)
-
-noinst_LIBRARIES = libcurl_version_check.a
 endif
-
-libcurl_version_check_a_SOURCES = \
-  curl_version_check.c
 
 test_concurrent_stop_SOURCES = \
   test_concurrent_stop.c
 test_concurrent_stop_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
 test_concurrent_stop_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  $(PTHREAD_LIBS) @LIBCURL@
+  $(PTHREAD_LIBS) $(LDADD)
 
 test_get_SOURCES = \
   test_get.c
-test_get_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_quiesce_SOURCES = \
   test_quiesce.c
 test_quiesce_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
 test_quiesce_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  $(PTHREAD_LIBS) @LIBCURL@
+  $(PTHREAD_LIBS) $(LDADD)
 
 test_quiesce_stream_SOURCES = \
   test_quiesce_stream.c
 test_quiesce_stream_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
 test_quiesce_stream_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  $(PTHREAD_LIBS) @LIBCURL@
+  $(PTHREAD_LIBS) $(LDADD)
 
 test_callback_SOURCES = \
   test_callback.c
-test_callback_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 perf_get_SOURCES = \
   perf_get.c \
   gauger.h mhd_has_in_name.h
-perf_get_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 perf_get_concurrent_SOURCES = \
   perf_get_concurrent.c \
@@ -192,8 +209,7 @@ perf_get_concurrent_SOURCES = \
 perf_get_concurrent_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
 perf_get_concurrent_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  $(PTHREAD_LIBS) @LIBCURL@
+  $(PTHREAD_LIBS) $(LDADD)
 
 perf_get_concurrent11_SOURCES = \
   perf_get_concurrent.c \
@@ -201,38 +217,28 @@ perf_get_concurrent11_SOURCES = \
 perf_get_concurrent11_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
 perf_get_concurrent11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  $(PTHREAD_LIBS) @LIBCURL@
+  $(PTHREAD_LIBS) $(LDADD)
 
 test_digestauth_SOURCES = \
   test_digestauth.c
 test_digestauth_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBGCRYPT_LIBS@ @LIBCURL@
+  @LIBGCRYPT_LIBS@ $(LDADD)
 
 test_digestauth_sha256_SOURCES = \
   test_digestauth_sha256.c
 test_digestauth_sha256_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBGCRYPT_LIBS@ @LIBCURL@
+  @LIBGCRYPT_LIBS@ $(LDADD)
 
 test_digestauth_with_arguments_SOURCES = \
   test_digestauth_with_arguments.c
 test_digestauth_with_arguments_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBGCRYPT_LIBS@ @LIBCURL@
+  @LIBGCRYPT_LIBS@ $(LDADD)
 
 test_get_iovec_SOURCES = \
   test_get_iovec.c mhd_has_in_name.h
-test_get_iovec_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_get_sendfile_SOURCES = \
   test_get_sendfile.c mhd_has_in_name.h
-test_get_sendfile_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_get_wait_SOURCES = \
   test_get_wait.c \
@@ -240,8 +246,7 @@ test_get_wait_SOURCES = \
 test_get_wait_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
 test_get_wait_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  $(PTHREAD_LIBS) @LIBCURL@
+  $(PTHREAD_LIBS) $(LDADD)
 
 test_get_wait11_SOURCES = \
   test_get_wait.c \
@@ -249,14 +254,10 @@ test_get_wait11_SOURCES = \
 test_get_wait11_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
 test_get_wait11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  $(PTHREAD_LIBS) @LIBCURL@
+  $(PTHREAD_LIBS) $(LDADD)
 
 test_urlparse_SOURCES = \
   test_urlparse.c mhd_has_in_name.h
-test_urlparse_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_get_response_cleanup_SOURCES = \
   test_get_response_cleanup.c mhd_has_in_name.h
@@ -265,194 +266,201 @@ test_get_response_cleanup_LDADD = \
 
 test_get_chunked_SOURCES = \
   test_get_chunked.c
-test_get_chunked_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
+
+test_get_chunked_close_SOURCES = \
+  test_get_chunked.c
+
+test_get_chunked_string_SOURCES = \
+  test_get_chunked.c
+
+test_get_chunked_close_string_SOURCES = \
+  test_get_chunked.c
+
+test_get_chunked_empty_SOURCES = \
+  test_get_chunked.c
+
+test_get_chunked_close_empty_SOURCES = \
+  test_get_chunked.c
+
+test_get_chunked_string_empty_SOURCES = \
+  test_get_chunked.c
+
+test_get_chunked_close_string_empty_SOURCES = \
+  test_get_chunked.c
+
+test_get_chunked_sized_SOURCES = \
+  test_get_chunked.c
+
+test_get_chunked_close_sized_SOURCES = \
+  test_get_chunked.c
+
+test_get_chunked_empty_sized_SOURCES = \
+  test_get_chunked.c
+
+test_get_chunked_close_empty_sized_SOURCES = \
+  test_get_chunked.c
+
+test_get_chunked_forced_SOURCES = \
+  test_get_chunked.c
+
+test_get_chunked_close_forced_SOURCES = \
+  test_get_chunked.c
+
+test_get_chunked_empty_forced_SOURCES = \
+  test_get_chunked.c
+
+test_get_chunked_close_empty_forced_SOURCES = \
+  test_get_chunked.c
 
 test_post_SOURCES = \
   test_post.c mhd_has_in_name.h
-test_post_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_process_headers_SOURCES = \
   test_process_headers.c mhd_has_in_name.h
-test_process_headers_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_parse_cookies_SOURCES = \
   test_parse_cookies.c mhd_has_in_name.h
-test_parse_cookies_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_process_arguments_SOURCES = \
   test_process_arguments.c mhd_has_in_name.h
-test_process_arguments_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_postform_SOURCES = \
   test_postform.c mhd_has_in_name.h
 test_postform_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBGCRYPT_LIBS@ @LIBCURL@
+  @LIBGCRYPT_LIBS@ $(LDADD)
 
 test_post_loop_SOURCES = \
   test_post_loop.c mhd_has_in_name.h
-test_post_loop_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_delete_SOURCES = \
   test_delete.c mhd_has_in_name.h
-test_delete_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_patch_SOURCES = \
   test_patch.c mhd_has_in_name.h
-test_patch_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_patch11_SOURCES = \
   test_patch.c mhd_has_in_name.h
-test_patch11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_put_SOURCES = \
   test_put.c mhd_has_in_name.h
-test_put_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_put_chunked_SOURCES = \
   test_put_chunked.c
-test_put_chunked_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_add_conn_SOURCES = \
   test_add_conn.c $(top_srcdir)/src/microhttpd/test_helpers.h
 test_add_conn_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
 test_add_conn_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
+  $(PTHREAD_LIBS) $(LDADD)
 
 test_add_conn_nolisten_SOURCES = \
   test_add_conn.c $(top_srcdir)/src/microhttpd/test_helpers.h
 test_add_conn_nolisten_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
 test_add_conn_nolisten_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
+  $(PTHREAD_LIBS) $(LDADD)
 
 test_add_conn_cleanup_SOURCES = \
   test_add_conn.c $(top_srcdir)/src/microhttpd/test_helpers.h
 test_add_conn_cleanup_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
 test_add_conn_cleanup_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
+  $(PTHREAD_LIBS) $(LDADD)
 
 test_add_conn_cleanup_nolisten_SOURCES = \
   test_add_conn.c $(top_srcdir)/src/microhttpd/test_helpers.h
 test_add_conn_cleanup_nolisten_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
 test_add_conn_cleanup_nolisten_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
+  $(PTHREAD_LIBS) $(LDADD)
 
 test_get11_SOURCES = \
   test_get.c
-test_get11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_get_iovec11_SOURCES = \
   test_get_iovec.c mhd_has_in_name.h
-test_get_iovec11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_get_sendfile11_SOURCES = \
   test_get_sendfile.c mhd_has_in_name.h
-test_get_sendfile11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
+
+test_get_close_SOURCES = \
+  test_get_close_keep_alive.c $(top_srcdir)/src/microhttpd/test_helpers.h
+
+test_get_close10_SOURCES = \
+  test_get_close_keep_alive.c $(top_srcdir)/src/microhttpd/test_helpers.h
+
+test_get_keep_alive_SOURCES = \
+  test_get_close_keep_alive.c $(top_srcdir)/src/microhttpd/test_helpers.h
+
+test_get_keep_alive10_SOURCES = \
+  test_get_close_keep_alive.c $(top_srcdir)/src/microhttpd/test_helpers.h
 
 test_post11_SOURCES = \
   test_post.c mhd_has_in_name.h
-test_post11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_postform11_SOURCES = \
   test_postform.c mhd_has_in_name.h
 test_postform11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBGCRYPT_LIBS@ @LIBCURL@
+  @LIBGCRYPT_LIBS@ $(LDADD)
 
 test_post_loop11_SOURCES = \
   test_post_loop.c mhd_has_in_name.h
-test_post_loop11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_put11_SOURCES = \
   test_put.c mhd_has_in_name.h
-test_put11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_large_put_SOURCES = \
   test_large_put.c
-test_large_put_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_large_put11_SOURCES = \
   test_large_put.c
-test_large_put11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_large_put_inc11_SOURCES = \
   test_large_put.c
-test_large_put_inc11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_long_header_SOURCES = \
   test_long_header.c mhd_has_in_name.h
-test_long_header_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_long_header11_SOURCES = \
   test_long_header.c mhd_has_in_name.h
-test_long_header11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_iplimit11_SOURCES = \
   test_iplimit.c mhd_has_in_name.h
-test_iplimit11_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_termination_SOURCES = \
   test_termination.c
-test_termination_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
 
 test_timeout_SOURCES = \
   test_timeout.c mhd_has_in_name.h
-test_timeout_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
-  @LIBCURL@
+
+test_toolarge_method_SOURCES = \
+  test_toolarge.c ../microhttpd/test_helpers.h
+
+test_toolarge_url_SOURCES = \
+  test_toolarge.c ../microhttpd/test_helpers.h
+
+test_toolarge_request_header_name_SOURCES = \
+  test_toolarge.c ../microhttpd/test_helpers.h
+
+test_toolarge_request_header_value_SOURCES = \
+  test_toolarge.c ../microhttpd/test_helpers.h
+
+test_toolarge_request_headers_SOURCES = \
+  test_toolarge.c ../microhttpd/test_helpers.h
+
+test_toolarge_reply_header_name_SOURCES = \
+  test_toolarge.c ../microhttpd/test_helpers.h
+
+test_toolarge_reply_header_value_SOURCES = \
+  test_toolarge.c ../microhttpd/test_helpers.h
+
+test_toolarge_reply_headers_SOURCES = \
+  test_toolarge.c ../microhttpd/test_helpers.h
+
+test_tricky_url_SOURCES = \
+  test_tricky.c ../microhttpd/test_helpers.h
+
+test_tricky_header2_SOURCES = \
+  test_tricky.c ../microhttpd/test_helpers.h
+  

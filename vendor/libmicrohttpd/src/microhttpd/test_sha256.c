@@ -27,6 +27,7 @@
 #include "sha256.h"
 #include "test_helpers.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 static int verbose = 0; /* verbose level (0-1)*/
 
@@ -310,7 +311,7 @@ check_result (const char *test_name,
     char calc_str[SHA256_DIGEST_STRING_SIZE];
     bin2hex (calculated, SHA256_DIGEST_SIZE, calc_str);
     printf (
-      "PASSED: %s check %u: calculated digest %s match expected digest.\n",
+      "PASSED: %s check %u: calculated digest %s matches expected digest.\n",
       test_name, check_num, calc_str);
     fflush (stdout);
   }
@@ -337,7 +338,7 @@ test1_str (void)
     MHD_SHA256_init (&ctx);
     MHD_SHA256_update (&ctx, (const uint8_t*) data_units1[i].str_l.str,
                        data_units1[i].str_l.len);
-    sha256_finish (&ctx, digest);
+    MHD_SHA256_finish (&ctx, digest);
     num_failed += check_result (__FUNCTION__, i, digest,
                                 data_units1[i].digest);
   }
@@ -359,7 +360,7 @@ test1_bin (void)
     MHD_SHA256_init (&ctx);
     MHD_SHA256_update (&ctx, data_units2[i].bin_l.bin,
                        data_units2[i].bin_l.len);
-    sha256_finish (&ctx, digest);
+    MHD_SHA256_finish (&ctx, digest);
     num_failed += check_result (__FUNCTION__, i, digest,
                                 data_units2[i].digest);
   }
@@ -384,7 +385,7 @@ test2_str (void)
     MHD_SHA256_update (&ctx, (const uint8_t*) data_units1[i].str_l.str, part_s);
     MHD_SHA256_update (&ctx, (const uint8_t*) data_units1[i].str_l.str + part_s,
                        data_units1[i].str_l.len - part_s);
-    sha256_finish (&ctx, digest);
+    MHD_SHA256_finish (&ctx, digest);
     num_failed += check_result (__FUNCTION__, i, digest,
                                 data_units1[i].digest);
   }
@@ -408,10 +409,52 @@ test2_bin (void)
     MHD_SHA256_update (&ctx, data_units2[i].bin_l.bin, part_s);
     MHD_SHA256_update (&ctx, data_units2[i].bin_l.bin + part_s,
                        data_units2[i].bin_l.len - part_s);
-    sha256_finish (&ctx, digest);
+    MHD_SHA256_finish (&ctx, digest);
     num_failed += check_result (__FUNCTION__, i, digest,
                                 data_units2[i].digest);
   }
+  return num_failed;
+}
+
+
+/* Use data set number 7 as it has the longest sequence */
+#define DATA_POS 6
+#define MAX_OFFSET 31
+
+static int
+test_unaligned (void)
+{
+  int num_failed = 0;
+  unsigned int offset;
+  uint8_t *buf;
+  uint8_t *digest_buf;
+
+  const struct data_unit2 *const tdata = data_units2 + DATA_POS;
+
+  buf = malloc (tdata->bin_l.len + MAX_OFFSET);
+  digest_buf = malloc (SHA256_DIGEST_SIZE + MAX_OFFSET);
+  if ((NULL == buf) || (NULL == digest_buf))
+    exit (99);
+
+  for (offset = MAX_OFFSET; offset >= 1; --offset)
+  {
+    struct sha256_ctx ctx;
+    uint8_t *unaligned_digest;
+    uint8_t *unaligned_buf;
+
+    unaligned_buf = buf + offset;
+    memcpy (unaligned_buf, tdata->bin_l.bin, tdata->bin_l.len);
+    unaligned_digest = digest_buf + MAX_OFFSET - offset;
+    memset (unaligned_digest, 0, SHA256_DIGEST_SIZE);
+
+    MHD_SHA256_init (&ctx);
+    MHD_SHA256_update (&ctx, unaligned_buf, tdata->bin_l.len);
+    MHD_SHA256_finish (&ctx, unaligned_digest);
+    num_failed += check_result (__FUNCTION__, MAX_OFFSET - offset,
+                                unaligned_digest, tdata->digest);
+  }
+  free (digest_buf);
+  free (buf);
   return num_failed;
 }
 
@@ -429,6 +472,8 @@ main (int argc, char *argv[])
 
   num_failed += test2_str ();
   num_failed += test2_bin ();
+
+  num_failed += test_unaligned ();
 
   return num_failed ? 1 : 0;
 }

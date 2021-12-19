@@ -20,7 +20,9 @@
 
 #include "mhd_options.h"
 #include <stdint.h>
+#ifdef HAVE_STDDEF_H
 #include <stddef.h>
+#endif /* HAVE_STDDEF_H */
 
 #define MD5_BLOCK_SIZE              64
 #define MD5_DIGEST_SIZE             16

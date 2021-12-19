@@ -358,7 +358,7 @@ MHD_daemon_epoll_ (struct MHD_Daemon *daemon,
 #endif
       return MHD_SC_UNEXPECTED_EPOLL_WAIT_ERROR;
     }
-    for (i = 0; i<(unsigned int) num_events; i++)
+    for (i = 0; i < (unsigned int) num_events; i++)
     {
       /* First, check for the values of `ptr` that would indicate
          that this event is not about a normal connection. */

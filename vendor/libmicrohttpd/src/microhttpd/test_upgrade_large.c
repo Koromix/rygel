@@ -400,12 +400,12 @@ wr_create_tls_sckt (void)
                                                           GNUTLS_CRD_CERTIFICATE,
                                                           s->tls_crd))
           {
-#if GNUTLS_VERSION_NUMBER + 0 >= 0x030109
+#if (GNUTLS_VERSION_NUMBER + 0 >= 0x030109) && ! defined(_WIN64)
             gnutls_transport_set_int (s->tls_s, (int) (s->fd));
-#else  /* GnuTLS before 3.1.9 */
+#else  /* GnuTLS before 3.1.9 or Win x64 */
             gnutls_transport_set_ptr (s->tls_s,
                                       (gnutls_transport_ptr_t) (intptr_t) (s->fd));
-#endif /* GnuTLS before 3.1.9 */
+#endif /* GnuTLS before 3.1.9 or Win x64 */
             return s;
           }
           gnutls_certificate_free_credentials (s->tls_crd);
@@ -630,7 +630,7 @@ notify_completed_cb (void *cls,
                      void **con_cls,
                      enum MHD_RequestTerminationCode toe)
 {
-  pthread_t*ppth = *con_cls;
+  pthread_t *ppth = *con_cls;
 
   (void) cls;
   (void) connection;  /* Unused. Silent compiler warning. */
@@ -638,7 +638,7 @@ notify_completed_cb (void *cls,
        (toe != MHD_REQUEST_TERMINATED_CLIENT_ABORT) &&
        (toe != MHD_REQUEST_TERMINATED_DAEMON_SHUTDOWN) )
     abort ();
-  if (! pthread_equal (**((pthread_t**) con_cls),
+  if (! pthread_equal (**((pthread_t **) con_cls),
                        pthread_self ()))
     abort ();
   if (NULL != ppth)
@@ -728,7 +728,6 @@ notify_connection_cb (void *cls,
  * Change socket to blocking.
  *
  * @param fd the socket to manipulate
- * @return non-zero if succeeded, zero otherwise
  */
 static void
 make_blocking (MHD_socket fd)
@@ -738,14 +737,15 @@ make_blocking (MHD_socket fd)
 
   flags = fcntl (fd, F_GETFL);
   if (-1 == flags)
-    return;
+    abort ();
   if ((flags & ~O_NONBLOCK) != flags)
     if (-1 == fcntl (fd, F_SETFL, flags & ~O_NONBLOCK))
       abort ();
 #elif defined(MHD_WINSOCK_SOCKETS)
-  unsigned long flags = 1;
+  unsigned long flags = 0;
 
-  ioctlsocket (fd, FIONBIO, &flags);
+  if (0 != ioctlsocket (fd, (int) FIONBIO, &flags))
+    abort ();
 #endif /* MHD_WINSOCK_SOCKETS */
 }
 
@@ -1050,7 +1050,7 @@ ahc_upgrade (void *cls,
 
   if (NULL == *con_cls)
     abort ();
-  if (! pthread_equal (**((pthread_t**) con_cls), pthread_self ()))
+  if (! pthread_equal (**((pthread_t **) con_cls), pthread_self ()))
     abort ();
   resp = MHD_create_response_for_upgrade (&upgrade_cb,
                                           NULL);
@@ -1085,7 +1085,7 @@ run_mhd_select_loop (struct MHD_Daemon *daemon)
     FD_ZERO (&rs);
     FD_ZERO (&ws);
     FD_ZERO (&es);
-    max_fd = -1;
+    max_fd = MHD_INVALID_SOCKET;
     to = 1000;
 
     FD_SET (MHD_itc_r_fd_ (kicker), &rs);

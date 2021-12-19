@@ -1,6 +1,7 @@
 /*
      This file is part of libmicrohttpd
      Copyright (C) 2016 Christian Grothoff
+     Copyright (C) 2016-2021 Evgeny Grin (Karlson2k)
 
      libmicrohttpd is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published
@@ -169,7 +170,7 @@ http_AccessHandlerCallback (void *cls,
 
   /* Second call: create response */
   response
-    = MHD_create_response_from_callback (-1,
+    = MHD_create_response_from_callback (MHD_SIZE_UNKNOWN,
                                          32 * 1024,
                                          &http_ContentReaderCallback,
                                          *con_cls,

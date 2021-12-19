@@ -1,6 +1,6 @@
 /*
      This file is part of libmicrohttpd
-     Copyright (C) 2019 Karlson2k (Evgeny Grin)
+     Copyright (C) 2019-2021 Karlson2k (Evgeny Grin)
 
      This library is free software; you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public
@@ -28,7 +28,10 @@
 
 #include "mhd_options.h"
 #include <stdint.h>
-#include <stddef.h>
+#ifdef HAVE_STDDEF_H
+#include <stddef.h>  /* for size_t */
+#endif /* HAVE_STDDEF_H */
+
 
 /**
  *  Digest is kept internally as 8 32-bit words.
@@ -36,26 +39,42 @@
 #define _SHA256_DIGEST_LENGTH 8
 
 /**
- * Size of SHA-256 digest in bytes
+ * Number of bits in single SHA-256 word
  */
-#define SHA256_DIGEST_SIZE (_SHA256_DIGEST_LENGTH * 4)
+#define SHA256_WORD_SIZE_BITS 32
 
 /**
- * Size of SHA-256 digest string in chars
+ * Number of bytes in single SHA-256 word
+ * used to process data
+ */
+#define SHA256_BYTES_IN_WORD (SHA256_WORD_SIZE_BITS / 8)
+
+/**
+ * Size of SHA-256 digest in bytes
+ */
+#define SHA256_DIGEST_SIZE (_SHA256_DIGEST_LENGTH * SHA256_BYTES_IN_WORD)
+
+/**
+ * Size of SHA-256 digest string in chars including termination NUL
  */
 #define SHA256_DIGEST_STRING_SIZE ((SHA256_DIGEST_SIZE) * 2 + 1)
 
 /**
+ * Size of single processing block in bits
+ */
+#define SHA256_BLOCK_SIZE_BITS 512
+
+/**
  * Size of single processing block in bytes
  */
-#define SHA256_BLOCK_SIZE 64
+#define SHA256_BLOCK_SIZE (SHA256_BLOCK_SIZE_BITS / 8)
 
 
 struct sha256_ctx
 {
   uint32_t H[_SHA256_DIGEST_LENGTH];    /**< Intermediate hash value / digest at end of calculation */
-  uint64_t count;                       /**< number of bytes, mod 2^64 */
   uint8_t buffer[SHA256_BLOCK_SIZE];    /**< SHA256 input data buffer */
+  uint64_t count;                       /**< number of bytes, mod 2^64 */
 };
 
 /**
@@ -87,7 +106,7 @@ MHD_SHA256_update (void *ctx_,
  * @param[out] digest set to the hash, must be #SHA256_DIGEST_SIZE bytes
  */
 void
-sha256_finish (void *ctx_,
-               uint8_t digest[SHA256_DIGEST_SIZE]);
+MHD_SHA256_finish (void *ctx_,
+                   uint8_t digest[SHA256_DIGEST_SIZE]);
 
 #endif /* MHD_SHA256_H */

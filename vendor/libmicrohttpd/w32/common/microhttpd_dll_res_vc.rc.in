@@ -31,7 +31,7 @@ BEGIN
             VALUE "OriginalFilename", "libmicrohttpd-dll.dll\0"
 #endif
             VALUE "CompanyName", "Free Software Foundation\0"
-            VALUE "LegalCopyright",  "Copyright (C) 2007-2020 Christian Grothoff, Evgeny Grin and project contributors\0"
+            VALUE "LegalCopyright",  "Copyright (C) 2007-2021 Christian Grothoff, Evgeny Grin, and project contributors\0"
             VALUE "Comments", "http://www.gnu.org/software/libmicrohttpd/\0"
         END
     END

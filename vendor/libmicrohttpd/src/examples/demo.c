@@ -28,6 +28,7 @@
  *        to be adjusted depending on the number of available cores.
  * @author Christian Grothoff
  */
+#include "MHD_config.h"
 #include "platform.h"
 #include <microhttpd.h>
 #include <unistd.h>
@@ -568,7 +569,7 @@ process_upload_data (void *cls,
               uc->language,
               uc->category,
               filename);
-    for (i = strlen (fn) - 1; i>=0; i--)
+    for (i = strlen (fn) - 1; i >= 0; i--)
       if (! isprint ((unsigned char) fn[i]))
         fn[i] = '_';
     uc->fd = open (fn,

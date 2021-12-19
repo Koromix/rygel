@@ -58,7 +58,9 @@
 
 #ifndef MHD_PANIC
 #  include <stdio.h>
-#  include <stdlib.h>
+#  ifdef HAVE_STDLIB_H
+#    include <stdlib.h>
+#  endif /* HAVE_STDLIB_H */
 /* Simple implementation of MHD_PANIC, to be used outside lib */
 #  define MHD_PANIC(msg) do { fprintf (stderr,           \
                                        "Abnormal termination at %d line in file %s: %s\n", \

@@ -35,11 +35,21 @@
 #include "mhd_options.h"
 
 #include <errno.h>
+#ifdef HAVE_STDBOOL_H
 #include <stdbool.h>
+#endif /* HAVE_STDBOOL_H */
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif /* HAVE_UNISTD_H */
 #include <fcntl.h>
+#ifdef HAVE_STDDEF_H
+#include <stddef.h>
+#endif /* HAVE_STDDEF_H */
+#if defined(_MSC_FULL_VER) && ! defined (_SSIZE_T_DEFINED)
+#  include <stdint.h>
+#  define _SSIZE_T_DEFINED
+typedef intptr_t ssize_t;
+#endif /* !_SSIZE_T_DEFINED */
 
 #if ! defined(MHD_POSIX_SOCKETS) && ! defined(MHD_WINSOCK_SOCKETS)
 #  if ! defined(_WIN32) || defined(__CYGWIN__)
@@ -60,17 +70,26 @@
 #  ifdef HAVE_SYS_TYPES_H
 #    include <sys/types.h> /* required on old platforms */
 #  endif
+#  ifdef HAVE_SYS_TIME_H
+#    include <sys/time.h>
+#  endif
+#  ifdef HAVE_TIME_H
+#    include <time.h>
+#  endif
+#  ifdef HAVE_STRING_H
+#    include <string.h> /* for strerror() */
+#  endif
 #  ifdef HAVE_SYS_SOCKET_H
 #    include <sys/socket.h>
 #  endif
 #  if defined(__VXWORKS__) || defined(__vxworks) || defined(OS_VXWORKS)
+#    include <strings.h>  /* required for FD_SET (bzero() function) */
 #    ifdef HAVE_SOCKLIB_H
 #      include <sockLib.h>
 #    endif /* HAVE_SOCKLIB_H */
 #    ifdef HAVE_INETLIB_H
 #      include <inetLib.h>
 #    endif /* HAVE_INETLIB_H */
-#    include <strings.h>  /* required for FD_SET (bzero() function) */
 #  endif /* __VXWORKS__ || __vxworks || OS_VXWORKS */
 #  ifdef HAVE_NETINET_IN_H
 #    include <netinet/in.h>
@@ -80,12 +99,6 @@
 #  endif
 #  ifdef HAVE_NET_IF_H
 #    include <net/if.h>
-#  endif
-#  ifdef HAVE_SYS_TIME_H
-#    include <sys/time.h>
-#  endif
-#  ifdef HAVE_TIME_H
-#    include <time.h>
 #  endif
 #  ifdef HAVE_NETDB_H
 #    include <netdb.h>
@@ -100,9 +113,6 @@
 /* for TCP_FASTOPEN and TCP_CORK */
 #    include <netinet/tcp.h>
 #  endif
-#  ifdef HAVE_STRING_H
-#    include <string.h> /* for strerror() */
-#  endif
 #elif defined(MHD_WINSOCK_SOCKETS)
 #  ifndef WIN32_LEAN_AND_MEAN
 #    define WIN32_LEAN_AND_MEAN 1
@@ -115,12 +125,6 @@
 #  include <poll.h>
 #endif
 
-#include <stddef.h>
-#if defined(_MSC_FULL_VER) && ! defined (_SSIZE_T_DEFINED)
-#  include <stdint.h>
-#  define _SSIZE_T_DEFINED
-typedef intptr_t ssize_t;
-#endif /* !_SSIZE_T_DEFINED */
 
 #ifdef __FreeBSD__
 #include <sys/param.h> /* For __FreeBSD_version */
@@ -139,9 +143,10 @@ typedef intptr_t ssize_t;
 #  include <stdio.h>
 #  include <stdlib.h>
 /* Simple implementation of MHD_PANIC, to be used outside lib */
-#  define MHD_PANIC(msg) do { fprintf (stderr,           \
-                                       "Abnormal termination at %d line in file %s: %s\n", \
-                                       (int) __LINE__, __FILE__, msg); abort (); \
+#  define MHD_PANIC(msg) \
+    do { fprintf (stderr,           \
+                  "Abnormal termination at %d line in file %s: %s\n", \
+                  (int) __LINE__, __FILE__, msg); abort (); \
 } while (0)
 #endif /* ! MHD_PANIC */
 
@@ -197,6 +202,13 @@ typedef SOCKET MHD_socket;
 #if HAVE_ACCEPT4 + 0 != 0 && (defined(HAVE_SOCK_NONBLOCK) || \
   defined(SOCK_CLOEXEC) || defined(SOCK_NOSIGPIPE))
 #  define USE_ACCEPT4 1
+#endif
+
+#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || \
+  defined(MHD_WINSOCK_SOCKETS) || defined(__MACH__) || defined(__sun) || \
+  defined(SOMEBSD)
+/* Most of OSes inherit nonblocking setting from the listen socket */
+#define MHD_ACCEPT_INHERIT_NONBLOCK 1
 #endif
 
 #if defined(HAVE_EPOLL_CREATE1) && defined(EPOLL_CLOEXEC)
@@ -378,18 +390,13 @@ typedef int MHD_SCKT_SEND_SIZE_;
  *         boolean false otherwise.
  */
 #if defined(MHD_POSIX_SOCKETS)
-#  define MHD_SCKT_FD_FITS_FDSET_SETSIZE_(fd,pset,setsize) ((fd) < \
-                                                            ((MHD_socket) \
-                                                             setsize))
+#  define MHD_SCKT_FD_FITS_FDSET_SETSIZE_(fd,pset,setsize) \
+    ((fd) < ((MHD_socket) setsize))
 #elif defined(MHD_WINSOCK_SOCKETS)
-#  define MHD_SCKT_FD_FITS_FDSET_SETSIZE_(fd,pset,setsize) ( ((void*) (pset)== \
-                                                              (void*) 0) || \
-                                                             (((fd_set*) (pset)) \
-                                                              ->fd_count < \
-                                                              ((unsigned) \
-                                                               setsize)) || \
-                                                             (FD_ISSET ((fd), \
-                                                                        (pset))) )
+#  define MHD_SCKT_FD_FITS_FDSET_SETSIZE_(fd,pset,setsize) \
+   ( ((void*) (pset)==  (void*) 0) || \
+     (((fd_set*) (pset))->fd_count < ((unsigned) setsize)) || \
+     (FD_ISSET ((fd), (pset))) )
 #endif
 
 /**
@@ -400,9 +407,8 @@ typedef int MHD_SCKT_SEND_SIZE_;
  * @return boolean true if FD can be added to fd_set,
  *         boolean false otherwise.
  */
-#define MHD_SCKT_FD_FITS_FDSET_(fd,pset) MHD_SCKT_FD_FITS_FDSET_SETSIZE_ ((fd), \
-                                                                          (pset), \
-                                                                          FD_SETSIZE)
+#define MHD_SCKT_FD_FITS_FDSET_(fd,pset) \
+  MHD_SCKT_FD_FITS_FDSET_SETSIZE_ ((fd), (pset), FD_SETSIZE)
 
 /**
  * Add FD to fd_set with specified FD_SETSIZE.
@@ -413,13 +419,13 @@ typedef int MHD_SCKT_SEND_SIZE_;
  *        system definition of FD_SET() is not used.
  */
 #if defined(MHD_POSIX_SOCKETS)
-#  define MHD_SCKT_ADD_FD_TO_FDSET_SETSIZE_(fd,pset,setsize) FD_SET ((fd), \
-                                                                     (pset))
+#  define MHD_SCKT_ADD_FD_TO_FDSET_SETSIZE_(fd,pset,setsize) \
+  FD_SET ((fd), (pset))
 #elif defined(MHD_WINSOCK_SOCKETS)
-#  define MHD_SCKT_ADD_FD_TO_FDSET_SETSIZE_(fd,pset,setsize)                     \
-  do {                                                                     \
-    u_int _i_ = 0;                                                        \
-    fd_set*const _s_ = (fd_set*) (pset);                                  \
+#  define MHD_SCKT_ADD_FD_TO_FDSET_SETSIZE_(fd,pset,setsize)                \
+  do {                                                                      \
+    u_int _i_ = 0;                                                          \
+    fd_set*const _s_ = (fd_set*) (pset);                                    \
     while ((_i_ < _s_->fd_count) && ((fd) != _s_->fd_array [_i_])) {++_i_;} \
     if ((_i_ == _s_->fd_count)) {_s_->fd_array [_s_->fd_count ++] = (fd);}  \
   } while (0)
@@ -433,9 +439,9 @@ typedef int MHD_SCKT_SEND_SIZE_;
   ( ( (((void*) (r) == (void*) 0) || ((fd_set*) (r))->fd_count == 0) &&  \
       (((void*) (w) == (void*) 0) || ((fd_set*) (w))->fd_count == 0) &&  \
       (((void*) (e) == (void*) 0) || ((fd_set*) (e))->fd_count == 0) ) ? \
-    ( ((void*) (t) == (void*) 0) ? 0 :                                  \
-      (Sleep (((struct timeval*) (t))->tv_sec * 1000                    \
-              + ((struct timeval*) (t))->tv_usec / 1000), 0) ) :          \
+    ( ((void*) (t) == (void*) 0) ? 0 :                                   \
+      (Sleep (((struct timeval*) (t))->tv_sec * 1000                     \
+              + ((struct timeval*) (t))->tv_usec / 1000), 0) ) :         \
     (select ((int) 0,(r),(w),(e),(t))) )
 #endif
 
@@ -470,8 +476,8 @@ typedef int MHD_SCKT_SEND_SIZE_;
 #  elif defined(__linux__)
 #    define MHD_POLL_EVENTS_ERR_DISC POLLPRI
 #  else /* ! __linux__ */
-#    define MHD_POLL_EVENTS_ERR_DISC (MHD_POLLPRI_OR_ZERO \
-                                      | MHD_POLLRDBAND_OR_ZERO)
+#    define MHD_POLL_EVENTS_ERR_DISC \
+       (MHD_POLLPRI_OR_ZERO | MHD_POLLRDBAND_OR_ZERO)
 #  endif /* ! __linux__ */
 /* MHD_POLL_REVENTS_ERR_DISC is 'revents' mask for errors and disconnect.
  * Note: Out-of-band data is treated as error. */
@@ -597,6 +603,21 @@ typedef int MHD_SCKT_SEND_SIZE_;
 #  else  /* ! ENETDOWN */
 #    define MHD_SCKT_ENETDOWN_    MHD_SCKT_MISSING_ERR_CODE_
 #  endif /* ! ENETDOWN */
+#  ifdef EALREADY
+#    define MHD_SCKT_EALREADY_    EALREADY
+#  else  /* ! EALREADY */
+#    define MHD_SCKT_EALREADY_    MHD_SCKT_MISSING_ERR_CODE_
+#  endif /* ! EALREADY */
+#  ifdef EINPROGRESS
+#    define MHD_SCKT_EINPROGRESS_ EINPROGRESS
+#  else  /* ! EINPROGRESS */
+#    define MHD_SCKT_EINPROGRESS_ MHD_SCKT_MISSING_ERR_CODE_
+#  endif /* ! EINPROGRESS */
+#  ifdef EISCONN
+#    define MHD_SCKT_EISCONN_     EISCONN
+#  else  /* ! EISCONN */
+#    define MHD_SCKT_EISCONN_     MHD_SCKT_MISSING_ERR_CODE_
+#  endif /* ! EISCONN */
 #elif defined(MHD_WINSOCK_SOCKETS)
 #  define MHD_SCKT_EAGAIN_        WSAEWOULDBLOCK
 #  define MHD_SCKT_EWOULDBLOCK_   WSAEWOULDBLOCK
@@ -619,6 +640,9 @@ typedef int MHD_SCKT_SEND_SIZE_;
 #  define MHD_SCKT_EOPNOTSUPP_    WSAEOPNOTSUPP
 #  define MHD_SCKT_EACCESS_       WSAEACCES
 #  define MHD_SCKT_ENETDOWN_      WSAENETDOWN
+#  define MHD_SCKT_EALREADY_      WSAEALREADY
+#  define MHD_SCKT_EINPROGRESS_   WSAEACCES
+#  define MHD_SCKT_EISCONN_       WSAEISCONN
 #endif
 
 /**
@@ -639,7 +663,7 @@ typedef int MHD_SCKT_SEND_SIZE_;
  * @param err the WinSock error code.
  * @return pointer to string description of specified WinSock error.
  */
-const char*MHD_W32_strerror_winsock_ (int err);
+const char *MHD_W32_strerror_winsock_ (int err);
 
 #endif /* MHD_WINSOCK_SOCKETS */
 
@@ -671,9 +695,9 @@ const char*MHD_W32_strerror_winsock_ (int err);
  *         zero if specified @a err code is not defined on system
  *         and error was not set.
  */
-#define MHD_socket_try_set_error_(err) ( (MHD_SCKT_MISSING_ERR_CODE_ != (err)) ? \
-                                         (MHD_socket_fset_error_ ((err)), ! 0) : \
-                                         0)
+#define MHD_socket_try_set_error_(err) \
+  ( (MHD_SCKT_MISSING_ERR_CODE_ != (err)) ? \
+      (MHD_socket_fset_error_ ((err)), ! 0) : 0)
 
 /**
  * MHD_socket_set_error_() set socket system native error code to
@@ -714,8 +738,8 @@ const char*MHD_W32_strerror_winsock_ (int err);
  *         @a err equals to MHD_SCKT_E*_ @a code;
  *         boolean false otherwise
  */
-#define MHD_SCKT_ERR_IS_(err,code) ( (MHD_SCKT_MISSING_ERR_CODE_ != (code)) && \
-                                     ((code) == (err)) )
+#define MHD_SCKT_ERR_IS_(err,code) \
+  ( (MHD_SCKT_MISSING_ERR_CODE_ != (code)) && ((code) == (err)) )
 
 /**
  * Check whether last socket error is equal to specified system
@@ -726,8 +750,8 @@ const char*MHD_W32_strerror_winsock_ (int err);
  *         last socket error equals to MHD_SCKT_E*_ @a code;
  *         boolean false otherwise
  */
-#define MHD_SCKT_LAST_ERR_IS_(code) MHD_SCKT_ERR_IS_ (MHD_socket_get_error_ (), \
-                                                      (code))
+#define MHD_SCKT_LAST_ERR_IS_(code) \
+  MHD_SCKT_ERR_IS_ (MHD_socket_get_error_ (), (code))
 
 /* Specific error code checks */
 
@@ -748,10 +772,9 @@ const char*MHD_W32_strerror_winsock_ (int err);
 #if MHD_SCKT_EAGAIN_ == MHD_SCKT_EWOULDBLOCK_
 #  define MHD_SCKT_ERR_IS_EAGAIN_(err) MHD_SCKT_ERR_IS_ ((err),MHD_SCKT_EAGAIN_)
 #else  /* MHD_SCKT_EAGAIN_ != MHD_SCKT_EWOULDBLOCK_ */
-#  define MHD_SCKT_ERR_IS_EAGAIN_(err) (MHD_SCKT_ERR_IS_ ((err), \
-                                                          MHD_SCKT_EAGAIN_) || \
-                                        MHD_SCKT_ERR_IS_ ((err), \
-                                                          MHD_SCKT_EWOULDBLOCK_) )
+#  define MHD_SCKT_ERR_IS_EAGAIN_(err) \
+  ( MHD_SCKT_ERR_IS_ ((err), MHD_SCKT_EAGAIN_) || \
+    MHD_SCKT_ERR_IS_ ((err), MHD_SCKT_EWOULDBLOCK_) )
 #endif /* MHD_SCKT_EAGAIN_ != MHD_SCKT_EWOULDBLOCK_ */
 
 /**
@@ -759,17 +782,11 @@ const char*MHD_W32_strerror_winsock_ (int err);
  * @return boolean true if @a err is any kind of "low resource" error,
  *         boolean false otherwise.
  */
-#define MHD_SCKT_ERR_IS_LOW_RESOURCES_(err) (MHD_SCKT_ERR_IS_ ((err), \
-                                                               MHD_SCKT_EMFILE_) \
-                                             || \
-                                             MHD_SCKT_ERR_IS_ ((err), \
-                                                               MHD_SCKT_ENFILE_) \
-                                             || \
-                                             MHD_SCKT_ERR_IS_ ((err), \
-                                                               MHD_SCKT_ENOMEM_) \
-                                             || \
-                                             MHD_SCKT_ERR_IS_ ((err), \
-                                                               MHD_SCKT_ENOBUFS_) )
+#define MHD_SCKT_ERR_IS_LOW_RESOURCES_(err) \
+  ( MHD_SCKT_ERR_IS_ ((err), MHD_SCKT_EMFILE_) || \
+    MHD_SCKT_ERR_IS_ ((err), MHD_SCKT_ENFILE_) || \
+    MHD_SCKT_ERR_IS_ ((err), MHD_SCKT_ENOMEM_) || \
+    MHD_SCKT_ERR_IS_ ((err), MHD_SCKT_ENOBUFS_) )
 
 /**
  * Check whether is given socket error is type of "incoming connection
@@ -778,11 +795,11 @@ const char*MHD_W32_strerror_winsock_ (int err);
  *         boolean false otherwise.
  */
 #if defined(MHD_POSIX_SOCKETS)
-#  define MHD_SCKT_ERR_IS_DISCNN_BEFORE_ACCEPT_(err) MHD_SCKT_ERR_IS_ ((err), \
-                                                                       MHD_SCKT_ECONNABORTED_)
+#  define MHD_SCKT_ERR_IS_DISCNN_BEFORE_ACCEPT_(err) \
+  MHD_SCKT_ERR_IS_ ((err), MHD_SCKT_ECONNABORTED_)
 #elif defined(MHD_WINSOCK_SOCKETS)
-#  define MHD_SCKT_ERR_IS_DISCNN_BEFORE_ACCEPT_(err) MHD_SCKT_ERR_IS_ ((err), \
-                                                                       MHD_SCKT_ECONNRESET_)
+#  define MHD_SCKT_ERR_IS_DISCNN_BEFORE_ACCEPT_(err) \
+  MHD_SCKT_ERR_IS_ ((err), MHD_SCKT_ECONNRESET_)
 #endif
 
 /**
@@ -791,11 +808,9 @@ const char*MHD_W32_strerror_winsock_ (int err);
  * @return boolean true is @a err match described socket error code,
  *         boolean false otherwise.
  */
-#define MHD_SCKT_ERR_IS_REMOTE_DISCNN_(err) (MHD_SCKT_ERR_IS_ ((err), \
-                                                               MHD_SCKT_ECONNRESET_) \
-                                             || \
-                                             MHD_SCKT_ERR_IS_ ((err), \
-                                                               MHD_SCKT_ECONNABORTED_))
+#define MHD_SCKT_ERR_IS_REMOTE_DISCNN_(err) \
+  ( MHD_SCKT_ERR_IS_ ((err), MHD_SCKT_ECONNRESET_) || \
+    MHD_SCKT_ERR_IS_ ((err), MHD_SCKT_ECONNABORTED_) )
 
 /* Specific error code set */
 
@@ -804,11 +819,11 @@ const char*MHD_W32_strerror_winsock_ (int err);
  * available on platform.
  */
 #if MHD_SCKT_MISSING_ERR_CODE_ != MHD_SCKT_ENOMEM_
-#  define MHD_socket_set_error_to_ENOMEM() MHD_socket_set_error_ ( \
-    MHD_SCKT_ENOMEM_)
+#  define MHD_socket_set_error_to_ENOMEM() \
+  MHD_socket_set_error_ (MHD_SCKT_ENOMEM_)
 #elif MHD_SCKT_MISSING_ERR_CODE_ != MHD_SCKT_ENOBUFS_
-#  define MHD_socket_set_error_to_ENOMEM() MHD_socket_set_error_ ( \
-    MHD_SCKT_ENOBUFS_)
+#  define MHD_socket_set_error_to_ENOMEM() \
+  MHD_socket_set_error_ (MHD_SCKT_ENOBUFS_)
 #else
 #  warning \
   No suitable replacement for ENOMEM error codes is found. Edit this file and add replacement code which is defined on system.
@@ -825,13 +840,11 @@ const char*MHD_W32_strerror_winsock_ (int err);
 #endif /* AF_UNIX */
 
 #if defined(MHD_POSIX_SOCKETS) && defined(MHD_SCKT_LOCAL)
-#  define MHD_socket_pair_(fdarr) (! socketpair (MHD_SCKT_LOCAL, SOCK_STREAM, 0, \
-                                                 (fdarr)))
+#  define MHD_socket_pair_(fdarr) \
+    (! socketpair (MHD_SCKT_LOCAL, SOCK_STREAM, 0, (fdarr)))
 #  if defined(HAVE_SOCK_NONBLOCK)
-#    define MHD_socket_pair_nblk_(fdarr) (! socketpair (MHD_SCKT_LOCAL, \
-                                                        SOCK_STREAM \
-                                                        | SOCK_NONBLOCK, 0, \
-                                                        (fdarr)))
+#    define MHD_socket_pair_nblk_(fdarr) \
+      (! socketpair (MHD_SCKT_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0, (fdarr)))
 #  endif /* HAVE_SOCK_NONBLOCK*/
 #elif defined(MHD_WINSOCK_SOCKETS)
 /**
@@ -916,8 +929,8 @@ static const int _MHD_socket_int_one = 1;
 /**
  * Indicate that SIGPIPE can be suppressed by MHD for normal send() by flags
  * or socket options.
- * If this macro is undefined, MHD cannot suppress SIGPIPE for normal
- * processing so sendfile() or writev() calls is not avoided.
+ * If this macro is undefined, MHD cannot suppress SIGPIPE for socket functions
+ * so sendfile() or writev() calls are avoided in application threads.
  */
 #define MHD_SEND_SPIPE_SUPPRESS_POSSIBLE   1
 #endif /* MHD_WINSOCK_SOCKETS || MHD_socket_nosignal_ || MSG_NOSIGNAL */

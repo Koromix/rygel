@@ -39,6 +39,8 @@ MHD_state_to_string (enum MHD_CONNECTION_STATE state)
   {
   case MHD_CONNECTION_INIT:
     return "connection init";
+  case MHD_CONNECTION_REQ_LINE_RECEIVING:
+    return "receiving request line";
   case MHD_CONNECTION_URL_RECEIVED:
     return "connection url received";
   case MHD_CONNECTION_HEADER_PART_RECEIVED:
@@ -57,18 +59,22 @@ MHD_state_to_string (enum MHD_CONNECTION_STATE state)
     return "footer partially received";
   case MHD_CONNECTION_FOOTERS_RECEIVED:
     return "footers received";
+  case MHD_CONNECTION_FULL_REQ_RECEIVED:
+    return "full request received";
+  case MHD_CONNECTION_START_REPLY:
+    return "start sending reply";
   case MHD_CONNECTION_HEADERS_SENDING:
     return "headers sending";
   case MHD_CONNECTION_HEADERS_SENT:
     return "headers sent";
-  case MHD_CONNECTION_NORMAL_BODY_READY:
-    return "normal body ready";
   case MHD_CONNECTION_NORMAL_BODY_UNREADY:
     return "normal body unready";
-  case MHD_CONNECTION_CHUNKED_BODY_READY:
-    return "chunked body ready";
+  case MHD_CONNECTION_NORMAL_BODY_READY:
+    return "normal body ready";
   case MHD_CONNECTION_CHUNKED_BODY_UNREADY:
     return "chunked body unready";
+  case MHD_CONNECTION_CHUNKED_BODY_READY:
+    return "chunked body ready";
   case MHD_CONNECTION_BODY_SENT:
     return "body sent";
   case MHD_CONNECTION_FOOTERS_SENDING:

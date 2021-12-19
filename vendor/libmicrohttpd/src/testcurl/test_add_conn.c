@@ -1,7 +1,8 @@
 /*
      This file is part of libmicrohttpd
      Copyright (C) 2007, 2009, 2011 Christian Grothoff
-     Copyright (C) 2020 Karlson2k (Evgeny Grin) - large rework, multithreading.
+     Copyright (C) 2014-2020 Evgeny Grin (Karlson2k) - large rework,
+                             multithreading.
 
      libmicrohttpd is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published
@@ -157,7 +158,7 @@ ahc_echo (void *cls,
   (void) upload_data;
   (void) upload_data_size;       /* Unused. Silence compiler warning. */
 
-  if (0 != strcasecmp (me, method))
+  if (0 != strcmp (me, method))
     return MHD_NO;              /* unexpected method */
   if (&ptr != *unused)
   {
@@ -272,7 +273,7 @@ createListeningSocket (int *pport)
     externalErrorExitDesc ("socket() failed");
 
 #ifdef MHD_POSIX_SOCKETS
-  setsockopt (skt, SOL_SOCKET, SO_REUSEADDR, (void*) &on, sizeof (on));
+  setsockopt (skt, SOL_SOCKET, SO_REUSEADDR, (void *) &on, sizeof (on));
   /* Ignore possible error */
 #endif /* MHD_POSIX_SOCKETS */
 
@@ -280,7 +281,7 @@ createListeningSocket (int *pport)
   sin.sin_family = AF_INET;
   sin.sin_port = htons (*pport);
   sin.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
-  if (0 != bind (skt, (struct sockaddr*) &sin, sizeof(sin)))
+  if (0 != bind (skt, (struct sockaddr *) &sin, sizeof(sin)))
     externalErrorExitDesc ("bind() failed");
 
   if (0 != listen (skt, SOMAXCONN))
@@ -369,7 +370,7 @@ doAcceptAndAddConn (void *param)
 
   (void) doAcceptAndAddConnInThread (p);
 
-  return (void*) p;
+  return (void *) p;
 }
 
 
@@ -380,7 +381,7 @@ startThreadAddConn (struct addConnParam *param)
   param->result = eMarker;
 
   if (0 != pthread_create (&param->addConnThread, NULL, &doAcceptAndAddConn,
-                           (void*) param))
+                           (void *) param))
     externalErrorExitDesc ("pthread_create() failed");
 }
 
@@ -390,7 +391,7 @@ finishThreadAddConn (struct addConnParam *param)
 {
   struct addConnParam *result;
 
-  if (0 != pthread_join (param->addConnThread, (void**) &result))
+  if (0 != pthread_join (param->addConnThread, (void **) &result))
     externalErrorExitDesc ("pthread_join() failed");
 
   if (param != result)
@@ -519,7 +520,7 @@ doCurlQueryInThread (struct curlQueryParams *p)
 static void *
 doCurlQuery (void *param)
 {
-  struct curlQueryParams *p = (struct curlQueryParams*) param;
+  struct curlQueryParams *p = (struct curlQueryParams *) param;
 
   (void) doCurlQueryInThread (p);
 
@@ -534,7 +535,7 @@ startThreadCurlQuery (struct curlQueryParams *param)
   param->queryError = eMarker;
 
   if (0 != pthread_create (&param->queryThread, NULL, &doCurlQuery,
-                           (void*) param))
+                           (void *) param))
     externalErrorExitDesc ("pthread_create() failed");
 }
 
@@ -544,7 +545,7 @@ finishThreadCurlQuery (struct curlQueryParams *param)
 {
   struct curlQueryParams *result;
 
-  if (0 != pthread_join (param->queryThread, (void**) &result))
+  if (0 != pthread_join (param->queryThread, (void **) &result))
     externalErrorExitDesc ("pthread_join() failed");
 
   if (param != result)
@@ -922,14 +923,22 @@ testExternalGet (void)
     {
 #ifdef MHD_POSIX_SOCKETS
       if (EINTR != errno)
-        externalErrorExitDesc ("select() failed");
+      {
+        fprintf (stderr, "Unexpected select() error: %d. Line: %d\n",
+                 (int) errno, __LINE__);
+        fflush (stderr);
+        exit (99);
+      }
 #else
-      if ((WSAEINVAL != WSAGetLastError ()) || (0 != rs.fd_count) || (0 !=
-                                                                      ws.
-                                                                      fd_count)
-          || (0 != es.fd_count) )
-        externalErrorExitDesc ("select() failed");
-      Sleep (1000);
+      if ((WSAEINVAL != WSAGetLastError ()) ||
+          (0 != rs.fd_count) || (0 != ws.fd_count) || (0 != es.fd_count) )
+      {
+        fprintf (stderr, "Unexpected select() error: %d. Line: %d\n",
+                 (int) WSAGetLastError (), __LINE__);
+        fflush (stderr);
+        exit (99);
+      }
+      Sleep (1);
 #endif
     }
     if (FD_ISSET (aParam.lstn_sk, &rs))
@@ -1044,12 +1053,11 @@ testStopRace (enum testMhdPollType pollType)
   MHD_socket fd2;
   struct addConnParam aParam;
   int ret = 0;              /* Return value of the test */
-  const int c_no_listen = no_listen; /* Local const value to mute analyzer */
 
   d = startTestMhdDaemon (testMhdThreadInternal, pollType,
                           &d_port);
 
-  if (! c_no_listen)
+  if (! no_listen)
   {
     fd1 = socket (PF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (MHD_INVALID_SOCKET == fd1)
@@ -1062,6 +1070,8 @@ testStopRace (enum testMhdPollType pollType)
     if (connect (fd1, (struct sockaddr *) (&sin), sizeof(sin)) < 0)
       externalErrorExitDesc ("socket() failed");
   }
+  else
+    fd1 = MHD_INVALID_SOCKET;
 
   aParam.d = d;
   aParam.lstn_sk = createListeningSocket (&a_port); /* Sets a_port */
@@ -1083,7 +1093,7 @@ testStopRace (enum testMhdPollType pollType)
 
   MHD_stop_daemon (d);
 
-  if (! c_no_listen)
+  if (MHD_INVALID_SOCKET != fd1)
     (void) MHD_socket_close_ (fd1);
   (void) MHD_socket_close_ (aParam.lstn_sk);
   (void) MHD_socket_close_ (fd2);

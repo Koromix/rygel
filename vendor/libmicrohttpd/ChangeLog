@@ -1,3 +1,320 @@
+Web 19 Dec 2021 18:30:00 MSK
+    Releasing GNU libmicrohttpd 0.9.74 -EG
+
+December 2021
+    Fixed doxy for MHD_suspend_connection().
+    Some code improvements for new test test_client_put_stop.
+    Added special log message if thread creation failed due to system limits.
+    Fully restructured new_connection_process_() to correctly handle errors,
+    fixed missing decrement of number of daemon connections if any error 
+    encountered, fixed app notification of connection termination when app has
+    not been notified about connection start, fixed (highly unlikely) reset of
+    the list of connections if reached daemon's connections limit.
+    configure: fixed some compiler warnings reported in config.log.
+    Fixed tests on FreeBSD to support system-limited rate of RST packets and
+    'blackhole' system setting. -EG
+    Fixed tests for libmagic to really use libmagic in examples. -CG
+    Used tricks in code formatting to workaround uncrustify bugs.
+    configure: improved compatibility with various shells.
+    configure: added selective enable of sanitizers.
+    Fixed compatibility with old GnuTLS versions.
+    Fixed tests compatibility with old libcurl versions.
+    Fixed busy-waiting in test_timeout (fixed CPU load spikes in the test).
+    test_https_time_out: check rewritten, previously it is was no-op.
+    test_upgrade{,_large}: fixed passing of socket value to GnuTLS on W32.
+    Simplified Makefile for HTTPS tests.
+    Added detection of old broken GnuTLS builds (on RHEL6 and clones) and
+    disabled some tests broken with these builds.
+    Muted compiler warnings with old libcurl versions.
+    Reworked dlltool support: added support for weakened oversimplified
+    half-broken llvm-dlltool
+    Silenced MS lib tool warning and MS lib tool invocation.
+    Added Makefiles rules for automatic regeneration of all required files if
+    anything is missing.
+    Added Makefile silent rules support for W32 RC and W32 static libs.
+    Added local patches for autotools (mainly for libtool) to build MHD
+    correctly on modern MinGW64/Clang.
+    Updated HTTP headers macros from registry. -EG
+
+November 2021
+    Clarified comments and doxy for MHD_str* and related tests.
+    MHD_uint32_to_strx(): rewritten for readability and minor optimization,
+    used indexes instead of pointers.
+    Documented in doxy how to use MHD_AccessHandlerCallback.
+    mhd_sockets: added more network error codes.
+    W32 socket pair: set TCP_NODELAY to avoid unwanted buffering and delays.
+    Additional doxy fixes in microhttpd.h.
+    Fixed blocking sockets setting in tests and examples for W32.
+    Added checks for fcntl() results in tests and examples.
+    Added series of tests based on simple HTTP client implementation developed
+    for testing of MHD.
+    Renamed 'early_response' connection flag to 'discard_request' and reworked
+    handling of connection's flags.
+    Clarified request termination reasons doxy, fixed reporting of 
+    MHD_REQUEST_TERMINATED_READ_ERROR (previously this code was not really used
+    in reporting).
+    Enforce all libcurl tests exit code to be zero or one.
+    Rewritten client upload processing: removed redundant checks, fixed
+    skipping of chunk closure when not data is not received yet, fixed skipping
+    of the last LF in termination chunk, handle correctly chunk sizes with more
+    than 16 digits (leading zeros are valid according to HTTP RFC), fixed
+    handling of CRCR, LFCR, LFLF, and bare CR as single line delimiters, report
+    error when invalid chunk format is received without waiting to receive 
+    (possibly missing) end of the line, reply to the client with special error
+    if chunk size is too large to be handled by MHD (>16 EiB).
+    Added error reply if client used too large request payload (>16 EiB).
+    Fixed return value for MHD_FEATURE_AUTOSUPPRESS_SIGPIPE on W32, now it
+    returns MHD_YES as W32 does not need sigpipe suppression.
+    configure: reordered and improved headers detection. Some headers require
+    other headers to be included before, now configure supports it.
+    Added missing ifdef guard for <stdbool.h>.
+    mhd_sockets: reordered includes for better compatibility.
+    Some code readability and formatting improvements. -EG
+
+October 2021
+    Added test family test_toolarge to check correct handling of the buffers
+    when the size of data is larger than free space.
+    Fixed missing updated of read and write buffers sizes.
+    Added detection and use of supported "noreturn" keyword for function 
+    declaration. It should help compiler and static analyser.
+    Added support for leak sanitizer.
+    Fixed analyser errors on W32.
+    Partially reworked memory allocation from the pool, more robust
+    implementation, always track read and write buffers.
+    Added custom memory poisoning in memory pool with address sanitizer.
+    Added missing update of the read buffer size.
+    Addition for doxy for new behaviour of MHD_del_response_header().
+    Added two tests with non-standard symbols in requests.
+    Removed double close of connection with error in headers processing.
+    Respond to the client with error if chunked request has broken chunked
+    encoding as required by HTTP RFC instead of just closing the connection.
+    Fixed request headers processing. Do not recognize bare CR as end of line.
+    Fixed processing of CRCR, bare CR, LFCR, and LFLF as end of the line for
+    request chunked encoding. Now only CRLF or bare LF are recognized as end
+    of line.
+    Added Lawrence Sebald to the AUTHORS file (iovec-based responses).
+    Check for PAGESIZE and PAGE_SIZE macros and check whether they can be used
+    for static variable initialization.
+    Include "MHD_config.h" before all other includes to set macros required to
+    be set before standard includes.
+    Chunked response: abort with error if application returns more data than
+    requested.
+    Monotonic clock: use only native clock on W32 as all other clocks are just
+    wrappers.
+    W32: fixed builds with MSVC, added projects for VS2022, added MSVC
+    universal project that use latest available toolset, use C17 if supported.
+    Chunked response: fixed calculation of number of bytes left to send.
+    microhttpd.h: doxy clarifications for sockets polling.
+    Updated HTTP statuses, methods, and headers names from the registries.
+    Further improved doxy for MHD_add_response_header().
+    A few comments improvements and clarifications.
+    Added internal connection's flag indicating discard of the request. -EG
+    Websockets update by David Gausmann. -DG
+    Fixed reported value for MHD_CONNECTION_INFO_CONNECTION_TIMEOUT.
+    Minor code readability improvements in MHD_set_connection_option().
+    Improved doxy for MHD_get_timeout().
+    Memorypool: minor code improvements. -EG
+
+September 2021
+    Improved system includes headers detection and usage. Removed unused
+    headers detection.
+    Added indirect calculation of maximum values at compile time by
+    using types size detection. These values are used only to mute
+    compiler warnings.
+    Fixed pre-compiler errors if various *_MAX macros defined with
+    non-digits symbols not readable for pre-compiler.
+    Limit number of used CPU cores in tests to 6, unless heavy tests are
+    enabled.
+    Disabled parallel tests with libcurl if heavy tests are enabled.
+    configure: removed '--enable-sanitizer' and added '--enable-sanitizers'
+    parameters. Added testing for supported sanitizers and enabling only
+    supported sanitizers.
+    Added support for run-time sanitizers settings for tests when
+    sanitizers are enabled.
+    Added support for undefined behavior sanitizer without run-time library.
+    Fixed various undefined behavior sanitizer detected errors, improved
+    portability.
+    Fixed how bitwise NOT is used with enum, fixed portability.
+    microhttpd.h: changed macros MHD_CONTENT_READER_* to use ssize_t.
+    test_postprocessor: added more check, improved error reporting, added
+    new test data.
+    postprocessor: fixed undefined behavior (memcpy(), memmove() with zero
+    size and NULL pointer).
+    Updated copyright year in W32 DLLs.
+    postprocessor: fixed empty key processing.
+    test_postprocessor: added tests with hex-encoded values.
+    postprocessor: fixed incomplete processing of the last part of hex-encoded
+    value if data was broken into certain sized pieces.
+    Used type specifiers for printf() from inttypes.h to improved compatibility
+    with various run-time libs. Fallback to standard values if type specifiers
+    are not defined.
+    Added detection of used run-time library (MSVCRT/UCRT) on W32.
+    testcurl: fixed incorrect case-insensitive match for method name. Method
+    name must be checked by using case-sensitive match.
+    microhttpd.h: clarified some doxy descriptions.
+    Prevented potential double sending of error responses.
+    Fixed application notification with MHD_REQUEST_TERMINATED_COMPLETED_OK
+    when error response has been sent (MHD_REQUEST_TERMINATED_WITH_ERROR is
+    used).
+    Avoid trying to send error response if response is already being sent.
+    Improved log error message when error response is processing. -EG
+
+August 2021
+    Silently drop "keep-alive" token from response "connection" header,
+    "keep-alive" cannot be enforced and always enabled if possible.
+    Further improved doxy for MHD_add_response_header().
+    Added detection of the "Date:" header in the response headers set by
+    app at response forming time.
+    Disallow space in response header name, allow tab in response header
+    value.
+    Added internal MHD_uint8_to_str_pad() function.
+    Used internal MHD_uint8_to_str_pad() in datestamp generation function.
+    Added detection and reporting of incorrect "Upgrade" responses. -EG
+    Fixed short busy waiting (up to one second) when connection is going
+    to be closed. -AI
+    Minor improvement for test_callback, test_get_chunked
+    Fixed chunked responses with known size.
+    Added two more tests for chunked response.
+    Fixed chunked responses with predefined data (without data callback).
+    Fixed calculation of the buffer size for the next response chunk.
+    Completely rewritten reply header build function. The old version
+    had several levels of hacks, was unmaintainable, did not follow
+    HTTP specification in details; fixed used caseless header matching
+    where case-sensitive matching must be used; removed two passes of
+    header building. New version use clear logic and can be extended
+    when needed.
+    Changed behaviour: "Connection: keep-alive" is not being sent
+    for HTTP/1.1 connection (as per HTTP RFC).
+    test_get_chunked: fixed error reporting.
+    HTTPS tests: fixed memory leaks if function failed.
+    libcurl tests: improved handling of curl multi_*.
+    Added two tests for correct choice of "Keep-Alive" or "Close".
+    Simplified Makefile for testcurl.
+    Fixed select() error handling in tests.
+    microhttpd.h: minor macro formatting
+    Changed behaviour: if response size is unknown and chunked encoding is
+    allowed, chunked encoding is used even for non-keep-alive connection as
+    required by HTTP RFC.
+    Added two more tests for chunked replies.
+    Simplified keepalive_possible(); added new value for MHD_ConnKeepAlive,
+    added third state "Upgrade".
+    Changed behaviour: used HTTP/1.1 replies for HTTP/1.0 requests as
+    required by HTTP RFC. HTTP/1.0 reply still can be enforced by response
+    flag.
+    Added more doxy for MHD_ResponseFlags, added new names with the same
+    values as old names: MHD_RF_HTTP_1_0_COMPATIBLE_STRICT and
+    MHD_RF_HTTP_1_0_SERVER.
+    Added new value MHD_RF_SEND_KEEP_ALIVE_HEADER to enforce sending of
+    "Connection: keep-alive" even for HTTP/1.1 clients when keep-alive is
+    used.
+    test_get_close_keep_alive: added more combinations of parameters to
+    check.
+    Added separate flag for chunked response in connection instead of
+    reusing the same flag as for chunked request.
+    Added new connection's flag "stop_with_error".
+    Fixed empty first line processing: the request could be not processed
+    unless something else kicks next processing the same connection again.
+    Added new connection states: MHD_CONNECTION_REQ_LINE_RECEIVING,
+    MHD_CONNECTION_FULL_REQ_RECEIVED, MHD_CONNECTION_START_REPLY to
+    simplify states logic.
+    Changed write buffer allocation logic: as connection buffer size is
+    known and fixed, use initially use full buffer for writing and reduce
+    size of part used for writing if another allocation from the same
+    buffer needs to be done. Implemented helper function to automatically
+    reduce the size of read or write part to allocate buffer for other
+    needs.
+    Added define of NDEBUG if neither _DEBUG nor NDEBUG are defined.
+    As accepted sockets inherit non-blocking flag from listening socket
+    on all platform except Linux, track this state to use less number
+    of syscalls.
+    Fixed compiler and static analyser warnings.
+    Moved HTTPS tests helper file to the HTTPS tests directory.
+    Minor Makefiles cleanup.
+    Added support for new monotonic clock ids.
+    Added new internal monotonic clock function with milliseconds accuracy.
+    Fixed support of custom connection timeout in thread-per-connection mode.
+    Added more error checking to test_timeout.
+    microhttpd.h: removed duplicated macro.
+    Refined timeouts handling. Switched from seconds resolution to milliseconds
+    resolution, added automatic detection and support of low-resolution system
+    clock to avoid busy-waiting at connection expiration. Added log message
+    for too large timeout period (> 146 million years) with trim to supported
+    values. -EG
+
+Wed 04 Aug 2021 06:56:52 PM CEST
+    Introduce new MHD_CONNECTION_INFO_HTTP_STATUS. -CG
+
+July 2021
+    Added automatic response flags with detection when response
+    is being formed.
+    Added special processing for response "Connection" headers, combined
+    multiple "Connection" headers into single header.
+    Restructured MSVC project files.
+    Changed MSVC project defaults to Vista+ (WinXP is still supported).
+    Fixed copy-paste error in mhd_aligh.h, added support for MSVC.
+    Added internal function for printing hex and decimals numbers.
+    Reply chunked body handling fixes, used new internal functions
+    instead of snprintf().
+    Added automatic response flag when app sets chunked encoding header.
+    New internal function for chunked reply footer forming. Unification with
+    reply header forming function just over-complicated things and made
+    function hardly maintainable.
+    Added new function MHD_get_reason_phrase_len_for(), related tests and
+    updated scripts for response phrases.
+    Added more tests for chunked replies.
+    Added function to reset connection state after finishing processing of
+    request-reply to prepare for the next request.
+    Added even more tests for chunked replies.
+    Added internal function for printing uint64_t decimal numbers. -EG
+
+June 2021
+    Tests: implemented checking of response footer.
+    Fixed loss of incoming data if more than half of buffer is
+    used for the next request data.
+    Fixed completely broken calculation of request header size.
+    Chunked response: do not ask app callback for more data then
+    it is possible to process (more than 16 MBytes). 
+    Check and report if app used wrong response code (>999 or <100)
+    Refuse to add second "Transfer-Encoding" header.
+    HTTPS tests: check whether all libcurl function succeeded.
+    HTTPS tests: implemented new detection of TLS backend.
+    HTTPS tests: fixed tests with new TLS defaults (SSL forbidden).
+    Implemented detection of basic HTTP methods, fixed wrong
+    caseless matching for HTTP method names.
+    MHD_create_response_*() functions: improved doxy.
+    MHD_add_response_header: added detailed comment about automatic
+    headers.
+    Do not allow responses with 1xx codes for HTTP/1.0 requests.
+    Fixed used order of headers: now user response headers are used in
+    the same order as was added by application.
+    Added new internal function MHD_get_response_element_n_().
+    Added detection of more compiler built-ins for bits rotations.
+    Minor optimisation of caseless strings matching.
+    Added MHD_str_remove_token_caseless_() function and tests.
+    Added MHD_str_remove_tokens_caseless_() function and tests. -EG
+
+May 2021
+    Doxy description clarifications for MHD_get_timeout() and related
+    functions.
+    Added MHD_create_response_from_buffer_with_free_callback_cls().
+    Added SHA-1 calculation (required for WebSockets).
+    Added new internal header mhd_aligh.h for checking alignment of
+    variables.
+    Fixed SHA-256 and MD5 calculation with unaligned data.
+    Added tests for hashes with unaligned data.
+    Used compiler built-ins for bits rotations.
+    Added detection of HTTP version at early stage.
+    Added early response of unsupported HTTP version.
+    Fixed wrong caseless matches for HTTP version strings.
+    Added calculation of error responses at compile time (avoided
+    repeated strlen() for known data). -EG
+
+April 2021
+    New test for reply chunked encoding. -EG
+
+Mon 26 Apr 2021 02:09:46 PM CEST
+    Importing experimental Websocket support by David Gausmann. -CG
+
 Sun 25 Apr 2021 14:00:00 MSK
     Releasing GNU libmicrohttpd 0.9.73. -EG
 

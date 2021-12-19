@@ -1,8 +1,8 @@
-This is libmicrohttpd.info, produced by makeinfo version 6.7 from
+This is libmicrohttpd.info, produced by makeinfo version 6.8 from
 libmicrohttpd.texi.
 
-This manual is for GNU libmicrohttpd (version 0.9.73, 7 April 2021), a
-library for embedding an HTTP(S) server into C applications.
+This manual is for GNU libmicrohttpd (version 0.9.74, 1 November 2021),
+a library for embedding an HTTP(S) server into C applications.
 
    Copyright © 2007–2019 Christian Grothoff
 
@@ -23,8 +23,8 @@ File: libmicrohttpd.info,  Node: Top,  Next: microhttpd-intro,  Up: (dir)
 The GNU libmicrohttpd Library
 *****************************
 
-This manual is for GNU libmicrohttpd (version 0.9.73, 7 April 2021), a
-library for embedding an HTTP(S) server into C applications.
+This manual is for GNU libmicrohttpd (version 0.9.74, 1 November 2021),
+a library for embedding an HTTP(S) server into C applications.
 
    Copyright © 2007–2019 Christian Grothoff
 
@@ -50,6 +50,7 @@ library for embedding an HTTP(S) server into C applications.
 * microhttpd-post::             Adding a ‘POST’ processor.
 * microhttpd-info::             Obtaining and modifying status information.
 * microhttpd-util::             Utilities.
+* microhttpd-websocket::        Websockets.
 
 Appendices
 
@@ -161,6 +162,8 @@ was able to handle more than 45,000 connections per second on loopback
 
  [image src="libmicrohttpd_performance_data.png" alt="Data" ]
 
+
+
 Figure 1.1: Performance measurements for select vs.  epoll (with
 thread-pool).
 
@@ -182,6 +185,7 @@ external                yes      no     yes
 internal                yes      yes    yes
 thread pool             yes      yes    yes
 thread-per-connection   yes      yes    no
+
 
 Table 1.1: Supported combinations of event styles and thread modes.
 
@@ -1097,6 +1101,444 @@ File: libmicrohttpd.info,  Node: microhttpd-const,  Next: microhttpd-struct,  Pr
           No more options / last option.  This is used to terminate the
           VARARGs list.
 
+ -- Enumeration: MHD_WEBSOCKET_FLAG
+     Options for the MHD websocket stream.
+
+     This is used for initialization of a websocket stream when calling
+     ‘MHD_websocket_stream_init’ or ‘MHD_websocket_stream_init2’ and
+     alters the behavior of the websocket stream.
+
+     Note that websocket streams are only available if you include the
+     header file ‘microhttpd_ws.h’ and compiled _libmicrohttpd_ with
+     websockets.
+
+     ‘MHD_WEBSOCKET_FLAG_SERVER’
+          The websocket stream is initialized in server mode (default).
+          Thus all outgoing payload will not be masked.  All incoming
+          payload must be masked.
+
+          This flag cannot be used together with
+          ‘MHD_WEBSOCKET_FLAG_CLIENT’.
+
+     ‘MHD_WEBSOCKET_FLAG_CLIENT’
+          The websocket stream is initialized in client mode.  You will
+          usually never use that mode in combination with
+          _libmicrohttpd_, because _libmicrohttpd_ provides a server and
+          not a client.  In client mode all outgoing payload will be
+          masked (XOR-ed with random values).  All incoming payload must
+          be unmasked.  If you use this mode, you must always call
+          ‘MHD_websocket_stream_init2’ instead of
+          ‘MHD_websocket_stream_init’, because you need to pass a random
+          number generator callback function for masking.
+
+          This flag cannot be used together with
+          ‘MHD_WEBSOCKET_FLAG_SERVER’.
+
+     ‘MHD_WEBSOCKET_FLAG_NO_FRAGMENTS’
+          You don’t want to get fragmented data while decoding
+          (default).  Fragmented frames will be internally put together
+          until they are complete.  Whether or not data is fragmented is
+          decided by the sender of the data during encoding.
+
+          This cannot be used together with
+          ‘MHD_WEBSOCKET_FLAG_WANT_FRAGMENTS’.
+
+     ‘MHD_WEBSOCKET_FLAG_WANT_FRAGMENTS’
+          You want fragmented data, if it appears while decoding.  You
+          will receive the content of the fragmented frame, but if you
+          are decoding text, you will never get an unfinished UTF-8
+          sequence (if the sequence appears between two fragments).
+          Instead the text will end before the unfinished UTF-8
+          sequence.  With the next fragment, which finishes the UTF-8
+          sequence, you will get the complete UTF-8 sequence.
+
+          This cannot be used together with
+          ‘MHD_WEBSOCKET_FLAG_NO_FRAGMENTS’.
+
+     ‘MHD_WEBSOCKET_FLAG_GENERATE_CLOSE_FRAMES_ON_ERROR’
+          If the websocket stream becomes invalid during decoding due to
+          protocol errors, a matching close frame will automatically be
+          generated.  The close frame will be returned via the
+          parameters ‘payload’ and ‘payload_len’ of
+          ‘MHD_websocket_decode’ and the return value is negative (a
+          value of ‘enum MHD_WEBSOCKET_STATUS’).
+
+          The generated close frame must be freed by the caller with
+          ‘MHD_websocket_free’.
+
+ -- Enumeration: MHD_WEBSOCKET_FRAGMENTATION
+     This enumeration is used to specify the fragmentation behavior when
+     encoding of data (text/binary) for a websocket stream.  This is
+     used with ‘MHD_websocket_encode_text’ or
+     ‘MHD_websocket_encode_binary’.
+
+     Note that websocket streams are only available if you include the
+     header file ‘microhttpd_ws.h’ and compiled _libmicrohttpd_ with
+     websockets.
+
+     ‘MHD_WEBSOCKET_FRAGMENTATION_NONE’
+          You don’t want to use fragmentation.  The encoded frame
+          consists of only one frame.
+
+     ‘MHD_WEBSOCKET_FRAGMENTATION_FIRST’
+          You want to use fragmentation.  The encoded frame is the first
+          frame of a series of data frames of the same type (text or
+          binary).  You may send control frames (ping, pong or close)
+          between these data frames.
+
+     ‘MHD_WEBSOCKET_FRAGMENTATION_FOLLOWING’
+          You want to use fragmentation.  The encoded frame is not the
+          first frame of the series of data frames, but also not the
+          last one.  You may send control frames (ping, pong or close)
+          between these data frames.
+
+     ‘MHD_WEBSOCKET_FRAGMENTATION_LAST’
+          You want to use fragmentation.  The encoded frame is the last
+          frame of the series of data frames, but also not the first
+          one.  After this frame, you may send all types of frames
+          again.
+
+ -- Enumeration: MHD_WEBSOCKET_STATUS
+     This enumeration is used for the return value of almost every
+     websocket stream function.  Errors are negative and values equal to
+     or above zero mean a success.  Positive values are only used by
+     ‘MHD_websocket_decode’.
+
+     Note that websocket streams are only available if you include the
+     header file ‘microhttpd_ws.h’ and compiled _libmicrohttpd_ with
+     websockets.
+
+     ‘MHD_WEBSOCKET_STATUS_OK’
+          The call succeeded.  Especially for ‘MHD_websocket_decode’
+          this means that no error occurred, but also no frame has been
+          completed yet.  For other functions this means simply a
+          success.
+
+     ‘MHD_WEBSOCKET_STATUS_TEXT_FRAME’
+          ‘MHD_websocket_decode’ has decoded a text frame.  The
+          parameters ‘payload’ and ‘payload_len’ are filled with the
+          decoded text (if any).  You must free the returned ‘payload’
+          after use with ‘MHD_websocket_free’.
+
+     ‘MHD_WEBSOCKET_STATUS_BINARY_FRAME’
+          ‘MHD_websocket_decode’ has decoded a binary frame.  The
+          parameters ‘payload’ and ‘payload_len’ are filled with the
+          decoded binary data (if any).  You must free the returned
+          ‘payload’ after use with ‘MHD_websocket_free’.
+
+     ‘MHD_WEBSOCKET_STATUS_CLOSE_FRAME’
+          ‘MHD_websocket_decode’ has decoded a close frame.  This means
+          you must close the socket using ‘MHD_upgrade_action’ with
+          ‘MHD_UPGRADE_ACTION_CLOSE’.  You may respond with a close
+          frame before closing.  The parameters ‘payload’ and
+          ‘payload_len’ are filled with the close reason (if any).  The
+          close reason starts with a two byte sequence of close code in
+          network byte order (see ‘enum MHD_WEBSOCKET_CLOSEREASON’).
+          After these two bytes a UTF-8 encoded close reason may follow.
+          You can call ‘MHD_websocket_split_close_reason’ to split that
+          close reason.  You must free the returned ‘payload’ after use
+          with ‘MHD_websocket_free’.
+
+     ‘MHD_WEBSOCKET_STATUS_PING_FRAME’
+          ‘MHD_websocket_decode’ has decoded a ping frame.  You should
+          respond to this with a pong frame.  The pong frame must
+          contain the same binary data as the corresponding ping frame
+          (if it had any).  The parameters ‘payload’ and ‘payload_len’
+          are filled with the binary ping data (if any).  You must free
+          the returned ‘payload’ after use with ‘MHD_websocket_free’.
+
+     ‘MHD_WEBSOCKET_STATUS_PONG_FRAME’
+          ‘MHD_websocket_decode’ has decoded a pong frame.  You should
+          usually only receive pong frames if you sent a ping frame
+          before.  The binary data should be equal to your ping frame
+          and can be used to distinguish the response if you sent
+          multiple ping frames.  The parameters ‘payload’ and
+          ‘payload_len’ are filled with the binary pong data (if any).
+          You must free the returned ‘payload’ after use with
+          ‘MHD_websocket_free’.
+
+     ‘MHD_WEBSOCKET_STATUS_TEXT_FIRST_FRAGMENT’
+          ‘MHD_websocket_decode’ has decoded a text frame fragment.  The
+          parameters ‘payload’ and ‘payload_len’ are filled with the
+          decoded text (if any).  This is like
+          ‘MHD_WEBSOCKET_STATUS_TEXT_FRAME’, but it can only appear if
+          you specified ‘MHD_WEBSOCKET_FLAG_WANT_FRAGMENTS’ during the
+          call of ‘MHD_websocket_stream_init’ or
+          ‘MHD_websocket_stream_init2’.  You must free the returned
+          ‘payload’ after use with ‘MHD_websocket_free’.
+
+     ‘MHD_WEBSOCKET_STATUS_TEXT_FIRST_FRAGMENT’
+          ‘MHD_websocket_decode’ has decoded a binary frame fragment.
+          The parameters ‘payload’ and ‘payload_len’ are filled with the
+          decoded binary data (if any).  This is like
+          ‘MHD_WEBSOCKET_STATUS_BINARY_FRAME’, but it can only appear if
+          you specified ‘MHD_WEBSOCKET_FLAG_WANT_FRAGMENTS’ during the
+          call of ‘MHD_websocket_stream_init’ or
+          ‘MHD_websocket_stream_init2’.  You must free the returned
+          ‘payload’ after use with ‘MHD_websocket_free’.
+
+     ‘MHD_WEBSOCKET_STATUS_TEXT_NEXT_FRAGMENT’
+          ‘MHD_websocket_decode’ has decoded the next text frame
+          fragment.  The parameters ‘payload’ and ‘payload_len’ are
+          filled with the decoded text (if any).  This is like
+          ‘MHD_WEBSOCKET_STATUS_TEXT_FIRST_FRAGMENT’, but it appears
+          only after the first and before the last fragment of a series
+          of fragments.  It can only appear if you specified
+          ‘MHD_WEBSOCKET_FLAG_WANT_FRAGMENTS’ during the call of
+          ‘MHD_websocket_stream_init’ or ‘MHD_websocket_stream_init2’.
+          You must free the returned ‘payload’ after use with
+          ‘MHD_websocket_free’.
+
+     ‘MHD_WEBSOCKET_STATUS_BINARY_NEXT_FRAGMENT’
+          ‘MHD_websocket_decode’ has decoded the next binary frame
+          fragment.  The parameters ‘payload’ and ‘payload_len’ are
+          filled with the decoded binary data (if any).  This is like
+          ‘MHD_WEBSOCKET_STATUS_BINARY_FIRST_FRAGMENT’, but it appears
+          only after the first and before the last fragment of a series
+          of fragments.  It can only appear if you specified
+          ‘MHD_WEBSOCKET_FLAG_WANT_FRAGMENTS’ during the call of
+          ‘MHD_websocket_stream_init’ or ‘MHD_websocket_stream_init2’.
+          You must free the returned ‘payload’ after use with
+          ‘MHD_websocket_free’.
+
+     ‘MHD_WEBSOCKET_STATUS_TEXT_LAST_FRAGMENT’
+          ‘MHD_websocket_decode’ has decoded the last text frame
+          fragment.  The parameters ‘payload’ and ‘payload_len’ are
+          filled with the decoded text (if any).  This is like
+          ‘MHD_WEBSOCKET_STATUS_TEXT_FIRST_FRAGMENT’, but it appears
+          only for the last fragment of a series of fragments.  It can
+          only appear if you specified
+          ‘MHD_WEBSOCKET_FLAG_WANT_FRAGMENTS’ during the call of
+          ‘MHD_websocket_stream_init’ or ‘MHD_websocket_stream_init2’.
+          You must free the returned ‘payload’ after use with
+          ‘MHD_websocket_free’.
+
+     ‘MHD_WEBSOCKET_STATUS_BINARY_LAST_FRAGMENT’
+          ‘MHD_websocket_decode’ has decoded the last binary frame
+          fragment.  The parameters ‘payload’ and ‘payload_len’ are
+          filled with the decoded binary data (if any).  This is like
+          ‘MHD_WEBSOCKET_STATUS_BINARY_FIRST_FRAGMENT’, but it appears
+          only for the last fragment of a series of fragments.  It can
+          only appear if you specified
+          ‘MHD_WEBSOCKET_FLAG_WANT_FRAGMENTS’ during the call of
+          ‘MHD_websocket_stream_init’ or ‘MHD_websocket_stream_init2’.
+          You must free the returned ‘payload’ after use with
+          ‘MHD_websocket_free’.
+
+     ‘MHD_WEBSOCKET_STATUS_PROTOCOL_ERROR’
+          The call failed and the stream is invalid now for decoding.
+          You must close the websocket now using ‘MHD_upgrade_action’
+          with ‘MHD_UPGRADE_ACTION_CLOSE’.  You may send a close frame
+          before closing.  This is only used by ‘MHD_websocket_decode’
+          and happens if the stream contains errors (i.  e.  invalid
+          byte data).
+
+     ‘MHD_WEBSOCKET_STATUS_STREAM_BROKEN’
+          You tried to decode something, but the stream has already been
+          marked invalid.  You must close the websocket now using
+          ‘MHD_upgrade_action’ with ‘MHD_UPGRADE_ACTION_CLOSE’.  You may
+          send a close frame before closing.  This is only used by
+          ‘MHD_websocket_decode’ and happens if you call
+          ‘MDM_websocket_decode’ again after has been invalidated.  You
+          can call ‘MHD_websocket_stream_is_valid’ at any time to check
+          whether a stream is invalid or not.
+
+     ‘MHD_WEBSOCKET_STATUS_MEMORY_ERROR’
+          A memory allocation failed.  The stream remains valid.  If
+          this occurred while decoding, the decoding could be possible
+          later if enough memory is available.  This could happen while
+          decoding if you received a too big data frame.  You could try
+          to specify max_payload_size during the call of
+          ‘MHD_websocket_stream_init’ or ‘MHD_websocket_stream_init2’ to
+          avoid this and close the websocket instead.
+
+     ‘MHD_WEBSOCKET_STATUS_PARAMETER_ERROR’
+          You passed invalid parameters during the function call (i.  e.
+          a NULL pointer for a required parameter).  The stream remains
+          valid.
+
+     ‘MHD_WEBSOCKET_STATUS_MAXIMUM_SIZE_EXCEEDED’
+          The maximum payload size has been exceeded.  If you got this
+          return code from ‘MHD_websocket_decode’ then the stream
+          becomes invalid and the websocket must be closed using
+          ‘MHD_upgrade_action’ with ‘MHD_UPGRADE_ACTION_CLOSE’.  You may
+          send a close frame before closing.  The maximum payload size
+          is specified during the call of ‘MHD_websocket_stream_init’ or
+          ‘MHD_websocket_stream_init2’.  This can also appear if you
+          specified 0 as maximum payload size when the message is
+          greater than the maximum allocatable memory size (i.  e.  more
+          than 4 GiB on 32 bit systems).  If you got this return code
+          from ‘MHD_websocket_encode_close’, ‘MHD_websocket_encode_ping’
+          or ‘MHD_websocket_encode_pong’ then you passed to much payload
+          data.  The stream remains valid then.
+
+     ‘MHD_WEBSOCKET_STATUS_UTF8_ENCODING_ERROR’
+          An UTF-8 sequence is invalid.  If you got this return code
+          from ‘MHD_websocket_decode’ then the stream becomes invalid
+          and you must close the websocket using ‘MHD_upgrade_action’
+          with ‘MHD_UPGRADE_ACTION_CLOSE’.  You may send a close frame
+          before closing.  If you got this from
+          ‘MHD_websocket_encode_text’ or ‘MHD_websocket_encode_close’
+          then you passed invalid UTF-8 text.  The stream remains valid
+          then.
+
+     ‘MHD_WEBSOCKET_STATUS_NO_WEBSOCKET_HANDSHAKE_HEADER’
+          A check routine for the HTTP headers came to the conclusion
+          that the header value isn’t valid for a websocket handshake
+          request.  This value can only be returned from the following
+          functions: ‘MHD_websocket_check_http_version’,
+          ‘MHD_websocket_check_connection_header’,
+          ‘MHD_websocket_check_upgrade_header’,
+          ‘MHD_websocket_check_version_header’,
+          ‘MHD_websocket_create_accept_header’
+
+ -- Enumeration: MHD_WEBSOCKET_CLOSEREASON
+     Enumeration of possible close reasons for websocket close frames.
+
+     The possible values are specified in RFC 6455 7.4.1 These close
+     reasons here are the default set specified by RFC 6455, but also
+     other close reasons could be used.
+
+     The definition is for short:
+        • 0-999 are never used (if you pass 0 in
+          ‘MHD_websocket_encode_close’ then no close reason is used).
+        • 1000-2999 are specified by RFC 6455.
+        • 3000-3999 are specified by libraries, etc.  but must be
+          registered by IANA.
+        • 4000-4999 are reserved for private use.
+
+     Note that websocket streams are only available if you include the
+     header file ‘microhttpd_ws.h’ and compiled _libmicrohttpd_ with
+     websockets.
+
+     ‘MHD_WEBSOCKET_CLOSEREASON_NO_REASON’
+          This value is used as placeholder for
+          ‘MHD_websocket_encode_close’ to tell that you don’t want to
+          specify any reason.  If you use this value then no reason text
+          may be used.  This value cannot be a result of decoding,
+          because this value is not a valid close reason for the
+          websocket protocol.
+
+     ‘MHD_WEBSOCKET_CLOSEREASON_REGULAR’
+          You close the websocket because it fulfilled its purpose and
+          shall now be closed in a normal, planned way.
+
+     ‘MHD_WEBSOCKET_CLOSEREASON_GOING_AWAY’
+          You close the websocket because you are shutting down the
+          server or something similar.
+
+     ‘MHD_WEBSOCKET_CLOSEREASON_PROTOCOL_ERROR’
+          You close the websocket because a protocol error occurred
+          during decoding (i.  e.  invalid byte data).
+
+     ‘MHD_WEBSOCKET_CLOSEREASON_UNSUPPORTED_DATATYPE’
+          You close the websocket because you received data which you
+          don’t accept.  For example if you received a binary frame, but
+          your application only expects text frames.
+
+     ‘MHD_WEBSOCKET_CLOSEREASON_MALFORMED_UTF8’
+          You close the websocket because it contains malformed UTF-8.
+          The UTF-8 validity is automatically checked by
+          ‘MHD_websocket_decode’, so you don’t need to check it on your
+          own.  UTF-8 is specified in RFC 3629.
+
+     ‘MHD_WEBSOCKET_CLOSEREASON_POLICY_VIOLATED’
+          You close the websocket because you received a frame which is
+          too big to process.  You can specify the maximum allowed
+          payload size during the call of ‘MHD_websocket_stream_init’ or
+          ‘MHD_websocket_stream_init2’.
+
+     ‘MHD_WEBSOCKET_CLOSEREASON_MISSING_EXTENSION’
+          This status code can be sent by the client if it expected a
+          specific extension, but this extension hasn’t been negotiated.
+
+     ‘MHD_WEBSOCKET_CLOSEREASON_UNEXPECTED_CONDITION’
+          The server closes the websocket because it encountered an
+          unexpected condition that prevented it from fulfilling the
+          request.
+
+ -- Enumeration: MHD_WEBSOCKET_UTF8STEP
+     Enumeration of possible UTF-8 check steps for websocket functions
+
+     These values are used during the encoding of fragmented text frames
+     or for error analysis while encoding text frames.  Its values
+     specify the next step of the UTF-8 check.  UTF-8 sequences consist
+     of one to four bytes.  This enumeration just says how long the
+     current UTF-8 sequence is and what is the next expected byte.
+
+     Note that websocket streams are only available if you include the
+     header file ‘microhttpd_ws.h’ and compiled _libmicrohttpd_ with
+     websockets.
+
+     ‘MHD_WEBSOCKET_UTF8STEP_NORMAL’
+          There is no open UTF-8 sequence.  The next byte must be
+          0x00-0x7F or 0xC2-0xF4.
+
+     ‘MHD_WEBSOCKET_UTF8STEP_UTF2TAIL_1OF1’
+          The second byte of a two byte UTF-8 sequence.  The first byte
+          was 0xC2-0xDF. The next byte must be 0x80-0xBF.
+
+     ‘MHD_WEBSOCKET_UTF8STEP_UTF3TAIL1_1OF2’
+          The second byte of a three byte UTF-8 sequence.  The first
+          byte was 0xE0.  The next byte must be 0xA0-0xBF.
+
+     ‘MHD_WEBSOCKET_UTF8STEP_UTF3TAIL2_1OF2’
+          The second byte of a three byte UTF-8 sequence.  The first
+          byte was 0xED. The next byte must by 0x80-0x9F.
+
+     ‘MHD_WEBSOCKET_UTF8STEP_UTF3TAIL_1OF2’
+          The second byte of a three byte UTF-8 sequence.  The first
+          byte was 0xE1-0xEC or 0xEE-0xEF. The next byte must be
+          0x80-0xBF.
+
+     ‘MHD_WEBSOCKET_UTF8STEP_UTF3TAIL_2OF2’
+          The third byte of a three byte UTF-8 sequence.  The next byte
+          must be 0x80-0xBF.
+
+     ‘MHD_WEBSOCKET_UTF8STEP_UTF4TAIL1_1OF3’
+          The second byte of a four byte UTF-8 sequence.  The first byte
+          was 0xF0.  The next byte must be 0x90-0xBF.
+
+     ‘MHD_WEBSOCKET_UTF8STEP_UTF4TAIL2_1OF3’
+          The second byte of a four byte UTF-8 sequence.  The first byte
+          was 0xF4.  The next byte must be 0x80-0x8F.
+
+     ‘MHD_WEBSOCKET_UTF8STEP_UTF4TAIL_1OF3’
+          The second byte of a four byte UTF-8 sequence.  The first byte
+          was 0xF1-0xF3.  The next byte must be 0x80-0xBF.
+
+     ‘MHD_WEBSOCKET_UTF8STEP_UTF4TAIL_2OF3’
+          The third byte of a four byte UTF-8 sequence.  The next byte
+          must be 0x80-0xBF.
+
+     ‘MHD_WEBSOCKET_UTF8STEP_UTF4TAIL_3OF3’
+          The fourth byte of a four byte UTF-8 sequence.  The next byte
+          must be 0x80-0xBF.
+
+ -- Enumeration: MHD_WEBSOCKET_VALIDITY
+     Enumeration of validity values of a websocket stream
+
+     These values are used for ‘MHD_websocket_stream_is_valid’ and
+     specify the validity status.
+
+     Note that websocket streams are only available if you include the
+     header file ‘microhttpd_ws.h’ and compiled _libmicrohttpd_ with
+     websockets.
+
+     ‘MHD_WEBSOCKET_VALIDITY_INVALID’
+          The stream is invalid.  It cannot be used for decoding
+          anymore.
+
+     ‘MHD_WEBSOCKET_VALIDITY_VALID’
+          The stream is valid.  Decoding works as expected.
+
+     ‘MHD_WEBSOCKET_VALIDITY_ONLY_VALID_FOR_CONTROL_FRAMES’
+          The stream has received a close frame and is partly invalid.
+          You can still use the stream for decoding, but if a data frame
+          is received an error will be reported.  After a close frame
+          has been sent, no data frames may follow from the sender of
+          the close frame.
+
 
 File: libmicrohttpd.info,  Node: microhttpd-struct,  Next: microhttpd-cb,  Prev: microhttpd-const,  Up: Top
 
@@ -1126,6 +1568,9 @@ File: libmicrohttpd.info,  Node: microhttpd-struct,  Next: microhttpd-cb,  Prev:
 
  -- C Union: MHD_DaemonInfo
      Information about an MHD daemon.
+
+ -- C Struct: MHD_WebSocketStream
+     Information about a MHD websocket stream.
 
 
 File: libmicrohttpd.info,  Node: microhttpd-cb,  Next: microhttpd-init,  Prev: microhttpd-struct,  Up: Top
@@ -1367,6 +1812,75 @@ File: libmicrohttpd.info,  Node: microhttpd-cb,  Next: microhttpd-init,  Prev: m
 
      Return ‘MHD_YES’ to continue iterating, ‘MHD_NO’ to abort the
      iteration.
+
+ -- Function Pointer: void* *MHD_WebSocketMallocCallback (size_t
+          buf_len)
+     This callback function is used internally by many websocket
+     functions for allocating data.  By default ‘malloc’ is used.  You
+     can use your own allocation function with
+     ‘MHD_websocket_stream_init2’ if you wish to.  This can be useful
+     for operating systems like Windows where ‘malloc’, ‘realloc’ and
+     ‘free’ are compiler-dependent.  You can call the associated
+     ‘malloc’ callback of a websocket stream with
+     ‘MHD_websocket_malloc’.
+
+     BUF_LEN
+          size of the buffer to allocate in bytes.
+
+     Return the pointer of the allocated buffer or ‘NULL’ on failure.
+
+ -- Function Pointer: void* *MHD_WebSocketReallocCallback (void *buf,
+          size_t new_buf_len)
+     This callback function is used internally by many websocket
+     functions for reallocating data.  By default ‘realloc’ is used.
+     You can use your own reallocation function with
+     ‘MHD_websocket_stream_init2’ if you wish to.  This can be useful
+     for operating systems like Windows where ‘malloc’, ‘realloc’ and
+     ‘free’ are compiler-dependent.  You can call the associated
+     ‘realloc’ callback of a websocket stream with
+     ‘MHD_websocket_realloc’.
+
+     BUF
+          current buffer, may be ‘NULL’;
+
+     NEW_BUF_LEN
+          new size of the buffer in bytes.
+
+     Return the pointer of the reallocated buffer or ‘NULL’ on failure.
+     On failure the old pointer must remain valid.
+
+ -- Function Pointer: void *MHD_WebSocketFreeCallback (void *buf)
+     This callback function is used internally by many websocket
+     functions for freeing data.  By default ‘free’ is used.  You can
+     use your own free function with ‘MHD_websocket_stream_init2’ if you
+     wish to.  This can be useful for operating systems like Windows
+     where ‘malloc’, ‘realloc’ and ‘free’ are compiler-dependent.  You
+     can call the associated ‘free’ callback of a websocket stream with
+     ‘MHD_websocket_free’.
+
+     CLS
+          current buffer to free, this may be ‘NULL’ then nothing
+          happens.
+
+ -- Function Pointer: size_t *MHD_WebSocketRandomNumberGenerator (void
+          *cls, void* buf, size_t buf_len)
+     This callback function is used for generating random numbers for
+     masking payload data in client mode.  If you use websockets in
+     server mode with _libmicrohttpd_ then you don’t need a random
+     number generator, because the server doesn’t mask its outgoing
+     messages.  However if you wish to use a websocket stream in client
+     mode, you must pass this callback function to
+     ‘MHD_websocket_stream_init2’.
+
+     CLS
+          closure specified in ‘MHD_websocket_stream_init2’;
+     BUF
+          buffer to fill with random values;
+     BUF_LEN
+          size of buffer in bytes.
+
+     Return the number of generated random bytes.  The return value
+     should usually equal to buf_len.
 
 
 File: libmicrohttpd.info,  Node: microhttpd-init,  Next: microhttpd-inspect,  Prev: microhttpd-cb,  Up: Top
@@ -2907,6 +3421,12 @@ File: libmicrohttpd.info,  Node: microhttpd-info conn,  Next: microhttpd-option 
 
           Takes no extra arguments.
 
+     ‘MHD_CONNECTION_INFO_HTTP_STATUS’
+          Returns the HTTP status code of the response that was queued.
+          Returns NULL if no response was queued yet.
+
+          Takes no extra arguments.
+
 
 File: libmicrohttpd.info,  Node: microhttpd-option conn,  Prev: microhttpd-info conn,  Up: microhttpd-info
 
@@ -2939,7 +3459,7 @@ File: libmicrohttpd.info,  Node: microhttpd-option conn,  Prev: microhttpd-info 
           for no timeout.
 
 
-File: libmicrohttpd.info,  Node: microhttpd-util,  Next: GNU-LGPL,  Prev: microhttpd-info,  Up: Top
+File: libmicrohttpd.info,  Node: microhttpd-util,  Next: microhttpd-websocket,  Prev: microhttpd-info,  Up: Top
 
 13 Utility functions.
 *********************
@@ -3056,7 +3576,632 @@ File: libmicrohttpd.info,  Node: microhttpd-util unescape,  Prev: microhttpd-uti
      afterwards due to elimination of escape sequences).
 
 
-File: libmicrohttpd.info,  Node: GNU-LGPL,  Next: eCos License,  Prev: microhttpd-util,  Up: Top
+File: libmicrohttpd.info,  Node: microhttpd-websocket,  Next: GNU-LGPL,  Prev: microhttpd-util,  Up: Top
+
+14 Websocket functions.
+***********************
+
+Websocket functions provide what you need to use an upgraded connection
+as a websocket.  These functions are only available if you include the
+header file ‘microhttpd_ws.h’ and compiled _libmicrohttpd_ with
+websockets.
+
+* Menu:
+
+* microhttpd-websocket handshake::    Websocket handshake functions
+* microhttpd-websocket stream::       Websocket stream functions
+* microhttpd-websocket decode::       Websocket decode functions
+* microhttpd-websocket encode::       Websocket encode functions
+* microhttpd-websocket memory::       Websocket memory functions
+
+
+File: libmicrohttpd.info,  Node: microhttpd-websocket handshake,  Next: microhttpd-websocket stream,  Up: microhttpd-websocket
+
+14.1 Websocket handshake functions
+==================================
+
+ -- Function: enum MHD_WEBSOCKET_STATUS MHD_websocket_check_http_version
+          (const char* http_version)
+     Checks the HTTP version of the incoming request.  Websocket
+     requests are only allowed for HTTP/1.1 or above.
+
+     HTTP_VERSION
+          The value of the ‘version’ parameter of your ‘access_handler’
+          callback.  If you pass ‘NULL’ then this is handled like a not
+          matching HTTP version.
+
+     Returns 0 when the HTTP version is valid for a websocket request
+     and a value less than zero when the HTTP version isn’t valid for a
+     websocket request.  Can be compared with ‘enum
+     MHD_WEBSOCKET_STATUS’.
+
+ -- Function: enum MHD_WEBSOCKET_STATUS
+          MHD_websocket_check_connection_header (const char*
+          connection_header)
+     Checks the value of the ‘Connection’ HTTP request header.
+     Websocket requests require the token ‘Upgrade’ in the ‘Connection’
+     HTTP request header.
+
+     CONNECTION_HEADER
+          Value of the ‘Connection’ request header.  You can get this
+          request header value by passing ‘MHD_HTTP_HEADER_CONNECTION’
+          to ‘MHD_lookup_connection_value()’.  If you pass ‘NULL’ then
+          this is handled like a not matching ‘Connection’ header value.
+
+     Returns 0 when the ‘Connection’ header is valid for a websocket
+     request and a value less than zero when the ‘Connection’ header
+     isn’t valid for a websocket request.  Can be compared with ‘enum
+     MHD_WEBSOCKET_STATUS’.
+
+ -- Function: enum MHD_WEBSOCKET_STATUS
+          MHD_websocket_check_upgrade_header (const char*
+          upgrade_header)
+     Checks the value of the ‘Upgrade’ HTTP request header.  Websocket
+     requests require the value ‘websocket’ in the ‘Upgrade’ HTTP
+     request header.
+
+     UPGRADE_HEADER
+          Value of the ‘Upgrade’ request header.  You can get this
+          request header value by passing ‘MHD_HTTP_HEADER_UPGRADE’ to
+          ‘MHD_lookup_connection_value()’.  If you pass ‘NULL’ then this
+          is handled like a not matching ‘Upgrade’ header value.
+
+     Returns 0 when the ‘Upgrade’ header is valid for a websocket
+     request and a value less than zero when the ‘Upgrade’ header isn’t
+     valid for a websocket request.  Can be compared with ‘enum
+     MHD_WEBSOCKET_STATUS’.
+
+ -- Function: enum MHD_WEBSOCKET_STATUS
+          MHD_websocket_check_version_header (const char*
+          version_header)
+     Checks the value of the ‘Sec-WebSocket-Version’ HTTP request
+     header.  Websocket requests require the value ‘13’ in the
+     ‘Sec-WebSocket-Version’ HTTP request header.
+
+     VERSION_HEADER
+          Value of the ‘Sec-WebSocket-Version’ request header.  You can
+          get this request header value by passing
+          ‘MHD_HTTP_HEADER_SEC_WEBSOCKET_VERSION’ to
+          ‘MHD_lookup_connection_value()’.  If you pass ‘NULL’ then this
+          is handled like a not matching ‘Sec-WebSocket-Version’ header
+          value.
+
+     Returns 0 when the ‘Sec-WebSocket-Version’ header is valid for a
+     websocket request and a value less than zero when the
+     ‘Sec-WebSocket-Version’ header isn’t valid for a websocket request.
+     Can be compared with ‘enum MHD_WEBSOCKET_STATUS’.
+
+ -- Function: enum MHD_WEBSOCKET_STATUS
+          MHD_websocket_create_accept_header (const char*
+          sec_websocket_key, char* sec_websocket_accept)
+     Checks the value of the ‘Sec-WebSocket-Key’ HTTP request header and
+     generates the value for the ‘Sec-WebSocket-Accept’ HTTP response
+     header.  The generated value must be sent to the client.
+
+     SEC_WEBSOCKET_KEY
+          Value of the ‘Sec-WebSocket-Key’ request header.  You can get
+          this request header value by passing
+          ‘MHD_HTTP_HEADER_SEC_WEBSOCKET_KEY’ to
+          ‘MHD_lookup_connection_value()’.  If you pass ‘NULL’ then this
+          is handled like a not matching ‘Sec-WebSocket-Key’ header
+          value.
+
+     SEC_WEBSOCKET_ACCEPT
+          Response buffer, which will receive the generated value for
+          the ‘Sec-WebSocket-Accept’ HTTP response header.  This buffer
+          must be at least 29 bytes long and will contain the response
+          value plus a terminating ‘NUL’ character on success.  Must not
+          be ‘NULL’.  You can add this HTTP header to your response by
+          passing ‘MHD_HTTP_HEADER_SEC_WEBSOCKET_ACCEPT’ to
+          ‘MHD_add_response_header()’.
+
+     Returns 0 when the ‘Sec-WebSocket-Key’ header was not empty and a
+     result value for the ‘Sec-WebSocket-Accept’ was calculated.  A
+     value less than zero is returned when the ‘Sec-WebSocket-Key’
+     header isn’t valid for a websocket request or when any error
+     occurred.  Can be compared with ‘enum MHD_WEBSOCKET_STATUS’.
+
+
+File: libmicrohttpd.info,  Node: microhttpd-websocket stream,  Next: microhttpd-websocket decode,  Prev: microhttpd-websocket handshake,  Up: microhttpd-websocket
+
+14.2 Websocket stream functions
+===============================
+
+ -- Function: enum MHD_WEBSOCKET_STATUS MHD_websocket_stream_init
+          (struct MHD_WebSocketStream **ws, int flags, size_t
+          max_payload_size)
+     Creates a new websocket stream, used for decoding/encoding.
+
+     WS
+          pointer a variable to fill with the newly created ‘struct
+          MHD_WebSocketStream’, receives ‘NULL’ on error.  May not be
+          ‘NULL’.
+
+          If not required anymore, free the created websocket stream
+          with ‘MHD_websocket_stream_free()’.
+
+     FLAGS
+          combination of ‘enum MHD_WEBSOCKET_FLAG’ values to modify the
+          behavior of the websocket stream.
+
+     MAX_PAYLOAD_SIZE
+          maximum size for incoming payload data in bytes.  Use 0 to
+          allow each size.
+
+     Returns 0 on success, negative values on error.  Can be compared
+     with ‘enum MHD_WEBSOCKET_STATUS’.
+
+ -- Function: enum MHD_WEBSOCKET_STATUS MHD_websocket_stream_init2
+          (struct MHD_WebSocketStream **ws, int flags, size_t
+          max_payload_size, MHD_WebSocketMallocCallback callback_malloc,
+          MHD_WebSocketReallocCallback callback_realloc,
+          MHD_WebSocketFreeCallback callback_free, void* cls_rng,
+          MHD_WebSocketRandomNumberGenerator callback_rng)
+     Creates a new websocket stream, used for decoding/encoding, but
+     with custom memory functions for malloc, realloc and free.  Also a
+     random number generator can be specified for client mode.
+
+     WS
+          pointer a variable to fill with the newly created ‘struct
+          MHD_WebSocketStream’, receives ‘NULL’ on error.  Must not be
+          ‘NULL’.
+
+          If not required anymore, free the created websocket stream
+          with ‘MHD_websocket_stream_free’.
+
+     FLAGS
+          combination of ‘enum MHD_WEBSOCKET_FLAG’ values to modify the
+          behavior of the websocket stream.
+
+     MAX_PAYLOAD_SIZE
+          maximum size for incoming payload data in bytes.  Use 0 to
+          allow each size.
+
+     CALLBACK_MALLOC
+          callback function for allocating memory.  Must not be ‘NULL’.
+          The shorter ‘MHD_websocket_stream_init()’ passes a reference
+          to ‘malloc’ here.
+
+     CALLBACK_REALLOC
+          callback function for reallocating memory.  Must not be
+          ‘NULL’.  The shorter ‘MHD_websocket_stream_init()’ passes a
+          reference to ‘realloc’ here.
+
+     CALLBACK_FREE
+          callback function for freeing memory.  Must not be ‘NULL’.
+          The shorter ‘MHD_websocket_stream_init()’ passes a reference
+          to ‘free’ here.
+
+     CLS_RNG
+          closure for the random number generator.  This is only
+          required when ‘MHD_WEBSOCKET_FLAG_CLIENT’ is passed in
+          ‘flags’.  The given value is passed to the random number
+          generator callback.  May be ‘NULL’ if not needed.  Should be
+          ‘NULL’ when you are not using ‘MHD_WEBSOCKET_FLAG_CLIENT’.
+          The shorter ‘MHD_websocket_stream_init’ passes ‘NULL’ here.
+
+     CALLBACK_RNG
+          callback function for a secure random number generator.  This
+          is only required when ‘MHD_WEBSOCKET_FLAG_CLIENT’ is passed in
+          ‘flags’ and must not be ‘NULL’ then.  Should be ‘NULL’
+          otherwise.  The shorter ‘MHD_websocket_stream_init()’ passes
+          ‘NULL’ here.
+
+     Returns 0 on success, negative values on error.  Can be compared
+     with ‘enum MHD_WEBSOCKET_STATUS’.
+
+ -- Function: enum MHD_WEBSOCKET_STATUS MHD_websocket_stream_free
+          (struct MHD_WebSocketStream *ws)
+     Frees a previously allocated websocket stream
+
+     WS
+          websocket stream to free, this value may be ‘NULL’.
+
+     Returns 0 on success, negative values on error.  Can be compared
+     with ‘enum MHD_WEBSOCKET_STATUS’.
+
+ -- Function: enum MHD_WEBSOCKET_STATUS MHD_websocket_stream_invalidate
+          (struct MHD_WebSocketStream *ws)
+     Invalidates a websocket stream.  After invalidation a websocket
+     stream cannot be used for decoding anymore.  Encoding is still
+     possible.
+
+     WS
+          websocket stream to invalidate.
+
+     Returns 0 on success, negative values on error.  Can be compared
+     with ‘enum MHD_WEBSOCKET_STATUS’.
+
+ -- Function: enum MHD_WEBSOCKET_VALIDITY MHD_websocket_stream_is_valid
+          (struct MHD_WebSocketStream *ws)
+     Queries whether a websocket stream is valid.  Invalidated websocket
+     streams cannot be used for decoding anymore.  Encoding is still
+     possible.
+
+     WS
+          websocket stream to invalidate.
+
+     Returns 0 if invalid, 1 if valid for all types or 2 if valid only
+     for control frames.  Can be compared with ‘enum
+     MHD_WEBSOCKET_VALIDITY’.
+
+
+File: libmicrohttpd.info,  Node: microhttpd-websocket decode,  Next: microhttpd-websocket encode,  Prev: microhttpd-websocket stream,  Up: microhttpd-websocket
+
+14.3 Websocket decode functions
+===============================
+
+ -- Function: enum MHD_WEBSOCKET_STATUS MHD_websocket_decode (struct
+          MHD_WebSocketStream* ws, const char* streambuf, size_t
+          streambuf_len, size_t* streambuf_read_len, char** payload,
+          size_t* payload_len)
+     Decodes a byte sequence for a websocket stream.  Decoding is done
+     until either a frame is complete or the end of the byte sequence is
+     reached.
+
+     WS
+          websocket stream for decoding.
+
+     STREAMBUF
+          byte sequence for decoding.  This is what you typically
+          received via ‘recv()’.
+
+     STREAMBUF_LEN
+          length of the byte sequence in parameter ‘streambuf’.
+
+     STREAMBUF_READ_LEN
+          pointer to a variable, which receives the number of bytes,
+          that has been processed by this call.  This value may be less
+          than the value of ‘streambuf_len’ when a frame is decoded
+          before the end of the buffer is reached.  The remaining bytes
+          of ‘buf’ must be passed to the next call of this function.
+
+     PAYLOAD
+          pointer to a variable, which receives the allocated buffer
+          with the payload data of the decoded frame.  Must not be
+          ‘NULL’.  If no decoded data is available or an error occurred
+          ‘NULL’ is returned.  When the returned value is not ‘NULL’
+          then the buffer contains always ‘payload_len’ bytes plus one
+          terminating ‘NUL’ character (regardless of the frame type).
+
+          The caller must free this buffer using ‘MHD_websocket_free()’.
+
+          If you passed the flag
+          ‘MHD_WEBSOCKET_FLAG_GENERATE_CLOSE_FRAMES_ON_ERROR’ upon
+          creation of the websocket stream and a decoding error occurred
+          (function return value less than 0), then this buffer contains
+          a generated close frame, which must be sent via the socket to
+          the recipient.
+
+          If you passed the flag ‘MHD_WEBSOCKET_FLAG_WANT_FRAGMENTS’
+          upon creation of the websocket stream then this payload may
+          only be a part of the complete message.  Only complete UTF-8
+          sequences are returned for fragmented text frames.  If
+          necessary the UTF-8 sequence will be completed with the next
+          text fragment.
+
+     PAYLOAD_LEN
+          pointer to a variable, which receives length of the result
+          ‘payload’ buffer in bytes.  Must not be ‘NULL’.  This receives
+          0 when no data is available, when the decoded payload has a
+          length of zero or when an error occurred.
+
+     Returns a value greater than zero when a frame is complete.
+     Compare with ‘enum MHD_WEBSOCKET_STATUS’ to distinguish the frame
+     type.  Returns 0 when the call succeeded, but no frame is
+     available.  Returns a value less than zero on errors.
+
+ -- Function: enum MHD_WEBSOCKET_STATUS MHD_websocket_split_close_reason
+          (const char* payload, size_t payload_len, unsigned short*
+          reason_code, const char** reason_utf8, size_t*
+          reason_utf8_len)
+     Splits the payload of a decoded close frame.
+
+     PAYLOAD
+          payload of the close frame.  This parameter may only be ‘NULL’
+          if ‘payload_len’ is 0.
+
+     PAYLOAD_LEN
+          length of ‘payload’.
+
+     REASON_CODE
+          pointer to a variable, which receives the numeric close
+          reason.  If there was no close reason, this is 0.  This value
+          can be compared with ‘enum MHD_WEBSOCKET_CLOSEREASON’.  May be
+          ‘NULL’.
+
+     REASON_UTF8
+          pointer to a variable, which receives the literal close
+          reason.  If there was no literal close reason, this will be
+          ‘NULL’.  May be ‘NULL’.
+
+          Please note that no memory is allocated in this function.  If
+          not ‘NULL’ the returned value of this parameter points to a
+          position in the specified ‘payload’.
+
+     REASON_UTF8_LEN
+          pointer to a variable, which receives the length of the
+          literal close reason.  If there was no literal close reason,
+          this is 0.  May be ‘NULL’.
+
+     Returns 0 on success or a value less than zero on errors.  Can be
+     compared with ‘enum MHD_WEBSOCKET_STATUS’.
+
+
+File: libmicrohttpd.info,  Node: microhttpd-websocket encode,  Next: microhttpd-websocket memory,  Prev: microhttpd-websocket decode,  Up: microhttpd-websocket
+
+14.4 Websocket encode functions
+===============================
+
+ -- Function: enum MHD_WEBSOCKET_STATUS MHD_websocket_encode_text
+          (struct MHD_WebSocketStream* ws, const char* payload_utf8,
+          size_t payload_utf8_len, int fragmentation, char** frame,
+          size_t* frame_len, int* utf8_step)
+     Encodes an UTF-8 encoded text into websocket text frame
+
+     WS
+          websocket stream;
+
+     PAYLOAD_UTF8
+          text to send.  This must be UTF-8 encoded.  If you don’t want
+          UTF-8 then send a binary frame with
+          ‘MHD_websocket_encode_binary()’ instead.  May be be ‘NULL’ if
+          ‘payload_utf8_len’ is 0, must not be ‘NULL’ otherwise.
+
+     PAYLOAD_UTF8_LEN
+          length of ‘payload_utf8’ in bytes.
+
+     FRAGMENTATION
+          A value of ‘enum MHD_WEBSOCKET_FRAGMENTATION’ to specify the
+          fragmentation behavior.  Specify
+          ‘MHD_WEBSOCKET_FRAGMENTATION_NONE’ or just 0 if you don’t want
+          to use fragmentation (default).
+
+     FRAME
+          pointer to a variable, which receives a buffer with the
+          encoded text frame.  Must not be ‘NULL’.  The buffer contains
+          what you typically send via ‘send()’ to the recipient.  If no
+          encoded data is available the variable receives ‘NULL’.
+
+          If the variable is not ‘NULL’ then the buffer contains always
+          ‘frame_len’ bytes plus one terminating ‘NUL’ character.  The
+          caller must free this buffer using ‘MHD_websocket_free()’.
+
+     FRAME_LEN
+          pointer to a variable, which receives the length of the
+          encoded frame in bytes.  Must not be ‘NULL’.
+
+     UTF8_STEP
+          If fragmentation is used (the parameter ‘fragmentation’ is not
+          0) then is parameter is required and must not be ‘NULL’.  If
+          no fragmentation is used, this parameter is optional and
+          should be ‘NULL’.
+
+          This parameter is a pointer to a variable which contains the
+          last check status of the UTF-8 sequence.  It is required to
+          continue a previous UTF-8 sequence check when fragmentation is
+          used, because a UTF-8 sequence could be splitted upon
+          fragments.
+
+          ‘enum MHD_WEBSOCKET_UTF8STEP’ is used for this value.  If you
+          start a new fragment using ‘MHD_WEBSOCKET_FRAGMENTATION_NONE’
+          or ‘MHD_WEBSOCKET_FRAGMENTATION_FIRST’ the old value of this
+          variable will be discarded and the value of this variable will
+          be initialized to ‘MHD_WEBSOCKET_UTF8STEP_NORMAL’.  On all
+          other fragmentation modes the previous value of the pointed
+          variable will be used to continue the UTF-8 sequence check.
+
+     Returns 0 on success or a value less than zero on errors.  Can be
+     compared with ‘enum MHD_WEBSOCKET_STATUS’.
+
+ -- Function: enum MHD_WEBSOCKET_STATUS MHD_websocket_encode_binary
+          (struct MHD_WebSocketStream* ws, const char* payload, size_t
+          payload_len, int fragmentation, char** frame, size_t*
+          frame_len)
+     Encodes binary data into websocket binary frame
+
+     WS
+          websocket stream;
+
+     PAYLOAD
+          binary data to send.  May be be ‘NULL’ if ‘payload_len’ is 0,
+          must not be ‘NULL’ otherwise.
+
+     PAYLOAD_LEN
+          length of ‘payload’ in bytes.
+
+     FRAGMENTATION
+          A value of ‘enum MHD_WEBSOCKET_FRAGMENTATION’ to specify the
+          fragmentation behavior.  Specify
+          ‘MHD_WEBSOCKET_FRAGMENTATION_NONE’ or just 0 if you don’t want
+          to use fragmentation (default).
+
+     FRAME
+          pointer to a variable, which receives a buffer with the
+          encoded binary frame.  Must not be ‘NULL’.  The buffer
+          contains what you typically send via ‘send()’ to the
+          recipient.  If no encoded data is available the variable
+          receives ‘NULL’.
+
+          If the variable is not ‘NULL’ then the buffer contains always
+          ‘frame_len’ bytes plus one terminating ‘NUL’ character.  The
+          caller must free this buffer using ‘MHD_websocket_free()’.
+
+     FRAME_LEN
+          pointer to a variable, which receives the length of the
+          encoded frame in bytes.  Must not be ‘NULL’.
+
+     Returns 0 on success or a value less than zero on errors.  Can be
+     compared with ‘enum MHD_WEBSOCKET_STATUS’.
+
+ -- Function: enum MHD_WEBSOCKET_STATUS MHD_websocket_encode_ping
+          (struct MHD_WebSocketStream* ws, const char* payload, size_t
+          payload_len, char** frame, size_t* frame_len)
+     Encodes a websocket ping frame.  Ping frames are used to check
+     whether a recipient is still available and what latency the
+     websocket connection has.
+
+     WS
+          websocket stream;
+
+     PAYLOAD
+          binary ping data to send.  May be ‘NULL’ if ‘payload_len’ is
+          0.
+
+     PAYLOAD_LEN
+          length of ‘payload’ in bytes.  This may not exceed 125 bytes.
+
+     FRAME
+          pointer to a variable, which receives a buffer with the
+          encoded ping frame.  Must not be ‘NULL’.  The buffer contains
+          what you typically send via ‘send()’ to the recipient.  If no
+          encoded data is available the variable receives ‘NULL’.
+
+          If the variable is not ‘NULL’ then the buffer contains always
+          ‘frame_len’ bytes plus one terminating ‘NUL’ character.  The
+          caller must free this buffer using ‘MHD_websocket_free()’.
+
+     FRAME_LEN
+          pointer to a variable, which receives the length of the
+          encoded frame in bytes.  Must not be ‘NULL’.
+
+     Returns 0 on success or a value less than zero on errors.  Can be
+     compared with ‘enum MHD_WEBSOCKET_STATUS’.
+
+ -- Function: enum MHD_WEBSOCKET_STATUS MHD_websocket_encode_pong
+          (struct MHD_WebSocketStream* ws, const char* payload, size_t
+          payload_len, char** frame, size_t* frame_len)
+     Encodes a websocket pong frame.  Pong frames are used to answer a
+     previously received websocket ping frame.
+
+     WS
+          websocket stream;
+
+     PAYLOAD
+          binary pong data to send, which should be the decoded payload
+          from the received ping frame.  May be ‘NULL’ if ‘payload_len’
+          is 0.
+
+     PAYLOAD_LEN
+          length of ‘payload’ in bytes.  This may not exceed 125 bytes.
+
+     FRAME
+          pointer to a variable, which receives a buffer with the
+          encoded pong frame.  Must not be ‘NULL’.  The buffer contains
+          what you typically send via ‘send()’ to the recipient.  If no
+          encoded data is available the variable receives ‘NULL’.
+
+          If the variable is not ‘NULL’ then the buffer contains always
+          ‘frame_len’ bytes plus one terminating ‘NUL’ character.  The
+          caller must free this buffer using ‘MHD_websocket_free()’.
+
+     FRAME_LEN
+          pointer to a variable, which receives the length of the
+          encoded frame in bytes.  Must not be ‘NULL’.
+
+     Returns 0 on success or a value less than zero on errors.  Can be
+     compared with ‘enum MHD_WEBSOCKET_STATUS’.
+
+ -- Function: enum MHD_WEBSOCKET_STATUS MHD_websocket_encode_close
+          (struct MHD_WebSocketStream* ws, unsigned short reason_code,
+          const char* reason_utf8, size_t reason_utf8_len, char** frame,
+          size_t* frame_len)
+     Encodes a websocket close frame.  Close frames are used to close a
+     websocket connection in a formal way.
+
+     WS
+          websocket stream;
+
+     REASON_CODE
+          reason for close.  You can use ‘enum
+          MHD_WEBSOCKET_CLOSEREASON’ for typical reasons, but you are
+          not limited to these values.  The allowed values are specified
+          in RFC 6455 7.4.  If you don’t want to enter a reason, you can
+          specify ‘MHD_WEBSOCKET_CLOSEREASON_NO_REASON’ (or just 0) then
+          no reason is encoded.
+
+     REASON_UTF8
+          An UTF-8 encoded text reason why the connection is closed.
+          This may be ‘NULL’ if ‘reason_utf8_len’ is 0.  This must be
+          ‘NULL’ if ‘reason_code’ equals to zero
+          (‘MHD_WEBSOCKET_CLOSEREASON_NO_REASON’).
+
+     REASON_UTF8_LEN
+          length of the UTF-8 encoded text reason in bytes.  This may
+          not exceed 123 bytes.
+
+     FRAME
+          pointer to a variable, which receives a buffer with the
+          encoded close frame.  Must not be ‘NULL’.  The buffer contains
+          what you typically send via ‘send()’ to the recipient.  If no
+          encoded data is available the variable receives ‘NULL’.
+
+          If the variable is not ‘NULL’ then the buffer contains always
+          ‘frame_len’ bytes plus one terminating ‘NUL’ character.  The
+          caller must free this buffer using ‘MHD_websocket_free()’.
+
+     FRAME_LEN
+          pointer to a variable, which receives the length of the
+          encoded frame in bytes.  Must not be ‘NULL’.
+
+     Returns 0 on success or a value less than zero on errors.  Can be
+     compared with ‘enum MHD_WEBSOCKET_STATUS’.
+
+
+File: libmicrohttpd.info,  Node: microhttpd-websocket memory,  Prev: microhttpd-websocket encode,  Up: microhttpd-websocket
+
+14.5 Websocket memory functions
+===============================
+
+ -- Function: void* MHD_websocket_malloc (struct MHD_WebSocketStream*
+          ws, size_t buf_len)
+     Allocates memory with the associated ‘malloc()’ function of the
+     websocket stream.  The memory allocation function could be
+     different for a websocket stream if ‘MHD_websocket_stream_init2()’
+     has been used for initialization.
+
+     WS
+          websocket stream;
+
+     BUF_LEN
+          size of the buffer to allocate in bytes.
+
+     Returns the pointer of the allocated buffer or ‘NULL’ on failure.
+
+ -- Function: void* MHD_websocket_realloc (struct MHD_WebSocketStream*
+          ws, void* buf, size_t new_buf_len)
+     Reallocates memory with the associated ‘realloc()’ function of the
+     websocket stream.  The memory reallocation function could be
+     different for a websocket stream if ‘MHD_websocket_stream_init2()’
+     has been used for initialization.
+
+     WS
+          websocket stream;
+
+     BUF
+          current buffer, may be ‘NULL’;
+
+     NEW_BUF_LEN
+          new size of the buffer in bytes.
+
+     Return the pointer of the reallocated buffer or ‘NULL’ on failure.
+     On failure the old pointer remains valid.
+
+ -- Function: void MHD_websocket_free (struct MHD_WebSocketStream* ws,
+          void* buf)
+     Frees memory with the associated ‘free()’ function of the websocket
+     stream.  The memory free function could be different for a
+     websocket stream if ‘MHD_websocket_stream_init2()’ has been used
+     for initialization.
+
+     WS
+          websocket stream;
+
+     BUF
+          buffer to free, this may be ‘NULL’ then nothing happens.
+
+
+File: libmicrohttpd.info,  Node: GNU-LGPL,  Next: eCos License,  Prev: microhttpd-websocket,  Up: Top
 
 GNU-LGPL
 ********
@@ -4464,134 +5609,186 @@ Concept Index
  [index ]
 * Menu:
 
-* ARM:                                   microhttpd-intro.    (line 282)
-* bind, restricting bind:                microhttpd-const.    (line 332)
-* bind, restricting bind <1>:            microhttpd-const.    (line 567)
-* cipher:                                microhttpd-const.    (line 405)
-* clock:                                 microhttpd-const.    (line 105)
-* compilation:                           microhttpd-intro.    (line 121)
+* ARM:                                   microhttpd-intro.   (line  285)
+* bind, restricting bind:                microhttpd-const.   (line  332)
+* bind, restricting bind <1>:            microhttpd-const.   (line  567)
+* cipher:                                microhttpd-const.   (line  405)
+* clock:                                 microhttpd-const.   (line  105)
+* compilation:                           microhttpd-intro.   (line  124)
 * connection, limiting number of connections: microhttpd-const.
-                                                              (line 209)
+                                                             (line  209)
 * connection, limiting number of connections <1>: microhttpd-info daemon.
-                                                              (line  60)
-* cookie:                                microhttpd-const.    (line 599)
-* cortex m3:                             microhttpd-intro.    (line 282)
-* date:                                  microhttpd-const.    (line 105)
-* debugging:                             microhttpd-const.    (line  31)
-* debugging <1>:                         microhttpd-const.    (line 343)
-* deprecated:                            microhttpd-const.    (line  61)
-* DH:                                    microhttpd-const.    (line 559)
-* digest auth:                           microhttpd-const.    (line 444)
-* digest auth <1>:                       microhttpd-const.    (line 455)
+                                                             (line   60)
+* cookie:                                microhttpd-const.   (line  599)
+* cortex m3:                             microhttpd-intro.   (line  285)
+* date:                                  microhttpd-const.   (line  105)
+* debugging:                             microhttpd-const.   (line   31)
+* debugging <1>:                         microhttpd-const.   (line  343)
+* deprecated:                            microhttpd-const.   (line   61)
+* DH:                                    microhttpd-const.   (line  559)
+* digest auth:                           microhttpd-const.   (line  444)
+* digest auth <1>:                       microhttpd-const.   (line  455)
 * eCos, GNU General Public License with eCos Extension: eCos License.
-                                                              (line   6)
-* embedded systems:                      microhttpd-intro.    (line 121)
-* embedded systems <1>:                  microhttpd-intro.    (line 282)
-* embedded systems <2>:                  microhttpd-const.    (line 105)
-* embedded systems <3>:                  microhttpd-const.    (line 112)
-* embedded systems <4>:                  microhttpd-const.    (line 543)
-* epoll:                                 microhttpd-intro.    (line  67)
-* epoll <1>:                             microhttpd-const.    (line  77)
+                                                             (line    6)
+* embedded systems:                      microhttpd-intro.   (line  124)
+* embedded systems <1>:                  microhttpd-intro.   (line  285)
+* embedded systems <2>:                  microhttpd-const.   (line  105)
+* embedded systems <3>:                  microhttpd-const.   (line  112)
+* embedded systems <4>:                  microhttpd-const.   (line  543)
+* epoll:                                 microhttpd-intro.   (line   67)
+* epoll <1>:                             microhttpd-const.   (line   77)
 * epoll <2>:                             microhttpd-info daemon.
-                                                              (line  49)
-* escaping:                              microhttpd-const.    (line 526)
-* FD_SETSIZE:                            microhttpd-const.    (line  70)
-* FD_SETSIZE <1>:                        microhttpd-const.    (line  77)
-* foreign-function interface:            microhttpd-const.    (line 504)
+                                                             (line   49)
+* escaping:                              microhttpd-const.   (line  526)
+* FD_SETSIZE:                            microhttpd-const.   (line   70)
+* FD_SETSIZE <1>:                        microhttpd-const.   (line   77)
+* foreign-function interface:            microhttpd-const.   (line  504)
 * HTTP2:                                 microhttpd-response upgrade.
-                                                              (line   6)
-* IAR:                                   microhttpd-intro.    (line 282)
-* internationalization:                  microhttpd-const.    (line 526)
-* IPv6:                                  microhttpd-const.    (line  45)
-* IPv6 <1>:                              microhttpd-const.    (line  55)
-* license:                               GNU-LGPL.            (line   6)
-* license <1>:                           eCos License.        (line   6)
-* license <2>:                           GNU-GPL.             (line   6)
-* license <3>:                           GNU-FDL.             (line   6)
-* listen:                                microhttpd-const.    (line 112)
-* listen <1>:                            microhttpd-const.    (line 143)
-* listen <2>:                            microhttpd-const.    (line 549)
+                                                             (line    6)
+* IAR:                                   microhttpd-intro.   (line  285)
+* internationalization:                  microhttpd-const.   (line  526)
+* IPv6:                                  microhttpd-const.   (line   45)
+* IPv6 <1>:                              microhttpd-const.   (line   55)
+* license:                               GNU-LGPL.           (line    6)
+* license <1>:                           eCos License.       (line    6)
+* license <2>:                           GNU-GPL.            (line    6)
+* license <3>:                           GNU-FDL.            (line    6)
+* listen:                                microhttpd-const.   (line  112)
+* listen <1>:                            microhttpd-const.   (line  143)
+* listen <2>:                            microhttpd-const.   (line  549)
 * listen <3>:                            microhttpd-info daemon.
-                                                              (line  43)
-* logging:                               microhttpd-const.    (line 343)
-* logging <1>:                           microhttpd-const.    (line 485)
-* long long:                             microhttpd-intro.    (line 282)
-* memory:                                microhttpd-const.    (line 201)
-* memory, limiting memory utilization:   microhttpd-const.    (line 193)
-* MHD_LONG_LONG:                         microhttpd-intro.    (line 282)
-* microhttpd.h:                          microhttpd-intro.    (line 222)
-* OCSP:                                  microhttpd-const.    (line 428)
-* options:                               microhttpd-const.    (line 504)
-* performance:                           microhttpd-intro.    (line  91)
-* performance <1>:                       microhttpd-const.    (line  90)
-* performance <2>:                       microhttpd-const.    (line 496)
+                                                             (line   43)
+* logging:                               microhttpd-const.   (line  343)
+* logging <1>:                           microhttpd-const.   (line  485)
+* long long:                             microhttpd-intro.   (line  285)
+* memory:                                microhttpd-const.   (line  201)
+* memory, limiting memory utilization:   microhttpd-const.   (line  193)
+* MHD_LONG_LONG:                         microhttpd-intro.   (line  285)
+* microhttpd.h:                          microhttpd-intro.   (line  225)
+* OCSP:                                  microhttpd-const.   (line  428)
+* options:                               microhttpd-const.   (line  504)
+* performance:                           microhttpd-intro.   (line   91)
+* performance <1>:                       microhttpd-const.   (line   90)
+* performance <2>:                       microhttpd-const.   (line  496)
 * performance <3>:                       microhttpd-info conn.
-                                                              (line 114)
-* poll:                                  microhttpd-intro.    (line  67)
-* poll <1>:                              microhttpd-const.    (line  70)
-* poll <2>:                              microhttpd-init.     (line  74)
-* portability:                           microhttpd-intro.    (line 121)
-* portability <1>:                       microhttpd-intro.    (line 222)
-* POST method:                           microhttpd-const.    (line 603)
-* POST method <1>:                       microhttpd-struct.   (line  22)
-* POST method <2>:                       microhttpd-cb.       (line  48)
-* POST method <3>:                       microhttpd-post.     (line   6)
-* POST method <4>:                       microhttpd-post api. (line   6)
-* proxy:                                 microhttpd-const.    (line 112)
-* PSK:                                   microhttpd-const.    (line 438)
-* pthread:                               microhttpd-const.    (line 543)
-* PUT method:                            microhttpd-cb.       (line  48)
-* query string:                          microhttpd-const.    (line 343)
-* quiesce:                               microhttpd-const.    (line 119)
-* quiesce <1>:                           microhttpd-init.     (line  51)
-* random:                                microhttpd-const.    (line 444)
-* replay attack:                         microhttpd-const.    (line 455)
-* reusing listening address:             microhttpd-const.    (line 567)
+                                                             (line  114)
+* poll:                                  microhttpd-intro.   (line   67)
+* poll <1>:                              microhttpd-const.   (line   70)
+* poll <2>:                              microhttpd-init.    (line   74)
+* portability:                           microhttpd-intro.   (line  124)
+* portability <1>:                       microhttpd-intro.   (line  225)
+* POST method:                           microhttpd-const.   (line  603)
+* POST method <1>:                       microhttpd-struct.  (line   22)
+* POST method <2>:                       microhttpd-cb.      (line   48)
+* POST method <3>:                       microhttpd-post.    (line    6)
+* POST method <4>:                       microhttpd-post api.
+                                                             (line    6)
+* proxy:                                 microhttpd-const.   (line  112)
+* PSK:                                   microhttpd-const.   (line  438)
+* pthread:                               microhttpd-const.   (line  543)
+* PUT method:                            microhttpd-cb.      (line   48)
+* query string:                          microhttpd-const.   (line  343)
+* quiesce:                               microhttpd-const.   (line  119)
+* quiesce <1>:                           microhttpd-init.    (line   51)
+* random:                                microhttpd-const.   (line  444)
+* replay attack:                         microhttpd-const.   (line  455)
+* reusing listening address:             microhttpd-const.   (line  567)
 * RFC2817:                               microhttpd-response upgrade.
-                                                              (line   6)
-* select:                                microhttpd-intro.    (line  67)
-* select <1>:                            microhttpd-const.    (line  70)
-* select <2>:                            microhttpd-const.    (line  77)
-* select <3>:                            microhttpd-init.     (line  74)
-* select <4>:                            microhttpd-init.     (line  89)
-* signals:                               microhttpd-intro.    (line 243)
-* SNI:                                   microhttpd-const.    (line 413)
-* SNI <1>:                               microhttpd-const.    (line 428)
-* SSL:                                   microhttpd-const.    (line  34)
-* SSL <1>:                               microhttpd-const.    (line 366)
-* SSL <2>:                               microhttpd-const.    (line 372)
-* SSL <3>:                               microhttpd-const.    (line 382)
-* SSL <4>:                               microhttpd-const.    (line 388)
-* SSL <5>:                               microhttpd-const.    (line 400)
-* SSL <6>:                               microhttpd-const.    (line 405)
-* SSL <7>:                               microhttpd-const.    (line 413)
-* SSL <8>:                               microhttpd-const.    (line 428)
-* SSL <9>:                               microhttpd-const.    (line 438)
-* SSL <10>:                              microhttpd-const.    (line 559)
-* stack:                                 microhttpd-const.    (line 543)
-* systemd:                               microhttpd-const.    (line 478)
-* testing:                               microhttpd-const.    (line 321)
-* thread:                                microhttpd-const.    (line 543)
-* timeout:                               microhttpd-const.    (line 247)
-* timeout <1>:                           microhttpd-inspect.  (line  39)
+                                                             (line    6)
+* select:                                microhttpd-intro.   (line   67)
+* select <1>:                            microhttpd-const.   (line   70)
+* select <2>:                            microhttpd-const.   (line   77)
+* select <3>:                            microhttpd-init.    (line   74)
+* select <4>:                            microhttpd-init.    (line   89)
+* signals:                               microhttpd-intro.   (line  246)
+* SNI:                                   microhttpd-const.   (line  413)
+* SNI <1>:                               microhttpd-const.   (line  428)
+* SSL:                                   microhttpd-const.   (line   34)
+* SSL <1>:                               microhttpd-const.   (line  366)
+* SSL <2>:                               microhttpd-const.   (line  372)
+* SSL <3>:                               microhttpd-const.   (line  382)
+* SSL <4>:                               microhttpd-const.   (line  388)
+* SSL <5>:                               microhttpd-const.   (line  400)
+* SSL <6>:                               microhttpd-const.   (line  405)
+* SSL <7>:                               microhttpd-const.   (line  413)
+* SSL <8>:                               microhttpd-const.   (line  428)
+* SSL <9>:                               microhttpd-const.   (line  438)
+* SSL <10>:                              microhttpd-const.   (line  559)
+* stack:                                 microhttpd-const.   (line  543)
+* systemd:                               microhttpd-const.   (line  478)
+* testing:                               microhttpd-const.   (line  321)
+* thread:                                microhttpd-const.   (line  543)
+* timeout:                               microhttpd-const.   (line  247)
+* timeout <1>:                           microhttpd-inspect. (line   39)
 * timeout <2>:                           microhttpd-option conn.
-                                                              (line   6)
-* TLS:                                   microhttpd-const.    (line  34)
-* TLS <1>:                               microhttpd-const.    (line 366)
-* TLS <2>:                               microhttpd-const.    (line 372)
-* TLS <3>:                               microhttpd-const.    (line 382)
-* TLS <4>:                               microhttpd-const.    (line 388)
-* TLS <5>:                               microhttpd-const.    (line 400)
-* TLS <6>:                               microhttpd-const.    (line 405)
-* TLS <7>:                               microhttpd-const.    (line 413)
-* TLS <8>:                               microhttpd-const.    (line 428)
-* TLS <9>:                               microhttpd-const.    (line 438)
-* TLS <10>:                              microhttpd-const.    (line 559)
-* upgrade:                               microhttpd-const.    (line 148)
+                                                             (line    6)
+* TLS:                                   microhttpd-const.   (line   34)
+* TLS <1>:                               microhttpd-const.   (line  366)
+* TLS <2>:                               microhttpd-const.   (line  372)
+* TLS <3>:                               microhttpd-const.   (line  382)
+* TLS <4>:                               microhttpd-const.   (line  388)
+* TLS <5>:                               microhttpd-const.   (line  400)
+* TLS <6>:                               microhttpd-const.   (line  405)
+* TLS <7>:                               microhttpd-const.   (line  413)
+* TLS <8>:                               microhttpd-const.   (line  428)
+* TLS <9>:                               microhttpd-const.   (line  438)
+* TLS <10>:                              microhttpd-const.   (line  559)
+* upgrade:                               microhttpd-const.   (line  148)
 * Upgrade:                               microhttpd-response upgrade.
-                                                              (line   6)
+                                                             (line    6)
+* websocket:                             microhttpd-const.   (line  710)
+* websocket <1>:                         microhttpd-const.   (line  775)
+* websocket <2>:                         microhttpd-const.   (line  807)
+* websocket <3>:                         microhttpd-const.   (line 1001)
+* websocket <4>:                         microhttpd-const.   (line 1066)
+* websocket <5>:                         microhttpd-const.   (line 1124)
+* websocket <6>:                         microhttpd-struct.  (line   31)
+* websocket <7>:                         microhttpd-cb.      (line  243)
+* websocket <8>:                         microhttpd-cb.      (line  259)
+* websocket <9>:                         microhttpd-cb.      (line  278)
+* websocket <10>:                        microhttpd-cb.      (line  292)
+* websocket <11>:                        microhttpd-websocket handshake.
+                                                             (line    8)
+* websocket <12>:                        microhttpd-websocket handshake.
+                                                             (line   24)
+* websocket <13>:                        microhttpd-websocket handshake.
+                                                             (line   42)
+* websocket <14>:                        microhttpd-websocket handshake.
+                                                             (line   60)
+* websocket <15>:                        microhttpd-websocket handshake.
+                                                             (line   80)
+* websocket <16>:                        microhttpd-websocket stream.
+                                                             (line    9)
+* websocket <17>:                        microhttpd-websocket stream.
+                                                             (line   36)
+* websocket <18>:                        microhttpd-websocket stream.
+                                                             (line   91)
+* websocket <19>:                        microhttpd-websocket stream.
+                                                             (line  101)
+* websocket <20>:                        microhttpd-websocket stream.
+                                                             (line  113)
+* websocket <21>:                        microhttpd-websocket decode.
+                                                             (line   10)
+* websocket <22>:                        microhttpd-websocket decode.
+                                                             (line   70)
+* websocket <23>:                        microhttpd-websocket encode.
+                                                             (line   10)
+* websocket <24>:                        microhttpd-websocket encode.
+                                                             (line   71)
+* websocket <25>:                        microhttpd-websocket encode.
+                                                             (line  110)
+* websocket <26>:                        microhttpd-websocket encode.
+                                                             (line  144)
+* websocket <27>:                        microhttpd-websocket encode.
+                                                             (line  179)
+* websocket <28>:                        microhttpd-websocket memory.
+                                                             (line    8)
+* websocket <29>:                        microhttpd-websocket memory.
+                                                             (line   23)
+* websocket <30>:                        microhttpd-websocket memory.
+                                                             (line   42)
 * WebSockets:                            microhttpd-response upgrade.
-                                                              (line   6)
+                                                             (line    6)
 
 
 File: libmicrohttpd.info,  Node: Function and Data Index,  Next: Type Index,  Prev: Concept Index,  Up: Top
@@ -4607,6 +5804,10 @@ Function and Data Index
 * *MHD_RequestCompletedCallback:         microhttpd-cb.       (line  96)
 * *MHD_UpgradeHandler:                   microhttpd-response upgrade.
                                                               (line  37)
+* *MHD_WebSocketFreeCallback:            microhttpd-cb.       (line 277)
+* *MHD_WebSocketMallocCallback:          microhttpd-cb.       (line 241)
+* *MHD_WebSocketRandomNumberGenerator:   microhttpd-cb.       (line 290)
+* *MHD_WebSocketReallocCallback:         microhttpd-cb.       (line 257)
 * MHD_add_connection:                    microhttpd-init.     (line 115)
 * MHD_basic_auth_get_username_password:  microhttpd-dauth basic.
                                                               (line  10)
@@ -4696,6 +5897,46 @@ Function and Data Index
 * MHD_set_panic_func:                    microhttpd-init.     (line   6)
 * MHD_start_daemon:                      microhttpd-init.     (line  18)
 * MHD_stop_daemon:                       microhttpd-init.     (line  67)
+* MHD_websocket_check_connection_header: microhttpd-websocket handshake.
+                                                              (line  21)
+* MHD_websocket_check_http_version:      microhttpd-websocket handshake.
+                                                              (line   6)
+* MHD_websocket_check_upgrade_header:    microhttpd-websocket handshake.
+                                                              (line  39)
+* MHD_websocket_check_version_header:    microhttpd-websocket handshake.
+                                                              (line  57)
+* MHD_websocket_create_accept_header:    microhttpd-websocket handshake.
+                                                              (line  77)
+* MHD_websocket_decode:                  microhttpd-websocket decode.
+                                                              (line   6)
+* MHD_websocket_encode_binary:           microhttpd-websocket encode.
+                                                              (line  67)
+* MHD_websocket_encode_close:            microhttpd-websocket encode.
+                                                              (line 175)
+* MHD_websocket_encode_ping:             microhttpd-websocket encode.
+                                                              (line 107)
+* MHD_websocket_encode_pong:             microhttpd-websocket encode.
+                                                              (line 141)
+* MHD_websocket_encode_text:             microhttpd-websocket encode.
+                                                              (line   6)
+* MHD_websocket_free:                    microhttpd-websocket memory.
+                                                              (line  40)
+* MHD_websocket_malloc:                  microhttpd-websocket memory.
+                                                              (line   6)
+* MHD_websocket_realloc:                 microhttpd-websocket memory.
+                                                              (line  21)
+* MHD_websocket_split_close_reason:      microhttpd-websocket decode.
+                                                              (line  66)
+* MHD_websocket_stream_free:             microhttpd-websocket stream.
+                                                              (line  89)
+* MHD_websocket_stream_init:             microhttpd-websocket stream.
+                                                              (line   6)
+* MHD_websocket_stream_init2:            microhttpd-websocket stream.
+                                                              (line  30)
+* MHD_websocket_stream_invalidate:       microhttpd-websocket stream.
+                                                              (line  99)
+* MHD_websocket_stream_is_valid:         microhttpd-websocket stream.
+                                                              (line 111)
 
 
 File: libmicrohttpd.info,  Node: Type Index,  Prev: Function and Data Index,  Up: Top
@@ -4706,75 +5947,88 @@ Type Index
  [index ]
 * Menu:
 
-* MHD_Connection:                        microhttpd-struct.   (line   9)
-* MHD_ConnectionInfo:                    microhttpd-struct.   (line  24)
+* MHD_Connection:                        microhttpd-struct.  (line    9)
+* MHD_ConnectionInfo:                    microhttpd-struct.  (line   24)
 * MHD_ConnectionInfoType:                microhttpd-info conn.
-                                                              (line  25)
+                                                             (line   25)
 * MHD_CONNECTION_OPTION:                 microhttpd-option conn.
-                                                              (line  22)
-* MHD_Daemon:                            microhttpd-struct.   (line   6)
-* MHD_DaemonInfo:                        microhttpd-struct.   (line  27)
+                                                             (line   22)
+* MHD_Daemon:                            microhttpd-struct.  (line    6)
+* MHD_DaemonInfo:                        microhttpd-struct.  (line   27)
 * MHD_DaemonInfoType:                    microhttpd-info daemon.
-                                                              (line  25)
+                                                             (line   25)
 * MHD_DigestAuthAlgorithm:               microhttpd-dauth digest.
-                                                              (line  10)
+                                                             (line   10)
 * MHD_FEATURE:                           microhttpd-util feature.
-                                                              (line   6)
-* MHD_FLAG:                              microhttpd-const.    (line   6)
-* MHD_IoVec:                             microhttpd-struct.   (line  18)
-* MHD_OPTION:                            microhttpd-const.    (line 184)
-* MHD_OptionItem:                        microhttpd-const.    (line 578)
-* MHD_PostProcessor:                     microhttpd-struct.   (line  21)
-* MHD_RequestTerminationCode:            microhttpd-const.    (line 616)
-* MHD_Response:                          microhttpd-struct.   (line  15)
-* MHD_ResponseFlags:                     microhttpd-const.    (line 656)
-* MHD_ResponseMemoryMode:                microhttpd-const.    (line 634)
-* MHD_ResponseOptions:                   microhttpd-const.    (line 701)
+                                                             (line    6)
+* MHD_FLAG:                              microhttpd-const.   (line    6)
+* MHD_IoVec:                             microhttpd-struct.  (line   18)
+* MHD_OPTION:                            microhttpd-const.   (line  184)
+* MHD_OptionItem:                        microhttpd-const.   (line  578)
+* MHD_PostProcessor:                     microhttpd-struct.  (line   21)
+* MHD_RequestTerminationCode:            microhttpd-const.   (line  616)
+* MHD_Response:                          microhttpd-struct.  (line   15)
+* MHD_ResponseFlags:                     microhttpd-const.   (line  656)
+* MHD_ResponseMemoryMode:                microhttpd-const.   (line  634)
+* MHD_ResponseOptions:                   microhttpd-const.   (line  701)
 * MHD_UpgradeAction:                     microhttpd-response upgrade.
-                                                              (line 103)
-* MHD_ValueKind:                         microhttpd-const.    (line 591)
+                                                             (line  103)
+* MHD_ValueKind:                         microhttpd-const.   (line  591)
+* MHD_WebSocketStream:                   microhttpd-struct.  (line   30)
+* MHD_WEBSOCKET_CLOSEREASON:             microhttpd-const.   (line 1000)
+* MHD_WEBSOCKET_FLAG:                    microhttpd-const.   (line  709)
+* MHD_WEBSOCKET_FRAGMENTATION:           microhttpd-const.   (line  774)
+* MHD_WEBSOCKET_STATUS:                  microhttpd-const.   (line  806)
+* MHD_WEBSOCKET_UTF8STEP:                microhttpd-const.   (line 1065)
+* MHD_WEBSOCKET_VALIDITY:                microhttpd-const.   (line 1123)
 
 
 
 Tag Table:
-Node: Top814
-Node: microhttpd-intro3122
-Ref: fig:performance8039
-Ref: tbl:supported9010
-Node: microhttpd-const17332
-Node: microhttpd-struct53272
-Node: microhttpd-cb54128
-Node: microhttpd-init64388
-Node: microhttpd-inspect70270
-Node: microhttpd-requests73051
-Node: microhttpd-responses77131
-Node: microhttpd-response enqueue78330
-Ref: microhttpd-response enqueue-Footnote-180659
-Node: microhttpd-response create80894
-Node: microhttpd-response headers88945
-Node: microhttpd-response options91443
-Node: microhttpd-response inspect92326
-Node: microhttpd-response upgrade93547
-Node: microhttpd-flow98925
-Node: microhttpd-dauth102243
-Node: microhttpd-dauth basic103794
-Node: microhttpd-dauth digest105200
-Node: microhttpd-post115420
-Node: microhttpd-post api118419
-Node: microhttpd-info121087
-Node: microhttpd-info daemon121509
-Node: microhttpd-info conn124969
-Node: microhttpd-option conn130028
-Node: microhttpd-util131108
-Node: microhttpd-util feature131379
-Node: microhttpd-util unescape134965
-Node: GNU-LGPL135613
-Node: eCos License163804
-Node: GNU-GPL165195
-Node: GNU-FDL184502
-Node: Concept Index209771
-Node: Function and Data Index219217
-Node: Type Index226097
+Node: Top817
+Node: microhttpd-intro3172
+Ref: fig:performance8089
+Ref: tbl:supported9062
+Node: microhttpd-const17385
+Node: microhttpd-struct75430
+Node: microhttpd-cb76368
+Node: microhttpd-init89673
+Node: microhttpd-inspect95555
+Node: microhttpd-requests98336
+Node: microhttpd-responses102416
+Node: microhttpd-response enqueue103615
+Ref: microhttpd-response enqueue-Footnote-1105944
+Node: microhttpd-response create106179
+Node: microhttpd-response headers114230
+Node: microhttpd-response options116728
+Node: microhttpd-response inspect117611
+Node: microhttpd-response upgrade118832
+Node: microhttpd-flow124210
+Node: microhttpd-dauth127528
+Node: microhttpd-dauth basic129079
+Node: microhttpd-dauth digest130485
+Node: microhttpd-post140705
+Node: microhttpd-post api143704
+Node: microhttpd-info146372
+Node: microhttpd-info daemon146794
+Node: microhttpd-info conn150254
+Node: microhttpd-option conn155520
+Node: microhttpd-util156600
+Node: microhttpd-util feature156883
+Node: microhttpd-util unescape160469
+Node: microhttpd-websocket161117
+Node: microhttpd-websocket handshake161836
+Node: microhttpd-websocket stream167011
+Node: microhttpd-websocket decode172051
+Node: microhttpd-websocket encode176549
+Node: microhttpd-websocket memory185995
+Node: GNU-LGPL187820
+Node: eCos License216016
+Node: GNU-GPL217407
+Node: GNU-FDL236714
+Node: Concept Index261983
+Node: Function and Data Index275169
+Node: Type Index285216
 
 End Tag Table
 

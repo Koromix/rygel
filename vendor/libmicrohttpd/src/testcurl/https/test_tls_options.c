@@ -109,6 +109,9 @@ main (int argc, char *const *argv)
   gcry_control (GCRYCTL_INITIALIZATION_FINISHED, 0);
 #endif
 #endif /* MHD_HTTPS_REQUIRE_GRYPT */
+  if (! testsuite_curl_global_init ())
+    return 99;
+
   if (curl_check_version (MHD_REQ_CURL_VERSION))
   {
     return 77;
@@ -119,21 +122,19 @@ main (int argc, char *const *argv)
     fprintf (stderr, "Curl does not support SSL.  Cannot run the test.\n");
     return 77;
   }
-  if (0 != strncmp (ssl_version, "GnuTLS", 6))
+
+  if (curl_tls_is_schannel () || curl_tls_is_sectransport ())
   {
-    fprintf (stderr, "This test can be run only with libcurl-gnutls.\n");
+    fprintf (stderr,
+             "libcurl TLS backend does not support this test. Skipping.\n");
     return 77;
   }
 
-  if (! testsuite_curl_global_init ())
-    return 99;
-
-  if (curl_uses_nss_ssl () == 0)
+  if (curl_tls_is_nss ())
   {
     aes128_sha = "rsa_aes_128_sha";
     aes256_sha = "rsa_aes_256_sha";
   }
-
 
   if (0 !=
       test_wrap ("TLS1.0-AES-SHA1",
@@ -152,17 +153,17 @@ main (int argc, char *const *argv)
   fprintf (stderr,
            "The following handshake should fail (and print an error message)...\n");
   if (0 !=
-      test_wrap ("TLS1.0 vs SSL3",
+      test_wrap ("TLS1.1 vs TLS1.0",
                  &test_unmatching_ssl_version, NULL, port, daemon_flags,
                  aes256_sha,
-                 CURL_SSLVERSION_SSLv3,
+                 CURL_SSLVERSION_TLSv1_1,
                  MHD_OPTION_HTTPS_MEM_KEY, srv_key_pem,
                  MHD_OPTION_HTTPS_MEM_CERT, srv_self_signed_cert_pem,
                  MHD_OPTION_HTTPS_PRIORITIES,
                  "NONE:+VERS-TLS1.0:+AES-256-CBC:+SHA1:+RSA:+COMP-NULL",
                  MHD_OPTION_END))
   {
-    fprintf (stderr, "TLS1.0 vs SSL3 test failed\n");
+    fprintf (stderr, "TLS1.1 vs TLS1.0 test failed\n");
     errorCount++;
   }
   curl_global_cleanup ();

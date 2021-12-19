@@ -65,7 +65,8 @@ recv_tls_adapter (struct MHD_Connection *connection,
   {
 #ifdef EPOLL_SUPPORT
     if (GNUTLS_E_AGAIN == res)
-      connection->epoll_state &= ~MHD_EPOLL_STATE_READ_READY;
+      connection->epoll_state &=
+        ~((enum MHD_EpollState) MHD_EPOLL_STATE_READ_READY);
 #endif
     /* Any network errors means that buffer is empty. */
     connection->tls_read_ready = false;
@@ -90,8 +91,13 @@ recv_tls_adapter (struct MHD_Connection *connection,
          (GNUTLS_E_CRYPTODEV_IOCTL_ERROR == res) ||
          (GNUTLS_E_CRYPTODEV_DEVICE_ERROR == res) )
       return MHD_ERR_PIPE_;
+#if defined(GNUTLS_E_PREMATURE_TERMINATION)
     if (GNUTLS_E_PREMATURE_TERMINATION == res)
       return MHD_ERR_CONNRESET_;
+#elif defined(GNUTLS_E_UNEXPECTED_PACKET_LENGTH)
+    if (GNUTLS_E_UNEXPECTED_PACKET_LENGTH == res)
+      return MHD_ERR_CONNRESET_;
+#endif /* GNUTLS_E_UNEXPECTED_PACKET_LENGTH */
     if (GNUTLS_E_MEMORY_ERROR == res)
       return MHD_ERR_NOMEM_;
     /* Treat any other error as a hard error. */

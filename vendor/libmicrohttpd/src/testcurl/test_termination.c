@@ -1,6 +1,7 @@
 /*
      This file is part of libmicrohttpd
      Copyright (C) 2009 Christian Grothoff
+     Copyright (C) 2014-2021 Evgeny Grin (Karlson2k)
 
      libmicrohttpd is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published
@@ -22,6 +23,7 @@
  * @file daemontest_termination.c
  * @brief  Testcase for libmicrohttpd tolerating client not closing immediately
  * @author hollosig
+ * @author Karlson2k (Evgeny Grin)
  */
 
 #include "platform.h"

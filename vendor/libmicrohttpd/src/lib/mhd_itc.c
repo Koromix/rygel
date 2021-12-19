@@ -48,7 +48,7 @@ MHD_itc_nonblocking_ (struct MHD_itc_ itc)
 {
   unsigned int i;
 
-  for (i = 0; i<2; i++)
+  for (i = 0; i < 2; i++)
   {
     int flags;
 

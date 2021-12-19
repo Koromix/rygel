@@ -11,6 +11,17 @@ GNU libmicrohttpd is dual-licensed under the GNU Lesser General Public
 License (LGPLv2.1+) and the eCos License.  See COPYING for details.
 
 
+Joining GNU
+===========
+
+This is a GNU program, developed by the GNU Project and part of the
+GNU Operating System. If you are the author of an awesome program and
+want to join us in writing Free Software, please consider making it an
+official GNU program and become a GNU maintainer.  You can find
+instructions on how to do so at http://www.gnu.org/help/evaluation.
+We are looking forward to hacking with you!
+
+
 Installation
 ============
 
@@ -63,8 +74,8 @@ Development Status
 This is a beta release for libmicrohttpd.  Before declaring the
 library stable, we should have testcases for the following features:
 
-- HTTP/1.1 pipelining (need to figure out how to ensure curl pipelines 
-  -- and it seems libcurl has issues with pipelining, 
+- HTTP/1.1 pipelining (need to figure out how to ensure curl pipelines
+  -- and it seems libcurl has issues with pipelining,
   see http://curl.haxx.se/mail/lib-2007-12/0248.html)
 - resource limit enforcement
 - client queuing early response, suppressing 100 CONTINUE
@@ -85,5 +96,3 @@ at all) newer implementation is in src/lib/, with the new API in
 src/include/microhttpd2.h.  The experimental code will need MUCH
 more testing and development, you are strongly advised to stick
 to microhttpd.h unless you are a MHD developer!
-
-

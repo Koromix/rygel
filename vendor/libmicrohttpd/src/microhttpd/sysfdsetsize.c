@@ -33,7 +33,9 @@
 #undef FD_SETSIZE
 #endif /* FD_SETSIZE */
 
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
+#endif /* HAVE_STDLIB_H */
 #if defined(__VXWORKS__) || defined(__vxworks) || defined(OS_VXWORKS)
 #include <sockLib.h>
 #endif /* OS_VXWORKS */

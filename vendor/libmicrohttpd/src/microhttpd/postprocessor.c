@@ -1,6 +1,6 @@
 /*
      This file is part of libmicrohttpd
-     Copyright (C) 2007-2021 Daniel Pittman and Christian Grothoff
+     Copyright (C) 2007-2021 Daniel Pittman, Christian Grothoff, and Evgeny Grin
 
      This library is free software; you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public
@@ -21,6 +21,7 @@
  * @file postprocessor.c
  * @brief  Methods for parsing POST data
  * @author Christian Grothoff
+ * @author Karlson2k (Evgeny Grin)
  */
 
 #include "internal.h"
@@ -47,9 +48,9 @@ enum PP_State
   PP_NextBoundary,
 
   /* url encoding-states */
+  PP_ProcessKey,
   PP_ProcessValue,
   PP_Callback,
-  PP_ExpectNewLine,
 
   /* post encoding-states  */
   PP_ProcessEntryHeaders,
@@ -355,10 +356,15 @@ process_value (struct MHD_PostProcessor *pp,
   size_t xoff;
 
   mhd_assert (pp->xbuf_pos < sizeof (xbuf));
+  /* 'value_start' and 'value_end' must be either both non-NULL or both NULL */
+  mhd_assert ( (NULL == value_start) || (NULL != value_end) );
+  mhd_assert ( (NULL != value_start) || (NULL == value_end) );
+  mhd_assert ( (NULL == last_escape) || (NULL != value_start) );
   /* move remaining input from previous round into processing buffer */
-  memcpy (xbuf,
-          pp->xbuf,
-          pp->xbuf_pos);
+  if (0 != pp->xbuf_pos)
+    memcpy (xbuf,
+            pp->xbuf,
+            pp->xbuf_pos);
   xoff = pp->xbuf_pos;
   pp->xbuf_pos = 0;
   if ( (NULL != last_escape) &&
@@ -381,11 +387,14 @@ process_value (struct MHD_PostProcessor *pp,
     if (delta > XBUF_SIZE - xoff)
       delta = XBUF_SIZE - xoff;
     /* move (additional) input into processing buffer */
-    memcpy (&xbuf[xoff],
-            value_start,
-            delta);
-    xoff += delta;
-    value_start += delta;
+    if (0 != delta)
+    {
+      memcpy (&xbuf[xoff],
+              value_start,
+              delta);
+      xoff += delta;
+      value_start += delta;
+    }
     /* find if escape sequence is at the end of the processing buffer;
        if so, exclude those from processing (reduce delta to point at
        end of processed region) */
@@ -430,8 +439,11 @@ process_value (struct MHD_PostProcessor *pp,
     mhd_assert (xoff < sizeof (xbuf));
     /* unescape */
     xbuf[xoff] = '\0';        /* 0-terminate in preparation */
-    MHD_unescape_plus (xbuf);
-    xoff = MHD_http_unescape (xbuf);
+    if (0 != xoff)
+    {
+      MHD_unescape_plus (xbuf);
+      xoff = MHD_http_unescape (xbuf);
+    }
     /* finally: call application! */
     if (pp->must_ikvi || (0 != xoff) )
     {
@@ -453,10 +465,13 @@ process_value (struct MHD_PostProcessor *pp,
     pp->value_offset += xoff;
     if (cut)
       break;
-    xbuf[delta] = '%';        /* undo 0-termination */
-    memmove (xbuf,
-             &xbuf[delta],
-             clen);
+    if (0 != clen)
+    {
+      xbuf[delta] = '%';        /* undo 0-termination */
+      memmove (xbuf,
+               &xbuf[delta],
+               clen);
+    }
     xoff = clen;
   }
 }
@@ -495,41 +510,80 @@ post_process_urlencoded (struct MHD_PostProcessor *pp,
     case PP_Error:
       /* clearly impossible as per while loop invariant */
       abort ();
-      break;
+      break; /* Unreachable */
     case PP_Init:
-      /* key phase */
-      if (NULL == start_key)
+      /* initial phase */
+      mhd_assert (NULL == start_key);
+      mhd_assert (NULL == end_key);
+      mhd_assert (NULL == start_value);
+      mhd_assert (NULL == end_value);
+      switch (post_data[poff])
+      {
+      case '=':
+        /* Case: (no key)'=' */
+        /* Empty key with value */
+        pp->state = PP_Error;
+        continue;
+      case '&':
+        /* Case: (no key)'&' */
+        /* Empty key without value */
+        poff++;
+        continue;
+      case '\n':
+      case '\r':
+        /* Case: (no key)'\n' or (no key)'\r' */
+        pp->state = PP_Done;
+        poff++;
+        break;
+      default:
+        /* normal character, key start, advance! */
+        pp->state = PP_ProcessKey;
         start_key = &post_data[poff];
-      pp->must_ikvi = true;
+        pp->must_ikvi = true;
+        poff++;
+        continue;
+      }
+      break; /* end PP_Init */
+    case PP_ProcessKey:
+      /* key phase */
+      mhd_assert (NULL == start_value);
+      mhd_assert (NULL == end_value);
+      mhd_assert (NULL != start_key || 0 == poff);
+      mhd_assert (0 != poff || NULL == start_key);
+      mhd_assert (NULL == end_key);
       switch (post_data[poff])
       {
       case '=':
         /* Case: 'key=' */
-        end_key = &post_data[poff];
+        if (0 != poff)
+          end_key = &post_data[poff];
         poff++;
         pp->state = PP_ProcessValue;
         break;
       case '&':
         /* Case: 'key&' */
-        end_key = &post_data[poff];
-        mhd_assert (NULL == start_value);
-        mhd_assert (NULL == end_value);
+        if (0 != poff)
+          end_key = &post_data[poff];
         poff++;
         pp->state = PP_Callback;
         break;
       case '\n':
       case '\r':
         /* Case: 'key\n' or 'key\r' */
-        end_key = &post_data[poff];
-        poff++;
-        pp->state = PP_Done;
+        if (0 != poff)
+          end_key = &post_data[poff];
+        /* No advance here, 'PP_Done' will be selected by next 'PP_Init' phase */
+        pp->state = PP_Callback;
         break;
       default:
         /* normal character, advance! */
+        if (0 == poff)
+          start_key = post_data;
         poff++;
-        continue;
+        break;
       }
-      break; /* end PP_Init */
+      mhd_assert (NULL == end_key || NULL != start_key);
+      break; /* end PP_ProcessKey */
     case PP_ProcessValue:
       if (NULL == start_value)
         start_value = &post_data[poff];
@@ -561,11 +615,14 @@ post_process_urlencoded (struct MHD_PostProcessor *pp,
       case '\r':
         /* Case: 'value\n' or 'value\r' */
         end_value = &post_data[poff];
-        poff++;
-        if (pp->must_ikvi)
-          pp->state = PP_Callback;
+        if (pp->must_ikvi ||
+            (start_value != end_value) )
+          pp->state = PP_Callback; /* No poff advance here to set PP_Done in the next iteration */
         else
+        {
+          poff++;
           pp->state = PP_Done;
+        }
         break;
       case '%':
         last_escape = &post_data[poff];
@@ -603,26 +660,33 @@ post_process_urlencoded (struct MHD_PostProcessor *pp,
       pp->state = PP_Error;
       break;
     case PP_Callback:
-      if ( (pp->buffer_pos + (end_key - start_key) >=
-            pp->buffer_size) ||
-           (pp->buffer_pos + (end_key - start_key) <
-            pp->buffer_pos) )
+      mhd_assert ((NULL != end_key) || (NULL == start_key));
+      if (1)
       {
-        /* key too long, cannot parse! */
-        pp->state = PP_Error;
-        continue;
+        const size_t key_len = end_key - start_key;
+        if (0 != key_len)
+        {
+          if ( (pp->buffer_pos + key_len >= pp->buffer_size) ||
+               (pp->buffer_pos + key_len < pp->buffer_pos) )
+          {
+            /* key too long, cannot parse! */
+            pp->state = PP_Error;
+            continue;
+          }
+          /* compute key, if we have not already */
+          memcpy (&kbuf[pp->buffer_pos],
+                  start_key,
+                  key_len);
+          pp->buffer_pos += key_len;
+          start_key = NULL;
+          end_key = NULL;
+          pp->must_unescape_key = true;
+        }
       }
-      /* compute key, if we have not already */
-      if (NULL != start_key)
-      {
-        memcpy (&kbuf[pp->buffer_pos],
-                start_key,
-                end_key - start_key);
-        pp->buffer_pos += end_key - start_key;
-        start_key = NULL;
-        end_key = NULL;
-        pp->must_unescape_key = true;
-      }
+#ifdef _DEBUG
+      else
+        mhd_assert (0 != pp->buffer_pos);
+#endif /* _DEBUG */
       if (pp->must_unescape_key)
       {
         kbuf[pp->buffer_pos] = '\0'; /* 0-terminate key */
@@ -648,22 +712,36 @@ post_process_urlencoded (struct MHD_PostProcessor *pp,
                  __LINE__,
                  NULL);              /* should never happen! */
     }
+    mhd_assert ((end_key == NULL) || (start_key != NULL));
+    mhd_assert ((end_value == NULL) || (start_value != NULL));
+  }
+
+  mhd_assert (PP_Callback != pp->state);
+
+  if (PP_Error == pp->state)
+  {
+    /* State in error, returning failure */
+    return MHD_NO;
   }
 
   /* save remaining data for next iteration */
   if (NULL != start_key)
   {
+    size_t key_len;
+    mhd_assert ((PP_ProcessKey == pp->state) || (NULL != end_key));
     if (NULL == end_key)
       end_key = &post_data[poff];
-    if (pp->buffer_pos + (end_key - start_key) >= pp->buffer_size)
+    key_len = end_key - start_key;
+    mhd_assert (0 != key_len); /* it must be always non-zero here */
+    if (pp->buffer_pos + key_len >= pp->buffer_size)
     {
       pp->state = PP_Error;
       return MHD_NO;
     }
     memcpy (&kbuf[pp->buffer_pos],
             start_key,
-            end_key - start_key);
-    pp->buffer_pos += end_key - start_key;
+            key_len);
+    pp->buffer_pos += key_len;
     pp->must_unescape_key = true;
     start_key = NULL;
     end_key = NULL;
@@ -681,6 +759,9 @@ post_process_urlencoded (struct MHD_PostProcessor *pp,
     }
     if (NULL == end_value)
       end_value = &post_data[poff];
+    if ( (NULL != last_escape) &&
+         (2 < (end_value - last_escape)) )
+      last_escape = NULL;
     process_value (pp,
                    start_value,
                    end_value,

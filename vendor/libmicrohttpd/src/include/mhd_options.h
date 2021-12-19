@@ -1,6 +1,6 @@
 /*
   This file is part of libmicrohttpd
-  Copyright (C) 2016 Karlson2k (Evgeny Grin)
+  Copyright (C) 2016-2021 Karlson2k (Evgeny Grin)
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -141,5 +141,29 @@
 /* Use faster code by default */
 #define MHD_FAVOR_FAST_CODE 1
 #endif /* !MHD_FAVOR_FAST_CODE && !MHD_FAVOR_SMALL_CODE */
+
+#ifndef MHD_ASAN_ACTIVE
+#if (defined(__GNUC__) || defined(_MSC_VER)) && defined(__SANITIZE_ADDRESS__)
+#define MHD_ASAN_ACTIVE 1
+#elif defined(__has_feature)
+#if __has_feature (address_sanitizer)
+#define MHD_ASAN_ACTIVE 1
+#endif /* __has_feature(address_sanitizer) */
+#endif /* __has_feature */
+#endif /* MHD_ASAN_ACTIVE */
+
+#if defined(MHD_ASAN_ACTIVE) && defined(HAVE_SANITIZER_ASAN_INTERFACE_H) && \
+  (defined(FUNC_ATTR_PTRCOMPARE_WOKRS) || defined(FUNC_ATTR_NOSANITIZE_WORKS))
+#ifndef MHD_ASAN_POISON_ACTIVE
+/* Manual ASAN poisoning could be used */
+#warning User memory poisoning is not active
+#endif /* ! MHD_ASAN_POISON_ACTIVE */
+#else  /* ! (MHD_ASAN_ACTIVE && HAVE_SANITIZER_ASAN_INTERFACE_H &&
+           (FUNC_ATTR_PTRCOMPARE_WOKRS || FUNC_ATTR_NOSANITIZE_WORKS))   */
+#ifdef MHD_ASAN_POISON_ACTIVE
+#error User memory poisoning is active, but conditions are not suitable
+#endif /* MHD_ASAN_POISON_ACTIVE */
+#endif /* ! (MHD_ASAN_ACTIVE && HAVE_SANITIZER_ASAN_INTERFACE_H &&
+           (FUNC_ATTR_PTRCOMPARE_WOKRS || FUNC_ATTR_NOSANITIZE_WORKS))   */
 
 #endif /* MHD_OPTIONS_H */

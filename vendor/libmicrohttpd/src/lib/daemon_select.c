@@ -538,7 +538,7 @@ MHD_daemon_upgrade_connection_with_select_ (struct MHD_Connection *con)
     /* FIXME: does this check really needed? */
     if (MHD_INVALID_SOCKET != max_fd)
     {
-      struct timeval*tvp;
+      struct timeval *tvp;
       struct timeval tv;
       if ( (con->tls_read_ready) &&
            (urh->in_buffer_used < urh->in_buffer_size))

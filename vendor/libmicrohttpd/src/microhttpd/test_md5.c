@@ -27,6 +27,7 @@
 #include "md5.h"
 #include "test_helpers.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 static int verbose = 0; /* verbose level (0-1)*/
 
@@ -369,6 +370,48 @@ test2_bin (void)
 }
 
 
+/* Use data set number 7 as it has the longest sequence */
+#define DATA_POS 6
+#define MAX_OFFSET 31
+
+static int
+test_unaligned (void)
+{
+  int num_failed = 0;
+  unsigned int offset;
+  uint8_t *buf;
+  uint8_t *digest_buf;
+
+  const struct data_unit2 *const tdata = data_units2 + DATA_POS;
+
+  buf = malloc (tdata->bin_l.len + MAX_OFFSET);
+  digest_buf = malloc (MD5_DIGEST_SIZE + MAX_OFFSET);
+  if ((NULL == buf) || (NULL == digest_buf))
+    exit (99);
+
+  for (offset = MAX_OFFSET; offset >= 1; --offset)
+  {
+    struct MD5Context ctx;
+    uint8_t *unaligned_digest;
+    uint8_t *unaligned_buf;
+
+    unaligned_buf = buf + offset;
+    memcpy (unaligned_buf, tdata->bin_l.bin, tdata->bin_l.len);
+    unaligned_digest = digest_buf + MAX_OFFSET - offset;
+    memset (unaligned_digest, 0, MD5_DIGEST_SIZE);
+
+    MHD_MD5Init (&ctx);
+    MHD_MD5Update (&ctx, unaligned_buf, tdata->bin_l.len);
+    MHD_MD5Final (&ctx, unaligned_digest);
+    num_failed += check_result (__FUNCTION__, MAX_OFFSET - offset,
+                                unaligned_digest, tdata->digest);
+  }
+  free (digest_buf);
+  free (buf);
+  return num_failed;
+}
+
+
 int
 main (int argc, char *argv[])
 {
@@ -382,6 +425,8 @@ main (int argc, char *argv[])
 
   num_failed += test2_str ();
   num_failed += test2_bin ();
+
+  num_failed += test_unaligned ();
 
   return num_failed ? 1 : 0;
 }

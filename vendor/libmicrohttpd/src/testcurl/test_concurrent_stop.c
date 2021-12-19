@@ -1,6 +1,7 @@
 /*
      This file is part of libmicrohttpd
      Copyright (C) 2007, 2009, 2011, 2015, 2016 Christian Grothoff
+     Copyright (C) 2014-2021 Evgeny Grin (Karlson2k)
 
      libmicrohttpd is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published
@@ -22,6 +23,7 @@
  * @file test_concurrent_stop.c
  * @brief test stopping server while concurrent GETs are ongoing
  * @author Christian Grothoff
+ * @author Karlson2k (Evgeny Grin)
  */
 #include "MHD_config.h"
 #include "platform.h"
@@ -103,7 +105,7 @@ start_watchdog (int timeout, const char *obj_name)
   watchdog_continue = 1;
   watchdog_obj = obj_name;
   if (0 != pthread_create (&watchdog_tid, NULL, &thread_watchdog,
-                           (void*) (intptr_t) timeout))
+                           (void *) (intptr_t) timeout))
   {
     fprintf (stderr, "Failed to start watchdog.\n");
     _exit (99);
@@ -171,7 +173,7 @@ thread_gets (void *param)
 {
   CURL *c;
   CURLcode errornum;
-  char *const url = (char*) param;
+  char *const url = (char *) param;
 
   c = NULL;
   c = curl_easy_init ();
@@ -222,9 +224,9 @@ do_gets (void *param)
             "http://127.0.0.1:%d/hello_world",
             port);
 
-  for (j = 0; j<PAR; j++)
+  for (j = 0; j < PAR; j++)
   {
-    if (0 != pthread_create (&par[j], NULL, &thread_gets, (void*) url))
+    if (0 != pthread_create (&par[j], NULL, &thread_gets, (void *) url))
     {
       fprintf (stderr, "pthread_create failed.\n");
       continue_requesting = 0;
@@ -236,7 +238,7 @@ do_gets (void *param)
     }
   }
   (void) sleep (1);
-  for (j = 0; j<PAR; j++)
+  for (j = 0; j < PAR; j++)
   {
     pthread_join (par[j], NULL);
   }
@@ -249,7 +251,7 @@ start_gets (int port)
 {
   pthread_t tid;
   continue_requesting = 1;
-  if (0 != pthread_create (&tid, NULL, &do_gets, (void*) (intptr_t) port))
+  if (0 != pthread_create (&tid, NULL, &do_gets, (void *) (intptr_t) port))
   {
     fprintf (stderr, "pthread_create failed.\n");
     _exit (99);
@@ -381,5 +383,5 @@ main (int argc, char *const *argv)
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);
   curl_global_cleanup ();
-  return errorCount != 0;       /* 0 == pass */
+  return (0 == errorCount) ? 0 : 1;       /* 0 == pass */
 }

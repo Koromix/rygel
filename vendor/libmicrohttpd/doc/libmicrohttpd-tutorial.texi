@@ -68,6 +68,7 @@ Free Documentation License".
 * Improved processing of POST data::
 * Session management::
 * Adding a layer of security::
+* Websockets::
 * Bibliography::
 * License text::
 * Example programs::
@@ -109,6 +110,10 @@ Free Documentation License".
 @chapter Adding a layer of security
 @include chapters/tlsauthentication.inc
 
+@node Websockets
+@chapter Websockets
+@include chapters/websocket.inc
+
 @node Bibliography
 @appendix Bibliography
 @include chapters/bibliography.inc
@@ -128,6 +133,7 @@ Free Documentation License".
 * largepost.c::
 * sessions.c::
 * tlsauthentication.c::
+* websocket.c::
 @end menu
 
 @node hellobrowser.c
@@ -176,6 +182,12 @@ Free Documentation License".
 @section tlsauthentication.c
 @smalldisplay
 @verbatiminclude examples/tlsauthentication.c
+@end smalldisplay
+
+@node websocket.c
+@section websocket.c
+@smalldisplay
+@verbatiminclude examples/websocket.c
 @end smalldisplay
 
 @bye

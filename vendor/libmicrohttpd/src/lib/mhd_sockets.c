@@ -37,7 +37,7 @@
  * @param err the WinSock error code.
  * @return pointer to string description of specified WinSock error.
  */
-const char*
+const char *
 MHD_W32_strerror_winsock_ (int err)
 {
   switch (err)
@@ -277,12 +277,12 @@ MHD_W32_socket_pair_ (SOCKET sockets_pair[2], int non_blk)
     listen_addr.sin_port = 0;   /* same as htons(0) */
     listen_addr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
     if ( ((0 == bind (listen_s,
-                      (struct sockaddr*) &listen_addr,
+                      (struct sockaddr *) &listen_addr,
                       c_addinlen)) &&
           (0 == listen (listen_s,
                         1) ) &&
           (0 == getsockname (listen_s,
-                             (struct sockaddr*) &listen_addr,
+                             (struct sockaddr *) &listen_addr,
                              &addr_len))) )
     {
       SOCKET client_s = socket (AF_INET,
@@ -303,7 +303,7 @@ MHD_W32_socket_pair_ (SOCKET sockets_pair[2], int non_blk)
                               FIONBIO,
                               &on_val)) ||
            ( (0 != connect (client_s,
-                            (struct sockaddr*) &listen_addr,
+                            (struct sockaddr *) &listen_addr,
                             c_addinlen)) &&
              (WSAGetLastError () != WSAEWOULDBLOCK)) )
       {
@@ -315,7 +315,7 @@ MHD_W32_socket_pair_ (SOCKET sockets_pair[2], int non_blk)
 
       addr_len = c_addinlen;
       server_s = accept (listen_s,
-                         (struct sockaddr*) &accepted_from_addr,
+                         (struct sockaddr *) &accepted_from_addr,
                          &addr_len);
       if (INVALID_SOCKET == server_s)
       {
@@ -327,7 +327,7 @@ MHD_W32_socket_pair_ (SOCKET sockets_pair[2], int non_blk)
 
       addr_len = c_addinlen;
       if ( (0 == getsockname (client_s,
-                              (struct sockaddr*) &client_addr,
+                              (struct sockaddr *) &client_addr,
                               &addr_len)) &&
            (accepted_from_addr.sin_family == client_addr.sin_family) &&
            (accepted_from_addr.sin_port == client_addr.sin_port) &&

@@ -99,7 +99,7 @@ iovncont_free_callback (void *cls)
   unsigned int i;
 
   for (i = 0; i < TESTSTR_IOVCNT; ++i)
-    free ((void*) iov[i].iov_base);
+    free ((void *) iov[i].iov_base);
   free (iov);
 }
 
@@ -245,7 +245,7 @@ err_out:
   for (j = 0; j < TESTSTR_IOVCNT; ++j)
   {
     if (NULL != iov[j].iov_base)
-      free ((void*) iov[j].iov_base);
+      free ((void *) iov[j].iov_base);
   }
   free (iov);
   return MHD_NO;
@@ -270,7 +270,7 @@ testInternalGet (bool contiguous)
       port += 10;
   }
 
-  cbc.buf = (char*) readbuf;
+  cbc.buf = (char *) readbuf;
   cbc.size = sizeof(readbuf);
   cbc.pos = 0;
 
@@ -350,7 +350,7 @@ testMultithreadedGet ()
       port += 10;
   }
 
-  cbc.buf = (char*) readbuf;
+  cbc.buf = (char *) readbuf;
   cbc.size = sizeof(readbuf);
   cbc.pos = 0;
   d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION
@@ -422,7 +422,7 @@ testMultithreadedPoolGet ()
       port += 10;
   }
 
-  cbc.buf = (char*) readbuf;
+  cbc.buf = (char *) readbuf;
   cbc.size = sizeof(readbuf);
   cbc.pos = 0;
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG
@@ -510,7 +510,7 @@ testExternalGet ()
   }
 
   multi = NULL;
-  cbc.buf = (char*) readbuf;
+  cbc.buf = (char *) readbuf;
   cbc.size = sizeof(readbuf);
   cbc.pos = 0;
   d = MHD_start_daemon (MHD_USE_ERROR_LOG,
@@ -592,35 +592,56 @@ testExternalGet ()
     {
 #ifdef MHD_POSIX_SOCKETS
       if (EINTR != errno)
-        abort ();
+      {
+        fprintf (stderr, "Unexpected select() error: %d. Line: %d\n",
+                 (int) errno, __LINE__);
+        fflush (stderr);
+        exit (99);
+      }
 #else
-      if ((WSAEINVAL != WSAGetLastError ()) || (0 != rs.fd_count) || (0 !=
-                                                                      ws.
-                                                                      fd_count)
-          || (0 != es.fd_count) )
-        abort ();
-      Sleep (1000);
+      if ((WSAEINVAL != WSAGetLastError ()) ||
+          (0 != rs.fd_count) || (0 != ws.fd_count) || (0 != es.fd_count) )
+      {
+        fprintf (stderr, "Unexpected select() error: %d. Line: %d\n",
+                 (int) WSAGetLastError (), __LINE__);
+        fflush (stderr);
+        exit (99);
+      }
+      Sleep (1);
 #endif
     }
     curl_multi_perform (multi, &running);
-    if (running == 0)
+    if (0 == running)
     {
-      msg = curl_multi_info_read (multi, &running);
-      if (msg == NULL)
-        break;
-      if (msg->msg == CURLMSG_DONE)
+      int pending;
+      int curl_fine = 0;
+      while (NULL != (msg = curl_multi_info_read (multi, &pending)))
       {
-        if (msg->data.result != CURLE_OK)
-          printf ("%s failed at %s:%d: `%s'\n",
-                  "curl_multi_perform",
-                  __FILE__,
-                  __LINE__, curl_easy_strerror (msg->data.result));
-        curl_multi_remove_handle (multi, c);
-        curl_multi_cleanup (multi);
-        curl_easy_cleanup (c);
-        c = NULL;
-        multi = NULL;
+        if (msg->msg == CURLMSG_DONE)
+        {
+          if (msg->data.result == CURLE_OK)
+            curl_fine = 1;
+          else
+          {
+            fprintf (stderr,
+                     "%s failed at %s:%d: `%s'\n",
+                     "curl_multi_perform",
+                     __FILE__,
+                     __LINE__, curl_easy_strerror (msg->data.result));
+            abort ();
+          }
+        }
       }
+      if (! curl_fine)
+      {
+        fprintf (stderr, "libcurl haven't returned OK code\n");
+        abort ();
+      }
+      curl_multi_remove_handle (multi, c);
+      curl_multi_cleanup (multi);
+      curl_easy_cleanup (c);
+      c = NULL;
+      multi = NULL;
     }
     MHD_run (d);
   }
@@ -657,7 +678,7 @@ testUnknownPortGet ()
   addr.sin_port = 0;
   addr.sin_addr.s_addr = INADDR_ANY;
 
-  cbc.buf = (char*) readbuf;
+  cbc.buf = (char *) readbuf;
   cbc.size = sizeof(readbuf);
   cbc.pos = 0;
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
@@ -752,5 +773,5 @@ main (int argc, char *const *argv)
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);
   curl_global_cleanup ();
-  return errorCount != 0;       /* 0 == pass */
+  return (0 == errorCount) ? 0 : 1;       /* 0 == pass */
 }

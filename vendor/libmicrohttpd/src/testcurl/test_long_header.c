@@ -1,6 +1,7 @@
 /*
      This file is part of libmicrohttpd
      Copyright (C) 2007 Christian Grothoff
+     Copyright (C) 2016-2021 Evgeny Grin (Karlson2k)
 
      libmicrohttpd is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published
@@ -22,6 +23,7 @@
  * @file test_long_header.c
  * @brief  Testcase for libmicrohttpd handling of very long headers
  * @author Christian Grothoff
+ * @author Karlson2k (Evgeny Grin)
  */
 
 #include "MHD_config.h"
@@ -152,7 +154,7 @@ testLongUrlGet (size_t buff_size)
   curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 0L);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
   curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
   if (oneone)
@@ -163,7 +165,7 @@ testLongUrlGet (size_t buff_size)
      setting NOSIGNAL results in really weird
      crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
-  if (CURLE_OK == curl_easy_perform (c))
+  if (CURLE_OK != curl_easy_perform (c))
   {
     curl_easy_cleanup (c);
     MHD_stop_daemon (d);
@@ -249,7 +251,7 @@ testLongHeaderGet (size_t buff_size)
   curl_easy_setopt (c, CURLOPT_PORT, (long) port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
+  curl_easy_setopt (c, CURLOPT_FAILONERROR, 0L);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
   curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
   if (oneone)
@@ -260,7 +262,7 @@ testLongHeaderGet (size_t buff_size)
      setting NOSIGNAL results in really weird
      crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
-  if (CURLE_OK == curl_easy_perform (c))
+  if (CURLE_OK != curl_easy_perform (c))
   {
     curl_easy_cleanup (c);
     MHD_stop_daemon (d);
@@ -304,5 +306,5 @@ main (int argc, char *const *argv)
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);
   curl_global_cleanup ();
-  return errorCount != 0;       /* 0 == pass */
+  return (0 == errorCount) ? 0 : 1;       /* 0 == pass */
 }

@@ -159,7 +159,7 @@ main (int argc, char *const *argv)
     fprintf (stderr, "Curl does not support SSL.  Cannot run the test.\n");
     return 77;
   }
-  if (curl_uses_nss_ssl () == 0)
+  if (curl_tls_is_nss ())
     aes256_sha = "rsa_aes_256_sha";
 #ifdef EPOLL_SUPPORT
   errorCount +=

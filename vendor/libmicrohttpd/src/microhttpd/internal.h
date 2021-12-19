@@ -1,6 +1,7 @@
 /*
   This file is part of libmicrohttpd
   Copyright (C) 2007-2018 Daniel Pittman and Christian Grothoff
+  Copyright (C) 2014-2021 Evgeny Grin (Karlson2k)
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -19,9 +20,10 @@
 
 /**
  * @file microhttpd/internal.h
- * @brief  internal shared structures
+ * @brief  MHD internal shared structures
  * @author Daniel Pittman
  * @author Christian Grothoff
+ * @author Karlson2k (Evgeny Grin)
  */
 
 #ifndef INTERNAL_H
@@ -43,6 +45,13 @@
 #include <stdbool.h>
 #endif
 
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
+#endif /* HAVE_INTTYPES_H */
+
+#ifndef PRIu64
+#define PRIu64  "llu"
+#endif /* ! PRIu64 */
 
 #ifdef MHD_PANIC
 /* Override any defined MHD_PANIC macro with proper one */
@@ -149,9 +158,9 @@ extern MHD_PanicCallback mhd_panic;
  */
 extern void *mhd_panic_cls;
 
-/* If we have Clang or gcc >= 4.5, use __buildin_unreachable() */
-#if defined(__clang__) || (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= \
-                                             5)
+/* If we have Clang or gcc >= 4.5, use __builtin_unreachable() */
+#if defined(__clang__) || (__GNUC__ > 4) || \
+  (__GNUC__ == 4 && __GNUC_MINOR__ >= 5)
 #define BUILTIN_NOT_REACHED __builtin_unreachable ()
 #elif defined(_MSC_FULL_VER)
 #define BUILTIN_NOT_REACHED __assume (0)
@@ -177,7 +186,7 @@ enum MHD_tristate
   _MHD_NO      = false, /**< State is "off" / "disabled" */
   _MHD_ON      = true,  /**< State is "on"  / "enabled" */
   _MHD_YES     = true   /**< State is "on"  / "enabled" */
-};
+} _MHD_FIXED_ENUM;
 
 
 /**
@@ -223,7 +232,7 @@ enum MHD_EpollState
    * Is this connection in some error state?
    */
   MHD_EPOLL_STATE_ERROR = 128
-};
+} _MHD_FIXED_FLAGS_ENUM;
 
 
 /**
@@ -250,7 +259,7 @@ enum MHD_ConnectionEventLoopInfo
    * We are finished and are awaiting cleanup.
    */
   MHD_EVENT_LOOP_INFO_CLEANUP = 3
-};
+} _MHD_FIXED_ENUM;
 
 
 /**
@@ -313,9 +322,14 @@ MHD_DLOG (const struct MHD_Daemon *daemon,
 struct MHD_HTTP_Header
 {
   /**
-   * Headers are kept in a linked list.
+   * Headers are kept in a double-linked list.
    */
   struct MHD_HTTP_Header *next;
+
+  /**
+   * Headers are kept in a double-linked list.
+   */
+  struct MHD_HTTP_Header *prev;
 
   /**
    * The name of the header (key), without the colon.
@@ -323,7 +337,7 @@ struct MHD_HTTP_Header
   char *header;
 
   /**
-   * Number of bytes in @a header.
+   * The length of the @a header, not including the final zero termination.
    */
   size_t header_size;
 
@@ -333,7 +347,7 @@ struct MHD_HTTP_Header
   char *value;
 
   /**
-   * Number of bytes in @a value.
+   * The length of the @a value, not including the final zero termination.
    */
   size_t value_size;
 
@@ -344,6 +358,19 @@ struct MHD_HTTP_Header
   enum MHD_ValueKind kind;
 
 };
+
+
+/**
+ * Automatically assigned flags
+ */
+enum MHD_ResponseAutoFlags
+{
+  MHD_RAF_NO_FLAGS = 0,                   /**< No auto flags */
+  MHD_RAF_HAS_CONNECTION_HDR = 1 << 0,    /**< Has "Connection" header */
+  MHD_RAF_HAS_CONNECTION_CLOSE = 1 << 1,  /**< Has "Connection: close" */
+  MHD_RAF_HAS_TRANS_ENC_CHUNKED = 1 << 2, /**< Has "Transfer-Encoding: chunked */
+  MHD_RAF_HAS_DATE_HDR = 1 << 3           /**< Has "Date" header */
+} _MHD_FIXED_FLAGS_ENUM;
 
 
 #if defined(MHD_WINSOCK_SOCKETS)
@@ -407,11 +434,14 @@ struct MHD_Response
 {
 
   /**
-   * Headers to send for the response.  Initially
-   * the linked list is created in inverse order;
-   * the order should be inverted before sending!
+   * Head of double-linked list of headers to send for the response.
    */
   struct MHD_HTTP_Header *first_header;
+
+  /**
+   * Tail of double-linked list of headers to send for the response.
+   */
+  struct MHD_HTTP_Header *last_header;
 
   /**
    * Buffer pointing to data that we are supposed
@@ -460,6 +490,7 @@ struct MHD_Response
 #endif
 
   /**
+   * The size of the response body.
    * Set to #MHD_SIZE_UNKNOWN if size is not known.
    */
   uint64_t total_size;
@@ -503,6 +534,11 @@ struct MHD_Response
   enum MHD_ResponseFlags flags;
 
   /**
+   * Automatic flags set for the MHD response.
+   */
+  enum MHD_ResponseAutoFlags flags_auto;
+
+  /**
    * If the @e fd is a pipe (no sendfile()).
    */
   bool is_pipe;
@@ -543,101 +579,119 @@ enum MHD_CONNECTION_STATE
   MHD_CONNECTION_INIT = 0,
 
   /**
-   * 1: We got the URL (and request type and version).  Wait for a header line.
+   * Part of the request line was received.
+   * Wait for complete line.
    */
-  MHD_CONNECTION_URL_RECEIVED = MHD_CONNECTION_INIT + 1,
+  MHD_CONNECTION_REQ_LINE_RECEIVING = MHD_CONNECTION_INIT + 1,
 
   /**
-   * 2: We got part of a multi-line request header.  Wait for the rest.
+   * We got the URL (and request type and version).  Wait for a header line.
+   */
+  MHD_CONNECTION_URL_RECEIVED = MHD_CONNECTION_REQ_LINE_RECEIVING + 1,
+
+  /**
+   * We got part of a multi-line request header.  Wait for the rest.
    */
   MHD_CONNECTION_HEADER_PART_RECEIVED = MHD_CONNECTION_URL_RECEIVED + 1,
 
   /**
-   * 3: We got the request headers.  Process them.
+   * We got the request headers.  Process them.
    */
   MHD_CONNECTION_HEADERS_RECEIVED = MHD_CONNECTION_HEADER_PART_RECEIVED + 1,
 
   /**
-   * 4: We have processed the request headers.  Send 100 continue.
+   * We have processed the request headers.  Send 100 continue.
    */
   MHD_CONNECTION_HEADERS_PROCESSED = MHD_CONNECTION_HEADERS_RECEIVED + 1,
 
   /**
-   * 5: We have processed the headers and need to send 100 CONTINUE.
+   * We have processed the headers and need to send 100 CONTINUE.
    */
   MHD_CONNECTION_CONTINUE_SENDING = MHD_CONNECTION_HEADERS_PROCESSED + 1,
 
   /**
-   * 6: We have sent 100 CONTINUE (or do not need to).  Read the message body.
+   * We have sent 100 CONTINUE (or do not need to).  Read the message body.
    */
   MHD_CONNECTION_CONTINUE_SENT = MHD_CONNECTION_CONTINUE_SENDING + 1,
 
   /**
-   * 7: We got the request body.  Wait for a line of the footer.
+   * We got the request body.  Wait for a line of the footer.
    */
   MHD_CONNECTION_BODY_RECEIVED = MHD_CONNECTION_CONTINUE_SENT + 1,
 
   /**
-   * 8: We got part of a line of the footer.  Wait for the
+   * We got part of a line of the footer.  Wait for the
    * rest.
    */
   MHD_CONNECTION_FOOTER_PART_RECEIVED = MHD_CONNECTION_BODY_RECEIVED + 1,
 
   /**
-   * 9: We received the entire footer.  Wait for a response to be queued
-   * and prepare the response headers.
+   * We received the entire footer.
    */
   MHD_CONNECTION_FOOTERS_RECEIVED = MHD_CONNECTION_FOOTER_PART_RECEIVED + 1,
 
   /**
-   * 10: We have prepared the response headers in the writ buffer.
-   * Send the response headers.
+   * We received the entire request.
+   * Wait for a response to be queued.
    */
-  MHD_CONNECTION_HEADERS_SENDING = MHD_CONNECTION_FOOTERS_RECEIVED + 1,
+  MHD_CONNECTION_FULL_REQ_RECEIVED = MHD_CONNECTION_FOOTERS_RECEIVED + 1,
 
   /**
-   * 11: We have sent the response headers.  Get ready to send the body.
+   * Finished reading of the request and the response is ready.
+   * Switch internal logic from receiving to sending, prepare connection
+   * sending the reply and build the reply header.
+   */
+  MHD_CONNECTION_START_REPLY = MHD_CONNECTION_FULL_REQ_RECEIVED + 1,
+
+  /**
+   * We have prepared the response headers in the write buffer.
+   * Send the response headers.
+   */
+  MHD_CONNECTION_HEADERS_SENDING = MHD_CONNECTION_START_REPLY + 1,
+
+  /**
+   * We have sent the response headers.  Get ready to send the body.
    */
   MHD_CONNECTION_HEADERS_SENT = MHD_CONNECTION_HEADERS_SENDING + 1,
 
   /**
-   * 12: We are ready to send a part of a non-chunked body.  Send it.
-   */
-  MHD_CONNECTION_NORMAL_BODY_READY = MHD_CONNECTION_HEADERS_SENT + 1,
-
-  /**
-   * 13: We are waiting for the client to provide more
+   * We are waiting for the client to provide more
    * data of a non-chunked body.
    */
-  MHD_CONNECTION_NORMAL_BODY_UNREADY = MHD_CONNECTION_NORMAL_BODY_READY + 1,
+  MHD_CONNECTION_NORMAL_BODY_UNREADY = MHD_CONNECTION_HEADERS_SENT + 1,
 
   /**
-   * 14: We are ready to send a chunk.
+   * We are ready to send a part of a non-chunked body.  Send it.
    */
-  MHD_CONNECTION_CHUNKED_BODY_READY = MHD_CONNECTION_NORMAL_BODY_UNREADY + 1,
+  MHD_CONNECTION_NORMAL_BODY_READY = MHD_CONNECTION_NORMAL_BODY_UNREADY + 1,
 
   /**
-   * 15: We are waiting for the client to provide a chunk of the body.
+   * We are waiting for the client to provide a chunk of the body.
    */
-  MHD_CONNECTION_CHUNKED_BODY_UNREADY = MHD_CONNECTION_CHUNKED_BODY_READY + 1,
+  MHD_CONNECTION_CHUNKED_BODY_UNREADY = MHD_CONNECTION_NORMAL_BODY_READY + 1,
 
   /**
-   * 16: We have sent the response body. Prepare the footers.
+   * We are ready to send a chunk.
    */
-  MHD_CONNECTION_BODY_SENT = MHD_CONNECTION_CHUNKED_BODY_UNREADY + 1,
+  MHD_CONNECTION_CHUNKED_BODY_READY = MHD_CONNECTION_CHUNKED_BODY_UNREADY + 1,
 
   /**
-   * 17: We have prepared the response footer.  Send it.
+   * We have sent the response body. Prepare the footers.
+   */
+  MHD_CONNECTION_BODY_SENT = MHD_CONNECTION_CHUNKED_BODY_READY + 1,
+
+  /**
+   * We have prepared the response footer.  Send it.
    */
   MHD_CONNECTION_FOOTERS_SENDING = MHD_CONNECTION_BODY_SENT + 1,
 
   /**
-   * 18: We have sent the response footer.  Shutdown or restart.
+   * We have sent the response footer.  Shutdown or restart.
    */
   MHD_CONNECTION_FOOTERS_SENT = MHD_CONNECTION_FOOTERS_SENDING + 1,
 
   /**
-   * 19: This connection is to be closed.
+   * This connection is to be closed.
    */
   MHD_CONNECTION_CLOSED = MHD_CONNECTION_FOOTERS_SENT + 1,
 
@@ -649,7 +703,7 @@ enum MHD_CONNECTION_STATE
   MHD_CONNECTION_UPGRADE
 #endif /* UPGRADE_SUPPORT */
 
-};
+} _MHD_FIXED_ENUM;
 
 
 /**
@@ -667,7 +721,7 @@ enum MHD_TLS_CONN_STATE
   MHD_TLS_CONN_TLS_CLOSED,  /**< TLS session is terminated.             */
   MHD_TLS_CONN_TLS_FAILED,  /**< TLS session failed.                    */
   MHD_TLS_CONN_INVALID_STATE/**< Sentinel. Not a valid value.           */
-};
+} _MHD_FIXED_ENUM;
 
 /**
  * Should all state transitions be printed to stderr?
@@ -729,9 +783,127 @@ enum MHD_ConnKeepAlive
   /**
    * Connection can be used for serving next request
    */
-  MHD_CONN_USE_KEEPALIVE = 1
-};
+  MHD_CONN_USE_KEEPALIVE = 1,
 
+  /**
+   * Connection will be upgraded
+   */
+  MHD_CONN_MUST_UPGRADE = 2
+} _MHD_FIXED_ENUM;
+
+enum MHD_HTTP_Version
+{
+  /**
+   * Not a HTTP protocol or HTTP version is invalid.
+   */
+  MHD_HTTP_VER_INVALID = -1,
+
+  /**
+   * HTTP version is not yet received from the client.
+   */
+  MHD_HTTP_VER_UNKNOWN = 0,
+
+  /**
+   * HTTP version before 1.0, unsupported.
+   */
+  MHD_HTTP_VER_TOO_OLD = 1,
+
+  /**
+   * HTTP version 1.0
+   */
+  MHD_HTTP_VER_1_0 = 2,
+
+  /**
+   * HTTP version 1.1
+   */
+  MHD_HTTP_VER_1_1 = 3,
+
+  /**
+   * HTTP version 1.2-1.9, must be used as 1.1
+   */
+  MHD_HTTP_VER_1_2__1_9 = 4,
+
+  /**
+   * HTTP future version. Unsupported.
+   */
+  MHD_HTTP_VER_FUTURE = 100
+} _MHD_FIXED_ENUM;
+
+/**
+ * Returns boolean 'true' if HTTP version is supported by MHD
+ */
+#define MHD_IS_HTTP_VER_SUPPORTED(ver) (MHD_HTTP_VER_1_0 <= (ver) && \
+    MHD_HTTP_VER_1_2__1_9 >= (ver))
+
+/**
+ * Protocol should be used as HTTP/1.1 protocol.
+ *
+ * See the last paragraph of
+ * https://datatracker.ietf.org/doc/html/rfc7230#section-2.6
+ */
+#define MHD_IS_HTTP_VER_1_1_COMPAT(ver) (MHD_HTTP_VER_1_1 == (ver) || \
+    MHD_HTTP_VER_1_2__1_9 == (ver))
+
+/**
+ * The HTTP method.
+ *
+ * Only primary methods (specified in RFC7231) are defined here.
+ */
+enum MHD_HTTP_Method
+{
+  /**
+   * No request string has been received yet
+   */
+  MHD_HTTP_MTHD_NO_METHOD = 0,
+  /**
+   * HTTP method GET
+   */
+  MHD_HTTP_MTHD_GET = 1,
+  /**
+   * HTTP method HEAD
+   */
+  MHD_HTTP_MTHD_HEAD = 2,
+  /**
+   * HTTP method POST
+   */
+  MHD_HTTP_MTHD_POST = 3,
+  /**
+   * HTTP method PUT
+   */
+  MHD_HTTP_MTHD_PUT = 4,
+  /**
+   * HTTP method DELETE
+   */
+  MHD_HTTP_MTHD_DELETE = 5,
+  /**
+   * HTTP method CONNECT
+   */
+  MHD_HTTP_MTHD_CONNECT = 6,
+  /**
+   * HTTP method OPTIONS
+   */
+  MHD_HTTP_MTHD_OPTIONS = 7,
+  /**
+   * HTTP method TRACE
+   */
+  MHD_HTTP_MTHD_TRACE = 8,
+  /**
+   * Other HTTP method. Check the string value.
+   */
+  MHD_HTTP_MTHD_OTHER = 1000
+} _MHD_FIXED_ENUM;
+
+
+/**
+ * Reply-specific properties.
+ */
+struct MHD_Reply_Properties
+{
+  bool set; /**< Indicates that other members are set and valid */
+  bool use_reply_body_headers; /**< Use reply body-specific headers */
+  bool send_reply_body; /**< Send reply body (can be zero-sized) */
+  bool chunked; /**< Use chunked encoding for reply */
+};
 
 /**
  * State kept for each HTTP request.
@@ -828,6 +1000,11 @@ struct MHD_Connection
   char *method;
 
   /**
+   * The request method as enum.
+   */
+  enum MHD_HTTP_Method http_mthd;
+
+  /**
    * Requested URL (everything after "GET" only).  Allocated
    * in pool.
    */
@@ -838,6 +1015,11 @@ struct MHD_Connection
    * in pool.
    */
   char *version;
+
+  /**
+   * HTTP protocol version as enum.
+   */
+  enum MHD_HTTP_Version http_ver;
 
   /**
    * Close connection after sending response?
@@ -891,16 +1073,15 @@ struct MHD_Connection
 #endif
 
   /**
-   * Size of @e read_buffer (in bytes).  This value indicates
-   * how many bytes we're willing to read into the buffer;
-   * the real buffer is one byte longer to allow for
-   * adding zero-termination (when needed).
+   * Size of @e read_buffer (in bytes).
+   * This value indicates how many bytes we're willing to read
+   * into the buffer.
    */
   size_t read_buffer_size;
 
   /**
-   * Position where we currently append data in
-   * @e read_buffer (last valid position).
+   * Position where we currently append data in @e read_buffer (the
+   * next char after the last valid position).
    */
   size_t read_buffer_offset;
 
@@ -971,13 +1152,14 @@ struct MHD_Connection
    * Last time this connection had any activity
    * (reading or writing).
    */
-  time_t last_activity;
+  uint64_t last_activity;
 
   /**
-   * After how many seconds of inactivity should
-   * this connection time out?  Zero for no timeout.
+   * After how many milliseconds of inactivity should
+   * this connection time out?
+   * Zero for no timeout.
    */
-  time_t connection_timeout;
+  uint64_t connection_timeout_ms;
 
   /**
    * Special member to be returned by #MHD_get_connection_info()
@@ -1032,6 +1214,24 @@ struct MHD_Connection
    */
   bool read_closed;
 
+  /**
+   * Some error happens during processing the connection therefore this
+   * connection must be closed.
+   * The error may come from the client side (like wrong request format),
+   * from the application side (like data callback returned error), or from
+   * the OS side (like out-of-memory).
+   */
+  bool stop_with_error;
+
+  /**
+   * Response queued early, before the request is fully processed,
+   * the client upload is rejected.
+   * The connection cannot be reused for additional requests as the current
+   * request is incompletely read and it is unclear where is the initial
+   * byte of the next request.
+   */
+  bool discard_request;
+
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   /**
    * Set to `true` if the thread has been joined.
@@ -1046,8 +1246,7 @@ struct MHD_Connection
   bool in_idle;
 
   /**
-   * Are we currently inside the "idle" handler (to avoid recursively
-   * invoking it).
+   * Connection is in the cleanup DL-linked list.
    */
   bool in_cleanup;
 
@@ -1075,19 +1274,28 @@ struct MHD_Connection
   unsigned int responseCode;
 
   /**
-   * Are we receiving with chunked encoding?  This will be set to
-   * #MHD_YES after we parse the headers and are processing the body
-   * with chunks.  After we are done with the body and we are
-   * processing the footers; once the footers are also done, this will
-   * be set to #MHD_NO again (before the final call to the handler).
+   * Reply-specific properties
+   */
+  struct MHD_Reply_Properties rp_props;
+
+  /**
+   * Are we receiving with chunked encoding?
+   * This will be set to #MHD_YES after we parse the headers and
+   * are processing the body with chunks.
+   * After we are done with the body and we are processing the footers;
+   * once the footers are also done, this will be set to #MHD_NO again
+   * (before the final call to the handler).
+   * It is used only for requests, chunked encoding for response is
+   * indicated by @a rp_props.
    */
   bool have_chunked_upload;
 
   /**
    * If we are receiving with chunked encoding, where are we right
-   * now?  Set to 0 if we are waiting to receive the chunk size;
-   * otherwise, this is the size of the current chunk.  A value of
-   * zero is also used when we're at the end of the chunks.
+   * now?
+   * Set to 0 if we are waiting to receive the chunk size;
+   * otherwise, this is the size of the current chunk.
+   * A value of zero is also used when we're at the end of the chunks.
    */
   uint64_t current_chunk_size;
 
@@ -1516,7 +1724,7 @@ struct MHD_Daemon
    * moved back to the tail of the list.
    *
    * All connections by default start in this list; if a custom
-   * timeout that does not match @e connection_timeout is set, they
+   * timeout that does not match @e connection_timeout_ms is set, they
    * are moved to the @e manual_timeout_head-XDLL.
    * Not used in MHD_USE_THREAD_PER_CONNECTION mode as each thread
    * needs only one connection-specific timeout.
@@ -1635,6 +1843,11 @@ struct MHD_Daemon
    * properly aligned as it will be used as member of union MHD_DaemonInfo.
    */
   MHD_socket listen_fd;
+
+  /**
+   * Listen socket is non-blocking.
+   */
+  bool listen_nonblk;
 
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   /**
@@ -1772,10 +1985,11 @@ struct MHD_Daemon
   unsigned int connection_limit;
 
   /**
-   * After how many seconds of inactivity should
-   * connections time out?  Zero for no timeout.
+   * After how many milliseconds of inactivity should
+   * this connection time out?
+   * Zero for no timeout.
    */
-  time_t connection_timeout;
+  uint64_t connection_timeout_ms;
 
   /**
    * Maximum number of connections per IP, or 0 for

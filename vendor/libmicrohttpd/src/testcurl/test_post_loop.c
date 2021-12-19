@@ -1,6 +1,7 @@
 /*
      This file is part of libmicrohttpd
      Copyright (C) 2007 Christian Grothoff
+     Copyright (C) 2014-2021 Evgeny Grin (Karlson2k)
 
      libmicrohttpd is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published
@@ -22,6 +23,7 @@
  * @file daemontest_post_loop.c
  * @brief  Testcase for libmicrohttpd POST operations using URL-encoding
  * @author Christian Grothoff (inspired by bug report #1296)
+ * @author Karlson2k (Evgeny Grin)
  */
 
 #include "MHD_config.h"
@@ -519,38 +521,65 @@ testExternalPost ()
       if ((CURLM_OK == curl_multi_timeout (multi, &ctimeout)) &&
           (ctimeout < (long long) timeout) && (ctimeout >= 0))
         timeout = ctimeout;
-      if ( (c == NULL) || (running == 0) )
+      if ( (c == NULL) || (0 == running) )
         timeout = 0; /* terminate quickly... */
       tv.tv_sec = timeout / 1000;
       tv.tv_usec = (timeout % 1000) * 1000;
       if (-1 == select (maxposixs + 1, &rs, &ws, &es, &tv))
       {
-        if (EINTR == errno)
-          continue;
-        fprintf (stderr,
-                 "select failed: %s\n",
-                 strerror (errno));
-        break;
+#ifdef MHD_POSIX_SOCKETS
+        if (EINTR != errno)
+        {
+          fprintf (stderr, "Unexpected select() error: %d. Line: %d\n",
+                   (int) errno, __LINE__);
+          fflush (stderr);
+          exit (99);
+        }
+#else
+        if ((WSAEINVAL != WSAGetLastError ()) ||
+            (0 != rs.fd_count) || (0 != ws.fd_count) || (0 != es.fd_count) )
+        {
+          fprintf (stderr, "Unexpected select() error: %d. Line: %d\n",
+                   (int) WSAGetLastError (), __LINE__);
+          fflush (stderr);
+          exit (99);
+        }
+        Sleep (1);
+#endif
       }
       while (CURLM_CALL_MULTI_PERFORM ==
              curl_multi_perform (multi, &running))
         ;
-      if (running == 0)
+      if (0 == running)
       {
-        msg = curl_multi_info_read (multi, &running);
-        if (msg == NULL)
-          break;
-        if (msg->msg == CURLMSG_DONE)
+        int pending;
+        int curl_fine = 0;
+        while (NULL != (msg = curl_multi_info_read (multi, &pending)))
         {
-          if (msg->data.result != CURLE_OK)
-            printf ("%s failed at %s:%d: `%s'\n",
-                    "curl_multi_perform",
-                    __FILE__,
-                    __LINE__, curl_easy_strerror (msg->data.result));
-          curl_multi_remove_handle (multi, c);
-          curl_easy_cleanup (c);
-          c = NULL;
+          if (msg->msg == CURLMSG_DONE)
+          {
+            if (msg->data.result == CURLE_OK)
+              curl_fine = 1;
+            else
+            {
+              fprintf (stderr,
+                       "%s failed at %s:%d: `%s'\n",
+                       "curl_multi_perform",
+                       __FILE__,
+                       __LINE__, curl_easy_strerror (msg->data.result));
+              abort ();
+            }
+          }
         }
+        if (! curl_fine)
+        {
+          fprintf (stderr, "libcurl haven't returned OK code\n");
+          abort ();
+        }
+        curl_multi_remove_handle (multi, c);
+        curl_easy_cleanup (c);
+        c = NULL;
+        break;
       }
       MHD_run (d);
     }
@@ -661,5 +690,5 @@ main (int argc, char *const *argv)
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);
   curl_global_cleanup ();
-  return errorCount != 0;       /* 0 == pass */
+  return (0 == errorCount) ? 0 : 1;       /* 0 == pass */
 }

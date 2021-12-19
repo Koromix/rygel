@@ -111,8 +111,8 @@ ahc_empty (void *cls,
   (void) upload_data;
   (void) upload_data_size; /* Unused. Silent compiler warning. */
 
-  if (0 != strcasecmp ("GET",
-                       method))
+  if (0 != strcmp ("GET",
+                   method))
     return MHD_NO;              /* unexpected method */
   if (&ptr != *unused)
   {
@@ -253,7 +253,7 @@ main (int argc, char *const *argv)
     return 77;
   }
 
-  if (curl_uses_nss_ssl () == 0)
+  if (curl_tls_is_nss ())
   {
     aes256_sha_tlsv1 = "rsa_aes_256_sha";
   }

@@ -15,21 +15,21 @@ extern "C" {
 
 
 void  *
-  tdelete (const void *__restrict,
-           void **__restrict,
-           int (*)(const void *, const void *));
-
-
-void  *
-  tfind (const void *,
-         void *const *,
+tdelete (const void *__restrict,
+         void **__restrict,
          int (*)(const void *, const void *));
 
 
 void  *
-  tsearch (const void *,
-           void **,
-           int (*)(const void *, const void *));
+tfind (const void *,
+       void *const *,
+       int (*)(const void *, const void *));
+
+
+void  *
+tsearch (const void *,
+         void **,
+         int (*)(const void *, const void *));
 
 #if defined(__cplusplus)
 };

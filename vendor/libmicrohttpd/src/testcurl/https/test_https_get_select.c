@@ -125,7 +125,7 @@ testExternalGet (int flags)
     port = (int) dinfo->port;
   }
 
-  if (curl_uses_nss_ssl () == 0)
+  if (curl_tls_is_nss ())
     aes256_sha = "rsa_aes_256_sha";
 
   c = curl_easy_init ();
@@ -213,24 +213,37 @@ testExternalGet (int flags)
     else
       (void) sleep (1);
     curl_multi_perform (multi, &running);
-    if (running == 0)
+    if (0 == running)
     {
-      msg = curl_multi_info_read (multi, &running);
-      if (msg == NULL)
-        break;
-      if (msg->msg == CURLMSG_DONE)
+      int pending;
+      int curl_fine = 0;
+      while (NULL != (msg = curl_multi_info_read (multi, &pending)))
       {
-        if (msg->data.result != CURLE_OK)
-          printf ("%s failed at %s:%d: `%s'\n",
-                  "curl_multi_perform",
-                  __FILE__,
-                  __LINE__, curl_easy_strerror (msg->data.result));
-        curl_multi_remove_handle (multi, c);
-        curl_multi_cleanup (multi);
-        curl_easy_cleanup (c);
-        c = NULL;
-        multi = NULL;
+        if (msg->msg == CURLMSG_DONE)
+        {
+          if (msg->data.result == CURLE_OK)
+            curl_fine = 1;
+          else
+          {
+            fprintf (stderr,
+                     "%s failed at %s:%d: `%s'\n",
+                     "curl_multi_perform",
+                     __FILE__,
+                     __LINE__, curl_easy_strerror (msg->data.result));
+            abort ();
+          }
+        }
       }
+      if (! curl_fine)
+      {
+        fprintf (stderr, "libcurl haven't returned OK code\n");
+        abort ();
+      }
+      curl_multi_remove_handle (multi, c);
+      curl_multi_cleanup (multi);
+      curl_easy_cleanup (c);
+      c = NULL;
+      multi = NULL;
     }
     MHD_run (d);
   }

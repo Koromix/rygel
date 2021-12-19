@@ -1,8 +1,8 @@
-diff --git a/vendor/libmicrohttpd/src/include/microhttpd.h b/vendor/libmicrohttpd/src/include/microhttpd.h
-index 2ab208a01..3dd32c339 100644
---- a/vendor/libmicrohttpd/src/include/microhttpd.h
-+++ b/vendor/libmicrohttpd/src/include/microhttpd.h
-@@ -3323,6 +3323,18 @@ MHD_create_response_from_iovec (const struct MHD_IoVec *iov,
+diff --git b/vendor/libmicrohttpd/src/include/microhttpd.h a/vendor/libmicrohttpd/src/include/microhttpd.h
+index 1d62f2ccf..06536f2c7 100644
+--- b/vendor/libmicrohttpd/src/include/microhttpd.h
++++ a/vendor/libmicrohttpd/src/include/microhttpd.h
+@@ -3709,6 +3709,18 @@ MHD_create_response_from_iovec (const struct MHD_IoVec *iov,
                                  void *cls);
  
  
@@ -21,11 +21,11 @@ index 2ab208a01..3dd32c339 100644
  /**
   * Enumeration for actions MHD should perform on the underlying socket
   * of the upgrade.  This API is not finalized, and in particular
-diff --git a/vendor/libmicrohttpd/src/microhttpd/response.c b/vendor/libmicrohttpd/src/microhttpd/response.c
-index cc0cd38bc..573de948c 100644
---- a/vendor/libmicrohttpd/src/microhttpd/response.c
-+++ b/vendor/libmicrohttpd/src/microhttpd/response.c
-@@ -987,6 +987,31 @@ MHD_create_response_from_iovec (const struct MHD_IoVec *iov,
+diff --git b/vendor/libmicrohttpd/src/microhttpd/response.c a/vendor/libmicrohttpd/src/microhttpd/response.c
+index ca3639f49..ed3da6378 100644
+--- b/vendor/libmicrohttpd/src/microhttpd/response.c
++++ a/vendor/libmicrohttpd/src/microhttpd/response.c
+@@ -1536,6 +1536,36 @@ MHD_create_response_from_iovec (const struct MHD_IoVec *iov,
  }
  
  
@@ -42,15 +42,20 @@ index cc0cd38bc..573de948c 100644
 +{
 +  struct MHD_HTTP_Header *last_header;
 +
-+  if (NULL != src->first_header) {
-+    last_header = src->first_header;
-+    while (NULL != last_header->next)
-+      last_header = last_header->next;
++  if (NULL == src->first_header)
++    return;
 +
-+    last_header->next = dest->first_header;
++  if (NULL == dest->first_header) {
 +    dest->first_header = src->first_header;
-+    src->first_header = NULL;
++    dest->last_header = src->last_header;
++  } else {
++    dest->last_header->next = src->first_header;
++    src->first_header->prev = dest->last_header;
++    dest->last_header = src->last_header;
 +  }
++
++  src->first_header = NULL;
++  src->last_header = NULL;
 +}
 +
 +

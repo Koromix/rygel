@@ -132,11 +132,11 @@ load_keys (const char *hostname,
  */
 static int
 sni_callback (gnutls_session_t session,
-              const gnutls_datum_t*req_ca_dn,
+              const gnutls_datum_t *req_ca_dn,
               int nreqs,
-              const gnutls_pk_algorithm_t*pk_algos,
+              const gnutls_pk_algorithm_t *pk_algos,
               int pk_algos_length,
-              gnutls_pcert_st**pcert,
+              gnutls_pcert_st **pcert,
               unsigned int *pcert_length,
               gnutls_privkey_t *pkey)
 {

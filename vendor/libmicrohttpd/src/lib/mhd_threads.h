@@ -227,7 +227,7 @@ MHD_create_thread_ (MHD_thread_handle_ID_ *thread,
  */
 int
 MHD_create_named_thread_ (MHD_thread_handle_ID_ *thread,
-                          const char*thread_name,
+                          const char *thread_name,
                           size_t stack_size,
                           MHD_THREAD_START_ROUTINE_ start_routine,
                           void *arg);

@@ -1,6 +1,7 @@
 /*
      This file is part of libmicrohttpd
      Copyright (C) 2007 Christian Grothoff
+     Copyright (C) 2016-2021 Evgeny Grin (Karlson2k)
 
      libmicrohttpd is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published
@@ -22,6 +23,7 @@
  * @file curl_version_check.c
  * @brief  verify required cURL version is available to run tests
  * @author Sagie Amir
+ * @author Karlson2k (Evgeny Grin)
  */
 
 #include "MHD_config.h"
@@ -51,7 +53,7 @@ parse_version_number (const char **s)
 }
 
 
-const char *
+static const char *
 parse_version_string (const char *s, int *major, int *minor, int *micro)
 {
   if (! s)
@@ -68,16 +70,6 @@ parse_version_string (const char *s, int *major, int *minor, int *micro)
   return s;
 }
 
-
-#ifdef HTTPS_SUPPORT
-int
-curl_uses_nss_ssl ()
-{
-  return (strstr (curl_version (), " NSS/") != NULL) ? 0 : -1;
-}
-
-
-#endif /* HTTPS_SUPPORT */
 
 /*
  * check local libcurl version matches required version

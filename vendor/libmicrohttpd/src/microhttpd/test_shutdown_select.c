@@ -22,10 +22,10 @@
  * @file microhttpd/test_shutdown_select.c
  * @brief  Test whether shutdown socket triggers select()/poll()
  * @details On some platforms shutting down the socket in one thread
- *          trigger select() or poll() waiting for this socket in
- *          other thread. libmicrohttpd depend on this behavior on
- *          those platforms. This program check whether select()
- *          and poll() (if available) works as expected.
+ *          triggers select() or poll() waiting for this socket in
+ *          other thread. libmicrohttpd depends on this behavior on
+ *          these platforms. This program check whether select()
+ *          and poll() (if available) work as expected.
  * @author Karlson2k (Evgeny Grin)
  */
 
@@ -187,7 +187,7 @@ start_socket_listen (int domain)
   }
 
 #ifdef MHD_WINSOCK_SOCKETS
-  if (0 != ioctlsocket (fd, FIONBIO, &flags))
+  if (0 != ioctlsocket (fd, (int) FIONBIO, &flags))
   {
     fprintf (stderr, "Failed to make socket non-blocking: %u\n",
              (unsigned) sock_errno);

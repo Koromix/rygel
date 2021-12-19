@@ -16,6 +16,9 @@ All referenced RFCs can be found on the website of @emph{The Internet Engineerin
 @emph{RFC 2617}: Franks, J., Hallam-Baker, P., Hostetler, J., Lawrence, S., Leach, P.,
 Luotonen, A., and L. Stewart, "HTTP Authentication: Basic and Digest Access Authentication", RFC 2617, June 1999.
 
+@item
+@emph{RFC 6455}: Fette, I., Melnikov, A., "The WebSocket Protocol", RFC 6455, December 2011.
+
 
 @item 
 A well--structured @emph{HTML} reference can be found on

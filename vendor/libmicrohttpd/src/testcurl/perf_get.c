@@ -1,6 +1,7 @@
 /*
      This file is part of libmicrohttpd
      Copyright (C) 2007, 2009, 2011 Christian Grothoff
+     Copyright (C) 2014-2021 Evgeny Grin (Karlson2k)
 
      libmicrohttpd is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published
@@ -34,6 +35,7 @@
  *        not universally meaningful (i.e. when comparing
  *        multithreaded vs. single-threaded or select/poll).
  * @author Christian Grothoff
+ * @author Karlson2k (Evgeny Grin)
  */
 
 #include "MHD_config.h"
@@ -225,7 +227,7 @@ testInternalGet (int port, int poll_flag)
             "http://127.0.0.1:%d/hello_world",
             port);
   start_timer ();
-  for (i = 0; i<ROUNDS; i++)
+  for (i = 0; i < ROUNDS; i++)
   {
     cbc.pos = 0;
     c = curl_easy_init ();
@@ -304,7 +306,7 @@ testMultithreadedGet (int port, int poll_flag)
             "http://127.0.0.1:%d/hello_world",
             port);
   start_timer ();
-  for (i = 0; i<ROUNDS; i++)
+  for (i = 0; i < ROUNDS; i++)
   {
     cbc.pos = 0;
     c = curl_easy_init ();
@@ -387,7 +389,7 @@ testMultithreadedPoolGet (int port, int poll_flag)
             "http://127.0.0.1:%d/hello_world",
             port);
   start_timer ();
-  for (i = 0; i<ROUNDS; i++)
+  for (i = 0; i < ROUNDS; i++)
   {
     cbc.pos = 0;
     c = curl_easy_init ();
@@ -487,7 +489,7 @@ testExternalGet (int port)
     MHD_stop_daemon (d);
     return 512;
   }
-  for (i = 0; i<ROUNDS; i++)
+  for (i = 0; i < ROUNDS; i++)
   {
     cbc.pos = 0;
     c = curl_easy_init ();
@@ -543,35 +545,57 @@ testExternalGet (int port)
       tv.tv_usec = 1000;
       if (-1 == select (maxposixs + 1, &rs, &ws, &es, &tv))
       {
-#ifdef MHD_POSIX_SOCKETS
+  #ifdef MHD_POSIX_SOCKETS
         if (EINTR != errno)
-          abort ();
-#else
-        if ((WSAEINVAL != WSAGetLastError ()) || (0 != rs.fd_count) || (0 !=
-                                                                        ws.
-                                                                        fd_count)
-            || (0 != es.fd_count) )
-          abort ();
-        Sleep (1000);
-#endif
+        {
+          fprintf (stderr, "Unexpected select() error: %d. Line: %d\n",
+                   (int) errno, __LINE__);
+          fflush (stderr);
+          exit (99);
+        }
+  #else
+        if ((WSAEINVAL != WSAGetLastError ()) ||
+            (0 != rs.fd_count) || (0 != ws.fd_count) || (0 != es.fd_count) )
+        {
+          fprintf (stderr, "Unexpected select() error: %d. Line: %d\n",
+                   (int) WSAGetLastError (), __LINE__);
+          fflush (stderr);
+          exit (99);
+        }
+        Sleep (1);
+  #endif
       }
       curl_multi_perform (multi, &running);
-      if (running == 0)
+      if (0 == running)
       {
-        msg = curl_multi_info_read (multi, &running);
-        if (msg == NULL)
-          break;
-        if (msg->msg == CURLMSG_DONE)
+        int pending;
+        int curl_fine = 0;
+        while (NULL != (msg = curl_multi_info_read (multi, &pending)))
         {
-          if (msg->data.result != CURLE_OK)
-            printf ("%s failed at %s:%d: `%s'\n",
-                    "curl_multi_perform",
-                    __FILE__,
-                    __LINE__, curl_easy_strerror (msg->data.result));
-          curl_multi_remove_handle (multi, c);
-          curl_easy_cleanup (c);
-          c = NULL;
+          if (msg->msg == CURLMSG_DONE)
+          {
+            if (msg->data.result == CURLE_OK)
+              curl_fine = 1;
+            else
+            {
+              fprintf (stderr,
+                       "%s failed at %s:%d: `%s'\n",
+                       "curl_multi_perform",
+                       __FILE__,
+                       __LINE__, curl_easy_strerror (msg->data.result));
+              abort ();
+            }
+          }
         }
+        if (! curl_fine)
+        {
+          fprintf (stderr, "libcurl haven't returned OK code\n");
+          abort ();
+        }
+        curl_multi_remove_handle (multi, c);
+        curl_easy_cleanup (c);
+        c = NULL;
+        break;
       }
       /* two possibilities here; as select sets are
          tiny, this makes virtually no difference

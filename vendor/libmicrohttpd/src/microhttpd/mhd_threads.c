@@ -30,7 +30,9 @@
 #include <process.h>
 #endif
 #ifdef MHD_USE_THREAD_NAME_
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
+#endif /* HAVE_STDLIB_H */
 #ifdef HAVE_PTHREAD_NP_H
 #include <pthread_np.h>
 #endif /* HAVE_PTHREAD_NP_H */
@@ -49,8 +51,8 @@
 #if defined(HAVE_PTHREAD_ATTR_SETNAME_NP_NETBSD) || \
   defined(HAVE_PTHREAD_ATTR_SETNAME_NP_IBMI)
 #  define MHD_USE_THREAD_ATTR_SETNAME 1
-#endif \
-  /* HAVE_PTHREAD_ATTR_SETNAME_NP_NETBSD || HAVE_PTHREAD_ATTR_SETNAME_NP_IBMI */
+#endif /* HAVE_PTHREAD_ATTR_SETNAME_NP_NETBSD || \
+          HAVE_PTHREAD_ATTR_SETNAME_NP_IBMI */
 
 #if defined(HAVE_PTHREAD_SETNAME_NP_GNU) || \
   defined(HAVE_PTHREAD_SET_NAME_NP_FREEBSD) \
@@ -73,12 +75,12 @@ MHD_set_thread_name_ (const MHD_thread_ID_ thread_id,
 #if defined(HAVE_PTHREAD_SETNAME_NP_GNU)
   return ! pthread_setname_np (thread_id, thread_name);
 #elif defined(HAVE_PTHREAD_SET_NAME_NP_FREEBSD)
-  /* FreeBSD and OpenBSD use different name and void return type */
+  /* FreeBSD and OpenBSD use different function name and void return type */
   pthread_set_name_np (thread_id, thread_name);
   return ! 0;
 #elif defined(HAVE_PTHREAD_SETNAME_NP_NETBSD)
   /* NetBSD use 3 arguments: second argument is string in printf-like format,
-   *                         third argument is single argument for printf;
+   *                         third argument is a single argument for printf();
    * OSF1 use 3 arguments too, but last one always must be zero (NULL).
    * MHD doesn't use '%' in thread names, so both form are used in same way.
    */
@@ -213,13 +215,13 @@ MHD_create_thread_ (MHD_thread_handle_ID_ *thread,
 
   return ! res;
 #elif defined(MHD_USE_W32_THREADS)
-#if SIZE_MAX != UINT_MAX
+#if SIZEOF_SIZE_T != SIZEOF_UNSIGNED_INT
   if (stack_size > UINT_MAX)
   {
     errno = EINVAL;
     return 0;
   }
-#endif /* SIZE_MAX != UINT_MAX */
+#endif /* SIZEOF_SIZE_T != SIZEOF_UNSIGNED_INT */
 
   thread->handle = (MHD_thread_handle_)
                    _beginthreadex (NULL,
@@ -295,7 +297,7 @@ named_thread_starter (void *data)
  */
 int
 MHD_create_named_thread_ (MHD_thread_handle_ID_ *thread,
-                          const char*thread_name,
+                          const char *thread_name,
                           size_t stack_size,
                           MHD_THREAD_START_ROUTINE_ start_routine,
                           void *arg)
@@ -359,7 +361,7 @@ MHD_create_named_thread_ (MHD_thread_handle_ID_ *thread,
   if (! MHD_create_thread_ (thread,
                             stack_size,
                             &named_thread_starter,
-                            (void*) param))
+                            (void *) param))
   {
     free (param);
     return 0;

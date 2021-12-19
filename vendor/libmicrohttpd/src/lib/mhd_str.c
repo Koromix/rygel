@@ -775,9 +775,9 @@ MHD_str_to_uvalue_n_ (const char *str,
   if (i)
   {
     if (8 == val_size)
-      *(uint64_t*) out_val = res;
+      *(uint64_t *) out_val = res;
     else if (4 == val_size)
-      *(uint32_t*) out_val = (uint32_t) res;
+      *(uint32_t *) out_val = (uint32_t) res;
     else
       return 0;
   }

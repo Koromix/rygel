@@ -27,12 +27,21 @@
 #define MHD_STR_H 1
 
 #include "mhd_options.h"
-
 #include <stdint.h>
+#ifdef HAVE_STDDEF_H
 #include <stddef.h>
+#endif /* HAVE_STDDEF_H */
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif /* HAVE_SYS_TYPES_H */
 #ifdef HAVE_STDBOOL_H
 #include <stdbool.h>
 #endif /* HAVE_STDBOOL_H */
+
+#if defined(_MSC_FULL_VER) && ! defined (_SSIZE_T_DEFINED)
+#define _SSIZE_T_DEFINED
+typedef intptr_t ssize_t;
+#endif /* !_SSIZE_T_DEFINED */
 
 #ifdef MHD_FAVOR_SMALL_CODE
 #include "mhd_limits.h"
@@ -45,6 +54,18 @@
 #define MHD_STATICSTR_LEN_(macro) (sizeof(macro) / sizeof(char) - 1)
 #endif /* ! MHD_STATICSTR_LEN_ */
 
+struct _MHD_str_w_len
+{
+  const char *str;
+  const size_t len;
+};
+
+/**
+ * Static string initialiser for struct _MHD_str_w_len
+ */
+#define _MHD_S_STR_W_LEN(str) { str, MHD_STATICSTR_LEN_(str) }
+
+
 /*
  * Block of functions/macros that use US-ASCII charset as required by HTTP
  * standards. Not affected by current locale settings.
@@ -52,7 +73,7 @@
 
 #ifndef MHD_FAVOR_SMALL_CODE
 /**
- * Check two string for equality, ignoring case of US-ASCII letters.
+ * Check two strings for equality, ignoring case of US-ASCII letters.
  * @param str1 first string to compare
  * @param str2 second string to compare
  * @return non-zero if two strings are equal, zero otherwise.
@@ -104,7 +125,7 @@ MHD_str_equal_caseless_bin_n_ (const char *const str1,
  * Token could be surrounded by spaces and tabs and delimited by comma.
  * Match succeed if substring between start, end of string or comma
  * contains only case-insensitive token and optional spaces and tabs.
- * @warning token must not contain null-charters except optional
+ * @warning token must not contain null-characters except optional
  *          terminating null-character.
  * @param str the string to check
  * @param token the token to find
@@ -129,6 +150,74 @@ MHD_str_has_token_caseless_ (const char *str,
  */
 #define MHD_str_has_s_token_caseless_(str,tkn) \
   MHD_str_has_token_caseless_ ((str),(tkn),MHD_STATICSTR_LEN_ (tkn))
+
+
+/**
+ * Remove case-insensitive @a token from the @a str and put result
+ * to the output @a buf.
+ *
+ * Tokens in @a str could be surrounded by spaces and tabs and delimited by
+ * comma. The token match succeed if substring between start, end (of string)
+ * or comma contains only case-insensitive token and optional spaces and tabs.
+ * The quoted strings and comments are not supported by this function.
+ *
+ * The output string is normalised: empty tokens and repeated whitespaces
+ * are removed, no whitespaces before commas, exactly one space is used after
+ * each comma.
+ *
+ * @param str the string to process
+ * @param str_len the length of the @a str, not including optional
+ *                terminating null-character.
+ * @param token the token to find
+ * @param token_len the length of @a token, not including optional
+ *                  terminating null-character.
+ * @param[out] buf the output buffer, not null-terminated.
+ * @param[in,out] buf_size pointer to the size variable, at input it
+ *                         is the size of allocated buffer, at output
+ *                         it is the size of the resulting string (can
+ *                         be up to 50% larger than input) or negative value
+ *                         if there is not enough space for the result
+ * @return 'true' if token has been removed,
+ *         'false' otherwise.
+ */
+bool
+MHD_str_remove_token_caseless_ (const char *str,
+                                size_t str_len,
+                                const char *const token,
+                                const size_t token_len,
+                                char *buf,
+                                ssize_t *buf_size);
+
+
+/**
+ * Perform in-place case-insensitive removal of @a tokens from the @a str.
+ *
+ * Token could be surrounded by spaces and tabs and delimited by comma.
+ * The token match succeed if substring between start, end (of the string), or
+ * comma contains only case-insensitive token and optional spaces and tabs.
+ * The quoted strings and comments are not supported by this function.
+ *
+ * The input string must be normalised: empty tokens and repeated whitespaces
+ * are removed, no whitespaces before commas, exactly one space is used after
+ * each comma. The string is updated in-place.
+ *
+ * Behavior is undefined is the input string in not normalised.
+ *
+ * @param[in,out] str the string to update
+ * @param[in,out] str_len the length of the @a str, not including optional
+ *                        terminating null-character, not null-terminated
+ * @param tokens the token to find
+ * @param tokens_len the length of @a tokens, not including optional
+ *                   terminating null-character.
+ * @return 'true' if any token has been removed,
+ *         'false' otherwise.
+ */
+bool
+MHD_str_remove_tokens_caseless_ (char *str,
+                                 size_t *str_len,
+                                 const char *const tokens,
+                                 const size_t tokens_len);
+
 
 #ifndef MHD_FAVOR_SMALL_CODE
 /* Use individual function for each case to improve speed */
@@ -287,5 +376,78 @@ MHD_str_to_uvalue_n_ (const char *str,
                                                              UINT64_MAX,16)
 
 #endif /* MHD_FAVOR_SMALL_CODE */
+
+
+/**
+ * Convert uint32_t value to hexdecimal US-ASCII string.
+ * @note: result is NOT zero-terminated.
+ * @param val the value to convert
+ * @param buf the buffer to result to
+ * @param buf_size size of the @a buffer
+ * @return number of characters has been put to the @a buf,
+ *         zero if buffer is too small (buffer may be modified).
+ */
+size_t
+MHD_uint32_to_strx (uint32_t val,
+                    char *buf,
+                    size_t buf_size);
+
+
+#ifndef MHD_FAVOR_SMALL_CODE
+/**
+ * Convert uint16_t value to decimal US-ASCII string.
+ * @note: result is NOT zero-terminated.
+ * @param val the value to convert
+ * @param buf the buffer to result to
+ * @param buf_size size of the @a buffer
+ * @return number of characters has been put to the @a buf,
+ *         zero if buffer is too small (buffer may be modified).
+ */
+size_t
+MHD_uint16_to_str (uint16_t val,
+                   char *buf,
+                   size_t buf_size);
+
+#else  /* MHD_FAVOR_SMALL_CODE */
+#define MHD_uint16_to_str(v,b,s) MHD_uint64_to_str(v,b,s)
+#endif /* MHD_FAVOR_SMALL_CODE */
+
+
+/**
+ * Convert uint64_t value to decimal US-ASCII string.
+ * @note: result is NOT zero-terminated.
+ * @param val the value to convert
+ * @param buf the buffer to result to
+ * @param buf_size size of the @a buffer
+ * @return number of characters has been put to the @a buf,
+ *         zero if buffer is too small (buffer may be modified).
+ */
+size_t
+MHD_uint64_to_str (uint64_t val,
+                   char *buf,
+                   size_t buf_size);
+
+
+/**
+ * Convert uint16_t value to decimal US-ASCII string padded with
+ * zeros on the left side.
+ *
+ * @note: result is NOT zero-terminated.
+ * @param val the value to convert
+ * @param min_digits the minimal number of digits to print,
+ *                   output padded with zeros on the left side,
+ *                   'zero' value is interpreted as 'one',
+ *                   valid values are 3, 2, 1, 0
+ * @param buf the buffer to result to
+ * @param buf_size size of the @a buffer
+ * @return number of characters has been put to the @a buf,
+ *         zero if buffer is too small (buffer may be modified).
+ */
+size_t
+MHD_uint8_to_str_pad (uint8_t val,
+                      uint8_t min_digits,
+                      char *buf,
+                      size_t buf_size);
+
 
 #endif /* MHD_STR_H */

@@ -10,17 +10,18 @@ endif
 
 SUBDIRS = include microhttpd $(curltests) $(zzuftests) .
 
+# Finally (last!) also build experimental lib...
+if HAVE_EXPERIMENTAL
+SUBDIRS += microhttpd_ws lib
+endif
+
 if BUILD_EXAMPLES
 SUBDIRS += examples
 endif
 
-# Finally (last!) also build experimental lib...
-if HAVE_EXPERIMENTAL
-SUBDIRS += lib
-endif
 
 EXTRA_DIST = \
  datadir/cert-and-key.pem \
- datadir/cert-and-key-for-wireshark.pem 
+ datadir/cert-and-key-for-wireshark.pem
 
 .NOTPARALLEL:

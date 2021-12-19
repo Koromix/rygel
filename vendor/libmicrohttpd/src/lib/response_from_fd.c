@@ -125,7 +125,7 @@ file_reader (void *cls,
     f_ol.Offset = pos_uli.LowPart;
     f_ol.OffsetHigh = pos_uli.HighPart;
     if (! ReadFile (fh,
-                    (void*) buf,
+                    (void *) buf,
                     toRead,
                     &resRead,
                     &f_ol))

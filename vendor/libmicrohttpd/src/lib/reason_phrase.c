@@ -156,7 +156,7 @@ static const char *const five_hundred[] = {
 struct MHD_Reason_Block
 {
   size_t max;
-  const char *const*data;
+  const char *const *data;
 };
 
 #define BLOCK(m) { (sizeof(m) / sizeof(char*)), m }

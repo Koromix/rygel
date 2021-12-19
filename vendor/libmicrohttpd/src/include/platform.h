@@ -37,7 +37,9 @@
 #include "mhd_options.h"
 
 #include <stdio.h>
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
+#endif /* HAVE_STDLIB_H */
 #include <stdint.h>
 #include <string.h>
 #ifdef HAVE_UNISTD_H
@@ -47,7 +49,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
+#ifdef HAVE_STDDEF_H
 #include <stddef.h>
+#endif /* HAVE_STDDEF_H */
 
 /* different OSes have fd_set in
    a broad range of header files;

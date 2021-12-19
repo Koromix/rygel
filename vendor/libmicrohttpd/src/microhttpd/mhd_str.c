@@ -27,9 +27,12 @@
 
 #ifdef HAVE_STDBOOL_H
 #include <stdbool.h>
-#endif
+#endif /* HAVE_STDBOOL_H */
+#include <string.h>
 
+#include "mhd_assert.h"
 #include "mhd_limits.h"
+#include "mhd_assert.h"
 
 #ifdef MHD_FAVOR_SMALL_CODE
 #ifdef _MHD_static_inline
@@ -143,6 +146,7 @@ isasciialnum (char c)
 #endif /* Disable unused functions. */
 
 
+#if 0 /* Disable unused functions. */
 /**
  * Convert US-ASCII character to lower case.
  * If character is upper case letter in US-ASCII than it's converted to lower
@@ -159,7 +163,6 @@ toasciilower (char c)
 }
 
 
-#if 0 /* Disable unused functions. */
 /**
  * Convert US-ASCII character to upper case.
  * If character is lower case letter in US-ASCII than it's converted to upper
@@ -216,6 +219,23 @@ toxdigitvalue (char c)
     return (unsigned char) (c - 'a' + 10);
 
   return -1;
+}
+
+
+/**
+ * Caseless compare two characters.
+ *
+ * @param c1 the first char to compare
+ * @param c1 the second char to compare
+ * @return boolean 'true' if chars are caseless equal, false otherwise
+ */
+_MHD_static_inline bool
+charsequalcaseless (const char c1, const char c2)
+{
+  return ( (c1 == c2) ||
+           (isasciiupper (c1) ?
+            ((c1 - 'A' + 'a') == c2) :
+            ((c1 == (c2 - 'A' + 'a')) && isasciiupper (c2))) );
 }
 
 
@@ -331,12 +351,26 @@ toxdigitvalue (char c)
                             ( (((char) (c)) >= 'a' && ((char) (c)) <= 'f') ? \
                               (int) (((unsigned char) (c)) - 'a' + 10) : \
                               (int) (-1) )))
+
+/**
+ * Caseless compare two characters.
+ *
+ * @param c1 the first char to compare
+ * @param c1 the second char to compare
+ * @return boolean 'true' if chars are caseless equal, false otherwise
+ */
+#define charsequalcaseless(c1, c2) \
+  ( ((c1) == (c2)) || \
+           (isasciiupper (c1) ? \
+             (((c1) - 'A' + 'a') == (c2)) : \
+             (((c1) == ((c2) - 'A' + 'a')) && isasciiupper (c2))) )
+
 #endif /* !INLINE_FUNC */
 
 
 #ifndef MHD_FAVOR_SMALL_CODE
 /**
- * Check two string for equality, ignoring case of US-ASCII letters.
+ * Check two strings for equality, ignoring case of US-ASCII letters.
  *
  * @param str1 first string to compare
  * @param str2 second string to compare
@@ -350,11 +384,13 @@ MHD_str_equal_caseless_ (const char *str1,
   {
     const char c1 = *str1;
     const char c2 = *str2;
-    if ( (c1 != c2) &&
-         (toasciilower (c1) != toasciilower (c2)) )
+    if (charsequalcaseless (c1, c2))
+    {
+      str1++;
+      str2++;
+    }
+    else
       return 0;
-    str1++;
-    str2++;
   }
   return 0 == (*str2);
 }
@@ -387,8 +423,9 @@ MHD_str_equal_caseless_n_ (const char *const str1,
     const char c2 = str2[i];
     if (0 == c2)
       return 0 == c1;
-    if ( (c1 != c2) &&
-         (toasciilower (c1) != toasciilower (c2)) )
+    if (charsequalcaseless (c1, c2))
+      continue;
+    else
       return 0;
   }
   return ! 0;
@@ -415,8 +452,9 @@ MHD_str_equal_caseless_bin_n_ (const char *const str1,
   {
     const char c1 = str1[i];
     const char c2 = str2[i];
-    if ( (c1 != c2) &&
-         (toasciilower (c1) != toasciilower (c2)) )
+    if (charsequalcaseless (c1, c2))
+      continue;
+    else
       return 0;
   }
   return ! 0;
@@ -428,7 +466,7 @@ MHD_str_equal_caseless_bin_n_ (const char *const str1,
  * Token could be surrounded by spaces and tabs and delimited by comma.
  * Match succeed if substring between start, end (of string) or comma
  * contains only case-insensitive token and optional spaces and tabs.
- * @warning token must not contain null-charters except optional
+ * @warning token must not contain null-characters except optional
  *          terminating null-character.
  * @param str the string to check
  * @param token the token to find
@@ -460,8 +498,7 @@ MHD_str_has_token_caseless_ (const char *str,
 
       if (0 == sc)
         return false;
-      if ( (sc != tc) &&
-           (toasciilower (sc) != toasciilower (tc)) )
+      if (! charsequalcaseless (sc, tc))
         break;
       if (i >= token_len)
       {
@@ -481,6 +518,351 @@ MHD_str_has_token_caseless_ (const char *str,
       str++;
   }
   return false;
+}
+
+
+/**
+ * Remove case-insensitive @a token from the @a str and put result
+ * to the output @a buf.
+ *
+ * Tokens in @a str could be surrounded by spaces and tabs and delimited by
+ * comma. The token match succeed if substring between start, end (of string)
+ * or comma contains only case-insensitive token and optional spaces and tabs.
+ * The quoted strings and comments are not supported by this function.
+ *
+ * The output string is normalised: empty tokens and repeated whitespaces
+ * are removed, no whitespaces before commas, exactly one space is used after
+ * each comma.
+ *
+ * @param str the string to process
+ * @param str_len the length of the @a str, not including optional
+ *                terminating null-character.
+ * @param token the token to find
+ * @param token_len the length of @a token, not including optional
+ *                  terminating null-character.
+ * @param[out] buf the output buffer, not null-terminated.
+ * @param[in,out] buf_size pointer to the size variable, at input it
+ *                         is the size of allocated buffer, at output
+ *                         it is the size of the resulting string (can
+ *                         be up to 50% larger than input) or negative value
+ *                         if there is not enough space for the result
+ * @return 'true' if token has been removed,
+ *         'false' otherwise.
+ */
+bool
+MHD_str_remove_token_caseless_ (const char *str,
+                                size_t str_len,
+                                const char *const token,
+                                const size_t token_len,
+                                char *buf,
+                                ssize_t *buf_size)
+{
+  const char *s1; /**< the "input" string / character */
+  char *s2;       /**< the "output" string / character */
+  size_t t_pos;   /**< position of matched character in the token */
+  bool token_removed;
+
+  mhd_assert (NULL == memchr (token, 0, token_len));
+  mhd_assert (NULL == memchr (token, ' ', token_len));
+  mhd_assert (NULL == memchr (token, '\t', token_len));
+  mhd_assert (NULL == memchr (token, ',', token_len));
+  mhd_assert (0 <= *buf_size);
+
+  s1 = str;
+  s2 = buf;
+  token_removed = false;
+
+  while ((size_t) (s1 - str) < str_len)
+  {
+    const char *cur_token; /**< the first char of current token */
+    size_t copy_size;
+
+    /* Skip any initial whitespaces and empty tokens */
+    while ( ((size_t) (s1 - str) < str_len) &&
+            ((' ' == *s1) || ('\t' == *s1) || (',' == *s1)) )
+      s1++;
+
+    /* 's1' points to the first char of token in the input string or
+     * points just beyond the end of the input string */
+
+    if ((size_t) (s1 - str) >= str_len)
+      break; /* Nothing to copy, end of the input string */
+
+    /* 's1' points to the first char of token in the input string */
+
+    cur_token = s1; /* the first char of input token */
+
+    /* Check the token with case-insensetive match */
+    t_pos = 0;
+    while ( ((size_t) (s1 - str) < str_len) && (token_len > t_pos) &&
+            (charsequalcaseless (*s1, token[t_pos])) )
+    {
+      s1++;
+      t_pos++;
+    }
+    /* s1 may point just beyond the end of the input string */
+    if ( (token_len == t_pos) && (0 != token_len) )
+    {
+      /* 'token' matched, check that current input token does not have
+       * any suffixes */
+      while ( ((size_t) (s1 - str) < str_len) &&
+              ((' ' == *s1) || ('\t' == *s1)) )
+        s1++;
+      /* 's1' points to the first non-whitespace char after the token matched
+       * requested token or points just beyond the end of the input string after
+       * the requested token */
+      if (((size_t) (s1 - str) == str_len) || (',' == *s1))
+      {/* full token match, do not copy current token to the output */
+        token_removed = true;
+        continue;
+      }
+    }
+
+    /* 's1' points to first non-whitespace char, to some char after
+     * first non-whitespace char in the token in the input string, to
+     * the ',', or just beyond the end of the input string */
+    /* The current token in the input string does not match the token
+     * to exclude, it must be copied to the output string */
+    /* the current token size excluding leading whitespaces and current char */
+    copy_size = (size_t) (s1 - cur_token);
+    if (buf == s2)
+    { /* The first token to copy to the output */
+      if (buf + *buf_size < s2 + copy_size)
+      { /* Not enough space in the output buffer */
+        *buf_size = (ssize_t) -1;
+        return false;
+      }
+    }
+    else
+    { /* Some token was already copied to the output buffer */
+      if (buf + *buf_size < s2 + copy_size + 2)
+      { /* Not enough space in the output buffer */
+        *buf_size = (ssize_t) -1;
+        return false;
+      }
+      *(s2++) = ',';
+      *(s2++) = ' ';
+    }
+    /* Copy non-matched token to the output */
+    if (0 != copy_size)
+    {
+      memcpy (s2, cur_token, copy_size);
+      s2 += copy_size;
+    }
+
+    while ( ((size_t) (s1 - str) < str_len) && (',' != *s1))
+    {
+      /* 's1' points to first non-whitespace char, to some char after
+       * first non-whitespace char in the token in the input string */
+      /* Copy all non-whitespace chars from the current token in
+       * the input string */
+      while ( ((size_t) (s1 - str) < str_len) &&
+              (',' != *s1) && (' ' != *s1) && ('\t' != *s1) )
+      {
+        if (buf + *buf_size <= s2) /* '<= s2' equals '< s2 + 1' */
+        { /* Not enough space in the output buffer */
+          *buf_size = (ssize_t) -1;
+          return false;
+        }
+        *(s2++) = *(s1++);
+      }
+      /* 's1' points to some whitespace char in the token in the input
+       * string, to the ',', or just beyond the end of the input string */
+      /* Skip all whitespaces */
+      while ( ((size_t) (s1 - str) < str_len) &&
+              ((' ' == *s1) || ('\t' == *s1)) )
+        s1++;
+
+      /* 's1' points to the first non-whitespace char in the input string
+       * after whitespace chars, to the ',', or just beyond the end of
+       * the input string */
+      if (((size_t) (s1 - str) < str_len) && (',' != *s1))
+      { /* Not the end of the current token */
+        if (buf + *buf_size <= s2) /* '<= s2' equals '< s2 + 1' */
+        { /* Not enough space in the output buffer */
+          *buf_size = (ssize_t) -1;
+          return false;
+        }
+        *(s2++) = ' ';
+      }
+    }
+  }
+  mhd_assert (((ssize_t) (s2 - buf)) <= *buf_size);
+  *buf_size = (ssize_t) (s2 - buf);
+  return token_removed;
+}
+
+
+/**
+ * Perform in-place case-insensitive removal of @a tokens from the @a str.
+ *
+ * Token could be surrounded by spaces and tabs and delimited by comma.
+ * The token match succeed if substring between start, end (of the string), or
+ * comma contains only case-insensitive token and optional spaces and tabs.
+ * The quoted strings and comments are not supported by this function.
+ *
+ * The input string must be normalised: empty tokens and repeated whitespaces
+ * are removed, no whitespaces before commas, exactly one space is used after
+ * each comma. The string is updated in-place.
+ *
+ * Behavior is undefined is the input string in not normalised.
+ *
+ * @param[in,out] str the string to update
+ * @param[in,out] str_len the length of the @a str, not including optional
+ *                        terminating null-character, not null-terminated
+ * @param tokens the token to find
+ * @param tokens_len the length of @a tokens, not including optional
+ *                   terminating null-character.
+ * @return 'true' if any token has been removed,
+ *         'false' otherwise.
+ */
+bool
+MHD_str_remove_tokens_caseless_ (char *str,
+                                 size_t *str_len,
+                                 const char *const tokens,
+                                 const size_t tokens_len)
+{
+  const char *const t = tokens;   /**< a short alias for @a tokens */
+  size_t pt;                      /**< position in @a tokens */
+  bool token_removed;
+
+  mhd_assert (NULL == memchr (tokens, 0, tokens_len));
+
+  token_removed = false;
+  pt = 0;
+
+  while (pt < tokens_len && *str_len != 0)
+  {
+    const char *tkn; /**< the current token */
+    size_t tkn_len;
+
+    /* Skip any initial whitespaces and empty tokens in 'tokens' */
+    while ( (pt < tokens_len) &&
+            ((' ' == t[pt]) || ('\t' == t[pt]) || (',' == t[pt])) )
+      pt++;
+
+    if (pt >= tokens_len)
+      break; /* No more tokens, nothing to remove */
+
+    /* Found non-whitespace char which is not a comma */
+    tkn = t + pt;
+    do
+    {
+      do
+      {
+        pt++;
+      } while (pt < tokens_len &&
+               (' ' != t[pt] && '\t' != t[pt] && ',' != t[pt]));
+      /* Found end of the token string, space, tab, or comma */
+      tkn_len = pt - (size_t) (tkn - t);
+
+      /* Skip all spaces and tabs */
+      while (pt < tokens_len && (' ' == t[pt] || '\t' == t[pt]))
+        pt++;
+      /* Found end of the token string or non-whitespace char */
+    } while(pt < tokens_len && ',' != t[pt]);
+
+    /* 'tkn' is the input token with 'tkn_len' chars */
+    mhd_assert (0 != tkn_len);
+
+    if (*str_len == tkn_len)
+    {
+      if (MHD_str_equal_caseless_bin_n_ (str, tkn, tkn_len))
+      {
+        *str_len = 0;
+        token_removed = true;
+      }
+      continue;
+    }
+    /* 'tkn' cannot match part of 'str' if length of 'tkn' is larger
+     * than length of 'str'.
+     * It's know that 'tkn' is not equal to the 'str' (was checked previously).
+     * As 'str' is normalized when 'tkn' is not equal to the 'str'
+     * it is required that 'str' to be at least 3 chars larger then 'tkn'
+     * (the comma, the space and at least one additional character for the next
+     * token) to remove 'tkn' from the 'str'. */
+    if (*str_len > tkn_len + 2)
+    { /* Remove 'tkn' from the input string */
+      size_t pr;    /**< the 'read' position in the @a str */
+      size_t pw;    /**< the 'write' position in the @a str */
+
+      pr = 0;
+      pw = 0;
+
+      do
+      {
+        mhd_assert (pr >= pw);
+        mhd_assert ((*str_len) >= (pr + tkn_len));
+        if ( ( ((*str_len) == (pr + tkn_len)) || (',' == str[pr + tkn_len]) ) &&
+             MHD_str_equal_caseless_bin_n_ (str + pr, tkn, tkn_len) )
+        {
+          /* current token in the input string matches the 'tkn', skip it */
+          mhd_assert ((*str_len == pr + tkn_len) || \
+                      (' ' == str[pr + tkn_len + 1])); /* 'str' must be normalized */
+          token_removed = true;
+          /* Advance to the next token in the input string or beyond
+           * the end of the input string. */
+          pr += tkn_len + 2;
+        }
+        else
+        {
+          /* current token in the input string does not match the 'tkn',
+           * copy to the output */
+          if (0 != pw)
+          { /* not the first output token, add ", " to separate */
+            if (pr != pw + 2)
+            {
+              str[pw++] = ',';
+              str[pw++] = ' ';
+            }
+            else
+              pw += 2; /* 'str' is not yet modified in this round */
+          }
+          do
+          {
+            if (pr != pw)
+              str[pw] = str[pr];
+            pr++;
+            pw++;
+          } while (pr < *str_len && ',' != str[pr]);
+          /* Advance to the next token in the input string or beyond
+           * the end of the input string. */
+          pr += 2;
+        }
+        /* 'pr' should point to the next token in the input string or beyond
+         * the end of the input string */
+        if ((*str_len) < (pr + tkn_len))
+        { /* The rest of the 'str + pr' is too small to match 'tkn' */
+          if ((*str_len) > pr)
+          { /* Copy the rest of the string */
+            size_t copy_size;
+            copy_size = *str_len - pr;
+            if (0 != pw)
+            { /* not the first output token, add ", " to separate */
+              if (pr != pw + 2)
+              {
+                str[pw++] = ',';
+                str[pw++] = ' ';
+              }
+              else
+                pw += 2; /* 'str' is not yet modified in this round */
+            }
+            if (pr != pw)
+              memmove (str + pw, str + pr, copy_size);
+            pw += copy_size;
+          }
+          *str_len = pw;
+          break;
+        }
+        mhd_assert ((' ' != str[0]) && ('\t' != str[0]));
+        mhd_assert ((0 == pr) || (3 <= pr));
+        mhd_assert ((0 == pr) || (' ' == str[pr - 1]));
+        mhd_assert ((0 == pr) || (',' == str[pr - 2]));
+      } while (1);
+    }
+  }
+
+  return token_removed;
 }
 
 
@@ -803,9 +1185,9 @@ MHD_str_to_uvalue_n_ (const char *str,
   if (i)
   {
     if (8 == val_size)
-      *(uint64_t*) out_val = res;
+      *(uint64_t *) out_val = res;
     else if (4 == val_size)
-      *(uint32_t*) out_val = (uint32_t) res;
+      *(uint32_t *) out_val = (uint32_t) res;
     else
       return 0;
   }
@@ -814,3 +1196,161 @@ MHD_str_to_uvalue_n_ (const char *str,
 
 
 #endif /* MHD_FAVOR_SMALL_CODE */
+
+
+size_t
+MHD_uint32_to_strx (uint32_t val,
+                    char *buf,
+                    size_t buf_size)
+{
+  size_t o_pos = 0; /**< position of the output character */
+  int digit_pos = 8; /** zero-based, digit position in @a 'val' */
+  int digit;
+
+  /* Skip leading zeros */
+  do
+  {
+    digit_pos--;
+    digit = (int) (val >> 28);
+    val <<= 4;
+  } while ((0 == digit) && (0 != digit_pos));
+
+  while (o_pos < buf_size)
+  {
+    buf[o_pos++] = (digit <= 9) ? ('0' + (char) digit) :
+                   ('A' + (char) digit - 10);
+    if (0 == digit_pos)
+      return o_pos;
+    digit_pos--;
+    digit = (int) (val >> 28);
+    val <<= 4;
+  }
+  return 0; /* The buffer is too small */
+}
+
+
+#ifndef MHD_FAVOR_SMALL_CODE
+size_t
+MHD_uint16_to_str (uint16_t val,
+                   char *buf,
+                   size_t buf_size)
+{
+  char *chr;  /**< pointer to the current printed digit */
+  /* The biggest printable number is 65535 */
+  uint16_t divisor = UINT16_C (10000);
+  int digit;
+
+  chr = buf;
+  digit = (int) (val / divisor);
+  mhd_assert (digit < 10);
+
+  /* Do not print leading zeros */
+  while ((0 == digit) && (1 < divisor))
+  {
+    divisor /= 10;
+    digit = (int) (val / divisor);
+    mhd_assert (digit < 10);
+  }
+
+  while (0 != buf_size)
+  {
+    *chr = (char) digit + '0';
+    chr++;
+    buf_size--;
+    if (1 == divisor)
+      return (size_t) (chr - buf);
+    val %= divisor;
+    divisor /= 10;
+    digit = (int) (val / divisor);
+    mhd_assert (digit < 10);
+  }
+  return 0; /* The buffer is too small */
+}
+
+
+#endif /* !MHD_FAVOR_SMALL_CODE */
+
+
+size_t
+MHD_uint64_to_str (uint64_t val,
+                   char *buf,
+                   size_t buf_size)
+{
+  char *chr;  /**< pointer to the current printed digit */
+  /* The biggest printable number is 18446744073709551615 */
+  uint64_t divisor = UINT64_C (10000000000000000000);
+  int digit;
+
+  chr = buf;
+  digit = (int) (val / divisor);
+  mhd_assert (digit < 10);
+
+  /* Do not print leading zeros */
+  while ((0 == digit) && (1 < divisor))
+  {
+    divisor /= 10;
+    digit = (int) (val / divisor);
+    mhd_assert (digit < 10);
+  }
+
+  while (0 != buf_size)
+  {
+    *chr = (char) digit + '0';
+    chr++;
+    buf_size--;
+    if (1 == divisor)
+      return (size_t) (chr - buf);
+    val %= divisor;
+    divisor /= 10;
+    digit = (int) (val / divisor);
+    mhd_assert (digit < 10);
+  }
+  return 0; /* The buffer is too small */
+}
+
+
+size_t
+MHD_uint8_to_str_pad (uint8_t val,
+                      uint8_t min_digits,
+                      char *buf,
+                      size_t buf_size)
+{
+  size_t pos; /**< the position of the current printed digit */
+  int digit;
+  mhd_assert (3 >= min_digits);
+  if (0 == buf_size)
+    return 0;
+
+  pos = 0;
+  digit = val / 100;
+  if (0 == digit)
+  {
+    if (3 <= min_digits)
+      buf[pos++] = '0';
+  }
+  else
+  {
+    buf[pos++] = '0' + digit;
+    val %= 100;
+    min_digits = 2;
+  }
+
+  if (buf_size <= pos)
+    return 0;
+  digit = val / 10;
+  if (0 == digit)
+  {
+    if (2 <= min_digits)
+      buf[pos++] = '0';
+  }
+  else
+  {
+    buf[pos++] = '0' + digit;
+    val %= 10;
+  }
+
+  if (buf_size <= pos)
+    return 0;
+  buf[pos++] = '0' + val;
+  return pos;
+}
