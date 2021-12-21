@@ -139,7 +139,7 @@ bool http_IO::UpgradeToWS(unsigned int flags)
 
     MHD_Response *response = MHD_create_response_for_upgrade(HandleUpgrade, this);
     AttachResponse(101, response);
-
+    AddHeader("Connection", "upgrade");
     AddHeader("Upgrade", "websocket");
     AddHeader("Sec-WebSocket-Accept", accept_str);
 
