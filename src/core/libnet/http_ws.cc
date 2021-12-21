@@ -272,9 +272,24 @@ Size http_IO::ReadWS(Span<uint8_t> out_buf)
                 Size avail_len = std::min(payload, ws_buf.len - offset);
                 Size copy_len = std::min(out_buf.len - read_len, avail_len);
 
-                for (Size i = 0; i < copy_len; i++) {
-                    out_buf[read_len++] = ws_buf[offset + i] ^ mask[i % 4];
+                Size copy4 = copy_len & ~(Size)0x3;
+                Size remain = copy_len - copy4;
+
+                for (Size i = 0; i < copy4; i += 4) {
+                    out_buf[read_len + 0] = ws_buf[offset + i + 0] ^ mask[0];
+                    out_buf[read_len + 1] = ws_buf[offset + i + 1] ^ mask[1];
+                    out_buf[read_len + 2] = ws_buf[offset + i + 2] ^ mask[2];
+                    out_buf[read_len + 3] = ws_buf[offset + i + 3] ^ mask[3];
+                    read_len += 4;
                 }
+                switch (remain) {
+                    default: { RG_UNREACHABLE(); } break;
+                    case 3: { out_buf[read_len + 2] = ws_buf[offset + copy4 + 2] ^ mask[2]; } [[fallthrough]];
+                    case 2: { out_buf[read_len + 1] = ws_buf[offset + copy4 + 1] ^ mask[1]; } [[fallthrough]];
+                    case 1: { out_buf[read_len + 0] = ws_buf[offset + copy4 + 0] ^ mask[0]; } [[fallthrough]];
+                    case 0: {} break;
+                }
+                read_len += remain;
             }
 
             ws_buf.len = std::max(ws_buf.len - offset - payload, (Size)0);
