@@ -115,7 +115,7 @@ html.mobile .fm_section {
     padding-top: 4px;
     font-weight: bold;
 }
-.fm_widget.mandatory > label::after {
+.fm_widget.mandatory > label:not(:empty)::after {
     content: ' *';
     color: red;
 }
