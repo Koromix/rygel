@@ -83,14 +83,26 @@ void http_IO::HandleUpgrade(void *cls, struct MHD_Connection *, void *,
     io->ws_cv.notify_one();
 }
 
+static bool CheckHeaderValue(const char *str, const char *needle)
+{
+    if (!str)
+        return false;
+
+    while (str[0]) {
+        Span<const char> part = TrimStr(SplitStr(str, ',', &str));
+
+        if (TestStrI(part, needle))
+            return true;
+    }
+
+    return false;
+}
+
 bool http_IO::IsWS() const
 {
-    const char *conn_str = request.GetHeaderValue("Connection");
-    const char *upgrade_str = request.GetHeaderValue("Upgrade");
-
-    if (!conn_str || !strstr(conn_str, "Upgrade"))
+    if (!CheckHeaderValue(request.GetHeaderValue("Connection"), "upgrade"))
         return false;
-    if (!upgrade_str || !TestStr(upgrade_str, "websocket"))
+    if (!CheckHeaderValue(request.GetHeaderValue("Upgrade"), "websocket"))
         return false;
 
     return true;
