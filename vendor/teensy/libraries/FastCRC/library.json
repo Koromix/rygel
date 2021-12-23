@@ -20,7 +20,7 @@
       "maintainer": true
     }
   ],
-  "version": "1.42",
+  "version": "1.4",
   "frameworks": "arduino",
   "platforms": "*"
 }
