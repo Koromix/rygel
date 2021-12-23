@@ -31,6 +31,102 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.86 (Released 2021-12-22)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+- Removed CalcListClipping() function. Prefer using ImGuiListClipper which can return non-contiguous ranges.
+  Please open an issue if you think you really need this function. (#3841)
+- Backends: OSX: Added NSView* parameter to ImGui_ImplOSX_Init(). (#4759) [@stuartcarnie]
+- Backends: Marmalade: Removed obsolete Marmalade backend (imgui_impl_marmalade.cpp) + example app. (#368, #375)
+  Find last supported version at https://github.com/ocornut/imgui/wiki/Bindings
+
+Other Changes:
+
+- Added an assertion for the common user mistake of using "" as an identifier at the root level of a window
+  instead of using "##something". Empty identifiers are valid and useful in a very small amount of cases,
+  but 99.9% of the time if you need an empty label you should use "##something". (#1414, #2562, #2807, #4008,
+  #4158, #4375, #4548, #4657, #4796). READ THE FAQ ABOUT HOW THE ID STACK WORKS -> https://dearimgui.org/faq
+- Added GetMouseClickedCount() function, returning the number of successive clicks. (#3229) [@kudaba]
+  (so IsMouseDoubleClicked(ImGuiMouseButton_Left) is same as GetMouseClickedCount(ImGuiMouseButton_Left) == 2,
+  but it allows testing for triple clicks and more).
+- Modals: fixed issue hovering popups inside a child windows inside a modal. (#4676, #4527)
+- Modals, Popups, Windows: changes how appearing windows are interrupting popups and modals. (#4317) [@rokups]
+  - appearing windows created from within the begin stack of a popup/modal will no longer close it.
+  - appearing windows created not within the begin stack of a modal will no longer close the modal,
+    and automatically appear behind it.
+- Fixed IsWindowFocused()/IsWindowHovered() issues with child windows inside popups. (#4676)
+- Nav: Ctrl+tabbing to cycle through windows is now enabled regardless of using the _NavEnableKeyboard
+  configuration flag. This is part of an effort to generalize the use of keyboard inputs. (#4023, #787).
+  Note that while this is active you can also moving windows (with arrow) and resize (shift+arrows).
+- Nav: tabbing now cycles through clipped items and scroll accordingly. (#4449)
+- Nav: pressing PageUp/PageDown/Home/End when in Menu layer automatically moves back to Main layer.
+- Nav: fixed resizing window from borders setting navigation to Menu layer.
+- Nav: prevent child from clipping items when using _NavFlattened and parent has a pending request.
+- Nav: pressing Esc to exit a child window reactivates the Nav highlight if it was disabled by mouse.
+- Nav: with ImGuiConfigFlags_NavEnableSetMousePos enabled: Fixed absolute mouse position when using
+  Home/End leads to scrolling. Fixed not setting mouse position when a failed move request (e.g. when
+  already at edge) reactivates the navigation highlight.
+- Menus: fixed closing a menu inside a popup/modal by clicking on the popup/modal. (#3496, #4797)
+- Menus: fixed closing a menu by clicking on its menu-bar item when inside a popup. (#3496, #4797) [@xndcn]
+- Menus: fixed menu inside a popup/modal not inhibiting hovering of items in the popup/modal. (#3496, #4797)
+- Menus: fixed sub-menu items inside a popups from closing the popup.
+- Menus: fixed top-level menu from not consistently using style.PopupRounding. (#4788)
+- InputText, Nav: fixed repeated calls to SetKeyboardFocusHere() preventing to use InputText(). (#4682)
+- Inputtext, Nav: fixed using SetKeyboardFocusHere() on InputTextMultiline(). (#4761)
+- InputText: made double-click select word, triple-line select line. Word delimitation logic differs
+  slightly from the one used by CTRL+arrows. (#2244)
+- InputText: fixed ReadOnly flag preventing callbacks from receiving the text buffer. (#4762) [@actondev]
+- InputText: fixed Shift+Delete from not cutting into clipboard. (#4818, #1541) [@corporateshark]
+- InputTextMultiline: fixed incorrect padding when FrameBorder > 0. (#3781, #4794)
+- InputTextMultiline: fixed vertical tracking with large values of FramePadding.y. (#3781, #4794)
+- Separator: fixed cover all columns while called inside a table. (#4787)
+- Clipper: currently focused item is automatically included in clipper range.
+  Fixes issue where e.g. drag and dropping an item and scrolling ensure the item source location is
+  still submitted. (#3841, #1725) [@GamingMinds-DanielC, @ocornut]
+- Clipper: added ForceDisplayRangeByIndices() to force a given item (or several) to be stepped out
+  during a clipping operation. (#3841) [@@GamingMinds-DanielC]
+- Clipper: rework so gamepad/keyboard navigation doesn't create spikes in number of items requested
+  by the clipper to display. (#3841)
+- Clipper: fixed content height declaration slightly mismatching the value of when not using a clipper.
+  (an additional ItemSpacing.y was declared, affecting scrollbar range).
+- Clipper: various and incomplete changes to tame down scrolling and precision issues on very large ranges.
+  Passing an explicit height to the clipper now allows larger ranges. (#3609, #3962).
+- Clipper: fixed invalid state when number of frozen table row is smaller than ItemCount.
+- Drag and Drop: BeginDragDropSource() with ImGuiDragDropFlags_SourceAllowNullID doesn't lose
+  tooltip when scrolling. (#143)
+- Fonts: fixed infinite loop in ImFontGlyphRangesBuilder::AddRanges() when passing UINT16_MAX or UINT32_MAX
+  without the IMGUI_USE_WCHAR32 compile-time option. (#4802) [@SlavicPotato]
+- Metrics: Added a node showing windows in submission order and showing the Begin() stack.
+- Misc: Added missing ImGuiMouseCursor_NotAllowed cursor for software rendering (when the
+  io.MouseDrawCursor flag is enabled). (#4713) [@nobody-special666]
+- Misc: Fixed software mouse cursor being rendered multiple times if Render() is called more than once.
+- Misc: Fix MinGW DLL build issue (when IMGUI_API is defined). [@rokups]
+- CI: Add MinGW DLL build to test suite. [@rokups]
+- Backends: Vulkan: Call vkCmdSetScissor() at the end of render with a full-viewport to reduce
+  likehood of issues with people using VK_DYNAMIC_STATE_SCISSOR in their app without calling
+  vkCmdSetScissor() explicitly every frame. (#4644)
+- Backends: OpenGL3: Using buffer orphaning + glBufferSubData(), seems to fix leaks with multi-viewports
+  with some Intel HD drivers, and perhaps improve performances. (#4468, #4504, #2981, #3381) [@parbo]
+- Backends: OpenGL2, Allegro5, Marmalade: Fixed mishandling of the ImDrawCmd::IdxOffset field.
+  This is an old bug, but due to the way we created drawlists, it never had any visible side-effect before.
+  The new code for handling Modal and CTRL+Tab dimming/whitening recently made the bug surface. (#4790)
+- Backends: Win32: Store left/right variants of Ctrl/Shift/Alt mods in KeysDown[] array. (#2625) [@thedmd]
+- Backends: DX12: Fixed DRAW_EMPTY_SCISSOR_RECTANGLE warnings. (#4775)
+- Backends: SDL_Renderer: Added support for large meshes (64k+ vertices) with 16-bit indices,
+  enabling 'ImGuiBackendFlags_RendererHasVtxOffset' in the backend. (#3926) [@rokups]
+- Backends: SDL_Renderer: Fix for SDL 2.0.19+ RenderGeometryRaw() API signature change. (#4819) [@sridenour]
+- Backends: OSX: Generally fix keyboard support. Keyboard arrays indexed using kVK_* codes, e.g.
+  ImGui::IsKeyPressed(kVK_Space). Don't set mouse cursor shape unconditionally. Handle two fingers scroll
+  cancel event. (#4759, #4253, #1873) [@stuartcarnie]
+- Backends: OSX: Add Game Controller support (need linking GameController framework) (#4759) [@stuartcarnie]
+- Backends: WebGPU: Passing explicit buffer sizes to wgpuRenderPassEncoderSetVertexBuffer() and
+  wgpuRenderPassEncoderSetIndexBuffer() functions as validation layers appears to not do what the
+  in-flux specs says. (#4766) [@meshula]
+
+
+-----------------------------------------------------------------------
  VERSION 1.85 (Released 2021-10-12)
 -----------------------------------------------------------------------
 
