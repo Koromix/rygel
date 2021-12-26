@@ -1,4 +1,21 @@
-Web 19 Dec 2021 18:30:00 MSK
+Sun 26 Dec 2021 20:30:00 MSK
+    Releasing GNU libmicrohttpd 0.9.75 -EG
+
+December 2021
+    Fixed Makefile warning on MinGW.
+    Fixed compiler warning on MinGW.
+    Fixed "configure" portability (for NetBSD).
+    MSVC project cosmetics.
+    MSVC fixed project to fix linker warning.
+    Fixed compiler warning on some platforms.
+    Further improved test_client_put_stop to get stable results on all
+    platforms.
+    Added workaround for platforms (like OpenBSD) where system monotonic clocks
+    may jump forward and back.
+    Added more checks in test_large_put, increased timeout (was too small for
+    this test). -EG
+
+Sun 19 Dec 2021 18:30:00 MSK
     Releasing GNU libmicrohttpd 0.9.74 -EG
 
 December 2021

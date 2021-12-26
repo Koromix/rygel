@@ -2864,7 +2864,7 @@ uninstall-am: uninstall-libLTLIBRARIES
 @USE_MS_LIB_TOOL_TRUE@@W32_SHARED_LIB_EXP_TRUE@$(lt_cv_objdir)/libmicrohttpd.lib: $(lt_cv_objdir)/libmicrohttpd.def libmicrohttpd.la $(libmicrohttpd_la_OBJECTS)
 @USE_MS_LIB_TOOL_TRUE@@W32_SHARED_LIB_EXP_TRUE@	$(AM_V_LIB) cd "$(lt_cv_objdir)" && dll_name=`$(SED) -n -e "s/^dlname='\(.*\)'/\1/p" libmicrohttpd.la` && test -n "$$dll_name" && \
 @USE_MS_LIB_TOOL_TRUE@@W32_SHARED_LIB_EXP_TRUE@	$(MS_LIB_TOOL) -nologo -def:libmicrohttpd.def -name:$$dll_name -out:libmicrohttpd.lib $(libmicrohttpd_la_OBJECTS:.lo=.o) -ignore:4221
-@USE_EXPORT_FILE_TRUE@@USE_MS_LIB_TOOL_FALSE@@W32_SHARED_LIB_EXP_TRUE@$(lt_cv_objdir)/libmicrohttpd.lib $(lt_cv_objdir)/libmicrohttpd.exp: $(lt_cv_objdir)/libmicrohttpd.def libmicrohttpd.la $(libmicrohttpd_la_OBJECTS)
+@USE_EXPORT_FILE_TRUE@@USE_MS_LIB_TOOL_FALSE@@W32_SHARED_LIB_EXP_TRUE@$(lt_cv_objdir)/libmicrohttpd.lib: $(lt_cv_objdir)/libmicrohttpd.def libmicrohttpd.la $(libmicrohttpd_la_OBJECTS)
 @USE_EXPORT_FILE_TRUE@@USE_MS_LIB_TOOL_FALSE@@W32_SHARED_LIB_EXP_TRUE@	$(AM_V_DLLTOOL) cd "$(lt_cv_objdir)" && dll_name=`$(SED) -n -e "s/^dlname='\(.*\)'/\1/p" libmicrohttpd.la` && test -n "$$dll_name" && \
 @USE_EXPORT_FILE_TRUE@@USE_MS_LIB_TOOL_FALSE@@W32_SHARED_LIB_EXP_TRUE@	$(DLLTOOL) -d libmicrohttpd.def -D $$dll_name -l libmicrohttpd.lib $(libmicrohttpd_la_OBJECTS:.lo=.o) -e ./libmicrohttpd.exp
 @USE_EXPORT_FILE_FALSE@@USE_MS_LIB_TOOL_FALSE@@W32_SHARED_LIB_EXP_TRUE@$(lt_cv_objdir)/libmicrohttpd.lib: $(lt_cv_objdir)/libmicrohttpd.def libmicrohttpd.la

@@ -23,15 +23,15 @@
 #
 AC_PREREQ([2.64])
 LT_PREREQ([2.4.0])
-AC_INIT([GNU Libmicrohttpd],[0.9.74],[libmicrohttpd@gnu.org])
+AC_INIT([GNU Libmicrohttpd],[0.9.75],[libmicrohttpd@gnu.org])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([silent-rules] [subdir-objects])
 AC_CONFIG_HEADERS([MHD_config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
-LIB_VERSION_CURRENT=71
+LIB_VERSION_CURRENT=72
 LIB_VERSION_REVISION=0
-LIB_VERSION_AGE=59
+LIB_VERSION_AGE=60
 AC_SUBST(LIB_VERSION_CURRENT)
 AC_SUBST(LIB_VERSION_REVISION)
 AC_SUBST(LIB_VERSION_AGE)
@@ -711,7 +711,7 @@ int main(void)
     mhd_host_os="${mhd_host_os}-${mhd_cv_wctr_type}"
     AS_VAR_IF([mhd_cv_wctr_type], ["msvcrt"],
       [
-        AX_APPEND_COMPILE_FLAGS([-D__USE_MINGW_ANSI_STDIO=0], [CPPFLAGS])
+        AX_APPEND_COMPILE_FLAGS([-U__USE_MINGW_ANSI_STDIO -D__USE_MINGW_ANSI_STDIO=0], [CPPFLAGS])
         AC_SUBST([W32CRT], [MSVCRT])
       ], [AC_SUBST([W32CRT], [UCRT])]
     )
@@ -2656,7 +2656,7 @@ AS_VAR_IF([have_gnutls], ["yes"],
   ]
 )
 AM_CONDITIONAL([HAVE_GNUTLS_MTHREAD_BROKEN], [[test "x${mhd_cv_gnutls_mthread_broken}" = "xfound"]])
-AM_CONDITIONAL([USE_UPGRADE_TLS_TESTS], [[test "x${mhd_cv_gnutls_mthread_broken}" = "xno" || test "x${mhd_cv_gnutls_cli}" == "xyes"]])
+AM_CONDITIONAL([USE_UPGRADE_TLS_TESTS], [[test "x${mhd_cv_gnutls_mthread_broken}" = "xno" || test "x${mhd_cv_gnutls_cli}" = "xyes"]])
 
 # optional: HTTP Basic Auth support. Enabled by default
 AC_MSG_CHECKING([[whether to support HTTP basic authentication]])

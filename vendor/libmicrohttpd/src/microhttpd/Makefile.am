@@ -45,7 +45,7 @@ $(lt_cv_objdir)/libmicrohttpd.lib: $(lt_cv_objdir)/libmicrohttpd.def libmicrohtt
 	$(MS_LIB_TOOL) -nologo -def:libmicrohttpd.def -name:$$dll_name -out:libmicrohttpd.lib $(libmicrohttpd_la_OBJECTS:.lo=.o) -ignore:4221
 else
 if USE_EXPORT_FILE
-$(lt_cv_objdir)/libmicrohttpd.lib $(lt_cv_objdir)/libmicrohttpd.exp: $(lt_cv_objdir)/libmicrohttpd.def libmicrohttpd.la $(libmicrohttpd_la_OBJECTS)
+$(lt_cv_objdir)/libmicrohttpd.lib: $(lt_cv_objdir)/libmicrohttpd.def libmicrohttpd.la $(libmicrohttpd_la_OBJECTS)
 	$(AM_V_DLLTOOL) cd "$(lt_cv_objdir)" && dll_name=`$(SED) -n -e "s/^dlname='\(.*\)'/\1/p" libmicrohttpd.la` && test -n "$$dll_name" && \
 	$(DLLTOOL) -d libmicrohttpd.def -D $$dll_name -l libmicrohttpd.lib $(libmicrohttpd_la_OBJECTS:.lo=.o) -e ./libmicrohttpd.exp
 else

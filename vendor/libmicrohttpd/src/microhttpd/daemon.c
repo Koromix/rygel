@@ -1858,6 +1858,54 @@ thread_main_connection_upgrade (struct MHD_Connection *con)
 
 
 /**
+ * Get maximum wait period for the connection (the amount of time left before
+ * connection time out)
+ * @param c the connection to check
+ * @return the maximum wait period before the connection must be processed
+ *         again.
+ */
+static uint64_t
+connection_get_wait (struct MHD_Connection *c)
+{
+  const uint64_t now = MHD_monotonic_msec_counter ();
+  const uint64_t since_actv = now - c->last_activity;
+  const uint64_t timeout = c->connection_timeout_ms;
+  uint64_t mseconds_left;
+
+  mhd_assert (0 != timeout);
+  /* Keep the next lines in sync with #connection_check_timedout() to avoid
+   * undesired side-effects like busy-waiting. */
+  if (timeout < since_actv)
+  {
+    if (UINT64_MAX / 2 < since_actv)
+    {
+      const uint64_t jump_back = c->last_activity - now;
+      /* Very unlikely that it is more than quarter-million years pause.
+       * More likely that system clock jumps back. */
+      if (5000 >= jump_back)
+      { /* Jump back is less than 5 seconds, try to recover. */
+        return 100; /* Set wait time to 0.1 seconds */
+      }
+      /* Too large jump back */
+    }
+    return 0; /* Connection has timed out */
+  }
+  else if (since_actv == timeout)
+  {
+    /* Exact match for timeout and time from last activity.
+     * Maybe this is just a precise match or this happens because the timer
+     * resolution is too low.
+     * Set wait time to 0.1 seconds to avoid busy-waiting with low
+     * timer resolution as connection is not timed-out yet. */
+    return 100;
+  }
+  mseconds_left = timeout - since_actv;
+
+  return mseconds_left;
+}
+
+
+/**
  * Main function of the thread that handles an individual
  * connection when #MHD_USE_THREAD_PER_CONNECTION is set.
  *
@@ -1995,35 +2043,16 @@ thread_main_handle_connection (void *data)
     if ( (NULL == tvp) &&
          (timeout > 0) )
     {
-      const uint64_t since_actv = MHD_monotonic_msec_counter ()
-                                  - con->last_activity;
-      if (since_actv > timeout)
-      {
-        tv.tv_sec = 0;
-        tv.tv_usec = 0;
-      }
-      else if (since_actv == timeout)
-      {
-        /* Exact match for timeout and time from last activity.
-         * Maybe this is just a precise match or this happens because the timer
-         * resolution is too low.
-         * Set wait time to 0.1 seconds to avoid busy-waiting with low
-         * timer resolution as connection is not yet timed-out */
-        tv.tv_sec = 0;
-        tv.tv_usec = 100 * 1000;
-      }
+      const uint64_t mseconds_left = connection_get_wait (con);
+#if (SIZEOF_UINT64_T - 2) >= SIZEOF_STRUCT_TIMEVAL_TV_SEC
+      if (mseconds_left / 1000 > TIMEVAL_TV_SEC_MAX)
+        tv.tv_sec = TIMEVAL_TV_SEC_MAX;
       else
-      {
-        const uint64_t mseconds_left = timeout - since_actv;
-#if (SIZEOF_UINT64_T - 1) >= SIZEOF_STRUCT_TIMEVAL_TV_SEC
-        if (mseconds_left / 1000 > TIMEVAL_TV_SEC_MAX)
-          tv.tv_sec = TIMEVAL_TV_SEC_MAX;
-        else
-#endif /* (SIZEOF_UINT64_T - 1) >= SIZEOF_STRUCT_TIMEVAL_TV_SEC */
-        tv.tv_sec = (_MHD_TIMEVAL_TV_SEC_TYPE) mseconds_left / 1000;
+#endif /* (SIZEOF_UINT64_T - 2) >= SIZEOF_STRUCT_TIMEVAL_TV_SEC */
+      tv.tv_sec = (_MHD_TIMEVAL_TV_SEC_TYPE) mseconds_left / 1000;
 
-        tv.tv_usec = (mseconds_left % 1000) * 1000;
-      }
+      tv.tv_usec = (mseconds_left % 1000) * 1000;
+
       tvp = &tv;
     }
     if (! use_poll)
@@ -3930,33 +3959,13 @@ MHD_get_timeout (struct MHD_Daemon *daemon,
 
   if (NULL != earliest_tmot_conn)
   {
-    const uint64_t since_actv = MHD_monotonic_msec_counter ()
-                                - earliest_tmot_conn->last_activity;
-    /* Keep the next lines in sync with #MHD_connection_handle_idle() and
-     * with #thread_main_handle_connection(). */
-    if (since_actv > earliest_tmot_conn->connection_timeout_ms)
-      *timeout = 0;
-    else if (since_actv == earliest_tmot_conn->connection_timeout_ms)
-    {
-      /* Exact match for timeout and time from last activity.
-       * Maybe this is just a precise match or this happens because the timer
-       * resolution is too low.
-       * Set wait time to 0.1 seconds to avoid busy-waiting with low
-       * timer resolution as connection is not yet timed-out */
-      *timeout = 100;
-    }
-    else
-    {
-      const uint64_t mssecond_left = earliest_tmot_conn->connection_timeout_ms
-                                     - since_actv;
-
+    const uint64_t mssecond_left = connection_get_wait (earliest_tmot_conn);
 #if SIZEOF_UINT64_T > SIZEOF_UNSIGNED_LONG_LONG
-      if (mssecond_left > ULLONG_MAX)
-        *timeout = ULLONG_MAX;
-      else
+    if (mssecond_left > ULLONG_MAX)
+      *timeout = ULLONG_MAX;
+    else
 #endif /* UINT64 != ULLONG_MAX */
-      *timeout = (unsigned long long) mssecond_left;
-    }
+    *timeout = (unsigned long long) mssecond_left;
     return MHD_YES;
   }
   return MHD_NO;
@@ -5658,8 +5667,8 @@ parse_options_va (struct MHD_Daemon *daemon,
     case MHD_OPTION_CONNECTION_TIMEOUT:
       uv = va_arg (ap,
                    unsigned int);
-#if (SIZEOF_UINT64_T - 1) <= SIZEOF_UNSIGNED_INT
-      if ((UINT64_MAX / 2000 - 1) < uv)
+#if (SIZEOF_UINT64_T - 2) <= SIZEOF_UNSIGNED_INT
+      if ((UINT64_MAX / 4000 - 1) < uv)
       {
 #ifdef HAVE_MESSAGES
         MHD_DLOG (daemon,
@@ -5667,11 +5676,11 @@ parse_options_va (struct MHD_Daemon *daemon,
                      "Maximum allowed value (%" PRIu64 ") will be used " \
                      "instead.\n"),
                   uv,
-                  (UINT64_MAX / 2000 - 1));
+                  (UINT64_MAX / 4000 - 1));
 #endif
-        uv = UINT64_MAX / 2000 - 1;
+        uv = UINT64_MAX / 4000 - 1;
       }
-#endif /* (SIZEOF_UINT64_T - 1) <= SIZEOF_UNSIGNED_INT */
+#endif /* (SIZEOF_UINT64_T - 2) <= SIZEOF_UNSIGNED_INT */
       daemon->connection_timeout_ms = uv * 1000;
       break;
     case MHD_OPTION_NOTIFY_COMPLETED:

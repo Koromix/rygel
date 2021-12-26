@@ -53,7 +53,7 @@
       <Filter>Internal Headers</Filter>
     </ClInclude>
     <ClInclude Include="$(MhdSrc)microhttpd\sha256.h">
-      <Filter>Source Files</Filter>
+      <Filter>Internal Headers</Filter>
     </ClInclude>
     <ClInclude Include="$(MhdSrc)microhttpd\memorypool.h">
       <Filter>Internal Headers</Filter>

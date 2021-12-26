@@ -1,4 +1,21 @@
-Web 19 Dec 2021 18:30:00 MSK
+Sun 26 Dec 2021 20:30:00 MSK
+Released GNU libmicrohttpd 0.9.75 -EG
+
+    This is a correction release.
+    The main improvement is the implementation of workaround for some
+    OSes (like OpenBSD 7) where "monotonic" clock may jump back. Now
+    MHD is able to automatically detect such situation and recover if
+    the jump is small. This workaround is needed with increased
+    accuracy of connection timeout introduced in previous version, as
+    with lower accuracy (v0.9.73 and before) these jumpbacks were
+    unnoticeable.
+    Other changes: fixed some compiler, Makefile, and configure
+    warnings on specific platforms; one test further improved.
+
+    -- Evgeny Grin (Karlson2k)
+
+
+Sun 19 Dec 2021 18:30:00 MSK
 Released GNU libmicrohttpd 0.9.74
 
     This release brings a lot of fixes and improvements, and

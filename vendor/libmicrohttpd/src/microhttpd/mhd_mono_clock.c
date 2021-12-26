@@ -215,8 +215,7 @@ MHD_monotonic_sec_counter_init (void)
   else
 #endif /* CLOCK_MONOTONIC_RAW */
 #ifdef CLOCK_BOOTTIME
-  /* Linux-specific clock */
-  /* Count time in suspend so it's real monotonic on Linux, */
+  /* Count time in suspend on Linux so it's real monotonic, */
   /* but can be slower value-getting than other clocks */
   if (0 == clock_gettime (CLOCK_BOOTTIME,
                           &ts))
@@ -239,7 +238,7 @@ MHD_monotonic_sec_counter_init (void)
     mono_clock_source = _MHD_CLOCK_GETTIME;
   }
   else
-#endif /* CLOCK_BOOTTIME */
+#endif /* CLOCK_MONOTONIC */
 #ifdef CLOCK_UPTIME
   /* non-Linux clock */
   /* Doesn't count time in suspend */

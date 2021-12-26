@@ -47,6 +47,111 @@
 #define MHD_CPU_COUNT 2
 #endif
 
+
+#if defined(HAVE___FUNC__)
+#define externalErrorExit(ignore) \
+    _externalErrorExit_func(NULL, __func__, __LINE__)
+#define externalErrorExitDesc(errDesc) \
+    _externalErrorExit_func(errDesc, __func__, __LINE__)
+#define libcurlErrorExit(ignore) \
+    _libcurlErrorExit_func(NULL, __func__, __LINE__)
+#define libcurlErrorExitDesc(errDesc) \
+    _libcurlErrorExit_func(errDesc, __func__, __LINE__)
+#define mhdErrorExit(ignore) \
+    _mhdErrorExit_func(NULL, __func__, __LINE__)
+#define mhdErrorExitDesc(errDesc) \
+    _mhdErrorExit_func(errDesc, __func__, __LINE__)
+#elif defined(HAVE___FUNCTION__)
+#define externalErrorExit(ignore) \
+    _externalErrorExit_func(NULL, __FUNCTION__, __LINE__)
+#define externalErrorExitDesc(errDesc) \
+    _externalErrorExit_func(errDesc, __FUNCTION__, __LINE__)
+#define libcurlErrorExit(ignore) \
+    _libcurlErrorExit_func(NULL, __FUNCTION__, __LINE__)
+#define libcurlErrorExitDesc(errDesc) \
+    _libcurlErrorExit_func(errDesc, __FUNCTION__, __LINE__)
+#define mhdErrorExit(ignore) \
+    _mhdErrorExit_func(NULL, __FUNCTION__, __LINE__)
+#define mhdErrorExitDesc(errDesc) \
+    _mhdErrorExit_func(errDesc, __FUNCTION__, __LINE__)
+#else
+#define externalErrorExit(ignore) _externalErrorExit_func(NULL, NULL, __LINE__)
+#define externalErrorExitDesc(errDesc) \
+  _externalErrorExit_func(errDesc, NULL, __LINE__)
+#define libcurlErrorExit(ignore) _libcurlErrorExit_func(NULL, NULL, __LINE__)
+#define libcurlErrorExitDesc(errDesc) \
+  _libcurlErrorExit_func(errDesc, NULL, __LINE__)
+#define mhdErrorExit(ignore) _mhdErrorExit_func(NULL, NULL, __LINE__)
+#define mhdErrorExitDesc(errDesc) _mhdErrorExit_func(errDesc, NULL, __LINE__)
+#endif
+
+
+_MHD_NORETURN static void
+_externalErrorExit_func (const char *errDesc, const char *funcName, int lineNum)
+{
+  if ((NULL != errDesc) && (0 != errDesc[0]))
+    fprintf (stderr, "%s", errDesc);
+  else
+    fprintf (stderr, "System or external library call failed");
+  if ((NULL != funcName) && (0 != funcName[0]))
+    fprintf (stderr, " in %s", funcName);
+  if (0 < lineNum)
+    fprintf (stderr, " at line %d", lineNum);
+
+  fprintf (stderr, ".\nLast errno value: %d (%s)\n", (int) errno,
+           strerror (errno));
+#ifdef MHD_WINSOCK_SOCKETS
+  fprintf (stderr, "WSAGetLastError() value: %d\n", (int) WSAGetLastError ());
+#endif /* MHD_WINSOCK_SOCKETS */
+  fflush (stderr);
+  exit (99);
+}
+
+
+static char libcurl_errbuf[CURL_ERROR_SIZE] = "";
+
+_MHD_NORETURN static void
+_libcurlErrorExit_func (const char *errDesc, const char *funcName, int lineNum)
+{
+  if ((NULL != errDesc) && (0 != errDesc[0]))
+    fprintf (stderr, "%s", errDesc);
+  else
+    fprintf (stderr, "CURL library call failed");
+  if ((NULL != funcName) && (0 != funcName[0]))
+    fprintf (stderr, " in %s", funcName);
+  if (0 < lineNum)
+    fprintf (stderr, " at line %d", lineNum);
+
+  fprintf (stderr, ".\nLast errno value: %d (%s)\n", (int) errno,
+           strerror (errno));
+  if (0 != libcurl_errbuf[0])
+    fprintf (stderr, "Last libcurl error details: %s\n", libcurl_errbuf);
+
+  fflush (stderr);
+  exit (99);
+}
+
+
+_MHD_NORETURN static void
+_mhdErrorExit_func (const char *errDesc, const char *funcName, int lineNum)
+{
+  if ((NULL != errDesc) && (0 != errDesc[0]))
+    fprintf (stderr, "%s", errDesc);
+  else
+    fprintf (stderr, "MHD unexpected error");
+  if ((NULL != funcName) && (0 != funcName[0]))
+    fprintf (stderr, " in %s", funcName);
+  if (0 < lineNum)
+    fprintf (stderr, " at line %d", lineNum);
+
+  fprintf (stderr, ".\nLast errno value: %d (%s)\n", (int) errno,
+           strerror (errno));
+
+  fflush (stderr);
+  exit (8);
+}
+
+
 static int oneone;
 static int incr_read; /* Use incremental read */
 static int verbose; /* Be verbose */
@@ -74,7 +179,7 @@ alloc_init (size_t buf_size)
 
   buf = malloc (buf_size);
   if (NULL == buf)
-    return NULL;
+    externalErrorExit ();
 
   fill_ptr = buf;
   to_fill = buf_size;
@@ -98,7 +203,7 @@ putBuffer (void *stream, size_t size, size_t nmemb, void *ptr)
   wrt = size * nmemb;
   /* Check for overflow. */
   if (wrt / size != nmemb)
-    return 0;
+    libcurlErrorExitDesc ("Too large buffer size");
   if (wrt > PUT_SIZE - (*pos))
     wrt = PUT_SIZE - (*pos);
   memcpy (stream, &put_buffer[*pos], wrt);
@@ -113,7 +218,7 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
   struct CBC *cbc = ctx;
 
   if (cbc->pos + size * nmemb > cbc->size)
-    return 0;                   /* overflow */
+    libcurlErrorExitDesc ("Too large buffer size");
   memcpy (&cbc->buf[cbc->pos], ptr, size * nmemb);
   cbc->pos += size * nmemb;
   return size * nmemb;
@@ -133,17 +238,31 @@ ahc_echo (void *cls,
   struct MHD_Response *response;
   enum MHD_Result ret;
   static size_t processed;
-  (void) version;        /* Unused. Silent compiler warning. */
+
+  if (NULL == cls)
+    mhdErrorExitDesc ("cls parameter is NULL");
+
+  if (0 != strcmp (version, oneone ?
+                   MHD_HTTP_VERSION_1_1 : MHD_HTTP_VERSION_1_0))
+    mhdErrorExitDesc ("Unexpected HTTP version");
+
+  if (NULL == url)
+    mhdErrorExitDesc ("url parameter is NULL");
+
+  if (NULL == upload_data_size)
+    mhdErrorExitDesc ("'upload_data_size' pointer is NULL");
 
   if (0 != strcmp ("PUT", method))
-    return MHD_NO;              /* unexpected method */
+    mhdErrorExitDesc ("Unexpected request method");   /* unexpected method */
+
   if ((*done) == 0)
   {
     size_t *pproc;
     if (NULL == *pparam)
     {
       processed = 0;
-      *pparam = &processed;     /* Safe as long as only one parallel request served. */
+      /* Safe as long as only one parallel request served. */
+      *pparam = &processed;
     }
     pproc = (size_t *) *pparam;
 
@@ -151,18 +270,14 @@ ahc_echo (void *cls,
       return MHD_YES;   /* No data to process. */
 
     if (*pproc + *upload_data_size > PUT_SIZE)
-    {
-      fprintf (stderr, "Incoming data larger than expected.\n");
-      return MHD_NO;
-    }
+      mhdErrorExitDesc ("Incoming data larger than expected");
+
     if ( (! incr_read) && (*upload_data_size != PUT_SIZE) )
       return MHD_YES;   /* Wait until whole request is received. */
 
     if (0 != memcmp (upload_data, put_buffer + (*pproc), *upload_data_size))
-    {
-      fprintf (stderr, "Incoming data does not match sent data.\n");
-      return MHD_NO;
-    }
+      mhdErrorExitDesc ("Incoming data does not match sent data");
+
     *pproc += *upload_data_size;
     *upload_data_size = 0;   /* Current block of data is fully processed. */
 
@@ -173,6 +288,8 @@ ahc_echo (void *cls,
   response = MHD_create_response_from_buffer (strlen (url),
                                               (void *) url,
                                               MHD_RESPMEM_MUST_COPY);
+  if (NULL == response)
+    mhdErrorExitDesc ("Failed to create response");
   ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
   MHD_destroy_response (response);
   return ret;
@@ -213,37 +330,50 @@ testPutInternalThread (unsigned int add_flag)
                         (size_t) (incr_read ? 1024 : (PUT_SIZE * 4 / 3)),
                         MHD_OPTION_END);
   if (d == NULL)
-    return 1;
+    mhdErrorExit ();
   if (0 == port)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
     if ((NULL == dinfo) || (0 == dinfo->port) )
-    {
-      MHD_stop_daemon (d); return 32;
-    }
+      mhdErrorExit ();
     port = (int) dinfo->port;
   }
+
   c = curl_easy_init ();
-  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
-  curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-  curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
-  curl_easy_setopt (c, CURLOPT_READDATA, &pos);
-  curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
-  curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
-  curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
-  if (oneone)
-    curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-  else
-    curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-  curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
-  /* NOTE: use of CONNECTTIMEOUT without also
-   *   setting NOSIGNAL results in really weird
-   *   crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+  if (NULL == c)
+  {
+    fprintf (stderr, "curl_easy_init() failed.\n");
+    externalErrorExit ();
+  }
+  if ((CURLE_OK != curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_URL,
+                                     "http://127.0.0.1/hello_world")) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_PORT, (long) port)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_WRITEFUNCTION,
+                                     &copyBuffer)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_READFUNCTION,
+                                     &putBuffer)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_READDATA, &pos)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_UPLOAD, 1L)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_ERRORBUFFER, libcurl_errbuf)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT,
+                                     (long) 150)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_TIMEOUT,
+                                     (long) 150)) ||
+      ((oneone) ?
+       (CURLE_OK != curl_easy_setopt (c, CURLOPT_HTTP_VERSION,
+                                      CURL_HTTP_VERSION_1_1)) :
+       (CURLE_OK != curl_easy_setopt (c, CURLOPT_HTTP_VERSION,
+                                      CURL_HTTP_VERSION_1_0))))
+  {
+    fprintf (stderr, "curl_easy_setopt() failed.\n");
+    externalErrorExit ();
+  }
+
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
   {
     fprintf (stderr,
@@ -256,9 +386,17 @@ testPutInternalThread (unsigned int add_flag)
   curl_easy_cleanup (c);
   MHD_stop_daemon (d);
   if (cbc.pos != strlen ("/hello_world"))
-    return 4;
+  {
+    fprintf (stderr, "Got %u bytes ('%.*s'), expected %u bytes. ",
+             (unsigned) cbc.pos, (int) cbc.pos, cbc.buf,
+             (unsigned) strlen ("/hello_world"));
+    mhdErrorExitDesc ("Wrong returned data length");
+  }
   if (0 != strncmp ("/hello_world", cbc.buf, strlen ("/hello_world")))
-    return 8;
+  {
+    fprintf (stderr, "Got invalid response '%.*s'. ", (int) cbc.pos, cbc.buf);
+    mhdErrorExitDesc ("Wrong returned data length");
+  }
   return 0;
 }
 
@@ -298,37 +436,50 @@ testPutThreadPerConn (unsigned int add_flag)
                         (size_t) (incr_read ? 1024 : (PUT_SIZE * 4)),
                         MHD_OPTION_END);
   if (d == NULL)
-    return 16;
+    mhdErrorExit ();
   if (0 == port)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
     if ((NULL == dinfo) || (0 == dinfo->port) )
-    {
-      MHD_stop_daemon (d); return 32;
-    }
+      mhdErrorExit ();
     port = (int) dinfo->port;
   }
+
   c = curl_easy_init ();
-  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
-  curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-  curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
-  curl_easy_setopt (c, CURLOPT_READDATA, &pos);
-  curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
-  curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
-  curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
-  if (oneone)
-    curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-  else
-    curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-  curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
-  /* NOTE: use of CONNECTTIMEOUT without also
-   *   setting NOSIGNAL results in really weird
-   *   crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+  if (NULL == c)
+  {
+    fprintf (stderr, "curl_easy_init() failed.\n");
+    externalErrorExit ();
+  }
+  if ((CURLE_OK != curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_URL,
+                                     "http://127.0.0.1/hello_world")) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_PORT, (long) port)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_WRITEFUNCTION,
+                                     &copyBuffer)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_READFUNCTION,
+                                     &putBuffer)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_READDATA, &pos)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_UPLOAD, 1L)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_ERRORBUFFER, libcurl_errbuf)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT,
+                                     (long) 150)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_TIMEOUT,
+                                     (long) 150)) ||
+      ((oneone) ?
+       (CURLE_OK != curl_easy_setopt (c, CURLOPT_HTTP_VERSION,
+                                      CURL_HTTP_VERSION_1_1)) :
+       (CURLE_OK != curl_easy_setopt (c, CURLOPT_HTTP_VERSION,
+                                      CURL_HTTP_VERSION_1_0))))
+  {
+    fprintf (stderr, "curl_easy_setopt() failed.\n");
+    externalErrorExit ();
+  }
+
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
   {
     fprintf (stderr,
@@ -342,11 +493,16 @@ testPutThreadPerConn (unsigned int add_flag)
   MHD_stop_daemon (d);
   if (cbc.pos != strlen ("/hello_world"))
   {
-    fprintf (stderr, "Got invalid response `%.*s'\n", (int) cbc.pos, cbc.buf);
-    return 64;
+    fprintf (stderr, "Got %u bytes ('%.*s'), expected %u bytes. ",
+             (unsigned) cbc.pos, (int) cbc.pos, cbc.buf,
+             (unsigned) strlen ("/hello_world"));
+    mhdErrorExitDesc ("Wrong returned data length");
   }
   if (0 != strncmp ("/hello_world", cbc.buf, strlen ("/hello_world")))
-    return 128;
+  {
+    fprintf (stderr, "Got invalid response '%.*s'. ", (int) cbc.pos, cbc.buf);
+    mhdErrorExitDesc ("Wrong returned data length");
+  }
   return 0;
 }
 
@@ -386,37 +542,49 @@ testPutThreadPool (unsigned int add_flag)
                         (size_t) (incr_read ? 1024 : (PUT_SIZE * 4)),
                         MHD_OPTION_END);
   if (d == NULL)
-    return 16;
+    mhdErrorExit ();
   if (0 == port)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
     if ((NULL == dinfo) || (0 == dinfo->port) )
-    {
-      MHD_stop_daemon (d); return 32;
-    }
+      mhdErrorExit ();
     port = (int) dinfo->port;
   }
+
   c = curl_easy_init ();
-  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
-  curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-  curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
-  curl_easy_setopt (c, CURLOPT_READDATA, &pos);
-  curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
-  curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
-  curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
-  if (oneone)
-    curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-  else
-    curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-  curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
-  /* NOTE: use of CONNECTTIMEOUT without also
-   *   setting NOSIGNAL results in really weird
-   *   crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
+  if (NULL == c)
+  {
+    fprintf (stderr, "curl_easy_init() failed.\n");
+    externalErrorExit ();
+  }
+  if ((CURLE_OK != curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_URL,
+                                     "http://127.0.0.1/hello_world")) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_PORT, (long) port)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_WRITEFUNCTION,
+                                     &copyBuffer)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_READFUNCTION,
+                                     &putBuffer)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_READDATA, &pos)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_UPLOAD, 1L)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_ERRORBUFFER, libcurl_errbuf)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT,
+                                     (long) 150)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_TIMEOUT,
+                                     (long) 150)) ||
+      ((oneone) ?
+       (CURLE_OK != curl_easy_setopt (c, CURLOPT_HTTP_VERSION,
+                                      CURL_HTTP_VERSION_1_1)) :
+       (CURLE_OK != curl_easy_setopt (c, CURLOPT_HTTP_VERSION,
+                                      CURL_HTTP_VERSION_1_0))))
+  {
+    fprintf (stderr, "curl_easy_setopt() failed.\n");
+    externalErrorExit ();
+  }
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
   {
     fprintf (stderr,
@@ -430,11 +598,16 @@ testPutThreadPool (unsigned int add_flag)
   MHD_stop_daemon (d);
   if (cbc.pos != strlen ("/hello_world"))
   {
-    fprintf (stderr, "Got invalid response `%.*s'\n", (int) cbc.pos, cbc.buf);
-    return 64;
+    fprintf (stderr, "Got %u bytes ('%.*s'), expected %u bytes. ",
+             (unsigned) cbc.pos, (int) cbc.pos, cbc.buf,
+             (unsigned) strlen ("/hello_world"));
+    mhdErrorExitDesc ("Wrong returned data length");
   }
   if (0 != strncmp ("/hello_world", cbc.buf, strlen ("/hello_world")))
-    return 128;
+  {
+    fprintf (stderr, "Got invalid response '%.*s'. ", (int) cbc.pos, cbc.buf);
+    mhdErrorExitDesc ("Wrong returned data length");
+  }
   return 0;
 }
 
@@ -450,12 +623,6 @@ testPutExternal (void)
   fd_set rs;
   fd_set ws;
   fd_set es;
-  MHD_socket maxsock;
-#ifdef MHD_WINSOCK_SOCKETS
-  int maxposixs; /* Max socket number unused on W32 */
-#else  /* MHD_POSIX_SOCKETS */
-#define maxposixs maxsock
-#endif /* MHD_POSIX_SOCKETS */
   int running;
   struct CURLMsg *msg;
   time_t start;
@@ -487,105 +654,105 @@ testPutExternal (void)
                         (size_t) (incr_read ? 1024 : (PUT_SIZE * 4)),
                         MHD_OPTION_END);
   if (d == NULL)
-    return 256;
+    mhdErrorExit ();
   if (0 == port)
   {
     const union MHD_DaemonInfo *dinfo;
     dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
     if ((NULL == dinfo) || (0 == dinfo->port) )
-    {
-      MHD_stop_daemon (d); return 32;
-    }
+      mhdErrorExit ();
     port = (int) dinfo->port;
   }
-  c = curl_easy_init ();
-  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
-  curl_easy_setopt (c, CURLOPT_PORT, (long) port);
-  curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
-  curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
-  curl_easy_setopt (c, CURLOPT_READFUNCTION, &putBuffer);
-  curl_easy_setopt (c, CURLOPT_READDATA, &pos);
-  curl_easy_setopt (c, CURLOPT_UPLOAD, 1L);
-  curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE);
-  curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L);
-  curl_easy_setopt (c, CURLOPT_TIMEOUT, 150L);
-  if (oneone)
-    curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-  else
-    curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-  curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
-  /* NOTE: use of CONNECTTIMEOUT without also
-   *   setting NOSIGNAL results in really weird
-   *   crashes on my system! */
-  curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L);
 
+  c = curl_easy_init ();
+  if (NULL == c)
+  {
+    fprintf (stderr, "curl_easy_init() failed.\n");
+    externalErrorExit ();
+  }
+  if ((CURLE_OK != curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1L)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_URL,
+                                     "http://127.0.0.1/hello_world")) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_PORT, (long) port)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_WRITEFUNCTION,
+                                     &copyBuffer)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_READFUNCTION,
+                                     &putBuffer)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_READDATA, &pos)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_UPLOAD, 1L)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_INFILESIZE, (long) PUT_SIZE)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_FAILONERROR, 1L)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_ERRORBUFFER, libcurl_errbuf)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT,
+                                     (long) 150)) ||
+      (CURLE_OK != curl_easy_setopt (c, CURLOPT_TIMEOUT,
+                                     (long) 150)) ||
+      ((oneone) ?
+       (CURLE_OK != curl_easy_setopt (c, CURLOPT_HTTP_VERSION,
+                                      CURL_HTTP_VERSION_1_1)) :
+       (CURLE_OK != curl_easy_setopt (c, CURLOPT_HTTP_VERSION,
+                                      CURL_HTTP_VERSION_1_0))))
+  {
+    fprintf (stderr, "curl_easy_setopt() failed.\n");
+    externalErrorExit ();
+  }
 
   multi = curl_multi_init ();
   if (multi == NULL)
-  {
-    curl_easy_cleanup (c);
-    MHD_stop_daemon (d);
-    return 512;
-  }
+    libcurlErrorExit ();
   mret = curl_multi_add_handle (multi, c);
   if (mret != CURLM_OK)
-  {
-    curl_multi_cleanup (multi);
-    curl_easy_cleanup (c);
-    MHD_stop_daemon (d);
-    return 1024;
-  }
+    libcurlErrorExit ();
+
   start = time (NULL);
-  while ((time (NULL) - start < 5) && (multi != NULL))
+  while ((time (NULL) - start < 45) && (multi != NULL))
   {
-    maxsock = MHD_INVALID_SOCKET;
-    maxposixs = -1;
+    MHD_socket maxMHDsock;
+    int maxcurlsock;
+    maxMHDsock = MHD_INVALID_SOCKET;
+    maxcurlsock = -1;
     FD_ZERO (&rs);
     FD_ZERO (&ws);
     FD_ZERO (&es);
-    curl_multi_perform (multi, &running);
-    mret = curl_multi_fdset (multi, &rs, &ws, &es, &maxposixs);
-    if (mret != CURLM_OK)
+    mret = curl_multi_perform (multi, &running);
+    if ((CURLM_OK != mret) && (CURLM_CALL_MULTI_PERFORM != mret))
     {
-      curl_multi_remove_handle (multi, c);
-      curl_multi_cleanup (multi);
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      return 2048;
+      fprintf (stderr, "curl_multi_perform() failed. Error: '%s'. ",
+               curl_multi_strerror (mret));
+      libcurlErrorExit ();
     }
-    if (MHD_YES != MHD_get_fdset (d, &rs, &ws, &es, &maxsock))
-    {
-      curl_multi_remove_handle (multi, c);
-      curl_multi_cleanup (multi);
-      curl_easy_cleanup (c);
-      MHD_stop_daemon (d);
-      return 4096;
-    }
+    if (CURLM_OK != curl_multi_fdset (multi, &rs, &ws, &es, &maxcurlsock))
+      libcurlErrorExitDesc ("curl_multi_fdset() failed");
+    if (MHD_YES != MHD_get_fdset (d, &rs, &ws, &es, &maxMHDsock))
+      mhdErrorExit ();
+
     tv.tv_sec = 0;
     tv.tv_usec = 1000;
-    if (-1 == select (maxposixs + 1, &rs, &ws, &es, &tv))
+#ifndef MHD_WINSOCK_SOCKETS
+    if (maxMHDsock > maxcurlsock)
+      maxcurlsock = maxMHDsock;
+#endif /* MHD_WINSOCK_SOCKETS */
+    if (-1 == select (maxcurlsock + 1, &rs, &ws, &es, &tv))
     {
 #ifdef MHD_POSIX_SOCKETS
       if (EINTR != errno)
-      {
-        fprintf (stderr, "Unexpected select() error: %d. Line: %d\n",
-                 (int) errno, __LINE__);
-        fflush (stderr);
-        exit (99);
-      }
+        externalErrorExitDesc ("Unexpected select() error");
 #else
       if ((WSAEINVAL != WSAGetLastError ()) ||
           (0 != rs.fd_count) || (0 != ws.fd_count) || (0 != es.fd_count) )
-      {
-        fprintf (stderr, "Unexpected select() error: %d. Line: %d\n",
-                 (int) WSAGetLastError (), __LINE__);
-        fflush (stderr);
-        exit (99);
-      }
-      Sleep (1);
+        externalErrorExitDesc ("Unexpected select() error");
+      Sleep (tv.tv_sec * 1000 + tv.tv_usec / 1000);
 #endif
     }
-    curl_multi_perform (multi, &running);
+
+    mret = curl_multi_perform (multi, &running);
+    if ((CURLM_OK != mret) && (CURLM_CALL_MULTI_PERFORM != mret))
+    {
+      fprintf (stderr, "curl_multi_perform() failed. Error: '%s'. ",
+               curl_multi_strerror (mret));
+      libcurlErrorExit ();
+    }
     if (0 == running)
     {
       int pending;
@@ -599,18 +766,16 @@ testPutExternal (void)
           else
           {
             fprintf (stderr,
-                     "%s failed at %s:%d: `%s'\n",
-                     "curl_multi_perform",
-                     __FILE__,
-                     __LINE__, curl_easy_strerror (msg->data.result));
-            abort ();
+                     "curl_multi_perform() failed: '%s' ",
+                     curl_easy_strerror (msg->data.result));
+            libcurlErrorExit ();
           }
         }
       }
       if (! curl_fine)
       {
-        fprintf (stderr, "libcurl haven't returned OK code\n");
-        abort ();
+        fprintf (stderr, "libcurl haven't returned OK code ");
+        mhdErrorExit ();
       }
       curl_multi_remove_handle (multi, c);
       curl_multi_cleanup (multi);
@@ -621,19 +786,21 @@ testPutExternal (void)
     MHD_run (d);
   }
   if (multi != NULL)
-  {
-    curl_multi_remove_handle (multi, c);
-    curl_easy_cleanup (c);
-    curl_multi_cleanup (multi);
-  }
+    mhdErrorExitDesc ("Request has been aborted by timeout");
+
   MHD_stop_daemon (d);
   if (cbc.pos != strlen ("/hello_world"))
   {
-    fprintf (stderr, "Got invalid response `%.*s'\n", (int) cbc.pos, cbc.buf);
-    return 8192;
+    fprintf (stderr, "Got %u bytes ('%.*s'), expected %u bytes. ",
+             (unsigned) cbc.pos, (int) cbc.pos, cbc.buf,
+             (unsigned) strlen ("/hello_world"));
+    mhdErrorExitDesc ("Wrong returned data length");
   }
   if (0 != strncmp ("/hello_world", cbc.buf, strlen ("/hello_world")))
-    return 16384;
+  {
+    fprintf (stderr, "Got invalid response '%.*s'. ", (int) cbc.pos, cbc.buf);
+    mhdErrorExitDesc ("Wrong returned data length");
+  }
   return 0;
 }
 

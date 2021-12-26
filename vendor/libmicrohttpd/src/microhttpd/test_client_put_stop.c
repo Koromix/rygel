@@ -710,6 +710,8 @@ _MHD_dumbClient_send_req (struct _MHD_dumbClient *clnt)
       return;
     if (MHD_SCKT_ERR_IS_REMOTE_DISCNN_ (err))
       mhdErrorExitDesc ("The connection was aborted by MHD");
+    if (MHD_SCKT_ERR_IS_ (err, MHD_SCKT_EPIPE_))
+      mhdErrorExitDesc ("The connection was shut down on MHD side");
     externalErrorExitDesc ("Unexpected network error");
   }
   clnt->send_off += (size_t) res;
@@ -1374,6 +1376,7 @@ performQueryExternal (struct MHD_Daemon *d, struct _MHD_dumbClient *clnt)
   int client_accepted;
   int full_req_recieved;
   int full_req_sent;
+  int some_data_recieved;
 
   di = MHD_get_daemon_info (d, MHD_DAEMON_INFO_LISTEN_FD);
   if (NULL == di)
@@ -1386,6 +1389,7 @@ performQueryExternal (struct MHD_Daemon *d, struct _MHD_dumbClient *clnt)
   _MHD_dumbClient_start_connect (clnt);
 
   full_req_recieved = 0;
+  some_data_recieved = 0;
   start = time (NULL);
   do
   {
@@ -1394,6 +1398,7 @@ performQueryExternal (struct MHD_Daemon *d, struct _MHD_dumbClient *clnt)
     fd_set es;
     MHD_socket maxMhdSk;
     int num_ready;
+    int do_client; /**< Process data in client */
 
     maxMhdSk = MHD_INVALID_SOCKET;
     FD_ZERO (&rs);
@@ -1405,6 +1410,7 @@ performQueryExternal (struct MHD_Daemon *d, struct _MHD_dumbClient *clnt)
        * processing any connections */
       unsigned long long to;
       full_req_sent = 1;
+      do_client = 0;
       if (client_accepted && (MHD_YES != MHD_get_timeout (d, &to)))
       {
         ret = 0;
@@ -1414,12 +1420,36 @@ performQueryExternal (struct MHD_Daemon *d, struct _MHD_dumbClient *clnt)
     else
     {
       full_req_sent = _MHD_dumbClient_is_req_sent (clnt);
-      if ((! full_req_sent) || full_req_recieved || (0 == rate_limiter))
+      if (! full_req_sent)
+        do_client = 1; /* Request hasn't been sent yet, send the data */
+      else
+      {
+        /* All request data has been sent.
+         * Client will close the socket as the next step. */
+        if (full_req_recieved)
+          do_client = 1; /* All data has been received by the MHD */
+        else if ((0 == rate_limiter) && some_data_recieved)
+        {
+          /* No RST rate limiter, no need to avoid extra RST
+           * and at least something was received by the MHD */
+          do_client = 1;
+        }
+        else
+        {
+          /* When rate limiter is enabled, all sent packets must be received
+           * before client close connection to avoid RST for every ACK.
+           * When rate limiter is not enabled, the MHD must receive at
+           * least something before closing the connection. */
+          do_client = 0;
+        }
+      }
+
+      if (do_client)
         _MHD_dumbClient_get_fdsets (clnt, &maxMhdSk, &rs, &ws, &es);
     }
     if (MHD_YES != MHD_get_fdset (d, &rs, &ws, &es, &maxMhdSk))
       mhdErrorExitDesc ("MHD_get_fdset() failed");
-    if ((! full_req_sent) || full_req_recieved || (0 == rate_limiter))
+    if (do_client)
     {
       tv.tv_sec = 1;
       tv.tv_usec = 250 * 1000;
@@ -1445,6 +1475,8 @@ performQueryExternal (struct MHD_Daemon *d, struct _MHD_dumbClient *clnt)
     }
     if (0 == num_ready)
     { /* select() finished by timeout, looks like no more packets are pending */
+      if (do_client)
+        externalErrorExitDesc ("Timeout waiting for sockets");
       if (full_req_sent && (! full_req_recieved))
         full_req_recieved = 1;
     }
@@ -1452,20 +1484,32 @@ performQueryExternal (struct MHD_Daemon *d, struct _MHD_dumbClient *clnt)
       mhdErrorExitDesc ("MHD_run_from_select() failed");
     if (! client_accepted)
       client_accepted = FD_ISSET (lstn_sk, &rs);
-    if (NULL != clnt)
-    {
-      /* Do not close the socket on client side until
-       * MHD is accepted and processed the socket. */
-      if (! full_req_sent || (client_accepted && ! FD_ISSET (lstn_sk, &rs)))
+    else
+    { /* Client connection was already accepted by MHD */
+      if (! some_data_recieved)
       {
-        if ((! full_req_sent) || full_req_recieved || (0 == rate_limiter))
+        if (! do_client)
         {
-          /* When rate limiter is enabled, all sent packets must be received
-           * before client close connection to avoid RST for every ACK. */
-          if (_MHD_dumbClient_process_from_fdsets (clnt, &rs, &ws, &es))
-            clnt = NULL;
+          if (0 != num_ready)
+          { /* Connection was accepted before, "ready" socket means data */
+            some_data_recieved = 1;
+          }
+        }
+        else
+        {
+          if (2 == num_ready)
+            some_data_recieved = 1;
+          else if ((1 == num_ready) &&
+                   ((MHD_INVALID_SOCKET == clnt->sckt) ||
+                    ! FD_ISSET (clnt->sckt, &ws)))
+            some_data_recieved = 1;
         }
       }
+    }
+    if (do_client)
+    {
+      if (_MHD_dumbClient_process_from_fdsets (clnt, &rs, &ws, &es))
+        clnt = NULL;
     }
     /* Use double timeout value here so MHD would be able to catch timeout
      * internally */
