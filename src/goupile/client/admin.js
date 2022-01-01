@@ -23,9 +23,14 @@ function AdminController() {
 
     this.init = async function() {
         ui.setMenu(renderMenu);
-        ui.createPanel('instances', 1, true, renderInstances);
-        ui.createPanel('users', 0, true, renderUsers);
-        ui.createPanel('archives', 0, false, renderArchives);
+
+        ui.createPanel('instances', ['users', 'archives'], 'users', renderInstances);
+        ui.createPanel('users', [], null, renderUsers);
+        ui.createPanel('archives', [], null, renderArchives);
+
+        ui.setPanelState('instances', true);
+        if (ui.allowTwoPanels())
+            ui.setPanelState('users', true);
     }
 
     this.hasUnsavedData = function() {
@@ -36,13 +41,13 @@ function AdminController() {
         return html`
             <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
                     @click=${e => self.go(e, '/admin/')}>Admin</button>
-            <button class=${'icon' + (ui.isPanelEnabled('instances') ? ' active' : '')}
+            <button class=${'icon' + (ui.isPanelActive('instances') ? ' active' : '')}
                     style="background-position-y: calc(-362px + 1.2em);"
                     @click=${ui.wrapAction(e => togglePanel(e, 'instances'))}>Projets</button>
-            <button class=${'icon' + (ui.isPanelEnabled('users') ? ' active' : '')}
+            <button class=${'icon' + (ui.isPanelActive('users') ? ' active' : '')}
                     style="background-position-y: calc(-406px + 1.2em);"
                     @click=${ui.wrapAction(e => togglePanel(e, 'users'))}>Utilisateurs</button>
-            <button class=${'icon' + (ui.isPanelEnabled('archives') ? ' active' : '')}
+            <button class=${'icon' + (ui.isPanelActive('archives') ? ' active' : '')}
                     style="background-position-y: calc(-142px + 1.2em);"
                     @click=${ui.wrapAction(e => togglePanel(e, 'archives'))}>Archives</button>
             <div style="flex: 1;"></div>
@@ -59,7 +64,7 @@ function AdminController() {
     }
 
     function togglePanel(e, key) {
-        ui.setPanelState(key, !ui.isPanelEnabled(key));
+        ui.setPanelState(key, !ui.isPanelActive(key), key !== 'instances');
         return self.go();
     }
 
@@ -369,7 +374,7 @@ function AdminController() {
             if (panels) {
                 panels = panels.split('|');
 
-                ui.setEnabledPanels(panels);
+                ui.restorePanels(panels);
                 explicit_panels = true;
             }
 
@@ -384,7 +389,7 @@ function AdminController() {
             }
         }
 
-        if (ui.isPanelEnabled('archives') && new_archives == null) {
+        if (ui.isPanelActive('archives') && new_archives == null) {
             new_archives = await net.fetchJson('/admin/api/archives/list');
             new_archives.sort(util.makeComparator(archive => archive.filename));
         }
@@ -422,7 +427,7 @@ function AdminController() {
 
             if (selected_instance != null)
                 params.select = selected_instance.key;
-            params.p = ui.getEnabledPanels().join('|') || null;
+            params.p = ui.savePanels().join('|') || null;
 
             let url = util.pasteURL('/admin/', params);
             goupile.syncHistory(url, options.push_history);

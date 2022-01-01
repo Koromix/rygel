@@ -115,7 +115,7 @@ button:not(:disabled):hover { border-color: var(--anchor_color); }
     padding-left: 36px;
     background-image: url('icons.png');
     background-repeat: no-repeat;
-    background-size: 22px 594px;
+    background-size: 22px 638px;
     background-position-x: 6px;
 }
 .ui_toolbar > hr {
@@ -130,6 +130,7 @@ html.small .ui_toolbar button.icon {
     text-overflow: clip;
     background-position-x: center;
 }
+.ui_toolbar button.icon:empty { background-position-x: center; }
 
 .ui_toolbar > .drop {
     position: relative;
@@ -147,7 +148,7 @@ html.small .ui_toolbar button.icon {
     height: 16px;
     background-image: url('icons.png');
     background-repeat: no-repeat;
-    background-size: 22px 594px;
+    background-size: 22px 638px;
     background-position: 1px calc(-591px + 1.2em);
     content: ' ';
 }
@@ -242,6 +243,25 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
     display: block;
     min-height: 2em;
     content: "";
+}
+
+.ui_pin {
+    position: absolute !important;
+    right: 2px;
+    top: 2px;
+    width: 3em;
+    height: 3em;
+    border: none;
+    padding: 0px;
+    background-color: inherit;
+    background-image: url('icons.png');
+    background-repeat: no-repeat;
+    background-size: 22px 638px;
+    background-position: center calc(-52px + 1.2em);
+}
+.ui_pin.active {
+    background-color: var(--anchor_color);
+    background-position-y: calc(-624px + 1.2em);
 }
 
 /* -------------------- Dialogs and popups -------------------- */
@@ -440,7 +460,7 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
 /* -------------------- Utility -------------------- */
 
 .ui_busy {
-    position: relative !important;
+    position: relative;
     cursor: wait !important;
     opacity: 0.5 !important;
     white-space: nowrap !important;

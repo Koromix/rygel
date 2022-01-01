@@ -146,9 +146,16 @@ function InstanceController() {
 
     function initUI() {
         ui.setMenu(renderMenu);
-        ui.createPanel('editor', 0, false, renderEditor);
-        ui.createPanel('data', 0, app.panels.data, renderData);
-        ui.createPanel('view', 1, app.panels.view && !app.panels.data, renderPage);
+
+        ui.createPanel('editor', ['view'], 'view', renderEditor);
+        ui.createPanel('data', ['view'], null, renderData);
+        ui.createPanel('view', [], null, renderPage);
+
+        if (app.panels.data) {
+            ui.setPanelState('data', true);
+        } else if (app.panels.view) {
+            ui.setPanelState('view', true);
+        }
     };
 
     this.hasUnsavedData = function() {
@@ -170,19 +177,14 @@ function InstanceController() {
 
         return html`
             ${app.panels.editor ? html`
-                <button class=${'icon' + (ui.isPanelEnabled('editor') ? ' active' : '')}
+                <button class=${'icon' + (ui.isPanelActive('editor') ? ' active' : '')}
                         style="background-position-y: calc(-230px + 1.2em);"
                         @click=${ui.wrapAction(e => togglePanel(e, 'editor'))}>Code</button>
             ` : ''}
             ${app.panels.data ? html`
-                <button class=${'icon' + (ui.isPanelEnabled('data') ? ' active' : '')}
+                <button class=${'icon' + (ui.isPanelActive('data') ? ' active' : '')}
                         style="background-position-y: calc(-274px + 1.2em);"
                         @click=${ui.wrapAction(e => togglePanel(e, 'data'))}>Liste</button>
-            ` : ''}
-            ${app.panels.view ? html`
-                <button class=${'icon' + (ui.isPanelEnabled('view') ? ' active' : '')}
-                        style="background-position-y: calc(-318px + 1.2em);"
-                        @click=${ui.wrapAction(e => togglePanel(e, 'view'))}>Saisie</button>
             ` : ''}
             ${profile.lock != null && profile.lock.unlockable ? html`
                 <button class="icon" style="background-position-y: calc(-186px + 1.2em)"
@@ -333,8 +335,8 @@ function InstanceController() {
     }
 
     async function togglePanel(e, key) {
-        let enable = !ui.isPanelEnabled(key);
-        ui.setPanelState(key, enable);
+        let enable = !ui.isPanelActive(key);
+        ui.setPanelState(key, enable, key === 'view');
 
         await self.run();
 
@@ -369,13 +371,16 @@ function InstanceController() {
                 <div class="ui_toolbar">
                     ${tabs.map(tab => html`<button class=${editor_filename === tab.filename ? 'active' : ''}
                                                    @click=${ui.wrapAction(e => toggleEditorFile(tab.filename))}>${tab.title}</button>`)}
+                    <div style="flex: 1;"></div>
                     ${editor_filename === 'main.js' ? html`
-                        <div style="flex: 1;"></div>
                         <button ?disabled=${!fileHasChanged('main.js')}
                                 @click=${ui.wrapAction(applyMainScript)}>Appliquer</button>
                     ` : ''}
-                    <div style="flex: 1;"></div>
                     <button @click=${ui.wrapAction(runPublishDialog)}>Publier</button>
+                    <div style="flex: 1;"></div>
+                    <button class=${ui.isPanelActive('view') ? 'icon active' : 'icon'}
+                            style="background-position-y: calc(-626px + 1.2em);"
+                            @click=${ui.wrapAction(e => togglePanel(e, 'view'))}></button>
                 </div>
 
                 ${editor_el}
@@ -434,6 +439,11 @@ function InstanceController() {
 
         return html`
             <div class="padded">
+                ${app.panels.view ? html`
+                    <button class=${ui.isPanelActive('view') ? 'ui_pin active' : 'ui_pin'}
+                            @click=${ui.wrapAction(e => togglePanel(e, 'view'))}></button>
+                ` : ''}
+
                 <div class="ui_actions" style="margin-bottom: 1.2em;">
                     <button @click=${ui.wrapAction(e => self.go(e, route.form.chain[0].url + '/new'))}>Ajouter un ${data_form.title.toLowerCase()}</button>
                 </div>
@@ -1204,7 +1214,7 @@ function InstanceController() {
             session.on('change', e => handleFileChange(editor_filename));
 
             session.on('changeScrollTop', () => {
-                if (ui.isPanelEnabled('view'))
+                if (ui.isPanelActive('view'))
                     setTimeout(syncFormScroll, 0);
             });
             session.selection.on('changeSelection', () => {
@@ -1257,7 +1267,7 @@ function InstanceController() {
     }
 
     function syncFormScroll() {
-        if (!ui.isPanelEnabled('editor') || !ui.isPanelEnabled('view'))
+        if (!ui.isPanelActive('editor') || !ui.isPanelActive('view'))
             return;
         if (ignore_editor_scroll) {
             ignore_editor_scroll = false;
@@ -1314,14 +1324,14 @@ function InstanceController() {
     }
 
     function syncFormHighlight(scroll) {
-        if (!ui.isPanelEnabled('view'))
+        if (!ui.isPanelActive('view'))
             return;
 
         try {
             let panel_el = document.querySelector('#ins_page').parentNode;
             let widget_els = panel_el.querySelectorAll('*[data-line]');
 
-            if (ui.isPanelEnabled('editor') && widget_els.length) {
+            if (ui.isPanelActive('editor') && widget_els.length) {
                 let selection = editor_ace.session.selection;
                 let editor_lines = [
                     selection.getRange().start.row + 1,
@@ -1385,7 +1395,7 @@ function InstanceController() {
     }
 
     function syncEditorScroll() {
-        if (!ui.isPanelEnabled('editor') || !ui.isPanelEnabled('view'))
+        if (!ui.isPanelActive('editor') || !ui.isPanelActive('view'))
             return;
         if (ignore_page_scroll) {
             ignore_page_scroll = false;
@@ -1531,7 +1541,7 @@ function InstanceController() {
                 panels = panels.split('|');
                 panels = panels.filter(key => app.panels[key]);
 
-                ui.setEnabledPanels(panels);
+                ui.restorePanels(panels);
                 explicit_panels = true;
             }
         }
@@ -1648,12 +1658,12 @@ function InstanceController() {
                     el.parentNode.scrollTop = 0;
             }, 0);
 
-            if (!explicit_panels && !ui.isPanelEnabled('view') && app.panels.view) {
+            if (!explicit_panels && !ui.isPanelActive('view') && app.panels.view) {
                 ui.setPanelState('view', true);
                 ui.setPanelState('data', false);
             }
-        } else if (form_record == null && new_record.chain[0].saved) {
-            if (!explicit_panels && !ui.isPanelEnabled('view') && app.panels.view) {
+        } else if (new_record.chain[0].saved) {
+            if (!explicit_panels && !ui.isPanelActive('view') && app.panels.view) {
                 ui.setPanelState('view', true);
                 ui.setPanelState('data', false);
             }
@@ -1725,7 +1735,7 @@ function InstanceController() {
         await fetchCode(filename);
 
         // Sync editor (if needed)
-        if (ui.isPanelEnabled('editor')) {
+        if (ui.isPanelActive('editor')) {
             if (editor_filename !== 'main.js')
                 editor_filename = filename;
 
@@ -1733,7 +1743,7 @@ function InstanceController() {
         }
 
         // Load rows for data panel
-        if (ui.isPanelEnabled('data')) {
+        if (ui.isPanelActive('data')) {
             if (data_form !== form_record.chain[0].form) {
                 data_form = form_record.chain[0].form;
                 data_rows = null;
@@ -1757,12 +1767,12 @@ function InstanceController() {
             if (app.panels.editor + app.panels.data + app.panels.view < 2) {
                 panels = null;
             } else if (url.match(/\/[A-Z0-9]{26}(@[0-9]+)?$/)) {
-                panels = ui.getEnabledPanels().join('|');
+                panels = ui.savePanels().join('|');
 
                 if (panels === 'view')
                     panels = null;
             } else {
-                panels = ui.getEnabledPanels().join('|');
+                panels = ui.savePanels().join('|');
 
                 if (panels === 'data')
                     panels = null;
@@ -1838,7 +1848,7 @@ function InstanceController() {
         }
 
         // Highlight might need to change (conditions, etc.)
-        if (ui.isPanelEnabled('editor'))
+        if (ui.isPanelActive('editor'))
             syncFormHighlight(false);
     }
 

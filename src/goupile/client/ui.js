@@ -14,9 +14,14 @@
 const ui = new function() {
     let self = this;
 
+    let small_threshold = 900;
+    let mobile_threshold = 580;
+
     let menu_render;
     let panels = new Map;
-    let active_panels = 0;
+    let primary_panel = null;
+    let dual_panel = null;
+    let dual_cache = new Map;
 
     let expanded = {};
     let new_expanded;
@@ -49,26 +54,16 @@ const ui = new function() {
     }
 
     function adaptToViewport(keep_panel = null) {
-        let small_threshold = 900;
-        let mobile_threshold = 580;
-
         let small = window.innerWidth < small_threshold;
         let mobile = window.innerWidth < mobile_threshold;
-        let max_panels = util.clamp(Math.floor(window.innerWidth / mobile_threshold), 1, 2);
 
-        while (active_panels > max_panels) {
-            let disable_priority = Number.MAX_SAFE_INTEGER;
-            let disable_panel;
-
-            for (let panel of panels.values()) {
-                if (panel !== keep_panel && panel.active && panel.priority < disable_priority) {
-                    disable_priority = panel.priority;
-                    disable_panel = panel;
-                }
+        if (self.allowTwoPanels()) {
+            if (primary_panel != null && dual_panel == null) {
+                let dual_key = dual_cache.get(primary_panel);
+                dual_panel = panels.get(dual_key);
             }
-
-            disable_panel.active = false;
-            active_panels--;
+        } else {
+            dual_panel = null;
         }
 
         document.documentElement.classList.toggle('small', small);
@@ -103,7 +98,8 @@ const ui = new function() {
                                                   id="ui_top" style="z-index: 999999;">${menu_render()}</nav>` : ''}
 
                 <main id="ui_panels">
-                    ${util.map(panels.values(), panel => panel.active ? panel.render() : '')}
+                    ${primary_panel != null ? primary_panel.render() : ''}
+                    ${dual_panel != null ? dual_panel.render() : ''}
                 </main>
             `, document.querySelector('#ui_main'));
 
@@ -120,53 +116,96 @@ const ui = new function() {
         menu_render = func;
     };
 
-    this.createPanel = function(key, priority, active, func) {
-        panels.set(key, {
+    this.createPanel = function(key, secondaries, dual, func) {
+        let panel = {
+            key: key,
             render: func,
-            priority: priority,
-            active: active
-        });
-        active_panels += active;
+            secondaries: secondaries
+        };
 
-        adaptToViewport();
+        panels.set(key, panel);
+
+        if (dual != null)
+            dual_cache.set(panel, dual);
     };
 
-    this.isPanelEnabled = function(key) {
+    this.isPanelActive = function(key) {
         let panel = panels.get(key);
-        return panel != null && panel.active;
+        return panel === primary_panel || panel === dual_panel;
     };
 
-    this.setPanelState = function(key, active) {
+    this.setPanelState = function(key, active, dual = false) {
         let panel = panels.get(key);
 
-        if (active !== panel.active && (active || active_panels > 1)) {
-            panel.active = active;
-            active_panels += active ? 1 : -1;
+        if (active === self.isPanelActive(key))
+            return;
 
-            if (active)
-                adaptToViewport(panel);
+        if (active) {
+            if (self.allowTwoPanels()) {
+                if (dual && primary_panel != null && primary_panel.secondaries.includes(key)) {
+                    dual_panel = panel;
+                    dual_cache.set(primary_panel, panel.key);
+
+                    return;
+                }
+            }
+
+            primary_panel = panel;
+
+            let dual_key = dual_cache.get(panel);
+            dual_panel = panels.get(dual_key);
+        } else {
+            if (panel === dual_panel) {
+                if (primary_panel != null)
+                    dual_cache.delete(primary_panel, dual_panel.key);
+            } else if (dual_panel != null) {
+                primary_panel = dual_panel;
+            }
+            dual_panel = null;
         }
     };
 
-    this.getEnabledPanels = function() {
+    this.savePanels = function() {
         let keys = [];
 
-        for (let [key, panel] of panels.entries()) {
-            if (panel.active)
-                keys.push(key);
-        }
+        if (primary_panel != null)
+            keys.push(primary_panel.key);
+        if (dual_panel != null)
+            keys.push(dual_panel.key);
 
         return keys;
     };
 
-    this.setEnabledPanels = function(keys) {
-        active_panels = 0;
-        for (let [key, panel] of panels.entries()) {
-            panel.active = keys.includes(key);
-            active_panels += panel.active;
+    this.restorePanels = function(keys) {
+        if (!keys.length) {
+            primary_panel = null;
+            dual_panel = null;
+
+            return;
         }
 
-        adaptToViewport();
+        if (keys.length >= 1) {
+            let panel = panels.get(keys[0]);
+            if (panel == null)
+                return;
+
+            primary_panel = panel;
+        }
+        dual_panel = null;
+
+        if (keys.length >= 2 && primary_panel != null) {
+            let panel = panels.get(keys[1]);
+            if (panel == null)
+                return;
+
+            dual_cache.set(primary_panel, panel.key);
+            dual_panel = panel;
+        }
+    };
+
+    this.allowTwoPanels = function() {
+        let allow = window.innerWidth >= mobile_threshold;
+        return allow;
     };
 
     this.runDialog = function(e, title, options, func) {
@@ -378,7 +417,8 @@ const ui = new function() {
     }
 
     function adjustLoadingSpinner() {
-        let empty = (dialogs.next === dialogs) && !active_panels;
+        let empty = (dialogs.next === dialogs && primary_panel == null
+                                              && dual_panel == null);
         document.body.classList.toggle('gp_loading', empty);
     }
 
