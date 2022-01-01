@@ -22,6 +22,8 @@ enum class HostPlatform {
     Linux,
     macOS,
 
+    Emscripten,
+
     Teensy20,
     Teensy20pp,
     TeensyLC,
@@ -36,6 +38,8 @@ static const char *const HostPlatformNames[] = {
     "Desktop/Windows",
     "Desktop/POSIX/Linux",
     "Desktop/POSIX/macOS",
+
+    "Web/WASM/Emscripten",
 
     "Embedded/Teensy/AVR/Teensy20",
     "Embedded/Teensy/AVR/Teensy20++",
