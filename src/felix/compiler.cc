@@ -1723,7 +1723,7 @@ public:
         }
 
         // Features
-        Fmt(&buf, " -s EXIT_RUNTIME=1 -s NODERAWFS=1");
+        Fmt(&buf, " -s EXIT_RUNTIME=1 -s NODERAWFS=1 -s INITIAL_MEMORY=268435456");
 
         if (env_flags) {
             AddEnvironmentFlags("LDFLAGS", &buf);
