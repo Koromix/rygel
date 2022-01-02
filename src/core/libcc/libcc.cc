@@ -1639,7 +1639,7 @@ static std::function<LogFunc> log_handler = DefaultLogHandler;
 static RG_THREAD_LOCAL std::function<LogFilterFunc> *log_filters[16];
 static RG_THREAD_LOCAL Size log_filters_len;
 
-static const char *GetQualifiedEnv(const char *name)
+const char *GetQualifiedEnv(const char *name)
 {
     RG_ASSERT(strlen(name) < 256);
 
