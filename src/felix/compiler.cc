@@ -1723,7 +1723,7 @@ public:
         }
 
         // Features
-        Fmt(&buf, " -s EXIT_RUNTIME=1");
+        Fmt(&buf, " -s EXIT_RUNTIME=1 -s NODERAWFS=1");
 
         if (env_flags) {
             AddEnvironmentFlags("LDFLAGS", &buf);

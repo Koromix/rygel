@@ -2468,54 +2468,6 @@ const char *GetWorkingDirectory()
     return buf;
 }
 
-#ifdef __EMSCRIPTEN__
-static bool running_in_node;
-
-RG_INIT(MountHostFilesystem)
-{
-    running_in_node = EM_ASM_INT({
-        try {
-            var path = require('path');
-            if (process.platform == 'win32') {
-                FS.mkdir('/host');
-                for (var c = 'a'.charCodeAt(0); c <= 'z'.charCodeAt(0); c++) {
-                    var disk_path = String.fromCharCode(c) + ':';
-                    var mount_point = '/host/' + String.fromCharCode(c);
-                    FS.mkdir(mount_point);
-                    try {
-                        FS.mount(NODEFS, { root: disk_path }, mount_point);
-                    } catch(error) {
-                        FS.rmdir(mount_point);
-                    }
-                }
-
-                var real_app_dir = path.dirname(process.mainModule.filename);
-                var app_dir = '/host/' + real_app_dir[0].toLowerCase() +
-                              real_app_dir.substr(2).replace(/\\\\\\\\/g, '/');
-            } else {
-                FS.mkdir('/host');
-                FS.mount(NODEFS, { root: '/' }, '/host');
-
-                var app_dir = '/host' + path.dirname(process.mainModule.filename);
-            }
-        } catch (error) {
-            // Running in browser (maybe)
-            return 0;
-        }
-
-        FS.mkdir('/work');
-        FS.mount(NODEFS, { root: '.' }, '/work');
-        FS.symlink(app_dir, '/app');
-
-        return 1;
-    });
-
-    if (running_in_node) {
-        chdir("/work");
-    }
-}
-#endif
-
 const char *GetApplicationExecutable()
 {
 #if defined(_WIN32)
@@ -2575,7 +2527,6 @@ const char *GetApplicationExecutable()
 
 const char *GetApplicationDirectory()
 {
-#if defined(_WIN32) || defined(__APPLE__) || defined(__linux__)
     static char executable_dir[4096];
 
     if (!executable_dir[0]) {
@@ -2587,11 +2538,6 @@ const char *GetApplicationDirectory()
     }
 
     return executable_dir;
-#elif defined(__EMSCRIPTEN__)
-    return running_in_node ? "/app" : nullptr;
-#else
-    #error GetApplicationDirectory() not implemented for this platform
-#endif
 }
 
 Span<const char> GetPathDirectory(Span<const char> filename)
