@@ -1722,6 +1722,9 @@ public:
             Fmt(&buf, " -l%1", lib);
         }
 
+        // Features
+        Fmt(&buf, " -s EXIT_RUNTIME=1");
+
         if (env_flags) {
             AddEnvironmentFlags("LDFLAGS", &buf);
         }
