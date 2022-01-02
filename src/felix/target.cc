@@ -385,10 +385,6 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
                 LogError("Cannot import non-library target '%1'", import->name);
                 return nullptr;
             }
-            if (target->hosts & ~import->hosts) {
-                LogError("Cannot import '%1' with mismatched hosts", import->name);
-                return nullptr;
-            }
 
             for (const TargetInfo *import2: import->imports) {
                 if (handled_imports.TrySet(import2->name).second) {
