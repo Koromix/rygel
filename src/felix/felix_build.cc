@@ -630,6 +630,11 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     // Find and check target used with --run
     const TargetInfo *run_target = nullptr;
     if (run_target_name) {
+        if (platform_spec.host != NativeHost) {
+            LogError("Cannot use --run when cross-compiling");
+            return 1;
+        }
+
         run_target = target_set.targets_map.FindValue(run_target_name, nullptr);
 
         if (!run_target) {
