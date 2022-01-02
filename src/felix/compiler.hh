@@ -58,6 +58,8 @@ static const char *const HostPlatformNames[] = {
     static const HostPlatform NativeHost = HostPlatform::macOS;
 #elif defined(__linux__)
     static const HostPlatform NativeHost = HostPlatform::Linux;
+#elif defined(__EMSCRIPTEN__)
+    static const HostPlatform NativeHost = HostPlatform::Emscripten;
 #else
     #error Unsupported platform
 #endif

@@ -164,7 +164,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                 valid = false;
             }
             target_config.type = TargetType::Executable;
-            target_config.hosts = ParseSupportedHosts("Desktop");
+            target_config.hosts = ParseSupportedHosts("Desktop Emscripten");
             RG_ASSERT(target_config.hosts);
 
             // Type property must be specified first
@@ -376,12 +376,17 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 
         for (const char *import_name: target_config->imports) {
             const TargetInfo *import = set.targets_map.FindValue(import_name, nullptr);
+
             if (!import) {
                 LogError("Cannot import from unknown target '%1'", import_name);
                 return nullptr;
             }
             if (import->type != TargetType::Library && import->type != TargetType::ExternalLibrary) {
                 LogError("Cannot import non-library target '%1'", import->name);
+                return nullptr;
+            }
+            if (target->hosts & ~import->hosts) {
+                LogError("Cannot import '%1' with mismatched hosts", import->name);
                 return nullptr;
             }
 
