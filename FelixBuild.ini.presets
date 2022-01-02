@@ -33,6 +33,10 @@ Features = DebugInfo, OptimizeSpeed, LTO
 Host = ,clang,lld
 Features = OptimizeSpeed, LTO, SafeStack, CFI, ZeroInit, ShuffleCode
 
+[EmCC]
+Host = Emscripten
+Features = OptimizeSpeed
+
 [Teensy20]
 Host = Teensy20
 Features = OptimizeSize
