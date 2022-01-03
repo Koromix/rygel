@@ -3071,6 +3071,26 @@ bool FileIsVt100(FILE *fp)
     static RG_THREAD_LOCAL FILE *cache_fp;
     static RG_THREAD_LOCAL bool cache_vt100;
 
+#ifdef __EMSCRIPTEN__
+    static bool win32 = ([]() {
+        int win32 = EM_ASM_INT({
+            try {
+                const os = require('os');
+
+                var win32 = (os.platform() === 'win32');
+                return win32 ? 1 : 0;
+            } catch (err) {
+                return 0;
+            }
+        });
+
+        return (bool)win32;
+    })();
+
+    if (win32)
+        return false;
+#endif
+
     // Fast path, for repeated calls (such as Print in a loop)
     if (fp == cache_fp)
         return cache_vt100;
