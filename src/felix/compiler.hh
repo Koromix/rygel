@@ -22,7 +22,8 @@ enum class HostPlatform {
     Linux,
     macOS,
 
-    Emscripten,
+    EmscriptenNode,
+    EmscriptenWeb,
 
     Teensy20,
     Teensy20pp,
@@ -39,7 +40,8 @@ static const char *const HostPlatformNames[] = {
     "Desktop/POSIX/Linux",
     "Desktop/POSIX/macOS",
 
-    "Web/WASM/Emscripten",
+    "WASM/Emscripten/Node",
+    "WASM/Emscripten/Web",
 
     "Embedded/Teensy/AVR/Teensy20",
     "Embedded/Teensy/AVR/Teensy20++",
@@ -59,7 +61,7 @@ static const char *const HostPlatformNames[] = {
 #elif defined(__linux__)
     static const HostPlatform NativeHost = HostPlatform::Linux;
 #elif defined(__EMSCRIPTEN__)
-    static const HostPlatform NativeHost = HostPlatform::Emscripten;
+    static const HostPlatform NativeHost = HostPlatform::EmscriptenNode;
 #else
     #error Unsupported platform
 #endif

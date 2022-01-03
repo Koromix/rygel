@@ -1538,14 +1538,17 @@ class EmCompiler final: public Compiler {
     const char *cc;
     const char *cxx;
 
+    bool node;
+
     BlockAllocator str_alloc;
 
 public:
-    EmCompiler(HostPlatform host) : Compiler(host, "EmCC") {}
+    EmCompiler(HostPlatform host, bool node) : Compiler(host, "EmCC"), node(node) {}
 
     static std::unique_ptr<const Compiler> Create(HostPlatform host, const char *cc)
     {
-        std::unique_ptr<EmCompiler> compiler = std::make_unique<EmCompiler>(host);
+        bool node = (host == HostPlatform::EmscriptenNode);
+        std::unique_ptr<EmCompiler> compiler = std::make_unique<EmCompiler>(host, node);
 
         // Find executables
         {
@@ -1595,7 +1598,7 @@ public:
     }
 
     const char *GetObjectExtension() const override { return ".o"; }
-    const char *GetLinkExtension() const override { return ".js"; }
+    const char *GetLinkExtension() const override { return node ? ".js" : ".html"; }
     const char *GetPostExtension() const override { return nullptr; }
 
     bool GetCore(Span<const char *const>, Allocator *, HeapArray<const char *> *,
@@ -1723,8 +1726,10 @@ public:
         }
 
         // Features
-        Fmt(&buf, " -s STANDALONE_WASM=1 -s NODERAWFS=1 -lnodefs.js"
-                  " -s ALLOW_MEMORY_GROWTH=1 -s MAXIMUM_MEMORY=268435456");
+        Fmt(&buf, " -s STANDALONE_WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s MAXIMUM_MEMORY=268435456");
+        if (node) {
+            Fmt(&buf, " -s NODERAWFS=1 -lnodefs.js");
+        }
 
         if (env_flags) {
             AddEnvironmentFlags("LDFLAGS", &buf);
@@ -1877,7 +1882,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
             LogError("Cannot find driver for compiler '%1'", spec.cc);
             return nullptr;
         }
-    } else if (spec.host == HostPlatform::Emscripten) {
+    } else if (spec.host == HostPlatform::EmscriptenNode || spec.host == HostPlatform::EmscriptenWeb) {
         if (!spec.cc) {
             spec.cc = "emcc";
         }

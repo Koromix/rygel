@@ -33,8 +33,12 @@ Features = DebugInfo, OptimizeSpeed, LTO
 Host = ,clang,lld
 Features = OptimizeSpeed, LTO, SafeStack, CFI, ZeroInit, ShuffleCode
 
-[EmCC]
-Host = Emscripten
+[NodeJS]
+Host = Emscripten/Node
+Features = DebugInfo, OptimizeSpeed
+
+[WebJS]
+Host = Emscripten/Web
 Features = DebugInfo, OptimizeSpeed
 
 [Teensy20]
