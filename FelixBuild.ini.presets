@@ -41,6 +41,10 @@ Features = DebugInfo, OptimizeSpeed
 Host = Emscripten/Web
 Features = DebugInfo, OptimizeSpeed
 
+[WasmBox]
+Host = Emscripten/Box
+Features = DebugInfo, OptimizeSpeed
+
 [Teensy20]
 Host = Teensy20
 Features = OptimizeSize

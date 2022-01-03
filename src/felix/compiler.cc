@@ -1538,22 +1538,23 @@ class EmCompiler final: public Compiler {
     const char *cc;
     const char *cxx;
 
-    bool node;
-
     BlockAllocator str_alloc;
 
 public:
-    EmCompiler(HostPlatform host, bool node) : Compiler(host, "EmCC"), node(node) {}
+    EmCompiler(HostPlatform host) : Compiler(host, "EmCC") {}
 
     static std::unique_ptr<const Compiler> Create(HostPlatform host, const char *cc)
     {
-        bool node = (host == HostPlatform::EmscriptenNode);
-        std::unique_ptr<EmCompiler> compiler = std::make_unique<EmCompiler>(host, node);
+        std::unique_ptr<EmCompiler> compiler = std::make_unique<EmCompiler>(host);
 
         // Find executables
         {
             if (!FindExecutableInPath(cc, &compiler->str_alloc, &cc)) {
                 LogError("Could not find '%1' in PATH", cc);
+                return nullptr;
+            }
+            if (host == HostPlatform::EmscriptenBox && !FindExecutableInPath("wasm2c")) {
+                LogError("Could not find 'wasm2c' in PATH");
                 return nullptr;
             }
 
@@ -1598,8 +1599,24 @@ public:
     }
 
     const char *GetObjectExtension() const override { return ".o"; }
-    const char *GetLinkExtension() const override { return node ? ".js" : ".html"; }
-    const char *GetPostExtension() const override { return nullptr; }
+    const char *GetLinkExtension() const override
+    {
+        switch (host) {
+            case HostPlatform::EmscriptenNode: return ".js";
+            case HostPlatform::EmscriptenWeb: return ".html";
+            case HostPlatform::EmscriptenBox: return ".wasm";
+
+            default: { RG_UNREACHABLE(); } break;
+        }
+    }
+    const char *GetPostExtension() const override
+    {
+        if (host == HostPlatform::EmscriptenBox) {
+            return ".c";
+        } else {
+            return nullptr;
+        }
+    }
 
     bool GetCore(Span<const char *const>, Allocator *, HeapArray<const char *> *,
                  HeapArray<const char *> *, const char **) const override { return true; }
@@ -1727,7 +1744,7 @@ public:
 
         // Features
         Fmt(&buf, " -s STANDALONE_WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s MAXIMUM_MEMORY=2147483648");
-        if (node) {
+        if (host == HostPlatform::EmscriptenNode) {
             Fmt(&buf, " -s NODERAWFS=1 -lnodefs.js");
         }
 
@@ -1742,7 +1759,14 @@ public:
         out_cmd->cmd_line = buf.TrimAndLeak(1);
     }
 
-    void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+    void MakePostCommand(const char *src_filename, const char *dest_filename,
+                         Allocator *alloc, Command *out_cmd) const override
+    {
+        RG_ASSERT(alloc);
+
+        Span<const char> cmd = Fmt(alloc, "wasm2c \"%1\" -o \"%2\"", src_filename, dest_filename);
+        out_cmd->cmd_line = cmd;
+    }
 };
 
 static bool IdentifyCompiler(const char *cc, const char *needle)
@@ -1882,7 +1906,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
             LogError("Cannot find driver for compiler '%1'", spec.cc);
             return nullptr;
         }
-    } else if (spec.host == HostPlatform::EmscriptenNode || spec.host == HostPlatform::EmscriptenWeb) {
+    } else if (StartsWith(HostPlatformNames[(int)spec.host], "WASM/Emscripten/")) {
         if (!spec.cc) {
             spec.cc = "emcc";
         }

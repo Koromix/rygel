@@ -24,6 +24,7 @@ enum class HostPlatform {
 
     EmscriptenNode,
     EmscriptenWeb,
+    EmscriptenBox,
 
     Teensy20,
     Teensy20pp,
@@ -42,6 +43,7 @@ static const char *const HostPlatformNames[] = {
 
     "WASM/Emscripten/Node",
     "WASM/Emscripten/Web",
+    "WASM/Emscripten/Box",
 
     "Embedded/Teensy/AVR/Teensy20",
     "Embedded/Teensy/AVR/Teensy20++",
@@ -191,6 +193,6 @@ extern const Span<const SupportedCompiler> SupportedCompilers;
 
 std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec);
 
-bool DetermineSourceType(const char *filename, SourceType *out_type = nullptr);
+RG_EXPORT bool DetermineSourceType(const char *filename, SourceType *out_type = nullptr);
 
 }
