@@ -1723,7 +1723,8 @@ public:
         }
 
         // Features
-        Fmt(&buf, " -s EXIT_RUNTIME=1 -s NODERAWFS=1 -s INITIAL_MEMORY=268435456");
+        Fmt(&buf, " -s STANDALONE_WASM=1 -s NODERAWFS=1 -lnodefs.js"
+                  " -s ALLOW_MEMORY_GROWTH=1 -s MAXIMUM_MEMORY=268435456");
 
         if (env_flags) {
             AddEnvironmentFlags("LDFLAGS", &buf);
