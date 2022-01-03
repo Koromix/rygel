@@ -1652,21 +1652,42 @@ static const char *GetQualifiedEnv(const char *name)
     buf.Append(name);
     buf.Append(0);
 
+#ifdef __EMSCRIPTEN__
+    // Each accessed environment variable is kept in memory and thus leaked once
+    static HashMap<const char *, const char *> values;
+
+    std::pair<const char **, bool> ret = values.TrySet(name, nullptr);
+
+    if (ret.second) {
+        const char *ptr = (const char *)EM_ASM_INT({
+            try {
+                var name = UTF8ToString($0);
+                var str = process.env[name];
+
+                if (str == null)
+                    return 0;
+
+                var bytes = lengthBytesUTF8(str) + 1;
+                var utf8 = _malloc(bytes);
+                stringToUTF8(str, utf8, bytes);
+
+                return utf8;
+            } catch (error) {
+                return 0;
+            }
+        }, buf.data);
+
+        *ret.first = ptr;
+    }
+
+    return *ret.first;
+#else
     return getenv(buf.data);
+#endif
 }
 
 bool GetDebugFlag(const char *name)
 {
-#ifdef __EMSCRIPTEN__
-    return EM_ASM_INT({
-        try {
-            var debug_env_name = UTF8ToString($0);
-            return (process.env[debug_env_name] !== undefined && process.env[debug_env_name] != 0);
-        } catch (error) {
-            return 0;
-        }
-    }, name);
-#else
     const char *debug = GetQualifiedEnv(name);
 
     if (debug) {
@@ -1677,7 +1698,6 @@ bool GetDebugFlag(const char *name)
     } else {
         return false;
     }
-#endif
 }
 
 static void RunLogFilter(Size idx, LogLevel level, const char *ctx, const char *msg)
