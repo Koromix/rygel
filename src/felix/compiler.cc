@@ -1726,7 +1726,7 @@ public:
         }
 
         // Features
-        Fmt(&buf, " -s STANDALONE_WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s MAXIMUM_MEMORY=268435456");
+        Fmt(&buf, " -s STANDALONE_WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s MAXIMUM_MEMORY=2147483648");
         if (node) {
             Fmt(&buf, " -s NODERAWFS=1 -lnodefs.js");
         }
