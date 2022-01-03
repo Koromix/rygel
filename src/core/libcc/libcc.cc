@@ -6132,10 +6132,12 @@ ConsolePrompter::ConsolePrompter()
 
 static bool EnableRawMode()
 {
+#if defined(__EMSCRIPTEN__)
+    return false;
+#elif defined(_WIN32)
     static bool init_atexit = false;
 
     if (!input_is_raw) {
-#ifdef _WIN32
         stdin_handle = (HANDLE)_get_osfhandle(_fileno(stdin));
 
         if (GetConsoleMode(stdin_handle, &input_orig_mode)) {
@@ -6146,7 +6148,13 @@ static bool EnableRawMode()
                 init_atexit = true;
             }
         }
+    }
+
+    return input_is_raw;
 #else
+    static bool init_atexit = false;
+
+    if (!input_is_raw) {
         if (isatty(STDIN_FILENO) && tcgetattr(STDIN_FILENO, &input_orig_tio) >= 0) {
             struct termios raw = input_orig_tio;
 
@@ -6164,10 +6172,10 @@ static bool EnableRawMode()
                 init_atexit = true;
             }
         }
-#endif
     }
 
     return input_is_raw;
+#endif
 }
 
 static void DisableRawMode()
