@@ -1954,7 +1954,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
         return TeensyCompiler::Create(spec.host, spec.cc);
     } else {
         LogError("Cross-compilation from host '%1' to '%2' is not supported",
-                 HostPlatformNames[(int)spec.host], HostPlatformNames[(int)NativeHost]);
+                 HostPlatformNames[(int)NativeHost], HostPlatformNames[(int)spec.host]);
         return nullptr;
     }
 }
