@@ -35,7 +35,7 @@ Features = OptimizeSpeed, LTO, SafeStack, CFI, ZeroInit, ShuffleCode
 
 [EmCC]
 Host = Emscripten
-Features = OptimizeSpeed
+Features = DebugInfo, OptimizeSpeed
 
 [Teensy20]
 Host = Teensy20

@@ -1644,7 +1644,7 @@ public:
         // Build options
         Fmt(&buf, " -fvisibility=hidden -fno-strict-aliasing");
         if (features & (int)CompileFeature::OptimizeSpeed) {
-            Fmt(&buf, " -O2 -DNDEBUG");
+            Fmt(&buf, " -O1 -DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {
             Fmt(&buf, " -Os -DNDEBUG");
         } else {
