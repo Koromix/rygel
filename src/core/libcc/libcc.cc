@@ -6205,33 +6205,38 @@ bool ConsolePrompter::Read()
     RG_DEFER { sigaction(SIGWINCH, &old_sa, nullptr); };
 #endif
 
-    if (!FileIsVt100(stderr) || !EnableRawMode()) {
-        fputs(prompt, stderr);
-        fflush(stderr);
+    if (FileIsVt100(stderr) && EnableRawMode()) {
+        RG_DEFER {
+            Print(stderr, "%!0");
+            DisableRawMode();
+        };
 
-        int c;
-        while ((c = fgetc(stdin)) != EOF) {
-            if (c == '\n') {
-                EnsureNulTermination();
-                return true;
-            } else if (c >= 32 || c == '\t') {
-                str.Append((char)c);
-            }
-        }
-
-        if (ferror(stdin)) {
-            LogError("Failed to read from standard input: %1", strerror(errno));
-            return false;
-        }
-
-        // EOF
-        return false;
+        return ReadRaw();
+    } else {
+        return ReadBuffered();
     }
-    RG_DEFER {
-        Print(stderr, "%!0");
-        DisableRawMode();
-    };
+}
 
+void ConsolePrompter::Commit()
+{
+    str.len = TrimStrRight(str.Take(), "\r\n").len;
+
+    if (str.len) {
+        std::swap(str, entries[entries.len - 1]);
+        entries.AppendDefault();
+    }
+    entry_idx = entries.len - 1;
+    str.RemoveFrom(0);
+    str_offset = 0;
+
+    rows = 0;
+    rows_with_extra = 0;
+    x = 0;
+    y = 0;
+}
+
+bool ConsolePrompter::ReadRaw()
+{
     // Don't overwrite current line
     fflush(stderr);
     if (GetCursorPosition().x > 0) {
@@ -6455,22 +6460,39 @@ bool ConsolePrompter::Read()
     return true;
 }
 
-void ConsolePrompter::Commit()
+bool ConsolePrompter::ReadBuffered()
 {
-    str.len = TrimStrRight(str.Take(), "\r\n").len;
+    prompt_columns = ComputeWidth(prompt);
 
-    if (str.len) {
-        std::swap(str, entries[entries.len - 1]);
-        entries.AppendDefault();
+    // Print prompt
+    {
+        Span<const char> remain = str;
+        Span<const char> line = SplitStr(remain, '\n', &remain);
+
+        Print(stderr, "%1%2", prompt, line);
+        while (remain.len) {
+            line = SplitStr(remain, '\n', &remain);
+            Print(stderr, "\n%1 %2", FmtArg('.').Repeat(prompt_columns - 1), line);
+        }
     }
-    entry_idx = entries.len - 1;
-    str.RemoveFrom(0);
-    str_offset = 0;
 
-    rows = 0;
-    rows_with_extra = 0;
-    x = 0;
-    y = 0;
+    int c;
+    while ((c = fgetc(stdin)) != EOF) {
+        if (c == '\n') {
+            EnsureNulTermination();
+            return true;
+        } else if (c >= 32 || c == '\t') {
+            str.Append((char)c);
+        }
+    }
+
+    if (ferror(stdin)) {
+        LogError("Failed to read from standard input: %1", strerror(errno));
+        return false;
+    }
+
+    // EOF
+    return false;
 }
 
 void ConsolePrompter::ChangeEntry(Size new_idx)

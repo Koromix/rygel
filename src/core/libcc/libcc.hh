@@ -4189,6 +4189,9 @@ public:
     void Commit();
 
 private:
+    bool ReadRaw();
+    bool ReadBuffered();
+
     void ChangeEntry(Size new_idx);
 
     Size SkipForward(Size offset, Size count);
