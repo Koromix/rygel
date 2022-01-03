@@ -190,7 +190,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                 if (prop.key == "Type") {
                     LogError("Target type cannot be changed");
                     valid = false;
-                } else if (prop.key == "Hosts") {
+                } else if (prop.key == "Hosts" || prop.key == "Platforms") {
                     target_config.hosts = ParseSupportedHosts(prop.value);
                     valid &= !!target_config.hosts;
                 } else {
