@@ -583,9 +583,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                         }
 
                         enabled_targets.Append(&target);
+                        match = true;
                     }
-
-                    match = true;
                 }
             }
 
@@ -593,16 +592,14 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             for (const SourceFileInfo &src: target_set.sources) {
                 if (MatchPathSpec(src.filename, selector)) {
                     if (handled_set.TrySet(src.filename).second) {
-                        if (!src.target->TestHosts(platform_spec.host)) {
-                            LogError("Cannot build '%1' for host '%2'",
+                        if (src.target->TestHosts(platform_spec.host)) {
+                            enabled_sources.Append(&src);
+                            match = true;
+                        } else {
+                            LogError("Cannot build '%1' for host '%2' (ignoring)",
                                      src.filename, HostPlatformNames[(int)platform_spec.host]);
-                            valid = false;
                         }
-
-                        enabled_sources.Append(&src);
                     }
-
-                    match = true;
                 }
             }
 
