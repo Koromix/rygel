@@ -81,7 +81,7 @@
     #define fseeko64 fseeko
     #define ftello64 ftello
 #endif
-#ifdef __OpenBSD__
+#if defined(__OpenBSD__) || defined(__FreeBSD__)
     #include <pthread_np.h>
     #include <sys/param.h>
     #include <sys/sysctl.h>
@@ -2573,6 +2573,19 @@ const char *GetApplicationExecutable()
     }
 
     return executable_path;
+#elif defined(__FreeBSD__)
+    static char executable_path[4096];
+
+    if (!executable_path[0]) {
+        int name[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1};
+        size_t len = sizeof(executable_path);
+
+        int ret = sysctl(name, RG_LEN(name), executable_path, &len, NULL, 0);
+        RG_ASSERT(ret >= 0);
+        RG_ASSERT(len < RG_SIZE(executable_path));
+    }
+
+    return executable_path;
 #elif defined(__EMSCRIPTEN__)
     return nullptr;
 #else
@@ -3580,7 +3593,7 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
 
 #else
 
-#ifdef __OpenBSD__
+#if defined(__OpenBSD__) || defined(__FreeBSD__)
 static const pthread_t main_thread = pthread_self();
 #endif
 static std::atomic_bool flag_interrupt = false;
@@ -3600,7 +3613,7 @@ static void SetSignalHandler(int signal, struct sigaction *prev, void (*func)(in
 
 static void DefaultSignalHandler(int signal)
 {
-#ifdef __OpenBSD__
+#if defined(__OpenBSD__) || defined(__FreeBSD__)
     if (!pthread_main_np()) {
         pthread_kill(main_thread, signal);
         return;

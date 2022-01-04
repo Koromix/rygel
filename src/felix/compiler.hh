@@ -22,6 +22,7 @@ enum class HostPlatform {
     Linux,
     macOS,
     OpenBSD,
+    FreeBSD,
 
     EmscriptenNode,
     EmscriptenWeb,
@@ -42,6 +43,7 @@ static const char *const HostPlatformNames[] = {
     "Desktop/POSIX/Linux",
     "Desktop/POSIX/macOS",
     "Desktop/POSIX/OpenBSD",
+    "Desktop/POSIX/FreeBSD",
 
     "WASM/Emscripten/Node",
     "WASM/Emscripten/Web",
@@ -66,6 +68,8 @@ static const char *const HostPlatformNames[] = {
     static const HostPlatform NativeHost = HostPlatform::Linux;
 #elif defined(__OpenBSD__)
     static const HostPlatform NativeHost = HostPlatform::OpenBSD;
+#elif defined(__FreeBSD__)
+    static const HostPlatform NativeHost = HostPlatform::FreeBSD;
 #elif defined(__EMSCRIPTEN__)
     static const HostPlatform NativeHost = HostPlatform::EmscriptenNode;
 #else
