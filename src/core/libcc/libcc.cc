@@ -80,6 +80,10 @@
     #define fseeko64 fseeko
     #define ftello64 ftello
 #endif
+#ifdef __OpenBSD__
+    #include <sys/param.h>
+    #include <sys/sysctl.h>
+#endif
 #include <chrono>
 #include <random>
 #include <thread>
@@ -2468,6 +2472,15 @@ const char *GetWorkingDirectory()
     return buf;
 }
 
+#ifdef __OpenBSD__
+RG_INIT(ExePathOpenBSD)
+{
+    // This can depend on PATH, which could change during execution
+    // so we want to cache the result as soon as possible.
+    GetApplicationExecutable();
+}
+#endif
+
 const char *GetApplicationExecutable()
 {
 #if defined(_WIN32)
@@ -2515,6 +2528,42 @@ const char *GetApplicationExecutable()
 
         CopyString(path_buf, executable_path);
         free(path_buf);
+    }
+
+    return executable_path;
+#elif defined(__OpenBSD__)
+    static char executable_path[4096];
+
+    if (!executable_path[0]) {
+        int name[4] = {CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_ARGV};
+
+        size_t argc;
+        {
+            int ret = sysctl(name, RG_LEN(name), nullptr, &argc, NULL, 0);
+            RG_ASSERT(ret >= 0);
+            RG_ASSERT(argc >= 1);
+        }
+
+        HeapArray<char *> argv;
+        {
+            argv.AppendDefault(argc);
+            int ret = sysctl(name, RG_LEN(name), argv.ptr, &argc, nullptr, 0);
+            RG_ASSERT(ret >= 0);
+        }
+
+        if (PathIsAbsolute(argv[0])) {
+            RG_ASSERT(strlen(argv[0]) < RG_SIZE(executable_path));
+
+            CopyString(argv[0], executable_path);
+        } else {
+            const char *path;
+            bool success = FindExecutableInPath(argv[0], GetDefaultAllocator(), &path);
+            RG_ASSERT(success);
+            RG_ASSERT(strlen(path) < RG_SIZE(executable_path));
+
+            CopyString(path, executable_path);
+            Allocator::Release(nullptr, (void *)path, -1);
+        }
     }
 
     return executable_path;
