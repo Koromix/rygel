@@ -2,7 +2,7 @@
 
 cd $(dirname $0)
 
-VERSION=0.13.14
+VERSION=0.14.10
 
 curl -O https://registry.npmjs.org/esbuild-windows-64/-/esbuild-windows-64-$VERSION.tgz
 tar zx --strip-components=1 -f esbuild-windows-64-$VERSION.tgz package/esbuild.exe
