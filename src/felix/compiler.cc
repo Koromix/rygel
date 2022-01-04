@@ -500,8 +500,11 @@ public:
                 Fmt(&buf, " -ldl -pthread -framework CoreFoundation -framework SystemConfiguration");
             } break;
 
+            case HostPlatform::Linux: {
+                Fmt(&buf, " -ldl -lrt");
+            } [[fallthrough]];
             default: {
-                Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
+                Fmt(&buf, " -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
                 if (link_type == LinkType::Executable) {
                     Fmt(&buf, " -pie");
                 }
@@ -871,8 +874,11 @@ public:
                 Fmt(&buf, " -ldl -pthread -framework CoreFoundation -framework SystemConfiguration");
             } break;
 
+            case HostPlatform::Linux: {
+                Fmt(&buf, " -ldl -lrt");
+            } [[fallthrough]];
             default: {
-                Fmt(&buf, " -lrt -ldl -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
+                Fmt(&buf, " -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
                 if (link_type == LinkType::Executable) {
                     Fmt(&buf, " -pie");
                 }
