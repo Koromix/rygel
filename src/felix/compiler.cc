@@ -1888,15 +1888,20 @@ std::unique_ptr<const Compiler> PrepareCompiler(PlatformSpecifier spec)
 
         if (spec.ld) {
             if (TestStr(spec.ld, "bfd") || TestStr(spec.ld, "ld")) {
-                if (!FindExecutableInPath("ld")) {
+                if (!FindExecutableInPath("ld.bfd")) {
                     LogError("Cannot find linker 'ld' in PATH");
                     return nullptr;
                 }
 
                 spec.ld = "bfd";
-            } else if (!FindExecutableInPath(spec.ld)) {
-                LogError("Cannot find linker '%1' in PATH", spec.ld);
-                return nullptr;
+            } else {
+                char buf[512];
+                Fmt(buf, "ld.%1", spec.ld);
+
+                if (!FindExecutableInPath(buf)) {
+                    LogError("Cannot find linker '%1' in PATH", buf);
+                    return nullptr;
+                }
             }
         }
 
