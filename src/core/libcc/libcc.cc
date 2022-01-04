@@ -82,6 +82,7 @@
     #define ftello64 ftello
 #endif
 #ifdef __OpenBSD__
+    #include <pthread_np.h>
     #include <sys/param.h>
     #include <sys/sysctl.h>
 
@@ -3579,6 +3580,9 @@ bool ExecuteCommandLine(const char *cmd_line, Span<const uint8_t> in_buf,
 
 #else
 
+#ifdef __OpenBSD__
+static const pthread_t main_thread = pthread_self();
+#endif
 static std::atomic_bool flag_interrupt = false;
 static std::atomic_bool explicit_interrupt = false;
 static int interrupt_pfd[2] = {-1, -1};
@@ -3596,6 +3600,13 @@ static void SetSignalHandler(int signal, struct sigaction *prev, void (*func)(in
 
 static void DefaultSignalHandler(int signal)
 {
+#ifdef __OpenBSD__
+    if (!pthread_main_np()) {
+        pthread_kill(main_thread, signal);
+        return;
+    }
+#endif
+
     pid_t pid = getpid();
     RG_ASSERT(pid > 1);
 
