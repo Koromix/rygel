@@ -196,11 +196,15 @@ public:
         supported |= (int)CompileFeature::UBSan;
         supported |= (int)CompileFeature::LTO;
         supported |= (int)CompileFeature::ZeroInit;
-        supported |= (int)CompileFeature::CFI; // LTO only
+        if (host != HostPlatform::OpenBSD) {
+            supported |= (int)CompileFeature::CFI; // LTO only
+        }
         if (host != HostPlatform::Windows) {
             supported |= (int)CompileFeature::TSan;
-            supported |= (int)CompileFeature::SafeStack;
             supported |= (int)CompileFeature::ShuffleCode; // Requires lld version >= 11
+        }
+        if (host == HostPlatform::Linux) {
+            supported |= (int)CompileFeature::SafeStack;
         }
         supported |= (int)CompileFeature::Cxx17;
 
