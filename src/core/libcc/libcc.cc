@@ -84,6 +84,10 @@
 #ifdef __OpenBSD__
     #include <sys/param.h>
     #include <sys/sysctl.h>
+
+    #define off64_t off_t
+    #define fseeko64 fseeko
+    #define ftello64 ftello
 #endif
 #include <chrono>
 #include <random>
