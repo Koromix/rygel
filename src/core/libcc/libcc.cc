@@ -4125,18 +4125,23 @@ int OpenIPSocket(SocketType type, int port)
         }
     } else {
         struct sockaddr_in6 addr = {};
+        int v6only = (type == SocketType::IPv6);
 
         addr.sin6_family = AF_INET6;
         addr.sin6_port = htons((uint16_t)port);
         addr.sin6_addr = IN6ADDR_ANY_INIT;
 
-        int v6only = (type == SocketType::IPv6);
-#ifdef _WIN32
+#if defined(_WIN32)
         if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, (const char *)&v6only, sizeof(v6only)) < 0) {
+#elif defined(__OpenBSD__)
+        if (!v6only) {
+            LogError("Dual-stack sockets are not supported on OpenBSD");
+            return -1;
+        } else if (false) {
 #else
         if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &v6only, sizeof(v6only)) < 0) {
 #endif
-            LogError("Failed to change Dual-stack socket option: %1", strerror(errno));
+            LogError("Failed to change dual-stack socket option: %1", strerror(errno));
             return -1;
         }
 

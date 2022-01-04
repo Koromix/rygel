@@ -38,7 +38,11 @@ static const char *const http_ClientAddressModeNames[] = {
 };
 
 struct http_Config {
+#ifdef __OpenBSD__
+    SocketType sock_type = SocketType::IPv4;
+#else
     SocketType sock_type = SocketType::Dual;
+#endif
     int port = 8888;
     const char *unix_path = nullptr;
 
