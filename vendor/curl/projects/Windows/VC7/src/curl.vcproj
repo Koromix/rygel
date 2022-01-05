@@ -1282,6 +1282,9 @@
 				RelativePath="..\..\..\..\src\tool_filetime.c">
 			</File>
 			<File
+				RelativePath="..\..\..\..\src\tool_findfile.c">
+			</File>
+			<File
 				RelativePath="..\..\..\..\src\tool_formparse.c">
 			</File>
 			<File
@@ -1295,9 +1298,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\src\tool_helpers.c">
-			</File>
-			<File
-				RelativePath="..\..\..\..\src\tool_homedir.c">
 			</File>
 			<File
 				RelativePath="..\..\..\..\src\tool_hugehelp.c">
@@ -1436,6 +1436,9 @@
 				RelativePath="..\..\..\..\src\tool_filetime.h">
 			</File>
 			<File
+				RelativePath="..\..\..\..\src\tool_findfile.h">
+			</File>
+			<File
 				RelativePath="..\..\..\..\src\tool_formparse.h">
 			</File>
 			<File
@@ -1449,9 +1452,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\src\tool_help.h">
-			</File>
-			<File
-				RelativePath="..\..\..\..\src\tool_homedir.h">
 			</File>
 			<File
 				RelativePath="..\..\..\..\src\tool_hugehelp.h">

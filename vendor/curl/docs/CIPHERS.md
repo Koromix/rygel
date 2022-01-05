@@ -18,7 +18,7 @@ libcurl was built to use. This is an attempt to list known cipher names.
 
 ## OpenSSL
 
-(based on [OpenSSL docs](https://www.openssl.org/docs/man1.1.0/apps/ciphers.html))
+(based on [OpenSSL docs](https://www.openssl.org/docs/manmaster/man1/openssl-ciphers.html))
 
 When specifying multiple cipher names, separate them with colon (`:`).
 
@@ -278,9 +278,9 @@ When specifying multiple cipher names, separate them with colon (`:`).
 
 ## GSKit
 
-Ciphers are internally defined as
-[numeric codes](https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_73/apis/gsk_attribute_set_buffer.htm),
-but libcurl maps them to the following case-insensitive names.
+Ciphers are internally defined as [numeric
+codes](https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_73/apis/gsk_attribute_set_buffer.htm). libcurl
+maps them to the following case-insensitive names.
 
 ### SSL2 cipher suites (insecure: disabled by default)
 

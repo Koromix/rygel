@@ -6607,22 +6607,26 @@ if test ${with_ssl+y}
 then :
   withval=$with_ssl; OPT_SSL=$withval
   OPT_OPENSSL=$withval
-  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+  if test X"$withval" != Xno; then
+    test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
 else $as_nop
   }OpenSSL"
 fi
 
+  fi
 
 
 # Check whether --with-openssl was given.
 if test ${with_openssl+y}
 then :
   withval=$with_openssl; OPT_OPENSSL=$withval
-  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+  if test X"$withval" != Xno; then
+    test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
 else $as_nop
   }OpenSSL"
 fi
 
+  fi
 
 OPT_GNUTLS=no
 
@@ -6630,11 +6634,13 @@ OPT_GNUTLS=no
 if test ${with_gnutls+y}
 then :
   withval=$with_gnutls; OPT_GNUTLS=$withval
-  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+  if test X"$withval" != Xno; then
+    test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
 else $as_nop
   }GnuTLS"
 fi
 
+  fi
 
 OPT_MBEDTLS=no
 
@@ -6642,11 +6648,13 @@ OPT_MBEDTLS=no
 if test ${with_mbedtls+y}
 then :
   withval=$with_mbedtls; OPT_MBEDTLS=$withval
-  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+  if test X"$withval" != Xno; then
+    test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
 else $as_nop
   }mbedTLS"
 fi
 
+  fi
 
 OPT_WOLFSSL=no
 
@@ -6654,11 +6662,13 @@ OPT_WOLFSSL=no
 if test ${with_wolfssl+y}
 then :
   withval=$with_wolfssl; OPT_WOLFSSL=$withval
-  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+  if test X"$withval" != Xno; then
+    test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
 else $as_nop
   }wolfSSL"
 fi
 
+  fi
 
 OPT_MESALINK=no
 
@@ -6666,11 +6676,13 @@ OPT_MESALINK=no
 if test ${with_mesalink+y}
 then :
   withval=$with_mesalink; OPT_MESALINK=$withval
-  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+  if test X"$withval" != Xno; then
+    test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
 else $as_nop
   }MesaLink"
 fi
 
+  fi
 
 OPT_BEARSSL=no
 
@@ -6678,11 +6690,13 @@ OPT_BEARSSL=no
 if test ${with_bearssl+y}
 then :
   withval=$with_bearssl; OPT_BEARSSL=$withval
-  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+  if test X"$withval" != Xno; then
+    test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
 else $as_nop
   }BearSSL"
 fi
 
+  fi
 
 OPT_RUSTLS=no
 
@@ -6690,11 +6704,13 @@ OPT_RUSTLS=no
 if test ${with_rustls+y}
 then :
   withval=$with_rustls; OPT_RUSTLS=$withval
-  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+  if test X"$withval" != Xno; then
+    test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
 else $as_nop
   }rustls"
 fi
 
+  fi
 
 OPT_NSS=no
 
@@ -6702,11 +6718,13 @@ OPT_NSS=no
 if test ${with_nss+y}
 then :
   withval=$with_nss; OPT_NSS=$withval
-  test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
+  if test X"$withval" != Xno; then
+    test -z "TLSCHOICE" || TLSCHOICE="${TLSCHOICE:+$TLSCHOICE
 else $as_nop
   }NSS"
 fi
 
+  fi
 
 if test -z "$TLSCHOICE"; then
   if test "x$OPT_SSL" != "xno"; then
@@ -17761,6 +17779,7 @@ squeeze() {
       CLANG)
         #
                                 tmp_CFLAGS="$tmp_CFLAGS -Qunused-arguments"
+                        tmp_CFLAGS="$tmp_CFLAGS -Wno-pointer-bool-conversion"
         ;;
         #
       DEC_C)
@@ -17918,9 +17937,15 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
     if test "x$cross_compiling" != "xyes" &&
     test "$tmp_compiler_works" = "yes"; then
 
-   old=$LD_LIBRARY_PATH
-   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH:$old
-   export LD_LIBRARY_PATH
+   case $host_os in
+     darwin*) library_path_var=DYLD_LIBRARY_PATH ;;
+     *)       library_path_var=LD_LIBRARY_PATH ;;
+   esac
+
+   eval "old=$$library_path_var"
+   eval "$library_path_var=\$CURL_LIBRARY_PATH:\$old"
+
+   eval "export $library_path_var"
    if test "$cross_compiling" = yes
 then :
   { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
@@ -17962,7 +17987,7 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
-   LD_LIBRARY_PATH=$old # restore
+   eval "$library_path_var=\$old" # restore
 
   fi
     if test "$tmp_compiler_works" = "yes"; then
@@ -18200,9 +18225,15 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
     if test "x$cross_compiling" != "xyes" &&
     test "$tmp_compiler_works" = "yes"; then
 
-   old=$LD_LIBRARY_PATH
-   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH:$old
-   export LD_LIBRARY_PATH
+   case $host_os in
+     darwin*) library_path_var=DYLD_LIBRARY_PATH ;;
+     *)       library_path_var=LD_LIBRARY_PATH ;;
+   esac
+
+   eval "old=$$library_path_var"
+   eval "$library_path_var=\$CURL_LIBRARY_PATH:\$old"
+
+   eval "export $library_path_var"
    if test "$cross_compiling" = yes
 then :
   { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
@@ -18244,7 +18275,7 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
-   LD_LIBRARY_PATH=$old # restore
+   eval "$library_path_var=\$old" # restore
 
   fi
     if test "$tmp_compiler_works" = "yes"; then
@@ -19640,9 +19671,15 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
     if test "x$cross_compiling" != "xyes" &&
     test "$tmp_compiler_works" = "yes"; then
 
-   old=$LD_LIBRARY_PATH
-   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH:$old
-   export LD_LIBRARY_PATH
+   case $host_os in
+     darwin*) library_path_var=DYLD_LIBRARY_PATH ;;
+     *)       library_path_var=LD_LIBRARY_PATH ;;
+   esac
+
+   eval "old=$$library_path_var"
+   eval "$library_path_var=\$CURL_LIBRARY_PATH:\$old"
+
+   eval "export $library_path_var"
    if test "$cross_compiling" = yes
 then :
   { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
@@ -19684,7 +19721,7 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
-   LD_LIBRARY_PATH=$old # restore
+   eval "$library_path_var=\$old" # restore
 
   fi
     if test "$tmp_compiler_works" = "yes"; then
@@ -21170,7 +21207,7 @@ printf "%s\n" "found" >&6; }
         LIB_HYPER="-lhyper -ldl -lpthread -lm"
     if test X"$want_hyper" != Xdefault; then
       CPP_HYPER=-I"$want_hyper_path/capi/include"
-      LD_HYPER="-L$want_hyper_path/target/debug"
+      LD_HYPER="-L$want_hyper_path/target/release -L$want_hyper_path/target/debug"
     fi
   fi
   if test -n "$LIB_HYPER"; then
@@ -21186,7 +21223,7 @@ printf "%s\n" "$as_me: -L is $LD_HYPER" >&6;}
     LIBS="$LIB_HYPER $LIBS"
 
     if test "x$cross_compiling" != "xyes"; then
-      DIR_HYPER=`echo $LD_HYPER | $SED -e 's/^-L//'`
+            DIR_HYPER=`echo $LD_HYPER | $SED -e 's/^-L//' -e 's/ -L/:/g'`
     fi
 
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for hyper_io_new in -lhyper" >&5
@@ -21253,7 +21290,12 @@ fi
 done
 
 else $as_nop
-  as_fn_error $? "--with-hyper but hyper was not found. See docs/HYPER.md." "$LINENO" 5
+  for d in `echo $DIR_HYPER | sed -e 's/:/ /'`; do
+        if test -f "$d/libhyper.a"; then
+          as_fn_error $? "hyper was found in $d but was probably built with wrong flags. See docs/HYPER.md." "$LINENO" 5
+        fi
+      done
+      as_fn_error $? "--with-hyper but hyper was not found. See docs/HYPER.md." "$LINENO" 5
 
 fi
 
@@ -22478,9 +22520,15 @@ printf "%s\n" "$curl_cv_gclk_LIBS" >&6; }
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if monotonic clock_gettime works" >&5
 printf %s "checking if monotonic clock_gettime works... " >&6; }
 
-   old=$LD_LIBRARY_PATH
-   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH:$old
-   export LD_LIBRARY_PATH
+   case $host_os in
+     darwin*) library_path_var=DYLD_LIBRARY_PATH ;;
+     *)       library_path_var=LD_LIBRARY_PATH ;;
+   esac
+
+   eval "old=$$library_path_var"
+   eval "$library_path_var=\$CURL_LIBRARY_PATH:\$old"
+
+   eval "export $library_path_var"
    if test "$cross_compiling" = yes
 then :
   { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
@@ -22535,7 +22583,7 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
-   LD_LIBRARY_PATH=$old # restore
+   eval "$library_path_var=\$old" # restore
 
     fi
     #
@@ -24182,9 +24230,15 @@ fi
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if argv can be written to" >&5
 printf %s "checking if argv can be written to... " >&6; }
 
-   old=$LD_LIBRARY_PATH
-   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH:$old
-   export LD_LIBRARY_PATH
+   case $host_os in
+     darwin*) library_path_var=DYLD_LIBRARY_PATH ;;
+     *)       library_path_var=LD_LIBRARY_PATH ;;
+   esac
+
+   eval "old=$$library_path_var"
+   eval "$library_path_var=\$CURL_LIBRARY_PATH:\$old"
+
+   eval "export $library_path_var"
    if test "$cross_compiling" = yes
 then :
   curl_cv_writable_argv=cross
@@ -24213,7 +24267,7 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
-   LD_LIBRARY_PATH=$old # restore
+   eval "$library_path_var=\$old" # restore
 
 case $curl_cv_writable_argv in
 yes)
@@ -25495,18 +25549,6 @@ fi
 if test "x$ac_cv_func_RAND_egd" = xyes
 then :
   printf "%s\n" "#define HAVE_RAND_EGD 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "SSLv2_client_method" "ac_cv_func_SSLv2_client_method"
-if test "x$ac_cv_func_SSLv2_client_method" = xyes
-then :
-  printf "%s\n" "#define HAVE_SSLV2_CLIENT_METHOD 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "OpenSSL_version" "ac_cv_func_OpenSSL_version"
-if test "x$ac_cv_func_OpenSSL_version" = xyes
-then :
-  printf "%s\n" "#define HAVE_OPENSSL_VERSION 1" >>confdefs.h
 
 fi
 
@@ -27838,14 +27880,14 @@ if test "x$OPT_RUSTLS" != xno; then
 
     if test -z "$OPT_RUSTLS" ; then
 
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for rustls_client_session_read in -lcrustls" >&5
-printf %s "checking for rustls_client_session_read in -lcrustls... " >&6; }
-if test ${ac_cv_lib_crustls_rustls_client_session_read+y}
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for rustls_client_session_read in -lrustls" >&5
+printf %s "checking for rustls_client_session_read in -lrustls... " >&6; }
+if test ${ac_cv_lib_rustls_rustls_client_session_read+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lcrustls -lpthread -ldl $LIBS"
+LIBS="-lrustls -lpthread -ldl -lm $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -27863,17 +27905,17 @@ return rustls_client_session_read ();
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_lib_crustls_rustls_client_session_read=yes
+  ac_cv_lib_rustls_rustls_client_session_read=yes
 else $as_nop
-  ac_cv_lib_crustls_rustls_client_session_read=no
+  ac_cv_lib_rustls_rustls_client_session_read=no
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_crustls_rustls_client_session_read" >&5
-printf "%s\n" "$ac_cv_lib_crustls_rustls_client_session_read" >&6; }
-if test "x$ac_cv_lib_crustls_rustls_client_session_read" = xyes
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_rustls_rustls_client_session_read" >&5
+printf "%s\n" "$ac_cv_lib_rustls_rustls_client_session_read" >&6; }
+if test "x$ac_cv_lib_rustls_rustls_client_session_read" = xyes
 then :
 
 
@@ -27890,11 +27932,6 @@ fi
 
     fi
 
-    addld=""
-    addlib="-lpthread"
-    addcflags=""
-    bearssllib=""
-
     if test "x$USE_RUSTLS" != "xyes"; then
             addld=-L$OPT_RUSTLS/lib$libsuff
       addcflags=-I$OPT_RUSTLS/include
@@ -27905,14 +27942,14 @@ fi
          CPPFLAGS="$CPPFLAGS $addcflags"
       fi
 
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for rustls_connection_read in -lcrustls" >&5
-printf %s "checking for rustls_connection_read in -lcrustls... " >&6; }
-if test ${ac_cv_lib_crustls_rustls_connection_read+y}
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for rustls_connection_read in -lrustls" >&5
+printf %s "checking for rustls_connection_read in -lrustls... " >&6; }
+if test ${ac_cv_lib_rustls_rustls_connection_read+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lcrustls -lpthread -ldl $LIBS"
+LIBS="-lrustls -lpthread -ldl -lm $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -27930,17 +27967,17 @@ return rustls_connection_read ();
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_lib_crustls_rustls_connection_read=yes
+  ac_cv_lib_rustls_rustls_connection_read=yes
 else $as_nop
-  ac_cv_lib_crustls_rustls_connection_read=no
+  ac_cv_lib_rustls_rustls_connection_read=no
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_crustls_rustls_connection_read" >&5
-printf "%s\n" "$ac_cv_lib_crustls_rustls_connection_read" >&6; }
-if test "x$ac_cv_lib_crustls_rustls_connection_read" = xyes
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_rustls_rustls_connection_read" >&5
+printf "%s\n" "$ac_cv_lib_rustls_rustls_connection_read" >&6; }
+if test "x$ac_cv_lib_rustls_rustls_connection_read" = xyes
 then :
 
 
@@ -27964,7 +28001,7 @@ fi
 printf "%s\n" "$as_me: detected rustls" >&6;}
       check_for_ca_bundle=1
 
-      LIBS="-lcrustls -lpthread -ldl $LIBS"
+      LIBS="-lrustls -lpthread -ldl -lm $LIBS"
 
       if test -n "$rustlslib"; then
                                         if test "x$cross_compiling" != "xyes"; then
@@ -33957,9 +33994,15 @@ printf "%s\n" "#define HAVE_STRUCT_TIMEVAL 1" >>confdefs.h
             { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking run-time libs availability" >&5
 printf %s "checking run-time libs availability... " >&6; }
 
-   old=$LD_LIBRARY_PATH
-   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH:$old
-   export LD_LIBRARY_PATH
+   case $host_os in
+     darwin*) library_path_var=DYLD_LIBRARY_PATH ;;
+     *)       library_path_var=LD_LIBRARY_PATH ;;
+   esac
+
+   eval "old=$$library_path_var"
+   eval "$library_path_var=\$CURL_LIBRARY_PATH:\$old"
+
+   eval "export $library_path_var"
    if test "$cross_compiling" = yes
 then :
   { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
@@ -33990,7 +34033,7 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
-   LD_LIBRARY_PATH=$old # restore
+   eval "$library_path_var=\$old" # restore
 
 
       fi
@@ -34415,9 +34458,15 @@ fi
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if time_t is unsigned" >&5
 printf %s "checking if time_t is unsigned... " >&6; }
 
-   old=$LD_LIBRARY_PATH
-   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH:$old
-   export LD_LIBRARY_PATH
+   case $host_os in
+     darwin*) library_path_var=DYLD_LIBRARY_PATH ;;
+     *)       library_path_var=LD_LIBRARY_PATH ;;
+   esac
+
+   eval "old=$$library_path_var"
+   eval "$library_path_var=\$CURL_LIBRARY_PATH:\$old"
+
+   eval "export $library_path_var"
    if test "$cross_compiling" = yes
 then :
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -34450,7 +34499,7 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
-   LD_LIBRARY_PATH=$old # restore
+   eval "$library_path_var=\$old" # restore
 
 
 
@@ -37437,9 +37486,15 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if getaddrinfo seems to work" >&5
 printf %s "checking if getaddrinfo seems to work... " >&6; }
 
-   old=$LD_LIBRARY_PATH
-   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH:$old
-   export LD_LIBRARY_PATH
+   case $host_os in
+     darwin*) library_path_var=DYLD_LIBRARY_PATH ;;
+     *)       library_path_var=LD_LIBRARY_PATH ;;
+   esac
+
+   eval "old=$$library_path_var"
+   eval "$library_path_var=\$CURL_LIBRARY_PATH:\$old"
+
+   eval "export $library_path_var"
    if test "$cross_compiling" = yes
 then :
   { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
@@ -37501,7 +37556,7 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
-   LD_LIBRARY_PATH=$old # restore
+   eval "$library_path_var=\$old" # restore
 
   fi
   #
@@ -38938,9 +38993,15 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if getifaddrs seems to work" >&5
 printf %s "checking if getifaddrs seems to work... " >&6; }
 
-   old=$LD_LIBRARY_PATH
-   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH:$old
-   export LD_LIBRARY_PATH
+   case $host_os in
+     darwin*) library_path_var=DYLD_LIBRARY_PATH ;;
+     *)       library_path_var=LD_LIBRARY_PATH ;;
+   esac
+
+   eval "old=$$library_path_var"
+   eval "$library_path_var=\$CURL_LIBRARY_PATH:\$old"
+
+   eval "export $library_path_var"
    if test "$cross_compiling" = yes
 then :
   { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
@@ -38988,7 +39049,7 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
-   LD_LIBRARY_PATH=$old # restore
+   eval "$library_path_var=\$old" # restore
 
   fi
   #
@@ -39177,9 +39238,15 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if gmtime_r seems to work" >&5
 printf %s "checking if gmtime_r seems to work... " >&6; }
 
-   old=$LD_LIBRARY_PATH
-   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH:$old
-   export LD_LIBRARY_PATH
+   case $host_os in
+     darwin*) library_path_var=DYLD_LIBRARY_PATH ;;
+     *)       library_path_var=LD_LIBRARY_PATH ;;
+   esac
+
+   eval "old=$$library_path_var"
+   eval "$library_path_var=\$CURL_LIBRARY_PATH:\$old"
+
+   eval "export $library_path_var"
    if test "$cross_compiling" = yes
 then :
   { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
@@ -39227,7 +39294,7 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
-   LD_LIBRARY_PATH=$old # restore
+   eval "$library_path_var=\$old" # restore
 
   fi
   #
@@ -39439,9 +39506,15 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if inet_ntop seems to work" >&5
 printf %s "checking if inet_ntop seems to work... " >&6; }
 
-   old=$LD_LIBRARY_PATH
-   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH:$old
-   export LD_LIBRARY_PATH
+   case $host_os in
+     darwin*) library_path_var=DYLD_LIBRARY_PATH ;;
+     *)       library_path_var=LD_LIBRARY_PATH ;;
+   esac
+
+   eval "old=$$library_path_var"
+   eval "$library_path_var=\$CURL_LIBRARY_PATH:\$old"
+
+   eval "export $library_path_var"
    if test "$cross_compiling" = yes
 then :
   { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
@@ -39531,7 +39604,7 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
-   LD_LIBRARY_PATH=$old # restore
+   eval "$library_path_var=\$old" # restore
 
   fi
   #
@@ -39693,9 +39766,15 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if inet_pton seems to work" >&5
 printf %s "checking if inet_pton seems to work... " >&6; }
 
-   old=$LD_LIBRARY_PATH
-   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH:$old
-   export LD_LIBRARY_PATH
+   case $host_os in
+     darwin*) library_path_var=DYLD_LIBRARY_PATH ;;
+     *)       library_path_var=LD_LIBRARY_PATH ;;
+   esac
+
+   eval "old=$$library_path_var"
+   eval "$library_path_var=\$CURL_LIBRARY_PATH:\$old"
+
+   eval "export $library_path_var"
    if test "$cross_compiling" = yes
 then :
   { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
@@ -39778,7 +39857,7 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
-   LD_LIBRARY_PATH=$old # restore
+   eval "$library_path_var=\$old" # restore
 
   fi
   #
@@ -40733,9 +40812,15 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if localtime_r seems to work" >&5
 printf %s "checking if localtime_r seems to work... " >&6; }
 
-   old=$LD_LIBRARY_PATH
-   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH:$old
-   export LD_LIBRARY_PATH
+   case $host_os in
+     darwin*) library_path_var=DYLD_LIBRARY_PATH ;;
+     *)       library_path_var=LD_LIBRARY_PATH ;;
+   esac
+
+   eval "old=$$library_path_var"
+   eval "$library_path_var=\$CURL_LIBRARY_PATH:\$old"
+
+   eval "export $library_path_var"
    if test "$cross_compiling" = yes
 then :
   { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
@@ -40783,7 +40868,7 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
-   LD_LIBRARY_PATH=$old # restore
+   eval "$library_path_var=\$old" # restore
 
   fi
   #
@@ -41132,9 +41217,15 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if poll seems to work" >&5
 printf %s "checking if poll seems to work... " >&6; }
 
-   old=$LD_LIBRARY_PATH
-   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH:$old
-   export LD_LIBRARY_PATH
+   case $host_os in
+     darwin*) library_path_var=DYLD_LIBRARY_PATH ;;
+     *)       library_path_var=LD_LIBRARY_PATH ;;
+   esac
+
+   eval "old=$$library_path_var"
+   eval "$library_path_var=\$CURL_LIBRARY_PATH:\$old"
+
+   eval "export $library_path_var"
    if test "$cross_compiling" = yes
 then :
   { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
@@ -41194,7 +41285,7 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
-   LD_LIBRARY_PATH=$old # restore
+   eval "$library_path_var=\$old" # restore
 
   fi
   #
@@ -43077,9 +43168,15 @@ printf "%s\n" "yes" >&6; }
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if strerror_r seems to work" >&5
 printf %s "checking if strerror_r seems to work... " >&6; }
 
-   old=$LD_LIBRARY_PATH
-   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH:$old
-   export LD_LIBRARY_PATH
+   case $host_os in
+     darwin*) library_path_var=DYLD_LIBRARY_PATH ;;
+     *)       library_path_var=LD_LIBRARY_PATH ;;
+   esac
+
+   eval "old=$$library_path_var"
+   eval "$library_path_var=\$CURL_LIBRARY_PATH:\$old"
+
+   eval "export $library_path_var"
    if test "$cross_compiling" = yes
 then :
   { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
@@ -43130,7 +43227,7 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
-   LD_LIBRARY_PATH=$old # restore
+   eval "$library_path_var=\$old" # restore
 
   fi
   #
@@ -43187,9 +43284,15 @@ printf "%s\n" "yes" >&6; }
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if strerror_r seems to work" >&5
 printf %s "checking if strerror_r seems to work... " >&6; }
 
-   old=$LD_LIBRARY_PATH
-   LD_LIBRARY_PATH=$CURL_LIBRARY_PATH:$old
-   export LD_LIBRARY_PATH
+   case $host_os in
+     darwin*) library_path_var=DYLD_LIBRARY_PATH ;;
+     *)       library_path_var=LD_LIBRARY_PATH ;;
+   esac
+
+   eval "old=$$library_path_var"
+   eval "$library_path_var=\$CURL_LIBRARY_PATH:\$old"
+
+   eval "export $library_path_var"
    if test "$cross_compiling" = yes
 then :
   { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
@@ -43240,7 +43343,7 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
-   LD_LIBRARY_PATH=$old # restore
+   eval "$library_path_var=\$old" # restore
 
   fi
   #

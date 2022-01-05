@@ -243,6 +243,9 @@ The connect section is used instead of the 'data' for all CONNECT
 requests. The remainder of the rules for the data section then apply but with
 a connect prefix.
 
+### `<socks>`
+Address type and address details as logged by the SOCKS proxy.
+
 ### `<datacheck [mode="text"] [nonewline="yes"]>`
 if the data is sent but this is what should be checked afterwards. If
 `nonewline=yes` is set, runtests will cut off the trailing newline from the
@@ -387,6 +390,8 @@ Features testable here are:
 - `Kerberos`
 - `large_file`
 - `ld_preload`
+- `libssh2`
+- `libssh`
 - `libz`
 - `manual`
 - `Mime`
@@ -415,6 +420,7 @@ Features testable here are:
 - `verbose-strings`
 - `wakeup`
 - `win32`
+- `wolfssh`
 
 as well as each protocol that curl supports.  A protocol only needs to be
 specified if it is different from the server (useful when the server

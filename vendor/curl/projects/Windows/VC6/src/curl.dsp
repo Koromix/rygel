@@ -767,6 +767,10 @@ SOURCE=..\..\..\..\src\tool_filetime.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\..\..\src\tool_findfile.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\..\..\src\tool_formparse.c
 # End Source File
 # Begin Source File
@@ -784,10 +788,6 @@ SOURCE=..\..\..\..\src\tool_help.c
 # Begin Source File
 
 SOURCE=..\..\..\..\src\tool_helpers.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\tool_homedir.c
 # End Source File
 # Begin Source File
 
@@ -971,6 +971,10 @@ SOURCE=..\..\..\..\src\tool_filetime.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\..\..\src\tool_findfile.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\..\..\src\tool_formparse.h
 # End Source File
 # Begin Source File
@@ -988,10 +992,6 @@ SOURCE=..\..\..\..\src\tool_helpers.h
 # Begin Source File
 
 SOURCE=..\..\..\..\src\tool_help.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\..\src\tool_homedir.h
 # End Source File
 # Begin Source File
 

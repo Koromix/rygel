@@ -20,14 +20,16 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_WILDCARDMATCH 3 "September 08, 2021" "libcurl 7.80.0" "curl_easy_setopt options"
+.TH CURLOPT_WILDCARDMATCH 3 "November 26, 2021" "libcurl 7.81.0" "curl_easy_setopt options"
 
 .SH NAME
 CURLOPT_WILDCARDMATCH \- directory wildcard transfers
 .SH SYNOPSIS
+.nf
 #include <curl/curl.h>
 
 CURLcode curl_easy_setopt(CURL *handle, CURLOPT_WILDCARDMATCH, long onoff);
+.fi
 .SH DESCRIPTION
 Set \fIonoff\fP to 1 if you want to transfer multiple files according to a
 file name pattern. The pattern can be specified as part of the

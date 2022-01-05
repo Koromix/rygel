@@ -7,14 +7,14 @@
                 Things that could be nice to do in the future
 
  Things to do in project curl. Please tell us what you think, contribute and
- send us patches that improve things!
+ send us patches that improve things.
 
  Be aware that these are things that we could do, or have once been considered
  things we could do. If you want to work on any of these areas, please
  consider bringing it up for discussions first on the mailing list so that we
- all agree it is still a good idea for the project!
+ all agree it is still a good idea for the project.
 
- All bugs documented in the KNOWN_BUGS document are subject for fixing!
+ All bugs documented in the KNOWN_BUGS document are subject for fixing.
 
  1. libcurl
  1.1 TFO support on Windows
@@ -79,6 +79,7 @@
  5.4 Allow SAN names in HTTP/2 server push
  5.5 auth= in URLs
  5.6 alt-svc should fallback if alt-svc does not work
+ 5.7 Require HTTP version X or higher
 
  6. TELNET
  6.1 ditch stdin
@@ -109,9 +110,10 @@
  12. FILE
  12.1 Directory listing for FILE:
 
- 13. SSL
+ 13. TLS
  13.1 TLS-PSK with OpenSSL
  13.2 Provide mutex locking API
+ 13.3 Defeat TLS fingerprinting
  13.4 Cache/share OpenSSL contexts
  13.5 Export session ids
  13.6 Provide callback for cert verification
@@ -273,7 +275,7 @@
  We can create a system with loadable modules/plug-ins, where these modules
  would be the ones that link to 3rd party libs. That would allow us to avoid
  having to load ALL dependencies since only the necessary ones for this
- app/invoke/used protocols would be necessary to load.  See
+ app/invoke/used protocols would be necessary to load. See
  https://github.com/curl/curl/issues/349
 
 1.12 updated DNS server while running
@@ -366,7 +368,7 @@
 1.20 SRV and URI DNS records
 
  Offer support for resolving SRV and URI DNS records for libcurl to know which
- server to connect to for various protocols (including HTTP!).
+ server to connect to for various protocols (including HTTP).
 
 1.21 netrc caching and sharing
 
@@ -644,6 +646,14 @@
 
  See https://github.com/curl/curl/issues/4908
 
+5.7 Require HTTP version X or higher
+
+ curl and libcurl provide options for trying higher HTTP versions (for example
+ HTTP/2) but then still allows the server to pick version 1.1. We could
+ consider adding a way to require a minimum version.
+
+ See https://github.com/curl/curl/issues/7980
+
 6. TELNET
 
 6.1 ditch stdin
@@ -746,7 +756,7 @@
  output should probably be the same as/similar to FTP.
 
 
-13. SSL
+13. TLS
 
 13.1 TLS-PSK with OpenSSL
 
@@ -762,6 +772,14 @@
  Provide a libcurl API for setting mutex callbacks in the underlying SSL
  library, so that the same application code can use mutex-locking
  independently of OpenSSL or GnutTLS being used.
+
+13.3 Defeat TLS fingerprinting
+
+ By changing the order of TLS extensions provided in the TLS handshake, it is
+ sometimes possible to circumvent TLS fingerprinting by servers. The TLS
+ extension order is of course not the only way to fingerprint a client.
+
+ See https://github.com/curl/curl/issues/8119
 
 13.4 Cache/share OpenSSL contexts
 
@@ -791,7 +809,7 @@
 
  OpenSSL supports a callback for customised verification of the peer
  certificate, but this does not seem to be exposed in the libcurl APIs. Could
- it be? There's so much that could be done if it were!
+ it be? There's so much that could be done if it were.
 
 13.8 Support DANE
 
@@ -928,7 +946,7 @@
 17.4 Support CURLOPT_PREQUOTE
 
  The two other QUOTE options are supported for SFTP, but this was left out for
- unknown reasons!
+ unknown reasons.
 
 17.5 SSH over HTTPS proxy with more backends
 
@@ -1295,4 +1313,4 @@
 21.1 Support rate-limiting
 
  The rate-limiting logic is done in the PERFORMING state in multi.c but MQTT
- is not (yet) implemented to use that!
+ is not (yet) implemented to use that.

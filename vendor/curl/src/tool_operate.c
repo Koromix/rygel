@@ -5,7 +5,7 @@
  *                            | (__| |_| |  _ <| |___
  *                             \___|\___/|_| \_\_____|
  *
- * Copyright (C) 1998 - 2021, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) 1998 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -63,7 +63,7 @@
 #include "tool_filetime.h"
 #include "tool_getparam.h"
 #include "tool_helpers.h"
-#include "tool_homedir.h"
+#include "tool_findfile.h"
 #include "tool_libinfo.h"
 #include "tool_main.h"
 #include "tool_msgs.h"
@@ -661,6 +661,31 @@ static void single_transfer_cleanup(struct OperationConfig *config)
   }
 }
 
+/*
+ * Return the proto bit for the scheme used in the given URL
+ */
+static long url_proto(char *url)
+{
+  CURLU *uh = curl_url();
+  long proto = 0;
+  if(uh) {
+    if(url) {
+      if(!curl_url_set(uh, CURLUPART_URL, url,
+                       CURLU_GUESS_SCHEME | CURLU_NON_SUPPORT_SCHEME)) {
+        char *schemep = NULL;
+        if(!curl_url_get(uh, CURLUPART_SCHEME, &schemep,
+                         CURLU_DEFAULT_SCHEME) &&
+           schemep) {
+          proto = scheme2protocol(schemep);
+          curl_free(schemep);
+        }
+      }
+    }
+    curl_url_cleanup(uh);
+  }
+  return proto;
+}
+
 /* create the next (singular) transfer */
 
 static CURLcode single_transfer(struct GlobalConfig *global,
@@ -710,6 +735,7 @@ static CURLcode single_transfer(struct GlobalConfig *global,
   }
 
   while(config->state.urlnode) {
+    static bool warn_more_options = FALSE;
     char *infiles; /* might be a glob pattern */
     struct URLGlob *inglob = state->inglob;
     urlnode = config->state.urlnode;
@@ -724,6 +750,11 @@ static CURLcode single_transfer(struct GlobalConfig *global,
       urlnode->flags = 0;
       config->state.urlnode = urlnode->next;
       state->up = 0;
+      if(!warn_more_options) {
+        /* only show this once */
+        warnf(config->global, "Got more output options than URLs\n");
+        warn_more_options = TRUE;
+      }
       continue; /* next URL please */
     }
 
@@ -801,6 +832,7 @@ static CURLcode single_transfer(struct GlobalConfig *global,
         struct OutStruct *etag_save;
         struct HdrCbData *hdrcbdata = NULL;
         struct OutStruct etag_first;
+        long use_proto;
         CURL *curl;
 
         /* --etag-save */
@@ -1194,6 +1226,15 @@ static CURLcode single_transfer(struct GlobalConfig *global,
         if(result)
           break;
 
+        /* here */
+        use_proto = url_proto(per->this_url);
+#if 0
+        if(!(use_proto & built_in_protos)) {
+          warnf(global, "URL is '%s' but no support for the scheme\n",
+                per->this_url);
+        }
+#endif
+
         if(!config->tcp_nodelay)
           my_setopt(curl, CURLOPT_TCP_NODELAY, 0L);
 
@@ -1325,6 +1366,10 @@ static CURLcode single_transfer(struct GlobalConfig *global,
         if(result)
           break;
 
+        /* new in libcurl 7.81.0 */
+        if(config->mime_options)
+          my_setopt(curl, CURLOPT_MIME_OPTIONS, config->mime_options);
+
         /* new in libcurl 7.10.6 (default is Basic) */
         if(config->authtype)
           my_setopt_bitmask(curl, CURLOPT_HTTPAUTH, (long)config->authtype);
@@ -1406,7 +1451,7 @@ static CURLcode single_transfer(struct GlobalConfig *global,
         my_setopt_str(curl, CURLOPT_KEYPASSWD, config->key_passwd);
         my_setopt_str(curl, CURLOPT_PROXY_KEYPASSWD, config->proxy_key_passwd);
 
-        if(built_in_protos & (CURLPROTO_SCP|CURLPROTO_SFTP)) {
+        if(use_proto & (CURLPROTO_SCP|CURLPROTO_SFTP)) {
 
           /* SSH and SSL private key uses same command-line option */
           /* new in libcurl 7.16.1 */
@@ -1677,25 +1722,21 @@ static CURLcode single_transfer(struct GlobalConfig *global,
         if(config->path_as_is)
           my_setopt(curl, CURLOPT_PATH_AS_IS, 1L);
 
-        if((built_in_protos & (CURLPROTO_SCP|CURLPROTO_SFTP)) &&
+        if((use_proto & (CURLPROTO_SCP|CURLPROTO_SFTP)) &&
            !config->insecure_ok) {
-          char *home = homedir(NULL);
-          if(home) {
-            char *file = aprintf("%s/.ssh/known_hosts", home);
-            if(file) {
-              /* new in curl 7.19.6 */
-              result = res_setopt_str(curl, CURLOPT_SSH_KNOWNHOSTS, file);
-              curl_free(file);
-              if(result == CURLE_UNKNOWN_OPTION)
-                /* libssh2 version older than 1.1.1 */
-                result = CURLE_OK;
-            }
-            Curl_safefree(home);
+          char *known = findfile(".ssh/known_hosts", FALSE);
+          if(known) {
+            /* new in curl 7.19.6 */
+            result = res_setopt_str(curl, CURLOPT_SSH_KNOWNHOSTS, known);
+            curl_free(known);
+            if(result == CURLE_UNKNOWN_OPTION)
+              /* libssh2 version older than 1.1.1 */
+              result = CURLE_OK;
             if(result)
               break;
           }
           else
-            warnf(global, "No home dir, couldn't find known_hosts file!");
+            warnf(global, "Couldn't find a known_hosts file!");
         }
 
         if(config->no_body || config->remote_time) {
