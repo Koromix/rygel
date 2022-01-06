@@ -463,7 +463,7 @@
 #define HAVE_NET_IF_H 1
 
 /* Define to 1 if you have the <nghttp2/nghttp2.h> header file. */
-#define HAVE_NGHTTP2_NGHTTP2_H 1
+/* #undef HAVE_NGHTTP2_NGHTTP2_H */
 
 /* Define to 1 if you have the <nghttp3/nghttp3.h> header file. */
 /* #undef HAVE_NGHTTP3_NGHTTP3_H */
