@@ -97,6 +97,10 @@
 #  include "config-openbsd.h"
 #endif
 
+#ifdef __FreeBSD__
+#  include "config-freebsd.h"
+#endif
+
 #if defined(macintosh) && defined(__MRC__)
 #  include "config-mac.h"
 #endif
