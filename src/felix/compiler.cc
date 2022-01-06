@@ -505,12 +505,9 @@ public:
             } break;
 
             default: {
-                Fmt(&buf, " -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,stack-size=1048576");
+                Fmt(&buf, " -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
                 if (host == HostPlatform::Linux) {
                     Fmt(&buf, " -ldl -lrt");
-                }
-                if (host != HostPlatform::FreeBSD) {
-                    Fmt(&buf, " -Wl,-z,separate-code");
                 }
                 if (link_type == LinkType::Executable) {
                     Fmt(&buf, " -pie");
@@ -882,12 +879,9 @@ public:
             } break;
 
             default: {
-                Fmt(&buf, " -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,stack-size=1048576");
+                Fmt(&buf, " -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
                 if (host == HostPlatform::Linux) {
                     Fmt(&buf, " -ldl -lrt");
-                }
-                if (host != HostPlatform::FreeBSD) {
-                    Fmt(&buf, " -Wl,-z,separate-code");
                 }
                 if (link_type == LinkType::Executable) {
                     Fmt(&buf, " -pie");
