@@ -6249,13 +6249,7 @@ static bool EnableRawMode()
     if (!input_is_raw) {
         if (isatty(STDIN_FILENO) && tcgetattr(STDIN_FILENO, &input_orig_tio) >= 0) {
             struct termios raw = input_orig_tio;
-
-            raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-            raw.c_oflag &= ~(OPOST);
-            raw.c_cflag |= (CS8);
-            raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-            raw.c_cc[VMIN] = 1;
-            raw.c_cc[VTIME] = 0;
+            cfmakeraw(&raw);
 
             input_is_raw = (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) >= 0);
 
