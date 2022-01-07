@@ -116,6 +116,23 @@ static int ParseMajorVersion(const char *cmd, const char *marker)
     return -1;
 }
 
+static bool IdentifyCompiler(const char *cc, const char *needle)
+{
+    cc = SplitStrReverseAny(cc, RG_PATH_SEPARATORS).ptr;
+
+    const char *ptr = strstr(cc, needle);
+    Size len = (Size)strlen(needle);
+
+    if (!ptr)
+        return false;
+    if (ptr != cc && !strchr("_-.", ptr[-1]))
+        return false;
+    if (ptr[len] && !strchr("_-.", ptr[len]))
+        return false;
+
+    return true;
+}
+
 class ClangCompiler final: public Compiler {
     const char *cc;
     const char *cxx;
@@ -165,7 +182,7 @@ public:
         });
 
         // Determine LLD version
-        if (strstr(SplitStrReverseAny(compiler->ld, RG_PATH_SEPARATORS).ptr, "lld")) {
+        if (IdentifyCompiler(compiler->ld, "lld")) {
             async.Run([&]() {
                 char cmd[4096];
                 if (PathIsAbsolute(compiler->ld)) {
@@ -1784,23 +1801,6 @@ public:
         out_cmd->cmd_line = cmd;
     }
 };
-
-static bool IdentifyCompiler(const char *cc, const char *needle)
-{
-    cc = SplitStrReverseAny(cc, RG_PATH_SEPARATORS).ptr;
-
-    const char *ptr = strstr(cc, needle);
-    Size len = (Size)strlen(needle);
-
-    if (!ptr)
-        return false;
-    if (ptr != cc && !strchr("_-.", ptr[-1]))
-        return false;
-    if (ptr[len] && !strchr("_-.", ptr[len]))
-        return false;
-
-    return true;
-}
 
 static void FindArduinoCompiler(const char *name, const char *compiler, Span<char> out_cc)
 {
