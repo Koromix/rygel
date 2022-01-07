@@ -2743,6 +2743,21 @@ bool PathContainsDotDot(const char *path)
     return false;
 }
 
+static bool CheckForDumbTerm()
+{
+    static bool init = false;
+    static bool dumb = false;
+
+    if (!init) {
+        const char *term = getenv("TERM");
+
+        dumb |= term && TestStr(term, "dumb");
+        dumb |= !!getenv("NO_COLOR");
+    }
+
+    return dumb;
+}
+
 #ifdef _WIN32
 
 int OpenDescriptor(const char *filename, unsigned int flags)
@@ -2870,20 +2885,11 @@ bool FlushFile(FILE *fp, const char *filename)
 
 bool FileIsVt100(FILE *fp)
 {
-    static bool nocolor_init = false;
-    static bool nocolor = false;
-
-    if (!nocolor_init) {
-        const char *term = getenv("TERM");
-
-        nocolor |= term && TestStr(term, "dumb");
-        nocolor |= !!getenv("NO_COLOR");
-    }
-    if (nocolor)
-        return false;
-
     static RG_THREAD_LOCAL FILE *cache_fp;
     static RG_THREAD_LOCAL bool cache_vt100;
+
+    if (CheckForDumbTerm())
+        return false;
 
     // Fast path, for repeated calls (such as Print in a loop)
     if (fp == cache_fp)
@@ -3138,6 +3144,9 @@ bool FileIsVt100(FILE *fp)
 {
     static RG_THREAD_LOCAL FILE *cache_fp;
     static RG_THREAD_LOCAL bool cache_vt100;
+
+    if (CheckForDumbTerm())
+        return false;
 
 #ifdef __EMSCRIPTEN__
     static bool win32 = ([]() {
