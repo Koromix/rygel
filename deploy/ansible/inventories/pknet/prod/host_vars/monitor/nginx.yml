@@ -82,7 +82,8 @@ nginx_domains:
           return 302 https://inter.goupile.fr/dreval/main/intro?id=7${request_id};
       }
       location = /r/dreval/t2 {
-          add_header Content-Type text/html;
+          types {}
+          default_type text/html;
           alias /srv/dreval_t2.html;
       }
   - name: www.goupile.fr
