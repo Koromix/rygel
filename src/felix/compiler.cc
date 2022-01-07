@@ -135,7 +135,7 @@ public:
         std::unique_ptr<ClangCompiler> compiler = std::make_unique<ClangCompiler>(host);
 
         // Prefer LLD
-        if (!ld && FindExecutableInPath("lld")) {
+        if (!ld && FindExecutableInPath("ld.lld")) {
             ld = "lld";
         }
 
@@ -165,17 +165,23 @@ public:
         });
 
         // Determine LLD version
-        async.Run([&]() {
-            char cmd[2048];
-            if (compiler->ld) {
-                Fmt(cmd, "\"%1\" -fuse-ld=%2 -Wl,--version", compiler->cc, compiler->ld);
-            } else {
-                Fmt(cmd, "\"%1\" -Wl,--version", compiler->cc);
-            }
+        if (strstr(SplitStrReverseAny(compiler->ld, RG_PATH_SEPARATORS).ptr, "lld")) {
+            async.Run([&]() {
+                char cmd[4096];
+                if (PathIsAbsolute(compiler->ld)) {
+                    Fmt(cmd, "\"%1\" --version", compiler->ld);
+                } else {
+#ifdef _WIN32
+                    Fmt(cmd, "\"%1-link\" --version", compiler->ld);
+#else
+                    Fmt(cmd, "\"ld.%1\" --version", compiler->ld);
+#endif
+                }
 
-            compiler->lld11 = ParseMajorVersion(cmd, "LLD") >= 11;
-            return true;
-        });
+                compiler->lld11 = ParseMajorVersion(cmd, "LLD") >= 11;
+                return true;
+            });
+        }
 
         async.Sync();
 
