@@ -6323,11 +6323,7 @@ void ConsolePrompter::Commit()
 
 bool ConsolePrompter::ReadRaw()
 {
-    // Don't overwrite current line
     fflush(stderr);
-    if (GetCursorPosition().x > 0) {
-        fputs("\r\n", stderr);
-    }
 
     str_offset = str.len;
     Prompt();
@@ -6747,33 +6743,6 @@ Vec2<int> ConsolePrompter::GetConsoleSize()
 
     // Give up!
     return {80, 24};
-}
-
-Vec2<int> ConsolePrompter::GetCursorPosition()
-{
-#ifdef _WIN32
-    HANDLE h = (HANDLE)_get_osfhandle(_fileno(stderr));
-
-    CONSOLE_SCREEN_BUFFER_INFO screen;
-    if (!GetConsoleScreenBufferInfo(h, &screen))
-        return {};
-
-    return {screen.dwCursorPosition.X, screen.dwCursorPosition.Y};
-#else
-    fputs("\x1B[6n", stderr);
-    fflush(stderr);
-
-    LocalArray<char, 64> buf;
-    while (buf.Available() > 1 && read(STDIN_FILENO, buf.end(), 1) == 1 && buf.data[buf.len] != 'R') {
-        buf.len++;
-    }
-    buf.Append(0);
-
-    int v = 1, h = 1;
-    sscanf(buf.data, "\x1B[%d;%d", &v, &h);
-
-    return {h - 1, v - 1};
-#endif
 }
 
 int32_t ConsolePrompter::ReadChar()

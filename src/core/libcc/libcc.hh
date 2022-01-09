@@ -4206,7 +4206,6 @@ private:
     void Prompt();
 
     Vec2<int> GetConsoleSize();
-    Vec2<int> GetCursorPosition();
     int32_t ReadChar();
 
     int ComputeWidth(Span<const char> str);
