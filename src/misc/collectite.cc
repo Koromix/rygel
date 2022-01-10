@@ -212,10 +212,14 @@ int Main(int argc, char **argv)
 
 Commands:
     %!..+restore%!0                      Restore databases from SQLite snapshots
-    %!..+list%!0                         List available databases in snapshot files)", FelixTarget);
+    %!..+list%!0                         List available databases in snapshot files
+
+Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
     };
 
     if (argc < 2) {
+        print_usage(stderr);
+        PrintLn(stderr);
         LogError("No command provided");
         return 1;
     }

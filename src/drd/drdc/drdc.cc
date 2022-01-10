@@ -83,10 +83,14 @@ Commands:
     %!..+mco_map%!0                      Compute GHM accessibility constraints
     %!..+mco_pack%!0                     Pack MCO stays for quicker loads
     %!..+mco_show%!0                     Print information about individual MCO elements
-                                 (diagnoses, procedures, GHM roots, etc.))");
+                                 (diagnoses, procedures, GHM roots, etc.)
+
+Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
     };
 
     if (argc < 2) {
+        print_usage(stderr);
+        PrintLn(stderr);
         LogError("No command provided");
         return 1;
     }

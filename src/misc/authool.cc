@@ -442,10 +442,14 @@ Commands:
 
     %!..+generate_totp%!0                Generate a TOTP QR code
     %!..+compute_totp%!0                 Generate TOTP code based on current time
-    %!..+check_totp%!0                   Check TOTP code based on current time)", FelixTarget);
+    %!..+check_totp%!0                   Check TOTP code based on current time
+
+Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
     };
 
     if (argc < 2) {
+        print_usage(stderr);
+        PrintLn(stderr);
         LogError("No command provided");
         return 1;
     }
