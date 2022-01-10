@@ -135,9 +135,10 @@ Options:
     %!..+-s, --secret <secret>%!0        Set secret in Base32 encoding
 
     %!..+-d, --digits <digits>%!0        Use specified number of digits
+                                 %!D..(default: %3)%!0
 
     %!..+-O, --output_file <file>%!0     Write QR code PNG image to disk)",
-                FelixTarget, pwd_HotpAlgorithmNames[(int)algorithm]);
+                FelixTarget, pwd_HotpAlgorithmNames[(int)algorithm], digits);
     };
 
     // Parse arguments
