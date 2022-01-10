@@ -91,11 +91,23 @@ int RunTest(int argc, char **argv)
         PrintLn(stderr);
     }
 
+#ifndef NDEBUG
+    if (!pattern) {
+        LogInfo("Benchmarks are disabled by default in debug builds");
+    }
+#endif
+
     // Run benchmarks
     for (Size i = 0; i < benchmarks.len; i++) {
         const BenchmarkInfo &bench = *benchmarks[i];
 
-        if (!pattern || MatchPathSpec(bench.path, pattern)) {
+#ifdef NDEBUG
+        bool enable = !pattern || MatchPathSpec(bench.path, pattern);
+#else
+        bool enable = pattern && MatchPathSpec(bench.path, pattern);
+#endif
+
+        if (enable) {
             PrintLn(stderr, "Benchmark: %!y..%1%!0", bench.path);
             bench.func();
             PrintLn(stderr);
