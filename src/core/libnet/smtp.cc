@@ -12,22 +12,12 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "../../core/libcc/libcc.hh"
-#ifdef _WIN32
-    #ifndef NOMINMAX
-        #define NOMINMAX
-    #endif
-    #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-    #endif
-#endif
-#include "../../../vendor/curl/include/curl/curl.h"
+#include "curl.hh"
 #include "../../../vendor/mbedtls/include/mbedtls/ssl.h"
 #include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 #include "smtp.hh"
 
 namespace RG {
-
-extern "C" const AssetInfo CacertPem;
 
 bool smtp_Config::Validate() const
 {
@@ -128,9 +118,9 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
 
     BlockAllocator temp_alloc;
 
-    CURL *curl = curl_easy_init();
+    CURL *curl = InitCurl();
     if (!curl)
-        throw std::bad_alloc();
+        return false;
     RG_DEFER { curl_easy_cleanup(curl); };
 
     Span<const char> payload;
@@ -198,17 +188,6 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
         success &= !curl_easy_setopt(curl, CURLOPT_MAIL_FROM, config.from);
         success &= !curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, &recipients);
 
-        // Give embedded CA store to curl
-        {
-            struct curl_blob blob;
-
-            blob.data = (void *)CacertPem.data.ptr;
-            blob.len = CacertPem.data.len;
-            blob.flags = CURL_BLOB_NOCOPY;
-
-            success &= !curl_easy_setopt(curl, CURLOPT_CAINFO_BLOB, &blob);
-        }
-
         // curl_easy_setopt is variadic, so we need the + lambda operator to force the
         // conversion to a C-style function pointer.
         success &= !curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *buf, size_t size, size_t nmemb, void *udata) {
@@ -231,14 +210,9 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
         }
     }
 
-    CURLcode res = curl_easy_perform(curl);
-    if (res != CURLE_OK) {
-        LogError("Failed to perform mail call: %1", curl_easy_strerror(res));
+    int status = PerformCurl(curl);
+    if (status < 0)
         return false;
-    }
-
-    long status = 0;
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
     if (status != 250) {
         LogError("Failed to send mail with status %1", status);
         return false;

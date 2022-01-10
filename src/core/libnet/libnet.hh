@@ -13,6 +13,7 @@
 
 #pragma once
 
+#include "curl.hh"
 #include "http.hh"
 #include "http_misc.hh"
 #include "http_session.hh"

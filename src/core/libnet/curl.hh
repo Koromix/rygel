@@ -11,9 +11,22 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#include "curl.cc"
-#include "http.cc"
-#include "http_misc.cc"
-#include "http_session.cc"
-#include "sms.cc"
-#include "smtp.c"
+#pragma once
+
+#include "../../core/libcc/libcc.hh"
+#ifdef _WIN32
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+#endif
+#include "../../../vendor/curl/include/curl/curl.h"
+
+namespace RG {
+
+CURL *InitCurl();
+int PerformCurl(CURL *curl);
+
+}
