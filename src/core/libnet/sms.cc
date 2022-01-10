@@ -30,10 +30,6 @@ namespace RG {
 
 extern "C" const AssetInfo CacertPem;
 
-static bool sms_ssl = false;
-static mbedtls_x509_crt sms_pem;
-static mbedtls_x509_crl sms_crl;
-
 bool sms_Config::Validate() const
 {
     bool valid = true;
@@ -63,23 +59,6 @@ bool sms_Sender::Init(const sms_Config &config)
     // Validate configuration
     if (!config.Validate())
         return false;
-
-    if (!sms_ssl) {
-        // Just memset calls it seems, but let's do it as they want
-        mbedtls_x509_crt_init(&sms_pem);
-        mbedtls_x509_crl_init(&sms_crl);
-        atexit([]() {
-            mbedtls_x509_crt_free(&sms_pem);
-            mbedtls_x509_crl_free(&sms_crl);
-        });
-
-        if (mbedtls_x509_crt_parse(&sms_pem, CacertPem.data.ptr, CacertPem.data.len + 1)) {
-            LogError("Failed to parse CA store file");
-            return false;
-        }
-
-        sms_ssl = true;
-    }
 
     str_alloc.ReleaseAll();
     this->config.provider = config.provider;
@@ -134,14 +113,21 @@ bool sms_Sender::SendTwilio(const char *to, const char *message)
         success &= !curl_easy_setopt(curl, CURLOPT_PASSWORD, config.token);
         success &= !curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
 
+        // Give embedded CA store to curl
+        {
+            struct curl_blob blob;
+
+            blob.data = (void *)CacertPem.data.ptr;
+            blob.len = CacertPem.data.len;
+            blob.flags = CURL_BLOB_NOCOPY;
+
+            success &= !curl_easy_setopt(curl, CURLOPT_CAINFO_BLOB, &blob);
+        }
+
         // curl_easy_setopt is variadic, so we need the + lambda operator to force the
         // conversion to a C-style function pointer.
-        success &= !curl_easy_setopt(curl, CURLOPT_SSL_CTX_FUNCTION, +[](CURL *, void *ctx, void *) {
-            mbedtls_ssl_config *ssl = (mbedtls_ssl_config *)ctx;
-            mbedtls_ssl_conf_ca_chain(ssl, &sms_pem, &sms_crl);
-            return CURLE_OK;
-        });
-        success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *, size_t size, size_t nmemb, void *) { return size * nmemb; });
+        success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
+                                     +[](char *, size_t size, size_t nmemb, void *) { return size * nmemb; });
 
         if (!success) {
             LogError("Failed to set libcurl options");

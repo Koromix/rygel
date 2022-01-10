@@ -29,10 +29,6 @@ namespace RG {
 
 extern "C" const AssetInfo CacertPem;
 
-static bool smtp_ssl = false;
-static mbedtls_x509_crt smtp_pem;
-static mbedtls_x509_crl smtp_crl;
-
 bool smtp_Config::Validate() const
 {
     bool valid = true;
@@ -58,23 +54,6 @@ bool smtp_Sender::Init(const smtp_Config &config)
     // Validate configuration
     if (!config.Validate())
         return false;
-
-    if (!smtp_ssl) {
-        // Just memset calls it seems, but let's do it as they want
-        mbedtls_x509_crt_init(&smtp_pem);
-        mbedtls_x509_crl_init(&smtp_crl);
-        atexit([]() {
-            mbedtls_x509_crt_free(&smtp_pem);
-            mbedtls_x509_crl_free(&smtp_crl);
-        });
-
-        if (mbedtls_x509_crt_parse(&smtp_pem, CacertPem.data.ptr, CacertPem.data.len + 1)) {
-            LogError("Failed to parse CA store file");
-            return false;
-        }
-
-        smtp_ssl = true;
-    }
 
     str_alloc.ReleaseAll();
     this->config.url = DuplicateString(config.url, &str_alloc).ptr;
@@ -219,13 +198,19 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
         success &= !curl_easy_setopt(curl, CURLOPT_MAIL_FROM, config.from);
         success &= !curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, &recipients);
 
+        // Give embedded CA store to curl
+        {
+            struct curl_blob blob;
+
+            blob.data = (void *)CacertPem.data.ptr;
+            blob.len = CacertPem.data.len;
+            blob.flags = CURL_BLOB_NOCOPY;
+
+            success &= !curl_easy_setopt(curl, CURLOPT_CAINFO_BLOB, &blob);
+        }
+
         // curl_easy_setopt is variadic, so we need the + lambda operator to force the
         // conversion to a C-style function pointer.
-        success &= !curl_easy_setopt(curl, CURLOPT_SSL_CTX_FUNCTION, +[](CURL *, void *ctx, void *) {
-            mbedtls_ssl_config *ssl = (mbedtls_ssl_config *)ctx;
-            mbedtls_ssl_conf_ca_chain(ssl, &smtp_pem, &smtp_crl);
-            return CURLE_OK;
-        });
         success &= !curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *buf, size_t size, size_t nmemb, void *udata) {
             Span<const char> *payload = (Span<const char> *)udata;
 
