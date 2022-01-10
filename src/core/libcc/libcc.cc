@@ -5195,9 +5195,10 @@ bool LineReader::Next(Span<char> *out_line)
 
 void LineReader::PushLogFilter()
 {
-    RG::PushLogFilter([this](LogLevel level, const char *, const char *msg, FunctionRef<LogFunc> func) {
+    RG::PushLogFilter([this](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         char ctx_buf[1024];
-        Fmt(ctx_buf, "%1(%2)", st->GetFileName(), line_number);
+        Fmt(ctx_buf, "%1(%2)%3%4", st->GetFileName(), line_number,
+                                   ctx ? ": " : "", ctx ? ctx : "");
 
         func(level, ctx_buf, msg);
     });
