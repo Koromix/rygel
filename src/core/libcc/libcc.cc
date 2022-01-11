@@ -2803,9 +2803,7 @@ int OpenDescriptor(const char *filename, unsigned int flags)
     if (flags & (int)OpenFileFlag::Exclusive) {
         oflags |= (int)_O_EXCL;
     }
-    if (flags & (int)OpenFileFlag::Unlinkable) {
-        share |= FILE_SHARE_DELETE;
-    }
+    share |= FILE_SHARE_DELETE;
 
     HANDLE h;
     if (win32_utf8) {
@@ -3285,7 +3283,7 @@ const char *CreateTemporaryFile(Span<const char> directory, const char *prefix, 
 {
     return CreateTemporaryPath(directory, prefix, extension, alloc, [&](const char *path) {
         int flags = (int)OpenFileFlag::Read | (int)OpenFileFlag::Write |
-                    (int)OpenFileFlag::Exclusive | (int)OpenFileFlag::Unlinkable;
+                    (int)OpenFileFlag::Exclusive;
 
         FILE *fp = OpenFile(path, flags);
 

@@ -3833,8 +3833,7 @@ enum class OpenFileFlag {
     Write = 1 << 1,
     Append = 1 << 2,
 
-    Exclusive = 1 << 3,
-    Unlinkable = 1 << 4 // Allow deletion despite open HANDLE on Windows
+    Exclusive = 1 << 3
 };
 
 int OpenDescriptor(const char *filename, unsigned int flags);
