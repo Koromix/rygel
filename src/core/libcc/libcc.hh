@@ -750,15 +750,15 @@ class RetainPtr {
 
 public:
     RetainPtr() = default;
-    RetainPtr(T *p, void (*delete_func)(T *))
+    RetainPtr(T *p, void (*delete_func)(std::remove_const_t<T> *))
         : p(p)
     {
         RG_ASSERT(p);
         RG_ASSERT(delete_func);
-        RG_ASSERT(!p->delete_func || (void *)delete_func == (void *)p->delete_func);
+        RG_ASSERT(!p->delete_func || delete_func == p->delete_func);
 
         p->Ref();
-        p->delete_func = (void *)delete_func;
+        p->delete_func = delete_func;
     }
     RetainPtr(T *p, bool ref = true)
         : p(p)
@@ -775,8 +775,7 @@ public:
     ~RetainPtr()
     {
         if (p && !p->Unref()) {
-            void (*delete_func)(T *) = (void (*)(T *))p->delete_func;
-            delete_func(p);
+            p->delete_func((std::remove_const_t<T> *)p);
         }
     }
 
@@ -790,8 +789,7 @@ public:
     RetainPtr &operator=(const RetainPtr &other)
     {
         if (p && !p->Unref()) {
-            void (*delete_func)(T *) = (void (*)(T *))p->delete_func;
-            delete_func(p);
+            p->delete_func((std::remove_const_t<T> *)p);
         }
 
         p = other.p;
@@ -820,8 +818,9 @@ public:
     T *GetRaw() const { return p; }
 };
 
+template <typename T>
 class RetainObject {
-    mutable void *delete_func = nullptr;
+    mutable void (*delete_func)(T *) = nullptr;
     mutable std::atomic_int refcount {0};
 
 public:
@@ -833,7 +832,8 @@ public:
         return new_count;
     }
 
-    template<class T> friend class RetainPtr;
+    friend class RetainPtr<T>;
+    friend class RetainPtr<const T>;
 };
 
 // ------------------------------------------------------------------------

@@ -71,7 +71,7 @@ enum class SessionConfirm {
     QRcode // Init TOTP
 };
 
-class SessionInfo: public RetainObject {
+class SessionInfo: public RetainObject<SessionInfo> {
     mutable BucketArray<SessionStamp, 8> stamps;
     mutable HashTable<int64_t, SessionStamp *> stamps_map;
 

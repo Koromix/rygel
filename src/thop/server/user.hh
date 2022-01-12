@@ -37,7 +37,7 @@ static const char *const UserPermissionNames[] = {
 
 // We don't need any extra session information for connected users, so we can
 // use this as the user data pointer stored in session manager.
-struct User: public RetainObject {
+struct User: public RetainObject<User> {
     const char *name;
     const char *password_hash;
 
