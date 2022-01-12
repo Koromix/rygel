@@ -131,3 +131,11 @@ nginx_domains:
           proxy_pass https://koromix.dev/carto_2nps/;
       }
     ssl_certbot_email: niels.martignene@protonmail.com
+
+  - name: inter.goupile.fr
+    config: |
+      location / {
+          proxy_set_header Host $host;
+          proxy_pass https://185.176.148.84;
+      }
+    ssl_certbot_email: interhop@riseup.net
