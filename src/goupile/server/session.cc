@@ -323,7 +323,11 @@ RetainPtr<const SessionInfo> GetCheckedSession(InstanceHolder *instance, const h
         }
 
         session = CreateUserSession(SessionType::Auto, 0, "Guest", local_key);
-        session->AuthorizeInstance(instance, (int)UserPermission::DataSave);
+
+        if (RG_LIKELY(session)) {
+            session->AuthorizeInstance(instance, (int)UserPermission::DataSave);
+            // sessions.Open(request, io, session);
+        }
     }
 
     return session;
