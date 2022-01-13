@@ -73,7 +73,7 @@ nginx_domains:
       }
 
       location = /r/dreval/video {
-          return 302 https://google.fr;
+          return 302 https://attendee.gotowebinar.com/register/725153627620328206;
       }
       location = /r/dreval/interv {
           return 302 https://inter.goupile.fr/dreval/main/intro?id=5${request_id};
